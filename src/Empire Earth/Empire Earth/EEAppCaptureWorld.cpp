@@ -9,15 +9,12 @@
 #include <list>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEUnit.h"
 #include "ee/EEPlayer.h"
-#include "rust/game/gamecpp.h"   // round 10, lane D: the storm and cheat sweeps; round 11, lane B: the statistics
 #include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
 

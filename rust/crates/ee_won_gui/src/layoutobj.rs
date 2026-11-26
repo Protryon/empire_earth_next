@@ -102,6 +102,10 @@ impl EeWonLayout {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        // (the children's moves and references are gamewin.rs common_op's in the game, R6 WON GUI round 38)
+        if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, b, c) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host's contract (the component pointers are the C++ caller's)
             Some(h) => unsafe { h(self.comp, op, a, b, c, 0) },
@@ -351,6 +355,9 @@ impl EeWonLayoutMgr {
     }
 
     fn op(&self, op: Op, a: isize) -> isize {
+        if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, 0, 0) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host's contract
             Some(h) => unsafe { h(self.comp, op, a, 0, 0, 0) },

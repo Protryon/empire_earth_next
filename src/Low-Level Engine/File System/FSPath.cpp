@@ -8,8 +8,6 @@
 #include "lle/LowLevelEngineCore.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "rust/base/fs.h"
-#include "lle/FSMemoryFile.h"
 
 const EeFsPathCalls FSPath::kCalls = {
     [](const EeFsArchiveObj* a) -> EeFsArchiveObj* {

@@ -7,6 +7,7 @@
 #define EE_EEUNITCLASSIMPROVEMENT_H
 
 #include <stdint.h>   // int32_t: the levels are saved as 16 raw 4-byte words
+#include "rust/sim/units.h"
 
 // vtable 0x449acc; bases EEUnitClassImprovement; sizeof 0x48; ctor 0x23a5bf; ??_G 0x23a5db; dtor 0x23a5f7
 class EEUnitClass;
@@ -30,14 +31,14 @@ int32_t EEImprovementHost(void* inContext, int32_t inOp, uint32_t inIndex, EeUni
 
 class EEUnitClassImprovement {
 public:
-    EEUnitClassImprovement();               // 0x23a5bf: every mLevels = 1, mL44 = 0
-    virtual ~EEUnitClassImprovement();      // +0x00 dtor 0x23a5f7
+    EEUnitClassImprovement() { ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_RESET, this->mLevels, &this->mTotalCost, NULL, &EEImprovementHost, 0, 0); }  // 0x23a5bf: every mLevels = 1, mL44 = 0
+    virtual ~EEUnitClassImprovement() {}  // +0x00 dtor 0x23a5f7
 
-    long GetLevel(long inIndex);            // 0x23a89d: mLevels[inIndex] (out of line)
+    long GetLevel(long inIndex) { return this->mLevels[inIndex]; }  // 0x23a89d: mLevels[inIndex] (out of line)
     // 0x23a5fe: whether inImprovement can still be raised for inUnitClass (EEUIBUpgrade, the scenario editor's
     // selected unit; ret 8, tested `== 1`) (provisional name)
     bool CanUpgrade(EEUnitClass* inUnitClass, long inImprovement);
-    long GetCost(long inImprovement);       // 0x23aee3 (ret 4; EEPlayer 0x163cf2 adds mL44 to it; provisional name)
+    long GetCost(long inImprovement) { return ee_units_improve_cost((int32_t)inImprovement); }  // 0x23aee3 (ret 4; EEPlayer 0x163cf2 adds mL44 to it; provisional name)
     // EEUnitClassImprovement.cpp's other members (provisional names; the arithmetic is ee_units improve.rs)
     void CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget);
     void GetGainText(EEUnitClassUpgrade* inUpgrade, long inLevel, long inImprovement, UWideString& outText);

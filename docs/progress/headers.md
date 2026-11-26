@@ -71,3 +71,83 @@ layout -14. The lane's headers after batch 25: 3,078 logic lines (list.py).
 
 The test profile's harness hooks (tools/build.py `HARNESS_HOOKS`) were inlined by the pass and broke only the
 test build: EEWorld::RemovePlayerFromGame, EEPhysics::Tick and ReportStatistics are out of line again.
+
+## Round 2 (branch rust-headers2, 2026-11-25): the paused lanes' headers, stale includes, uncalled members
+
+State: done; target (-3,000 C++ lines) met by removals alone. Base: the round 1 tip merged with batch 26
+(4930a8c9d). port_metrics 4930a8c9d -> the merged tip: cpp_lines 103,917 -> 96,936 (**-6,981**), compiled files
+330 -> 325 (-5), logic 14,509 -> 14,289 (-220), code -3,064, shim -2,844; classes, extern_c, rust_hdrs, unsafe and
+layout unchanged.
+
+| Kind | lead | hd2a (units) | hd2b (AI, scenario, UI, lle) | total |
+|---|---|---|---|---|
+| one-statement members inline (inl.py) | -374 (77 members, EEPPlayerHelper.cpp gone) | -205 (31) | about -480 (77; EEUIEOpenCivBuilder.cpp gone) | about -1,060 |
+| uncalled members and declarations | | -135 (88 members) | about -95 (ee) and -126 (about 70 lle) | about -355 |
+| stale project includes (trim.py) | -736 (74 units) | -435 (30 units) | -1,352 (89 units; UICheckBox.cpp, UIRadioButton.cpp, User Interface.cpp gone) | -2,523 |
+| line joins (formatting only: compact.py, casejoin.py) | | -1,065 | -1,982 | -3,047 |
+
+Removals: about -3,934; formatting: -3,047. Commits: lead 51d05f4d4 (inline, world-side headers), 4763b4234 (calamity
+includes), ed8d8f235 (includes); hd2a 8550ee9f3, 9348dae9d, e07e2d3ce, 6dd145240; hd2b 81d8ff25f, 18a63d369,
+e33aa3d74, 68ab393f8, 57e8ec73d.
+
+### What moved
+
+- **The inline pass over the paused lanes' headers** (units: EEUnit.h, EEUnitAction.h, EEUnitClassImprovement.h,
+  EEUnitPicker.h, RTSUnit.h; the AI: EEComputerPlayer, EETown, EEHerd, EEAIArea, EEAIContinentManager, EEAIForest,
+  EEAIRectangleArea; the editor: EEUIFScenarioEditor, EEUIFSETerrain, EEUIFSEBrushGroup; EEUIFMGMainGroup) and over
+  the world-side headers round 1's skip list had left (EEAmbientSoundManager, EEAnimal, EECampaignProgress,
+  EEContagionFunctor/Manager, EEEMStorm, EEFormation, EEGraphicEffect, EEPCalamityHelper, EEPPlayerHelper, EEROUnits,
+  EERules, EEEnvironmentManager, EEMiniMap, EECameraControl, RTSGraphics). Blocked ones unblocked by hand:
+  EECombatShotStep is declared in EEUnit.h (the five shot steps inline); EEHerd/EETown/EEAIRectangleArea
+  GetRandomPoint unpack the Rust point in the body; EEHerd's Load/Save see EESaveFilePrimitive.
+- **Uncalled members**: names whose only mention in src, include, rust/crates, tools and tests is their own
+  declaration (non-virtual only: a virtual's slot is layout). uncalled.py skips uses inside the declaring header, so
+  the forks counted repo-wide instead.
+- **Stale includes**: trim.py removes each project `#include "..."` of a unit, last first, and keeps the removal
+  only if the unit still compiles (clang-cl /Zs, the unit's own flags). `<...>` headers stay; hd2b also skipped
+  includes inside `#if` blocks, and the lead kept the rust/ and platform/ headers of Empire Earth.cpp (its POSIX
+  `main` uses them). No dropped header defines a macro its unit tests in `#if` (checked).
+- **Emptied units deleted**: EEPPlayerHelper.cpp, EEUIEOpenCivBuilder.cpp, UICheckBox.cpp, UIRadioButton.cpp,
+  User Interface.cpp (UIInitialize inline in lle/User Interface.h), with their link/*/units.txt lines.
+
+### Left
+
+- Members whose body needs a type the header only forward-declares (about 30: ~EEComplexUnit, EEComplexUnit(),
+  GetQueueGoals, SetRange, SetMaxVelocity, 10 EEComputerPlayer members casting EEComplexUnit*, EEUIFMGStatusButton's 4
+  (EEUIFMainGame.h), EEUIManager's (EEUIManagerCall lives in the .cpp), EEGraphicEffect's Rust calls declared in its
+  .cpp, EEContagionFunctor's dtor, EEPhysics's dtor (TSScheduler)). Out-of-class `inline` definitions at the end of
+  a header would save about 3 lines each.
+- EmpireEarth.h's and EEARust.h's globals: their remaining C++ users are ee_screens game_cpp.rs shims behind the
+  Cpp trait with Fake tests; each move saves 1-2 C++ lines and costs a test edit. Not done.
+- Host-case collapses (Rust calling Rust where a C++ case only forwards): about 10 pure ones in the units' hosts
+  (EE_COMBAT_H_GOAL_TARGET, EE_UNITS_UCK_CONDITION, EE_UNITS_UC_RECORD_RELATED, the EE_UNITS_UCB_* ring family,
+  EE_UNITS_CU_CAN_STAND_ON); hd2b's collapse_scan lists about 1,000 one-call ee_*cpp_* shims needing a stricter filter.
+- EESaveActiveGroups/EELoadActiveGroups have no caller (declared in EESaveGameFiles.h).
+- The include trim of the headers themselves (each trial is a full build).
+- A POSIX game build to confirm the include trim (only Windows clang-cl checked it).
+
+### Gates (on 50072c064, batch 26 in; the reduced lane set)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | 0 unresolved, 0 duplicates (test 366 inputs) |
+| `rust_build.py header` / `gate` | current / PASS |
+| oracle seeds 2-7 | identical |
+| captures oracle, late, calamity, units, effects, scenario, groups | PASS each |
+| saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) | PASS |
+| `scenario_check.py` | 27/27 |
+| `sim_editor.py`, `--civbuilder` | PASS (14,448), PASS (4,062) |
+| tour, `random-game --box-select --orders --seed 7`, editor | PASS, PASS, PASS |
+| `won_host_coverage.py`, `xbuild.py wontest` | PASS, PASS (183 drivers) |
+| `gates.sh` | GATES PASS: ai-game time-cap units [4, 34, 36], alive_computers [2, 3], classic_lua x 2; lan-game |
+
+### After batch 28 (merged 4a88b155a, fixes cf9303955, origin/rust 6cd0018bc)
+
+The merge conflicted in about 85 files, nearly all include lines: an include-only hunk took batch 28's lines less
+the ones this round dropped; code hunks took batch 28's bodies (or none where a body is inline here). 21 units then
+lacked includes the new bodies need: their includes were restored in batch 28's order and trimmed again.
+port_metrics 8eba20040 -> the tip: cpp_lines 96,416 -> 90,211 (-6,205), files 295 -> 290 (-5), logic -220.
+Regate (reduced set): both builds 0/0 (test 331 inputs), headers current, Rust gate PASS, oracle seeds 2-7
+identical, captures oracle, late, units, scenario PASS, saveload matrix PASS, scenario_check 27/27, sim_editor and
+`--civbuilder` PASS, editor tour PASS, won_host_coverage PASS, wontest PASS (185 drivers), gates.sh GATES PASS
+(ai-game units [4, 36, 38], alive_computers [2, 3], classic_lua x 2; lan-game).

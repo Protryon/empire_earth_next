@@ -4,15 +4,7 @@
 // The bodies are Rust (ee_game preload.rs, world lane round 1).
 #include <windows.h>
 #include <vector>
-
 #include "lle/LowLevelEngine.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERhombus.h"
-#include "lle/FSArchive.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NEMessage.h"
@@ -29,7 +21,7 @@
 #include "ee/EEClient.h"
 #include "ee/EEMessage.h"
 #include "ee/EEDataPreLoading.h"
-#include "rust/game/preload.h"
+
 // The thread's bodies are Rust (ee_game preload.rs, world lane round 1: the loop, the messages, the queue and its two
 // flags, the media loads, the game's load); each C++ call they make is a case of ee_preloadcpp below.
 

@@ -76,9 +76,6 @@ public:
         *this = GERectangle((float)UMFloor(this->mLeft + 0.5f), (float)UMFloor(this->mTop + 0.5f),
                             (float)UMFloor(this->mRight + 0.5f), (float)UMFloor(this->mBottom + 0.5f));
     }
-    void SetBottomRight(const GE2DPoint& inPoint)
-        { *this = GERectangle(this->mLeft, this->mTop, inPoint.mX, inPoint.mY); }
-    void SetTopLeft(const GE2DPoint& inPoint) { *this = GERectangle(inPoint.mX, inPoint.mY, this->mRight, this->mBottom); }
     // clipped to another rectangle (or the overlap into outRectangle); false, nothing changed, when they do not overlap
     bool And(const GERectangle& inRectangle) { return ee_ge_rect_and_in_place(GERust(*this), GERust(inRectangle)); }
     bool And(const GERectangle& inRectangle, GERectangle& outRectangle) const

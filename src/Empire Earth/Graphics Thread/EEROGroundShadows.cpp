@@ -9,13 +9,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnit.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEROGroundShadows.h"
-#include "rust/game/gamecpp.h"
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 

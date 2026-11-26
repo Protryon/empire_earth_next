@@ -43,11 +43,6 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     switch ((Gb)a) {
     case Gb::LocalToRoot: comp->LocalToRoot(((int*)c)[0], ((int*)c)[1]); return 0;
     case Gb::DrawImage: g->DrawImage(t->mBGImage.get(), (int)c, (int)d); return 0;
-    case Gb::Clip: {
-        int* r = (int*)c;
-        r[0] = g->mClipRect.x; r[1] = g->mClipRect.y; r[2] = g->mClipRect.width; r[3] = g->mClipRect.height;
-        return 0;
-    }
     case Gb::CompSize: ((int*)c)[0] = comp->Width(); ((int*)c)[1] = comp->Height(); return 0;
     case Gb::HasImage: return t->mBGImage.get() != NULL ? 1 : 0;
     case Gb::ImageWidth: return t->mBGImage->GetWidth();
@@ -67,14 +62,10 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     case Gb::Offscreen: return (intptr_t)comp->GetRoot()->GetOffscreenImage();
     case Gb::RootToChild: comp->RootToChild(((int*)c)[0], ((int*)c)[1]); return 0;
     case Gb::CaptureDraw: t->mBGImage->GetGraphics().DrawImage((NativeImage*)c, ((const int*)d)[0], ((const int*)d)[1]); return 0;
-    case Gb::BlendSupported: return g->BlendSupported() ? 1 : 0;
-    case Gb::SetColor: g->SetColor((int)c); return 0;
-    case Gb::FillBlend: g->FillRectBlend(0, 0, ((const int*)d)[0], ((const int*)d)[1], ((const int*)d)[2]); return 0;
     case Gb::RawNew: return Held(t->mBGImage->GetRaw().get());
     case Gb::RawPixels: return (intptr_t)raw->GetImageData();
     case Gb::RawWidth: return raw->GetWidth();
     case Gb::RawHeight: return raw->GetHeight();
-    case Gb::DrawRaw: g->DrawImage(raw, 0, 0); return 0;
     default: return 0;
     }
 }

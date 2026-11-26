@@ -16,7 +16,6 @@
 #include "rust/won_gui/ctobj.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guihost.h"
-#include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -24,12 +23,10 @@ typedef EeWonCtVirt V;
 
 static Component* Comp(intptr_t a) { return (Component*)a; }
 
-extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp, intptr_t, intptr_t, intptr_t, intptr_t);
-// a component's virtual (or, for the base, Component's own, the Rust component's: inBase)
-static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t b)
+// a component's virtual (Component's own for the container, CtBase, and a child's Invalidate, RequestTimer and
+// RequestFocus are gamewin.rs common_op's in the game: R6 WON GUI round 38)
+static intptr_t CtVirtCall(Component* c, V v, intptr_t a, intptr_t b)
 {
-    if (inBase)
-        return ee_won_comp_base_call(c, ee_won_guicpp_comp_call, v, a, b);
     switch (v) {
     case V::NeedsPaint: return c->NeedsPaint() ? 1 : 0;
     case V::PrePaint: c->PrePaint(*(Graphics*)a); return 0;
@@ -45,7 +42,6 @@ static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t 
     case V::MouseHover: c->MouseHover((unsigned long)a); return 0;
     case V::HandleBroadcastEvent: c->HandleBroadcastEvent((ComponentEvent*)a); return 0;
     case V::AddedToParent: c->AddedToParent(); return 0;
-    case V::Invalidate: c->Invalidate(); return 0;
     case V::MarkInvalid: c->MarkInvalid(); return 0;
     case V::ClearGrabBG: c->ClearGrabBG(); return 0;
     case V::TabFocus: return c->TabFocus(a != 0, b != 0) ? 1 : 0;
@@ -56,8 +52,6 @@ static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t 
     case V::GotFocus: c->GotFocus(); return 0;
     case V::LostFocus: c->LostFocus(); return 0;
     case V::TimerEvent: return c->TimerEvent((int)a) ? 1 : 0;
-    case V::RequestTimer: c->RequestTimer(a != 0); return 0;
-    case V::RequestFocus: c->RequestFocus(); return 0;
     case V::SetCursor: c->SetCursor((Cursor*)a); return 0;
     case V::RemoveChild: static_cast<Container*>(c)->RemoveChild(Comp(a)); return 0; // (a container: the tab bar's)
     default: return 0;
@@ -87,8 +81,7 @@ namespace WONAPI {
 intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     switch (op) {
-    case Op::CtBase: return CtVirtCall(t, true, (V)a, b, c);
-    case Op::CtChild: return CtVirtCall(Comp(a), false, (V)b, c, d);
+    case Op::CtChild: return CtVirtCall(Comp(a), (V)b, c, d);
     case Op::CtChildMouseDown: Comp(a)->MouseDown((int)b, (int)c, (int)d); return 0;
     case Op::CtChildMouseUp: Comp(a)->MouseUp((int)b, (int)c, (int)d); return 0;
     case Op::CtParentCall:
@@ -96,14 +89,9 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         return CtOwnCall(t->mParent, (V)a, (intptr_t)static_cast<Component*>(t), 0);
     case Op::CtVirt: return CtOwnCall(t, (V)a, b, c);
     case Op::CtDetach: Comp(a)->mParent->RemoveChild(Comp(a)); return 0;
-    case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
-    case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
     // (a viewport whose area was never set: no area, not visible; the forwarder would read its object through NULL)
     case Op::VpAreaRectVisible:
         return a != 0 && static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
-    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
-    case Op::Invalidate: t->Invalidate(); return 0;
-    case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     default: return 0;
     }
 }

@@ -27,21 +27,16 @@ public:
     const GE3DPoint& GetCenterPoint() const { return *(const GE3DPoint*)this->Ptr(EeGeModPtr::Center); }
     bool GetClipToPlane(unsigned long inPlane) { return ee_ge_mod_clip(this->mRust, inPlane); }
     unsigned long GetFrameCount() const { return this->Val(EeGeModVal::FrameCount); }
-    float GetFractionalFramePosition() const
-        { return ee_ge_mod_getf(this->mRust, EeGeModFloat::FractionalFramePosition); }
+    float GetFractionalFramePosition() const { return ee_ge_mod_getf(this->mRust, EeGeModFloat::FractionalFramePosition); }
     const GEBoundingBox& GetGraphicsBoundingBox() const { return *this->GetGraphicsBoundingBoxPointer(); }
     float GetGraphicsBoundingRadius() const { return this->GetBoundingRadius(this->GetGraphicsCurrentFrame()); }
     unsigned long GetGraphicsCurrentFrame() const { return this->Val(EeGeModVal::CurrentFrame); }
     unsigned long GetGraphicsNextFrame() const { return this->Val(EeGeModVal::NextFrame); }
-    const GETransformation& GetGraphicsPostModelTransform() const
-        { return *(const GETransformation*)this->Ptr(EeGeModPtr::PostTransform); }
-    const GETransformation& GetGraphicsPreModelTransform() const
-        { return *(const GETransformation*)this->Ptr(EeGeModPtr::PreTransform); }
+    const GETransformation& GetGraphicsPostModelTransform() const { return *(const GETransformation*)this->Ptr(EeGeModPtr::PostTransform); }
+    const GETransformation& GetGraphicsPreModelTransform() const { return *(const GETransformation*)this->Ptr(EeGeModPtr::PreTransform); }
     float GetGraphicsScale() const { return ee_ge_mod_getf(this->mRust, EeGeModFloat::GraphicsScale); }
-    const GETransformation& GetGraphicsTransform() const
-        { return *(const GETransformation*)this->Ptr(EeGeModPtr::GraphicsTransform); }
-    const GETransformation& GetInternalTransform(unsigned long inFrame) const
-        { return this->GetInternalTransforms()[inFrame]; }
+    const GETransformation& GetGraphicsTransform() const { return *(const GETransformation*)this->Ptr(EeGeModPtr::GraphicsTransform); }
+    const GETransformation& GetInternalTransform(unsigned long inFrame) const { return this->GetInternalTransforms()[inFrame]; }
     unsigned long GetLODCount() const { return this->Val(EeGeModVal::LodCount); }
     GEMaterial* GetMaterial(unsigned long inIndex) const { return this->GetMaterials()[inIndex]; }
     unsigned long GetMaterialCount() const { return this->Val(EeGeModVal::MaterialCount); }
@@ -54,8 +49,7 @@ public:
     GEVertexArray* GetVertexArray(unsigned long inFrame) { return this->GetVertexArrays()[inFrame]; }
     unsigned long GetSubModelCount() const { return this->Val(EeGeModVal::SubModelCount); }
     const GE3DPoint& GetTagPoint(unsigned long inIndex) const { return this->GetTagPointList()[inIndex]; }
-    const GE3DPoint& GetTagPoint(unsigned long inIndex, unsigned long inFrame) const
-        { return this->GetFrameTagPoints()[inFrame][inIndex]; }
+    const GE3DPoint& GetTagPoint(unsigned long inIndex, unsigned long inFrame) const { return this->GetFrameTagPoints()[inFrame][inIndex]; }
     unsigned long GetTagPointCount() const { return this->Val(EeGeModVal::TagPointCount); }
     GE3DPoint* GetTagPointList() const { return (GE3DPoint*)this->Ptr(EeGeModPtr::TagPoints); }
     void SetClipToPlane(unsigned long inPlane, bool inClip) { ee_ge_mod_set_clip(this->mRust, inPlane, inClip); }
@@ -78,8 +72,7 @@ public:
     void PrepareTransforms() { ee_ge_mod_prepare_transforms(this->mRust); }
     // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
     void SetGraphicsCurrentFrame(unsigned long inFrame) { ee_ge_mod_set_current_frame(this->mRust, inFrame); }
-    void SetTexture(GETexture* inTexture, unsigned long inIndex)
-        { ee_ge_mod_set_texture(this->mRust, inTexture, inIndex); }
+    void SetTexture(GETexture* inTexture, unsigned long inIndex) { ee_ge_mod_set_texture(this->mRust, inTexture, inIndex); }
     unsigned long SizeOf() { return ee_ge_mod_size_of(this->mRust); }
     bool Verify() const { return ee_ge_mod_verify(this->mRust); }
     // an empty model owned by a model manager, with one LOD and no data allocated
@@ -92,25 +85,21 @@ public:
     virtual ~GEModel() { ee_ge_mod_destroy(this->mRust); }
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
-    void SetSubModel(GEModel* inModel, unsigned long inIndex)
-        { ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex); }
+    void SetSubModel(GEModel* inModel, unsigned long inIndex) { ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex); }
     // what the friends read (the store gate's digest), as accessors
     unsigned long GetVertexCount() const { return this->Val(EeGeModVal::VertexCount); }
     unsigned long GetSharedFrameCount() const { return this->Val(EeGeModVal::SharedFrameCount); }
     void GetSharedFrame(unsigned long inIndex, unsigned long& outFrame, long& outOffset) const
         { ee_ge_mod_shared_frame(this->mRust, inIndex, &outFrame, &outOffset); }
-    const GETransformation* GetInternalTransforms() const
-        { return (const GETransformation*)this->Ptr(EeGeModPtr::InternalTransforms); }
+    const GETransformation* GetInternalTransforms() const { return (const GETransformation*)this->Ptr(EeGeModPtr::InternalTransforms); }
     const GEBoundingBox* GetBoundingBoxes() const { return (const GEBoundingBox*)this->Ptr(EeGeModPtr::BoundingBoxes); }
-    const GEBoundingBox* GetGraphicsBoundingBoxPointer() const
-        { return (const GEBoundingBox*)this->Ptr(EeGeModPtr::GraphicsBoundingBox); }
+    const GEBoundingBox* GetGraphicsBoundingBoxPointer() const { return (const GEBoundingBox*)this->Ptr(EeGeModPtr::GraphicsBoundingBox); }
     const float* GetBoundingRadii() const { return (const float*)this->Ptr(EeGeModPtr::BoundingRadii); }
     GE3DPoint* const* GetFrameTagPoints() const { return (GE3DPoint* const*)this->Ptr(EeGeModPtr::FrameTagPoints); }
     GEMaterial* const* GetMaterials() const { return (GEMaterial* const*)this->Ptr(EeGeModPtr::Materials); }
     const UString* GetTextureFilenames() const { return (const UString*)this->Ptr(EeGeModPtr::TextureFilenames); }
     const UString* GetTagPointNames() const { return (const UString*)this->Ptr(EeGeModPtr::TagPointNames); }
-    GEPolygonArray* const* GetPolygonArrays() const
-        { return (GEPolygonArray* const*)this->Ptr(EeGeModPtr::PolygonArrays); }
+    GEPolygonArray* const* GetPolygonArrays() const { return (GEPolygonArray* const*)this->Ptr(EeGeModPtr::PolygonArrays); }
     GEVertexArray* const* GetVertexArrays() const { return (GEVertexArray* const*)this->Ptr(EeGeModPtr::VertexArrays); }
     GEModel* const* GetSubModels() const { return (GEModel* const*)this->Ptr(EeGeModPtr::SubModels); }
 

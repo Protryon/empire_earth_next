@@ -6,22 +6,14 @@
 // colour constants are ee_gfx ro_units.rs's (RUST_PLAN R4.4): the C++ hands the frame's render lists over as records
 // and keeps the bar rhombi and the line batch (LoadMedia 0x516a97's asserts carry their original __LINE__ 1823/1824).
 #include <windows.h>
-
 #include <vector>
-
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEText.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "GEWindow.h"
-
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
@@ -31,9 +23,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEROUnits.h"
-#include "lle/GESurface.h"
-#include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
@@ -41,7 +30,6 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EEROUserInterface.h"
-#include "rust/game/gamecpp.h"
 #include <utility>
 
 extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
@@ -59,56 +47,15 @@ static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == s
               sizeof(GERectangle) == sizeof(EeGeRectangle) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
               sizeof(GEViewport) == sizeof(EeGeViewport) && sizeof(GEColor) == sizeof(EeGfxColor), "GE mirrors");
 
-// Creates the units' render object
-EEROUnits::EEROUnits()
-{
-}
-
-// Destroys the units' render object
-EEROUnits::~EEROUnits()
-{
-}
-
-// Fills the render lists of units and objects for this frame
-void EEROUnits::FrameStarting()
-{
-    this->FillRenderLists();
-}
-
 extern std::vector<unsigned long> gU4E9230;   // EERenderObject.cpp: the rectangle's picked unit ids
 extern EERenderUnit* gU529044;               // the picked enemy's render unit
 extern UWideString gU529030;                 // its owner's name
-
-// the media, the frame's draws and the labels: gamecpp ro_units.rs
-void EEROUnits::LoadMedia()
-{
-    ee_gamecpp_ru_load_media();
-}
-
-void EEROUnits::RenderScene()
-{
-    ee_gamecpp_ru_draw(false);
-}
-
-void EEROUnits::FrameDone()
-{
-    ee_gamecpp_ru_frame_done();
-}
-
-void EEROUnits::ReleaseMedia()
-{
-    ee_gamecpp_ru_release_media();
-}
 
 // Projects a world point to window coordinates in the game view (ee_gfx units.rs)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 {
     ee_gfx_units_screen_point(reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
                               reinterpret_cast<const EeGe3DPoint*>(&inPoint), reinterpret_cast<EeGe2DPoint*>(&outPoint));
-}
-
-void EEROUnits::SceneStarting()
-{
 }
 
 // ------------------------------------------------------------------------- round 10, lane A: this file's C++ (gamecpp ro_units.rs)

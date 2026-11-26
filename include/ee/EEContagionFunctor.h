@@ -8,6 +8,7 @@
 #define EE_EECONTAGIONFUNCTOR_H
 
 #include "rust/sim/tech.h"   // EeContagionFunctorFields (ee_tech contagion_functor.rs)
+#include "rust/game/gamecpp.h"
 
 class EECalamity;
 class EECalamityClass;
@@ -22,7 +23,7 @@ class EEUnit;
 class EEContagionFunctor : public EeContagionFunctorFields {
 public:
     // the functor of inKind for the class (its record, effects and immunity flag; the fire references its effect)
-    EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind);
+    EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind) { ee_gamecpp_functor_construct(this, inClass, inKind); }
     ~EEContagionFunctor();                  // the fire's 0xb6c2f: its effect released
 
     // CanInfect (0xb66f8, every kind's CanInfectType 0xb6c4d: the unit set test), the update's periods (0xb6c7c,

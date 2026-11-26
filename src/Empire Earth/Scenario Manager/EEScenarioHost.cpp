@@ -33,10 +33,7 @@
 namespace {
 
 // the world's player slot inA (NULL outside the array, as no original index reached)
-EEPlayer* Player(int32_t inA)
-{
-    return inA >= 0 && inA < (int32_t)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0])) ? gWorld.mPlayers[inA] : NULL;
-}
+EEPlayer* Player(int32_t inA) { return inA >= 0 && inA < (int32_t)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0])) ? gWorld.mPlayers[inA] : NULL; }
 
 }   // namespace
 
@@ -51,8 +48,7 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_RANDOM: return gPhysics->GetRandom((long)inA, (long)inB);
     case EE_SCENARIO_READ_POPULATION: return thePlayer->GetTotalPopulation(false, false);
     case EE_SCENARIO_READ_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
-    case EE_SCENARIO_READ_COMPUTER_DIFFICULTY:
-        return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
+    case EE_SCENARIO_READ_COMPUTER_DIFFICULTY: return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
     case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
@@ -142,12 +138,8 @@ extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_
     case EE_SCENARIO_RX_OBJECT_ATTRIBUTE_PERCENT: return SMReadOf<EESMObject>(a[0])->GetIsAttributePercent();
     case EE_SCENARIO_RX_OBJECT_UNIT_ATTRIBUTE:
         return SMReadOf<EESMObject>(a[0])->GetUnitAttribute((unsigned long)a[1], a[2] != 0, SMReadOf<EEUnit>(a[3]), 0, 0);
-    case EE_SCENARIO_RX_OBJECT_GET_UNITS:
-        SMReadOf<EESMObject>(a[0])->GetUnits(sSMReadIDs);
-        return 0;
-    case EE_SCENARIO_RX_IDS_CLEAR:
-        sSMReadIDs.clear();
-        return 0;
+    case EE_SCENARIO_RX_OBJECT_GET_UNITS: SMReadOf<EESMObject>(a[0])->GetUnits(sSMReadIDs); return 0;
+    case EE_SCENARIO_RX_IDS_CLEAR: sSMReadIDs.clear(); return 0;
     case EE_SCENARIO_RX_IDS_COUNT: return (int64_t)sSMReadIDs.size();
     case EE_SCENARIO_RX_IDS_AT: return (int64_t)sSMReadIDs[(size_t)a[0]];
     case EE_SCENARIO_RX_TRIGGER: return SMReadPtr(gWorld.mScenarioManager->GetTrigger((unsigned long)a[0]));

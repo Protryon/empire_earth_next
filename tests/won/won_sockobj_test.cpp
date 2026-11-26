@@ -1099,7 +1099,7 @@ static void Udp()
     // an op for u's address with a check: a datagram it refuses goes to the auto-receive op
     Verifier aCheck = {'A', 'R', "addr op"};
     SmartPtr<UdpDone> anAddrDone = new UdpDone("addr");
-    SmartPtr<UDPManagerRecvOp> anAddrOp = new UDPManagerRecvOp(aU);
+    SmartPtr<UDPManagerRecvOp> anAddrOp = new UDPManagerRecvOp(aU.GetValue());
     anAddrOp->SetMessageVerifier(&Verifier::Check, &aCheck);
     anAddrOp->SetCompletion(anAddrDone);
     m->QueueOp(anAddrOp, 60000);
@@ -1124,7 +1124,7 @@ static void Udp()
     PumpFor(anAnyDone, 1);
     // a timed-out op
     SmartPtr<UdpDone> aShortDone = new UdpDone("short");
-    SmartPtr<UDPManagerRecvOp> aShortOp = new UDPManagerRecvOp(IPAddr("127.0.0.1", 1));
+    SmartPtr<UDPManagerRecvOp> aShortOp = new UDPManagerRecvOp(IPAddr("127.0.0.1", 1).GetValue());
     aShortOp->SetCompletion(aShortDone);
     m->QueueOp(aShortOp, 30);
     PumpFor(aShortDone, 1);
@@ -1193,7 +1193,7 @@ static void Udp()
 
     // close: the waiting ops are killed
     SmartPtr<UdpDone> aWaitDone = new UdpDone("wait");
-    SmartPtr<UDPManagerRecvOp> aWait = new UDPManagerRecvOp(aSrv);
+    SmartPtr<UDPManagerRecvOp> aWait = new UDPManagerRecvOp(aSrv.GetValue());
     aWait->SetCompletion(aWaitDone);
     m->QueueOp(aWait, 60000);
     SmartPtr<UdpDone> aWait2Done = new UdpDone("wait2");
@@ -1274,7 +1274,7 @@ static void UdpOps()
     // an addressed receive op on its own socket: another sender's datagram, a refused one, one that throws, then one
     // accepted (the own-socket path keeps no message)
     SmartPtr<UdpDone> anOwnDone = new UdpDone("own recv");
-    SmartPtr<UDPManagerRecvOp> anOwn = new UDPManagerRecvOp(aSrv);
+    SmartPtr<UDPManagerRecvOp> anOwn = new UDPManagerRecvOp(aSrv.GetValue());
     anOwn->SetMessageVerifier(&TwoByteCheck, NULL);
     anOwn->SetCompletion(anOwnDone);
     anOwn->RunAsync(60000);
@@ -1400,7 +1400,7 @@ static void UdpOps()
     m->Bind(0, false);
     IPAddr aMgr("127.0.0.1", m->GetSocket()->GetLocalPort());
     SmartPtr<UdpDone> aMgrDone = new UdpDone("mgr recv");
-    SmartPtr<UDPManagerRecvOp> aMgrOp = new UDPManagerRecvOp(aU);
+    SmartPtr<UDPManagerRecvOp> aMgrOp = new UDPManagerRecvOp(aU.GetValue());
     aMgrOp->SetUDPManager(m);
     aMgrOp->SetCompletion(aMgrDone);
     aMgrOp->RunAsync(60000);

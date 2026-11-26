@@ -49,12 +49,6 @@ public:
     // (`jbe`: unsigned) and the hull's center as the node tile (0x28aa7 reads +0x44/+0x48) (provisional names)
     unsigned long GetNumNeighbors() const { return (unsigned long)this->GetNeighbors().size(); }
 
-    // New (port): the members behind accessors (R5b.1 blocker (b)); the lists, counts, category and id are the
-    // record's (EeAStarContinentRecord, ee_astar continent.rs), the neighbours stay here
-    EEAIListView<U2DPoint<long> > GetShoreTiles() const
-        { return EEAIListView<U2DPoint<long> >(ee_astar_continent_shore, static_cast<const EeAStarContinentRecord*>(this)); }
-    EEAIListView<long> GetChokePoints() const
-        { return EEAIListView<long>(ee_astar_continent_choke_points, static_cast<const EeAStarContinentRecord*>(this)); }
     EEAIListView<unsigned short> GetIDs(EeAStarContinentList inList) const
         { return EEAIListView<unsigned short>(ee_astar_continent_ids, static_cast<const EeAStarContinentRecord*>(this), inList); }
     EEAIListView<unsigned short> GetPathAreaIDs() const { return this->GetIDs(EeAStarContinentList::PathAreas); }

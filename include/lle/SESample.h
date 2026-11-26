@@ -11,10 +11,7 @@
 #include "lle/SEMixer.h"
 
 // a none (-1) or paused (-2) id or channel keeps all bits set on LP64, as the C++ stored it (`= -1`)
-inline unsigned long EeSoundWide(uint32_t inValue)
-{
-    return inValue >= 0xfffffffeu ? (unsigned long)(long)(int32_t)inValue : (unsigned long)inValue;
-}
+inline unsigned long EeSoundWide(uint32_t inValue) { return inValue >= 0xfffffffeu ? (unsigned long)(long)(int32_t)inValue : (unsigned long)inValue; }
 
 class LLE_API SESample : URustView {
 public:

@@ -13,7 +13,6 @@
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/SESoundManager.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/UResourceFile.h"
@@ -59,7 +58,6 @@
 #include "ee/EECheatCodes.h"
 #include "ee/EECivilizationManager.h"
 #include <utility>
-#include "rust/game/gamecpp.h"
 #include "ee/EEGameLog.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)

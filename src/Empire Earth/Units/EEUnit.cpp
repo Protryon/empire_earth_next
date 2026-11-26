@@ -7,18 +7,9 @@
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnitStore.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -26,24 +17,18 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "ee/EEEffectManager.h"
 #include "lle/SESoundManager.h"
 #include "ee/EEGameSound.h"
-#include "ee/EECameraControl.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EESoundObject.h"
-#include "ee/RTSRegionTable.h"
-#include "ee/EEUnitRegions.h"
 #include "ee/EEInfluenceTable.h"
 #include <math.h>
 #include <algorithm>
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEMapDimensions.h"
@@ -51,9 +36,6 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIForest.h"
-#include "ee/EEEffectKindIDs.h"
-#include "ee/EEUnitHandle.h"
-#include "rust/sim/units.h"
 
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
@@ -64,10 +46,7 @@ EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPla
 }
 
 // Returns the centre of the unit's tile at ground height
-void EEUnit::GetPosition(GE3DPoint& outPosition)
-{
-    outPosition = GE3DPoint(this->mTileX + 0.5f, this->mTileY + 0.5f, this->mTile->mHeight);
-}
+void EEUnit::GetPosition(GE3DPoint& outPosition) { outPosition = GE3DPoint(this->mTileX + 0.5f, this->mTileY + 0.5f, this->mTile->mHeight); }
 
 // Turns the loaded health fraction into hit points (at least 1 if the fraction was not 0; port, R5b.4 round 27:
 // ee_units unit_load.rs finish_hit_points over the record); returns 0
@@ -88,10 +67,7 @@ static float sDeathSound[3];   // volume, pan, pitch
 // Describe's and DescribeLong's text (their theString)
 static UWideString sEuText;
 
-template <class T> static T* EEEuObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEEuObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // The C++ of EEUnit::TakeHit's Rust body (ee_units eu_hit.rs; EE_UNITS_EU_*): one statement of the original each, in
 // its order; inA an object, inB and inC values
@@ -105,9 +81,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     switch (inOp) {
     case EE_UNITS_EU_COMPLEX: return (uint64_t)(uintptr_t)theComplex;
     case EE_UNITS_EU_PREVIOUS_PART: return (uint64_t)(uintptr_t)theComplex->mPreviousPart;
-    case EE_UNITS_EU_PART_TAKE_HIT:
-        EEEuObject<EEComplexUnit>(inA)->TakeHit(EEEuObject<EEUnit>((uint64_t)theArgs[0]), (long)theArgs[1], (unsigned long)theArgs[2], (long)theArgs[3]);
-        return 0;
+    case EE_UNITS_EU_PART_TAKE_HIT: EEEuObject<EEComplexUnit>(inA)->TakeHit(EEEuObject<EEUnit>((uint64_t)theArgs[0]), (long)theArgs[1], (unsigned long)theArgs[2], (long)theArgs[3]); return 0;
     case EE_UNITS_EU_IN_CINEMATIC: return ::gWorld.mInCinematic;
     case EE_UNITS_EU_DISABLED_UNPROTECTED: return theComplex->mIsDisabled && !theComplex->IsProtected();
     case EE_UNITS_EU_HIT_POINTS: return theUnit->mHitPoints;
@@ -132,8 +106,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_HAS_UNDER_ATTACK: return theComplex->mUnitClass->FindAction(kActionUnderAttack) != NULL;
     case EE_UNITS_EU_START_UNDER_ATTACK: theComplex->StartAction(kActionUnderAttack); return 0;
     case EE_UNITS_EU_ACTION_CHANGED: theComplex->mUnitClass->ActionChanged(theComplex); return 0;
-    case EE_UNITS_EU_SHOOTS_TRACERS:
-        return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
+    case EE_UNITS_EU_SHOOTS_TRACERS: return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
     case EE_UNITS_EU_HIT_FORMULA:
         sHitOut = EECombatHitPoints(EeCombatHitPointsIn{(int32_t)inB, (int32_t)inC, (int32_t)theUnit->mStats->mMaxHitPoints});
         return 0;
@@ -147,9 +120,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_TILE_X: return theOther->mTileX;
     case EE_UNITS_EU_TILE_Y: return theOther->mTileY;
     case EE_UNITS_EU_CONTAINER: return (uint64_t)(uintptr_t)EEEuObject<EEComplexUnit>(inA)->mContainer;
-    case EE_UNITS_EU_ADD_ATTACK_EVENT:
-        thePlayer->mEvents.AddPlayerEvent(EETileLocation(theUnit->mTileX, theUnit->mTileY), EETileLocation((long)inB, (long)inC), 1, thePlayer, -1, false);
-        return 0;
+    case EE_UNITS_EU_ADD_ATTACK_EVENT: thePlayer->mEvents.AddPlayerEvent(EETileLocation(theUnit->mTileX, theUnit->mTileY), EETileLocation((long)inB, (long)inC), 1, thePlayer, -1, false); return 0;
     case EE_UNITS_EU_DAMAGE_EFFECT: return (uint64_t)(uintptr_t)theUnit->mUnitClass->mDamageEffect;
     case EE_UNITS_EU_SHOWS_DAMAGE: return theUnit->mTileNode == NULL || theUnit->mComplexUnit->mIsBuilt;
     case EE_UNITS_EU_DAMAGE_EFFECT_FORMULA: return EECombatDamageEffect(EeCombatDamageEffectIn{(int32_t)theUnit->mHitPoints, (int32_t)inB, (int32_t)theUnit->mStats->mMaxHitPoints, EEEuObject<EEGraphicEffect>(inA)->GetParam2()});
@@ -169,9 +140,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_STATS_RESET: ::gWorld.mPlayers[inB]->mSavedGroups.Reset((long)inC, 1); return 0;
     case EE_UNITS_EU_KILL: theUnit->Kill(true, false, false); return 0;
     case EE_UNITS_EU_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
-    case EE_UNITS_EU_ICBM_EXPLOSION:
-        gWorld.mEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectAircraftExplosion), NULL, false, 0, 0);
-        return 0;
+    case EE_UNITS_EU_ICBM_EXPLOSION: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectAircraftExplosion), NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_IS_CURRENT_PLAYER: return theUnit->mPlayer == ::gWorld.GetCurrentPlayer();
     case EE_UNITS_EU_MINIMAP_PING: gMiniMap->Ping(GE2DPoint((float)theUnit->mTileX, (float)theUnit->mTileY)); return 0;
     case EE_UNITS_EU_SELECTED: return theUnit->mPlayer->mSelectedGroup->Contains(theComplex);
@@ -208,17 +177,12 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_ACTIVATE_COMPLEX: gWorld.ActivateUnit(theComplex); return 0;
     case EE_UNITS_EU_RESORT: gWorld.ResortUnit(theUnit); return 0;
     case EE_UNITS_EU_SIGHT_OFF_HERE: theUnit->SightOff(theUnit->mTileX, theUnit->mTileY); return 0;
-    case EE_UNITS_EU_HAS_DOPPELGANGER:
-        return gDoppelgangerManager.GetDoppelganger(EEEuObject<EETile>(inA), theUnit, theUnit->mPlayer->mPlayerID) != NULL;
-    case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN:
-        gDoppelgangerManager.TileShown(EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, theUnit->mPlayer);
-        return 0;
+    case EE_UNITS_EU_HAS_DOPPELGANGER: return gDoppelgangerManager.GetDoppelganger(EEEuObject<EETile>(inA), theUnit, theUnit->mPlayer->mPlayerID) != NULL;
+    case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN: gDoppelgangerManager.TileShown(EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, theUnit->mPlayer); return 0;
     case EE_UNITS_EU_HAS_DEATH_EFFECT: return theUnit->mUnitClass->mDeathEffect != NULL;
     case EE_UNITS_EU_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
     case EE_UNITS_EU_HAS_DEATH_SOUND: return theUnit->mStats->mDeathSound != NULL;
-    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS:
-        theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]);
-        return 0;
+    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]); return 0;
     case EE_UNITS_EU_DEATH_SOUND_PLAY:
         gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, sDeathSound[0], sDeathSound[1], sDeathSound[2], theUnit->mStats->mDeathSound->mLooping, NULL);
         return 0;

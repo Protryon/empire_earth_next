@@ -17,14 +17,11 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include <string.h>
 #include <string>
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GETerrainMesh.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -45,7 +42,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EECivilizationManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
-#include "lle/FSRestorable.h"
 #include "lle/UResourceFile.h"
 #include "lle/TMTimer.h"
 #include "lle/FSPersistentList.h"
@@ -63,7 +59,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEMusicManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEGraphics.h"
-#include "ee/EECPEngine.h"
 #include "ee/EECPNextUnits.h"
 
 #include "ee/EEGlobalStorage.h"
@@ -191,8 +186,6 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 #include "lle/NEMessage.h"
 #include "ee/EEMessage.h"
 
-#include "GEWindow.h"
-#include "lle/GEFont.h"
 #include "lle/UIFontTable.h"
 #include "ee/EERenderObject.h"
 #include "ee/EERenderLists.h"

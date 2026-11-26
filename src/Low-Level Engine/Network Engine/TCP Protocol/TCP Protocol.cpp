@@ -7,12 +7,9 @@
 #include <vector>
 
 #include "platform/wintypes.h"   // the Windows types the engine headers use (on Windows <windows.h>, as before)
-#include "platform/PlatSocket.h"
 #include "platform/PlatSim.h"
-#include "platform/PlatThread.h"
 
 #include "lle/LowLevelEngine.h"
-#include "rust/net/net_tcp.h"
 
 // ---- the engine calls Rust needs (extern "C" so Rust can link them)
 

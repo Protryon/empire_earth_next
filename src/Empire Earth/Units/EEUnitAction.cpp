@@ -9,14 +9,6 @@
 #include <stdlib.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 
@@ -24,12 +16,9 @@
 #include <string>
 #include <vector>
 
-#include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEPhysics.h"
-#include "rust/sim/units.h"
 
 extern FSPath* gDataPath;
 
@@ -54,11 +43,6 @@ extern "C" int64_t ee_units_script_host(int32_t inOp, uint64_t inA, int64_t inB)
     case EE_UNITS_SCRIPT_H_DELETE: delete sScriptFile; return 0;
     default: return 0;
     }
-}
-
-void* EEUnitAction::GetScript(const UString& inName)
-{
-    return reinterpret_cast<void*>(static_cast<uintptr_t>(ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength())));   // script.rs
 }
 
 // IsActive's action (the gather test's local)

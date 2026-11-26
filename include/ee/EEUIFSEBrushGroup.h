@@ -6,13 +6,15 @@
 #define EE_EEUIFSEBRUSHGROUP_H
 
 #include "lle/LLEForward.h"
+#include "rust/game/screens.h"
 
 class EEUIFSEBrushGroup {
 public:
-    EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inPosition, UIForm* inForm, GEFont* inFont);
-    ~EEUIFSEBrushGroup();                   // 0x1a074a, five owned buttons plus title
+    EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inLocation, UIForm* inForm, GEFont* inFont) { ee_screens_sebr_group_new(reinterpret_cast<EeScreensSeBrushGroup*>(this), &ioIndex, inLocation.GetX(), inLocation.GetY(), inForm, inFont); }
+    // 0x1a074a, five owned buttons plus title
+    ~EEUIFSEBrushGroup() { ee_screens_sebr_group_free(reinterpret_cast<EeScreensSeBrushGroup*>(this)); }
     // 0x1a0778: the brush outline at tile (inX, inY) (EEUIFSEElevation::MouseMove) (provisional name)
-    void SetHighlight(float inX, float inY, bool inIsCentered);
+    void SetHighlight(float inX, float inY, bool inIsCentered) { ee_screens_sebr_group_highlight(reinterpret_cast<EeScreensSeBrushGroup*>(this), inX, inY, inIsCentered); }
     void SetIsHighlightShown(bool inValue) { this->mIsHighlightShown = inValue; }
     GERectangle mRectangle;                 // +0x00
     UIControl* mButtons[5];                 // +0x10 (the brush radio buttons: shells, ee_game shells.rs)

@@ -8,22 +8,23 @@
 #include <stddef.h>
 #include "rust/won_gui/imgdec.h"
 
+/// The offset of `mRust` (the `EeWonImage*`) in an image handle (RefCount's vtable pointer and its 32-bit count,
+/// padded): every host's handle class lays it out there (the game's `Image`, a driver's own).
+constexpr static const size_t EE_WON_IMAGE_RUST_AT = 16;
+
+/// The offset of a DisplayContext's members ([`EeWonDisplayContextRec`]) in the C++ object (after RefCount's head).
+constexpr static const size_t EE_WON_CONTEXT_AT = 16;
+
 /// What an image asks of the C++ (`a`..`d` per op).
 enum class EeWonImageHost : int32_t {
   /// `((RefCount*)a)->AddRef()`.
   Ref = 0,
   /// `((RefCount*)a)->Release()`.
   Unref = 1,
-  /// A new handle for the image `(EeWonImage*)a` (its class by the kind), no reference taken.
+  /// A new handle for the image `(EeWonImage*)a` (its class by the kind), no reference taken. (3..6 read a handle's
+  /// `mRust` and a DisplayContext's members: read in place since R6 WON GUI round 38, [`EE_WON_IMAGE_RUST_AT`] and
+  /// [`EeWonDisplayContextRec`].)
   Wrap = 2,
-  /// `((Image*)a)->mRust`.
-  RustOf = 3,
-  /// `((DisplayContext*)a)->mGraphics` (0 for a NULL context).
-  CtxGraphics = 4,
-  /// The `EeWonSurface*` of `((DisplayContext*)a)->mSurface` (0 for none or a NULL context).
-  CtxSurface = 5,
-  /// `((DisplayContext*)a)->mPixelScale` into `*(float*)b`.
-  CtxScale = 6,
   /// `((Graphics*)a)`'s translation into `((int*)b)[0..2]`.
   GfxTrans = 7,
   /// `((Graphics*)a)->mDisplayContext.get()`.

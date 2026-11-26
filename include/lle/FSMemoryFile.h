@@ -79,16 +79,10 @@ public:
         { return ee_fs_mem_fopen_disk(this->mState, inMode, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<EeFsString*>(&this->mTemporaryFileName)); }
     virtual long GetFirstFile(FSFileSpec& outFile) { return kErrorFailed; }                // +0xb0 (folded 0x3903e)
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile) { return kErrorFailed; }   // +0xac (0x39110)
-    virtual long GetLength(unsigned long& outLength) const                      // +0xb4 0xa45b (the written length)
-    {
-        return ee_fs_mem_get_length(this->mState, &outLength);
-    }
+    virtual long GetLength(unsigned long& outLength) const { return ee_fs_mem_get_length(this->mState, &outLength); }  // +0xb4 0xa45b (the written length)
     virtual long GetNextFile(FSFileSpec& outFile) { return kErrorFailed; }                 // +0xb8 (folded 0x3903e)
     virtual void GetParentDirectory(FSFileSpec& outDirectory) const {}          // +0xbc (folded 0x58f8e)
-    virtual long GetPosition(long& outPosition) const                           // +0xc0 0xa46c (-1 closed or empty)
-    {
-        return ee_fs_mem_get_position(this->mState, &outPosition);
-    }
+    virtual long GetPosition(long& outPosition) const { return ee_fs_mem_get_position(this->mState, &outPosition); }  // +0xc0 0xa46c (-1 closed or empty)
     virtual bool IsDirectory() const { return false; }                          // +0xc4 (folded 0x5efa4)
     virtual long Lock() { return kErrorFailed; }                                           // +0xc8 (0x4652)
     virtual long SetLength(unsigned long& ioLength, bool inTruncate) { return kErrorFailed; }   // +0xcc (folded 0x39110)

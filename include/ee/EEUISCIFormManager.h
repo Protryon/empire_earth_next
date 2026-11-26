@@ -29,11 +29,6 @@ public:
     // Opens the scenario's map picture (.jpg, else .png; the original's second choice was .tga) from Scenarios; returns
     // whether one was found
     bool OpenMap() { return ee_screens_sci_open_map((uintptr_t)this); }                         // 0x1e72e4 (mMapFile + ".jpg", else ".png", in "Scenarios\")
-    // (0x1e73bd OpenMovie and GetMovie: the scenario's movie, gone with the movies; its name stays in mMediaStrings)
-    // Reopens the scenario file by name from Scenarios or the data path; returns whether it was found
-    bool OpenScenario() { return ee_screens_sci_open_scenario((uintptr_t)this); }                    // 0x1e7444 (mFile's own name, in "Scenarios\" or the data path)
-    // Opens the scenario's sound (.mp3) from Sounds; returns whether it was found
-    bool OpenSound() { return ee_screens_sci_open_sound((uintptr_t)this); }                       // 0x1e74dc (mSoundFile + ".mp3" in "Sounds\")
     // Returns the scenario's history text
     UWideString GetHistory() { return this->mMediaStrings.mHistory; }               // 0x1e7563 (mHistory)
     // Returns the scenario's hints text
@@ -50,10 +45,6 @@ public:
     void SetBlinking(bool inBlinking) { ee_screens_sci_set_blinking(inBlinking); }      // 0x1e766a (the main game form's info button; 0x1be512, 0x26615a)
     // 0x1d2ae5 (out of line COMDAT; the SCL/SPL load events call it): owns the opened scenario file
     void SetFile(FSFileSpec* inFile) { delete this->mFile; this->mFile = inFile; }
-
-    // inline setters (SCLE LoadFile's inline budget; provisional names)
-    void SetMediaStrings(const EESMMediaStrings& inStrings) { this->mMediaStrings = inStrings; }
-    void SetIsCampaign(bool inFlag) { this->mIsCampaign = inFlag; }
 
     EESMMediaStrings mMediaStrings;         // +0x04 (sizeof 0x8c)
     FSFileSpec* mMap;                       // +0x90 (OpenMap)

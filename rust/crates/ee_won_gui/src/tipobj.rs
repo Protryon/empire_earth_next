@@ -109,6 +109,17 @@ impl EeWonTip {
     }
 
     fn op(&self, o: EeWonTipOp, a: isize, b: isize) -> isize {
+        // the Graphics' own in the game (gfxrun.rs: TextListItem.cpp's cases went, R6 WON GUI round 38)
+        use crate::guihost::EeWonGuiOp as G;
+        let g = match o {
+            EeWonTipOp::Draw => Some(G::Draw),
+            EeWonTipOp::Scheme => Some(G::CtScheme),
+            EeWonTipOp::SetScheme => Some(G::CtSetScheme),
+            _ => None,
+        };
+        if let Some(r) = g.filter(|_| crate::compobj::is_game()).and_then(|g| crate::gfxrun::game_op(g, a, b)) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object
             Some(h) => unsafe { h(self.me, o, a, b) },

@@ -14,8 +14,6 @@
 #include "lle/UWideString.h"
 #include "lle/UReferenceCounter.h"
 #include "lle/NEMessage.h"
-#include "rust/sim/netmsg.h"   // ee_netmsg: the engine messages' wire layout and records
-#include "rust/game/lle.h"
 
 static_assert(sizeof(NEMRecordValue) == sizeof(int64_t), "a sender's value is one long long");
 

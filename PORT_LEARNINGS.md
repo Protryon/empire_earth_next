@@ -41846,3 +41846,95 @@ this is the lead's part and the round's.
   cases reached from ee_sim (need a hook ee_game registers into ee_sim: units lane) and the scenario editor's (behind
   goldened screens host traits); MiniMapSetViewer/Snapshot (no Rust accessor of RTSMiniMap's pixels); the player's
   host prologues (player/tech round 2 landed in batch 28: next round).
+
+## The game headers lane, round 2: the paused lanes' headers inline, uncalled members and stale includes removed, emptied units deleted (branch rust-headers2, 2026-11-25)
+
+Numbers: docs/progress/headers.md "Round 2". port_metrics 4930a8c9d (round 1 + batch 26) -> the merged tip: cpp_lines
+-6,981 (about -3,934 removals, -3,047 formatting), compiled files -5, logic -220.
+
+- **A fork branch older than a batch is cheaper to redo than to merge** when its work is mechanical. hd2a's units
+  pass, merged after batch 26 (units 12) landed, conflicted in 21 files; rerunning its tools (inl.py, the dead-member
+  scan, trim.py, the joiners) on the merged base took one cycle and found mostly the same edits. Keep the tools, not
+  only the commits.
+- **Stale includes are the biggest cheap cut**: about a third of the project `#include "..."` lines of a unit can go
+  (2,523 lines over about 190 units). trim.py removes each, last first, and keeps the removal only if the unit
+  compiles (clang-cl /Zs with the unit's own flags; about 14 s per trial on a loaded machine; it stages into build/eex,
+  so never during a build of the same worktree, and a killed run leaves the file of the trial in progress short of
+  one include: restore those files from git). Traps: a header defining a macro the unit tests in `#if` (checked: none
+  here), includes inside `#if` blocks (hd2b skips them), and the POSIX-only branches: Empire Earth.cpp's `main`
+  (`#else` of `_WIN32`) uses rust/game/gamecpp.h and platform/PlatSim.h, which Windows compiled without; keep the
+  rust/ and platform/ includes of a unit with POSIX branches. Only Windows checked the trim; a POSIX game build should.
+- **Uncalled members**: count code mentions repo-wide, the declaring header included (uncalled.py skips the
+  header, so about 20 of its hits were wrong). Only non-virtual members: a virtual's slot is the vtable's layout.
+  A delete tool keyed on names can hit the wrong member (hd2b's removed GERasterizer::Light for RemoveAllLights;
+  review the diff).
+- **inl.py's rust index misses Rust calls declared by hand in a .cpp** (EEGraphicEffect's ee_preload_* and
+  ee_gfx_geffect_*): such a body cannot go inline until the declaration is in a generated header. `if` bodies are one
+  statement too (KEYWORDS now has `if`).
+- **Line joins are formatting**: compact.py (a one-statement body onto its signature's line) and casejoin.py (a
+  `case X:` with its 1-3 statements) cut 3,047 lines with no change of code; report them apart from removals.
+- **Other lanes' files hide in directories**: a trim list by directory picked up EECivilization.cpp (player/tech)
+  and EEAWonNet.cpp (WON); both were restored. Filter by the running lanes' name patterns, not by folder.
+- **Behaviour changes**: none intended; the oracle is identical. `__LINE__` values in the trimmed and joined units
+  moved.
+- **Gates** (on 50072c064, batch 26 in; the owner's reduced lane set): both builds 0/0 (EE-AOC, EE-SIM; the test
+  profile 366 inputs), headers current, the Rust gate PASS; the oracle seeds 2-7 identical; captures oracle (598
+  digests), late (598), calamity (623), units (510), effects (18), scenario (113), groups (6) PASS; the saveload
+  matrix `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS
+  (4,062); the tour, `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS) and the editor
+  RESULT PASS; won_host_coverage PASS, `xbuild.py wontest` PASS (183 drivers, exit 0); `gates.sh` GATES PASS (ai-game
+  time-cap units [4, 34, 36] alive_computers [2, 3] engines classic_lua x 2; lan-game PT host=2811 joiner=2809).
+  Not run: the space, missile, app, placement and transport captures, plain saveload, eedata (untouched), POSIX builds.
+
+## R6 WON GUI, round 38: RootContainer's overrides and Button's copies through Component's dispatch, the window event over a Rust record, Graphics a Rust record with its draw plans run in Rust, the message box, buttons, list items, combo box, list hosts, children and layouts answered in Rust in the game (ee_won_gui gamewin.rs, gfxrun.rs, wmobj.rs EeWonWmEventRec; branch rust-wongui38, 2026-11-25)
+
+The round started from rust-wongui37 (906c751aa, batch 26 in). A first lead (on another model) stopped after about 30
+minutes with fork A's work uncommitted and fork B's one commit plus uncommitted edits; the resumed lead (Opus) built both
+fork states, committed them (fork B's WindowManager.cpp `WmEvent` case got a check that only `Deliver` reaches the
+virtual), merged them and relaunched both forks into their worktrees. Both finished; their merge had one conflict
+(gamewin.rs's tail: fork A's msgbox_op beside fork B's test module, both kept), then origin/rust batch 27 (9e8714175)
+merged with the usual cbindgen.toml and PORT_LEARNINGS.md unions.
+
+### What moved (`port_metrics.py` cpp_lines, 906c751aa -> 5186a0b17, the forks' merge before batch 27)
+
+| Commit | What | Kind |
+|---|---|---|
+| ef2dbefaa | NativeImage and RawImage folded into Image (typedefs) | fold |
+| f30deaabd | Button.cpp's CtBase, references, siblings, flags, repaints, focus and timer answered by gamewin.rs common_op; RootContainer's 13 virtual overrides and RemoveChild gone: the container's Rust object links its Rust root (ctobj.rs `root`, set by ee_won_root_new) and Component's and the container's entries run the root's calls; the root's window ops in gamewin.rs root_op; ee_won_comp_base_call gone | move |
+| 29b39494a | WindowEventBase carries wmobj.rs's EeWonWmEventRec (input record, window, handler); the type, window and an input event's delivery in guisplit.rs; WmWinCall, WmEventCall, Window::HandleEvent, InputEvent::Deliver and ee_won_win_event gone | move |
+| 267be69e3 | a DisplayContext's members and an image handle's mRust read in place (EeWonDisplayContextRec at EE_WON_CONTEXT_AT); four image host ops gone (+6 lines: the layout asserts) | move |
+| 8180d4cd8 | Graphics begins with the Rust record EeWonGraphics (translation, colour, clip, clip stack, the borrowed ColorScheme*, the surface); the scheme's colours read in place (`offsetof(ColorScheme, mColors)` passed at registration: 16 under MSVC, 12 under Itanium); gfxrun.rs runs a draw plan and the skin's paints; WONDrawOne's switch, WONDrawPlain and the callback WONDrawRun gone; the plain draws, scheme save/restore, tooltip, shell, grabber and root draws answered in Rust | move |
+| 7a3bad927 | the message box's window calls through gamewin.rs msgbox_op (only SHOWPARSETIME reaches MSMessageBoxMsg: WONCfgLoad.inl's ParseTimeBox; a Rust test drives a window nobody bound) | move |
+| b20853098 | the buttons' state (SkinBtn; BtnOf from the registry, not a dynamic_cast) and the list items' members (leafpaint.rs EeWonListItemRec at EE_WON_LIST_ITEM_AT) answered in Rust; ButtonHostCall gone | move |
+| 98cd5e2be | the combo box's list-area calls on the list's Rust objects (comboobj.rs game_list_op): 14 ComboBox.cpp cases | move |
+| d6f66dbbc | the list and text areas' scroll-pane and Component statements (gamewin list_host_op) | move |
+| 7388c8534 | a child's place, size, visibility, control id, parent and references (common_op child_op); Container::Place (uncalled) gone | move |
+| ec04b6ace | the layouts' SetSizeAtLeast and instruction references | move |
+
+Total -313 cpp_lines (106,806 -> 106,493), cpp_files 0, logic -71, classes -2, extern_c +5, unsafe +66, layout +10.
+Far short of the -1,500 target: each controls- or host-side move removes a handful of switch cases (4..30 lines) and
+costs a Rust answer, a layout assert or a driver world's new case; the large blocks left (the config object model, the
+C++ smart-pointer holders: Graphics' Attach/Detach/SetFont, ImageButton's mImages written by the lobby's
+CrossPromotionButton.cpp, the GUIString- and ComponentEvent-carrying ops) are other lanes' or need those types in Rust first.
+
+### Problems met
+- f30deaabd made Container's AddedToParent Component's own call in Rust, which reads the parent's flags: the registry
+  unit test's stand-in world has no parent and crashed (0xc0000005); the world leaves AddedToParent out (3f7054afc).
+- clippy `ptr_eq` on the root link check (b39424526).
+- fork B's list_host_op first lacked the `is_game()` guard: won_guisplit33's driver world crashed. Every gamewin answer
+  must stay behind `is_game()` (a driver's world is the host's).
+- `ColorScheme::mColors` sits at a different offset under MSVC and Itanium: pass the offset from C++ (`offsetof`)
+  rather than a Rust constant.
+
+### Gates (on 9afe4158b, batch 27 merged; logs in build/w38)
+Builds `--sim` and `--test-profile windowed-software` 0/0; rust header current, rust gate PASS; won_host_coverage PASS;
+oracle 2-7 identical; captures oracle and late PASS (the WON GUI is not in EE-SIM, so no other profile covers it);
+saveload matrix PASS; scenario_check 27/27; gates.sh GATES PASS (tour, ai-game [4, 38, 39], lan-game); wontest exit 0;
+the LAN game PASS and lan_capture_compare against build/w36lanC: the known diffs only (the game name in staging and the
+LAN list, the game frames).
+
+### Left
+PlatNativeImage.cpp's GfxTrans/GfxRun/GfxDrawImage the same way (about 11 lines); Graphics' Attach, Detach and SetFont
+(smart pointers); WmSetStandardColor; ImageButton's images (the lobby writes mImages); the ListAreaToolTip item reads
+(the tip's mItem first); ComboItemTextLength and the text, edit and event ops (GUIString, ComponentEvent); CfgTabRead and
+the config object model with the lobby lane.
