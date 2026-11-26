@@ -41908,3 +41908,44 @@ PlatNativeImage.cpp's GfxTrans/GfxRun/GfxDrawImage the same way (about 11 lines)
 (smart pointers); WmSetStandardColor; ImageButton's images (the lobby writes mImages); the ListAreaToolTip item reads
 (the tip's mItem first); ComboItemTextLength and the text, edit and event ops (GUIString, ComponentEvent); CfgTabRead and
 the config object model with the lobby lane.
+
+## The player/tech lane, round 3: the civilization builder's shims answered in Rust, the tech tree's nodes, epochs and epoch list as Rust records, the computer player's virtuals dispatched in Rust (ee_game screens civ_direct.rs, civ_list_state.rs; ee_sim tech nodes.rs, tree_objects.rs, tech_native.rs; ee_sim units player_native.rs, save_prim.rs; branch rust-playertech3, 2026-11-26)
+
+The round's measure was total C++ lines (tools/port_metrics.py), target -1,500: -767 against origin/rust (fork A -410,
+fork B -320, the lead -37), compiled files -3, classes -3, logic -25, with no behaviour change (the oracle's six
+seeds identical after every step; the capture profiles, the saveload matrix, scenario_check). Two forks in parallel
+worktrees and the lead; batch 29 landed mid-round and was merged into the lead.
+
+- **A Rust path in a shim table** (fork A): game_cpp.rs's `shims!` takes `= module::name` in place of a C++ symbol:
+  the FFI implementation calls the Rust function, while the trait and the test fake stay as they were. The host
+  calls on objects that are already Rust's (the toolkit's forms, edit boxes, list boxes through ee_ui::direct; the
+  world's players, units, classes and stats through ee_sim's views) need no C++ at all. Keep the macros' FFI halves
+  under the FFI build's cfg, or the tests warn of an unused macro.
+- **A dead export has no caller on either side**: grep C++ and Rust both before dropping an `ee_*` export; a cbindgen
+  type only those exports named must then be exported by name in rust/cbindgen.toml (EeAreaEffectData,
+  EeAreaEffectTemplateFields) while C++ still uses it.
+- **A class with no vtable and no members of its own is its record** (fork B): EETechTreeNode, EETechTreeEpoch and
+  EETechTree hold only their Rust record, so the object pointer is the record pointer (layout node_fields and
+  tech_tree_fields compute to 0). New record fields go at the end so no earlier offset moves, and code that reads a
+  record through the layout offset (fork A's civ_direct.rs `node_fields`) stays right when the offset becomes 0.
+  The epoch's virtuals dispatch in Rust on a field (`mLists != 0`), which also replaces the one `dynamic_cast`.
+- **Route every Rust caller through the new layer** (fork B): the AI hosts (units_cases.rs, units_host.rs,
+  units_world.rs `cpp()`, next_host.rs) also called the C++ host directly; deleting the C++ cases made those calls
+  silently answer 0 (classic_lua stopped buying improvements), and only the oracle caught it. Grep the Rust callers
+  of a host before deleting its cases.
+- **An ee_sim `extern "C"` declaration of an ee_game export** makes cbindgen declare it twice: keep that case in C++
+  (NODE_COST stays).
+- **`new` of a C++ class whose record gained a Rust field** leaves the field uninitialized: the Rust init must set
+  every field of the record.
+- **Merging over a reformatting batch**: batch 29 put each `case` on one line; fork B deleted cases from the
+  multi-line form. Resolving each conflict by keeping our (one-line) cases whose label survives on fork B's side
+  (a script over the conflict blocks, the dropped labels printed) kept both sides' intent.
+- **A subclass override equal to the base's is dead**: four of EEComputerPlayer's overrides (NoticeTargetPlayer,
+  Virtual60, GetExtraPopulation, WonderStarted) did what EEPlayer's did; the others (ScaleCost, TakeResource)
+  dispatch in player_native.rs on the player's mComputerPlayer, so the virtual's host case is answered in Rust.
+- Windows Python `open(p, 'w')` writes CRLF: use `newline=''` on LF sources.
+- Edits outside the lane's files (fork B, the deleted one-statement cases now answered in Rust): EEWorld.cpp,
+  EEGameOps.cpp, EEGameLog.cpp, EESim.cpp, EESimEditor.cpp, Empire Earth.cpp, EEPWorldHelper.cpp,
+  EEDataPreLoading.cpp, EEEffectHost.cpp, EEEvent.cpp, EEScenarioHost.cpp, EESMEffect.cpp, EECPNextUnits.cpp,
+  EECPNext.cpp, EEComputerPlayer.cpp, EEUIFMGStatusButton.cpp, EEDataTextFile.cpp; Rust in ee_game gamecpp,
+  preload.rs, sim_driver and ee_sim scenario and ai.
