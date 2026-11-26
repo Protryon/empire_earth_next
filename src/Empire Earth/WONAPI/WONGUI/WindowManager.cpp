@@ -56,10 +56,8 @@ static SmartPtr<Font> sHostFont; // WmDefaultWindowFont's local
 
 static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
 {
-    // (the members, Component's and the container's calls are wmobj.rs's own: game_comp, R6 WON GUI round 37)
+    // (the members, Component's and the container's calls are wmobj.rs's own: game_comp, R6 WON GUI rounds 37, 40)
     switch ((EeWonWmComp)call) {
-    case EeWonWmComp::FireEndPopup: t->Fn2F5380(ComponentEvent_EndPopup, 0); return 0;
-    case EeWonWmComp::ClickChildAt: return (intptr_t)static_cast<Container*>(t)->FindClickChildAt((int)c, (int)d);
     case EeWonWmComp::MouseWheel: t->MouseWheel((int)c); return 0;
     case EeWonWmComp::HandleComponentEvent: t->HandleComponentEvent((ComponentEvent*)c); return 0;
     default: return 0;
@@ -119,7 +117,6 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::QueueInput: w->QueueEvent(new InputEvent((int)b)); return 0;
     case Op::QueueKey: w->QueueEvent(new KeyEvent((int)b, (int)c, (int)d)); return 0;
     case Op::ClosePopup: w->ClosePopup(NULL); return 0;
-    case Op::Offscreen: return w->mOffscreenImage.get() != NULL ? (intptr_t)w->mOffscreenImage->GetSurface() : 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
     case Op::Minimize: PlatWindowMinimize((PlatWindow*)a); return 0;
@@ -145,7 +142,7 @@ WindowManager::WindowManager() {
     ee_won_wm_standard_colors((uint32_t*)this->mColorScheme->mColors); // InitColorScheme (0x32c230): wmobj.rs's table
     // the platform manager and the standard cursors: the WON hand from its bits, the others the system's
     this->mRust = ee_won_plat_wm_new(this, PlatWmHost);
-    ee_won_wm_bind(this, this->mWmObj.p, this->mRust); // the windows' Rust parts call it directly (gamewin.rs)
+    ee_won_wm_bind(this, this->mWmObj.p, this->mRust, WONImageHost); // the windows' Rust parts call it directly (gamewin.rs)
     this->mEventForward = NULL;
     ee_won_cursor_install_standard(WONCursorHost, &kCursorFns);
     // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
@@ -159,7 +156,7 @@ WindowManager::~WindowManager()
     this->Call(EeWonPlatWmCall::UnregisterAll);
     ee_won_plat_wm_free(this->mRust);
     this->mRust = NULL;
-    ee_won_wm_bind(this, this->mWmObj.p, NULL);
+    ee_won_wm_bind(this, this->mWmObj.p, NULL, WONImageHost);
 }
 
 // The default font with another style and, when the size is positive, another size, from the default window
@@ -172,19 +169,12 @@ Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize)
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 {
     Window* aWindow = this->GetDefaultWindow();
-    return aWindow == NULL ? SmartPtr<NativeImage>() : this->DecodeImage(aWindow->mDisplayContext.get(), theFilePath);
+    return aWindow == NULL ? SmartPtr<NativeImage>() : this->DecodeImage(NULL, theFilePath);
 }
 // Decodes a sound with the sound decoder, or returns a plain sound for the descriptor when there is none
 SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 {
     return this->mSoundDecoder.get() == NULL ? SmartPtr<Sound>(new Sound(theDesc)) : this->mSoundDecoder->DecodeDescriptor(theDesc);
-}
-// The default window's font for a descriptor and its display context (NULL without a window; not identified in the
-// original exe)
-SmartPtr<Font> WindowManager::GetDefaultFont(const FontDescriptor& theDescriptor)
-{
-    Window* aWindow = Window::GetDefaultWindow();
-    return aWindow == NULL ? SmartPtr<Font>() : aWindow->GetFont(theDescriptor);
 }
 
 // Class statics: the default window manager and the GUI thread id (constant-initialised)
@@ -231,8 +221,6 @@ static NativeImage* NewOffscreen(int inWidth, int inHeight)
     WindowManager* theManager = WindowManager::GetDefaultWindowManager();
     return new Image(ee_won_image_new_native(WONImageHost, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f));
 }
-
-SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height) { return NewOffscreen(width, height); }
 
 // imgobj.rs reads a handle's mRust and a context's members in place (R6 WON GUI round 38)
 #pragma clang diagnostic push

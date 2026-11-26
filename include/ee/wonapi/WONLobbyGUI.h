@@ -360,7 +360,6 @@ public:
     void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); }
     void AddChild(Component* c) { this->CCall(EeWonCtCall::AddChild,(intptr_t)c); }
     virtual Component* FindChildAt(int x, int y) { return (Component*)this->CCall(EeWonCtCall::FindChildAt,x,y); }
-    virtual Component* FindClickChildAt(int inX, int inY) { return this->FindChildAt(inX, inY); }
     virtual void SetFocusChild(Component* c) { this->CCall(EeWonCtCall::SetFocusChild,(intptr_t)c); }
     virtual void AddTimerChild(Component* c) { this->CCall(EeWonCtCall::AddTimerChild,(intptr_t)c); }
     virtual void ChildStateChanged(Component* c) { this->CCall(EeWonCtCall::ChildStateChanged,(intptr_t)c); }
@@ -1212,7 +1211,6 @@ public:
     // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
     // draws with is logical; the backend scales it to the surface's pixels
     float mPixelScale;
-    SmartPtr<NativeImage> CreateImage(int,int); //3cedd0, nonvirtual
 };
 class SoundDecoder;
 
@@ -1281,7 +1279,6 @@ public:
     Font* GetNamedFont(const std::string& n) { return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)n.data(), (intptr_t)n.size()); } //32c4d0
     Font* GetDefaultFont() { return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont); } //32c540
     Font* GetDefaultFontMod(int,int=0); //32c700
-    static SmartPtr<Font> GetDefaultFont(const FontDescriptor&);
     void RemoveAllTimerEvents() { this->WmCall(EeWonWmCall::RemoveAllTimerEvents); }
     void SetCacheImages(bool c) { this->WmCall(EeWonWmCall::SetCacheImages, c ? 1 : 0); } // 0x32c7f0: a count; at 0 the caches empty
     // the decodes: the Rust answer carries the returned SmartPtr's reference
@@ -1382,7 +1379,6 @@ public:
     bool CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; } //32ab80
     void CheckResize(DWORD t) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)t); } //32ac90
     void SuspendRootResize(bool s) { this->WCall(EeWonWinCall::SuspendRootResize, s ? 1 : 0); }
-    NativeImage* GetOffscreenImage() { return this->mOffscreenImage.get(); }
     void RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
     bool IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }
     void ShowNativeCursor(bool s) { this->WCall(EeWonWinCall::ShowNativeCursor, s ? 1 : 0); }
@@ -1463,9 +1459,9 @@ public:
     intptr_t WCall(EeWonWinCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_win_call(this->mWinObj.p, c, a, b); }
     intptr_t WField(EeWonWinField f) const { return this->WCall(EeWonWinCall::GetField, (intptr_t)f); }
     void WSet(EeWonWinField f, intptr_t v) { this->WCall(EeWonWinCall::SetField, (intptr_t)f, v); }
-    // the members that are C++ objects (the original's offsets)
-    SmartPtr<NativeImage> mOffscreenImage; // +0c
-    SmartPtr<DisplayContext> mDisplayContext; // +28
+    // the members that are C++ objects (the original's offsets); the offscreen image (+0c) is gamewin.rs's, the display
+    // context (+28) never set since R6 WON GUI round 40 (it had no surface: nothing read it; a config filter passes it)
+    SmartPtr<DisplayContext> mDisplayContext;
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
     // (the close event, +90, and the allow-close function, +94, were never set: gone, R6 WON GUI round 36)

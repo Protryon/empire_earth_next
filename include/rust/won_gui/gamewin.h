@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/imgobj.h"
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
 #include "rust/won_gui/rootobj.h"
@@ -28,13 +29,15 @@ void ee_won_win_bind(void *window,
 /// back (the object deleted with its last).
 void ee_won_gui_ref_register(void (*f)(void *object, int32_t hold));
 
-/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
+/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone) and the
+/// game's image host.
 ///
 /// # Safety
 /// The parts are the manager's live objects until it binds them again.
 void ee_won_wm_bind(void *manager,
                     const EeWonWm *wm,
-                    const EeWonPlatWm *plat);
+                    const EeWonPlatWm *plat,
+                    EeWonImageHostFn images);
 
 }  // extern "C"
 

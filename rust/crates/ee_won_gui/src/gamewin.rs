@@ -33,8 +33,9 @@ pub struct Parts {
     pub root_obj: *const EeWonRoot,
 }
 
-// (the addresses as integers: the map is shared, the objects are the GUI thread's)
-static WINDOWS: Mutex<BTreeMap<isize, [isize; 4]>> = Mutex::new(BTreeMap::new());
+// (the addresses as integers: the map is shared, the objects are the GUI thread's); the fifth is the window's
+// offscreen image (one reference to its handle: the C++ member `mOffscreenImage` until R6 WON GUI round 40)
+static WINDOWS: Mutex<BTreeMap<isize, [isize; 5]>> = Mutex::new(BTreeMap::new());
 
 /// The parts of the game window `window` (a `Window*`), None for a driver's.
 pub fn parts(window: isize) -> Option<Parts> {
@@ -55,8 +56,48 @@ pub unsafe extern "C" fn ee_won_win_bind(
     root_obj: *const EeWonRoot,
 ) {
     if let Ok(mut m) = WINDOWS.lock() {
-        m.insert(window as isize, [win as isize, plat as isize, root as isize, root_obj as isize]);
+        let offscreen = m.get(&(window as isize)).map_or(0, |w| w[4]);
+        m.insert(window as isize, [win as isize, plat as isize, root as isize, root_obj as isize, offscreen]);
     }
+}
+
+/// The game window `window`'s offscreen image (its handle, borrowed; 0 for none).
+pub(crate) fn offscreen(window: isize) -> isize {
+    WINDOWS.lock().ok().and_then(|m| m.get(&window).map(|w| w[4])).unwrap_or(0)
+}
+/// The offscreen image replaced by `image` (its reference given to the window), the old one's given back.
+fn set_offscreen(window: isize, image: isize) {
+    let old = WINDOWS.lock().ok().and_then(|mut m| m.get_mut(&window).map(|w| std::mem::replace(&mut w[4], image)));
+    if let Some(o) = old.filter(|&o| o != 0) {
+        rf(o, false);
+    }
+}
+/// The image's Graphics (`GetGraphics()`; 0 without an image).
+fn graphics_of(image: isize) -> isize {
+    // SAFETY: a game image handle or 0
+    unsafe { crate::imgobj::image_of(image) }.map_or(0, |i| i.graphics())
+}
+/// `CreateImage(w, h)`: a new offscreen image of that size (a handle with one reference; 0 without the image host).
+pub(crate) fn new_image(w: isize, h: isize) -> isize {
+    let f = IMAGE_HOST.load(std::sync::atomic::Ordering::Acquire);
+    if f == 0 {
+        return 0;
+    }
+    // SAFETY: a value ee_won_wm_bind stored from the game's image host
+    let f = unsafe { std::mem::transmute::<usize, crate::imgobj::EeWonImageHostFn>(f) };
+    f(crate::imgobj::EeWonImageHost::CreateImage, 0, w, h, 0)
+}
+/// WinNewOffscreen: a new offscreen image of `w` x `h` with the old one drawn into it at 0, 0.
+fn copy_offscreen(window: isize, w: isize, h: isize) -> isize {
+    let image = new_image(w, h);
+    let g = graphics_of(image) as *mut crate::gfxrun::EeWonGraphics;
+    if !g.is_null() {
+        let old = offscreen(window) as *const c_void;
+        // SAFETY: the new image's live Graphics; the old image a live handle or NULL
+        unsafe { crate::gfxrun::ee_won_graphics_call(g, crate::gfxobj::EeWonGfxCall::DrawImage, 0, 0, 0, 0, 0, 0, 0, old) };
+    }
+    set_offscreen(window, image);
+    0
 }
 
 // the game's reference count calls (RefCount::AddRef / Release on any of its objects, ComponentLifetime.cpp)
@@ -99,16 +140,25 @@ pub(crate) fn wm_ref_op(manager: isize, op: Op, a: isize, b: isize, c: isize) ->
 
 // the game's window manager (the default one): its C++ object, its Rust manager and its platform manager
 static MANAGER: Mutex<[isize; 3]> = Mutex::new([0; 3]);
+// the game's image host (WONImageHost), which makes the windows' offscreen images
+static IMAGE_HOST: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
+/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone) and the
+/// game's image host.
 ///
 /// # Safety
 /// The parts are the manager's live objects until it binds them again.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_wm_bind(manager: *mut c_void, wm: *const EeWonWm, plat: *const EeWonPlatWm) {
+pub unsafe extern "C" fn ee_won_wm_bind(
+    manager: *mut c_void,
+    wm: *const EeWonWm,
+    plat: *const EeWonPlatWm,
+    images: crate::imgobj::EeWonImageHostFn,
+) {
     if let Ok(mut m) = MANAGER.lock() {
         *m = [manager as isize, wm as isize, plat as isize];
     }
+    IMAGE_HOST.store(images as usize, std::sync::atomic::Ordering::Release);
 }
 
 /// The manager's entry gone (its Rust manager freed).
@@ -139,8 +189,9 @@ fn wm_field(f: EeWonWmField) -> Option<isize> {
 
 /// The window's entry gone (its Rust window freed).
 pub(crate) fn unbind(window: isize) {
-    if let Ok(mut m) = WINDOWS.lock() {
-        m.remove(&window);
+    let old = WINDOWS.lock().ok().and_then(|mut m| m.remove(&window));
+    if let Some(o) = old.map(|w| w[4]).filter(|&o| o != 0) {
+        rf(o, false);
     }
 }
 
@@ -185,6 +236,7 @@ pub(crate) fn win_op(window: isize, op: Op, a: isize, b: isize, c: isize, d: isi
         Op::WinHasIcon | Op::WinIconDefault => return parts(window).map(|_| 0),
         Op::WinFontHold => return rf(a, true),
         Op::WinChildSet => return parts(a).map(|p| z(win(&p, C::ChildSet, window, b))),
+        Op::WinNewOffscreen => return parts(window).map(|_| copy_offscreen(window, a, b)),
         _ => {}
     }
     if !matches!(op, Op::WinPlat | Op::WinSetPosSize | Op::WinGetRect | Op::WinIsVisible | Op::WinCanClose) {
@@ -230,6 +282,25 @@ pub(crate) fn plat_win_op(window: isize, op: EeWonPlatWinOp, a: isize, b: isize)
             }
             O::PopupWindow => return wm(EeWonWmCall::PopupWindow, 0, 0),
             O::PopupFlags => return wm_field(EeWonWmField::PopupFlags),
+            // the offscreen image is Rust's (R6 WON GUI round 40); the display context went (nothing read it: its
+            // surface was NULL)
+            O::NewContext => return Some(0),
+            O::OffscreenOfRoot | O::Offscreen | O::CopyOffscreen | O::Paint | O::RootPaint => {
+                let me = parts(window)?;
+                let image = offscreen(window);
+                return Some(match op {
+                    O::OffscreenOfRoot => {
+                        let r = crate::compmem::bounds(me.root);
+                        set_offscreen(window, new_image(r.width as isize, r.height as isize));
+                        0
+                    }
+                    // SAFETY: the window's live image handle or 0
+                    O::Offscreen => unsafe { crate::imgobj::image_of(image) }.map_or(0, |i| i as *const _ as isize),
+                    O::CopyOffscreen => copy_offscreen(window, a, b),
+                    O::Paint => z(comp(&me, K::PrePaint, graphics_of(image), 0)),
+                    _ => z(comp(&me, K::Paint, graphics_of(image), 0)),
+                });
+            }
             _ => {}
         }
     }
@@ -335,6 +406,10 @@ pub(crate) fn plat_wm_op(op: EeWonPlatWmOp, window: isize, b: isize, c: isize) -
         O::NotModal => return parts(window).and_then(|_| wm(EeWonWmCall::NotModalWindow, window, 0)),
         O::Hold => return rf(window, true),
         O::Release => return rf(window, false),
+        O::Offscreen => {
+            // SAFETY: the window's live image handle or 0
+            return parts(window).map(|_| unsafe { crate::imgobj::image_of(offscreen(window)) }.map_or(0, surface_of));
+        }
         _ => {}
     }
     if !matches!(
@@ -1003,6 +1078,10 @@ pub(crate) fn msgbox_op(op: crate::shell::EeWonShellHostOp, window: isize, b: is
         H::MsgRunDialog => wm(EeWonWmCall::DoDialog, window, b)? as i32 as isize,
         _ => z(win_call(&me, C::Close, 0)),
     })
+}
+fn surface_of(i: &crate::imgobj::EeWonImage) -> isize {
+    // SAFETY: a live image
+    unsafe { crate::imgobj::ee_won_image_get(i, crate::imgobj::EeWonImageField::Surface) }
 }
 fn win_call(p: &Parts, c: C, a: isize) -> isize {
     win(p, c, a, 0)

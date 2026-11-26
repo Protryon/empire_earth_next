@@ -89,6 +89,9 @@ pub enum EeWonWmComp {
     HandleComponentEvent,
 }
 
+/// `ComponentEvent_EndPopup` (WONEventTypes.h).
+const COMPONENT_EVENT_END_POPUP: isize = 30;
+
 /// A component call the game's manager makes itself (R6 WON GUI round 37): the members' block, Component's calls
 /// and the container's; None for the virtuals, the references and the event the C++ answers.
 fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize> {
@@ -126,7 +129,12 @@ fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize
         }
         W::Hold => return crate::gamewin::rf(comp, true),
         W::Release => return crate::gamewin::rf(comp, false),
-        W::FireEndPopup | W::ClickChildAt | W::MouseWheel | W::HandleComponentEvent => return None,
+        // `FireEvent(ComponentEvent_EndPopup)` and the container's own FindChildAt (no class overrides
+        // FindClickChildAt or FindChildAt): R6 WON GUI round 40
+        W::FireEndPopup => kc(K::FireEvent, COMPONENT_EVENT_END_POPUP, 0),
+        // SAFETY: as `kc`; `comp` is a container (the call's contract)
+        W::ClickChildAt => unsafe { ee_won_ct_call(m.ct as *const EeWonContainer, T::FindChildAt, c, d, 0) },
+        W::MouseWheel | W::HandleComponentEvent => return None,
     })
 }
 
