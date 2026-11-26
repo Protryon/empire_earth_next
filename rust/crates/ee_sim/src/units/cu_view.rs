@@ -18,6 +18,7 @@ use crate::units::goals;
 use crate::units::u12a_small::*;
 use crate::units::uc_is::{EE_UNITS_UC_IS_AIR_BASE, EE_UNITS_UC_IS_TRANSPORT};
 use crate::world::layout::{layout, EeWorldLayout};
+use crate::world::map_fields::EeUnitsRtsMapFields;
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use crate::world::stats_fields::{EeUnitsUnitClassUpgradeFields, EeUnitsUnitClassUpgradeLinks};
 use crate::world::unit_class_fields::{EeUnitsUnitClassFields, EeUnitsUnitClassLinks};
@@ -1538,12 +1539,12 @@ pub(crate) unsafe fn ai_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> 
     Some(v)
 }
 
-/// The answer of `ee_units_ck_host`'s statement `op` (EECloakingUtilities.cpp; uu_cloak.rs's statements) when it is
-/// a plain record read or store (None: the game's host answers it).
+/// The answer of the cloaking utilities' statement `op` (uu_cloak.rs's statements) when it is a plain record read or
+/// store (None: a world call, the sight host's: EEComplexUnit.cpp). Units round 14: EECloakingUtilities.cpp is gone.
 ///
 /// # Safety
 /// As the host's: `a` the statement's live object.
-pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
+pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, d: i64, f: &mut [f32; 4]) -> Option<i64> {
     use crate::units::uu_cloak::*;
     let l = layout();
     let o = U(a, l);
@@ -1571,6 +1572,28 @@ pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, f: &mut [f32; 4]) -> Optio
                 (*o.cx()).mCloaked = 0;
                 0
             }
+            EE_UNITS_CK_KEEP_CLOAK => {
+                (*o.cx()).mCloaked = c as u32 as c_ulong;
+                0
+            }
+            EE_UNITS_CK_TERRAIN => match map_tile(c, d) {
+                0 => -1,
+                tile => long(*at::<c_long>(tile as u64, l.tile_terrain_type)),
+            },
+            EE_UNITS_CK_IS_EDGE => {
+                let map = world_map();
+                let r = at::<EeUnitsRtsMapFields>(map, l.rts_map_fields);
+                let (x, y) = (c as c_long, d as c_long);
+                i64::from(
+                    x.wrapping_add(y) == (*r).mL195608
+                        || y.wrapping_sub(x) == (*r).mL195610
+                        || x.wrapping_add(y) == (*r).mL19560C
+                        || x.wrapping_sub(y) == (*r).mL195610,
+                )
+            }
+            EE_UNITS_CK_IS_LAND => i64::from(crate::astar::continent_grid::is_land(c as c_long as i32)),
+            EE_UNITS_CK_FIRST_UNIT => world_word(l.world_units_first) as i64,
+            EE_UNITS_CK_NEXT_UNIT => word(word(a, l.unit_tile_node), 0) as i64,
             EE_UNITS_CK_TILE_X => long((*o.rts()).mTileX),
             EE_UNITS_CK_TILE_Y => long((*o.rts()).mTileY),
             EE_UNITS_CK_COMPLEX_OF => o.complex().0 as i64,

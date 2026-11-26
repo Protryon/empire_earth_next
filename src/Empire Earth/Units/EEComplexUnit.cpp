@@ -135,6 +135,14 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     case EE_UNITS_SIGHT_SHOW_TILE_OFF: ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_WONDER: ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
     case EE_UNITS_SIGHT_WONDER_OFF: ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
+    // the cloaking utilities' world calls (ee_units uu_cloak.rs; units round 14: EECloakingUtilities.cpp is gone)
+    case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(thePlayer, kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>(f), (long)inC, (long)inD, 0, 0);
+    case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
+    case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
+    case EE_UNITS_CK_CREATE_CLOAK: return ::gWorld.GetEffectManager()->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), reinterpret_cast<EEEffectHandle*>(f), false, 0, 0);
+    case EE_UNITS_CK_DESTROY_EFFECT: ::gWorld.GetEffectManager()->DestroyEffect(EEEffectHandle{(uint32_t)inC}); return 0;
+    case EE_UNITS_CK_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
+    case EE_UNITS_CK_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     }
     return 0;
 }

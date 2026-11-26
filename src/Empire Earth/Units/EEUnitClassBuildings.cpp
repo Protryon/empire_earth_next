@@ -241,7 +241,7 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_FACING_QUARTER: return EEGetUnitFacingQuarter(theUnit);
     case EE_UNITS_UCB_SET_FACING: theUnit->SetFacing((unsigned long)inB); return 0;
     case EE_UNITS_UCB_NAVY_YARD_FACING: return GetNavyYardFacing(theUnit->GetTileX(), theUnit->GetTileY());
-    case EE_UNITS_UCB_SPACE_DOCK_YAW: f[0] = EEGetSpaceDockYaw(theUnit->GetTileX() + 1, theUnit->GetTileY() + 1, theUnit->mUnitClass->GetTileSize()); return 0;
+    case EE_UNITS_UCB_SPACE_DOCK_YAW: f[0] = UBitsFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, theUnit->GetTileX() + 1, theUnit->GetTileY() + 1)); return 0;
     case EE_UNITS_UCB_UPDATE_TURRETS: theUnit->UpdateTurrets(); return 0;
     case EE_UNITS_UCB_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
     case EE_UNITS_UCB_SET_MINE: EEUcbObject<EEUnit>(inA)->mComplexUnit->SetMine(EEUcbObject<EEUnit>((uint64_t)inB)); return 0;

@@ -16047,101 +16047,101 @@ constexpr static const int32_t EE_UNITS_UB_DO_SPACE_ENERGY_WALL = 25;
 constexpr static const int32_t EE_UNITS_UB_DO_HAS_CIVILIZATION_UPGRADE = 26;
 
 /// the terrain type of `gWorld.mMap->GetTile(c, d)` (-1: no tile)
-constexpr static const int32_t EE_UNITS_CK_TERRAIN = 1;
+constexpr static const int32_t EE_UNITS_CK_TERRAIN = 14001;
 
 /// `gWorld.mMap->IsEdgeTile(c, d)`
-constexpr static const int32_t EE_UNITS_CK_IS_EDGE = 2;
+constexpr static const int32_t EE_UNITS_CK_IS_EDGE = 14002;
 
 /// `EEIsLandTerrain(c)`
-constexpr static const int32_t EE_UNITS_CK_IS_LAND = 3;
+constexpr static const int32_t EE_UNITS_CK_IS_LAND = 14003;
 
 /// `EECanPlace(player a, kUnitTypeSpaceDock, &the point f, c, d, 0, 0)`
-constexpr static const int32_t EE_UNITS_CK_CAN_PLACE_DOCK = 4;
+constexpr static const int32_t EE_UNITS_CK_CAN_PLACE_DOCK = 14004;
 
 /// `EEGetDockFacing(c, d)`
-constexpr static const int32_t EE_UNITS_CK_DOCK_FACING = 5;
+constexpr static const int32_t EE_UNITS_CK_DOCK_FACING = 14005;
 
 /// unit `a`'s `GetCommandType()`
-constexpr static const int32_t EE_UNITS_CK_COMMAND_TYPE = 6;
+constexpr static const int32_t EE_UNITS_CK_COMMAND_TYPE = 14006;
 
 /// the bits of `(float)` unit `a`'s complex unit's `mRottingAwayTime / ` its class's `mRottingTime` (0: no rotting
 /// time... asked only when it is not 0)
-constexpr static const int32_t EE_UNITS_CK_ROT_FRACTION = 7;
+constexpr static const int32_t EE_UNITS_CK_ROT_FRACTION = 14007;
 
 /// unit `a`'s class's `mRottingTime != 0`
-constexpr static const int32_t EE_UNITS_CK_HAS_ROTTING_TIME = 8;
+constexpr static const int32_t EE_UNITS_CK_HAS_ROTTING_TIME = 14008;
 
 /// unit `a`'s `mIsCloakable`
-constexpr static const int32_t EE_UNITS_CK_IS_CLOAKABLE = 9;
+constexpr static const int32_t EE_UNITS_CK_IS_CLOAKABLE = 14009;
 
 /// unit `a`'s `mIsCloaked`
-constexpr static const int32_t EE_UNITS_CK_IS_CLOAKED = 10;
+constexpr static const int32_t EE_UNITS_CK_IS_CLOAKED = 14010;
 
 /// `gFreeCamera`
-constexpr static const int32_t EE_UNITS_CK_FREE_CAMERA = 11;
+constexpr static const int32_t EE_UNITS_CK_FREE_CAMERA = 14011;
 
 /// the bits of unit `a`'s `mOpacity`
-constexpr static const int32_t EE_UNITS_CK_OPACITY = 12;
+constexpr static const int32_t EE_UNITS_CK_OPACITY = 14012;
 
 /// `gWorld.GetCurrentPlayer()`
-constexpr static const int32_t EE_UNITS_CK_CURRENT_PLAYER = 13;
+constexpr static const int32_t EE_UNITS_CK_CURRENT_PLAYER = 14013;
 
 /// unit `a`'s `mPlayer`
-constexpr static const int32_t EE_UNITS_CK_PLAYER = 14;
+constexpr static const int32_t EE_UNITS_CK_PLAYER = 14014;
 
 /// unit `a`'s `mPlayer->mEnemies[the current player's mPlayerID]`
-constexpr static const int32_t EE_UNITS_CK_ENEMY_OF_VIEWER = 15;
+constexpr static const int32_t EE_UNITS_CK_ENEMY_OF_VIEWER = 14015;
 
 /// `gWorld.GetCurrentPlayer()->mObserverMode`
-constexpr static const int32_t EE_UNITS_CK_OBSERVER = 16;
+constexpr static const int32_t EE_UNITS_CK_OBSERVER = 14016;
 
 /// `*(float*)a = f[0]`
-constexpr static const int32_t EE_UNITS_CK_SET_FLOAT = 17;
+constexpr static const int32_t EE_UNITS_CK_SET_FLOAT = 14017;
 
 /// the cloak effect created on unit `a` (`kGraphicEffectMarketTicketTape`, the handle kept); the result
-constexpr static const int32_t EE_UNITS_CK_CREATE_CLOAK = 18;
+constexpr static const int32_t EE_UNITS_CK_CREATE_CLOAK = 14018;
 
 /// unit `a`'s complex unit's `mCloaked = the kept handle's mValue`
-constexpr static const int32_t EE_UNITS_CK_KEEP_CLOAK = 19;
+constexpr static const int32_t EE_UNITS_CK_KEEP_CLOAK = 14019;
 
 /// unit `a`'s complex unit's `(long)mCloaked`
-constexpr static const int32_t EE_UNITS_CK_CLOAKED = 20;
+constexpr static const int32_t EE_UNITS_CK_CLOAKED = 14020;
 
 /// the effect handle `c` destroyed
-constexpr static const int32_t EE_UNITS_CK_DESTROY_EFFECT = 21;
+constexpr static const int32_t EE_UNITS_CK_DESTROY_EFFECT = 14021;
 
 /// unit `a`'s complex unit's `mCloaked = 0`
-constexpr static const int32_t EE_UNITS_CK_CLEAR_CLOAKED = 22;
+constexpr static const int32_t EE_UNITS_CK_CLEAR_CLOAKED = 14022;
 
 /// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
-constexpr static const int32_t EE_UNITS_CK_SPACE_MAP = 23;
+constexpr static const int32_t EE_UNITS_CK_SPACE_MAP = 14023;
 
 /// complex unit `a`'s `mTileX`
-constexpr static const int32_t EE_UNITS_CK_TILE_X = 24;
+constexpr static const int32_t EE_UNITS_CK_TILE_X = 14024;
 
 /// complex unit `a`'s `mTileY`
-constexpr static const int32_t EE_UNITS_CK_TILE_Y = 25;
+constexpr static const int32_t EE_UNITS_CK_TILE_Y = 14025;
 
 /// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
-constexpr static const int32_t EE_UNITS_CK_CONTINENT = 26;
+constexpr static const int32_t EE_UNITS_CK_CONTINENT = 14026;
 
 /// `gWorld.mUnits.mFirst`
-constexpr static const int32_t EE_UNITS_CK_FIRST_UNIT = 27;
+constexpr static const int32_t EE_UNITS_CK_FIRST_UNIT = 14027;
 
 /// unit `a`'s `mTileNode->mNext`
-constexpr static const int32_t EE_UNITS_CK_NEXT_UNIT = 28;
+constexpr static const int32_t EE_UNITS_CK_NEXT_UNIT = 14028;
 
 /// unit `a`'s `mComplexUnit`
-constexpr static const int32_t EE_UNITS_CK_COMPLEX_OF = 29;
+constexpr static const int32_t EE_UNITS_CK_COMPLEX_OF = 14029;
 
 /// complex unit `a`'s class's `mDomains`
-constexpr static const int32_t EE_UNITS_CK_DOMAINS = 30;
+constexpr static const int32_t EE_UNITS_CK_DOMAINS = 14030;
 
 /// complex unit `a`'s class's `mUnitType`
-constexpr static const int32_t EE_UNITS_CK_UNIT_TYPE = 31;
+constexpr static const int32_t EE_UNITS_CK_UNIT_TYPE = 14031;
 
 /// complex unit `a`'s `mPlanetID = c`
-constexpr static const int32_t EE_UNITS_CK_SET_PLANET = 32;
+constexpr static const int32_t EE_UNITS_CK_SET_PLANET = 14032;
 
 constexpr static const int32_t EE_UNITS_CK_DO_TRANSLUCENT = 1;
 
@@ -22106,8 +22106,6 @@ extern int64_t ee_units_ub_host(int32_t op,
 /// # Safety
 /// The objects are live game objects, on the simulation thread.
 int64_t ee_units_ub_body(int32_t what, uint64_t a, uint64_t b, int64_t c, int64_t d, int64_t e);
-
-extern int64_t ee_units_ck_host(int32_t op, uint64_t a, int64_t c, int64_t d, float (*f)[4]);
 
 /// The cloaking utility `what` (`EE_UNITS_CK_DO_*`).
 ///

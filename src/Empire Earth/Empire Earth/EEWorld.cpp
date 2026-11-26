@@ -99,7 +99,6 @@ void EEStopAllSounds();
 void EEDumpGraphicObjectTable(FSFileSpec& inFile);
 void EEDumpLeakedUnits(FSFileSpec& inFile);
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);
-void EEUpdateLandContinents();
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
 
 // EEGameState's team count: inline (its refused copy 0x13cff7 sits in this unit's template tail); defined here where
@@ -708,7 +707,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::ContinentBuildRegions: gContinentManager.BuildRegions((EEMap*)a[0]);
         break;
-    case O::UpdateLandContinents: EEUpdateLandContinents();
+    case O::UpdateLandContinents: ee_units_ck_body(EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS, 0, 0, 0, 0);
         break;
     case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
         break;

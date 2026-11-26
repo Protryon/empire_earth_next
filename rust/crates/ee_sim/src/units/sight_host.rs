@@ -73,7 +73,7 @@ pub const EE_UNITS_SIGHT_SHOW_TILE_OFF: i32 = 25;
 pub const EE_UNITS_SIGHT_WONDER_OFF: i32 = 26;
 
 extern "C" {
-    fn ee_units_sight_host(
+    pub(crate) fn ee_units_sight_host(
         op: i32,
         on: u8,
         a: u64,

@@ -26,7 +26,6 @@ bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUni
 long EETurnGatePart(GETransformation&, long, long);
 void EEGetWallGateTiles(const U2DPoint<long>&, long, std::vector<U2DPoint<long> >&);
 bool EEIsLandTerrain(long);
-bool EEIsSpaceDockSiteOpen(long, long, EEPlayer*);
 extern GEViewport gViewport;
 
 // ghost_view.rs reads and stores the ghost's record one pointer past the ghost (after the vtable pointer)
@@ -79,9 +78,9 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_TILE_TERRAIN: return theMap->GetTile((long)inB, (long)inC)->mTerrainType;
     case EE_UNITS_GHOST_TERRAIN_Z: return UFloatBits(theMap->mTerrainMesh.GetZ((long)inB, (long)inC));
     case EE_UNITS_GHOST_IS_LAND_TERRAIN: return EEIsLandTerrain((long)inB);
-    case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return EEIsSpaceDockSiteOpen(theGhost->mTileX, theGhost->mTileY, theGhost->mPlayer);
+    case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)theGhost->mPlayer, 0, theGhost->mTileX, theGhost->mTileY) != 0;
     case EE_UNITS_GHOST_DOCK_FACING: return EEGetDockFacing(theGhost->mTileX, theGhost->mTileY);
-    case EE_UNITS_GHOST_SPACE_DOCK_YAW: return UFloatBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
+    case EE_UNITS_GHOST_SPACE_DOCK_YAW: return (uint32_t)ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, theGhost->mTileX, theGhost->mTileY);
     case EE_UNITS_GHOST_SET_YAW: theGhost->mTransformation.SetOrientationYPR(UBitsFloat((uint32_t)(inB)), 0.0f, 0.0f); return 0;
     case EE_UNITS_GHOST_NODE_IN_SET: return theNode->mUnit != NULL && gUnitSetManager.Contains(theNode->mUnit->mUnitClass->GetUnitType(), theGhost->mUnitSet);
     case EE_UNITS_GHOST_TILE_UNBLOCKED:
