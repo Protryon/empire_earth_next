@@ -27,9 +27,6 @@ public:
     this->SubCall(EeUiButtonCall::CheckInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inScaleBitmap ? 1.0f : 0.0f);
 }
     // the dtor (0x1005f9da) deleted the label: the Rust button's release does
-    // Resizes the check box and its label to a new width. No marker: ICF-folded into UITriStateCheckBox::ChangeWidth
-    // (0x10080916), the same body over the same offsets.
-    void ChangeWidth(unsigned long inWidth) { this->SubCall(EeUiButtonCall::CheckChangeWidth, (intptr_t)inWidth); }
     // Copies the button and its label for the draw pass, deleting the label once the text was cleared
     virtual long CopyData() { return (long)this->SubCall(EeUiButtonCall::CheckCopyData); }
     // Draws the box bitmap (scaled to the control height when scaling) and the label

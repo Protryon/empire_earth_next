@@ -42,11 +42,6 @@ public:
     void SetNormalBitmap(GEBitmap* inBitmap) { this->Call(EeUiButtonCall::SetNormalBitmap, (intptr_t)inBitmap); }
     void SetPressedBitmap(GEBitmap* inBitmap) { this->Call(EeUiButtonCall::SetPressedBitmap, (intptr_t)inBitmap); }
     void SetText(const UWideString& inText, GEFont* inFont) { this->Call(EeUiButtonCall::SetText, (intptr_t)&inText, (intptr_t)inFont); }
-    void SetTextRectangle(const GERectangle& inRectangle)
-    {
-        this->CallF(EeUiButtonCall::SetTextRectangle, inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight,
-                            inRectangle.mTop);
-    }
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiButtonCall::VirtUpdateKeyboard); }   // Fixed (kept): a key press on it
     virtual void ButtonDown() { this->Call(EeUiButtonCall::VirtButtonDown); } // slot 0x88
     virtual void ButtonUp() { this->Call(EeUiButtonCall::VirtButtonUp); }   // Fixed (kept): plays the button-up sound                // slot 0x8c

@@ -20,11 +20,6 @@
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
 
-// winspool.h maps AddForm to AddFormA; the export is ?AddForm@UIManager@@
-#ifdef AddForm
-#undef AddForm
-#endif
-
 
 // The class is whole in Rust (rust/crates/ee_ui/src/managerobj.rs, R6 ui round 17): its state (the event factories,
 // the stack, the forms, the visible and copied forms, the queued events, the fonts, the music, the UI texture and the
@@ -49,9 +44,6 @@ public:
     virtual ~UIManager() { ee_ui_manager_destroy(this->mRust); }
     // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
     void AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm) { this->CallRect(EeUiManagerCall::AddDirtyRectangle, (intptr_t)inForm, inRectangle); }
-    // Queues an event (referenced) to run on the next update for a form and entity
-    void AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity) { this->Call(EeUiManagerCall::AddEventToTrigger, (intptr_t)inEvent, (intptr_t)inForm, (intptr_t)inEntity); }
-    void AddForm(UIForm* inForm) { this->Call(EeUiManagerCall::AppendForm, (intptr_t)inForm); } // 0x1005a006; UIForm::Create calls it
     // Passes an IME result string to the top form, under the UI lock
     void AddIMEResultString(const UWideString& inString) { this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString); }
     // Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
@@ -65,16 +57,6 @@ public:
     virtual long CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
     // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
     long CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
-    // Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
-    GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle) { return reinterpret_cast<GEBitmap*>(this->CallRect(EeUiManagerCall::ScaledBitmap, (intptr_t)inBitmap, inRectangle)); }
-    // Asks each registered control-event factory in turn for a form's event; returns the first one made, or NULL
-    UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID)
-    {
-        return reinterpret_cast<UIEvent*>(
-            this->Call(EeUiManagerCall::CreateControlEvent, (intptr_t)inForm, (intptr_t)inEventID));
-    }
-    // Asks each registered form-event factory in turn for an event; returns the first one made, or NULL
-    UIEvent* CreateFormEvent(unsigned long inEventID) { return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID)); }
     virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable) { return NULL; }
     virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable) { return NULL; }
     // inline: exported 0x1005a028 (UIBackground.cpp's inline block)
@@ -101,17 +83,12 @@ public:
     }
     unsigned long GetFormCount() const { return (unsigned long)this->Call(EeUiManagerCall::FormCount); }
     UIForm* GetStackedForm(unsigned long inIndex) const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex)); } // port (test fixture)
-    TSCriticalSection* GetUILock() const { return reinterpret_cast<TSCriticalSection*>(this->Call(EeUiManagerCall::UiLock)); } // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 10)); }
     // the bitmap by its index (EeUiManagerCall::Bitmap: GetAlphaSortUpBitmap 0 .. GetRadioDownOn 20)
     GEBitmap* GetBitmap(unsigned long inIndex) const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, (intptr_t)inIndex)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)
     static ISEntity* GetLMouseButton() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::LeftMouse)); }
 #endif
-#ifdef LOWLEVELENGINE_EXPORTS
-    static ISEntity* GetMouseWheel() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::MouseWheel)); }
-#endif
-    unsigned long GetNumberOfSurfaces() const { return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces); }
     GEBitmap* GetRadioDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 18)); }
     GEBitmap* GetRadioOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 17)); }
     GEBitmap* GetRadioOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 19)); }
@@ -141,8 +118,6 @@ public:
     long Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
     // Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
     long PopTo(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::PopTo, (intptr_t)inForm); }
-    // Runs and releases the queued events of one form; the other forms' events stay queued in order
-    void ProcessAllEventsForForm(UIForm* inForm) { this->Call(EeUiManagerCall::ProcessAllEventsForForm, (intptr_t)inForm); }
     // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
     long Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::Push, (intptr_t)inForm); }
     // Marks every visible form and all its controls dirty
@@ -160,8 +135,6 @@ public:
     void SetMusicVolume(float inVolume) { this->CallPoint(EeUiManagerCall::SetMusicVolume, inVolume, 0.0f); }
     // Loads and starts a music track unless it is the current one (names compared lower-cased)
     void StartMusic(const UWideString& inFileName) { this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName); }
-    // Stops the music and unloads the track
-    void StopMusic() { this->Call(EeUiManagerCall::StopMusic); }
     void UnlockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 1); }
     // Runs one UI update: keyboard, mouse, queued events, then any pending music stop or start; returns the mouse result
     virtual long UpdateUI(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x28

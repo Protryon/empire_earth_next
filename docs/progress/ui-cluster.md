@@ -159,6 +159,35 @@ input system, fork A's), the strings and string vectors (`UWideString` has a vta
 object's address), the fonts (a `GEFont` is a `UReferenceCounter`), and the non-virtual members of forms and
 managers that Rust could call through direct.rs (`GetManager()->GetScreen()` chains: next).
 
+### Pass 2 (branch `rust-lleui2-d`, from rust-lleui2 61544a7d6 with origin/rust batch 29)
+
+**-462 C++ lines** against 61544a7d6 (87,963 -> 87,501; compiled files unchanged, 251; logic unchanged, shim -381;
+classes unchanged; extern_c +5: the harness's six EETestUI* are Rust's now, the 200 removed shims were `EE_UI_CASE`
+macros the metric does not count). Behaviour: none intended (oracle seeds 2-7 identical after the background fix
+below; a fixture tour, RESULT PASS, with `EE_DIRECT_CHECK`: 1,488,000 lookups by C++ pointer, none missing).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| a122d23cf | ee_ui lle_chains.rs: the ~200 host ops whose shim was a chain of non-virtual C++ forwarders (`theForm->GetManager()->GetScreen()`, `ctl->GetForm()->GetTabStop()`, a control's, background's, hot key's or table's member, a scroll bar's slider, the database loaders' statics) make the forwarders' inward calls themselves; direct.rs finds each Rust object by the C++ pointer (new kinds: ScrollBar, Table, HotKey; the hot key's constructors hand Rust the C++ object). The forwarders nothing calls any more and the members no C++ ever called went with them | -311 |
+| 3311121dd | the combo box's parts (PartOf's rectangle and border, the edit box's text, UIControl's CopyData/SetRectangle/SetLocation, the base rectangle); the harness's EETestUI* in direct.rs (the unit keeps the `/include:` pragmas); the macros the moved shims used; 21 more members no C++ calls | -81 |
+| 9ee87014c | the controls table's setters whose C++ member is a non-virtual forwarder (lle_hosts.rs SET takes a shim or a Rust op), the combo box's list queries, the file lists' selections, the radio button's checked state and bitmaps, the label's fit; five ChangeWidth members no C++ calls | -59 |
+| 773698328 | SetupText's texts (the list box's `mText` keeps its shim), the combo box's label and edit texts, the graph text's colour and transparency | -11 |
+| 1a2932dd6 | bgobj.rs: a background is registered for direct.rs before its constructor's calls out: its `BgAdd` (now Rust: `AddBackground` of the registry's `UIBackground*`) ran before the registration and handed the form NULL, which the first form Open dereferenced (EE-SIM faulted in `ee_uicpp_form_bg_open` on every seed) | 0 |
+
+Lessons: an op that finds its object through direct.rs needs the object registered before the first call out that
+can reach it, and a constructor's own calls out come before `made()`'s registration (the form's and manager's
+`new` make none; the background's `init` adds itself to its form; the control's record and the hot key are
+registered first). The sim oracle opens the forms, so a NULL from the registry shows there; the lookup check
+(`EE_DIRECT_CHECK`) names the op. A virtual stays a shim when any class overrides it (`GetType`: the check, radio and
+tri-state boxes; `UnCheck`: the editor's tabs).
+
+What is left (the unit is 1,037 lines): the virtuals (the controls', forms', backgrounds', events' and the manager's
+overridable members), the constructors and deletes of C++ objects (controls, texts, rhombi, lines, strings, hot keys,
+events, the wheel event), the GE objects' calls (bitmaps, textures, the rasterizer's windows and blending, GEText's
+font and string, the rhombi: fork A's), the string table and the C++ strings (`UWideString`, `std::vector`), the file
+system's calls (`FSFileSpec`, `FSPath`, the file lists' searches), the sound manager's, `gISKeyboard`/`gISMouse` and
+the list box's members over its C++ line views (`mData`, `mCopyLineArray`, `mText`).
+
 ## Round 16 (branches `rust-ui16a` toolkit then civilization builder and UI thread, `rust-ui16b` game UI then HUD, two passes each, merged on `rust-ui16`, 2026-11-23)
 
 The collapse phase: classes deleted, not only bodies moved. Lane classes 115 -> 96 (+2 outside the lane).

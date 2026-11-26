@@ -29,13 +29,6 @@ class LLE_API UIControlsTable {
 public:
     // Destroys the control description, releasing its font
     virtual ~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
-    void AddEvent(unsigned long inEventID, unsigned long inEventType) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEventID, inEventType, NULL); }
-    // Loads every control record from the file and registers each valid one with its form; returns the last read result
-    static long Create(FSFileSpec& inFile, UIManager* inManager)
-    {
-        return (long)ee_ui_controls_tables(EeUiTablesCall::Create, (intptr_t)&inFile, (intptr_t)inManager,
-                                           ee_ui_table_host, NULL);
-    }
     // port: adds a control the database does not have (after Create), described as a copy of the database control
     // inTemplateID (its type, font, colours, sounds and offset types; not its events) with its own id, form index,
     // group, rectangle (fractions of the window: offset type 4), string range and help string; registered with the
@@ -52,40 +45,25 @@ public:
     // Loads a UI texture (clamped, point mip, given alpha) and returns a bitmap stretched over the rectangle, or NULL
     GEBitmap* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle, const UString& inFileName,
                            bool inHasAlpha, const GERectangle& inTextureRectangle) const { return (GEBitmap*)ee_ui_table_create_bitmap(inManager, &inRectangle, &inFileName, inHasAlpha, &inTextureRectangle); }
-    // Lays out the control on the window and creates it by type (user types via the manager), then sets its background
-    UIControl* CreateControl(UIManager* inManager)
-    {
-        return reinterpret_cast<UIControl*>(
-            ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControl, (intptr_t)inManager, 0, NULL));
-    }
-    // Attaches the description's trigger events to the form's control, creating each event through the manager
-    void CreateControlEvent(UIForm* inForm) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControlEvent, (intptr_t)inForm, 0, NULL); }
     GEBitmap* CreateFocusedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetFocusedFileName(), this->GetFocusedHasAlpha(), this->GetFocusedTextureRect()); }
     GEBitmap* CreateNormalBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetNormalFileName(), this->GetNormalHasAlpha(), this->GetNormalTextureRect()); }
     GEBitmap* CreatePressedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetPressedFileName(), this->GetPressedHasAlpha(), this->GetPressedTextureRect()); }
-    // Deletes every control description and empties the table
-    static void DeleteAll() { ee_ui_controls_tables(EeUiTablesCall::DeleteAll, 0, 0, NULL, NULL); }
-    static UIControlsTable* GetUIControlsTable(unsigned long inIndex) { return reinterpret_cast<UIControlsTable*>(ee_ui_controls_tables(EeUiTablesCall::At, inIndex, 0, NULL, NULL)); }
     GEColor GetBackground() const { return reinterpret_cast<const GEColor&>(this->D().background); }
     GEColor GetTextForeground() const { return reinterpret_cast<const GEColor&>(this->D().text_foreground); }
     UString GetNormalFileName() const { return UString(this->D().names[0]); }
     UString GetPressedFileName() const { return UString(this->D().names[1]); }
     UString GetFocusedFileName() const { return UString(this->D().names[2]); }
     GEFont* GetFont() const { return static_cast<GEFont*>(this->D().font); }
-    GEBitmap* GetNormal() const { return NULL; }    // never set (the original left these members uninitialized)
     float GetBackgroundOpacity() const { return this->F().background_opacity; }
     long GetID() const { return this->F().id; }
     long GetFormID() const { return this->F().form_id; }
-    unsigned long GetGroup() const { return this->F().group; }
     unsigned long GetControlType() const { return this->F().control_type; }
     long GetFormIndex() const { return this->F().form_index; }
     long GetBorderThickness() const { return this->F().border_thickness; }
     unsigned long GetStringTableID() const { return this->F().string_table_id; }
-    long GetStringTableBegin() const { return this->F().string_table_begin; }
-    long GetStringTableEnd() const { return this->F().string_table_end; }
     const UILayoutUtility& GetLayout() const { return reinterpret_cast<const UILayoutUtility&>(this->D().layout); }
     const GERectangle& GetNormalTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().normal_rect); }
     const GERectangle& GetPressedTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().pressed_rect); }
@@ -97,12 +75,6 @@ public:
     bool GetNormalHasAlpha() const { return this->F().normal_has_alpha; }
     bool GetAlwaysDirty() const { return this->F().always_dirty; }
     bool GetLoopMovie() const { return this->F().loop_movie; }
-    // Recomputes a created control's rectangle and font for the current window size
-    void RelayoutControl(UIControl* inControl, UIManager* inManager)
-    {
-        ee_ui_controls_table_call(this->mRust, EeUiTableCall::RelayoutControl, (intptr_t)inControl, (intptr_t)inManager,
-                                  NULL);
-    }
     // Picks the description's font: scaled to the control or window height when the record asks, else the table font
     void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::SetupFont, (intptr_t)inManager, inScaleToWindow, const_cast<float*>(&inRectangle.mBottom)); }
     // Sets text to transparent in the description's text colour (ee_ui lle_hosts.rs)

@@ -62,6 +62,12 @@ pub enum Kind {
     List,
     /// `UIStatusBar`'s [`EeUiStatusBar`].
     StatusBar,
+    /// `UIScrollBar`'s [`EeUiScrollBar`](crate::scrollbarobj::EeUiScrollBar).
+    ScrollBar,
+    /// `UIControlsTable`'s [`EeUiControlsTable`](crate::tableobj::EeUiControlsTable).
+    Table,
+    /// `UIHotKey`'s record ([`EeUiHotKeyFields`](crate::hotkeyobj::EeUiHotKeyFields)).
+    HotKey,
 }
 
 /// The C++ pointer of a toolkit object (`UIForm*`, `UIControl*`, ...).
@@ -186,13 +192,22 @@ fn buf() -> [f32; 4] {
 
 /// One of `UIManager`'s methods on the manager `manager`.
 pub fn manager_call(manager: Cpp, call: EeUiManagerCall, a: isize, b: isize, c: isize) -> isize {
+    manager_call_f(manager, call, a, b, c, &mut buf())
+}
+
+/// One of `UIManager`'s methods on the manager `manager`, with the float buffer `f`.
+pub fn manager_call_f(manager: Cpp, call: EeUiManagerCall, a: isize, b: isize, c: isize, f: &mut [f32; 4]) -> isize {
     let m = find(Kind::Manager, manager) as *const EeUiManager;
     if m.is_null() {
         return 0;
     }
-    let mut f = buf();
     // SAFETY: a live manager (registered between its construction and destruction)
     unsafe { ee_ui_manager_call(m, call, a, b, c, f.as_mut_ptr()) }
+}
+
+/// The C++ object of the Rust object `obj` of `kind` (a background's `UIBackground*` from its record), or NULL.
+pub fn cpp_of(kind: Kind, obj: *const c_void) -> Cpp {
+    registry().by_obj.get(&(obj as usize, kind)).map_or(core::ptr::null_mut(), |&c| c as Cpp)
 }
 
 /// The manager's `GetFormByID(id)`.
@@ -227,11 +242,15 @@ pub fn fields(control: Cpp) -> *mut EeUiControlFields {
 
 /// One of `UIControl`'s base methods on `control`.
 pub fn control_call(control: Cpp, call: EeUiControlCall, a: isize, b: isize) -> isize {
+    control_call_f(control, call, a, b, &mut buf())
+}
+
+/// One of `UIControl`'s base methods on `control`, with the float buffer `f`.
+pub fn control_call_f(control: Cpp, call: EeUiControlCall, a: isize, b: isize, f: &mut [f32; 4]) -> isize {
     let r = fields(control);
     if r.is_null() {
         return 0;
     }
-    let mut f = buf();
     // SAFETY: a live control record
     unsafe { ee_ui_control_call(r, call, a, b, f.as_mut_ptr()) }
 }
@@ -425,6 +444,41 @@ pub unsafe fn c_bytes(p: *const c_void) -> Vec<u8> {
     }
     // SAFETY: the contract
     unsafe { core::ffi::CStr::from_ptr(p as *const core::ffi::c_char) }.to_bytes().to_vec()
+}
+
+// ---- TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the
+// map (the manager's and forms' state is Rust's: managerobj.rs, formobj.rs): the UI lock it try-enters, the form
+// stack, and a form's id and controls. The toolkit's unit keeps them linked (`/include:`).
+
+/// The manager's UI lock (the one UpdateUI holds).
+#[no_mangle]
+pub extern "C" fn EETestUILock(manager: *mut c_void) -> *mut c_void {
+    manager_call(manager, EeUiManagerCall::UiLock, 0, 0, 0) as *mut c_void
+}
+/// The number of forms on the manager's stack.
+#[no_mangle]
+pub extern "C" fn EETestUIFormCount(manager: *mut c_void) -> c_ulong {
+    manager_call(manager, EeUiManagerCall::FormCount, 0, 0, 0) as c_ulong
+}
+/// The stacked form `index`.
+#[no_mangle]
+pub extern "C" fn EETestUIForm(manager: *mut c_void, index: c_ulong) -> *mut c_void {
+    manager_call(manager, EeUiManagerCall::StackedForm, index as isize, 0, 0) as *mut c_void
+}
+/// The form's id.
+#[no_mangle]
+pub extern "C" fn EETestUIFormID(form: *mut c_void) -> c_ulong {
+    form_call(form, EeUiFormCall::FormId, 0, 0) as c_ulong
+}
+/// The form's control count.
+#[no_mangle]
+pub extern "C" fn EETestUIFormControlCount(form: *mut c_void) -> c_ulong {
+    form_call(form, EeUiFormCall::ControlCount, 0, 0) as c_ulong
+}
+/// The form's control `index`.
+#[no_mangle]
+pub extern "C" fn EETestUIFormControl(form: *mut c_void, index: c_ulong) -> *mut c_void {
+    control(form, index)
 }
 
 #[cfg(test)]
