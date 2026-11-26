@@ -15,21 +15,15 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/UResourceFile.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/GEModelManager.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
 #include "lle/SESoundManager.h"
 #include "lle/UIControl.h"
-#include "lle/FSRestorable.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
 
@@ -39,7 +33,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEGhostUnit.h"
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESaveGameFiles.h"
@@ -79,7 +72,6 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
-#include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp world.rs)
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)

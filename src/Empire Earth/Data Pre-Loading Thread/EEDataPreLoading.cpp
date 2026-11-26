@@ -19,7 +19,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECommunications.h"
 #include "ee/EEClient.h"
-#include "ee/EEMessage.h"
 #include "ee/EEDataPreLoading.h"
 
 // The thread's bodies are Rust (ee_game preload.rs, world lane round 1: the loop, the messages, the queue and its two

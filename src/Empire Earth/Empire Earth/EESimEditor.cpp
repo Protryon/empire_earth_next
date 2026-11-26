@@ -17,12 +17,9 @@
 #include <typeinfo>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
 #include "lle/UIEntityGroup.h"
-#include "lle/UIForm.h"
 #include "lle/NEMessage.h"
 #include "lle/UITriStateCheckBox.h"
 #include "lle/GETerrainMesh.h"
@@ -58,7 +55,6 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EESERBUnitTypes.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBUIListBox.h"

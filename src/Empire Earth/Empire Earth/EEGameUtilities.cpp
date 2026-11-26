@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <mbstring.h>
 #include <stdlib.h>
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"

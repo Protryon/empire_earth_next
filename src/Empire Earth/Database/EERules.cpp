@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "EEDataText.h"   // the ee_data C API
 
 EERuleNumber EERuleNumber::Constant(float inValue)
 {

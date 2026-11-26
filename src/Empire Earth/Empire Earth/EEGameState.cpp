@@ -9,7 +9,6 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/UIFormManager.h"
 #include "ee/EmpireEarth.h"
@@ -37,7 +36,6 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEGamePreferences.h"
-#include "rust/game/gamecpp.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp

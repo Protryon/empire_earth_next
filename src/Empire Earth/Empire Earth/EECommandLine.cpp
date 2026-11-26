@@ -27,7 +27,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EECommunications.h"
 #include "ee/EEGamePreferences.h"
-#include "ee/EEMessage.h"
 #include "ee/EEServer.h"
 #include "ee/EEClient.h"
 #include "ee/EEARust.h"

@@ -40,7 +40,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EESaveGameFiles.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
