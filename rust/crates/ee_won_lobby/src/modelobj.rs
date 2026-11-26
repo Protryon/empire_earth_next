@@ -1060,6 +1060,12 @@ impl EeWonModel {
 
 // ---- the methods (each the original's statements; a model object reached through its shell)
 
+/// RoutingLogic's client iterator (the C++ `LobbyClientIterator` it made): the list shell and the cursor.
+struct ClientIter {
+    list: isize,
+    cursor: EeWonModelCursor,
+}
+
 /// A server shell's address (`((LobbyServer*)shell)->GetAddress()`, a copy).
 pub(crate) fn server_address(shell: isize) -> EeWonIpAddr {
     must(shell).server().address.borrow().clone()
@@ -2717,6 +2723,28 @@ pub(crate) fn route_op(
                 3 => x.game().invited.set(c != 0),
                 4 => x.game_read_group(c),
                 _ => {}
+            }
+            0
+        }
+        // R6 WON lobby and network round 40: RoutingLogic.cpp's client iterator (`new LobbyClientIterator(list)`, its
+        // HasMore and Next, its delete) as a Rust cursor over the list (NULL: no clients)
+        O::IterNew => Box::into_raw(Box::new(ClientIter { list: a, cursor: EeWonModelCursor::default() })) as isize,
+        O::IterHasMore | O::IterNext => {
+            // SAFETY: an iterator IterNew made, not yet freed (the logic's contract)
+            let it = unsafe { &mut *(a as *mut ClientIter) };
+            // SAFETY: a live list shell or NULL
+            let Some(l) = (unsafe { of(it.list) }) else { return Some(0) };
+            if op == O::IterHasMore {
+                b(l.cursor_peek(&it.cursor) < l.list().clients.len())
+            } else {
+                let i = l.cursor_next(&mut it.cursor);
+                l.list().clients.at(i)
+            }
+        }
+        O::IterFree => {
+            if a != 0 {
+                // SAFETY: IterNew's box, freed once
+                drop(unsafe { Box::from_raw(a as *mut ClientIter) });
             }
             0
         }
