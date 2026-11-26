@@ -431,7 +431,7 @@ enum class EeWonEeGlueOp : uint32_t {
   GameAddressSet,
   /// `&sEELocalAddress`.
   GameAddressRef,
-  /// `GlueText(a, b)` held (one reference given back with `Release`).
+  /// `GlueText(a, b)` held (one reference given back with `Release`; in the game gluesplit.rs makes it).
   TextHeld = 500,
   /// `((Graphics*)a)->mFont->GetStringWidth(text, 0, length)` of the held text `b`.
   GfxTextWidthHeld,
@@ -621,6 +621,9 @@ enum class EeWonEeGlueOp : uint32_t {
   PlayerSetIsReady,
   /// `sEELobbyPlayer.mB36 = a != 0` (the player being made).
   PlayerSetB36,
+  /// `EELobbyToGUIString(EERMGetGeneratorDisplayName(a))` held (a map type's text: the game's texts of the other
+  /// kinds are gluesplit.rs's since R6 WON GUI round 40).
+  MapTypeTextHeld,
 };
 
 /// The inward calls (`a`.. as documented).

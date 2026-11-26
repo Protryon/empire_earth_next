@@ -12,6 +12,35 @@ use crate::eeglue::{EeWonEeGlueField as F, EeWonEeGlueOp as Op};
 /// The calls out: the host's op with its six arguments.
 pub(crate) type Out<'a> = &'a dyn Fn(Op, isize, isize, isize, isize, isize, isize) -> isize;
 
+fn is_game() -> bool {
+    ee_won_gui::compobj::is_game()
+}
+
+/// A lobby text (`GlueText(kind, value)`: eeglue.rs's `EeWonEeGlueText`) with one reference: a map type's name is
+/// the host's (`MapTypeTextHeld`); in a driver's world the host's `TextHeld`.
+fn text_held(kind: isize, value: isize, out: Out) -> isize {
+    use crate::eeglue::EeWonEeGlueText as T;
+    use crate::lobbytext as lt;
+    if !is_game() {
+        return out(Op::TextHeld, kind, value, 0, 0, 0, 0);
+    }
+    let empty = || lt::held(ee_won_gui::guistrobj::ee_won_gstr_empty());
+    match kind {
+        k if k == T::Resource as isize => {
+            // SAFETY: the string's GUIString (one text pointer)
+            lt::held(unsafe { *(crate::eeresource::ee_won_eeresource_string(value as i32 as usize) as *const *mut _) })
+        }
+        // `sprintf("%ld", (long)value)`
+        k if k == T::Number as isize => {
+            let s = (value as std::ffi::c_long).to_string();
+            lt::held(lt::narrow_new(s.as_ptr() as isize, s.len()))
+        }
+        k if k == T::MapType as isize => out(Op::MapTypeTextHeld, value, 0, 0, 0, 0, 0),
+        k if k == T::Data as isize && value != 0 => lt::held(value as *mut _),
+        _ => empty(),
+    }
+}
+
 /// The op `op` with the arguments `v` answered here (`None`: the host's own case).
 pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
     let o = |op: Op, a: isize, b: isize| out(op, a, b, 0, 0, 0, 0);
@@ -19,10 +48,76 @@ pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
     let r = match op {
         // `GUIString aText = GlueText(b, c); return g->mFont->GetStringWidth(aText, 0, aText.length());`
         Op::TextWidth => {
-            let t = o(Op::TextHeld, b, c);
+            let t = text_held(b, c, out);
             let w = o(Op::GfxTextWidthHeld, a, t);
             o(Op::Release, t, 0);
             w
+        }
+        // the lobby's texts (`GlueText(kind, value)`), in the game
+        Op::TextHeld => {
+            if !is_game() {
+                return None;
+            }
+            text_held(a, b, out)
+        }
+        // `((Graphics*)a)->DrawString(GlueText(b, c), d, e)`
+        Op::DrawText => {
+            if !is_game() {
+                return None;
+            }
+            let t = text_held(b, c, out);
+            let p = t as *const ee_won_gui::guistrobj::EeWonGstr;
+            // SAFETY: the game's Graphics (its record first); the text a GUIString (one pointer) for the call
+            unsafe {
+                ee_won_gui::gfxrun::ee_won_graphics_call(
+                    a as *mut ee_won_gui::gfxrun::EeWonGraphics,
+                    ee_won_gui::gfxobj::EeWonGfxCall::DrawString,
+                    v[3] as i32,
+                    v[4] as i32,
+                    crate::lobbytext::len(t) as i32,
+                    0,
+                    0,
+                    0,
+                    0,
+                    (&p as *const *const ee_won_gui::guistrobj::EeWonGstr).cast(),
+                )
+            };
+            crate::lobbytext::release(t);
+            0
+        }
+        // `GlueText(b, c).findNoCase(*(const GUIString*)d, 0)`
+        Op::TextFind => {
+            if !is_game() {
+                return None;
+            }
+            let t = text_held(b, c, out);
+            let r = crate::lobbytext::find_no_case(t, crate::lobbytext::of(v[3]));
+            crate::lobbytext::release(t);
+            r
+        }
+        // `GlueText(a, b).CompareNoCase(GlueText(c, d))`
+        Op::TextCompareNoCase => {
+            if !is_game() {
+                return None;
+            }
+            let (ta, tb) = (text_held(a, b, out), text_held(c, v[3], out));
+            let r = crate::lobbytext::compare_no_case(ta, tb);
+            crate::lobbytext::release(ta);
+            crate::lobbytext::release(tb);
+            r
+        }
+        // `LobbyAddGameOption(a ? "MapType" : "Epoch", GlueText(b, c), true)`
+        Op::AddGameOption => {
+            if !is_game() {
+                return None;
+            }
+            let name: &str = if a != 0 { "MapType" } else { "Epoch" };
+            let column = crate::lobbytext::held(crate::lobbytext::narrow_new(name.as_ptr() as isize, name.len()));
+            let t = text_held(b, c, out);
+            crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::AddGameOption, column, t, 1);
+            crate::lobbytext::release(t);
+            crate::lobbytext::release(column);
+            0
         }
         Op::SetFactories => {
             o(Op::FactoryGame, 0, 0);
