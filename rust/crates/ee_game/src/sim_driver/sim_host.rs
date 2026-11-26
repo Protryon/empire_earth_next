@@ -320,12 +320,14 @@ pub(super) const WORLD_TRADE_RATE_FOOD_WOOD: u32 = 92;
 
 /// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`; the live unit's, read on the thread that owns it).
 fn unit_fields(u: usize) -> *const ee_sim::world::unit_fields::EeUnitsUnitFields {
-    gc::h(gc::O::UnFields, u, &[]) as usize as *const _
+    // SAFETY: a live unit of the world (the record's address only)
+    unsafe { gc::records::un_fields(u) }
 }
 
 /// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
 fn cx_fields(c: usize) -> *const ee_sim::world::unit_fields::EeUnitsComplexUnitFields {
-    gc::h(gc::O::CxFields, c, &[]) as usize as *const _
+    // SAFETY: as unit_fields
+    unsafe { gc::records::cx_fields(c) }
 }
 
 /// gPhysics' saved block (EE-SIM's reads while the physics lives).

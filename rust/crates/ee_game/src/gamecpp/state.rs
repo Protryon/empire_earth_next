@@ -144,17 +144,17 @@ fn slot_fields<'a>(slot: P) -> &'a mut EeAppOptionsPlayerFields {
 
 fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
     // SAFETY: a live player's record
-    unsafe { &mut *rec(O::PlRts, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_rts(pl) }
 }
 
 fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
     // SAFETY: as prts
-    unsafe { &mut *rec(O::PlSaved, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_saved(pl) }
 }
 
 fn pfields<'a>(pl: P) -> &'a mut EeUnitsPlayerFields {
     // SAFETY: as prts
-    unsafe { &mut *rec(O::PlFields, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_fields(pl) }
 }
 
 /// The options' slot `i` (an `EEGameOptionsPlayer*`).

@@ -862,7 +862,7 @@ fn restore_players(st: P, helper: P) -> i64 {
 
 fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
     // SAFETY: a live player's record
-    unsafe { &mut *rec(O::PlRts, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_rts(pl) }
 }
 
 /// `EELoadPersistent`: one chunk (by tag) read out of a saved game file without loading the rest; the read error.

@@ -30,7 +30,6 @@ use ee_sim::tech::calamity_class::EeCalamityClassFields;
 use ee_sim::tech::calamity_record::EeCalamityFields;
 use ee_sim::tech::calamity_update::{EeCalamityCall, EeCalamityOp, EeCalamityReply, EeCalamityState};
 use ee_sim::units::uu_host::{tiles_of, units_of};
-use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
@@ -116,32 +115,32 @@ mod cap {
 
 fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record, used before the next C++ call
-    unsafe { &mut *rec(O::UnRts, u) }
+    unsafe { &mut *crate::gamecpp::records::un_rts(u) }
 }
 
 fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: a live complex unit's record, as rts
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn ucf<'a>(uc: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: a live unit class's record, as rts
-    unsafe { &*rec(O::UcFields, uc) }
+    unsafe { &*crate::gamecpp::records::uc_fields(uc) }
 }
 
 fn player_id(pl: P) -> c_ulong {
     // SAFETY: a live player's record, as rts
-    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+    unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID }
 }
 
 fn enemy(pl: P, other: c_ulong) -> c_ulong {
     // SAFETY: as player_id
-    unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies[other as usize] }
+    unsafe { (*crate::gamecpp::records::pl_saved(pl)).mEnemies[other as usize] }
 }
 
 fn cal<'a>(c: P) -> &'a mut EeCalamityFields {
@@ -1362,7 +1361,7 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
             // the earthquake's ShakeCamera: the local player's camera (once per player and manager update)
             let player = hp(O::WorldCurrentPlayer, 0, &[]);
             // SAFETY: the live player's record
-            let shaken = unsafe { &mut (*rec::<EeUnitsPlayerFields>(O::PlFields, player)).mEarthquakeShaken };
+            let shaken = unsafe { &mut (*crate::gamecpp::records::pl_fields(player)).mEarthquakeShaken };
             if !*shaken {
                 *shaken = true;
                 let (angle, amplitude) = (call.x, call.y);

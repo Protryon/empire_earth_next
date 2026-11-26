@@ -11,7 +11,6 @@ use ee_sim::app::statistics_ffi::{
 use ee_sim::units::player_stats::{
     EeUnitsPlayerStats, EeUnitsStatsRecordTail, EE_UNITS_STATS_EDITOR, EE_UNITS_STATS_LOADING, EE_UNITS_STATS_SHUTDOWN,
 };
-use ee_sim::world::player_fields::EeUnitsPlayerSaved;
 
 use crate::app::game_options::{EeAppOptionsFields, EeAppOptionsPlayerFields};
 
@@ -66,7 +65,7 @@ fn record_of(w: P, o: &EeAppStatsRecord, history_end_time: c_long) -> StatsRecor
     // SAFETY: the player's saved numbers and colour, copied; its live series
     let (saved, color, series) = unsafe {
         (
-            *rec::<EeUnitsPlayerSaved>(O::PlSaved, pl),
+            *crate::gamecpp::records::pl_saved(pl),
             [hd(O::EgColorRed, pl, &[], &[]), hd(O::EgColorGreen, pl, &[], &[]), hd(O::EgColorBlue, pl, &[], &[])],
             (*rec::<EeUnitsPlayerStats>(O::EwStatsSeries, statistics)).clone(),
         )

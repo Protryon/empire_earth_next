@@ -18,8 +18,6 @@ use ee_base::error::checksum::{
 };
 use ee_sim::tech::calamity_record::EeCalamityFields;
 use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_ALLIES};
-use ee_sim::world::player_fields::EeUnitsPlayerSaved;
-use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
 
 use super::persistent::{Pf, PF_FAILED, PF_OK};
 use super::{h, hp, pa, rec, Owned, O, P};
@@ -195,7 +193,7 @@ pub extern "C" fn ee_gamecpp_pph_load(
             // SAFETY: the player's record
             if j != i
                 && h(O::MpPlAlliedWith, pj, &[pa(pi)]) != 0
-                && unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pj)).mSharedLOS }
+                && unsafe { (*crate::gamecpp::records::pl_saved(pj)).mSharedLOS }
             {
                 player_op(pj as u64, EE_UNITS_LISTS_ALLIES, ListOp::Add(pi as u64));
             }
@@ -729,7 +727,7 @@ pub extern "C" fn ee_gamecpp_pch_save(major: c_ulong, minor: c_ulong, file: *mut
         let mut target: P = 0;
         let id = if h(O::PchGetTarget, calamity, &[&mut target as *mut P as usize as i64]) != 0 {
             // SAFETY: the target's record
-            unsafe { (*rec::<EeUnitsRtsUnitFields>(O::UnRts, target)).mUnitID }
+            unsafe { (*crate::gamecpp::records::un_rts(target)).mUnitID }
         } else {
             c_ulong::MAX
         };

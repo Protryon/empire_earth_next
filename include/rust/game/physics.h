@@ -83,8 +83,6 @@ enum class EePhysCpp : uint32_t {
   LogChecksumResponse,
   LogResponse,
   PauseGame,
-  /// `SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {...}), 15000, 12)` with the name a0
-  SendAutoSave,
   ScenarioResult,
   SetScenarioResult,
   ScenarioUpdate,
@@ -144,7 +142,6 @@ enum class EePhysCpp : uint32_t {
   SetLastAutoSave,
   /// `gSavedGameExtension` into the buffer a0 (room a1)
   SavedGameExtension,
-  LoadOrSave,
   FileOpen,
   FileClose,
   ContinentChecksum,

@@ -42,11 +42,10 @@ use ee_sim::units::uu_adapt::ee_units_uu_next_tile;
 use ee_sim::units::uu_ffi::{
     ee_units_uu_can_stand_on, ee_units_uu_farm_drop_sites, ee_units_uu_tile_direction, ee_units_uu_units_on_tile,
 };
-use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
-use super::{cptr, h, hd, hf, hp, pa, position, ptr, rec, set_position, Owned, O, P};
+use super::{cptr, h, hd, hf, hp, pa, position, ptr, set_position, Owned, O, P};
 
 // ---- the constants the C++ cases name (static_assert'd in EEEffectHost.cpp)
 
@@ -90,27 +89,27 @@ fn head<'a>(e: EffectPtr) -> &'a mut EeGfxEffectHead {
 
 fn unit_fields<'a>(u: P) -> &'a EeUnitsUnitFields {
     // SAFETY: a live unit's record
-    unsafe { &*rec::<EeUnitsUnitFields>(O::UnFields, u) }
+    unsafe { &*crate::gamecpp::records::un_fields(u) }
 }
 
 fn rts_fields<'a>(u: P) -> &'a EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record
-    unsafe { &*rec::<EeUnitsRtsUnitFields>(O::UnRts, u) }
+    unsafe { &*crate::gamecpp::records::un_rts(u) }
 }
 
 fn cx_fields<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: a live complex unit's record
-    unsafe { &mut *rec::<EeUnitsComplexUnitFields>(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn class_fields<'a>(uc: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: a live unit class's record
-    unsafe { &*rec::<EeUnitsUnitClassFields>(O::UcFields, uc) }
+    unsafe { &*crate::gamecpp::records::uc_fields(uc) }
 }
 
 fn player_id(pl: P) -> c_ulong {
     // SAFETY: a live player's record
-    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+    unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID }
 }
 
 /// `GetPosition` of a unit.
@@ -485,7 +484,7 @@ pub extern "C" fn ee_gamecpp_fx_farm_doppelganger(ask: *mut c_void) -> i32 {
         d = hp(O::FxDoppelgangerGet, tile, &[pa(unit), player_id(current) as i64]);
     }
     // SAFETY: the current player's record
-    let sees_all = unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, current)).mSeesAll };
+    let sees_all = unsafe { (*crate::gamecpp::records::pl_rts(current)).mSeesAll };
     if d != 0 && h(O::FxFreeCamera, 0, &[]) == 0 && !sees_all {
         return if h(O::FxDoppelgangerIsBuilt, d, &[]) != 0 { 1 } else { 0 };
     }
@@ -717,7 +716,7 @@ pub extern "C" fn ee_gamecpp_fx_goal_player(_: *mut c_void, player: u32) -> EeGf
     let group = hp(O::FxPlSelectedGroup, pl, &[]);
     GOAL_GROUP.store(group, Ordering::Relaxed);
     // SAFETY: the player's record
-    let shift_mode = unsafe { (*rec::<EeUnitsPlayerFields>(O::PlFields, pl)).mShiftMode };
+    let shift_mode = unsafe { (*crate::gamecpp::records::pl_fields(pl)).mShiftMode };
     EeGfxGoalPlayer {
         late_epoch: h(O::FxPlCurrentEpoch, pl, &[]) >= FX_EPOCH_ATOMIC_WW2,
         shift_mode,

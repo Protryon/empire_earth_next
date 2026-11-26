@@ -27,8 +27,6 @@ use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
 use ee_sim::units::save_prim::game::ee_units_save_primitive;
 use ee_sim::units::world_save::*;
 use ee_sim::world::layout::EeWorldLayout;
-use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
-use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 use ee_sim::world::view::{ClassView, MapView, WorldRead};
 
@@ -71,17 +69,17 @@ fn fields(helper: P) -> *mut EePWorldHelperFields {
 
 fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's RTSUnit record, used before the next C++ call that changes it
-    unsafe { &mut *rec(O::UnRts, u) }
+    unsafe { &mut *crate::gamecpp::records::un_rts(u) }
 }
 
 fn unf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cxf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: a live complex unit's record
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn num_players() -> c_ulong {
@@ -745,10 +743,10 @@ fn ghost_fields(u: P, io: &mut EeUnitsWorldIo) {
     let class = hp(O::UnClass, u, &[]);
     // SAFETY: the class's record
     io.v[1] =
-        if class != 0 { unsafe { (*rec::<EeUnitsUnitClassFields>(O::UcFields, class)).mUnitType as i64 } } else { -1 };
+        if class != 0 { unsafe { (*crate::gamecpp::records::uc_fields(class)).mUnitType as i64 } } else { -1 };
     let pl = hp(O::UnPlayer, u, &[]);
     // SAFETY: the player's record
-    io.v[2] = if pl != 0 { unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID as i64 } } else { -1 };
+    io.v[2] = if pl != 0 { unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID as i64 } } else { -1 };
     let f = *unf(u);
     io.v[3] = f.mHitPoints as i64;
     io.v[4] = r.mTileX as i64;

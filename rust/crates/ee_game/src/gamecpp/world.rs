@@ -58,37 +58,37 @@ const PROGRESS: [f32; 14] = [
 
 fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record, used before the next C++ call
-    unsafe { &mut *rec(O::UnRts, u) }
+    unsafe { &mut *crate::gamecpp::records::un_rts(u) }
 }
 
 fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn ucf<'a>(uc: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: as rts
-    unsafe { &*rec(O::UcFields, uc) }
+    unsafe { &*crate::gamecpp::records::uc_fields(uc) }
 }
 
 fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
     // SAFETY: a live player's record, as rts
-    unsafe { &mut *rec(O::PlRts, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_rts(pl) }
 }
 
 fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
     // SAFETY: as prts
-    unsafe { &mut *rec(O::PlSaved, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_saved(pl) }
 }
 
 fn pfields<'a>(pl: P) -> &'a mut EeUnitsPlayerFields {
     // SAFETY: as prts
-    unsafe { &mut *rec(O::PlFields, pl) }
+    unsafe { &mut *crate::gamecpp::records::pl_fields(pl) }
 }
 
 /// The world's game options (`mGameOptions`), or the lobby's (`gGameOptions`).

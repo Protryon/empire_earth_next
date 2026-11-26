@@ -34,7 +34,6 @@ use ee_sim::tech::calamity_class::{
 use ee_sim::tech::calamity_record::EeCalamityFields;
 use ee_sim::tech::calamity_update::{EeCalamityCall, EeCalamityOp, EeCalamityReply, EeCalamityState};
 use ee_sim::tech::contagion_functor::{self as cf, EeContagionFunctorFields};
-use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
@@ -63,22 +62,22 @@ fn klass<'a>(kl: P) -> &'a mut EeCalamityClassFields {
 
 fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record, as cal
-    unsafe { &mut *rec(O::UnRts, u) }
+    unsafe { &mut *crate::gamecpp::records::un_rts(u) }
 }
 
 fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cxf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn ucf<'a>(uc: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: as rts
-    unsafe { &*rec(O::UcFields, uc) }
+    unsafe { &*crate::gamecpp::records::uc_fields(uc) }
 }
 
 fn functor<'a>(fu: P) -> &'a mut EeContagionFunctorFields {
@@ -88,12 +87,12 @@ fn functor<'a>(fu: P) -> &'a mut EeContagionFunctorFields {
 
 fn player_id(pl: P) -> c_ulong {
     // SAFETY: a live player's record
-    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+    unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID }
 }
 
 fn enemy(pl: P, other: c_ulong) -> c_ulong {
     // SAFETY: as player_id
-    unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies[other as usize] }
+    unsafe { (*crate::gamecpp::records::pl_saved(pl)).mEnemies[other as usize] }
 }
 
 fn complex(u: P) -> P {
@@ -724,7 +723,7 @@ pub extern "C" fn ee_gamecpp_calamity_update_all(m: *mut c_void, elapsed: f32) {
     for i in 1..n {
         let pl = hp(O::WPlayer, world, &[i as i64]);
         // SAFETY: the live player's record
-        unsafe { (*rec::<EeUnitsPlayerFields>(O::PlFields, pl)).mEarthquakeShaken = false };
+        unsafe { (*crate::gamecpp::records::pl_fields(pl)).mEarthquakeShaken = false };
     }
     let mut i = 0;
     while i < active(m) {

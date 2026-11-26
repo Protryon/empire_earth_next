@@ -234,10 +234,9 @@ pub(crate) fn player_record(pl: P) -> Vec<u8> {
     if pl == 0 {
         r.i32(-1);
     } else {
-        use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsRtsPlayerFields};
         // SAFETY: the live player's records
         let (rts, f) = unsafe {
-            (&*super::rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl), &*super::rec::<EeUnitsPlayerFields>(O::PlFields, pl))
+            (&*crate::gamecpp::records::pl_rts(pl), &*crate::gamecpp::records::pl_fields(pl))
         };
         r.i32(rts.mPlayerID as i32);
         r.i32(f.mPopulationLimitBonus as i32);

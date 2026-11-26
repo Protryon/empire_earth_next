@@ -234,7 +234,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNodeUnitClass0: return TNODE->GetUnitClass(0);
     case O::TkNodeIsAvailable: return TNODE->GetIsAvailable();
     case O::TkNodeGetCost: return TNODE->GetCost((long)a[0], (long)a[1], 1.0f);
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);   // the end of the chain
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnComplex, 1);   // the end of the chain
     }
     return 0;
 }

@@ -24,7 +24,6 @@ use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
 use ee_sim::units::tile_sight_host::{ee_units_map_words_free, ee_units_map_words_new, ee_units_map_words_resize};
 use ee_sim::units::uu_ffi::ee_units_uu_get_tiles_near_point;
 use ee_sim::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
-use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::view::{MapView, PlayerView, UnitView, WorldRead, WorldView};
 
 use crate::app::map_ffi::{
@@ -36,7 +35,7 @@ use crate::app::map_ffi::{
 use crate::app::world_capture::{ee_app_capture_map_checksum, ee_app_capture_slope};
 use crate::sight_capture::ee_app_sight_record;
 
-use super::{cptr, h, hd, hf, hp, pa, position, ptr, rec, Owned, O, P};
+use super::{cptr, h, hd, hf, hp, pa, position, ptr, Owned, O, P};
 
 /// `kUnitTypeCameraObject` (static_assert'd in EEEffectHost.cpp).
 const MP_TYPE_CAMERA_OBJECT: c_ulong = 0x167;
@@ -306,7 +305,7 @@ pub extern "C" fn ee_gamecpp_map_place_on_ground(unit: *mut c_void) {
         return;
     }
     // SAFETY: the class's record
-    let kind = unsafe { (*rec::<EeUnitsUnitClassFields>(O::UcFields, super::map::unit_class(cx))).mUnitType };
+    let kind = unsafe { (*crate::gamecpp::records::uc_fields(super::map::unit_class(cx))).mUnitType };
     if kind != MP_TYPE_CAMERA_OBJECT {
         let mut t = GeTransformation::IDENTITY;
         h(O::CxLocation, cx, &[ptr(&mut t)]);

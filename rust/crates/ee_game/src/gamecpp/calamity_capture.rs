@@ -535,7 +535,7 @@ fn events(list: &std::sync::Mutex<Events>) -> std::sync::MutexGuard<'_, Events> 
 fn unit_id(u: P) -> u32 {
     if u != 0 {
         // SAFETY: a live unit's record
-        unsafe { (*rec::<ee_sim::world::unit_fields::EeUnitsRtsUnitFields>(O::UnRts, u)).mUnitID as u32 }
+        unsafe { (*crate::gamecpp::records::un_rts(u)).mUnitID as u32 }
     } else {
         0xffff_ffff
     }
@@ -687,7 +687,7 @@ fn living_unit(pl: P, skip: i64) -> P {
     let mut u = hp(O::PlFirstUnit, pl, &[]);
     while u != 0 {
         // SAFETY: a live unit's record
-        let alive = unsafe { (*rec::<ee_sim::world::unit_fields::EeUnitsUnitFields>(O::UnFields, u)).mHitPoints } > 0;
+        let alive = unsafe { (*crate::gamecpp::records::un_fields(u)).mHitPoints } > 0;
         if hp(O::UnComplex, u, &[]) != 0 && alive {
             if skip == 0 {
                 return u;
@@ -711,7 +711,7 @@ pub extern "C" fn ee_gamecpp_capture_calamity_sweep() {
     let size = h(O::MapSize, hp(O::WMap, world, &[]), &[]) as c_long;
     let tile = |u: P| {
         // SAFETY: a live unit's record
-        let t = unsafe { *rec::<ee_sim::world::unit_fields::EeUnitsRtsUnitFields>(O::UnRts, u) };
+        let t = unsafe { *crate::gamecpp::records::un_rts(u) };
         (t.mTileX, t.mTileY)
     };
     for row in 0..h(O::MgrClassCount, m, &[]) as c_ulong {
@@ -769,14 +769,14 @@ fn unit_state(r: &mut Record, u: P) {
         return;
     }
     // SAFETY: a live unit's record
-    r.i32(unsafe { (*rec::<ee_sim::world::unit_fields::EeUnitsUnitFields>(O::UnFields, u)).mHitPoints } as i32);
+    r.i32(unsafe { (*crate::gamecpp::records::un_fields(u)).mHitPoints } as i32);
     let cx = hp(O::UnComplex, u, &[]);
     r.u32((cx != 0) as u32);
     if cx == 0 {
         return;
     }
     // SAFETY: a live complex unit's record
-    let f = unsafe { *rec::<ee_sim::world::unit_fields::EeUnitsComplexUnitFields>(O::CxFields, cx) };
+    let f = unsafe { *crate::gamecpp::records::cx_fields(cx) };
     r.u32(f.mIsDisabled as u32 | (f.mIsTinted as u32) << 1 | (f.mIsDeletable as u32) << 2);
     r.u32(f.mDisabledReason as u32);
     r.f32(f.mSight);
@@ -884,10 +884,10 @@ fn helper_state(r: &mut Record, helper: *const ee_sim::tech::contagion_store::Ee
         for i in 0..n {
             let u = cs::ee_contagion_helper_unit(helper, false, i) as P;
             r.u32(unit_id(u));
-            r.i32((*rec::<ee_sim::world::unit_fields::EeUnitsUnitFields>(O::UnFields, u)).mHitPoints as i32);
+            r.i32((*crate::gamecpp::records::un_fields(u)).mHitPoints as i32);
             let cx = hp(O::UnComplex, u, &[]);
             r.u32(if cx != 0 {
-                (*rec::<ee_sim::world::unit_fields::EeUnitsComplexUnitFields>(O::CxFields, cx)).mCalamityFlags as u32
+                (*crate::gamecpp::records::cx_fields(cx)).mCalamityFlags as u32
             } else {
                 0xffff_ffff
             });
@@ -965,14 +965,14 @@ pub extern "C" fn ee_gamecpp_capture_cast_calamities(call: c_long) {
             }
             // SAFETY: the live player's record
             let player =
-                unsafe { (*rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID };
+                unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID };
             let cid = unit_id(caster) as c_ulong;
             let create = super::calamity_objects::ee_gamecpp_calamity_create;
             if kind == 3 {
                 create(m as *mut c_void, 2, row, cid, unit_id(target) as c_ulong, 0, 0, player);
             } else if kind == 2 {
                 // SAFETY: a live unit's record
-                let t = unsafe { *rec::<ee_sim::world::unit_fields::EeUnitsRtsUnitFields>(O::UnRts, target) };
+                let t = unsafe { *crate::gamecpp::records::un_rts(target) };
                 create(m as *mut c_void, 1, row, cid, 0, t.mTileX, t.mTileY, player);
             } else if kind == 1 {
                 create(m as *mut c_void, 0, row, cid, 0, 0, 0, player);

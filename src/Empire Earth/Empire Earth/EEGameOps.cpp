@@ -67,9 +67,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     typedef EeGameCpp O;
     switch (inOp) {
     // the units
-    case O::UnRts: return P64(static_cast<EeUnitsRtsUnitFields*>(UN));
-    case O::UnFields: return P64(static_cast<EeUnitsUnitFields*>(UN));
-    case O::CxFields: return P64(static_cast<EeUnitsComplexUnitFields*>(CX));
     case O::UnComplex: return P64(UN->mComplexUnit);
     case O::UnGetComplex: return P64(UN->GetComplexUnit());
     case O::UnPlayer: return P64(UN->mPlayer);
@@ -169,7 +166,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NewCastCalamity: return P64(EEUGRust::NewCastCalamity(CX, (EEUnit*)a[0], (long)a[1], (long)a[2], (long)a[3], a[4] != 0));
     case O::NewLocation: return P64(EEUGRust::NewLocation(&PT(0), a[1] != 0, a[2] != 0, a[3] != 0, f[0], a[4] != 0, (unsigned char)a[5]));
     // the unit classes
-    case O::UcFields: return P64(static_cast<EeUnitsUnitClassFields*>(UC));
     case O::UcActionChanged: UC->ActionChanged((EEComplexUnit*)a[0]);
         break;
     case O::UcIsLandBuilding: return UC->IsLandBuilding();
@@ -182,9 +178,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::UcLastLinked: return P64(UC->GetLastLinked((EEComplexUnit*)a[0]));
     case O::UcMoraleEffect: return P64(UC->mMoraleEffect);
     // the players
-    case O::PlRts: return P64(static_cast<EeUnitsRtsPlayerFields*>(PL));
-    case O::PlSaved: return P64(static_cast<EeUnitsPlayerSaved*>(PL));
-    case O::PlFields: return P64(static_cast<EeUnitsPlayerFields*>(PL));
     case O::PlTechnology: return P64(PL->mTechnologies->Get((long)a[0]));
     case O::PlCanAfford: return PL->CanAfford((EETechnology*)a[0], (long)a[1], (long)a[2]);
     case O::PlPay: PL->Pay((EETechnology*)a[0], (long)a[1], f[0]);

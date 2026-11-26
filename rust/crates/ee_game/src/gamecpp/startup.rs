@@ -286,7 +286,7 @@ pub extern "C" fn ee_gamecpp_startup_attack_players(player: c_long, flag: u8) {
     let players = unsafe { *super::rec::<c_ulong>(O::WNumPlayers, hp(O::WorldAddr, 0, &[])) };
     let pid = |p: P| -> c_ulong {
         // SAFETY: a live player's record
-        unsafe { (*super::rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, p)).mPlayerID }
+        unsafe { (*crate::gamecpp::records::pl_rts(p)).mPlayerID }
     };
     for i in 1..players {
         let other = hp(O::WorldPlayer, 0, &[i as i64]);
@@ -296,12 +296,12 @@ pub extern "C" fn ee_gamecpp_startup_attack_players(player: c_long, flag: u8) {
         let computer = hp(O::EgComputer, other, &[]);
         // SAFETY: as pid
         let observer = unsafe {
-            (*super::rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, other)).mObserverMode
+            (*crate::gamecpp::records::pl_rts(other)).mObserverMode
         };
         if computer != 0 && !observer {
             // SAFETY: the player's saved numbers
             let enemy = unsafe {
-                (*super::rec::<ee_sim::world::player_fields::EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies
+                (*crate::gamecpp::records::pl_saved(pl)).mEnemies
                     [pid(computer) as usize]
             };
             let is_enemy = computer != pl && enemy != 0;

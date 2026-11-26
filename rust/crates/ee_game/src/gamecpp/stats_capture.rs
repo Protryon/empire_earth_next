@@ -13,7 +13,6 @@ use std::ffi::c_ulong;
 
 use ee_sim::app::capture_record::{self, Record};
 use ee_sim::units::player_stats::{EeUnitsPlayerStats, EeUnitsStatsHistoryTail};
-use ee_sim::world::player_fields::EeUnitsPlayerSaved;
 
 use super::{h, hp, rec, O};
 
@@ -92,7 +91,7 @@ pub extern "C" fn ee_gamecpp_capture_statistics_sweep() {
         }
         r.u32(1);
         // SAFETY: the player's saved numbers, copied
-        let caps = unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, p)).mResourceCaps };
+        let caps = unsafe { (*crate::gamecpp::records::pl_saved(p)).mResourceCaps };
         for k in 2..7 {
             r.i32(caps[k] as i32);
         }

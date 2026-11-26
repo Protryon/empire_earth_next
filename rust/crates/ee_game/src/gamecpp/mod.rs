@@ -50,6 +50,7 @@ pub mod tile;
 // ---- round 9, lane C: the persistent helpers (Persistent)
 pub mod persist_parts;
 pub mod persist_save;
+pub mod records;
 pub mod persist_world;
 pub mod persistent;
 //
@@ -186,10 +187,7 @@ use ee_base::math::types::{Ge3DPoint, GeTransformation};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeGameCpp {
     // ---- the units (p: an EEUnit*, or an EEComplexUnit* for the Cx ops)
-    UnRts = 1,
-    UnFields,
-    CxFields,
-    UnComplex,
+    UnComplex = 1,
     UnGetComplex,
     UnPlayer,
     UnClass,
@@ -253,7 +251,6 @@ pub enum EeGameCpp {
     NewCastCalamity,
     NewLocation,
     // ---- the unit classes (p: an EEUnitClass*)
-    UcFields,
     UcActionChanged,
     UcIsLandBuilding,
     UcHeightAt,
@@ -264,9 +261,6 @@ pub enum EeGameCpp {
     UcLastLinked,
     UcMoraleEffect,
     // ---- the players (p: an EEPlayer*)
-    PlRts,
-    PlSaved,
-    PlFields,
     PlTechnology,
     PlCanAfford,
     PlPay,

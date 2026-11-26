@@ -117,10 +117,7 @@ constexpr static const size_t EE_GAME_SIZE_gGameVariants = 1;
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
-  UnRts = 1,
-  UnFields,
-  CxFields,
-  UnComplex,
+  UnComplex = 1,
   UnGetComplex,
   UnPlayer,
   UnClass,
@@ -183,7 +180,6 @@ enum class EeGameCpp : uint32_t {
   NewAttackUnit,
   NewCastCalamity,
   NewLocation,
-  UcFields,
   UcActionChanged,
   UcIsLandBuilding,
   UcHeightAt,
@@ -193,9 +189,6 @@ enum class EeGameCpp : uint32_t {
   UcLastLinkedCarrier,
   UcLastLinked,
   UcMoraleEffect,
-  PlRts,
-  PlSaved,
-  PlFields,
   PlTechnology,
   PlCanAfford,
   PlPay,
@@ -2344,7 +2337,6 @@ enum class EeGameCpp : uint32_t {
   LcMsgExport,
   LcBytesDelete,
   LcMsgCodecSlots,
-  LcMsgSelectIDs,
   LcMsgBuildGame,
   LcMsgBuildEngine,
   LcMsgDereference,
@@ -2874,7 +2866,6 @@ enum class EeGameCpp : uint32_t {
   C11MsgListData,
   C11MsgListSize,
   C11MsgSetRectangle,
-  C11LongsAssign,
   C11CalHostNew,
   C11CalHostDelete,
   C11CalRectLoad,
@@ -5476,14 +5467,6 @@ void *ee_gamecpp_msg_build(void *memory);
 void *ee_gamecpp_msg_select_units(const void *rectangle,
                                   long unit_type,
                                   uint8_t kind);
-
-/// EESelectUnitsIDs: a box selection's compact buffer decoded into unit ids, replacing the list (a C++
-/// `std::vector<long>`: each the 32-bit value, sign-extended on LP64).
-///
-/// # Safety
-/// `message` is a live record, `out` a live `std::vector<long>`.
-void ee_gamecpp_msg_select_ids(const void *message,
-                               void *out);
 
 /// The farm sorts' comparison of two complex units (the comparators' bodies).
 ///

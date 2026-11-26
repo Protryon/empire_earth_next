@@ -130,7 +130,7 @@ pub fn set_location(location: *const Ge3DPoint, immediate: bool, follow_terrain:
 fn unit_id(unit: P) -> u32 {
     if unit != 0 {
         // SAFETY: the live unit's record
-        unsafe { crate::rts::units::ee_rts_unit_handle_id(super::rec(O::UnRts, unit)) }
+        unsafe { crate::rts::units::ee_rts_unit_handle_id(crate::gamecpp::records::un_rts(unit)) }
     } else {
         EE_APP_CAMERA_NO_UNIT
     }
