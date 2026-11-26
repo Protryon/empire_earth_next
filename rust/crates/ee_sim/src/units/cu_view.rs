@@ -1175,7 +1175,7 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
                 let input = crate::combat::EeCombatHitPointsIn {
                     hit_points: b as i32,
                     damage: _c as i32,
-                    max_hit_points: (*u.stats()).mMaxHitPoints as i32,
+                    max_hit_points: long((*u.stats()).mMaxHitPoints) as i32,
                 };
                 let out = crate::combat::captured::ee_combat_hit_points_captured(&input);
                 CU_VIEW_HIT_OUT.with(|h| h.set(out));

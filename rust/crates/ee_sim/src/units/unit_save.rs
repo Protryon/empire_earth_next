@@ -120,6 +120,7 @@ pub(crate) struct CallbackHost {
     pub(crate) ctx: *mut c_void,
     pub(crate) f: EeUnitsUnitSaveFn,
     /// the complex unit's handle when the layout is registered (its plain statements are cu_view.rs's), else 0
+    #[cfg_attr(test, allow(dead_code))]
     pub(crate) unit: u64,
 }
 
