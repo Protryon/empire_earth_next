@@ -138,6 +138,14 @@ fn group_set_formation(g: P, formation: P) {
     unsafe { gh::ee_units_group_set_formation(group(g), formation as *mut c_void) }
 }
 
+/// A player's `mSelectedGroup` (an `EESelectedGroup*`), read through the world view.
+pub(crate) fn selected_group(pl: P) -> P {
+    // SAFETY: the world's thread; `pl` a live player
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    unsafe { PlayerView::of(&token, pl as u64) }.map_or(0, |v| v.selected_group_handle() as P)
+}
+
 /// A player's `mViewedUnit` (an `RTSUnit*`), read through the world view.
 fn viewed_unit(pl: P) -> u64 {
     // SAFETY: the world's thread; `pl` a live player
@@ -346,7 +354,7 @@ fn immediate_cargo_unload(m: P) {
         && cu(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, hp(O::UnGetComplex, transport, &[]), pa(hp(O::UnGetComplex, cargo, &[])))
             == 0
     {
-        if h(O::UcIsTransport, unit_class(transport), &[]) != 0 {
+        if ee_sim::units::uc_is::ee_units_uc_is(unit_class(transport) as u64, ee_sim::units::uc_is::EE_UNITS_UC_IS_TRANSPORT) {
             text = h(O::UcUnloadFailedText, unit_class(transport), &[]) as c_long;
         }
         let (x, y) = (rts(transport).mTileX, rts(transport).mTileY);
@@ -478,7 +486,7 @@ fn saved_group_select(m: P) {
         h(O::MainGroupReset, main_group, &[]);
         h(O::MainFormSetUiState, 0, &[0]);
         h(O::MainFormSetCursorLocked, 0, &[0]);
-        let unit = group_unit(hp(O::PlSelectedGroup, pl, &[]), 0);
+        let unit = group_unit(selected_group(pl), 0);
         if unit != 0 {
             if get_bool(m, 2) {
                 h(O::UnPosition, unit, &[ptr(&mut location)]);
@@ -1224,13 +1232,13 @@ pub unsafe extern "C" fn ee_gamecpp_msg_selection(i: *const i64, pl: *mut c_void
             unsafe { *ids.add(prts(pl).mPlayerID as u8 as usize) = i[1] as u8 };
         }
         EE_NETMSG_SEL_COPY => {
-            group_with(hp(O::PlSelectedGroup, pl, &[]), 2, hp(O::PlActiveGroup, pl, &[]));
+            group_with(selected_group(pl), 2, hp(O::PlActiveGroup, pl, &[]));
             // SAFETY: the live player (EEPlayer::SetSelectedViewedUnit(mViewedUnit))
             unsafe { player_body(pl, EE_UNITS_PLAYER_DO_SET_SELECTED_VIEWED, viewed_unit(pl)) };
         }
         EE_NETMSG_SEL_RESET => {
             unselect_all(pl);
-            group_with(hp(O::PlSelectedGroup, pl, &[]), 2, hp(O::PlActiveGroup, pl, &[]));
+            group_with(selected_group(pl), 2, hp(O::PlActiveGroup, pl, &[]));
         }
         EE_NETMSG_SEL_JIT_OFF => {
             if pfields(pl).mJITManufacturing {

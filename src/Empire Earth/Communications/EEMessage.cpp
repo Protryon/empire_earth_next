@@ -292,7 +292,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the players
     case O::PlName: return P64(&PL->mName);
     case O::PlActiveGroup: return P64(PL->mActiveGroup);
-    case O::PlSelectedGroup: return P64(PL->mSelectedGroup);
     case O::PlSavedGroupAt: return P64(PL->mGroups[a[0]]);
     case O::PlAddEvent: PL->mEvents.AddEvent(U2DPoint<long>((long)a[0], (long)a[1]), (long)a[2], (EEPlayer*)a[3], (long)a[4], a[5] != 0);
         break;
@@ -358,7 +357,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GoalAsUnload: return P64(EEUnloadGoalCast(GOAL));
     case O::UnloadGoalTransport: return P64(((EEUGRust*)p)->GetUnloadTransport());
     case O::UnTreeTechnology: return P64(UN->GetPlayer()->GetTechTree()->Get(UN->GetUnitClass()->GetTechnology()));
-    case O::UcIsTransport: return UC->IsTransport();
     case O::UcUnloadFailedText: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(UC)->GetUnloadFailedTextID();
     case O::UcAsGate: return P64(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UC));
     case O::GateSecondPart: return P64(UC->GetSecondPart((EEComplexUnit*)a[0]));
@@ -465,16 +463,12 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // (EECore11OpC4) the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
     // statement each
     // the net message host (gamecpp msg_host.rs; p the host's call, EeNetMsgCall)
-    case O::C11NmGroup: return P64(static_cast<EEGroup*>(NM_P->mActiveGroup));
-    case O::C11NmSavedGroup: return P64(static_cast<EEGroup*>(NM_P->mGroups[NM_I[0]]));
-    case O::C11NmUnit: return P64(gWorld.GetUnit(NM_I[0]));
     case O::C11NmKill: NM_U->Kill(NM_I[0], 0, 0);
         break;
     case O::C11NmUnitLandBuilding: return NM_U->mUnitClass->IsLandBuilding();
     case O::C11NmUnitAsComplex: return P64(EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(NM_U)));
     case O::C11NmUnitInSet: return gUnitSetManager.GetSet(NM_I[1])->Contains(NM_U->mUnitClass->mUnitType);
     case O::C11NmPlayerTradePrice: return EEGetTradePrice(NM_P, (long)NM_I[1], (unsigned char)NM_I[2]);
-    case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
     case O::C11NmMapType: gWorld.mLobbyOptions.mMapType = NM_M->mString;
         break;
     // the factory (p the received buffer)

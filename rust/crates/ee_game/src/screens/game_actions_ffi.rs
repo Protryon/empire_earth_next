@@ -228,7 +228,7 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         }
         _ if key == EE_SCREENS_GAH_N_COPY_SELECTION => {
             let pl = current()?.handle() as usize;
-            group_with(hp(O::PlSelectedGroup, pl, &[]), 2, active(pl));
+            group_with(crate::gamecpp::message::selected_group(pl), 2, active(pl));
             0
         }
         _ if key == EE_SCREENS_GAH_N_CURRENT_TICK => {

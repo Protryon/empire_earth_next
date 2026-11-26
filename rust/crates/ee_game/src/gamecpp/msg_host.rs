@@ -9,7 +9,7 @@ use ee_sim::netmsg::bodies::*;
 use ee_sim::netmsg::decisions::ee_netmsg_capture_decision;
 
 use super::message::*;
-use super::{h, rec, O, P};
+use super::{h, hp, rec, O, P};
 use crate::app::game_options::EeAppOptionsFields;
 use ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassLinks;
@@ -36,7 +36,6 @@ fn player_fact(which: i64) -> Option<O> {
 /// The world's fact (`EE_NETMSG_WORLD_*`).
 fn world_fact(which: i64) -> Option<O> {
     Some(match which {
-        EE_NETMSG_WORLD_STRING_LENGTH => O::C11NmWorldStringLength,
         EE_NETMSG_WORLD_COLLISION_SPHERE_MODE => O::RoCollisionSphereMode,
         _ => return None,
     })
@@ -152,13 +151,15 @@ fn player_record_fact(which: i64, pl: P, index: i64) -> Option<i64> {
 }
 
 /// The world's facts its members hold (the world view's reads); None for the others.
-fn world_record_fact(which: i64) -> Option<i64> {
+fn world_record_fact(which: i64, message: P) -> Option<i64> {
     // SAFETY: the host's call holds the world
     let token = unsafe { WorldRead::begin() };
     let w = WorldView::global(&token)?;
     Some(match which {
         EE_NETMSG_WORLD_NUM_PLAYERS => w.num_players() as c_ulong as i64,
         EE_NETMSG_WORLD_CURRENT_INDEX => w.current_player_index(),
+        // the message's string's length (`mString.GetLength()`)
+        EE_NETMSG_WORLD_STRING_LENGTH => h(O::StrLength, hp(O::MsgString, message, &[]), &[]),
         _ => return None,
     })
 }
@@ -208,13 +209,13 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
         EE_NETMSG_OP_SENDER => player_by_slot(h(O::MsgOrigin, m as P, &[])) as i64,
         EE_NETMSG_OP_PLAYER => h(O::WorldPlayer, 0, &[i[0]]),
         EE_NETMSG_OP_CURRENT => h(O::WorldCurrentPlayer, 0, &[]),
-        EE_NETMSG_OP_GROUP => h(O::C11NmGroup, call, &[]),
-        EE_NETMSG_OP_SAVED_GROUP => h(O::C11NmSavedGroup, call, &[]),
+        EE_NETMSG_OP_GROUP => h(O::PlActiveGroup, a as P, &[]),
+        EE_NETMSG_OP_SAVED_GROUP => h(O::PlSavedGroupAt, a as P, &[i[0]]),
         EE_NETMSG_OP_GROUP_COUNT => group_len(a as P) as i64,
         EE_NETMSG_OP_GROUP_UNIT => group_unit(a as P, i[0] as c_long) as i64,
         EE_NETMSG_OP_GROUP_FIRST => group_unit(a as P, 0) as i64,
         EE_NETMSG_OP_GROUP_CONTAINS => group_contains(a as P, b as P) as i64,
-        EE_NETMSG_OP_UNIT => h(O::C11NmUnit, call, &[]),
+        EE_NETMSG_OP_UNIT => h(O::WorldUnit, 0, &[i[0]]),
         EE_NETMSG_OP_CLASS_FACT => {
             let class = ucf(a as P);
             if i[0] == EE_NETMSG_CLASS_TYPE {
@@ -240,7 +241,7 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
             player_record_fact(i[0], a as P, i[1]).unwrap_or_else(|| fact(player_fact(i[0]), call))
         }
         EE_NETMSG_OP_WORLD_FACT => {
-            world_record_fact(i[0]).or_else(|| net_fact(i[0])).unwrap_or_else(|| fact(world_fact(i[0]), call))
+            world_record_fact(i[0], m as P).or_else(|| net_fact(i[0])).unwrap_or_else(|| fact(world_fact(i[0]), call))
         }
         EE_NETMSG_OP_DECISION => {
             ee_netmsg_capture_decision(i[0] as u32, c.i.as_ptr().add(2), i[1] as u32);
@@ -312,7 +313,7 @@ mod tests {
     fn the_facts_map_to_their_ops() {
         assert_eq!(unit_fact(EE_NETMSG_UNIT_IN_SET), Some(O::C11NmUnitInSet));
         assert_eq!(player_fact(EE_NETMSG_PLAYER_TRADE_PRICE), Some(O::C11NmPlayerTradePrice));
-        assert_eq!(world_fact(EE_NETMSG_WORLD_STRING_LENGTH), Some(O::C11NmWorldStringLength));
+        assert_eq!(world_fact(EE_NETMSG_WORLD_COLLISION_SPHERE_MODE), Some(O::RoCollisionSphereMode));
         assert_eq!(world_fact(EE_NETMSG_WORLD_HUMANS), None);
         assert_eq!(world_fact(EE_NETMSG_WORLD_OPTIONS_LOCK), None);
         assert_eq!(fact(None, 0), 0);
