@@ -176,7 +176,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // CreateDataObject(true, c, the game data type "G", gEmptyWideString, the summary, NULL)
     case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(gEmptyWideString).D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
-    case O::ConnectOpNew: return HeldOp(new ServerConnectionConnectOp(RC(a), S(b)->GetAddress()));
+    case O::ConnectOpNew: return HeldOp(RustServerOp::MadeOp(ee_won_servconn_connect_op_new(static_cast<RefCount*>(RC(a)), S(b)->GetAddress().GetValue())));
     // ---- the parser, the events, the dialogs
     case O::ParserNum:
         switch (b) {

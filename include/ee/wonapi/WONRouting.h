@@ -715,20 +715,9 @@ private:
     EeWonServerConn* mConn;
 };
 
-// connects a server connection to an address, finishing with the connect's status (2abfc0; its run and completion
-// are Rust's: ee_won cppcore.rs ee_won_servconn_connect_op_run)
-class ServerConnectionConnectOp : public AsyncOp {
-public:
-    ServerConnectionConnectOp(ServerConnection* inConnection, const IPAddr& inAddr) : mConnection(inConnection), mAddr(inAddr) {}
-    virtual void RunHook() //2ac2f0
-    {
-        ee_won_servconn_connect_op_run(static_cast<RefCount*>(this->mConnection.get()), static_cast<RefCount*>(this),
-                                       &this->mAddr, (uint32_t)this->GetTimeout());
-    }
-    virtual void CleanupHook() { this->mConnection->SetConnectCompletion(NULL); } //2ac380
-    SmartPtr<ServerConnection> mConnection; //44
-    IPAddr mAddr; //48
-};
+// ServerConnectionConnectOp (2abfc0: a server connection connected to an address, finishing with the connect's
+// status) is a Rust op since R6 WON lobby and network round 40: RustServerOp::MadeOp(ee_won_servconn_connect_op_new(
+// connection, address)) (ee_won cppcore.rs ServConnConnect)
 
 // The op list, the completions and the reply dispatch are a Rust object since net round 16
 // (rust/crates/ee_won_net/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one
