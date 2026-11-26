@@ -126,7 +126,8 @@ pub(crate) fn group_with(g: P, op: i32, other: P) {
     unsafe { gh::ee_units_group_with(group(g), op, group(other)) }
 }
 
-/// The members that answer a value (`ee_units_group_get`'s `op`).
+/// The members that answer a value (`ee_units_group_get`'s `op`; the game actions' host's, absent from a test build).
+#[cfg_attr(test, allow(dead_code))]
 pub(crate) fn group_get(g: P, op: i32, a: i64) -> i64 {
     // SAFETY: as group_len
     unsafe { gh::ee_units_group_get(group(g), op, a) }
@@ -162,7 +163,8 @@ fn patrol_group(u: P) -> u64 {
     unsafe { UnitView::of(&token, u as u64) }.map_or(0, |v| v.patrol_group_handle())
 }
 
-/// A unit's `mUnitID` (`u` a live unit), read through the world view.
+/// A unit's `mUnitID` (`u` a live unit), read through the world view (the game actions' host's).
+#[cfg_attr(test, allow(dead_code))]
 pub(crate) fn unit_id(u: P) -> c_ulong {
     // SAFETY: the caller holds the world (a host call's thread); `u` a live unit
     let token = unsafe { WorldRead::begin() };
@@ -354,7 +356,10 @@ fn immediate_cargo_unload(m: P) {
         && cu(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, hp(O::UnGetComplex, transport, &[]), pa(hp(O::UnGetComplex, cargo, &[])))
             == 0
     {
-        if ee_sim::units::uc_is::ee_units_uc_is(unit_class(transport) as u64, ee_sim::units::uc_is::EE_UNITS_UC_IS_TRANSPORT) {
+        if ee_sim::units::uc_is::ee_units_uc_is(
+            unit_class(transport) as u64,
+            ee_sim::units::uc_is::EE_UNITS_UC_IS_TRANSPORT,
+        ) {
             text = h(O::UcUnloadFailedText, unit_class(transport), &[]) as c_long;
         }
         let (x, y) = (rts(transport).mTileX, rts(transport).mTileY);

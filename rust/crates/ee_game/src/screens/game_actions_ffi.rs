@@ -60,10 +60,10 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
     use crate::gamecpp::{h, hd, hf, hp, O};
     use crate::screens::game_actions::*;
     use crate::screens::game_actions_host::*;
+    use ee_net::net::ffi_comms::EeNetCommsField;
     use ee_sim::units::uc_is::{EE_UNITS_UC_IS_AIR_BASE, EE_UNITS_UC_IS_DROP_SITE, EE_UNITS_UC_IS_TRANSPORT};
     use ee_sim::world::layout;
     use ee_sim::world::view::{ClassView, TileView, UnitView, WorldRead, WorldView};
-    use ee_net::net::ffi_comms::EeNetCommsField;
     use ee_sim::world_field;
     use std::ffi::{c_long, c_ulong};
 
@@ -272,11 +272,13 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         // the communications' state (the network engine's) and the client's and server's plain tails (only a LAN
         // game reaches these)
         (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_IS_SERVER) => !crate::gamecpp::net::global().server.is_null() as i64,
-        (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_CTS_PROCESSED) => (comms().get(EeNetCommsField::CtsProcessed) > 0) as i64,
+        (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_CTS_PROCESSED) => {
+            (comms().get(EeNetCommsField::CtsProcessed) > 0) as i64
+        }
         _ if key == EE_SCREENS_GAH_N_CTS => comms().get(EeNetCommsField::CtsProcessed) as c_ulong as i64,
         (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_PAUSED) => (comms().get(EeNetCommsField::IsGamePaused) != 0) as i64,
         _ if key == EE_SCREENS_GAH_N_LAST_TICK => {
-            comms().set(EeNetCommsField::LastTickReceived, -2i64 as c_ulong as u32);
+            comms().set(EeNetCommsField::LastTickReceived, -2i32 as u32);
             0
         }
         _ if key == EE_SCREENS_GAH_N_MULTI_SESSION => {

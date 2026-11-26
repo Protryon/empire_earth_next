@@ -28,8 +28,8 @@ use ee_base::time::{ee_time_get, ee_time_of_day, EeTimeOfDay};
 use ee_sim::units::physics_save::EeUnitsPhysicsSaved;
 
 use crate::gamecpp as gc;
-use ee_net::net::ffi_comms::EeNetCommsField;
 use crate::gamecpp::message::{group_len, group_unit};
+use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_sim::world::view::{PlayerView, UnitView, WorldRead, WorldView};
 
 /// The physics' calls (p: the `EEPhysics`, or the object a call names). See EEPhysics.cpp for each exact call.
@@ -707,10 +707,7 @@ fn end_game(p: P, victory: bool) {
             set_game_result(player_at(i), if victory { 1 } else { 2 });
         }
     }
-    if h0(O::CampaignNameLength) > 0
-        && options().mCampaignChecksum > 0
-        && player_game_result(current_player()) == 1
-    {
+    if h0(O::CampaignNameLength) > 0 && options().mCampaignChecksum > 0 && player_game_result(current_player()) == 1 {
         campaign_win();
     }
     if player_game_result(current_player()) != 0 {
@@ -1250,7 +1247,10 @@ fn drain_input(p: P) {
         let r = rec(p);
         let net = gc::net::global();
         net.set(EeNetCommsField::AveragePhysicsUpdateTime, get!(r, mAveragePhysicsUpdateTime) as c_ulong as u32);
-        net.set(EeNetCommsField::AverageTimeBetweenPhysicsTicks, get!(r, mAverageTimeBetweenPhysicsTicks) as c_ulong as u32);
+        net.set(
+            EeNetCommsField::AverageTimeBetweenPhysicsTicks,
+            get!(r, mAverageTimeBetweenPhysicsTicks) as c_ulong as u32,
+        );
         let ticks = h(O::RecU8, message, &[1]) as c_ulong;
         set!(r, mCurrentTick, get!(r, mCurrentTick).wrapping_add(ticks));
         set!(r, mTicksToProcess, h(O::RecU8, message, &[1]) as c_ulong);
