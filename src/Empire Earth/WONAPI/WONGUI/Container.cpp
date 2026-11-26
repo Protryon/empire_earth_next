@@ -242,6 +242,7 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     case K::IdIn: return ((const ControlIdSet*)b)->find((long)c) != ((const ControlIdSet*)b)->end();
     case K::VSetVisible: t->SetVisible(c != 0); return 0;
     case K::VMouseChild: return (intptr_t)t->GetMouseChild();
+    case K::VMouseWheel: t->MouseWheel((int)c); return 0;
     default: return 0;
     }
 }

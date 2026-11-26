@@ -92,8 +92,8 @@ pub enum EeWonWmComp {
 /// `ComponentEvent_EndPopup` (WONEventTypes.h).
 const COMPONENT_EVENT_END_POPUP: isize = 30;
 
-/// A component call the game's manager makes itself (R6 WON GUI round 37): the members' block, Component's calls
-/// and the container's; None for the virtuals, the references and the event the C++ answers.
+/// A component call the game's manager makes itself (R6 WON GUI round 37): the members' block, Component's calls,
+/// the container's, the references and (round 40) the two virtuals through the component host.
 fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize> {
     use crate::compobj::{ee_won_comp_call, host, EeWonCompCall as K};
     use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T};
@@ -134,7 +134,15 @@ fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize
         W::FireEndPopup => kc(K::FireEvent, COMPONENT_EVENT_END_POPUP, 0),
         // SAFETY: as `kc`; `comp` is a container (the call's contract)
         W::ClickChildAt => unsafe { ee_won_ct_call(m.ct as *const EeWonContainer, T::FindChildAt, c, d, 0) },
-        W::MouseWheel | W::HandleComponentEvent => return None,
+        // the two virtuals through the component host (R6 WON GUI round 40)
+        W::MouseWheel => {
+            crate::compobj::comp().v_mouse_wheel(comp, c);
+            0
+        }
+        W::HandleComponentEvent => {
+            crate::compobj::comp().v_handle_event(comp, c);
+            0
+        }
     })
 }
 
@@ -267,6 +275,9 @@ pub struct EeWonRustEvent {
     kind: u32,
     pub rec: EeWonWmEventRec,
     pub popup: EeWonWmPopup,
+    /// a user event's function and its argument (UserEvent's `mFunc` and `mParam`)
+    user: Option<unsafe extern "C" fn(i32)>,
+    param: i32,
 }
 /// A popup event's handler in its record: `GetWindow()->OpenPopup(mParams)` (gamewin.rs deliver_popup).
 pub const EE_WON_WM_HANDLER_POPUP: u32 = 0xC0E1;
@@ -286,8 +297,38 @@ pub(crate) fn new_popup_event(popup: EeWonWmPopup) -> isize {
     new_event(EeWonWmEventRec { handler: EE_WON_WM_HANDLER_POPUP, ..EeWonWmEventRec::default() }, popup)
 }
 fn new_event(rec: EeWonWmEventRec, popup: EeWonWmPopup) -> isize {
-    let e = EeWonRustEvent { vtable: std::ptr::null(), refs: 0, kind: EE_WON_RC_EVENT, rec, popup };
+    let e =
+        EeWonRustEvent { vtable: std::ptr::null(), refs: 0, kind: EE_WON_RC_EVENT, rec, popup, user: None, param: 0 };
     Box::into_raw(Box::new(e)) as isize
+}
+/// A user event's handler in its record: `mFunc(mParam)` (deliver_user).
+pub const EE_WON_WM_HANDLER_USER: u32 = 0xC0E2;
+/// `new UserEvent(func, param)` (R6 WON GUI round 40: the C++ class went): an event of type 0 for no window whose
+/// delivery calls `func(param)`, with no reference yet.
+#[no_mangle]
+pub extern "C" fn ee_won_wm_user_event(func: Option<unsafe extern "C" fn(i32)>, param: i32) -> *mut c_void {
+    let rec = EeWonWmEventRec { handler: EE_WON_WM_HANDLER_USER, ..EeWonWmEventRec::default() };
+    let e = EeWonRustEvent {
+        vtable: std::ptr::null(),
+        refs: 0,
+        kind: EE_WON_RC_EVENT,
+        rec,
+        popup: EeWonWmPopup::default(),
+        user: func,
+        param,
+    };
+    Box::into_raw(Box::new(e)) as *mut c_void
+}
+/// A user event's delivery: its function with its argument.
+///
+/// # Safety
+/// `e` is a live event `ee_won_wm_user_event` made.
+pub(crate) unsafe fn deliver_user(e: isize) -> Option<isize> {
+    // SAFETY: the contract
+    let (f, p) = unsafe { ((*(e as *const EeWonRustEvent)).user, (*(e as *const EeWonRustEvent)).param) };
+    // SAFETY: the function the event was made with
+    unsafe { f?(p) };
+    Some(0)
 }
 /// Whether `e` (a live RefCount) is a Rust-made event.
 ///

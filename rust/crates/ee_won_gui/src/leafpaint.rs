@@ -214,6 +214,82 @@ pub extern "C" fn ee_won_leaf_imgbtn_register(at: usize) {
     IMGBTN_AT.store(at, std::sync::atomic::Ordering::Release);
 }
 
+/// Where the game's text list items, menu items, component list items, backgrounds and lists keep the members the
+/// measures and paints read (offsets in a `TextListItem`, a `MenuItem`, a `ComponentListItem`, a `Background`, a
+/// `ListArea` and a `Font`; Button.cpp registers them; R6 WON GUI round 40).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeWonLeafAt {
+    /// `TextListItem::mText` (a GUIString: its text's pointer)
+    pub text: usize,
+    /// `TextListItem::mColor` (a C `long`)
+    pub color: usize,
+    /// `TextListItem::mFont`, `mImage` (SmartPtrs: one pointer each)
+    pub font: usize,
+    pub image: usize,
+    /// `MenuItem::mSubMenu` (a SmartPtr), `mDisabled` (a bool)
+    pub sub_menu: usize,
+    pub disabled: usize,
+    /// `ListArea::mFont`, `mTextColor` (an int), `mSelColor` (an `EeWonSelColor`), `mRust`, `ScrollArea::mPane`
+    pub list_font: usize,
+    pub list_text_color: usize,
+    pub list_sel: usize,
+    pub list_rust: usize,
+    pub list_pane: usize,
+    /// `Font::mRust`
+    pub font_rust: usize,
+    /// `ComponentListItem::mComponent` (a SmartPtr), `mIsSizable` (a bool)
+    pub comp_item_component: usize,
+    pub comp_item_sizable: usize,
+    /// `Background::mImage`, `mComponent` (SmartPtrs), `mColor`, `mBorderColor` (ints), `mUseOffsets`,
+    /// `mStretchImage` (bools)
+    pub bg_image: usize,
+    pub bg_component: usize,
+    pub bg_color: usize,
+    pub bg_border_color: usize,
+    pub bg_use_offsets: usize,
+    pub bg_stretch: usize,
+}
+static LEAF_AT: std::sync::Mutex<Option<EeWonLeafAt>> = std::sync::Mutex::new(None);
+
+/// Registers the text items' member offsets (Button.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_leaf_members_register(at: *const EeWonLeafAt) {
+    if let Ok(mut s) = LEAF_AT.lock() {
+        // SAFETY: the contract
+        *s = Some(unsafe { *at });
+    }
+}
+
+/// A field of the game's list `list`'s scroll pane (`GetField(f)`: its pane at the registered offset); None before
+/// the registration.
+pub(crate) fn list_field(list: isize, f: crate::guihost::EeWonGuiField) -> Option<isize> {
+    let at = (*LEAF_AT.lock().ok()?)?;
+    // SAFETY: the game's live list (the caller's) and its Rust pane at the registered offset
+    let w = unsafe {
+        crate::paneobj::ee_won_pane_call(
+            word(list, at.list_pane) as *const crate::paneobj::EeWonScrollPane,
+            crate::paneobj::EeWonPaneCall::GetField,
+            f as isize,
+            0,
+            0,
+        )
+    };
+    Some(w as i32 as isize)
+}
+
+/// A word at `p + off` (a pointer member or a SmartPtr).
+///
+/// # Safety
+/// `p + off` holds a pointer-sized member of a live object.
+unsafe fn word(p: isize, off: usize) -> isize {
+    // SAFETY: the contract
+    unsafe { *((p as usize + off) as *const isize) }
+}
+
 pub type EeWonLeafHostFn = Option<unsafe extern "C" fn(me: *mut c_void, op: EeWonLeafOp, a: isize, b: isize) -> isize>;
 
 /// One C++ object and its host.
@@ -231,6 +307,12 @@ impl EeWonLeaf {
             return r;
         }
         if let Some(r) = self.image_button_op(o, a, b) {
+            return r;
+        }
+        if let Some(r) = self.text_item_op(o, a, b) {
+            return r;
+        }
+        if let Some(r) = self.member_op(o, a, b) {
             return r;
         }
         match self.host {
@@ -278,6 +360,234 @@ impl EeWonLeaf {
             ItemHeightAt => (unsafe { std::ptr::addr_of_mut!((*item).height) }) as isize,
             // SAFETY: as above
             _ => isize::from(unsafe { (*item).selected } != 0),
+        })
+    }
+    /// A text list item's and a menu item's reads and the list's (`a` the `ListArea*`) in the game (R6 WON GUI round
+    /// 40): the members in place at their registered offsets, the font's measures its platform font's, the list's
+    /// flags and paint width its Rust list's, the view width its pane's. None in a driver's world.
+    fn text_item_op(&self, o: EeWonLeafOp, a: isize, b: isize) -> Option<isize> {
+        use EeWonLeafOp::*;
+        if !matches!(
+            o,
+            ItemHasFont
+                | ItemTakeListFont
+                | ItemColor
+                | ItemTakeListColor
+                | ItemHasImage
+                | ItemImageWidth
+                | ItemImageHeight
+                | ItemTextWidth
+                | ItemFontHeight
+                | ItemListFlag
+                | ItemListSel
+                | ItemListPaintWidth
+                | MenuDisabled
+                | MenuHasSubMenu
+                | MenuListSel
+                | MenuListViewWidth
+        ) || !crate::compobj::is_game()
+        {
+            return None;
+        }
+        let at = (*LEAF_AT.lock().ok()?)?;
+        let me = self.me as isize;
+        let m = |off: usize| (me as usize + off) as *mut u8;
+        // SAFETY (the reads below): the game's live item `me` and list `a` (the ops' contracts), each member at its
+        // registered offset; the item's font and image are live (its SmartPtrs hold them)
+        let font = || unsafe { word(word(me, at.font), at.font_rust) } as *const crate::platfont::EeWonPlatFont;
+        // SAFETY: as above
+        let image = || unsafe { crate::imgobj::image_of(word(me, at.image)) };
+        // SAFETY: as above
+        let list = |c: crate::listobj::EeWonListCall| unsafe {
+            crate::listobj::ee_won_list_call(word(a, at.list_rust) as *const crate::listobj::EeWonList, c, 0, 0, 0)
+        };
+        let sel = || {
+            // SAFETY: as above; `b` the record the op fills
+            unsafe {
+                *(b as *mut crate::guidraw::EeWonSelColor) =
+                    *((a as usize + at.list_sel) as *const crate::guidraw::EeWonSelColor)
+            };
+            0
+        };
+        Some(match o {
+            // SAFETY: as above
+            ItemHasFont => isize::from(unsafe { word(me, at.font) } != 0),
+            ItemTakeListFont => {
+                // SAFETY: as above
+                let f = unsafe { word(a, at.list_font) };
+                if f != 0 {
+                    crate::gamewin::rf(f, true)?;
+                }
+                // SAFETY: the item's font slot
+                let old = unsafe { std::mem::replace(&mut *(m(at.font) as *mut isize), f) };
+                if old != 0 {
+                    crate::gamewin::rf(old, false)?;
+                }
+                0
+            }
+            // SAFETY: as above
+            ItemColor => (unsafe { *(m(at.color) as *const std::ffi::c_long) }) as isize,
+            ItemTakeListColor => {
+                // SAFETY: as above (`GetTextColor()` answers `mTextColor`)
+                unsafe {
+                    *(m(at.color) as *mut std::ffi::c_long) =
+                        *((a as usize + at.list_text_color) as *const i32) as std::ffi::c_long
+                };
+                0
+            }
+            // SAFETY: as above
+            ItemHasImage => isize::from(unsafe { word(me, at.image) } != 0),
+            ItemImageWidth => image().map_or(0, |i| i.width() as u16 as isize),
+            ItemImageHeight => image().map_or(0, |i| i.height() as u16 as isize),
+            ItemTextWidth => {
+                // SAFETY: as above: the item's text (a guistrobj.rs block) and font
+                unsafe {
+                    let t = word(me, at.text) as *const u8;
+                    let buf =
+                        &*(t.add(crate::guistrobj::EE_WON_GSTR_DATA_AT) as *const crate::guistrobj::EeWonGuiStrBuf);
+                    if buf.length == 0 {
+                        0
+                    } else {
+                        crate::platfont::ee_won_plat_font_width(font(), buf.text, buf.length) as isize
+                    }
+                }
+            }
+            // SAFETY: as above
+            ItemFontHeight => (unsafe { crate::platfont::ee_won_plat_font_metric(font(), 0) }) as isize,
+            ItemListFlag => isize::from(list(crate::listobj::EeWonListCall::ListFlags) & b != 0),
+            ItemListPaintWidth => list(crate::listobj::EeWonListCall::PaintWidth) as i32 as isize,
+            ItemListSel | MenuListSel => sel(),
+            // SAFETY: as above
+            MenuDisabled => isize::from(unsafe { *m(at.disabled) } != 0),
+            // SAFETY: as above
+            MenuHasSubMenu => isize::from(unsafe { word(me, at.sub_menu) } != 0),
+            _ => {
+                let f = crate::guihost::EeWonGuiField::ScrollWidth as isize;
+                // SAFETY: as above: the list's Rust pane
+                let w = unsafe {
+                    crate::paneobj::ee_won_pane_call(
+                        word(a, at.list_pane) as *const crate::paneobj::EeWonScrollPane,
+                        crate::paneobj::EeWonPaneCall::GetField,
+                        f,
+                        0,
+                        0,
+                    )
+                };
+                w as i32 as isize
+            }
+        })
+    }
+    /// A component list item's and a background's members and their component's non-virtual calls in the game (R6
+    /// WON GUI round 40): in place at their registered offsets, the component's through Component's own calls. None
+    /// in a driver's world.
+    fn member_op(&self, o: EeWonLeafOp, a: isize, b: isize) -> Option<isize> {
+        use EeWonLeafOp::*;
+        if !matches!(
+            o,
+            CompItemHasComponent
+                | CompItemWidth
+                | CompItemHeight
+                | CompItemSetParent
+                | CompItemBaseSetPos
+                | CompItemSetPos
+                | CompItemSizable
+                | CompItemListPaintWidth
+                | CompItemSetSize
+                | CompItemMarkInvalid
+                | BgHasImage
+                | BgStretch
+                | BgUseOffsets
+                | BgHasComponent
+                | BgImageWidth
+                | BgImageHeight
+                | BgColor
+                | BgBorderColor
+                | BgCompSetSize
+                | BgCompInvalidate
+        ) || !crate::compobj::is_game()
+        {
+            return None;
+        }
+        let at = (*LEAF_AT.lock().ok()?)?;
+        let me = self.me as isize;
+        // SAFETY (the reads below): the game's live item or background `me` (the ops' contracts), each member at its
+        // registered offset; the component and image its SmartPtrs hold are live
+        let flag = |off: usize| isize::from(unsafe { *((me as usize + off) as *const u8) } != 0);
+        // SAFETY: as above
+        let int = |off: usize| (unsafe { *((me as usize + off) as *const i32) }) as isize;
+        // SAFETY: as above
+        let ptr = |off: usize| unsafe { word(me, off) };
+        // SAFETY: as above
+        let image = || unsafe { crate::imgobj::image_of(ptr(at.bg_image)) };
+        let comp = crate::compobj::comp();
+        // Component's own SetPos and SetSize, as the C++ calls them (no class overrides them)
+        // SAFETY: the game's live component; the call re-enters through Component's entry
+        let kc = |c: isize, k: crate::compobj::EeWonCompCall, x: isize, y: isize| unsafe {
+            crate::compobj::ee_won_comp_call(
+                c as *mut c_void,
+                crate::compobj::host(),
+                k,
+                x as i32 as isize,
+                y as i32 as isize,
+                0,
+            )
+        };
+        let item_comp = || ptr(at.comp_item_component);
+        Some(match o {
+            CompItemHasComponent => isize::from(item_comp() != 0),
+            CompItemWidth => crate::compmem::bounds(item_comp()).width as isize,
+            CompItemHeight => crate::compmem::bounds(item_comp()).height as isize,
+            CompItemSetParent => {
+                crate::compmem::set_parent(item_comp(), a);
+                0
+            }
+            CompItemBaseSetPos => {
+                // SAFETY: the item's own members (ListItem::SetPos sets the top alone)
+                unsafe { (*item_rec(me)).top = b as i32 };
+                0
+            }
+            CompItemSetPos => {
+                kc(item_comp(), crate::compobj::EeWonCompCall::SetPos, a, b);
+                0
+            }
+            CompItemSizable => flag(at.comp_item_sizable),
+            CompItemListPaintWidth => {
+                // SAFETY: the game's live list `a` and its Rust list at the registered offset
+                let w = unsafe {
+                    crate::listobj::ee_won_list_call(
+                        word(a, at.list_rust) as *const crate::listobj::EeWonList,
+                        crate::listobj::EeWonListCall::PaintWidth,
+                        0,
+                        0,
+                        0,
+                    )
+                };
+                w as i32 as isize
+            }
+            CompItemSetSize => {
+                kc(item_comp(), crate::compobj::EeWonCompCall::SetSize, a, b);
+                0
+            }
+            CompItemMarkInvalid => {
+                comp.v_mark_invalid(item_comp());
+                0
+            }
+            BgHasImage => isize::from(ptr(at.bg_image) != 0),
+            BgStretch => flag(at.bg_stretch),
+            BgUseOffsets => flag(at.bg_use_offsets),
+            BgHasComponent => isize::from(ptr(at.bg_component) != 0),
+            BgImageWidth => image().map_or(0, |i| i.width() as u16 as isize),
+            BgImageHeight => image().map_or(0, |i| i.height() as u16 as isize),
+            BgColor => int(at.bg_color),
+            BgBorderColor => int(at.bg_border_color),
+            BgCompSetSize => {
+                kc(ptr(at.bg_component), crate::compobj::EeWonCompCall::SetSize, a, b);
+                0
+            }
+            _ => {
+                comp.v_invalidate(ptr(at.bg_component));
+                0
+            }
         })
     }
     /// An image button's images (its `mImages`, read in place: R6 WON GUI round 39): whether it has the image `a`, its

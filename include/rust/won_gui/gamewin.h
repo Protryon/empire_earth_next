@@ -13,6 +13,19 @@
 #include "rust/won_gui/winobj.h"
 #include "rust/won_gui/wmobj.h"
 
+/// Where the game's text segments keep their members (offsets in a `TextSegment`, a `TextLink`'s past it, and a
+/// `Font`'s platform font; WONLobbyTextAreaConfig.h, registered by GuiHost.cpp at static initialisation).
+struct EeWonSegAt {
+  size_t text;
+  size_t color;
+  size_t font;
+  size_t line_break;
+  size_t pressed;
+  size_t down_color;
+  size_t normal_color;
+  size_t font_rust;
+};
+
 extern "C" {
 
 /// The game window `window`'s parts (`plat` NULL: freed).
@@ -47,6 +60,12 @@ void ee_won_wm_bind(void *manager,
                     const EeWonWm *wm,
                     const EeWonPlatWm *plat,
                     EeWonImageHostFn images);
+
+/// Registers the text segments' member offsets (GuiHost.cpp).
+///
+/// # Safety
+/// `at` points at the offsets.
+void ee_won_text_seg_register(const EeWonSegAt *at);
 
 }  // extern "C"
 

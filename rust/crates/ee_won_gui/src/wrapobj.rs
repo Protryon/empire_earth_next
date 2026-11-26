@@ -308,6 +308,170 @@ pub unsafe extern "C" fn ee_won_wrap_paint_font(
     unsafe { ee_won_wrap_paint(o, length, ee_won_plat_font_metric(font, 0), x, y, &measure_of(&ft), out, cap) }
 }
 
+/// Where the game's WrappedText keeps its members and the classes that hold one keep it (offsets in a
+/// `WrappedText`, a `Label`, an `MSButtonBase` and a `Font`; GuiHost.cpp registers them; R6 WON GUI round 40).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeWonWrapAt {
+    /// `WrappedText::mText` (a GUIString: its text's pointer), `mFont` (a SmartPtr), `mObj`
+    pub text: usize,
+    pub font: usize,
+    pub obj: usize,
+    /// `Label::mWrappedText`, `MSButtonBase::mText` (SmartPtrs)
+    pub label_text: usize,
+    pub msbtn_text: usize,
+    /// `Font::mRust`
+    pub font_rust: usize,
+}
+static WRAP_AT: std::sync::Mutex<Option<EeWonWrapAt>> = std::sync::Mutex::new(None);
+
+/// Registers the wrapped texts' member offsets (GuiHost.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wrap_register(at: *const EeWonWrapAt) {
+    if let Ok(mut s) = WRAP_AT.lock() {
+        // SAFETY: the contract
+        *s = Some(unsafe { *at });
+    }
+}
+
+fn wrap_at() -> Option<EeWonWrapAt> {
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    *WRAP_AT.lock().ok()?
+}
+
+/// The word at `p + off` (a pointer or SmartPtr member).
+///
+/// # Safety
+/// `p + off` holds a pointer-sized member of a live object.
+unsafe fn word(p: isize, off: usize) -> isize {
+    // SAFETY: the contract
+    unsafe { *((p as usize + off) as *const isize) }
+}
+
+/// The wrapped text a game label holds (`mWrappedText`); None in a driver's world.
+pub(crate) fn label_text(label: isize) -> Option<isize> {
+    let at = wrap_at().filter(|_| label != 0)?;
+    // SAFETY: the game's live label
+    Some(unsafe { word(label, at.label_text) })
+}
+/// The wrapped text a game MS button holds (`mText`); None in a driver's world.
+pub(crate) fn msbtn_text(button: isize) -> Option<isize> {
+    let at = wrap_at().filter(|_| button != 0)?;
+    // SAFETY: the game's live MS button
+    Some(unsafe { word(button, at.msbtn_text) })
+}
+
+/// A label's or MS button's host op on its wrapped text `w` (None: not the game's, or no wrapped text op).
+pub(crate) fn wrap_host_op(w: Option<isize>, op: crate::guihost::EeWonGuiOp, a: isize) -> Option<isize> {
+    use crate::guihost::{EeWonGuiOp as Op, EeWonWbText as T};
+    let which = match op {
+        Op::WrapSetMaxWidth => T::SetMaxWidth,
+        Op::WrapSetCentered => T::SetCentered,
+        Op::WrapSetWrap => T::SetWrap,
+        Op::WrapWidth => T::Width,
+        Op::WrapHeight => T::Height,
+        _ => return None,
+    };
+    game_wrap_op(w?, which, a)
+}
+
+/// One of the game's WrappedText `w`'s methods in Rust (R6 WON GUI round 40): its text and font held in place, its
+/// Rust object rewrapped when the original's `CalcWrap` ran. `c` the argument. None in a driver's world and for
+/// `New`, `Hold` and `Release`.
+pub(crate) fn game_wrap_op(w: isize, which: crate::guihost::EeWonWbText, c: isize) -> Option<isize> {
+    use crate::guihost::EeWonWbText as T;
+    let at = wrap_at()?;
+    let slot = |off: usize| (w as usize + off) as *mut isize;
+    // SAFETY: the game's live wrapped text (the callers'): its Rust object at the registered offset
+    let obj = unsafe { *slot(at.obj) } as *mut EeWonWrapText;
+    let calc = || {
+        // SAFETY: the text's live font (its SmartPtr holds it) and its text (a guistrobj.rs block)
+        unsafe {
+            let f = *slot(at.font);
+            let font = if f == 0 { std::ptr::null() } else { word(f, at.font_rust) as *const EeWonPlatFont };
+            let t = *slot(at.text) as *const u8;
+            let (p, n) = if t.is_null() {
+                (std::ptr::null(), 0)
+            } else {
+                let b = &*(t.add(crate::guistrobj::EE_WON_GSTR_DATA_AT) as *const crate::guistrobj::EeWonGuiStrBuf);
+                (b.text as *const c_void, i32::from(b.length))
+            };
+            ee_won_wrap_calc_font(obj, font, p, n);
+        }
+    };
+    // SAFETY (the calls below): the live Rust object
+    Some(match which {
+        T::SetText => {
+            // SAFETY: `c` a live GUIString; the slot holds its text's reference (GUIString's assignment)
+            unsafe {
+                let new = *(c as *const *const crate::guistrobj::EeWonGstr);
+                if !new.is_null() {
+                    crate::guistrobj::gstr_ref(new);
+                }
+                let old = std::mem::replace(&mut *(slot(at.text) as *mut *const crate::guistrobj::EeWonGstr), new);
+                if !old.is_null() {
+                    crate::guistrobj::gstr_release(old);
+                }
+            }
+            calc();
+            0
+        }
+        T::SetMaxWidth => {
+            // SAFETY: as above
+            if unsafe { ee_won_wrap_set_max_width(obj, c as i32) } {
+                calc();
+            }
+            0
+        }
+        T::SetWrap => {
+            // SAFETY: as above
+            if unsafe { ee_won_wrap_set_wrap(obj, c != 0) } {
+                calc();
+            }
+            0
+        }
+        T::SetCentered => {
+            // SAFETY: as above
+            unsafe { ee_won_wrap_set_centered(obj, c != 0) };
+            0
+        }
+        T::SetFont => {
+            if c != 0 {
+                crate::gamewin::rf(c, true)?;
+            }
+            // SAFETY: the text's font slot (a SmartPtr)
+            let old = unsafe { std::mem::replace(&mut *slot(at.font), c) };
+            if old != 0 {
+                crate::gamewin::rf(old, false)?;
+            }
+            calc();
+            0
+        }
+        // SAFETY: as above
+        T::Width => (unsafe { ee_won_wrap_width(obj) }) as isize,
+        T::Height => {
+            // SAFETY: as above
+            let h = unsafe { ee_won_wrap_height(obj) };
+            if h != 0 {
+                h as isize
+            } else {
+                // SAFETY: the text's live font (GetHeight's `mFont->GetHeight()`)
+                (unsafe { ee_won_plat_font_metric(word(*slot(at.font), at.font_rust) as *const EeWonPlatFont, 0) })
+                    as isize
+            }
+        }
+        // SAFETY: as above
+        T::Font => unsafe { *slot(at.font) },
+        T::Text => slot(at.text) as isize,
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 #[path = "wrapobj_tests.rs"]
 mod tests;

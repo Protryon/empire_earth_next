@@ -19,6 +19,9 @@ constexpr static const uint32_t EE_WON_RC_EVENT = 1;
 /// A popup event's handler in its record: `GetWindow()->OpenPopup(mParams)` (gamewin.rs deliver_popup).
 constexpr static const uint32_t EE_WON_WM_HANDLER_POPUP = 49377;
 
+/// A user event's handler in its record: `mFunc(mParam)` (deliver_user).
+constexpr static const uint32_t EE_WON_WM_HANDLER_USER = 49378;
+
 /// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
 /// bubbled up from the component) is guisplit.rs's.
 constexpr static const uint32_t EE_WON_WM_HANDLER_COMPONENT = 49376;
@@ -347,6 +350,11 @@ struct EeWonWmPopup {
 };
 
 extern "C" {
+
+/// `new UserEvent(func, param)` (R6 WON GUI round 40: the C++ class went): an event of type 0 for no window whose
+/// delivery calls `func(param)`, with no reference yet.
+void *ee_won_wm_user_event(void (*func)(int32_t),
+                           int32_t param);
 
 /// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
 EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);

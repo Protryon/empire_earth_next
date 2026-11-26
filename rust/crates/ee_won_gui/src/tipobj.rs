@@ -144,6 +144,7 @@ impl EeWonTip {
     /// LocalToRoot). None in a driver's world.
     fn game_op(&self, o: EeWonTipOp, a: isize, b: isize) -> Option<isize> {
         use crate::compobj::EeWonCompCall as K;
+        use crate::guihost::EeWonGuiField as F;
         use EeWonTipOp::*;
         let at = TIP_AT.load(std::sync::atomic::Ordering::Acquire);
         if at == 0
@@ -161,6 +162,12 @@ impl EeWonTip {
                     | Height
                     | SetSize
                     | ListLocalToRoot
+                    | HasOwnScheme
+                    | ListScheme
+                    | ListLeftPad
+                    | ListRightPad
+                    | ListTopPad
+                    | ListVertOffset
             )
             || !crate::compobj::is_game()
         {
@@ -204,6 +211,13 @@ impl EeWonTip {
                     kc(me, K::SetSize, a as i32 as isize, b as i32 as isize);
                     0
                 }
+                // the schemes (Component's) and the list's pads and offset (its scroll pane's: R6 WON GUI round 40)
+                HasOwnScheme => isize::from(kc(me, K::OwnColorScheme, 0, 0) != 0),
+                ListScheme => kc(list, K::ColorScheme, 0, 0),
+                ListLeftPad => crate::leafpaint::list_field(list, F::LeftPad)?,
+                ListRightPad => crate::leafpaint::list_field(list, F::RightPad)?,
+                ListTopPad => crate::leafpaint::list_field(list, F::TopPad)?,
+                ListVertOffset => crate::leafpaint::list_field(list, F::VertOffset)?,
                 _ => {
                     kc(list, K::LocalToRoot, a, (a as usize + 4) as isize);
                     0

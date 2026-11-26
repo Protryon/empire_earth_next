@@ -1510,17 +1510,9 @@ public:
     EeWonWmEventRec mRec;
 };
 
-// an event that calls a function with one argument when it is delivered
-class UserEvent : public WindowEventBase {
-public:
-    typedef void (*Func)(int inParam);
-
-    UserEvent(Func inFunc, int inParam) : mFunc(inFunc), mParam(inParam) {}
-    virtual void Deliver() { this->mFunc(this->mParam); }  // +0x04 0x295d30
-
-    Func mFunc;                             // +0x10
-    int mParam;                             // +0x14
-};
+// an event that calls a function with one argument when it is delivered (UserEvent, 0x295d30: wmobj.rs's Rust event
+// since R6 WON GUI round 40)
+inline WindowEventBase* NewUserEvent(void (*inFunc)(int), int inParam) { return (WindowEventBase*)ee_won_wm_user_event(inFunc, inParam); }
 
 // (the window's input events, InputEvent, MouseEvent, KeyEvent and SizeEvent, are wmobj.rs's EeWonRustEvent: R6 WON GUI
 // round 40)

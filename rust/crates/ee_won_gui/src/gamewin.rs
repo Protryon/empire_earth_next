@@ -927,7 +927,7 @@ pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize, c: isize, d:
 /// A WONButton's references and images' reads (`WbText`, `WbImage`, `WbFont`; wonbtnobj.rs) in the game (R6 WON GUI
 /// round 38): the game's reference function, the image handles' Rust images, the manager's default font. None in a
 /// driver's world and for the others.
-pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::guihost::{EeWonWbFont as Wf, EeWonWbImage as Wi, EeWonWbText as Wt};
     if !crate::compobj::is_game() {
         return None;
@@ -935,6 +935,12 @@ pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
     match op {
         Op::WbText if a == Wt::Hold as isize => rf(b, true),
         Op::WbText if a == Wt::Release as isize => rf(b, false),
+        // the wrapped text's methods (wrapobj.rs, R6 WON GUI round 40)
+        Op::WbText if a != Wt::New as isize => {
+            // SAFETY: `a` an EeWonWbText (the op's contract)
+            let which = unsafe { std::mem::transmute::<u32, Wt>(a as u32) };
+            crate::wrapobj::game_wrap_op(b, which, c)
+        }
         Op::WbFont if a == Wf::Hold as isize => rf(b, true),
         Op::WbFont if a == Wf::Release as isize => rf(b, false),
         Op::WbFont if a == Wf::Default as isize => wm(EeWonWmCall::GetDefaultFont, 0, 0),
@@ -1232,6 +1238,215 @@ fn surface_of(i: &crate::imgobj::EeWonImage) -> isize {
 }
 fn win_call(p: &Parts, c: C, a: isize) -> isize {
     win(p, c, a, 0)
+}
+
+/// Where the game's text segments keep their members (offsets in a `TextSegment`, a `TextLink`'s past it, and a
+/// `Font`'s platform font; WONLobbyTextAreaConfig.h, registered by GuiHost.cpp at static initialisation).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeWonSegAt {
+    pub text: usize,
+    pub color: usize,
+    pub font: usize,
+    pub line_break: usize,
+    pub pressed: usize,
+    pub down_color: usize,
+    pub normal_color: usize,
+    pub font_rust: usize,
+}
+static SEG_AT: Mutex<Option<EeWonSegAt>> = Mutex::new(None);
+/// The text a copy gathers (the C++ `TextArea::mSelText` until R6 WON GUI round 40): a copy runs to its end in one
+/// call (`CopySelection`), so one buffer serves every area.
+static SEL_TEXT: Mutex<Vec<u32>> = Mutex::new(Vec::new());
+
+/// Registers the text segments' member offsets (GuiHost.cpp).
+///
+/// # Safety
+/// `at` points at the offsets.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_text_seg_register(at: *const EeWonSegAt) {
+    if let Ok(mut s) = SEG_AT.lock() {
+        // SAFETY: the contract
+        *s = Some(unsafe { *at });
+    }
+}
+
+/// A game segment's members at their registered offsets.
+#[derive(Clone, Copy)]
+struct Seg {
+    p: usize,
+    at: EeWonSegAt,
+}
+
+impl Seg {
+    fn m(&self, off: usize) -> *mut u8 {
+        (self.p + off) as *mut u8
+    }
+    fn int(&self, off: usize) -> i32 {
+        // SAFETY: an int member of the live segment (`Seg`'s contract)
+        unsafe { *(self.m(off) as *const i32) }
+    }
+    fn set_int(&self, off: usize, v: i32) {
+        // SAFETY: as `int`
+        unsafe { *(self.m(off) as *mut i32) = v };
+    }
+    fn flag(&self, off: usize) -> bool {
+        // SAFETY: a bool member of the live segment
+        unsafe { *self.m(off) != 0 }
+    }
+    fn set_flag(&self, off: usize, v: bool) {
+        // SAFETY: as `flag`
+        unsafe { *self.m(off) = u8::from(v) };
+    }
+    /// The text slot (a `GUIString`: one pointer to its text).
+    fn text_slot(&self) -> *mut *const crate::guistrobj::EeWonGstr {
+        self.m(self.at.text).cast()
+    }
+    /// The text's block (None for no text).
+    fn buf(&self) -> Option<&crate::guistrobj::EeWonGuiStrBuf> {
+        // SAFETY: the segment's text slot
+        let t = unsafe { *self.text_slot() } as *const u8;
+        // SAFETY: a live text's block at its offset (guistrobj.rs)
+        (!t.is_null()).then(|| unsafe {
+            &*(t.add(crate::guistrobj::EE_WON_GSTR_DATA_AT) as *const crate::guistrobj::EeWonGuiStrBuf)
+        })
+    }
+    fn len(&self) -> usize {
+        self.buf().map_or(0, |b| usize::from(b.length))
+    }
+    fn unit(&self, i: usize) -> u32 {
+        self.buf().map_or(0, |b| b.unit(i, crate::guistrobj::EE_WON_GSTR_WCHAR))
+    }
+    /// The held font's platform font.
+    fn font(&self) -> *const crate::platfont::EeWonPlatFont {
+        // SAFETY: the segment's font slot holds a live Font, its platform font at the registered offset
+        unsafe {
+            let f = *(self.m(self.at.font) as *const *const u8);
+            *(f.add(self.at.font_rust) as *const *const crate::platfont::EeWonPlatFont)
+        }
+    }
+    /// `mFont->GetHeight()` (0) or `GetAscent()` (1).
+    fn metric(&self, which: i32) -> isize {
+        // SAFETY: the segment's live platform font
+        let m = unsafe { crate::platfont::ee_won_plat_font_metric(self.font(), which) };
+        m as isize
+    }
+    /// `mFont->GetCharacterWidth(ch)`.
+    fn char_width(&self, ch: i32) -> isize {
+        // SAFETY: as `metric`
+        let w = unsafe { crate::platfont::ee_won_plat_font_char_width(self.font(), ch) };
+        w as isize
+    }
+    /// `mFont->GetStringWidth(mText, from, n)`.
+    fn width(&self, from: usize, n: usize) -> isize {
+        if n == 0 {
+            return 0;
+        }
+        let t = self.buf().map_or(std::ptr::null_mut(), |b| b.text) as *const u8;
+        let ws = crate::guistrobj::EE_WON_GSTR_WCHAR;
+        // SAFETY: the segment's font and its text from `from` (the original's `mText + offset`, `n` units)
+        let w =
+            unsafe { crate::platfont::ee_won_plat_font_width(self.font(), t.wrapping_add(from * ws).cast(), n as u16) };
+        w as isize
+    }
+}
+
+/// The text area's host's statements on its segments, its link and its copy in the game (R6 WON GUI round 40): a
+/// segment's text, colour, font and line break and a link's pressed state read and set in place, the font's
+/// measures its platform font's, the copy's text Rust's; the area's link parameter (never read, and no link sets
+/// one) is gone. `out` is the area's other calls. None in a driver's world and for the others.
+pub(crate) fn text_host_op(op: Op, a: isize, b: isize, c: isize, out: &dyn Fn(Op, isize) -> isize) -> Option<isize> {
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    let at = (*SEG_AT.lock().ok()?)?;
+    // (the op's contract: `a` a live TextSegment, a TextLink for the link's statements)
+    let s = Seg { p: a as usize, at };
+    Some(match op {
+        Op::TextSetLinkParam => 0,
+        Op::SegLineBreak => isize::from(s.flag(at.line_break)),
+        Op::SegSetLineBreak => {
+            s.set_flag(at.line_break, b != 0);
+            0
+        }
+        Op::SegLength => s.len() as isize,
+        Op::SegColor => s.int(at.color) as isize,
+        Op::SegSetColor => {
+            s.set_int(at.color, b as i32);
+            0
+        }
+        Op::SegTextTake => {
+            let v: Vec<u32> = (0..s.len()).map(|i| s.unit(i)).collect();
+            if b != 0 && !v.is_empty() {
+                // SAFETY: a take sink (the op's contract)
+                unsafe { (*(b as *mut Vec<u32>)).extend(v) };
+            }
+            0
+        }
+        Op::SegSetText => {
+            // SAFETY: `b` a live GUIString; the slot holds its text's reference (SmartPtr's assignment)
+            unsafe {
+                let new = *(b as *const *const crate::guistrobj::EeWonGstr);
+                if !new.is_null() {
+                    crate::guistrobj::gstr_ref(new);
+                }
+                let old = std::mem::replace(&mut *s.text_slot(), new);
+                if !old.is_null() {
+                    crate::guistrobj::gstr_release(old);
+                }
+            }
+            0
+        }
+        Op::SegSetFont => {
+            if b != 0 {
+                rf(b, true)?;
+            }
+            // SAFETY: the segment's font slot (a SmartPtr: one pointer)
+            let old = unsafe { std::mem::replace(&mut *(s.m(at.font) as *mut isize), b) };
+            if old != 0 {
+                rf(old, false)?;
+            }
+            0
+        }
+        Op::SegFontStringWidth => s.width(0, s.len()),
+        Op::SegStringWidth => s.width(b as u16 as usize, c as u16 as usize),
+        Op::SegFontHeight => s.metric(0),
+        Op::SegFontAscent => s.metric(1),
+        Op::SegCharWidth => s.char_width(s.unit(b as usize) as i32),
+        // a link's Pressed and Released (TextLink's statements; only a link is the area's current link)
+        Op::SegPressed => {
+            s.set_flag(at.pressed, true);
+            s.set_int(at.normal_color, s.int(at.color));
+            s.set_int(at.color, s.int(at.down_color));
+            0
+        }
+        Op::SegReleased => {
+            if !s.flag(at.pressed) {
+                return Some(0);
+            }
+            s.set_int(at.color, s.int(at.normal_color));
+            s.set_flag(at.pressed, false);
+            1
+        }
+        // the copy's text: a segment's part, a line break; then the clipboard's, and emptied
+        Op::SelTextAppend => {
+            let from = b as u16 as usize;
+            let part: Vec<u32> = (from..from + c as u16 as usize).map(|i| s.unit(i)).collect();
+            SEL_TEXT.lock().ok()?.extend(part);
+            0
+        }
+        Op::SelTextBreak => {
+            SEL_TEXT.lock().ok()?.extend([13, 10]);
+            0
+        }
+        Op::SelTextCopy => {
+            let units = std::mem::take(&mut *SEL_TEXT.lock().ok()?);
+            let mut t = crate::guistrobj::GText::new(&units);
+            out(Op::ClipboardSetText, t.arg());
+            0
+        }
+        _ => return None,
+    })
 }
 
 #[cfg(test)]
