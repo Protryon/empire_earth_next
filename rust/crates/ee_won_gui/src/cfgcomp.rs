@@ -13,6 +13,8 @@
 
 use std::ffi::c_void;
 
+use crate::skinobj::EeWonSkinSlot as Sl;
+
 use crate::cfgkind::{v24_steps, EeWonCfgKind};
 use crate::guiconf::*;
 
@@ -70,8 +72,6 @@ pub enum EeWonCfgComp {
     FilterCut,
     /// ImageFilterConfig's named child of the raw image.
     FilterNamed,
-    /// The read of a flag: its text and whether it is on (starting true).
-    ReadFlag,
     /// The read of a scroll area ("Expecting ScrollArea" for another component).
     ReadScrollArea,
     /// The read of WONFrameValueConfig's frame: a stretch image alone, or an image and one border or four.
@@ -142,14 +142,14 @@ pub enum EeWonCfgTabOp {
     RequestFocus,
     /// `SafeConfigGetComponent<WONButton*>(c[0], "WONButton")` (guarded).
     SafeWonButton,
-    /// The skin's radio button slot = the WON button `x`.
-    SkinSetRadio,
+    /// `WONSkinSet((EeWonSkinSlot)x, y, (Component*)z)`: the skin's slot `x` (index `y`) = component `z`.
+    SkinSet,
+    /// `ee_won_skin_set_type(WONSkinGlobal(), x != 0, &s[0], (Component*)y)`: the button type `s[0]` (simple: `x`).
+    SkinSetType,
     /// The WON button `x`'s `SetButtonFlags(8, true)`.
     RadioFlag,
-    /// `SafeConfigGetSkinPart(c[0], "WONTabCtrl")` (guarded).
-    SafeTabCtrl,
-    /// The skin's tab control slot = `x`.
-    SkinSetTabCtrl,
+    /// `SafeConfigGetSkinPart(c[0], (const char*)x)` (guarded; `x` a NUL-terminated name).
+    SafePart,
     /// `WONShell::Op(x, SetSkin, 0)`.
     ShellSetSkin,
     /// The font config's descriptor style.
@@ -234,8 +234,6 @@ pub enum EeWonCfgTabOp {
     FilterToParentS0,
     /// Filter holder `x` deleted.
     FilterFree,
-    /// `s[ns++] = ReadFlag((bool*)x)` (guarded).
-    ReadFlagText,
     /// The config's `ReadComponent()` (guarded).
     ReadComp,
     /// Whether component `x` is a ScrollArea.
@@ -427,12 +425,12 @@ fn run(o: &Ops, which: EeWonCfgComp) -> R<()> {
         }
         W::SkinRadio => {
             let radio = o.op(O::SafeWonButton, 0, 0)?;
-            o.call(O::SkinSetRadio, radio, 0);
+            o.op3(O::SkinSet, Sl::RadioButton as isize, 0, radio)?;
             o.call(O::RadioFlag, radio, 0);
         }
         W::SkinTabCtrl => {
-            let tab = o.op(O::SafeTabCtrl, 0, 0)?;
-            o.call(O::SkinSetTabCtrl, tab, 0);
+            let tab = o.op(O::SafePart, c"WONTabCtrl".as_ptr() as isize, 0)?;
+            o.op3(O::SkinSet, Sl::TabCtrl as isize, 0, tab)?;
             o.call(O::ShellSetSkin, tab, 0);
         }
         W::FontStyle => {
@@ -525,11 +523,6 @@ fn run(o: &Ops, which: EeWonCfgComp) -> R<()> {
             r?;
         }
         W::FilterNamed => o.filter_child(None, o.call(O::FrameRaw, 0, 0))?,
-        W::ReadFlag => {
-            let mut on = true;
-            o.op(O::ReadFlagText, &mut on as *mut bool as isize, 0)?;
-            o.call(O::PushInt, on as isize, 0);
-        }
         W::ReadScrollArea => {
             let c = o.op(O::ReadComp, 0, 0)?;
             if o.call(O::IsScrollArea, c, 0) == 0 {
@@ -614,6 +607,159 @@ fn read_frame(o: &Ops, image: isize) -> R<()> {
 pub unsafe extern "C" fn ee_won_cfg_comp(ops: EeWonCfgTabOpFn, frame: *mut c_void, which: EeWonCfgComp) -> bool {
     let Some(f) = ops else { return false };
     run(&Ops { f, frame }, which).is_ok()
+}
+
+/// The composition a table setter is (`table << 8 | n`), None for another setter (R6 WON lobby and network round 39:
+/// WONCfgTable.inl's CfgTabSet cases that only ran one).
+fn of_setter(setter: i32) -> Option<EeWonCfgComp> {
+    use crate::cfgtab::*;
+    use EeWonCfgComp as W;
+    Some(match (setter >> 8, setter & 0xff) {
+        (EE_WON_CFG_T_SIMPLE, 1) => W::SimpleType,
+        (EE_WON_CFG_T_WONBUTTON, 1) => W::ButtonType,
+        (EE_WON_CFG_T_WONBUTTON, 12) => W::HorzTextPad,
+        (EE_WON_CFG_T_WSCROLLBAR, 0) => W::ScrollRect,
+        (EE_WON_CFG_T_WSCROLLCONT, 0) => W::ScrollContNoFrame,
+        (EE_WON_CFG_T_COMPONENT, 3) => W::Left,
+        (EE_WON_CFG_T_COMPONENT, 4) => W::Top,
+        (EE_WON_CFG_T_COMPONENT, 5) => W::Width,
+        (EE_WON_CFG_T_COMPONENT, 6) => W::Height,
+        (EE_WON_CFG_T_COMPONENT, 10) => W::SizeAtLeast,
+        (EE_WON_CFG_T_COMPONENT, 17) => W::Focus,
+        (EE_WON_CFG_T_COMPONENT, 22) => W::ParseTimerStart,
+        (EE_WON_CFG_T_COMPONENT, 23) => W::ParseTimerStop,
+        (EE_WON_CFG_T_SKIN, 5) => W::SkinRadio,
+        (EE_WON_CFG_T_SKIN, 16) => W::SkinTabCtrl,
+        (EE_WON_CFG_T_SKIN, 21) => W::SkinCursor,
+        (EE_WON_CFG_T_FONT, 2) => W::FontStyle,
+        (EE_WON_CFG_T_CONTAINER, 2) => W::NewLayoutPoint,
+        (EE_WON_CFG_T_CONTAINER, 5) => W::EnableLayout,
+        (EE_WON_CFG_T_CONTAINER, 15) => W::SpaceEvenlyH,
+        (EE_WON_CFG_T_CONTAINER, 16) => W::SpaceEvenlyV,
+        (EE_WON_CFG_T_CONTAINER, 17) => W::ClearRight,
+        (EE_WON_CFG_T_CONTAINER, 19) => W::SizeAtLeastLayout,
+        (EE_WON_CFG_T_CONTAINER, 25) => W::LayoutPrev,
+        (EE_WON_CFG_T_CONTAINER, 26) => W::LayoutChain,
+        (EE_WON_CFG_T_CONTAINER, 27) => W::LayoutOffsets,
+        (EE_WON_CFG_T_CONTAINER, 28) => W::LayoutRule,
+        (EE_WON_CFG_T_CONTAINER, 29) => W::NoOverlap,
+        (EE_WON_CFG_T_STRETCHIMAGE, 4) => W::StretchExport,
+        (EE_WON_CFG_T_STRETCHIMAGE, 6) => W::StretchCut,
+        (EE_WON_CFG_T_STRETCHIMAGE, 7) => W::StretchNamed,
+        (EE_WON_CFG_T_STRETCHIMAGE, 8) => W::StretchNewChild,
+        (EE_WON_CFG_T_IMAGEFILTER, 4) => W::FilterCut,
+        (EE_WON_CFG_T_IMAGEFILTER, 5) => W::FilterNamed,
+        _ => return None,
+    })
+}
+
+/// A skin slot's index as the setter's expression had it: 0, `i[0]`, `i[0]?1:0`.
+#[derive(Clone, Copy)]
+enum Idx {
+    Zero,
+    Int,
+    Bool,
+}
+
+/// The setters made of the frame's ops (R6 WON lobby and network round 39): WONSkinConfig's slots and button types
+/// (`WONSkinSet(slot, index, SafeConfigGetSkinPart(c[0], name))`, a WON button's `SafeConfigGetComponent<WONButton*>`),
+/// ComponentConfig's POS, SIZE and the set-size flags.
+#[derive(Clone, Copy)]
+enum Small {
+    /// The slot, its index, whether the part is a WON button, the part's NUL-terminated name.
+    SkinPart(Sl, Idx, bool, &'static std::ffi::CStr),
+    /// The button type `s[0]`: simple (a skin part) or a WON button.
+    SkinType(bool),
+    Pos,
+    Size,
+    /// mHasSetWidth, mHasSetHeight set.
+    HasSet(bool, bool),
+}
+
+fn small_of(setter: i32) -> Option<Small> {
+    use crate::cfgtab::*;
+    use Small::*;
+    Some(match (setter >> 8, setter & 0xff) {
+        (EE_WON_CFG_T_SKIN, 3) => SkinPart(Sl::PushButton, Idx::Zero, true, c"WONButton"),
+        (EE_WON_CFG_T_SKIN, 4) => SkinPart(Sl::Checkbox, Idx::Zero, true, c"WONButton"),
+        (EE_WON_CFG_T_SKIN, 6) => SkinPart(Sl::HeaderButton, Idx::Zero, false, c"WONHeaderButton"),
+        (EE_WON_CFG_T_SKIN, 7) => SkinPart(Sl::TabButton, Idx::Zero, true, c"WONButton"),
+        (EE_WON_CFG_T_SKIN, 8) => SkinPart(Sl::Arrow0, Idx::Int, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 9) => SkinPart(Sl::ComboButton, Idx::Zero, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 10) => SkinPart(Sl::CloseButton, Idx::Zero, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 11) => SkinPart(Sl::ScrollGutter0, Idx::Bool, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 12) => SkinPart(Sl::ScrollThumb0, Idx::Bool, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 13) => SkinPart(Sl::Scrollbar0, Idx::Bool, false, c"WONScrollbar"),
+        (EE_WON_CFG_T_SKIN, 14) => SkinPart(Sl::ScrollContainer, Idx::Zero, false, c"WONScrollContainer"),
+        (EE_WON_CFG_T_SKIN, 15) => SkinPart(Sl::ListCtrl, Idx::Zero, false, c"WONListCtrl"),
+        (EE_WON_CFG_T_SKIN, 17) => SkinPart(Sl::ComboBox, Idx::Zero, false, c"WONComboBox"),
+        (EE_WON_CFG_T_SKIN, 18) => SkinPart(Sl::PopupBack, Idx::Zero, false, c"WONPopupBack"),
+        (EE_WON_CFG_T_SKIN, 19) => SkinPart(Sl::DialogBack, Idx::Zero, false, c"WONDialogBack"),
+        (EE_WON_CFG_T_SKIN, 1) => SkinType(false),
+        (EE_WON_CFG_T_SKIN, 2) => SkinType(true),
+        (EE_WON_CFG_T_COMPONENT, 7) => Pos,
+        (EE_WON_CFG_T_COMPONENT, 8) => Size,
+        (EE_WON_CFG_T_COMPONENT, 30) => HasSet(true, false),
+        (EE_WON_CFG_T_COMPONENT, 31) => HasSet(false, true),
+        (EE_WON_CFG_T_COMPONENT, 32) => HasSet(true, true),
+        _ => return None,
+    })
+}
+
+fn run_small(o: &Ops, which: Small) -> R<()> {
+    use EeWonCfgTabOp as O;
+    let part = |button: bool, name: &'static std::ffi::CStr| {
+        if button {
+            o.op(O::SafeWonButton, 0, 0)
+        } else {
+            o.op(O::SafePart, name.as_ptr() as isize, 0)
+        }
+    };
+    match which {
+        Small::SkinPart(slot, idx, button, name) => {
+            let i = match idx {
+                Idx::Zero => 0,
+                Idx::Int => o.int(0) as isize,
+                Idx::Bool => isize::from(o.int(0) != 0),
+            };
+            let c = part(button, name)?;
+            o.op3(O::SkinSet, slot as isize, i, c)?;
+        }
+        Small::SkinType(simple) => {
+            let c = part(!simple, c"WONSimpleButton")?;
+            o.op(O::SkinSetType, isize::from(simple), c)?;
+        }
+        Small::Pos => {
+            o.call(O::CompSetPos, o.int(0) as isize, o.int(1) as isize);
+        }
+        Small::Size => {
+            o.call(O::CompSetSize, o.int(0) as isize, o.int(1) as isize);
+        }
+        Small::HasSet(w, h) => {
+            if w {
+                o.call(O::SetHasWidth, 1, 0);
+            }
+            if h {
+                o.call(O::SetHasHeight, 1, 0);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The table setter `setter` when it is a composition: 1 when it ran, 0 when an op threw (the host keeps the
+/// exception), -1 for another setter (the host's own case).
+///
+/// # Safety
+/// As `ee_won_cfg_comp`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_cfg_comp_setter(ops: EeWonCfgTabOpFn, frame: *mut c_void, setter: i32) -> i32 {
+    if let Some(w) = of_setter(setter) {
+        // SAFETY: the contract
+        return i32::from(unsafe { ee_won_cfg_comp(ops, frame, w) });
+    }
+    let (Some(f), Some(small)) = (ops, small_of(setter)) else { return -1 };
+    i32::from(run_small(&Ops { f, frame }, small).is_ok())
 }
 
 /// Appends bytes to the `Vec<u8>` at `v` (the host's way to hand back a string).

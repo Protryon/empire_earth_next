@@ -95,13 +95,6 @@ public:
 // - EELobbyPlayerOptionsCtrl (EELobbyPlayerOptionsCtrl.cpp; 0x154 bytes; vtable 0x84c718): the game room's eight
 //   player rows (ids slot * 6 + column + 1), lobbyctl.rs's PlayerOptions.
 
-// the lobby's configuration: WONAPI's plus the file transfer port (0xfc bytes; vtable 0x44c610)
-class EELobbyConfig : public LobbyConfig {
-public:
-    EELobbyConfig();
-
-    unsigned short mFileTransferPort;       // +0xf8 "EEFileTransferPort" (8889)
-};
 
 }
 

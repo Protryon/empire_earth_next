@@ -1,5 +1,4 @@
-// The control host's compound cases R6 WON round 35 made Rust (ee_won_lobby hostops.rs's split_op, lobbycfgrd.rs's
-// SetComponent calls) against the deleted LobbyNetCtrlHost.cpp code as it was at f2bdb70f7, over one stand-in world
+// The control host's compound cases R6 WON round 35 made Rust (ee_won_lobby hostops.rs's split_op) against the deleted LobbyNetCtrlHost.cpp code as it was at f2bdb70f7, over one stand-in world
 // that logs every call ("WON goldens by reach": the Internet lobby's cases no LAN game runs, and the rows' and links'
 // members the LAN game reaches only in part).
 //
@@ -9,7 +8,8 @@
 //   texts (the references after), ParserCommandText with and without a name;
 // - ChatAddFormatted with 0..2 strings and 0..3 links; DeliverCreateAccount over numbers past a byte and a short;
 //   HttpDocPath for both owners, paths shorter and longer than the buffer;
-// - the configs' SetComponent (room label, chat, game list);
+// - (the configs' SetComponent calls of round 35 are gone with the configs' typed members: R6 WON lobby and network
+//   round 39);
 // - EELobbyGlueHost.cpp's options and players fields (OptionsField, OptionsPlayer, OptionSet, PlayerSet: every field,
 //   values past 32 bits; the LAN game never reads a player of the options);
 // - EELobbyGlueHost.cpp's colour chooser: ChooserNew and OpenPopup (eecolor.rs; the LAN game opens no chooser).
@@ -158,18 +158,6 @@ static void LobbyAppendFormattedText(TextArea* inArea, const GUIString& inFormat
     Log(s + " lb " + N(inLineBreak));
 }
 
-// the configs
-struct Component { int mId = 0; };
-struct RoomLabelCtrl : Component {};
-struct ChatCtrl : Component {};
-struct ServerListCtrl : Component {};
-struct ComponentConfig { virtual ~ComponentConfig() {} };
-struct ContainerConfig : ComponentConfig {
-    void SetComponent(Component* c) { Log("ContainerConfig::SetComponent " + N(c ? c->mId : -1)); }
-};
-struct ChatCtrlConfig : ContainerConfig { ChatCtrl* mChatCtrl = NULL; };
-struct RoomLabelCtrlConfig : ContainerConfig { RoomLabelCtrl* mRoomLabel = NULL; };
-struct ServerListCtrlConfig : ContainerConfig { ServerListCtrl* mServerList = NULL; };
 #define WON_GUARDED_V(x) ((x), (intptr_t)0)
 
 // ---- the deleted cases, as they were (LobbyNetCtrlHost.cpp at f2bdb70f7; EvField's and ItemField's helpers too)
@@ -291,22 +279,6 @@ static intptr_t Host(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_
     default: return 0;
     }
 }
-// the configs' SetComponent bodies
-static void SetRoom(RoomLabelCtrlConfig* t, Component* inComponent)
-{
-    t->mRoomLabel=static_cast<RoomLabelCtrl*>(inComponent);
-    t->ContainerConfig::SetComponent(inComponent);
-}
-static void SetChat(ChatCtrlConfig* t, Component* inComponent)
-{
-    t->ContainerConfig::SetComponent(inComponent);
-    t->mChatCtrl = static_cast<ChatCtrl*>(inComponent);
-}
-static void SetServer(ServerListCtrlConfig* t, Component* inComponent)
-{
-    t->ContainerConfig::SetComponent(inComponent);
-    t->mServerList = static_cast<ServerListCtrl*>(inComponent);
-}
 } // namespace Orig
 
 // ---- the new host's one-statement cases (LobbyNetCtrlHost.cpp's, as they are; GUIStringData's constructor the
@@ -398,23 +370,6 @@ static intptr_t World(void* inCtlArg, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t
     }
 }
 
-// the configs' new host cases (CfgRdHost's), through lobbycfgrd.rs's SetComponent calls
-static intptr_t CfgWorld(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t, intptr_t)
-{
-    typedef EeWonLobbyCfgRdOp COp;
-    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
-    ChatCtrlConfig* cc_ = static_cast<ChatCtrlConfig*>(c);
-    RoomLabelCtrlConfig* rl = static_cast<RoomLabelCtrlConfig*>(c);
-    ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
-    if ((int)inOp + 100000 == sSkip) return 0;
-    switch (inOp) {
-    case COp::BaseSetComponent: return WON_GUARDED_V(static_cast<ContainerConfig*>(c)->ContainerConfig::SetComponent(reinterpret_cast<Component*>(a)));
-    case COp::RoomSetLabel: rl->mRoomLabel = static_cast<RoomLabelCtrl*>(reinterpret_cast<Component*>(a)); return 0;
-    case COp::ChatSetCtrl: cc_->mChatCtrl = static_cast<ChatCtrl*>(reinterpret_cast<Component*>(a)); return 0;
-    case COp::ServerSetList: sl->mServerList = static_cast<ServerListCtrl*>(reinterpret_cast<Component*>(a)); return 0;
-    default: Log("unexpected cfg op " + N((int)inOp)); return 0;
-    }
-}
 
 // ---- the cases
 
@@ -598,30 +553,6 @@ static void Run()
                      o.mDoc.mPaths[1] = std::string(len + 1, 'g');
                  },
                  [&](Objects& o, bool n) { return Call(o, n, Op::HttpDocPath, (intptr_t)&o.mDoc, owner, (intptr_t)o.mBuffer); });
-    // the configs' SetComponent
-    for (int k = 0; k < 3; k++)
-        for (int null = 0; null < 2; null++)
-            Case("SetComponent " + N(k) + N(null), [](Objects&) {},
-                 [&](Objects&, bool n) {
-                     RoomLabelCtrlConfig room;
-                     ChatCtrlConfig chat;
-                     ServerListCtrlConfig server;
-                     Component* comp = null ? NULL : new Component{42};
-                     typedef EeWonLobbyCfgRdCall C;
-                     if (!n) {
-                         if (k == 0) Orig::SetRoom(&room, comp);
-                         if (k == 1) Orig::SetChat(&chat, comp);
-                         if (k == 2) Orig::SetServer(&server, comp);
-                     } else {
-                         ComponentConfig* cfg = k == 0 ? (ComponentConfig*)&room : k == 1 ? (ComponentConfig*)&chat : (ComponentConfig*)&server;
-                         C call = k == 0 ? C::RoomLabelSetComponent : k == 1 ? C::ChatSetComponent : C::ServerListSetComponent;
-                         std::string key;
-                         ee_won_lobbycfgrd_call(cfg, CfgWorld, call, (intptr_t)key.data(), (intptr_t)key.size(), (intptr_t)&key, (intptr_t)comp);
-                     }
-                     Log("room " + N(room.mRoomLabel ? 1 : 0) + " chat " + N(chat.mChatCtrl ? 1 : 0) + " server " + N(server.mServerList ? 1 : 0));
-                     delete comp;
-                     return (intptr_t)0;
-                 });
 }
 
 // ---- the colour button's chooser and popup (EELobbyGlueHost.cpp's ColorHost: ChooserNew and OpenPopup, deleted;
@@ -1041,9 +972,6 @@ int main()
         // (TextStartEmpty's empty text is the one TextDrop left: in this world, as in the game,
         // GetEmptyGUIStringData() is the empty text, so skipping it reads the same)
         if (op != (int)Op::TextStartEmpty) aSkips.push_back(op);
-    for (EeWonLobbyCfgRdOp op : {EeWonLobbyCfgRdOp::BaseSetComponent, EeWonLobbyCfgRdOp::RoomSetLabel, EeWonLobbyCfgRdOp::ChatSetCtrl,
-                                 EeWonLobbyCfgRdOp::ServerSetList})
-        aSkips.push_back((int)op + 100000);
     for (int op = (int)EeWonEeColorOp::ChooserAlloc; op <= (int)EeWonEeColorOp::PopupFree; op++)
         aSkips.push_back(op + 200000);
     for (int op = (int)EeWonEeGlueOp::OptGetMapSize; op <= (int)EeWonEeGlueOp::PlayerSetB36; op++)
