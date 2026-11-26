@@ -20664,12 +20664,14 @@ int32_t ee_units_player_save(void *ctx,
                              uint32_t major,
                              uint32_t minor);
 
-/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
+/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
+/// `ctx` (the loaded unit's id into the player's loaded ids is Rust's: `lists_answer`).
 ///
 /// # Safety
-/// `f` is valid with `ctx` for the call.
+/// `f` is valid with `ctx` for the call; `player` is the live `EEPlayer`.
 int32_t ee_units_player_unit(void *ctx,
                              EeUnitsPlayerSaveFn f,
+                             void *player,
                              bool save_it,
                              uint32_t major,
                              uint32_t minor);

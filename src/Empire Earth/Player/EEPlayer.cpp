@@ -594,8 +594,6 @@ static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inI
         return 0;
     case EE_UNITS_PLAYER_SAVE_X_UNIT_NEW: io->i = EEPlayerUnitArg(EEUnit::Create());
         return 0;
-    case EE_UNITS_PLAYER_SAVE_X_LOADED_ID: ee_units_lists_add(c.mPlayer->mLists, EE_UNITS_LISTS_LOADED_IDS, theIt->GetUnitID());
-        return 0;
     case EE_UNITS_PLAYER_SAVE_X_UNIT_REPAIR: theIt->RepairPointers(c.mMajorVersion, c.mMinorVersion);
         return 0;
     case EE_UNITS_PLAYER_SAVE_X_UNIT_CLEAR: theIt->Clear();
@@ -611,7 +609,7 @@ static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inI
 // Reads one unit from a saved game and creates it on the player (ee_units player_save.rs load_unit)
 long EEPlayer::LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    return ee_units_player_unit(EEPlayerSaveContext{this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL}.Self(), &EEPlayerUnitOperation, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    return ee_units_player_unit(EEPlayerSaveContext{this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL}.Self(), &EEPlayerUnitOperation, this, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Makes every town of the player recheck whether it is near water
@@ -702,7 +700,7 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 // from 0.254)
 long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    return ee_units_player_unit(EEPlayerSaveContext{this, &outFile, inMajorVersion, inMinorVersion, inUnit, NULL}.Self(), &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    return ee_units_player_unit(EEPlayerSaveContext{this, &outFile, inMajorVersion, inMinorVersion, inUnit, NULL}.Self(), &EEPlayerUnitOperation, this, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // VirtualBC's functor (RTTI EEPSuggestRecomputeAllAreaEffects; vtable 0x442b08: the shared ??_G 0x16b555, its
