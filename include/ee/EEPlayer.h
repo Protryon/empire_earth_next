@@ -151,7 +151,6 @@ public:
     EESelectedGroup& CopySelection(EESelectedGroup* inGroup) { ee_units_group_with(this, 2, inGroup); return *this; }
     // a saved group's units, remembering the group when asked (EEMSavedGroupSelect: true)
     void SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup) { ee_units_group_with(this, inRememberGroup ? 4 : 5, inGroup); }
-    void AddUnit(EEComplexUnit* inUnit, bool inNeedsSort) { ee_units_group_do(this, inNeedsSort ? 11 : 12, inUnit); }
     void ShowSelectionAreas() { ee_units_group_do(this, 7, NULL); }
     unsigned short GetContinent() { return (unsigned short)ee_units_group_get(this, 5, 0); }
     EEGroup* GetSavedGroup() const { return static_cast<EEGroup*>(this->mSavedGroup); }
