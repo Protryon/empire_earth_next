@@ -129,7 +129,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
-    case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;
+    case Op::ConfigNew: p->mConfig = new LobbyConfig; return 0;
     case Op::PersistentDataNew: p->mPersistentData = new LobbyPersistentData; return 0;
     case Op::ChatParserNew: p->mChatCommandParser = new ChatCommandParser; return 0;
     case Op::UdpNew: p->mUDPManager = new UDPManager; return 0;

@@ -134,7 +134,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   SysTouPath,
   /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
   GameTouPath,
-  /// `p->mConfig = LobbyConfig::mAllocator()`.
+  /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39).
   ConfigNew,
   /// `p->mPersistentData = new LobbyPersistentData`.
   PersistentDataNew,

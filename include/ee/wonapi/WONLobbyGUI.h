@@ -999,12 +999,8 @@ public:
 
 class LobbyConfig : public ConfigObject {
 public:
-    LobbyConfig();
-    typedef LobbyConfig* (*ConfigAllocator)();
-    static ConfigAllocator mAllocator; // class static at 0x4d954c
-    static LobbyConfig* DefaultAllocator();
+    LobbyConfig(); // the game's (EELobbyConfig: the file transfer port's key too; R6 WON lobby and network round 39)
     static std::string mDefaultFileName;
-    static void SetAllocator(ConfigAllocator allocator) { LobbyConfig::mAllocator=allocator; } // inline setter
     virtual bool HandleValueInstruction(ConfigParser* inParser, const std::string& inKey, StringParser& inValue);
     virtual bool PostParse(ConfigParser* inParser);
 
@@ -1032,9 +1028,10 @@ public:
     bool mAppendNumberToDefaultLanName;      // +0xe7
     bool mAllowJoinGameWithoutPing;          // +0xe8
     std::map<std::string, std::string, StringLessNoCase> mDefines;           // +0xec (node value 0x20; pair dtor 0x296a48)
+    unsigned short mFileTransferPort;       // +0xf8 EELobbyConfig's "EEFileTransferPort" (8889)
 };
 
-// 0x358710: the lobby's configuration object (an EELobbyConfig: EELobbyInit.cpp's factory)
+// 0x358710: the lobby's configuration object
 LobbyConfig* GetLobbyConfig();
 
 // one item of a list (0x18 bytes: TextListItem's members start at +0x18; vtable 0x84dba4, 14 slots; the inline
