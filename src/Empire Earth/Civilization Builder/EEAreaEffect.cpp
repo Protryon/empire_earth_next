@@ -32,10 +32,8 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EERules.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAreaEffectKindIDs.h"
 #include "rust/sim/units.h"
 #include "rust/game/screens.h"   // the host (area_effect_host.rs)
 #include "ee/EEScreensShims.h"

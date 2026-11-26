@@ -18,7 +18,6 @@
 #include <stddef.h>
 #include <vector>
 #include "rust/sim/astar.h"         // EeAStarAreaRecord
-#include "ee/EEAIKindIDs.h"
 #include "ee/EEAIListView.h"
 
 class EEInfluenceTable;

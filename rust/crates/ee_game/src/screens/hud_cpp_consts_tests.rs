@@ -16,10 +16,9 @@ use crate::screens::status_button::*;
 use crate::screens::ui_manager_calls::*;
 
 /// The headers the C++ names come from.
-const HEADERS: [&str; 9] = [
+const HEADERS: [&str; 8] = [
     "rust/crates/ee_base/src/string_ids.rs",
     "include/rust/sim/game_ids.h",
-    "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
     "include/rust/data/world_constants.h",
     "include/ee/EEControlEventID.h",
