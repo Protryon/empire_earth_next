@@ -32,7 +32,7 @@ static_assert(sizeof(short) == 2 && sizeof(float) == 4 && sizeof(double) == 8 &&
 // The file classes are one class (LLE round 12): FSFile holds what FSBasicFile (the names, access, version, open flag)
 // and FSFileSpec (a file on disk: the platform handle and stream) had, its members whole in Rust
 // (rust/crates/ee_base/src/fs/spec.rs) over the object from its vtable pointer on (EeFsSpec; the layout is pinned in
-// File System.cpp). FSBasicFile and FSFileSpec keep their constructors; FSMemoryFile overrides the virtuals. The
+// File System.cpp). FSFileSpec keeps its constructors (FSBasicFile went); FSMemoryFile overrides the virtuals. The
 // original's FSFile was abstract (every slot pure), its slot order the comments' offsets.
 class LLE_API FSFile {
 public:

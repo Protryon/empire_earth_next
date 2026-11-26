@@ -33,7 +33,6 @@
 #include "lle/UIEditBox.h"
 #include "lle/UResourceFile.h"
 #include "lle/NEProtocol.h"
-#include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"

@@ -1,3 +1,4 @@
+// TEST ONLY (tests/util/util_golden.cpp; no game unit used it after LLE/UI round 2): the Low-Level Engine
 // C:\EEX\Low-Level Engine\Utilities\UGraph.h (RECONSTRUCTION). Requires lle/LowLevelEngine.h, lle/U2DPoint.h,
 // lle/GEColor.h. A set of named series of integer points (UIGraph/UILineGraph draw it).
 //

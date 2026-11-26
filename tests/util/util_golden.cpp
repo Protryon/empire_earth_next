@@ -18,7 +18,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/U2DPoint.h"
 #include "lle/GEColor.h"
-#include "lle/UGraph.h"
+#include "UGraph.h"       // (test-only: no game unit graphs a UGraph)
 #include "U2DFractal.h"   // (the game no longer has the class: the terrain mesh's fractals are ee_base's own)
 
 static uint64_t gRand;

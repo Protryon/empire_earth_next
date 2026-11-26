@@ -47,7 +47,6 @@
 
 // ---- File system (FS): the engine's per-class headers (vtables from RTTI, layouts from the engine's own code)
 #include "lle/FSFile.h"
-#include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
 #include "lle/FSMemoryFile.h"
 LLE_API void FSInitialize(const UString& inPath);     // proven ?FSInitialize@@YAXABVUString@@@Z (exe import)
