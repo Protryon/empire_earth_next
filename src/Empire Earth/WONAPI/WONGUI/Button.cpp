@@ -439,24 +439,18 @@ typedef EeWonLeafOp Lo;
 static_assert(offsetof(ListItem, mSelected) == EE_WON_LIST_ITEM_AT && offsetof(ListItem, mSelectable) == EE_WON_LIST_ITEM_AT + 1 &&
               offsetof(ListItem, mTop) == EE_WON_LIST_ITEM_AT + 4 && offsetof(ListItem, mWidth) == EE_WON_LIST_ITEM_AT + 8 &&
               offsetof(ListItem, mHeight) == EE_WON_LIST_ITEM_AT + 12, "leafpaint.rs's EeWonListItemRec");
+// where leafpaint.rs reads a text item's, a menu item's and a list's members in the game (R6 WON GUI round 40)
+static const EeWonTextItemAt kTextItemAt = {offsetof(TextListItem, mText), offsetof(TextListItem, mColor),
+    offsetof(TextListItem, mFont), offsetof(TextListItem, mImage), offsetof(MenuItem, mSubMenu), offsetof(MenuItem, mDisabled),
+    offsetof(ListArea, mFont), offsetof(ListArea, mTextColor), offsetof(ListArea, mSelColor), offsetof(ListArea, mRust),
+    offsetof(ListArea, mPane), offsetof(Font, mRust)};
 #pragma clang diagnostic pop
+[[maybe_unused]] static const bool sTextItemAt = (ee_won_leaf_textitem_register(&kTextItemAt), true);
 extern "C" intptr_t ee_won_guicpp_textitem_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
     TextListItem* t = (TextListItem*)inMe;
-    ListArea* l = (ListArea*)a;
     switch (op) {
-    case Lo::ItemHasFont: return t->mFont.get() != NULL ? 1 : 0;
-    case Lo::ItemTakeListFont: t->mFont = l->mFont; return 0;
-    case Lo::ItemColor: return (intptr_t)t->mColor;
-    case Lo::ItemTakeListColor: t->mColor = l->GetTextColor(); return 0;
-    case Lo::ItemHasImage: return t->mImage.get() != NULL ? 1 : 0;
-    case Lo::ItemImageWidth: return t->mImage->GetWidth();
-    case Lo::ItemImageHeight: return t->mImage->GetHeight();
-    case Lo::ItemTextWidth: return t->mFont->GetStringWidth(t->mText);
-    case Lo::ItemFontHeight: return t->mFont->GetHeight();
-    case Lo::ItemListFlag: return l->ListFlagSet((int)b) ? 1 : 0;
-    case Lo::ItemListSel: *(EeWonSelColor*)b = WONDrawSelOf(l->GetSelColor()); return 0;
-    case Lo::ItemListPaintWidth: return l->GetPaintWidth();
+    // (the item's, the menu item's and the list's reads are leafpaint.rs text_item_op's in the game: R6 WON GUI round 40)
     case Lo::ItemDraw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(t->mFont.get(), &t->mText, t->mImage.get()), WONDrawNoCall()); return 0;
     default: return 0;
     }
@@ -483,25 +477,14 @@ void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
 // selection rules are its guimenu module (guimenu.rs); this unit keeps the menus and submenus; the item's paint is guidraw's menu_item.
 
 namespace WONAPI {
-// the menu item's own reads for leafpaint.rs (the text item's are TextListItem.cpp's)
-static intptr_t MenuItemCall(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
-{
-    MenuItem* t = (MenuItem*)static_cast<TextListItem*>(inMe);
-    switch (op) {
-    case EeWonLeafOp::MenuDisabled: return t->mDisabled ? 1 : 0;
-    case EeWonLeafOp::MenuHasSubMenu: return t->mSubMenu.get() != NULL ? 1 : 0;
-    case EeWonLeafOp::MenuListSel: *(EeWonSelColor*)b = WONDrawSelOf(((ListArea*)a)->mSelColor); return 0;
-    case EeWonLeafOp::MenuListViewWidth: return ((ListArea*)a)->GetViewWidth();
-    default: return ee_won_guicpp_textitem_call(inMe, op, a, b);
-    }
-}
+// (the menu item's own reads are leafpaint.rs text_item_op's in the game: R6 WON GUI round 40)
 // Measures the menu item as text plus room for the icon and submenu arrow (32 wider, 4 taller)
-void MenuItem::CalcDimensions(ListArea* area) { ee_won_leaf_call(static_cast<TextListItem*>(this), MenuItemCall, EeWonLeafCall::MenuItemMeasure, (intptr_t)area, 0); }
+void MenuItem::CalcDimensions(ListArea* area) { ee_won_leaf_call(static_cast<TextListItem*>(this), ee_won_guicpp_textitem_call, EeWonLeafCall::MenuItemMeasure, (intptr_t)area, 0); }
 // Draws the menu item: icon, selection highlight with an icon box, text (embossed grey when disabled)
 // and a submenu arrow; the box's bottom edge runs to x = height-1, not to the box width
 void MenuItem::Paint(Graphics& g,ListArea* area)
 {
-    ee_won_leaf_call(static_cast<TextListItem*>(this), MenuItemCall, EeWonLeafCall::MenuItemPaint, (intptr_t)&g, (intptr_t)area);
+    ee_won_leaf_call(static_cast<TextListItem*>(this), ee_won_guicpp_textitem_call, EeWonLeafCall::MenuItemPaint, (intptr_t)&g, (intptr_t)area);
 }
 // ---- the menu item's constructor and the popup menu's AddItem overloads (MenuItemLifetime.cpp and MenuAddItem.cpp
 // until R6 WON GUI round 36)

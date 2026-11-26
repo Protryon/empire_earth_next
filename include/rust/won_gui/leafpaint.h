@@ -166,12 +166,41 @@ enum class EeWonLeafCall : uint32_t {
   ComponentItemPaint,
 };
 
+/// Where the game's text list items, menu items and lists keep the members the items' measures and paints read
+/// (offsets in a `TextListItem`, a `MenuItem`, a `ListArea` and a `Font`; Button.cpp registers them; R6 WON GUI round 40).
+struct EeWonTextItemAt {
+  /// `TextListItem::mText` (a GUIString: its text's pointer)
+  size_t text;
+  /// `TextListItem::mColor` (a C `long`)
+  size_t color;
+  /// `TextListItem::mFont`, `mImage` (SmartPtrs: one pointer each)
+  size_t font;
+  size_t image;
+  /// `MenuItem::mSubMenu` (a SmartPtr), `mDisabled` (a bool)
+  size_t sub_menu;
+  size_t disabled;
+  /// `ListArea::mFont`, `mTextColor` (an int), `mSelColor` (an `EeWonSelColor`), `mRust`, `ScrollArea::mPane`
+  size_t list_font;
+  size_t list_text_color;
+  size_t list_sel;
+  size_t list_rust;
+  size_t list_pane;
+  /// `Font::mRust`
+  size_t font_rust;
+};
+
 using EeWonLeafHostFn = ptrdiff_t(*)(void *me, EeWonLeafOp op, ptrdiff_t a, ptrdiff_t b);
 
 extern "C" {
 
 /// `offsetof(ImageButton, mImages)` (Button.cpp at static initialisation; R6 WON GUI round 39).
 void ee_won_leaf_imgbtn_register(size_t at);
+
+/// Registers the text items' member offsets (Button.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+void ee_won_leaf_textitem_register(const EeWonTextItemAt *at);
 
 /// One of the classes' methods (`EeWonLeafCall`) on the C++ object `me` through its host.
 ///

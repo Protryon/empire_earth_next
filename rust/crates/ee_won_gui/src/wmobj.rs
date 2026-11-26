@@ -297,7 +297,8 @@ pub(crate) fn new_popup_event(popup: EeWonWmPopup) -> isize {
     new_event(EeWonWmEventRec { handler: EE_WON_WM_HANDLER_POPUP, ..EeWonWmEventRec::default() }, popup)
 }
 fn new_event(rec: EeWonWmEventRec, popup: EeWonWmPopup) -> isize {
-    let e = EeWonRustEvent { vtable: std::ptr::null(), refs: 0, kind: EE_WON_RC_EVENT, rec, popup, user: None, param: 0 };
+    let e =
+        EeWonRustEvent { vtable: std::ptr::null(), refs: 0, kind: EE_WON_RC_EVENT, rec, popup, user: None, param: 0 };
     Box::into_raw(Box::new(e)) as isize
 }
 /// A user event's handler in its record: `mFunc(mParam)` (deliver_user).

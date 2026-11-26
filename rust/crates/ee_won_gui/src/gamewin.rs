@@ -1339,7 +1339,8 @@ impl Seg {
         let t = self.buf().map_or(std::ptr::null_mut(), |b| b.text) as *const u8;
         let ws = crate::guistrobj::EE_WON_GSTR_WCHAR;
         // SAFETY: the segment's font and its text from `from` (the original's `mText + offset`, `n` units)
-        let w = unsafe { crate::platfont::ee_won_plat_font_width(self.font(), t.wrapping_add(from * ws).cast(), n as u16) };
+        let w =
+            unsafe { crate::platfont::ee_won_plat_font_width(self.font(), t.wrapping_add(from * ws).cast(), n as u16) };
         w as isize
     }
 }
