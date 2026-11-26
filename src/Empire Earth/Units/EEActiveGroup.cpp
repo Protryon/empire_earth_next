@@ -27,9 +27,6 @@
 #include "ee/EEUnitClassKinds.h"   // EEObj
 #include "ee/EECombatGoals.h"
 
-// Moves the unit to another active group, passing its reference from the old group to the new one (group_obj.rs)
-void EEComplexUnit::SetActiveGroup(EEActiveGroup* inGroup) { ee_units_group_do(inGroup, 22, this); }
-
 // Returns the unit's top speed: its active group's value when it is in one, else its stats'
 // (was EECPEngineHelpers.cpp's, out of line after its first user there)
 float EEComplexUnit::GetMaxVelocity() { return this->mActiveGroup ? this->mActiveGroup->GetMaxVelocity(this) : this->mStats->mMaxVelocity; }

@@ -81,9 +81,6 @@ EE_CONSTRUCT_GLOBAL_AS(std::vector<unsigned long>, EEUnitClassUnitTypes, EEUnitC
 
 // (FireShot and its CBXA record: ee_sim units ucn_noted.rs, inline in ee/EEUnit.h)
 
-// Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
-void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags) { ee_units_terrain_flags((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inUnit, outFlags.mFlags); }  // gather_spot.rs
-
 // Builds the airport's three runway pieces in its facing direction on levelled ground and links them to it
 void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation)
 {
