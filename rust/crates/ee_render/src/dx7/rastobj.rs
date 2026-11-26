@@ -157,6 +157,24 @@ impl EeDx7Rasterizer {
     /// # Safety
     /// `p` is live; the operation's arguments are as [`EeDx7RastOp`] describes.
     pub(crate) unsafe fn op(p: *mut Self, op: EeDx7RastOp, obj: H, a: isize, b: isize) -> isize {
+        // the drawing lock's calls and the clock end in ee_base: made here (a test's fake host answers them instead)
+        if !cfg!(test) {
+            use ee_base::ts::{ee_ts_section_enter, ee_ts_section_leave, EeTsSection};
+            match op {
+                EeDx7RastOp::LockEnter => {
+                    // SAFETY: the lock is the base's live drawing lock (a TSCriticalSection is its Rust section)
+                    unsafe { ee_ts_section_enter(obj as *const EeTsSection) };
+                    return 0;
+                }
+                EeDx7RastOp::LockLeave => {
+                    // SAFETY: as above
+                    unsafe { ee_ts_section_leave(obj as *const EeTsSection) };
+                    return 0;
+                }
+                EeDx7RastOp::Time => return ee_base::time::ee_time_get() as isize,
+                _ => {}
+            }
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (rs(p).host, rs(p).owner) };
         // SAFETY: the host's contract

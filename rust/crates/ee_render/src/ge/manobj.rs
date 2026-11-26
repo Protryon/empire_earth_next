@@ -107,6 +107,35 @@ pub enum EeGeManOp {
     TexPackLog,
 }
 
+/// The managers' calls that end in Rust, made here rather than through the C++ host (a test's fake host answers them
+/// instead): the lock's (`TSScheduler::CreateCriticalSection`, `DestroyCriticalSection`, `Enter`, `Leave`: one call
+/// each of ee_base's thread system; `LockVerify` checks a creation's result, always kErrorOK), a path's `Reference()`
+/// and a model's or texture's `mReferenceCount` (read in place: `cppobj.rs`).
+///
+/// # Safety
+/// The operation's arguments are as `EeGeManOp` describes.
+pub(crate) unsafe fn direct_op(op: EeGeManOp, obj: usize, a: isize) -> Option<isize> {
+    if cfg!(test) {
+        return None;
+    }
+    use crate::ge::cppobj;
+    use ee_base::ts::{ee_ts_section_enter, ee_ts_section_free, ee_ts_section_leave, ee_ts_section_new, EeTsSection};
+    // SAFETY (each call): the caller's contract
+    unsafe {
+        match op {
+            EeGeManOp::LockCreate => *(a as *mut usize) = ee_ts_section_new() as usize,
+            EeGeManOp::LockVerify => {}
+            EeGeManOp::LockDestroy => ee_ts_section_free(obj as *mut EeTsSection),
+            EeGeManOp::LockEnter => ee_ts_section_enter(obj as *const EeTsSection),
+            EeGeManOp::LockLeave => ee_ts_section_leave(obj as *const EeTsSection),
+            EeGeManOp::PathReference => cppobj::reference(obj),
+            EeGeManOp::RefCount => return Some(cppobj::reference_count(obj) as isize),
+            _ => return None,
+        }
+    }
+    Some(0)
+}
+
 /// The C++ host: `owner` is the C++ manager the object belongs to.
 pub type EeGeManHostFn =
     unsafe extern "C" fn(owner: *mut c_void, op: EeGeManOp, obj: *mut c_void, a: isize, b: isize, c: isize) -> isize;
@@ -195,6 +224,10 @@ impl EeGeModelManager {
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeManOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeManOp, obj: usize, a: isize, b: isize, c: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { direct_op(op, obj, a) } {
+            return r;
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { ((*p).host, (*p).owner) };
         // SAFETY: the host's contract

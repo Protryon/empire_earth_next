@@ -53,7 +53,7 @@ def build(game_out, out):
     game_out, out = game_out.resolve(), out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     import rust_build
-    mods = ["lle", "default", "tcp", "mixer", "dx7hrtnl"]
+    mods = ["lle", "default", "mixer", "dx7hrtnl"]
     objs = [units.obj_path(game_out, j) for m in mods for j in units.jobs_for(m)]
     missing = [o for o in objs if not o.exists()]
     if missing:

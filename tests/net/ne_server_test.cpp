@@ -44,7 +44,6 @@ static bool sProgress = false;   // --progress: each sequence's number to stderr
 #undef private
 #undef protected
 #include "rust/net/net.h"
-#include "ne_tcp_host.h"
 
 int QWorld::IdOf(NEMessage* inMessage)
 {

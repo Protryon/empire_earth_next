@@ -359,6 +359,24 @@ impl EeGeRasterizer {
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeRastOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeRastOp, obj: usize, a: isize, b: isize) -> isize {
+        // the drawing lock's creation and destruction end in ee_base (TSScheduler's one call each; the creation is
+        // always kErrorOK): made here (a test's fake host answers them instead)
+        if !cfg!(test) {
+            use ee_base::ts::{ee_ts_section_free, ee_ts_section_new, EeTsSection};
+            match op {
+                EeGeRastOp::LockCreate => {
+                    // SAFETY: `a` is the lock's out pointer
+                    unsafe { *(a as *mut usize) = ee_ts_section_new() as usize };
+                    return 0;
+                }
+                EeGeRastOp::LockDestroy => {
+                    // SAFETY: the lock is the one LockCreate made
+                    unsafe { ee_ts_section_free(obj as *mut EeTsSection) };
+                    return 0;
+                }
+                _ => {}
+            }
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (rs(p).host, rs(p).owner) };
         // SAFETY: the host's contract

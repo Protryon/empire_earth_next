@@ -30,8 +30,7 @@ struct GERasterizerHost {
         switch (inOp) {
         case EeGeRastOp::NameNew: return (intptr_t) new UString(*reinterpret_cast<const UString*>(a));
         case EeGeRastOp::NameDelete: delete static_cast<UString*>(inObj); return 0;
-        case EeGeRastOp::LockCreate: return TSScheduler::CreateCriticalSection(*reinterpret_cast<TSCriticalSection**>(a));
-        case EeGeRastOp::LockDestroy: TSScheduler::DestroyCriticalSection(static_cast<TSCriticalSection*>(inObj)); return 0;
+        // (the drawing lock's creation and destruction: Rust's own, ee_ge rastobj.rs)
         case EeGeRastOp::Verify: ESVERIFY_AT(a != 0, (unsigned long)b); return 0;
         case EeGeRastOp::FontNew: return (intptr_t) new GEFont("Arial Bold", 9, 0, kFontQualityAntialiased);
         case EeGeRastOp::FontDereference: static_cast<GEFont*>(inObj)->Dereference(); return 0;

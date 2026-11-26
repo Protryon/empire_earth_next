@@ -25,7 +25,6 @@
 #include "lle/GETextureSet.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/U2DFractal.h"
 #include "lle/GETextureCoordinate.h"
 #include "rust/render/openformats.h"
 
@@ -131,25 +130,10 @@ intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeManOp::LockCreate: return TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a);
-    case EeGeManOp::LockVerify: ESVERIFY_AT(a == keseOK, 39); return 0;
-    case EeGeManOp::LockDestroy:
-        TSScheduler::DestroyCriticalSection((TSCriticalSection*)inObj);
-        return 0;
-    case EeGeManOp::LockEnter:
-        ((TSCriticalSection*)inObj)->Enter();
-        return 0;
-    case EeGeManOp::LockLeave:
-        ((TSCriticalSection*)inObj)->Leave();
-        return 0;
-    case EeGeManOp::PathReference:
-        ((FSPath*)inObj)->Reference();
-        return 0;
+    // (the lock's calls, the path's Reference and a model's reference count: Rust's own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
-    case EeGeManOp::RefCount:
-        return (intptr_t)((GEModel*)inObj)->mReferenceCount;
     case EeGeManOp::BaseDereference:
         ((GEModel*)inObj)->UReferenceCounter::Dereference();
         return 0;
@@ -211,36 +195,11 @@ bool GEPhysicalModel::Intersects(const GEViewport& inViewport, bool inOrthograph
 static intptr_t TerrainMeshHost(void*, EeGeTmOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
-    case EeGeTmOp::Time:
-        return (intptr_t)TMGetTime();
-    case EeGeTmOp::FractalNew:
-        return (intptr_t) new U2DFractal(64, 0.0f, 10.5f, (unsigned long)a);
-    case EeGeTmOp::FractalDelete:
-        delete (U2DFractal*)inObj;
-        return 0;
-    case EeGeTmOp::FractalValue:
-        *(float*)a = ((U2DFractal*)inObj)->GetValue((unsigned long)(b >> 16), (unsigned long)(b & 0xffff));
-        return 0;
-    case EeGeTmOp::FractalCompute:
-        ((U2DFractal*)inObj)->ComputeFractal(0.0f, 10.5f, (unsigned long)a);
-        return 0;
+    // (the clock, the fractals, the texture sets' reads and a texture's Reference: Rust's own, ee_ge tmobj.rs direct_op)
     case EeGeTmOp::Quantize:
         return (intptr_t)((const GEVector*)a)->GetQuantizedVersion();
     case EeGeTmOp::SetDelete:
         delete ((GETextureSet*)inObj);
-        return 0;
-    case EeGeTmOp::SetWidth:
-        return (intptr_t)((GETextureSet*)inObj)->GetNumTexturesInWidth();
-    case EeGeTmOp::SetHeight:
-        return (intptr_t)((GETextureSet*)inObj)->GetNumTexturesInHeight();
-    case EeGeTmOp::SetCoverage:
-        return (intptr_t)((GETextureSet*)inObj)->GetTextureTileCoverage();
-    case EeGeTmOp::SetTexture:
-        return (intptr_t)((GETextureSet*)inObj)->GetTexture((unsigned long)a, (unsigned long)b);
-    case EeGeTmOp::SetTextureAt:
-        return (intptr_t)((GETextureSet*)inObj)->GetTextureAt((unsigned long)a, (unsigned long)b);
-    case EeGeTmOp::TexReference:
-        ((GETexture*)inObj)->Reference();
         return 0;
     case EeGeTmOp::TexDereference:
         ((GETexture*)inObj)->Dereference();

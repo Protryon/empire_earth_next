@@ -59,9 +59,7 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
         return (intptr_t)(GXSurface*)*static_cast<GETexture*>(inObj)->GetStageTexture(0)->GetFrameSurface();
     case EeDx7RastOp::TextureValidate: static_cast<GETexture*>(inObj)->ValidateChanges(); return 0;
     case EeDx7RastOp::WindowOrigin: *reinterpret_cast<GE2DPoint*>(a) = static_cast<GEWindow*>(inObj)->GetClientOrigin(); return 0;
-    case EeDx7RastOp::LockEnter: static_cast<TSCriticalSection*>(inObj)->Enter(); return 0;
-    case EeDx7RastOp::LockLeave: static_cast<TSCriticalSection*>(inObj)->Leave(); return 0;
-    case EeDx7RastOp::Time: return (intptr_t)TMGetTime();
+    // (the drawing lock's Enter and Leave and the clock: Rust's own, ee_dx7 rastobj.rs)
     case EeDx7RastOp::Verify: ESVERIFY_AT(a != 0, (unsigned long)b); return 0;
     default: return 0;
     }

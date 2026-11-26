@@ -115,20 +115,7 @@ static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "G
 intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeManOp::LockCreate: return TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a);
-    case EeGeManOp::LockVerify: ESVERIFY_AT(a == keseOK, 43); return 0;
-    case EeGeManOp::LockDestroy:
-        TSScheduler::DestroyCriticalSection((TSCriticalSection*)inObj);
-        return 0;
-    case EeGeManOp::LockEnter:
-        ((TSCriticalSection*)inObj)->Enter();
-        return 0;
-    case EeGeManOp::LockLeave:
-        ((TSCriticalSection*)inObj)->Leave();
-        return 0;
-    case EeGeManOp::PathReference:
-        ((FSPath*)inObj)->Reference();
-        return 0;
+    // (the lock's calls and the path's Reference: Rust's own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;

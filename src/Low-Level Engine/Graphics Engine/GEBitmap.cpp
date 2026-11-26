@@ -16,6 +16,7 @@
 #include "lle/GELine.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEFont.h"
+#include "lle/GETextureSet.h"
 
 // The RNG trace hook (the draws are Rust: ee_base random)
 extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
@@ -73,7 +74,8 @@ extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a,
 static_assert(sizeof(GEMaterial) == 3 * sizeof(void*) && sizeof(GEFont) == 3 * sizeof(void*) &&
               sizeof(GETexture) == 3 * sizeof(void*) &&
               sizeof(GEBitmap) == 3 * sizeof(void*) && sizeof(GEFontBitmap) == 3 * sizeof(void*), "cppobj.rs CppCounted");
-static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void*), "cppobj.rs plain");
+static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void*) && sizeof(GETextureSet) == sizeof(void*),
+              "cppobj.rs plain");
 static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWideString) == sizeof(void*) + sizeof(EeUWideString),
               "cppobj.rs CppUString");
 
