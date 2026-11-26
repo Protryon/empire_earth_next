@@ -24,6 +24,7 @@ class UITextLabel;
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
 #include "rust/won_net/dirlist.h"
+#include "rust/won_gui/guistrobj.h" // RefCount::Release's texts
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
 
@@ -109,7 +110,9 @@ public:
     virtual ~RefCount() {}
     void AddRef() { PlatAtomicIncrement(&mRefCount); }
     const RefCount* CreateRef() const { PlatAtomicIncrement(&mRefCount); return this; } //actual SDK const retain API, same native+4
-    void Release() { if (PlatAtomicDecrement(&mRefCount) <= 0) delete this; }
+    // (one without a vtable is a lobby text, which Rust made and frees: guistrobj.rs EeWonGstr, R6 WON GUI round 39)
+    void Release()
+    { if (PlatAtomicDecrement(&mRefCount) <= 0) { if (*reinterpret_cast<void**>(this) != NULL) delete this; else ee_won_gstr_free(reinterpret_cast<EeWonGstr*>(this)); } }
     //: GUIString::CopyOnWrite 0x29121b compares the count unsigned (`jbe`)
     unsigned long GetRefCount() const { return mRefCount; }
 

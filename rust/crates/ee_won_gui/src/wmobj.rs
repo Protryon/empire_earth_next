@@ -242,6 +242,10 @@ pub struct EeWonWmEventRec {
     pub handler: u32,
 }
 
+/// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
+/// bubbled up from the component) is guisplit.rs's.
+pub const EE_WON_WM_HANDLER_COMPONENT: u32 = 0xC0E0;
+
 /// The inward calls (`ee_won_wm_call`).
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

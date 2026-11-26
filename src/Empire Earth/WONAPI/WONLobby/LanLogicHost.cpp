@@ -36,7 +36,6 @@
 #include "rust/won_net/ipobj.h"
 #include "rust/won_net/peerobj.h"
 #include "rust/won_net/qsock.h"
-extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 using namespace WONAPI;
 
 extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC,
@@ -131,7 +130,7 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanGamePasswordIs: return LanWide(inC, inD) == std::wstring(g->GetPassword());
     // LanNewClient, LanPortDialogRun and LanNewTimer are lobbyops.rs's over these (R6 WON round 32)
     case EeWonLobbyOp::LanClientAlloc: return Held(new LobbyLanClient);
-    case EeWonLobbyOp::LanClientSetName: lc->SetName(GUIString(new GUIStringData(LanWide(inC, inD)))); return 0;
+    case EeWonLobbyOp::LanClientSetName: lc->SetName(GUIString(LanWide(inC, inD))); return 0;
     case EeWonLobbyOp::LanPortSetGamePort: l->mDialog[kLanPort]->LCall(EeWonLobbyDlgCall::SetGamePort, (unsigned short)LobbyGetLobbyPort()); return 0;
     case EeWonLobbyOp::LanPortSetPort: l->mDialog[kLanPort]->LCall(EeWonLobbyDlgCall::SetPort, (unsigned short)(int)inC); return 0;
     case EeWonLobbyOp::LanPortReset: l->mDialog[kLanPort]->LCall(EeWonLobbyDlgCall::Reset); return 0;
@@ -153,7 +152,7 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mDialog[kLanName]->InputText(0).length();
     case EeWonLobbyOp::LanBroadcastPort: return LobbyGetLanBroadcastPort();
     case EeWonLobbyOp::LanPortDialogPort: return (unsigned short)l->mDialog[kLanPort]->LCall(EeWonLobbyDlgCall::GetPort);
-    case EeWonLobbyOp::EventComponent: return (intptr_t)static_cast<ComponentEvent*>(inA)->mComponent;
+    case EeWonLobbyOp::EventComponent: return static_cast<ComponentEvent*>(inA)->mEv.comp;
     case EeWonLobbyOp::SetClientIgnored: LobbySetClientIgnored(cl, inC != 0, (int)inD); return 0;
     case EeWonLobbyOp::LanSetChatInput:
         LobbyBroadcastEvent(SetChatInputEvent(2, cl->GetName(), (int)inC, false), true);
@@ -211,9 +210,9 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::AuthSetAutoRefresh: static_cast<AuthContext*>(inA)->SetDoAutoRefresh(inC != 0);
         return 0;
     case EeWonLobbyOp::AuthIsExpired: return static_cast<AuthContext*>(inA)->IsExpired((time_t)inC) ? 1 : 0;
-    case EeWonLobbyOp::AuthClearUserName: static_cast<AuthContext*>(inA)->SetUserName(std::wstring(gEmptyWideString));
+    case EeWonLobbyOp::AuthClearUserName: static_cast<AuthContext*>(inA)->SetUserName(std::wstring());
         return 0;
-    case EeWonLobbyOp::AuthClearPassword: static_cast<AuthContext*>(inA)->SetPassword(std::wstring(gEmptyWideString));
+    case EeWonLobbyOp::AuthClearPassword: static_cast<AuthContext*>(inA)->SetPassword(std::wstring());
         return 0;
     case EeWonLobbyOp::AuthCommunity: return (intptr_t)(DWORD)ee_won_authctx_peer_num(static_cast<AuthContext*>(inA)->Core(), EE_WON_AUTHOBJ_FIRST_COMMUNITY); // GetPeerData()->GetFirstCommunity()
     case EeWonLobbyOp::CdKeyValid: return LobbyIsCDKeyValid() ? 1 : 0;

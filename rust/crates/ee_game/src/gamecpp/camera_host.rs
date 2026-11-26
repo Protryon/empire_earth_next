@@ -22,8 +22,8 @@ use super::{cptr, h, hd, hf, hp, ptr, O, P};
 /// float as the C++ did).
 const CAMERA_FIELD_OF_VIEW: f32 = 0.017453292f32 * 30.0f32;
 
-fn fields(c: P) -> *mut EeAppCameraFields {
-    hp(O::DkFields, c, &[]) as *mut EeAppCameraFields
+fn fields(_: P) -> *mut EeAppCameraFields {
+    super::camera_io::fields()
 }
 
 /// `GetUnitPoint`: a unit's model centre at its camera-focus height (scaled, at its location), else its tile's
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_update(camera: *mut c_void, elapsed: 
         // SAFETY: as above
         unsafe { ee_app_camera_set_clipping_distances(fields(c), camera, call) };
         if crate::gamecpp::globals::have!(gMiniMap) {
-            h(O::DkMiniMapRefresh, 0, &[]);
+            super::minimap::refresh_view(crate::gamecpp::globals::get!(gMiniMap) as *mut c_void);
         }
         h(O::DkClearB529066, 0, &[]);
         h(O::DkClearFollowing, 0, &[]);
@@ -119,8 +119,8 @@ pub extern "C" fn ee_gamecpp_capture_camera(camera: *mut c_void, phase: u32, ela
     floats(&mut r, &c.mEndFocus);
     floats(&mut r, &c.mView);
     floats(&mut r, &c.mTargetPoint);
-    r.u32(h(O::DkUnitASaved, cam, &[]) as u32);
-    r.u32(h(O::DkUnitBSaved, cam, &[]) as u32);
+    r.u32(crate::app::camera_ffi::ee_app_camera_unit(0));
+    r.u32(crate::app::camera_ffi::ee_app_camera_unit(1));
     for f in [c.mFraction, c.mRate, c.mZoom, c.mWait, c.mWaited, c.mTurnYaw, c.mTurnPitch] {
         r.f32(f);
     }

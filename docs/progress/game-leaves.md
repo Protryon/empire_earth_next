@@ -90,6 +90,13 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 | Map/EESightCapture.cpp (TSGT) | ee_game `sight_capture.rs` (rust/game/sight_capture.h) | ee/EESightCapture.h: `EESightScope` inline; `EESightRecord` (EEMap.cpp); the end sweep in EESim.cpp |
 | EETechCapture.cpp's node/epoch/tree states, TCST, EVHP, CALC, TRTE, EVUN, TNWK; EECivCapture.cpp's CVMG head | ee_sim tech `capture_rec.rs` | the hooks (EVHP's and CALC's point at Rust); C++ wrappers pass the Rust records and the C++ members |
 | 1,527 #include lines of 71 units (Empire Earth 591, Graphics Thread 244, Civilization Builder 221, Communications 193, Persistent 150, the rest 128) | | each unit's object symbol for symbol HEAD's (llvm-nm); EEWorld, EEPlayer, EEGlobals and five LLE emission units untouched |
+| **Round 16** (branch `rust-core16`) | | |
+| EETeam, EEVCWonder, EEVictoryCondition, EEVCWonder.cpp; gWorld/gGameState/EEPWorldHelper mTeams | ee_sim app teams_ffi.rs (the only store); ee_game gamecpp teams.rs (state and helper teams, load/save), civilization.rs (wonder victory by team index) | the mirror, C12TeamsResize/SetPlayers gone |
+| EEStatisticsHistory, EEStatisticsRecord (gWorld.mStatistics) | ee_game gamecpp stats_history.rs | the post-game summary's and game view's shims are Rust exports |
+| EEGameState mPlayers, mLoadedPlayers, mRestorables | ee_game gamecpp state.rs | the restorable pushes keep the FSRestorable upcast in C++ |
+| EECameraControl mUnitA/mUnitB; the world's camera calls | ee_game app camera_ffi.rs UNITS, gamecpp camera_io.rs | the hosts' camera cases gone |
+| EEGlobals.cpp (19 aliases) | | users read gWorld.mX |
+| RequestSaveNew, ChunksBuild, the fixed EEMRecord constructions | ee_game gamecpp mrecord.rs, persist_save.rs build_chunks | |
 | **Rounds 1-2** (branches `rust-leaves1`, `rust-leaves2`) | | |
 | EECPPlaceCapture, EEAIArea, EEColorTable, EECPBehaviorTable, EEUnitBehavior, EEDatabase, EEUnitSet(Manager), EEGameVariant, EETeam, EEHumanPlayer, EECDKeyStrings; EESimCapture, EEAIAStarCapture, EEAIContinentCapture, EEWorldViewCheck, EEVoting, EECPCombatManager, EEStartingResources, EEUCUpgradeTable, EEAIUnitTargetingTable, EECPEngine | PORT_LEARNINGS "The game's leaves, round 1" / "round 2" | |
 
@@ -182,7 +189,14 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Next
 
-Round 15's "Left": EEGlobals.cpp's 21 reference aliases still sit past standard containers: gWorld keeps
+Round 16's "Left": EESimEditorAction/EESimEditorDone (no generic Rust-callback EEAction or UIEvent class); the mini
+map cases ee_sim reaches (units and player hosts: a hook ee_game registers into ee_sim, units lane) and the scenario
+editor's (behind goldened screens host traits); MiniMapSetViewer/Snapshot (RTSMiniMap's pixels have no Rust
+accessor); EEPhysics' SendAutoSave (a SendToAllAndWait op on the physics host); the player's host prologues (the
+player/tech lane's round 2 landed in batch 28); GetRandom, GetPlayerBySlot and the patrol group (they need C++
+members).
+
+Older: Round 15's "Left": EEGlobals.cpp's 21 reference aliases still sit past standard containers: gWorld keeps
 EEStatisticsHistory::mRecords (a vector of C++ records with UWideStrings: EEWorld.cpp, EEGameLog.cpp, EEScreens.cpp,
 EEPlayerStatistics.cpp) and mTeams (vector<EETeam>, each with a vector<unsigned long>: nine files), gGameState its
 four vectors (mPlayers, mLoadedPlayers, mTeams, mRestorables); when those are Rust's, the aliases become

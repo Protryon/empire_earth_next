@@ -206,3 +206,66 @@ fn golden_replay() {
     }
     assert!(lines > 10_000, "{lines} edits");
 }
+
+// ---- the text object (R6 WON GUI round 39)
+
+fn text_of(p: *const EeWonGstr) -> Vec<u32> {
+    // SAFETY: a live text
+    unsafe { data_units(p.cast()) }
+}
+
+#[test]
+fn a_text_is_counted_copied_on_write_and_freed() {
+    let w = |s: &str| -> Vec<u32> { s.chars().map(|c| c as u32).collect() };
+    let a = gstr_from_units(&w("abc"));
+    // SAFETY: the texts made here, each slot holding one reference
+    unsafe {
+        assert_eq!((*a).refs, 0);
+        assert!((*a).vtable.is_null(), "RefCount::Release tells a text by its NULL vtable");
+        gstr_ref(a);
+        let mut s1 = a;
+        gstr_ref(a);
+        let s2 = a;
+        // shared: the edit copies first; the other keeps the old text
+        ee_won_gstr_edit(EeWonGstrOp::AppendUnit, &mut s1, std::ptr::null(), 'd' as i32, 0, 0);
+        assert_ne!(s1, s2);
+        assert_eq!(text_of(s1), w("abcd"));
+        assert_eq!(text_of(s2), w("abc"));
+        assert_eq!(((*s1).refs, (*s2).refs), (1, 1));
+        // an append of itself reads the copy (the slot after the copy)
+        let p2: *const *mut EeWonGstr = &s2;
+        gstr_ref(s2);
+        let mut s3 = s2;
+        ee_won_gstr_edit(EeWonGstrOp::Append, &mut s3, p2.cast(), 0, 3, 0);
+        assert_eq!(text_of(s3), w("abcabc"));
+        // a reservation keeps the shared text
+        gstr_ref(s3);
+        let mut s4 = s3;
+        ee_won_gstr_edit(EeWonGstrOp::Reserve, &mut s4, std::ptr::null(), 40, 0, 0);
+        assert_eq!(s4, s3);
+        assert!((*s4).buf.capacity >= 41);
+        ee_won_gstr_edit(EeWonGstrOp::Upper, &mut s4, std::ptr::null(), 0, 0, 0);
+        assert_eq!(text_of(s4), w("ABCABC"));
+        assert_eq!(text_of(s3), w("abcabc"));
+        assert_eq!(ee_won_gstr_read(EeWonGstrRead::CompareNoCase, s3, s4.cast(), 0, 0), 0);
+        assert_eq!(ee_won_gstr_read(EeWonGstrRead::Find, s3, s1.cast(), 0, 0), -1);
+        assert_eq!(ee_won_gstr_read(EeWonGstrRead::FindChar, s3, std::ptr::null(), 'c' as i32, 3), 5);
+        let n = b"ABCABC\0";
+        assert_eq!(ee_won_gstr_read(EeWonGstrRead::CompareNarrowNoCase, s3, n.as_ptr().cast(), 0, 0), 0);
+        for s in [s1, s2, s3, s4] {
+            gstr_release(s);
+        }
+    }
+}
+
+#[test]
+fn the_empty_text_is_shared_and_held() {
+    let e = ee_won_gstr_empty();
+    assert_eq!(e, ee_won_gstr_empty());
+    // SAFETY: the shared text
+    unsafe {
+        assert!((*e).refs >= 1);
+        assert!(text_of(e).is_empty());
+        assert_eq!((*e).buf.capacity, 1, "the empty wide string's reservation");
+    }
+}

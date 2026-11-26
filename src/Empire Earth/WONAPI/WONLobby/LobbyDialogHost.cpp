@@ -89,7 +89,7 @@ void LobbyRustDialog::InitComponent(ComponentInit& inInit)
 
 void LobbyRustDialog::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    this->LCall(EeWonLobbyDlgCall::RawEvent, (intptr_t)inEvent, inEvent->mType, (intptr_t)inEvent->mComponent);
+    this->LCall(EeWonLobbyDlgCall::RawEvent, (intptr_t)inEvent, inEvent->mEv.kind, inEvent->mEv.comp);
 }
 
 const GUIString& LobbyRustDialog::InputText(int inMember)
@@ -182,7 +182,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
     case Op::InputSetNumeric: anInput->mInputFilter = InputBox::NumericFilter; return 0;
-    case Op::LabelSetNumber: aLabel->SetText(GUIString(new GUIStringData(std::to_string((int)b).c_str())), true); return 0;
+    case Op::LabelSetNumber: aLabel->SetText(GUIString(std::to_string((int)b).c_str()), true); return 0;
     // the lobby's strings come as resource rows (lobbydlg.rs string_row), the EE game's two as strings
     case Op::LabelSetRes: aLabel->SetText(gLobbyResources[b].mString, true); return 0;
     case Op::ButtonSetRes: aButton->SetText(gLobbyResources[b].mString, true); return 0;
@@ -248,24 +248,24 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::ConnectItemSetImage: static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;
     case Op::ConnectItemNotReady: return static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
     // EELobbyFileDialog
-    case Op::ItemText: return (intptr_t)(sDlgItemText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.mData->GetString()).c_str();
+    case Op::ItemText: return (intptr_t)(sDlgItemText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.operator std::string()).c_str();
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
     case Op::FileAskDelete: return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle), EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
     case Op::FileDelete: WONFile(reinterpret_cast<const char*>(a)).Delete(true); return 0;
-    case Op::EventDoubleClick: return reinterpret_cast<ListItemClickedEvent*>(a)->mDoubleClick ? 1 : 0;
-    case Op::EventButton: return reinterpret_cast<ListItemClickedEvent*>(a)->mButton;
+    case Op::EventDoubleClick: return reinterpret_cast<ComponentEvent*>(a)->mEv.flag;
+    case Op::EventButton: return reinterpret_cast<ComponentEvent*>(a)->mEv.button;
     // R6 WON round 34: the statements of the compound cases dlgsplit.rs composes (the bad user rows, the admin title,
     // the default adapter row, the file search) and of the constructors
-    case Op::TextCompare: return reinterpret_cast<GUIStringData*>(a)->Compare(reinterpret_cast<GUIStringData*>(b));
-    case Op::TextRecord: return Held(new GUIStringData(RecordText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
+    case Op::TextCompare: return ee_won_gstr_read(EeWonGstrRead::Compare, reinterpret_cast<const EeWonGstr*>(a), reinterpret_cast<const void*>(b), 0, 0);
+    case Op::TextRecord: return Held(NewGUIStringData(RecordText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
     case Op::TextFormatRes: return Held(LobbyFormatString(gLobbyResources[a].mString, GUIString(reinterpret_cast<GUIStringData*>(b))).mData.get());
     case Op::TitleNew: return (intptr_t) new GUIString(gLobbyResources[a].mString);
-    case Op::TitleAppendSpace: reinterpret_cast<GUIString*>(a)->append(GUIString(new GUIStringData(" "))); return 0;
+    case Op::TitleAppendSpace: reinterpret_cast<GUIString*>(a)->append(GUIString(" ")); return 0;
     case Op::TitleAppendName: reinterpret_cast<GUIString*>(a)->append(reinterpret_cast<LobbyClient*>(b)->GetName()); return 0;
     case Op::TitleFree: delete reinterpret_cast<GUIString*>(a); return 0;
     case Op::AdapterSetDefaultName: aMulti->SetString(0, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Default_String), NULL); return 0;
     case Op::NameLength: return (intptr_t)GUIString(reinterpret_cast<const char*>(a)).length();
-    case Op::FileListInsertName: aList->InsertString(GUIString(new GUIStringData(GUIString(reinterpret_cast<const char*>(b)).mData.get(), 0, (unsigned short)c)), -1); return 0;
+    case Op::FileListInsertName: aList->InsertString(GUIString(reinterpret_cast<const char*>(b)).substr(0, (unsigned short)c), -1); return 0;
     case Op::NewScrollText: return (intptr_t) new ScrollingTextComponent;
     }
     return 0;
@@ -295,7 +295,7 @@ LobbyRustPopup::~LobbyRustPopup() { ee_won_lobbypopup_free(this->mLobbyPopup); }
 
 void LobbyRustPopup::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    this->PCall(EeWonLobbyPopupCall::RawEvent, (intptr_t)inEvent, inEvent->mType);
+    this->PCall(EeWonLobbyPopupCall::RawEvent, (intptr_t)inEvent, inEvent->mEv.kind);
 }
 
 static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -305,7 +305,7 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     PopupMenu* aMenu = reinterpret_cast<PopupMenu*>(a);
     LobbyClient* aClient = reinterpret_cast<LobbyClient*>(a);
     LobbyGame* aGame = reinterpret_cast<LobbyGame*>(a);
-    ListItemClickedEvent* anEvent = reinterpret_cast<ListItemClickedEvent*>(a);
+    ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
     case Op::MenuNew: return (intptr_t) new PopupMenu;
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
@@ -323,8 +323,8 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
     case Op::Config: return (intptr_t)ee_won_lobbyconf_current();
     case Op::ConfigNoPingInProgress: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::NoPingInProgress);
-    case Op::EventItem: return (intptr_t)anEvent->mItem.get();
-    case Op::EventButton: return anEvent->mButton;
+    case Op::EventItem: return anEvent->mEv.item;
+    case Op::EventButton: return anEvent->mEv.button;
     case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;
     case Op::DeliverClient: aPopup->DeliverEvent(ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false); return 0;
     case Op::DeliverGame: aPopup->DeliverEvent(GameActionEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;

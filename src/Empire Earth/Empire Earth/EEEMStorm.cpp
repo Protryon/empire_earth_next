@@ -85,7 +85,7 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DsFindPath: gPathManager.FindPath(NULL, gWorld.GetMap(), S->mStart, S->mGoal, *(EEAIAStarBounds*)a[0], POINTS(1), 4, 0x6e, (EeAStarModifier*)a[2], &POINTS(3));
         break;
-    case O::DsCreateWeather: gEffectManager->CreateWeatherEffect(*(std::vector<U2DPoint<long> >*)p, (EEGraphicEffect*)a[0], (EEEffectHandle*)a[1]);
+    case O::DsCreateWeather: gWorld.mEffectManager->CreateWeatherEffect(*(std::vector<U2DPoint<long> >*)p, (EEGraphicEffect*)a[0], (EEEffectHandle*)a[1]);
         break;
     case O::DsEffectReference: ((EEE3DRust*)p)->Reference();
         break;

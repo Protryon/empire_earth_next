@@ -369,15 +369,16 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             if crate::sim_driver::sim_host::world_map_and_lock().0 == 0 {
                 0
             } else {
-                let focus = on(Op::FxCameraFocus, 0).run();
-                let end = on(Op::FxCameraEndFocus, 0).run();
-                c.f[0] = focus.f(0);
-                c.f[1] = focus.f(1);
-                c.f[2] = focus.f(2);
-                c.f[3] = end.f(0);
-                c.f[4] = end.f(1);
-                c.f[5] = fl(Op::FxCameraZoom, 0, &[]);
-                c.i[0] = go(Op::FxCameraMode, 0, &[]);
+                let focus = crate::gamecpp::camera_io::location();
+                // SAFETY: the world's camera's record
+                let cam = unsafe { *crate::gamecpp::camera_io::fields() };
+                c.f[0] = focus.x;
+                c.f[1] = focus.y;
+                c.f[2] = focus.z;
+                c.f[3] = cam.mEndFocus.x;
+                c.f[4] = cam.mEndFocus.y;
+                c.f[5] = cam.mZoom;
+                c.i[0] = cam.mMode as i64;
                 c.i[1] = go(Op::FxMapSize, 0, &[]);
                 c.i[2] = gc::hf(gc::O::EcValidPoint, 0, &[], &[c.f[0], c.f[1]]);
                 c.i[3] = gc::hf(gc::O::EcValidPoint, 0, &[], &[c.f[3], c.f[4]]);

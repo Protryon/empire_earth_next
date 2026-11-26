@@ -16064,6 +16064,14 @@ struct EeScreensUserInterfaceFields {
   bool mIsQuitting;
 };
 
+/// One member of a record message (`EEMRecordValue`): an integer, a float or a point.
+struct EeScreensGaValue {
+  /// `EE_SCREENS_GA_VALUE_*`.
+  uint32_t kind;
+  int64_t i;
+  float f[2];
+};
+
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
 struct EeScreensSinglePlayerSlot {
   /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new
@@ -16416,14 +16424,6 @@ struct EeScreensSefmButton {
   float pressed[2];
   float dest[4];
   float rect[4];
-};
-
-/// One member of a record message (`EEMRecordValue`): an integer, a float or a point.
-struct EeScreensGaValue {
-  /// `EE_SCREENS_GA_VALUE_*`.
-  uint32_t kind;
-  int64_t i;
-  float f[2];
 };
 
 /// `EEUIFMainGame`'s C++ objects (ee/EEUIFMainGame.h; UI lane round 15), as untyped pointers the C++ casts at

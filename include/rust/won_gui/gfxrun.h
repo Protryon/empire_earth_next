@@ -11,7 +11,9 @@
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/mspaint.h"
 
-/// The C++ Graphics' leading members, in this order (`mTransX` .. `mClipRect`, `mGfx`, `mColorScheme`, `mPlat`).
+/// The game's Graphics (the C++ `Graphics` is this record since R6 WON GUI round 39, made, attached and freed here:
+/// [`new_graphics`], [`free_graphics`]): the translation, colour and clip, the clip stack, the borrowed colour
+/// scheme, the surface, and the display context and font (each held, as the original's SmartPtr members held them).
 struct EeWonGraphics {
   EeWonGfxState st;
   /// the clip stack (owned)
@@ -19,6 +21,10 @@ struct EeWonGraphics {
   /// the `ColorScheme*` (borrowed; NULL: none)
   const void *scheme;
   EeWonGfxPlat plat;
+  /// the `DisplayContext*` (held; 0: none)
+  ptrdiff_t context;
+  /// the `Font*` (held; 0: none)
+  ptrdiff_t font;
 };
 
 /// What a plan's operations name (WONGUIDraw.h's WONDrawSlots): four `Image*`, the `Font*`, the `GUIString*` and the
@@ -37,12 +43,11 @@ extern "C" {
 void ee_won_graphics_register(EeWonGfxHost host,
                               size_t scheme_colors);
 
-/// A new Graphics' members: no translation, no colour scheme, an empty clip stack, no surface (the colour and the
-/// clip are set when it attaches and clips, as the original's constructor left them).
+/// `SetFont(f)` on the game's Graphics `g`.
 ///
 /// # Safety
-/// `g` is a C++ Graphics being constructed.
-void ee_won_graphics_init(EeWonGraphics *g);
+/// `g` is a live game Graphics; `f` a live Font or NULL.
+void ee_won_graphics_set_font(EeWonGraphics *g, void *f);
 
 /// One Graphics method on the game's Graphics `g` with seven ints and the image or text `p` (Graphics' GCall).
 ///

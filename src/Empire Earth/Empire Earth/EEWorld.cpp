@@ -43,9 +43,7 @@
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EETeam.h"
 #include "ee/EEGameState.h"
-#include "ee/EEStatisticsRecord.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEMiniMap.h"
@@ -102,13 +100,6 @@ void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChe
 void EEUpdateLandContinents();
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
 
-// EEGameState's team count: inline (its refused copy 0x13cff7 sits in this unit's template tail); defined here where
-// EETeam is complete
-inline unsigned long EEGameState::GetNumTeams() const
-{
-    return this->mTeams.size();
-}
-
 // Takes a player out of the game: marks them out, drops them from their teams, reveals the map to them (except a lost
 // scenario), stamps their end time and ends any cinematic; for the local player it redraws the minimap. Its own
 // lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
@@ -122,13 +113,6 @@ void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
 EEWorld::EEWorld()
 {
     ee_gamecpp_world_init(this);   // the members (ee_game gamecpp world.rs)
-}
-
-// The statistics history's ctor (inline in the real header; its refused copy follows its first user):
-// Creates an empty statistics history
-EEStatisticsHistory::EEStatisticsHistory()
-{
-    this->Reset();
 }
 
 // Destroys the world, deleting its influence table, ghost units and effect, scenario, environment and calamity managers
@@ -191,7 +175,7 @@ void EEWorld::CreateInfluenceTable(EEMap* inMap)
 void EEWorld::CreateMiniMap(EEGameState* inState)
 {
     delete gMiniMap;
-    gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, inState->GetPlayer(inState->mLocalPlayer));
+    gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, static_cast<EEPlayer*>(ee_gamecpp_state_player(inState->mLocalPlayer)));
     gMiniMap->SetMap(this->mMap);
     gEEGameUI.mMiniMapUpdate(gMiniMap);   // EEUIMiniMap::Update (ee/EEGameUI.h)
 }
@@ -203,12 +187,6 @@ extern "C" void ee_gamecpp_world_record_statistics(uintptr_t inWorld);   // game
 void EEWorld::RecordStatistics()
 {
     ee_gamecpp_world_record_statistics((uintptr_t)this);
-}
-
-// Creates an empty statistics record
-EEStatisticsRecord::EEStatisticsRecord()
-{
-    this->Clear();
 }
 
 // Applies the queued unit activations and deactivations to the list of units updated every tick
@@ -254,10 +232,7 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
     switch (inOp) {
     case EE_UNITS_GAME_OVER_SCENARIO: return gWorld.mGameOptions.mIsScenarioGame;
     case EE_UNITS_GAME_OVER_DEFEAT_RULE: return EEGetRules().mGameOptions.mDefeatWithoutRecovery;
-    case EE_UNITS_GAME_OVER_TEAMS: return (int64_t)gWorld.mTeams.size();
-    case EE_UNITS_GAME_OVER_TEAM_STATE: return gWorld.mTeams[(size_t)inA].GetVictoryState();
-    case EE_UNITS_GAME_OVER_TEAM_SIZE: return (int64_t)gWorld.mTeams[(size_t)inA].mPlayers.size();
-    case EE_UNITS_GAME_OVER_TEAM_PLAYER: return (int64_t)gWorld.mTeams[(size_t)inA].mPlayers[(size_t)inB];
+    case EE_UNITS_GAME_OVER_TEAM_STATE: return ee_gamecpp_wonder_state((size_t)inA);
     case EE_UNITS_GAME_OVER_IS_HUMAN: return gWorld.mPlayers[inA]->IsHuman();
     case EE_UNITS_GAME_OVER_REMOVE: gWorld.RemovePlayerFromGame(inB != 0, (unsigned long)inA); return 0;
     case EE_UNITS_GAME_OVER_SET_RESULT: gWorld.mPlayers[inA]->SetGameResult((long)inB); return 0;
@@ -277,13 +252,6 @@ void EEWorld::GameSpeedChanged()
     gPhysics->UpdateTiming();
 }
 
-// EETeam's ctors: COMDATs here after their first users (each news the team's EEVCWonder)
-// Creates an empty team with a wonder victory condition
-EETeam::EETeam()
-{
-    this->mVictoryCondition = new EEVCWonder(this);
-}
-
 
 // Returns the unit with the id (its top byte is the player), 0 if none
 EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
@@ -295,7 +263,6 @@ EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define W ((EEWorld*)p)
-#define REC (W->mStatistics.mRecords[(size_t)a[0]])
 #define PL0 (W->mPlayers[a[0]])
 #define PL1 (W->mPlayers[a[1]])
 #define ST ((EEGameState*)p)
@@ -380,8 +347,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WCreateGhostLock: TSScheduler::CreateCriticalSection(W->mGhostUnitsLock);
         break;
-    case O::WStatisticsReset: W->mStatistics.Reset();
-        break;
     case O::WGhostLock: W->mGhostUnitsLock->Enter();
         break;
     case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
@@ -390,16 +355,8 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::GhostDelete: delete (EEGhostUnit*)p;
         break;
-    case O::WTeamsClear: W->mTeams.clear();
-        break;
-    case O::C12TeamsResize: W->mTeams.resize((size_t)a[0]);   // round 12, fork D (gamecpp teams.rs)
-        break;
-    case O::C12TeamSetPlayers: W->mTeams[(size_t)a[0]].mPlayers.assign((const uint32_t*)a[1], (const uint32_t*)a[1] + a[2]);
-        break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
-        break;
     case O::WWriteLock: W->mLock->WriteLock();
         break;
     case O::WWriteUnlock: W->mLock->WriteUnlock();
@@ -442,9 +399,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     // the game state
     case O::StOptions: return P64(static_cast<EeAppOptionsFields*>(&ST->mGameOptions));
-    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gGameOptions));
-    case O::LobbyCampaignNameLength: return gGameOptions.mCampaignName.GetLength();
-    case O::LobbyCampaignMapName: return gGameOptions.GetCampaignMapName(*(UWideString*)p);
+    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gWorld.mLobbyOptions));
+    case O::LobbyCampaignNameLength: return gWorld.mLobbyOptions.mCampaignName.GetLength();
+    case O::LobbyCampaignMapName: return gWorld.mLobbyOptions.GetCampaignMapName(*(UWideString*)p);
     case O::StIsLoadedGame: return P64(&ST->mIsLoadedGame);
     case O::StInScenarioEditor: return P64(&ST->mInScenarioEditor);
     case O::StRandomSeed: return P64(&ST->mRandomSeed);
@@ -465,19 +422,12 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StScenarioManager: return P64(ST->mScenarioManager);
     case O::StEnvironmentManager: return P64(ST->mEnvironmentManager);
     case O::StCalamityHelper: return P64(ST->mCalamityHelper);
-    case O::StNumPlayers: return ST->GetNumPlayers();
-    case O::StPlayerCount: return (int64_t)ST->mPlayers.size();
-    case O::StPlayerAt: return P64(ST->mPlayers[a[0]]);
-    case O::StLoadedPlayerCount: return (int64_t)ST->mLoadedPlayers.size();
-    case O::StLoadedPlayerAt: return P64(ST->mLoadedPlayers[a[0]]);
-    case O::StNumTeams: return ST->GetNumTeams();
-    case O::StTeamToRust: ee_app_teams_set(ee_app_teams_get(SIZE_MAX, NULL, 0), std::vector<uint32_t>(ST->mTeams[a[0]].mPlayers.begin(), ST->mTeams[a[0]].mPlayers.end()).data(), ST->mTeams[a[0]].mPlayers.size());
         break;
     case O::StReadLock: ST->ReadLock();
         break;
     case O::StReadUnlock: ST->ReadUnlock();
         break;
-    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
+    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)PL->mName), reinterpret_cast<const unsigned char*>((const char*)(a[0] ? gWonPlayerName : gPlayerName))) == 0;
     case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
         break;
     // the players
@@ -553,7 +503,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::TechIsLoaded: return ((EETechTree*)p)->mIsLoaded;
     case O::TechResetEpochRange: ((EETechTree*)p)->ResetEpochRange((long)a[0], (long)a[1]);
         break;
-    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gLoadingSavedGame, true);
+    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gWorld.mLoadingSavedGame, true);
         break;
     case O::TechUpdateInterface: ((EETechTree*)p)->UpdateInterface(a[0] != 0);
         break;
@@ -712,16 +662,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
         break;
-    case O::CameraClearUnitA: gWorld.mCameraControl.ClearUnitA();
-        break;
-    case O::CameraClearUnitB: gWorld.mCameraControl.ClearUnitB();
-        break;
-    case O::CameraResetPath: gWorld.mCameraControl.ResetPath();
-        break;
-    case O::CameraResetZoom: gWorld.mCameraControl.ResetZoom();
-        break;
-    case O::CameraSetChanged: gWorld.mCameraControl.SetChanged();
-        break;
     case O::GraphicsReleaseScene: gGraphics->PostReleaseScene();
         break;
     case O::GraphicsInitialiseScene: gGraphics->PostInitialiseScene();
@@ -742,8 +682,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CampaignProgressDelete: delete (EECampaignProgress*)p;
         break;
     case O::CampaignRestoreCivilization: ((EECampaignProgress*)p)->RestoreCivilization(UWideString(gDefaultCampaignUser), ((EEGameState*)a[0])->mGameOptions.mCampaignName, ((EEGameState*)a[0])->mGameOptions.mScenarioName, ((EEGameState*)a[0])->mGameOptions.mCampaignChecksum);
-        break;
-    case O::ClearFormManager: ee_screens_chat_log_clear();
         break;
     case O::StrNew: return P64(new UWideString);
     case O::StrFree: delete (UWideString*)p;
@@ -785,23 +723,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::DumpLeakTitle: fprintf(FILE_SPEC, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
         break;
     // RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world)
-    case O::WsStart: W->mStatistics.mStartTime = W->mStartTime;
-        break;
-    case O::WsTiles: W->mStatistics.mTileCount = W->mMap->GetTileCount();
-        break;
-    case O::WsVictory: W->mStatistics.mVictoryEnabled = W->mVictoryEnabled;
-        break;
-    case O::WsTeamsLocked: W->mStatistics.mTeamsLocked = W->mTeamsLocked;
-        break;
-    case O::WsScenarioGame: return W->mGameOptions.mIsScenarioGame;
-    case O::WsCampaignOptions: return W->mGameOptions.mCampaignName.GetLength() > 0 && W->mGameOptions.mCampaignChecksum > 0;
-    case O::WsSetScenario: W->mStatistics.mIsScenario = a[0] != 0;
-        break;
-    case O::WsSetCampaign: W->mStatistics.mIsCampaign = a[0] != 0;
-        break;
-    case O::WsEndTime: return W->mStatistics.mEndTime = gPhysics->mGameTime;
-    case O::WsCampaignName: W->mStatistics.mCampaignName = W->mGameOptions.mCampaignName;
-        break;
+    case O::WsTiles: return W->mMap->GetTileCount();
     case O::WsNumPlayers: return W->mNumPlayers;
     case O::WsPlayer: *(EeAppStatsPlayer*)a[2] = {PL0->GetPlayerID(), PL0->IsHuman(), PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)PL0->mName), reinterpret_cast<const unsigned char*>((const char*)*(UWideString*)a[1])) == 0, PL0->mObserverMode, PL0->mDisconnected, PL0->mGameResult, PL0->mSavedGroups.mStats};
         break;
@@ -812,42 +734,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WsStatsCap: return gWorld.mPlayers[a[0]]->mResourceCaps[a[1]];
     case O::WsStatsSetCap: gWorld.mPlayers[a[0]]->mResourceCaps[a[1]] = (long)a[2];
-        break;
-    case O::WsRecordsAssign: W->mStatistics.mRecords.assign((size_t)a[0], EEStatisticsRecord());
-        break;
-    case O::WsRecScore: REC.mScore = (unsigned long)a[1];
-        break;
-    case O::WsRecEconomy: REC.mEconomyScore = (unsigned long)a[1];
-        break;
-    case O::WsRecEpoch: REC.mEpochScore = (unsigned long)a[1];
-        break;
-    case O::WsRecMilitary: REC.mMilitaryScore = (unsigned long)a[1];
-        break;
-    case O::WsRecTech: REC.mTechScore = (unsigned long)a[1];
-        break;
-    case O::WsRecColor: REC.mColor = PL1->mColor;
-        break;
-    case O::WsRecName: REC.mName = PL1->mName + UWideString((const char*)a[2]);
-        break;
-    case O::WsRecStatistics: REC.mStatistics = PL1->mSavedGroups;
-        break;
-    case O::WsRecSlot: REC.mSlot = PL1->mSlot;
-        break;
-    case O::WsRecResult: REC.mResult = PL1->mGameResult;
-        break;
-    case O::WsRecEndTime: REC.mEndTime = PL1->mSavedGroups.mEndTime != 0 ? PL1->mSavedGroups.mEndTime : W->mStatistics.mEndTime;
-        break;
-    case O::WsRecTeam: REC.mTeam = PL1->GetPlayerID() > 0 ? W->mGameOptions.mPlayers[PL1->GetPlayerID() - 1].mTeam : 0;
-        break;
-    case O::WsRecResource: REC.mResources[a[2]] = PL1->mResourceCaps[a[2]];
-        break;
-    case O::WsRecLocal: REC.mIsLocal = a[1] != 0;
-        break;
-    case O::WsRecHuman: REC.mIsHuman = a[1] != 0;
-        break;
-    case O::WsSetCurrentRecord: W->mStatistics.mCurrentRecordIndex = (long)a[0];
-        break;
-    case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
         break;
     default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
     }

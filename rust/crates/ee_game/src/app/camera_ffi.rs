@@ -2,12 +2,15 @@
 //! body. Each entry copies the record in, runs the body and copies it back: no host operation reads or writes the
 //! camera's record (camera.rs), so no Rust reference to it lives across a call into C++.
 
-use crate::app::camera::{self, CameraHost, EeAppCameraFields, EeAppCameraKey, EeAppCameraMove};
+use crate::app::camera::{
+    self, CameraHost, EeAppCameraFields, EeAppCameraKey, EeAppCameraMove, EE_APP_CAMERA_NO_UNIT, EE_APP_CAMERA_UNIT_A,
+};
 use ee_base::math::types::Ge3DPlane;
 use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation};
 use ee_render::gfx::camera::EeGfxEdgePlanes;
 use std::ffi::c_void;
 use std::os::raw::c_long;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 /// The terrain mesh's four edge planes (ee_gfx camera.rs's `EeGfxEdgePlanes`, repeated so that the C header does not
 /// need ee_gfx's).
@@ -225,6 +228,21 @@ fn with<R>(
     let r = body(&mut c, &mut host);
     unsafe { *rec = c };
     r
+}
+
+/// The world's camera's followed units' ids (were `EECameraControl::mUnitA`, `mUnitB`, two `EEUnitHandle<EEUnit>`s:
+/// read on the graphics and the physics threads). One camera (gWorld's).
+static UNITS: [AtomicU32; 2] = [AtomicU32::new(EE_APP_CAMERA_NO_UNIT), AtomicU32::new(EE_APP_CAMERA_NO_UNIT)];
+
+/// The followed unit's saved id in `slot` (`mUnitA` 0, `mUnitB` 1), resolved or not.
+#[no_mangle]
+pub extern "C" fn ee_app_camera_unit(slot: u32) -> u32 {
+    UNITS[(slot != EE_APP_CAMERA_UNIT_A) as usize].load(Ordering::Relaxed)
+}
+
+/// The followed unit's id in `slot` stored (the host's `EE_APP_CAMERA_OP_SET_UNIT`).
+pub fn set_unit(slot: u32, id: u32) {
+    UNITS[(slot != EE_APP_CAMERA_UNIT_A) as usize].store(id, Ordering::Relaxed);
 }
 
 /// `EECameraControl()`'s plain members.

@@ -464,26 +464,6 @@ pub struct EeUnitsStatsHistoryTail {
     pub is_campaign: bool,
 }
 
-/// The record's plain members cleared (`EEStatisticsRecord::Clear`; the C++ clears the names and statistics).
-///
-/// # Safety
-/// `tail` is a live record's `mColor`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_stats_record_clear(tail: *mut EeUnitsStatsRecordTail) {
-    // SAFETY: the caller's contract
-    unsafe { *tail = STATS_RECORD_CLEAR };
-}
-
-/// The history's plain members cleared (`EEStatisticsHistory::Reset`; the C++ clears the name and records).
-///
-/// # Safety
-/// `tail` is a live history's `mStartTime`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_stats_history_clear(tail: *mut EeUnitsStatsHistoryTail) {
-    // SAFETY: the caller's contract
-    unsafe { *tail = EeUnitsStatsHistoryTail::default() };
-}
-
 #[cfg(test)]
 #[path = "player_stats_tests.rs"]
 mod tests;

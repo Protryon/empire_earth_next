@@ -60,7 +60,6 @@
 // The C++ constants game_actions.rs names are checked against the headers by its game_actions_cpp_consts_tests.rs
 // (they were static_asserts here); ee/EEARust.h's kinds are its constants.
 
-extern unsigned short& gLagStatus;           // 0x5318d4 (cleared after a migration; provisional name)
 
 GETransformation gMiniMapTransformation;
 
@@ -223,8 +222,8 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         return 0;
     case GA_K(MAP, M_EXISTS): return gWorld.mMap != NULL;
     // the effects
-    case EE_SCREENS_GAH_FX_CREATE: gEffectManager->CreateEffect(static_cast<EEUnit*>(p), GA_F3, EEGraphicEffect::Get(i[0]), reinterpret_cast<EEEffectHandle*>(&i[1]), 0); return 0;
-    case EE_SCREENS_GAH_FX_LOCAL: gEffectManager->GetEffect(*reinterpret_cast<EEEffectHandle*>(&i[2]))->SetLocalTo(i[1]); return 0;
+    case EE_SCREENS_GAH_FX_CREATE: gWorld.mEffectManager->CreateEffect(static_cast<EEUnit*>(p), GA_F3, EEGraphicEffect::Get(i[0]), reinterpret_cast<EEEffectHandle*>(&i[1]), 0); return 0;
+    case EE_SCREENS_GAH_FX_LOCAL: gWorld.mEffectManager->GetEffect(*reinterpret_cast<EEEffectHandle*>(&i[2]))->SetLocalTo(i[1]); return 0;
     // the current player's technologies
     case GA_K(TECH, K_CAN_PRODUCE): return GA_PL->CanProduce(i[1], 0x20, 1, true, 3, NULL);
     case EE_SCREENS_GAH_K_CLASS: return (intptr_t)gUnitClassTable[GA_PL->mTechnologies->Get(i[1])->mData->mUnitClass];
@@ -295,11 +294,11 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(NET, N_PUBLISHED): return GA_SERVER->GetGameWasPublished();
     case EE_SCREENS_GAH_N_PLAYER_NAME: gPlayerName = GA_A->mPlayerName; return 0;
     case EE_SCREENS_GAH_N_HOST_NAME: gGamePreferences.mSettings.mHostGameName = GA_A->mGameName; return 0;
-    case EE_SCREENS_GAH_N_OPT_LOCK: gGameOptions.mLock->WriteLock(); return 0;
-    case EE_SCREENS_GAH_N_OPT_COPY: gGameOptions = gGamePreferences.GetLastGameOptions(); return 0;
-    case EE_SCREENS_GAH_N_OPT_MULTI: gGameOptions.mIsMultiplayer = true; return 0;
-    case EE_SCREENS_GAH_N_OPT_NO_CHEATS: gGameOptions.mCheatCodes = false; return 0;
-    case EE_SCREENS_GAH_N_OPT_UNLOCK: gGameOptions.mLock->WriteUnlock(); return 0;
+    case EE_SCREENS_GAH_N_OPT_LOCK: gWorld.mLobbyOptions.mLock->WriteLock(); return 0;
+    case EE_SCREENS_GAH_N_OPT_COPY: gWorld.mLobbyOptions = gGamePreferences.GetLastGameOptions(); return 0;
+    case EE_SCREENS_GAH_N_OPT_MULTI: gWorld.mLobbyOptions.mIsMultiplayer = true; return 0;
+    case EE_SCREENS_GAH_N_OPT_NO_CHEATS: gWorld.mLobbyOptions.mCheatCodes = false; return 0;
+    case EE_SCREENS_GAH_N_OPT_UNLOCK: gWorld.mLobbyOptions.mLock->WriteUnlock(); return 0;
     case EE_SCREENS_GAH_N_SLEEP: PlatSleep(i[1]); return 0;
     case EE_SCREENS_GAH_N_FORMAT: gResource->GetString(i[1], sFormat); return 0;
     case EE_SCREENS_GAH_N_PRINT_TEXT: sprintf(sMessage, sFormat, (const char*)GA_A->mText); return 0;
@@ -331,7 +330,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_PLAYER_FIREWALL: return gWorld.mPlayers[i[1]]->mBehindFirewall != 0;
     case EE_SCREENS_GAH_N_PLAYER_HUMAN: return gWorld.mPlayers[i[1]]->mHumanPlayer != 0;
     case EE_SCREENS_GAH_N_PLAYER_CURRENT: return GA_PL == gWorld.mPlayers[i[1]];
-    case GA_K(NET, N_LOADING_SAVED): return gLoadingSavedGame != 0;
+    case GA_K(NET, N_LOADING_SAVED): return gWorld.mLoadingSavedGame != 0;
     case EE_SCREENS_GAH_N_ACTIVE_CLEAR: gWorld.mPlayers[i[1]]->mActiveGroup->Clear(); return 0;
     case EE_SCREENS_GAH_N_COPY_SELECTION: GA_PL->mSelectedGroup->CopySelection(GA_PL->mActiveGroup); return 0;
     case EE_SCREENS_GAH_N_RESET_FAST: GA_CLIENT->ResetFastSelection(); return 0;
@@ -357,7 +356,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_MY_SLOT_NONE: GA_SYNC->SetMySendToSlot(kSlotNone); return 0;
     case EE_SCREENS_GAH_N_NEW_RECONNECT:   // the tick, the player
         return (intptr_t)static_cast<NEMessage*>(new NEMRecord(kNetMessageClientReconnectionRequest, {gCommunications->GetNumberOfCTsProcessedInPhysics(), gWorld.mCurrentPlayer}));
-    case GA_K(NET, N_LAG_CLEAR): gLagStatus = 0; return 0;
+    case GA_K(NET, N_LAG_CLEAR): gWorld.mLagStatus = 0; return 0;
     // the scenario editor's and the saved games'
     case GA_K(EDITOR, E_JIT): gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_SCREENS_GAH_E_APPLY_IMPROVEMENT:
@@ -410,31 +409,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(EDITOR, E_LOAD_TEXT): GA_FORM->SetLoadText(GA_A->mText); return 0;
     }
     return 0;
-}
-
-// A record value (EEMRecordValue's conversions)
-static EEMRecordValue GaValue(const EeScreensGaValue& inValue)
-{
-    return inValue.kind == EE_SCREENS_GA_VALUE_POINT   ? EEMRecordValue(GE2DPoint(inValue.f[0], inValue.f[1]))
-           : inValue.kind == EE_SCREENS_GA_VALUE_FLOAT ? EEMRecordValue((double)inValue.f[0])
-                                                        : EEMRecordValue((long long)inValue.i);
-}
-
-#define GA_V(k) GaValue(inValues[k])
-
-// A record message: its members in wire order (seven at most)
-extern "C" void* ee_screenscpp_ga_record(uint32_t inKind, const EeScreensGaValue* inValues, uint32_t inCount)
-{
-    switch (inCount) {
-    case 0: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind));
-    case 1: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0)}));
-    case 2: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1)}));
-    case 3: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2)}));
-    case 4: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3)}));
-    case 5: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4)}));
-    case 6: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4), GA_V(5)}));
-    default: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4), GA_V(5), GA_V(6)}));
-    }
 }
 
 // ------------------------------------------------------------------------------------------------ the originals' COMDATs
