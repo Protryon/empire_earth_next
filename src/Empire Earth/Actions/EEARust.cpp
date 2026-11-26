@@ -412,31 +412,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     return 0;
 }
 
-// A record value (EEMRecordValue's conversions)
-static EEMRecordValue GaValue(const EeScreensGaValue& inValue)
-{
-    return inValue.kind == EE_SCREENS_GA_VALUE_POINT   ? EEMRecordValue(GE2DPoint(inValue.f[0], inValue.f[1]))
-           : inValue.kind == EE_SCREENS_GA_VALUE_FLOAT ? EEMRecordValue((double)inValue.f[0])
-                                                        : EEMRecordValue((long long)inValue.i);
-}
-
-#define GA_V(k) GaValue(inValues[k])
-
-// A record message: its members in wire order (seven at most)
-extern "C" void* ee_screenscpp_ga_record(uint32_t inKind, const EeScreensGaValue* inValues, uint32_t inCount)
-{
-    switch (inCount) {
-    case 0: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind));
-    case 1: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0)}));
-    case 2: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1)}));
-    case 3: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2)}));
-    case 4: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3)}));
-    case 5: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4)}));
-    case 6: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4), GA_V(5)}));
-    default: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4), GA_V(5), GA_V(6)}));
-    }
-}
-
 // ------------------------------------------------------------------------------------------------ the originals' COMDATs
 // (out of line in these units after their first users)
 

@@ -329,13 +329,15 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
             n(f).local_input(info as *mut c_void, v[2] as u8);
             0
         }
-        EE_NETMSG_SESS_SEND_NEW_RECORD => match v[2] {
-            // the values' count
-            0 => h(O::SsNewRecord0, f, &[v[1]]),
-            2 => h(O::SsNewRecord2, f, &[v[1], v[3], v[4]]),
-            3 => h(O::SsNewRecord3, f, &[v[1], v[3], v[4], v[5]]),
-            _ => h(O::SsNewRecord4, f, &[v[1], v[3], v[4], v[5], v[6]]),
-        },
+        EE_NETMSG_SESS_SEND_NEW_RECORD => {
+            // the values' count (0, 2, 3, else 4)
+            let n = match v[2] {
+                0 | 2 | 3 => v[2] as usize,
+                _ => 4,
+            };
+            let values: Vec<_> = v[3..3 + n].iter().map(|&x| super::mrecord::EeGamecppMrValue::integer(x)).collect();
+            super::mrecord::new_record(v[1] as u8, &values) as i64
+        }
         EE_NETMSG_SESS_SEND_PING_STAT => {
             session_objs::send_ping_stat(session_objs::frame_server(f), v[1] as u8 as i64, f32::from_bits(v[2] as u32));
             0

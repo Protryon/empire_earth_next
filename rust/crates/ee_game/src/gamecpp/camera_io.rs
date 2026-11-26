@@ -116,28 +116,65 @@ pub fn set_location(location: *const Ge3DPoint, immediate: bool, follow_terrain:
     unsafe { ee_app_camera_set_location(fields(), cam(), ee_gamecpp_camera_host, location, immediate, follow_terrain) }
 }
 
-/// `Follow(unit, mIsFollowingUnitB, 1, mTurnYaw, mTurnPitch)`: the swapped unit's successor (an EEUnit, or none).
-pub fn follow_swapped(unit: P) {
-    let id = if unit != 0 {
+/// `EECameraID`: a unit's handle id, or none.
+fn unit_id(unit: P) -> u32 {
+    if unit != 0 {
         // SAFETY: the live unit's record
         unsafe { crate::rts::units::ee_rts_unit_handle_id(super::rec(O::UnRts, unit)) }
     } else {
         EE_APP_CAMERA_NO_UNIT
-    };
+    }
+}
+
+/// `Follow(unit, flag, duration, turn yaw, turn pitch)` (an EEUnit, or none).
+pub fn follow(unit: P, flag: bool, duration: f32, yaw: f32, pitch: f32) {
+    // SAFETY: the world's camera and its host
+    unsafe { ee_app_camera_follow(fields(), cam(), ee_gamecpp_camera_host, unit_id(unit), flag, duration, yaw, pitch) }
+}
+
+/// `Follow(unit, mIsFollowingUnitB, 1, mTurnYaw, mTurnPitch)`: the swapped unit's successor (an EEUnit, or none).
+pub fn follow_swapped(unit: P) {
     // SAFETY: the world's camera's record
     let c = unsafe { *fields() };
-    unsafe {
-        ee_app_camera_follow(
-            fields(),
-            cam(),
-            ee_gamecpp_camera_host,
-            id,
-            c.mIsFollowingUnitB,
-            1.0,
-            c.mTurnYaw,
-            c.mTurnPitch,
-        )
-    }
+    follow(unit, c.mIsFollowingUnitB, 1.0, c.mTurnYaw, c.mTurnPitch);
+}
+
+// ---- the screens' camera calls (were EEScreens.cpp's, EEUIFMainGame.cpp's and EEUserInterface.cpp's shims)
+
+/// `SetChanged`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_set_changed() {
+    set_changed();
+}
+
+/// `SetLocation((x, y, z), flag1, flag2)`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_set_location(x: f32, y: f32, z: f32, immediate: bool, follow_terrain: bool) {
+    set_location(&Ge3DPoint::new(x, y, z), immediate, follow_terrain);
+}
+
+/// `Follow(unit, follow, 1, 0, 0)`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_follow(unit: usize, flag: bool) {
+    follow(unit, flag, 1.0, 0.0, 0.0);
+}
+
+/// `ClearUnitA`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_clear_unit_a() {
+    clear_unit_a();
+}
+
+/// `ClearUnitB`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_clear_unit_b() {
+    clear_unit_b();
+}
+
+/// `Update(seconds)`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_update(seconds: f32) {
+    update(seconds);
 }
 
 /// A unit's state bits (`EE_APP_CAMERA_EXISTS`, `_ALIVE`, `_ON_MAP`): 0 for none.

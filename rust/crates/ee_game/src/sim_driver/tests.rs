@@ -323,16 +323,13 @@ fn an_editor_script_runs_line_by_line() {
 }
 
 #[test]
-fn the_world_constants_are_the_generated_headers() {
+fn the_world_constants_are_the_generated_ones() {
+    // (the enum is ee_data world_constants.rs's since the game headers lane, round 1: ee/EEWorldConstants.h only
+    // includes its header)
     use super::sim_host::*;
-    let path = format!("{}/../../../include/rust/data/world_constants.h", env!("CARGO_MANIFEST_DIR"));
-    let text = std::fs::read_to_string(path).unwrap();
-    let id = |name: &str| -> u32 {
-        let line = text.lines().find(|l| l.trim_start().starts_with(&format!("{name} ="))).unwrap();
-        line.split('=').nth(1).unwrap().split(',').next().unwrap().trim().parse().unwrap()
-    };
-    assert_eq!(id("kWorldConversionFaithCost"), WORLD_CONVERSION_FAITH_COST);
-    assert_eq!(id("kWorldWonderSightRadius"), WORLD_WONDER_SIGHT_RADIUS);
-    assert_eq!(id("kWorldTradeRateStoneIron"), WORLD_TRADE_RATE_STONE_IRON);
-    assert_eq!(id("kWorldTradeRateFoodWood"), WORLD_TRADE_RATE_FOOD_WOOD);
+    use ee_data::world_constants::EEWorldConstant as W;
+    assert_eq!(W::kWorldConversionFaithCost as u32, WORLD_CONVERSION_FAITH_COST);
+    assert_eq!(W::kWorldWonderSightRadius as u32, WORLD_WONDER_SIGHT_RADIUS);
+    assert_eq!(W::kWorldTradeRateStoneIron as u32, WORLD_TRADE_RATE_STONE_IRON);
+    assert_eq!(W::kWorldTradeRateFoodWood as u32, WORLD_TRADE_RATE_FOOD_WOOD);
 }

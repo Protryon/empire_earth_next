@@ -285,8 +285,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the sends
     case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
-    case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
-        break;
     case O::C11SvXferStatus: SV->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {(unsigned char)a[0], (unsigned char)a[1], (uint32_t)a[2], (unsigned char)a[3]}), kSlotNone);
         break;
     // a connection request (a0)
@@ -386,9 +384,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsMsgSetOriginServer: MSG->SetOriginatingSlot(kSlotServer);
         break;
     case O::SsNewRecord0: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0])));
-    case O::SsNewRecord2: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2]})));
-    case O::SsNewRecord3: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2], (long long)a[3]})));
-    case O::SsNewRecord4: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2], (long long)a[3], (long long)a[4]})));
     case O::SsNewString: return P64(new UWideString);
     case O::SsDeleteString: delete (UWideString*)p;
         break;

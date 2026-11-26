@@ -297,7 +297,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcExplore: gWorld.mMap->ExploreUnseen(B_PL);
         break;
-    case O::DcNewMakeVisible: return P64(new EEMRecord(kMessageMakeWorldVisible));
     case O::DcSetOriginatingSlot: ((EEMRecord*)p)->SetOriginatingSlot(((EEPlayer*)a[0])->mSlot);
         break;
     case O::DcProcessInput: gCommunications->ProcessLocalUserInput((EEMRecord*)p, kSlotNone);

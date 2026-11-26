@@ -72,7 +72,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_update(camera: *mut c_void, elapsed: 
         // SAFETY: as above
         unsafe { ee_app_camera_set_clipping_distances(fields(c), camera, call) };
         if crate::gamecpp::globals::have!(gMiniMap) {
-            h(O::DkMiniMapRefresh, 0, &[]);
+            super::minimap::refresh_view(crate::gamecpp::globals::get!(gMiniMap) as *mut c_void);
         }
         h(O::DkClearB529066, 0, &[]);
         h(O::DkClearFollowing, 0, &[]);

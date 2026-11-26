@@ -393,7 +393,10 @@ fn load_game(name: &[u8]) {
         h(O::EntryServerStopPing, 0, &[]);
         h(O::EntryServerLoadState, 0, &[1]);
         h(O::EntryNotInEditor, 0, &[]);
-        h(O::EntryStartLoadingInput, 0, &[]);
+        // kMessageStartLoading {1, TMGetTime()} to the local input
+        let values = [1, i64::from(ee_base::time::ee_time_get())].map(super::mrecord::EeGamecppMrValue::integer);
+        let message = super::mrecord::new_record(ee_sim::message_ids::EEMessageID::kMessageStartLoading as u8, &values);
+        super::net::global().local_input(message as *mut std::ffi::c_void, 0xff);
     } else {
         start_client(None);
     }

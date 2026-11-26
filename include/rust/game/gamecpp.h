@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "rust/base/math.h"
 #include "rust/game/app.h"
+#include "rust/game/screens.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/app.h"
 #include "rust/sim/netmsg.h"
@@ -836,8 +837,6 @@ enum class EeGameCpp : uint32_t {
   MsgStartLoading,
   MsgString,
   NewChatAction,
-  NewLoadMainScreenRecord,
-  NewLoadSaveResponse,
   NewLocationGoal2D,
   NewStartGameRecord,
   NewTimerExpiredEvent,
@@ -1656,8 +1655,6 @@ enum class EeGameCpp : uint32_t {
   MpTileVecClear,
   MpTileVecData,
   MpTileVecSize,
-  MpCountCellOn,
-  MpCountCellOff,
   MpOrthographic,
   MpDenormalizePerspective,
   MpDenormalizeOrthographic,
@@ -1906,7 +1903,6 @@ enum class EeGameCpp : uint32_t {
   PvLongsAt,
   PvAfterLoad,
   PsMajorVersion,
-  PsListPush,
   PsPersistentTag,
   PsPersistentDelete,
   PsNewChecksumChunk,
@@ -2104,9 +2100,6 @@ enum class EeGameCpp : uint32_t {
   SsNewPlayerInfo,
   SsMsgSetOriginServer,
   SsNewRecord0,
-  SsNewRecord2,
-  SsNewRecord3,
-  SsNewRecord4,
   SsNewString,
   SsDeleteString,
   SsClientAddress,
@@ -2355,7 +2348,6 @@ enum class EeGameCpp : uint32_t {
   EntryServerStopPing,
   EntryServerLoadState,
   EntryNotInEditor,
-  EntryStartLoadingInput,
   GsClassScale,
   GsDrawGroundShadows,
   GsShadowModel,
@@ -2778,7 +2770,6 @@ enum class EeGameCpp : uint32_t {
   DcApplyImprovement,
   DcEraseQueued,
   DcExplore,
-  DcNewMakeVisible,
   DcSetOriginatingSlot,
   DcProcessInput,
   DcCurrentEpoch,
@@ -2830,7 +2821,6 @@ enum class EeGameCpp : uint32_t {
   DkSetOrtho,
   DkSetWorldCamera,
   DkSetFieldOfView,
-  DkMiniMapRefresh,
   DkClearB529066,
   DkClearFollowing,
   DkClearB529068,
@@ -3211,7 +3201,6 @@ enum class EeGameCpp : uint32_t {
   C11UlongsAt,
   C11PickUnits,
   C11CurrentPlayerId,
-  C11NewSelectRecord,
   C11MsgListAssign,
   C11MsgListData,
   C11MsgListSize,
@@ -3256,7 +3245,6 @@ enum class EeGameCpp : uint32_t {
   C11SvDestroyFastLock,
   C11SvDestroyAttemptLock,
   C11SvNewResponse,
-  C11SvPingStat,
   C11SvXferStatus,
   C11RequestFirewall,
   C11RequestString,
@@ -4613,6 +4601,18 @@ void ee_gamecpp_minimap_recolor(void *mm);
 /// Refresh: the camera's view trapezoid on the mini map (ee_gfx minimap.rs).
 void ee_gamecpp_minimap_refresh(void *mm);
 
+/// `gMiniMap`.
+size_t ee_screenscpp_mini_map();
+
+/// `gMiniMap->Refresh()`.
+void ee_screenscpp_mini_map_refresh();
+
+/// `gMiniMap->RedrawAll()`.
+void ee_screenscpp_mini_map_redraw_all();
+
+/// `gMiniMap->Redraw()`.
+void ee_screenscpp_mini_map_redraw();
+
 /// RedrawAll: every terrain pixel recomputed, the terrain texture flagged changed.
 void ee_gamecpp_minimap_redraw_all(void *mm);
 
@@ -4735,9 +4735,6 @@ long ee_gamecpp_pc_load(void *chunk, void *file);
 
 /// `EEPChecksum::Save`: the verbose flag and the described checksum entries; the first write error.
 long ee_gamecpp_pc_save(void *chunk, void *file);
-
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
-void ee_gamecpp_ps_build_chunks(void *list);
 
 /// `TrimAutoSaves`: the files matching a pattern in a directory deleted, lowest (FSFileSpec order) first, until at
 /// most `max` remain.
@@ -5183,6 +5180,14 @@ void ee_gamecpp_mrecord_init(void *message,
                              const EeGamecppMrValue *values,
                              size_t count);
 
+/// A game action's record message (`new EEMRecord(kind, {values})`, seven values at most; was EEARust.cpp's).
+///
+/// # Safety
+/// `values` points at `count` values.
+void *ee_screenscpp_ga_record(uint32_t kind,
+                              const EeScreensGaValue *values,
+                              uint32_t count);
+
 /// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
 /// text, the list's records, the blob's bytes, the record's members).
 ///
@@ -5578,6 +5583,28 @@ void ee_gamecpp_ambient_add_tree(EeAppAmbientCounts *counts,
 /// `camera` is the EECameraControl being constructed and `rec` its record.
 void ee_gamecpp_camera_new(void *camera,
                            EeAppCameraFields *rec);
+
+/// `SetChanged`.
+void ee_screenscpp_camera_set_changed();
+
+/// `SetLocation((x, y, z), flag1, flag2)`.
+void ee_screenscpp_camera_set_location(float x,
+                                       float y,
+                                       float z,
+                                       bool immediate,
+                                       bool follow_terrain);
+
+/// `Follow(unit, follow, 1, 0, 0)`.
+void ee_screenscpp_camera_follow(size_t unit, bool flag);
+
+/// `ClearUnitA`.
+void ee_screenscpp_camera_clear_unit_a();
+
+/// `ClearUnitB`.
+void ee_screenscpp_camera_clear_unit_b();
+
+/// `Update(seconds)`.
+void ee_screenscpp_camera_update(float seconds);
 
 /// The camera's host (camera_ffi.rs `EeAppCameraFn`): the context is the camera.
 ///

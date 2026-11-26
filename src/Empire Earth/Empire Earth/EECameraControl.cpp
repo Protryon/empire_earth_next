@@ -22,7 +22,6 @@
 #include "ee/EECameraKey.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp camera_host.rs)
 #include "ee/EECombatGoals.h"
@@ -99,8 +98,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DkSetWorldCamera: gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(CAM->mView));
         break;
     case O::DkSetFieldOfView: gViewport.SetFieldOfView(f[0]);
-        break;
-    case O::DkMiniMapRefresh: gMiniMap->RefreshView();
         break;
     case O::DkClearB529066: gB529066 = false;
         break;

@@ -139,7 +139,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define CALAMITIES (*(std::vector<EECalamity*>*)p)
 #define CAFILE (*(FSFile*)a[2])
 #define SPEC ((FSFileSpec*)p)
-#define LIST (*(std::vector<FSPersistent*>*)p)
 #define CHUNKS (*(std::vector<FSChunk>*)p)
 #define CHUNK ((FSChunk*)p)
 #define SPECS (*(std::vector<FSFileSpec>*)p)
@@ -392,8 +391,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PvAfterLoad: EEAfterLoadRust((void (*)(uintptr_t))a[0], (uintptr_t)a[1]);
         break;
     case O::PsMajorVersion: return kSaveGameMajorVersion;
-    case O::PsListPush: LIST.push_back((FSPersistent*)a[0]);
-        break;
     case O::PsPersistentTag: return PERSISTENT->GetTagID();
     case O::PsPersistentDelete: delete PERSISTENT;
         break;

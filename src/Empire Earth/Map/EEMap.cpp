@@ -233,10 +233,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MpTileVecData: return P64(((std::vector<EETileCoordinate>*)p)->empty() ? NULL : &(*(std::vector<EETileCoordinate>*)p)[0].mX);
     case O::MpTileVecSize: return (int64_t)((std::vector<EETileCoordinate>*)p)->size();
-    case O::MpCountCellOn: gMiniMap->CountCellOn((long)a[0], (long)a[1]);
-        break;
-    case O::MpCountCellOff: gMiniMap->CountCellOff((long)a[0], (long)a[1]);
-        break;
     // the screen line
     case O::MpOrthographic: return gOrthographicView;
     case O::MpDenormalizePerspective: gViewport.DenormalizePerspectivePoint(MPPT(0), f[0], MPPT(1));
