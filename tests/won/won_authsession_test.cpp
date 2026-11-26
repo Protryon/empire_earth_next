@@ -24,7 +24,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONAuthPeerData.h"
 #include "ee/wonapi/WONBlowfish.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
 #include "rust/won_net/blowfish.h"

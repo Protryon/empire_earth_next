@@ -7,3 +7,7 @@ bool SaveToFile(const std::string& inFileName) { return this->Call(EeWonCdKeyCal
 std::string GetProduct() const { return this->Bytes(0); } // the SDK's mProduct
 bool IsBeta() const { return this->Call(EeWonCdKeyCall::Flag, NULL, 0); }
 bool IsForceCheck() const { return this->Call(EeWonCdKeyCall::Flag, NULL, 1); }
+// (R6 WON round 39)
+// 2e3880: a stored key decrypted with the machine-bound or the old key (the other tried on failure)
+bool InitEncrypted(const void* inData, unsigned long inLength) { return this->Call(EeWonCdKeyCall::InitEncrypted, inData, inLength); }
+bool InitRaw(const void* inRaw) { return this->Call(EeWonCdKeyCall::InitRaw, inRaw, 8); }

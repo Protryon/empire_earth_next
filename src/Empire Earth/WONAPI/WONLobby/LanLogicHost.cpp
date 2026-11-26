@@ -25,7 +25,7 @@
 #include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyStaging.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/EELobbyGameCode.h" // LobbyMessageBox
@@ -33,6 +33,7 @@
 #include "rust/won_lobby/lanobj.h"
 #include "rust/won_lobby/lobbyhost.h"
 #include "rust/won_net/ipobj.h"
+#include "rust/won_net/peerobj.h"
 #include "rust/won_net/qsock.h"
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 using namespace WONAPI;
@@ -213,7 +214,7 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
         return 0;
     case EeWonLobbyOp::AuthClearPassword: static_cast<AuthContext*>(inA)->SetPassword(std::wstring(gEmptyWideString));
         return 0;
-    case EeWonLobbyOp::AuthCommunity: return (intptr_t)static_cast<AuthContext*>(inA)->GetPeerData()->GetFirstCommunity();
+    case EeWonLobbyOp::AuthCommunity: return (intptr_t)(DWORD)ee_won_authctx_peer_num(static_cast<AuthContext*>(inA)->Core(), EE_WON_AUTHOBJ_FIRST_COMMUNITY); // GetPeerData()->GetFirstCommunity()
     case EeWonLobbyOp::CdKeyValid: return LobbyIsCDKeyValid() ? 1 : 0;
     case EeWonLobbyOp::GetCertNew: return Held(RustServerOp::NewGetCert(static_cast<AuthContext*>(inA)));
     case EeWonLobbyOp::LanRunPeerAuth: l->RunTrackedOp(RustServerOpPtr(RustServerOp::NewPeerAuthServer(static_cast<AuthContext*>(inB), sock)).get(), new ShellCompletion(l, EeWonLogicShellDone::LanPeerAuthDone), 30000);

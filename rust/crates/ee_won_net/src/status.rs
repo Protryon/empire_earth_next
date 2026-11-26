@@ -1,4 +1,4 @@
-//! WONStatus: the WON library's status codes (`include/ee/wonapi/WONStatus.h`) and their names
+//! WONStatus: the WON library's status codes (`rust/won_net/status_codes.h`; WONStatus.h until R6 WON round 39) and their names
 //! (`WONStatusToString`, `src/Empire Earth/WONAPI/WONCommon/WONStatus.cpp`). The table was printed by the C++ over
 //! every code from -40000 to 120000 (`golden_status.tsv`, the test's reference).
 

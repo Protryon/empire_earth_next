@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyScreens.h"
-#include "ee/wonapi/WONURL.h"
+#include "rust/won_net/http.h"
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_gui/guiconf.h"
 #include "ee/wonapi/WONLobbyGuard.h"
@@ -234,7 +234,7 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     switch (inOp) {
     case Op::BrowserBase: return WON_GUARDED(gb->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
-    case Op::BrowserPathIsFile: return WON_GUARDED(URL(sCfgRdPath).GetType() == URLType_File);
+    case Op::BrowserPathIsFile: return WON_GUARDED(ee_won_url_kind(reinterpret_cast<const uint8_t*>(sCfgRdPath.data()), sCfgRdPath.size()) == EE_WON_URL_FILE); // URL(path).GetType()
     case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
     case Op::BrowserSetHome: return WON_GUARDED_V(LobbyCfgComp<GameBrowserCtrl>(c)->SetHomeLocation(sCfgRdPath));
     case Op::GameUserListBase: return WON_GUARDED(gu->ContainerConfig::Virtual24(*(const std::string*)a));

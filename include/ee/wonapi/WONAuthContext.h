@@ -36,12 +36,9 @@ public:
     void SetProductString(const std::string& inProduct) { this->Call(EeWonCdKeyCall::SetProduct, inProduct.data(), inProduct.size()); } //2e30d0
     // 2e3320: the machine's id (Windows: the volume serial number of the Windows drive), a failure without one
     static DWORD GetMachineId(bool* outSuccess = NULL) { return ee_won_cdkey_machine_id(outSuccess); }
-    // 2e3880: a stored key decrypted with the machine-bound or the old key (the other tried on failure)
-    bool InitEncrypted(const void* inData, unsigned long inLength) { return this->Call(EeWonCdKeyCall::InitEncrypted, inData, inLength); }
     // the key's text ("XXXX-XXXX-XXXX-XXXX-XXXX", dashes and white space optional); true when its check byte is right
     bool Init(const std::string& inKey) { return this->Call(EeWonCdKeyCall::Init, inKey.data(), inKey.size()); }
     std::string GetString() const { return this->Bytes(2); } // the key's text; empty without a key
-    bool InitRaw(const void* inRaw) { return this->Call(EeWonCdKeyCall::InitRaw, inRaw, 8); }
     bool LoadFromFile(const std::string& inFileName) { return this->Call(EeWonCdKeyCall::LoadFile, inFileName.c_str(), 0); }
     // genuine SDK borrowed key accessor (now a copy: the key's bytes are Rust's); NULL without a key
     ConstSmartPtr<ByteBuffer> GetRaw() const { ConstSmartPtr<ByteBuffer> r; ee_won_cdkey_obj_bytes(this->mKey, 1, WonByteBufferSink, &r); return r; }
@@ -75,13 +72,11 @@ public:
     bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter = NULL)
     { return this->GetServerContext()->AddAddressesFromDir(inDir, inNameFilter); }
     #include EE_WON_DRV(Auth_AuthContext) // the drivers' members
-    bool RemoveAddress(const IPAddr& inAddr) { return this->GetServerContext()->RemoveAddress(inAddr); }
     void RemoveAllAddresses() { this->GetServerContext()->RemoveAllAddresses(); }
     void SetServerContext(ServerContext* inContext) //2df330
     { ee_won_authctx_set_server_context(this->mCore, inContext != NULL ? static_cast<RefCount*>(inContext) : NULL); }
     SmartPtr<ServerContext> GetServerContext() //2df3e0: a reference of the result's own
     { return static_cast<ServerContext*>(static_cast<RefCount*>(ee_won_authctx_server_context_borrowed(this->mCore))); }
-    ConstSmartPtr<AuthPeerData> GetPeerData() { return AuthPeerData::Adopt(ee_won_authctx_peer_data(this->mCore)); } //2e19e0
     bool IsExpired(time_t inExtra = 0) { return ee_won_authctx_is_expired(this->mCore, (int64_t)inExtra); } //2e1a30
     void SetUserName(const std::wstring& inName) { this->LoginSet(EE_WON_AUTH_LOGIN_NAME, std::wstring(), Utf16(inName)); } //2df620
     void SetPassword(const std::wstring& inPassword) //2df760
@@ -101,22 +96,6 @@ public:
     void SetCDKey(const std::wstring& inCommunity, const CDKey& inKey) //2e0380
     {
         this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY, inCommunity, inKey.KeyBytes(), (inKey.HasKey() ? 1 : 0) | (inKey.IsValid() ? 2 : 0));
-    }
-    bool SetHashFile(const std::wstring& inCommunity) //2e06d0: the running exe in the data root (authlogin.rs)
-    {
-        return ee_won_auth_login_hash_exe(ee_won_authctx_login(this->mCore), inCommunity.data(), sizeof(wchar_t),
-                                          inCommunity.size());
-    }
-    bool SetHashFile(const std::wstring& inCommunity, const std::string& inFile) //2e07f0
-    { return this->SetHashFileList(inCommunity, std::list<std::string>(1, inFile)); }
-    bool SetHashFileList(const std::wstring& inCommunity, const std::list<std::string>& inFiles) //2e08e0
-    {
-        std::string aCommunity = Utf16(inCommunity);
-        std::string aFiles;
-        for (std::list<std::string>::const_iterator i = inFiles.begin(); i != inFiles.end(); ++i)
-            aFiles.append(i->c_str(), i->size() + 1);
-        return ee_won_auth_login_hash_files(ee_won_authctx_login(this->mCore), WonBytes(aCommunity), aCommunity.size(),
-                                            WonBytes(aFiles), aFiles.size());
     }
     void Kill() { ee_won_authctx_kill(this->mCore); } //2df260
     // the Rust object (the certificate ops' host calls answer on it: ee_won hostauth.rs)
