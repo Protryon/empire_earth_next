@@ -67,45 +67,16 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     return 0;
 }
 
-// Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
-// near the location (water allowed for non-land units); returns whether one was found
-// Sets up a new transport as any unit, then gives it its class's resource type and amount
-// Unloads the transport's cargo at a tile (siege towers with the tower flag set)
-// ---- EEUCLandTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
-// The land
-// transport's unit class: 0x216de3..0x217085 (after EEUCLandPriest.cpp; EEUCMiningBuilding.cpp follows). Unit flags:
-// the exe's module set. Its ctor is inline (vtable 0x448930); the slots +0xe4, +0xf4, +0xf8, +0x8c, +0xb8 in address
-// order. +0x8c and +0xf4 are also EEUCFortress's (ICF).
-
-// Unloads all cargo at once when the transport is badly hurt
 // ---- EEUCHelicopterTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The transport
 // helicopter's unit class: 0x21339d..0x213866 (after EEUCHelicopterPriest.cpp; EEUCLand.cpp follows). One unit per
 // EEUC* class in alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's
 // factory); slots +0xe4, +0x24, +0xf0, +0xf8, +0x74, +0x78, +0xa0, +0xb8 in address order.
 
-// 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way) (provisional name)
-
 // New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
 void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0); }  // ucx_transports.rs
 
-// Sets up a new transport helicopter as a transport, then lifts it to its flying height
-// ---- EEUCNavalTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval
-// transport's unit class: 0x218a45..0x218e34 (after EEUCNavalPriest.cpp; EEUCPlanetSpaceship.cpp's +0x74 0x218e34
-// follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory; vtable 0x448718); its
-// slots +0x04, +0xe8, +0xf8, +0xfc, +0x88, +0x104, +0xb8 in source order (Virtual08/0C/30/34/A0/E4/F4 are other
-// units' copies by ICF).
-
-// ---- EEUCSpaceTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The space
-// transport's unit class: 0x21a6e0..0x21ab66 (after EEUCSpaceship.cpp; EEUCSubmergedNaval.cpp's +0x04 0x21ab66
-// follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory). Slots +0xe4, +0x24,
-// +0x2c, +0xf4, +0xf8, EEUCTransport::ContinentsConnect, +0x78, +0x84, +0x98, +0xa0 in address order; +0x24/+0x2c/+0x78/+0xa0
-// call the spaceship's bodies (helpers ICF-folded into EEUCSpaceship.cpp's slots).
-
-// Sets up a new space transport at its flying height, with the class's resource type and amount
-// Adds the transport to its own tile only
-// Removes the transport from its own tile only
 // ---- EEUCFortress.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The fortress (a land
 // transport that garrisons; unit type 0x313 is the teleporter): 0x21013b..0x21048f (after
 // EEUCBuildingPriest.cpp; a globals chain opens the next unit at 0x21048f). Unit flags: the exe's module set. Its ctor
@@ -114,10 +85,6 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 // 0x4c8fa4 (.data, a word): the faith a teleporter spends per full unload (provisional name)
 unsigned short gFortressUnloadCost = 100;
 
-// Returns whether the player's population has room for the unit's cost
-// Sets up a new fortress as built, with a 1 s regeneration timer
-// Unloads at a tile; a teleporter needs 100 faith and spends it in proportion to the cargo unloaded, else warns
-// its owner (event 0x274e)
 // the boarding location's tiles (ucx_transports.rs)
 static std::vector<EETileCoordinate> sUcxTiles;
 

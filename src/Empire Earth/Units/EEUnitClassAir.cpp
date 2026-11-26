@@ -34,16 +34,6 @@
 // cdecl helpers (EEUCHelicopter.cpp declares the first the same way) (provisional names)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
-// 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (provisional name)
-
-// Takes off from the ground: rolls 3 ahead, climbs 7 ahead to 3/4 cruising height (plus the ground height when the
-// ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
-// Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
-// Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
-
-// Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
-// at cruising height; an explore goal without a target picks a new area first
-// Gives the ground height under a point (the closest tile's off the map; 0 under water)
 // New (R5b.4, the fourteenth round): EEUCLandable::ActionChanged's operations that are more than a call, each the
 // original's statements of its branch (ee_units actions.rs decides which, in which order; EEUnitUpdate.cpp's host
 // calls this with the operation code). inoutAirport: FIND_NEAREST_AIRPORT's result, for SET_HOME_BASE_FOUND.
@@ -53,21 +43,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     return ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_OP, inClass, inUnit, EEObj(inoutAirport), inOperation, inA, NULL);   // uca_air.rs
 }
 
-// Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
-// Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
-// half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
-// Plans a plane's approach to its home carrier's deck (tag point 0): turn, descent and touch-down (inSteep: the
-// full approach whatever the height), or just the deck when braking; makes the deck the move goal
-// Plans a take-off from the home carrier: on take-off, sits at the deck start (tag point 0) and heads for the
-// take-off point; otherwise flies off the deck end (tag point 2) towards the goal
-// Returns 0 (left) or 1 (right) when the next waypoint or goal lies inside the turning circle beside or behind
-// the plane, else 5 (ee_units cls_air.rs, R5b.4 round 33)
-// Plans a land plane's runway approach in a direction: turn onto the line, descent and touch-down at the airport
-// (a navy yard: its pier), then makes the airport the move goal (ee_units cls_air.rs, R5b.4 round 33). The four
-// direction wrappers (0x616308..0x616338) and the take-off's (0x616430..0x616460) are the runway direction's table.
-// Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
-// flies to the goal (ee_units cls_air.rs)
-// Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
 // ---- EEUCAirplane.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The airplane's unit
 // class: 0x20b192..0x20b9fc (after EEUCAirAnimal.cpp; EEUCAmbient.cpp follows). Unit flags: the exe's module set. Its
 // ctor is inline (EEUnitClass.cpp's factory). Order: Virtual74 with EEAirTrafficControl::GetNumSlots's COMDAT after
@@ -95,17 +70,12 @@ bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 // Fills a new carrier with aircraft of the best of three fighter techs its player has (else unit class 0x1f)
 void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer) { ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, inUnit, 0, inPlayer, 0, NULL); }  // uca_air.rs
 
-// Sends a leaving plane off the map: hands it to player 0, fuels it for 1000 s and flies it out 1000 tiles along
-// its direction from the map origin
 // ---- EEUCAirAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The flying animal's
 // unit class: 0x20a279..0x20b192 (after EESelectedGroup.cpp's sort COMDATs; EEUCAirplane.cpp follows). One unit per
 // EEUC* class in alphabetical order (AirAnimal, Airplane, Ambient, BasicCitizen, BasicPriest, Bomb, Building, ...).
 // Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); ReturnToAirport (the landing on an
 // airport, used by Virtual74) comes first, then the slots +0x24, +0x2c, +0x74, +0x78, +0x88, +0xa0, (+0xc0 folded)
 // +0xb8 in source order. Bodies are the EEUCLandable twins' (0x213ed2.., same sizes) with the animal's states.
-
-// Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
-// Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
 
 // New (R5b.4, the fourteenth round): EEUCAirAnimal::ActionChanged's operations that are more than a call (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): the path to the goal
@@ -114,7 +84,6 @@ void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_uni
 
 void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_DEATH_ROLL, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
-// Sets up a new animal on the ground (height 0)
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
@@ -129,8 +98,6 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24,
 // +0x74, +0xb8 in source order (the others are ICF-folded into twins).
 
-// 0x249560 (cdecl): the point to fly to for the attack on inTarget (EEMap.cpp's range) (provisional name)
-
 // New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
 void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
@@ -140,7 +107,6 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_un
 // flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24, +0x2c, +0x74, +0x78,
 // +0xa0, +0xb8 in source order.
 
-// Returns a sound's volume, pan and pitch, with a doppler shift
 // The air animal's and the landable's sound parameters: the spaceship's Doppler pitch, but (as their own inline
 // bodies were) without the unit utilities' UUTL note of EEGetDopplerPitch
 void EEUnitClass::AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,

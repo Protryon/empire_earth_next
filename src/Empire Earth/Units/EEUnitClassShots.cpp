@@ -136,15 +136,6 @@ void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClas
     ee_combat_shot_step(inKind, inUpdate, inFunc, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
 }
 
-// ---- EEUCBomb.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The bomb's unit class:
-// 0x20e2cb..0x20e58d (after EEUCBasicPriest.cpp; EEUCBuilding.cpp follows). Unit flags: the exe's module set. Its ctor
-// is inline (EEUnitClass.cpp's factory). Order: VirtualAC (the drop), VirtualB8 with its function-static colour's
-// empty atexit dtor, then EEUnitClass::LaunchStoredMissile (the carrier drops its first bomb; EEUnitClass::FireShot calls it).
-
-// Drops the bomb from its carrier: aims it along the carrier's heading, pitched down by the launcher's tilt (0 to
-// -90 degrees), with the launch speed's horizontal part; always returns true
-// Flies the bomb; an SAS explosive (unit type 0x305) makes its target blink red every half second while it attacks
-// Has a carrier drop its first cargo unit (a bomb) at its target and set it moving
 // ---- EEUCMissile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The missile's unit
 // class: 0x217337..0x217c6d (after EEUCMiningBuilding.cpp; EEUCNaval.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline (vtable 0x448cf8); +0x74/+0x78/+0xac are also EEUCTorpedo's (ICF).
@@ -152,19 +143,9 @@ void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClas
 // The pooled words 0x447230/0x447234 (0.3, the height over a target the missile is not on; 2.25, its squared
 // proximity to an attack target) are ee_combat's (impact.rs)
 
-// The original first argument reads only the base tile. Its sole ComplexUnit caller does not uniquely
-// recover narrower pointer specificity; this declaration records the minimum proven contract.
-bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget);
-
-// Returns whether the missile hit the ground after its flight time (0.3 higher over its target): sets it down there
-// and, for an attack-ground goal, leaves a shell hole and returns true (never for a missile base's missiles)
 // Returns whether a unit stands on one of the target's tiles (every part of a multi-part target, its whole footprint)
 bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget) { return ee_units_ucs_call(EE_UNITS_UCS_DO_ON_TARGET_TILES, NULL, inUnit, EEObj(inTarget), NULL) != 0; }  // ucs_shots.rs
 
-// Returns whether the missile hit water (z 0 or below on terrain it cannot cross); if so, it attacks the ground there
-
-// Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
-// Launches the missile: tilts it to its launcher's launch pitch and starts the launch delay and a 300 s lifetime; true
 // Answers the missile triggers: hit unit (attacks it; also true when its lifetime ran out), ground and water impact,
 // rotted or dying done (always with an attack-unit goal), target dead or in a container, new target
 long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -172,10 +153,6 @@ long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long 
     // ee_combat goals.rs condition (CBTC): the target is the attack-unit goal's; a hit unit's attack goal is set here
     return EECombatCondition(EE_COMBAT_GOAL_MISSILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
 }
-
-// ---- EEUCTorpedo.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The torpedo's unit class:
-// 0x21b163..0x21b27a (after EEUCSubmergedNaval.cpp; EEUCTransport.cpp follows). Unit flags: the exe's module set.
-// Its ctor is inline; +0xe4 is ICF-folded (0x29059d: false).
 
 // BombUpdate's blink colour (its function static until round 7)
 static GEColor sBombBlinkColor(0.9f, 0.0f, 0.2f);
