@@ -21,7 +21,6 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioHost.h"
 #include "lle/GETerrainMesh.h"
-#include "ee/EEMap.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EESMCondition.h"
@@ -150,12 +149,6 @@ extern "C" int64_t ee_scenariocpp_trigger(uint32_t inOp, EESMTrigger* t, int64_t
         return 0;
     case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_ERASE: t->mConditions.erase(t->mConditions.begin() + (size_t)i);
         return 0;
-    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_FIRST: return t->mConditions[(size_t)i]->mIsNot = v != 0;
-    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_SECOND: return (int64_t)(t->mConditions[(size_t)i]->mValue = (unsigned long)v);
-    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_OPERATOR: return t->mConditions[(size_t)i]->mOperator = (long)v;
-    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_FIRST: return t->mConditions[(size_t)i]->mIsNot;
-    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SECOND: return (int64_t)t->mConditions[(size_t)i]->mValue;
-    case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_OPERATOR: return t->mConditions[(size_t)i]->mOperator;
     case EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_AT: return (int64_t)(intptr_t)t->mConditions[(size_t)i];
     case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_COUNT: return (int64_t)t->mEffects.size();
     case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_PUSH_NEW: t->mEffects.push_back(new EESMTEffectWrapper());
@@ -169,12 +162,6 @@ extern "C" int64_t ee_scenariocpp_trigger(uint32_t inOp, EESMTrigger* t, int64_t
         return 0;
     case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_ERASE: t->mEffects.erase(t->mEffects.begin() + (size_t)i);
         return 0;
-    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_FIRST: return (int64_t)(t->mEffects[(size_t)i]->mDelay = (unsigned long)v);
-    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_SECOND: return (int64_t)(t->mEffects[(size_t)i]->mEffectIndex = (unsigned long)v);
-    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_OPERATOR: return t->mEffects[(size_t)i]->mOperator = (long)v;
-    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_FIRST: return (int64_t)t->mEffects[(size_t)i]->mDelay;
-    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SECOND: return (int64_t)t->mEffects[(size_t)i]->mEffectIndex;
-    case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_OPERATOR: return t->mEffects[(size_t)i]->mOperator;
     case EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_AT: return (int64_t)(intptr_t)t->mEffects[(size_t)i];
     case EE_SCENARIO_TR_NAME_EMPTY: t->SetName("");
         return 0;
