@@ -8,7 +8,6 @@
 
 #include <vector>
 
-#include "rust/data/tables.h"
 #include "rust/game/gamecpp.h"
 
 class EEMedia;

@@ -7,7 +7,6 @@
 #define EE_RTSUNIT_H
 
 #include "ee/EEUnitStore.h"   // the members the unit store mirrors (EEUnitStoreField)
-#include "rust/sim/units.h"    // EeUnitsRtsUnitFields (RTSUnit's plain members)
 #include "rust/game/rts.h"
 
 class EEPlayer;

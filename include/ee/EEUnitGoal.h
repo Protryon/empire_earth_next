@@ -24,9 +24,6 @@
 #include <vector>
 
 #include "lle/U2DPoint.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/LowLevelEngineCore.h"     // UFloatBits
 #include "rust/sim/unit_ids.h"        // kGoalAttackGround
 #include "rust/sim/units.h"
 #include "rust/sim/combat.h"
@@ -271,6 +268,5 @@ public:
 };
 
 // EEUnitGoal::mKind's kinds: Rust's enum (ee_sim unit_ids.rs, rust/sim/unit_ids.h).
-#include "rust/sim/unit_ids.h"
 
 #endif

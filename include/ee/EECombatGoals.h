@@ -17,7 +17,6 @@
 #include <string.h>
 
 #include "rust/sim/combat.h"
-#include "ee/EESimCapture.h"
 
 class EEComplexUnit;
 class EEUnit;

@@ -15,7 +15,6 @@
 #include "lle/UList.h"                  // EEComplexUnit+0xc4
 #include "lle/U2DPoint.h"               // EEComplexUnit+0x1a4
 #include "lle/GEColor.h"                // EEComplexUnit+0x1ac
-#include "ee/EEUnitClassIDs.h"
 #include "ee/EEResourceType.h"         // kResourceAny (CanTake)
 class GETerrainMesh;
 #include "lle/GEPhysicalModel.h"        // EEComplexUnit+0x130 (it uses GE3DLine/GEViewport by reference)
@@ -37,7 +36,6 @@ class EETown;
 class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit+0x208, EEUnitClass+0x118)
 #include "ee/EEUnitVectorItem.h"        // the element of EEComplexUnit::mGoalQueues (inline GetQueueGoals, the destructor)
 class GEModel;
-#include "ee/EETileCoordinate.h"     // RTSUnit::GetTile returns one
 class EEPlayer;
 class EEUnitClass;
 class EEUnitGoal;
@@ -48,9 +46,7 @@ class EESoundObject;
 #include "ee/EEUnitClassImprovement.h"
 #include "ee/EEUnitKind.h"               // EEClassBody (EEUnitClass::IsBuilding, Virtual70)
 #include "ee/EEUnitUpdate.h"             // EEUnitClassActionChanged (EEUnitClass::HandleActionChanged)
-#include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 #include "rust/sim/cp.h"                 // ee_cp_distance_squared_to_unit (DistanceSquaredToUnit)
-#include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
 #include "rust/sim/combat.h"             // EE_COMBAT_SHOT_* (the shots' steps)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
