@@ -21,7 +21,7 @@ const HEADERS: [&str; 8] = [
     "include/rust/sim/tech_tree_ids.h",
     "include/rust/net/msgid.h",
     "include/rust/base/lle_enums.h",
-    "include/ee/EEStringIDs.h",
+    "rust/crates/ee_base/src/string_ids.rs",
 ];
 
 fn text(h: &str) -> String {

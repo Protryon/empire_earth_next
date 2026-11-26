@@ -42,6 +42,9 @@ pub mod random;
 pub mod shim;
 /// The sparse point set (`U2DSparseArrayPointContainer`; was ee_sim::astar's sparse.rs).
 pub mod sparse;
+/// The language's string ids by name (the whole table; ee/EEStringIDs.h keeps the C++'s).
+/// cbindgen:ignore
+pub mod string_ids;
 /// The crate ee_time before the restructure.
 pub mod time;
 /// The crate ee_ts before the restructure.

@@ -17,7 +17,7 @@ use crate::screens::ui_manager_calls::*;
 
 /// The headers the C++ names come from.
 const HEADERS: [&str; 9] = [
-    "include/ee/EEStringIDs.h",
+    "rust/crates/ee_base/src/string_ids.rs",
     "include/rust/sim/game_ids.h",
     "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
