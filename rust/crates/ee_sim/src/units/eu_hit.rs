@@ -366,7 +366,7 @@ pub(crate) mod game {
             // SAFETY: the body runs inside the C++ member that handed over its live unit (the plain record reads
             // and stores first: cu_view.rs)
             unsafe {
-                if let Some(v) = crate::units::cu_view::eu_view(op, unit, a, b) {
+                if let Some(v) = crate::units::cu_view::eu_view(op, unit, a, b, c) {
                     return v;
                 }
                 ee_units_eu_host(op, unit as usize as *mut c_void, a, b, c)

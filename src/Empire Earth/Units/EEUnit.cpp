@@ -57,7 +57,6 @@ long EEUnit::FinishLoad(long, long)
 static long sHitInput;
 static long sHitAreaDamage;
 static long sHitDamage;
-static EeCombatHitPointsOut sHitOut;
 // Kill's death sound parameters (its locals)
 static float sDeathSound[3];   // volume, pan, pitch
 // Describe's and DescribeLong's text (their theString)
@@ -76,24 +75,17 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     const int64_t* theArgs = EEEuObject<const int64_t>((uint64_t)inB);
     switch (inOp) {
     case EE_UNITS_EU_PART_TAKE_HIT: EEEuObject<EEComplexUnit>(inA)->TakeHit(EEEuObject<EEUnit>((uint64_t)theArgs[0]), (long)theArgs[1], (unsigned long)theArgs[2], (long)theArgs[3]); return 0;
-    case EE_UNITS_EU_IN_CINEMATIC: return ::gWorld.mInCinematic;
     case EE_UNITS_EU_SPARKS: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactSparksEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_BLOOD: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_SET_INPUT: sHitInput = (long)inB; return 0;
     case EE_UNITS_EU_SET_AREA_DAMAGE: sHitAreaDamage = (long)inB; return 0;
     case EE_UNITS_EU_APPLY_MODIFIERS: theComplex->mAffectingAreaEffects.ApplyModifiers(1, sHitInput, sHitAreaDamage, theComplex); return 0;
-    case EE_UNITS_EU_AREA_DAMAGE: return sHitAreaDamage;
     case EE_UNITS_EU_SET_DAMAGE: sHitDamage = (long)inB; return 0;
     case EE_UNITS_EU_APPLY_MORALE: theComplex->ApplyMorale(sHitAreaDamage, sHitDamage); return 0;
     case EE_UNITS_EU_DAMAGE: return sHitDamage;
     case EE_UNITS_EU_HAS_UNDER_ATTACK: return theComplex->mUnitClass->FindAction(kActionUnderAttack) != NULL;
     case EE_UNITS_EU_ACTION_CHANGED: theComplex->mUnitClass->ActionChanged(theComplex); return 0;
     case EE_UNITS_EU_SHOOTS_TRACERS: return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
-    case EE_UNITS_EU_HIT_FORMULA:
-        sHitOut = EECombatHitPoints(EeCombatHitPointsIn{(int32_t)inB, (int32_t)inC, (int32_t)theUnit->mStats->mMaxHitPoints});
-        return 0;
-    case EE_UNITS_EU_HIT_BADLY_HURT: return sHitOut.badly_hurt;
-    case EE_UNITS_EU_HIT_NEW_POINTS: return sHitOut.hit_points;
     case EE_UNITS_EU_BADLY_HURT: theUnit->mUnitClass->BadlyHurt(theUnit); return 0;
     case EE_UNITS_EU_DAMAGE_TAKEN: thePlayer->DamageTaken((unsigned long)inB, (long)inC, theUnit); return 0;
     case EE_UNITS_EU_HAS_UNITS_STATE: return gWorld.mPlayers[inB] != NULL && gWorld.mPlayers[inB]->mComputerPlayer != NULL && gWorld.mPlayers[inB]->mComputerPlayer->mUnitsState != NULL;
@@ -110,18 +102,15 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_SELECTED: return theUnit->mPlayer->mSelectedGroup->Contains(theComplex);
     case EE_UNITS_EU_POST_424: gUserInterface->PostMessage424Once(); return 0;
     // eu_body.rs's
-    case EE_UNITS_EU_REGIONS: return (uint64_t)(uintptr_t)(gWorld.mMap ? gWorld.mMap->mUnitRegions : 0);
     case EE_UNITS_EU_ADD_OFF_MAP: theUnit->mPlayer->AddOffMapUnit(theUnit); return 0;
     case EE_UNITS_EU_REMOVE_OFF_MAP: theUnit->mPlayer->RemoveOffMapUnit(theUnit); return 0;
     case EE_UNITS_EU_IS_FOUNDATION: return theUnit->IsFoundation();
     case EE_UNITS_EU_MINIMAP_MOVE: gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
     case EE_UNITS_EU_SIGHT_MOVED: theUnit->SightMoved(theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
-    case EE_UNITS_EU_MAP_TILE_EXISTS: return gWorld.mMap->GetTile((long)inB, (long)inC) != NULL;
     case EE_UNITS_EU_REMOVE_FROM_REGION: theUnit->mUnitClass->RemoveFromRegion(theUnit); return 0;
     case EE_UNITS_EU_INFLUENCE_REMOVE: gWorld.mInfluenceTable->RemoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY); return 0;
     case EE_UNITS_EU_REMOVE_FROM_TILE: theUnit->mUnitClass->RemoveFromTile(theUnit); return 0;
     case EE_UNITS_EU_UPDATE_HIDDEN: theUnit->UpdateHidden(); return 0;
-    case EE_UNITS_EU_SET_TILE: theUnit->mTile = gWorld.mMap->GetTile((long)inB, (long)inC); return 0;
     case EE_UNITS_EU_ADD_TO_TILE: theUnit->mUnitClass->AddToTile(theUnit); return 0;
     case EE_UNITS_EU_ADD_TO_REGION: theUnit->mUnitClass->AddToRegion(theUnit); return 0;
     case EE_UNITS_EU_INFLUENCE_ADD: gWorld.mInfluenceTable->AddUnit(theUnit, (long)inB, (long)inC); return 0;
@@ -141,7 +130,6 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_CLEAR_CAMERA_UNIT_B: gWorld.mCameraControl.ClearUnitB(); return 0;
     case EE_UNITS_EU_UNIT_TAKEN: theUnit->mPlayer->UnitTaken(theUnit, inB != 0); return 0;
     case EE_UNITS_EU_TILE_VISIBLE: return gWorld.mMap->GetTile((long)inB, (long)inC)->IsVisibleTo(theUnit->GetPlayer());
-    case EE_UNITS_EU_TERRAIN_OF: return theOther->mTile->mTerrainType;
     case EE_UNITS_EU_CONTINENT_AT: return (uint64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
     case EE_UNITS_EU_CONTINENT_CATEGORY: return EEEuObject<EEAIContinent>(inA)->GetCategory();
     case EE_UNITS_EU_MAP_SIZE: return inB == 0 ? (int64_t)gMapWidth : (int64_t)gMapHeight;
@@ -166,7 +154,6 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_UNLOAD_MEDIA: theUnit->mPlayer->UnloadUnitClassMedia(theUnit->mUnitClass->mUnitType); return 0;
     case EE_UNITS_EUM_DEACTIVATE: gWorld.DeactivateUnit(theUnit->mComplexUnit); return 0;
     case EE_UNITS_EUM_RTS_INVALIDATE: theUnit->RTSUnit::Invalidate(); return 0;
-    case EE_UNITS_EUM_AS_UNIT: return EEObj(dynamic_cast<EEUnit*>(EEEuObject<RTSUnit>(inA)));
     case EE_UNITS_EUM_UPGRADE_MAX_HIT_POINTS: return EEEuObject<EEUnit>(inA)->GetPlayer()->mUnitClassUpgrades[EEEuObject<EEUnit>(inA)->GetUnitClass()->mUnitType]->mMaxHitPoints;
     case EE_UNITS_EUM_RTS_COPY_FROM: theUnit->RTSUnit::CopyFrom(EEEuObject<RTSUnit>(inA)); return 0;
     case EE_UNITS_EUM_INITIALIZE: theUnit->Initialize((long)inB); return 0;
@@ -176,7 +163,6 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_MOVE_TO_TILE: theUnit->MoveTo((long)inB, (long)inC, 0); return 0;
     case EE_UNITS_EUM_CARBON_ROCK: return EEUnit::IsCarbonRock(theUnit->mUnitClass->mUnitType);
     case EE_UNITS_EUM_FOREST: return EEObj(gContinentManager.GetForestAt(theUnit));
-    case EE_UNITS_EUM_GAME_TIME: return gPhysics->mGameTime;
     case EE_UNITS_EUM_FOREST_DUE: return EEEuObject<EEAIForest>(inA)->GetNextRenewal() <= gPhysics->mGameTime;
     case EE_UNITS_EUM_FOREST_TILES: return EEEuObject<EEAIForest>(inA)->GetNumTiles();
     case EE_UNITS_EUM_RANDOM: return gPhysics->GetRandom((long)inB, (long)inC);

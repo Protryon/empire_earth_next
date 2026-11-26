@@ -229,15 +229,11 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_ADD_PATROL_GROUP: UhObject<EEPlayer>(inA)->AddPatrolGroup(UhObject<EEPPatrolGroup>(inB)); return 0;
     case EE_UNITS_UH_PATROL_GOAL: return EEObj(static_cast<EEUnitGoal*>(EEPatrolGoalCast(ComplexOf(UhID(inA))->GetGoal())));
     case EE_UNITS_UH_GOAL_PATROL_GROUP: return EEObj(UhGoal(inB)->GetPatrolGroup());
-    case EE_UNITS_UH_MAP_TILE: return EEObj(gWorld.GetMap()->GetTile((long)inC, (long)inD));
     case EE_UNITS_UH_CLOSEST_TILE: return EEObj(gWorld.GetMap()->GetClosestTile(&(sUhPoint = GE3DPoint(f[0], f[1], 0.0f)), &(sUhXY[0] = (long)inC), &(sUhXY[1] = (long)inD)));
     case EE_UNITS_UH_X: return sUhXY[0];
     case EE_UNITS_UH_Y: return sUhXY[1];
-    case EE_UNITS_UH_TILE_UNITS: return EEObj(UhObject<EETile>(inB)->mUnits);
-    case EE_UNITS_UH_NODE_NEXT: return EEObj(UhNode(inB)->mNext);
     case EE_UNITS_UH_NODE_BLOCKS: return UhNode(inB)->mUnit->mUnitClass->mTileSize > 1 && !UhNode(inB)->mUnit->IsPassableBy(ComplexOf(UhID(inA))->GetComplexUnit());
     case EE_UNITS_UH_NEAREST_FOOTPRINT: ComplexOf(UhID(inA))->GetNearestFootprintTile(UhNode(inB)->mUnit, &(sUhXY[0] = (long)inC), &(sUhXY[1] = (long)inD)); return 0;
-    case EE_UNITS_UH_TILE_HEIGHT: f[0] = UhObject<EETile>(inB)->mHeight; return 0;
     case EE_UNITS_UH_NEW_PIECES: return EEObj(new std::vector<EEUnit*>());
     case EE_UNITS_UH_TECH_CLASS: return EEObj(gUnitClassTable[UhObject<EEPlayer>(inA)->mTechnologies->Get((long)inC)->mData->mUnitClass]);
     case EE_UNITS_UH_PIECES_SIZE: return (int64_t)UhObject<std::vector<EEUnit*> >(inB)->size();
