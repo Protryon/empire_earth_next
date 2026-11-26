@@ -57,7 +57,6 @@ public:
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiLabelCall::MouseMove, 0, 0, inLocation.GetX(), inLocation.GetY()); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    void SetTextRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiLabelCall::SetTextRectangle, inRectangle); }
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
     void SetText(const UWideString& inText, bool inReplace) { this->Call(EeUiLabelCall::SetText, (intptr_t)(const char*)inText, inReplace); }

@@ -174,8 +174,6 @@ EE_UI_CASE(bgt_make_user) { return (intptr_t)m->CreateUserDefinedBackground(*t);
 #undef m
 #undef t
 
-// Creates an empty background table entry (IDs -1, bitmap type, hidden, full opacity, draw priority 1)
-
 // C:\EEX\Low-Level Engine\User Interface\UIButton.cpp
 // 0x1005e47c..0x1005ef4b: the U2D key init chains (U2DRectangle.h, via the rasterizer header), the ctor, the dtor
 // and the out-of-line members in alphabetical order. The header-inline members are emitted first by
@@ -225,11 +223,7 @@ EE_UI_VOID(button_label_set_text) { reinterpret_cast<UITextLabel*>(a)->SetText(*
 #define LIST(x) reinterpret_cast<UILBString*>(x)
 #define LABEL(x) reinterpret_cast<UITextLabel*>(x)
 #define EDIT(x) reinterpret_cast<UIEditBox*>(x)
-#define TEXT(x) reinterpret_cast<GEText*>(x)
-#define FORM(x) reinterpret_cast<UIForm*>(x)
 #define BMP(x) reinterpret_cast<GEBitmap*>(x)
-extern "C" uintptr_t ee_uicpp_combo_part(uintptr_t inCombo, uint32_t inPart)
-{ return (uintptr_t)COMBO(inCombo)->PartOf((int)inPart); }
 extern "C" uintptr_t ee_uicpp_list_scroll_bar(uintptr_t inList) { return (uintptr_t)LIST(inList)->GetScrollBar(); }
 extern "C" long ee_uicpp_list_selection(uintptr_t inList, unsigned long* inSelection)
 { return LIST(inList)->GetCurrentSelection(*inSelection); }
@@ -271,24 +265,18 @@ extern "C" void ee_uicpp_list_set_scroll_bg_opacity(uintptr_t inList, float inOp
 { LIST(inList)->SetScrollBarBgOpacity(inOpacity); }
 extern "C" void ee_uicpp_list_set_scroll_bg_color(uintptr_t inList, float inRed, float inGreen, float inBlue)
 { LIST(inList)->SetScrollBarBgColor(GEColor(inRed, inGreen, inBlue)); }
-extern "C" void ee_uicpp_combo_base_set_rect(uintptr_t inCombo, uintptr_t inTextBox, uintptr_t inDrop)
-{ COMBO(inCombo)->UIControl::SetRectangle(GERectangle(CTL(inTextBox)->GetRectangle().GetTopLeft(), CTL(inDrop)->GetRectangle().GetBottomRight())); }
 
 // The Rust combo box's calls out (ee_ui lle_hosts.rs combo: ComboQuery's and ComboAct's one shim each, by its
 // number; a the query's argument, or b, c, d, f the action's)
 #define CB static_cast<UIComboBox*>(inObj)
 #define CB_PART(x) CB->PartOf((int)(x))
 #define CB_LIST CB->GetList()
-#define CB_EDIT reinterpret_cast<UIEditBox*>(CB->PartOf(3))
-EE_UI_VOID(combo_q_rect_of) { UIObjHost::PutRect(f, CB_PART(a)->GetRectangle()); }
-EE_UI_CASE(combo_q_text_box_border) { return CB_PART(0)->GetBorderThickness(); }
 EE_UI_CASE(combo_q_line_count) { return CB_LIST->GetLineCount(); }
 EE_UI_CASE(combo_q_line) { return (intptr_t)(const char*)CB_LIST->GetData((unsigned long)a); }
 EE_UI_CASE(combo_q_line_height) { return CB_LIST->GetLineHeight(); }
 EE_UI_CASE(combo_q_list_border) { return CB_LIST->GetBorderThickness(); }
 EE_UI_CASE(combo_q_list_scroll_bar_captured) { return CB_LIST->GetScrollBarCaptured(); }
 EE_UI_CASE(combo_q_window_height) { return CB->GetRasterizer()->GetWindow(CB->GetScreenIndex())->GetHeight(); }
-EE_UI_CASE(combo_q_edit_text) { return (intptr_t)CB_EDIT->GetText(0); }
 EE_UI_VOID(combo_a_list_change_selection) { CB_LIST->ChangeSelectionIndex((unsigned long)b, (c & 1) != 0, (c & 2) != 0); }
 EE_UI_VOID(combo_a_list_insert_line) { CB_LIST->InsertLine(UWideString(reinterpret_cast<const char*>(b)), (unsigned long)c); }
 EE_UI_VOID(combo_a_list_delete_line) { CB_LIST->DeleteLine((unsigned long)b); }
@@ -303,11 +291,8 @@ EE_UI_CASE(combo_a_part_translated_key) { return CB_PART(b)->UpdateTranslatedKey
 EE_UI_VOID(combo_a_part_set_rectangle) { CB_PART(b)->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(combo_a_part_set_location) { CB_PART(b)->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_CASE(combo_a_part_copy_data) { return CB_PART(b)->CopyData(); }
-EE_UI_CASE(combo_a_base_copy_data) { return CB->UIControl::CopyData(); }
 EE_UI_VOID(combo_a_set_dirty) { CB->SetDirty(true); }
 EE_UI_VOID(combo_a_set_rectangle) { CB->SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_VOID(combo_a_base_set_rectangle) { CB->UIControl::SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_VOID(combo_a_base_set_location) { CB->UIControl::SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(combo_a_release_mouse) { CB->ReleaseCapturedMouse(); }
 EE_UI_VOID(combo_a_release_keyboard) { CB->ReleaseCapturedKeyboard(); }
 EE_UI_VOID(combo_a_open_list) { CB->OpenListBox(); }
@@ -316,7 +301,6 @@ EE_UI_CASE(combo_a_add_string) { return CB->AddString(); }
 EE_UI_VOID(combo_a_change_selection) { CB->ChangeSelection(); }
 EE_UI_CASE(combo_rhombus_create) { return (intptr_t) new GERhombus(); }
 EE_UI_VOID(combo_rhombus_delete) { delete reinterpret_cast<GERhombus*>(a); }
-#undef CB_EDIT
 #undef CB_LIST
 #undef CB_PART
 #undef CB
@@ -408,8 +392,6 @@ EE_UI_VOID(obj_part_set_bg_color) { part->SetBgColor(GEColor(f[0], f[1], f[2]));
 EE_UI_VOID(obj_part_set_bg_opacity) { part->SetBgOpacity(f[0]); }
 #undef part
 
-// the key predicates' calls (lle_control.rs key_pressed)
-
 // C:\EEX\Low-Level Engine\User Interface\UIControlsTable.cpp
 // 0x10065f69..0x10069cc7: UIControlsTable's header-inline block (0x10065f69, declaration order; the getters ICF
 // folded into earlier units are missing), its implicit copy members and ??_E, the U2D key init chains (0x1006672c),
@@ -422,7 +404,6 @@ EE_UI_VOID(obj_part_set_bg_opacity) { part->SetBgOpacity(f[0]); }
 // Create, the factories and the font are the Rust object; this unit keeps the members that only call GE objects and
 // the host of its calls out (UIControlsTableHost: the controls' constructors and setters, the files, fonts, strings).
 // the one-statement shims of the moved host cases, CreateBitmap and SetupStringArray (ee_ui lle_table.rs)
-#define FORM(x) reinterpret_cast<UIForm*>(x)
 #define MGR(x) reinterpret_cast<UIManager*>(x)
 #define CTL(x) reinterpret_cast<UIControl*>(x)
 #define TBL(x) reinterpret_cast<const UIControlsTable*>(x)
@@ -464,7 +445,6 @@ extern "C" void ee_uicpp_bitmap_stretch(uintptr_t inB, uintptr_t inRect, uintptr
 // selector): a is the form, font, file, string, bitmap, control or event the op names, d the manager where the op
 // needs one; rectangles and colours travel in f
 #define TM reinterpret_cast<UIManager*>(d)
-#define TF reinterpret_cast<UIForm*>(a)
 EE_UI_CASE(tbl_window_width) { return TM->GetRasterizer()->GetWindow(TM->GetScreen())->GetWidth(); }
 EE_UI_CASE(tbl_window_height) { return TM->GetRasterizer()->GetWindow(TM->GetScreen())->GetHeight(); }
 EE_UI_CASE(tbl_form_by_id) { return (intptr_t)TM->GetFormByID((unsigned long)a); }
@@ -481,7 +461,6 @@ EE_UI_VOID(tbl_font_release) { reinterpret_cast<GEFont*>(a)->Dereference(); }
 EE_UI_VOID(tbl_font_bitmap_new) { new GEFontBitmap(TM->GetRasterizer(), reinterpret_cast<GEFont*>(a), TM->GetScreen()); }
 EE_UI_CASE(tbl_user_defined) { return (intptr_t)TM->CreateUserDefinedControl(*static_cast<UIControlsTable*>(inObj)); }
 EE_UI_VOID(tbl_event_release) { reinterpret_cast<UIEvent*>(a)->Dereference(); }
-#undef TF
 #undef TM
 // A control's constructor (the factories' new: CreateBitmap .. CreateTextLabel), its arguments at a
 #define MK (*reinterpret_cast<const EeUiTableMake*>(a))
@@ -585,7 +564,6 @@ EE_UI_CASE(tbl_text_status) { return (intptr_t)static_cast<UIStatusBar*>(SC)->Ge
 // clipboard, the scroll bar, the texts, lines, rhombus and polls it holds by address). The text model (edit.rs), the
 // key dispatch (edit_keys.rs) and the drawing's ranges (edit_draw.rs) are its algorithms.
 #define e static_cast<UIEditBox*>(inObj)
-#define theBar reinterpret_cast<UIScrollBar*>(a)
 #define theLine reinterpret_cast<GELine*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
 #define theText reinterpret_cast<GEText*>(a)
@@ -601,7 +579,6 @@ EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
 #undef theText
 #undef theRhombus
 #undef theLine
-#undef theBar
 #undef e
 
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
@@ -700,7 +677,6 @@ EE_UI_VOID(font_release) { theFont->Dereference(); }
 #undef theName
 #undef theFont
 #undef theFile
-// Creates an empty font table entry
 
 // C:\EEX\Low-Level Engine\User Interface\UIForm.cpp
 // 0x1007042f..0x10075330: the U2D key init chains, UIIMECandidate's implicit copy members and ??_E (UIForm.cpp is the
@@ -717,7 +693,6 @@ static GERectangle UIFormRect(const float* inF) { return GERectangle(inF[1], inF
 
 // The form's calls out of more than one call are Rust's (ee_ui lle_form.rs, the host ee_ui_form_host), over the
 // one-statement shims below (and UIManager.cpp's)
-#define FORM(x) reinterpret_cast<UIForm*>(x)
 #define MGR(x) reinterpret_cast<UIManager*>(x)
 #define CTL(x) reinterpret_cast<UIControl*>(x)
 #define HOTKEY(x) reinterpret_cast<UIHotKey*>(x)
@@ -765,7 +740,6 @@ EE_UI_VOID(group_set_dirty) { ENTITY_CONTROL->SetDirty(true); }
 #define theBackground reinterpret_cast<UIBackground*>(a)
 #define theKey reinterpret_cast<UIHotKey*>(a)
 #define theEvent reinterpret_cast<UIEvent*>(a)
-#define theTable reinterpret_cast<UIControlsTable*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
 EE_UI_CASE(form_ctl_type) { return theControl->GetType(); }
 EE_UI_CASE(form_ctl_entity_type) { return theControl->UIEntity::GetType(); }
@@ -822,10 +796,7 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 #undef theBackground
 #undef theKey
 #undef theEvent
-#undef theTable
 #undef theRhombus
-
-// Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over
 
 // C:\EEX\Low-Level Engine\User Interface\UIGraph.cpp
 // UIGraph (with UILineGraph and the post-game summary's EEUIPGSLineGraph, R6 game screens B round 3) is whole in
@@ -894,7 +865,6 @@ extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast
 // The Rust list box's ops that do not depend on T (ee_ui listobj.rs; UIListBoxRust<T>::Op answers the rest):
 // UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's
 #define lst static_cast<UIControl*>(inObj)
-#define theBar reinterpret_cast<UIScrollBar*>(a)
 #define theLine reinterpret_cast<GELine*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
 EE_UI_CASE(list_rhombus_create) { return (intptr_t) new GERhombus(); }
@@ -904,7 +874,6 @@ EE_UI_VOID(list_line_delete) { delete theLine; }
 EE_UI_CASE(list_create_scroll_bar) { return (intptr_t) new UIScrollBar(lst->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, lst->GetForm(), lst->GetIndex(), lst->GetBorderThickness()); }
 #undef theRhombus
 #undef theLine
-#undef theBar
 #undef lst
 
 // The string list's draw (ee_ui listobj.rs string_draw): its drawn text placed, given a drawn line, drawn clipped
@@ -997,7 +966,6 @@ extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich, uint32_t inButton)
 { gISMouse->GetEntity(inButton, UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
-#undef FORM   // (the earlier sections' FORM(x))
 #define FORM reinterpret_cast<UIForm*>(a)
 #define INSTANCE reinterpret_cast<SESMInstanceNode*>(a)
 #define SOUNDS static_cast<UIManager*>(inObj)->GetSoundManager()
@@ -1045,15 +1013,7 @@ EE_UI_CASE(event_ev_uninitialize) { return static_cast<UIEvent*>(static_cast<EeU
 EE_UI_VOID(event_bgt_file_open) { ee_uicpp_file_open(inObj); }
 EE_UI_CASE(event_bgt_file_read) { return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c); }
 EE_UI_VOID(event_bgt_file_close) { ee_uicpp_file_close(inObj); }
-// TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the map
-// (the manager's and forms' state is Rust's: ee_ui managerobj.rs, formobj.rs): the UI lock it try-enters, the form
-// stack, and a form's id and controls. Kept by the linker for it.
-extern "C" void* EETestUILock(UIManager* inManager) { return inManager->GetUILock(); }
-extern "C" unsigned long EETestUIFormCount(UIManager* inManager) { return inManager->GetFormCount(); }
-extern "C" void* EETestUIForm(UIManager* inManager, unsigned long inIndex) { return inManager->GetStackedForm(inIndex); }
-extern "C" unsigned long EETestUIFormID(UIForm* inForm) { return inForm->GetFormID(); }
-extern "C" unsigned long EETestUIFormControlCount(UIForm* inForm) { return inForm->GetControlCount(); }
-extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { return inForm->GetControl(inIndex); }
+// TEST ONLY: the harness's presentation bridge's EETestUI* (ee_ui direct.rs), kept by the linker for it
 #if defined(_MSC_VER)
 #pragma comment(linker, "/include:EETestUILock")
 #pragma comment(linker, "/include:EETestUIFormCount")
@@ -1071,12 +1031,10 @@ extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { re
 // the Rust object, which calls out through UIScrollBarRust::Op (UIControl's members, the parts' virtuals, their new
 // and delete, the manager's arrow bitmaps).
 #define s static_cast<UIScrollBar*>(inObj)
-#define theSlider reinterpret_cast<UISlider*>(a)
 EE_UI_CASE(bar_create_slider) { return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->GetForm(), s->GetIndex(), (unsigned long)b); }
 // a 19 x 19 arrow button at f (its slider and direction set by Rust: scrollbarobj.rs scroll_init)
 EE_UI_CASE(bar_create_button) { return (intptr_t) new UIButton(s->GetId(), reinterpret_cast<GEBitmap*>(a), NULL, reinterpret_cast<GEBitmap*>(b), GERectangle(GE2DPoint(f[0], f[1]), GE2DPoint(f[0] + 19.0f, f[1] + 19.0f)), s->GetForm(), s->GetIndex(), 0); }
 EE_UI_VOID(bar_part_button_down) { reinterpret_cast<UIButton*>(a)->ButtonDown(); }
-#undef theSlider
 #undef s
 
 // C:\EEX\Low-Level Engine\User Interface\UISlider.cpp
@@ -1124,7 +1082,6 @@ struct UITextLabelRust {
     static const GERectangle& RectAt(intptr_t inAddress) { return *reinterpret_cast<const GERectangle*>(inAddress); }
 };
 #define l static_cast<UITextLabel*>(inObj)
-#define theBar reinterpret_cast<UIScrollBar*>(a)
 EE_UI_CASE(label_string_new) { return (intptr_t) new UWideString(reinterpret_cast<const char*>(a)); }
 EE_UI_VOID(label_string_delete) { delete reinterpret_cast<UWideString*>(a); }
 EE_UI_VOID(label_string_assign) { *reinterpret_cast<UWideString*>(a) = *reinterpret_cast<const UWideString*>(b); }
@@ -1135,7 +1092,6 @@ EE_UI_VOID(label_virt_check_scroll_bar) { l->CheckScrollBar(); }
 EE_UI_VOID(label_virt_recompute) { l->RecomputeDisplayRange(); }
 EE_UI_VOID(label_virt_set_location) { l->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
-#undef theBar
 #undef l
 
 // ---- the unit's own code: UIInitialize is inline in lle/User Interface.h (the original's unreferenced file-static

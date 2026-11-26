@@ -757,3 +757,37 @@ pub(crate) unsafe fn tbl_font_closest(_o: *mut c_void, a: isize, b: isize, _c: i
     // SAFETY: the contract
     unsafe { ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, ul(a), ul(b), 0, 0, Some(crate::lle_hosts::ee_ui_font_table_host)) }
 }
+
+// ---- the combo box's parts (`PartOf(i)`: the Rust combo box's part `i`, a C++ control)
+
+/// `combo->PartOf(i)`.
+fn part_of(combo: Cpp, i: isize) -> Cpp {
+    direct::combo_call(combo, crate::comboobj::EeUiComboCall::Part, i as core::ffi::c_int as isize, 0).unwrap_or(0) as Cpp
+}
+
+ops! {
+    /// `f = CB->PartOf(a)->GetRectangle()`.
+    combo_q_rect_of => |o, a, b, f| { ctl(part_of(o, a), |r| put_rect(f, &r.mRectangle)); 0 };
+    /// `CB->PartOf(0)->GetBorderThickness()`.
+    combo_q_text_box_border => |o, a, b, f| ctl(part_of(o, 0), |r| r.mBorderThickness) as isize;
+    /// `CB->PartOf(3)->GetText(0)` (the edit box's first line).
+    combo_q_edit_text => |o, a, b, f| direct::edit_call(part_of(o, 3), crate::editobj::EeUiEditCall::Line, 0, 0).unwrap_or(0);
+    /// `CB->UIControl::CopyData()`.
+    combo_a_base_copy_data => |o, a, b, f| ctl_call(o, C::CopyData, 0) as core::ffi::c_long as isize;
+    /// `CB->UIControl::SetRectangle(rect f)`.
+    combo_a_base_set_rectangle => |o, a, b, f| ctl_f(o, C::SetRectangle, f) * 0;
+    /// `CB->UIControl::SetLocation(point f)`.
+    combo_a_base_set_location => |o, a, b, f| direct::control_call_f(o, C::SetLocation, 0, 0, &mut [*f, *f.add(1), 0.0, 0.0]) * 0;
+}
+
+/// `combo->PartOf(part)` (lle_combo.rs).
+pub(crate) fn combo_part(combo: usize, part: u32) -> usize {
+    part_of(combo as Cpp, part as isize) as usize
+}
+/// `combo->UIControl::SetRectangle(GERectangle(text_box's top left, drop's bottom right))`.
+pub(crate) fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) {
+    let t = ctl(text_box as Cpp, |r| r.mRectangle);
+    let d = ctl(drop as Cpp, |r| r.mRectangle);
+    let r = UiRect::new(t.left, t.top, d.right, d.bottom);
+    direct::control_call_f(combo as Cpp, C::SetRectangle, 0, 0, &mut [r.bottom, r.left, r.right, r.top]);
+}

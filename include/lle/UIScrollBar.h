@@ -33,7 +33,6 @@ public:
     virtual long DrawTextA() { return (long)this->Call(EeUiScrollBarCall::DrawText); }
     const UISlider* GetSlider() const { return reinterpret_cast<const UISlider*>(this->Call(EeUiScrollBarCall::Slider)); }
     virtual bool GetTabable() const { return false; }
-    void IncrementBy(long inAmount) { this->Call(EeUiScrollBarCall::IncrementBy, inAmount); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiScrollBarCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiScrollBarCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallF(EeUiScrollBarCall::MouseMove, inLocation.GetX(), inLocation.GetY()); }

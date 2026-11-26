@@ -83,7 +83,6 @@ public:
     }
     unsigned long GetFormCount() const { return (unsigned long)this->Call(EeUiManagerCall::FormCount); }
     UIForm* GetStackedForm(unsigned long inIndex) const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex)); } // port (test fixture)
-    TSCriticalSection* GetUILock() const { return reinterpret_cast<TSCriticalSection*>(this->Call(EeUiManagerCall::UiLock)); } // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 10)); }
     // the bitmap by its index (EeUiManagerCall::Bitmap: GetAlphaSortUpBitmap 0 .. GetRadioDownOn 20)
     GEBitmap* GetBitmap(unsigned long inIndex) const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, (intptr_t)inIndex)); }

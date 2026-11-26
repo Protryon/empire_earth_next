@@ -63,7 +63,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     unsigned long GetId() const { return this->mId; }
     virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
-    bool GetIsDirty() const { return this->mIsDirty; }
     bool GetLeftMouseButtonDown() const { return this->Call(EeUiControlCall::LeftButtonDown) != 0; }
     // Returns the UI manager's rasterizer
     GERasterizer* GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }

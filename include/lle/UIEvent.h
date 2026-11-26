@@ -3,8 +3,8 @@
 // The original's sizeof was 0xc.
 //
 // Whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21): the member is EeUiEventFields, the class's private
-// base (the inline constructor and GetIsInitialized read it in place); Initialize, Uninitialize and the two loaders
-// forward there (UIManager.cpp), calling out through HostOp: the virtuals, the events file and the owners.
+// base (the inline constructor reads it in place); Initialize and Uninitialize forward there, and the two loaders are
+// Rust's (ee_ui lle_chains.rs db_*), calling out through HostOp: the virtuals, the events file and the owners.
 #ifndef LLE_UIEVENT_H
 #define LLE_UIEVENT_H
 
@@ -18,7 +18,6 @@ class LLE_API UIEvent : public UReferenceCounter, public EeUiEventFields {
 public:
     UIEvent() { this->mInitializeCount = 0; }  // body assignment: the store follows the vptr load (exe 0x1aa9ef)
     virtual ~UIEvent() {}
-    bool GetIsInitialized() const { return this->mInitializeCount != 0; }
     long Initialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Initialize); }
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) = 0;   // slot 0x04
     long Uninitialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Uninitialize); }

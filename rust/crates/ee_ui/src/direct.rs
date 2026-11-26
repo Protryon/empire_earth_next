@@ -446,6 +446,41 @@ pub unsafe fn c_bytes(p: *const c_void) -> Vec<u8> {
     unsafe { core::ffi::CStr::from_ptr(p as *const core::ffi::c_char) }.to_bytes().to_vec()
 }
 
+// ---- TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the
+// map (the manager's and forms' state is Rust's: managerobj.rs, formobj.rs): the UI lock it try-enters, the form
+// stack, and a form's id and controls. The toolkit's unit keeps them linked (`/include:`).
+
+/// The manager's UI lock (the one UpdateUI holds).
+#[no_mangle]
+pub extern "C" fn EETestUILock(manager: *mut c_void) -> *mut c_void {
+    manager_call(manager, EeUiManagerCall::UiLock, 0, 0, 0) as *mut c_void
+}
+/// The number of forms on the manager's stack.
+#[no_mangle]
+pub extern "C" fn EETestUIFormCount(manager: *mut c_void) -> c_ulong {
+    manager_call(manager, EeUiManagerCall::FormCount, 0, 0, 0) as c_ulong
+}
+/// The stacked form `index`.
+#[no_mangle]
+pub extern "C" fn EETestUIForm(manager: *mut c_void, index: c_ulong) -> *mut c_void {
+    manager_call(manager, EeUiManagerCall::StackedForm, index as isize, 0, 0) as *mut c_void
+}
+/// The form's id.
+#[no_mangle]
+pub extern "C" fn EETestUIFormID(form: *mut c_void) -> c_ulong {
+    form_call(form, EeUiFormCall::FormId, 0, 0) as c_ulong
+}
+/// The form's control count.
+#[no_mangle]
+pub extern "C" fn EETestUIFormControlCount(form: *mut c_void) -> c_ulong {
+    form_call(form, EeUiFormCall::ControlCount, 0, 0) as c_ulong
+}
+/// The form's control `index`.
+#[no_mangle]
+pub extern "C" fn EETestUIFormControl(form: *mut c_void, index: c_ulong) -> *mut c_void {
+    control(form, index)
+}
+
 #[cfg(test)]
 #[path = "direct_tests.rs"]
 mod tests;

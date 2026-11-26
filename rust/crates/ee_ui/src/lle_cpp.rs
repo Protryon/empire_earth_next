@@ -450,7 +450,6 @@ shims! {
     fn texture_load_ui_string(manager: usize, name: usize, depth: u32, alpha: bool) -> usize = ee_uicpp_texture_load_ui_string;
     fn bitmap_stretch(b: usize, rect: usize, texture_rect: usize, screen: u32) = ee_uicpp_bitmap_stretch;
     // UIComboBox.cpp's (lle_combo.rs)
-    fn combo_part(combo: usize, part: u32) -> usize = ee_uicpp_combo_part;
     fn list_scroll_bar(list: usize) -> usize = ee_uicpp_list_scroll_bar;
     fn list_selection(list: usize, selection: EeUiShimULongOut) -> c_long = ee_uicpp_list_selection;
     fn label_set_text_line(label: usize, list: usize, line: u32) = ee_uicpp_label_set_text_line;
@@ -478,7 +477,6 @@ shims! {
     fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = ee_uicpp_control_set_bg_color;
     fn list_set_scroll_bg_opacity(list: usize, opacity: f32) = ee_uicpp_list_set_scroll_bg_opacity;
     fn list_set_scroll_bg_color(list: usize, red: f32, green: f32, blue: f32) = ee_uicpp_list_set_scroll_bg_color;
-    fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) = ee_uicpp_combo_base_set_rect;
     // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
     fn keyboard_entity(key: u32, out: EeUiShimPtrOut) = ee_uicpp_keyboard_entity;
@@ -549,6 +547,8 @@ shims! {
     fn db_remove_controls() = crate::lle_hosts::chains::db_remove_controls;
     fn db_remove_backgrounds() = crate::lle_hosts::chains::db_remove_backgrounds;
     fn db_remove_fonts() = crate::lle_hosts::chains::db_remove_fonts;
+    fn combo_part(combo: usize, part: u32) -> usize = crate::lle_hosts::chains::combo_part;
+    fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) = crate::lle_hosts::chains::combo_base_set_rect;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's

@@ -1,14 +1,11 @@
 // The shims' declarations (lle_hosts.rs): r a number, v nothing.
 shims! {
-    v ee_uicpp_combo_q_rect_of;
-    r ee_uicpp_combo_q_text_box_border;
     r ee_uicpp_combo_q_line_count;
     r ee_uicpp_combo_q_line;
     r ee_uicpp_combo_q_line_height;
     r ee_uicpp_combo_q_list_border;
     r ee_uicpp_combo_q_list_scroll_bar_captured;
     r ee_uicpp_combo_q_window_height;
-    r ee_uicpp_combo_q_edit_text;
     v ee_uicpp_combo_a_list_change_selection;
     v ee_uicpp_combo_a_list_insert_line;
     v ee_uicpp_combo_a_list_delete_line;
@@ -23,11 +20,8 @@ shims! {
     v ee_uicpp_combo_a_part_set_rectangle;
     v ee_uicpp_combo_a_part_set_location;
     r ee_uicpp_combo_a_part_copy_data;
-    r ee_uicpp_combo_a_base_copy_data;
     v ee_uicpp_combo_a_set_dirty;
     v ee_uicpp_combo_a_set_rectangle;
-    v ee_uicpp_combo_a_base_set_rectangle;
-    v ee_uicpp_combo_a_base_set_location;
     v ee_uicpp_combo_a_release_mouse;
     v ee_uicpp_combo_a_release_keyboard;
     v ee_uicpp_combo_a_open_list;

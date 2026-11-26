@@ -18,6 +18,24 @@ extern "C" {
 void ee_ui_direct_background(EeUiBackgroundFields *rec,
                              void *cpp);
 
+/// The manager's UI lock (the one UpdateUI holds).
+void *EETestUILock(void *manager);
+
+/// The number of forms on the manager's stack.
+unsigned long EETestUIFormCount(void *manager);
+
+/// The stacked form `index`.
+void *EETestUIForm(void *manager, unsigned long index);
+
+/// The form's id.
+unsigned long EETestUIFormID(void *form);
+
+/// The form's control count.
+unsigned long EETestUIFormControlCount(void *form);
+
+/// The form's control `index`.
+void *EETestUIFormControl(void *form, unsigned long index);
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_DIRECT_H

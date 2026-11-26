@@ -23,7 +23,6 @@ public:
     virtual long DrawPolygons() { return (long)this->Call(EeUiSliderCall::DrawPolygons); }
     long GetCurrentRangeValue() const { return (long)this->Call(EeUiSliderCall::CurrentRangeValue); }
     long GetMaxRange() const { return (long)this->Call(EeUiSliderCall::MaxRange); }
-    unsigned long GetSliderStyle() const { return (unsigned long)this->Call(EeUiSliderCall::Style); }
     virtual bool GetTabable() const { return false; }
     void SetCurrentRangeValue(long inValue) { this->Call(EeUiSliderCall::SetCurrentRangeValue, inValue); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->CallAt(EeUiSliderCall::SetLocation, inLocation); }
@@ -33,8 +32,6 @@ public:
     virtual void ButtonDown() {}            // slot 0x88
     virtual void ButtonUp() { this->Call(EeUiSliderCall::ButtonUp); } // slot 0x8c
     virtual void ChangeRange(unsigned long inValue) { this->Call(EeUiSliderCall::ChangeRange, inValue); } // slot 0x90
-    void DecrementByPageSize() { this->Call(EeUiSliderCall::DecrementByPageSize); }
-    void IncrementByPageSize() { this->Call(EeUiSliderCall::IncrementByPageSize); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiSliderCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiSliderCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallAt(EeUiSliderCall::MouseMove, inLocation); }
