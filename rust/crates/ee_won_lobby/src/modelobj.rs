@@ -45,6 +45,9 @@ pub enum EeWonModelKind {
     GameList,
     Server,
     ServerList,
+    /// EELobbyPlayer (R6 WON lobby and network round 38: folded into LobbyPlayer): a player with a game slot, which
+    /// its game messages carry (one byte after the ready flag) and whose team decides IsSameTeam.
+    EePlayer,
 }
 
 /// A member read by [`ee_won_model_get`] and written by [`ee_won_model_set`]. Numbers are the member's value; a
@@ -55,6 +58,12 @@ pub enum EeWonModelKind {
 pub enum EeWonModelField {
     PlayerPing = 0,
     PlayerReady,
+    /// EELobbyPlayer's slot number (`mSlot`, +0x10).
+    PlayerSlot,
+    /// the slot's number in its game (`mSlotIndex`, set by the Rust game with the game).
+    PlayerSlotIndex,
+    /// the slot's game: its Rust game (`EeWonEeGame*`, not held; 0: none; the original's `mSlotGame`).
+    PlayerSlotGame,
     // LobbyClient
     ClientName = 10,
     ClientId,
@@ -134,6 +143,8 @@ pub enum EeWonModelField {
 pub enum EeWonModelCall {
     /// `IsSameTeam((LobbyPlayer*)a)`.
     PlayerIsSameTeam = 0,
+    /// EELobbyPlayer::GetTeam: the slot game's team option of the slot, 0 without a slot game.
+    PlayerTeam,
     // ---- LobbyClient
     /// `ClearGroup(a, b)`.
     ClientClearGroup = 10,
@@ -512,6 +523,11 @@ impl AddrMap {
 struct Player {
     ping: Cell<u16>,
     ready: Cell<bool>,
+    // EELobbyPlayer's (an EePlayer)
+    ee: bool,
+    slot: Cell<u8>,
+    slot_index: Cell<u8>,
+    slot_game: Cell<isize>,
 }
 
 struct Client {
@@ -643,6 +659,18 @@ unsafe fn of<'a>(shell: isize) -> Option<&'a EeWonModel> {
     unsafe { (*((shell as usize + SHELL_MODEL) as *const *const EeWonModel)).as_ref() }
 }
 
+/// The slot of an EELobbyPlayer's model (modelbuf.rs reads and writes it), None for another object or NULL.
+///
+/// # Safety
+/// `model` is NULL or a live model.
+pub(crate) unsafe fn ee_player_slot<'a>(model: isize) -> Option<&'a Cell<u8>> {
+    // SAFETY: the caller's contract
+    match unsafe { (model as *const EeWonModel).as_ref() }.map(|m| &m.body) {
+        Some(Body::Player(p)) if p.ee => Some(&p.slot),
+        _ => None,
+    }
+}
+
 macro_rules! body {
     ($fn:ident, $variant:ident, $ty:ty) => {
         fn $fn(&self) -> &$ty {
@@ -701,7 +729,14 @@ impl EeWonModel {
     fn new(shell: isize, kind: EeWonModelKind, host: EeWonModelHost, empty: isize) -> EeWonModel {
         let text = || Cell::new(empty);
         let body = match kind {
-            EeWonModelKind::Player => Body::Player(Player { ping: Cell::new(0xfffe), ready: Cell::new(false) }),
+            EeWonModelKind::Player | EeWonModelKind::EePlayer => Body::Player(Player {
+                ping: Cell::new(0xfffe),
+                ready: Cell::new(false),
+                ee: kind == EeWonModelKind::EePlayer,
+                slot: Cell::new(0),
+                slot_index: Cell::new(0),
+                slot_game: Cell::new(0),
+            }),
             EeWonModelKind::Client => Body::Client(Client {
                 name: text(),
                 id: Cell::new(0xffff),
@@ -841,6 +876,9 @@ impl EeWonModel {
         match (&self.body, f) {
             (Body::Player(p), F::PlayerPing) => p.ping.get() as isize,
             (Body::Player(p), F::PlayerReady) => b(p.ready.get()),
+            (Body::Player(p), F::PlayerSlot) => p.slot.get() as isize,
+            (Body::Player(p), F::PlayerSlotIndex) => p.slot_index.get() as isize,
+            (Body::Player(p), F::PlayerSlotGame) => p.slot_game.get(),
             (Body::Client(c), _) => match f {
                 F::ClientName => c.name.get(),
                 F::ClientId => c.id.get() as isize,
@@ -933,6 +971,9 @@ impl EeWonModel {
         match (&self.body, f) {
             (Body::Player(p), F::PlayerPing) => p.ping.set(v as u16),
             (Body::Player(p), F::PlayerReady) => p.ready.set(v != 0),
+            (Body::Player(p), F::PlayerSlot) => p.slot.set(v as u8),
+            (Body::Player(p), F::PlayerSlotIndex) => p.slot_index.set(v as u8),
+            (Body::Player(p), F::PlayerSlotGame) => p.slot_game.set(v),
             (Body::Client(c), _) => match f {
                 F::ClientName => self.assign(&c.name, v),
                 F::ClientId => c.id.set(v as u16),
@@ -1036,7 +1077,32 @@ impl EeWonModel {
         if other == 0 {
             return false;
         }
+        if self.player().ee {
+            // EELobbyPlayer::IsTeammate: the two slots' teams by the game's rule (the other is the game's player too)
+            // SAFETY: the callers pass live shells
+            let theirs = unsafe { of(other) }.map_or(0, |o| o.player_team());
+            return crate::eegame::is_teammate(self.player_team(), theirs);
+        }
         self.op(EeWonModelOp::PlayerIsTeammate, self.shell, other, 0) != 0
+    }
+
+    /// EELobbyPlayer::GetTeam: the team option (1) of the slot in its game, 0 without a slot game.
+    fn player_team(&self) -> u8 {
+        let p = self.player();
+        match p.slot_game.get() {
+            0 => 0,
+            // SAFETY: the slot's game is live while it is set (the game detaches its players)
+            g => unsafe {
+                crate::eegame::ee_won_eegame_call(
+                    g as *const crate::eegame::EeWonEeGame,
+                    crate::eegame::EeWonEeGameCall::SlotRawOption,
+                    p.slot_index.get() as isize,
+                    1,
+                    0,
+                    0,
+                ) as u8
+            },
+        }
     }
 
     // ---- LobbyClient
@@ -1933,6 +1999,7 @@ unsafe fn dispatch(m: &EeWonModel, call: EeWonModelCall, a: isize, bb: isize, c:
     unsafe {
         match call {
             C::PlayerIsSameTeam => b(m.player_same_team(a)),
+            C::PlayerTeam => m.player_team() as isize,
             C::ClientClearGroup => {
                 m.client_clear_group(a as u16, bb != 0);
                 0

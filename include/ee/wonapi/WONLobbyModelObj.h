@@ -44,7 +44,9 @@ template <class T> SmartPtr<T> LobbyModelHeld(intptr_t inObj)
 // RTTI LobbyPlayer; vtable 0x852c54, four slots; size 0x0c.
 class LobbyPlayer : public LobbyModelObject {
 public:
-    LobbyPlayer() : LobbyModelObject(EeWonModelKind::Player) {}
+    // the game's player (EELobbyPlayer, folded in R6 WON lobby and network round 38) is the kind EePlayer: its slot,
+    // read and written after the ready flag and deciding IsSameTeam, is the Rust object's (modelobj.rs)
+    explicit LobbyPlayer(EeWonModelKind inKind = EeWonModelKind::Player) : LobbyModelObject(inKind) {}
     virtual bool ReadData(ReadBuffer& inBuffer) { return true; } // returns true (shared body at 0x387ff0)
     virtual void WriteData(WriteBuffer& outBuffer) {} // empty (shared body at 0x30a800)
     virtual bool IsTeammate(LobbyPlayer* inOther) { return false; } // 0x3a90d0: the base player has no teams
@@ -171,11 +173,6 @@ public:
     EeWonEeGame* mEE;                       // owned
     intptr_t EE(EeWonEeGameCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0)
     { return ee_won_eegame_call(this->mEE, inCall, a, b, c, d); }
-    virtual bool PreNetJoinGameHook() { return true; }
-    virtual bool PostNetJoinGameHook() { return true; }
-    virtual bool PreNetCreateGameHook() { return true; }
-    virtual bool PostNetCreateGameHook() { return true; }
-    virtual void PreNetLeaveGameHook() {}
     virtual void PostNetLeaveGameHook() { if (this->mEE) this->EE(EeWonEeGameCall::PostNetLeaveGameHook); } // EE +0x18 0x292797
     virtual void NotifyStartGameHook() { if (this->mEE) this->EE(EeWonEeGameCall::NotifyStartGameHook); }
     virtual bool TryStartGameHook() { return !this->mEE || this->EE(EeWonEeGameCall::TryStartGameHook) != 0; } // EE 0x292719 (false: everyone is on one team)
@@ -223,11 +220,13 @@ public:
     bool MatchesRoomSpec(long inFlags) { return this->M(LobbyMC::GameMatchesRoomSpec, inFlags) != 0; }
     bool IsPinging() { return this->M(LobbyMC::GamePinging) != 0; }
     bool IsQueryingDetails() { return this->M(LobbyMC::GameQuerying) != 0; }
-    bool PreNetJoinGame() { return this->PreNetJoinGameHook(); }
-    bool PostNetJoinGame() { return this->PostNetJoinGameHook(); }
-    bool PreNetCreateGame() { return this->PreNetCreateGameHook(); }
-    bool PostNetCreateGame() { return this->PostNetCreateGameHook(); }
-    void PreNetLeaveGame() { this->PreNetLeaveGameHook(); }
+    // the SDK's pre/post join, create and leave hooks: neither the base's nor the EE game's do anything (no game
+    // class overrides them since EELobbyGame's fold, R6 WON lobby and network round 37)
+    bool PreNetJoinGame() { return true; }
+    bool PostNetJoinGame() { return true; }
+    bool PreNetCreateGame() { return true; }
+    bool PostNetCreateGame() { return true; }
+    void PreNetLeaveGame() {}
     void PostNetLeaveGame() { this->PostNetLeaveGameHook(); }
     void WriteDetails(WriteBuffer& outBuffer) { this->WriteDetailsHook(outBuffer); }
     bool CanReady() { return this->CanReadyHook(); }
@@ -235,7 +234,6 @@ public:
     void HandlePlayerJoined(LobbyClient* inClient) { this->HandlePlayerJoinedHook(inClient); }
     void HandleGameMessage(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom) { this->HandleGameMessageHook(inType, inBuffer, inFrom); }
     bool IsFull() { return this->M(LobbyMC::GameIsFull) != 0; }
-    bool CanJoin() { return this->GetJoinStatus() == 0; }
     short GetJoinStatus() { return (short)this->M(LobbyMC::GameJoinStatus); }
     void WriteSummary(WriteBuffer& outBuffer);
     bool ReadSummary(ReadBuffer& inBuffer);

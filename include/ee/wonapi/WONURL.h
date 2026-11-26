@@ -3,6 +3,7 @@
 // method forwards. URL.cpp was deleted in net round 29
 #ifndef EE_WONAPI_WONURL_H
 #define EE_WONAPI_WONURL_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include <string>
 #include "ee/wonapi/WONLobbyResource.h" // WONFile, rust/ee_won.h
 #include "rust/won_net/http.h"
@@ -16,13 +17,10 @@ public:
     URL(const URL& inURL) : mUrl(ee_won_url_obj_clone(inURL.mUrl)) {}
     URL& operator=(const URL& inURL) { ee_won_url_obj_assign(this->mUrl, inURL.mUrl); return *this; }
     ~URL() { ee_won_url_obj_free(this->mUrl); }
-    // a relative URL against a base (fragments append to the base path, others replace its file part; 2d7e90)
-    void CalcRelativeTo(const URL& inBase) { ee_won_url_obj_relative(this->mUrl, inBase.mUrl); }
+    #include EE_WON_DRV(URL_URL) // the drivers' members
     URLType GetType() const { return static_cast<URLType>(ee_won_url_obj_kind(this->mUrl)); } //SDK inline accessors
     std::string GetAddress() const { return this->Text(0); } // copies (the SDK returned its members)
     std::string GetPath() const { return this->Text(1); }
-    std::string GetPathAsLocalFilePath() const { return WONFile(this->GetPath()).GetFilePath(); } //2d7d10: backslashes
-    void GetEntire(std::string& outString) { outString = this->Text(2); } //2d8150: the full text from scheme, address and path
 private:
     static const uint8_t* B(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
     static void Sink(void* inText, const uint8_t* inBytes, size_t inLength)

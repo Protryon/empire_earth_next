@@ -26,11 +26,11 @@ inline const char* WonSocketOpClass(const AsyncOp* inOp)
 struct CloseOp : SocketOp { CloseOp(AsyncSocket* s) : SocketOp(WonOpKind::Close, s) {} };
 struct AcceptOp : SocketOp { AcceptOp(AsyncSocket* s) : SocketOp(WonOpKind::Accept, s) {} };
 struct ConnectOp : SocketOp
-{ ConnectOp(const IPAddr& a, AsyncSocket* s = NULL) : SocketOp(WonOpKind::Connect, s, NULL, &a) {} };
+{ ConnectOp(const IPAddr& a, AsyncSocket* s = NULL) : SocketOp(WonOpKind::Connect, s, NULL, a.GetValue()) {} };
 struct SendBytesOp : SocketOp { SendBytesOp(const ByteBuffer* b, AsyncSocket* s = NULL) : SocketOp(WonOpKind::SendBytes, s, b) {} };
 struct SendMsgOp : SocketOp { SendMsgOp(const ByteBuffer* b, AsyncSocket* s = NULL) : SocketOp(WonOpKind::SendMsg, s, b) {} };
 struct SendBytesToOp : SocketOp
-{ SendBytesToOp(const ByteBuffer* b, const IPAddr& a, AsyncSocket* s = NULL) : SocketOp(WonOpKind::SendTo, s, b, &a) {} };
+{ SendBytesToOp(const ByteBuffer* b, const IPAddr& a, AsyncSocket* s = NULL) : SocketOp(WonOpKind::SendTo, s, b, a.GetValue()) {} };
 struct RecvMsgOp : SocketOp { RecvMsgOp(AsyncSocket* s = NULL) : SocketOp(WonOpKind::RecvMsg, s) {} };
 struct RecvCRMsgOp : SocketOp { RecvCRMsgOp(AsyncSocket* s = NULL) : SocketOp(WonOpKind::RecvCrMsg, s) {} };
 struct RecvBytesFromOp : SocketOp
