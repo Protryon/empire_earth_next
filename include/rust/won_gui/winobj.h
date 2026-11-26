@@ -200,15 +200,6 @@ void ee_won_win_free(EeWonWindow *win);
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
 
-/// A key, mouse or input handler (`call`: HandleKeyEvent, HandleMouseEvent, HandleInputEvent) over the C++ event's
-/// record (R6 WON GUI round 37: the input events carry the record the handlers read, `InputEvent::mEv`).
-///
-/// # Safety
-/// `win` is live; `event` is a live record.
-ptrdiff_t ee_won_win_event(const EeWonWindow *win,
-                           EeWonWinCall call,
-                           const EeWonWinEvent *event);
-
 /// `Window::GetFont`'s font (unheld: the C++ wraps it in its SmartPtr).
 ///
 /// # Safety

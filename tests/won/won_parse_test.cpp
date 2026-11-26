@@ -3,6 +3,7 @@
 // the C++ StringParser before its port; the Rust tests assert the same file). `--print` prints the lines instead.
 // A second pass runs under setlocale(LC_ALL, "English") as the game's UI thread sets it: the scanner's ctype calls
 // are the C runtime's, so the code page's letters and spaces count there. The exit code is the number of failures.
+#define EE_WON_STRINGPARSER_DRIVER // StringParser's list reads and writes (won_parser_lists.inl)
 #include <windows.h>
 #include <locale.h>
 #include <stdio.h>

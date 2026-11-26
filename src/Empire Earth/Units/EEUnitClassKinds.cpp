@@ -20,17 +20,10 @@
 #include "ee/EEPlayer.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEUnitUpdate.h"
-#include "ee/EEPhysics.h"
-#include "ee/EEUGRust.h"
 
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
 
-
-template <class T> static T* EEUckObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUckObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // The bodies the kind dispatchers of ee_units uck_kinds.rs choose (EE_UNITS_UCK_*): one statement each; the class
 // host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
@@ -53,14 +46,11 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
     case EE_UNITS_UCK_RIPPLES_DUE:
         return theClass->mRippleEffect != NULL && theUnit->mUnitClass->mUnitType == kUnitTypeCatalina && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_RIPPLES_DUE_3:
-        return theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && (unsigned long)theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_3: return theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && (unsigned long)theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
     case EE_UNITS_UCK_RIPPLES_DUE_4:
         return (theClass->mUnitType == kUnitTypeDock || theClass->mUnitType == kUnitTypeNavyYard) && theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_RIPPLES_DUE_5:
-        return theClass->mRippleEffect != NULL && theUnit->mHitPoints > 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_TRAIL_DUE:
-        return theUnit->mHitPoints > 0 && theClass->mTrailEffect != NULL && theUnit->mVelocity != 0.0f && theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_5: return theClass->mRippleEffect != NULL && theUnit->mHitPoints > 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_TRAIL_DUE: return theUnit->mHitPoints > 0 && theClass->mTrailEffect != NULL && theUnit->mVelocity != 0.0f && theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
     case EE_UNITS_UCK_TORPEDO_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
     case EE_UNITS_UCK_MISSILE_CONDITION: return theClass->MissileEvaluateCondition(theUnit, (unsigned long)inB);
     case EE_UNITS_UCK_PROJECTILE_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);

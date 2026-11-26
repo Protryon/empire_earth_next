@@ -19,20 +19,26 @@ class EEUnit;
 class EETown : public EEAIArea, public EeTownFields {
 public:
     // 0xabbaf: EEAIArea::mAreaType = 5 (the town kind); its only caller, EEPlayer 0x163138, passes (this, ++a town counter)
-    EETown(EEPlayer* inPlayer, long inTownID);
-    ~EETown();                          // 0xabc10 (??_G 0xabbf4): Reset, then ~EEAIArea
+    EETown(EEPlayer* inPlayer, long inTownID) : EeTownFields(), mPlayer(inPlayer), mPatrolGroup(NULL) { ee_cp_town_construct(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this), inTownID); }
+    // 0xabc10 (??_G 0xabbf4): Reset, then ~EEAIArea
+    ~EETown() { this->Reset(); }
     // +0x20 0xac203: 16 tries of a random tile in the hull's bounds on the map and in the hull; else EEAIArea's
-    U2DPoint<long> GetRandomPoint();
-    bool AddUnit(EEUnit* inUnit);               // 0xabc27: a building joins (its tile, the counters, the patrol group)
-    void Reset();                               // 0xabf8f: counters 0, mReach = 0x100, the patrol group released
-    bool AddTile(const U2DPoint<long>& inTile); // 0xabdf3: a tile joins (the hull made again unless inside it)
-    void Merge(EETown* inOther);                // 0xabede: inOther's tiles and counters added
-    bool UpdateNearWater();                     // 0xabfda: mNearWater/mNearMapEdge worked out; returns mNearWater
-    bool RemoveUnit(EEUnit* inUnit);            // 0xac351: the mirror of AddUnit
-    bool RemoveHullTile(const U2DPoint<long>& inTile);   // 0xac573: a tile leaves (the hull made again if a vertex)
-    bool CanTake(EEUnit* inUnit);               // 0xac6f7: whether inUnit belongs to this town
-    void RefreshPatrolGroup();                  // 0xac4b6: mPatrolGroup found or made, its points the hull's
-    static bool IsTownUnit(EEUnit* inUnit);
+    U2DPoint<long> GetRandomPoint() { EeHerdPoint p = ee_cp_town_random_point(this, static_cast<EEAIArea*>(this), this); return U2DPoint<long>(p.mX, p.mY); }
+    // 0xabc27: a building joins (its tile, the counters, the patrol group)
+    bool AddUnit(EEUnit* inUnit) { return ee_cp_town_add_unit(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this), (uint64_t)(uintptr_t)inUnit); }
+    // 0xabf8f: counters 0, mReach = 0x100, the patrol group released
+    void Reset() { ee_cp_town_reset(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this)); }
+    // 0xabede: inOther's tiles and counters added
+    void Merge(EETown* inOther) { ee_cp_town_merge(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this), (uint64_t)(uintptr_t)inOther, static_cast<EeTownFields*>(inOther)); }
+    // 0xabfda: mNearWater/mNearMapEdge worked out; returns mNearWater
+    bool UpdateNearWater() { return ee_cp_town_update_near_water(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this)); }
+    // 0xac351: the mirror of AddUnit
+    bool RemoveUnit(EEUnit* inUnit) { return ee_cp_town_remove_unit(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this), (uint64_t)(uintptr_t)inUnit); }
+    // 0xac6f7: whether inUnit belongs to this town
+    bool CanTake(EEUnit* inUnit) { return ee_cp_town_can_take(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this), (uint64_t)(uintptr_t)inUnit); }
+    // 0xac4b6: mPatrolGroup found or made, its points the hull's
+    void RefreshPatrolGroup() { ee_cp_town_refresh_patrol_group(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this)); }
+    static bool IsTownUnit(EEUnit* inUnit) { return ee_cp_town_is_town_unit((uint64_t)(uintptr_t)inUnit); }
 
     EEPlayer* GetPlayer() const { return this->mPlayer; }
     EEPlayer* mPlayer;                      // +0x68 (ctor argument 1)

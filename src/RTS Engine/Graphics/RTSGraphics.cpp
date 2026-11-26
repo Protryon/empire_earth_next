@@ -6,10 +6,8 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GESurface.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/Input System.h"
 #include "lle/UIForm.h"

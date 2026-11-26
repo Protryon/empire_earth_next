@@ -40,16 +40,10 @@ pub enum EeWonImageHost {
     Ref = 0,
     /// `((RefCount*)a)->Release()`.
     Unref = 1,
-    /// A new handle for the image `(EeWonImage*)a` (its class by the kind), no reference taken.
+    /// A new handle for the image `(EeWonImage*)a` (its class by the kind), no reference taken. (3..6 read a handle's
+    /// `mRust` and a DisplayContext's members: read in place since R6 WON GUI round 38, [`EE_WON_IMAGE_RUST_AT`] and
+    /// [`EeWonDisplayContextRec`].)
     Wrap = 2,
-    /// `((Image*)a)->mRust`.
-    RustOf = 3,
-    /// `((DisplayContext*)a)->mGraphics` (0 for a NULL context).
-    CtxGraphics = 4,
-    /// The `EeWonSurface*` of `((DisplayContext*)a)->mSurface` (0 for none or a NULL context).
-    CtxSurface = 5,
-    /// `((DisplayContext*)a)->mPixelScale` into `*(float*)b`.
-    CtxScale = 6,
     /// `((Graphics*)a)`'s translation into `((int*)b)[0..2]`.
     GfxTrans = 7,
     /// `((Graphics*)a)->mDisplayContext.get()`.
@@ -72,6 +66,40 @@ pub enum EeWonImageHost {
     Decode = 17,
     /// `GETextureManager::GetTexturePackLogicalShift()` when there is a default window manager, else 0.
     PackShift = 18,
+}
+
+/// The offset of `mRust` (the `EeWonImage*`) in an image handle (RefCount's vtable pointer and its 32-bit count,
+/// padded): every host's handle class lays it out there (the game's `Image`, a driver's own).
+pub const EE_WON_IMAGE_RUST_AT: usize = 16;
+/// The offset of a DisplayContext's members ([`EeWonDisplayContextRec`]) in the C++ object (after RefCount's head).
+pub const EE_WON_CONTEXT_AT: usize = 16;
+
+/// A DisplayContext's members, in their C++ order (`mSurface`, `mGraphics`, `mPixelScale`), at
+/// [`EE_WON_CONTEXT_AT`] in the object (the game's static_asserts: PlatNativeImage.cpp).
+#[repr(C)]
+pub struct EeWonDisplayContextRec {
+    /// `mSurface`: not owned; NULL: nothing to draw into.
+    pub surface: *mut EeWonSurface,
+    /// `mGraphics` (a `Graphics*`, borrowed), 0 for none.
+    pub graphics: isize,
+    /// `mPixelScale`.
+    pub pixel_scale: f32,
+}
+
+const _: () = assert!(
+    std::mem::offset_of!(EeWonDisplayContextRec, graphics) == std::mem::size_of::<usize>()
+        && std::mem::offset_of!(EeWonDisplayContextRec, pixel_scale) == 2 * std::mem::size_of::<usize>()
+);
+
+/// The members of the DisplayContext `ctx` (None for 0).
+///
+/// # Safety
+/// `ctx` is 0 or a live DisplayContext of a host that lays its members out as [`EeWonDisplayContextRec`].
+unsafe fn context_rec<'a>(ctx: isize) -> Option<&'a EeWonDisplayContextRec> {
+    // SAFETY: the contract
+    unsafe {
+        ((ctx as usize).wrapping_add(EE_WON_CONTEXT_AT) as *const EeWonDisplayContextRec).as_ref().filter(|_| ctx != 0)
+    }
 }
 
 /// The host: one C++ function for every op.
@@ -235,7 +263,7 @@ impl Ref {
     }
     fn img(&self) -> Option<&EeWonImage> {
         // SAFETY: a live handle (its reference held)
-        unsafe { image_of(self.host, self.p) }
+        unsafe { image_of(self.p) }
     }
 }
 
@@ -258,13 +286,12 @@ fn href(host: EeWonImageHostFn, p: isize, hold: bool) {
 ///
 /// # Safety
 /// `h` is 0 or a live image handle; the object lives while the caller holds a reference to the handle.
-unsafe fn image_of<'a>(host: EeWonImageHostFn, h: isize) -> Option<&'a EeWonImage> {
+pub(crate) unsafe fn image_of<'a>(h: isize) -> Option<&'a EeWonImage> {
     if h == 0 {
         return None;
     }
-    let o = host(EeWonImageHost::RustOf, h, 0, 0, 0) as *const EeWonImage;
-    // SAFETY: the contract
-    unsafe { o.as_ref() }
+    // SAFETY: the contract: a live handle's `mRust` at EE_WON_IMAGE_RUST_AT
+    unsafe { (*((h as usize + EE_WON_IMAGE_RUST_AT) as *const *const EeWonImage)).as_ref() }
 }
 
 /// `PlatGUIPixels(logical, scale)`.
@@ -567,7 +594,7 @@ impl EeWonImage {
             Kind::Native { .. } => self.native_draw(ctx, x, y, left, top, w, h),
             Kind::Delay { .. } => {
                 let n = self.delay_load();
-                if let Some(i) = image_of_ref(self.host, n) {
+                if let Some(i) = image_of_ref(n) {
                     i.draw(ctx, x, y, left, top, w, h);
                 }
             }
@@ -580,15 +607,12 @@ impl EeWonImage {
     /// `PlatNativeImage::Draw`: part of the image into the context's surface within its clip (platimg.rs draw).
     #[allow(clippy::too_many_arguments)]
     fn native_draw(&self, ctx: isize, x: i32, y: i32, left: i32, top: i32, w: i32, h: i32) {
-        if ctx == 0 {
-            return;
-        }
-        let dst = self.h(EeWonImageHost::CtxSurface, ctx, 0, 0, 0) as *mut EeWonSurface;
+        // SAFETY: the caller's live context
+        let Some(rec) = (unsafe { context_rec(ctx) }) else { return };
+        let (dst, dscale) = (rec.surface, rec.pixel_scale);
         if dst.is_null() {
             return;
         }
-        let mut dscale = 0.0f32;
-        self.h(EeWonImageHost::CtxScale, ctx, &mut dscale as *mut f32 as isize, 0, 0);
         let m = self.native_mask();
         let pm = m.as_ref().map(|m| m.plat());
         // SAFETY: live surfaces; the mask's bits live while `m` does
@@ -615,10 +639,8 @@ impl EeWonImage {
     /// it is not the whole image, then the translation restored.
     #[allow(clippy::too_many_arguments)]
     fn program_draw(&self, ctx: isize, x: i32, y: i32, left: i32, top: i32, w: i32, h: i32) {
-        if ctx == 0 {
-            return;
-        }
-        let g = self.h(EeWonImageHost::CtxGraphics, ctx, 0, 0, 0);
+        // SAFETY: the caller's live context
+        let g = unsafe { context_rec(ctx) }.map_or(0, |r| r.graphics);
         if g == 0 {
             return;
         }
@@ -1041,9 +1063,9 @@ fn op(kind: i32, args: &[i32]) -> EeWonDrawOp {
     o
 }
 
-fn image_of_ref<'a>(host: EeWonImageHostFn, h: isize) -> Option<&'a EeWonImage> {
+fn image_of_ref<'a>(h: isize) -> Option<&'a EeWonImage> {
     // SAFETY: a handle the caller holds
-    unsafe { image_of(host, h) }
+    unsafe { image_of(h) }
 }
 
 // ---- the decoders (ImageDecoder.cpp)

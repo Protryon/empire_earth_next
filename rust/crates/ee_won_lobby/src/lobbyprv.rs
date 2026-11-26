@@ -37,8 +37,8 @@ pub enum EeWonLobbyPrvOp {
     ErrorParseHead,
     /// `p->mInitError.append(GUIString(sPrvParser->GetAbortReason()))`.
     ErrorParseReason,
-    /// `p->mLobbyPort = p->mConfig->mLobbyPort`.
-    LobbyPortFromConfig,
+    /// `p->mConfig->mLobbyPort` (the lobby port: the Rust's member, R6 WON lobby and network round 38).
+    ConfigLobbyPort,
     /// `sPrvComponentConfig = new ContainerConfig`.
     ComponentConfigNew,
     /// `p->mLobbyContainer = new LobbyContainer`.
@@ -67,14 +67,12 @@ pub enum EeWonLobbyPrvOp {
     CrcPutProductName,
     /// `sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length())`.
     CrcPutVersion,
-    /// `p->mProductId = sPrvCrc.Get()`.
-    ProductIdFromCrc,
+    /// `sPrvCrc.Get()` (a product id).
+    CrcGet,
     /// `sPrvCrc.Reset()`.
     CrcReset,
     /// `sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length())`.
     CrcPutLanVersion,
-    /// `p->mLanProductId = sPrvCrc.Get()`.
-    LanProductIdFromCrc,
     /// `p->mChatCommandParser->InitCommands()`.
     ChatParserInitCommands,
     /// `sPrvTable = NULL`.
@@ -101,7 +99,7 @@ pub enum EeWonLobbyPrvOp {
     HashSetClear,
     /// `p->mHashFileList.clear()`.
     HashListClear,
-    /// `StringParser(reinterpret_cast<const char*>(a)).ReadValue(p->mHashFileList)`.
+    /// `ee_won_cfgval_read_strings(a, &p->mHashFileList)` (the original's `StringParser(a).ReadValue(list)`).
     HashListRead,
     /// `p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a)`.
     CommunitySet,
@@ -115,14 +113,6 @@ pub enum EeWonLobbyPrvOp {
     CdKeyLoad,
     /// `p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey)`.
     AuthSetCdKey,
-    /// `p->mLobbyPort = 8888`.
-    LobbyPort8888,
-    /// `p->mSysTOUTime = p->mGameTOUTime = 0`.
-    TouTimesClear,
-    /// `p->mBehindFirewall = false`.
-    BehindFirewallClear,
-    /// `p->mFirewallTestDone = false`.
-    FirewallTestDoneClear,
     /// `p->mSuspended = false`.
     SuspendedClear,
     /// `p->mCurGameType = (LobbyGameType)0`.
@@ -131,10 +121,6 @@ pub enum EeWonLobbyPrvOp {
     LobbyStatusClear,
     /// `p->mRunMode = (LobbyRunMode)1`.
     RunModeOne,
-    /// `p->mProductId = 0`.
-    ProductIdClear,
-    /// `p->mLanProductId = 0`.
-    LanProductIdClear,
     /// `p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"`.
     SysTouPath,
     /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
@@ -159,8 +145,6 @@ pub enum EeWonLobbyPrvOp {
     FirewallServersNew,
     /// `p->mPatchServers = new ServerContext`.
     PatchServersNew,
-    /// `p->mVersionStatus = WS_None`.
-    VersionStatusNone,
     /// `p->mAuthContext = new AuthContext`.
     AuthContextNew,
     /// `p->mAuthContext->SetServerContext(p->mAuthServers.get())`.
@@ -305,7 +289,200 @@ pub enum EeWonLobbyPrvCall {
     InitAuth,
 }
 
+use ee_won_net::ipobj::EeWonIpAddr;
+use std::ffi::c_long;
+use std::sync::Mutex;
 use EeWonLobbyPrvOp as Op;
+
+// ---- WONLobbyPrv's plain members (R6 WON lobby and network round 38: the Rust's; the C++ object keeps its objects)
+
+/// A plain member of the lobby's private state.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonLobbyPrvField {
+    /// `mVersionStatus` (+0x70; `WS_None` 100004 from the constructor, and without a lobby).
+    VersionStatus = 1,
+    /// `mSysTOUTime` (+0xbc).
+    SysTouTime,
+    /// `mGameTOUTime` (+0xc0).
+    GameTouTime,
+    /// `mLobbyPort` (+0xb8; 8888 from the constructor, the config's from Init, the bound port after the UDP bind).
+    LobbyPort,
+    /// `mBehindFirewall` (+0xc4; a write also marks the firewall test done, as LobbySetBehindFirewall did).
+    BehindFirewall,
+    /// `mFirewallTestDone` (+0xc5).
+    FirewallTestDone,
+    /// `mProductId` (+0xb4).
+    ProductId,
+    /// `mLanProductId` (+0xb6; stamped on the game listings).
+    LanProductId,
+}
+
+/// The members of the lobby `owner` (the WONLobbyPrv they belong to). None: no lobby, when every read answers what
+/// the original's `gLobbyData == NULL` branch did and every write does nothing.
+struct Vals {
+    owner: usize,
+    version_status: i32,
+    sys_tou: i64,
+    game_tou: i64,
+    lobby_port: u16,
+    behind_firewall: bool,
+    firewall_test_done: bool,
+    product_id: u16,
+    lan_product_id: u16,
+    /// `mPublicAddr` (+0xe8: the address seen from outside)
+    public_addr: EeWonIpAddr,
+}
+
+impl Vals {
+    /// The constructor's values (the time, flag and id members cleared, port 8888, `WS_None`).
+    fn new(owner: usize) -> Vals {
+        Vals {
+            owner,
+            version_status: 100004,
+            sys_tou: 0,
+            game_tou: 0,
+            lobby_port: 8888,
+            behind_firewall: false,
+            firewall_test_done: false,
+            product_id: 0,
+            lan_product_id: 0,
+            public_addr: EeWonIpAddr::default(),
+        }
+    }
+}
+
+static VALS: Mutex<Option<Vals>> = Mutex::new(None);
+
+fn vals() -> std::sync::MutexGuard<'static, Option<Vals>> {
+    VALS.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+fn set(f: EeWonLobbyPrvField, v: i64) {
+    ee_won_lobbyprv_set(f, v);
+}
+
+/// A member's value (without a lobby: `WS_None` for the version status, else 0).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_get(f: EeWonLobbyPrvField) -> i64 {
+    use EeWonLobbyPrvField as F;
+    let g = vals();
+    let Some(v) = g.as_ref() else {
+        return if f == F::VersionStatus { 100004 } else { 0 };
+    };
+    match f {
+        F::VersionStatus => v.version_status as i64,
+        F::SysTouTime => v.sys_tou,
+        F::GameTouTime => v.game_tou,
+        F::LobbyPort => v.lobby_port as i64,
+        F::BehindFirewall => v.behind_firewall as i64,
+        F::FirewallTestDone => v.firewall_test_done as i64,
+        F::ProductId => v.product_id as i64,
+        F::LanProductId => v.lan_product_id as i64,
+    }
+}
+
+/// A member set (nothing without a lobby).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_set(f: EeWonLobbyPrvField, x: i64) {
+    use EeWonLobbyPrvField as F;
+    let mut g = vals();
+    let Some(v) = g.as_mut() else { return };
+    match f {
+        F::VersionStatus => v.version_status = x as i32,
+        F::SysTouTime => v.sys_tou = x,
+        F::GameTouTime => v.game_tou = x,
+        F::LobbyPort => v.lobby_port = x as u16,
+        F::BehindFirewall => {
+            v.behind_firewall = x != 0;
+            v.firewall_test_done = true;
+        }
+        F::FirewallTestDone => v.firewall_test_done = x != 0,
+        F::ProductId => v.product_id = x as u16,
+        F::LanProductId => v.lan_product_id = x as u16,
+    }
+}
+
+/// LobbyIsTOUNewer: whether the recorded system or game terms of use are newer than the times given (false without
+/// a lobby).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_tou_newer(sys: c_long, game: c_long) -> bool {
+    vals().as_ref().is_some_and(|v| v.sys_tou > sys as i64 || v.game_tou > game as i64)
+}
+
+/// LobbySetTOUTimes (nothing without a lobby).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_set_tou(sys: c_long, game: c_long) {
+    if let Some(v) = vals().as_mut() {
+        v.sys_tou = sys as i64;
+        v.game_tou = game as i64;
+    }
+}
+
+/// LobbyGetTOUTimes: the two times into `sys` and `game` (left as they are without a lobby).
+///
+/// # Safety
+/// `sys` and `game` are live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyprv_tou_times(sys: *mut c_long, game: *mut c_long) {
+    if let Some(v) = vals().as_ref() {
+        // SAFETY: the contract
+        unsafe {
+            *sys = v.sys_tou as c_long;
+            *game = v.game_tou as c_long;
+        }
+    }
+}
+
+/// LobbyResetFirewallTest: the test not done, the public address forgotten (nothing without a lobby).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_reset_firewall() {
+    if let Some(v) = vals().as_mut() {
+        v.firewall_test_done = false;
+        v.public_addr = EeWonIpAddr::default();
+    }
+}
+
+/// LobbySetPublicAddress (nothing without a lobby).
+///
+/// # Safety
+/// `a` is a live address.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyprv_set_public_addr(a: *const EeWonIpAddr) {
+    if let Some(v) = vals().as_mut() {
+        // SAFETY: the contract
+        v.public_addr = unsafe { (*a).clone() };
+    }
+}
+
+/// LobbyGetPublicAddress: a new copy (an empty address without a lobby).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_public_addr() -> *mut EeWonIpAddr {
+    Box::into_raw(Box::new(vals().as_ref().map_or_else(EeWonIpAddr::default, |v| v.public_addr.clone())))
+}
+
+/// LobbyGetMyAddress: the address to give peers, a new value: the public address unless room spec 1, no valid
+/// public address or the config's UseLocalIP (`use_local_ip`), else the local one; on the lobby port. An empty
+/// address without a lobby.
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_my_address(room_spec: i32, use_local_ip: bool) -> *mut EeWonIpAddr {
+    // (the lock is not held over the local address's look-up)
+    let Some((public, port)) = vals().as_ref().map(|v| (v.public_addr.clone(), v.lobby_port)) else {
+        return Box::into_raw(Box::default());
+    };
+    let mut a = if room_spec != 1 && public.valid && !use_local_ip { public } else { ee_won_net::ipobj::local_addr() };
+    a.set_port(port);
+    Box::into_raw(Box::new(a))
+}
+
+/// `~WONLobbyPrv`: the lobby `prv` gone, its members with it (a newer lobby's stay).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyprv_drop(prv: *mut core::ffi::c_void) {
+    let mut g = vals();
+    if g.as_ref().is_some_and(|v| v.owner == prv as usize) {
+        *g = None;
+    }
+}
 
 /// The resource table's allocators (GetLobbyResourceConfigTable's lines), in order.
 const ALLOCATORS: &[Op] = &[
@@ -394,7 +571,7 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
         }
         _ => {}
     }
-    on(Op::LobbyPortFromConfig);
+    set(EeWonLobbyPrvField::LobbyPort, on(Op::ConfigLobbyPort) as i64);
     on(Op::ComponentConfigNew);
     on(Op::LobbyContainerNew);
     on(Op::SetResourceFolder);
@@ -432,27 +609,22 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
     on(Op::CrcNew);
     on(Op::CrcPutProductName);
     on(Op::CrcPutVersion);
-    on(Op::ProductIdFromCrc);
+    set(EeWonLobbyPrvField::ProductId, on(Op::CrcGet) as u16 as i64);
     on(Op::CrcReset);
     on(Op::CrcPutProductName);
     on(Op::CrcPutLanVersion);
-    on(Op::LanProductIdFromCrc);
+    set(EeWonLobbyPrvField::LanProductId, on(Op::CrcGet) as u16 as i64);
     on(Op::ChatParserInitCommands);
     init_exit(op, true, 1)
 }
 
 /// The constructor's statements, in order.
+/// (the plain members' are [`Vals::new`]'s)
 const CONSTRUCT: &[Op] = &[
-    Op::LobbyPort8888,
-    Op::TouTimesClear,
-    Op::BehindFirewallClear,
-    Op::FirewallTestDoneClear,
     Op::SuspendedClear,
     Op::CurGameTypeClear,
     Op::LobbyStatusClear,
     Op::RunModeOne,
-    Op::ProductIdClear,
-    Op::LanProductIdClear,
     Op::SysTouPath,
     Op::GameTouPath,
     Op::ConfigNew,
@@ -465,7 +637,6 @@ const CONSTRUCT: &[Op] = &[
     Op::RoomDirServersNew,
     Op::FirewallServersNew,
     Op::PatchServersNew,
-    Op::VersionStatusNone,
     Op::AuthContextNew,
     Op::AuthSetServers,
     Op::AccountLogicNew,
@@ -484,10 +655,12 @@ const CONSTRUCT: &[Op] = &[
     Op::AddPingLogic,
 ];
 
-fn call(call: EeWonLobbyPrvCall, a: isize, b: isize, op: &dyn Fn(Op, isize) -> isize) -> isize {
+fn call(prv: usize, call: EeWonLobbyPrvCall, a: isize, b: isize, op: &dyn Fn(Op, isize) -> isize) -> isize {
     let on = |o: Op| op(o, 0);
     match call {
         EeWonLobbyPrvCall::Construct => {
+            // the plain members first (the original's constructor set them first)
+            *vals() = Some(Vals::new(prv));
             for &o in CONSTRUCT {
                 on(o);
             }
@@ -542,7 +715,7 @@ pub unsafe extern "C" fn ee_won_lobbyprv_call(
         Some(f) => unsafe { f(prv, o, a) },
         None => 0,
     };
-    call(which, a, b, &op)
+    call(prv as usize, which, a, b, &op)
 }
 
 #[cfg(test)]
@@ -556,7 +729,7 @@ mod tests {
             log.borrow_mut().push(format!("{o:?} {a}"));
             answer(o)
         };
-        let r = call(c, a, b, &op);
+        let r = call(1, c, a, b, &op);
         (r, log.into_inner())
     }
 
@@ -574,6 +747,7 @@ mod tests {
 
     #[test]
     fn init_releases_its_locals_on_every_exit() {
+        let _turn = LOBBY.lock().unwrap_or_else(|e| e.into_inner());
         let (r, log) = run(EeWonLobbyPrvCall::Init, 5, 9, &ok);
         assert_eq!(r, 1);
         assert_eq!(log[log.len() - 3..], ["ResDone 0", "ComponentConfigDone 0", "ParserFree 0"]);
@@ -590,13 +764,52 @@ mod tests {
         );
     }
 
+    /// the plain members are one process-wide state: the tests that make a lobby take turns
+    static LOBBY: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn destroy_auth_and_the_constructor() {
+        let _turn = LOBBY.lock().unwrap_or_else(|e| e.into_inner());
         let (_, log) = run(EeWonLobbyPrvCall::Destroy, 0, 0, &|o| (o == Op::AuthIs) as isize);
         assert_eq!(log, ["LogicMgrKill 0", "UdpIs 0", "AuthIs 0", "AuthKill 0", "AuthClear 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::InitAuth, 7, 0, &|_| 0);
         assert_eq!(log, ["HashSetClear 0", "HashListClear 0", "CommunitySet 7", "AuthSetCommunity 0", "CdKeyCheck 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::Construct, 0, 0, &|_| 0);
-        assert_eq!((log.len(), log[0].as_str(), log[38].as_str()), (39, "LobbyPort8888 0", "AddPingLogic 0"));
+        assert_eq!((log.len(), log[0].as_str(), log[31].as_str()), (32, "SuspendedClear 0", "AddPingLogic 0"));
+    }
+
+    #[test]
+    fn the_plain_members_answer_as_without_a_lobby_until_one_is_made() {
+        use EeWonLobbyPrvField as F;
+        let _turn = LOBBY.lock().unwrap_or_else(|e| e.into_inner());
+        let (mut x, mut y) = (0u8, 0u8);
+        let (me, other) = (&mut x as *mut u8 as *mut core::ffi::c_void, &mut y as *mut u8 as *mut core::ffi::c_void);
+        // the other test's lobby (prv 1), if it is still there
+        ee_won_lobbyprv_drop(std::ptr::without_provenance_mut(1));
+        ee_won_lobbyprv_drop(me);
+        assert_eq!((ee_won_lobbyprv_get(F::VersionStatus), ee_won_lobbyprv_get(F::LobbyPort)), (100004, 0));
+        ee_won_lobbyprv_set(F::LobbyPort, 9);
+        assert!(!ee_won_lobbyprv_tou_newer(-5, -5));
+        call(me as usize, EeWonLobbyPrvCall::Construct, 0, 0, &|_, _| 0);
+        assert_eq!((ee_won_lobbyprv_get(F::VersionStatus), ee_won_lobbyprv_get(F::LobbyPort)), (100004, 8888));
+        ee_won_lobbyprv_set_tou(5, 7);
+        assert!(ee_won_lobbyprv_tou_newer(4, 7) && ee_won_lobbyprv_tou_newer(5, 6) && !ee_won_lobbyprv_tou_newer(5, 7));
+        let (mut s, mut g) = (0, 0);
+        // SAFETY: live locals
+        unsafe { ee_won_lobbyprv_tou_times(&mut s, &mut g) };
+        assert_eq!((s, g), (5, 7));
+        ee_won_lobbyprv_set(F::BehindFirewall, 1);
+        assert_eq!((ee_won_lobbyprv_get(F::BehindFirewall), ee_won_lobbyprv_get(F::FirewallTestDone)), (1, 1));
+        ee_won_lobbyprv_reset_firewall();
+        assert_eq!((ee_won_lobbyprv_get(F::BehindFirewall), ee_won_lobbyprv_get(F::FirewallTestDone)), (1, 0));
+        // the address: the local one on the lobby port without a valid public address
+        // SAFETY: a value made here
+        let a = unsafe { Box::from_raw(ee_won_lobbyprv_my_address(0, false)) };
+        assert_eq!(a.port(), 8888);
+        // another lobby's end leaves this one's members; this one's end drops them
+        ee_won_lobbyprv_drop(other);
+        assert_eq!(ee_won_lobbyprv_get(F::LobbyPort), 8888);
+        ee_won_lobbyprv_drop(me);
+        assert_eq!((ee_won_lobbyprv_get(F::VersionStatus), ee_won_lobbyprv_get(F::LobbyPort)), (100004, 0));
     }
 }

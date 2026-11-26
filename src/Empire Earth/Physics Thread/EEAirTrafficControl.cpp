@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"

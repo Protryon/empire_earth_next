@@ -33,7 +33,6 @@
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
-#include "rust/sim/units.h"
 #include "ee/EECombatGoals.h"
 
 static EEUnit* UnitOf(uint32_t inID) { return EEUnitHandleResolved<EEUnit>(inID); }
@@ -42,10 +41,7 @@ static EEComplexUnit* ComplexOf(uint32_t inID) { return EEUnitHandleResolved<EEC
 // ---- the host's calls ----
 
 // a group as Rust holds it: its EEGroup base (the address group_ids reads)
-static EEActiveGroup* ActiveOf(void* inGroup)
-{
-    return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(inGroup));
-}
+static EEActiveGroup* ActiveOf(void* inGroup) { return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(inGroup)); }
 
 extern "C" int32_t ee_units_host_random(int32_t inLow, int32_t inHigh)
 {
@@ -85,10 +81,7 @@ extern "C" void ee_units_host_wall_release(void* inPieces)
 // ---- EEMBuildUnit, EEMSmartFarmers, EEMCastCalamity (ee_units commands.rs) ----
 
 // the technology's node of the player's tree (NULL: none)
-static EETechTreeNode* NodeOf(void* inPlayer, int32_t inTechnology)
-{
-    return static_cast<EEPlayer*>(inPlayer)->mTechnologies->Get(inTechnology);
-}
+static EETechTreeNode* NodeOf(void* inPlayer, int32_t inTechnology) { return static_cast<EEPlayer*>(inPlayer)->mTechnologies->Get(inTechnology); }
 
 extern "C" uint8_t ee_units_host_can_produce(void* inPlayer, int32_t inTechnology)
 {
@@ -213,10 +206,7 @@ static std::vector<EEComplexUnit*> sUhRejected;
 static EECivPower sUhPower;
 static GETransformation sUhTransformation;
 
-template <class T> static T* UhObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* UhObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 static uint32_t UhID(uint64_t inUnit) { return (uint32_t)inUnit; }
 

@@ -7,8 +7,6 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
@@ -16,18 +14,12 @@
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEAIContinentManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EETechTreeTechID.h"
-#include "lle/GEModel.h"
-#include "rust/sim/units.h"
 
 // ---- EEUCLandable.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The unit class of the
@@ -42,7 +34,6 @@
 
 // 0x447038..0x447050: the unit's named float constants (one .rdata block per unit): uca_air.rs's now
 
-
 // cdecl helpers (EEUCHelicopter.cpp declares the first the same way) (provisional names)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
@@ -52,7 +43,6 @@ void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
 // Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
 // Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
-
 
 // Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
 // at cruising height; an explore goal without a target picks a new area first
@@ -65,7 +55,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
 {
     return ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_OP, inClass, inUnit, EEObj(inoutAirport), inOperation, inA, NULL);   // uca_air.rs
 }
-
 
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
@@ -88,7 +77,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
 // it, EEIsTileFree, EECreateCarrierAircraft (the carrier's aircraft), FlyOffMap (off the map edge), VirtualBC, VirtualB8.
 // Virtual74 is EEUCPlanetSpaceship's twin (0x218e34).
 
-
 // New (R5b.4, the fourteenth round): EEUCAirplane::ActionChanged's operations that are more than a call (the original's
 // statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): circling's side (on space maps
 // toward the side it can reach; EE_UNITS_ACT_CIRCLE_SIDE), the holding pattern over its home airport (killed when
@@ -99,10 +87,7 @@ void EEAirplaneCircleSide(EEUnitClass* inClass, EEComplexUnit* inUnit)
     ee_units_cr_circle_side(EEObj(inUnit));   // ee_units cls_carrier.rs
 }
 
-void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_cr_holding_pattern(EEObj(inClass), EEObj(inUnit));   // ee_units cls_carrier.rs
-}
+void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_cr_holding_pattern(EEObj(inClass), EEObj(inUnit)); }  // ee_units cls_carrier.rs
 
 // Returns whether a tile is on the map, not cliff, deep water or space, and not on the map edge
 bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
@@ -111,10 +96,7 @@ bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 }
 
 // Fills a new carrier with aircraft of the best of three fighter techs its player has (else unit class 0x1f)
-void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, inUnit, 0, inPlayer, 0, NULL);   // uca_air.rs
-}
+void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer) { ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, inUnit, 0, inPlayer, 0, NULL); }  // uca_air.rs
 
 // Sends a leaving plane off the map: hands it to player 0, fuels it for 1000 s and flies it out 1000 tiles along
 // its direction from the map origin
@@ -125,36 +107,24 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
 // airport, used by Virtual74) comes first, then the slots +0x24, +0x2c, +0x74, +0x78, +0x88, +0xa0, (+0xc0 folded)
 // +0xb8 in source order. Bodies are the EEUCLandable twins' (0x213ed2.., same sizes) with the animal's states.
 
-
 // Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
 // Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
-
 
 // New (R5b.4, the fourteenth round): EEUCAirAnimal::ActionChanged's operations that are more than a call (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): the path to the goal
 // when preparing to move (EE_UNITS_ACT_AIR_ANIMAL_PATH), the dying spin (EE_UNITS_ACT_DEATH_ROLL 0)
-void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_PATH, inClass, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
+void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_PATH, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
-void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_DEATH_ROLL, inClass, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
+void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_DEATH_ROLL, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
 // Sets up a new animal on the ground (height 0)
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
 
-
 // New (R5b.4, the fourteenth round): EEUCPlanetSpaceship::ActionChanged's holding pattern over its home airport (dies
 // without one; the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HOLDING_PATTERN 1 calls it)
-void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_SPACESHIP_HOLDING, inClass, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
+void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_SPACESHIP_HOLDING, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
 // ---- EEUCHelicopter.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The helicopter's unit
@@ -166,10 +136,7 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
 
 // New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
-void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
+void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
 // ---- EEUCSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The spaceship's unit
 // class: 0x21a219..0x21a6e0 (after EEUCSpaceBuilding.cpp; EEUCSpaceTransport.cpp's +0xe4 0x21a6e0 follows). Unit
@@ -187,10 +154,7 @@ void EEUnitClass::AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, 
     ee_units_uu_doppler_pitch_unnoted(*outVolume, inUnit->mComplexUnit->mVelocity, (const float(*)[4][4])&inUnit->mComplexUnit->mPhysicalModel.GetLocation().mMatrix[0][0], &theCamera, outPitch);   // ee_units uu_world.rs doppler_pitch
 }
 
-template <class T> static T* EEUcaObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUcaObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // GetGroundHeight's closest tile (its x and y are not read)
 static long sUcaTile[2];   // x, y

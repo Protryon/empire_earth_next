@@ -40,10 +40,8 @@ public:
     long ExtractAll(const FSFileSpec& inDestination)   // (the progress lines are Rust's: after the C runtime's)
         { return ee_fs_arch_extract_all(Rec(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory)); }
     // a file by name (case-insensitive), decompressed as a new memory file
-    long FindFile(const UString& inName, FSMemoryFile*& outFile)
-        { return ee_fs_arch_find_file(Rec(this), Text(&inName), reinterpret_cast<void**>(&outFile)); }
-    long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
-        { return this->FindFile(UString((const char*)inName), outFile); }
+    long FindFile(const UString& inName, FSMemoryFile*& outFile) { return ee_fs_arch_find_file(Rec(this), Text(&inName), reinterpret_cast<void**>(&outFile)); }
+    long FindFile(const UWideString& inName, FSMemoryFile*& outFile) { return this->FindFile(UString((const char*)inName), outFile); }
     const FSFileSpec& GetArchiveFile() const { return this->mArchiveFile; }    // folded 0x40cb (inline)
     // a named archive tag's value, or kErrorNotFound
     long GetTag(const UWideString& inName, UWideString& outValue) const

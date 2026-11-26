@@ -8,10 +8,7 @@
 #include <set>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DPolygon.h"
 #include "lle/U2DSparseArray.h"
 
 #include "ee/EEPlayer.h"
@@ -22,10 +19,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUnitUtilities.h"
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEAirTrafficControl.h"
-#include "rust/sim/units.h"
 
 // ---- EEUCTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The transports' base
 // unit class: 0x21b27a..0x21c9e1 (after EEUCTorpedo.cpp). Unit flags: the exe's module set. Its ctor is out of line in
@@ -50,14 +43,9 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         return EEUnitClassMoveOp(inOp, theUnit, inB, inC, inD, ioIo);   // EEUnitClass.cpp
     // (the cargo, container, command, home base, turn speeds, projectile category and map size: cls_host.rs)
     switch (inOp) {
-    case EE_UNITS_CLS_NEXT_TO_AREA:
-        return gContinentManager.IsNextToArea((long)inC, (long)inD, (unsigned short)inA);
-    case EE_UNITS_CLS_SHORE_IN_REGION:
-        ((EEAIContinent*)(uintptr_t)inA)->GetShoreInRegion((unsigned short)inB, theTiles, (long)inC);
-        break;
-    case EE_UNITS_CLS_SHORE_NEXT_TO:
-        ((EEAIContinent*)(uintptr_t)inA)->GetShoreNextTo((unsigned short)inB, theTiles);
-        break;
+    case EE_UNITS_CLS_NEXT_TO_AREA: return gContinentManager.IsNextToArea((long)inC, (long)inD, (unsigned short)inA);
+    case EE_UNITS_CLS_SHORE_IN_REGION: ((EEAIContinent*)(uintptr_t)inA)->GetShoreInRegion((unsigned short)inB, theTiles, (long)inC); break;
+    case EE_UNITS_CLS_SHORE_NEXT_TO: ((EEAIContinent*)(uintptr_t)inA)->GetShoreNextTo((unsigned short)inB, theTiles); break;
     case EE_UNITS_CLS_ADJACENT_IDS: {
         std::vector<unsigned short> theIDs;
         gContinentManager.GetAdjacentIDs(theIDs, (unsigned short)inB);
@@ -65,35 +53,18 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
             theTiles.push_back(U2DPoint<long>(theIDs[i], 0));
         break;
     }
-    case EE_UNITS_CLS_TILES_IN_RADIUS:
-        ee_units_uu_tiles_in_radius((long)inC, (long)inD, (uint32_t)(2), true, &theTiles);
-        break;
-    case EE_UNITS_CLS_LINE_TILES:
-        U2DPoint<long>((long)inC, (long)inD).GetLineTiles(U2DPoint<long>((long)ioIo->a, (long)ioIo->b), 1.0f, theTiles);
-        break;
-    case EE_UNITS_CLS_SET_LOCATION:
-        theUnit->SetLocation(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), false);
-        return 0;
-    case EE_UNITS_CLS_SURROUNDING:
-        theUnit->mUnitClass->GetSurroundingTiles(theUnit, theTiles, 0, false);
-        break;
+    case EE_UNITS_CLS_TILES_IN_RADIUS: ee_units_uu_tiles_in_radius((long)inC, (long)inD, (uint32_t)(2), true, &theTiles); break;
+    case EE_UNITS_CLS_LINE_TILES: U2DPoint<long>((long)inC, (long)inD).GetLineTiles(U2DPoint<long>((long)ioIo->a, (long)ioIo->b), 1.0f, theTiles); break;
+    case EE_UNITS_CLS_SET_LOCATION: theUnit->SetLocation(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), false); return 0;
+    case EE_UNITS_CLS_SURROUNDING: theUnit->mUnitClass->GetSurroundingTiles(theUnit, theTiles, 0, false); break;
     // the waypoints' operations: Rust (cls_host.rs waypoint_op)
-    case EE_UNITS_CLS_BOMB_ON_TARGET:
-        return ((EEUnitClass*)(uintptr_t)inB)->IsBombOnTarget(theUnit);
-    case EE_UNITS_CLS_AWAY_FROM_GOAL:
-        return ((EEUnitClass*)(uintptr_t)inB)->IsAwayFromGoal(theUnit);
-    case EE_UNITS_CLS_GOAL_HAS_LOCATION:
-        return EEGoalHasLocation(theUnit->GetGoal());
-    case EE_UNITS_CLS_QUEUE_GOALS:
-        return (int64_t)theUnit->GetQueueGoals((unsigned long)inC).size();
-    case EE_UNITS_CLS_TILES_NEAR_POINT:
-        ee_units_uu_get_tiles_near_point((const float(*)[3])ioIo->p, ioIo->f, &theTiles);
-        break;
-    case EE_UNITS_CLS_IS_SPACE_MAP:
-        return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    case EE_UNITS_CLS_ADD_WAYPOINT:
-        ((EEUnitClass*)(uintptr_t)inB)->AddWaypointAt(theUnit, ioIo->p[0], ioIo->p[1], ioIo->p[2], inC != 0);
-        return 0;
+    case EE_UNITS_CLS_BOMB_ON_TARGET: return ((EEUnitClass*)(uintptr_t)inB)->IsBombOnTarget(theUnit);
+    case EE_UNITS_CLS_AWAY_FROM_GOAL: return ((EEUnitClass*)(uintptr_t)inB)->IsAwayFromGoal(theUnit);
+    case EE_UNITS_CLS_GOAL_HAS_LOCATION: return EEGoalHasLocation(theUnit->GetGoal());
+    case EE_UNITS_CLS_QUEUE_GOALS: return (int64_t)theUnit->GetQueueGoals((unsigned long)inC).size();
+    case EE_UNITS_CLS_TILES_NEAR_POINT: ee_units_uu_get_tiles_near_point((const float(*)[3])ioIo->p, ioIo->f, &theTiles); break;
+    case EE_UNITS_CLS_IS_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
+    case EE_UNITS_CLS_ADD_WAYPOINT: ((EEUnitClass*)(uintptr_t)inB)->AddWaypointAt(theUnit, ioIo->p[0], ioIo->p[1], ioIo->p[2], inC != 0); return 0;
     }
     for (size_t i = 0; i < theTiles.size(); i++)
         ee_units_cls_push((EeUnitsClsListHandle*)ioIo->list, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
@@ -121,10 +92,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
 
 // New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
-void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0);   // ucx_transports.rs
-}
+void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0); }  // ucx_transports.rs
 
 // Sets up a new transport helicopter as a transport, then lifts it to its flying height
 // ---- EEUCNavalTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval
@@ -132,7 +100,6 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory; vtable 0x448718); its
 // slots +0x04, +0xe8, +0xf8, +0xfc, +0x88, +0x104, +0xb8 in source order (Virtual08/0C/30/34/A0/E4/F4 are other
 // units' copies by ICF).
-
 
 // ---- EEUCSpaceTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The space
 // transport's unit class: 0x21a6e0..0x21ab66 (after EEUCSpaceship.cpp; EEUCSubmergedNaval.cpp's +0x04 0x21ab66
@@ -158,10 +125,7 @@ unsigned short gFortressUnloadCost = 100;
 // the boarding location's tiles (ucx_transports.rs)
 static std::vector<EETileCoordinate> sUcxTiles;
 
-template <class T> static T* EEUcxObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUcxObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // The C++ of the transports' Rust bodies (ee_units ucx_transports.rs; EE_UNITS_UCX_*): one statement of the original
 // bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's

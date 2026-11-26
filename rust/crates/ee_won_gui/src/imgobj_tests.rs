@@ -9,11 +9,15 @@ use std::cell::RefCell;
 enum What {
     Img(*mut EeWonImage),
     Surface(*mut EeWonSurface),
-    Ctx { surf: *mut EeWonSurface, scale: f32, graphics: isize },
+    Ctx,
     Gfx { ctx: isize, tx: i32, ty: i32 },
 }
 
+#[repr(C)]
 struct Fake {
+    _head: [usize; 2],
+    /// at EE_WON_IMAGE_RUST_AT and EE_WON_CONTEXT_AT: a handle's image, a context's members
+    rec: EeWonDisplayContextRec,
     rc: Cell<i32>,
     what: RefCell<What>,
 }
@@ -35,8 +39,11 @@ fn live() -> i32 {
 }
 
 fn fake(w: What, rc: i32) -> isize {
+    fake_rec(w, rc, EeWonDisplayContextRec { surface: std::ptr::null_mut(), graphics: 0, pixel_scale: 0.0 })
+}
+fn fake_rec(w: What, rc: i32, rec: EeWonDisplayContextRec) -> isize {
     LIVE.with(|l| l.set(l.get() + 1));
-    Box::into_raw(Box::new(Fake { rc: Cell::new(rc), what: RefCell::new(w) })) as isize
+    Box::into_raw(Box::new(Fake { _head: [0; 2], rec, rc: Cell::new(rc), what: RefCell::new(w) })) as isize
 }
 fn f<'a>(p: isize) -> &'a Fake {
     // SAFETY: a live fake
@@ -68,29 +75,11 @@ extern "C" fn host(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -
             0
         }
         H::Wrap => {
-            let h = fake(What::Img(a as *mut EeWonImage), 0);
+            let rec = EeWonDisplayContextRec { surface: a as *mut EeWonSurface, graphics: 0, pixel_scale: 0.0 };
+            let h = fake_rec(What::Img(a as *mut EeWonImage), 0, rec);
             // SAFETY: a live image
             unsafe { ee_won_image_bind(a as *const EeWonImage, h) };
             h
-        }
-        H::RustOf => match &*f(a).what.borrow() {
-            What::Img(i) => *i as isize,
-            _ => 0,
-        },
-        H::CtxGraphics => match &*f(a).what.borrow() {
-            What::Ctx { graphics, .. } => *graphics,
-            _ => 0,
-        },
-        H::CtxSurface => match &*f(a).what.borrow() {
-            What::Ctx { surf, .. } => *surf as isize,
-            _ => 0,
-        },
-        H::CtxScale => {
-            if let What::Ctx { scale, .. } = &*f(a).what.borrow() {
-                // SAFETY: the caller's float
-                unsafe { *(b as *mut f32) = *scale };
-            }
-            0
         }
         H::GfxTrans => {
             if let What::Gfx { tx, ty, .. } = &*f(a).what.borrow() {
@@ -124,9 +113,14 @@ extern "C" fn host(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -
             log("DrawImage".into());
             0
         }
-        // SAFETY: the caller's float
         H::NewContext => {
-            fake(What::Ctx { surf: a as *mut EeWonSurface, scale: unsafe { *(b as *const f32) }, graphics: 0 }, 1)
+            // SAFETY: the caller's float
+            let rec = EeWonDisplayContextRec {
+                surface: a as *mut EeWonSurface,
+                graphics: 0,
+                pixel_scale: unsafe { *(b as *const f32) },
+            };
+            fake_rec(What::Ctx, 1, rec)
         }
         H::NewGraphics => fake(What::Gfx { ctx: a, tx: 0, ty: 0 }, 1),
         H::FreeGraphics => host(H::Unref, a, 0, 0, 0),
@@ -150,7 +144,7 @@ fn own(o: *mut EeWonImage) -> isize {
     h
 }
 fn rust(h: isize) -> *const EeWonImage {
-    host(EeWonImageHost::RustOf, h, 0, 0, 0) as *const EeWonImage
+    f(h).rec.surface as *const EeWonImage
 }
 fn release(h: isize) {
     if h != 0 {
@@ -287,9 +281,8 @@ fn program_images_draw_through_the_graphics() {
     let surface = fake(What::Surface(s), 1);
     let ctx = host(EeWonImageHost::NewContext, s as isize, &1.0f32 as *const f32 as isize, 0, 0);
     let g = host(EeWonImageHost::NewGraphics, ctx, 0, 0, 0);
-    if let What::Ctx { graphics, .. } = &mut *f(ctx).what.borrow_mut() {
-        *graphics = g;
-    }
+    // SAFETY: the live context fake
+    unsafe { (*(ctx as *mut Fake)).rec.graphics = g };
     let ms = own(ee_won_image_new_ms(host, 7, 0, 10, 8));
     take_log();
     // SAFETY: a live image

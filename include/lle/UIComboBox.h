@@ -17,10 +17,7 @@
 
 class LLE_API UIComboBox : public UIControl {
 public:
-    intptr_t Call(EeUiComboCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
-    {
-        return ee_ui_combo_call(this->mRust, inCall, a, b, f);
-    }
+    intptr_t Call(EeUiComboCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_combo_call(this->mRust, inCall, a, b, f); }
     UIControl* PartOf(int inPart) const { return reinterpret_cast<UIControl*>(this->Call(EeUiComboCall::Part, inPart)); }
     UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont, const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness) : UIControl(kControlTypeComboBox, inId, inRectangle, inForm, inIndex, 0) { ee_ui_combo_construct(this, inTextBoxType, &inData, inFont, reinterpret_cast<const EeUiRect*>(&inRectangle), inMaxListBoxHeight, inForm, inMaxChars, inBorderThickness); }
     virtual ~UIComboBox() { ee_ui_combo_free(this->mRust); }
@@ -47,10 +44,7 @@ public:
     const UITextLabel* GetTextLabel() const { return reinterpret_cast<const UITextLabel*>(this->PartOf(4)); }
 #endif
     unsigned long GetTextBoxType() const { return (unsigned long)this->Call(EeUiComboCall::TextBoxType); }
-    void InsertLine(const UWideString& inLine, unsigned long inIndex)
-    {
-        this->Call(EeUiComboCall::InsertLine, (intptr_t)(const char*)inLine, inIndex);
-    }
+    void InsertLine(const UWideString& inLine, unsigned long inIndex) { this->Call(EeUiComboCall::InsertLine, (intptr_t)(const char*)inLine, inIndex); }
     virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(EeUiComboCall::MouseWheelTurned, inDelta); }
     virtual void SetBgColor(const GEColor& inColor) {}
     virtual void SetBgOpacity(float inOpacity) {}

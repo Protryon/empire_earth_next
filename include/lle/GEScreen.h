@@ -25,8 +25,7 @@ public:
     ~GEScreen() { ee_dx7sc_destroy(this->mDX7); }
     operator GXDirectDraw*() { return static_cast<GXDirectDraw*>(ee_dx7sc_direct_draw(this->mDX7)); }
 
-    long Capture(const GEWindow* inWindow, bool inToClipboard)
-        { return ee_dx7sc_capture(this->mDX7, const_cast<GEWindow*>(inWindow), inToClipboard); }
+    long Capture(const GEWindow* inWindow, bool inToClipboard) { return ee_dx7sc_capture(this->mDX7, const_cast<GEWindow*>(inWindow), inToClipboard); }
     long CreateSurface(GESurfaceDescription& inDescription, GESurface** outSurface)
         { return ee_dx7sc_create_surface(this->mDX7, reinterpret_cast<EeDx7SurfaceDescription*>(&inDescription), reinterpret_cast<void**>(outSurface)); }
     // Creates a window (a platform window: style 1 a framed, resizable window with an inWidth x inHeight client area,

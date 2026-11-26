@@ -15,11 +15,6 @@ inline void UESink(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
     *static_cast<UString*>(inContext) = std::string(reinterpret_cast<const char*>(inBytes), inLength).c_str();
 }
-inline void UEEncryptUString(const UString& inString, UString& outString)
-{
-    ee_ue_encrypt_ustring(reinterpret_cast<const uint8_t*>(static_cast<const char*>(inString)), inString.GetLength(),
-                          inString.GetAllocatedLength(), UESink, &outString);
-}
 inline bool UEDecryptUString(const UString& inString, UString& outString)
 {
     return ee_ue_decrypt_ustring(reinterpret_cast<const uint8_t*>(static_cast<const char*>(inString)),

@@ -8,8 +8,6 @@
 #include "lle/FSPersistent.h"
 
 #include "ee/EEPChecksum.h"
-#include "ee/EEPersistentTag.h"
-#include "rust/game/gamecpp.h"
 
 
 // Adds the chunk's total checksum to a running checksum as "EEPChecksum"

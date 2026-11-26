@@ -9,9 +9,6 @@
 
 class LLE_API FSPersistentList {
 public:
-    // a new default object of the type registered under the tag, or NULL
-    static FSPersistent* CreateDefaultPersistent(long inTagID)
-        { return static_cast<FSPersistent*>(ee_fs_persistent_create_default(inTagID)); }
     // URegisterShutdown hook: deletes every registered prototype, the lowest tag first (inForced is not used)
     static void Shutdown(bool inForced)
     {

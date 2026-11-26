@@ -8,12 +8,11 @@
 #ifndef EE_EEUNITPICKER_H
 #define EE_EEUNITPICKER_H
 
+#include "rust/game/gamecpp.h"
 class EEUnit;
-class EEComplexUnit;
 class EEPlayer;
 class GERectangle;
 class GETransformation;
-class GE3DPlane;
 class TSCriticalSection;
 
 #ifdef LLE_GEVIEWPORT_H
@@ -30,21 +29,21 @@ struct EEUnitPickerEntry : public GEPhysicalModel {
 
 class EEUnitPicker {                        // RTTI, vtable 0x441c48 (one slot)
 public:
-    EEUnitPicker(unsigned long inCapacity);
-    virtual ~EEUnitPicker();                // +0x00 (??_G 0x118dbb; dtor 0x118e35)
-    bool Contains(EEUnit* inUnit);
+    EEUnitPicker(unsigned long inCapacity) { ee_gamecpp_pz_construct(this, inCapacity); }
+    virtual ~EEUnitPicker() { ee_gamecpp_pz_destroy(this); }  // +0x00 (??_G 0x118dbb; dtor 0x118e35)
+    bool Contains(EEUnit* inUnit) { return ee_gamecpp_picker_contains(this, inUnit); }
     // 0x119540: the unit under inPoint (referenced; 0 if none) (provisional name). The caller holds the world's lock
-    EEUnit* PickUnit(const GE2DPoint& inPoint, long inPreferResources);
+    EEUnit* PickUnit(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, true); }
     // port (R5a.3): PickUnit without the reference, for the frame's capture (the world's lock is held throughout)
-    EEUnit* PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources);
+    EEUnit* PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, false); }
     // 0x119ea2: the ids of inPlayer's units inside inRectangle (EEMSelectUnits' ctor; provisional name)
-    void PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inMode, std::vector<unsigned long>& outUnitIDs);
+    void PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType, std::vector<unsigned long>& outUnitIDs) { ee_gamecpp_pz_box(this, &inRectangle, false, inPlayer, inType, &outUnitIDs); }
     // 0x119d63: the ids of the units inside inRectangle (the editor's lasso) (provisional name)
-    void PickUnitsInRectangle(const GERectangle& inRectangle, long inArg2, std::vector<unsigned long>& outUnitIDs);
-    void Clear();                           // 0x119f08: drops the entries (provisional name)
-    void Reset();                           // 0x119f7c: Clear, the main viewport, the camera mode (provisional name)
+    void PickUnitsInRectangle(const GERectangle& inRectangle, long inType, std::vector<unsigned long>& outUnitIDs) { ee_gamecpp_pz_box(this, &inRectangle, true, NULL, inType, &outUnitIDs); }
+    void Clear() { ee_gamecpp_picker_clear(this); }  // 0x119f08: drops the entries (provisional name)
+    void Reset() { ee_gamecpp_picker_reset(this); }  // 0x119f7c: Clear, the main viewport, the camera mode (provisional name)
     // 0x119ffb: one drawn unit (EEROUnits) (provisional name)
-    void AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize);
+    void AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize) { ee_gamecpp_picker_add_unit(this, inUnit, reinterpret_cast<const float*>(&inTransformation), inPixelSize); }
 #ifdef LLE_GEVIEWPORT_H
     // the picker's lock (the original addressed mLock as a global, gUnitPickerLock 0x529014)
     TSCriticalSection* GetLock() const { return this->mLock; }

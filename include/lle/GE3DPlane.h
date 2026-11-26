@@ -19,8 +19,7 @@ public:
     const GE3DPoint& GetPoint() const { return GECpp(this->mPoint); }
     // the line where the planes meet; false when they are parallel (degenerate normals: the C++ read an
     // uninitialized parameter, Rust takes 0)
-    bool Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
-        { return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine)); }
+    bool Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const { return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine)); }
     template <class F> long Load(F& inFile) { return ee_ge_3d_plane_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_3d_plane_save(GERust(*this), GERustFile(inFile)); }
 };

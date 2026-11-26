@@ -6,31 +6,15 @@
 #include <windows.h>
 #include <stdio.h>
 #include <vector>
-
 #include "lle/LowLevelEngine.h"
-
-#include "ee/RTSWorld.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
-#include "rust/render/gfx.h"
-#include "rust/game/preload_media.h"
+
+
 
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three
 // init chains) and the loads are ee_gfx geffect_table.rs'
 extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEGraphicObject.cpp)
-
-// Creates a graphic effect from its table record's members (ee_data tables.rs) and its graphic; LoadTable links the
-// follow-on effects
-EEGraphicEffect::EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject)
-    : EeDataGraphicEffectFields(inFields), mGraphicObject(inGraphicObject)
-{
-}
-
-// Destroys the graphic effect (nothing of its own to free)
-EEGraphicEffect::~EEGraphicEffect()
-{
-}
 
 // Reads the graphic effect table from the file (the record and its copy are ee_data tables.rs'; rows whose id is not
 // above 0 stay NULL) and links each effect's three follow-on effects by index; returns the last read result

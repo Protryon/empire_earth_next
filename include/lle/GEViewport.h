@@ -67,11 +67,9 @@ public:
     // the front one in)
     void SetFieldOfView(float inFieldOfView) { ee_ge_viewport_set_field_of_view(this, inFieldOfView); }
     void SetFrontClippingDistance(float inDistance) { ee_ge_viewport_set_front(this, inDistance); }
-    void SetOrthographicRectangle(const GERectangle& inRectangle)
-        { ee_ge_viewport_set_orthographic_rectangle(this, GERust(inRectangle)); }
+    void SetOrthographicRectangle(const GERectangle& inRectangle) { ee_ge_viewport_set_orthographic_rectangle(this, GERust(inRectangle)); }
     void SetRearClippingDistance(float inDistance) { ee_ge_viewport_set_rear(this, inDistance); }
-    void SetViewRectangle(const GERectangle& inRectangle)
-        { ee_ge_viewport_set_view_rectangle(this, GERust(inRectangle)); }
+    void SetViewRectangle(const GERectangle& inRectangle) { ee_ge_viewport_set_view_rectangle(this, GERust(inRectangle)); }
 };
 
 #endif
