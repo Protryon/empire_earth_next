@@ -90,7 +90,7 @@ impl StatusHost for ClsGame {
         self.st(crate::units::cls_move_host::EE_UNITS_CLS_MV_MAX_VELOCITY, unit, 0, 0, 0, 0.0).1.p[0]
     }
     fn random(&mut self) -> f32 {
-        self.st(crate::units::cls_carrier_host::EE_UNITS_CLS_CR_RANDOM, 0, 0, 0, 0, 0.0).1.f
+        crate::units::uc_view::physics_generate()
     }
     fn random_range(&mut self, min: f32, max: f32) -> f32 {
         crate::units::uu_direct::with_game(|g| g.random_float(min, max))

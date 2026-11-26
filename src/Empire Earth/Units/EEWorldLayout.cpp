@@ -14,6 +14,9 @@
 #include "ee/EEMap.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPhysics.h"
+#include "ee/EEMedia.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EmpireEarth.h"
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
@@ -143,6 +146,9 @@ void EEWorldLayoutRegister()
     theLayout.stats_links = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
     theLayout.physics_pointer = (uint64_t)(uintptr_t)&gPhysics;   // the units' round 1 (the game time, the tick)
     theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
+    theLayout.physics_random = offsetof(EEPhysics, mRandom);   // units round 14 (the class hosts' draws, detail tests)
+    theLayout.effect_detail = (uint64_t)(uintptr_t)&gEffectDetail;
+    theLayout.graphic_effect_fields = BaseOffset<EEGraphicEffect, EeDataGraphicEffectFields>();
     // the units' saves (the units' state lane: unit_save_views.rs)
     const size_t theModelAt = offsetof(EEComplexUnit, mPhysicalModel);
     theLayout.complex_patrol_group = offsetof(EEComplexUnit, mPatrolGroup);

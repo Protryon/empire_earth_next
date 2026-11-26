@@ -764,9 +764,6 @@ constexpr static const int32_t EE_UNITS_CLS_CR_LOCATION_GOAL_POINT = 80;
 /// unit `a`'s `SetHomeBase(` its air traffic control's first slot's airport `)`
 constexpr static const int32_t EE_UNITS_CLS_CR_HOME_FIRST_SLOT = 81;
 
-/// `gPhysics->mRandom.Generate()` into `io.f`
-constexpr static const int32_t EE_UNITS_CLS_CR_RANDOM = 82;
-
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_CR_HEIGHT_AT = 83;
 

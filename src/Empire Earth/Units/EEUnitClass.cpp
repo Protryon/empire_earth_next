@@ -157,7 +157,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_CR_DECK_GOAL: return EEObj(EEUGRust::NewLocation(&p, false, true, false, 0.0f, false, false));
     case EE_UNITS_CLS_CR_SET_LOCATION_POINT: EESetLocationGoalPoint(theGoal, p); return 0;
     case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT: p = EELocationGoalPoint(inUnit->GetGoal()); return 0;
-    case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
     case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, p); return 0;
     // the ground levelling's (cls_level.rs): the mesh and the tile are the handle a
     case EE_UNITS_CLS_LV_MESH_Z: io->f = ((GETerrainMesh*)(uintptr_t)inUnit)->GetZ((unsigned long)inC, (unsigned long)inD); return 0;
@@ -494,7 +493,6 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_SET_PAUSED: theUnit->SetIsAnimationPaused(inB != 0); return 0;
     case EE_UNITS_UC_SET_ANIMATION_TIME: theUnit->SetAnimationTime((unsigned long)inB); return 0;
     case EE_UNITS_UC_STOP_SOUND: gSoundManager->Stop(EEUcObject<SESMInstanceNode>(inA), !gSoundManager->GetIsLooping(EEUcObject<SESMInstanceNode>(inA))); return 0;
-    case EE_UNITS_UC_RANDOM: f[0] = gPhysics->GetRandom(); return 0;
     case EE_UNITS_UC_MODEL_TAGS: return EEObj(theUnit->GetModel()->GetTagPoints((unsigned long)inB, (long)inC));
     case EE_UNITS_UC_TIME_OF_DAY: f[0] = gWorld.mTimeOfDay; return 0;
     case EE_UNITS_UC_IN_STORM: return gWorld.mEnvironmentManager->IsInStorm(U2DPoint<long>(theUnit->GetTileX(), theUnit->GetTileY()), false, true);
@@ -574,8 +572,6 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCG_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
     case EE_UNITS_UCG_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCG_TERRAIN_Z: f[0] = ::gWorld.mMap->mTerrainMesh.GetZ((unsigned long)inB, (unsigned long)inC); return 0;
-    case EE_UNITS_UCG_RANDOM_GENERATE: f[0] = gPhysics->mRandom.Generate(); return 0;
-    case EE_UNITS_UCG_RANDOM_RANGE: f[0] = gPhysics->GetRandom(f[0], f[1]); return 0;
     case EE_UNITS_UCG_WHEEL_UPDATE: theUnit->mWheels[inB]->Update(theUnit); return 0;
     // the kind dispatchers' bodies (ee_units uck_kinds.rs, uck_dispatch.rs; EE_UNITS_UCK_*: EEUnitClassKinds.cpp's until units round 14)
     case EE_UNITS_UCK_MISSILE_ACTION_CHANGED: theClass->MissileActionChanged(theUnit); return 0;
@@ -585,11 +581,6 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCK_TORPEDO_UPDATE: theClass->TorpedoUpdate(theUnit); return 0;
     case EE_UNITS_UCK_MISSILE_UPDATE: theClass->MissileUpdate(theUnit); return 0;
     case EE_UNITS_UCK_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
-    case EE_UNITS_UCK_RIPPLES_DUE: return theClass->mRippleEffect != NULL && theUnit->mUnitClass->mUnitType == kUnitTypeCatalina && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_RIPPLES_DUE_3: return theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && (unsigned long)theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_RIPPLES_DUE_4: return (theClass->mUnitType == kUnitTypeDock || theClass->mUnitType == kUnitTypeNavyYard) && theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_RIPPLES_DUE_5: return theClass->mRippleEffect != NULL && theUnit->mHitPoints > 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCK_TRAIL_DUE: return theUnit->mHitPoints > 0 && theClass->mTrailEffect != NULL && theUnit->mVelocity != 0.0f && theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
     case EE_UNITS_UCK_TORPEDO_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
     case EE_UNITS_UCK_MISSILE_CONDITION: return theClass->MissileEvaluateCondition(theUnit, (unsigned long)inB);
     case EE_UNITS_UCK_PROJECTILE_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
@@ -612,8 +603,6 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCS_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit->mOwner, theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType], EEUcObject<GE3DPoint>(inA), EEUcObject<GE3DPoint>((uint64_t)inB), &f[0]);
     case EE_UNITS_UCS_LAUNCH_SPEED: f[0] = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType]->mLaunchSpeed; return 0;
     case EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED: f[0] = theUnit->mPlayer->GetUpgrade(theUnit->mLauncherClass->mUnitType)->mLaunchSpeed; return 0;
-    case EE_UNITS_UCS_TRAIL_DETAILED: return theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
-    case EE_UNITS_UCS_RIPPLE_DETAILED: return theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
     case EE_UNITS_UCS_SET_TINTED: theOther->SetIsTinted(inB != 0); return 0;
     case EE_UNITS_UCS_SET_BLINK_COLOR: theOther->SetColor(GEColor(0.9f, 0.0f, 0.2f)); return 0;
     case EE_UNITS_UCS_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;

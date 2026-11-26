@@ -29,8 +29,6 @@ pub const EE_UNITS_CLS_CR_DECK_GOAL: i32 = 79;
 pub const EE_UNITS_CLS_CR_LOCATION_GOAL_POINT: i32 = 80;
 /// unit `a`'s `SetHomeBase(` its air traffic control's first slot's airport `)`
 pub const EE_UNITS_CLS_CR_HOME_FIRST_SLOT: i32 = 81;
-/// `gPhysics->mRandom.Generate()` into `io.f`
-pub const EE_UNITS_CLS_CR_RANDOM: i32 = 82;
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 pub const EE_UNITS_CLS_CR_HEIGHT_AT: i32 = 83;
 /// carrier `a`'s `GetModel()->mTagPoints[mAnimation]`
@@ -181,7 +179,7 @@ impl CarrierHost for ClsGame {
         (r == 0).then_some(point(io.p))
     }
     fn random(&mut self) -> f32 {
-        self.cr0(EE_UNITS_CLS_CR_RANDOM, 0, 0).1.f
+        crate::units::uc_view::physics_generate()
     }
     fn height_at(&mut self, class: u64, unit: u64, p: Ge3DPoint) -> f32 {
         self.cr(EE_UNITS_CLS_CR_HEIGHT_AT, unit, class, 0, 0, p, 0.0).1.f

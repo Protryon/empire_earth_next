@@ -56,6 +56,11 @@ fn i(v: c_long) -> i32 {
 pub(crate) fn scratch_view(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     let interval = || crate::tech::civ::rules().combat.regeneration_interval;
     Some(match op {
+        // `gPhysics->GetRandom()`
+        EE_UNITS_UC_RANDOM => {
+            f[0] = crate::units::uc_view::physics_generate();
+            0
+        }
         // HealGarrison's timer: EECombatTimer({mRegenerationTimer, gPhysics->mTickTimeMs, the rules' interval})
         EE_UNITS_UC_COMBAT_TIMER => {
             let u = x.u()?;

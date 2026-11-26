@@ -211,7 +211,6 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_HAS_ADAPTATION: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerAdaptation);
     case EE_UNITS_UCP_IS_CRUSADER: return theUnit->mUnitClass->IsCrusader();
     case EE_UNITS_UCP_CONVERSION: *EEUcpObject<EeCombatConversionOut>((uint64_t)inB) = EECombatConversion(*EEUcpObject<EeCombatConversionIn>(inA)); return 0;
-    case EE_UNITS_UCP_RANDOM: f[0] = gPhysics->mRandom.Generate(); return 0;
     case EE_UNITS_UCP_PROTECTED_OF: return theOther->GetComplexUnit()->IsProtected();
     case EE_UNITS_UCP_CONVERT_UNIT: return EEObj(EEConvertUnit(theOther, theUnit->mPlayer->GetPlayerID(), 1));
     case EE_UNITS_UCP_AREA_CONVERSION: return theUnit->mPlayer->mAreaConversion == true;
