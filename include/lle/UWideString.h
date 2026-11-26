@@ -35,7 +35,7 @@ public:
     unsigned long Find(const UWideString& inString, unsigned long inStart) const { return ee_uwstring_find(&this->mState, &inString.mState, inStart); }
     unsigned long Find(const char* inString, unsigned long inStart) const { return ee_uwstring_find_text(&this->mState, inString, inStart); }
     unsigned long GetBytesUsedToSave() const { return ee_uwstring_bytes_to_save(&this->mState); }
-    // adds a checksum of the characters (weighted by position, times the length) named after the text (ESChecksum.h)
+    // adds a checksum of the characters (weighted by position, times the length) named after the text (ESChecksum)
     void GetChecksum(ESChecksum& ioChecksum);
     unsigned long GetExportSize() const { return ee_uwstring_export_size(&this->mState); }
     UWideString GetIndexedSubstring(unsigned long inFirst, unsigned long inLast) const

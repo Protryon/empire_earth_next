@@ -12,7 +12,6 @@
 #define EE_EEGAMESTATE_H
 
 #include <vector>
-#include "lle/ESChecksum.h"
 #include "lle/FSFileSpec.h"
 #include "lle/GE3DPoint.h"
 #include "TSLockable.h"

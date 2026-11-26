@@ -8,7 +8,24 @@
 #include "lle/FSMemoryFile.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
-#include "lle/FSPersistentList.h"
+
+// C:\EEX\Low-Level Engine\File System\FSPersistentList.h (file name inferred): the registry of FSPersistent
+// prototypes by tag. The registry is Rust's (rust/crates/ee_base/src/fs persistent_list.rs, LLE lane round 2; a lazily
+// created singleton holding a std::map before): these inline static members make the prototypes' virtual calls.
+// (Folded here in LLE/UI round 2.)
+class LLE_API FSPersistentList {
+public:
+    // URegisterShutdown hook: deletes every registered prototype, the lowest tag first (inForced is not used)
+    static void Shutdown(bool inForced)
+    {
+        while (FSPersistent* thePrototype = static_cast<FSPersistent*>(ee_fs_persistent_take()))
+            delete thePrototype;
+    }
+    // registers a prototype under its tag; for a tag already taken deletes it and returns kErrorAlreadyExists
+    static long RegisterPersistent(FSPersistent* inPersistent) { return ee_fs_persistent_register_object(inPersistent); }
+
+    FSPersistentList() = delete;
+};
 
 // The class forwards to Rust (rust/crates/ee_base/src/fs/chunk.rs, cppobj.rs: the persistent's virtual calls through
 // File System.cpp's table).

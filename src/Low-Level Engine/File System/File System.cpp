@@ -14,7 +14,6 @@
 #include "lle/FSChunk.h"
 #include "lle/FSPath.h"
 #include "lle/FSPersistent.h"
-#include "lle/FSPersistentList.h"
 
 UString gStartupVolume(256);
 UString gStartupDirectory(256);
