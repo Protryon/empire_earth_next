@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "rust/data/tables.h"
+#include "ee/EEMedia.h"
 
 class EEGraphicObject;
 class FSFile;

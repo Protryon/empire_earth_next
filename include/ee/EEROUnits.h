@@ -6,6 +6,7 @@
 #define EE_EEROUNITS_H
 
 #include "rust/game/gamecpp.h"
+#include "ee/EERenderObject.h"
 class EEROUnits : public EERenderObject {
 public:
     EEROUnits() {  }

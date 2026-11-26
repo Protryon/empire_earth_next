@@ -5,6 +5,9 @@
 // Requires lle/UIListBox.h, lle/GEText.h, lle/GEFont.h.
 #ifndef LLE_UILBSTRING_H
 #define LLE_UILBSTRING_H
+#include "lle/UIListBox.h"
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
 
 class LLE_API UILBString : public UIListBox<UWideString> {
 public:

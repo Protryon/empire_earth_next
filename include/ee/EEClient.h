@@ -7,6 +7,7 @@
 
 #include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
+#include "lle/NESynchronousClient.h"
 class EEGameOptionsPlayer;
 
 class EEClient : public NESynchronousClient {

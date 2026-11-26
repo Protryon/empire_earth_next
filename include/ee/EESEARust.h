@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "ee/EEARust.h"
+#include "lle/UIEvent.h"
 
 class UIForm;
 

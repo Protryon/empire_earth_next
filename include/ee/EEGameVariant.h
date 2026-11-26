@@ -10,6 +10,10 @@
 
 // The record (EEGameVariantData) and its copy are Rust's: rust/crates/ee_data tables.rs (DbGameVariant).
 
+class EEGameVariant;
+// 0x4e7f78: every variant (GetGameVariant's table; 0xd6b34 deletes them; provisional name)
+extern EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // Rust's list (ee/EEDbList.h)
+
 // RTTI EEGameVariant (vtable 0x43e51c, one slot: ??_G 0xd6919; sizeof 0x84: the loader's `new`). The ctor 0xd6910 and
 // dtor 0xd6935 only store the vptr (out of line, user-declared empty). Every member is copied from an
 // EEGameVariantData record by the loader 0xd693c (types from the copy instructions: mov = long, fld/fstp = float).
@@ -42,8 +46,6 @@ public:
     // morale and earthquake factors, the index, name, cost set and selectable flag
 };
 
-// 0x4e7f78: every variant (GetGameVariant's table; 0xd6b34 deletes them; provisional name)
-extern EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // Rust's list (ee/EEDbList.h)
 inline EEGameVariant* EEGetGameVariantAt(unsigned long inIndex) { return gGameVariants[inIndex]; }   // inline (lobby 0x5dde02) (provisional name)
 // 0x1304b4: gGameVariants.size() (the lobby's variant box; provisional name)
 unsigned long EEGetNumberOfGameVariants();

@@ -17,6 +17,7 @@
 #include "rust/base/math.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
+#include "lle/GETerrainMesh.h"
 
 // One map tile (provisional name and layout)
 class EEDoppelganger;

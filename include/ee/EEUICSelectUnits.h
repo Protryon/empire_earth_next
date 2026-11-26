@@ -9,6 +9,7 @@
 #define EE_EEUICSELECTUNITS_H
 
 #include "ee/EEUIRustControl.h"
+#include "rust/ui/ids.h"
 
 class EEAMouseClick;
 class EEALasso;

@@ -10,6 +10,7 @@
 
 #include "rust/sim/app.h"   // the players' load and save
 #include "rust/sim/units.h"   // EeUnitsPlayerSaveIo
+#include "lle/FSRestorable.h"
 
 class EEVCWonder;                          // RTTI EEVCWonder > EEVictoryCondition (vtable 0x442064)
 // the saved game's primitives over an FSFile (EEPlayer.cpp; ee/EEPlayer.h)

@@ -11,6 +11,8 @@
 #include "rust/sim/units.h"
 
 #include "rust/sim/cp.h"             // EeTownFields
+#include "ee/EEAIArea.h"
+#include "lle/U2DPoint.h"
 
 class EEPlayer;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;

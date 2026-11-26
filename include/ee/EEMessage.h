@@ -14,6 +14,7 @@
 #include "ee/EEMessageID.h"
 #include "rust/game/gamecpp.h"
 #include "rust/sim/netmsg.h"
+#include "lle/NEMessage.h"
 
 class EEGameOptions;
 class GE2DPoint;

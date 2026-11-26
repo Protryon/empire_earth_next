@@ -6,6 +6,7 @@
 
 #include "rust/game/gamecpp.h"
 #include "rust/render/gfx.h"
+#include "ee/EERenderObject.h"
 class EEROGroundShadows : public EERenderObject {
 public:
     // Creates the ground shadows' render object

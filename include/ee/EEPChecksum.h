@@ -9,6 +9,7 @@
 #include "rust/base/error.h"
 #include "rust/game/gamecpp.h"
 #include "ee/EEPersistentTag.h"
+#include "lle/FSPersistent.h"
 
 class EEPChecksum : public ESChecksum, public FSPersistent {
 public:

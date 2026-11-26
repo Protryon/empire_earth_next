@@ -16,6 +16,7 @@
 #include "rust/ui/lle_control.h"
 #include "rust/ui/obj.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIForm.h"
 
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)

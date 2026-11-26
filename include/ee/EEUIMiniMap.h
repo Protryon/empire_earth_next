@@ -10,6 +10,7 @@
 #define EE_EEUIMINIMAP_H
 
 #include "ee/EEUIRustControl.h"
+#include "lle/GELine.h"
 
 class EEMiniMap;
 

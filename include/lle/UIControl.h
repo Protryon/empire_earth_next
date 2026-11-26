@@ -27,6 +27,7 @@
 #include "lle/UReferenceCounter.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
+#include "lle/GERhombus.h"
 
 
 // winspool.h maps GetForm to GetFormA; the export is ?GetForm@UIControl@@

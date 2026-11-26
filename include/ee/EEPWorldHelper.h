@@ -10,6 +10,8 @@
 
 #include "rust/game/gamecpp.h"
 #include "ee/EEPersistentTag.h"   // kPersistentWorld
+#include "lle/FSPersistent.h"
+#include "ee/EETeam.h"
 class EEGameState;
 class EEScenarioManager;
 class EEWorld;

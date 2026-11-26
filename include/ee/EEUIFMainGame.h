@@ -12,6 +12,7 @@
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEUIBuildWall.h"
 #include "rust/ui/formobj.h"
+#include "lle/UIForm.h"
 
 class EEUIFMGMainGroup;
 class EEUIFMGStatusButton;

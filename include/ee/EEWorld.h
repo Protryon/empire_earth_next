@@ -10,6 +10,7 @@
 // Requires ee/RTSWorld.h.
 #ifndef EE_EEWORLD_H
 #define EE_EEWORLD_H
+#include "ee/RTSWorld.h"
 
 class EEGhostUnit;
 class EEComplexUnit;

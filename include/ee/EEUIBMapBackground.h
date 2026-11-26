@@ -7,6 +7,7 @@
 #ifndef EE_EEUIBMAPBACKGROUND_H
 #define EE_EEUIBMAPBACKGROUND_H
 #include "rust/game/screens.h"
+#include "lle/UIBFull.h"
 
 class EEUIBMapBackground : public UIBFull {
 public:

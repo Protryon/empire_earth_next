@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include "rust/sim/cp.h"
+#include "lle/U2DRectangle.h"
 
 class EEUnit;
 class EEWorld;

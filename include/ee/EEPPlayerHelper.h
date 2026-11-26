@@ -8,6 +8,8 @@
 #define EE_EEPPLAYERHELPER_H
 
 #include "rust/game/gamecpp.h"
+#include "lle/FSPersistent.h"
+#include "rust/sim/game_ids.h"
 class EEPlayer;
 class EEWorld;
 class EEGameState;

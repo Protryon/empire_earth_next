@@ -10,6 +10,9 @@
 
 #include "ee/EECivUpgrade.h"
 #include "rust/game/screens.h"
+#include "lle/UILBString.h"
+#include "lle/GEColor.h"
+#include "lle/UIListBox.h"
 
 
 class EECBUIListBox : public UILBString {

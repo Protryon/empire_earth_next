@@ -6,6 +6,7 @@
 #ifndef EE_EEUIBUPGRADE_H
 #define EE_EEUIBUPGRADE_H
 #include "rust/game/screens.h"
+#include "lle/UIButton.h"
 
 class EEUnit;
 class EEUIBUpgrade;

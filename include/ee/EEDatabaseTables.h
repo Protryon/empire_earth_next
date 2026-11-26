@@ -17,6 +17,7 @@
 #include "ee/EEDbList.h"
 #include "rust/data/media.h"
 #include "rust/game/gamecpp.h"
+#include "lle/GEColor.h"
 
 class FSFileSpec;
 class EEUnitClass;

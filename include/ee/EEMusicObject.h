@@ -8,6 +8,7 @@
 #include "rust/data/tables.h"
 #include "rust/data/media.h"
 #include "rust/game/preload_media.h"
+#include "ee/EEMedia.h"
 
 class FSFile;
 

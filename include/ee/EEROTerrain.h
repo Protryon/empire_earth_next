@@ -7,6 +7,7 @@
 
 #include "rust/game/gamecpp.h"
 #include "rust/render/gfx.h"
+#include "ee/EERenderObject.h"
 class GEModel;
 class GETexture;
 

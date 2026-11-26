@@ -9,6 +9,7 @@
 #include "lle/UConfig.h"
 #include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
+#include "ee/EEGameOptions.h"
 
 // The preference values (sizeof 0x5e0 in the original): the ctor 0x1324f8 (the defaults: ee_app settings.rs) and the
 // dtor 0x132466 are out of line in Empire Earth's preferences unit; the copy ctor is implicit (the game settings unit's

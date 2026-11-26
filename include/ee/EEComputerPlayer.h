@@ -8,6 +8,7 @@
 
 #include "ee/EEUnitHandle.h"
 #include "rust/sim/cp.h"             // EeCpFields (the plain members), the bodies over them
+#include "ee/EEPlayer.h"
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 struct EECPPlacement;                       // ee/EECPPlacement.h
