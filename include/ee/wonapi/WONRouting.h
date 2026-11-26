@@ -405,19 +405,13 @@ private:
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
 // vtables 0x84c49c / 0x84c4ac; provisional member names). The templates LobbyCompletion<T> and LogicCompletion<T>
-// have no game user since R6 WON round 39 (PingLogic's two are the logic shell's: ShellCompletion)
+// have no game user since R6 WON round 39 (PingLogic's two are the logic shell's: ShellCompletion); their
+// LogicCompletionBase (RTTI 4558cc, the tracker flag +0x08) is ShellCompletion's since round 40
 class LobbyCompletionBase : public CompletionBase<AsyncOpPtr> {
 public:
     LobbyCompletionBase() throw() {}
     virtual void Complete(AsyncOpPtr theParam);     // +0x04 0x357d70 (calls +0x08)
     virtual void Run(AsyncOp* inOp) {}      // +0x08
-};
-
-// RTTI LogicCompletionBase4558cc derives LobbyCompletionBase; distinct flag-bearing subclass.
-class LogicCompletionBase : public LobbyCompletionBase {
-public:
-    LogicCompletionBase() : mCheckTracker(false) {}
-    bool mCheckTracker;                    // +0x08; original3df809 and3e5b6e
 };
 
 // A Rust object a C++ reference holds (R6 WON round 34): HTTPConnection (RTTI 44d3a4 > RefCount; ctor 2d2c80, dtor
