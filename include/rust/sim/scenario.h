@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 #include "rust/sim/astar.h"
 
 /// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
@@ -4731,6 +4732,24 @@ struct EeScenarioListHost {
   void *(*op)(void *ctx, uint32_t op, uint32_t list, size_t index, void *element, const char *text);
 };
 
+/// The run's values (`EESMEffectRun`'s second base): the calamity's point, the camera move's end and start, the task
+/// placement's point, the unit's transformation and the terrain's roll and pitch, the facing's transformation and
+/// point, the ground's transformation, Create Units' location and transformation.
+struct EeScenarioRunState {
+  EeGe3DPoint mPoint;
+  EeGe3DPoint mEnd;
+  EeGe3DPoint mStart;
+  EeGe2DPoint mPlace;
+  EeGeTransformation mTransformation;
+  float mRoll;
+  float mPitch;
+  EeGeTransformation mFace;
+  EeGe3DPoint mFacePoint;
+  EeGeTransformation mGround;
+  EeGe2DPoint mCreateLocation;
+  EeGeTransformation mCreateTransform;
+};
+
 /// SMTE's trigger state before (`EESMCaptureTriggerState`): on, fired, the condition start time.
 struct EeScenarioCapTriggerBefore {
   bool mIsOn;
@@ -5589,6 +5608,9 @@ void ee_scenario_object_changed(const EeScenarioListHost *host,
 /// # Safety
 /// `xy` must point to `2 * count` longs (or be anything when `count` is 0).
 uint64_t ee_scenario_tiles_hash(const long *xy, size_t count);
+
+/// A new run's values (`EESMEffectRun`'s constructor).
+EeScenarioRunState ee_scenario_run_state_new();
 
 /// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
 extern int64_t ee_scenariocpp_capture(uint32_t op, const void *p, int64_t a, int64_t b);

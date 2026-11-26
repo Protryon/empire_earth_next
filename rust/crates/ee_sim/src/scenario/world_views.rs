@@ -274,6 +274,20 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
         }
         return Some(0);
     }
+    if crate::scenario::run_state::is_op(op) {
+        // the effect run's own values (run_state.rs), its record right after the host context (EESMEffect.cpp
+        // asserts it)
+        // SAFETY: the operation is an effect run's: `ctx` is the run
+        let state = unsafe {
+            &mut *((ctx as usize + std::mem::size_of::<EeScenarioHostContext>())
+                as *mut crate::scenario::run_state::EeScenarioRunState)
+        };
+        let mut location = |o: u32, id: i64| {
+            let u = if o == EE_SCENARIO_WC_T_FROM { by(id as u64) } else { unit(id) };
+            Some(ee_base::math::types::GeTransformation { m: u?.complex_unit()?.transform() })
+        };
+        return crate::scenario::run_state::op(state, op, a, &mut location);
+    }
     let w = WorldView::global(&t)?;
     let node_of = |handle: i64| unsafe { NodeView::of(&t, handle as u64) };
     let tile_of = |handle: i64| unsafe { TileView::of(&t, handle as u64) };
