@@ -489,13 +489,13 @@ pub fn engine_ids() -> Vec<String> {
 
 /// A unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource.
 pub fn unit_value(player: u64, technology: c_long, unit_type: c_ulong) -> c_long {
-    let tree = gc::h(gc::O::PlTechnologies, player as usize, &[]) as usize;
-    let node = if tree != 0 { gc::h(gc::O::PwTreeGet, tree, &[technology as i64]) as usize } else { 0 };
+    let tree = crate::tech_tree::objects::player_tree(player as usize);
+    let node = if tree != 0 { crate::tech_tree::objects::get(tree, technology) } else { 0 };
     let mut value: c_long = 0;
-    if node != 0 && h(O::NodeData, node, &[]) != 0 {
+    if node != 0 && !crate::tech_tree::objects::node_data(node).is_null() {
         for r in 2..=6 {
             // kResourceFood .. kResourceIron
-            value = value.wrapping_add(h(O::NodeCost, node, &[r, unit_type as i64]) as c_long);
+            value = value.wrapping_add(crate::tech_tree::objects::ee_gamecpp_tech_obj_cost(node as *mut std::ffi::c_void, r as std::ffi::c_long, unit_type as std::ffi::c_long, 1.0));
         }
     }
     value

@@ -141,7 +141,7 @@ fn action(action: CheatAction, player: c_ulong) {
         CheatAction::AdvanceEpoch(epoch) => {
             if epoch < ee_sim::tech::tech_ids::ee_tech_epoch_count() as c_long
                 && epoch > EPOCH_PREHISTORIC
-                && epoch > h(O::DcCurrentEpoch, pl, &[]) as c_long
+                && epoch > crate::tech_tree::objects::current_epoch(crate::tech_tree::objects::player_tree(pl)) as c_long
             {
                 h(O::DcSetEpoch, pl, &[epoch as i64]);
             }

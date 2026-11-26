@@ -193,7 +193,7 @@ pub unsafe extern "C" fn ee_musiccpp_set(manager: *mut c_void, field: u32, value
 #[no_mangle]
 pub unsafe extern "C" fn ee_musiccpp_current_epoch(epoch: *mut i32) -> bool {
     let player = hp(O::EcCurrentPlayer, 0, &[]);
-    let tree = if player != 0 { hp(O::EmTechnologies, player, &[]) } else { 0 };
+    let tree = if player != 0 { crate::tech_tree::objects::player_tree(player) } else { 0 };
     if tree == 0 {
         return false;
     }

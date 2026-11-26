@@ -1117,7 +1117,7 @@ pub extern "C" fn ee_gamecpp_startup_game_objects() {
     h(O::MouseSetSensitivityPref, 0, &[]);
     h(O::MouseSetPointer, 0, &[0]);
     h(O::CreateUnitClasses, 0, &[]);
-    h(O::TechBuildUnitClassInfo, 0, &[]);
+    crate::tech_tree::objects::tree_walk(hp(O::TbGlobalTree, 0, &[]), ee_sim::tech::nodes::EeTechTreeOp::BuildUnitClassInfo, 0, 0);
     h(O::NewUIManager, 0, &[]);
     verify(h(O::UiManagerPresent, 0, &[]) != 0, 0x50a);
     h(O::UiSetLeftHandedPref, 0, &[]);
@@ -1191,7 +1191,11 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
         O::StartingResourcesUnload,
         O::GameVariantUnload,
         O::WorldTableClear,
-        O::TechTreeUnloadAll,
+    ] {
+        h(op, 0, &[]);
+    }
+    crate::tech_tree::host::ee_gamecpp_tech_unload_all(hp(O::TbGlobalTree, 0, &[]) as *mut std::ffi::c_void);
+    for op in [
         O::CalamityManagerDestroy,
         O::DeleteResource,
         O::ComplexUnitReleasePool,

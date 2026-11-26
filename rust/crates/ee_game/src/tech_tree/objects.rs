@@ -312,3 +312,32 @@ pub(crate) fn player_id(player: P) -> i64 {
     let t = unsafe { ee_sim::world::WorldRead::begin() };
     unsafe { ee_sim::world::PlayerView::of(&t, player as u64) }.map_or(0, |p| p.id() as i64)
 }
+
+/// The tree's `mCurrentEpoch`.
+pub(crate) fn current_epoch(tree: P) -> i64 {
+    // SAFETY: a live tree's record
+    unsafe { (*tree_fields(tree)).mCurrentEpoch as i64 }
+}
+
+/// The tree's `mIsLoaded`.
+pub(crate) fn is_loaded(tree: P) -> bool {
+    // SAFETY: a live tree's record
+    unsafe { (*tree_fields(tree)).mIsLoaded }
+}
+
+/// The node data's `mKind`.
+pub(crate) fn data_kind(node: P) -> i64 {
+    // SAFETY: a node with its data
+    unsafe { (*node_data(node)).mKind as i64 }
+}
+
+/// The node's `mIsAllowed`.
+pub(crate) fn allowed(node: P) -> bool {
+    // SAFETY: a live node's record
+    unsafe { (*node_fields(node)).mIsAllowed }
+}
+
+pub(crate) fn set_allowed(node: P, value: bool) {
+    // SAFETY: a live node's record
+    unsafe { (*node_fields(node)).mIsAllowed = value };
+}

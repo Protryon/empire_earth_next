@@ -29,15 +29,11 @@ pub enum EePreloadCpp {
     Player,
     /// `gUnitClassTable[a0]`
     Class,
-    /// `mTechnologies->Get(a0)` of the player p
-    Technology,
     ClassUnitType,
     SetUnitClassMedia,
     LoadUnitClassButtons,
     UnloadUnitClassMedia,
     UnloadUnitClassButtons,
-    TechLoadMedia,
-    TechUnloadMedia,
     // ---- the game's load
     NewOptions,
     DeleteOptions,
@@ -177,13 +173,9 @@ fn handle_message(p: P, message: u32, parameter1: usize, parameter2: usize) {
         MESSAGE_LOAD_TECHNOLOGY | MESSAGE_UNLOAD_TECHNOLOGY => {
             let player = h(O::Player, 0, &[parameter1 as isize as i64]) as P;
             if player != 0 {
-                let node = h(O::Technology, player, &[parameter2 as isize as i64]) as P;
+                let node = crate::tech_tree::objects::get(crate::tech_tree::objects::player_tree(player), parameter2 as isize as std::ffi::c_long);
                 if node != 0 {
-                    h(
-                        if message == MESSAGE_LOAD_TECHNOLOGY { O::TechLoadMedia } else { O::TechUnloadMedia },
-                        node,
-                        &[player as i64],
-                    );
+                    crate::tech_tree::objects::ee_gamecpp_tech_obj_media(node as *mut std::ffi::c_void, player as *mut std::ffi::c_void, message == MESSAGE_LOAD_TECHNOLOGY);
                 }
             }
         }

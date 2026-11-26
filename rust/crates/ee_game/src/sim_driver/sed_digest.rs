@@ -841,7 +841,8 @@ pub fn players_digest(out: &mut Vec<String>) {
             out.push(format!("  player {p} none"));
             continue;
         }
-        let t = gc::h(gc::O::PlTechTree, q, &[]) as usize;
+        // SAFETY: the player's tree's record
+        let t = unsafe { &*crate::tech_tree::objects::tree_fields(crate::tech_tree::objects::player_tree(q)) };
         let caps: Vec<String> = (2..7).map(|i| (h(O::PlayerResourceCap, q, &[i]) as c_long).to_string()).collect();
         let enemies: String = (0..n).map(|j| (h(O::PlayerEnemy, q, &[j as i64]) as c_long).to_string()).collect();
         let mut line = format!(
@@ -849,9 +850,9 @@ pub fn players_digest(out: &mut Vec<String>) {
             ht(O::PlayerName, q, 0),
             colour(x::color(h(O::PlayerColor, q, &[]) as usize)),
             ht(O::PlayerCivilizationFile, q, 0),
-            h(O::TreeCurrentEpoch, t, &[]) as c_long,
-            h(O::TreeStartEpoch, t, &[]) as c_long,
-            h(O::TreeEndEpoch, t, &[]) as c_long,
+            t.mCurrentEpoch,
+            t.mStartEpoch,
+            t.mEndEpoch,
             caps.join(","),
             gc::h(gc::O::MpPlSharedLos, q, &[]),
             h(O::PlayerPurchasedUpgrades, q, &[]) as u64,

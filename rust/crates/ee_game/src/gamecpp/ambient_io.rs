@@ -195,7 +195,7 @@ pub extern "C" fn ee_gamecpp_ambient_count_unit(counts: *mut EeAppAmbientCounts,
     }
     // SAFETY: the unit's record, copied
     let r = unsafe { *rec::<EeUnitsRtsUnitFields>(O::UnRts, u) };
-    if h(O::EaPlayerEpoch, local, &[]) < EPOCH_ATOMIC_WW1 as i64 {
+    if crate::tech_tree::objects::current_epoch(crate::tech_tree::objects::player_tree(local)) < EPOCH_ATOMIC_WW1 as i64 {
         return;
     }
     let towns = player_op(local as u64, EE_UNITS_LISTS_TOWNS, ListOp::Len) as i64;

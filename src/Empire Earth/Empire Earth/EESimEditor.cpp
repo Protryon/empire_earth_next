@@ -318,9 +318,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::PlayerResourceCap: return PL->mResourceCaps[a[0]];
     case O::PlayerEnemy: return (long)PL->mEnemies[a[0]];
     case O::PlayerPurchasedUpgrades: return PL->mCivilization.mPurchasedUpgrades.size();
-    case O::TreeCurrentEpoch: return (long)((EETechTree*)p)->mCurrentEpoch;
-    case O::TreeStartEpoch: return (long)((EETechTree*)p)->mStartEpoch;
-    case O::TreeEndEpoch: return (long)((EETechTree*)p)->mEndEpoch;
     case O::ComputerActive: return CP->mActive;
     case O::ComputerIsCheating: return CP->mIsCheating;
     case O::ComputerCanAttack: return CP->mCanAttack;

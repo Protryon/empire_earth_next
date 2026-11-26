@@ -88,7 +88,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::UnTakeHit: UN->TakeHit((EEUnit*)a[0], (long)a[1], (unsigned long)a[2], (long)a[3]);
         break;
     case O::UnTechNode: return P64(UN->GetTechTreeNode());
-    case O::NodeDataKind: return ((EETechTreeNode*)p)->mData->mKind;
     case O::UnCastComplex: return P64(EEUnitCast<EEComplexUnit>(UN));
     case O::CxLocation: TR(0) = CX->mPhysicalModel.GetLocation();
         break;
@@ -193,7 +192,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::PlRts: return P64(static_cast<EeUnitsRtsPlayerFields*>(PL));
     case O::PlSaved: return P64(static_cast<EeUnitsPlayerSaved*>(PL));
     case O::PlFields: return P64(static_cast<EeUnitsPlayerFields*>(PL));
-    case O::PlTechnology: return P64(PL->mTechnologies->Get((long)a[0]));
     case O::PlCanAfford: return PL->CanAfford((EETechnology*)a[0], (long)a[1], (long)a[2]);
     case O::PlPay: PL->Pay((EETechnology*)a[0], (long)a[1], f[0]);
         break;

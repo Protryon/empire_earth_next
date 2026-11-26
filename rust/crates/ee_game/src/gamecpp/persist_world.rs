@@ -813,7 +813,7 @@ pub extern "C" fn ee_gamecpp_find_loaded_ghost_unit(id: c_ulong) -> *mut c_void 
 
 /// The ids of a player's tech tree nodes (`GetNodeIDs`), with the tree (0 for none).
 fn tree_ids(pl: P) -> (P, Vec<c_long>) {
-    let tree = if pl != 0 { hp(O::PwPlayerTechTree, pl, &[]) } else { 0 };
+    let tree = if pl != 0 { crate::tech_tree::objects::player_tree(pl) } else { 0 };
     let ids = Longs::new();
     if tree != 0 {
         h(O::PwTreeNodeIds, tree, &[pa(ids.0)]);
@@ -831,8 +831,8 @@ fn save_tech_allowed(file: Pf) -> i64 {
         let (tree, ids) = tree_ids(player(p as u64));
         let mut off: Vec<c_long> = Vec::new();
         for &id in &ids {
-            let node = hp(O::PwTreeGet, tree, &[id as i64]);
-            if node != 0 && h(O::PwNodeAllowed, node, &[]) == 0 {
+            let node = crate::tech_tree::objects::get(tree, id as std::ffi::c_long);
+            if node != 0 && !crate::tech_tree::objects::allowed(node) {
                 off.push(id);
             }
         }
@@ -858,9 +858,9 @@ extern "C" fn apply_tech_allowed(data: usize) {
             continue;
         }
         for &id in &ids {
-            let node = hp(O::PwTreeGet, tree, &[id as i64]);
+            let node = crate::tech_tree::objects::get(tree, id as std::ffi::c_long);
             if node != 0 {
-                h(O::PwNodeSetAllowed, node, &[off.binary_search(&id).is_err() as i64]);
+                crate::tech_tree::objects::set_allowed(node, off.binary_search(&id).is_err());
             }
         }
     }
