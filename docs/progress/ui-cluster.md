@@ -129,6 +129,36 @@ boxes' line structs and members (UIListBox<T> templates over C++ strings: a Rust
 destructor); EEUIFSETerrain.h 17, UIListBox.h 16, UIObjHost.h 16 (UIF4), EEScreens.cpp 14; the status button's four
 members (they need EEUIFMainGame complete: ButtonCall), the main group's constructor (it news the status box).
 
+## Round 15 (LLE/UI round 2, fork B: the UI toolkit; branch `rust-lleui2-b`, 2026-11-25)
+
+The measure is total C++ lines (`tools/port_metrics.py`). The toolkit (src/Low-Level Engine/User Interface,
+include/lle/UI*.h): **-909 C++ lines, -20 compiled files** against a102c738e (95,507 / 275; logic -1, shim -104;
+classes unchanged). Behaviour: none intended (oracle seeds 2-7 identical; a harness tour with `EE_DIRECT_CHECK` found
+every control record by its C++ pointer, 78,691 lookups, none missing).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| bbd4fa7b8 | UICheckBox.cpp and UIRadioButton.cpp deleted: they compiled to nothing (includes and a comment their headers carry) | -102 (-2 files) |
+| 6cb005e72 | the 18 other units one, `User Interface.cpp`: each a section under its unit's own comment (a reference elsewhere to UIForm.cpp's host or UIButton.cpp's shims names its section), one include list of 40 headers found by trial compiles (the units had 610 include lines); the three `LLE_UI*_CPP` switches gone with the units; `tools/harness/layout_gen.py` dumps the one unit (every class its two units saw, checked) | -668 (-18 files) |
+| eef347435 | the controls' and forms' polls (`TMPoll`, whose only member is ee_base's `EeTimePoll`) made, run and freed in Rust (lle_hosts.rs `polls`), and the hot keys' static 50 ms poll | -47 |
+| 042eb1a06 | lle_cpp.rs's `shims!` takes a `rust:` part, calls that were one statement on another crate's Rust object (the fake logs them alike, so the goldens stay): the input entities, the shared key slots and the key predicates, Num Lock, the texts' colours (`own`) | -29 |
+| 8011fedfc | the tables' ops on the locks (ee_base sections), the clock, the form's Tab, Shift and wheel, the clipboard and the texts' setters (lle_hosts.rs `own`); the UI lock's creation | -23 |
+| 43f231d39 | a control's own members (border thickness, type and opacity, index, always-dirty, the button-down flags, a form slot's) read and written in its record, which direct.rs finds by the C++ control (lle_hosts.rs `fields`) | -16 |
+| 702a53cf6 | UIButtonState.h (one include of rust/ui/ids.h) gone; UIEMouseWheelScroll and UITiledBackground, included only by the toolkit's unit, in it | -24 |
+
+Lessons: the include lists were most of what was left (610 of 2,100 lines in 21 units): with the classes whole in
+Rust, the units are their host shims, and one unit needs one list. A shim of one call on another crate's Rust object
+(`TMPoll`, `ISEntity`, `TSCriticalSection`, `GEText`: each a C++ class over one Rust record or pointer) is a Rust call
+of that crate's C ABI; the host tables' `x` entries and `shims!`'s `rust:` part take it without changing what a
+golden sees (the objects still make the op).
+
+What is left: the shims that call a C++ virtual (the controls', forms', backgrounds' and events' overridable members:
+the game's classes override them), the constructors (`new UIButton`, `new GEText(font)`, `new GERhombus`: the C++
+object is the host owner the Rust object calls back), the `gISKeyboard`/`gISMouse` lookups (C++ globals of the
+input system, fork A's), the strings and string vectors (`UWideString` has a vtable: its record is not at the
+object's address), the fonts (a `GEFont` is a `UReferenceCounter`), and the non-virtual members of forms and
+managers that Rust could call through direct.rs (`GetManager()->GetScreen()` chains: next).
+
 ## Round 16 (branches `rust-ui16a` toolkit then civilization builder and UI thread, `rust-ui16b` game UI then HUD, two passes each, merged on `rust-ui16`, 2026-11-23)
 
 The collapse phase: classes deleted, not only bodies moved. Lane classes 115 -> 96 (+2 outside the lane).

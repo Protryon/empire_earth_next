@@ -111,9 +111,7 @@ public:
     static ISEntity* GetLMouseButton() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::LeftMouse)); }
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
-#if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
     static ISEntity* GetMouseWheel() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::MouseWheel)); }
-#endif
 #endif
     unsigned long GetNumberOfSurfaces() const { return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces); }
     GEBitmap* GetRadioDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 18)); }

@@ -1061,7 +1061,252 @@ pub unsafe extern "C" fn ee_ui_table_setup_text(table: *mut c_void, text: *mut c
     let mut f = [0.0f32; 4];
     // SAFETY: the contract
     unsafe {
-        ee_uicpp_tbl_text_transparent(table, text as isize, 0, 0, 0, f.as_mut_ptr());
+        own::text_set_transparent(table, text as isize, 1, 0, 0, f.as_mut_ptr());
         ee_uicpp_tbl_text_fg(table, text as isize, 0, 0, 0, f.as_mut_ptr());
     }
 }
+
+// ---- the ops whose C++ shim was one call on a Rust object of another crate (LLE/UI round 2): Rust's own calls
+
+/// The toolkit's polls (`TMPoll`, whose only member is ee_base's [`EeTimePoll`]): the objects' timers (the buttons',
+/// edit boxes', forms', labels' and lists' `PollCreate` .. `PollSetDelay`; `a` the poll, `b` a new delay) are Rust
+/// records made and freed here, never seen by the C++.
+#[cfg(not(any(test, feature = "no_cpp")))]
+mod polls {
+    use core::ffi::c_void;
+    use ee_base::time::{self as t, EeTimePoll};
+
+    fn p(a: isize) -> *mut EeTimePoll {
+        a as *mut EeTimePoll
+    }
+
+    /// `new TMPoll(a, 0, false)`: a stopped millisecond poll of delay `a`.
+    pub(super) unsafe fn create(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+        let poll = Box::into_raw(Box::new(EeTimePoll::default()));
+        // SAFETY: a fresh record
+        unsafe { t::ee_time_poll_init(poll, a as u32, 0, false) };
+        poll as isize
+    }
+    /// # Safety
+    /// `a` a poll [`create`] made (or NULL).
+    pub(super) unsafe fn delete(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+        if a != 0 {
+            // SAFETY: the contract
+            drop(unsafe { Box::from_raw(p(a)) });
+        }
+        0
+    }
+    macro_rules! poll_ops {
+        ($( $name:ident => |$q:ident, $b:ident| $e:expr; )*) => {$(
+            /// # Safety
+            /// `a` a live poll [`create`] made.
+            pub(super) unsafe fn $name(_o: *mut c_void, a: isize, $b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+                let $q = p(a);
+                // SAFETY: the contract
+                unsafe { $e }
+            }
+        )*};
+    }
+    poll_ops! {
+        running => |q, _b| t::ee_time_poll_is_running(q) as isize;
+        poll => |q, _b| t::ee_time_poll_poll(q) as isize;
+        start => |q, _b| { t::ee_time_poll_start(q); 0 };
+        stop => |q, _b| { t::ee_time_poll_stop(q); 0 };
+        pause => |q, _b| { t::ee_time_poll_pause(q); 0 };
+        resume => |q, _b| { t::ee_time_poll_resume(q); 0 };
+        time_left => |q, _b| t::ee_time_poll_time_left(q) as isize;
+        set_delay => |q, b| { t::ee_time_poll_set_time_delay(q, b as u32); 0 };
+    }
+
+    /// The hot keys' pressed poll (the original's `UIHotKey::sPressedPoll`: 50 ms, running from the first update),
+    /// polled once per manager update (`MgrHotKeyPoll`).
+    pub(super) unsafe fn hot_key(_o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+        static POLL: std::sync::Mutex<Option<EeTimePoll>> = std::sync::Mutex::new(None);
+        let mut g = POLL.lock().unwrap_or_else(|e| e.into_inner());
+        let q = g.get_or_insert_with(|| {
+            let mut q = EeTimePoll::default();
+            // SAFETY: a live record
+            unsafe { t::ee_time_poll_init(&mut q, 50, 0, true) };
+            q
+        });
+        // SAFETY: a live record
+        unsafe { t::ee_time_poll_poll(q) };
+        0
+    }
+}
+
+/// The ops on the locks, the clock, the shared keys, the clipboard and the texts (LLE/UI round 2): each shim was one
+/// call on a Rust object of ee_base or ee_render (a `TSCriticalSection*` is ee_base's section, a `GEText`'s only
+/// member ee_render's text, the keys [`crate::lle_control`]'s slots of ee_base's input entities).
+#[cfg(not(any(test, feature = "no_cpp")))]
+mod own {
+    use core::ffi::c_void;
+
+    use ee_base::input::ffi as input;
+    use ee_base::math::types::Ge2DPoint;
+    use ee_base::ts::{self, EeTsSection};
+    use ee_render::ge::smallobj::{self as ge, EeGeText};
+
+    use crate::lle_control::{key, EeUiKey};
+
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$a:ident, $b:ident, $f:ident| $e:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract: `a` (and `b`) the op's live objects, `f` its floats.
+            #[allow(unused_variables, unused_unsafe)]
+            pub(super) unsafe fn $name(_o: *mut c_void, $a: isize, $b: isize, _c: isize, _d: isize, $f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $e }
+            }
+        )*};
+    }
+
+    fn section(a: isize) -> *mut EeTsSection {
+        a as *mut EeTsSection
+    }
+    /// A C++ `GEText*`'s text.
+    ///
+    /// # Safety
+    /// `a` is a live `GEText`.
+    unsafe fn text(a: isize) -> *mut EeGeText {
+        // SAFETY: the contract (the class's one member)
+        unsafe { *(a as *const *mut EeGeText) }
+    }
+    /// # Safety
+    /// `f` holds three floats; `t` a live text.
+    unsafe fn set_color(t: isize, foreground: bool, f: *const f32) -> isize {
+        // SAFETY: the contract
+        unsafe { core::ptr::copy(f, ge::ee_ge_text_color(text(t), foreground), 3) };
+        0
+    }
+
+    ops! {
+        /// `TSScheduler::DestroyCriticalSection(a)` (the form's and the manager's locks).
+        lock_delete => |a, b, f| { ts::ee_ts_section_free(section(a)); 0 };
+        /// `a->Enter()`.
+        lock_enter => |a, b, f| { ts::ee_ts_section_enter(section(a)); 0 };
+        /// `a->Leave()`.
+        lock_leave => |a, b, f| { ts::ee_ts_section_leave(section(a)); 0 };
+        /// `TMGetTime()`.
+        now => |a, b, f| ee_base::time::ee_time_get() as isize;
+        /// The form's keys looked up (`UIControl::Key(Tab) != NULL`).
+        keys_ready => |a, b, f| (key(EeUiKey::Tab) != 0) as isize;
+        /// Tab just pressed.
+        tab_just_pressed => |a, b, f| input::ee_input_entity_just_pressed(key(EeUiKey::Tab) as *const _) as isize;
+        /// Shift's value.
+        shift_value => |a, b, f| input::ee_input_entity_value(key(EeUiKey::Shift) as *const _) as isize;
+        /// The wheel looked up (`UIManager::GetMouseWheel() != NULL`).
+        mouse_wheel => |a, b, f| (key(EeUiKey::MouseWheel) != 0) as isize;
+        /// The wheel's scroll step: -1 rolled forward, 1 back, 0 still.
+        wheel_amount => |a, b, f| crate::managerobj::ee_ui_manager_wheel_scroll_amount(
+            input::ee_input_entity_normalized_value(key(EeUiKey::MouseWheel) as *const _)) as isize;
+        /// `PlatClipboardSetText(a)` (the edit box's copy and cut).
+        clipboard_set => |a, b, f| {
+            extern "C" {
+                fn PlatClipboardSetText(text: *const core::ffi::c_char) -> core::ffi::c_int;
+            }
+            PlatClipboardSetText(a as *const core::ffi::c_char);
+            0
+        };
+        /// `a->SetFont(b)`.
+        text_set_font => |a, b, f| { ge::ee_ge_text_set_font(text(a), b as *mut c_void); 0 };
+        /// `*a = *b`.
+        text_copy => |a, b, f| { ge::ee_ge_text_assign(text(a), text(b)); 0 };
+        /// `a->SetLocation(GE2DPoint(f[0], f[1]))`.
+        text_set_location => |a, b, f| { *ge::ee_ge_text_location(text(a)) = Ge2DPoint { x: *f, y: *f.add(1) }; 0 };
+        /// `a->SetFgColor(GEColor(f[0], f[1], f[2]))`.
+        text_set_fg_color => |a, b, f| set_color(a, true, f);
+        /// `a->SetBgColor(GEColor(f[0], f[1], f[2]))`.
+        text_set_bg_color => |a, b, f| set_color(a, false, f);
+        /// `a->SetIsTransparent(b != 0)`.
+        text_set_transparent => |a, b, f| { ge::ee_ge_text_set_transparent(text(a), b != 0); 0 };
+    }
+}
+
+/// The ops that read or write a control's own members (LLE/UI round 2): the members are the record
+/// [`EeUiControlFields`](crate::controlobj::EeUiControlFields) (`UIControl`'s base), which [`crate::direct`] finds by
+/// the C++ control, so Rust reads them in place (as the one-statement shims did through the C++ object).
+#[cfg(not(any(test, feature = "no_cpp")))]
+mod fields {
+    use core::ffi::{c_ulong, c_void};
+
+    use crate::controlobj::EeUiControlFields;
+    use crate::direct;
+
+    /// The record of the control `o`, NULL when it has none.
+    fn rec(o: *const c_void) -> *mut EeUiControlFields {
+        direct::fields(o as *mut c_void)
+    }
+
+    /// `get` of the control `o`'s record (0 when it has none).
+    pub(super) fn get(o: *const c_void, get: impl FnOnce(&EeUiControlFields) -> isize) -> isize {
+        // SAFETY: a live record (the registry forgets it in the destructor)
+        unsafe { rec(o).as_ref() }.map_or(0, get)
+    }
+
+    /// `set` on the control `o`'s record.
+    pub(super) fn set(o: *const c_void, set: impl FnOnce(&mut EeUiControlFields)) {
+        // SAFETY: as get
+        if let Some(r) = unsafe { rec(o).as_mut() } {
+            set(r)
+        }
+    }
+
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$o:ident, $a:ident, $f:ident| $e:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract: `o` a live control, `f` its op's floats.
+            #[allow(unused_variables, unused_unsafe)]
+            pub(super) unsafe fn $name($o: *mut c_void, $a: isize, _b: isize, _c: isize, _d: isize, $f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $e }
+            }
+        )*};
+    }
+
+    ops! {
+        border_thickness => |o, a, f| get(o, |r| r.mBorderThickness as isize);
+        index => |o, a, f| get(o, |r| r.mIndex as isize);
+        border_type => |o, a, f| get(o, |r| r.mBorderType as isize);
+        set_border_type => |o, a, f| { set(o, |r| r.mBorderType = a as c_ulong); 0 };
+        always_dirty => |o, a, f| get(o, |r| r.mAlwaysDirty as isize);
+        set_always_dirty => |o, a, f| { set(o, |r| r.mAlwaysDirty = a != 0); 0 };
+        /// `f[0] = GetBorderOpacity()`.
+        border_opacity => |o, a, f| { *f = f32::from_bits(get(o, |r| r.mBorderOpacity.to_bits() as isize) as u32); 0 };
+        /// `SetBorderOpacity(f[0])`.
+        set_border_opacity => |o, a, f| { let v = *f; set(o, |r| r.mBorderOpacity = v); 0 };
+        /// The form's control in slot `a`: its left button down (`GetForm()->GetControl(a)->mLeftButtonDown`).
+        slot_left_down => |o, a, f| slot(o, a, |r| r.mLeftButtonDown as isize);
+        /// The same, its right button.
+        slot_right_down => |o, a, f| slot(o, a, |r| r.mRightButtonDown as isize);
+    }
+
+    /// `get` of the record of the control in the slot `a` of `o`'s form.
+    fn slot(o: *const c_void, a: isize, g: impl FnOnce(&EeUiControlFields) -> isize) -> isize {
+        let form = get(o, |r| r.mForm as isize) as *mut c_void;
+        get(direct::control(form, a as c_ulong), g)
+    }
+
+    /// The control's left button down (`mLeftButtonDown`: the mouse dispatch's).
+    pub(crate) fn left_down(control: usize) -> bool {
+        get(control as *const c_void, |r| r.mLeftButtonDown as isize) != 0
+    }
+    pub(crate) fn right_down(control: usize) -> bool {
+        get(control as *const c_void, |r| r.mRightButtonDown as isize) != 0
+    }
+    pub(crate) fn set_left_down(control: usize, down: bool) {
+        set(control as *const c_void, |r| r.mLeftButtonDown = down)
+    }
+    pub(crate) fn set_right_down(control: usize, down: bool) {
+        set(control as *const c_void, |r| r.mRightButtonDown = down)
+    }
+}
+#[cfg(not(any(test, feature = "no_cpp")))]
+pub(crate) use fields::{
+    left_down as control_left_down, right_down as control_right_down, set_left_down as control_set_left_down,
+    set_right_down as control_set_right_down,
+};
