@@ -311,7 +311,7 @@ pub(crate) fn mesh_of(map: usize) -> *const EeGeTerrainMesh {
 
 /// The world's terrain mesh (`gWorld.mMap->mTerrainMesh`).
 pub(crate) fn world_mesh() -> *const EeGeTerrainMesh {
-    mesh_of(hp(O::MpWorldMap, 0, &[]))
+    mesh_of(super::map::world_map())
 }
 
 /// `GetMeshZ(x, y)`.

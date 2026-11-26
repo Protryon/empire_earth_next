@@ -181,7 +181,6 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CgFunctorUpdate: FNC->Update(f[0], (EECalamity*)a[0]);
         break;
     case O::C11CgCanInfect: return FNC->CanInfectType(((EEUnit*)a[0])->mUnitClass->GetCategory(), ((EEUnit*)a[0])->mUnitClass->GetUnitType());
-    case O::C11CgUnit: return P64(gWorld.GetUnit((unsigned long)a[0]));
     case O::C11CgChecksum: return CAL->GetOutOfSynchChecksum();
     case O::C11CgFunctor: return P64(CAL->mClass->GetContagionFunctor());
     case O::C11CgDump: CAL->DumpOutOfSynch((FILE*)a[0]);

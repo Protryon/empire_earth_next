@@ -282,7 +282,7 @@ fn dump_players(o: &mut Out) {
         o.push(&s);
     }
     // each player's unit list in its order (save 0.270)
-    for i in 0..lu(gc::h(gc::O::MmNumPlayers, 0, &[])) {
+    for i in 0..lu(gc::map::num_players()) {
         let p = gc::h(gc::O::SsWorldPlayer, 0, &[i64::from(i)]) as usize;
         if p == 0 {
             continue;

@@ -469,7 +469,7 @@ pub extern "C" fn ee_gamecpp_sn_take() {
     let yaw = hd(O::EcWorldCameraYaw, 0, &[], &[]);
     let pitch = hd(O::SnCameraPitch, 0, &[], &[]);
     let cinematic = h(O::RrCinematic, 0, &[]) != 0;
-    let map = hp(O::MpWorldMap, 0, &[]);
+    let map = super::map::world_map();
     let mesh = if map != 0 { mesh_of(map) } else { std::ptr::null() };
     let mut s = snapshot();
     s.camera = camera;
@@ -484,7 +484,7 @@ pub extern "C" fn ee_gamecpp_sn_take() {
 /// opacity erases the element; the others are kept in that order) and the editor's brush highlight.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_sn_take_terrain() {
-    let map = hp(O::MpWorldMap, 0, &[]);
+    let map = super::map::world_map();
     let mut colored = Vec::new();
     let count = h(O::SnMapColoredCount, map, &[]);
     if count > 0 {

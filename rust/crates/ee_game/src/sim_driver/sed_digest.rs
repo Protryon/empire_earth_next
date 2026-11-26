@@ -342,7 +342,7 @@ pub fn text_elements(out: &mut Vec<String>) {
         ));
     }
     let mut s = "  players".to_string();
-    for p in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
+    for p in 0..gc::map::num_players() {
         let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
         s += &format!(" |{}", if player != 0 { ht(O::PlayerName, player, 0) } else { "-".into() });
     }
@@ -845,7 +845,7 @@ pub fn players_digest(out: &mut Vec<String>) {
             h(O::TreeStartEpoch, t, &[]) as c_long,
             h(O::TreeEndEpoch, t, &[]) as c_long,
             caps.join(","),
-            gc::h(gc::O::MpPlSharedLos, q, &[]),
+            (gc::map::shared_los(q) as i64),
             h(O::PlayerPurchasedUpgrades, q, &[]) as u64,
             format_g(x::hd(O::PlayerAvailablePoints, q, 0))
         );

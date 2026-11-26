@@ -164,7 +164,7 @@ mod world {
             EE_CONTAGION_WORLD_IMMUNE => ee_gamecpp_contagion_immune(a),
             EE_CONTAGION_WORLD_RANDOM => float_bits(hd(O::C11CgRandom, 0, &[], &[])),
             EE_CONTAGION_WORLD_DISTANCE => float_bits(hd(O::C11CgDistance, pa, &[ib], &[])),
-            EE_CONTAGION_WORLD_UNIT => h(O::C11CgUnit, 0, &[ia]),
+            EE_CONTAGION_WORLD_UNIT => crate::gamecpp::map::world_unit(ia) as i64,
             EE_CONTAGION_WORLD_CALAMITY_CHECKSUM => h(O::C11CgChecksum, pa, &[]),
             EE_CONTAGION_WORLD_CALAMITY_INDEX => ee_gamecpp_contagion_calamity_index(a),
             EE_CONTAGION_WORLD_CALAMITY_FUNCTOR => h(O::C11CgFunctor, pa, &[]),
