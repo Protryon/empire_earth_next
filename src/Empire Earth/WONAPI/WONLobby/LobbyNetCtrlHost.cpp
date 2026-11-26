@@ -42,17 +42,6 @@
 #include "rust/won_lobby/lobbycfgrd.h"
 using namespace WONAPI;
 
-// The filter combo's add/remove row (RTTI .?AVFilterListItem@@): a TextListItem with no new virtuals
-class FilterListItem : public TextListItem {
-public:
-    FilterListItem(const GUIString& inColumn, Font* inFont)
-        : TextListItem(gEmptyGUIString, inFont), mIsAdd(false), mSelPos(0), mColumnName(inColumn) {}
-    bool mIsAdd; // 0x28: true when the row adds the text, false when it removes it
-    int mSelPos; // 0x2c: position of the typed text in the combo list
-    GUIString mFilterText; // 0x30: the typed filter text
-    GUIString mColumnName; // 0x34: the column the combo filters
-};
-
 namespace WONAPI {
 
 // ---- the host
@@ -313,7 +302,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     ListArea* aList = reinterpret_cast<ListArea*>(a);
     Graphics* g = reinterpret_cast<Graphics*>(a);
     ComboBox* aCombo = reinterpret_cast<ComboBox*>(a);
-    FilterListItem* aFilter = reinterpret_cast<FilterListItem*>(a);
     TextListItem* aText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a));
     ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
@@ -364,14 +352,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ConfigPublic: return reinterpret_cast<LobbyConfig*>(a)->mPublic ? 1 : 0;
     case Op::ItemTextAppend: aText->mText.append(Txt(b));
         return 0;
-    case Op::FilterSetSelPos: aFilter->mSelPos = (int)b;
-        return 0;
-    case Op::FilterSetIsAdd: aFilter->mIsAdd = b != 0;
-        return 0;
-    case Op::FilterSetText: aFilter->mFilterText = Txt(b);
-        return 0;
-    case Op::FilterClearText: aFilter->mFilterText = GUIString("");
-        return 0;
     case Op::LabelSetFormatRes: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(ResText(b), Txt(c)), true);
         return 0;
     case Op::LabelSetFormat2Res: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString2(ResText(b), Txt(reinterpret_cast<const intptr_t*>(c)[0]), Txt(reinterpret_cast<const intptr_t*>(c)[1])), true);
@@ -418,7 +398,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ComboInsertNoFilter:
         aCombo->InsertItem(new TextListItem(LOBBY_STRING(ServerListCtrl_NoFilter_String), reinterpret_cast<Font*>(b)), -1);
         return 0;
-    case Op::ComboInsertFilterRow: aCombo->InsertItem(new FilterListItem(Txt(b), reinterpret_cast<Font*>(c)), -1); return 0;
     case Op::ComboItem: return (intptr_t)aCombo->mListArea->GetItem((int)b);
     case Op::ComboCount: return aCombo->mListArea->GetNumItems();
     case Op::ComboItemPos: return aCombo->mListArea->GetItemPos(reinterpret_cast<ListItem*>(b));
@@ -427,10 +406,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ComboSetText: aCombo->SetText(Txt(b), true); return 0;
     case Op::ComboAddString: return (intptr_t)aCombo->AddString(Txt(b), -1);
     case Op::ComboSelectEnd: aCombo->mEdit->SelectRange(-1, 0); return 0;
-    case Op::FilterIsAdd: return aFilter->mIsAdd ? 1 : 0;
-    case Op::FilterSelPos: return aFilter->mSelPos;
-    case Op::FilterText: return Dat(aFilter->mFilterText);
-    case Op::FilterColumn: return Dat(aFilter->mColumnName);
     case Op::AddFilterValue: LobbyAddFilterValue(Txt(a), Txt(b)); return 0;
     case Op::RemoveFilterValue: LobbyRemoveFilterValue(Txt(a), Txt(b)); return 0;
     // the statements of the compound cases hostops.rs composes in the game (R6 WON round 35)
