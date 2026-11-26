@@ -865,6 +865,10 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
             | Op::ChildSetPos
             | Op::ChildSetVisible
             | Op::RootDrawImage
+            | Op::RootGrabberRead
+            | Op::RootGrabberClear
+            | Op::RootGrabberDrop
+            | Op::RootImageSize
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -882,6 +886,19 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
         // (no class overrides SetVisible)
         Op::ChildSetVisible => return Some(z(kc(a, K::SetVisible, on(b), 0))),
         Op::RootDrawImage => return Some(crate::gfxrun::draw_image_part(a, b, c)),
+        // a queued grabber's state, clear and drop, a background image's size (R6 WON GUI round 39)
+        Op::RootGrabberRead | Op::RootGrabberClear | Op::RootGrabberDrop => {
+            return Some(crate::grabobj::root_grabber_op(op, a, b))
+        }
+        Op::RootImageSize => {
+            // SAFETY: the game's live image handle; `b` and `c` the two ints (the op's contract)
+            unsafe {
+                let i = crate::imgobj::image_of(a)?;
+                *(b as *mut i32) = i.width() as u16 as i32;
+                *(c as *mut i32) = i.height() as u16 as i32;
+            }
+            return Some(0);
+        }
         _ => {}
     }
     let Some(me) = window_of_root(root) else {

@@ -482,6 +482,34 @@ pub unsafe extern "C" fn ee_won_grab_call(g: *const EeWonGrabber, c: EeWonGrabCa
     unsafe { (*g).call(c, a, b) }
 }
 
+/// The root container's calls on a game grabber `g` (R6 WON GUI round 39; RootContainer.cpp's cases went): its
+/// state with its background image into `*(EeWonRootGrab*)q`, its Clear, and its Clear with the image given back.
+/// The C++ grabber is its image's pointer, its debug window's and its Rust grabber's (checked in
+/// BackgroundGrabber.cpp).
+pub(crate) fn root_grabber_op(op: crate::guihost::EeWonGuiOp, g: isize, q: isize) -> isize {
+    use crate::guihost::EeWonGuiOp as Op;
+    let p = g as *mut isize;
+    // SAFETY: the game's live grabber (the ops' contract): the image's pointer first, the Rust grabber third
+    unsafe {
+        let rust = *p.add(2) as *const EeWonGrabber;
+        match op {
+            Op::RootGrabberRead => {
+                (*rust).read(&mut *(q as *mut EeWonRootGrab));
+                (*(q as *mut EeWonRootGrab)).image = *p;
+            }
+            Op::RootGrabberClear => (*rust).clear(),
+            _ => {
+                (*rust).clear();
+                let image = std::mem::replace(&mut *p, 0);
+                if image != 0 {
+                    crate::gamewin::rf(image, false);
+                }
+            }
+        }
+    }
+    0
+}
+
 /// The root container's read of the grabber's state into `q` (its `image` left as it was).
 ///
 /// # Safety

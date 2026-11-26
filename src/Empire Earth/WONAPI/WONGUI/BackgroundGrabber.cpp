@@ -21,7 +21,8 @@
 using namespace WONAPI;
 
 typedef EeWonGrab Gb;
-static_assert(offsetof(BackgroundGrabber, mBGImage) == 0 && sizeof(SmartPtr<NativeImage>) == sizeof(void*), "grabobj.rs reads the image");
+static_assert(offsetof(BackgroundGrabber, mBGImage) == 0 && sizeof(SmartPtr<NativeImage>) == sizeof(void*) &&
+              offsetof(BackgroundGrabber, mRust) == 2 * sizeof(void*), "grabobj.rs reads the image and its grabber");
 static_assert(ComponentFlag_DebugBG == EE_WON_GRAB_FLAG_DEBUG_BG && ComponentFlag_Translucent == EE_WON_GRAB_FLAG_TRANSLUCENT,
               "grabobj.rs flags");
 
