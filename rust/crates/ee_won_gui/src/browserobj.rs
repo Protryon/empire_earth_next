@@ -119,6 +119,17 @@ pub struct EeWonBrowser {
     host: EeWonBrowserHostFn,
     wchar_size: u32,
     st: RefCell<State>,
+    /// the game's scroller (the C++ member `mScroller` until R6 WON GUI round 40), held; 0 for none
+    scroller: std::cell::Cell<isize>,
+}
+
+impl Drop for EeWonBrowser {
+    fn drop(&mut self) {
+        let s = self.scroller.replace(0);
+        if s != 0 {
+            crate::gamewin::rf(s, false);
+        }
+    }
 }
 
 /// A page file's bytes (`PlatFOpen(path, "rb")`, read in 4,096-byte pieces to the end); None when it cannot be
@@ -200,6 +211,7 @@ impl EeWonBrowser {
             host,
             wchar_size,
             st: RefCell::new(State { font_size: EE_WON_BROWSER_FONT_MEDIUM, ..State::default() }),
+            scroller: std::cell::Cell::new(0),
         };
         b.op(EeWonBrowserOp::NewView, 0, 0);
         b.op(EeWonBrowserOp::ViewNoScrollOnBottom, 0, 0);
@@ -207,11 +219,44 @@ impl EeWonBrowser {
     }
 
     fn op(&self, o: EeWonBrowserOp, a: isize, b: isize) -> isize {
+        if let Some(r) = self.game_op(o, a) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object; no borrow of the state is live across a call
             Some(h) => unsafe { h(self.me, o, a, b) },
             None => 0,
         }
+    }
+
+    /// The game's answers (R6 WON GUI round 40): the scroller held here, the references the game's, the component's
+    /// Invalidate its own (no class overrides it). None in a driver's world and for the others.
+    fn game_op(&self, o: EeWonBrowserOp, a: isize) -> Option<isize> {
+        use EeWonBrowserOp as B;
+        if !matches!(o, B::ScrollerAssign | B::HasScroller | B::Ref | B::Unref | B::Invalidate) || !crate::compobj::is_game() {
+            return None;
+        }
+        Some(match o {
+            B::ScrollerAssign => {
+                if a != 0 {
+                    crate::gamewin::rf(a, true);
+                }
+                let old = self.scroller.replace(a);
+                if old != 0 {
+                    crate::gamewin::rf(old, false);
+                }
+                0
+            }
+            B::HasScroller => isize::from(self.scroller.get() != 0),
+            B::Ref => crate::gamewin::rf(a, true)?,
+            B::Unref => crate::gamewin::rf(a, false)?,
+            _ => {
+                let k = crate::compobj::EeWonCompCall::Invalidate;
+                // SAFETY: the game's live browser component; the call re-enters through Component's entry
+                unsafe { crate::compobj::ee_won_comp_call(self.me, crate::compobj::host(), k, 0, 0, 0) };
+                0
+            }
+        })
     }
 
     /// `SetScroller`: the scroller held, around the view, sized to it and added as a child.

@@ -2085,7 +2085,7 @@ class TextArea;
 // ported (docs/RUST_PLAN.md D8): a page is plain text in a TextArea, an HTML page with its tags dropped and entities
 // decoded (ee_won's plaintext.rs). There are no links, so no history: back, forward and stop stay disabled.
 // R6 WON round 34: the Rust record (rust/crates/ee_won_gui/src/browserobj.rs) holds the font size, the background
-// flag and the location and runs every method; the view and the scroller stay C++ members its host sets.
+// flag, the location and (round 40) the scroller and runs every method; the view stays a C++ member its host sets.
 class BrowserComponent : public Container {
 public:
     BrowserComponent();
@@ -2110,8 +2110,7 @@ public:
     { this->BCall(EeWonBrowserCall::ShowFiles,(intptr_t)inFirst.data(),(intptr_t)inFirst.size(),(intptr_t)inSecond.data(),(intptr_t)inSecond.size(),inSkipFirstCharIfText); }
     TextArea* GetHTMLView() { return this->mHTMLView.get(); }
     const GUIString& GetCurStatus() { return gEmptyGUIString; } // (never set)
-    SmartPtr<TextArea> mHTMLView;
-    SmartPtr<Scroller> mScroller;
+    SmartPtr<TextArea> mHTMLView; // (the scroller is the Rust record's)
     EeWonBrowser* mRust;
 private:
     intptr_t BCall(EeWonBrowserCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0,intptr_t e=0)

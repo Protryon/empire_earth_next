@@ -751,16 +751,12 @@ extern "C" intptr_t ee_won_guicpp_browser_call(void* inMe, EeWonBrowserOp op, in
     switch (op) {
     case Bo::NewView: t->mHTMLView = new TextArea; return 0;
     case Bo::ViewNoScrollOnBottom: t->mHTMLView->SetTextFlags(TextFlag_ScrollOnBottom, false); return 0;
-    case Bo::ScrollerAssign: t->mScroller = s; return 0;
     case Bo::ScrollerHasView: return s->GetScrollArea() == t->mHTMLView.get() ? 1 : 0;
     case Bo::ScrollerSetView: s->SetScrollArea(t->mHTMLView.get()); return 0;
     case Bo::SameSize: t->Fn2F6140(s, 3, t, 0, 0, 0, 0, 0); return 0; // CLI_SameSize = 3
     case Bo::AddChild: t->AddChild(s); return 0;
-    case Bo::HasScroller: return t->mScroller.get() != NULL ? 1 : 0;
     case Bo::NewScrollContainer:
         return (intptr_t)static_cast<Scroller*>(static_cast<ScrollbarScroller*>(WONShellNew(EeWonShellKind::MsScrollContainer, (intptr_t)static_cast<ScrollArea*>(t->mHTMLView.get()))));
-    case Bo::Ref: s->AddRef(); return 0;
-    case Bo::Unref: s->Release(); return 0;
     case Bo::ScrollbarsConditional: static_cast<ScrollbarScroller*>(s)->SetScrollbarConditions(ScrollbarCondition_Conditional, ScrollbarCondition_Conditional); return 0;
     case Bo::BaseAddedToParent: t->Container::AddedToParent(); return 0;
     case Bo::ViewNoBackground: t->mHTMLView->SetBackground(Background(-1, -1)); return 0;
@@ -768,7 +764,7 @@ extern "C" intptr_t ee_won_guicpp_browser_call(void* inMe, EeWonBrowserOp op, in
     case Bo::ViewClear: t->mHTMLView->Clear(); return 0;
     case Bo::ViewAddText: t->mHTMLView->AddFormatedText(GUIString(std::wstring((const wchar_t*)a, (size_t)b)), false); return 0;
     case Bo::ViewTop: t->mHTMLView->SetOffsets(0, 0); return 0;
-    case Bo::Invalidate: t->Invalidate(); return 0;
+    default: return 0; // (the scroller, the references and Invalidate are browserobj.rs's: R6 WON GUI round 40)
     }
     return 0;
 }
