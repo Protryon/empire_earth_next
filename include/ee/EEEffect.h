@@ -9,9 +9,6 @@
 #define EE_EEEFFECT_H
 
 #include <stdint.h>
-#include "lle/GE3DPoint.h"
-#include "rust/render/gfx.h"            // effect_obj.rs, effect_state.rs
-#include "rust/sim/world.h"             // EEEffectHandle (unit_fields.rs EeUnitsEffectHandle)
 #include "rust/game/gamecpp.h"
 
 class EEUnit;

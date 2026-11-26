@@ -12,12 +12,8 @@
 #define EE_EEGAMESTATE_H
 
 #include <vector>
-#include "lle/ESChecksum.h"
-#include "lle/FSFileSpec.h"
-#include "lle/GE3DPoint.h"
 #include "TSLockable.h"
 #include "ee/EEGameOptions.h"
-#include "rust/game/gamecpp.h"
 
 class UWideString;
 class EETeam;

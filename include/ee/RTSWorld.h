@@ -7,8 +7,6 @@
 #define EE_RTSWORLD_H
 
 #include <vector>
-#include "lle/GETransformation.h"
-#include "lle/GE3DLine.h"
 #include "ee/RTSDummyHeader.h"
 #include "rust/game/rts.h"
 

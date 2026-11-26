@@ -29,7 +29,6 @@ struct EERuleNumber {
 };
 
 // How a hit's damage is formed (EEDamageForm): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
-#include "rust/sim/game_ids.h"
 
 // A list the Rust rules own (ee_data rules.rs RuleListC): read like a const std::vector
 template <class T>

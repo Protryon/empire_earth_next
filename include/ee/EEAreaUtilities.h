@@ -10,7 +10,6 @@ class GE3DPoint;
 class EEUnit;
 class EEUnitClass;
 #include <algorithm>                  // U2DComputeCenterPoint (EEComputeTileCenterPoint) uses std::find
-#include "lle/U2DPoint.h"           // EETileArea::Extend/GetCenter use U2DPoint<long> (orchestrator fix)
 #include "lle/U2DRectangle.h"       // EETileArea, EEAIAStarBounds (exe view: no statics)
 
 #include "ee/EETileCoordinate.h"     // the tile coordinates (moved there)

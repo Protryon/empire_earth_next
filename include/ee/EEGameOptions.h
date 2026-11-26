@@ -8,7 +8,6 @@
 #ifndef EE_EEGAMEOPTIONS_H
 #define EE_EEGAMEOPTIONS_H
 
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 
 class FSFile;

@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <type_traits>
 
-#include "rust/game/gamecpp.h"   // EE_GAME_SIZE_*, EE_GAME_STORAGE_FACTOR
 
 #define EE_GLOBAL_FITS(Type, tag) \
     static_assert(sizeof(Type) <= EE_GAME_SIZE_##tag * EE_GAME_STORAGE_FACTOR && alignof(Type) <= 16, \
