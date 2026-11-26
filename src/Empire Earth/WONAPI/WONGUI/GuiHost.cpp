@@ -68,11 +68,8 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
 {
     switch (op) {
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
-    case Op::FireEvent:
-        // the type is Rust's map, which the goldens check against the enum (round 23's lists fired ListSelChanged
-        // through a switch here as InputTextChanged: the LAN lobby's Join Game stayed disabled)
-        c->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), 0);
-        return 0;
+    // (FireEvent is gamewin.rs common_op's in the game: R6 WON GUI round 39; the type Rust's map, which the goldens
+    // check against the enum: round 23's lists fired ListSelChanged here as InputTextChanged)
     case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
     // ClipboardTake is guisplit.rs's over these (R6 WON round 33)
     case Op::HostTextClipboard: sHostText = Clipboard::Get(); return 0;

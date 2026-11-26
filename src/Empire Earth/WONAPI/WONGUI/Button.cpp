@@ -41,8 +41,6 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
     case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;
     case Op::BtnPlayClick: t->mClickSound->Play(); return 0;
-    // the type is Rust's map, which the golden checks against the enum
-    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
     default: return 0;
     }
 }

@@ -44,8 +44,6 @@ static intptr_t CtlOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c, i
     case Op::ButtonSetCheck: static_cast<Button*>(Comp(a))->SetCheck(b != 0, false); return 0;
     case Op::DlgClick: static_cast<Button*>(Comp(a))->Fn2F3440(); return 0;
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
-    // the type is Rust's map, which the goldens check against the enum
-    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
     default: return t != NULL ? ContainerHostCall(t, op, a, b, c, d) : 0;
     }
 }

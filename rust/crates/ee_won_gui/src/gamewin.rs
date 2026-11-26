@@ -469,6 +469,34 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
         | Op::EventChildUnder
         | Op::ComboEventButton
         | Op::DlgEventButtonFlags => return event_op(comp, op, a),
+        // `FireEvent(type, b != 0)` on the asking component, the type Rust's map (R6 WON GUI round 39: the hosts'
+        // cases went)
+        Op::FireEvent if comp != 0 && crate::compobj::is_game() => {
+            use crate::guihost::EeWonGuiEvent as E;
+            let e = [
+                E::InputReturn,
+                E::InputTextChanged,
+                E::ListSelChanged,
+                E::Scroll,
+                E::TabCtrlTabSelected,
+                E::ButtonPressed,
+            ]
+            .into_iter()
+            .find(|e| *e as isize == a)?;
+            let kind = crate::guihost::ee_won_gui_event_type(e) as isize;
+            // SAFETY: the game's live component (the op's contract); the call re-enters through Component's entry
+            unsafe {
+                crate::compobj::ee_won_comp_call(
+                    comp as *mut c_void,
+                    crate::compobj::host(),
+                    crate::compobj::EeWonCompCall::FireEvent,
+                    kind,
+                    on(b),
+                    0,
+                )
+            };
+            return Some(0);
+        }
         _ => {}
     }
     if !matches!(
