@@ -121,7 +121,16 @@ fn queue(window: isize, e: isize) -> Option<isize> {
 }
 /// An input event's record: its type, place, modifiers, button, key and size (InputEvent's constructor).
 #[allow(clippy::too_many_arguments)]
-fn input(kind: i32, x: i32, y: i32, key_mod: i32, button: i32, key: i32, width: i32, height: i32) -> crate::winobj::EeWonWinEvent {
+fn input(
+    kind: i32,
+    x: i32,
+    y: i32,
+    key_mod: i32,
+    button: i32,
+    key: i32,
+    width: i32,
+    height: i32,
+) -> crate::winobj::EeWonWinEvent {
     crate::winobj::EeWonWinEvent { kind, x, y, key_mod, button, key, width, height }
 }
 /// DoPopupEvent's `Deliver`: `GetWindow()->OpenPopup(mParams)` (the parameters' parent the event's window, then the
@@ -158,7 +167,9 @@ fn copy_offscreen(window: isize, w: isize, h: isize) -> isize {
     if !g.is_null() {
         let old = offscreen(window) as *const c_void;
         // SAFETY: the new image's live Graphics; the old image a live handle or NULL
-        unsafe { crate::gfxrun::ee_won_graphics_call(g, crate::gfxobj::EeWonGfxCall::DrawImage, 0, 0, 0, 0, 0, 0, 0, old) };
+        unsafe {
+            crate::gfxrun::ee_won_graphics_call(g, crate::gfxobj::EeWonGfxCall::DrawImage, 0, 0, 0, 0, 0, 0, 0, old)
+        };
     }
     set_offscreen(window, image);
     0
@@ -580,7 +591,10 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
         K::WQueue => {
             parts(b)?;
             // SAFETY: the game's live event `c`: its record at WindowEventBase's offset
-            unsafe { (*((c as usize + crate::wmobj::EE_WON_WM_EVENT_REC_AT) as *mut crate::wmobj::EeWonWmEventRec)).window = b };
+            unsafe {
+                (*((c as usize + crate::wmobj::EE_WON_WM_EVENT_REC_AT) as *mut crate::wmobj::EeWonWmEventRec)).window =
+                    b
+            };
             wm(EeWonWmCall::PostEvent, c, 1).map(z)
         }
         // `w->mManager->BroadcastEvent(e)`: the one manager's
@@ -887,7 +901,8 @@ pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize, c: isize, d:
         Op::ParamsMake => {
             let (popup, flags, x, y) = (a, b as i32, c as i32, d as i32);
             let avoid = crate::guictl::EeWonRect4::default();
-            *SUBMENU.lock().ok()? = crate::wmobj::EeWonWmPopup { popup, owner: list, flags, x, y, avoid, ..Default::default() };
+            *SUBMENU.lock().ok()? =
+                crate::wmobj::EeWonWmPopup { popup, owner: list, flags, x, y, avoid, ..Default::default() };
             Some(0)
         }
         Op::ParamsAvoid => {
@@ -1120,7 +1135,8 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
                     (*(b as *mut i32), *(c as *mut i32)) = (0, 0);
                     return Some(0);
                 }
-                let r = *((a as usize + crate::cursorobj::EE_WON_CURSOR_RUST_AT) as *const *const crate::cursorobj::EeWonCursor);
+                let r = *((a as usize + crate::cursorobj::EE_WON_CURSOR_RUST_AT)
+                    as *const *const crate::cursorobj::EeWonCursor);
                 return Some(crate::cursorobj::ee_won_cursor_component(r, b as *mut i32, c as *mut i32));
             }
         }

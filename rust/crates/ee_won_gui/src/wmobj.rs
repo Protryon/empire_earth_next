@@ -274,7 +274,11 @@ const _: () = assert!(std::mem::offset_of!(EeWonRustEvent, rec) == EE_WON_WM_EVE
 
 /// A new input event of the record `ev` for the window `window` and its handler (the original's
 /// `new InputEvent(..)` with `mWindow` set: Window::QueueEvent's).
-pub(crate) fn new_input_event(window: isize, handler: crate::winobj::EeWonWinCall, ev: crate::winobj::EeWonWinEvent) -> isize {
+pub(crate) fn new_input_event(
+    window: isize,
+    handler: crate::winobj::EeWonWinCall,
+    ev: crate::winobj::EeWonWinEvent,
+) -> isize {
     new_event(EeWonWmEventRec { ev, window, handler: handler as u32 }, EeWonWmPopup::default())
 }
 /// A new popup event (DoPopupEvent) of the parameters `popup`, for no window yet.

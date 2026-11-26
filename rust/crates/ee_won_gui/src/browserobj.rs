@@ -233,7 +233,9 @@ impl EeWonBrowser {
     /// Invalidate its own (no class overrides it). None in a driver's world and for the others.
     fn game_op(&self, o: EeWonBrowserOp, a: isize) -> Option<isize> {
         use EeWonBrowserOp as B;
-        if !matches!(o, B::ScrollerAssign | B::HasScroller | B::Ref | B::Unref | B::Invalidate) || !crate::compobj::is_game() {
+        if !matches!(o, B::ScrollerAssign | B::HasScroller | B::Ref | B::Unref | B::Invalidate)
+            || !crate::compobj::is_game()
+        {
             return None;
         }
         Some(match o {
