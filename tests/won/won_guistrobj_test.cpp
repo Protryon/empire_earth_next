@@ -18,6 +18,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/won_gui/guistring.h"
 
 using namespace WONAPI;
 

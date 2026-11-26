@@ -11,6 +11,7 @@
 use crate::guictl::EeWonRect4;
 use crate::guidraw::{EeWonDrawOp, EeWonInputPaint, EeWonSelColor, EE_WON_DRAW_CALL};
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp, EeWonGuiOp as Op};
+use crate::guistrobj::{EeWonGstr, GText};
 use crate::winobj::EeWonWinCall as C;
 use crate::wmcache::EeWonWmRefKind;
 use crate::wmobj::{EeWonWmEvent, EeWonWmMouse, EeWonWmWin};
@@ -224,25 +225,56 @@ fn text_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
     }
 }
 
+/// `n` u32 units at `p` (none for NULL).
+///
+/// # Safety
+/// `p` holds `n` units.
+unsafe fn units(p: isize, n: isize) -> Vec<u32> {
+    if p == 0 || n <= 0 {
+        return Vec::new();
+    }
+    // SAFETY: the contract
+    unsafe { std::slice::from_raw_parts(p as *const u32, n as usize) }.to_vec()
+}
+
+/// The units into a take sink (a `Vec<u32>`; untouched for NULL or no units, as ee_won_gui_sink_units).
+fn sink(s: isize, v: Vec<u32>) {
+    if s != 0 && !v.is_empty() {
+        // SAFETY: a take sink (the ops' contract)
+        unsafe { (*(s as *mut Vec<u32>)).extend(v) };
+    }
+}
+
 fn input_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
     match op {
-        // the clipboard's text into the sink `a` (the original's local GUIString is the host's text; R6 WON round 33)
+        // the clipboard's text into the sink `a` (the original's local GUIString, Rust's: R6 WON GUI round 39)
         Op::ClipboardTake => {
-            out(Op::HostTextClipboard, 0, 0, 0, 0);
-            out(Op::HostTextSink, a, 0, 0, 0);
-            out(Op::HostTextClear, 0, 0, 0, 0);
+            // SAFETY: the host's new text
+            let t = unsafe { GText::adopt(out(Op::ClipboardText, 0, 0, 0, 0) as *mut EeWonGstr) };
+            sink(a, t.units());
             Some(0)
         }
-        // the filter over the typed text (the original's local GUIString is the host's text), 2 without one
+        // the filter over the typed text (`b` units at `a`; the original's local GUIString), 2 without one
         Op::Filter => {
             if out(Op::InputHasFilter, 0, 0, 0, 0) == 0 {
                 return Some(2);
             }
-            out(Op::HostTextUnits, a, b, 0, 0);
-            let r = out(Op::InputFilterHostText, 0, 0, 0, 0);
-            out(Op::HostTextSink, c, 0, 0, 0);
-            out(Op::HostTextClear, 0, 0, 0, 0);
+            // SAFETY: `b` units (the op's contract)
+            let mut t = GText::new(&unsafe { units(a, b) });
+            let r = out(Op::InputFilterText, t.arg(), 0, 0, 0);
+            sink(c, t.units());
             Some(if r != 0 { 1 } else { 0 })
+        }
+        // the clipboard's and the box's texts from units (the original's GUIStrings)
+        Op::ClipboardSet => {
+            // SAFETY: `b` units (the op's contract)
+            let mut t = GText::new(&unsafe { units(a, b) });
+            Some(out(Op::ClipboardSetText, t.arg(), 0, 0, 0))
+        }
+        Op::TextStore => {
+            // SAFETY: `c` units (the op's contract)
+            let mut t = GText::new(&unsafe { units(b, c) });
+            Some(out(Op::TextStoreText, a, t.arg(), 0, 0))
         }
         Op::PaintInputs => {
             // SAFETY: `a` is the box's paint record (PaintInputs' contract)
@@ -629,18 +661,25 @@ mod tests {
         // no filter: 2 and nothing else; a filter's answer and the text taken back
         let (r, log) = run(|o| input_op(Op::Filter, 7, 3, 8, o), |_, _| 0);
         assert_eq!((r, log), (Some(2), vec!["InputHasFilter 0 0 0 0".to_string()]));
-        let (r, log) = run(|o| input_op(Op::Filter, 7, 3, 8, o), |_, _| 5);
-        assert_eq!(r, Some(1));
-        assert_eq!(
-            log,
-            [
-                "InputHasFilter 0 0 0 0",
-                "HostTextUnits 7 3 0 0",
-                "InputFilterHostText 0 0 0 0",
-                "HostTextSink 8 0 0 0",
-                "HostTextClear 0 0 0 0"
-            ]
+        // the typed text a Rust text the filter reads (and may replace) in place, taken back into the sink
+        let typed = [u32::from(b'a'), u32::from(b'b')];
+        let mut taken: Vec<u32> = Vec::new();
+        let tp = &mut taken as *mut Vec<u32> as isize;
+        let (r, log) = run(
+            |o| input_op(Op::Filter, typed.as_ptr() as isize, 2, tp, o),
+            |op, a| {
+                if op == Op::InputFilterText {
+                    // SAFETY: the GUIString slot the op hands over
+                    assert_eq!(unsafe { crate::guistrobj::gstring_units(a as *const c_void) }, typed);
+                }
+                5
+            },
         );
+        assert_eq!(r, Some(1));
+        assert_eq!(taken, typed);
+        assert_eq!(log.len(), 2);
+        assert_eq!(log[0], "InputHasFilter 0 0 0 0");
+        assert!(log[1].starts_with("InputFilterText "));
         let (r, log) = run(|o| split_op(Op::NewDragComponent, 4, o), |_, _| 9);
         assert_eq!(r, Some(9));
         assert_eq!(

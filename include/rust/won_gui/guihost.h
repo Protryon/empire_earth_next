@@ -776,12 +776,13 @@ enum class EeWonGuiOp : uint32_t {
   SegSetLineBreak,
   /// `AddSegment(Seg(a))`.
   AddSegmentOf,
-  /// the host's text (a component op's local GUIString) into the take sink `a`.
-  HostTextSink = 800,
-  /// `sHostText = GUIString()` (the local's end).
-  HostTextClear,
-  /// `sHostText = UnitsText(a, b)`.
-  HostTextUnits,
+  /// `NewGUIStringData(Clipboard::Get())`: the clipboard's text, a new text (no reference; guisplit.rs's
+  /// ClipboardTake in the game: the original's local GUIString, R6 WON GUI round 39).
+  ClipboardText = 800,
+  /// `Clipboard::Set(*(const GUIString*)a)` (guisplit.rs's ClipboardSet).
+  ClipboardSetText,
+  /// `(a == 0 ? mText : mRealText) = *(const GUIString*)b` (guisplit.rs's TextStore).
+  TextStoreText,
   /// `Seg(a)->mFont->GetStringWidth(Seg(a)->mText)`.
   SegFontStringWidth,
   /// `Seg(a)->mFont->GetHeight()`.
@@ -792,8 +793,8 @@ enum class EeWonGuiOp : uint32_t {
   TextDrawSeg,
   /// `mInputFilter != NULL` (0 or 1).
   InputHasFilter = 820,
-  /// `mInputFilter(this, sHostText)` (0 or 1).
-  InputFilterHostText,
+  /// `mInputFilter(this, *(GUIString*)a)` (0 or 1; guisplit.rs's Filter, the text Rust's).
+  InputFilterText,
   /// `IsDisabled()` (0 or 1).
   InputDisabled,
   /// `mUseDisabledColors` (0 or 1).
@@ -884,10 +885,8 @@ enum class EeWonGuiOp : uint32_t {
   WmNewDelayImage,
   /// `mColorScheme->SetStandardColor(a, b)`.
   WmSetStandardColor,
-  /// `sHostText = Clipboard::Get()` (ClipboardTake's local).
-  HostTextClipboard = 2000,
   /// TextArea: `mLinkParam = ((TextSegment*)a)->GetLinkParam()`.
-  TextSetLinkParam,
+  TextSetLinkParam = 2001,
   /// TextArea: `DeliverEvent(new TextLinkActivatedEvent(this, (TextSegment*)a), false)`.
   TextDeliverLinkEvent,
   /// ListArea: `GetRoot()` (the window).

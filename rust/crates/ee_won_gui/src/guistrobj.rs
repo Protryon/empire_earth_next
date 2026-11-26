@@ -495,6 +495,45 @@ pub unsafe fn gstring_units(s: *const c_void) -> Vec<u32> {
     unsafe { data_units(*s.cast::<*const c_void>()) }
 }
 
+/// One reference to a text Rust holds for a host call: the C++ reads or edits it as the `GUIString` at [`GText::arg`]
+/// (a `GUIString` is its text's pointer), as the original's local GUIString.
+pub struct GText(*mut EeWonGstr);
+
+impl GText {
+    /// A new text of `units`.
+    pub fn new(units: &[u32]) -> Self {
+        let p = gstr_from_units(units);
+        // SAFETY: the new text
+        unsafe { gstr_ref(p) };
+        GText(p)
+    }
+    /// A text a host made with no reference (`NewGUIStringData`).
+    ///
+    /// # Safety
+    /// `p` is a live text no one else holds.
+    pub unsafe fn adopt(p: *mut EeWonGstr) -> Self {
+        // SAFETY: the contract
+        unsafe { gstr_ref(p) };
+        GText(p)
+    }
+    /// The `GUIString*` (the slot; an edit may replace its text).
+    pub fn arg(&mut self) -> isize {
+        &mut self.0 as *mut *mut EeWonGstr as isize
+    }
+    /// The units.
+    pub fn units(&self) -> Vec<u32> {
+        // SAFETY: the held text
+        unsafe { data_units(self.0.cast()) }
+    }
+}
+
+impl Drop for GText {
+    fn drop(&mut self) {
+        // SAFETY: the reference this holds
+        unsafe { gstr_release(self.0) };
+    }
+}
+
 /// A new text of `units` (no reference).
 pub fn gstr_from_units(units: &[u32]) -> *mut EeWonGstr {
     let p = boxed();

@@ -49,16 +49,6 @@ typedef EeWonGuiField Fd;
 // the standard cursor a host op names (guihost.rs over cursorobj.rs's table; NULL for none)
 static Cursor* CursorOf(intptr_t inCursor) { return (Cursor*)ee_won_gui_cursor(inCursor); }
 
-// a text the Rust object hands out (u32 units)
-static GUIString UnitsText(intptr_t inUnits, intptr_t inCount)
-{
-    std::wstring w;
-    for (intptr_t i = 0; i < inCount; i++) w.push_back((wchar_t)((const uint32_t*)inUnits)[i]);
-    return GUIString(w);
-}
-
-// the text a run of ops shares (guisplit.rs: the original's local GUIString)
-static GUIString sHostText;
 // QueueSubMenu's local PopupParams (borrowed pointers)
 static PopupParams sHostParams(NULL, 0, NULL);
 
@@ -73,12 +63,9 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
         // through a switch here as InputTextChanged: the LAN lobby's Join Game stayed disabled)
         c->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), 0);
         return 0;
-    case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
-    // ClipboardTake is guisplit.rs's over these (R6 WON round 33)
-    case Op::HostTextClipboard: sHostText = Clipboard::Get(); return 0;
-    case Op::HostTextSink: ee_won_gui_sink_units((void*)a, sHostText.mData->mText, sHostText.length(), sizeof(wchar_t)); return 0;
-    case Op::HostTextClear: sHostText = GUIString(); return 0;
-    case Op::HostTextUnits: sHostText = UnitsText(a, b); return 0;
+    // ClipboardTake, ClipboardSet, TextStore and Filter are guisplit.rs's over these and its texts (R6 WON GUI round 39)
+    case Op::ClipboardText: return (intptr_t)NewGUIStringData(Clipboard::Get());
+    case Op::ClipboardSetText: Clipboard::Set(*(const GUIString*)a); return 0;
     default: return 0;
     }
 }
@@ -185,9 +172,9 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
     case Op::TextWidthAll: return t->mFont->GetStringWidth(t->mText);
     case Op::TextCharWidth: return t->mFont->GetCharacterWidth(t->mText[(int)a]);
     case Op::FontStringM: return t->mFont->GetStringWidth(GUIString("M"));
-    case Op::TextStore: (a == 0 ? t->mText : t->mRealText) = UnitsText(b, c); return 0;
+    case Op::TextStoreText: (a == 0 ? t->mText : t->mRealText) = *(const GUIString*)b; return 0;
     case Op::InputHasFilter: return t->mInputFilter != NULL ? 1 : 0;
-    case Op::InputFilterHostText: return t->mInputFilter(t, sHostText) ? 1 : 0;
+    case Op::InputFilterText: return t->mInputFilter(t, *(GUIString*)a) ? 1 : 0;
     case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->GetWidth() : -1;
     case Op::InputDisabled: return t->IsDisabled() ? 1 : 0;
     case Op::InputUseDisabledColors: return t->mUseDisabledColors ? 1 : 0;

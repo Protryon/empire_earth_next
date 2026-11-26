@@ -171,7 +171,7 @@ CHECKS = [
     # the WONGUI component hosts' one-statement cases (R6 WON round 32: guisplit.rs composes them; checked from the
     # round's first value on: the older ops are answered by the components' Rust objects and hosts this tool does
     # not follow)
-    dict(enum="EeWonGuiOp", header="won_gui/guihost.h", since="HostTextSink",
+    dict(enum="EeWonGuiOp", header="won_gui/guihost.h", since="ClipboardText",
          hosts=sorted(GUI.glob("*.cpp")),
          rust=[(RS / "ee_won_gui" / "src" / "guisplit.rs", fn)
                for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")] +
