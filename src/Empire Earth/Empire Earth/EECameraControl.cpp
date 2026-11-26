@@ -27,7 +27,7 @@
 #include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp camera_host.rs)
 #include "ee/EECombatGoals.h"
 
-// the GE value classes and their Rust mirrors share their storage (GERustMath.h)
+// the GE value classes and their Rust mirrors share their storage (lle/GERust.h)
 static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
                   sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GEQuaternion) == sizeof(EeGeQuaternion) &&
                   sizeof(EECameraKey) == sizeof(EeAppCameraKey) && offsetof(EECameraKey, mChanged) == offsetof(EeAppCameraKey, mChanged),

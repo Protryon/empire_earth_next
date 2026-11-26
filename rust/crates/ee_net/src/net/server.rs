@@ -56,7 +56,7 @@ pub const STATE_CLOSED: u8 = 1;
 pub const STATE_RUNNING: u8 = 3;
 pub const STATE_PAUSED: u8 = 4;
 
-// message types (NEMessageID.h)
+// message types (rust/net/msgid.h)
 pub const MSG_ADD_PLAYER_RESPONSE: u8 = 0x21;
 pub const MSG_CLIENT_CONNECTION_REQUEST: u8 = 0x22;
 pub const MSG_CLIENT_DISCONNECTION_NOTIFICATION: u8 = 0x24;

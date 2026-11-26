@@ -8,9 +8,6 @@
 // Every member below is inline (UReferenceCounter.cpp, 0x1008104b.., is gone); the inline
 // block is emitted first by File System.cpp (0x1000436c..0x100043dd, declaration order; the dtor is ICF-folded at
 // 0x1003bf2f).
-#if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_EXE_HEADERS)
-#include <map>      // sReferenceDebugInfo's maps (engine view); GetBucketMap's result (the game's view)
-#endif
 class LLE_API UReferenceCounter {
 public:
     // inline: mixer SPIMDuplicateSample increments +4 in place
@@ -21,14 +18,6 @@ public:
     unsigned long GetReferenceCount() const { return this->mReferenceCount; }  // ICF-folded (0x4380)
     // (the reference-leak report, DumpAllLeakedReferences, was only its title: the original's per-caller tracking had
     // no caller, so its map was always empty; EEWorld::DumpAllLoadedMedia writes the title)
-#if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_EXE_HEADERS)
-    // Engine and game views (the exe calls __imp_?GetBucketMap@UReferenceCounter@@SAPAV?$map@... at 0x1f8df4, a
-    // reference-leak dump that walks the returned map). Typedef provisional names: line -> counter -> file -> count.
-    typedef std::map<const char*, unsigned long> FileCountMap;
-    typedef std::map<UReferenceCounter*, FileCountMap*> CounterMap;
-    // always NULL (there is no tracking)
-    static CounterMap* GetBucketMap(unsigned long inLine) { return NULL; }
-#endif
     // exported ??0UReferenceCounter@@IAE@XZ (0x4384): protected, the count assigned in the body (vptr stored first;
     // GEMaterial ctor 0x16b9b)
     UReferenceCounter() { this->mReferenceCount = 1; }

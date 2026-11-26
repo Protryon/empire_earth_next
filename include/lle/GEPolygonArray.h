@@ -14,9 +14,6 @@ public:
     explicit GEPolygonArray(unsigned long inCount) : mRust(ee_ge_pa_new(inCount)) { this->mIndices = ee_ge_pa_indices(this->mRust); }
     virtual ~GEPolygonArray() { ee_ge_pa_destroy(this->mRust); }
     virtual unsigned long GetSize() const { return ee_ge_pa_size(this->mRust, false); }
-    virtual unsigned long GetVertexIndex1(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 0); }
-    virtual unsigned long GetVertexIndex2(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 1); }
-    virtual unsigned long GetVertexIndex3(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 2); }
     virtual void SetVertexIndex1(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 0, inIndex); }
     virtual void SetVertexIndex2(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 1, inIndex); }
     virtual void SetVertexIndex3(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 2, inIndex); }

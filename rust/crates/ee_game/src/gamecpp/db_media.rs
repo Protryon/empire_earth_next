@@ -33,7 +33,7 @@ use super::{cptr, h, hf, hp, pa, ptr, rec, O, P};
 const DB_OK: i64 = 0;
 /// LoadTexture's status for a missing button texture.
 const DB_NO_TEXTURE: c_long = 3;
-/// The texture stages' values (lle/GERenderState.h; static_assert'd in EETerrainTable.cpp).
+/// The texture stages' values (rust/render/gestate.h; static_assert'd in EETerrainTable.cpp).
 const DB_STAGE_MODULATE: i64 = 2;
 const DB_ADDRESSING_CLAMP: i64 = 0;
 const DB_MIP_NONE: i64 = 0;

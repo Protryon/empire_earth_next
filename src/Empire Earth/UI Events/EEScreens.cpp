@@ -111,7 +111,6 @@
 #include "lle/UGraph.h"
 #include "lle/UIGraph.h"
 #include "lle/UIStatusBar.h"
-#include "lle/UEncryption.h"
 #include "ee/EEPGSFormManager.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EECheatCodes.h"

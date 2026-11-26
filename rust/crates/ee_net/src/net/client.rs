@@ -40,7 +40,7 @@ pub const THREAD_CL_PLAYBACK: u32 = 3;
 pub const THREAD_CL_MAIN: u32 = 4;
 pub const THREAD_CL_RECEIVE: u32 = 5;
 
-// message types (NEMessageID.h)
+// message types (rust/net/msgid.h)
 pub const MSG_CLIENT_CONNECTION_REQUEST_RESPONSE: u8 = 0x23;
 pub const MSG_CLIENT_DISCONNECTION_NOTIFICATION: u8 = 0x24;
 pub const MSG_COMMUNICATIONS_TICK: u8 = 0x26;

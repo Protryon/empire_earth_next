@@ -28,7 +28,7 @@
 #include "lle/TMPoll.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/TSScheduler.h"
-#include "lle/SESample.h"
+#include "lle/SEMixer.h"
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/Input System.h"
@@ -73,7 +73,7 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"
-#include "lle/ISModifierState.h"
+#include "rust/base/lle_enums.h"
 #include "rust/won_lobby/wonfront.h"
 
 // Creates the WON available-games form manager with a 3-second refresh poll

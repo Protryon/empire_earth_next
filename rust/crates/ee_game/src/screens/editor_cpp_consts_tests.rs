@@ -1,5 +1,5 @@
 //! The C++ constants the editor's Rust numbers equal (once the editor's C++ `static_assert`s): the string ids
-//! (`ee/EEStringIDs.h`), the UI framework's alignments, display modes and control triggers (`lle/GETextAlignment.h`,
+//! (`ee/EEStringIDs.h`), the UI framework's alignments, display modes and control triggers (`rust/render/gestate.h`,
 //! `lle/UIControl.h`), the unit categories and movements (`ee/EEUnitClassIDs.h`), read from the headers themselves.
 
 // the Rust numbers' types differ (u32, i32, i64): each is widened to compare

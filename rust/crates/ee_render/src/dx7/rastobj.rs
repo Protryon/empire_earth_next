@@ -151,12 +151,133 @@ unsafe fn dx<'a>(p: *mut EeDx7Rasterizer, screen: c_ulong) -> &'a mut ScreenStat
     unsafe { &mut *rs(p).screens[screen as usize] }
 }
 
+/// The rasterizer's calls on its screens, surfaces and texture managers, each one call of their Rust objects (a
+/// `GEScreen` is `cppobj::CppScreen`, a `GESurface` a reference-counted object over its Rust surface, a
+/// `GETextureManager` its Rust manager alone: `cppobj.rs`), made here rather than through the C++ host (a test's
+/// fake host answers them instead). The surfaces' logical sizes stay the host's (the C++ surface holds them).
+///
+/// # Safety
+/// The operation's objects and arguments are as [`EeDx7RastOp`] describes.
+#[cfg(not(test))]
+unsafe fn object_op(op: EeDx7RastOp, obj: H, a: isize, b: isize) -> Option<isize> {
+    use crate::dx7::scrobj::{
+        ee_dx7sc_create_surface, ee_dx7sc_current_mode, ee_dx7sc_direct_draw, ee_dx7sc_flag, ee_dx7sc_mode,
+        ee_dx7sc_mode_count, EeDx7Screen,
+    };
+    use crate::dx7::surfobj::{ee_dx7sf_attach, ee_dx7sf_attached, ee_dx7sf_flip, ee_dx7sf_gx, EeDx7Surface};
+    use crate::ge::cppobj::{self, CppScreen};
+    // SAFETY (every use): the caller's contract
+    let cpp_screen = || unsafe { &mut *(obj as *mut CppScreen) };
+    let screen = || cpp_screen().dx7 as *mut EeDx7Screen;
+    let surface = || unsafe { cppobj::counted::<EeDx7Surface>(obj as usize) };
+    // SAFETY (each call): the caller's contract
+    unsafe {
+        Some(match op {
+            EeDx7RastOp::ScreenDirectDraw => ee_dx7sc_direct_draw(screen()) as isize,
+            EeDx7RastOp::ScreenIsFullScreen => ee_dx7sc_flag(screen(), 1) as isize,
+            EeDx7RastOp::ScreenCurrentMode => {
+                *(a as *mut VideoMode) = *ee_dx7sc_current_mode(screen());
+                0
+            }
+            EeDx7RastOp::ScreenModeCount => ee_dx7sc_mode_count(screen()) as isize,
+            EeDx7RastOp::ScreenMode => {
+                *(b as *mut VideoMode) = *ee_dx7sc_mode(screen(), a as c_ulong);
+                0
+            }
+            EeDx7RastOp::ScreenCreateSurface => {
+                ee_dx7sc_create_surface(screen(), a as *mut _, b as *mut *mut c_void) as isize
+            }
+            EeDx7RastOp::ScreenSetTextureManager => {
+                cpp_screen().texture_manager = a as *mut c_void;
+                0
+            }
+            EeDx7RastOp::ManagerSetScreen => {
+                crate::ge::texobj::ee_ge_texman_set_screen(cppobj::plain(obj as usize), a as *mut c_void);
+                0
+            }
+            EeDx7RastOp::SurfaceAttached => ee_dx7sf_attached(surface(), 0) as isize,
+            EeDx7RastOp::SurfaceAttach => ee_dx7sf_attach(surface(), a as *mut c_void) as isize,
+            EeDx7RastOp::SurfaceGx | EeDx7RastOp::SurfaceGxChecked => ee_dx7sf_gx(surface()) as isize,
+            EeDx7RastOp::SurfaceFlip => ee_dx7sf_flip(surface(), a != 0) as isize,
+            // (GXSurface*)*obj->GetStageTexture(0)->GetFrameSurface()
+            EeDx7RastOp::TextureStageSurface => {
+                use crate::ge::texobj_tex::{ee_ge_tex_get, ee_ge_tex_stage, EeGeTexVal, EeGeTexture};
+                let stage = &*ee_ge_tex_stage(cppobj::counted::<EeGeTexture>(obj as usize));
+                let frame =
+                    ee_ge_tex_get(cppobj::counted::<EeGeTexture>(stage.texture as usize), EeGeTexVal::FrameSurface);
+                ee_dx7sf_gx(cppobj::counted::<EeDx7Surface>(frame as usize)) as isize
+            }
+            EeDx7RastOp::WindowOrigin => {
+                use crate::ge::smallobj::{ee_ge_win_origin, EeGeWin};
+                *(a as *mut ee_base::math::types::Ge2DPoint) =
+                    *ee_ge_win_origin(cppobj::plain::<EeGeWin>(obj as usize));
+                0
+            }
+            _ => return None,
+        })
+    }
+}
+
+#[cfg(test)]
+unsafe fn object_op(_op: EeDx7RastOp, _obj: H, _a: isize, _b: isize) -> Option<isize> {
+    None
+}
+
 impl EeDx7Rasterizer {
     /// A host call made by rasterizer `p`.
     ///
     /// # Safety
     /// `p` is live; the operation's arguments are as [`EeDx7RastOp`] describes.
     pub(crate) unsafe fn op(p: *mut Self, op: EeDx7RastOp, obj: H, a: isize, b: isize) -> isize {
+        // the drawing lock's calls and the clock end in ee_base, a texture's and a surface's reference count and a
+        // texture's change flag, promotion and stage in their Rust objects (read in place: ge cppobj.rs): made here
+        // (a test's fake host answers them instead)
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { object_op(op, obj, a, b) } {
+            return r;
+        }
+        if !cfg!(test) {
+            use crate::ge::cppobj;
+            use crate::ge::texobj_tex::{ee_ge_tex_get, ee_ge_tex_promote, ee_ge_tex_set, ee_ge_tex_stage, EeGeTexVal};
+            use ee_base::ts::{ee_ts_section_enter, ee_ts_section_leave, EeTsSection};
+            // SAFETY (every use): a texture operation's object is a live GETexture
+            let texture = || unsafe { cppobj::counted::<crate::ge::texobj_tex::EeGeTexture>(obj as usize) };
+            match op {
+                EeDx7RastOp::TextureReference | EeDx7RastOp::SurfaceReference => {
+                    // SAFETY: a live GETexture or GESurface (UReferenceCounter's layout)
+                    unsafe { cppobj::reference(obj as usize) };
+                    return 0;
+                }
+                // SAFETY: a live texture
+                EeDx7RastOp::TextureHasChanged => {
+                    return unsafe { ee_ge_tex_get(texture(), EeGeTexVal::HasChanged) != 0 } as isize
+                }
+                EeDx7RastOp::TexturePromote => {
+                    // SAFETY: as above
+                    unsafe { ee_ge_tex_promote(texture()) };
+                    return 0;
+                }
+                // SAFETY: as above
+                EeDx7RastOp::TextureStage => return unsafe { ee_ge_tex_stage(texture()) } as isize,
+                EeDx7RastOp::TextureValidate => {
+                    // SAFETY: as above
+                    unsafe { ee_ge_tex_set(texture(), EeGeTexVal::HasChanged, 0) };
+                    return 0;
+                }
+                EeDx7RastOp::LockEnter => {
+                    // SAFETY: the lock is the base's live drawing lock (a TSCriticalSection is its Rust section)
+                    unsafe { ee_ts_section_enter(obj as *const EeTsSection) };
+                    return 0;
+                }
+                EeDx7RastOp::LockLeave => {
+                    // SAFETY: as above
+                    unsafe { ee_ts_section_leave(obj as *const EeTsSection) };
+                    return 0;
+                }
+                EeDx7RastOp::Time => return ee_base::time::ee_time_get() as isize,
+                _ => {}
+            }
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (rs(p).host, rs(p).owner) };
         // SAFETY: the host's contract

@@ -37,7 +37,7 @@
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GEPolygonArray.h"
-#include "lle/GERenderState.h"
+#include "rust/render/gestate.h"
 #include "lle/GERasterizer.h"
 
 // A surface in memory, the state behind a GESurface (its mDX7: storegate.cpp defines the ee_dx7sf_* functions the

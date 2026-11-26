@@ -70,7 +70,7 @@ pub const EE_SCREENS_TEXT_CL_TEXT: u32 = 0x78; // (i) entry i's text
 pub const EE_SCREENS_TEXT_CL_PLAYER: u32 = 0x79; // the current player's name
 pub const EE_SCREENS_TEXT_CL_APPEND: u32 = 0x7a; // put: the log's label AppendText
 
-// the controls (ee/EEUIManager.h), triggers (lle/UIControl.h), keys (lle/ISKeyCode.h) and strings
+// the controls (ee/EEUIManager.h), triggers (lle/UIControl.h), keys (rust/base/lle_enums.h) and strings
 const CH_EDIT: u32 = 1;
 const CH_ALLY: u32 = 2;
 const CH_ALL: u32 = 3;

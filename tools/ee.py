@@ -35,7 +35,6 @@ TOOLCHAIN = _toolchain()   # downloaded headers (DX7 SDK), the built-in fonts
 ORIG_SRC_ROOT = pathlib.Path(os.environ.get("EE_ORIG_SRC_ROOT", ROOT / "build" / "eex")).resolve()
 FILE_PREFIX = r"C:\EEX"
 MODULE_SRC = {
-    "tcp": "Low-Level Engine/Network Engine/TCP Protocol",
     "mixer": "Low-Level Engine/Sound Engine/Mixer",
     "default": "Empire Earth/Random Map/Random Map Generators/Default",
     "lle": "Low-Level Engine",
@@ -58,7 +57,6 @@ def module_src(mod):
 # tools/xbuild.py has the POSIX builds' -ffp-contract=off).
 FP = "/clang:-ffp-contract=off"
 MODULE_FLAGS = {
-    "tcp": f"-MT -GR {FP} -DEE_STATIC",
     "mixer": f"-MT -GR {FP} -DEE_STATIC",
     "default": f"-MT -GR {FP} -DEE_STATIC",
     "lle": f"-MT -GR {FP} -DEE_STATIC -DLOWLEVELENGINE_EXPORTS -DDM_STATIC",

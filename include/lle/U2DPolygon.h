@@ -11,11 +11,10 @@
 // Port: both are gone. The float instantiation went with the terrain volume's hull (ee_ge hull.rs /
 // terrain_volume.rs); the long one's only user was EEAIArea, whose hull is now its Rust record's (ee_astar area.rs,
 // ee/EEAIArea.h; the algorithms hull.rs over ee_ge hull.rs; docs/RUST_PLAN.md R5b.1, branch rust-astar-areas1).
-// What is left is the seam: the point type and the geometry capture records.
+// What is left is the geometry capture's scope.
 #ifdef LLE_EXE_HEADERS
 #include <vector>
 #include "rust/sim/app.h"
-#include "rust/sim/astar.h"
 
 // New (port), TEST ONLY (EE_SIM_CAPTURE, tools/sim_capture.py; the records are Rust's: ee_sim app capture_record.rs): the
 // records of the hulls' geometry (HULL: kind 1 SetPoints, 2 GetClosestOutlinePoint, 4 GetClosestPoint, 6 Contains;
@@ -29,25 +28,6 @@ public:
     ~EEGeomCaptureScope() { ee_sim_capture_geom_leave(); }
     bool mOuter;
 };
-inline void EEGeomCaptureBegin(unsigned int inTag, unsigned int inKind) { ee_sim_capture_geom_begin(inTag, inKind); }
-inline void EEGeomCaptureValue(long inValue) { ee_sim_capture_geom_value((int32_t)inValue); }
-inline void EEGeomCaptureFloat(float inValue) { ee_sim_capture_geom_float(inValue); }
-inline void EEGeomCapturePoint(const U2DPoint<long>& inPoint)
-{
-    ee_sim_capture_geom_point((int32_t)inPoint.mX, (int32_t)inPoint.mY);
-}
-inline void EEGeomCaptureCommit() { ee_sim_capture_geom_commit(); }
-
-// New (port): the seam's point type is U2DPoint<long>'s layout, so a point vector passes in place
-static_assert(sizeof(U2DPoint<long>) == sizeof(EeHullPoint), "EeHullPoint");
-inline const EeHullPoint* U2DHullPoints(const std::vector<U2DPoint<long> >& inPoints)
-{
-    return inPoints.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&inPoints[0]);
-}
-inline U2DPoint<long> U2DHullPoint(EeHullPoint inPoint)
-{
-    return U2DPoint<long>(inPoint.x, inPoint.y);
-}
 #endif
 
 #endif

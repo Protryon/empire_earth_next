@@ -58,6 +58,10 @@ impl EeGePrim {
         if let Some(r) = unsafe { crate::ge::bmpobj::vertex_op(op, obj, a, b) } {
             return r;
         }
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { crate::ge::bmpobj::direct_op(op, obj) } {
+            return r;
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (pr(p).host, pr(p).owner) };
         // SAFETY: the host's contract

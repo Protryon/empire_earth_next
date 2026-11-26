@@ -117,7 +117,6 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
     case EeNetSvOp::BytesFree:
         delete[] reinterpret_cast<unsigned char*>(a);
         return 0;
-        return static_cast<NESynchronousServer*>(inServer)->ProcessLocalUserInput(reinterpret_cast<NEMessage*>(a), (unsigned char)b);
     }
     return 0;
 }

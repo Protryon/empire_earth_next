@@ -78,7 +78,7 @@
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEStringIDs.h"
-#include "lle/ISKeyCode.h"
+#include "rust/base/lle_enums.h"
 
 // the interval of the healing units' hit-point bonus (0x4429b8, just before kTributeFee; ComputeLoadDistance)
 // (provisional name)

@@ -34,7 +34,6 @@ public:
     // keeps the original's temporary)
     U2DPoint<T> GetTopLeft() const { return U2DPoint<T>(this->mLeft, this->mTop); }
     U2DPoint<T> GetBottomRight() const { return U2DPoint<T>(this->mRight, this->mBottom); }
-    U2DPoint<T> GetBottomLeft() const { return U2DPoint<T>(this->mLeft, this->mBottom); }
     U2DPoint<T> GetTopRight() const { return U2DPoint<T>(this->mRight, this->mTop); }
     // exe: the rectangle's point closest to inPoint: the nearer of the closest points on the two edges at the closest
     // corner (U2DRectangle<float> only: ee_base math u2d.rs)
@@ -47,11 +46,6 @@ public:
     }
 #endif
     void Clear() { *this = U2DRectangle(); }
-    void Extend(const U2DPoint<T>& inPoint)   // just enough to contain the point (each edge reads only its own)
-    {
-        *this = U2DRectangle(min(this->mLeft, inPoint.GetX()), min(this->mTop, inPoint.GetY()), max(this->mRight, inPoint.GetX()),
-                             max(this->mBottom, inPoint.GetY()));
-    }
     // left, top, right and bottom from (to) an open file, each through its typed call; kErrorNotOpen when it is not
     // open, else the first error (ee_base math u2d.rs; T is long or float)
     long Load(FSFile& inFile)

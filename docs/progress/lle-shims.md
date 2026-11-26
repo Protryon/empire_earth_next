@@ -1,4 +1,4 @@
-# LLE: bodies over one-statement shims (rounds 8-14)
+# LLE: bodies over one-statement shims (rounds 8-15)
 
 The lane's state after LLE round 13 (branch `rust-lle13`, 2026-11-22). The rounds' stories are PORT_LEARNINGS.md
 "LLE round 8" to "LLE round 13". Earlier state: [lle-rest.md](lle-rest.md) (rounds 1-2),
@@ -19,6 +19,66 @@ function of one statement per shim (a member's slot, a virtual call, a `new`/`de
 Plain members a body reads and writes become a `#[repr(C)]` record the C++ class derives from (as the units' and
 the players' records before): `EeRtsPhysicsFields`, `EeRtsGraphicsFields`, `EeRtsMouseFields`. The Thread System,
 Time Manager, Input System and sound samples are Rust objects already: the bodies call them directly.
+
+## Round 15 (LLE/UI round 2, fork A: branch `rust-lleui2-a`, 2026-11-25)
+
+Scope: the LLE but the UI toolkit (src/Low-Level Engine but User Interface, include/lle but UI*, include/dx7,
+include/gx). Measured by `tools/port_metrics.py a102c738e HEAD` (cpp_lines: every line of src, include/ee,
+include/lle): 96,416 -> 95,604 (**-812**), compiled files 295 -> 294, logic 12,655 -> 12,637, classes 729 -> 725.
+
+Three kinds of cut. (1) The dead: `tools/dead_members.py` over include/lle and the LLE sources (60 names, then the
+members each later commit left without a caller), the free inlines nothing calls, headers nothing needs
+(GE2DVertex.h, UEncryption.h, UMFastMath.h, ISDeviceInput.h with the game's uncalled ISHandleEvent). (2) The host
+cases whose callee is itself one Rust call: the Rust object now makes that call directly, before asking its host
+(`direct_op` in manobj.rs, tmobj.rs, rastobj.rs, bmpobj.rs, modobj.rs; `object_op` in dx7 rastobj.rs and fbobj.rs;
+`platform_op` in smallobj.rs; texobj_tex.rs's `direct` path), reading the C++ objects in place as cppobj.rs already
+did (a `GERasterizer` is its two Rust objects, a `GEScreen` is `CppScreen`, a `GETextureSet`/`GETextureManager`/
+`GEText`/`GEWindow` their Rust object, a `GEPhysicalModel` modobj.rs's `PlacedModel`; C++ `static_assert`s pin each).
+Every such call is skipped under `cfg(test)`, so the crates' fake hosts still answer and their tests are unchanged.
+The store gate's memory surfaces and screens (its own `ee_dx7sf_*`/`ee_dx7sc_*`) are never reached directly: the
+surface calls moved only out of the DX7 rasterizer's and the font bitmap's hosts, which the gate does not run; a
+surface's logical size stays a host call (the C++ surface holds it). (3) Headers: the GE units' include blocks
+(50 -> 18 lines in GEModel.cpp, and the like), the one-include headers of Rust's constants (their includers include
+the Rust header), local headers folded into their includers (GERustMath.h, GEOpenFormats.h, GERustText.h whose
+table is ee_render's `platform_text_ops` now), SEConductor.h into SEMixer.h, and classes only a test names moved to
+the test (U2DFractal.h to tests/util, SESample.h to tests/sound). TCP Protocol.cpp went whole: ee_net_tcp calls
+ee_base's error system, clock and port offset itself (the `tcp` module is gone from tools/units.py and tools/ee.py;
+tests/net's `ne_tcp_host.h` stand-ins with it).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| bbfcf3e1f | the dead members dead_members.py lists (60 names), their comments, GE2DPoint::Push | -148 |
+| 1223f72b4 | dead free functions and headers: GE2DVertex.h, UEncryption.h, the geometry capture's and hull's free inlines, GEUnpack*, ESInitialize, UMTan, UMSquare, USavedPointer | -89 |
+| 663bbceaa | the text functions' table and the platform window's calls in Rust (GERustText.h gone); GE include blocks; GERustMath.h, GEOpenFormats.h folded | -179 |
+| f92adb6e6 | the calls ending in ee_base made by the Rust objects (the managers' and rasterizers' locks, the clock, the terrain mesh's fractals and texture-set reads, references read in place); TCP Protocol.cpp gone; U2DFractal.h test-only | -124 |
+| 9262311c2 | the DX7 host's texture reference, change flag, promotion, stage and surface reference; GETextureSet's dead accessors | -8 |
+| 7efe2df02 | UMFastMath and its empty BuildSqrtTable | -15 |
+| 8dc071704 | the six one-include headers of Rust's constants | -43 |
+| 48bf665a9 | Input System.cpp's and File System.cpp's include blocks; NESynchronousServer::Host's unreachable statement | -22 |
+| 69bbc97ec | the rasterizer's, model's, bitmap's, font bitmap's and texture's calls on the debug text, models, placed models, textures, the active rasterizer and the decoded files; members left without a caller | -66 |
+| a5cf63469 | the DX7 rasterizer's and font bitmap's calls on screens, surfaces, texture managers, the font and the window; the texture's on its manager | -43 |
+| 7107f8613 | DX7Rasterizer.cpp's one include block | -1 |
+| 55ca44688 | ISHandleEvent and lle/ISDeviceInput.h | -20 |
+| fe09e5880 | SEConductor.h merged into SEMixer.h | -9 |
+| af76e22c8 | SESample test-only (tests/sound); EeSoundWide in SESoundManager.h | -45 |
+
+Edits outside the lane's files (one line each unless said): EEScreens.cpp (UEncryption.h's include), Empire
+Earth.cpp (RunSqrtTable's case, 2 lines) with ee_game entry.rs (its call; the `RunSqrtTable` variant stays, unused),
+EEPlayer.cpp, EEWonNetAvailableGameFormManager.cpp, RTSMiniMap.cpp (the constants' includes), EECameraControl.cpp (a
+comment), UIManager.cpp, EELobbyGlueHost.cpp, EEAWonNet.cpp, EEUIEWonNetArenaGameEvents.cpp (SESample.h -> SEMixer.h),
+ee_game/ee_net Rust doc comments naming the deleted constant headers, tools (units.py, ee.py, dead_census.py,
+eemodel/storegate.py, xbuild.py tcptest, storegate/fakes.h) and tests (net, input, util, sound).
+
+## What is left after round 15 (fork A)
+
+- The hosts' remaining cases are C++ by nature: `new`/`delete` of C++ objects with vtables (UString, GEVertexArray,
+  GEMaterial, GETexture, FSFileSpec), `Dereference` (a virtual destructor), the surfaces' logical sizes (GESurface's
+  own members; moving them into the Rust surface would let SurfaceWidth/Height/Metrics go, with the store gate's
+  memory surfaces holding them too), the texture's GESurface reads (the store gate's surfaces), FSFile's virtual
+  calls (FSMemoryFile overrides them).
+- Sound Engine.cpp's ee_soundcpp_* and NESynchronousServer's SimMode: their fake hosts are goldens (golden_objects.rs,
+  ne_server_test), so a direct call would re-record them.
+- include/dx7 (not counted): DX7Rasterizer.h is an include list EERenderObject.cpp still uses.
 
 ## Round 14 (the LLE and UI floor lane `lu1`, branch `rust-lleui1`; fork `rust-lleui1-a`, 2026-11-24)
 

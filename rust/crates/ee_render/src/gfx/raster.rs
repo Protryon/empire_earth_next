@@ -14,7 +14,7 @@ use crate::gfx::lighting::EeGfxLighting;
 use crate::gfx::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
 use crate::gfx::raster_direct;
 
-/// `kZBufferTestOnly`, `kZBufferTestAndWrite` (GERenderState.h).
+/// `kZBufferTestOnly`, `kZBufferTestAndWrite` (rust/render/gestate.h).
 pub(crate) const ZBUFFER_TEST_ONLY: u32 = 2;
 pub(crate) const ZBUFFER_TEST_AND_WRITE: u32 = 3;
 /// `kBlendOne`, `kBlendSrcAlpha`, `kBlendInvSrcAlpha`.

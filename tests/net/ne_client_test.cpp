@@ -34,7 +34,6 @@ CNet* gNet;
 static bool sVerbose = false;   // --verbose: each trace line to stderr as it is made
 #include "orig_c/NESynchronousClient.cpp"
 #include "rust/net/net.h"
-#include "ne_tcp_host.h"
 
 int QWorld::IdOf(NEMessage* inMessage)
 {

@@ -21,9 +21,6 @@ public:
     bool operator!=(const GEVector& inVector) const { return this->mX != inVector.mX || this->mY != inVector.mY || this->mZ != inVector.mZ; }
     void Add(const GEVector& inVector, GEVector& outVector) const
         { outVector = GEVector(inVector.mX + this->mX, inVector.mY + this->mY, inVector.mZ + this->mZ); }
-    // inline (GE3DPlane::IsPointOnPlane 0xd4c3 expands it; the plug-ins never call it)
-    float DotProduct(const GEVector& inVector) const { return inVector.mZ * this->mZ + inVector.mY * this->mY + inVector.mX * this->mX; }
-    float GetMagnitude() const { return ee_ge_vector_magnitude(GERust(*this)); }
     float GetX() const { return this->mX; }  // inline (exported, ICF-folded with GE2DPoint's)
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }

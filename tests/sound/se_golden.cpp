@@ -27,7 +27,7 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/SEMixer.h"
-#include "lle/SESample.h"
+#include "SESample.h"
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/SEScore.h"

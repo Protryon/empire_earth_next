@@ -54,13 +54,6 @@ public:
         return inRectangle.mLeft >= this->mLeft && inRectangle.mRight <= this->mRight && inRectangle.mTop >= this->mTop &&
                inRectangle.mBottom <= this->mBottom;
     }
-    void Extend(const GE2DPoint& inPoint)   // just enough to contain the point (each edge reads only its own)
-    {
-        *this = GERectangle(this->mLeft < inPoint.mX ? this->mLeft : inPoint.mX, this->mTop < inPoint.mY ? this->mTop : inPoint.mY,
-                            this->mRight > inPoint.mX ? this->mRight : inPoint.mX,
-                            this->mBottom > inPoint.mY ? this->mBottom : inPoint.mY);
-    }
-    GE2DPoint GetBottomLeft() const { return GE2DPoint(this->mLeft, this->mBottom); }
     GE2DPoint GetBottomRight() const { return GE2DPoint(this->mRight, this->mBottom); }
     void GetCenter(GE2DPoint& outCenter) const
         { outCenter = GE2DPoint((this->mRight - this->mLeft) * 0.5f + this->mLeft, (this->mBottom - this->mTop) * 0.5f + this->mTop); }
@@ -76,9 +69,6 @@ public:
         *this = GERectangle((float)UMFloor(this->mLeft + 0.5f), (float)UMFloor(this->mTop + 0.5f),
                             (float)UMFloor(this->mRight + 0.5f), (float)UMFloor(this->mBottom + 0.5f));
     }
-    void SetBottomRight(const GE2DPoint& inPoint)
-        { *this = GERectangle(this->mLeft, this->mTop, inPoint.mX, inPoint.mY); }
-    void SetTopLeft(const GE2DPoint& inPoint) { *this = GERectangle(inPoint.mX, inPoint.mY, this->mRight, this->mBottom); }
     // clipped to another rectangle (or the overlap into outRectangle); false, nothing changed, when they do not overlap
     bool And(const GERectangle& inRectangle) { return ee_ge_rect_and_in_place(GERust(*this), GERust(inRectangle)); }
     bool And(const GERectangle& inRectangle, GERectangle& outRectangle) const

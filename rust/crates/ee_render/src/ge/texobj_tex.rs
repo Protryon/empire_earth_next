@@ -28,7 +28,7 @@ const OUT_OF_MEMORY: c_long = 8;
 /// `kErrorFailed`.
 const FAILED: c_long = 9;
 /// `kStageOpTexture`, `kAddressingClamp`, `kMinFilterPoint`, `kMagFilterPoint`, `kMipFilterPoint`
-/// (lle/GERenderState.h).
+/// (rust/render/gestate.h).
 const STAGE_OP_TEXTURE: c_ulong = 1;
 const ADDRESSING_CLAMP: c_ulong = 0;
 const MIN_FILTER_POINT: c_ulong = 0;
@@ -292,6 +292,34 @@ impl EeGeTexture {
                 EeGeTexOp::TexDereference => {
                     unsafe { ee_ge_tex_dereference(crate::ge::cppobj::counted::<Self>(obj)) };
                     return 0;
+                }
+                // the decoded file's reads (ee_openformats) and the rasterizer's texture handles (no handle is
+                // needed: CreateTextureHandle is kErrorOK, DestroyTextureHandle does nothing)
+                EeGeTexOp::FileInfo => {
+                    unsafe { crate::openformats::ffi::ee_of_texture_info(obj as *const _, a as *mut EeOfTextureInfo) };
+                    return 0;
+                }
+                EeGeTexOp::FileFrame => {
+                    unsafe {
+                        crate::openformats::ffi::ee_of_texture_frame(
+                            obj as *const _,
+                            a as u32,
+                            b as *mut EeOfTextureFrame,
+                        )
+                    };
+                    return 0;
+                }
+                EeGeTexOp::RasterCreate | EeGeTexOp::RasterDestroy => return 0,
+                // the manager's RemoveTexture and PromoteTexture (a GETextureManager is its Rust manager alone)
+                EeGeTexOp::ManagerRemove => {
+                    return unsafe {
+                        crate::ge::texobj::ee_ge_texman_remove(crate::ge::cppobj::plain(obj), a as *mut c_void)
+                    } as isize
+                }
+                EeGeTexOp::ManagerPromote => {
+                    return unsafe {
+                        crate::ge::texobj::ee_ge_texman_promote(crate::ge::cppobj::plain(obj), a as *mut c_void)
+                    } as isize
                 }
                 _ => {}
             }

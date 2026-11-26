@@ -1,7 +1,7 @@
 // The Graphics Engine's value types over Rust (docs/RUST_PLAN.md R4.3; LLE round 8): the C++ classes stay the types
 // every caller uses and their members are inline forwarders to the C ABI of ee_base::math (rust/base/math.h) and
 // ee_render::geval (rust/render/geval.h), with the objects themselves as arguments. This header gives each class its
-// #[repr(C)] mirror (the same storage; the layouts are pinned in Graphics Engine/GERustMath.h) and the file their
+// #[repr(C)] mirror (the same storage: each class derives from its record) and the file their
 // loaders and savers hand to Rust. The classes need not be complete here.
 #ifndef LLE_GERUST_H
 #define LLE_GERUST_H
