@@ -1103,7 +1103,9 @@ public:
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)
 struct PopupParams {
-    PopupParams(Component* inPopup,int inFlags,Component* inOwner,int inX=-1,int inY=-1);
+    // a popup to open: the component, flags, owner component and position (no parent yet)
+    PopupParams(Component* inPopup,int inFlags,Component* inOwner,int inX=-1,int inY=-1)
+      : mParent(NULL),mPopup(inPopup),mInputComponent(NULL),mOwnerComponent(inOwner),mFlags(inFlags),mx(inX),my(inY) {}
     Window* mParent; //00, borrowed
     Component* mPopup; //04, borrowed
     Component* mInputComponent; //08, borrowed
@@ -1450,9 +1452,10 @@ public:
     bool Close() { return this->WCall(EeWonWinCall::Close) != 0; }
     void SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
     void Center(bool p) { this->WCall(EeWonWinCall::Center, p ? 1 : 0); }
-    void EndDialog(int, Component*);
-    void OpenPopup(PopupParams&);
-    void ClosePopup(Component*);
+    // the manager's dialog end, popup (this window its parent) and popup close
+    void EndDialog(int r, Component* c) { this->mManager->EndDialog(r, this, c); }
+    void OpenPopup(PopupParams& p) { p.mParent = this; this->mManager->DoPopup(p); }
+    void ClosePopup(Component* c) { this->mManager->EndPopup(c); }
     void InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
     void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);

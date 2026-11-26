@@ -11,7 +11,6 @@
 3040d0 304ded WONGUI/RootContainer.cpp
 326ad0 32742b WONGUI/Graphics.cpp
 328450 3284f9 WONGUI/GUIStringSingleton.cpp
-328540 32b0f0 WONGUI/PopupValueAdapters.cpp
 329990 329c29 WONGUI/Sound.cpp
 329c30 32b519 WONGUI/Window.cpp
 32b660 33531e WONGUI/WindowManager.cpp
