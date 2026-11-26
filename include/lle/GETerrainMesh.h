@@ -62,7 +62,9 @@ public:
     unsigned long GetTextureSetID(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->texture_set_id; }
     const GEColor& GetVertexColor(unsigned long inX, unsigned long inY) const
         { return *reinterpret_cast<const GEColor*>(ee_ge_tm_vertex_color(this->mRust, inX, inY)); }
-    GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }\n    float GetVisibleSpaceTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }\n    float GetVisibleWaterTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
+    GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
+    float GetVisibleSpaceTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
+    float GetVisibleWaterTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
     float GetZ(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->z; }
     bool Intersects(const GE3DLine& inLine, float& outDistance) const { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_ge_tm_load(this->mRust, &inFile); }
@@ -82,7 +84,10 @@ public:
     void SetIsWater(unsigned long inX, unsigned long inY, bool inIsWater) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 5, inIsWater); }
     void SetSpaceCliffTextures(std::vector<GETexture*>& inTextures)
         { ee_ge_tm_set_space_cliff_textures(this->mRust, (void* const*)inTextures.data(), inTextures.size()); }
-    void SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 3, inTextureSetID); }\n    void SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }\n    void SetWaterColorSet(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }\n    void SetZ(unsigned long inX, unsigned long inY, float inZ) { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
+    void SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 3, inTextureSetID); }
+    void SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }
+    void SetWaterColorSet(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }
+    void SetZ(unsigned long inX, unsigned long inY, float inZ) { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
     void UpdateWaterAnimation() { ee_ge_tm_update_water_animation(this->mRust); }
 
     URust<EeGeTerrainMesh> mRust;                 // the whole mesh (ee_ge tmobj.rs)

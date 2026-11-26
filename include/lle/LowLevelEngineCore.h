@@ -53,7 +53,8 @@ LLE_API extern UString gStartupDirectory;
 
 // The Error System is Rust's (rust/crates/ee_base/src/error): ESVerify reports a failed verification (file, line,
 // expression) on stderr, breaks into the debugger and aborts (a nested failure is ignored); ESRecordNativeError
-// records a nonzero native error and returns it.\ninline void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression) { ee_error_verify(inFile, inLine, inExpression); }
+// records a nonzero native error and returns it.
+inline void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression) { ee_error_verify(inFile, inLine, inExpression); }
 // a float's bits and back (the hosts' intptr_t arguments)
 inline uint32_t UFloatBits(float inValue) { return __builtin_bit_cast(uint32_t, inValue); }
 inline float UBitsFloat(intptr_t inBits) { return __builtin_bit_cast(float, (uint32_t)inBits); }

@@ -80,7 +80,8 @@ public:                                                // column 3; rust/base/ma
     // the rotation from yaw, pitch and roll applied in the order the name gives (the position kept)
     void SetOrientationYPR(const GEOrientation& inO) { this->SetOrientationYPR(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
     void SetOrientationYPR(float inYaw, float inPitch, float inRoll) { this->SetOrientation(4, inYaw, inPitch, inRoll); }
-    void SetOrientation(uint32_t inOrder, float inYaw, float inPitch, float inRoll) { ee_ge_t_set_orientation(GERust(*this), inOrder, inYaw, inPitch, inRoll); }\n    void SetPosition(const GE3DPoint& inPosition) { this->SetPosition(inPosition.GetX(), inPosition.GetY(), inPosition.GetZ()); }
+    void SetOrientation(uint32_t inOrder, float inYaw, float inPitch, float inRoll) { ee_ge_t_set_orientation(GERust(*this), inOrder, inYaw, inPitch, inRoll); }
+    void SetPosition(const GE3DPoint& inPosition) { this->SetPosition(inPosition.GetX(), inPosition.GetY(), inPosition.GetZ()); }
     // inline: SetPosition(const GE3DPoint&) 0xd93d loads z, y, x (call arguments) then stores
     void SetPosition(float inX, float inY, float inZ) { mMatrix[0][3] = inX; mMatrix[1][3] = inY; mMatrix[2][3] = inZ; }
     void SetScale(float inScale) { this->SetScale(inScale, inScale, inScale); }

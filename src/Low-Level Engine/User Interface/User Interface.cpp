@@ -1347,8 +1347,5 @@ EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
 #undef theBar
 #undef l
 
-// ---- the unit's own code
-// Registers the user interface's shutdown hook (every background table deleted); always succeeds (ee_ui
-// bgtableobj.rs). The original's unreferenced file-static UIBackgroundTable and its gUIInitialized flag (set here,
-// read by nothing) are gone.
-long UIInitialize() { return ee_ui_initialize(); }
+// ---- the unit's own code: UIInitialize is inline in lle/User Interface.h (the original's unreferenced file-static
+// UIBackgroundTable and its gUIInitialized flag, set here and read by nothing, are gone)
