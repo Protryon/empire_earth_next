@@ -440,15 +440,6 @@ pub unsafe extern "C" fn ee_ai_manifest_entry(m: *const EeAiManifest, k: usize, 
     true
 }
 
-/// Whether the document had its "ais" array (false: the read stopped at the document, its one log line says why).
-///
-/// # Safety
-/// `m` is a live manifest.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_manifest_listed(m: *const EeAiManifest) -> bool {
-    (*m).0.listed
-}
-
 /// The log lines of a manifest read.
 ///
 /// # Safety
@@ -510,12 +501,6 @@ pub unsafe extern "C" fn ee_ai_engine_resolve(
 
 // ---------------------------------------------------------------------------------------------------------------
 // The name tables
-
-/// `EECPNextCodeName`.
-#[no_mangle]
-pub extern "C" fn ee_ai_code_name(code: i64) -> *const c_char {
-    names::code_name(code).as_ptr()
-}
 
 /// `EECPNextReasonName`.
 #[no_mangle]

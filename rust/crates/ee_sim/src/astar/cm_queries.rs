@@ -443,22 +443,6 @@ pub unsafe extern "C" fn ee_astar_cmq_remove_forest_tile(r: *mut EeAStarCmRecord
 
 const RESOURCE_WOOD: i64 = 3;
 
-/// A query left in C++ (`CanGetTo`, `AreConnectedForUnit`, `UpdateWallUnit`) records an area as Rust does.
-///
-/// # Safety
-/// `h` 0 or a live area.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cntq_area(h: u64) {
-    if h == 0 {
-        cap_i(-1);
-        cap_i(-1);
-    } else {
-        let a = cm_io::area(h);
-        cap_i(a.serial as i64);
-        cap_i(a.area_type as i64);
-    }
-}
-
 fn cap_i(v: i64) {
     cap::ee_astar_cntq_i(v as i32);
 }
@@ -472,30 +456,6 @@ pub unsafe extern "C" fn ee_astar_cntq_state(r: *const EeAStarCmRecord) {
     let d = cm_io::capture_digest(&*r);
     cap_i(d as u32 as i32 as i64);
     cap_i((d >> 32) as u32 as i32 as i64);
-}
-
-/// `FindContinentID(x, y)`: the continent found through the tile's path sector, its id (0 if none).
-///
-/// # Safety
-/// `r` a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_found_continent_id(r: *const EeAStarCmRecord, x: c_long, y: c_long) -> u16 {
-    match cm_io::find_continent(rec(r), x, y) {
-        0 => 0,
-        c => cm_io::continent(c).id,
-    }
-}
-
-/// `FindPathSubSectorID(x, y)`: the sub sector found through the tile's path sector, its id (0 if none).
-///
-/// # Safety
-/// `r` a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_sub_sector_id_found(r: *const EeAStarCmRecord, x: c_long, y: c_long) -> u16 {
-    match cm_io::find_sub_sector(rec(r), x, y) {
-        0 => 0,
-        s => cm_io::sub(s).id,
-    }
 }
 
 /// `AddArea(area)`: the serial table gets the area under its serial.

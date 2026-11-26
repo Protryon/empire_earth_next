@@ -1528,15 +1528,6 @@ pub unsafe extern "C" fn ee_astar_cm_write_regions(r: *const EeAStarCmRecord) ->
     bytes(write_regions(&*r))
 }
 
-/// `EEContinentRegionsDigest`.
-///
-/// # Safety
-/// As `ee_astar_cm_write_regions`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_regions_digest(r: *const EeAStarCmRecord) -> c_ulong {
-    regions_digest(&*r)
-}
-
 /// TEST ONLY: `EEAIContinentCapture(tag)`: one record of the manager's state under `tag` (CNTB, CNTR); nothing
 /// unless the capture is on.
 ///
@@ -1548,15 +1539,6 @@ pub unsafe extern "C" fn ee_astar_cm_capture(r: *const EeAStarCmRecord, tag: u32
         return;
     }
     crate::app::capture_record::commit(tag, &capture_fill(&*r));
-}
-
-/// `EEAIContinentDigest` (TEST ONLY).
-///
-/// # Safety
-/// As `ee_astar_cm_write_regions`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_capture_digest(r: *const EeAStarCmRecord) -> u64 {
-    capture_digest(&*r)
 }
 
 /// `ReadRegions`: NULL on a bad block (or another map's).
@@ -1644,15 +1626,6 @@ pub unsafe extern "C" fn ee_astar_cm_read_area(h: u64, data: *const u8, len: usi
 #[no_mangle]
 pub unsafe extern "C" fn ee_astar_cm_find_continent(r: *const EeAStarCmRecord, x: c_long, y: c_long) -> u64 {
     find_continent(&*r, x, y)
-}
-
-/// `FindPathSubSector`.
-///
-/// # Safety
-/// As `ee_astar_cm_find_continent`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_find_sub_sector(r: *const EeAStarCmRecord, x: c_long, y: c_long) -> u64 {
-    find_sub_sector(&*r, x, y)
 }
 
 #[cfg(test)]

@@ -672,26 +672,6 @@ pub unsafe extern "C" fn ee_gfx_fill_object_fields(
     }
 }
 
-/// `FillUnitFields` (EERenderObject.cpp) through Rust.
-///
-/// # Safety
-/// As [`ee_gfx_fill_object_fields`]; `out` is the head of an `EERenderUnit`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_fill_unit_fields(
-    unit: u64,
-    out: *mut EeGfxFillUnit,
-    frame: *const EeGfxFillFrame,
-    host: *const EeGfxFillHost,
-) -> EeGfxFillUnitResult {
-    // SAFETY: the function's contract
-    unsafe {
-        let t = WorldRead::begin();
-        let unit = UnitView::of(&t, unit).expect("a unit");
-        let mut host = &*host;
-        fill_unit_fields(&t, unit, out, &*frame, &mut host)
-    }
-}
-
 /// `IsUnitDrawn`'s facts of a unit on a tile of the walk (walk.rs `unit_drawn` decides over them): its class's,
 /// stats' and owner's, the tile's sight by the current player, the complex unit's command, class and foundation.
 pub fn unit_drawn_facts(

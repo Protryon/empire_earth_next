@@ -17,8 +17,6 @@ public:
     GE2DPoint& operator+=(const GE2DPoint& inPoint) { return *this = GE2DPoint(this->mX + inPoint.mX, this->mY + inPoint.mY); }
     GE2DPoint& operator-=(const GE2DPoint& inPoint) { return *this = GE2DPoint(this->mX - inPoint.mX, this->mY - inPoint.mY); }
     void Clear() { *this = GE2DPoint(); }
-    // cross product of (inFrom - inTo) and (inTo - this): the side of the line inFrom-inTo this point lies on
-    float GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const { return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo)); }
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     void SetX(float inX) { this->mX = inX; }
@@ -26,21 +24,10 @@ public:
     void SetX(long inX) { this->mX = (float)inX; }
     void SetY(long inY) { this->mY = (float)inY; }
     void SetXY(float inX, float inY) { *this = GE2DPoint(inX, inY); }
-    float DistanceTo(const GE2DPoint& inPoint) const { return ee_ge_2d_distance(GERust(*this), GERust(inPoint)); }
     float DistanceToSquared(const GE2DPoint& inPoint) const { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
-    // points every inStep along the segment to inPoint, always ending with inPoint itself
-    // (Rust copies the two points before the vector is cleared: either may be one of its elements)
-    void InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const
-        { ee_ge_2d_interpolate(GERust(*this), GERust(inPoint), inStep, Push, &outPoints); }
     // x and y from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
     template <class F> long Load(F& inFile) { return ee_ge_2d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_2d_point_save(GERust(*this), GERustFile(inFile)); }
-    // the interpolation's calls: the vector cleared (no point), then each point
-    static void Push(void* inPoints, const EeGe2DPoint* inPoint)
-    {
-        inPoint ? static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint))
-                : static_cast<std::vector<GE2DPoint>*>(inPoints)->clear();
-    }
 };
 
 #endif

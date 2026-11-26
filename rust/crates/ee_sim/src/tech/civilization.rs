@@ -132,63 +132,6 @@ pub unsafe extern "C" fn ee_tech_civ_can_afford_all(
     can_afford_all(p, u, available, allow_custom, cost_now)
 }
 
-/// [`reapply`]: the deferred upgrades into `deferred` (room for `count`), their number into `deferred_count`.
-///
-/// # Safety
-/// `purchased` names `count` upgrades; `deferred` has room for `count`; `deferred_count` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_civ_reapply(
-    purchased: *const EeTechCivUpgrade,
-    count: usize,
-    apply: EeTechCivApply,
-    context: *mut c_void,
-    deferred: *mut EeTechCivUpgrade,
-    deferred_count: *mut usize,
-) -> bool {
-    // SAFETY: the caller's contract
-    let (applied, d) = reapply(unsafe { upgrades_at(purchased, count) }, |u| apply(context, u));
-    // SAFETY: at most `count` deferred
-    unsafe {
-        std::ptr::copy_nonoverlapping(d.as_ptr(), deferred, d.len());
-        *deferred_count = d.len();
-    }
-    applied
-}
-
-/// [`apply_all`].
-///
-/// # Safety
-/// `upgrades` names `count` upgrades.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_civ_apply_all(
-    upgrades: *const EeTechCivUpgrade,
-    count: usize,
-    apply: EeTechCivApply,
-    context: *mut c_void,
-) -> bool {
-    // SAFETY: the caller's contract
-    apply_all(unsafe { upgrades_at(upgrades, count) }, |u| apply(context, u))
-}
-
-/// `ApplyLevel21ToWorld`: applies every purchased upgrade of the deferred index (results ignored).
-///
-/// # Safety
-/// `purchased` names `count` upgrades.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_civ_apply_deferred_kind(
-    purchased: *const EeTechCivUpgrade,
-    count: usize,
-    apply: EeTechCivApply,
-    context: *mut c_void,
-) {
-    // SAFETY: the caller's contract
-    for &u in unsafe { upgrades_at(purchased, count) } {
-        if u & LEVEL_MASK == EE_TECH_CIV_DEFERRED_INDEX {
-            apply(context, u);
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

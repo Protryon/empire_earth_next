@@ -520,17 +520,3 @@ pub fn apply_power<H: CivHost>(h: &mut H, player: i32, id: i32) {
         }
     }
 }
-
-/// `ApplyUpgrade` over the C++ host ([`apply_upgrade`]).
-///
-/// # Safety
-/// `host` names a live host whose callback answers every op.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_civ_apply_upgrade(
-    host: *mut EeTechCivHost,
-    upgrade: EeTechCivUpgrade,
-    player: i32,
-) -> bool {
-    // SAFETY: the caller's contract
-    apply_upgrade(unsafe { &mut *host }, upgrade, player)
-}

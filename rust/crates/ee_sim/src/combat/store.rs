@@ -279,40 +279,6 @@ pub fn fill_heal_work(i: &mut EeCombatHealWorkIn, unit: EeCombatHandle, target: 
     }
 }
 
-/// `EEUGHealUnit::Work`'s store part over `input` (see [`fill_heal_work`]).
-///
-/// # Safety
-/// `input` must point to a writable record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_fill_heal_work(input: *mut EeCombatHealWorkIn, unit: u64, target: u64) {
-    fill_heal_work(unsafe { &mut *input }, unit, target);
-}
-
-/// `EECombatFillCondition`'s store part over `input` (see [`fill_condition`]).
-///
-/// # Safety
-/// `input` must point to a writable record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_fill_condition(
-    input: *mut EeCombatConditionIn,
-    kind: i32,
-    unit: u64,
-    event: u32,
-    target: u64,
-    complex: u64,
-) {
-    fill_condition(unsafe { &mut *input }, kind, unit, event, target, complex);
-}
-
-/// `EECombatFillStep`'s store part over `input` (see [`fill_step`]).
-///
-/// # Safety
-/// `input` must point to a writable record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_fill_step(input: *mut EeCombatStepIn, kind: i32, unit: u64, target: u64) {
-    fill_step(unsafe { &mut *input }, kind, unit, target);
-}
-
 #[cfg(test)]
 #[path = "store_tests.rs"]
 pub(crate) mod tests;

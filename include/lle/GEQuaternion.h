@@ -23,7 +23,6 @@ public:
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
-    void Normalize() { ee_ge_quat_normalize(GERust(*this)); }   // to unit length
 };
 
 #endif

@@ -942,22 +942,6 @@ pub unsafe extern "C" fn ee_gfx_ro_units_render(
     }
 }
 
-/// `EEROUnits::DrawLabels`.
-///
-/// # Safety
-/// As `ee_gfx_ro_units_render`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_ro_units_labels(
-    raster: *const crate::gfx::raster::EeGfxRaster,
-    scene: *const EeGfxUnitsScene,
-) {
-    // SAFETY: the function's contract
-    unsafe {
-        let mut x = &*raster;
-        draw_labels(&mut x, &*scene);
-    }
-}
-
 #[cfg(test)]
 #[path = "ro_units_tests.rs"]
 mod tests;

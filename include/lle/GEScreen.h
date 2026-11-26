@@ -49,7 +49,6 @@ public:
 
     GETextureManager* GetTextureManager() const { return this->mTextureManager; }
     void SetTextureManager(GETextureManager* inManager) { this->mTextureManager = inManager; }
-    static HINSTANCE__* GetInstance() { return GEScreen::sInstance; }
 
     GETextureManager* mTextureManager = NULL;   // +0x04
     unsigned long mRasterizerIndex = 0;     // +0x08

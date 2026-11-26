@@ -195,18 +195,6 @@ pub unsafe extern "C" fn ee_astar_sector_free(r: *mut EeAStarSectorRecord) {
     }
 }
 
-/// The sector's sub sectors in id order; `count` gets their number. Valid until they change.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sector_subs(
-    r: *const EeAStarSectorRecord,
-    count: *mut usize,
-) -> *const EeAStarSectorSub {
-    view(&sector_lists(r).sub_sectors, count)
-}
-
 /// `mSubSectors.insert((id, sub))`.
 ///
 /// # Safety
@@ -214,24 +202,6 @@ pub unsafe extern "C" fn ee_astar_sector_subs(
 #[no_mangle]
 pub unsafe extern "C" fn ee_astar_sector_insert_sub(r: *mut EeAStarSectorRecord, id: u16, sub: u64) {
     sector_lists(r).insert_sub(id, sub);
-}
-
-/// `mSubSectors.clear()` (the C++ deletes the objects first).
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sector_clear_subs(r: *mut EeAStarSectorRecord) {
-    sector_lists(r).sub_sectors.clear();
-}
-
-/// The continents touching the sector; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sector_neighbors(r: *const EeAStarSectorRecord, count: *mut usize) -> *const u64 {
-    view(&sector_lists(r).neighbors, count)
 }
 
 /// `AddNeighbor` (`unique`), or a plain `push_back` (a saved game's list).
@@ -247,15 +217,6 @@ pub unsafe extern "C" fn ee_astar_sector_add_neighbor(r: *mut EeAStarSectorRecor
     }
 }
 
-/// The sector's path area ids; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sector_path_area_ids(r: *const EeAStarSectorRecord, count: *mut usize) -> *const u16 {
-    view(&sector_lists(r).path_area_ids, count)
-}
-
 /// `AddPathAreaID`.
 ///
 /// # Safety
@@ -263,28 +224,6 @@ pub unsafe extern "C" fn ee_astar_sector_path_area_ids(r: *const EeAStarSectorRe
 #[no_mangle]
 pub unsafe extern "C" fn ee_astar_sector_add_path_area_id(r: *mut EeAStarSectorRecord, id: u16) {
     sector_lists(r).add_path_area_id(id);
-}
-
-/// `RemovePathAreaID`.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sector_remove_path_area_id(r: *mut EeAStarSectorRecord, id: u16) {
-    sector_lists(r).remove_path_area_id(id);
-}
-
-/// The path area ids as saved.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `ids` holds `count` ids (NULL for 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sector_set_path_area_ids(r: *mut EeAStarSectorRecord, ids: *const u16, count: usize) {
-    let l = &mut sector_lists(r).path_area_ids;
-    l.clear();
-    if count > 0 {
-        l.extend_from_slice(std::slice::from_raw_parts(ids, count));
-    }
 }
 
 // ---- sub sectors
@@ -321,67 +260,6 @@ pub unsafe extern "C" fn ee_astar_sub_sector_free(r: *mut EeAStarSubSectorRecord
     }
 }
 
-/// Every link in order; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sub_sector_links_all(
-    r: *const EeAStarSubSectorRecord,
-    count: *mut usize,
-) -> *const EeAStarSubSectorLink {
-    view(&sub_lists(r).links, count)
-}
-
-/// The links under `id`; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sub_sector_links_of(
-    r: *const EeAStarSubSectorRecord,
-    id: u16,
-    count: *mut usize,
-) -> *const EeAStarSubSectorLink {
-    view(sub_lists(r).links_of(id), count)
-}
-
-/// `mLinks.insert((id, (first, second)))`.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sub_sector_insert_link(
-    r: *mut EeAStarSubSectorRecord,
-    id: u16,
-    first: u64,
-    second: u64,
-) {
-    sub_lists(r).insert_link(EeAStarSubSectorLink { id, first, second });
-}
-
-/// `RemoveLinks`.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sub_sector_remove_links(r: *mut EeAStarSubSectorRecord, id: u16) {
-    sub_lists(r).remove_links(id);
-}
-
-/// `RemoveNeighbor` (`other` the sub sector, `other_id` its id).
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sub_sector_remove_neighbor(
-    r: *mut EeAStarSubSectorRecord,
-    other: u64,
-    other_id: u16,
-) -> bool {
-    sub_lists(r).remove_neighbor(other, other_id)
-}
-
 /// The neighbours; `count` gets their number.
 ///
 /// # Safety
@@ -392,15 +270,6 @@ pub unsafe extern "C" fn ee_astar_sub_sector_neighbors(
     count: *mut usize,
 ) -> *const u64 {
     view(&sub_lists(r).neighbors, count)
-}
-
-/// `mNeighbors.push_back(other)`.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_sub_sector_add_neighbor(r: *mut EeAStarSubSectorRecord, other: u64) {
-    sub_lists(r).neighbors.push(other);
 }
 
 #[cfg(test)]

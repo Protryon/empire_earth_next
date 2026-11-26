@@ -785,15 +785,6 @@ pub unsafe extern "C" fn ee_astar_flood_stale(f: *mut EeAStarFlood, count: *mut 
     f.stale.as_ptr()
 }
 
-/// `EEAIContinentManager::NumberContinentChains(kind)`.
-///
-/// # Safety
-/// `cb` valid, its functions callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_number_chains(kind: u32, cb: *const EeAStarChainCallbacks) {
-    number_chains(kind, unsafe { &*cb });
-}
-
 /// The unit tests' C views (a callbacks struct whose every query panics).
 #[cfg(test)]
 pub(crate) mod test_view {

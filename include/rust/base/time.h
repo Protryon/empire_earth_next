@@ -43,9 +43,6 @@ struct EeTimePoll {
   bool running;
 };
 
-/// A user callback of a callback timer.
-using EeTimeCallback = void(*)(void*);
-
 extern "C" {
 
 /// The system timer's procedure (the original's `TMTimer::TimerCallback`): `user` is the timer.
@@ -88,10 +85,6 @@ void ee_time_poll_init(EeTimePoll *poll, uint32_t delay, uint32_t unit, bool sta
 
 /// # Safety
 /// `poll` is a live poll.
-bool ee_time_poll_is_paused(const EeTimePoll *poll);
-
-/// # Safety
-/// `poll` is a live poll.
 bool ee_time_poll_is_running(const EeTimePoll *poll);
 
 /// # Safety
@@ -131,10 +124,6 @@ EeTimeTimer *ee_time_timer_new(uint32_t interval, uint32_t unit, bool repeating)
 /// `timer` came from [`ee_time_timer_new`] and is not used again.
 void ee_time_timer_free(EeTimeTimer *timer);
 
-/// # Safety
-/// `timer` is a live timer.
-int ee_time_timer_set_callback(const EeTimeTimer *timer, EeTimeCallback callback, void *parameter);
-
 /// `SetEvent`: `event` is the event's platform handle (`TSEvent::mHandle`; NULL for none).
 ///
 /// # Safety
@@ -147,10 +136,6 @@ int ee_time_timer_set_interval(const EeTimeTimer *timer, uint32_t interval, uint
 
 /// # Safety
 /// `timer` is a live timer.
-int ee_time_timer_set_repeating(const EeTimeTimer *timer, bool repeating);
-
-/// # Safety
-/// `timer` is a live timer.
 int ee_time_timer_set_type(const EeTimeTimer *timer, uint32_t timer_type);
 
 /// # Safety
@@ -160,14 +145,6 @@ int ee_time_timer_start(const EeTimeTimer *timer);
 /// # Safety
 /// `timer` is a live timer.
 int ee_time_timer_stop(const EeTimeTimer *timer);
-
-/// `Stop(outElapsed, outRemaining)`: the outputs are written only on success.
-///
-/// # Safety
-/// `timer` is a live timer; the outputs are writable.
-int ee_time_timer_stop_elapsed(const EeTimeTimer *timer,
-                               unsigned long *elapsed,
-                               unsigned long *remaining);
 
 }  // extern "C"
 

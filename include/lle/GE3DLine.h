@@ -16,22 +16,11 @@ public:
     void Define(const GE3DPoint& inStart, const GEVector& inDirection) { *this = GE3DLine(inStart, inDirection); }
     const GEVector& GetDirection() const { return GECpp(this->mDirection); }
     const GE3DPoint& GetStart() const { return GECpp(this->mStart); }
-    // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
-    // in the third axis; the parameters on each); a plane (false when parallel)
-    bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const
-        { return ee_ge_line_intersects_point(GERust(*this), GERust(inPoint), inTolerance, &outT); }
-    bool Intersects(const GE3DLine& inLine, float& outT, float& outLineT) const
-        { return ee_ge_line_intersects_line(GERust(*this), GERust(inLine), &outT, &outLineT); }
-    bool Intersects(const GE3DPlane& inPlane, float& outT) const { return ee_ge_line_intersects_plane(GERust(*this), GERust(inPlane), &outT); }
     template <class F> long Load(F& inFile) { return ee_ge_3d_line_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) const { return ee_ge_3d_line_save(GERust(*this), GERustFile(inFile)); }
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }
     void SetStart(const GE3DPoint& inStart) { this->mStart = inStart; }
-    // the parameter (and the point) where the line reaches a given x, y or z; false when it runs parallel to it
-    bool SolveForX(float inX, float& outT) const { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, NULL); }
-    bool SolveForX(float inX, float& outT, GE3DPoint& outPoint) const { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, GERust(outPoint)); }
-    bool SolveForY(float inY, float& outT) const { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, NULL); }
-    bool SolveForY(float inY, float& outT, GE3DPoint& outPoint) const { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, GERust(outPoint)); }
+    // the parameter (and the point) where the line reaches a given z; false when it runs parallel to it
     bool SolveForZ(float inZ, float& outT) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, NULL); }
     bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, GERust(outPoint)); }
 };

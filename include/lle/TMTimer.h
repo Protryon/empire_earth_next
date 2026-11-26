@@ -13,19 +13,9 @@ public:
     TMTimer(unsigned long inInterval, unsigned long inTimeUnit, bool inRepeating)
         : mTimer(ee_time_timer_new((uint32_t)inInterval, (uint32_t)inTimeUnit, inRepeating)) {}
     ~TMTimer() { ee_time_timer_free(this->mTimer); }
-    long SetCallback(void (*inCallback)(void*), void* inParameter) { return ee_time_timer_set_callback(this->mTimer, inCallback, inParameter); }
     // the event's handle is read here (the original read it at Start; a NULL event crashed there)
     long SetEvent(TSEvent* inEvent) { return ee_time_timer_set_event(this->mTimer, inEvent != NULL ? inEvent->GetHandle() : NULL); }
-    long SetInterval(unsigned long inInterval, unsigned long inTimeUnit)
-    {
-        return ee_time_timer_set_interval(this->mTimer, (uint32_t)inInterval, (uint32_t)inTimeUnit);
-    }
-    long SetRepeating(bool inRepeating) { return ee_time_timer_set_repeating(this->mTimer, inRepeating); }
-    long SetTimerType(unsigned long inType) { return ee_time_timer_set_type(this->mTimer, (uint32_t)inType); }
-    long Start() { return ee_time_timer_start(this->mTimer); }
-    long Stop() { return ee_time_timer_stop(this->mTimer); }
     EeTimeTimer* Rust() const { return this->mTimer; }   // the Rust timer (ee_game rts physics.rs)
-    long Stop(unsigned long& outElapsed, unsigned long& outRemaining) { return ee_time_timer_stop_elapsed(this->mTimer, &outElapsed, &outRemaining); }
 
     URust<EeTimeTimer> mTimer;
 };

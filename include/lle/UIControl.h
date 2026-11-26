@@ -64,7 +64,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     bool GetHasMouseCapture() const { return this->Call(EeUiControlCall::HasMouseCapture) != 0; }
     unsigned long GetHeight() const { return UMFloor(this->GetRectangle().GetBottom() - this->GetRectangle().GetTop() + 1.0f); }
     virtual bool GetHelpString(UWideString& outString) const { return this->Call(EeUiControlCall::HelpString, (intptr_t)&outString) != 0; }
-    UIHotKey* GetHotKey() const { return static_cast<UIHotKey*>(this->mHotKey); }
     unsigned long GetId() const { return this->mId; }
     virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
@@ -104,7 +103,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     static void SetBorderColors(const GEColor& inDark, const GEColor& inLight) { ee_ui_set_border_colors(UIF4(inDark), UIF4(inLight)); }
     void SetBorderOpacity(float inOpacity) { this->mBorderOpacity = inOpacity; }
     void SetBorderThickness(unsigned long inThickness) { this->Call(EeUiControlCall::SetBorderThickness, inThickness); }
-    void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
     virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiControlCall::SetLocation, 0, 0, UIF4(inLocation)); }

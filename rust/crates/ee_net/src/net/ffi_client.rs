@@ -517,18 +517,8 @@ pub extern "C" fn ee_net_cl_stop_threads(c: *const EeNetClient) {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_net_cl_clear_incoming_messages(c: *const EeNetClient) {
-    cl(c).clear_incoming_messages()
-}
-
-#[no_mangle]
 pub extern "C" fn ee_net_cl_send_start_connect_message(c: *const EeNetClient, msg: *mut c_void) {
     cl(c).send_start_connect_message(msg as Msg)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_net_cl_send_end_connect_message(c: *const EeNetClient) {
-    cl(c).send_end_connect_message()
 }
 
 /// `Connect(name, host, address)`: `strings` points at the three (an `EeNetClStrings` with `tcp`), handed to the
@@ -574,18 +564,8 @@ pub unsafe fn cl_strings(
 }
 
 #[no_mangle]
-pub extern "C" fn ee_net_cl_connect_for_xfer(c: *const EeNetClient) -> i32 {
-    cl(c).connect_for_xfer()
-}
-
-#[no_mangle]
 pub extern "C" fn ee_net_cl_disconnect(c: *const EeNetClient) -> i32 {
     cl(c).disconnect()
-}
-
-#[no_mangle]
-pub extern "C" fn ee_net_cl_disconnect_from_xfer(c: *const EeNetClient) -> i32 {
-    cl(c).disconnect_from_xfer()
 }
 
 /// `GetDetectedGame(index, name, host, address)`: `strings` points at the three (an `EeNetClSinks` with `tcp`),
@@ -614,12 +594,6 @@ pub extern "C" fn ee_net_cl_process_user_input(
     guaranteed: bool,
 ) -> i32 {
     cl(c).process_user_input(msg as Msg, player, guaranteed)
-}
-
-/// The protocol the client uses (protocol 0, `NEProtocol*`)
-#[no_mangle]
-pub extern "C" fn ee_net_cl_protocol(c: *const EeNetClient) -> *mut c_void {
-    cl(c).protocol() as *mut c_void
 }
 
 /// The game connection (`NEConnection*`, NULL when not connected)

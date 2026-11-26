@@ -43,24 +43,10 @@ public:
     {
         return Point(ee_sparse_closest_point(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY));
     }
-    // Returns a random point (16 tries at a random column; then the first point; default point when empty)
-    U2DPoint<long> GetRandomPoint(URandom& inRandom) { return Point(ee_sparse_random_point(this->mPoints, Generate, &inRandom)); }
-    // Adds a point, growing the column array; a point left of the array with x <= 0 is silently ignored
-    void Insert(const U2DPoint<long>& inPoint) { ee_sparse_insert(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY); }
-    // Adds every point of the list (from the last)
-    void Insert(const std::vector<U2DPoint<long> >& inPoints) { InsertList(inPoints, false); }
-    // Removes a point, deleting its column when it becomes empty; false when it was not there
-    bool Remove(const U2DPoint<long>& inPoint) { return ee_sparse_remove(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY); }
     // Returns the point count
     long Size() const { return ee_sparse_size(this->mPoints); }
     // Returns the point at the given index over all columns in order (default point when out of range)
     U2DPoint<long> operator[](long inIndex) const { return Point(ee_sparse_get(this->mPoints, (int32_t)inIndex)); }
-    // port (save version 0.263, the continent manager's regions in a saved game): the set as it is (empty columns
-    // too: GetRandomPoint draws a column), as numbers: the offset, the count, the column count, then per column 0 (none)
-    // or 1, its size, its run count and its runs' ends (ee_sparse_raw); SetRaw makes the set from them (false, the set
-    // cleared, when they are not such a list)
-    void GetRaw(std::vector<long>& outRaw) const { ee_sparse_raw_into(this->mPoints, &outRaw, Resize<long>); }
-    EeSparseArray* GetHandle() const { return this->mPoints; }   // New (port): for the AI area's record (ee_astar area.rs)
     // New (port): where the handle is (ee_sim::astar cm_io.rs reads an area's tiles from its object)
     EeSparseArray* const* GetHandleSlot() const { return &this->mPoints; }
 

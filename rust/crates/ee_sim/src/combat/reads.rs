@@ -913,25 +913,6 @@ pub unsafe extern "C" fn ee_combat_enemy_in_range(unit: u64, host: *const EeComb
     i32::from(enemy_in_range(&mut Stored::new(&mut h), unit))
 }
 
-/// `FacesPoint` over `input`; `turret(ctx, i, out)` reads turret part `i`.
-///
-/// # Safety
-/// `input` must point to a valid record and `turret` be callable with `ctx` for every index below `input.turrets`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_faces_point(
-    input: *const EeCombatFacingIn,
-    ctx: *mut c_void,
-    turret: unsafe extern "C" fn(ctx: *mut c_void, index: i32, out: *mut EeCombatTurret),
-) -> i32 {
-    let i = unsafe { *input };
-    i32::from(faces_point(&i, |index| {
-        let mut out = EeCombatTurret::default();
-        // SAFETY: the function's contract
-        unsafe { turret(ctx, index, &mut out) };
-        out
-    }))
-}
-
 #[cfg(test)]
 #[path = "reads_tests.rs"]
 mod tests;

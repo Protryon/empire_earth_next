@@ -75,7 +75,6 @@ public:
     UString GetPressedFileName() const { return UString(this->D().names[1]); }
     UString GetFocusedFileName() const { return UString(this->D().names[2]); }
     GEFont* GetFont() const { return static_cast<GEFont*>(this->D().font); }
-    GEBitmap* GetNormal() const { return NULL; }    // never set (the original left these members uninitialized)
     float GetBackgroundOpacity() const { return this->F().background_opacity; }
     long GetID() const { return this->F().id; }
     long GetFormID() const { return this->F().form_id; }

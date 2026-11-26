@@ -49,19 +49,15 @@ public:
     virtual void SetVolume(const UString& inVolume) { this->mVolume = inVolume; }                 // +0x70
 
     unsigned long GetFileAccess() const { return this->mFileAccess; }  // inline: GESurface/GETexture read +0x34 directly; export folded 0x4c365
-    unsigned long GetVersion() const { return this->mVersion; }
-    void SetVersion(unsigned long inVersion) { this->mVersion = inVersion; }
 
     // (the vtable slots are the original's)
     virtual long Close() { return ee_fs_spec_close(Rec()); }                    // +0x08
-    void CloseSearchHandle() { ee_fs_spec_close_search(Rec()); }
     virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes)   // +0x0c
         { return ee_fs_spec_copy(Rec(), inDestination, inOverwrite, inKeepTimes); }
     virtual long Create() { return ee_fs_spec_create(Rec()); }                  // +0x04
     virtual long CreateDirectory() { return ee_fs_spec_create_directory(Rec()); }   // +0xa0
     virtual long DeleteDirectory() { return ee_fs_spec_delete_directory(Rec()); }   // +0xa4
     virtual long FOpen(char* inMode) { return ee_fs_spec_fopen(Rec(), inMode); }   // +0xa8
-    void* GetFileHandle() const { return this->mHandle; }  // inline (folded 0x11cc9)
     virtual long GetFirstFile(FSFileSpec& outFile) { return this->GetFirstFile(UString("*.*"), outFile); }   // +0xb0 0x13e8 (inline)
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile)   // +0xac
     {

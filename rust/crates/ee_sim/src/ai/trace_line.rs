@@ -27,12 +27,6 @@ pub fn scope_end(saved: *const c_char) {
     MANAGER.store(saved as *mut c_char, Ordering::Release);
 }
 
-/// `std::exchange(gCPTraceManager, name)` for the C++ (`name` a static C string).
-#[no_mangle]
-pub extern "C" fn ee_ai_trace_manager_swap(name: *const c_char) -> *const c_char {
-    scope(name)
-}
-
 fn manager() -> Vec<u8> {
     // SAFETY: every manager name is a static C string
     unsafe { CStr::from_ptr(MANAGER.load(Ordering::Acquire)) }.to_bytes().to_vec()

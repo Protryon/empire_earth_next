@@ -148,15 +148,6 @@ pub unsafe extern "C" fn ee_util_fractal_value(fractal: *const EeUtilFractal, x:
     (*fractal).value(x as u32, y as u32)
 }
 
-/// `GetSquareDimension`.
-///
-/// # Safety
-/// `fractal` is a live map.
-#[no_mangle]
-pub unsafe extern "C" fn ee_util_fractal_dimension(fractal: *const EeUtilFractal) -> c_ulong {
-    (*fractal).dimension as c_ulong
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

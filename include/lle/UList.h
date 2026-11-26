@@ -20,7 +20,6 @@ public:
     UList() : mHead(NULL), mCount(0) {}
     ~UList() { this->Clear(); }
 
-    void InsertAfter(UListNode<T>* inPrevious, const T& inData) { ee_util_list_insert_after(this->Rust(), sNodePool.Rust(), reinterpret_cast<EeUtilListNode*>(inPrevious), (void*)inData); }
     void Remove(UListNode<T>* inNode) { ee_util_list_remove(this->Rust(), sNodePool.Rust(), reinterpret_cast<EeUtilListNode*>(inNode)); }
     void Clear() { ee_util_list_clear(this->Rust(), sNodePool.Rust()); }
     void AddHead(const T& inData) { ee_util_list_add_head(this->Rust(), sNodePool.Rust(), (void*)inData); }

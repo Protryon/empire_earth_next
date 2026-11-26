@@ -28,7 +28,6 @@ public:
     const GETransformation& GetCamera() const { return GECpp(this->mCamera); }
     const GETransformation& GetCameraInverse() const { return GECpp(this->mCameraInverse); }
     float GetFrontClippingDistance() const { return this->mFrontClippingDistance; }
-    const GE3DPlane& GetFrontPlane() const { return GECpp(this->mFrontPlane); }
     void GetFrustrumWorldPlanes(std::vector<GE3DPlane>& outPlanes, bool inOrthographic) const
         { this->GetFrustrumWorldPlanes(this->GetViewRectangle(), outPlanes, inOrthographic); }
     // the six world-space planes of the frustum under a screen rectangle (the vector resized to them)
@@ -38,19 +37,10 @@ public:
         outPlanes.resize(6);
         ee_ge_viewport_frustum_planes(this, GERust(inRectangle), inOrthographic, GERust(outPlanes[0]));
     }
-    void GetFrustrumWorldPoints(std::vector<GE3DPoint>& outPoints, bool inOrthographic) const
-        { this->GetFrustrumWorldPoints(this->GetViewRectangle(), outPoints, inOrthographic); }
-    // appends the eight world-space corners (near and far per screen corner) of the frustum under a screen
-    // rectangle, widened to at least 2 pixels each way
-    void GetFrustrumWorldPoints(const GERectangle& inRectangle, std::vector<GE3DPoint>& outPoints,
-                                bool inOrthographic) const
-        { ee_ge_viewport_frustum_points_push(this, GERust(inRectangle), inOrthographic, GE3DPoint::Push, &outPoints); }
     float GetHalfHeight() const { return this->mHalfHeight; }
     float GetHalfWidth() const { return this->mHalfWidth; }
-    const GE3DPlane& GetLeftPlane() const { return GECpp(this->mLeftPlane); }
     const GERectangle& GetOrthographicRectangle() const { return GECpp(this->mOrthographicRectangle); }
     float GetRearClippingDistance() const { return this->mRearClippingDistance; }
-    const GE3DPlane& GetRightPlane() const { return GECpp(this->mRightPlane); }
     const GERectangle& GetViewRectangle() const { return GECpp(this->mViewRectangle); }
     float GetXCenter() const { return this->mXCenter; }
     float GetYCenter() const { return this->mYCenter; }

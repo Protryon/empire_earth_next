@@ -19,8 +19,6 @@ public:
         { return *this = GEVector(this->mX - inVector.mX, this->mY - inVector.mY, this->mZ - inVector.mZ); }
     bool operator==(const GEVector& inVector) const { return this->mX == inVector.mX && this->mY == inVector.mY && this->mZ == inVector.mZ; }
     bool operator!=(const GEVector& inVector) const { return this->mX != inVector.mX || this->mY != inVector.mY || this->mZ != inVector.mZ; }
-    void Add(const GEVector& inVector, GEVector& outVector) const
-        { outVector = GEVector(inVector.mX + this->mX, inVector.mY + this->mY, inVector.mZ + this->mZ); }
     float GetX() const { return this->mX; }  // inline (exported, ICF-folded with GE2DPoint's)
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
@@ -38,7 +36,6 @@ public:
     void Scale(float inScale, GEVector& outVector) const { outVector = GEVector(inScale * this->mX, inScale * this->mY, inScale * this->mZ); }
     void SetX(float inX) { this->mX = inX; }  // inline (exported 0x54ae4 / 0xc56c / 0xc576)
     void SetY(float inY) { this->mY = inY; }
-    void SetZ(float inZ) { this->mZ = inZ; }
     template <class F> long Load(F& inFile) { return ee_ge_vector_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) const { return ee_ge_vector_save(GERust(*this), GERustFile(inFile)); }
 };

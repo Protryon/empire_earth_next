@@ -17,7 +17,6 @@ const UString& SEMixerPlugInName();
 
 class LLE_API SEMixer : URustView {
 public:
-    static SEMixer* GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
     SEConductor& GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(Rust())); }
     static unsigned long GetCount() { return ee_sound_mixer_count(); }
     // the registered mixer with the given index; kErrorBeyondEnd past the last
@@ -26,15 +25,8 @@ public:
         return ee_sound_mixer_get((uint32_t)inIndex, reinterpret_cast<EeSoundMixer**>(&outMixer));
     }
     const UString& GetName() { return SEMixerPlugInName(); }
-    bool IsValid() { return ee_mixer_plugin_is_valid(); }   // (PIMIsValid)
-    bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-    {
-        return ee_sound_mixer_process_message(Rust(), inMessage, inParameter1, inParameter2);
-    }
     // the given mixer active (NULL: none), the current one's music stopped and the mixer deactivated first
     static long UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
-    // this port's addition: the mixer's output rate
-    unsigned long GetOutputRate() const { return ee_sound_mixer_output_rate(Rust()); }
     EeSoundMixer* Rust() const { return reinterpret_cast<EeSoundMixer*>(const_cast<SEMixer*>(this)); }
 };
 

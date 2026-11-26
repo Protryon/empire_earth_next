@@ -33,9 +33,6 @@ public:
     // Creates an empty saved-world chunk (persistent factory)
     // +0x14 0x14c2a6
     virtual FSPersistent* CreateDefault() const { return new EEPWorldHelper; }
-    // 0x14c3a7: hands the saved state to the game being loaded (the loader 0x14a0a4 dynamic_casts the helper)
-    // Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
-    void Restore(EEGameState& ioState) { ee_gamecpp_pwh_restore(this, &ioState); }
 
     // class static keys: guard byte 0x531c58 (bits 1..0x80), then 0x531bd0 (bits 1..0x40)
 

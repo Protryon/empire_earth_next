@@ -9,7 +9,7 @@
 //! The values stay as the C++ kept them; the C++'s accessors (EECPExperiment, EECPPersonality, EECPCheats,
 //! EECPDemandSplitOn) ask here.
 
-use std::ffi::{c_char, c_long, CStr, CString};
+use std::ffi::{c_char, c_long, CString};
 use std::sync::OnceLock;
 
 /// The cheats' names in their bits' order (gameoptions.yaml ai_cheats; EERules.cpp kEEAICheatNames)
@@ -145,16 +145,6 @@ pub fn experiment_of(id: u64, name: &str) -> bool {
     experiment(switches(), id, name)
 }
 
-/// `EECPExperiment`: the player `id`'s experiments name `name`.
-///
-/// # Safety
-/// `name` is a NUL-terminated string.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_switch_experiment(id: u64, name: *const c_char) -> bool {
-    let name = CStr::from_ptr(name).to_str().unwrap_or("");
-    experiment(switches(), id, name)
-}
-
 /// `EECPExperimentNames`: the player's set as ",a,b," ("-": none or empty); the text lives as long as the game.
 #[no_mangle]
 pub extern "C" fn ee_ai_switch_experiment_names(id: u64) -> *const c_char {
@@ -180,20 +170,6 @@ pub extern "C" fn ee_ai_switch_personality(id: u64) -> c_long {
 #[no_mangle]
 pub extern "C" fn ee_ai_switch_cheats(id: u64) -> c_long {
     pick(&switches().cheats, id).copied().unwrap_or(CHEAT_ALL)
-}
-
-/// `EECPCheatNames`: the cheats of `bits` by name, "a,b" ("none": none) into `out` (room for `cap` bytes,
-/// NUL-terminated) -> the length.
-///
-/// # Safety
-/// `out` has room for `cap` bytes (at least 1).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_switch_cheat_names(bits: c_long, out: *mut c_char, cap: usize) -> usize {
-    let text = cheat_names(bits);
-    let n = text.len().min(cap.saturating_sub(1));
-    std::ptr::copy_nonoverlapping(text.as_ptr(), out.cast(), n);
-    *out.add(n) = 0;
-    n
 }
 
 /// The cheats of `bits` by name

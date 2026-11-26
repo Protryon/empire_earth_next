@@ -392,26 +392,6 @@ pub extern "C" fn ee_data_starting_resources_record_size() -> usize {
     core::mem::size_of::<DbStartingResources>()
 }
 
-/// `EEStartingResources::Load`'s copy of one record; false (and `fields` untouched) for a skipped row.
-///
-/// # Safety
-/// `bytes` holds `ee_data_starting_resources_record_size()` bytes; `fields` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_starting_resources_from_record(
-    bytes: *const u8,
-    fields: *mut EeDataStartingResourcesFields,
-) -> bool {
-    // SAFETY: the caller's guarantee
-    match starting_resources_fields(&unsafe { record::<DbStartingResources>(bytes) }) {
-        Some(f) => {
-            // SAFETY: the caller's guarantee
-            unsafe { *fields = f };
-            true
-        }
-        None => false,
-    }
-}
-
 // ---- EEUCUpgradeTable (db\dbupgrade)
 
 /// One record of dbupgrade (`EEUCUpgradeRecord`, 240 bytes): a unit class's upgrade steps and costs.
@@ -519,33 +499,6 @@ pub fn upgrade_fields(r: &DbUpgrade) -> Option<EeDataUpgradeFields> {
 #[no_mangle]
 pub extern "C" fn ee_data_upgrade_record_size() -> usize {
     core::mem::size_of::<DbUpgrade>()
-}
-
-/// The constructor's entry (see [`upgrade_default`]).
-///
-/// # Safety
-/// `fields` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_upgrade_default(fields: *mut EeDataUpgradeFields) {
-    // SAFETY: the caller's guarantee
-    unsafe { *fields = upgrade_default() };
-}
-
-/// `EEUCUpgradeTable::Load`'s copy of one record; false (and `fields` untouched) for a row without an entry.
-///
-/// # Safety
-/// `bytes` holds `ee_data_upgrade_record_size()` bytes; `fields` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_upgrade_from_record(bytes: *const u8, fields: *mut EeDataUpgradeFields) -> bool {
-    // SAFETY: the caller's guarantee
-    match upgrade_fields(&unsafe { record::<DbUpgrade>(bytes) }) {
-        Some(f) => {
-            // SAFETY: the caller's guarantee
-            unsafe { *fields = f };
-            true
-        }
-        None => false,
-    }
 }
 
 // ---- EEColorTable (db\dbcolortable)
@@ -782,16 +735,6 @@ pub extern "C" fn ee_data_terrain_type_record_size() -> usize {
     core::mem::size_of::<DbTerrainType>()
 }
 
-/// `EETerrainTypeTable::Load`'s copy of one record.
-///
-/// # Safety
-/// `bytes` holds `ee_data_terrain_type_record_size()` bytes; `fields` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_terrain_type_from_record(bytes: *const u8, fields: *mut EeDataTerrainTypeFields) {
-    // SAFETY: the caller's guarantee
-    unsafe { *fields = terrain_type_fields(&record::<DbTerrainType>(bytes)) };
-}
-
 #[test]
 fn a_terrain_type_keeps_its_palette_index_as_l18() {
     // SAFETY: plain integers and bytes
@@ -913,26 +856,6 @@ pub fn game_variant_fields(r: &DbGameVariant) -> Option<EeDataGameVariantFields>
 #[no_mangle]
 pub extern "C" fn ee_data_game_variant_record_size() -> usize {
     core::mem::size_of::<DbGameVariant>()
-}
-
-/// `EEGameVariant::Load`'s copy of one record; false (and `fields` untouched) for a skipped row.
-///
-/// # Safety
-/// `bytes` holds `ee_data_game_variant_record_size()` bytes; `fields` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_game_variant_from_record(
-    bytes: *const u8,
-    fields: *mut EeDataGameVariantFields,
-) -> bool {
-    // SAFETY: the caller's guarantee
-    match game_variant_fields(&unsafe { record::<DbGameVariant>(bytes) }) {
-        Some(f) => {
-            // SAFETY: the caller's guarantee
-            unsafe { *fields = f };
-            true
-        }
-        None => false,
-    }
 }
 
 #[test]
@@ -2195,19 +2118,6 @@ pub fn tag_point_kinds(name: &[u8]) -> Vec<c_long> {
         })
         .map(|k| k as c_long)
         .collect()
-}
-
-/// [`tag_point_kinds`] of a NUL-terminated name into `out` (room for 0x48); returns the count.
-///
-/// # Safety
-/// `name` is NUL-terminated; `out` has room for 0x48 `long`s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_tag_point_kinds(name: *const c_char, out: *mut c_long) -> usize {
-    // SAFETY: the caller's guarantee
-    let kinds = tag_point_kinds(unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes());
-    // SAFETY: at most 0x48 kinds
-    unsafe { std::ptr::copy_nonoverlapping(kinds.as_ptr(), out, kinds.len()) };
-    kinds.len()
 }
 
 /// The model slot of the shared model in the frame maps (the parts' models take 0 .. 13 in first-seen order).

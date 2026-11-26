@@ -4,7 +4,7 @@
 //! mirrors them after every change. `TeamsChanged` (an empty member) is gone.
 #![allow(clippy::missing_safety_doc)]
 
-use std::ffi::{c_ulong, c_void};
+use std::ffi::c_void;
 
 use ee_sim::app::teams_ffi::{self as teams, EeAppTeamsWorld};
 
@@ -39,18 +39,6 @@ pub fn mirror(w: P) {
         unsafe { teams::ee_app_teams_get(k, players.as_mut_ptr(), players.len()) };
         h(O::C12TeamSetPlayers, w, &[k as i64, pa(players.as_ptr() as P), players.len() as i64]);
     }
-}
-
-/// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_world_teams_add(w: *mut c_void, players: *const c_ulong, n: usize) {
-    let players: Vec<u32> = if n == 0 {
-        Vec::new()
-    } else {
-        unsafe { std::slice::from_raw_parts(players, n) }.iter().map(|p| *p as u32).collect()
-    };
-    unsafe { teams::ee_app_teams_add(players.as_ptr(), players.len(), &world()) };
-    mirror(w as P);
 }
 
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.

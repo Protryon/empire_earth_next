@@ -1490,20 +1490,6 @@ pub unsafe extern "C" fn ee_ge_mod_store_loaded(
     }
 }
 
-/// `LoadTexturesForScreen(description, screen)`.
-///
-/// # Safety
-/// `p` is live; `description` a `GETextureDescription`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_mod_load_textures(
-    p: *mut EeGeModel,
-    description: *const c_void,
-    screen: c_ulong,
-) -> c_long {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModel::load_textures(p, description as usize, screen) }
-}
-
 /// `ComputeBoundingVolumes`.
 ///
 /// # Safety
@@ -1611,16 +1597,6 @@ pub unsafe extern "C" fn ee_ge_mod_prepare_transforms(p: *mut EeGeModel) {
     unsafe { EeGeModel::prepare_transforms(p) }
 }
 
-/// `RemoveScale`.
-///
-/// # Safety
-/// `p` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_mod_remove_scale(p: *mut EeGeModel) {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModel::remove_scale(p) }
-}
-
 /// `SetFractionalFramePosition`.
 ///
 /// # Safety
@@ -1689,16 +1665,6 @@ pub unsafe extern "C" fn ee_ge_mod_set_texture(p: *mut EeGeModel, texture: *mut 
 pub unsafe extern "C" fn ee_ge_mod_size_of(p: *mut EeGeModel) -> c_ulong {
     // SAFETY: the caller's contract
     unsafe { EeGeModel::size_of(p) }
-}
-
-/// `SortTagPoints`.
-///
-/// # Safety
-/// `p` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_mod_sort_tag_points(p: *mut EeGeModel) {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModel::sort_tag_points(p) }
 }
 
 /// `Verify`.

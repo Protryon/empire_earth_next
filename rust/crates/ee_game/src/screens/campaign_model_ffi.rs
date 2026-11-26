@@ -56,33 +56,3 @@ pub(crate) fn text(which: u32, arg: u32) -> Option<Vec<u8>> {
 pub(crate) fn put(which: u32, arg: u32, text: &[u8]) -> Option<u32> {
     model().put(&mut Cpp, which, arg, text)
 }
-
-/// The model's ops for a caller without the events (the golden driver): `kind` 0 a call (`which` the op, `a` its
-/// argument), 1 a text (written to `out` up to `capacity`; its length), 2 a put; `usize::MAX` for an op it does
-/// not own.
-///
-/// # Safety
-/// `text` holds `length` bytes, `out` `capacity`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_campaign_model(
-    kind: u32,
-    which: u32,
-    a: u32,
-    text_in: *const u8,
-    length: usize,
-    out: *mut u8,
-    capacity: usize,
-) -> usize {
-    let input = if length == 0 { &[][..] } else { std::slice::from_raw_parts(text_in, length) };
-    match kind {
-        0 => model().op(&mut Cpp, which).map_or(usize::MAX, |r| r as usize),
-        1 => match text(which, a) {
-            Some(t) => {
-                std::ptr::copy_nonoverlapping(t.as_ptr(), out, t.len().min(capacity));
-                t.len()
-            }
-            None => usize::MAX,
-        },
-        _ => put(which, a, input).map_or(usize::MAX, |r| r as usize),
-    }
-}

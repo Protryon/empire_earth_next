@@ -10,15 +10,6 @@
 
 extern "C" {
 
-/// `UIHotKey::GetHotKeyName`: the modifiers' names (NULL: no modifier) and the key's, as C strings -> the name in
-/// `out` (`capacity` bytes, NUL-terminated); returns its length. The C++ sizes `out` from the names' lengths.
-size_t ee_ui_hotkey_name(const char *m0,
-                         const char *m1,
-                         const char *m2,
-                         const char *key,
-                         uint8_t *out,
-                         size_t capacity);
-
 /// `UIHotKey::GetHotKeyName`: the record's modifiers' and key's entity names (UIHotKey.cpp's
 /// `ee_uicpp_entity_name`) as the display name, e.g. "Ctrl + Shift + A"; valid until the next call on this thread.
 ///

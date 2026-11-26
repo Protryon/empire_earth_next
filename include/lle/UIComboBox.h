@@ -27,7 +27,6 @@ public:
     {
         ee_ui_combo_append_lines(this->mRust, this->GetList()->mRust, inLines.data(), inLines.size(), sizeof(UWideString));
     }
-    void ChangeWidth(unsigned long inWidth) { this->Call(EeUiComboCall::ChangeWidth, inWidth); }
     virtual long CopyData() { return (long)this->Call(EeUiComboCall::CopyData); }
     void DeleteAllEntries() { this->Call(EeUiComboCall::DeleteAllEntries); }
     void DeleteLine(unsigned long inLine) { this->Call(EeUiComboCall::DeleteLine, inLine); }
@@ -36,7 +35,6 @@ public:
     long GetCurrentSelection(unsigned long& outSelection) const { return ee_ui_combo_current_selection(this->mRust, &outSelection); }
     GEText* GetGEText() const { return static_cast<GEText*>(ee_ui_combo_ge_text(this->mRust)); }   // the label's or edit box's
     const UILBString* GetListBox() const { return this->GetList(); }
-    GERhombus* GetSelectedBackground() const { return this->GetList()->GetSelectedBackground(); }
 #ifdef LLE_EXE_HEADERS   // the game sets the label's text (EESEInstructions::Virtual14 0x171ce3 calls
                          // UITextLabel::SetText on +0xa0): non-const like UICheckBox/UIRadioButton (owner decision 2)
     UITextLabel* GetTextLabel() const { return reinterpret_cast<UITextLabel*>(this->PartOf(4)); }
@@ -57,7 +55,6 @@ public:
         this->Call(EeUiComboCall::SetSelectedColor, 0, 0, UIF4(inColor));
     }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiComboCall::SetLocation, 0, 0, UIF4(inLocation)); }
-    void SetScrollBarBgColor(const GEColor& inColor) { this->GetList()->SetScrollBarBgColor(inColor); }
     void SetTextBoxBgColor(const GEColor& inColor) { this->PartOf(0)->SetBgColor(inColor); }
     void SetTextBoxBgOpacity(float inOpacity) { this->PartOf(0)->SetBgOpacity(inOpacity); }
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiComboCall::UpdateKeyboard); }

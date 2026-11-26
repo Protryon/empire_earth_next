@@ -1289,22 +1289,6 @@ pub unsafe extern "C" fn ee_campaign_progress_restore(
     unsafe { (*p).restore_civilization(bytes(user), bytes(campaign), bytes(scenario), checksum) }
 }
 
-/// `SaveCompletedScenario` (C strings).
-///
-/// # Safety
-/// As `ee_campaign_progress_load`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_campaign_progress_save(
-    p: *mut EeCampaignProgress,
-    user: *const c_char,
-    campaign: *const c_char,
-    scenario: *const c_char,
-    checksum: c_ulong,
-) -> c_long {
-    // SAFETY: the caller's guarantee
-    unsafe { (*p).save_completed_scenario(bytes(user), bytes(campaign), bytes(scenario), checksum) }
-}
-
 #[cfg(test)]
 mod tests {
     #[test]

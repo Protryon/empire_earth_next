@@ -524,15 +524,6 @@ void ee_u2d_line_tiles(const long (*from)[2],
                        void *out,
                        EeU2DAssignTiles assign);
 
-/// `U2DRectangle<float>::GetClosestPoint(inPoint)` (the rectangle's members in their order: bottom, left, right,
-/// top).
-///
-/// # Safety
-/// `rect` points at four floats, `point` and `out` at two.
-void ee_u2d_rect_closest_point(const float (*rect)[4],
-                               const float (*point)[2],
-                               float (*out)[2]);
-
 /// `U2DRectangle<T>::Load` (`write` false) and `Save` over a C++ `FSFile*` whose `GetIsOpen()` is `open`; `rect`
 /// is the rectangle (four `long`s, or with `float` four floats).
 ///

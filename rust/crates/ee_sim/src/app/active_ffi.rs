@@ -30,16 +30,6 @@ pub unsafe extern "C" fn ee_app_active_update(refs: EeAppActiveRefsFn) {
     Lists::world().update(&mut |id, delta| unsafe { refs(id, delta) });
 }
 
-/// Every list emptied, the references dropped through `refs` (`between` after the queues').
-///
-/// # Safety
-/// As [`ee_app_active_update`]; `between` callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_active_clear(refs: EeAppActiveRefsFn, between: EeAppActiveBetweenFn) {
-    // SAFETY: the caller's contract
-    Lists::world().clear(&mut |id, delta| unsafe { refs(id, delta) }, &mut || unsafe { between() });
-}
-
 /// A unit stepped from now (two references taken by the caller).
 #[no_mangle]
 pub extern "C" fn ee_app_active_start(id: u32) {

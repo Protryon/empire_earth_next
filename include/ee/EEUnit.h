@@ -113,14 +113,12 @@ public:
     float GetMaxVelocity() const { return this->mMaxVelocity; }
     float GetInverseMaxAngularVelocity() const { return this->mInverseMaxAngularVelocity; }
     float GetInverseMaxVelocity() const { return this->mInverseMaxVelocity; }
-    float GetAcceleration() const { return this->mAcceleration; }  // inline (EEPMMissile::Accelerate 0x55b041 loads it as a value) (provisional name)
     float GetLineOfSight() const { return this->mLineOfSight; }  // inline (EEActiveGroup::SpreadAroundUnit loads it after GetRange as a value) (provisional name)
 
     EEUnitClassImprovement mImprovement;    // +0x04 (ctor 0x23a5bf)
     UWideString mName;                      // +0x4c (= "" in the ctor)
     // +0x60 mUnitClass, +0x64 mButton .. +0x7c mSelectionSounds[1]: the Rust record EeUnitsUnitClassUpgradeLinks (a base)
     // +0x84 mAreaEffectScale .. +0x168 mIsInitialized: the record EeUnitsUnitClassUpgradeFields (the base above)
-    float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)

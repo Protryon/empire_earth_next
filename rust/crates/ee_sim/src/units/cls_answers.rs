@@ -156,22 +156,6 @@ pub unsafe extern "C" fn ee_units_cls_num_goal_queues(c: *const EeUnitsUnitClass
 }
 
 /// # Safety
-/// A live class's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_shares_rally_point(c: *const EeUnitsUnitClassFields, other: u64) -> u8 {
-    // SAFETY: the caller's contract
-    u8::from(unsafe { shares_rally_point(&*c, other) })
-}
-
-/// # Safety
-/// A live class's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_shares_research(c: *const EeUnitsUnitClassFields, other: i64) -> u8 {
-    // SAFETY: the caller's contract
-    u8::from(unsafe { shares_research(&*c, other) })
-}
-
-/// # Safety
 /// A live class's record; `stats` a live stats record or null.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_cls_passable_flags(

@@ -110,7 +110,6 @@ public:
     // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
     long EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
     long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
-    unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) { return 0; }   // 0 for any capability
     // lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times the
     // vertex colour
     template <class Mesh> void Light(Mesh& inMesh, unsigned long inScreen) { ee_dx7r_light_terrain(this->mDX7, inScreen, inMesh.GetRust()); }
@@ -213,9 +212,6 @@ public:
     long ActivateRasterizer() { return this->mDX7 != NULL ? ee_dx7r_activate_rasterizer(this->mDX7) : kErrorOK; }   // slot 0x118
     long CreateTextureHandle(GETexture* inTexture) { return kErrorOK; }             // slot 0x120: GETexture gains a surface
     void DestroyTextureHandle(GETexture* inTexture) {}                              // slot 0x128: GETexture loses its surface
-    long PromoteTexture(GETexture* inTexture) { return kErrorOK; }                  // slot 0x130
-    // makes a surface the render target (swapping the references) and fits the viewport to its size (slot 0x134)
-    void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) { ee_dx7r_set_render_target(this->mDX7, inTarget, inScreen); }
 
     // The state is Rust's (rust/crates/ee_render/src/ge rastobj.rs: the colours, the screen records, the debug font and text,
     // the drawing lock, the ripple, the culling, the flags, the name, the screen id, and the statics sRasterizers and

@@ -285,16 +285,6 @@ pub unsafe extern "C" fn ee_gfx_mouse_frame_slot(frame: *mut EeGfxMouseFrame, in
     }
 }
 
-/// `GetPointerSurface`.
-///
-/// # Safety
-/// `frame` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_mouse_frame_pointer(frame: *const EeGfxMouseFrame, index: u32) -> *mut c_void {
-    // SAFETY: the function's contract
-    unsafe { (*frame).pointer(index) }
-}
-
 /// The frame's calls (`op`): 0 `BeginFrame` (`position`, `pointer`, `overlay`, `shift`), 1 `SaveUnder`, 2 `Draw`,
 /// 3 `RestoreUnder` (`shift`: windowed; its copy's result), 4 `EndFrame`, 5 `EEMouse::Release`'s own, 6
 /// `RTSMouse::Release`, 7 a load done (the next restore skipped). `target` and `origin` for 1..3.

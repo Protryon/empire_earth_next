@@ -3,7 +3,7 @@
 //! `UI Events/EEScreens.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_long, c_ulong, c_void};
+use core::ffi::{c_long, c_void};
 use std::sync::Mutex;
 
 use crate::screens::menus::*;
@@ -279,10 +279,4 @@ pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity:
     }
     dispatch(&mut host, &MENUS, event);
     0
-}
-
-/// The menus' event code for a control event id, 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_menus_event_for(id: c_ulong) -> u32 {
-    event_for_control(id)
 }

@@ -264,11 +264,6 @@ pub unsafe extern "C" fn gx_direct_draw_enumerate(callback: EnumerateCallback, c
 // ---- GXSurface
 
 #[no_mangle]
-pub unsafe extern "C" fn gx_surface_add_ref(surface: *mut c_void) -> c_ulong {
-    with(|gx| gx.add_ref(id(surface)) as c_ulong)
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn gx_surface_release(surface: *mut c_void) -> c_ulong {
     with(|gx| gx.release(id(surface)) as c_ulong)
 }
@@ -378,19 +373,8 @@ pub unsafe extern "C" fn gx_surface_set_color_key(surface: *mut c_void, key: *co
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gx_surface_get_desc(surface: *mut c_void, out: *mut GxSurfaceDesc) -> GxResult {
-    *out = with(|gx| gx.surface_desc(id(surface)));
-    GX_OK
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn gx_surface_render_scale(surface: *mut c_void) -> f32 {
     with(|gx| gx.s(id(surface)).scale)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn gx_surface_is_gpu_resident(surface: *mut c_void) -> bool {
-    with(|gx| !gx.s(id(surface)).cpu_valid)
 }
 
 #[no_mangle]
@@ -415,14 +399,6 @@ pub unsafe extern "C" fn gx_surface_draw_text(
 }
 
 // ---- GXVertexBuffer
-
-#[no_mangle]
-pub unsafe extern "C" fn gx_vertex_buffer_add_ref(buffer: *mut c_void) -> c_ulong {
-    let _guard = lock();
-    let buffer = &mut *(buffer as *mut VertexBuffer);
-    buffer.references += 1;
-    buffer.references as c_ulong
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn gx_vertex_buffer_release(buffer: *mut c_void) -> c_ulong {
@@ -481,14 +457,6 @@ unsafe fn device_mut<'a>(device: *mut c_void) -> &'a mut Device {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gx_device_add_ref(device: *mut c_void) -> c_ulong {
-    let _guard = lock();
-    let object = device_mut(device);
-    object.references += 1;
-    object.references as c_ulong
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn gx_device_release(device: *mut c_void) -> c_ulong {
     with(|gx| {
         let object = device_mut(device);
@@ -525,13 +493,6 @@ pub unsafe extern "C" fn gx_device_set_viewport(device: *mut c_void, viewport: *
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gx_device_get_viewport(device: *mut c_void, out: *mut GxViewport) -> GxResult {
-    let _guard = lock();
-    *out = device_mut(device).viewport;
-    GX_OK
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn gx_device_clear(
     device: *mut c_void,
     count: c_ulong,
@@ -551,33 +512,9 @@ pub unsafe extern "C" fn gx_device_set_transform(device: *mut c_void, state: u32
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gx_device_get_transform(device: *mut c_void, state: u32, out: *mut GxMatrix) -> GxResult {
-    let _guard = lock();
-    match device_mut(device).get_transform(state) {
-        Ok(matrix) => {
-            *out = matrix;
-            GX_OK
-        }
-        Err(error) => error,
-    }
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn gx_device_set_render_state(device: *mut c_void, state: u32, value: c_ulong) -> GxResult {
     let _guard = lock();
     device_mut(device).set_render_state(state, value as u64)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn gx_device_get_render_state(device: *mut c_void, state: u32, out: *mut c_ulong) -> GxResult {
-    let _guard = lock();
-    match device_mut(device).get_render_state(state) {
-        Ok(value) => {
-            *out = value as c_ulong;
-            GX_OK
-        }
-        Err(error) => error,
-    }
 }
 
 #[no_mangle]

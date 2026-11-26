@@ -226,13 +226,3 @@ pub unsafe extern "C" fn ee_app_map_checksum(host: *const EeAppMapHost, cursor: 
     let d = h.dims;
     map::compute_checksum(&mut Host { h }, &d, cursor)
 }
-
-/// `GetTileCount`.
-///
-/// # Safety
-/// `dims` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_map_tile_count(dims: *const EeAppMapDims) -> c_ulong {
-    // SAFETY: the function's contract
-    map::tile_count(unsafe { &*dims })
-}

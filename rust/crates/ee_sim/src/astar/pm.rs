@@ -1912,15 +1912,6 @@ pub unsafe extern "C" fn ee_path_manager_free(p: *mut EePathManager) {
     }
 }
 
-/// The bounded machine (`mBoundedMachine`, a path_search.rs search), null for none.
-///
-/// # Safety
-/// `p` from `ee_path_manager_new`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_manager_bounded(p: *mut EePathManager) -> *const c_void {
-    (*p).bounded as *const c_void
-}
-
 /// Runs `body` over the manager. The manager is reentered only by the host's calls that the C++ never makes
 /// during one of these (the original's call graph: a unit asking its path again while its search finishes goes
 /// through the queues, which `body` reads again after each host call).
@@ -2071,37 +2062,6 @@ pub(crate) unsafe fn with_manager<R>(
     with(p, |m, host| body(m, host))
 }
 
-/// The queued searches into `out` (up to `cap`), `mPaths` then `mAutoPaths`; their count.
-///
-/// # Safety
-/// `p` a live manager; `out` writable for `cap` entries (or NULL with `cap` 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_manager_queued(p: *mut EePathManager, out: *mut EePathQueued, cap: u32) -> u32 {
-    let q = (*p).m.queued();
-    for (k, e) in q.iter().take(cap as usize).enumerate() {
-        *out.add(k) = *e;
-    }
-    q.len() as u32
-}
-
-/// The pending unit `k` (its id and tile into `out`); false past the end.
-///
-/// # Safety
-/// `p` a live manager, `out` writable for three values.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_manager_pending(p: *mut EePathManager, k: u32, out: *mut i32) -> bool {
-    let m = &(*p).m;
-    match m.pending.get(k as usize) {
-        Some(e) => {
-            *out = e.unit as i32;
-            *out.add(1) = e.x;
-            *out.add(2) = e.y;
-            true
-        }
-        None => false,
-    }
-}
-
 /// The saved game's parts: `what` 0 the running state, 1 the tile searches, 2 the graph searches; `load` reads
 /// (the answer the file's error, 0 done), else writes.
 ///
@@ -2160,64 +2120,6 @@ extern "C" fn after_load_running() {
 
 extern "C" fn after_load_searches() {
     call_global(26);
-}
-
-/// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
-/// the end; `push` appends (x, y).
-///
-/// # Safety
-/// `lists` a live `EePathSavedLists`, `out` writable for two values.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_saved_tile(lists: *mut EePathSavedLists, which: u32, k: u32, out: *mut i32) -> bool {
-    let l = &*lists;
-    let v = if which == 0 { &l.blocked } else { &l.unit_tiles };
-    match v.get(k as usize) {
-        Some(p) => {
-            *out = p[0];
-            *out.add(1) = p[1];
-            true
-        }
-        None => false,
-    }
-}
-
-/// Appends (x, y) to a saved search's tile list `which`.
-///
-/// # Safety
-/// `lists` a live `EePathSavedLists`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_saved_tile_push(lists: *mut EePathSavedLists, which: u32, x: i32, y: i32) {
-    let l = &mut *lists;
-    if which == 0 { &mut l.blocked } else { &mut l.unit_tiles }.push([x, y]);
-}
-
-/// A saved search's storage bytes: set from `data[..len]` (`data` non-NULL), and their pointer and length.
-///
-/// # Safety
-/// `bytes` a live `Vec<u8>` (an `EePathSavedLists`'s `storage` or a saved graph's), `data` readable for `len`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_saved_bytes(
-    bytes: *mut c_void,
-    data: *const u8,
-    len: u32,
-    out_len: *mut u32,
-) -> *const u8 {
-    let b = &mut *(bytes as *mut Vec<u8>);
-    if !data.is_null() {
-        b.clear();
-        b.extend_from_slice(std::slice::from_raw_parts(data, len as usize));
-    }
-    *out_len = b.len() as u32;
-    b.as_ptr()
-}
-
-/// The storage bytes of a saved search's lists.
-///
-/// # Safety
-/// `lists` a live `EePathSavedLists`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_saved_storage(lists: *mut EePathSavedLists) -> *mut c_void {
-    &mut (*lists).storage as *mut Vec<u8> as *mut c_void
 }
 
 /// A dump's text into `out` (up to `cap` bytes, no terminator); its length. `what` 0: `DumpSim`'s (TEST ONLY, EE-SIM's

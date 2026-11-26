@@ -54,23 +54,11 @@ public:
         return inRectangle.mLeft >= this->mLeft && inRectangle.mRight <= this->mRight && inRectangle.mTop >= this->mTop &&
                inRectangle.mBottom <= this->mBottom;
     }
-    void Extend(const GE2DPoint& inPoint)   // just enough to contain the point (each edge reads only its own)
-    {
-        *this = GERectangle(this->mLeft < inPoint.mX ? this->mLeft : inPoint.mX, this->mTop < inPoint.mY ? this->mTop : inPoint.mY,
-                            this->mRight > inPoint.mX ? this->mRight : inPoint.mX,
-                            this->mBottom > inPoint.mY ? this->mBottom : inPoint.mY);
-    }
-    GE2DPoint GetBottomLeft() const { return GE2DPoint(this->mLeft, this->mBottom); }
     GE2DPoint GetBottomRight() const { return GE2DPoint(this->mRight, this->mBottom); }
     void GetCenter(GE2DPoint& outCenter) const
         { outCenter = GE2DPoint((this->mRight - this->mLeft) * 0.5f + this->mLeft, (this->mBottom - this->mTop) * 0.5f + this->mTop); }
     GE2DPoint GetTopLeft() const { return GE2DPoint(this->mLeft, this->mTop); }
     GE2DPoint GetTopRight() const { return GE2DPoint(this->mRight, this->mTop); }
-    bool Intersects(const GERectangle& inRectangle) const
-    {
-        return this->mLeft <= inRectangle.mRight && this->mRight >= inRectangle.mLeft && this->mTop <= inRectangle.mBottom &&
-               this->mBottom >= inRectangle.mTop;
-    }
     void RoundToNearest()   // each edge to the nearest whole value
     {
         *this = GERectangle((float)UMFloor(this->mLeft + 0.5f), (float)UMFloor(this->mTop + 0.5f),

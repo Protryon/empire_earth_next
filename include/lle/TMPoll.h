@@ -15,7 +15,6 @@ public:
         ee_time_poll_init(&this->mState, (uint32_t)inTimeDelay, (uint32_t)inTimeUnit, inStart);
     }
     ~TMPoll() {}
-    bool GetIsPaused() const { return ee_time_poll_is_paused(&this->mState); }
     bool GetIsRunning() const { return ee_time_poll_is_running(&this->mState); }
     unsigned long GetTimeLeft() const { return ee_time_poll_time_left(&this->mState); }
     void SetTimeDelay(unsigned long inTimeDelay) { ee_time_poll_set_time_delay(&this->mState, (uint32_t)inTimeDelay); }

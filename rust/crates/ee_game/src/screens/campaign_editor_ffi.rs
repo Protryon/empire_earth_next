@@ -1,6 +1,6 @@
 //! The campaign editor's events' host over the C++ calls (`campaign_editor.rs`; `UI Events/EEScreens.cpp`).
 
-use core::ffi::{c_long, c_ulong};
+use core::ffi::c_long;
 
 use crate::screens::campaign_editor::{CampaignEditorHost, EE_SCREENS_CE_SAVE_CONTINUED};
 use crate::screens::menus_ffi::Form;
@@ -27,10 +27,4 @@ impl CampaignEditorHost for Form {
     fn put_text(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
         crate::screens::campaign_model_ffi::put(which, arg, text).unwrap_or_else(|| self.put(which, arg, text))
     }
-}
-
-/// The campaign editor's event code for a control event id, 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_campaign_editor_event_for(id: c_ulong) -> u32 {
-    crate::screens::campaign_editor::event_for_control(id)
 }

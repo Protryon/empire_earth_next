@@ -327,8 +327,6 @@ public:
     // EEMap.cpp's other members in address order (provisional names)
     // 0x11c13f / 0x11d006: inPlayer stops / starts seeing the tiles within inRadius of (inX, inY)
     void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false); }
-    // 0x11c9a3 (the ctors' common part)
-    void Initialize() { ee_gamecpp_map_initialize(this); }
     void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true); }
     void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff) { ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff); }
     void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop) { ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop); }

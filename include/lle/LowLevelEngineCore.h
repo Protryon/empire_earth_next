@@ -102,10 +102,9 @@ template <class... A> LLE_PRINTF_TEMPLATE(1, 2) inline void ESDebugOut(const cha
 
 // ---- Timing (TM): Time Manager unit 0x53701..0x53819 (folder/file name inferred)
 typedef EeTimeOfDay TMTime;                 // filled from the local time by TMGetTimeOfDay 0x5376c (rust/base/time.h)
-// The Time Manager is Rust's (rust/crates/ee_base/src/time): TMInitialize sets 1 ms timer resolution and registers
-// the shutdown; TMGetTime is milliseconds (a time pinned on this thread instead: EE-SIM's scripted editor,
-// ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local clock (month counted from 0)
-inline long TMInitialize() { return ee_time_system_initialize(); }
+// The Time Manager is Rust's (rust/crates/ee_base/src/time): TMGetTime is milliseconds (a time pinned on this
+// thread instead: EE-SIM's scripted editor, ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local
+// clock (month counted from 0)
 inline unsigned long TMGetTime() { return ee_time_get(); }
 inline int64_t TMGetMicroTime() { return ee_time_get_micro(); }
 inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
@@ -114,10 +113,9 @@ inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
 // saw no engine-class static data members (TMPoll::sCounterFrequency was one; it is ee_time's state now). Engine units include them directly.
 
 // ---- Shutdown registry (Utilities): engine subsystems register cleanup functions
-// (rust/crates/ee_base/src/util system.rs) URegisterShutdown: always kErrorOK; UShutdown calls every registered
+// (rust/crates/ee_base/src/util system.rs) URegisterShutdown: always kErrorOK; ee_util_shutdown calls every registered
 // function, last first, and with inTerminate ends the platform's services and exits (inForced: exit(0), else abort)
 inline long URegisterShutdown(void (*inFunction)(bool)) { return ee_util_register_shutdown(inFunction); }
-inline void UShutdown(bool inForced, bool inTerminate) { ee_util_shutdown(inForced, inTerminate); }
 inline bool UShutdownInProgress() { return ee_util_shutdown_in_progress(); }
 inline unsigned short UGetOSLanguage() { return ee_util_os_language(); }   // the user's default language id
 
@@ -131,10 +129,6 @@ inline unsigned long UMGetFloatingPointRoundingMode() { return ee_util_fp_roundi
 inline float UMArcTan2(float inY, float inX) { return ee_ge_um_arctan2(inY, inX); }
 inline float UMCos(float inAngle) { return ee_ge_um_cos(inAngle); }
 inline float UMArcCos(float inValue) { return ee_ge_um_arccos(inValue); }
-// Provisional name: no UMSin export; GEQuaternion::Slerp (0x23526) computes sines as UMCos(pi/2 - x) inline
-// pi/2 is 1.5707964f (0x3fc90fdb) in every module: the engine's word 0x10097808, the exe's 0x43c008
-// (1.5707963f would be 0x3fc90fda, one ulp lower)
-inline float UMSin(float inAngle) { return UMCos(1.5707964f - inAngle); }
 // Saved games keep an object's 32-bit id in the pointer field the object will fill: the loader reads the id into
 // the field and a fix-up pass (RepairPointers, Restore, ...) looks the object up. The id held by such a field (its
 // low 32 bits: the loader writes 4 bytes, whatever the pointer size). uint32_t on every data model, so the "none"
