@@ -112,15 +112,12 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_D_BUILDING_CREATE_UNIT_AT: return EEObj(theClass->BuildingCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
     case EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT_AT: return EEObj(theClass->SubmergedNavalCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
     case EE_UNITS_UCK_D_BASE_CREATE_UNIT_AT: return EEObj(theClass->BaseCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
-    case EE_UNITS_UCK_D_DOMAINS: return theClass->mDomains;
     case EE_UNITS_UCK_D_GATE_GATE_REPLACED: theClass->GateGateReplaced(EEUckObject<EEUnit>(inA), EEUckObject<EEUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UCK_D_AIR_SOUND: theClass->AirGetSoundParameters(EEUckObject<EEUnit>(inA), EEUckObject<EESoundObject>((uint64_t)inB), EEUckObject<float*>((uint64_t)inC)[0], EEUckObject<float*>((uint64_t)inC)[1], EEUckObject<float*>((uint64_t)inC)[2]); return 0;
     case EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION: theClass->BuildingGroundLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION: theClass->SubmergedNavalGroundLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCK_D_IS_SIDE_PART: return theClass->IsSidePart(theUnit);
     case EE_UNITS_UCK_D_FIRST_PART_COMMAND: return EEGetFirstPart(theUnit)->GetCommandType();
-    case EE_UNITS_UCK_D_IS_FLARE: return theClass->mIsFlare;
-    case EE_UNITS_UCK_D_UNIT_TYPE_OF: return EEUckObject<EEUnit>(inA)->mUnitClass->mUnitType;
     case EE_UNITS_UCK_D_BOMB_LAUNCH: return theClass->BombLaunchProjectile(theUnit, *EEUckObject<GE3DPoint>(inA));
     case EE_UNITS_UCK_D_MISSILE_LAUNCH: return theClass->MissileLaunchProjectile(theUnit, *EEUckObject<GE3DPoint>(inA));
     case EE_UNITS_UCK_D_PROJECTILE_LAUNCH: return theClass->ProjectileLaunchProjectile(theUnit, *EEUckObject<GE3DPoint>(inA));

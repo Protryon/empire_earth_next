@@ -175,6 +175,9 @@ fn cls_view(op: i32, a: u64, b: u64, c: i64, io: &mut EeUnitsClsIo) -> Option<i6
     if let Some(v) = waypoint_op(op, a, c, io) {
         return Some(v);
     }
+    if let Some(v) = crate::units::cls_mv_view::cls_mv_view(op, a, b, io) {
+        return Some(v);
+    }
     if !matches!(
         op,
         EE_UNITS_CLS_CARGO

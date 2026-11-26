@@ -353,13 +353,10 @@ extern "C" int64_t ee_units_ucs_host(int32_t inOp, void* inClass, void* inUnit, 
     float* f = *ioF;
     switch (inOp) {
     // the impact tests' (ucs_impact.rs)
-    case EE_UNITS_UCS_GOAL_STATE: return EEObj(theUnit->mGoalState);
     case EE_UNITS_UCS_IS_BOMB: return theClass->mCategory == kUnitCategoryBomb;
-    case EE_UNITS_UCS_IMPACT_FLIGHT_TIME: return theUnit->mFlightTime;
     case EE_UNITS_UCS_START_Z: f[0] = theUnit->mProjectileStart.GetZ(); return 0;
     case EE_UNITS_UCS_POSITION: theUnit->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCS_TILE_PRESENT: return ::gWorld.mMap->GetTile((long)inB, (long)inC) != NULL;
-    case EE_UNITS_UCS_GOAL_KIND: return EEUcsObject<EEUnitGoal>(inA)->mKind;
     case EE_UNITS_UCS_SHELL_HOLE: return theUnit->GetUnitClass()->mShellHoleEffect != NULL;
     case EE_UNITS_UCS_CAPTURE_IMPACT:
         EECombatCapture(inB != 0 ? EE_COMBAT_TAG('C', 'B', 'W', 'I') : EE_COMBAT_TAG('C', 'B', 'G', 'I'), *EEUcsObject<EeCombatImpactIn>(inA), *EEUcsObject<EeCombatImpactOut>((uint64_t)inC));
@@ -374,42 +371,26 @@ extern "C" int64_t ee_units_ucs_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCS_TILE_HEIGHT: f[0] = theUnit->mTile->GetHeight(); return 0;
     case EE_UNITS_UCS_ATTACK_TARGET: return EEObj(static_cast<EEUGRust*>(theUnit->mGoalState)->GetAttackTarget());
     case EE_UNITS_UCS_TARGET_BUILDING: return EEUcsObject<EEUnit>(inA)->GetUnitClass()->IsLandBuilding() || EEUcsObject<EEUnit>(inA)->GetUnitClass()->mIsWall;
-    case EE_UNITS_UCS_IMPACT_TILE_X: return EEUcsObject<EEUnit>(inA)->GetTileX();
-    case EE_UNITS_UCS_IMPACT_TILE_Y: return EEUcsObject<EEUnit>(inA)->GetTileY();
-    case EE_UNITS_UCS_IMPACT_TILE_SIZE: return EEUcsObject<EEUnit>(inA)->GetUnitClass()->mTileSize;
     case EE_UNITS_UCS_GOAL_LOCATION: theUnit->mGoalState->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCS_ON_TARGET_TILES: return EEIsOnTargetTiles(theUnit, static_cast<EEUGRust*>(theUnit->GetGoal())->GetAttackTarget());
     case EE_UNITS_UCS_SAME_TILE: return ::gWorld.mMap->GetTile(UMFloatToLong(f[0]), UMFloatToLong(f[1])) == theUnit->mTile;
     case EE_UNITS_UCS_CAN_MOVE: return theClass->CanMoveOnTerrain(theUnit, theUnit->mTile->mTerrainType);
-    case EE_UNITS_UCS_SET_CONTACT_LOCATION: theUnit->mInitialContactLocation = GE3DPoint(f[0], f[1], f[2]); return 0;
     case EE_UNITS_UCS_FULL_SPEED: theUnit->SetVelocity(theUnit->mStats->GetMaxVelocity()); return 0;
-    case EE_UNITS_UCS_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
     case EE_UNITS_UCS_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit->mOwner, theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType], EEUcsObject<GE3DPoint>(inA), EEUcsObject<GE3DPoint>((uint64_t)inB), &f[0]);
     case EE_UNITS_UCS_SET_FLIGHT_TIME: theUnit->SetFlightTime((unsigned long)inB); return 0;
     case EE_UNITS_UCS_LAUNCH_SPEED: f[0] = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType]->mLaunchSpeed; return 0;
     case EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED: f[0] = theUnit->mPlayer->GetUpgrade(theUnit->mLauncherClass->mUnitType)->mLaunchSpeed; return 0;
-    case EE_UNITS_UCS_LAUNCH_PITCH: f[0] = theUnit->mLauncherClass->mLaunchPitch; return 0;
     case EE_UNITS_UCS_HAS_TRAIL: return theClass->mTrailEffect != NULL;
     case EE_UNITS_UCS_TRAIL_DETAILED: return theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
     case EE_UNITS_UCS_HAS_RIPPLE: return theClass->mRippleEffect != NULL;
     case EE_UNITS_UCS_RIPPLE_DETAILED: return theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
     case EE_UNITS_UCS_COMPLEX_CAST: return EEObj(EEUnitCast<EEComplexUnit>(EEUcsObject<EEUnit>(inA)));
-    case EE_UNITS_UCS_FLIGHT_TIME: return theUnit->mFlightTime;
     case EE_UNITS_UCS_SET_TINTED: theOther->SetIsTinted(inB != 0); return 0;
     case EE_UNITS_UCS_SET_BLINK_COLOR: theOther->SetColor(sBombBlinkColor); return 0;
     case EE_UNITS_UCS_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
     case EE_UNITS_UCS_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)));
-    case EE_UNITS_UCS_FIRST_CARGO: return EEObj(theUnit->mCargo[0]);
     case EE_UNITS_UCS_UNLOAD_NOW: theUnit->UnloadCargoNow(theOther); return 0;
     case EE_UNITS_UCS_LAUNCH_SHOT: theClass->LaunchShot(theUnit, EEUcsObject<EEUnit>(inA), *reinterpret_cast<GE3DPoint*>(f), EEUcsObject<EEComplexUnit>((uint64_t)inB)); return 0;
-    case EE_UNITS_UCS_COMPLEX_FIELD: return EEObj(EEUcsObject<EEUnit>(inA)->mComplexUnit);
-    case EE_UNITS_UCS_TILE_OF: return EEObj(EEUcsObject<EEUnit>(inA)->mTile);
-    case EE_UNITS_UCS_PREVIOUS_PART: return EEObj(theOther->mPreviousPart);
-    case EE_UNITS_UCS_NEXT_PART: return EEObj(theOther->mNextPart);
-    case EE_UNITS_UCS_TILE_SIZE_OF: return theOther->mUnitClass->mTileSize;
-    case EE_UNITS_UCS_TILE_X_OF: return theOther->mTileX;
-    case EE_UNITS_UCS_TILE_Y_OF: return theOther->mTileY;
-    case EE_UNITS_UCS_SET_LIFETIME: theUnit->mCloaked = 300000; return 0;
     case EE_UNITS_UCS_SET_LAUNCH_DELAY: theUnit->SetFlightTime(theUnit->mLauncherClass->mMissileDelayTime); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }
