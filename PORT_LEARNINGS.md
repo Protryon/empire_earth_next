@@ -41816,3 +41816,33 @@ this is the lead's part and the round's.
 - Fix: `EE_SCREENS_TEXT_LABEL_LINES` writes nothing when the form's control is NULL (game_texts.rs, with a test).
 - Lesson: an event posted by a form's own handlers can outlive the form's open; a handler reached through a C++
   shim must tolerate the form's closed state like the Rust toolkit calls do.
+
+## The game core lane, round 16: the teams, the statistics history, the game state's vectors and the camera's units Rust's; EEGlobals.cpp gone
+
+- Resumed from a lead stopped after 20 minutes: its two forks' uncommitted edits (the camera's units, the statistics
+  history) were whole in intent and built after one missing import each; they were committed on the fork branches.
+- **The teams** live only in ee_sim app teams_ffi.rs: the C++ `std::vector<EETeam>` mirror, EETeam, EEVCWonder,
+  EEVictoryCondition and EEVCWonder.cpp are gone. The wonder victory takes a team index; the game state's teams and
+  each saved-world helper's teams are gamecpp teams.rs statics (the helpers keyed by address). The team save/load
+  over `Pf` keeps the format byte for byte (the saveload matrix is the check).
+- **The statistics history** (EEWorld::mStatistics, EEStatisticsHistory/EEStatisticsRecord) is gamecpp
+  stats_history.rs's one history: RecordStatistics fills it in Rust, WSTA and the post-game summary read it; the
+  summary's `ee_screenscpp_pr_*` shims are Rust exports now (the screens' extern block resolves to them).
+- **The game state's** mPlayers, mLoadedPlayers and mRestorables are gamecpp state.rs Vecs; the restorable pushes keep
+  only the `FSRestorable` upcast in C++.
+- **The camera's** followed units are ids in camera_ffi.rs (UNITS); `ee_gamecpp_camera_new` records the world's one
+  camera so camera_io.rs calls ClearUnitA/B, ResetPath, SetChanged, SetZoom, Update, GetLocation, SetLocation and
+  Follow by path: the hosts' one-statement camera cases went.
+- **EEGlobals.cpp**: its 19 reference aliases into gWorld/gGameState are gone; users read `gWorld.mX`. The net test
+  stand's EEWorld (tests/net/ee_stand/ee_world.h) binds three reference members to the test's storage instead.
+- EE-SIM's save request and the scripted editor's chunk list are built in Rust (mrecord.rs `new_record`; persist_save.rs
+  `build_chunks`); the fixed EEMRecord constructions of EEARust, EEMessage, EEPhysics, EECommandLine and the server go
+  the same way.
+- Merge lessons: the game headers lane (batch 27) inlines one-line bodies into headers, so a moved member's
+  deletion conflicts with the header's new inline body: take the header's inline form and drop what the move
+  removed. Batch 28's diff3 conflicts had nested `|||||||||`/`=========` markers from a criss-cross merge base: a
+  resolver that splits on `=======` must match the exact seven-character markers, or it keeps half of the base.
+- Left: EESimEditorAction/EESimEditorDone (no generic Rust-callback EEAction/UIEvent class to reuse); the mini map
+  cases reached from ee_sim (need a hook ee_game registers into ee_sim: units lane) and the scenario editor's (behind
+  goldened screens host traits); MiniMapSetViewer/Snapshot (no Rust accessor of RTSMiniMap's pixels); the player's
+  host prologues (player/tech round 2 landed in batch 28: next round).
