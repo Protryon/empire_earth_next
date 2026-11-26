@@ -128,7 +128,7 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     case EE_CP_PLACE_RANDOM:
         return gPhysics->GetRandom(0L, (long)v[0]);
     case EE_CP_PLACE_SPACE_DOCK_OPEN:
-        return EEIsSpaceDockSiteOpen((long)v[0], (long)v[1], thePlayer) ? 1 : 0;
+        return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)thePlayer, 0, (long)v[0], (long)v[1]) != 0 ? 1 : 0;   // uu_cloak.rs
     }
     return 0;
 }

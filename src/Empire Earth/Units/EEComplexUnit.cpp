@@ -60,6 +60,21 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 //   object bound as ?sMemoryPool@EEComplexUnit@@2V?$UMemoryPool@VEEComplexUnit@@@@A
 UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 
+// EEUnitStoreModel's location was written (ee/EEUnitStore.h; was EEUnitStore.cpp): the unit from the member's offset
+// (the unit classes derive singly), its record's x, y, z
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#endif
+void EEUnitStoreMoved(const void* inModel)
+{
+    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(const_cast<char*>(static_cast<const char*>(inModel)) - offsetof(EEComplexUnit, mPhysicalModel));
+    if (theUnit->mInUnitStore) {
+        const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
+        ee_units_store_set_location(static_cast<uint32_t>(theUnit->mUnitID), reinterpret_cast<uintptr_t>(theUnit),
+                                    UFloatBits(theLocation.GetX()), UFloatBits(theLocation.GetY()), UFloatBits(theLocation.GetZ()));
+    }
+}
+
 #include "ee/EEStringIDs.h"
 #include "ee/EESoundObject.h"
 #include "lle/UResourceFile.h"
@@ -120,6 +135,14 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     case EE_UNITS_SIGHT_SHOW_TILE_OFF: ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_WONDER: ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
     case EE_UNITS_SIGHT_WONDER_OFF: ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
+    // the cloaking utilities' world calls (ee_units uu_cloak.rs; units round 14: EECloakingUtilities.cpp is gone)
+    case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(thePlayer, kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>(f), (long)inC, (long)inD, 0, 0);
+    case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
+    case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
+    case EE_UNITS_CK_CREATE_CLOAK: return ::gWorld.GetEffectManager()->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), reinterpret_cast<EEEffectHandle*>(f), false, 0, 0);
+    case EE_UNITS_CK_DESTROY_EFFECT: ::gWorld.GetEffectManager()->DestroyEffect(*reinterpret_cast<const EEEffectHandle*>(&inC)); return 0;   // (its low 32 bits)
+    case EE_UNITS_CK_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
+    case EE_UNITS_CK_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     }
     return 0;
 }
@@ -142,13 +165,6 @@ static EEProductionEntry EECuEntry(int64_t inTechnology, int64_t inFlag)
     return EEProductionEntry{(long)inTechnology, inFlag != 0};
 }
 
-// the index of a unit in a deque or vector (std::find; -1: not there)
-template <class C, class T> static int64_t EECuFind(const C& inUnits, T* inUnit)
-{
-    typename C::const_iterator theIterator = std::find(inUnits.begin(), inUnits.end(), inUnit);
-    return theIterator == inUnits.end() ? -1 : (int64_t)(theIterator - inUnits.begin());
-}
-
 // UnloadCargoAt's aircraft at cruise altitude: a copy of the location at height inZ
 static void EECuSetTransformationAtZ(EEComplexUnit* inUnit, const GETransformation& inLocation, float inZ)
 {
@@ -162,17 +178,11 @@ static EeUnitsComplexDumpIn sCuDumpIn;
 static GE3DPoint sCuDumpLocation;
 static UWideString sCuText;
 
-// cu_world.rs's scratch values: CanReachTile's destination, attach point, position and pitch, MoveToLocation's
-// waypoint point, ApplyAreaEffects' location, ReleaseConversionEffect's handle (the originals' locals)
-static GE3DPoint sCuDestination;
-static GE3DPoint sCuUnused;
-static GE3DPoint sCuPosition;
-static float sCuPitch;
+// cu_world.rs's scratch values: MoveToLocation's waypoint point, ApplyAreaEffects' location, ReleaseConversionEffect's
+// handle (the originals' locals; CanReachTile's points, pitch and blocker are the Rust body's)
 static GE3DPoint sCuWaypoint;
 static GE2DPoint sCuLocation;
 static EEEffectHandle sCuHandle;
-static EEUnit* sCuBlocker;
-static long sCuBlockTile[2];   // x, y
 
 // cu_life.rs's scratch values: SwapGraphic's new angles, orbitals and wheels, StepAside's tiles, IsNextToTile's
 // points, Init's copy of the placement (the originals' locals)
@@ -182,19 +192,6 @@ static EEWheel** sCuWheels;
 static std::vector<EETileCoordinate> sCuTiles;
 static std::vector<U2DPoint<long> > sCuPoints;
 static GETransformation sCuPlacement;
-
-// the fanaticism effect's colour parameter 1..6
-static float EECuFanaticismParam(EEGraphicEffect* inEffect, int64_t inIndex)
-{
-    switch (inIndex) {
-    case 1: return inEffect->mParam1;
-    case 2: return inEffect->mParam2;
-    case 3: return inEffect->mParam3;
-    case 4: return inEffect->mParam4;
-    case 5: return inEffect->mParam5;
-    default: return inEffect->mParam6;
-    }
-}
 
 template <class T> static T* EECuObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
@@ -419,7 +416,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_BUILD_GOAL_TARGET: return (uint64_t)(uintptr_t)EEBuildRepairGoalCast(theUnit->GetGoal())->GetBuildTarget();
     case EE_UNITS_CU_BUILD_QUEUE_PUSH_FRONT: theUnit->mCitizenBuildQueue.push_front(EECuObject<EEUnit>(inA)); return 0;
     case EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK: theUnit->mCitizenBuildQueue.push_back(EECuObject<EEUnit>(inA)); return 0;
-    case EE_UNITS_CU_BUILD_QUEUE_FIND: return EECuFind(theUnit->mCitizenBuildQueue, EECuObject<EEUnit>(inA));
+    case EE_UNITS_CU_CITIZEN_AT: return (int64_t)(uintptr_t)theUnit->mCitizenBuildQueue[(size_t)inB];
     case EE_UNITS_CU_BUILD_QUEUE_ERASE_AT:
         theUnit->mCitizenBuildQueue.erase(theUnit->mCitizenBuildQueue.begin() + (size_t)inB);   // (Dinkum deque erase(P))
         return 0;
@@ -511,7 +508,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_ATTACK_GOAL_OF: return (uint64_t)(uintptr_t)EEAttackUnitCast(theOther->GetGoal());
     case EE_UNITS_CU_ATTACK_TARGET_IS_THIS: return EECuObject<EEUGRust>(inA)->GetAttackTarget() == theUnit;
     case EE_UNITS_CU_IN_REACH_OF: return theOther->IsInReach(theUnit);
-    case EE_UNITS_CU_LINE_FROM_BLOCKED: return EEIsLineToUnitBlocked(theOther, theUnit, &sCuBlocker, &sCuBlockTile[0], &sCuBlockTile[1]);
+    case EE_UNITS_CU_LINE_FROM_BLOCKED: return EEIsLineToUnitBlocked(theOther, theUnit, EECuObject<EEUnit*>((uint64_t)inB), EECuObject<long>((uint64_t)inB + sizeof(EEUnit*)), EECuObject<long>((uint64_t)inB + sizeof(EEUnit*)) + 1);
     case EE_UNITS_CU_GROUND_GOAL_OF: return (uint64_t)(uintptr_t)EEAttackGroundCast(theOther->GetGoal());
     case EE_UNITS_CU_GROUND_TARGET: return UFloatBits(inB == 0 ? EECuObject<EEUGRust>(inA)->GetGroundTarget().GetX() : EECuObject<EEUGRust>(inA)->GetGroundTarget().GetY());
     case EE_UNITS_CU_CARGO_DEREFERENCE_AT: theUnit->mCargo[(size_t)inB]->Dereference(); return 0;
@@ -525,11 +522,9 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_MOVE_SIGHT_CIRCLE: EEMoveSightCircle(f[0], f[1], f[2], f[3], theUnit->GetLineOfSight(), theUnit->mPlayer); return 0;
     case EE_UNITS_CU_GATE_IS_SIDE_PART: return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass())->IsSidePart(theUnit);
     case EE_UNITS_CU_IS_FOUNDATION_NOW: return theUnit->IsFoundation();
-    case EE_UNITS_CU_SET_DESTINATION: sCuDestination = GE3DPoint((float)(long)inB, (float)(long)inC, ::gWorld.mMap->GetTile((long)inB, (long)inC)->mHeight); return 0;
-    case EE_UNITS_CU_APPROACH_ATTACH: EEApproachAttachPoint(theUnit, sCuUnused = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
-    case EE_UNITS_CU_GET_POSITION: theUnit->GetPosition(sCuPosition = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
-    case EE_UNITS_CU_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit, theUnit->GetStats(), &sCuPosition, &sCuDestination, &sCuPitch);
-    case EE_UNITS_CU_LINE_BLOCKED: return EEIsLineBlocked(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, &sCuBlocker, &sCuBlockTile[0], &sCuBlockTile[1]);
+    case EE_UNITS_CU_GET_POSITION: theUnit->GetPosition(*reinterpret_cast<GE3DPoint*>(f) = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
+    case EE_UNITS_CU_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit, theUnit->GetStats(), EECuObject<GE3DPoint>((uint64_t)inC), EECuObject<GE3DPoint>((uint64_t)inC) + 1, &f[0]);
+    case EE_UNITS_CU_LINE_BLOCKED: return EEIsLineBlocked(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, EECuObject<EEUnit*>(inA), EECuObject<long>(inA + sizeof(EEUnit*)), EECuObject<long>(inA + sizeof(EEUnit*)) + 1);
     case EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE: return UFloatBits(theUnit->DistanceSquaredToTileXY((long)inB, (long)inC));
     case EE_UNITS_CU_CAN_GET_TO: return ::gContinentManager.CanGetTo(theUnit, (long)inB, (long)inC);
     case EE_UNITS_CU_IS_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
@@ -686,8 +681,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SCRATCH_POINT_X: return sCuPoints[(size_t)inB].GetX();
     case EE_UNITS_CU_SCRATCH_POINT_Y: return sCuPoints[(size_t)inB].GetY();
     // UpdateFanaticismColor's
-    case EE_UNITS_CU_FANATICISM_PERIOD: return EEGraphicEffect::Get(kGraphicEffectFanaticismEffect)->mIntParam1;
-    case EE_UNITS_CU_FANATICISM_PARAM: return UFloatBits(EECuFanaticismParam(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect), inB));
+    case EE_UNITS_CU_FANATICISM_FIELDS: return (int64_t)(uintptr_t)static_cast<EeDataGraphicEffectFields*>(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect));
     case EE_UNITS_CU_SET_COLOR: theUnit->SetColor(GEColor(f[0], f[1], f[2])); return 0;
     // GetChecksum's
     case EE_UNITS_CU_GOAL_CHECKSUM: return theUnit->mComplexUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC]->GetOutOfSynchChecksum();
@@ -750,13 +744,9 @@ extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inAr
     case EE_UNITS_WP_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
     case EE_UNITS_WP_CLEAR_BOUNDED: theUnit->mBoundedPathTiles.clear(); return 0;
     case EE_UNITS_WP_REGION_SIZE: return gEEAIRegionSize;
-    case EE_UNITS_WP_GOAL_POINT: { GE3DPoint thePoint = EELocationGoalPoint(theGoal); memcpy(ioPoint, &thePoint.mX, 12); return 0; }
-    case EE_UNITS_WP_CLOSEST_TILE: {
-        GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
-        long theX = 0, theY = 0;
-        ::gWorld.GetMap()->GetClosestTile(&thePoint, &theX, &theY);
-        return (int64_t)(uint32_t)theX | ((int64_t)(uint32_t)theY << 32);
-    }
+    case EE_UNITS_WP_GOAL_POINT: *reinterpret_cast<GE3DPoint*>(ioPoint) = EELocationGoalPoint(theGoal); return 0;
+    // the point's copy in ioPoint[0..3], the tile's two longs after it (waypoints.rs)
+    case EE_UNITS_WP_CLOSEST_TILE: ::gWorld.GetMap()->GetClosestTile(reinterpret_cast<GE3DPoint*>(ioPoint), reinterpret_cast<long*>(ioPoint + 4), reinterpret_cast<long*>(ioPoint + 4) + 1); return 0;
     }
     return 0;
 }

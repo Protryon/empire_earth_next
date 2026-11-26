@@ -175,6 +175,8 @@ void EEWorldLayoutRegister()
     theLayout.player_air_traffic = offsetof(EEPlayer, mAirTraffic);
     theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
     theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
+    theLayout.world_units_first = offsetof(EEWorld, mUnits) + offsetof(RTSDummyUnit, mFirst);   // units round 14
+    theLayout.unit_in_store = offsetof(RTSUnit, mInUnitStore);
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

@@ -348,6 +348,8 @@ pub const EE_UNITS_CU_CLEAR_CLOAKED_TIME: i32 = 659;
 pub const EE_UNITS_CU_FANATICISM_PERIOD: i32 = 660;
 /// the fanaticism effect's `mParam<b>` (b 1..6; its bits)
 pub const EE_UNITS_CU_FANATICISM_PARAM: i32 = 661;
+/// `static_cast<EeDataGraphicEffectFields*>(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect))` (units round 14)
+pub const EE_UNITS_CU_FANATICISM_FIELDS: i32 = 14302;
 /// `SetColor(GEColor(f[0], f[1], f[2]))` (the function static `sColor`'s copy)
 pub const EE_UNITS_CU_SET_COLOR: i32 = 662;
 // GetChecksum's

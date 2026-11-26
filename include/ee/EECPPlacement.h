@@ -10,9 +10,6 @@
 
 class EEPlayer;
 
-// 0x23d1f1 (cdecl; callers EECPBuildManager::FindSpaceSite for class 0x2d8 and 0x2037c6): whether (inX, inY) suits inPlayer's
-// class-0x2d8 site (provisional name)
-bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer);
 
 // The placement's record: Rust's (ee_sim::cp placement.rs EeCpPlacementObj: the town centre tile, -10000 none; the
 // player; the dock and space site tiles, whether they were collected and UnitAdded's classes). Rust makes it at Init

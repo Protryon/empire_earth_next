@@ -95,7 +95,7 @@ use ee_won_lobby as _;
 use ee_won_net as _;
 
 // the unit registry behind EEUnitHandle<T> and the unit store (ee_units/src/ffi.rs), called by RTSUnit.cpp and
-// EEUnitStore.cpp; its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary
+// EEComplexUnit.cpp (EEUnitStoreMoved); its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary
 #[cfg(not(test))]
 use ee_sim as _;
 
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn ee_combat_store_player_of(
     }
 }
 
-/// The store's C++ fills the bridges fall back on (EEUnitStore.cpp; declared nowhere else: cbindgen must not).
+/// The store's C++ fills the bridges fall back on (ee_sim us_fill.rs; declared nowhere else: cbindgen must not).
 /// cbindgen:ignore
 #[cfg(not(test))]
 mod host {

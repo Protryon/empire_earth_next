@@ -76,8 +76,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
                        # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
                        "Empire Earth/Communications/EEMRecord.cpp",
-                       # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
-                       "Empire Earth/Units/EEUnitStore.cpp",
                        # the world's layout for Rust's views (ee/EEWorldLayout.h; ee_sim world layout.rs)
                        "Empire Earth/Units/EEWorldLayout.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)

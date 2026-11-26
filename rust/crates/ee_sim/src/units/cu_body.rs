@@ -1059,11 +1059,42 @@ pub(crate) mod game {
         }
     }
 
+    use crate::units::cu_cargo::{EE_UNITS_CU_BUILD_QUEUE_FIND, EE_UNITS_CU_CITIZEN_AT};
+    use crate::units::cu_life::{
+        EE_UNITS_CU_FANATICISM_FIELDS, EE_UNITS_CU_FANATICISM_PARAM, EE_UNITS_CU_FANATICISM_PERIOD,
+    };
+
     impl CuHost for Game {
         fn cu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
             // SAFETY: the body runs inside the C++ member that handed over its live unit (the plain record reads
             // and stores first: cu_view.rs)
             unsafe {
+                let host = |op: i32, b: i64| ee_units_cu_host(op, unit as usize as *mut c_void, 0, b, 0, &mut [0.0; 4]);
+                match op {
+                    // units round 14: std::find over mCitizenBuildQueue (was EECuFind)
+                    EE_UNITS_CU_BUILD_QUEUE_FIND => {
+                        let n = host(EE_UNITS_CU_BUILD_TARGET_COUNT, 0);
+                        return (0..n).find(|&i| host(EE_UNITS_CU_CITIZEN_AT, i) as u64 == a).unwrap_or(-1);
+                    }
+                    // the fanaticism effect's period and colour parameters 1..6 (was EECuFanaticismParam)
+                    EE_UNITS_CU_FANATICISM_PERIOD | EE_UNITS_CU_FANATICISM_PARAM => {
+                        let fields = host(EE_UNITS_CU_FANATICISM_FIELDS, 0) as usize;
+                        let e = &*(fields as *const ee_data::tables::EeDataGraphicEffectFields);
+                        if op == EE_UNITS_CU_FANATICISM_PERIOD {
+                            return e.mIntParam1 as i64;
+                        }
+                        let p = match b {
+                            1 => e.mParam1,
+                            2 => e.mParam2,
+                            3 => e.mParam3,
+                            4 => e.mParam4,
+                            5 => e.mParam5,
+                            _ => e.mParam6,
+                        };
+                        return i64::from(p.to_bits());
+                    }
+                    _ => {}
+                }
                 if let Some(v) = crate::units::cu_view::cu_view(op, unit, a, b, c, f) {
                     return v;
                 }

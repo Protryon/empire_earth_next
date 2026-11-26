@@ -29,7 +29,7 @@ class EEPlayer;
 typedef EEPlayer RTSPlayer;
 
 // EEComplexUnit::mPhysicalModel's location was written (EEUnitStoreModel): the record's x, y, z (store.rs
-// EE_UNIT_FIELD_LOCATION_*; EEUnitStore.cpp: the owner from the member's offset)
+// EE_UNIT_FIELD_LOCATION_*; EEComplexUnit.cpp: the owner from the member's offset)
 void EEUnitStoreMoved(const void* inModel);
 
 // the unit enters inPlayer's list (its id inOwner; after the unit's mPlayer and id are final) / leaves it (also at

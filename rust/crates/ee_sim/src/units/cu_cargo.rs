@@ -197,6 +197,8 @@ pub const EE_UNITS_CU_BUILD_QUEUE_PUSH_FRONT: i32 = 289;
 pub const EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK: i32 = 290;
 /// the index of unit `a` in `mCitizenBuildQueue` (`std::find`; -1: none)
 pub const EE_UNITS_CU_BUILD_QUEUE_FIND: i32 = 291;
+/// `mCitizenBuildQueue[b]` (units round 14: the find is Rust's, cu_body.rs)
+pub const EE_UNITS_CU_CITIZEN_AT: i32 = 14301;
 /// `mCitizenBuildQueue.erase(mCitizenBuildQueue.begin() + b)` (the single-iterator erase)
 pub const EE_UNITS_CU_BUILD_QUEUE_ERASE_AT: i32 = 292;
 /// `DropFinishedGoals(0)`

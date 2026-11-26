@@ -83,7 +83,6 @@ static void EEStoreMesh(GEModel* inModel, const EeGfxMeshVertex* inVertices, siz
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
-bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
 #if defined(__clang__)
@@ -220,7 +219,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FxDoppelgangerIsBuilt: return ((EEDoppelganger*)p)->IsBuilt();
     case O::FxHasDoppelganger: return gDoppelgangerManager.HasDoppelganger((EEMapTile*)p, (EEUnit*)a[0], gWorld.mCurrentPlayer);
     case O::FxFreeCamera: return gFreeCamera;
-    case O::FxUnitOpacity: Fn23CEE2(FXCX, false, *(float*)a[0]);
+    case O::FxUnitOpacity: ee_units_ck_body(EE_UNITS_CK_DO_TRANSLUCENT, (uint64_t)(uintptr_t)FXCX, (uint64_t)a[0], 0, 0);
         break;
     case O::FxGeffObject: return P64(((EEGraphicEffect*)p)->mGraphicObject);
     case O::FxGeffLinked2: return P64(((EEGraphicEffect*)p)->GetLinkedEffect2());

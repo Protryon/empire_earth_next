@@ -406,11 +406,17 @@ mod game {
                 WorldView::global(&t).and_then(|w| w.map()).is_some_and(|m| m.tile(wx, wy).is_some())
             };
             if !on {
-                let mut q = *p;
-                // SAFETY: three floats
-                let packed = unsafe { ee_units_wp_host(EE_UNITS_WP_CLOSEST_TILE, unit, 0, q.as_mut_ptr()) };
-                wx = i64::from(packed as u32 as i32);
-                wy = i64::from((packed >> 32) as u32 as i32);
+                // the point's copy, then the tile (two `long`s, 0 until found)
+                #[repr(C)]
+                struct Closest {
+                    p: [f32; 4],
+                    xy: [std::os::raw::c_long; 2],
+                }
+                let mut q = Closest { p: [p[0], p[1], p[2], 0.0], xy: [0, 0] };
+                // SAFETY: the record's floats and longs
+                unsafe { ee_units_wp_host(EE_UNITS_WP_CLOSEST_TILE, unit, 0, q.p.as_mut_ptr()) };
+                wx = i64::from(q.xy[0] as u32 as i32);
+                wy = i64::from(q.xy[1] as u32 as i32);
             }
             if wx == x && wy == y {
                 return Some(i);

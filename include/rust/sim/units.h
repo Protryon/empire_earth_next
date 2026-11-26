@@ -545,61 +545,61 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
 /// `mCommand ? mCommand->mType : 0`
-constexpr static const int32_t EE_UNITS_AI_H_COMMAND_TYPE = 4000;
+constexpr static const int32_t EE_UNITS_AI_H_COMMAND_TYPE = 14200;
 
 /// `mNextTriggerTime`
-constexpr static const int32_t EE_UNITS_AI_H_NEXT_TRIGGER_TIME = 4001;
+constexpr static const int32_t EE_UNITS_AI_H_NEXT_TRIGGER_TIME = 14201;
 
 /// `mGoalState ? mGoalState->mKind : -1`
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_KIND = 4002;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_KIND = 14202;
 
 /// `mCommand` as a handle (0: none)
-constexpr static const int32_t EE_UNITS_AI_H_COMMAND = 4003;
+constexpr static const int32_t EE_UNITS_AI_H_COMMAND = 14203;
 
 /// `mGoalState != NULL`
-constexpr static const int32_t EE_UNITS_AI_H_HAS_GOAL = 4004;
+constexpr static const int32_t EE_UNITS_AI_H_HAS_GOAL = 14204;
 
 /// `theAction = 0` (the gather test's local)
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION_RESET = 4005;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION_RESET = 14205;
 
 /// `mGoalState->IsActive(&theAction)`
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTIVE = 4006;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTIVE = 14206;
 
 /// `theAction`
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION = 4007;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION = 14207;
 
 /// `mUnitClass->EvaluateCondition(unit, b)`
-constexpr static const int32_t EE_UNITS_AI_H_CONDITION = 4008;
+constexpr static const int32_t EE_UNITS_AI_H_CONDITION = 14208;
 
 /// action `a`'s `mType`
-constexpr static const int32_t EE_UNITS_AI_H_ACTION_TYPE = 4009;
+constexpr static const int32_t EE_UNITS_AI_H_ACTION_TYPE = 14209;
 
 /// `StartAction(b)`
-constexpr static const int32_t EE_UNITS_AI_H_START_ACTION = 4010;
+constexpr static const int32_t EE_UNITS_AI_H_START_ACTION = 14210;
 
 /// `GetUnitClass()->ActionChanged(unit)`
-constexpr static const int32_t EE_UNITS_AI_H_ACTION_CHANGED = 4011;
+constexpr static const int32_t EE_UNITS_AI_H_ACTION_CHANGED = 14211;
 
 /// `DropFinishedGoals(false)`
-constexpr static const int32_t EE_UNITS_AI_H_DROP_FINISHED_GOALS = 4012;
+constexpr static const int32_t EE_UNITS_AI_H_DROP_FINISHED_GOALS = 14212;
 
 /// `UpdateCamouflage(b)`
-constexpr static const int32_t EE_UNITS_AI_H_UPDATE_CAMOUFLAGE = 4013;
+constexpr static const int32_t EE_UNITS_AI_H_UPDATE_CAMOUFLAGE = 14213;
 
 /// `mCommand = (EEUnitAction*)a`
-constexpr static const int32_t EE_UNITS_AI_H_SET_COMMAND = 4014;
+constexpr static const int32_t EE_UNITS_AI_H_SET_COMMAND = 14214;
 
 /// `mNextTriggerTime = b`
-constexpr static const int32_t EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME = 4015;
+constexpr static const int32_t EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME = 14215;
 
 /// `mUnitID`
-constexpr static const int32_t EE_UNITS_AI_H_UNIT_ID = 4016;
+constexpr static const int32_t EE_UNITS_AI_H_UNIT_ID = 14216;
 
 /// `mIsCitizen`
-constexpr static const int32_t EE_UNITS_AI_H_IS_CITIZEN = 4017;
+constexpr static const int32_t EE_UNITS_AI_H_IS_CITIZEN = 14217;
 
 /// `gPhysics->mGameTime`
-constexpr static const int32_t EE_UNITS_AI_H_GAME_TIME = 4018;
+constexpr static const int32_t EE_UNITS_AI_H_GAME_TIME = 14218;
 
 /// the unit's class's `mWeight`
 constexpr static const int32_t EE_UNITS_ATC_WEIGHT = 1;
@@ -2322,6 +2322,9 @@ constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK = 290;
 /// the index of unit `a` in `mCitizenBuildQueue` (`std::find`; -1: none)
 constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_FIND = 291;
 
+/// `mCitizenBuildQueue[b]` (units round 14: the find is Rust's, cu_body.rs)
+constexpr static const int32_t EE_UNITS_CU_CITIZEN_AT = 14301;
+
 /// `mCitizenBuildQueue.erase(mCitizenBuildQueue.begin() + b)` (the single-iterator erase)
 constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_ERASE_AT = 292;
 
@@ -3006,6 +3009,9 @@ constexpr static const int32_t EE_UNITS_CU_FANATICISM_PERIOD = 660;
 
 /// the fanaticism effect's `mParam<b>` (b 1..6; its bits)
 constexpr static const int32_t EE_UNITS_CU_FANATICISM_PARAM = 661;
+
+/// `static_cast<EeDataGraphicEffectFields*>(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect))` (units round 14)
+constexpr static const int32_t EE_UNITS_CU_FANATICISM_FIELDS = 14302;
 
 /// `SetColor(GEColor(f[0], f[1], f[2]))` (the function static `sColor`'s copy)
 constexpr static const int32_t EE_UNITS_CU_SET_COLOR = 662;
@@ -9849,31 +9855,31 @@ constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
 constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 
 /// `theName.Copy(the name's `b` bytes at `a`)` (the read's locals are the host's)
-constexpr static const int32_t EE_UNITS_SCRIPT_H_NAME = 4000;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_NAME = 14100;
 
 /// `gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile = NULL)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_FIND = 4001;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_FIND = 14101;
 
 /// `theFile != NULL`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_HAS_FILE = 4002;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_HAS_FILE = 14102;
 
 /// `theFile->Open(kFileAccessRead)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_OPEN = 4003;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_OPEN = 14103;
 
 /// `theFile->GetLength(theLength = 0)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_GET_LENGTH = 4004;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_GET_LENGTH = 14104;
 
 /// `theLength`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_LENGTH = 4005;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_LENGTH = 14105;
 
 /// `theFile->Read((char*)a, b, theCount = 0)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_READ = 4006;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_READ = 14106;
 
 /// `theFile->Close()`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_CLOSE = 4007;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_CLOSE = 14107;
 
 /// `delete theFile`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_DELETE = 4008;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_DELETE = 14108;
 
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
@@ -16047,101 +16053,101 @@ constexpr static const int32_t EE_UNITS_UB_DO_SPACE_ENERGY_WALL = 25;
 constexpr static const int32_t EE_UNITS_UB_DO_HAS_CIVILIZATION_UPGRADE = 26;
 
 /// the terrain type of `gWorld.mMap->GetTile(c, d)` (-1: no tile)
-constexpr static const int32_t EE_UNITS_CK_TERRAIN = 1;
+constexpr static const int32_t EE_UNITS_CK_TERRAIN = 14001;
 
 /// `gWorld.mMap->IsEdgeTile(c, d)`
-constexpr static const int32_t EE_UNITS_CK_IS_EDGE = 2;
+constexpr static const int32_t EE_UNITS_CK_IS_EDGE = 14002;
 
 /// `EEIsLandTerrain(c)`
-constexpr static const int32_t EE_UNITS_CK_IS_LAND = 3;
+constexpr static const int32_t EE_UNITS_CK_IS_LAND = 14003;
 
 /// `EECanPlace(player a, kUnitTypeSpaceDock, &the point f, c, d, 0, 0)`
-constexpr static const int32_t EE_UNITS_CK_CAN_PLACE_DOCK = 4;
+constexpr static const int32_t EE_UNITS_CK_CAN_PLACE_DOCK = 14004;
 
 /// `EEGetDockFacing(c, d)`
-constexpr static const int32_t EE_UNITS_CK_DOCK_FACING = 5;
+constexpr static const int32_t EE_UNITS_CK_DOCK_FACING = 14005;
 
 /// unit `a`'s `GetCommandType()`
-constexpr static const int32_t EE_UNITS_CK_COMMAND_TYPE = 6;
+constexpr static const int32_t EE_UNITS_CK_COMMAND_TYPE = 14006;
 
 /// the bits of `(float)` unit `a`'s complex unit's `mRottingAwayTime / ` its class's `mRottingTime` (0: no rotting
 /// time... asked only when it is not 0)
-constexpr static const int32_t EE_UNITS_CK_ROT_FRACTION = 7;
+constexpr static const int32_t EE_UNITS_CK_ROT_FRACTION = 14007;
 
 /// unit `a`'s class's `mRottingTime != 0`
-constexpr static const int32_t EE_UNITS_CK_HAS_ROTTING_TIME = 8;
+constexpr static const int32_t EE_UNITS_CK_HAS_ROTTING_TIME = 14008;
 
 /// unit `a`'s `mIsCloakable`
-constexpr static const int32_t EE_UNITS_CK_IS_CLOAKABLE = 9;
+constexpr static const int32_t EE_UNITS_CK_IS_CLOAKABLE = 14009;
 
 /// unit `a`'s `mIsCloaked`
-constexpr static const int32_t EE_UNITS_CK_IS_CLOAKED = 10;
+constexpr static const int32_t EE_UNITS_CK_IS_CLOAKED = 14010;
 
 /// `gFreeCamera`
-constexpr static const int32_t EE_UNITS_CK_FREE_CAMERA = 11;
+constexpr static const int32_t EE_UNITS_CK_FREE_CAMERA = 14011;
 
 /// the bits of unit `a`'s `mOpacity`
-constexpr static const int32_t EE_UNITS_CK_OPACITY = 12;
+constexpr static const int32_t EE_UNITS_CK_OPACITY = 14012;
 
 /// `gWorld.GetCurrentPlayer()`
-constexpr static const int32_t EE_UNITS_CK_CURRENT_PLAYER = 13;
+constexpr static const int32_t EE_UNITS_CK_CURRENT_PLAYER = 14013;
 
 /// unit `a`'s `mPlayer`
-constexpr static const int32_t EE_UNITS_CK_PLAYER = 14;
+constexpr static const int32_t EE_UNITS_CK_PLAYER = 14014;
 
 /// unit `a`'s `mPlayer->mEnemies[the current player's mPlayerID]`
-constexpr static const int32_t EE_UNITS_CK_ENEMY_OF_VIEWER = 15;
+constexpr static const int32_t EE_UNITS_CK_ENEMY_OF_VIEWER = 14015;
 
 /// `gWorld.GetCurrentPlayer()->mObserverMode`
-constexpr static const int32_t EE_UNITS_CK_OBSERVER = 16;
+constexpr static const int32_t EE_UNITS_CK_OBSERVER = 14016;
 
 /// `*(float*)a = f[0]`
-constexpr static const int32_t EE_UNITS_CK_SET_FLOAT = 17;
+constexpr static const int32_t EE_UNITS_CK_SET_FLOAT = 14017;
 
 /// the cloak effect created on unit `a` (`kGraphicEffectMarketTicketTape`, the handle kept); the result
-constexpr static const int32_t EE_UNITS_CK_CREATE_CLOAK = 18;
+constexpr static const int32_t EE_UNITS_CK_CREATE_CLOAK = 14018;
 
 /// unit `a`'s complex unit's `mCloaked = the kept handle's mValue`
-constexpr static const int32_t EE_UNITS_CK_KEEP_CLOAK = 19;
+constexpr static const int32_t EE_UNITS_CK_KEEP_CLOAK = 14019;
 
 /// unit `a`'s complex unit's `(long)mCloaked`
-constexpr static const int32_t EE_UNITS_CK_CLOAKED = 20;
+constexpr static const int32_t EE_UNITS_CK_CLOAKED = 14020;
 
 /// the effect handle `c` destroyed
-constexpr static const int32_t EE_UNITS_CK_DESTROY_EFFECT = 21;
+constexpr static const int32_t EE_UNITS_CK_DESTROY_EFFECT = 14021;
 
 /// unit `a`'s complex unit's `mCloaked = 0`
-constexpr static const int32_t EE_UNITS_CK_CLEAR_CLOAKED = 22;
+constexpr static const int32_t EE_UNITS_CK_CLEAR_CLOAKED = 14022;
 
 /// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
-constexpr static const int32_t EE_UNITS_CK_SPACE_MAP = 23;
+constexpr static const int32_t EE_UNITS_CK_SPACE_MAP = 14023;
 
 /// complex unit `a`'s `mTileX`
-constexpr static const int32_t EE_UNITS_CK_TILE_X = 24;
+constexpr static const int32_t EE_UNITS_CK_TILE_X = 14024;
 
 /// complex unit `a`'s `mTileY`
-constexpr static const int32_t EE_UNITS_CK_TILE_Y = 25;
+constexpr static const int32_t EE_UNITS_CK_TILE_Y = 14025;
 
 /// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
-constexpr static const int32_t EE_UNITS_CK_CONTINENT = 26;
+constexpr static const int32_t EE_UNITS_CK_CONTINENT = 14026;
 
 /// `gWorld.mUnits.mFirst`
-constexpr static const int32_t EE_UNITS_CK_FIRST_UNIT = 27;
+constexpr static const int32_t EE_UNITS_CK_FIRST_UNIT = 14027;
 
 /// unit `a`'s `mTileNode->mNext`
-constexpr static const int32_t EE_UNITS_CK_NEXT_UNIT = 28;
+constexpr static const int32_t EE_UNITS_CK_NEXT_UNIT = 14028;
 
 /// unit `a`'s `mComplexUnit`
-constexpr static const int32_t EE_UNITS_CK_COMPLEX_OF = 29;
+constexpr static const int32_t EE_UNITS_CK_COMPLEX_OF = 14029;
 
 /// complex unit `a`'s class's `mDomains`
-constexpr static const int32_t EE_UNITS_CK_DOMAINS = 30;
+constexpr static const int32_t EE_UNITS_CK_DOMAINS = 14030;
 
 /// complex unit `a`'s class's `mUnitType`
-constexpr static const int32_t EE_UNITS_CK_UNIT_TYPE = 31;
+constexpr static const int32_t EE_UNITS_CK_UNIT_TYPE = 14031;
 
 /// complex unit `a`'s `mPlanetID = c`
-constexpr static const int32_t EE_UNITS_CK_SET_PLANET = 32;
+constexpr static const int32_t EE_UNITS_CK_SET_PLANET = 14032;
 
 constexpr static const int32_t EE_UNITS_CK_DO_TRANSLUCENT = 1;
 
@@ -18210,8 +18216,6 @@ uint8_t ee_units_ag_reserved(uint64_t group, const float (*point)[3], uint8_t wh
 /// `EEActiveGroupCaptureSweep()` (EE-SIM's game end, with the capture's groups profile): the capture only takes AGPL
 /// records while it runs, and alone.
 void ee_units_ag_sweep();
-
-extern int64_t ee_units_ai_host(int32_t op, void *unit, uint64_t a, int64_t b);
 
 /// `EEComplexUnit::AIStep()` on `unit` (see [`ai_step_noted`]).
 ///
@@ -21069,8 +21073,6 @@ int32_t ee_units_script_action_id(const char *name);
 /// The NUL-terminated name of an action id ("" unknown), static.
 const char *ee_units_script_action_name(uint32_t id);
 
-extern int64_t ee_units_script_host(int32_t op, uint64_t a, int64_t b);
-
 /// `EEUnitAction::GetScript(name)`: the script's handle (its file read through the data path).
 ///
 /// # Safety
@@ -21962,8 +21964,6 @@ uint64_t ee_units_upgrade_media(const EeUnitsUpgradeMedia *media,
                                 long arg,
                                 void *value);
 
-extern int64_t ee_units_us_host(int32_t op, uint64_t a, int64_t b, uint64_t c, void *out);
-
 /// TEST ONLY: `EEUnitStoreCheck(where)`.
 uint64_t ee_units_us_check(uint64_t at);
 
@@ -22108,8 +22108,6 @@ extern int64_t ee_units_ub_host(int32_t op,
 /// # Safety
 /// The objects are live game objects, on the simulation thread.
 int64_t ee_units_ub_body(int32_t what, uint64_t a, uint64_t b, int64_t c, int64_t d, int64_t e);
-
-extern int64_t ee_units_ck_host(int32_t op, uint64_t a, int64_t c, int64_t d, float (*f)[4]);
 
 /// The cloaking utility `what` (`EE_UNITS_CK_DO_*`).
 ///

@@ -103,12 +103,10 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 20834c 208c37 Empire Earth/Units/EESightRings.cpp
 208c37 208e6b Empire Earth/Graphics Thread/EEOrbital.cpp
 228c4c 22a509 Empire Earth/Units/EEUnit.cpp
-22a509 22d95f Empire Earth/Units/EEUnitAction.cpp
 22d95f 22f272 Empire Earth/Units/EEUnitAI.cpp
 22f272 23a5bf Empire Earth/Units/EEUnitClass.cpp
 23a5bf 23b61a Empire Earth/Units/EEUnitClassImprovement.cpp
 23b61a 23c332 Empire Earth/Units/EEUnitClassUpgrade.cpp
-23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
 254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
