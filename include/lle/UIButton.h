@@ -11,7 +11,7 @@
 #define LLE_UIBUTTON_H
 
 #include "lle/UIControl.h"
-#include "lle/UIButtonState.h"
+#include "rust/ui/ids.h"   // UIButtonState (once lle/UIButtonState.h)
 #include "rust/ui/buttonobj.h"
 #include "rust/ui/lle_hosts.h"
 

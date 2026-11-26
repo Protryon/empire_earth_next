@@ -29,8 +29,7 @@
 #include "lle/UIEntityGroup.h"
 #include "lle/UIControlsTable.h"
 #include "lle/UIBitmap.h"
-#include "lle/UIEMouseWheelScroll.h"
-#include "lle/UITiledBackground.h"
+#include "lle/UIBitmapBackground.h"
 #include "lle/UIBFull.h"
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
@@ -53,6 +52,34 @@
 #include "lle/GEViewport.h"      // (unused here: the harness's layout dump, tools/harness/layout_gen.py, reads them)
 #include "lle/UIFormManager.h"
 #include "rust/ui/form_state.h"
+
+// C:\EEX\Low-Level Engine\User Interface\UIEMouseWheelScroll.h (RECONSTRUCTION; port: here, in its only includer). The form's
+// default mouse wheel event (UIForm's FormWheelEventNew news one): forwards the wheel to the control under the mouse. UIEMouseWheelScroll.cpp
+// (0x1006de9d..0x1006e304) held the ctor, dtor and ProcessEvent; they are inline here (the unit is gone). Vtable
+// 0x10099968. sizeof 0xc. Requires lle/UIEvent.h, lle/UIForm.h, lle/UIManager.h.
+class LLE_API UIEMouseWheelScroll : public UIEvent {
+public:
+    // Scrolls the control under the mouse by the manager's wheel scroll amount
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)inForm->Call(EeUiFormCall::WheelScroll); }
+};
+
+// C:\EEX\Low-Level Engine\User Interface\UITiledBackground.h (RECONSTRUCTION; port: here, in its only includer). A bitmap
+// background repeated over the rectangle. Vtable 0x10099a0c (UIBitmapBackground's 8 slots, then DrawTiledBackground). Requires
+// lle/UIBitmapBackground.h.
+//
+// Whole in Rust (bgobj.rs, R6 ui round 20). The original's three subclasses UILRTiledBackground (tiled left to
+// right), UITBTiledBackground (top to bottom) and UIStretchedTiledBackground (a given number of tiles across and down)
+// only chose the tiling of DrawBackground: they are the tiling the constructor takes (the record's mTiling,
+// mHorizontalCount, mVerticalCount). UITiling: rust/ui/ids.h (ee_ui ids.rs).
+class LLE_API UITiledBackground : public UIBitmapBackground {
+public:
+    UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription, const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible, UITiling inTiling = kTilingBoth, float inAcross = 0.0f, float inDown = 0.0f) : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm, inDrawPriority, inVisible) { this->Call(EeUiBgCall::TiledInit, inTiling, 0, UIF4(inAcross, inDown)); }
+    virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::TiledDraw, inRectangle); }
+    // slot 0x20: draws the tiles [inFirstRow, inLastRow] x [inFirstColumn, inLastColumn] clipped to inClip
+    virtual long DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
+                                     unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
+                                     float inHeight);
+};
 
 // C:\EEX\Low-Level Engine\User Interface\UIBackground.cpp
 // 0x10058d38..0x1005c34a: the first User Interface unit. It opens with the header-inline members of every UI class it
