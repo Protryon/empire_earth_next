@@ -57,11 +57,8 @@ public:
     // inline (out-of-line COMDAT 0x1c577c `lea eax, [ecx + 0x8c]`: SetClassName's two SetName copies; provisional name)
     const UWideString& GetNewName() const { return this->mNewName; }
     unsigned long GetType() const { return this->mType; }
-    unsigned long GetID() const { return this->mID; }
-    float GetFloatValue() const { return this->mFloatValue; }  // inline (Copy 0x5bc60f copies it with fld/fstp; provisional name)
     void SetName(const UWideString& inName) { this->mName = inName; }
     void SetText(const UWideString& inText) { this->mText = inText; }
-    void SetType(unsigned long inType) { this->mType = inType; }
 
     std::vector<unsigned long> mObjects;    // +0x04 (`_Buy` 0xe7d2e, `_Tidy` 0x2002c7; Load/Save: unsigned long elements)
     UWideString mName;                      // +0x14

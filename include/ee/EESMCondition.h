@@ -41,11 +41,8 @@ public:
     const UWideString& GetName() const { return this->mName; }
     const UWideString& GetText() const { return this->mText; }
     unsigned long GetType() const { return this->mType; }
-    unsigned long GetID() const { return this->mID; }
-    unsigned long GetObjectIndex() const { return this->mObjectIndex; }  // inline (EEScenarioManager 0x5b0d37 / 0x5b3f11)
     void SetName(const UWideString& inName) { this->mName = inName; }
     void SetText(const UWideString& inText) { this->mText = inText; }
-    void SetType(unsigned long inType) { this->mType = inType; }
 
     UWideString mName;                      // +0x04 (the condition screen's name edit box)
     UWideString mText;                      // +0x18 (the condition screen's text edit box)

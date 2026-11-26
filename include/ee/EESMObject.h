@@ -63,13 +63,10 @@ public:
     unsigned long GetUnitCount() const { return this->mUnits.size(); }  // inline (EESMEffect 0x5bd5eb, EESMObject 0x5c6458)
     // inline value getters (EESMEffect 0x5c2b3e / 0x5bc942 read the object test through them)
     bool GetIsSelectOnMap() const { return this->mIsSelectOnMap; }
-    unsigned long GetParent() const { return this->mParent; }
     unsigned long GetInAreaCheck() const { return this->mInAreaCheck; }
     unsigned long GetNearCheck() const { return this->mNearCheck; }
     unsigned long GetAttribute() const { return this->mAttribute; }
     bool GetIsAttributePercent() const { return this->mIsAttributePercent; }
-    unsigned long GetFamily() const { return this->mFamily; }
-    unsigned long GetClass() const { return this->mClass; }
     unsigned long GetArea() const { return this->mArea; }
     // Replaces the object's unit list
     void SetUnits(const std::vector<unsigned long>& inUnits) { this->mUnits = inUnits; }
