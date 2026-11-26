@@ -544,7 +544,8 @@ mod tests {
         let layout = parse_layout(&text);
         let field = |class: &str, path: &str| -> Option<u64> {
             let fields = &layout.get(class)?.1;
-            // an empty member (UConfig mConfig) prefixes its successors' names with "(empty)."
+            // (an empty member prefixed its successors' names with "(empty)." until layout_gen.py's depth fix, LLE/UI
+            // round 2)
             fields.get(path).or_else(|| fields.get(&format!("(empty).{path}"))).copied()
         };
         let size = |class: &str| layout.get(class).map(|r| r.0).unwrap_or_else(|| panic!("{class}: no record"));

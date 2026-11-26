@@ -80,7 +80,7 @@ def parse(text, into):
             if not m:
                 continue
             off, depth, decl = int(m.group(1)), (len(m.group(4)) - 1) // 2, m.group(5).strip()
-            del stack[depth:]
+            del stack[max(depth - 1, 0):]   # (the class's own members are depth 1: stack[0])
             if decl.endswith(("(base)", "(base) (empty)", "(primary base)")) or "vftable pointer" in decl \
                     or "vbtable pointer" in decl or "(virtual base)" in decl:
                 stack.append(None)   # base subobject: its members join the derived class's names
