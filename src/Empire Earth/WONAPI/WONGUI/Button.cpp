@@ -28,41 +28,15 @@
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
-typedef EeWonCtVirt V;
-
-static Component* Comp(intptr_t a) { return (Component*)a; }
 
 // t is NULL for the static functions' ops (those on a)
 extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
-    (void)d;
+    (void)c; (void)d;
     Button* t = static_cast<Button*>((Component*)inComp);
     switch (op) {
-    case Op::CtBase:
-        switch ((V)a) {
-        case V::AddedToParent: t->Component::AddedToParent(); return 0;
-        case V::MouseEnter: t->Component::MouseEnter((int)b, (int)c); return 0;
-        case V::MouseExit: t->Component::MouseExit(); return 0;
-        case V::GotFocus: t->Component::GotFocus(); return 0;
-        case V::LostFocus: t->Component::LostFocus(); return 0;
-        case V::MouseHover: t->Component::MouseHover((unsigned long)b); return 0;
-        default: return 0;
-        }
-    case Op::CtChild: if ((V)b == V::RequestFocus) Comp(a)->RequestFocus(); return 0; // (the next radio's)
-    case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
-    case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
-    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
-    case Op::BtnOf: {
-        Button* aButton = dynamic_cast<Button*>(Comp(a));
-        return aButton != NULL ? (intptr_t)aButton->mBtn : 0;
-    }
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
-    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
-    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
-    case Op::Invalidate: t->Invalidate(); return 0;
-    case Op::RequestFocus: t->RequestFocus(); return 0;
-    case Op::RequestTimer: t->RequestTimer(a != 0); return 0;
+    // (Component's own virtuals, the references, the siblings, the flags, the repaints, the focus, the timer and
+    // BtnOf are gamewin.rs common_op's in the game: R6 WON GUI round 38)
     case Op::BtnHandleActivate: return t->HandleActivate() ? 1 : 0;
     case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
     case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;
@@ -74,33 +48,6 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
 }
 
 namespace WONAPI {
-// The skinned buttons' shared ops: the size, and the button's and component's state (EeWonSkinBtn; `b` the container
-// or component asked about); 0 for any other op
-intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
-{
-    switch (op) {
-    case Op::Get: return (EeWonGuiField)a == EeWonGuiField::Width ? t->Width() : (EeWonGuiField)a == EeWonGuiField::Height ? t->Height() : 0;
-    case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
-    case Op::SkinBtn: break;
-    default: return 0;
-    }
-    switch ((EeWonSkinBtn)a) {
-    case EeWonSkinBtn::IsDisabled: return t->IsDisabled() ? 1 : 0;
-    case EeWonSkinBtn::HasFocus: return t->HasFocus() ? 1 : 0;
-    case EeWonSkinBtn::Parent: return (intptr_t)t->mParent;
-    case EeWonSkinBtn::UsedDialogKeys: return ((Container*)b)->HasUsedDialogKeys() ? 1 : 0;
-    case EeWonSkinBtn::IsPressed: return t->IsPressed() ? 1 : 0;
-    case EeWonSkinBtn::IsChecked: return t->IsChecked() ? 1 : 0;
-    case EeWonSkinBtn::ButtonFlags: return (intptr_t)(uint32_t)t->GetButtonFlags();
-    case EeWonSkinBtn::IsDefaultButton: return t->IsDefaultButton() ? 1 : 0;
-    case EeWonSkinBtn::FlagSet: return ((Component*)b)->ComponentFlagSet((int)c) ? 1 : 0;
-    case EeWonSkinBtn::SetFlag: t->SetComponentFlags((int)b,true); return 0;
-    case EeWonSkinBtn::SetGrabBG: t->SetComponentFlags(ComponentFlag_GrabBG,true); return 0;
-    case EeWonSkinBtn::SetWantFocus: t->SetComponentFlags(ComponentFlag_WantFocus,b!=0); return 0;
-    case EeWonSkinBtn::SetButtonFlags: t->SetButtonFlags((unsigned long)b,c!=0); return 0;
-    default: return 0;
-    }
-}
 // Creates a button that takes focus (the Rust button: no flags, not pressed)
 Button::Button() : mBtn(ee_won_btn_make(static_cast<Component*>(this),ee_won_guicpp_btn_call)) {}
 // Destroys the button (the Rust button; the click sound is a member)
@@ -137,13 +84,7 @@ extern "C" intptr_t ee_won_guicpp_imgbtn_call(void* inMe, EeWonLeafOp op, intptr
     case Lo::BtnImageWidth: return t->mImages[a]->GetWidth();
     case Lo::BtnImageHeight: return t->mImages[a]->GetHeight();
     case Lo::BtnBasePaint: t->Component::Paint(*g); return 0;
-    case Lo::BtnDisabled: return t->IsDisabled() ? 1 : 0;
-    case Lo::BtnChecked: return t->IsChecked() ? 1 : 0;
-    case Lo::BtnPressed: return t->IsPressed() ? 1 : 0;
-    case Lo::BtnMouseOver: return t->IsMouseOver() ? 1 : 0;
     case Lo::BtnStretch: return t->mStretch ? 1 : 0;
-    case Lo::BtnWidth: return t->Width();
-    case Lo::BtnHeight: return t->Height();
     case Lo::BtnImageFit: t->mImages[a]->SetSize(t->Width(), t->Height()); return 0;
     case Lo::BtnDrawImage: g->DrawImage(t->mImages[b].get(), 0, 0); return 0;
     default: return 0;
@@ -179,7 +120,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
         WONMsPaint(*(Graphics*)a,WONMsPaintOf((EeWonMsBox)b == EeWonMsBox::Checkbox ? EeWonMsPaintKind::Check : EeWonMsPaintKind::Radio,13,13,(t->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(t->IsChecked()?EE_WON_MSPAINT_CHECKED:0)));
         return 0;
     case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, NULL, t->mText.get()), WONDrawNoCall()); return 0;
-    default: return ButtonHostCall(t, op, a, b, c); // the size, the button's state
+    default: return 0; // (the size and the button's state: gamewin.rs common_op's)
     }
 }
 
@@ -208,8 +149,6 @@ static intptr_t TextOp(intptr_t which, intptr_t b, intptr_t c)
 {
     switch ((EeWonWbText)which) {
     case EeWonWbText::New: { WrappedText* t = new WrappedText; t->AddRef(); return (intptr_t)t; }
-    case EeWonWbText::Hold: Txt(b)->AddRef(); return 0;
-    case EeWonWbText::Release: Txt(b)->Release(); return 0;
     case EeWonWbText::SetText: Txt(b)->SetText(*(const GUIString*)c); return 0;
     case EeWonWbText::SetMaxWidth: Txt(b)->SetMaxWidth((int)c); return 0;
     case EeWonWbText::SetWrap: Txt(b)->SetWrap(c != 0); return 0;
@@ -223,39 +162,14 @@ static intptr_t TextOp(intptr_t which, intptr_t b, intptr_t c)
     }
 }
 
-// an image's method (EeWonWbImage; `b` the image)
-static intptr_t ImageOp(intptr_t which, intptr_t b)
-{
-    switch ((EeWonWbImage)which) {
-    case EeWonWbImage::Hold: Img(b)->AddRef(); return 0;
-    case EeWonWbImage::Release: Img(b)->Release(); return 0;
-    case EeWonWbImage::Width: return Img(b)->GetWidth();
-    case EeWonWbImage::Height: return Img(b)->GetHeight();
-    case EeWonWbImage::Duplicate: { // the SmartPtr temporary's reference goes to the Rust
-        SmartPtr<Image> aCopy = Img(b)->Duplicate();
-        Image* p = aCopy.get();
-        if (p) p->AddRef();
-        return (intptr_t)p;
-    }
-    default: return 0;
-    }
-}
-
 extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WONButton* t = (WONButton*)inComp;
     switch (op) {
     case Op::WbBaseCopy: t->Button::CopyAttributes((Button*)a); return 0;
     case Op::WbText: return TextOp(a,b,c);
-    case Op::WbImage: return ImageOp(a,b);
-    case Op::WbFont:
-        switch ((EeWonWbFont)a) {
-        case EeWonWbFont::Default: return (intptr_t)WONAPI::WindowManager::GetDefaultWindowManager()->GetDefaultFont();
-        case EeWonWbFont::Hold: ((Font*)b)->AddRef(); return 0;
-        case EeWonWbFont::Release: ((Font*)b)->Release(); return 0;
-        default: return 0;
-        }
+    // (WbImage, WbFont and the texts' references are gamewin.rs wonbtn_op's in the game: R6 WON GUI round 38)
     case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, Img(c), Txt(d)), WONDrawNoCall()); return 0;
-    default: return ButtonHostCall(t, op, a, b, c); // the size, the button's state
+    default: return 0; // (the size and the button's state: gamewin.rs common_op's)
     }
 }

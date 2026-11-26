@@ -69,6 +69,19 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
+/// One draw operation (`kind` and up to eight arguments; their meaning is the kind's).
+struct EeWonDrawOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
+  int32_t f;
+  int32_t g;
+  int32_t h;
+};
+
 /// The filter's inputs (`StretchImageFilter`'s members and the source image's size).
 struct EeWonStretchFilter {
   int32_t width;
@@ -82,19 +95,6 @@ struct EeWonStretchFilter {
   bool tile_horz;
   bool tile_vert;
   bool skip_center;
-};
-
-/// One draw operation (`kind` and up to eight arguments; their meaning is the kind's).
-struct EeWonDrawOp {
-  int32_t kind;
-  int32_t a;
-  int32_t b;
-  int32_t c;
-  int32_t d;
-  int32_t e;
-  int32_t f;
-  int32_t g;
-  int32_t h;
 };
 
 /// A frame to paint (`WONFrame::Paint`'s inputs): its image's size (slot `slot`), the component's size and the

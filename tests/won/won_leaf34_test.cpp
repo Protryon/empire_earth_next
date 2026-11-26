@@ -62,14 +62,25 @@ static intptr_t MutBrowser(void* me, EeWonBrowserOp op, intptr_t a, intptr_t b)
 }
 static bool IsTipExists(EeWonTipOp o) { return o == To::ItemIs || o == To::HasItem || o == To::HasParent || o == To::HasOwnScheme; }
 static bool IsTipNumber(EeWonTipOp o) { return (o >= To::ItemTop && o <= To::ItemHeight) || (o >= To::ListLeftPad && o <= To::Height); }
+// the Graphics' own ops, gfxrun.rs's in the game (TextListItem.cpp's cases went, R6 WON GUI round 38): the world's
+static intptr_t TipGfx(void* me, EeWonTipOp op, intptr_t a, intptr_t b)
+{
+    Graphics* g = (Graphics*)a;
+    switch (op) {
+    case To::Scheme: return (intptr_t)g->mColorScheme;
+    case To::SetScheme: g->mColorScheme = (ColorScheme*)b; return 0;
+    case To::Draw: WONDrawPlain(*g, *(const EeWonDrawOp*)b); return 0;
+    default: return HostTip(me, op, a, b);
+    }
+}
 static intptr_t MutTip(void* me, EeWonTipOp op, intptr_t a, intptr_t b)
 {
-    if ((int)op + 100 != sMutate) return HostTip(me, op, a, b);
+    if ((int)op + 100 != sMutate) return TipGfx(me, op, a, b);
     if (IsTipExists(op)) return 0;
-    if (IsTipNumber(op)) return HostTip(me, op, a, b) + 1;
+    if (IsTipNumber(op)) return TipGfx(me, op, a, b) + 1;
     if (op == To::Scheme || op == To::ListScheme) return 0;
     if (op == To::ListLocalToRoot) {
-        HostTip(me, op, a, b);
+        TipGfx(me, op, a, b);
         ((int*)a)[0]++;
         return 0;
     }

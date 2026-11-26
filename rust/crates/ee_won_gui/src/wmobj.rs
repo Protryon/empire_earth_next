@@ -231,6 +231,17 @@ pub enum EeWonWmEvent {
     Release,
 }
 
+/// A window event's record (the C++ `WindowEventBase::mRec`, R6 WON GUI round 38): the input record first (its kind
+/// the event's type; the rest an input event's), the window the event is for, and an input event's handler (the
+/// `EeWonWinCall` its original class's `Deliver` ran on the window; 0 for any other event, whose `Deliver` is C++).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeWonWmEventRec {
+    pub ev: crate::winobj::EeWonWinEvent,
+    pub window: isize,
+    pub handler: u32,
+}
+
 /// The inward calls (`ee_won_wm_call`).
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

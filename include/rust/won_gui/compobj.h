@@ -370,17 +370,6 @@ ptrdiff_t ee_won_comp_call(void *me,
                            ptrdiff_t b,
                            ptrdiff_t c);
 
-/// Component's own virtual `v` on the container `me` (the original's `Component::X()` from a Container body: the
-/// container's base call, `CtBase`), not routed to the container.
-///
-/// # Safety
-/// As `ee_won_comp_call`.
-ptrdiff_t ee_won_comp_base_call(void *me,
-                                EeWonGuiHostFn host,
-                                EeWonCtVirt v,
-                                ptrdiff_t a,
-                                ptrdiff_t b);
-
 }  // extern "C"
 
 #endif  // EE_RUST_WON_GUI_COMPOBJ_H

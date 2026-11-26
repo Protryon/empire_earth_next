@@ -425,7 +425,11 @@ impl Sh {
             EeWonShellHostOp::Img if a == I::Hold as isize || a == I::Release as isize => {
                 crate::gamewin::rf(b, a == I::Hold as isize)
             }
-            _ => None,
+            // the Graphics' own in the game (gfxrun.rs: GuiShell.cpp's case went, R6 WON GUI round 38)
+            EeWonShellHostOp::Draw if crate::compobj::is_game() => {
+                crate::gfxrun::game_op(crate::guihost::EeWonGuiOp::Draw, a, b)
+            }
+            _ => crate::gamewin::msgbox_op(op, a, b, c),
         };
         if let Some(r) = r {
             return r;

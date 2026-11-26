@@ -44,7 +44,9 @@ CHECKS = [
     # Rust objects do not (shell.rs Sh routes the component's, button's and MS button's calls to them in the game)
     dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiShell.cpp"],
          # R6 WON GUI round 37: the references are the game's reference function's (gamewin.rs rf)
-         rust=[(RS / "ee_won_gui" / "src" / "shell.rs", "host", True)],
+         rust=[(RS / "ee_won_gui" / "src" / "shell.rs", "host", True),
+               # R6 WON GUI round 38: the message box's window calls on a game window (gamewin.rs)
+               (RS / "ee_won_gui" / "src" / "gamewin.rs", "msgbox_op", True)],
          allowed={v: "a base class's Rust object answers it in the game (shell.rs Sh); a driver's host otherwise"
                   for v in ("Comp", "Btn", "MsBtn", "Call")}),
     # the images' calls out (R6 WONLobby round 24: imgobj.rs): every one the images' host answers
@@ -174,7 +176,9 @@ CHECKS = [
          rust=[(RS / "ee_won_gui" / "src" / "guisplit.rs", fn)
                for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")] +
               # R6 WON GUI round 37: a game window's and the manager's own Rust parts (gamewin.rs)
-              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("win_op", "wm_ref_op")],
+              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("win_op", "wm_ref_op")] +
+              # R6 WON GUI round 38: the list and text areas' scroll-pane and Component statements, the children's, in the game
+              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("list_host_op", "child_op")],
          allowed={}),
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
     # the front end's UI-thread action (R6 WON lobby and network round 37: wonaction.rs; ee/EEAWonNetHost.inl)
