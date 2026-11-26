@@ -11,7 +11,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 use std::collections::BTreeMap;
-use std::os::raw::c_long;
+use std::os::raw::{c_long, c_ulong};
 
 use crate::tech::nodes::{node_fields_new, EeTechNodeDataFields, EeTechNodeFields, EeTechNodeRef, EeTechTreeFields};
 use crate::tech::tech_ids;
@@ -299,4 +299,32 @@ mod tests {
             assert_eq!(t.mEpochs, 0);
         }
     }
+}
+
+/// A player's tree's bodies, ee_game's (tech_tree load.rs, objects.rs: ee_sim cannot call ee_game); ee_game registers
+/// them at start (`ee_rust_init`). The player's tree slot (`mTechnologies`) is Rust's: [`TreeBodies::new`] makes
+/// every player tree and [`TreeBodies::delete`] frees it (C++ never `new`s or `delete`s one; `gTechTree` is C++'s).
+pub struct TreeBodies {
+    /// `new EETechTree`: a tree record allocated and constructed (every epoch, the prehistoric one current)
+    pub new: fn() -> usize,
+    /// `delete tree` (0: nothing): the destructor, then the record freed
+    pub delete: unsafe fn(usize),
+    /// `*tree = gTechTree`
+    pub copy_global: unsafe fn(usize),
+    /// `tree->Load(major, minor, file)` (`load`) or `tree->Save(major, minor, file)` of a saved game's `FSFile`
+    pub file: unsafe fn(usize, usize, bool, c_ulong, c_ulong) -> c_long,
+    /// the saved game's version (`kSaveGameMajorVersion`, `kSaveGameMinorVersion`)
+    pub save_version: fn() -> (c_ulong, c_ulong),
+}
+
+static TREE_BODIES: std::sync::OnceLock<TreeBodies> = std::sync::OnceLock::new();
+
+/// Registers the player trees' bodies (once).
+pub fn register_tree_bodies(bodies: TreeBodies) {
+    let _ = TREE_BODIES.set(bodies);
+}
+
+/// The registered player trees' bodies (None: not registered, the tests).
+pub fn tree_bodies() -> Option<&'static TreeBodies> {
+    TREE_BODIES.get()
 }

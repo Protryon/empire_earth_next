@@ -225,8 +225,7 @@ pub extern "C" fn ee_gamecpp_tech_tree_init(tree: *mut c_void) {
 }
 
 /// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c_void) -> *mut c_void {
+pub(crate) fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c_void) -> *mut c_void {
     let (t, o) = (tree as P, other as P);
     let (tf, of) = (tree_fields(t), tree_fields(o));
     // SAFETY: the two trees' records
@@ -253,8 +252,7 @@ pub extern "C" fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c
 }
 
 /// EETechTree::SetPlayer: the tree's player and, for a player, its index.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_void) {
+pub(crate) fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_void) {
     let t = tree_fields(tree as P);
     // SAFETY: the tree's record
     unsafe { (*t).mPlayer = player.cast() };
@@ -424,8 +422,7 @@ unsafe extern "C" fn tb_save_host(context: *mut c_void, op: i32, io: *mut EeTech
 
 /// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
 /// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_tree_save(
+pub(crate) fn ee_gamecpp_tech_tree_save(
     tree: *mut c_void,
     file: *mut c_void,
     load: bool,

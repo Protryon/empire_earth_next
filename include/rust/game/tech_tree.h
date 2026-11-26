@@ -116,13 +116,6 @@ void *ee_gamecpp_tech_epoch_assign(void *epoch,
 /// The EETechTree constructor's body: every epoch, the prehistoric one current, the end the last.
 void ee_gamecpp_tech_tree_init(void *tree);
 
-/// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
-void *ee_gamecpp_tech_tree_assign(void *tree,
-                                  const void *other);
-
-/// EETechTree::SetPlayer: the tree's player and, for a player, its index.
-void ee_gamecpp_tech_set_player(void *tree, void *player);
-
 /// The node's destructor (`destroy`: its unit media unloaded when loaded and its unit classes given their default
 /// buttons back) and ClearClassCosts (the class cost tables freed).
 void ee_gamecpp_tech_node_free(void *node,
@@ -141,14 +134,6 @@ bool ee_gamecpp_tech_needs_unit_media(void *node,
 
 /// EETechTreeEpoch::GetBuildTime: the epoch's research time (computer players need half of it); TNMT records it.
 long ee_gamecpp_tech_epoch_build_time(void *epoch);
-
-/// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
-/// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
-long ee_gamecpp_tech_tree_save(void *tree,
-                               void *file,
-                               bool load,
-                               unsigned long major,
-                               unsigned long minor);
 
 /// EETechTree::SumCosts: the resource costs of a tech and every unresearched prerequisite and upgrade path to it;
 /// TSUM (TEST ONLY) records the outermost call: player, id, unit class, the seven costs before and after.

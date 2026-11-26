@@ -262,6 +262,55 @@ pub extern "C" fn ee_gamecpp_tech_tree_free(tree: *mut c_void) {
     }
 }
 
+// ---- a player's tree (the player's `mTechnologies`: ee_sim tree_objects.rs `TreeBodies`, registered by
+// `ee_rust_init`; were EEPlayer.cpp's `new EETechTree`, `delete mTechnologies`, `*mTechnologies = gTechTree`, Load and
+// Save)
+
+/// `new EETechTree`: the record allocated (the class has no members of its own) and constructed.
+pub(crate) fn player_tree_new() -> usize {
+    let tree = Box::into_raw(Box::new(EeTechTreeFields::default()));
+    super::load::ee_gamecpp_tech_tree_init(tree as *mut c_void);
+    tree as usize
+}
+
+/// `delete tree` of a tree [`player_tree_new`] made (0: nothing).
+///
+/// # Safety
+/// `tree` is 0 or a live player tree, unused after.
+pub(crate) unsafe fn player_tree_delete(tree: usize) {
+    if tree == 0 {
+        return;
+    }
+    ee_gamecpp_tech_tree_free(tree as *mut c_void);
+    // SAFETY: the contract: the record player_tree_new boxed
+    drop(unsafe { Box::from_raw(tree as *mut EeTechTreeFields) });
+}
+
+/// `*tree = gTechTree`.
+///
+/// # Safety
+/// `tree` is a live tree.
+pub(crate) unsafe fn player_tree_copy_global(tree: usize) {
+    // gTechTree's storage (constructed by the C++ at start): only its address taken here
+    let global = std::ptr::addr_of!(crate::gamecpp::global_objects::gTechTree) as *const c_void;
+    super::load::ee_gamecpp_tech_tree_assign(tree as *mut c_void, global);
+}
+
+/// A saved game's `tree->Load(major, minor, file)` (`load`) or `tree->Save(major, minor, file)`.
+///
+/// # Safety
+/// `tree` is a live tree, `file` a live `FSFile`.
+pub(crate) unsafe fn player_tree_file(tree: usize, file: usize, load: bool, major: c_ulong, minor: c_ulong) -> c_long {
+    let (major, minor) = if load { (major, minor) } else { (0, 0) };
+    super::load::ee_gamecpp_tech_tree_save(tree as *mut c_void, file as *mut c_void, load, major, minor)
+}
+
+/// The saved game's version.
+pub(crate) fn save_version() -> (c_ulong, c_ulong) {
+    use crate::gamecpp::global_objects::{kSaveGameMajorVersion, kSaveGameMinorVersion};
+    (kSaveGameMajorVersion, kSaveGameMinorVersion)
+}
+
 // ---- the world's reads the tree's bodies make (were EETechTree.cpp's host cases), through the world views
 
 /// `EEUnitClassCount()`.

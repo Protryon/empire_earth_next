@@ -20641,7 +20641,7 @@ void ee_units_cloak_chain(uint64_t unit,
 int64_t ee_units_player_rest(void *player, uint32_t what, uint64_t a, int64_t b, int64_t c);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
-/// and its C++ parts through `f`.
+/// and its C++ parts through `f`; `file` the saved game's `FSFile` (the tech tree's load).
 ///
 /// # Safety
 /// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
@@ -20651,7 +20651,8 @@ int32_t ee_units_player_load(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
                              uint32_t major,
-                             uint32_t minor);
+                             uint32_t minor,
+                             void *file);
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
 ///
@@ -20662,7 +20663,8 @@ int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
                              uint32_t major,
-                             uint32_t minor);
+                             uint32_t minor,
+                             void *file);
 
 /// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
 /// `ctx` (the loaded unit's id into the player's loaded ids is Rust's: `lists_answer`).

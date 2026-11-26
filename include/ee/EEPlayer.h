@@ -306,7 +306,6 @@ public:
     EETechTree() { ee_gamecpp_tech_tree_init(this); }   // every epoch, the prehistoric one current
     ~EETechTree() { ee_gamecpp_tech_tree_free(this); }   // 0x1cbd99: the saved game's lists, the epochs
     EETechTree(const EETechTree&) = delete;
-    void SetPlayerIndex(long inValue) { this->mPlayerIndex = inValue; }   // the player's index (provisional name)
     // an epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf)
     EETechTreeNode* Get(long inID) { return (EETechTreeNode*)ee_gamecpp_tech_obj_get(this, inID); }
     RTSTechTreeNodeData* GetData(long inID) { return this->Get(inID)->mData; }   // inline (editor P7)
@@ -317,29 +316,19 @@ public:
     void GetNodeIDs(std::vector<long>& outIDs) { ee_gamecpp_tech_node_ids(this, true, 0, &outIDs); }   // every epoch's nodes
     // the researched/obsolete state of every tech and epoch, weighted by position (ee_tech tree_checksum)
     void GetChecksum(ESChecksum& ioChecksum);
-    // whether a tech's model or sound effect for a unit class is the latest one the tree still uses
-    static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind) { return ee_tech_is_latest_effect(inTree, &EETechHost, inTree, (int32_t)inID, (int32_t)inUnitClass, (int32_t)inKind); }
     EEPlayer* GetPlayer() { return (EEPlayer*)ee_gamecpp_tech_tree_player(this); }   // by index when no player pointer is set
     // a loaded tree's state reapplied: editor-obsoleted techs, the epoch range, research, each epoch's counters, then
     // the interface
     void ApplySavedState(bool inApplyObsoleted, bool inApplyResearch) { this->Walk(EeTechTreeOp::ApplySavedState, inApplyObsoleted ? 1 : 0, inApplyResearch ? 1 : 0); }
-    // 0x1ccbc9 (saved game): the research, obsolete and editor-obsoleted ids, the epochs and each epoch's state
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_tech_tree_save(this, &inFile, true, inMajorVersion, inMinorVersion); }
     void MakeObsolete(long inID) { this->Walk(EeTechTreeOp::MakeObsolete, inID); }
     void SetPrerequisite(long inID, long inPrerequisite) { this->Walk(EeTechTreeOp::SetPrerequisite, inID, inPrerequisite); }
     // 0x1ccec2 (inUnit: the researching unit, passed on to EEEvent::Trigger) (TTRS, TEST ONLY)
     void Research(long inID, EEComplexUnit* inUnit) { this->Walk(EeTechTreeOp::Research, inID, 0, inUnit); }
-    long Save(unsigned long, unsigned long, FSFile& outFile) { return ee_gamecpp_tech_tree_save(this, &outFile, false, 0, 0); }
     // forward to an epoch (never back), recorded in statistics series 0xc, researching up to it
     void SetEpoch(long inEpoch) { this->Walk(EeTechTreeOp::SetEpoch, inEpoch); }
-    void SetEpochRange(long inStart, long inEnd) { this->Walk(EeTechTreeOp::SetEpochRange, inStart, inEnd); }   // researches up to the start
     void ResetEpochRange(long inStart, long inEnd) { this->Walk(EeTechTreeOp::ResetEpochRange, inStart, inEnd); }   // the current epoch its start, no research
-    void SetNodeAvailable(long inID, bool inValue) { this->Walk(EeTechTreeOp::SetNodeAvailable, inID, inValue ? 1 : 0); }   // unless it has a research delay
-    void SetPlayer(EEPlayer* inPlayer) { ee_gamecpp_tech_set_player(this, inPlayer); }   // and, for a player, its index
     // for the local player's tree, the new epoch's name shown and the main game form's group panel refreshed
     void UpdateInterface(bool inEpochChanged) { ee_gamecpp_tech_update_interface(this, inEpochChanged); }
-    // another tree's epochs, epoch range and player; the copy is not marked loaded
-    EETechTree& operator=(const EETechTree& inOther) { return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther); }
     int32_t Walk(EeTechTreeOp inOp, long inA = 0, long inB = 0, EEComplexUnit* inUnit = NULL) { return ee_tech_walk_tree(this, &EETechHost, inOp, this, (int32_t)inA, (int32_t)inB, inUnit); }
 };
 inline int32_t EETechTreeNode::Walk(EeTechNodeOp inOp, long inA, bool inB, EEComplexUnit* inUnit)

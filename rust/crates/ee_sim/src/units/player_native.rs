@@ -8,7 +8,8 @@ use crate::units::player_body::*;
 use crate::units::player_rest::{
     EE_UNITS_PLAYER_BODY_ATC_UPDATE, EE_UNITS_PLAYER_BODY_CLOAKED, EE_UNITS_PLAYER_BODY_DETACHED,
     EE_UNITS_PLAYER_BODY_GAME_TIME, EE_UNITS_PLAYER_BODY_SET_CLOAKED, EE_UNITS_PLAYER_BODY_SET_DETACHED,
-    EE_UNITS_PLAYER_BODY_TOWN_CONTINENT,
+    EE_UNITS_PLAYER_BODY_TECH_APPLY_SAVED, EE_UNITS_PLAYER_BODY_TECH_LOAD, EE_UNITS_PLAYER_BODY_TECH_RESET_RANGE,
+    EE_UNITS_PLAYER_BODY_TECH_SAVE, EE_UNITS_PLAYER_BODY_TOWN_CONTINENT,
 };
 use crate::units::town_split::{
     EE_UNITS_PLAYER_BODY_TOWN_COUNTER, EE_UNITS_PLAYER_BODY_TOWN_ID, EE_UNITS_PLAYER_BODY_TOWN_NEAR_EDGE,
@@ -19,7 +20,7 @@ use crate::units::town_split::{
 use crate::world::layout::layout;
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
 use std::ffi::c_void;
-use std::os::raw::c_long;
+use std::os::raw::{c_long, c_ulong};
 
 /// The pointer member at byte offset `offset` of player `p`.
 fn slot(p: u64, offset: u64) -> *mut u64 {
@@ -69,6 +70,24 @@ fn node(n: u64) -> *mut crate::tech::nodes::EeTechNodeFields {
     (n as usize + layout().node_fields as usize) as *mut _
 }
 
+/// `mTechnologies->SetPlayerIndex(mPlayerID)` of player `p`, with `SetPlayer(this)` when `with_player` (None: no
+/// such player).
+///
+/// # Safety
+/// `p` is a live player with a tree.
+unsafe fn set_tree_player(p: u64, with_player: bool) -> Option<()> {
+    // SAFETY: the contract: the player's tree's record
+    unsafe {
+        let t = *slot(p, layout().player_technologies) as *mut crate::tech::nodes::EeTechTreeFields;
+        if with_player {
+            (*t).mPlayer = p as usize as *mut _;
+        }
+        let w = crate::world::WorldRead::begin();
+        (*t).mPlayerIndex = crate::world::PlayerView::of(&w, p)?.id() as c_long;
+    }
+    Some(())
+}
+
 /// The answer of body operation `op` of player `p` (None: the C++ does it).
 ///
 /// # Safety
@@ -97,6 +116,17 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
             EE_UNITS_PLAYER_BODY_STORE_TABLE => crate::units::us_fill::game::ee_units_store_player_table(p),
             EE_UNITS_PLAYER_BODY_HEALED_CLEAR => set(l.player_healed_unit_set, 0),
             EE_UNITS_PLAYER_BODY_TECH_NULL => set(l.player_technologies, 0),
+            EE_UNITS_PLAYER_BODY_TECH_NEW
+            | EE_UNITS_PLAYER_BODY_TECH_COPY
+            | EE_UNITS_PLAYER_BODY_TECH_DELETE
+            | EE_UNITS_PLAYER_BODY_TECH_OBSOLETE
+            | EE_UNITS_PLAYER_BODY_TECH_ALLOW
+            | EE_UNITS_PLAYER_BODY_TECH_SET_INDEX
+            | EE_UNITS_PLAYER_BODY_TECH_SET_PLAYER
+            | EE_UNITS_PLAYER_BODY_TECH_SAVE
+            | EE_UNITS_PLAYER_BODY_TECH_LOAD
+            | EE_UNITS_PLAYER_BODY_TECH_RESET_RANGE
+            | EE_UNITS_PLAYER_BODY_TECH_APPLY_SAVED => return body_tech(op, p, a, b, c),
             EE_UNITS_PLAYER_BODY_COMPUTER_CLEAR => set(l.player_computer_player, 0),
             EE_UNITS_PLAYER_BODY_HUMAN_CLEAR => set(l.player_human_player, 0),
             EE_UNITS_PLAYER_BODY_QUEUED_NEW => (*fields(p)).mQueued = crate::units::player::ee_units_queued_new(),
@@ -198,6 +228,49 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                 game::ee_units_player_body(p as *mut c_void, EE_UNITS_PLAYER_DO_UNLOAD_ALL_MEDIA, 0, 0, 0, 0.0);
             }
             _ => return None,
+        }
+    }
+    Some(0)
+}
+
+/// The body operations on player `p`'s tech tree (`mTechnologies`): made, copied from gTechTree and freed by ee_game's
+/// bodies (ee_sim tech tree_objects.rs `TreeBodies`), its nodes' flags, its player, its walks and its save to and
+/// load from a memory file `a` in the current saved game version.
+///
+/// # Safety
+/// As [`body`]; the player's tree is live (but for TECH_NEW).
+unsafe fn body_tech(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
+    use crate::tech::nodes::EeTechTreeOp;
+    use crate::tech::tree_objects as to;
+    let tb = to::tree_bodies()?;
+    let slot = slot(p, layout().player_technologies);
+    // SAFETY (every block): the caller's contract
+    unsafe {
+        let tree = *slot as usize;
+        let node = |id: i64| to::tree_get(tree as *mut _, id as c_long) as usize;
+        match op {
+            EE_UNITS_PLAYER_BODY_TECH_NEW => *slot = (tb.new)() as u64,
+            EE_UNITS_PLAYER_BODY_TECH_COPY => (tb.copy_global)(tree),
+            EE_UNITS_PLAYER_BODY_TECH_DELETE => (tb.delete)(tree),
+            EE_UNITS_PLAYER_BODY_TECH_OBSOLETE => return Some(i64::from(to::is_obsolete(node(b)))),
+            EE_UNITS_PLAYER_BODY_TECH_ALLOW => (*to::node(node(b))).mIsAllowed = c != 0,
+            EE_UNITS_PLAYER_BODY_TECH_SET_INDEX => {
+                (*(tree as *mut crate::tech::nodes::EeTechTreeFields)).mPlayerIndex = b as c_long
+            }
+            EE_UNITS_PLAYER_BODY_TECH_SET_PLAYER => set_tree_player(p, true)?,
+            EE_UNITS_PLAYER_BODY_TECH_RESET_RANGE => {
+                to::walk_tree(tree, EeTechTreeOp::ResetEpochRange, b as i32, c as i32, 0);
+            }
+            EE_UNITS_PLAYER_BODY_TECH_APPLY_SAVED => {
+                to::walk_tree(tree, EeTechTreeOp::ApplySavedState, 1, i32::from(b != 0), 0);
+            }
+            _ => {
+                // TECH_SAVE, TECH_LOAD: the memory file (an FSFile) in the current version
+                let load = op == EE_UNITS_PLAYER_BODY_TECH_LOAD;
+                let (major, minor) = (tb.save_version)();
+                let r = (tb.file)(tree, a as usize, load, major, minor);
+                return Some(if load { r as i64 } else { 0 });
+            }
         }
     }
     Some(0)
@@ -474,6 +547,7 @@ pub unsafe fn save(
     p: u64,
     index: u32,
     io: &mut crate::units::player_save::EeUnitsPlayerSaveIo,
+    file: crate::units::player_save::SaveFile,
 ) -> Option<i32> {
     use crate::units::player_save::{EE_UNITS_PLAYER_SAVE_STORE_PLAYER_TABLE, EE_UNITS_PLAYER_SAVE_TECH_PRESENT};
     use crate::units::player_save_split::*;
@@ -511,12 +585,26 @@ pub unsafe fn save(
             EE_UNITS_PLAYER_SAVE_X_TECH_NULL => *slot(p, l.player_technologies) = 0,
             EE_UNITS_PLAYER_SAVE_X_TECH_INDEX | EE_UNITS_PLAYER_SAVE_X_TECH_PLAYER => {
                 // SetPlayerIndex(mPlayerID), SetPlayer(this) (its index too)
-                let t = *slot(p, l.player_technologies) as *mut crate::tech::nodes::EeTechTreeFields;
-                if op == EE_UNITS_PLAYER_SAVE_X_TECH_PLAYER {
-                    (*t).mPlayer = p as usize as *mut _;
+                set_tree_player(p, op == EE_UNITS_PLAYER_SAVE_X_TECH_PLAYER)?;
+            }
+            // the player's tree made, copied from gTechTree, loaded, saved and freed (ee_game's bodies)
+            EE_UNITS_PLAYER_SAVE_X_TECH_NEW
+            | EE_UNITS_PLAYER_SAVE_X_TECH_COPY
+            | EE_UNITS_PLAYER_SAVE_X_TECH_DELETE
+            | EE_UNITS_PLAYER_SAVE_X_TECH_LOAD
+            | EE_UNITS_PLAYER_SAVE_X_TECH_SAVE => {
+                let tb = crate::tech::tree_objects::tree_bodies()?;
+                let tree = slot(p, l.player_technologies);
+                match op {
+                    EE_UNITS_PLAYER_SAVE_X_TECH_NEW => *tree = (tb.new)() as u64,
+                    EE_UNITS_PLAYER_SAVE_X_TECH_COPY => (tb.copy_global)(*tree as usize),
+                    EE_UNITS_PLAYER_SAVE_X_TECH_DELETE => (tb.delete)(*tree as usize),
+                    _ => {
+                        let load = op == EE_UNITS_PLAYER_SAVE_X_TECH_LOAD;
+                        let (major, minor) = (file.major as c_ulong, file.minor as c_ulong);
+                        return Some((tb.file)(*tree as usize, file.file, load, major, minor) as i32);
+                    }
                 }
-                let w = WorldRead::begin();
-                (*t).mPlayerIndex = crate::world::PlayerView::of(&w, p)?.id() as c_long;
             }
             EE_UNITS_PLAYER_SAVE_TECH_PRESENT => return Some(i32::from(*slot(p, l.player_technologies) != 0)),
             EE_UNITS_PLAYER_SAVE_X_PATROL_NEW => io.i = crate::units::patrol_group::ee_units_pg_new() as i64,
