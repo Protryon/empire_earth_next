@@ -5,18 +5,14 @@
 
 #include <stdio.h>
 #include <vector>
-#include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
-#include "lle/U2DPoint.h"               // RTSMapTileRun holds two by value
 #include "lle/U2DRectangle.h"           // RTSColoredRectangle holds one by value
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
 #include "ee/EESightCapture.h"       // TSGT (TEST ONLY): the sight functions' scope
-#include "rust/sim/combat.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
-#include "rust/sim/units.h"
-#include "rust/base/math.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
+#include "lle/GETerrainMesh.h"
 
 // One map tile (provisional name and layout)
 class EEDoppelganger;

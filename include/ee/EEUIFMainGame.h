@@ -11,14 +11,13 @@
 #include "lle/GERhombus.h"
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEUIBuildWall.h"
-#include "rust/ui/formobj.h"
+#include "lle/UIForm.h"
 
 class EEUIFMGMainGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
 class EEUIFMainGame;
 class EESMDialogMessage;
-#include "rust/game/screens.h"   // EeScreensMainFormFields, EeScreensMainFormIo
 
 // One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the Rust record's
 // form, picked unit, chat line's colour and flags, dialog message, start modes' objects, media, mouse modes' first

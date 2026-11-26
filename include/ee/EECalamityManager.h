@@ -7,6 +7,7 @@
 // Requires lle/LowLevelEngine.h, lle/USingleton.h, <stdio.h> (FILE).
 #ifndef EE_EECALAMITYMANAGER_H
 #define EE_EECALAMITYMANAGER_H
+#include "lle/USingleton.h"
 
 class EECalamity;
 class EECalamityClass;

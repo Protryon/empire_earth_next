@@ -15,18 +15,11 @@
 
 #include <map>
 
-#include "rust/ui/controlobj.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
 #include "lle/ISEntity.h"
 #include "rust/ui/mouse_ffi.h"
-#include "rust/ui/lle_control.h"
-#include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
-#include "lle/UIObjHost.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/UIForm.h"
 #include "lle/UIManager.h"
+#include "lle/GERhombus.h"
 
 
 // winspool.h maps GetForm to GetFormA; the export is ?GetForm@UIControl@@
@@ -154,6 +147,5 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const { return this->Call(inCall, 0, 0, UIF4(inRectangle)); }
 };
 
-#include "lle/UIMultiByte.h"
 
 #endif

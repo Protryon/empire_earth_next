@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "ee/EEAIArea.h"
-#include "ee/EEAIListView.h"
 
 class EEAIPathArea;
 

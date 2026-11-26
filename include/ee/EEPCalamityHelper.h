@@ -6,6 +6,8 @@
 #define EE_EEPCALAMITYHELPER_H
 
 #include "rust/game/gamecpp.h"
+#include "lle/FSPersistent.h"
+#include "rust/sim/game_ids.h"
 class EECalamity;
 class EEContagionManager;
 

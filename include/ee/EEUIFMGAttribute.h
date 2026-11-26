@@ -5,7 +5,7 @@
 // elsewhere (the tab slots 0x1720c6, UpdateKeyboard 0x1ad67e). Names are provisional. Requires ee/EEUIBUpgrade.h.
 #ifndef EE_EEUIFMGATTRIBUTE_H
 #define EE_EEUIFMGATTRIBUTE_H
-#include "rust/game/screens.h"
+#include "ee/EEUIBUpgrade.h"
 
 
 class EEUIFMGAttribute : public EEUIBUpgrade, public EeScreensAttributeFields {

@@ -6,6 +6,7 @@
 #ifndef EE_EESCREENEVENT_H
 #define EE_EESCREENEVENT_H
 #include "rust/game/screens.h"
+#include "lle/UIEvent.h"
 
 // An event of the game's C++ carries two arguments (UI lane round 16, ee_screens cpp_events.rs EE_SCREENS_EV_*: the
 // original's EEUIECancel (the form to open), EEUIELoadUnit, EEUIEMGHotKeyStatusButton (the button, pressed),

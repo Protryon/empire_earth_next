@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "rust/data/tables.h"
+#include "ee/EEMedia.h"
 
 class EEGraphicObject;
 class FSFile;
@@ -52,7 +53,5 @@ public:
 
 // dbgfxeffects' effects by table index (EEGraphicEffectID): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
 #include "rust/sim/game_ids.h"
-#include "rust/game/preload_media.h"
-#include "rust/render/gfx.h"
 
 #endif

@@ -3,6 +3,7 @@
 // File System.cpp's inlines (0x4409..0x4495). Requires lle/FSRestorable.h.
 #ifndef LLE_FSPERSISTENT_H
 #define LLE_FSPERSISTENT_H
+#include "lle/FSRestorable.h"
 
 class LLE_API FSPersistent : public FSRestorable {
 public:

@@ -9,6 +9,9 @@
 #define EE_EEUIFSETERRAIN_H
 
 #include "rust/game/screens.h"   // ee_screens_setlb_call
+#include "lle/UIListBox.h"
+#include "lle/GEText.h"
+#include "lle/GEBitmap.h"
 
 // the terrain tab's statements (editor_setnx.rs: the list boxes' draws and copies are composed in Rust)
 extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i, float* f);

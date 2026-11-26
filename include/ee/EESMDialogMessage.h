@@ -9,7 +9,6 @@
 #ifndef EE_EESMDIALOGMESSAGE_H
 #define EE_EESMDIALOGMESSAGE_H
 
-#include "lle/UWideString.h"
 #include "rust/sim/scenario.h"
 
 // the numbers (scroll speed, unit type, duration, unit id, cinematic flag) are the Rust record's (ee_scenario fields.rs)

@@ -10,6 +10,7 @@
 #define EE_EEDOPPELGANGER_H
 
 #include "rust/sim/units.h"             // the inline bodies' Rust calls
+#include "lle/FSRestorable.h"
 
 class EEComplexDoppelganger;
 class EEGraphicObject;

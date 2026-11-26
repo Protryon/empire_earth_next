@@ -5,8 +5,7 @@
 #ifndef EE_EEROTERRAIN_H
 #define EE_EEROTERRAIN_H
 
-#include "rust/game/gamecpp.h"
-#include "rust/render/gfx.h"
+#include "ee/EERenderObject.h"
 class GEModel;
 class GETexture;
 

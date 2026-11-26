@@ -7,6 +7,8 @@
 #define EE_EEENVIRONMENTMANAGER_H
 
 #include "rust/game/gamecpp.h"
+#include "lle/FSPersistent.h"
+#include "lle/GEColor.h"
 class EEEMStorm;
 template <class T> class U2DPoint;
 

@@ -10,14 +10,13 @@
 
 #include <vector>
 #include "lle/FSRestorable.h"
+#include "lle/U2DPoint.h"
 #include "ee/EEEffect.h"
-#include "rust/base/math.h"
-#include "rust/game/gamecpp.h"
 
 class EEGraphicEffect;
 class EEUnit;
 class GETransformation;
-template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
+typedef U2DPoint<long> EETileCoordinate;
 
 class EEEffectManager : public FSRestorable {
 public:

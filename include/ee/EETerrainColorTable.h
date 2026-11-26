@@ -7,6 +7,7 @@
 #define EE_EETERRAINCOLORTABLE_H
 
 #include "rust/game/gamecpp.h"
+#include "lle/GEColor.h"
 class EETerrainColorTable {
 public:
     // Creates an empty terrain colour entry

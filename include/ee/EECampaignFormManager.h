@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "rust/game/campaign.h"
+#include "lle/UIFormManager.h"
 
 
 class EECampaign {
