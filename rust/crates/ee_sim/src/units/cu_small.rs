@@ -70,15 +70,13 @@ pub const EE_UNITS_CU_S_FREE_NODE: i32 = 4028;
 pub const EE_UNITS_CU_S_ZERO_REFERENCES: i32 = 4029;
 /// `EEComplexUnit::sMemoryPool.Delete(this)`
 pub const EE_UNITS_CU_S_POOL_DELETE: i32 = 4030;
-/// `sprintf(theAmount, "%ld", b)` (the chat's locals are the host's)
-pub const EE_UNITS_CU_S_INSURANCE_AMOUNT: i32 = 4031;
 /// `theText = UWideString()`
 pub const EE_UNITS_CU_S_INSURANCE_TEXT_NEW: i32 = 4032;
 /// `thePart = UWideString()`
 pub const EE_UNITS_CU_S_INSURANCE_PART_NEW: i32 = 4033;
 /// `gResource->GetString(IDS_YOU_HAVE_RECEIVED, theText)`
 pub const EE_UNITS_CU_S_INSURANCE_RECEIVED: i32 = 4034;
-/// `theText += theAmount`
+/// `theText += (const char*)a` (the amount's digits: the body's)
 pub const EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT: i32 = 4035;
 /// `theText += " "`
 pub const EE_UNITS_CU_S_INSURANCE_APPEND_SPACE: i32 = 4036;
@@ -211,11 +209,12 @@ pub fn reach<H: CuHost + ?Sized>(h: &mut H, unit: u64, target: u64, bordering: b
 
 /// PayInsurance's notice "You have received <amount> <resource> in insurance" for `player`.
 pub fn insurance_chat<H: CuHost + ?Sized>(h: &mut H, unit: u64, player: u64, resource: i64, shown: i64) {
-    qab(h, EE_UNITS_CU_S_INSURANCE_AMOUNT, unit, 0, shown);
+    // `sprintf(theAmount, "%ld", shown)` (units round 14: the body's, was a C++ scratch static)
+    let amount = format!("{}\0", shown as std::os::raw::c_long);
     q(h, EE_UNITS_CU_S_INSURANCE_TEXT_NEW, unit);
     q(h, EE_UNITS_CU_S_INSURANCE_PART_NEW, unit);
     q(h, EE_UNITS_CU_S_INSURANCE_RECEIVED, unit);
-    q(h, EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT, unit);
+    qa(h, EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT, unit, amount.as_ptr() as usize as u64);
     q(h, EE_UNITS_CU_S_INSURANCE_APPEND_SPACE, unit);
     qab(h, EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME, unit, 0, resource);
     q(h, EE_UNITS_CU_S_INSURANCE_APPEND_PART, unit);
@@ -437,7 +436,6 @@ mod tests {
         assert_eq!(
             ops(&r),
             [
-                EE_UNITS_CU_S_INSURANCE_AMOUNT,
                 EE_UNITS_CU_S_INSURANCE_TEXT_NEW,
                 EE_UNITS_CU_S_INSURANCE_PART_NEW,
                 EE_UNITS_CU_S_INSURANCE_RECEIVED,
@@ -450,8 +448,7 @@ mod tests {
                 EE_UNITS_CU_S_INSURANCE_CHAT_LINE
             ]
         );
-        assert_eq!(r.log[0].2, 100);
-        assert_eq!(r.log[6].2, 3);
-        assert_eq!(r.log[10].1, 0x60);
+        assert_eq!(r.log[5].2, 3);
+        assert_eq!(r.log[9].1, 0x60);
     }
 }

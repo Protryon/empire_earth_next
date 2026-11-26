@@ -150,10 +150,7 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
 // FleeAfterCalamity's point ahead is the body's first two floats
 static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "a GE2DPoint is two floats");
 
-// Kill's civilization power (EE_UNITS_CU_GET_INSURANCE fills it for the two reads after it)
-static EECivPower sInsurancePower;
-// the insurance chat line's locals (cu_small.rs: theAmount, theText, thePart)
-static char sCuInsuranceAmount[64];
+// the insurance chat line's locals (cu_small.rs: theText, thePart; the amount's digits are the body's)
 static UWideString sCuInsuranceText;
 static UWideString sCuInsurancePart;
 // EEDumpLeakedUnits' list (its theUnits)
@@ -165,33 +162,9 @@ static EEProductionEntry EECuEntry(int64_t inTechnology, int64_t inFlag)
     return EEProductionEntry{(long)inTechnology, inFlag != 0};
 }
 
-// UnloadCargoAt's aircraft at cruise altitude: a copy of the location at height inZ
-static void EECuSetTransformationAtZ(EEComplexUnit* inUnit, const GETransformation& inLocation, float inZ)
-{
-    GETransformation theLocation(inLocation);
-    theLocation.SetZ(inZ);
-    inUnit->SetTransformation(theLocation, true);
-}
-
-// cu_dump.rs's scratch values: the dump's input record and goal location, Describe's text (the originals' locals)
-static EeUnitsComplexDumpIn sCuDumpIn;
-static GE3DPoint sCuDumpLocation;
+// cu_dump.rs's Describe text (the original's local; the dump's record and goal location, cu_world.rs's and
+// cu_life.rs's points, tiles, placement and new arrays are the Rust bodies')
 static UWideString sCuText;
-
-// cu_world.rs's scratch values: MoveToLocation's waypoint point, ApplyAreaEffects' location, ReleaseConversionEffect's
-// handle (the originals' locals; CanReachTile's points, pitch and blocker are the Rust body's)
-static GE3DPoint sCuWaypoint;
-static GE2DPoint sCuLocation;
-static EEEffectHandle sCuHandle;
-
-// cu_life.rs's scratch values: SwapGraphic's new angles, orbitals and wheels, StepAside's tiles, IsNextToTile's
-// points, Init's copy of the placement (the originals' locals)
-static float* sCuAngles;
-static EEOrbital** sCuOrbitals;
-static EEWheel** sCuWheels;
-static std::vector<EETileCoordinate> sCuTiles;
-static std::vector<U2DPoint<long> > sCuPoints;
-static GETransformation sCuPlacement;
 
 template <class T> static T* EECuObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
@@ -258,11 +231,10 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_S_FREE_NODE: theUnit->FreeNode(); return 0;
     case EE_UNITS_CU_S_ZERO_REFERENCES: theUnit->mReferenceCount = 0; return 0;
     case EE_UNITS_CU_S_POOL_DELETE: EEComplexUnit::sMemoryPool.Delete(theUnit); return 0;
-    case EE_UNITS_CU_S_INSURANCE_AMOUNT: sprintf(sCuInsuranceAmount, "%ld", (long)inB); return 0;
     case EE_UNITS_CU_S_INSURANCE_TEXT_NEW: sCuInsuranceText = UWideString(); return 0;
     case EE_UNITS_CU_S_INSURANCE_PART_NEW: sCuInsurancePart = UWideString(); return 0;
     case EE_UNITS_CU_S_INSURANCE_RECEIVED: gResource->GetString(IDS_YOU_HAVE_RECEIVED, sCuInsuranceText); return 0;
-    case EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT: sCuInsuranceText += sCuInsuranceAmount; return 0;
+    case EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT: sCuInsuranceText += EECuObject<const char>(inA); return 0;
     case EE_UNITS_CU_S_INSURANCE_APPEND_SPACE: sCuInsuranceText += " "; return 0;
     case EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME: gResource->GetString((unsigned long)inB + IDS_RESOURCE_NAME_BASE, sCuInsurancePart); return 0;
     case EE_UNITS_CU_S_INSURANCE_APPEND_PART: sCuInsuranceText += sCuInsurancePart; return 0;
@@ -282,9 +254,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_ADD_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theUnit);
     case EE_UNITS_CU_STATS_LOWER: theUnit->mPlayer->mSavedGroups.Lower((long)inB, 1); return 0;
     case EE_UNITS_CU_HAS_INSURANCE: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerInsurance);
-    case EE_UNITS_CU_GET_INSURANCE: return gCivPowersManager.GetPower(kCivPowerInsurance, sInsurancePower);
-    case EE_UNITS_CU_INSURANCE_COVERS: return gUnitSetManager.Contains(theUnit->GetUnitClass()->GetUnitType(), sInsurancePower.mUnitSet);
-    case EE_UNITS_CU_INSURANCE_AMOUNT: return UFloatBits(sInsurancePower.mAmount);
+    case EE_UNITS_CU_INSURANCE_COVERS: return gUnitSetManager.Contains(theUnit->GetUnitClass()->GetUnitType(), (long)inB);
     case EE_UNITS_CU_DEREFERENCE: EECuObject<RTSUnit>(inA)->Dereference(); return 0;
     case EE_UNITS_CU_HOLDER_RELEASE: theUnit->mHolder->ReleaseHeld(theUnit); return 0;
     case EE_UNITS_CU_CANCEL_PATHS: gPathManager.CancelPaths(theUnit, true); return 0;
@@ -397,7 +367,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CARGO_UNLOADED: theUnit->GetUnitClass()->CargoUnloaded(theUnit, theOther); return 0;
     case EE_UNITS_CU_UNIT_SET_TRANSFORMATION: theOther->SetTransformation(*EECuObject<GETransformation>((uint64_t)inB), true); return 0;
     case EE_UNITS_CU_UNIT_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
-    case EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z: EECuSetTransformationAtZ(theOther, *EECuObject<GETransformation>((uint64_t)inB), UBitsFloat(inC)); return 0;
     case EE_UNITS_CU_ACTIVATE_UNIT: ::gWorld.ActivateUnit(theOther); return 0;
     case EE_UNITS_CU_DEACTIVATE_UNIT: ::gWorld.DeactivateUnit(theOther); return 0;
     case EE_UNITS_CU_UNIT_IS_HUMAN: return theOther->mPlayer->IsHuman();
@@ -465,12 +434,11 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_ABANDON_GOAL: theUnit->mGoalQueues[0].GetGoalAt((unsigned long)inB)->Abandon(theUnit); return 0;
     case EE_UNITS_CU_GOAL_QUEUE_CLEAR: theUnit->mGoalQueues[(size_t)inB].Clear(); return 0;
     // cu_dump.rs's
-    case EE_UNITS_CU_DUMP_IN: return (int64_t)(uintptr_t)&sCuDumpIn;
     case EE_UNITS_CU_DUMP_ANGULAR_VELOCITY: f[0] = inB == 0 ? theUnit->mAngularVelocity.GetYaw() : inB == 1 ? theUnit->mAngularVelocity.GetPitch() : theUnit->mAngularVelocity.GetRoll(); return 0;
     case EE_UNITS_CU_DUMP_QUEUE_SIZE: return (int64_t)(inB == 0 ? theUnit->mBuildQueue.size() : theUnit->mCitizenBuildQueue.size());
     case EE_UNITS_CU_DUMP_PROJECTILE_START: f[0] = inB == 0 ? theUnit->mProjectileStart.GetX() : inB == 1 ? theUnit->mProjectileStart.GetY() : theUnit->mProjectileStart.GetZ(); return 0;
     case EE_UNITS_CU_DUMP_LOCATION_ELEMENT: f[0] = theUnit->mPhysicalModel.GetLocation().GetElement((unsigned long)inB, (unsigned long)inC); return 0;
-    case EE_UNITS_CU_DUMP_PART: ee_units_complex_dump((uint32_t)inB, theUnit, theUnit, theUnit, theUnit->GetUnitClass(), theUnit->GetStats(), &sCuDumpIn, &EEDumpWrite, theFile); return 0;
+    case EE_UNITS_CU_DUMP_PART: ee_units_complex_dump((uint32_t)inB, theUnit, theUnit, theUnit, theUnit->GetUnitClass(), theUnit->GetStats(), EECuObject<EeUnitsComplexDumpIn>((uint64_t)inC), &EEDumpWrite, theFile); return 0;
     case EE_UNITS_CU_DUMP_ACTION: fprintf(theFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(theUnit->GetComplexUnit()->GetCommandType()), theUnit->GetComplexUnit()->GetCommandType()); return 0;
     case EE_UNITS_CU_DUMP_NO_GROUP: fprintf(theFile, "OUT OF SYNCH DUMP:  This unit has no active group\n"); return 0;
     case EE_UNITS_CU_DUMP_GROUP: fprintf(theFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", theUnit->GetComplexUnit()->mActiveGroup->mFields.mAction); return 0;
@@ -478,11 +446,11 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_DUMP_QUEUE: fprintf(theFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", (long)inB, theUnit->GetComplexUnit()->mGoalQueues[(size_t)inB].mGoals.size()); return 0;
     case EE_UNITS_CU_DUMP_GOAL_KIND: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", (long)inC, theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->mKind); return 0;
     case EE_UNITS_CU_DUMP_GOAL: theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->DumpOutOfSynch(theFile); return 0;
-    case EE_UNITS_CU_DUMP_GOAL_LOCATION: theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->GetGoalLocation(sCuDumpLocation); return 0;
-    case EE_UNITS_CU_DUMP_STATE_LOCATION: theUnit->GetComplexUnit()->mGoalState->GetGoalLocation(sCuDumpLocation); return 0;
-    case EE_UNITS_CU_DUMP_LOCATION: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)sCuDumpLocation.GetX()); return 0;
-    case EE_UNITS_CU_DUMP_LOCATION_Y: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)sCuDumpLocation.GetY()); return 0;
-    case EE_UNITS_CU_DUMP_LOCATION_Z: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)sCuDumpLocation.GetZ()); return 0;
+    case EE_UNITS_CU_DUMP_GOAL_LOCATION: theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_CU_DUMP_STATE_LOCATION: theUnit->GetComplexUnit()->mGoalState->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)f[0]); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION_Y: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)f[1]); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION_Z: fprintf(theFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)f[2]); return 0;
     case EE_UNITS_CU_GOAL_AUTO_WAYPOINT: return static_cast<EEUGRust*>(theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC])->GetIsAutoWaypoint() == true;
     case EE_UNITS_CU_DUMP_AUTO_WAYPOINT: fprintf(theFile, "OUT OF SYNCH DUMP:  Location Goal Is An AutoWaypoint\n"); return 0;
     case EE_UNITS_CU_DUMP_NOT_AUTO_WAYPOINT: fprintf(theFile, "OUT OF SYNCH DUMP:  Location Goal Is Not An AutoWaypoint\n"); return 0;
@@ -540,15 +508,15 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_TOWN_CONTAINS: return EECuObject<EETown>(inA)->Contains(U2DPoint<long>((long)inB, (long)inC));
     case EE_UNITS_CU_TOWN_DISTANCE: return U2DPoint<long>((long)inB, (long)inC).DistanceToSquared(EECuObject<EETown>(inA)->GetHullClosestOutlinePoint(U2DPoint<long>((long)inB, (long)inC)));
     case EE_UNITS_CU_WAYPOINT_COUNT: return (int64_t)theUnit->mWaypoints.size();
-    case EE_UNITS_CU_NEXT_WAYPOINT_POINT: theUnit->GetNextWaypointPoint(sCuWaypoint = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
-    case EE_UNITS_CU_SET_HEIGHT_AT_POINT: theUnit->SetHeight(theUnit->GetUnitClass()->GetHeightAt(theUnit, sCuWaypoint)); return 0;
+    case EE_UNITS_CU_NEXT_WAYPOINT_POINT: theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f) = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
+    case EE_UNITS_CU_SET_HEIGHT_AT_POINT: theUnit->SetHeight(theUnit->GetUnitClass()->GetHeightAt(theUnit, *reinterpret_cast<GE3DPoint*>(f))); return 0;
     case EE_UNITS_CU_HAS_SWIM_ANIMATION: return theUnit->HasSwimAnimation();
     case EE_UNITS_CU_IS_SWIMMING: return theUnit->IsSwimming();
     case EE_UNITS_CU_HAS_PARATROOPERS: return ::gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerParatroopers);
     case EE_UNITS_CU_QUEUE_GOAL: theUnit->QueueGoal(EECuObject<EEUnitGoal>(inA), (unsigned long)inB); return 0;
     case EE_UNITS_CU_AREA_EFFECTS_SIZE: return (int64_t)theUnit->mAreaEffects.GetSize();
     case EE_UNITS_CU_AREA_EFFECT_RADIUS: return UFloatBits(theUnit->mAreaEffects.mItems[(size_t)inB]->GetRadius());
-    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(UBitsFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
+    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(UBitsFloat(inB), *reinterpret_cast<GE2DPoint*>(f) = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
     case EE_UNITS_CU_AFFECTING_KIND: return theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->mTemplate->mKind;
     case EE_UNITS_CU_SET_OUT_EFFECT: *EECuObject<EEGraphicEffect*>(inA) = theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->mTemplate->mGraphicEffect; return 0;
     case EE_UNITS_CU_CITIZEN_FRONT: return (uint64_t)(uintptr_t)theUnit->mCitizenBuildQueue.front();
@@ -565,7 +533,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CONTACTS_CLEAR: theUnit->mContacts.Clear(); return 0;
     case EE_UNITS_CU_CONTACTS_REMOVE: theUnit->mContacts.Remove(EECuObject<UListNode<EEComplexUnit*> >(inA)); return 0;
     case EE_UNITS_CU_AFFECTING_REMOVED_FROM: theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->RemovedFrom(theUnit); return 0;
-    case EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: gWorld.mEffectManager->DestroyEffect(sCuHandle = theUnit->mConversionEffect); return 0;
+    case EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: gWorld.mEffectManager->DestroyEffect(theUnit->mConversionEffect); return 0;
     case EE_UNITS_CU_UNLOAD_CARGO_AT_INDEX: return (uint64_t)(uintptr_t)theUnit->UnloadCargoAt((unsigned long)inB, *EECuObject<const GETransformation>(inA));
     case EE_UNITS_CU_RELOAD_RANGE: return UFloatBits(inB == 0 ? gWorldTable.GetFloatValue(kWorldReloadTimeRandomRange) : gWorldTable.GetFloatValue2(kWorldReloadTimeRandomRange));
     case EE_UNITS_CU_RANDOM_BETWEEN: return UFloatBits(gPhysics->GetRandom(UBitsFloat(inB), UBitsFloat(inC)));
@@ -644,42 +612,25 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_GRAPHIC_LAST_FRAME: return (int64_t)EECuObject<EEGraphicObject>(inA)->mLastFrames[inB];
     case EE_UNITS_CU_FLOAT_TO_LONG: return UMFloatToLong(UBitsFloat(inB));
     case EE_UNITS_CU_GRAPHIC_NUM_PARTS: return (int64_t)EECuObject<EEGraphicObject>(inA)->GetNumParts();
-    case EE_UNITS_CU_SCRATCH_ANGLES_NEW: sCuAngles = new float[(size_t)inB]; return 0;
-    case EE_UNITS_CU_SCRATCH_ANGLE_COPY: sCuAngles[inB] = (unsigned long)inB < (unsigned long)inC ? theUnit->mTurretAngles[inB] : 0.0f; return 0;
-    case EE_UNITS_CU_TURRET_ANGLES_ASSIGN: theUnit->mTurretAngles = sCuAngles; return 0;
+    case EE_UNITS_CU_SCRATCH_ANGLES_NEW: return (int64_t)(uintptr_t)new float[(size_t)inB];
+    case EE_UNITS_CU_SCRATCH_ANGLE_COPY: EECuObject<float>(inA)[inB] = (unsigned long)inB < (unsigned long)inC ? theUnit->mTurretAngles[inB] : 0.0f; return 0;
+    case EE_UNITS_CU_TURRET_ANGLES_ASSIGN: theUnit->mTurretAngles = EECuObject<float>(inA); return 0;
     case EE_UNITS_CU_GRAPHIC_ORBITAL_COUNT: return (int64_t)EECuObject<EEGraphicObject>(inA)->GetOrbitalCount();
-    case EE_UNITS_CU_SCRATCH_ORBITALS_NEW: sCuOrbitals = inB != 0 ? new EEOrbital*[(size_t)inB] : NULL; return 0;
-    case EE_UNITS_CU_SCRATCH_ORBITAL_NEW: sCuOrbitals[inB] = new EEOrbital(*EECuObject<EEGraphicObject>(inA)->mOrbitals[inB]); return 0;
-    case EE_UNITS_CU_SCRATCH_ORBITAL_KEEP_ANGLE: sCuOrbitals[inB]->mAngle = theUnit->mOrbitals[inB]->mAngle; return 0;
-    case EE_UNITS_CU_ORBITALS_ASSIGN: theUnit->mOrbitals = sCuOrbitals; return 0;
+    case EE_UNITS_CU_SCRATCH_ORBITALS_NEW: return (int64_t)(uintptr_t)(inB != 0 ? new EEOrbital*[(size_t)inB] : NULL);
+    case EE_UNITS_CU_SCRATCH_ORBITAL_NEW: EECuObject<EEOrbital*>((uint64_t)inC)[inB] = new EEOrbital(*EECuObject<EEGraphicObject>(inA)->mOrbitals[inB]); return 0;
+    case EE_UNITS_CU_SCRATCH_ORBITAL_KEEP_ANGLE: EECuObject<EEOrbital*>(inA)[inB]->mAngle = theUnit->mOrbitals[inB]->mAngle; return 0;
+    case EE_UNITS_CU_ORBITALS_ASSIGN: theUnit->mOrbitals = EECuObject<EEOrbital*>(inA); return 0;
     case EE_UNITS_CU_GRAPHIC_WHEEL_COUNT: return (int64_t)EECuObject<EEGraphicObject>(inA)->GetWheelCount();
-    case EE_UNITS_CU_SCRATCH_WHEELS_NEW: sCuWheels = inB != 0 ? new EEWheel*[(size_t)inB] : NULL; return 0;
-    case EE_UNITS_CU_SCRATCH_WHEEL_NEW: sCuWheels[inB] = new EEWheel(*EECuObject<EEGraphicObject>(inA)->mWheels[inB]); return 0;
-    case EE_UNITS_CU_SCRATCH_WHEEL_KEEP_ANGLE: sCuWheels[inB]->mAngle = theUnit->mWheels[inB]->mAngle; return 0;
-    case EE_UNITS_CU_WHEELS_ASSIGN: theUnit->mWheels = sCuWheels; return 0;
+    case EE_UNITS_CU_SCRATCH_WHEELS_NEW: return (int64_t)(uintptr_t)(inB != 0 ? new EEWheel*[(size_t)inB] : NULL);
+    case EE_UNITS_CU_SCRATCH_WHEEL_NEW: EECuObject<EEWheel*>((uint64_t)inC)[inB] = new EEWheel(*EECuObject<EEGraphicObject>(inA)->mWheels[inB]); return 0;
+    case EE_UNITS_CU_SCRATCH_WHEEL_KEEP_ANGLE: EECuObject<EEWheel*>(inA)[inB]->mAngle = theUnit->mWheels[inB]->mAngle; return 0;
+    case EE_UNITS_CU_WHEELS_ASSIGN: theUnit->mWheels = EECuObject<EEWheel*>(inA); return 0;
     // StepAside's
     case EE_UNITS_CU_GATHER_GOAL: return (uint64_t)(uintptr_t)EEGatherGoalCast(theUnit->GetGoal());
     case EE_UNITS_CU_FIND_GATHER_SPOT: return EECuObject<EEUGRust>(inA)->FindGatherSpot(theUnit);
-    case EE_UNITS_CU_SCRATCH_TILES_CLEAR: sCuTiles.clear(); return 0;
-    case EE_UNITS_CU_SCRATCH_TILES_PUSH: sCuTiles.push_back(EETileCoordinate((long)inB, (long)inC)); return 0;
-    case EE_UNITS_CU_SCRATCH_TILES_SHUFFLE: EEAIRandomShuffle(sCuTiles.begin(), sCuTiles.end()); return 0;
-    case EE_UNITS_CU_SCRATCH_TILES_SIZE: return (int64_t)sCuTiles.size();
-    case EE_UNITS_CU_SCRATCH_TILES_BACK_X: return sCuTiles.back().mX;
-    case EE_UNITS_CU_SCRATCH_TILES_BACK_Y: return sCuTiles.back().GetY();
-    case EE_UNITS_CU_SCRATCH_TILES_POP: sCuTiles.pop_back(); return 0;
+    case EE_UNITS_CU_SCRATCH_TILES_SHUFFLE: EEAIRandomShuffle(EECuObject<EETileCoordinate>(inA), EECuObject<EETileCoordinate>(inA) + inB); return 0;
     case EE_UNITS_CU_NEW_LOCATION_GOAL: return (uint64_t)(uintptr_t)EEUGRust::NewLocation(GE2DPoint(f[0], f[1]), false, true, false, 0.0f, false, 0);
     case EE_UNITS_CU_SET_GOAL: theUnit->SetGoal(EECuObject<EEUnitGoal>(inA), inB != 0, (long)inC); return 0;
-    // IsNextToTile's
-    case EE_UNITS_CU_SCRATCH_POINTS_CLEAR: sCuPoints.clear(); return 0;
-    case EE_UNITS_CU_SCRATCH_SQUARE_RING:
-        ee_units_uu_square_ring(theUnit->GetTileX(), theUnit->GetTileY(), theUnit->GetUnitClass()->mTileSize, theUnit->GetUnitClass()->mTileSize, 1, &sCuPoints);
-        return 0;
-    case EE_UNITS_CU_SCRATCH_RING_CORNERS:
-        ee_units_uu_ring_corners(0, theUnit->GetTileX(), theUnit->GetTileY(), theUnit->GetUnitClass()->mTileSize, theUnit->GetUnitClass()->mTileSize, 1, &sCuPoints);
-        return 0;
-    case EE_UNITS_CU_SCRATCH_POINTS_SIZE: return (int64_t)sCuPoints.size();
-    case EE_UNITS_CU_SCRATCH_POINT_X: return sCuPoints[(size_t)inB].GetX();
-    case EE_UNITS_CU_SCRATCH_POINT_Y: return sCuPoints[(size_t)inB].GetY();
     // UpdateFanaticismColor's
     case EE_UNITS_CU_FANATICISM_FIELDS: return (int64_t)(uintptr_t)static_cast<EeDataGraphicEffectFields*>(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect));
     case EE_UNITS_CU_SET_COLOR: theUnit->SetColor(GEColor(f[0], f[1], f[2])); return 0;
@@ -695,12 +646,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_INIT_COLLIDABLE: theUnit->mIsCollidable = theClass->mIsCollidable && (!(theClass->mDomains & kMovementAir) || theClass->FliesOver()) && !theClass->mIsProjectile && theClass->mUnitType != kUnitTypeWaypoint; return 0;
     case EE_UNITS_CU_INIT_CAN_BE_HIDDEN: theUnit->mCanBeHidden = (!(theClass->mDomains & kMovementAir) && !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f) || theClass->mFamily == kUnitFamilyAABuilding; return 0;
     case EE_UNITS_CU_UM_FLOOR: return UMFloor(UBitsFloat(inB));
-    case EE_UNITS_CU_PLACEMENT_COPY: sCuPlacement = *EECuObject<const GETransformation>(inA); return 0;
-    case EE_UNITS_CU_PLACEMENT_X: return UFloatBits(sCuPlacement.GetX());
-    case EE_UNITS_CU_PLACEMENT_Y: return UFloatBits(sCuPlacement.GetY());
-    case EE_UNITS_CU_PLACEMENT_SET_X: sCuPlacement.SetX(UBitsFloat(inB)); return 0;
-    case EE_UNITS_CU_PLACEMENT_SET_Y: sCuPlacement.SetY(UBitsFloat(inB)); return 0;
-    case EE_UNITS_CU_PM_SET_PLACEMENT: theUnit->mPhysicalModel.SetLocation(sCuPlacement); return 0;
     case EE_UNITS_CU_UPGRADE_AREA_TEMPLATE: return thePlayer->GetUpgrade(theUnit->GetUnitClass()->GetUnitType())->mAreaEffectTemplates[inB];
     case EE_UNITS_CU_CREATE_AREA_EFFECT: return (uint64_t)(uintptr_t)gAEManager.CreateAreaEffect((long)inB, theUnit);
     case EE_UNITS_CU_AREA_EFFECTS_ADD: theUnit->mAreaEffects.Add(EECuObject<EEAreaEffect>(inA)); return 0;
@@ -727,26 +672,18 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CUM_TOP_POINT_OF: memcpy(f, &EECuObject<EEUnit>(inA)->GetModel()->mTopPoint.mX, 3 * sizeof(float)); return 0;
     case EE_UNITS_CUM_APPLY_OF: EECuObject<EEUnit>(inA)->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(GE3DPoint(f[0], f[1], f[2]), sCuMorePoint); return 0;
     case EE_UNITS_CUM_POSITION_OF: EECuObject<EEUnit>(inA)->GetPosition(sCuMorePoint); return 0;
-    }
-    return 0;
-}
-
-// The C++ calls of the Rust path bodies (ee_sim::units waypoints.rs, ee_sim::astar pm_apply.rs): one statement each
-extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inArg, float* ioPoint)
-{
-    EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inUnit;
-    EEUnitGoal* theGoal = (EEUnitGoal*)(uintptr_t)inArg;
-    switch (inOp) {
-    case EE_UNITS_WP_SET_GOAL: theUnit->SetGoal(theGoal, 1, 0); return 0;
-    case EE_UNITS_WP_INSERT_GOAL: theUnit->mGoalQueues[0].Insert(1, theGoal); return 0;
-    case EE_UNITS_WP_START_ACTION: theUnit->StartAction((unsigned long)inArg); return 0;
+    // the C++ calls of the Rust path bodies (ee_sim::units waypoints.rs, ee_sim::astar pm_apply.rs; inA a goal or a
+    // value; units round 14: was ee_units_wp_host)
+    case EE_UNITS_WP_SET_GOAL: theUnit->SetGoal(EECuObject<EEUnitGoal>(inA), 1, 0); return 0;
+    case EE_UNITS_WP_INSERT_GOAL: theUnit->mGoalQueues[0].Insert(1, EECuObject<EEUnitGoal>(inA)); return 0;
+    case EE_UNITS_WP_START_ACTION: theUnit->StartAction((unsigned long)inA); return 0;
     case EE_UNITS_WP_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
     case EE_UNITS_WP_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
     case EE_UNITS_WP_CLEAR_BOUNDED: theUnit->mBoundedPathTiles.clear(); return 0;
     case EE_UNITS_WP_REGION_SIZE: return gEEAIRegionSize;
-    case EE_UNITS_WP_GOAL_POINT: *reinterpret_cast<GE3DPoint*>(ioPoint) = EELocationGoalPoint(theGoal); return 0;
-    // the point's copy in ioPoint[0..3], the tile's two longs after it (waypoints.rs)
-    case EE_UNITS_WP_CLOSEST_TILE: ::gWorld.GetMap()->GetClosestTile(reinterpret_cast<GE3DPoint*>(ioPoint), reinterpret_cast<long*>(ioPoint + 4), reinterpret_cast<long*>(ioPoint + 4) + 1); return 0;
+    case EE_UNITS_WP_GOAL_POINT: *reinterpret_cast<GE3DPoint*>(f) = EELocationGoalPoint(EECuObject<EEUnitGoal>(inA)); return 0;
+    // the point's copy in f[0..3], the tile's two longs after it (waypoints.rs)
+    case EE_UNITS_WP_CLOSEST_TILE: ::gWorld.GetMap()->GetClosestTile(reinterpret_cast<GE3DPoint*>(f), reinterpret_cast<long*>(f + 4), reinterpret_cast<long*>(f + 4) + 1); return 0;
     }
     return 0;
 }

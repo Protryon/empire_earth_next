@@ -36,27 +36,27 @@ pub struct EeUnitsWaypoints {
 /// `GetPathStart`'s and the others' "no path" answer.
 pub const EE_UNITS_WAYPOINTS_NONE: i32 = 7;
 
-// ---- `ee_units_wp_host`'s operations (EEComplexUnit.cpp: the C++ calls of the path bodies, one statement each;
-// `unit` the unit, `arg` a goal or a value)
+// ---- the path bodies' C++ calls (EEComplexUnit.cpp: statements of `ee_units_cu_host` since units round 14, one
+// each; `unit` the unit, `arg` (the host's `a`) a goal or a value)
 /// `SetGoal(arg, 1, 0)`, `mGoalQueues[0].Insert(1, arg)`, `RefreshGoals()`, `RefreshActiveGoal()`
-pub const EE_UNITS_WP_SET_GOAL: i32 = 0;
-pub const EE_UNITS_WP_INSERT_GOAL: i32 = 1;
-pub const EE_UNITS_WP_REFRESH_GOALS: i32 = 2;
-pub const EE_UNITS_WP_REFRESH_ACTIVE_GOAL: i32 = 3;
+pub const EE_UNITS_WP_SET_GOAL: i32 = 15000;
+pub const EE_UNITS_WP_INSERT_GOAL: i32 = 15001;
+pub const EE_UNITS_WP_REFRESH_GOALS: i32 = 15002;
+pub const EE_UNITS_WP_REFRESH_ACTIVE_GOAL: i32 = 15003;
 /// `StartAction(arg)`, the class's `ActionChanged(unit)`
-pub const EE_UNITS_WP_START_ACTION: i32 = 4;
-pub const EE_UNITS_WP_ACTION_CHANGED: i32 = 5;
+pub const EE_UNITS_WP_START_ACTION: i32 = 15004;
+pub const EE_UNITS_WP_ACTION_CHANGED: i32 = 15005;
 /// the first goal queue's length and last goal
-pub const EE_UNITS_WP_QUEUE_LENGTH: i32 = 6;
-pub const EE_UNITS_WP_QUEUE_BACK: i32 = 7;
+pub const EE_UNITS_WP_QUEUE_LENGTH: i32 = 15006;
+pub const EE_UNITS_WP_QUEUE_BACK: i32 = 15007;
 /// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `gEEAIRegionSize`
-pub const EE_UNITS_WP_IS_HUMAN: i32 = 8;
-pub const EE_UNITS_WP_CLEAR_BOUNDED: i32 = 9;
+pub const EE_UNITS_WP_IS_HUMAN: i32 = 15008;
+pub const EE_UNITS_WP_CLEAR_BOUNDED: i32 = 15009;
 // (10 was RefreshPath: refresh_path)
-pub const EE_UNITS_WP_REGION_SIZE: i32 = 11;
+pub const EE_UNITS_WP_REGION_SIZE: i32 = 15011;
 /// `EELocationGoalPoint(arg)` into the point; the world map's closest tile to the point (x | y << 32)
-pub const EE_UNITS_WP_GOAL_POINT: i32 = 12;
-pub const EE_UNITS_WP_CLOSEST_TILE: i32 = 13;
+pub const EE_UNITS_WP_GOAL_POINT: i32 = 15012;
+pub const EE_UNITS_WP_CLOSEST_TILE: i32 = 15013;
 
 /// `kGoalHealUnit`; `kMovementSea`; `kPathSpeedScale` (0x446dbc)
 #[cfg_attr(test, allow(dead_code))]
@@ -214,9 +214,12 @@ mod game {
     use crate::world::{UnitView, WorldRead, WorldView};
     use std::os::raw::c_long;
 
-    extern "C" {
-        /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
-        fn ee_units_wp_host(op: i32, unit: u64, arg: u64, point: *mut f32) -> i64;
+    /// the path bodies' C++ calls (`EE_UNITS_WP_*`: statements of the unit host, EEComplexUnit.cpp)
+    unsafe fn ee_units_wp_host(op: i32, unit: u64, arg: u64, point: *mut f32) -> i64 {
+        let mut f = [0.0f32; 4];
+        let f = if point.is_null() { &mut f as *mut [f32; 4] } else { point.cast::<[f32; 4]>() };
+        // SAFETY: the caller's contract (a live unit; `point` null or the statement's buffer)
+        unsafe { crate::units::cu_body::game::ee_units_cu_host(op, unit as usize as *mut std::ffi::c_void, arg, 0, 0, f) }
     }
 
     fn token() -> WorldRead {

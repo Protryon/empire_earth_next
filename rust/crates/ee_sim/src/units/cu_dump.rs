@@ -9,8 +9,6 @@ use crate::units::cu_life::*;
 // ---- the statements (`op`; `a` the FILE* or the UWideString*)
 // the dump's input record (`EeUnitsComplexDumpIn`, the host's `sCuDumpIn`) filled from the unit by [`dump_fill`],
 // one statement each
-/// `&sCuDumpIn`
-pub const EE_UNITS_CU_DUMP_IN: i32 = 4041;
 /// `mPlayer->mPlayerID`
 pub const EE_UNITS_CU_DUMP_PLAYER_ID: i32 = 4042;
 /// `GetTileX()`, `GetTileY()` (`b` 0, 1)
@@ -27,7 +25,7 @@ pub const EE_UNITS_CU_DUMP_FRAME: i32 = 4047;
 pub const EE_UNITS_CU_DUMP_PROJECTILE_START: i32 = 4048;
 /// `mPhysicalModel.GetLocation().GetElement(b, c)` into `f[0]`
 pub const EE_UNITS_CU_DUMP_LOCATION_ELEMENT: i32 = 4049;
-/// `ee_units_complex_dump(b, this, this, this, GetUnitClass(), GetStats(), the input, EEDumpWrite, (FILE*)a)`
+/// `ee_units_complex_dump(b, this, this, this, GetUnitClass(), GetStats(), the input c, EEDumpWrite, (FILE*)a)`
 pub const EE_UNITS_CU_DUMP_PART: i32 = 901;
 /// the action line
 pub const EE_UNITS_CU_DUMP_ACTION: i32 = 902;
@@ -45,9 +43,9 @@ pub const EE_UNITS_CU_DUMP_QUEUE: i32 = 907;
 pub const EE_UNITS_CU_DUMP_GOAL_KIND: i32 = 908;
 /// goal (`b`, `c`)'s `DumpOutOfSynch(file)`
 pub const EE_UNITS_CU_DUMP_GOAL: i32 = 909;
-/// goal (`b`, `c`)'s `GetGoalLocation(the scratch location)`
+/// goal (`b`, `c`)'s `GetGoalLocation(the location f)`
 pub const EE_UNITS_CU_DUMP_GOAL_LOCATION: i32 = 910;
-/// the scratch location's x line
+/// the location f's x line
 pub const EE_UNITS_CU_DUMP_LOCATION: i32 = 911;
 /// goal (`b`, `c`)'s `GetIsAutoWaypoint() == true`
 pub const EE_UNITS_CU_GOAL_AUTO_WAYPOINT: i32 = 912;
@@ -90,11 +88,11 @@ pub const EE_UNITS_CU_DESCRIBE_COLON: i32 = 929;
 pub const EE_UNITS_CU_DESCRIBE_VELOCITY: i32 = 930;
 /// the goal state's `GetDebugLine(the scratch text)`
 pub const EE_UNITS_CU_DESCRIBE_GOAL: i32 = 931;
-/// the goal state's `GetGoalLocation(the scratch location)`
+/// the goal state's `GetGoalLocation(the location f)`
 pub const EE_UNITS_CU_DUMP_STATE_LOCATION: i32 = 932;
-/// the scratch location's y line
+/// the location f's y line
 pub const EE_UNITS_CU_DUMP_LOCATION_Y: i32 = 933;
-/// the scratch location's z line
+/// the location f's z line
 pub const EE_UNITS_CU_DUMP_LOCATION_Z: i32 = 934;
 /// the "is not an auto waypoint" line
 pub const EE_UNITS_CU_DUMP_NOT_AUTO_WAYPOINT: i32 = 935;
@@ -105,19 +103,18 @@ pub const EE_UNITS_CU_DESCRIBE_CLEAR: i32 = 937;
 
 /// `kGoalLocation`
 const GOAL_LOCATION: i64 = 1;
-fn locations<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64) {
+fn locations<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64, location: &mut [f32; 4]) {
     for op in [EE_UNITS_CU_DUMP_LOCATION, EE_UNITS_CU_DUMP_LOCATION_Y, EE_UNITS_CU_DUMP_LOCATION_Z] {
-        h.cu(op, unit, file, 0, 0, &mut [0.0; 4]);
+        h.cu(op, unit, file, 0, 0, location);
     }
 }
 
 /// `OutOfSynchDump(file, flags)`: the unit's goals, physics, class stats, waypoints and area effects in the
 /// out-of-sync file `file` (a `FILE*`).
-/// The dump's input record (the host's) filled from the unit: its player, tile, physics and queues.
-pub fn dump_fill<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
+/// The dump's input record filled from the unit: its player, tile, physics and queues.
+pub fn dump_fill<H: CuHost + ?Sized>(h: &mut H, unit: u64) -> crate::units::unit_bulk::EeUnitsComplexDumpIn {
     let mut f = [0.0f32; 4];
     let mut q = |h: &mut H, op: i32, b: i64, c: i64| h.cu(op, unit, 0, b, c, &mut f);
-    let at = q(h, EE_UNITS_CU_DUMP_IN, 0, 0) as usize;
     let mut d = crate::units::unit_bulk::EeUnitsComplexDumpIn {
         player_id: q(h, EE_UNITS_CU_DUMP_PLAYER_ID, 0, 0) as _,
         tile_x: q(h, EE_UNITS_CU_DUMP_TILE, 0, 0) as _,
@@ -144,16 +141,16 @@ pub fn dump_fill<H: CuHost + ?Sized>(h: &mut H, unit: u64) {
             d.location[r][c] = f[0];
         }
     }
-    if at != 0 {
-        // SAFETY: the host's live record (0 in a test)
-        unsafe { *(at as *mut crate::units::unit_bulk::EeUnitsComplexDumpIn) = d };
-    }
+    d
 }
 
 pub fn out_of_synch_dump<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64) {
     let q = |h: &mut H, op: i32, b: i64, c: i64| h.cu(op, unit, file, b, c, &mut [0.0; 4]);
-    dump_fill(h, unit);
-    q(h, EE_UNITS_CU_DUMP_PART, 0, 0);
+    // the dump's input record and goal location (units round 14: the body's, were C++ scratch statics)
+    let d = dump_fill(h, unit);
+    let input = &d as *const crate::units::unit_bulk::EeUnitsComplexDumpIn as usize as i64;
+    let mut location = [0.0f32; 4];
+    h.cu(EE_UNITS_CU_DUMP_PART, unit, file, 0, input, &mut [0.0; 4]);
     q(h, EE_UNITS_CU_DUMP_ACTION, 0, 0);
     if q(h, EE_UNITS_CU_NO_ACTIVE_GROUP, 0, 0) != 0 {
         q(h, EE_UNITS_CU_DUMP_NO_GROUP, 0, 0);
@@ -168,8 +165,8 @@ pub fn out_of_synch_dump<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64) {
         for j in 0..count {
             q(h, EE_UNITS_CU_DUMP_GOAL_KIND, i, j);
             q(h, EE_UNITS_CU_DUMP_GOAL, i, j);
-            q(h, EE_UNITS_CU_DUMP_GOAL_LOCATION, i, j);
-            locations(h, unit, file);
+            h.cu(EE_UNITS_CU_DUMP_GOAL_LOCATION, unit, file, i, j, &mut location);
+            locations(h, unit, file, &mut location);
             let goal = h.cu(crate::units::cu_world::EE_UNITS_CU_QUEUE_GOAL_AT, unit, 0, i, j, &mut [0.0; 4]) as u64;
             if h.cu(EE_UNITS_CU_GOAL_KIND_OF, unit, goal, 0, 0, &mut [0.0; 4]) == GOAL_LOCATION {
                 if q(h, EE_UNITS_CU_GOAL_AUTO_WAYPOINT, i, j) != 0 {
@@ -184,10 +181,10 @@ pub fn out_of_synch_dump<H: CuHost + ?Sized>(h: &mut H, unit: u64, file: u64) {
     }
     if q(h, EE_UNITS_CU_HAS_GOAL_STATE_NOW, 0, 0) != 0 {
         q(h, EE_UNITS_CU_DUMP_GOAL_STATE, 0, 0);
-        q(h, EE_UNITS_CU_DUMP_STATE_LOCATION, 0, 0);
-        locations(h, unit, file);
+        h.cu(EE_UNITS_CU_DUMP_STATE_LOCATION, unit, file, 0, 0, &mut location);
+        locations(h, unit, file, &mut location);
     }
-    q(h, EE_UNITS_CU_DUMP_PART, 1, 0);
+    h.cu(EE_UNITS_CU_DUMP_PART, unit, file, 1, input, &mut [0.0; 4]);
     q(h, EE_UNITS_CU_DUMP_WAYPOINT_SIZE, 0, 0);
     let mut w = 0;
     while w < q(h, crate::units::cu_world::EE_UNITS_CU_WAYPOINT_COUNT, 0, 0) {
@@ -350,7 +347,6 @@ mod tests {
         let mut h = Mock::default();
         let mut h2 = Wrap(&mut h);
         dump_fill(&mut h2, 1);
-        assert_eq!(h.log[0].0, EE_UNITS_CU_DUMP_IN);
         assert_eq!(h.count(EE_UNITS_CU_DUMP_ANGULAR_VELOCITY), 3);
         assert_eq!(h.count(EE_UNITS_CU_DUMP_QUEUE_SIZE), 2);
         assert_eq!(h.count(EE_UNITS_CU_DUMP_COLLISION_TILE), 2);

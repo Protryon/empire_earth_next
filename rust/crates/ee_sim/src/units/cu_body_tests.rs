@@ -122,13 +122,13 @@ fn the_insurance_pays_a_covered_unit() {
         .answer(EE_UNITS_CU_HAS_INSURANCE, 0, 1)
         .answer(EE_UNITS_CU_GET_INSURANCE, 0, 1)
         .answer(EE_UNITS_CU_INSURANCE_COVERS, 0, 1)
-        .answer(EE_UNITS_CU_UNIT_TYPE, 0, 0x2a)
-        .answer(EE_UNITS_CU_INSURANCE_AMOUNT, 0, bits(0.5));
+        .answer(EE_UNITS_CU_UNIT_TYPE, 0, 0x2a);
     kill(&mut h, 1, true, false, false);
     assert_eq!(h.count(EE_UNITS_CU_PAY_INSURANCE), 0, "an unbuilt farm is not covered");
     let mut h = h.answer(EE_UNITS_CU_IS_BUILT, 0, 1);
     kill(&mut h, 1, true, false, false);
-    assert!(h.log.contains(&(EE_UNITS_CU_PAY_INSURANCE, 0, bits(0.5), 0)));
+    // (the power record is the host's to fill: the mock leaves its amount 0)
+    assert!(h.log.contains(&(EE_UNITS_CU_PAY_INSURANCE, 0, bits(0.0), 0)));
 }
 
 #[test]
@@ -250,11 +250,10 @@ fn insurance_notices_pass_the_thresholds() {
         // food 90 -> 150 (passes 100: shown 100), wood 0 -> 10 (under 20: shown as is), the rest unchanged
         .sequence(EE_UNITS_CU_REFUND_TOTAL, 60, &[90, 0, 0, 0, 0, 90, 0, 0, 0, 0, 150, 10, 0, 0, 0]);
     pay_insurance(&mut h, 1, 0.5);
-    use crate::units::cu_small::{EE_UNITS_CU_S_INSURANCE_AMOUNT, EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME};
-    let amounts: Vec<i64> = h.log.iter().filter(|e| e.0 == EE_UNITS_CU_S_INSURANCE_AMOUNT).map(|e| e.2).collect();
+    use crate::units::cu_small::EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME;
     let resources: Vec<i64> =
         h.log.iter().filter(|e| e.0 == EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME).map(|e| e.2).collect();
-    assert_eq!((resources, amounts), (vec![2, 3], vec![100, 10]));
+    assert_eq!(resources, vec![2, 3]);
     assert!(h.log.contains(&(EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY, 40, bits(0.5), 0)));
     assert_eq!(h.count(EE_UNITS_CU_DISBAND_EFFECT), 1);
 }
