@@ -144,13 +144,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::ServerCount: return InitList(a)->GetNumAddresses();
     case O::DirNotifyFailed: LobbyGetDirServers()->NotifyFailed(R(a)->GetCurAddr()); return 0;
     case O::ServerNotifyFailed: SC(a)->NotifyFailed(R(b)->GetCurAddr()); return 0;
-    case O::TextNew: return (intptr_t)(a >= 0 ? new GUIString(gLobbyResources[a].mString) : new GUIString);
-    case O::TextAppendRes: T(a)->append(gLobbyResources[b].mString); return 0;
-    case O::TextAppendComma: T(a)->append(GUIString(", ")); return 0;
-    case O::TextLength: return T(a)->length();
-    case O::TextAppendText: T(a)->append(*T(b)); return 0;
-    case O::TextFree: delete T(a); return 0;
-    case O::TextStatus: return (intptr_t)new GUIString(LobbyFormatString(gLobbyResources[a].mString, GetWONStatusString((WONStatus)b)));
     case O::IsAcceptOp: return reinterpret_cast<AsyncOp*>(a) == aLogic->Slot<AsyncOp>(kInitAcceptOp);
     case O::ClearAcceptOp: aLogic->mSlot[kInitAcceptOp] = NULL; return 0;
     case O::AcceptedFromFirewall:

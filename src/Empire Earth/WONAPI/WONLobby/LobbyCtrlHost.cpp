@@ -137,8 +137,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::Invalidate: aComp->Invalidate(); return 0;
     case Op::EventControlId: return anEvent->GetControlId();
     case Op::EventIsSelectedItem: return anEvent->GetItem<ListItem>() == static_cast<ListArea*>(anEvent->GetComponent())->GetSelItem() ? 1 : 0;
-    case Op::EventButton: return anEvent->mEv.button;
-    case Op::EventDoubleClick: return anEvent->mEv.flag;
     case Op::BrowserBackEnabled: return aBrowser->BackButtonEnabled() ? 1 : 0;
     case Op::BrowserForwardEnabled: return aBrowser->ForwardButtonEnabled() ? 1 : 0;
     case Op::BrowserStopEnabled: return aBrowser->StopButtonEnabled() ? 1 : 0;

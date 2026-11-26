@@ -425,7 +425,7 @@ pub extern "C" fn ee_won_comp_event_register(at: usize) {
 }
 
 /// A game event's record (`e` a live `ComponentEvent*`), None outside the game.
-pub(crate) fn event_rec(e: isize) -> Option<*mut EeWonCompEventRec> {
+pub fn event_rec(e: isize) -> Option<*mut EeWonCompEventRec> {
     let at = EVENT_AT.load(Ordering::Acquire);
     (at != 0 && e != 0 && is_game()).then(|| (e as usize + at) as *mut EeWonCompEventRec)
 }

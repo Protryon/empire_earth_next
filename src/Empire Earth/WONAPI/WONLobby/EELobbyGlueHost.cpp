@@ -779,8 +779,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::UiLockCopy: gUIManager->LockUIForCopyData(); return 0;
     case Op::WorldWriteLock: gWorld.mLock->WriteLock(); return 0;
     // StringUnits' (gluesplit.rs composes it, R6 WON round 33)
-    case Op::StringLength: return (intptr_t)reinterpret_cast<GUIStringData*>(a)->mLength;
-    case Op::StringUnitAt: return (intptr_t)(uint32_t)reinterpret_cast<GUIStringData*>(a)->mText[b];
     case Op::ActionNew: return (intptr_t) new EEALobbyAction(reinterpret_cast<void (*)()>(a));
     case Op::UiPostAction: gUserInterface->PostAction(reinterpret_cast<EEALobbyAction*>(a)); return 0;
     case Op::ActionDereference: reinterpret_cast<EEALobbyAction*>(a)->Dereference(); return 0;

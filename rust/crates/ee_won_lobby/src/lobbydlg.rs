@@ -852,11 +852,13 @@ impl EeWonLobbyDlg {
             if let Some(r) = crate::widgets::dlg_op(self.dialog as isize, op, a, b, c) {
                 return r;
             }
+            if let Some(r) = crate::lobbytext::dlg_op(op, a, b) {
+                return r;
+            }
             // the compound cases' statements (R6 WON round 34), while the network core is bound
             if ee_won_net::cppnet::bound() {
-                if let Some(r) =
-                    crate::dlgsplit::game_op(op, a, b, c, &|o, x, y, z| self.host_op(o, x, y, z), self.host)
-                {
+                let out = |o, x, y, z| crate::lobbytext::dlg_op(o, x, y).unwrap_or_else(|| self.host_op(o, x, y, z));
+                if let Some(r) = crate::dlgsplit::game_op(op, a, b, c, &out, self.host) {
                     return r;
                 }
             }

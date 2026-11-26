@@ -59,8 +59,6 @@ static intptr_t ScrollTextHost(void* inComp, EeWonScrollTextOp inOp, intptr_t a,
     case Op::Height: return aComp->Height();
     case Op::Invalidate: aComp->Invalidate(); return 0;
     case Op::RequestTimer: aComp->RequestTimer(x != 0); return 0;
-    case Op::LineNew: return (intptr_t) new GUIString(*reinterpret_cast<const GUIString*>(a));
-    case Op::LineFree: delete reinterpret_cast<GUIString*>(a); return 0;
     case Op::BasePaint: aComp->Component::Paint(g); return 0;
     case Op::SetDefaultFont: g.SetFont(aComp->GetDefaultFont()); return 0;
     case Op::SetColor: g.SetColor((DWORD)(uint32_t)x); return 0;

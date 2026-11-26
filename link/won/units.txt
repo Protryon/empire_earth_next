@@ -30,7 +30,6 @@
 3628c0 366167 WONLobby/WONLobbyPrv.cpp
 3630a0 3632fc WONLobby/WONLobbyPrvLifetime.cpp
 365700 3c9c36 WONLobby/CrossPromotionButton.cpp
-366170 366b2f WONLobby/WONStatusString.cpp
 377670 381801 WONLobby/WONLobbyResource.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
 3bdd60 3bdfbe WONLobby/LobbyContainer.cpp

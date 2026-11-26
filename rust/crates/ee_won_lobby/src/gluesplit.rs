@@ -56,6 +56,15 @@ pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
             0
         }
         // `aData->mLength`, and with `b` its units copied to the `uint32_t*` `b` (R6 WON round 33)
+        // (the game's units read in place since R6 WON GUI round 40; a driver's world answers the two ops)
+        Op::StringUnits if ee_won_gui::compobj::is_game() => {
+            let u = crate::lobbytext::units(a);
+            if b != 0 {
+                // SAFETY: the caller's buffer of `mLength` units (the op's contract)
+                unsafe { std::ptr::copy_nonoverlapping(u.as_ptr(), b as *mut u32, u.len()) };
+            }
+            u.len() as isize
+        }
         Op::StringUnits => {
             let n = o(Op::StringLength, a, 0);
             if b != 0 {

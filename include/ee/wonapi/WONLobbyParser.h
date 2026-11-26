@@ -215,7 +215,8 @@ private:
     { ee_won_chatparser_set_text(this->mParser, inWhich, inText.mData->mText, inText.length(), sizeof(wchar_t)); }
     int64_t Number(EeWonChatParserNumber inNumber) const { return ee_won_chatparser_number(this->mParser, inNumber); }
     void SetNumber(EeWonChatParserNumber inNumber, int64_t inValue) { ee_won_chatparser_set_number(this->mParser, inNumber, inValue); }
-    EeWonChatParser* mParser;
+public:
+    EeWonChatParser* mParser; // read in place by ee_won_lobby lobbytext.rs (ParserCommandText; R6 WON GUI round 40)
 };
 }
 #endif

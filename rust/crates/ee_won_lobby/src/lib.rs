@@ -38,6 +38,7 @@ pub mod lobbyhost;
 pub mod lobbymap;
 pub mod lobbyops;
 pub mod lobbypopup;
+pub mod lobbytext;
 pub mod lobbyprv;
 pub mod lobbyrun;
 pub mod logics;

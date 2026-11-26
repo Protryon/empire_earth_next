@@ -72,13 +72,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     RustLogic* L = static_cast<RustLogic*>(inObj);
     switch (inOp) {
     case O::TextFree: delete T(a); return 0;
-    case O::TextLength: return T(a)->length();
     case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
     case O::IterFree: delete reinterpret_cast<LobbyClientIterator*>(a); return 0;
-    case O::TextUnits: // the text's wchar_t units (to b when not 0); 0 is the empty text
-        if (b != 0)
-            for (unsigned i = 0; i < TX(a).mData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)TX(a).mData->mText[i];
-        return TX(a).mData->mLength;
     // ---- the lobby
     case O::Killed: return L->mKilled;
     case O::RunOp: L->RunOp(AO(a), NULL, 0); return 0;
@@ -192,8 +187,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::IterNew: return (intptr_t) new LobbyClientIterator(reinterpret_cast<LobbyClientList*>(a));
     case O::IterHasMore: return reinterpret_cast<LobbyClientIterator*>(a)->HasMore();
     case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();
-    case O::EventComponent: return E(a)->mEv.comp;
-    case O::EventType: return E(a)->mEv.kind;
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);

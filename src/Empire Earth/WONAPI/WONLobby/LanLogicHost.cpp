@@ -150,7 +150,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mDialog[kLanName]->InputText(0).length();
     case EeWonLobbyOp::LanBroadcastPort: return LobbyGetLanBroadcastPort();
     case EeWonLobbyOp::LanPortDialogPort: return (unsigned short)l->mDialog[kLanPort]->LCall(EeWonLobbyDlgCall::GetPort);
-    case EeWonLobbyOp::EventComponent: return static_cast<ComponentEvent*>(inA)->mEv.comp;
     case EeWonLobbyOp::SetClientIgnored: LobbySetClientIgnored(cl, inC != 0, (int)inD); return 0;
     case EeWonLobbyOp::LanSetChatInput:
         LobbyBroadcastEvent(SetChatInputEvent(2, cl->GetName(), (int)inC, false), true);

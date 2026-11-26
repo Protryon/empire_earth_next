@@ -660,6 +660,9 @@ impl EeWonLogic {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) = crate::lobbytext::logic_op(op, a, b) {
+            return r;
+        }
         let out = |o: Op, a: isize, b: isize, c: isize, d: isize| host_call(self.host, self.obj, o, a, b, c, d);
         if let Some(r) = crate::netlogicops::game_logic_op(op, a, b, c, d, &out) {
             return r;
