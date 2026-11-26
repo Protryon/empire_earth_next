@@ -4,6 +4,7 @@
 #![cfg(not(test))]
 
 use crate::units::sight::{sight, EeUnitsSightUnit, SightHost};
+use crate::units::tile_sight_host::{ee_units_tile_sight_circle, ee_units_tile_sight_player, ee_units_tile_sight_tile};
 use crate::world::view::{PlayerView, UnitView, WorldRead, WorldView};
 use std::os::raw::c_long;
 
@@ -41,14 +42,8 @@ pub const EE_UNITS_SIGHT_ALLIED: i32 = 7;
 pub const EE_UNITS_SIGHT_SHARERS: i32 = 8;
 /// player `a`'s `mSightSharers[c]`
 pub const EE_UNITS_SIGHT_SHARER: i32 = 9;
-/// `EEAddSightCircle` (`on`) / `EERemoveSightCircle(f[0], f[1], f[2], player a)`
-pub const EE_UNITS_SIGHT_CIRCLE: i32 = 10;
 /// `gWorld.mMap->GetTile(c, d)`
 pub const EE_UNITS_SIGHT_TILE: i32 = 11;
-/// tile `a`'s `AddSight` (`on`) / `RemoveSight(player b)`
-pub const EE_UNITS_SIGHT_TILE_SIGHT: i32 = 12;
-/// player `a`'s `AddSharedSight(tile b, c, d)` (`on`) / `RemoveSharedSight(tile b)`
-pub const EE_UNITS_SIGHT_SHARED: i32 = 13;
 /// `gMiniMap->CountCellOn/Off(c, d)`, the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
 pub const EE_UNITS_SIGHT_SHOW: i32 = 14;
 /// `gWorld.mMap->AddSight/RemoveSight(player a, f[0], f[1], the wonder sight radius, false)`
@@ -57,12 +52,6 @@ pub const EE_UNITS_SIGHT_WONDER: i32 = 15;
 pub const EE_UNITS_SIGHT_NUM_PLAYERS: i32 = 16;
 /// `gWorld.mPlayers[c]`
 pub const EE_UNITS_SIGHT_PLAYER: i32 = 17;
-/// `EERemoveSightCircle(f[0], f[1], f[2], player a)` (`EE_UNITS_SIGHT_CIRCLE` is the add)
-pub const EE_UNITS_SIGHT_CIRCLE_OFF: i32 = 20;
-/// tile `a`'s `RemoveSight(player b)` (`EE_UNITS_SIGHT_TILE_SIGHT` is the add)
-pub const EE_UNITS_SIGHT_TILE_SIGHT_OFF: i32 = 21;
-/// player `a`'s `RemoveSharedSight(tile b)` (`EE_UNITS_SIGHT_SHARED` is the add)
-pub const EE_UNITS_SIGHT_SHARED_OFF: i32 = 22;
 /// the terrain mesh's `ReferenceTile(c, d)` (`EE_UNITS_SIGHT_SHOW` is the minimap's `CountCellOn`)
 pub const EE_UNITS_SIGHT_SHOW_TILE: i32 = 23;
 /// `gMiniMap->CountCellOff(c, d)`
@@ -86,6 +75,19 @@ extern "C" {
 }
 
 struct Game;
+
+// the TSGT scopes' kinds (ee/EESightCapture.h)
+const SCOPE_TILE_ADD: u32 = 1;
+const SCOPE_TILE_REMOVE: u32 = 2;
+const SCOPE_PLAYER_ADD_SHARED: u32 = 4;
+const SCOPE_PLAYER_REMOVE_SHARED: u32 = 5;
+const SCOPE_CIRCLE_ADD: u32 = 10;
+const SCOPE_CIRCLE_REMOVE: u32 = 11;
+
+/// `&gWorld`
+fn world() -> u64 {
+    crate::world::layout::layout().world_address
+}
 
 /// `f` over the world's view (the sight's caller holds the world); its default without one.
 fn with_world<R: Default>(f: impl FnOnce(&WorldView<'_>) -> R) -> R {
@@ -161,20 +163,42 @@ impl SightHost for Game {
         with_player(player, |p| (0..p.sight_sharers_len()).map(|i| p.sight_sharer_handle(i)).collect())
     }
     fn circle(&mut self, on: bool, x: f32, y: f32, radius: f32, player: u64) {
-        let op = if on { EE_UNITS_SIGHT_CIRCLE } else { EE_UNITS_SIGHT_CIRCLE_OFF };
-        self.op(op, on, player, 0, 0, 0, &mut [x, y, radius]);
+        // `EEAddSightCircle` / `EERemoveSightCircle` (kSightCircleAdd, kSightCircleRemove; units round 14: Rust's
+        // entry, was the C++ forwarder)
+        let (scope, kind) = if on { (SCOPE_CIRCLE_ADD, 0) } else { (SCOPE_CIRCLE_REMOVE, 1) };
+        ee_units_tile_sight_circle(world(), scope, kind, x, y, 0.0, 0.0, radius, player);
     }
     fn tile(&mut self, x: i32, y: i32) -> u64 {
         // `gWorld.mMap->GetTile(x, y)`
         with_world(|w| w.map().and_then(|m| m.tile(i64::from(x), i64::from(y))).map_or(0, |t| t.handle()))
     }
     fn tile_sight(&mut self, on: bool, tile: u64, player: u64) {
-        let op = if on { EE_UNITS_SIGHT_TILE_SIGHT } else { EE_UNITS_SIGHT_TILE_SIGHT_OFF };
-        self.op(op, on, tile, player, 0, 0, &mut [0.0; 3]);
+        // tile's `AddSight(player)` / `RemoveSight(player)` (kSightTileAdd, kSightTileRemove)
+        ee_units_tile_sight_tile(
+            world(),
+            if on { SCOPE_TILE_ADD } else { SCOPE_TILE_REMOVE },
+            u8::from(on),
+            tile,
+            player,
+        );
     }
     fn shared_sight(&mut self, on: bool, player: u64, tile: u64, x: i32, y: i32) {
-        let op = if on { EE_UNITS_SIGHT_SHARED } else { EE_UNITS_SIGHT_SHARED_OFF };
-        self.op(op, on, player, tile, x as i64, y as i64, &mut [0.0; 3]);
+        // player's `AddSharedSight(tile, x, y)` / `RemoveSharedSight(tile)` (kSightPlayerAddShared,
+        // kSightPlayerRemoveShared; a removal names no coordinates)
+        if on {
+            ee_units_tile_sight_player(
+                world(),
+                SCOPE_PLAYER_ADD_SHARED,
+                1,
+                1,
+                player,
+                tile,
+                i64::from(x),
+                i64::from(y),
+            );
+        } else {
+            ee_units_tile_sight_player(world(), SCOPE_PLAYER_REMOVE_SHARED, 0, 1, player, tile, -1, -1);
+        }
     }
     fn show(&mut self, on: bool, x: i32, y: i32) {
         let (cell, mesh) = if on {

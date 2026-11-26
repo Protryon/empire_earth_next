@@ -138,9 +138,9 @@ pub const EE_UNITS_CU_IS_COLLIDABLE: i32 = 757;
 pub const EE_UNITS_CU_MOVE_TO_UPDATE: i32 = 758;
 /// `mWaypoints.size()`
 pub const EE_UNITS_CU_WAYPOINT_COUNT: i32 = 759;
-/// `GetNextWaypointPoint(the scratch point = GE3DPoint(0.0f, 0.0f, 0.0f))`
+/// `GetNextWaypointPoint(the point f = GE3DPoint(0.0f, 0.0f, 0.0f))`
 pub const EE_UNITS_CU_NEXT_WAYPOINT_POINT: i32 = 760;
-/// `SetHeight(GetUnitClass()->GetHeightAt(this, the scratch point))`
+/// `SetHeight(GetUnitClass()->GetHeightAt(this, the point f))`
 pub const EE_UNITS_CU_SET_HEIGHT_AT_POINT: i32 = 761;
 /// `HasSwimAnimation()`
 pub const EE_UNITS_CU_HAS_SWIM_ANIMATION: i32 = 762;
@@ -174,7 +174,7 @@ pub const EE_UNITS_CU_QUEUE_GOAL: i32 = 775;
 pub const EE_UNITS_CU_AREA_EFFECTS_SIZE: i32 = 776;
 /// `mAreaEffects.mItems[b]->GetRadius()` (its bits)
 pub const EE_UNITS_CU_AREA_EFFECT_RADIUS: i32 = 777;
-/// `gAEManager.CollectEffects(the float of the bits b, the location's x and y, c, &mAreaEffects, this)`
+/// `gAEManager.CollectEffects(the float of the bits b, the location's x and y (in f), c, &mAreaEffects, this)`
 pub const EE_UNITS_CU_COLLECT_EFFECTS: i32 = 778;
 /// `mPlayer->mPlayerID`
 pub const EE_UNITS_CU_PLAYER_ID: i32 = 779;
@@ -234,7 +234,7 @@ pub const EE_UNITS_CU_CONTACTS_REMOVE: i32 = 805;
 pub const EE_UNITS_CU_AFFECTING_REMOVED_FROM: i32 = 806;
 /// `UIsNone32(mConversionEffect.mValue)`
 pub const EE_UNITS_CU_CONVERSION_IS_NONE: i32 = 807;
-/// `gEffectManager->DestroyEffect(the scratch handle = mConversionEffect)`
+/// `gEffectManager->DestroyEffect(mConversionEffect)`
 pub const EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: i32 = 808;
 /// `mHolder = a`
 pub const EE_UNITS_CU_SET_HOLDER_FIELD: i32 = 809;
@@ -364,6 +364,9 @@ impl<H: CuHost + ?Sized> S<'_, H> {
     }
     fn qabc(&mut self, op: i32, a: u64, b: i64, c: i64) -> i64 {
         self.h.cu(op, self.unit, a, b, c, &mut [0.0; 4])
+    }
+    fn qf(&mut self, op: i32, a: u64, f: &mut [f32; 4]) -> i64 {
+        self.h.cu(op, self.unit, a, 0, 0, f)
     }
     fn yes(&mut self, op: i32) -> bool {
         self.q(op) != 0
@@ -715,8 +718,10 @@ pub fn move_to_location<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: f32, y: f32
         && (s.q(EE_UNITS_CU_CLASS_DOMAINS) & MOVEMENT_AIR != 0
             || s.q(EE_UNITS_CU_UNIT_TYPE) == UNIT_TYPE_SP15_SPACE_FIGHTER)
     {
-        s.q(EE_UNITS_CU_NEXT_WAYPOINT_POINT);
-        s.q(EE_UNITS_CU_SET_HEIGHT_AT_POINT);
+        // the original's local point (units round 14: the body's floats, was a C++ scratch static)
+        let mut point = [0.0f32; 4];
+        s.qf(EE_UNITS_CU_NEXT_WAYPOINT_POINT, 0, &mut point);
+        s.qf(EE_UNITS_CU_SET_HEIGHT_AT_POINT, 0, &mut point);
     }
     if !s.yes(EE_UNITS_CU_HAS_SWIM_ANIMATION) {
         return;

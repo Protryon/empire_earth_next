@@ -26,6 +26,8 @@ use crate::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, 
 use std::os::raw::{c_long, c_ulong};
 use std::ptr::addr_of;
 
+/// `kCivPowerInsurance`
+const KCIV_POWER_INSURANCE: i32 = 45;
 /// `kGoalBuildRepair` (an `EEUnitGoal`'s `mKind`)
 const CU_VIEW_GOAL_BUILD_REPAIR: u8 = 4;
 /// `kUnitCategoryAirplane`, `kUnitCategoryPlanetSpaceship`
@@ -339,6 +341,27 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
     // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            // units round 14: the bodies' own copies of a transformation (Init's placement), IsNextToTile's rings
+            // into the body's tiles, Kill's insurance power record (were C++ scratch statics)
+            EE_UNITS_CU_TRANSFORMATION_COPY => {
+                *(b as usize as *mut [[f32; 4]; 4]) = *(a as usize as *const [[f32; 4]; 4]);
+                0
+            }
+            EE_UNITS_CU_SCRATCH_SQUARE_RING | EE_UNITS_CU_SCRATCH_RING_CORNERS => {
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
+                let (x, y) = ((*u.rts()).mTileX as i32, (*u.rts()).mTileY as i32);
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
+                let size = (*u.class()).mTileSize as i32;
+                *(b as usize as *mut Vec<crate::units::uu_tiles::Tile>) = if op == EE_UNITS_CU_SCRATCH_SQUARE_RING {
+                    crate::units::uu_ffi::square_ring(x, y, size, size, true)
+                } else {
+                    crate::units::uu_ffi::ring_corners(0, x, y, size, size, true)
+                };
+                0
+            }
+            EE_UNITS_CU_GET_INSURANCE => {
+                i64::from(crate::tech::civ::ee_tech_civ_power(KCIV_POWER_INSURANCE, b as usize as *mut _))
+            }
             // units round 14: CanReachTile's destination (the tile's corner and height, into f) and
             // attach point (unused: the C++ statics until then)
             EE_UNITS_CU_SET_DESTINATION => {
@@ -1188,6 +1211,20 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
             }
             EE_UNITS_EU_MAP_TILE_EXISTS => i64::from(map_tile(b, _c) != 0),
             EE_UNITS_EU_TERRAIN_OF => long(*at::<c_long>(word(o.0, l.unit_tile), l.tile_terrain_type)),
+            // units round 14: EEComplexUnit::ApplyMorale (the formula's CBMO record as the C++ made it)
+            EE_UNITS_EU_APPLY_MORALE => {
+                let cx = u.complex().cx();
+                let rules = &crate::tech::civ::rules().combat;
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
+                let input = crate::combat::EeCombatMoraleIn {
+                    value: b as i32,
+                    positive: (*cx).mPositiveMorale as i32,
+                    negative: (*cx).mNegativeMorale as i32,
+                    positive_share: rules.positive_morale,
+                    negative_share: rules.negative_morale,
+                };
+                i64::from(crate::combat::captured::ee_combat_morale_captured(&input))
+            }
             EE_UNITS_EU_HIT_FORMULA => {
                 let input = crate::combat::EeCombatHitPointsIn {
                     hit_points: b as i32,
@@ -1338,7 +1375,7 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
     Some(v)
 }
 
-/// The answer of `ee_units_eum_host`'s statement `op` (EEUnit.cpp; eu_more.rs's and eu_describe.rs's statements)
+/// The answer of the unit host's eu_more.rs statement `op` (EEUnit.cpp; eu_more.rs's and eu_describe.rs's statements)
 /// when it is a plain record read or store (None: the game's host answers it).
 ///
 /// # Safety

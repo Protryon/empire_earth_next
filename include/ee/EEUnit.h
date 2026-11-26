@@ -605,7 +605,6 @@ public:
     void ResizeTurretAngles(unsigned long inCount) { ee_units_cu_more(EE_UNITS_CUM_DO_RESIZE_TURRETS, this, (int64_t)inCount, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL); }  // 0x1f7bfa: mTabButtons = inCount zeroed floats
     // 0x1fcb0e (drops the auto-waypoint location goals; ee_units goals.rs)
     void DropFinishedGoals(bool inStartAll) { ee_units_unit_drop_finished_goals((uint64_t)(uintptr_t)this, inStartAll); }
-    void ApplyMorale(long inValue, long& outValue);  // 0x1fbd81: inValue less 0.8 of it with positive morale, plus 0.6 with negative
     // 0x1fbf66: drops the queued goals of mGoalQueues[inIndex] that refuse the unit
     void DropUnsuitedGoals(unsigned long inIndex) { ee_units_unit_drop_unsuited_goals((uint64_t)(uintptr_t)this, (uint32_t)inIndex); }
     void ReplaceResearch(long inTechnology, long inNewTechnology) { ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_RESEARCH, this, inTechnology, inNewTechnology, 0); }  // 0x1ffbc2 (0x244deb: each live unit of a technology's classes) (provisional name)
