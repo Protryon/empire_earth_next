@@ -1060,7 +1060,9 @@ pub(crate) mod game {
     }
 
     use crate::units::cu_cargo::{EE_UNITS_CU_BUILD_QUEUE_FIND, EE_UNITS_CU_CITIZEN_AT};
-    use crate::units::cu_life::{EE_UNITS_CU_FANATICISM_FIELDS, EE_UNITS_CU_FANATICISM_PARAM, EE_UNITS_CU_FANATICISM_PERIOD};
+    use crate::units::cu_life::{
+        EE_UNITS_CU_FANATICISM_FIELDS, EE_UNITS_CU_FANATICISM_PARAM, EE_UNITS_CU_FANATICISM_PERIOD,
+    };
 
     impl CuHost for Game {
         fn cu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {

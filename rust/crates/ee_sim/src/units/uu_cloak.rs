@@ -484,8 +484,14 @@ mod game {
                     }
                     // the store of the kept handle (cu_view.rs)
                     EE_UNITS_CK_KEEP_CLOAK => {
-                        return crate::units::cu_view::ck_view(op, a, i64::from(CK_HANDLE.load(Ordering::Relaxed)), d, f)
-                            .unwrap_or(0)
+                        return crate::units::cu_view::ck_view(
+                            op,
+                            a,
+                            i64::from(CK_HANDLE.load(Ordering::Relaxed)),
+                            d,
+                            f,
+                        )
+                        .unwrap_or(0)
                     }
                     EE_UNITS_CK_DESTROY_EFFECT => CK_HANDLE.store(c as u32, Ordering::Relaxed),
                     _ => {}

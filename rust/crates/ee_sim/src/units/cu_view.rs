@@ -1607,7 +1607,7 @@ pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, d: i64, f: &mut [f32; 4]) 
                         || x.wrapping_sub(y) == (*r).mL195610,
                 )
             }
-            EE_UNITS_CK_IS_LAND => i64::from(crate::astar::continent_grid::is_land(c as c_long as i32)),
+            EE_UNITS_CK_IS_LAND => i64::from(crate::astar::continent_grid::is_land(c as i32)),
             EE_UNITS_CK_FIRST_UNIT => world_word(l.world_units_first) as i64,
             EE_UNITS_CK_NEXT_UNIT => word(word(a, l.unit_tile_node), 0) as i64,
             EE_UNITS_CK_TILE_X => long((*o.rts()).mTileX),
@@ -1648,10 +1648,13 @@ pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64, c: u64, out: *mut std::ffi
             EE_UNITS_US_CHECKSUM => {
                 // the virtual `GetChecksum`: `EEUnit`'s returns 0, `EEComplexUnit`'s is the cu body's
                 if *at::<u8>(a, l.unit_object_kind) >= crate::units::kinds::EE_OBJECT_COMPLEX_UNIT {
-                    i64::from(
-                        crate::units::cu_body::game::ee_units_cu_body(EE_UNITS_CU_DO_GET_CHECKSUM, a as usize as _, b, 0, 0)
-                            as c_long as u32,
-                    )
+                    i64::from(crate::units::cu_body::game::ee_units_cu_body(
+                        EE_UNITS_CU_DO_GET_CHECKSUM,
+                        a as usize as _,
+                        b,
+                        0,
+                        0,
+                    ) as c_long as u32)
                 } else {
                     0
                 }
@@ -1663,7 +1666,10 @@ pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64, c: u64, out: *mut std::ffi
                 if physics == 0 {
                     0
                 } else {
-                    ulong((*at::<crate::units::physics_save::EeUnitsPhysicsSaved>(physics, l.physics_saved)).mNumTicksDone)
+                    ulong(
+                        (*at::<crate::units::physics_save::EeUnitsPhysicsSaved>(physics, l.physics_saved))
+                            .mNumTicksDone,
+                    )
                 }
             }
             EE_UNITS_US_EXIT => std::process::exit(3),
