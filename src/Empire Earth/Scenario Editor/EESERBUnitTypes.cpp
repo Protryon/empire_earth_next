@@ -6,19 +6,11 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETexture.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIForm.h"
-#include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-
-
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
@@ -38,14 +30,16 @@
 #include "ee/EESELoadThread.h"
 #include "lle/UITriStateCheckBox.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EECivilizationManager.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EEScreenEvent.h"
+
+
 
 // the diplomacy buttons' shared bitmaps (once EESEUIBDiplomacy's statics 0x531fc0/0x531fc8/0x531fd0): normal,
 // focused, pressed, each for allies (0) and enemies (1)
 static GEBitmap* sSeplDiplomacy[3][2];
 
-#include "ee/EECivilizationManager.h"
-#include "ee/EEComputerPlayer.h"
-#include "ee/EEScreenEvent.h"
 extern FSPath* gCivilizationDataPath;
 UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit global)
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)
@@ -65,10 +59,7 @@ static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTe
 // shells_editor.rs; its state 0 allies, 1 enemies, toggled by ButtonUp): their bitmaps cut from the editor's button
 // texture (0x1768a6), released (0x176b18), and a button's bitmaps and help text for its state (UpdateBitmaps), then
 // the form's help text when inHelp (ButtonUp): ee_game screens editor_seplx.rs
-static void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp)
-{
-    ee_screens_sepl_diplomacy_show(inButton, inState, inHelp);
-}
+static void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp) { ee_screens_sepl_diplomacy_show(inButton, inState, inHelp); }
 static const bool sDiplomacyShowRegistered = (gEEUIShellDiplomacyShow = EESEDiplomacyShow, true);   // ee/EEUIShell.h
 
 // ---- the player tab's host (editor_players.rs; EE_SCREENS_SEPL_OP_*): the controls it makes and drives, the
@@ -90,10 +81,7 @@ GEFont* SeplFont(uint32_t inFont)
 
 
 // a text's colour by the record's flags: yellow, white, red (transparent), or none (editor_seunx.rs sepl_color)
-void SeplColor(GEText* inText, uint32_t inFlags)
-{
-    ee_screens_sepl_color(inText->GetRust(), inFlags);
-}
+void SeplColor(GEText* inText, uint32_t inFlags) { ee_screens_sepl_color(inText->GetRust(), inFlags); }
 
 std::vector<UWideString> sSeplLines;   // EE_SCREENS_SEPL_OP_LINE_PUSH's lines, for the next combo box
 
@@ -106,10 +94,7 @@ std::vector<UWideString> sSepxLines;   // EE_SCREENS_SEPX_LINES_PUSH's lines
 }   // namespace
 
 // a line for the next combo box made with pending lines (the map tab's host, EEUIFSEMap.cpp)
-void SeplLinePush(const UWideString& inLine)
-{
-    sSeplLines.push_back(inLine);
-}
+void SeplLinePush(const UWideString& inLine) { sSeplLines.push_back(inLine); }
 
 // The ops (editor_players.rs; p: three handles, i: four integers, f: four floats). The plain world reads (the
 // player count, a player's presence, computer player, enemies and id) are Rust's (ee_game editor_world.rs).
@@ -125,9 +110,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_SET_DIPLOMACY: EEUIShell::Op(SeplControl(p), EE_SCREENS_SKOP_DIPLOMACY_SET, i[0]); return 0;
     case EE_SCREENS_SEPL_OP_MAX_PLAYERS: return (int32_t)gMaxPlayers;
     case EE_SCREENS_SEPL_OP_NAME_TO_EDIT: static_cast<UIEditBox*>(SeplControl(p))->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
-    case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT:
-        gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(SeplControl(p))->GetText(0));
-        return 0;
+    case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT: gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(SeplControl(p))->GetText(0)); return 0;
     case EE_SCREENS_SEPL_OP_NAME_TO_LABEL: static_cast<UITextLabel*>(SeplControl(p))->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
     case EE_SCREENS_SEPL_OP_EPOCH_RANGE: gWorld.mPlayers[i[0]]->GetTechTree()->ResetEpochRange(i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;
@@ -228,10 +211,8 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_AI_SET + 6: return SepxAI(i)->mIgnoreOthers = i[3] != 0;
     case EE_SCREENS_SEPX_AI_SET + 7: return SepxAI(i)->mCanGather = i[3] != 0;
     case EE_SCREENS_SEPX_EVENT_START_EPOCH: return EESEOut(i, static_cast<UIEvent*>(new EESEERust(EE_SCREENS_SEE_START_EPOCH, p[1])));
-    case EE_SCREENS_SEPX_EVENT_SLIDER:
-        return EESEOut(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
-    case EE_SCREENS_SEPX_EVENT_UNIT_LIMIT:
-        return EESEOut(i, static_cast<UIEvent*>(EESEENewUnitLimit(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
+    case EE_SCREENS_SEPX_EVENT_SLIDER: return EESEOut(i, static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
+    case EE_SCREENS_SEPX_EVENT_UNIT_LIMIT: return EESEOut(i, static_cast<UIEvent*>(EESEENewUnitLimit(static_cast<UITextLabel*>(p[1]), 1.0f, 0)));
     case EE_SCREENS_SEPX_EVENT_DISPLAY_EPOCH: return EESEOut(i, EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH));
     case EE_SCREENS_SEPX_EVENT_SCREEN: return EESEOut(i, EECreateScreenEvent((uint32_t)i[0]));
     case EE_SCREENS_SEPX_SET_TRIGGER: c->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1]));
@@ -249,11 +230,8 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_UNIT_LIMIT_MIN: return (int32_t)EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum);
     case EE_SCREENS_SEPX_UNIT_LIMIT_MAX: return (int32_t)EERuleLong(EEGetRules().mGameOptions.mUnitLimitMaximum);
     case EE_SCREENS_SEPX_UNIT_LIMIT_DEFAULT: return (int32_t)EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault);
-    case EE_SCREENS_SEPX_COLOR_DIFFERS:
-        return gWorld.mPlayers[i[0]]->mColor != EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR));
-    case EE_SCREENS_SEPX_SET_PLAYER_COLOR:
-        gWorld.mPlayers[i[0]]->SetColor(EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR)));
-        return 0;
+    case EE_SCREENS_SEPX_COLOR_DIFFERS: return gWorld.mPlayers[i[0]]->mColor != EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR));
+    case EE_SCREENS_SEPX_SET_PLAYER_COLOR: gWorld.mPlayers[i[0]]->SetColor(EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR))); return 0;
     case EE_SCREENS_SEPX_MINIMAP: return gMiniMap != NULL;
     case EE_SCREENS_SEPX_MINIMAP_REDRAW: gMiniMap->Redraw();
         return 0;
@@ -412,9 +390,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPX_DIPLO_TEXTURE: SepxBitmap(i)->SetTexture(SepxTexture(p), SepxScreen(p));
         return 0;
-    case EE_SCREENS_SEPX_DIPLO_COORDS:
-        ee_screens_bitmap_uvs(SepxBitmap(i)->GetRust(), f[0], f[2], f[1], f[3]);
-        return 0;
+    case EE_SCREENS_SEPX_DIPLO_COORDS: ee_screens_bitmap_uvs(SepxBitmap(i)->GetRust(), f[0], f[2], f[1], f[3]); return 0;
     case EE_SCREENS_SEPX_DIPLO_SCALE: SepxBitmap(i)->SetXYScale(f[0], f[0]);
         return 0;
     case EE_SCREENS_SEPX_DIPLO_RELEASE: SepxBitmap(i)->Dereference();

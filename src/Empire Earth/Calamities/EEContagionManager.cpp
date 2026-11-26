@@ -9,8 +9,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
@@ -20,25 +18,17 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionManager.h"
-#include "rust/game/gamecpp.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EEPlayer.h"
 
-
-// New (port): the six functor classes' constructors (0xb6bd1, 0xb6e58, 0xb6fb1, 0xac991, 0xac7b9, 0xac891) as one:
-// the numbers from the class's record (ee_tech contagion_functor.rs init), the effects each kind kept
-EEContagionFunctor::EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind)
-{
-    ee_gamecpp_functor_construct(this, inClass, inKind);   // (ee_game gamecpp calamity_objects.rs)
-}
 
 // Destroys the functor, releasing the fire's burning effect
 EEContagionFunctor::~EEContagionFunctor()
@@ -59,29 +49,6 @@ bool EEContagionFunctor::CanInfect(EEUnit* inUnit)
     return this->CanInfectType(inUnit->mUnitClass->GetCategory(), inUnit->mUnitClass->GetUnitType());
 }
 
-// Counts the whole discrete update periods elapsed on the calamity for this update's damage
-void EEContagionFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_update(this, inElapsedTime, inCalamity);
-}
-
-void EEContagionFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_infect(this, inUnit, inCalamity);
-}
-
-void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_cure(this, inUnit, inCalamity);
-}
-
-// Damages the unit per elapsed period (ee_tech contagion_functor.rs apply_damage): the fire and the plague keep it
-// from being deleted (the fire before, unless it is carried; the plague after), the area effect shows its hit effect
-void EEContagionFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_apply(this, inUnit, inElapsedTime, inCalamity);
-}
-
 // Reads the helpers and their calamity indexes from a saved game (the last helper id from 0.273 on: ee/
 // EESaveGameFiles.h EESaveHasContagionCounter); the first read error (contagion_store.rs EeContagionManager::load)
 long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -99,10 +66,6 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
 
 // (the calamities' addresses as the Rust's 64-bit handles: every target is 64-bit)
 static_assert(sizeof(EECalamity*) == sizeof(uint64_t), "the calamities' handles");
-long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
-{
-    return ee_contagion_manager_restore(this->mRust, reinterpret_cast<const uint64_t*>(inCalamities.data()), inCalamities.size());
-}
 
 bool EEContagionHelperAddUnit(EEContagionHelper* inHelper, EEUnit* inUnit, bool inNotify)
 {

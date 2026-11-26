@@ -12,18 +12,10 @@
 #include <windows.h>
 #include <string.h>
 
-#include "rust/ui/hotkey_ffi.h"
-#include "rust/ui/hotkeyobj.h"
-#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
-#include "lle/TMPoll.h"
-#include "lle/FSFileSpec.h"
 #include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
 #include "lle/UIEvent.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 
 // The UI database files' calls (FSFileSpec&): the hot keys' records (hotkeyobj.rs), the events' and the background

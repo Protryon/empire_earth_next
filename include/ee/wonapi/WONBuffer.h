@@ -2,6 +2,7 @@
 // before it. No GUI/Core/Root header dependency.
 #ifndef EE_WONAPI_WONBUFFER_H
 #define EE_WONAPI_WONBUFFER_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include <exception>
 #include <stdint.h>
 #include <wchar.h>
@@ -17,11 +18,7 @@ namespace WONAPI {
 // surrogate pairs). On Windows each wchar_t is one unit and the bytes are unchanged. The conversions are Rust's
 // (rust/crates/ee_won_net/src/text.rs, the one place WON's text is converted: docs/RUST_PLAN.md D6).
 
-// the number of UTF-16 units (the wire's character count) of a wide string
-inline unsigned long WideUtf16Length(const std::wstring& inText)
-{
-    return static_cast<unsigned long>(ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),NULL,0)/2);
-}
+#include EE_WON_DRV(Buffer_ns) // the drivers' members
 // the UTF-16 little-endian bytes of a wide string, appended to outBytes
 inline void WonAppendSink(void* inBytes, const uint8_t* inData, size_t inLength)
 { static_cast<std::string*>(inBytes)->append(reinterpret_cast<const char*>(inData), inLength); }
@@ -108,8 +105,7 @@ public:
     void SetPos(int thePos) { this->mState.pos=thePos; }
     int Available() { return static_cast<int>(this->length())-this->pos(); }
     void Rewind() { this->mState.pos=0; }
-    // the next bytes, skipped; throws ReadBufferException past the end
-    const void* ReadBytes(unsigned long inLength) { return this->Take(inLength); }
+    #include EE_WON_DRV(Buffer_ReadBuffer) // the drivers' members
     bool ReadBool() { return this->ReadByte()!=0; }
     unsigned char ReadByte() { return *static_cast<const unsigned char*>(this->Take(1)); }
     short ReadShort() { short aValue; memcpy(&aValue,this->Take(2),2); return aValue; }
@@ -139,12 +135,6 @@ public:
     }
     void ReadWString(std::wstring& outText, int inLengthSize)
     { this->ReadRawWString(outText,this->ReadLength(static_cast<unsigned char>(inLengthSize))); }
-    // a length-prefixed block as a new byte buffer
-    ByteBufferPtr ReadBuf(unsigned char inLengthSize)
-    {
-        unsigned long aLength=this->ReadLength(inLengthSize);
-        return new ByteBuffer(this->Take(aLength),aLength,false);
-    }
 
     EeWonReadBuffer mState;
 
@@ -173,35 +163,24 @@ public:
     // empties the buffer (the original forgot an allocation another owner had taken; ToByteBuffer hands it over now)
     void Release() { ee_won_writer_reset(this->mBuffer); }
     void Reserve(unsigned long inNumBytes) { ee_won_writer_reserve(this->mBuffer,inNumBytes); }
-    void ReserveChunk(unsigned long theNumBytesToReserve,unsigned long theMaxSize=0)
-    { ee_won_writer_reserve_chunk(this->mBuffer,theNumBytesToReserve,theMaxSize); }
+    #include EE_WON_DRV(Buffer_WriteBuffer) // the drivers' members
     void SetSize(unsigned long inSize) { ee_won_writer_set_size(this->mBuffer,inSize); }
-    void SkipBytes(unsigned long inLength) { ee_won_writer_skip(this->mBuffer,inLength); }
     void AppendBytes(const void* inData, unsigned long inLength)
     { ee_won_writer_append(this->mBuffer,static_cast<const uint8_t*>(inData),inLength); }
     void AppendByte(unsigned char inByte) { this->AppendBytes(&inByte,1); }
     void AppendBool(bool inValue) { unsigned char aByte=inValue?1:0; this->AppendBytes(&aByte,1); }
     void AppendShort(short inValue) { this->AppendBytes(&inValue,2); }
     void AppendLong(int32_t inValue) { this->AppendBytes(&inValue,4); } // 32-bit on every OS
-    void AppendLength(unsigned long inLength, unsigned char inSize)
-    { ee_won_writer_append_length(this->mBuffer,inLength,inSize); }
     void AppendString(const std::string& inText, unsigned char inSize = 2)
     {
         ee_won_writer_append_field(this->mBuffer,reinterpret_cast<const uint8_t*>(inText.data()),
                                    static_cast<unsigned long>(inText.length()),inSize);
     }
-    void AppendRawString(const std::string& theStr) { this->AppendString(theStr,0); }
     // a unit count field, then the UTF-16 little-endian units
     void AppendWString(const std::wstring& inText, int inLengthSize)
     {
         ee_won_writer_append_wide(this->mBuffer,inText.data(),sizeof(wchar_t),inText.length(),
                                   static_cast<unsigned char>(inLengthSize));
-    }
-    // a length field, then the bytes; a NULL buffer writes only a zero length
-    void AppendBuffer(const ByteBuffer* inBuffer, unsigned char inLengthFieldSize = 0)
-    {
-        ee_won_writer_append_field(this->mBuffer,inBuffer!=NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL,
-                                   inBuffer!=NULL ? inBuffer->length() : 0,inLengthFieldSize);
     }
     void SetBytes(unsigned long inPos, const void* inData, unsigned long inLength)
     { ee_won_writer_set(this->mBuffer,inPos,static_cast<const uint8_t*>(inData),inLength); }

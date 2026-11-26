@@ -1,5 +1,6 @@
 #ifndef EE_WONAPI_WONLOBBYPERSISTENCE_H
 #define EE_WONAPI_WONLOBBYPERSISTENCE_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "rust/won_lobby/persistobj.h"
 #include "rust/won_lobby/prefsobj.h"
 #include "rust/won_net/ipobj.h"
@@ -72,16 +73,13 @@ inline GUIString LobbyPCText(LobbyPC_ c, int64_t a = 0, const GUIString* t = NUL
 }
 inline intptr_t LobbyPersistAddr(const IPAddr& inAddr) { return (intptr_t)inAddr.GetValue(); }
 
-// the saved login users, by name ignoring case (none without lobby data)
-inline size_t LobbyGetUserCount() { return (size_t)LobbyPC(LobbyPC_::UserCount); }
+#include EE_WON_DRV(Persist_ns) // the drivers' members
 inline GUIString LobbyGetUserNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::UserNameAt, (int64_t)inPos); }
-inline long LobbyGetUserLastUseAt(size_t inPos) { return (long)LobbyPC(LobbyPC_::UserLastUseAt, (int64_t)inPos); }
 inline LobbyUserInfo* LobbyFindUser(const GUIString& inName) { return (LobbyUserInfo*)LobbyPC1(LobbyPC_::FindUser, inName); }
 // records a login as a saved user's most recent use (a new user gets a free id, its stale file deleted); with
 // inExistingOnly NULL for a user never seen before
 inline LobbyUserInfo* LobbyAddUser(const GUIString& inName, const GUIString& inPassword, bool inExistingOnly)
 { return (LobbyUserInfo*)LobbyPC2(LobbyPC_::AddUser, inName, inPassword, inExistingOnly); }
-inline LobbyUserInfo* LobbyGetCurrentUser() { return (LobbyUserInfo*)LobbyPC(LobbyPC_::CurrentUser); } // NULL: the LAN user, or no record
 // makes the user (NULL: the LAN user) current and loads its preferences
 inline void LobbySetCurrentUser(LobbyUserInfo* inUser) { LobbyPC(LobbyPC_::SetCurrentUser, (int64_t)(intptr_t)inUser); }
 // a record's fields: the id, the terms of use's two times (the original's mValue04 / mValue08), name, password
@@ -110,7 +108,6 @@ EE_LOBBY_PERSIST_FLAG(ShowGamesInProgress, ShowGamesInProgress)
 EE_LOBBY_PERSIST_FLAG(AnonymousToFriends, AnonymousToFriends)
 #undef EE_LOBBY_PERSIST_FLAG
 inline unsigned short LobbyGetConnectionSpeed() { return (unsigned short)LobbyPC(LobbyPC_::ConnectionSpeed); } // 50
-inline void LobbySetConnectionSpeed(unsigned short inSpeed) { LobbyPC(LobbyPC_::ChangeConnectionSpeed, inSpeed); }
 // TEST ONLY: the harness slot's port offset (EE_TEST_PORT_OFFSET under EE_TEST_UI, through gPlatSimPortOffset; 0
 // otherwise): added to the LAN broadcast port and the lobby port, so that LAN games in two slots never meet
 inline unsigned short LobbyTestPortOffset()
@@ -126,23 +123,16 @@ inline void LobbySaveNetworkAdapter() { LobbyPC(LobbyPC_::SaveNetworkAdapter); }
 inline void LobbySaveGlobalPrefs(bool inForce) { LobbyPC(LobbyPC_::SaveGlobal, inForce); }
 inline void LobbySaveUserPrefs(bool inForce) { LobbyPC(LobbyPC_::SaveUser, inForce); }
 inline void LobbyLoadGlobalPrefs() { LobbyPC(LobbyPC_::LoadGlobal); }
-inline void LobbyRestoreDefaults() { LobbyPC(LobbyPC_::RestoreDefaults); } // the user flag set, the global one on a change
 inline GUIString LobbyGetTabSelect() { return LobbyPCText(LobbyPC_::Text, (int64_t)EeWonPrefsText::TabSelect); }
 inline void LobbySetTabSelect(const GUIString& inTab) { LobbyPC1(LobbyPC_::ChangeTabSelect, inTab); }
 inline GUIString LobbyGetLastServerName() { return LobbyPCText(LobbyPC_::Text, (int64_t)EeWonPrefsText::LastServerName); }
 inline GUIString LobbyGetLastRoomName() { return LobbyPCText(LobbyPC_::Text, (int64_t)EeWonPrefsText::LastRoomName); }
 inline void LobbySetLastRoom(const GUIString& inServer, const GUIString& inRoom) { LobbyPC2(LobbyPC_::SetLastRoom, inServer, inRoom); }
 
-// the friends, by user id (not owned)
-inline size_t LobbyGetFriendCount() { return (size_t)LobbyPC(LobbyPC_::FriendCount); }
-inline LobbyFriend* LobbyGetFriendAt(size_t inPos) { return (LobbyFriend*)LobbyPC(LobbyPC_::FriendAt, (int64_t)inPos); }
 inline LobbyFriend* LobbyFindFriend(unsigned long inId) { return (LobbyFriend*)LobbyPC(LobbyPC_::FindFriend, (int64_t)inId); }
 // a new friend unless the id is there (the user flag set); the friend
 inline LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inId)
 { return (LobbyFriend*)LobbyPC1(LobbyPC_::AddFriend, inName, (int64_t)inId); }
-inline void LobbyRemoveFriend(unsigned long inId) { LobbyPC(LobbyPC_::RemoveFriend, (int64_t)inId); } // the user flag: whether one went
-// the ignored names, ignoring case; the user flag set to whether the list changed
-inline size_t LobbyGetIgnoredNameCount() { return (size_t)LobbyPC(LobbyPC_::IgnoredCount); }
 inline GUIString LobbyGetIgnoredNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::IgnoredAt, (int64_t)inPos); }
 inline bool LobbyIsNameIgnored(const GUIString& inName) { return LobbyPC1(LobbyPC_::IsIgnored, inName) != 0; }
 inline void LobbySetNameIgnored(const GUIString& inName, bool inIgnore) { LobbyPC1(LobbyPC_::SetIgnored, inName, inIgnore); }
@@ -151,12 +141,8 @@ inline bool LobbyIsCDKeyBlocked(unsigned long inId) { return LobbyPC(LobbyPC_::I
 
 // the LAN names: the current one, the recent ones (at most 50)
 inline GUIString LobbyGetLanName() { return LobbyPCText(LobbyPC_::Text, (int64_t)EeWonPrefsText::LanName); }
-inline size_t LobbyGetLanNameCount() { return (size_t)LobbyPC(LobbyPC_::LanNameCount); }
 inline GUIString LobbyGetLanNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::LanNameAt, (int64_t)inPos); }
 inline void LobbySetLanName(const GUIString& inName) { LobbyPC1(LobbyPC_::SetLanName, inName); }
-inline void LobbyRemoveLanName() { LobbyPC(LobbyPC_::RemoveLanName); } // the most recent other one becomes current
-// the direct-connect addresses and their names, by address
-inline size_t LobbyGetDirectConnectCount() { return (size_t)LobbyPC(LobbyPC_::DirectCount); }
 inline IPAddr LobbyGetDirectConnectAddressAt(size_t inPos)
 {
     const EeWonIpAddr* a = (const EeWonIpAddr*)LobbyPC(LobbyPC_::DirectAddrAt, (int64_t)inPos);
@@ -177,7 +163,6 @@ inline GUIString LobbyGetFilterValueAt(const GUIString& inColumn, size_t inPos)
 inline void LobbyAddFilterValue(const GUIString& inColumn, const GUIString& inValue) { LobbyPC2(LobbyPC_::AddFilterValue, inColumn, inValue); }
 // (an emptied column stays)
 inline void LobbyRemoveFilterValue(const GUIString& inColumn, const GUIString& inValue) { LobbyPC2(LobbyPC_::RemoveFilterValue, inColumn, inValue); }
-inline void LobbyResetFilters() { LobbyPC(LobbyPC_::ResetFilters); } // the defaults copied, the user flag set
 // comma-separated values into a default filter; a column with values is skipped unless appending
 inline void LobbyAddGameOption(const GUIString& inColumn, const GUIString& inValues, bool inAppend)
 { LobbyPC2(LobbyPC_::AddGameOption, inColumn, inValues, inAppend); }

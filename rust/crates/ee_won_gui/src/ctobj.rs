@@ -261,6 +261,9 @@ pub struct EeWonContainer {
     /// `ChildLayoutManager` shell until then). None for a container made without one (the drivers' worlds): the layout
     /// calls go to the host as `CtLayout` ops.
     layout: RefCell<Option<Box<EeWonLayoutMgr>>>,
+    /// The Rust root of a game's root container (R6 WON GUI round 38: RootContainer's overrides run through
+    /// Component's and the container's entries; rootobj.rs sets and clears it), else NULL.
+    pub(crate) root: std::cell::Cell<*const crate::rootobj::EeWonRoot>,
 }
 
 impl EeWonContainer {
@@ -286,6 +289,7 @@ impl EeWonContainer {
                 viewport_area: 0,
             }),
             layout: RefCell::new(None),
+            root: std::cell::Cell::new(std::ptr::null()),
         }
     }
 
@@ -1536,7 +1540,13 @@ pub unsafe extern "C" fn ee_won_ct_call(
     c: isize,
 ) -> isize {
     // SAFETY: live (the contract); a shared reference: the calls out re-enter through this function
-    unsafe { (*ct).call(call, a, b, c) }
+    unsafe {
+        // (the game's root container's RemoveChild is RootContainer's override)
+        if call == EeWonCtCall::RemoveChild && !(*ct).root.get().is_null() {
+            return (*(*ct).root.get()).call(crate::rootobj::EeWonRootCall::RemoveChild, a, b, c);
+        }
+        (*ct).call(call, a, b, c)
+    }
 }
 
 #[cfg(test)]

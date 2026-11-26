@@ -25,8 +25,7 @@ public:
     // the game's map background (EEUIBMapBackground::LoadBackground) describes the textures it cuts
     void SetTextureDescription(const GETextureDescription& inDescription)
         { this->mTextureDescription = *reinterpret_cast<const EeUiTextureDescription*>(&inDescription); }
-    void SetTextureRectangle(const GERectangle& inRectangle)
-        { this->mTextureRectangle = *reinterpret_cast<const EeUiRect*>(&inRectangle); }
+    void SetTextureRectangle(const GERectangle& inRectangle) { this->mTextureRectangle = *reinterpret_cast<const EeUiRect*>(&inRectangle); }
     UString mTextureFileName;
 };
 

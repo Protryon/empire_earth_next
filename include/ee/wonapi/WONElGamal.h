@@ -5,6 +5,7 @@
 // original's `mutable Random`), so a const key changes there as it did.
 #ifndef EE_WONAPI_WONELGAMAL_H
 #define EE_WONAPI_WONELGAMAL_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "ee/wonapi/WONBlowfish.h"
 namespace WONAPI {
 class ElGamal {
@@ -26,7 +27,7 @@ public:
     ~ElGamal() { ee_won_elgamal_free(this->mKey); }
     void Invalidate() { ee_won_elgamal_invalidate(this->mKey); } //3d7820: neither key
     bool IsPrivate() const { return ee_won_elgamal_is_private(this->mKey); } //3d7830
-    bool IsPublic() const { return ee_won_elgamal_is_public(this->mKey); } //3d7840
+    #include EE_WON_DRV(ElGamal_ElGamal) // the drivers' members
     // a private (p, q, g, y, x) or public (p, q, g, y) key and its reduction reciprocal; false when malformed
     bool SetPrivateKey(const void* inKey, int inLength) { return this->SetKey(inKey, inLength, true); } //3d7850
     bool SetPublicKey(const void* inKey, int inLength) { return this->SetKey(inKey, inLength, false); } //3d79e0
@@ -42,8 +43,6 @@ public:
     }
     // the signature of the message's MD5 digest; NULL without a private key
     ByteBufferPtr Sign(const void* inData, int inLength) const { return this->Run(EeWonElGamalOp::Sign, inData, inLength); }
-    ByteBufferPtr GetRawPrivateKey() const { return this->Run(EeWonElGamalOp::RawPrivateKey, NULL, 0); }
-    ByteBufferPtr GetRawPublicKey() const { return this->Run(EeWonElGamalOp::RawPublicKey, NULL, 0); }
     // takes ownership of a key ee_won made (an auth block's); NULL leaves no key
     void Adopt(EeWonElGamal* inKey) { this->mKey = ee_won_elgamal_adopt(this->mKey, inKey); }
     const EeWonElGamal* Raw() const { return this->mKey; } // the Rust key (copied by ee_won_peer_new)

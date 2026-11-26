@@ -4,24 +4,13 @@
 // module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureManager.h"
 #include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "rust/render/ge.h"   // ee_ge_draw2d_fill (ee_ge list2d.rs)
-#include "lle/UIEntityGroup.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEText.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "ee/EmpireEarth.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUserInterface.h"
@@ -123,23 +112,12 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
 #define theControls reinterpret_cast<UIControl**>(ioSlots)
 #define theError static_cast<UITextLabel*>(theControls[0])
     switch (inOp) {
-    case EE_SCREENS_DLG_MESSAGE_SIZE:
-        theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
-        break;
-    case EE_SCREENS_DLG_SWITCH:
-        gUserInterface->SwitchToForm(theBox);
-        break;
-    case EE_SCREENS_DLG_PLACE:
-        theControls[inA]->SetRectangle(EEScratch<GERectangle>(kScratchDialogRectangle));
-        break;
-    case EE_SCREENS_DLG_SET_RECT:
-        memcpy(kDialogSides[inA], &inB, 4);
-        break;
-    case EE_SCREENS_DLG_LINE_HEIGHT:
-        return (uint32_t)gFontTahoma12->GetHeight();
-    case EE_SCREENS_DLG_FLOAT:
-        memcpy(&EEScratch<float[9]>(kScratchDialogFloats)[inA], &inB, 4);
-        break;
+    case EE_SCREENS_DLG_MESSAGE_SIZE: theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB)); break;
+    case EE_SCREENS_DLG_SWITCH: gUserInterface->SwitchToForm(theBox); break;
+    case EE_SCREENS_DLG_PLACE: theControls[inA]->SetRectangle(EEScratch<GERectangle>(kScratchDialogRectangle)); break;
+    case EE_SCREENS_DLG_SET_RECT: memcpy(kDialogSides[inA], &inB, 4); break;
+    case EE_SCREENS_DLG_LINE_HEIGHT: return (uint32_t)gFontTahoma12->GetHeight();
+    case EE_SCREENS_DLG_FLOAT: memcpy(&EEScratch<float[9]>(kScratchDialogFloats)[inA], &inB, 4); break;
     }
     return 0;
 }

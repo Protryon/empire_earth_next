@@ -88,16 +88,10 @@ public:
     virtual long DrawTextA() { return EE_SHELL_IS(DRAW_TEXT) ? (long)EE_SHELL_TO(DRAW_TEXT) : B::DrawTextA(); }
     virtual long MouseLButtonDown() { return EE_SHELL_IS(MOUSE_L_DOWN) ? (long)EE_SHELL_TO(MOUSE_L_DOWN) : B::MouseLButtonDown(); }
     virtual long MouseLButtonUp() { return EE_SHELL_IS(MOUSE_L_UP) ? (long)EE_SHELL_TO(MOUSE_L_UP) : B::MouseLButtonUp(); }
-    virtual long MouseLButtonDoublePressed()
-    {
-        return EE_SHELL_IS(MOUSE_L_DOUBLE) ? (long)EE_SHELL_TO(MOUSE_L_DOUBLE) : B::MouseLButtonDoublePressed();
-    }
+    virtual long MouseLButtonDoublePressed() { return EE_SHELL_IS(MOUSE_L_DOUBLE) ? (long)EE_SHELL_TO(MOUSE_L_DOUBLE) : B::MouseLButtonDoublePressed(); }
     virtual long MouseRButtonDown() { return EE_SHELL_IS(MOUSE_R_DOWN) ? (long)EE_SHELL_TO(MOUSE_R_DOWN) : B::MouseRButtonDown(); }
     virtual long MouseRButtonUp() { return EE_SHELL_IS(MOUSE_R_UP) ? (long)EE_SHELL_TO(MOUSE_R_UP) : B::MouseRButtonUp(); }
-    virtual long UpdateKeyboard()
-    {
-        return EE_SHELL_IS(UPDATE_KEYBOARD) ? (long)EE_SHELL_TO(UPDATE_KEYBOARD) : B::UpdateKeyboard();
-    }
+    virtual long UpdateKeyboard() { return EE_SHELL_IS(UPDATE_KEYBOARD) ? (long)EE_SHELL_TO(UPDATE_KEYBOARD) : B::UpdateKeyboard(); }
     virtual void TabbedTo() { EE_SHELL_IS(TABBED_TO) ? (void)EE_SHELL_TO(TABBED_TO) : B::TabbedTo(); }
     virtual void TabbedFrom() { EE_SHELL_IS(TABBED_FROM) ? (void)EE_SHELL_TO(TABBED_FROM) : B::TabbedFrom(); }
     virtual long MouseMove(const GE2DPoint& inLocation)
@@ -215,10 +209,7 @@ public:
         this->Make(inKind, static_cast<UIComboBox*>(this), inArgs);
     }
     unsigned long Selection() const { return this->GetSelectionIndex(); }
-    virtual void ChangeSelection()
-    {
-        EE_SHELL_IS(CHANGE_SELECTION) ? (void)EE_SHELL_TO(CHANGE_SELECTION) : UIComboBox::ChangeSelection();
-    }
+    virtual void ChangeSelection() { EE_SHELL_IS(CHANGE_SELECTION) ? (void)EE_SHELL_TO(CHANGE_SELECTION) : UIComboBox::ChangeSelection(); }
     virtual GEText* Text(int64_t) { return this->GetGEText(); }
     int64_t Extra(uint32_t inVirtual, int64_t, int64_t, bool inSelf)
     {
@@ -256,9 +247,7 @@ public:
     {
         switch (inSelf ? 0 : inVirtual) {
         case EE_SCREENS_SV_BUTTON_UP: UILBString::ButtonUp(); return 0;
-        case EE_SCREENS_SV_CHANGE_SELECTION_INDEX:
-            UILBString::ChangeSelectionIndex((unsigned long)inA, (inB & 1) != 0, (inB & 2) != 0);
-            return 0;
+        case EE_SCREENS_SV_CHANGE_SELECTION_INDEX: UILBString::ChangeSelectionIndex((unsigned long)inA, (inB & 1) != 0, (inB & 2) != 0); return 0;
         default: return 0;
         }
     }
@@ -275,10 +264,7 @@ public:
     {
         this->Make(inKind, static_cast<UIEditBox*>(this), inArgs);
     }
-    virtual void ProcessEnterKey()
-    {
-        EE_SHELL_IS(PROCESS_ENTER) ? (void)EE_SHELL_TO(PROCESS_ENTER) : UIEditBox::ProcessEnterKey();
-    }
+    virtual void ProcessEnterKey() { EE_SHELL_IS(PROCESS_ENTER) ? (void)EE_SHELL_TO(PROCESS_ENTER) : UIEditBox::ProcessEnterKey(); }
     virtual GEText* Text(int64_t) { return this->GetGEText(); }
     int64_t Extra(uint32_t inVirtual, int64_t, int64_t, bool inSelf)
     {
@@ -295,10 +281,7 @@ public:
     {
         this->Make(inKind, static_cast<UISlider*>(this), inArgs);
     }
-    virtual void ChangeRange(unsigned long inValue)
-    {
-        EE_SHELL_IS(CHANGE_RANGE) ? (void)EE_SHELL_TO(CHANGE_RANGE, inValue) : UISlider::ChangeRange(inValue);
-    }
+    virtual void ChangeRange(unsigned long inValue) { EE_SHELL_IS(CHANGE_RANGE) ? (void)EE_SHELL_TO(CHANGE_RANGE, inValue) : UISlider::ChangeRange(inValue); }
     int64_t Extra(uint32_t inVirtual, int64_t inA, int64_t, bool inSelf)
     {
         return inVirtual == EE_SCREENS_SV_CHANGE_RANGE && !inSelf ? (UISlider::ChangeRange((unsigned long)inA), 0) : 0;
@@ -340,19 +323,10 @@ public:
     }
     virtual void Activate() { EE_SHELL_IS(ACTIVATE) ? (void)EE_SHELL_TO(ACTIVATE) : UIForm::Activate(); }
     virtual void Deactivate() { EE_SHELL_IS(DEACTIVATE) ? (void)EE_SHELL_TO(DEACTIVATE) : UIForm::Deactivate(); }
-    virtual void SetHelpTextPopupLocation()
-    {
-        EE_SHELL_IS(HELP_POPUP) ? (void)EE_SHELL_TO(HELP_POPUP) : UIForm::SetHelpTextPopupLocation();
-    }
-    virtual long UpdateKeyboard()
-    {
-        return EE_SHELL_IS(UPDATE_KEYBOARD) ? (long)EE_SHELL_TO(UPDATE_KEYBOARD) : UIForm::UpdateKeyboard();
-    }
+    virtual void SetHelpTextPopupLocation() { EE_SHELL_IS(HELP_POPUP) ? (void)EE_SHELL_TO(HELP_POPUP) : UIForm::SetHelpTextPopupLocation(); }
+    virtual long UpdateKeyboard() { return EE_SHELL_IS(UPDATE_KEYBOARD) ? (long)EE_SHELL_TO(UPDATE_KEYBOARD) : UIForm::UpdateKeyboard(); }
     virtual long UpdateMouse() { return EE_SHELL_IS(UPDATE_MOUSE) ? (long)EE_SHELL_TO(UPDATE_MOUSE) : UIForm::UpdateMouse(); }
-    virtual void RelayoutForm(const GERectangle& inR)
-    {
-        EE_SHELL_IS(RELAYOUT) ? (void)EE_SHELL_TO(RELAYOUT, 0, 0, RectF(inR).f) : UIForm::RelayoutForm(inR);
-    }
+    virtual void RelayoutForm(const GERectangle& inR) { EE_SHELL_IS(RELAYOUT) ? (void)EE_SHELL_TO(RELAYOUT, 0, 0, RectF(inR).f) : UIForm::RelayoutForm(inR); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat)
     {
         return EE_SHELL_IS(TRANSLATED_KEY) ? (long)EE_SHELL_TO(TRANSLATED_KEY, (int64_t)inKey, inRepeat)

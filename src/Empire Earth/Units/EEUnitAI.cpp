@@ -5,34 +5,15 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEUnitUpdate.h"
-#include "rust/sim/units.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEPathManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPhysics.h"
 #include "ee/EmpireEarth.h"
@@ -45,15 +26,12 @@
 #include "ee/EEAnimal.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEAirTrafficControl.h"
 #include "ee/EECombatGoals.h"
-#include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
 extern long gUnitAIWaitScale;
-
 
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (EEUCLandable.cpp; provisional name)
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRange);
@@ -79,10 +57,7 @@ static GE3DPoint sCondSunkPosition;
 static GETransformation sCondSunkTransformation(false);
 static GEBoundingBox sCondSunkBox;
 
-static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint)
-{
-    memcpy(ioIo->p, &inPoint.mX, sizeof(ioIo->p));   // (a GE3DPoint is its three floats)
-}
+static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint) { memcpy(ioIo->p, &inPoint.mX, sizeof(ioIo->p)); }  // (a GE3DPoint is its three floats)
 
 extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsCondIo* ioIo)
 {
@@ -109,15 +84,11 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_SUNK_LOCATE:
         theUnit->mPhysicalModel.GetLocation().Apply(theUnit->mPhysicalModel.GetModel()->GetInternalTransform(theUnit->mPhysicalModel.GetFrame()), sCondSunkTransformation = GETransformation(false));
         return 0;
-    case EE_UNITS_COND_SUNK_SCALE:
-        sCondSunkTransformation.Scale(theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale());
-        return 0;
+    case EE_UNITS_COND_SUNK_SCALE: sCondSunkTransformation.Scale(theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale()); return 0;
     case EE_UNITS_COND_SUNK_SET_X: sCondSunkTransformation.SetX(sCondSunkPosition.GetX()); return 0;
     case EE_UNITS_COND_SUNK_SET_Y: sCondSunkTransformation.SetY(sCondSunkPosition.GetY()); return 0;
     case EE_UNITS_COND_SUNK_SET_Z: sCondSunkTransformation.SetZ(sCondSunkPosition.GetZ()); return 0;
-    case EE_UNITS_COND_SUNK_BOX:
-        theUnit->mPhysicalModel.GetModel()->GetBoundingBox(theUnit->mPhysicalModel.GetFrame()).Transform(sCondSunkTransformation, sCondSunkBox);
-        return 0;
+    case EE_UNITS_COND_SUNK_BOX: theUnit->mPhysicalModel.GetModel()->GetBoundingBox(theUnit->mPhysicalModel.GetFrame()).Transform(sCondSunkTransformation, sCondSunkBox); return 0;
     case EE_UNITS_COND_SUNK_TOP_Z: ioIo->f = sCondSunkBox.GetTopRightBack().GetZ(); return 0;
     // ---- uai_cond.rs's statements (the compound answers and AttackNearby)
     case EE_UNITS_UAI_GOAL_KIND: return CondGoal(inB)->mKind;

@@ -72,10 +72,7 @@ private:
 // iterates, where the order is not observable.
 template <class T>
 struct EEUnitHandleLess {
-    bool operator()(const EEUnitHandle<T>& inFirst, const EEUnitHandle<T>& inSecond) const
-    {
-        return inFirst.GetSavedID() < inSecond.GetSavedID();
-    }
+    bool operator()(const EEUnitHandle<T>& inFirst, const EEUnitHandle<T>& inSecond) const { return inFirst.GetSavedID() < inSecond.GetSavedID(); }
 };
 
 #endif

@@ -4,18 +4,14 @@
 // Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
 #include "lle/UIFontTable.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
 #include "ee/EEUIBUpgrade.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIStatusBar.h"
 #include "ee/EEUIFMGStatusBar.h"
-#include "rust/game/screens.h"   // ee_screens_upgrade_bar_mouse's constants (ee_screens upgrade.rs)
 
 
 // ---- the one-statement shims of ee_screens status_bar_calls.rs (UI lane round 8: the constructor's layout, the

@@ -16,8 +16,6 @@ public:
         { return this->mU != inCoordinate.mU || this->mV != inCoordinate.mV; }
     float GetU() const { return this->mU; }
     float GetV() const { return this->mV; }
-    void SetU(float inU) { this->mU = inU; }
-    void SetV(float inV) { this->mV = inV; }
 
     float mU;                               // +0x00
     float mV;                               // +0x04

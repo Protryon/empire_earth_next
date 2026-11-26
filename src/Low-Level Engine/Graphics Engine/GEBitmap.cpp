@@ -11,41 +11,19 @@
 #include <string.h>
 
 #include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
 #include "lle/URandom.h"
 #include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GE2DVertex.h"
-#include "lle/GEBitmap.h"
-#include "lle/GELine.h"
-#include "lle/UWideString.h"
 #include "lle/GEMaterial.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "platform/PlatFont.h"
 #include "platform/PlatWindow.h"
 #include "GERustText.h"
-#include "GERustMath.h"
 #include <mbstring.h>
-#include "lle/Graphics Engine.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -214,7 +192,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         return (intptr_t)((GEScreen*)inObj)->GetTextureManager()->MakeTexture((GESurface*)a);
     case EeGeFbOp::VerifySurface: ESVerify(__FILE__, 228, "theResult == keseOK"); return 0;
     case EeGeFbOp::VerifyTexture: ESVerify(__FILE__, 235, "((GETexture*)inObj) != NULL"); return 0;
-    default:
-        return 0;
+    default: return 0;
     }
 }

@@ -30,11 +30,7 @@
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "rust/base/png.h"
-#include "rust/render/ge.h"
-#include "rust/render/openformats.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
@@ -115,8 +111,7 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     case EeGeTexOp::RasterDestroy:
         ((GERasterizer*)a)->DestroyTextureHandle(((GETexture*)inObj));
         return 0;
-    default:
-        return 0;
+    default: return 0;
     }
 }
 
@@ -162,8 +157,7 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
         return (intptr_t)new GETexture(((GETextureManager*)inOwner));
     case EeGeManOp::TexNewFromSurface:
         return (intptr_t)new GETexture((GESurface*)inObj, ((GETextureManager*)inOwner));
-    default:
-        return 0;
+    default: return 0;
     }
 }
 
@@ -213,13 +207,7 @@ long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType,
 }
 
 // Loads an image file into the surface by file type (BMP: unsupported, JPG, JPG2, PNG; TGA: no longer read, D9)
-long GESurface::Load(FSFileSpec& inFile, unsigned char inType)
-{
-    return ee_of_surf_load(&GESurfaceHost, this, &inFile, inType);
-}
+long GESurface::Load(FSFileSpec& inFile, unsigned char inType) { return ee_of_surf_load(&GESurfaceHost, this, &inFile, inType); }
 
 // Saves the surface as an image file of the given type (BMP, JPG, JPG2)
-long GESurface::Save(FSFileSpec& inFile, unsigned char inType)
-{
-    return ee_of_surf_save(&GESurfaceHost, this, &inFile, inType);
-}
+long GESurface::Save(FSFileSpec& inFile, unsigned char inType) { return ee_of_surf_save(&GESurfaceHost, this, &inFile, inType); }

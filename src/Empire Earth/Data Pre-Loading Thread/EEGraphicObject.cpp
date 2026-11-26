@@ -17,20 +17,14 @@
 
 std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount read it)
 
-#include "lle/GEColor.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GESurface.h"
 #include "lle/GETextureManager.h"
-#include "ee/EEPhysics.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEMediaUse.h"
 #include "ee/EEWheel.h"
 #include "ee/EESoundObject.h"
-#include "rust/render/gfx.h"
-#include "rust/game/preload_media.h"
 
 // The wheels of a unit model, as the graphic object makes them from its model's parts (were EEWheel.cpp's, which
 // keeps their Update: the graphic object named no unit code for them; PORT_LEARNINGS "Cycle cuts")

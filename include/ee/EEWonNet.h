@@ -5,6 +5,7 @@
 // lle/LowLevelEngine.h.
 #ifndef EE_EEWONNET_H
 #define EE_EEWONNET_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 
 #include <stdint.h>   // int32_t/uint32_t: the network fields' fixed widths
 #include "platform/PlatSocket.h"    // PlatSockAddrIn (sockaddr_in's layout)
@@ -22,8 +23,8 @@ class UITextLabel;
 
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
-struct EeWonDirList; // rust/won_net/dirlist.h (a directory listing)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
+#include "rust/won_net/dirlist.h"
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
 
@@ -73,8 +74,7 @@ public:
     // 2b2d50 / 2b2df0: from "host[:port]" (by DNS / dotted only), the default port if none; the validity
     bool SetWithDefaultPort(const std::string& inText, unsigned short inPort)
     { return ee_won_ipaddr_set_with_default_port(this->mAddr, Bytes(inText), inText.length(), inPort); }
-    bool SetWithDefaultPortNoDNS(const std::string& inText, unsigned short inPort)
-    { return ee_won_ipaddr_set_no_dns(this->mAddr, Bytes(inText), inText.length(), inPort); }
+    #include EE_WON_DRV(IPAddr_IPAddr) // the drivers' members
     // 2b3070: "host:port", as formatted into a 50-byte buffer (a long remembered host name is cut short)
     std::string GetHostAndPortString(bool inUseOriginal = true) const
     { std::string aText; ee_won_ipaddr_host_and_port_string(this->mAddr, inUseOriginal, TextSink, &aText); return aText; }
@@ -87,7 +87,6 @@ public:
     bool IsValid() const { return ee_won_ipaddr_valid(this->mAddr); }
     // 0x2b29c0 / 0x2b29d0: the 6-byte wire form (port then IP, network order); setting it forgets the host name
     const char* GetSixByte() const { return ee_won_ipaddr_six(this->mAddr); }
-    void SetSixByte(const void* inSix) { ee_won_ipaddr_set_six(this->mAddr, static_cast<const uint8_t*>(inSix)); }
     // 0x2b31f0 orders by the wire form (port first); 2b3220 / 2b3240 compare it
     bool operator<(const IPAddr& inOther) const { return ee_won_ipaddr_compare(this->mAddr, inOther.mAddr) < 0; }
     bool operator==(const IPAddr& inOther) const { return ee_won_ipaddr_compare(this->mAddr, inOther.mAddr) == 0; }
@@ -95,8 +94,6 @@ public:
     // 2b3260: by host-order IP, then by port
     int StringCompare(const IPAddr& inOther) const
     { return ee_won_ipaddr_string_compare_values(this->mAddr, inOther.mAddr); }
-    // ServerContext's conversions to and from servctx.rs's EeWonAddr (the host borrowed while this value lives)
-    EeWonAddr ToRaw() const { return ee_won_ipaddr_to_raw(this->mAddr); }
     void FromRaw(const EeWonAddr& inRaw) { ee_won_ipaddr_from_raw(this->mAddr, &inRaw); }
     // the Rust value, for the Rust objects that copy it (a socket's destination, an op's address)
     const EeWonIpAddr* GetValue() const { return this->mAddr; }
@@ -245,20 +242,20 @@ class CDKey; // ee/wonapi/WONAuthContext.h
 
 // A directory listing (R6 WON round 34): DirEntity (0x7c bytes: ctor 2f0190, dtor 2f0290, GetNetAddrAsIP 2f0400), its
 // data objects and ACLs and the DirEntityList of SmartPtrs are Rust's (rust/crates/ee_won_net/src/dirlist.rs); this
-// owns one Rust list (moved, never copied) and reads its entities by index (WONDir/DirEntityReplyParser.cpp).
+// owns one Rust list (moved, never copied) and reads its entities by index (the texts: WONRouting.h).
 class DirList {
 public:
-    explicit DirList(EeWonDirList* inList = NULL); // takes the list; NULL: a new empty one
+    explicit DirList(EeWonDirList* inList = NULL) : mList(inList != NULL ? inList : ee_won_dirlist_new()) {} // NULL: a new one
     DirList(DirList&& inOther) : mList(inOther.mList) { inOther.mList = NULL; }
     DirList& operator=(DirList&& inOther) { std::swap(this->mList, inOther.mList); return *this; }
-    ~DirList();
-    size_t size() const;
+    ~DirList() { ee_won_dirlist_free(this->mList); }
+    size_t size() const { return ee_won_dirlist_len(this->mList); }
     bool empty() const { return this->size() == 0; }
-    void clear();
-    void Keep(const DirList& inFrom, size_t inIndex); // push_back(inFrom's entity)
+    void clear() { ee_won_dirlist_clear(this->mList); }
+    void Keep(const DirList& inFrom, size_t inIndex) { ee_won_dirlist_keep(this->mList, inFrom.mList, inIndex); } // push_back
     std::wstring Name(size_t inIndex) const; // mName
     std::wstring DisplayName(size_t inIndex) const; // mDisplayName
-    IPAddr Addr(size_t inIndex) const; // GetNetAddrAsIP()
+    IPAddr Addr(size_t inIndex) const { return IPAddr::FromValue(ee_won_dirlist_addr(this->mList, inIndex)); } // GetNetAddrAsIP()
     EeWonDirList* get() const { return this->mList; }
 private:
     DirList(const DirList&);

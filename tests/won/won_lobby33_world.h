@@ -416,7 +416,7 @@ struct StringParser {
         return true;
     }
 };
-enum WONStatus { WS_None = -1, WS_Success = 0 };
+enum WONStatus { WS_None = 100004, WS_Success = 0 }; // WS_None is the game's (lobbyprv.rs's constructor value)
 enum LobbyGameType : int {};
 enum LobbyStatus : int {};
 enum LobbyRunMode : int {};

@@ -8,6 +8,7 @@
 // identity, the command strings of ids 0..41), every object freed since the last step (in order) and every live
 // object's reference count are compared; at the end the parsers are freed and the worlds emptied, and the traces compared again.
 //   won_chatparser_test [--seqs N] [--seed S] [--print]     exit code: the number of mismatching sequences (max 100)
+#define EE_WON_STRINGPARSER_DRIVER // StringParser's list reads (won_parser_lists.inl)
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>

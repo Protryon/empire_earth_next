@@ -18,31 +18,37 @@ class EEAnimal;
 class EEUnit;
 class EEPlayer;
 class FSFile;
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);   // EEPlayer.h
 
 class EEHerd : public EEAIArea, public EeHerdFields {
 public:
     static const UString sData;             // "EEHerd-SaveLoadData" (guarded chain 0xa191a)
 
-    EEHerd();
+    EEHerd() { ee_cp_herd_construct_default(static_cast<void*>(this), this); }
     // 0xa19ff (ret 0xc): the player, the animal index (EEAnimal::Get), the herd id
-    EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID);
+    EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID) { ee_cp_herd_construct(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inPlayer, inAnimal, inID); }
     ~EEHerd();                      // +0x00 0xa1b1e (??_G 0xa19e3)
     // +0x08 0xa2775 (ret 4): EEAIArea::Create, then (unless a load) the territory widened by a random margin; PickLeader
-    void Create(const std::vector<U2DPoint<long> >& inTiles);
+    void Create(const std::vector<U2DPoint<long> >& inTiles) { ee_cp_herd_create(static_cast<void*>(this), this, reinterpret_cast<const EeHerdPoint*>(inTiles.data()), inTiles.size()); }
     // +0x20: EETown's body (ICF-folded into EETown::GetRandomPoint 0xac203): a random hull point on the map
-    U2DPoint<long> GetRandomPoint();
+    U2DPoint<long> GetRandomPoint() { EeHerdPoint p = ee_cp_herd_random_point(this, this); return U2DPoint<long>(p.mX, p.mY); }
 
-    bool AddUnit(EEComplexUnit* inUnit);
-    void HandleUnitHit(EEComplexUnit* inUnit);  // 0xa1d0f: the unit was attacked: flee or fight back
-    void AttackBack(EEComplexUnit* inUnit, bool inAll);
-    bool CanTake(EEComplexUnit* inUnit, bool inCheckRange);  // 0xa4263: may inUnit join
-    bool HasUnit(EEComplexUnit* inUnit);
-    bool RemoveUnit(EEComplexUnit* inUnit);
-    void Update(unsigned long inTime);      // 0xa33bd: the per-state update
+    bool AddUnit(EEComplexUnit* inUnit) { return ee_cp_herd_add_unit(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inUnit); }
+    // 0xa1d0f: the unit was attacked: flee or fight back
+    void HandleUnitHit(EEComplexUnit* inUnit) { ee_cp_herd_handle_unit_hit(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inUnit); }
+    void AttackBack(EEComplexUnit* inUnit, bool inAll) { ee_cp_herd_attack_back(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inUnit, inAll); }
+    // 0xa4263: may inUnit join
+    bool CanTake(EEComplexUnit* inUnit, bool inCheckRange) { return ee_cp_herd_can_take(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inUnit, inCheckRange); }
+    bool HasUnit(EEComplexUnit* inUnit) { return ee_cp_herd_has_unit(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inUnit); }
+    bool RemoveUnit(EEComplexUnit* inUnit) { return ee_cp_herd_remove_unit(static_cast<void*>(this), this, (uint64_t)(uintptr_t)inUnit); }
+    // 0xa33bd: the per-state update
+    void Update(unsigned long inTime) { ee_cp_herd_update(static_cast<void*>(this), this, inTime); }
     static bool IsAnimalOnMap(EEUnit* inUnit);
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    long RepairPointers(long inMajorVersion, long inMinorVersion);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+        { return ee_cp_herd_load(this, this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &inFile, &EESaveFilePrimitive); }
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+        { return ee_cp_herd_save(this, this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &outFile, &EESaveFilePrimitive); }
+    long RepairPointers(long inMajorVersion, long inMinorVersion) { return ee_cp_herd_repair_pointers(static_cast<void*>(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }
     void GetUnits(std::vector<EEComplexUnit*>& outUnits);   // mUnits, in order
 
     EEAnimal* GetAnimal() const { return reinterpret_cast<EEAnimal*>((uintptr_t)this->mAnimal); }

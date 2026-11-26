@@ -57,7 +57,7 @@ static intptr_t Lan(EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC, intpt
     case EeWonLobbyOp::LanRunTimer: op->RunAsTimer((DWORD)inC); return 0;
     case EeWonLobbyOp::LanSendTo: {
         IPAddr aTo = Addr(inB);
-        static_cast<QueueSocket*>(static_cast<RefCount*>(inA))->QueueOp(new SocketOp(EeWonCoreSocketOp::SendTo, NULL, LanMessageOf(NULL, inC, inD, aHold), &aTo), -1);
+        static_cast<QueueSocket*>(static_cast<RefCount*>(inA))->QueueOp(new SocketOp(EeWonCoreSocketOp::SendTo, NULL, LanMessageOf(NULL, inC, inD, aHold), aTo.GetValue()), -1);
         return 0;
     }
     case EeWonLobbyOp::LanOpOnSocket: {

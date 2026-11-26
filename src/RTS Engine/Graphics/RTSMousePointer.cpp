@@ -9,12 +9,9 @@
 #include "lle/GESurface.h"
 #include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/Input System.h"
 
 #include "ee/RTSMouse.h"
 #include "ee/RTSMousePointer.h"
-#include "rust/base/math.h"
-#include "rust/game/rts.h"
 
 // The shims mouse_pointer.rs calls (PointerCpp)
 extern "C" {

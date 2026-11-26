@@ -18,26 +18,16 @@
 #include <functional>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUGRust.h"
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEAutoPathRequest.h"
-#include "ee/EEAIPathSubSector.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEAIContinentManager.h"
 
 #include "ee/EEPathManager.h"
-#include "rust/sim/astar.h"   // ee_path_*: the path splicing (ee_astar path_splice.rs)
-#include "rust/sim/units.h"
 
 static_assert(sizeof(GE3DPoint) == sizeof(EePathPoint) && offsetof(GE3DPoint, mZ) == offsetof(EePathPoint, z),
               "GE3DPoint");
@@ -61,14 +51,11 @@ extern "C" void ee_path_after_load(void (*inFixup)())
 static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
 {
     switch (inOp) {
-    case EE_PATH_WORLD_UNIT:
-        return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->i[0])));
+    case EE_PATH_WORLD_UNIT: return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->i[0])));
     case EE_PATH_CLOSEST_TILE:   // ClampTile's (pm_apply.rs): map h1's tile closest to the GE3DPoint at i2, as longs at i0, i1
         reinterpret_cast<EEMap*>(io->h[1])->GetClosestTile(reinterpret_cast<GE3DPoint*>(&io->i[2]), reinterpret_cast<long*>(&io->i[0]), reinterpret_cast<long*>(&io->i[1]));
         return 0;
-    case EE_PATH_UNIT_STRANDED:
-        reinterpret_cast<EEComplexUnit*>(io->h[0])->mPlayer->UnitStranded(reinterpret_cast<EEComplexUnit*>(io->h[0]));
-        return 0;
+    case EE_PATH_UNIT_STRANDED: reinterpret_cast<EEComplexUnit*>(io->h[0])->mPlayer->UnitStranded(reinterpret_cast<EEComplexUnit*>(io->h[0])); return 0;
     }
     return 0;
 }
@@ -79,7 +66,4 @@ EEPathManager::EEPathManager() : mRust(ee_path_manager_new(EEPathManagerHost, th
 }
 
 // Destroys the path manager (Clear, then the Rust manager freed)
-EEPathManager::~EEPathManager()
-{
-    this->mRust = ee_path_manager_destroy(this->mRust);
-}
+EEPathManager::~EEPathManager() { this->mRust = ee_path_manager_destroy(this->mRust); }

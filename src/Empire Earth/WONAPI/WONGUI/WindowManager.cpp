@@ -59,40 +59,14 @@ static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
     }
 }
 
-static intptr_t WmWinCall(Window* t, intptr_t call, intptr_t c, intptr_t d)
-{
-    // (the window's and its root's own calls are gamewin.rs's: R6 WON GUI round 37)
-    switch ((EeWonWmWin)call) {
-    case EeWonWmWin::HandleMouse: t->HandleEvent(EeWonWinCall::HandleMouseEvent, (InputEvent*)c); return 0;
-    case EeWonWmWin::HandleKey: t->HandleEvent(EeWonWinCall::HandleKeyEvent, (InputEvent*)c); return 0;
-    case EeWonWmWin::HandleInput: t->HandleEvent(EeWonWinCall::HandleInputEvent, (InputEvent*)c); return 0;
-    case EeWonWmWin::CloseEvent: return 0; // (no window ever had a close event)
-    default: return 0;
-    }
-}
-
-// R6 WON round 34: a window event's fields and methods (EeWonGuiOp::WmEvent)
-static intptr_t WmEventCall(WindowEventBase* t, intptr_t call, intptr_t c)
-{
-    switch ((EeWonWmEvent)call) {
-    case EeWonWmEvent::Type: return (intptr_t)t->mEventType;
-    case EeWonWmEvent::Window: return (intptr_t)t->mWindow;
-    case EeWonWmEvent::SetWindow: t->mWindow = (Window*)c; return 0;
-    // Mouse, SetMouse, Button, Key, Size and SetSize are guisplit.rs's over the input event's record (WmInputRec)
-    case EeWonWmEvent::Deliver: t->Deliver(); return 0;
-    }
-    return 0;
-}
-
 extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WindowManager* t = (WindowManager*)inWm;
     switch (op) {
     case Op::WmTick: return (intptr_t)(uint32_t)WONTickCount();
     case Op::WmComp: return WmCompCall((Component*)b, a, c, d);
-    case Op::WmWin: return WmWinCall((Window*)b, a, c, d);
     case Op::WmScreenRect: t->GetScreenRect(*(WONRectangle*)a); return 0;
-    case Op::WmInputRec: return (intptr_t)&static_cast<InputEvent*>((WindowEventBase*)a)->mEv;
+    case Op::WmInputRec: return (intptr_t)&((WindowEventBase*)a)->mRec;
     case Op::WmDecodeKeep: sHostImage = t->mImageDecoder.Decode((DisplayContext*)a, std::string((const char*)b, (size_t)c).c_str()); return 0;
     case Op::WmHostImage: return (intptr_t)sHostImage.get();
     case Op::WmHostImageClear: sHostImage = SmartPtr<NativeImage>(); return 0;
@@ -103,7 +77,9 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmNewDelayImage: return (intptr_t)new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)a, (size_t)b, sHostAttr.mWidth, sHostAttr.mHeight));
     case Op::WmSetStandardColor: t->mColorScheme->SetStandardColor((int)a, (DWORD)(uint32_t)b); return 0;
     case Op::WmNextEvent: t->GetNextEvent(); return 0;
-    case Op::WmEvent: return WmEventCall((WindowEventBase*)b, a, c);
+    // (an event's type, window and input record and an input event's delivery are guisplit.rs's over its record,
+    // the window's calls gamewin.rs's: R6 WON GUI round 38)
+    case Op::WmEvent: if ((EeWonWmEvent)a == EeWonWmEvent::Deliver) ((WindowEventBase*)b)->Deliver(); return 0;
     case Op::WmSignal: t->Signal(); return 0;
     // the statements of the new popup window, the default window font, the resolution and the size events
     // (guisplit.rs composes them: R6 WON round 33)

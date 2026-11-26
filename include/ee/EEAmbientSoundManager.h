@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "rust/game/app.h"
+#include "rust/game/gamecpp.h"
 
 class EEAmbientSound;
 class FSFile;
@@ -22,11 +23,14 @@ class EEAmbientWorldAnalyzer : public EeAppAmbientCounts {
 public:
     EEAmbientWorldAnalyzer() { this->Clear(); this->mForestType = 0; }
     virtual ~EEAmbientWorldAnalyzer() {}   // inline (its ??_G 0x12735f is an EEAmbientSoundManager.cpp COMDAT)
-    void Clear();                           // 0x124ec1 (zeroes the counts)
+    // 0x124ec1 (zeroes the counts)
+    void Clear() { ee_app_ambient_clear(this); }
     // 0x124e80 (ret 4): counts a placed object whose class +0x268 is 3 (EERenderObject::FillObject) (provisional name)
-    void CountTree(EEUnit* inUnit);
-    void CountUnit(EEComplexUnit* inUnit);  // 0x124d63 (ret 4; EERenderObject 0x10d47c): counts the unit into +0x04..+0x1c
-    void AddTree(EEUnit* inUnit);           // 0x124e99 (ret 4; CountTree's callee): +0x08, then the forest's +0x68
+    void CountTree(EEUnit* inUnit) { ee_gamecpp_ambient_count_tree(this, inUnit); }
+    // 0x124d63 (ret 4; EERenderObject 0x10d47c): counts the unit into +0x04..+0x1c
+    void CountUnit(EEComplexUnit* inUnit) { ee_gamecpp_ambient_count_unit(this, inUnit); }
+    // 0x124e99 (ret 4; CountTree's callee): +0x08, then the forest's +0x68
+    void AddTree(EEUnit* inUnit) { ee_gamecpp_ambient_add_tree(this, inUnit); }
 };
 // The manager's plain members are EeAppAmbientFields (ee_app ambient.rs: mState 1..4, mFrameCount, mNextUpdateFrame,
 // mUpdateInterval (10), mIsEnabled, mIsPaused), the base; every decision is Rust over EEAmbientSoundManager.cpp's host.
@@ -44,7 +48,8 @@ public:
     // inline: its COMDAT 0x111709 follows its first user's unit (EERenderObject.cpp); true: the sounds may be updated
     bool IsUpdateDue() { return this->mFrameCount >= this->mNextUpdateFrame && this->mIsEnabled == true && !this->mIsPaused; }
     void Update();                          // 0x125685 (when IsUpdateDue was true)
-    long Load(FSFile& inFile);              // 0x125012 (the 0x98-byte sound records)
+    // 0x125012 (the 0x98-byte sound records)
+    long Load(FSFile& inFile) { return ee_gamecpp_ambient_load(this, &inFile); }
     void ClearSounds();
     float Random() { return this->mRandom.Generate(); }   // inline (COMDAT 0x12737c)
 
