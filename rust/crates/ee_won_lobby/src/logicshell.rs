@@ -539,7 +539,11 @@ pub(crate) fn logic_op(logic: *mut c_void, op: crate::logics::EeWonLogicOp, a: i
         O::NumTracked => {
             let t = tracker(logic);
             // SAFETY: the logic's live tracker
-            if t.is_null() { 0 } else { unsafe { ee_won_op_tracker_len(t) as i32 as isize } }
+            if t.is_null() {
+                0
+            } else {
+                unsafe { ee_won_op_tracker_len(t) as i32 as isize }
+            }
         }
         O::KillTracked => {
             let t = tracker(logic);
