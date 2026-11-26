@@ -206,9 +206,6 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEPhysics.h"
 
-// New (R5a.6): the RTS layer's way to the input mouse (ee/RTSMouse.h), without the game's mouse header
-RTSMouse* RTSGetInputMouse() { return gMouse; }
-
 #include "lle/UIControl.h"
 #include "ee/EEUIManager.h"
 
@@ -249,13 +246,6 @@ EEGameState::~EEGameState()
 void EESetGameViewRectangle(const GERectangle& inRectangle)
 {
     ee_gamecpp_startup_game_view(reinterpret_cast<const EeGeRectangle*>(&inRectangle));
-}
-
-// Stops the music, ambient sounds (disabling them) and every one-shot sound
-// (EEWorld::Clear and the main game form call it)
-void EEStopAllSounds()
-{
-    ee_gamecpp_startup_stop_sounds();
 }
 
 // Points the texture, model and sound managers at the data search path
@@ -304,11 +294,9 @@ void EEReleaseInstanceMutex(bool inShutdown)
 
 extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
 
-
 #include "ee/EEWonNet.h"
 
 #include "ee/EEButtonObject.h"
-
 
 // port: the menus' resolution. Their controls are laid out for 1024x768 (pixel sizes; the forms anchor to their
 // edges), so they keep its height of 768 and take the game resolution's aspect ratio: the frame scales to the window
@@ -342,7 +330,6 @@ bool EEInitializeDisplay()
 // returns 1 when the original Empire Earth install is missing, else 0
 // (the previous instance and show command arguments are unused)
 // (EESimPreferences, the window's event pump and the native message hook: gamecpp entry.rs, window_pump.rs)
-
 
 // The game's run (ee_game gamecpp entry.rs): the Rust library's start first, the window system, the engine, the
 // start-up under the splash screen, the menus, the command line and the user interface's run, then the shutdown

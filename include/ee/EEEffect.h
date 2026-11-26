@@ -34,8 +34,6 @@ inline bool operator!=(const EEEffectHandle& inA, const EEEffectHandle& inB) { r
 
 static const EEEffectHandle kNoEffectHandle = {0};
 
-// An FSFile as ee_gfx effect_state.rs's typed reads and writes (EEEffectHost.cpp)
-EeGfxEffectFile EEEffectFile(FSFile& inFile);
 // 0x1487a3 (cdecl): the graphic's sound for the animation frame inFrame at inLocation (inStart: the frame changed);
 // takes a reference to inSound, returns a referenced node (provisional name)
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,

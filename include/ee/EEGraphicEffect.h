@@ -36,7 +36,6 @@ public:
     virtual long UnloadMedia();             // EEMedia +0x08 0xd72b6
     static long LoadTable(FSFile* inFile);  // 0xd6e9e (db\dbgfxeffects.dat)
     static void DumpIDs(FSFileSpec& inFile);    // 0xd6fe6 (fprintf to the spec's stream; EEWorld::DumpMedia)
-    static void UnloadTable();
     EEMedia* GetMedia();                    // 0xd7074 (the graphic object, or a random one of this effect's kind)
     static void SortMediaByKind();
     void Load(bool inIsOnDemand);           // 0xd7100 (counts a use at +0x80) (provisional name)

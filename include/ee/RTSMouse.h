@@ -58,9 +58,4 @@ public:
     TSCriticalSection* mInputLock;          // +0x7c
 };
 
-// New (R5a.6): the mouse the input side updates, the game's gMouse (defined in Empire Earth.cpp), so that the RTS
-// layer does not include the game's mouse header for it; RTSMousePointer's thread reads it at each pass, as it read
-// gMouse.
-RTSMouse* RTSGetInputMouse();
-
 #endif

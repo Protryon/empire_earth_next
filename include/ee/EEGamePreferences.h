@@ -99,7 +99,5 @@ public:
 };
 
 extern EEGamePreferences gGamePreferences;
-// 0x13286a: the resource defaults of gDefaultSettings' names (Empire Earth.cpp calls it before Load; provisional name)
-void EEInitializeDefaultSettings();
 
 #endif

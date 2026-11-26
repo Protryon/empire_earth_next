@@ -52,11 +52,6 @@ EECameraControl::~EECameraControl()
 {
 }
 
-float EECameraControl::GetPitch(float inZoom, long inMode)
-{
-    return ee_gfx_camera_pitch(inZoom, (int32_t)inMode, EECameraRust<EeGeTransformation>(gWorld.mTransformation));
-}
-
 void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration,
                                EEUnit* inUnitB, GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw,
                                float inTurnPitch)

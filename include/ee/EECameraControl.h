@@ -90,7 +90,6 @@ public:
     // 0x12844f: the point to look at on a unit
     void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint) { ee_gamecpp_camera_unit_point(inUnit, &outPoint); }
     void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation) { ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation)); }
-    static float GetPitch(float inZoom, long inMode);   // 0x1285ec (cdecl): the pitch for a zoom
     // 0x1286fa: plays the key list
     void StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
 

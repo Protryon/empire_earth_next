@@ -32,11 +32,6 @@ public:
     // 0x12ddbf (cdecl, by value): 0 "Unknown", 1 "Rain", 2 "Snow", 3 "Hurricane", 4 "Blizzard", 5..8 "PlaceHolder1".."4"
     // (each `theName += ...`), else `theName = "Type Not defined"` (provisional name)
     static UWideString GetTypeName(long inType) { return UWideString(ee_app_storm_type_name(inType)); }
-    // In-class getters: EEEnvironmentManager::IsInStorm 0x52ee1b reads the type and tests the area
-    // through them (the extra free inline sites make VC6 refuse the first four _Ptrit::operator+ as the original does;
-    // exact only with both).
-    long GetType() const { return this->mType; }
-    bool Contains(const U2DPoint<long>& inPoint) const { return this->mArea.Contains(inPoint); }
     // (Begin, IsOver, RequestRoute, TakePath, Release, Step and the step's host: ee_game gamecpp weather.rs)
 
     static UString sStormData;              // "Storm-Data" (chain 0x12dba8; guarded atexit, bit 1 of 0x529b20; unreferenced)
