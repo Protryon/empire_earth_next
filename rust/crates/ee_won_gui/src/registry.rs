@@ -304,12 +304,15 @@ mod tests {
         let direct = |k: K, x: isize| {
             crate::compobj::Comp::new(crate::compobj::host()).call(w2, k, x, 0, 0);
         };
+        // (a game Graphics record: the game answers its scheme and plain draws, gfxrun.rs)
+        let mut gfx = crate::gfxrun::tests_graphics();
+        let g = &mut gfx as *mut crate::gfxrun::EeWonGraphics as isize;
         let comp_cases: [(O, K, isize); 7] = [
             (O::BaseSizeChanged, K::SizeChanged, 0),
             (O::BaseGotFocus, K::GotFocus, 0),
             (O::BaseLostFocus, K::LostFocus, 0),
             (O::BaseMouseExit, K::MouseExit, 0),
-            (O::BasePaint, K::Paint, 0x40),
+            (O::BasePaint, K::Paint, g),
             (O::BaseSetEnabled, K::SetEnabled, 1),
             (O::BaseHandleEvent, K::HandleEvent, 0x50),
         ];
@@ -329,7 +332,9 @@ mod tests {
         let pane2 = ee_won_pane_new((w + 2048) as *mut c_void, Some(rec));
         use crate::ctobj::EeWonCtCall as C;
         use crate::paneobj::EeWonPaneCall as P;
-        let ct_cases: [(O, C, [isize; 3]); 12] = [
+        // (AddedToParent is Component's own in Rust since round 38, which reads the parent the stand-in world has not:
+        // the LAN game and the tour run it)
+        let ct_cases: [(O, C, [isize; 3]); 11] = [
             (O::BaseSizeChanged, C::SizeChanged, [0, 0, 0]),
             (O::BaseMouseDown, C::MouseDown, [5, 6, 1]),
             (O::BaseMouseUp, C::MouseUp, [5, 6, 0]),
@@ -337,7 +342,6 @@ mod tests {
             (O::BaseMouseMove, C::MouseMove, [7, 9, 0]),
             (O::BaseMouseEnter, C::MouseEnter, [3, 4, 0]),
             (O::BaseMouseExit, C::MouseExit, [0, 0, 0]),
-            (O::BaseAddedToParent, C::AddedToParent, [0, 0, 0]),
             (O::BaseNotifyRootVisibility, C::NotifyRootVisibility, [1, 0, 0]),
             (O::BaseMouseWheel, C::MouseWheel, [-3, 0, 0]),
             (O::BaseKeyDown, C::KeyDown, [13, 0, 0]),

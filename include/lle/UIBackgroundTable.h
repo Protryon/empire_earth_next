@@ -41,8 +41,6 @@ public:
     float GetOpacity() const { return this->mOpacity; }
     const UString& GetTextureFile() const { return this->mTextureFile; }
     const GERectangle& GetTextureRect() const { return *reinterpret_cast<const GERectangle*>(&this->mTextureRect); }
-    float GetTileWidthPercent() const { return this->mTileWidthPercent; }
-    float GetTileHeightPercent() const { return this->mTileHeightPercent; }
     bool GetVisible() const { return this->mVisible; }
     UString mTextureFile;
 };

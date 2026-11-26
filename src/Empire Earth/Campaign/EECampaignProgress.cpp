@@ -7,33 +7,20 @@
 #include <stdlib.h>
 #include <set>
 #include <algorithm>
-
 #include "lle/LowLevelEngine.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIForm.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
 #include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
-#include "ee/EECampaignProgress.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EECivilizationBuilder.h"
-
 #include <memory>
 #include "ee/EEStringIDs.h"
 #include "lle/FSRestorable.h"
@@ -42,7 +29,9 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMEffect.h"
 #include "ee/EEPersistentTemplates.h"
-#include "rust/game/campaign.h"
+
+
+
 
 // UString globals used before their definitions (gU5656B8/gU5656C8 are defined at the end of this file, gU530B88 in
 // Empire Earth.cpp); no class/static/const owner is claimed (provisional names)
@@ -54,21 +43,6 @@ void CivBuilderEditCurrentCivilization();
 long CivBuilderSaveCivilization(const UString& inName, bool inCampaign);
 // Original cdecl scenario-civilization loader (EEAResetAllPlayerInfo, 0x2806e7).
 long EEApplyCivilizationFile(UString& inName, EEPlayer* inPlayer);
-
-// The progress is Rust's whole (ee_game campaign.rs, world lane round 1: the lists, Load, RestoreCivilization and
-// SaveCompletedScenario); the class is its handle
-EECampaignProgress::EECampaignProgress() : mRust(ee_campaign_progress_new()) {}
-EECampaignProgress::~EECampaignProgress() { ee_campaign_progress_free(this->mRust); }
-void EECampaignProgress::GetCompletedScenarios(std::vector<UWideString>& outScenarios)
-    { ee_campaign_progress_completed(this->mRust, &outScenarios); }
-long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UWideString& inCampaign,
-                                             const UWideString& inScenario, unsigned long inChecksum)
-    { return ee_campaign_progress_restore(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
-long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCampaign, unsigned long inChecksum, bool inExtract)
-    { return ee_campaign_progress_load(this->mRust, (const char*)inUser, (const char*)inCampaign, inChecksum, inExtract); }
-long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign,
-                                               const UWideString& inScenario, unsigned long inChecksum)
-    { return ee_campaign_progress_save(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
 
 // A text into the Rust side's sink
 static void EECampaignText(int64_t inSink, const char* inText)

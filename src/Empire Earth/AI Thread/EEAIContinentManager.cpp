@@ -9,26 +9,15 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEInfluenceTable.h"
-#include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 
-#include "ee/EEAIForest.h"
-#include "ee/EEPathManager.h"
-#include "ee/EEScenarioManager.h"
-#include "ee/EESMArea.h"
 #include "ee/EEDebugTrace.h"
-#include "rust/sim/units.h"
 
 // The continent manager's passes, queries and objects are Rust (ee_sim::astar cm_passes.rs, cm_queries.rs,
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
@@ -45,25 +34,13 @@ EEAIContinentManager::EEAIContinentManager()
     EEAIRegisterContinentState();
 }
 
-// Destroys the continent manager by shutting down the global one (Shutdown), then frees its tables
-EEAIContinentManager::~EEAIContinentManager()
-{
-    ee_astar_cm_destroy(&gContinentManager.mRecord, &this->mRecord);
-}
-
 
 // The influence table's region size (the areas' bounds), 0 without the table
-static long EEAIRegionSize()
-{
-    return gWorld.mInfluenceTable != NULL ? gWorld.mInfluenceTable->mRegionSize : 0;
-}
+static long EEAIRegionSize() { return gWorld.mInfluenceTable != NULL ? gWorld.mInfluenceTable->mRegionSize : 0; }
 
 // Marks the manager as clearing, resets it, frees its grids and rebuilds the continents and hills of inMap (Rust:
 // cm_passes.rs)
-void EEAIContinentManager::Clear(EEMap* inMap)
-{
-    ee_astar_cm_clear(&this->mRecord, (uint64_t)(uintptr_t)inMap, EEAIRegionSize());
-}
+void EEAIContinentManager::Clear(EEMap* inMap) { ee_astar_cm_clear(&this->mRecord, (uint64_t)(uintptr_t)inMap, EEAIRegionSize()); }
 
 // Builds the AI regions of inMap after Clear: tile values, path areas and sectors, choke points, the region ids, the
 // scenario manager's areas (scenario::entry::region_inputs) and the six chain kinds; frees the work grids (continent
@@ -86,12 +63,4 @@ extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
         theUnit->mPlanetID = EEGetLandContinentOf(theUnit);
     }
     return theUnit->mPlanetID;
-}
-
-// When inTile is in the forest, creates inCount units of type 0x147 at random forest tiles within inRadius of
-// inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest (EEUnit 0x22a3fd
-// calls it; Rust: cm_world.rs)
-bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount)
-{
-    return ee_astar_forest_regrow((uint64_t)(uintptr_t)this, inTile.mX, inTile.mY, inRadius, inCount);
 }

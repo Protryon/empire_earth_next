@@ -32,18 +32,12 @@
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
-EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults())
-{
-    gResource->GetString(IDS_NONE, this->mName);
-}
+EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults()) { gResource->GetString(IDS_NONE, this->mName); }
 
 namespace {
 
 // a unit id handed over as 32 bits (ee_scenario objeval.rs), as the list holds it
-EEUnit* SMUnit(int32_t inID)
-{
-    return gWorld.GetUnit((unsigned long)(uint32_t)inID);
-}
+EEUnit* SMUnit(int32_t inID) { return gWorld.GetUnit((unsigned long)(uint32_t)inID); }
 
 }   // namespace
 
@@ -127,9 +121,7 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     std::vector<unsigned long>& theUnits = inContext->mObject->mUnits;
     switch (inOp) {
     case EE_SCENARIO_WRITE_OBJ_CLEAR: theUnits.clear(); break;
-    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT:
-        gWorld.mScenarioManager->GetScenarioObject((unsigned long)inB)->GetUnits(theUnits);
-        break;
+    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT: gWorld.mScenarioManager->GetScenarioObject((unsigned long)inB)->GetUnits(theUnits); break;
     case EE_SCENARIO_WRITE_OBJ_ERASE: theUnits.erase(theUnits.begin() + (size_t)inB); break;
     case EE_SCENARIO_WRITE_OBJ_PUSH: theUnits.push_back((unsigned long)(uint32_t)inB); break;
     case EE_SCENARIO_WRITE_OBJ_SHUFFLE: EEAIRandomShuffle(theUnits.begin(), theUnits.end()); break;

@@ -20,8 +20,6 @@ public:
     // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
     // (ee_screens status_button.rs)
     virtual void ButtonUp();                // +0x8c 0x26e274
-    // Releases the button's button object
-    void ReleaseButton() { ee_screens_sbt_release((uintptr_t)this); }                   // 0x26e71d (the main group hides every button, then calls it)
     // Snapshots the button for drawing: whether it is available, its icon and the queued count; the availability of the button: a command button by its own test (mB148), else its technology through the
     // player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
     // mAvailable; VC6 merges the stores)
@@ -40,14 +38,6 @@ public:
     virtual long MouseRButtonUp();          // +0x48 0x26f1a4
     // for the presses' host (ee_screens status_button.rs): UIButton::ButtonUp, and the mouse in the rectangle
     bool IsMouseInside() const { return this->GetRectangle().Contains(this->GetMouseLocation()); }
-    // Makes the button a command button showing a button object
-    void SetCommandButton(unsigned long inButton) { ee_screens_sbt_set_command((uintptr_t)this, (uint32_t)inButton); }  // 0x26fa82 (an EEButtonObject index)
-    // 0x26faba (ret 0xc): a technology button (the unit class's technology, its unit type, the unit's id)
-    // Makes the button a tech button for a unit's technology, showing the tech's button
-    void SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID)
-    {
-        ee_screens_sbt_set_tech((uintptr_t)this, inTechnology, (uint32_t)inUnitType, (uint32_t)inUnitID);
-    }
     // Moves the button, its icon and its queue count text
     virtual void SetLocation(const GE2DPoint& inLocation)
     {

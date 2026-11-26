@@ -5,6 +5,7 @@
 // a name past the texts' 1,024-byte buffers), every public method with random arguments, and after each step
 // every member compared (the line, the flags, the texts, the open file, the process-wide line count's change,
 // each call's result and any exception). Exit code: the mismatches (the first ones are printed).
+#include "won_cfgparser_driver.h" // ConfigParser's driver-only methods (before the game headers)
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>

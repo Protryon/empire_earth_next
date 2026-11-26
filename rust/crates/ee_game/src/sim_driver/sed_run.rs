@@ -43,7 +43,7 @@ fn post(act: Act) {
     let done = matches!(act, Act::Done { .. });
     let state = Box::into_raw(Box::new(act)) as usize;
     let item = h(if done { O::C12DoneNew } else { O::C12ActionNew }, state, &[]) as usize;
-    gc::h(if done { gc::O::UiPostEvent } else { gc::O::UiPostAction }, item, &[]);
+    gc::h(if done { gc::O::UiPostEvent } else { gc::O::EntryPostAction }, item, &[]);
     h(O::C12Dereference, item, &[i64::from(done)]);
 }
 
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn ee_sim_driver_sed_action(action: *mut c_void, state: *m
         }
         Act::Marker { left, rounds } => {
             if marker_step(left) {
-                gc::h(gc::O::UiPostAction, action as usize, &[]);
+                gc::h(gc::O::EntryPostAction, action as usize, &[]);
                 return;
             }
             let rounds = *rounds;

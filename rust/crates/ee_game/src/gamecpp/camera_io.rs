@@ -99,6 +99,16 @@ pub fn set_zoom(zoom: f32) {
     unsafe { ee_app_camera_set_zoom(fields(), cam(), ee_gamecpp_camera_host, zoom) }
 }
 
+/// `SetMode`.
+pub fn set_mode(mode: c_long) {
+    unsafe { ee_app_camera_set_mode(fields(), cam(), ee_gamecpp_camera_host, mode) }
+}
+
+/// `Scroll`.
+pub fn scroll(dx: f32, dy: f32) {
+    unsafe { ee_app_camera_scroll(fields(), cam(), ee_gamecpp_camera_host, dx, dy) }
+}
+
 /// `Update`.
 pub fn update(elapsed: f32) {
     unsafe { super::camera_host::ee_gamecpp_camera_update(cam(), elapsed) }

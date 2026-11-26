@@ -13,7 +13,6 @@
 
 #include "dx7/DX7Rasterizer.h"
 #include "lle/GEModelManager.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
 
@@ -42,7 +41,6 @@
 #include "ee/EEMouse.h"
 #include "ee/EEWheel.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "rust/game/gamecpp.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -86,11 +84,6 @@ std::vector<GETexture*> gU4E8EF0;
 static EeGfxSceneFade sSceneFade = {1.0f, 1.0f, 0, 0.0f, 0.0f, 1, 1.0f, 0.0f, 0.0f, false};
 // the letterbox's zoom gF4BE374 (0x4be374) and the unit's other .bss globals gB529065, gB529066, gCameraFollowing,
 // gB529068 (declared in ee/EEGraphics.h, ee/EmpireEarth.h): gamecpp globals.rs
-
-// Destroys a render object (RTSRenderObject's inline destructor)
-RTSRenderObject::~RTSRenderObject()
-{
-}
 
 // The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
 void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }

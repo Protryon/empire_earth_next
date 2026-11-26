@@ -16,25 +16,14 @@ UWideString gLoadSaveErrorMessage;
 #include <string.h>
 #include <deque>
 #include <map>
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/NESynchronousClient.h"
-#include "ee/RTSWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEGameState.h"
-#include "ee/EEScenarioManager.h"
-#include "lle/FSArchive.h"
 #include <algorithm>
 #include <functional>
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
 
 
 #include "ee/EEStringIDs.h"
-#include "ee/EEPersistentTag.h"
-#include "rust/game/gamecpp.h"
 class EEGameState;
 extern EEGameState gGameState;
 extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)

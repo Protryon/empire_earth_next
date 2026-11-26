@@ -147,6 +147,9 @@ impl EeWonComboBox {
         if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, b, c) {
             return r;
         }
+        if let Some(r) = self.game_list_op(op, a, b) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
@@ -155,6 +158,57 @@ impl EeWonComboBox {
     }
     fn op1(&self, op: Op, a: isize) -> isize {
         self.op(op, a, 0, 0, 0)
+    }
+    /// The game's list-area ops (R6 WON GUI round 38): ListArea's and ScrollArea's methods are forwards to the list
+    /// area's Rust list and pane, called here directly (the C++ cases went); an item's width in place. None in a
+    /// driver's world and for the other ops.
+    fn game_list_op(&self, op: Op, a: isize, b: isize) -> Option<isize> {
+        use crate::listobj::{EeWonList, EeWonListCall as L};
+        use crate::paneobj::{EeWonPaneCall as P, EeWonScrollPane};
+        use crate::registry::{get, EeWonGuiKind as Kind};
+        let (call, x, y) = match op {
+            Op::ComboInsertItem => (L::InsertItem, a, b as i32 as isize),
+            Op::ComboDeleteItem => (L::DeleteItem, a as i32 as isize, 0),
+            Op::ComboRefreshItem => (L::RefreshItem, a, 0),
+            Op::ComboListClear => (L::Clear, 1, 0),
+            Op::ComboSelItem => (L::SelItem, 0, 0),
+            Op::ComboItemPos => (L::GetItemPos, a, 0),
+            Op::ComboSetSel => (L::SetSelItemAt, a as i32 as isize, isize::from(b != 0)),
+            Op::ComboSetListFlags => (L::SetListFlags, a as i32 as isize, isize::from(b != 0)),
+            Op::ComboItemCount => (L::NumItems, 0, 0),
+            Op::ComboItemAt => (L::GetItem, a as i32 as isize, 0),
+            Op::ComboEnsureVisible => (L::EnsureVisible, a, 0),
+            Op::ComboListMetric | Op::ComboSetScroller | Op::ComboItemWidth => (L::SizeChanged, 0, 0),
+            _ => return None,
+        };
+        if !crate::compobj::is_game() {
+            return None;
+        }
+        if op == Op::ComboItemWidth {
+            // SAFETY: the game's live list item (the op's contract)
+            return Some(unsafe { (*crate::leafpaint::item_rec(a)).width } as isize);
+        }
+        let area = self.part(PART_LIST_AREA);
+        if matches!(op, Op::ComboListMetric | Op::ComboSetScroller) {
+            use crate::guihost::EeWonGuiField as F;
+            // SAFETY: the list area's Rust pane lives as long as it (the combo box holds it)
+            let pane = unsafe { get::<EeWonScrollPane>(area, Kind::Pane) }?;
+            return Some(if op == Op::ComboSetScroller {
+                pane.call(P::SetScroller, self.part(PART_LIST_BOX), 0, 0);
+                0
+            } else {
+                let f = [F::RightPad, F::LeftPad, F::TotalWidth][..].get(a as usize).copied().unwrap_or(F::TotalHeight);
+                pane.call(P::GetField, f as isize, 0, 0) as i32 as isize
+            });
+        }
+        // SAFETY: the list area's Rust list lives as long as it (the combo box holds it)
+        let list = unsafe { get::<EeWonList>(area, Kind::List) }?;
+        let r = list.call(call, x, y, 0);
+        Some(match op {
+            Op::ComboSelItem | Op::ComboItemAt => r,
+            Op::ComboItemPos | Op::ComboItemCount => r as i32 as isize,
+            _ => 0,
+        })
     }
     fn ct(&self) -> &EeWonContainer {
         // SAFETY: the base's Rust object outlives this one (made before it, freed after it)

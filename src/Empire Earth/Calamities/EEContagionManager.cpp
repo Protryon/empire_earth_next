@@ -9,8 +9,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
@@ -20,25 +18,17 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionManager.h"
-#include "rust/game/gamecpp.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EEPlayer.h"
 
-
-// New (port): the six functor classes' constructors (0xb6bd1, 0xb6e58, 0xb6fb1, 0xac991, 0xac7b9, 0xac891) as one:
-// the numbers from the class's record (ee_tech contagion_functor.rs init), the effects each kind kept
-EEContagionFunctor::EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind)
-{
-    ee_gamecpp_functor_construct(this, inClass, inKind);   // (ee_game gamecpp calamity_objects.rs)
-}
 
 // Destroys the functor, releasing the fire's burning effect
 EEContagionFunctor::~EEContagionFunctor()
@@ -66,10 +56,6 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
 
 // (the calamities' addresses as the Rust's 64-bit handles: every target is 64-bit)
 static_assert(sizeof(EECalamity*) == sizeof(uint64_t), "the calamities' handles");
-long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
-{
-    return ee_contagion_manager_restore(this->mRust, reinterpret_cast<const uint64_t*>(inCalamities.data()), inCalamities.size());
-}
 
 bool EEContagionHelperAddUnit(EEContagionHelper* inHelper, EEUnit* inUnit, bool inNotify)
 {

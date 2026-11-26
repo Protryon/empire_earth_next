@@ -27,6 +27,7 @@ pub mod fontmap;
 pub mod gamewin;
 pub mod gfxobj;
 pub mod gfxplat;
+pub mod gfxrun;
 pub mod grabobj;
 pub mod guicfg;
 pub mod guiconf;

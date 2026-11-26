@@ -2,21 +2,12 @@
 // "EEPhysics Data" key's init chain, the class in definition order, the inline COMDATs of other classes after their
 // first users). Unit flags: the exe's module set.
 #include <windows.h>
-#include "platform/PlatFile.h"
 #include <vector>
 #include <stdlib.h>
-
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/Input System.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/FSArchive.h"
-#include "lle/UIForm.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -44,14 +35,12 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EECivPowersManager.h"
-#include "ee/EEDatabaseTables.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEMap.h"
 #include "ee/EEMessageCapture.h"
 #include <functional>
 #include "ee/EEGameLog.h"
-#include "rust/game/physics.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 
@@ -168,7 +157,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ThreadPost: return PH->mThread != NULL ? PH->mThread->Post((unsigned long)a[0], NULL, NULL, true) : 0;
     case O::RtsHandleMessage: PH->RTSPhysics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
         break;
-    case O::UnitOfId: return P64((EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0]));
     case O::UnitStep: CX->Step();
         break;
     case O::PlayerUpdate: PL->UpdatePlayer();
@@ -207,13 +195,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SwapClear: PH->mUnitSwaps.clear();
         break;
     // a message
-    case O::MsgType: return MSG->GetType();
-    case O::MsgReference: MSG->Reference();
-        break;
-    case O::MsgDereference: MSG->Dereference();
-        break;
-    case O::MsgForSpecificSlot: return MSG->GetForSpecificSlot();
-    case O::MsgOriginatingSlot: return MSG->GetOriginatingSlot();
     case O::MsgSetOriginatingSlot: MSG->SetOriginatingSlot((unsigned char)a[0]);
         break;
     case O::RecBool: return REC->Get<bool>((unsigned long)a[0]);
@@ -223,8 +204,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ExecuteSelection: EEGameMessageCast(MSG)->ExecuteSelectionMessage();
         break;
     case O::ExecuteGame: ((EEMessage*)p)->ExecuteMessage();
-        break;
-    case O::Execute: MSG->Execute();
         break;
     case O::RecordBytes: return P64(static_cast<EEMRecord*>((EEMessage*)p)->mRecord);
     case O::RemovePlayer: gCommunications->ExecuteRemovePlayer(REC->Get<unsigned char>(0), REC->Get<bool>(3), REC->Get<bool>(1), REC->Get<bool>(2));
@@ -238,38 +217,20 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
         break;
-    case O::TestHookSet: return gEEMessageExecutedTestHook != NULL;
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
         break;
     // the communications
-    case O::IsServer: return gCommunications->IsServer();
-    case O::IsClient: return gCommunications->IsClient();
-    case O::CommsIsServer: return gCommunications != NULL && gCommunications->IsServer();
-    case O::ClientHasLeft: return static_cast<EEClient*>(gCommunications)->mHasLeftGame;
-    case O::CtsInPhysics: return gCommunications->GetNumberOfCTsProcessedInPhysics();
-    case O::IncrementCts: gCommunications->IncrementNumberOfCTsProcessedInPhysics();
-        break;
-    case O::SetAverageUpdate: gCommunications->SetAveragePhysicsUpdateTime((long)a[0]);
-        break;
-    case O::SetAverageGap: gCommunications->SetAverageTimeBetweenPhysicsTicks((long)a[0]);
-        break;
     case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput(MSG, (unsigned char)a[0]);
         break;
     case O::LogChecksumResponse: SERVER->LogChecksumResponse(REC);
         break;
     case O::LogResponse: SERVER->LogResponse(MSG);
         break;
-    case O::IsPaused: return gCommunications->GetIsGamePaused();
-    case O::CurrentCommsTick: return gCommunications->GetCurrentCommunicationsTick();
     case O::PauseGame: SERVER->PauseGame();
         break;
     case O::SendAutoSave: SERVER->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, UWideString((const char*)a[0])}), 15000, 12);
         break;
     // the world
-    case O::NumPlayers: return gWorld.mNumPlayers;
-    case O::Player: return P64(gWorld.mPlayers[a[0]]);
-    case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::InCinematic: return gWorld.mInCinematic;
     case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
     case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
         break;
@@ -281,17 +242,10 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::ScenarioReplaceUnit: gWorld.mScenarioManager->ReplaceUnit((unsigned long)a[0], (unsigned long)a[1]);
         break;
-    case O::SetWindYaw: gWorld.mWindYaw = f[0];
-        break;
     case O::SetWindDirection: gWorld.mWindDirection = GEVector(f[0], f[1], f[2]);
         break;
     case O::EnvironmentTick: gWorld.mEnvironmentManager->Tick((unsigned long)a[0]);
         break;
-    case O::WorldWriteLock: gWorld.mLock->WriteLock();
-        break;
-    case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
-        break;
-    case O::UnitsFirst: return P64(gWorld.mUnits.mFirst);
     case O::UnitNext: return P64(((RTSUnit*)p)->mTileNode->mNext);
     case O::UnitChecksum: return static_cast<EEUnit*>((RTSUnit*)p)->GetChecksum((unsigned long)a[0]);
     case O::UnitDump: static_cast<EEUnit*>((RTSUnit*)p)->OutOfSynchDump(FP(0), (unsigned long)a[1]);
@@ -303,45 +257,24 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::MapDump: gWorld.mMap->DumpOutOfSynch(FP(0));
         break;
     case O::CampaignNameLength: return gWorld.mGameOptions.mCampaignName.GetLength();
-    case O::CampaignChecksum: return gWorld.mGameOptions.mCampaignChecksum;
-    case O::IsScenarioGame: return gWorld.mGameOptions.mIsScenarioGame;
-    case O::Resources: return gWorld.mGameOptions.mResources;
     case O::CanBuyCivilization: return gWorld.mGameOptions.CanBuyCivilization();
     case O::CheckUnitList: RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
         break;
-    case O::SetGameOverFlag: gB529065 = true;
-        break;
     // a player
-    case O::PlayerObserver: return PL->mObserverMode;
-    case O::PlayerGameResult: return PL->mGameResult;
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(0, 1);
         break;
     case O::PlayerUnitsSwapped: PL->UnitsSwapped(((EEPhysics*)a[0])->mUnitSwaps);
         break;
-    case O::PlayerCivChosen: return PL->mCivilizationChosen;
-    case O::PlayerShiftMode: return PL->mShiftMode;
     case O::PlayerAvailablePoints: return static_cast<unsigned long>(PL->mCivilization.GetAvailablePoints());
     case O::PlayerSavedGroupLast: return PL->mSavedGroups.GetLastValue((unsigned long)a[0]);
-    case O::PlayerId: return PL->mPlayerID;
-    case O::PlayerSlot: return PL->mSlot;
-    case O::PlayerGetSlot: return PL->GetSlot();
-    case O::PlayerActiveGroup: return P64(PL->mActiveGroup);
     case O::PlayerRunningGroups: return PL->GetNumRunningGroups();
     case O::PlayerRunningGroup: return P64(PL->GetRunningGroup((unsigned long)a[0]));
     case O::PlayerAirTraffic: return P64(PL->mAirTraffic[a[0]]);
-    // the groups
-    case O::SelectedCount: return ((EESelectedGroup*)p)->GetNumUnits();
-    case O::SelectedUnitId: return ((EESelectedGroup*)p)->GetUnit((unsigned long)a[0])->mUnitID;
-    case O::GroupCount: return ((EEGroup*)p)->GetNumUnits();
-    case O::GroupUnitId: return ((EEGroup*)p)->GetUnit((unsigned long)a[0])->mUnitID;
     // a unit
-    case O::UnitPlayer: return P64(CX->GetPlayer());
-    case O::UnitIsCitizen: return CX->mIsCitizen;
     case O::UnitReference: CX->Reference();
         break;
     case O::UnitDereference: CX->Dereference();
         break;
-    case O::UnitId: return ((EEUnit*)p)->mUnitID;
     // the other systems
     case O::PathManagerUpdate: gPathManager.Update();
         break;
@@ -360,14 +293,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CalamityChecksum: return EECalamityManager::GetInstance()->GetOutOfSynchChecksum();
     case O::AiUpdate: gArtificialIntelligence->Update();
         break;
-    case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);
     case O::HasJitPower: return gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing);
-    case O::TextNew: return P64(new UWideString);
-    case O::TextDelete: delete (UWideString*)p;
-        break;
-    case O::ResourceString: return gResource->GetString((unsigned long)a[0], *(UWideString*)p);
-    case O::ChatLog: gUserInterface->AddChatLogEntry(*(UWideString*)p, 0);
-        break;
     case O::IsMainGameForm: return dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL;
     case O::OptionsButtonBlink: (static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
         break;
@@ -376,11 +302,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CivTimerFirstWarning: return EEGetCivTimerFirstWarning();
     case O::ShiftKey: return gISKeyboard != NULL ? gISKeyboard->GetEntity(kKeyShift, *(ISEntity**)a[0]) : -1;
     case O::EntityValue: return ((ISEntity*)p)->GetValue();
-    case O::AutoSaves: return gGamePreferences.mSettings.mNumberOfAutoSaves;
-    case O::AutoSaveMilliseconds: return gGamePreferences.mSettings.mAutoSaveInMilliseconds;
     case O::SetLastAutoSave: gGamePreferences.mSettings.mLastAutoSave = UWideString((const char*)a[0]);
-        break;
-    case O::SavePreferences: gGamePreferences.Save();
         break;
     case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
         break;
@@ -388,8 +310,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::LoadOrSave: return EELoadOrSave(static_cast<EEMRecord*>(MSG));
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));
-    case O::FilePuts: fputs((const char*)a[0], (FILE*)p);
-        break;
     case O::FileClose: fclose((FILE*)p);
         break;
     case O::ContinentChecksum: return gContinentManagerChecksum;
@@ -410,10 +330,7 @@ extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, co
     switch (inOp) {
     case O::Speed: return PH->mSpeed;
     case O::Random: return PH->mRandom.Generate();
-    case O::GameSpeed: return gWorld.GetGameSpeed();
-    case O::WorldGameSpeed: return gWorld.mGameSpeed;
     case O::TimeOfDay: return gWorld.GetTimeOfDay();
-    case O::WindYaw: return gWorld.mWindYaw;
     default: ESVERIFY_AT(false, 1);
     }
     return 0.0;
@@ -434,10 +351,3 @@ extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, co
 // (EndGame: the campaign progress's user; not EEUIECampaignSelectScreenEvents.cpp's gCampaignDefaultUser 0x562ee0)
 UString gCampaignUser("default");
 
-// Steps the environment manager when it is enabled and its next step time has come
-// not inline: defined here after the unit's init chain (UpdateWeather calls it)
-void EEEnvironmentManager::Tick(unsigned long inTime)
-{
-    if (this->mNextStep <= inTime && this->mIsEnabled == true)
-        this->Step(inTime);
-}

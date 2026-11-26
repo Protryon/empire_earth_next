@@ -36,7 +36,6 @@
 #include "ee/EEScreenEvent.h"
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
-#include "rust/game/gamecpp.h"
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);

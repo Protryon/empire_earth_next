@@ -10,7 +10,6 @@
 #include <utility>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
@@ -32,9 +31,7 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EETerrainColorTable.h"
-#include "ee/EEPersistentTag.h"
 #include "ee/EEAppCapture.h"
-#include "rust/game/gamecpp.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)

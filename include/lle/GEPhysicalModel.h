@@ -50,8 +50,7 @@ public:
         this->mScale = inScale;
     }
     void SetLocationXY(float inX, float inY) { this->mLocation.SetPosition(inX, inY, this->mLocation.GetZ()); }
-    void SetLocationXYZ(const GE3DPoint& inPoint)
-        { this->mLocation.SetPosition(inPoint.GetX(), inPoint.GetY(), inPoint.GetZ()); }
+    void SetLocationXYZ(const GE3DPoint& inPoint) { this->mLocation.SetPosition(inPoint.GetX(), inPoint.GetY(), inPoint.GetZ()); }
     // replaces the model, keeping a reference to the new one (the old one released first)
     void SetModel(GEModel* inModel) { ee_ge_pm_set_model(reinterpret_cast<void**>(&this->mModel), inModel); }
     void SetScale(float inScale) { this->mScale = inScale; }

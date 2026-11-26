@@ -16,7 +16,6 @@
 #include "ee/EEPWorldHelper.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEPersistentTag.h"
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
 #include "lle/U2DSparseArray.h"
@@ -28,22 +27,16 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include <algorithm>
 #include <memory>
 #include <vector>
 
 
-#include "rust/game/gamecpp.h"
-#include "lle/NEMessage.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEPMultiplayerHelper.h"
-#include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPPlayerHelper.h"
 #include "ee/EECPEngine.h"
-#include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -61,7 +54,6 @@
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEUIFScenarioEditor.h"
 #include "lle/FSChunk.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
@@ -169,8 +161,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwTownsLoad: return EELoadTowns(FILE_, a[0] != 0);
     case O::PwTownsSave: EESaveTowns(FILE_);
         break;
-    case O::PwDebugText: ESDebugOut("%s", (const char*)a[0]);
-        break;
     case O::PwChainFirst: return P64(gWorld.mUnits.mFirst);
     case O::PwChainHead: return P64(reinterpret_cast<RTSUnit*>(&gWorld.mUnits));
     case O::PwTileNodeNext: return P64(RTS->mTileNode->mNext);
@@ -193,52 +183,28 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwForestTiles: FOREST->GetTileSet().BuildPointList(*(std::vector<U2DPoint<long> >*)a[0], 1);
         break;
     case O::PwForestAtTile: return P64(gContinentManager.GetForestAt(U2DPoint<long>((long)a[0], (long)a[1])));
-    case O::PwPointsNew: return P64(new std::vector<U2DPoint<long> >);
     case O::PwPointsDelete: delete &POINTS;
         break;
     case O::PwPointsCount: return (int64_t)POINTS.size();
     case O::PwPointX: return POINTS[a[0]].mX;
     case O::PwPointY: return POINTS[a[0]].mY;
-    case O::PwMap: return P64(gWorld.mMap);
-    case O::PwMapSize: return ((EEMap*)p)->mSize;
-    case O::PwMapTileAt: return P64(((EEMap*)p)->mTiles[a[0]]);
-    case O::PwMapRegions: return P64(((EEMap*)p)->mUnitRegions);
-    case O::PwNodeUnit: return P64(((RTSTileUnitNode*)p)->mUnit);
-    case O::PwNodeSetUnit: ((RTSTileUnitNode*)p)->mUnit = (EEUnit*)a[0];
-        break;
-    case O::PwNodeNext: return P64(((RTSTileUnitNode*)p)->mNext);
-    case O::PwTileSetTerrainType: ((EEMapTile*)p)->mTerrainType = (long)a[0];
-        break;
-    case O::PwNumPlayers: return (int64_t)gWorld.mNumPlayers;
-    case O::PwPlayerFirstUnit: return P64(PL->mFirstUnit);
     case O::PwPlayerGetUnit: return P64(PL->GetUnit((unsigned long)a[0]));
     case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].first = (size_t)a[1];
         break;
-    case O::PwPlayerSetFirstUnit: PL->mFirstUnit = (EEUnit*)a[0];
-        break;
     case O::PwPlayerSetLastUnit: PL->mLastUnit = (EEUnit*)a[0];
         break;
-    case O::PwUnitNext: return P64(RTS->mNext);
     case O::PwUnitSetPrevious: RTS->mPrevious = (RTSUnit*)a[0];
         break;
     case O::PwUnitSetNext: RTS->mNext = (RTSUnit*)a[0];
         break;
     case O::PwDynComplex: return P64(dynamic_cast<EEComplexUnit*>(UNIT));
-    case O::PwCxLastAttacker: return P64(CX->mLastAttacker);
     case O::PwCxGoalQueueCount: return (int64_t)CX->mGoalQueues.size();
-    case O::PwCxGoalCount: return (int64_t)CX->mGoalQueues[a[0]].mGoals.size();
     case O::PwCxGoalAt: return P64(CX->mGoalQueues[a[0]].mGoals[a[1]]);
-    case O::PwAttackUnitCast: return P64(EEAttackUnitCast((EEUnitGoal*)p));
-    case O::PwAttackTarget: return P64(((EEUGRust*)p)->GetAttackTarget());
     case O::PwGatherGoalCast: return P64(EEGatherGoalCast((EEUnitGoal*)p));
     case O::PwGatherResource: return P64(((EEUGRust*)p)->GetGatherResource());
     case O::PwGatherStorage: return P64(((EEUGRust*)p)->GetGatherStorage());
-    case O::PwCxGetPlacement: *(GETransformation*)a[0] = CX->mPhysicalModel.GetLocation();
-        break;
     case O::PwCxSetPlacement: CX->mPhysicalModel.SetLocation(*(GETransformation*)a[0]);
         break;
-    case O::PwUnitClassCount: return (int64_t)EEUnitClassCount();
-    case O::PwUnitClassAt: return P64(gUnitClassTable[a[0]]);
     case O::PwComplexCreate: return P64(EEComplexUnit::Create());
     case O::PwCxInitUnit: CX->EEUnit::Init((EEUnitClass*)a[0], (EEPlayer*)a[1]);
         break;
@@ -249,7 +215,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwRegisterUnit: RTSRegisterUnit(UNIT);
         break;
-    case O::PwPlayerTechTree: return P64(PL->GetTechTree());
     case O::PwTreeNodeIds: ((EETechTree*)p)->GetNodeIDs(*(std::vector<long>*)a[0]);
         break;
     case O::PwTreeGet: return P64(((EETechTree*)p)->Get((long)a[0]));
@@ -267,13 +232,11 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PphChecksumLocal: ((ESChecksum*)p)->AddChecksum("EEPPlayerHelper::mLocalPlayerIndex", (unsigned long)a[0]);
         break;
-    case O::PphNewHuman: return P64(static_cast<EEPlayer*>(new EEHumanPlayer));
     case O::PphNewComputer: return P64(static_cast<EEPlayer*>(new EEComputerPlayer));
     case O::PphVerifyType3: ESVERIFY_AT(false, 251);
         break;
     case O::PphPlayerLoad: return PL->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
     case O::PphPlayerSave: return PL->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PphComputerOf: return P64(PL->mComputerPlayer);
     case O::PphHasHuman: return PL->mHumanPlayer != NULL;
     case O::PphVerifyPlayerType: ESVERIFY_AT(a[0] != 0, 274);
         break;
@@ -314,7 +277,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     // (EEPChecksumOp) The checksum's C++ calls and members (EEPCalamityHelper.cpp's EEPCalamityOp default; the end of lane C): one
     // statement each
     case O::PcRust: return P64(static_cast<EEPChecksum*>((FSPersistent*)p)->GetRust());
-    case O::PcUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::PcUStrText: return P64((const char*)*(UString*)p);
     case O::PcSaveText: return UString((const char*)a[0]).Save(*(FSFile*)p);
     // (EECore11OpC8) the scenario extension's text (gamecpp persist_text.rs; EETechTree.cpp's EECore11OpC7 default)
@@ -341,7 +303,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PchCalamities: return P64(PCH->mCalamities);
     case O::PchNewCalamities: PCH->mCalamities = new std::vector<EECalamity*>;
         break;
-    case O::PchNewCalamity: return P64(new EECalamity);
     case O::PchCalamityLoad: return CL->Load((unsigned long)a[0], (unsigned long)a[1], CAFILE);
     case O::PchCalamitySave: return CL->Save((unsigned long)a[0], (unsigned long)a[1], CAFILE);
     case O::PchPush: PCH->mCalamities->push_back((EECalamity*)a[0]);
@@ -381,14 +342,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PfWriteF32: return FILE_.Write(*(const float*)a[0]);
     case O::PfWriteBool: return FILE_.Write(*(const bool*)a[0]);
     case O::PfWriteChars: return FILE_.Write((const char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
-    case O::PvLongsNew: return P64(new std::vector<long>);
-    case O::PvLongsDelete: delete (std::vector<long>*)p;
-        break;
-    case O::PvLongsCount: return (int64_t)((std::vector<long>*)p)->size();
-    case O::PvLongsAt: return (*(std::vector<long>*)p)[a[0]];
     case O::PvAfterLoad: EEAfterLoadRust((void (*)(uintptr_t))a[0], (uintptr_t)a[1]);
         break;
-    case O::PsMajorVersion: return kSaveGameMajorVersion;
     case O::PsPersistentTag: return PERSISTENT->GetTagID();
     case O::PsPersistentDelete: delete PERSISTENT;
         break;
@@ -458,14 +413,10 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsHdrOptionsFromWorld: HDR->mGameOptions = gWorld.mGameOptions;
         break;
     case O::PsMaxPlayers: return gWorld.mMaxPlayers;
-    case O::PsSpecNew: return P64(new FSFileSpec);
     case O::PsSpecDelete: delete SPEC;
         break;
     case O::PsSpecSetDirectory: SPEC->SetDirectory(*(const UString*)a[0]);
         break;
-    case O::PsSpecFirstFile: return SPEC->GetFirstFile(*(const UString*)a[0], *(FSFileSpec*)a[1]);
-    case O::PsSpecNextFile: return SPEC->GetNextFile(*(FSFileSpec*)a[0]);
-    case O::PsSpecsNew: return P64(new std::vector<FSFileSpec>);
     case O::PsSpecsDelete: delete &SPECS;
         break;
     case O::PsSpecsCount: return (int64_t)SPECS.size();
@@ -482,11 +433,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSpecSetFile: SPEC->SetFile(*(const UString*)a[0]);
         break;
-    case O::PsSpecDeleteFile: SPEC->Delete();
-        break;
     case O::PsSpecCreate: return SPEC->Create();
     case O::PsSpecOpen: return SPEC->Open((unsigned long)a[0]);
-    case O::PsSpecClose: return FILE_.Close();
     case O::PsSpecOpenAny: return FILE_.Open((unsigned long)a[0]);
     case O::PsFileIsOpen: return FILE_.GetIsOpen();
     case O::PsFileCloseAny: return FILE_.Close();
@@ -513,9 +461,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsMemFileSave: return MEM->Save(*(FSFile*)a[0]);
     case O::PsMemFileLoad: return MEM->Load(*(FSFile*)a[0]);
-    case O::PsUStrNew: return P64(new UString);
-    case O::PsUStrDelete: delete (UString*)p;
-        break;
     case O::PsSaveTextName: *(UString*)a[0] = GetSaveTextName(SPEC->GetFile(), a[1] != 0);
         break;
     case O::PsMessageString: gResource->GetString((long)a[0], gLoadSaveErrorMessage);
@@ -535,8 +480,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsSetMusicVolume: gConductor->GetConductor().SetVolume(f[0]);
         break;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
-        break;
-    case O::PsShowSelectionAreas: gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();
         break;
     case O::PsOpenMainGameForm: gUserInterface->OpenForm(gUIManager->GetMainGameForm());
         break;
@@ -569,14 +512,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsRestorableOfEffects: return P64(static_cast<FSRestorable*>((EEEffectManager*)p));
     case O::PsRestorableOfCalamities: return P64(static_cast<FSRestorable*>((EEPCalamityHelper*)p));
     case O::PsRestorableOfEnvironment: return P64(static_cast<FSRestorable*>((EEEnvironmentManager*)p));
-    case O::PsPlayerRemoveAlly: ((EEPlayer*)p)->RemoveAlly((EEPlayer*)a[0]);
-        break;
-    case O::PsEditorFormPresent: return gUIManager->GetScenarioEditorForm() != NULL;
-    case O::PsEditorClearSelection: gUIManager->GetScenarioEditorForm()->ClearSelection();
-        break;
-    case O::PsWorldClear: gWorld.Clear();
-        break;
-    case O::PsInScenarioEditor: return gUIManager->mInScenarioEditor;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");
         break;
     case O::PsDataPathFind: return gDataPath->FindFile(*(const UString*)a[0], *(FSFileSpec**)a[1]);
@@ -598,12 +533,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsWStrsCount: return (int64_t)WSTRS.size();
     case O::PsWStrsAt: return P64(&WSTRS[a[0]]);
     case O::PsWStrsContains: return std::find(WSTRS.begin(), WSTRS.end(), *(UWideString*)a[0]) != WSTRS.end();
-    case O::PsWStrNew: return P64(new UWideString);
-    case O::PsWStrDelete: delete &WSTR;
-        break;
     case O::PsWStrClear: WSTR = gEmptyString;
         break;
-    case O::PsWStrLength: return WSTR.GetLength();
     case O::PsSprintfNumber: sprintf(WSTR, *(UWideString*)a[0], (unsigned long)a[1]);
         break;
     case O::PsSprintfText: sprintf(WSTR, *(UWideString*)a[0], (const char*)*(UWideString*)a[1]);

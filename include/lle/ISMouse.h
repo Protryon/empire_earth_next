@@ -13,8 +13,7 @@
 class LLE_API ISMouse : URustView {
 public:
     // the axis or button at an index (ISMouseEntity); kErrorBeyondEnd past 6
-    long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
-        { return ee_input_mouse_entity(Rust(), inIndex, (const EeInputEntity**)&outEntity); }
+    long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const { return ee_input_mouse_entity(Rust(), inIndex, (const EeInputEntity**)&outEntity); }
     bool GetShouldUpdate() const { return ee_input_mouse_should_update(Rust()); }
     // reads the buffered mouse events: motion, wheel, button presses and releases, double presses
     void Refresh() { ee_input_mouse_refresh_now(Rust()); }

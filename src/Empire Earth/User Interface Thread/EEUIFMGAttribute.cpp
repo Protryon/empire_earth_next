@@ -3,23 +3,17 @@
 // DrawTextA, GetIconRectangle; EEUIFMGErrorLog's ctor at 0x267ad9). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
-#include "lle/UIForm.h"
 #include "lle/UIButton.h"
 #include "lle/GEText.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIFMGAttribute.h"
 #include "ee/EEScreensShims.h"
-#include "rust/game/screens.h"
 
 
 // Destroys the attribute button and its level text
-EEUIFMGAttribute::~EEUIFMGAttribute()
-{
-    delete static_cast<GEText*>(this->mLevelText);
-}
+EEUIFMGAttribute::~EEUIFMGAttribute() { delete static_cast<GEText*>(this->mLevelText); }
 
 // the Rust bodies' shims (ee_screens hud_more.rs: the constructor's level text, CopyData, DrawTextA)
 #define ATT(a) reinterpret_cast<EEUIFMGAttribute*>(a)

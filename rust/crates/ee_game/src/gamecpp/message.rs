@@ -32,11 +32,21 @@ use super::{cptr, h, hf, hp, pa, ptr, rec, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::EeNetSvSet;
 use ee_sim::netmsg::session::EE_NETMSG_SESS_DO_SLOT_INFO;
-use ee_sim::units::group_host::ee_units_selection;
+use ee_sim::units::cu_cargo::{
+    EE_UNITS_CU_DO_REMOVE_RESEARCH, EE_UNITS_CU_DO_TOGGLE_JIT, EE_UNITS_CU_DO_UNLOAD_CARGO_NOW,
+    EE_UNITS_CU_DO_UPDATE_JIT,
+};
+use ee_sim::units::cu_small::EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES;
+use ee_sim::units::cu_world::{EE_UNITS_CU_DO_GO_FANATIC, EE_UNITS_CU_DO_SET_HOME_BASE};
+use ee_sim::units::group_host::{self as gh, ee_units_selection};
+use ee_sim::units::group_obj::EeUnitsGroup;
 use ee_sim::units::player_body::game::ee_units_player_body;
-use ee_sim::units::player_body::{EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, EE_UNITS_PLAYER_DO_UNSELECT_ALL};
+use ee_sim::units::player_body::{
+    EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, EE_UNITS_PLAYER_DO_SET_SELECTED_VIEWED, EE_UNITS_PLAYER_DO_UNSELECT_ALL,
+};
 use ee_sim::units::player_rest::game::ee_units_player_rest;
 use ee_sim::units::player_rest::EE_UNITS_PLAYER_REST_SET_GAME_RESULT;
+use ee_sim::world::view::{PlayerView, UnitView, WorldRead};
 
 // ---- the constants the bodies pass (EEMessage.cpp static_asserts them)
 /// `kGraphicEffectCommandConfirmationMove`, `...Attack`, `...GatherOther`, `kGraphicEffectDisbandUnitEmitter`.
@@ -78,9 +88,110 @@ const IDS_MSG_GAME: i64 = 31813;
 /// `kNames`: the tribute's resource names (food, wood, stone, gold, iron by resource 2..6)
 const RESOURCE_NAMES: [i64; 7] = [0, 0, 30116, 30117, 30118, 30119, 30120];
 
+// ---- the unit groups: Rust objects (ee_sim units group_host.rs), called by path as EEGroup's inline members call
+// them (ee/EEPlayer.h; `g` an EEGroup*, EESelectedGroup* or EEActiveGroup*, all at the record's address)
+
+fn group(g: P) -> *mut EeUnitsGroup {
+    g as *mut EeUnitsGroup
+}
+
+/// `GetNumUnits()`.
+pub(crate) fn group_len(g: P) -> c_ulong {
+    // SAFETY: a live group of the world
+    unsafe { gh::ee_units_group_len(group(g)) }
+}
+
+/// `GetUnit(i)` (an `EEComplexUnit*`; 0 past the end).
+pub(crate) fn group_unit(g: P, i: c_long) -> P {
+    // SAFETY: as group_len
+    unsafe { gh::ee_units_group_unit(group(g), i) as P }
+}
+
+/// `Contains(unit)`.
+pub(crate) fn group_contains(g: P, unit: P) -> bool {
+    // SAFETY: as group_len
+    unsafe { gh::ee_units_group_contains(group(g), unit as *mut c_void) }
+}
+
+/// The members of a unit or none (`ee_units_group_do`'s `op`: 0 `Add`, 2 `Clear`, 7 `ShowSelectionAreas`).
+pub(crate) fn group_do(g: P, op: i32, unit: P) {
+    // SAFETY: as group_len; `unit` a live complex unit where `op` names one
+    unsafe { gh::ee_units_group_do(group(g), op, unit as *mut c_void) }
+}
+
+/// The members between two groups (`ee_units_group_with`'s `op`: 2 `CopySelection`, 3 `Assign`, 4
+/// `SelectSavedGroup(other, true)`).
+pub(crate) fn group_with(g: P, op: i32, other: P) {
+    // SAFETY: two live groups
+    unsafe { gh::ee_units_group_with(group(g), op, group(other)) }
+}
+
+/// The members that answer a value (`ee_units_group_get`'s `op`; the game actions' host's, absent from a test build).
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn group_get(g: P, op: i32, a: i64) -> i64 {
+    // SAFETY: as group_len
+    unsafe { gh::ee_units_group_get(group(g), op, a) }
+}
+
+/// `SetFormation(formation)`.
+fn group_set_formation(g: P, formation: P) {
+    // SAFETY: a live group and formation
+    unsafe { gh::ee_units_group_set_formation(group(g), formation as *mut c_void) }
+}
+
+/// A player's `mSelectedGroup` (an `EESelectedGroup*`), read through the world view.
+pub(crate) fn selected_group(pl: P) -> P {
+    // SAFETY: the world's thread; `pl` a live player
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    unsafe { PlayerView::of(&token, pl as u64) }.map_or(0, |v| v.selected_group_handle() as P)
+}
+
+/// A player's `mViewedUnit` (an `RTSUnit*`), read through the world view.
+fn viewed_unit(pl: P) -> u64 {
+    // SAFETY: the world's thread; `pl` a live player
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    unsafe { PlayerView::of(&token, pl as u64) }.map_or(0, |v| v.viewed_unit_handle())
+}
+
+/// A complex unit's patrol group (`mPatrolGroup`), read through the world view.
+fn patrol_group(u: P) -> u64 {
+    // SAFETY: as viewed_unit
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    unsafe { UnitView::of(&token, u as u64) }.map_or(0, |v| v.patrol_group_handle())
+}
+
+/// A unit's `mUnitID` (`u` a live unit), read through the world view (the game actions' host's).
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn unit_id(u: P) -> c_ulong {
+    // SAFETY: the caller holds the world (a host call's thread); `u` a live unit
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    unsafe { UnitView::of(&token, u as u64) }.map_or(0, |v| v.id() as c_ulong)
+}
+
+// ---- the complex units' bodies (ee_sim units cu_body.rs, cu_small.rs: EEComplexUnit's inline members call them)
+
+/// `EEComplexUnit`'s body `what` (`EE_UNITS_CU_DO_*`) on the live unit `u`.
+pub(super) fn cu(what: i32, u: P, a: i64) -> i64 {
+    // SAFETY: a live complex unit, on the thread that runs the world
+    unsafe { ee_sim::units::cu_body::game::ee_units_cu_body(what, u as *mut c_void, a, 0, 0) }
+}
+
+/// A complex unit's cargo (`mCargo`: the world view's).
+fn cargo(u: P) -> Vec<u64> {
+    // SAFETY: the world's thread; `u` a live complex unit
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    let v = unsafe { UnitView::of(&token, u as u64) }.expect("a unit");
+    (0..v.cargo_len()).map(|i| v.cargo_handle(i)).collect()
+}
+
 // ---- the records
 
-fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
+pub(super) fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record, used before the next C++ call
     unsafe { &mut *rec(O::UnRts, u) }
 }
@@ -110,7 +221,7 @@ pub(super) fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
     unsafe { &mut *rec(O::PlSaved, pl) }
 }
 
-fn pfields<'a>(pl: P) -> &'a mut EeUnitsPlayerFields {
+pub(super) fn pfields<'a>(pl: P) -> &'a mut EeUnitsPlayerFields {
     // SAFETY: as prts
     unsafe { &mut *rec(O::PlFields, pl) }
 }
@@ -126,12 +237,12 @@ fn get_bool(m: P, i: i64) -> bool {
     get::<u8>(m, i) != 0
 }
 
-fn world() -> P {
+pub(super) fn world() -> P {
     hp(O::WorldAddr, 0, &[])
 }
 
 /// A plain member of the world (`op` answers its address).
-fn wm<'a, T>(op: O) -> &'a mut T {
+pub(super) fn wm<'a, T>(op: O) -> &'a mut T {
     // SAFETY: the op answers the address of the world's member of type T
     unsafe { &mut *rec(op, world()) }
 }
@@ -145,10 +256,15 @@ fn world_player(i: i64) -> P {
 }
 
 fn sender(m: P) -> P {
-    hp(O::MsgSender, m, &[])
+    player_by_slot(h(O::MsgOrigin, m, &[]))
 }
 
-fn num_players() -> c_ulong {
+/// `gWorld.GetPlayerBySlot(slot)` (gamecpp world.rs, which the inline member calls).
+pub(super) fn player_by_slot(slot: i64) -> P {
+    super::world::ee_gamecpp_world_player_by_slot(world() as *mut c_void, slot as u8) as P
+}
+
+pub(super) fn num_players() -> c_ulong {
     // SAFETY: the world's member
     unsafe { *rec::<c_ulong>(O::WNumPlayers, world()) }
 }
@@ -187,10 +303,11 @@ fn change_formation(m: P) {
     let group = hp(O::PlActiveGroup, sender(m), &[]);
     let formation = hp(O::FormationCreate, 0, &[get::<i32>(m, 1) as i64]);
     h(O::FormationSetB5C, formation, &[get_bool(m, 2) as i64]);
-    h(O::SelGroupSetFormation, group, &[pa(formation)]);
-    let saved = hp(O::SelGroupSavedGroup, group, &[]);
+    group_set_formation(group, formation);
+    // SAFETY: the live selection's head (EESelectedGroup::GetSavedGroup)
+    let saved = unsafe { (*self::group(group)).mSavedGroup } as P;
     if saved != 0 {
-        h(O::GroupSetFormation, saved, &[pa(formation)]);
+        group_set_formation(saved, formation);
     }
     h(O::FormationDereference, formation, &[]);
 }
@@ -234,11 +351,15 @@ fn immediate_cargo_unload(m: P) {
         && cargo != 0
         && uf(transport).mHitPoints > 0
         && !cf(complex(transport)).mIsDisabled
-        && h(O::CxNumCargoUnits, complex(transport), &[]) > 0
-        && h(O::CxHasCargo, hp(O::UnGetComplex, transport, &[]), &[pa(hp(O::UnGetComplex, cargo, &[]))]) != 0
-        && h(O::CxUnloadCargoNow, hp(O::UnGetComplex, transport, &[]), &[pa(hp(O::UnGetComplex, cargo, &[]))]) == 0
+        && !self::cargo(complex(transport)).is_empty()
+        && self::cargo(hp(O::UnGetComplex, transport, &[])).contains(&(hp(O::UnGetComplex, cargo, &[]) as u64))
+        && cu(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, hp(O::UnGetComplex, transport, &[]), pa(hp(O::UnGetComplex, cargo, &[])))
+            == 0
     {
-        if h(O::UcIsTransport, unit_class(transport), &[]) != 0 {
+        if ee_sim::units::uc_is::ee_units_uc_is(
+            unit_class(transport) as u64,
+            ee_sim::units::uc_is::EE_UNITS_UC_IS_TRANSPORT,
+        ) {
             text = h(O::UcUnloadFailedText, unit_class(transport), &[]) as c_long;
         }
         let (x, y) = (rts(transport).mTileX, rts(transport).mTileY);
@@ -325,7 +446,7 @@ fn load_unit_data(m: P) {
             }
         };
         preload(O::PreloadUnloadClass, pl);
-        h(O::PlSetHackUnitClass, pl, &[get::<i32>(m, 1) as i64]);
+        pfields(pl).mHackUnitClass = get::<i32>(m, 1) as c_long as c_ulong;
         preload(O::PreloadLoadClass, pl);
     }
 }
@@ -362,19 +483,15 @@ fn saved_group_select(m: P) {
     let pl = sender(m);
     let main_group = hp(O::MainFormGroup0, 0, &[]);
     let slot = h(O::MsgOrigin, m, &[]);
-    let local_slot = h(O::PlGetSlot, current(), &[]);
-    h(
-        O::SelGroupSelectSaved,
-        hp(O::PlActiveGroup, pl, &[]),
-        &[pa(hp(O::PlSavedGroupAt, pl, &[get::<u8>(m, 1) as i64])), 1],
-    );
+    let local_slot = prts(current()).mSlot as i64;
+    group_with(hp(O::PlActiveGroup, pl, &[]), 4, hp(O::PlSavedGroupAt, pl, &[get::<u8>(m, 1) as i64]));
     if slot == local_slot && *wm::<bool>(O::WExecutingLocalSelection) {
         h(O::MouseSetPointer, 0, &[0]);
         h(O::GameUiShowCommands, main_group, &[]);
         h(O::MainGroupReset, main_group, &[]);
         h(O::MainFormSetUiState, 0, &[0]);
         h(O::MainFormSetCursorLocked, 0, &[0]);
-        let unit = hp(O::SelGroupFirstUnit, hp(O::PlSelectedGroup, pl, &[]), &[]);
+        let unit = group_unit(selected_group(pl), 0);
         if unit != 0 {
             if get_bool(m, 2) {
                 h(O::UnPosition, unit, &[ptr(&mut location)]);
@@ -486,7 +603,7 @@ pub extern "C" fn ee_gamecpp_msg_body(index: i64, m: *mut c_void) {
         EE_NETMSG_BODY_SET_DIPLOMATIC_STANCE => set_diplomatic_stance(m),
         11 => {
             // EE_NETMSG_BODY_START_LOADING: through EEStartLoading (the harness's breakpoint)
-            h(O::MsgStartLoading, m, &[]);
+            ee_gamecpp_msg_start_loading(m as *mut c_void);
         }
         _ => change_formation(m),
     }
@@ -634,13 +751,13 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         }
         EE_NETMSG_WACT_POST_CHAT => {
             let action = hp(O::NewChatAction, m, &[(i[1] != 0) as i64]);
-            h(O::UiPostAction, action, &[]);
-            h(O::ActionDereference, action, &[]);
+            h(O::EntryPostAction, action, &[]);
+            h(O::EntryDereferenceAction, action, &[]);
         }
         EE_NETMSG_WACT_TIMER_EXPIRED => {
             let event = hp(O::NewTimerExpiredEvent, 0, &[]);
             h(O::UiPostEvent, event, &[]);
-            h(O::EventDereference, event, &[]);
+            h(O::EntryDereferenceEvent, event, &[]);
         }
         EE_NETMSG_WACT_START_GAME => {
             // every human has shown the main screen: the start at the offset time
@@ -892,29 +1009,29 @@ pub unsafe extern "C" fn ee_gamecpp_msg_unit_act(i: *const i64, a: *mut c_void, 
             h(O::UcActionChanged, unit_class(u), &[pa(u)]);
         }
         EE_NETMSG_ACT_GO_FANATIC => {
-            h(O::CxGoFanatic, u, &[]);
+            cu(EE_UNITS_CU_DO_GO_FANATIC, u, 0);
         }
         EE_NETMSG_ACT_JIT => {
-            h(O::CxToggleJit, u, &[]);
-            h(O::CxUpdateJit, u, &[]);
+            cu(EE_UNITS_CU_DO_TOGGLE_JIT, u, 0);
+            cu(EE_UNITS_CU_DO_UPDATE_JIT, u, 0);
         }
         EE_NETMSG_ACT_JIT_TOGGLE => {
-            h(O::CxToggleJit, u, &[]);
+            cu(EE_UNITS_CU_DO_TOGGLE_JIT, u, 0);
         }
         EE_NETMSG_ACT_REMOVE_RESEARCH => {
-            h(O::CxRemoveResearch, u, &[i[1]]);
+            cu(EE_UNITS_CU_DO_REMOVE_RESEARCH, u, i[1] as c_long as i64);
         }
         EE_NETMSG_ACT_LOCK_GATE => {
             // a gate built as one piece (scenario Create effect) has no second or fourth part
             let gate = hp(O::UcAsGate, unit_class(u), &[]);
-            h(O::CxSetLocked, u, &[(i[1] != 0) as i64]);
+            cf(u).mIsLocked = i[1] != 0;
             let part = hp(O::GateSecondPart, gate, &[pa(u)]);
             if part != 0 {
-                h(O::CxSetLocked, part, &[(i[1] != 0) as i64]);
+                cf(part).mIsLocked = i[1] != 0;
             }
             let part = hp(O::GateFourthPart, gate, &[pa(u)]);
             if part != 0 {
-                h(O::CxSetLocked, part, &[(i[1] != 0) as i64]);
+                cf(part).mIsLocked = i[1] != 0;
             }
         }
         EE_NETMSG_ACT_RALLY_TIME => {
@@ -924,35 +1041,43 @@ pub unsafe extern "C" fn ee_gamecpp_msg_unit_act(i: *const i64, a: *mut c_void, 
         }
         EE_NETMSG_ACT_BEHAVIOR => {
             let behavior = hp(O::BehaviorAt, 0, &[i[1]]);
-            if hp(O::CxBehavior, u, &[]) != behavior {
-                h(O::CxSetBehavior, u, &[pa(behavior)]);
+            if cf(u).mBehavior as P != behavior {
+                cf(u).mBehavior = behavior as *mut _;
             }
         }
         EE_NETMSG_ACT_REPLANT => {
             h(O::UcReplantFarm, unit_class(u), &[pa(u), pa(a)]);
         }
         EE_NETMSG_ACT_HOME_BASE => {
-            h(O::CxSetHomeBase, u, &[pa(a)]);
+            cu(EE_UNITS_CU_DO_SET_HOME_BASE, u, pa(a));
         }
         EE_NETMSG_ACT_LAND => {
             h(O::CxSetFlightTime, u, &[0]);
         }
         EE_NETMSG_ACT_SCRAMBLE => {
             let goal = hp(O::NewLocationGoal2D, 0, &[i[1] as c_long as i64, i[2] as c_long as i64]);
-            h(O::CxClearAllGoalQueues, u, &[]);
+            // SAFETY: the live unit (EEComplexUnit::ClearAllGoalQueues)
+            unsafe {
+                ee_sim::units::cu_small::game::ee_units_cu_small(
+                    EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES,
+                    u as *mut c_void,
+                    std::ptr::null_mut(),
+                    0,
+                )
+            };
             h(O::CxQueueGoal, u, &[pa(goal), 0]);
             h(O::CxQueueGoal, u, &[pa(hp(O::GoalClone, goal, &[])), 1]);
             h(O::CxQueueAddTime, u, &[1, 1000]);
         }
         EE_NETMSG_ACT_PACK => {
             let new = hp(O::ReplaceUnit, u, &[i[1], pa(a)]);
-            h(O::CxSetIsPacked, new, &[1]);
+            cf(new).mIsPacked = true;
         }
         EE_NETMSG_ACT_UNPACK => {
             let new = hp(O::ReplaceUnit, u, &[i[1], pa(a)]);
             let (x, y) = (rts(u).mTileX, rts(u).mTileY);
             h(O::PlaceUnit, new, &[pa(unit_class(new)), i[2], x as i64, y as i64]);
-            h(O::CxSetIsPacked, new, &[0]);
+            cf(new).mIsPacked = false;
         }
         EE_NETMSG_ACT_SPHERE => {
             // grown or shrunk by 0.05, the inner (mode 9) or the outer (10)
@@ -1021,10 +1146,13 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
             unsafe { player_body(pl, EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, i[1] as u8 as u64) };
         }
         EE_NETMSG_PACT_ASSIGN_SAVED => {
-            h(O::PlAssignSavedGroup, pl, &[i[1]]);
+            group_with(hp(O::PlSavedGroupAt, pl, &[i[1]]), 3, hp(O::PlActiveGroup, pl, &[]));
         }
         EE_NETMSG_PACT_ACKNOWLEDGE => {
-            h(O::PlPlayAcknowledgement, pl, &[i[1]]);
+            // SAFETY: the live player and unit (EEPlayer::PlayAcknowledgement)
+            unsafe {
+                ee_units_selection(pl as *mut c_void, 9, i[1] as P as *mut c_void, 0, std::ptr::null(), 0, false, false)
+            };
         }
         EE_NETMSG_PACT_LOCK_CIV => psaved(pl).mCivilizationLocked = true,
         EE_NETMSG_PACT_REMOVE => {
@@ -1044,7 +1172,14 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         EE_NETMSG_PACT_PATROL_GROUP => {
             let unit = hp(O::UnCastComplex, hp(O::WorldUnit, 0, &[i[1]]), &[]);
             if unit != 0 {
-                h(O::PatrolGroupSelect, unit, &[pa(pl)]);
+                // SAFETY: the live unit's patrol group and the player (EEPPatrolGroup's select)
+                unsafe {
+                    ee_sim::units::patrol_group::ee_units_pg_select(
+                        patrol_group(unit) as *mut _,
+                        pl as *mut c_void,
+                        true,
+                    )
+                };
             }
         }
         _ => {}
@@ -1102,12 +1237,13 @@ pub unsafe extern "C" fn ee_gamecpp_msg_selection(i: *const i64, pl: *mut c_void
             unsafe { *ids.add(prts(pl).mPlayerID as u8 as usize) = i[1] as u8 };
         }
         EE_NETMSG_SEL_COPY => {
-            h(O::PlSelectedCopyActive, pl, &[]);
-            h(O::PlSetSelectedViewedUnit, pl, &[]);
+            group_with(selected_group(pl), 2, hp(O::PlActiveGroup, pl, &[]));
+            // SAFETY: the live player (EEPlayer::SetSelectedViewedUnit(mViewedUnit))
+            unsafe { player_body(pl, EE_UNITS_PLAYER_DO_SET_SELECTED_VIEWED, viewed_unit(pl)) };
         }
         EE_NETMSG_SEL_RESET => {
             unselect_all(pl);
-            h(O::PlSelectedCopyActive, pl, &[]);
+            group_with(selected_group(pl), 2, hp(O::PlActiveGroup, pl, &[]));
         }
         EE_NETMSG_SEL_JIT_OFF => {
             if pfields(pl).mJITManufacturing {
@@ -1158,7 +1294,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
     let attack_effect = hp(O::GfxEffectGet, 0, &[EFFECT_ATTACK]);
     let move_effect = hp(O::GfxEffectGet, 0, &[EFFECT_MOVE]);
     let target_effect = hp(O::GfxEffectGet, 0, &[EFFECT_TARGET]);
-    let count = || h(O::GroupCount, group, &[]) as c_ulong;
+    let count = || group_len(group);
     let fraction = count() as f32 * 0.05f32;
     let mut rounded = ee_base::math::um::lrintf(fraction) as c_long;
     if (rounded as f32) < fraction {
@@ -1181,7 +1317,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
     };
     let mut i: c_ulong = 0;
     while i < count() {
-        let unit = hp(O::GroupUnit, group, &[i as i64]);
+        let unit = group_unit(group, i as c_long);
         let slot = cf(unit).mFormationSlot;
         if (formation != 0 || !(slot < 15))
             && (formation != 1 || !(slot < 20))
@@ -1286,7 +1422,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
     }
     let mut i: c_ulong = 0;
     while i < count() {
-        let unit = hp(O::GroupUnit, group, &[i as i64]);
+        let unit = group_unit(group, i as c_long);
         if !((index as i64) < h(O::CxNumGoalQueues, unit, &[])) {
             i += 1;
             continue;

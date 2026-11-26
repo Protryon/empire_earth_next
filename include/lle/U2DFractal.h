@@ -25,8 +25,7 @@ public:
 
     // diamond-square subdivision wrapping at the edges, the random range shrinking with the step; each value the
     // average plus a random offset within the scaled range, clamped to 0..1
-    void ComputeFractal(float inCornerValue, float inRange, unsigned long inSeed)
-        { ee_util_fractal_compute(this->mFractal, inCornerValue, inRange, inSeed); }
+    void ComputeFractal(float inCornerValue, float inRange, unsigned long inSeed) { ee_util_fractal_compute(this->mFractal, inCornerValue, inRange, inSeed); }
     float GetValue(unsigned long inX, unsigned long inY) { return ee_util_fractal_value(this->mFractal, inX, inY); }
 
     URust<EeUtilFractal> mFractal;

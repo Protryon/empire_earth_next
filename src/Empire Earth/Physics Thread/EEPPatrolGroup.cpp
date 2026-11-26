@@ -10,7 +10,6 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"

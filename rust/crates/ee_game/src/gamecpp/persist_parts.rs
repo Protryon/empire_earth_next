@@ -213,7 +213,7 @@ fn load_player(helper: P, file: Pf, major: c_ulong, minor: c_ulong, v: [i64; 2])
         return r;
     }
     let pl = match kind {
-        0 => hp(O::PphNewHuman, 0, &[]),
+        0 => hp(O::NewHumanPlayer, 0, &[]),
         1 => hp(O::PphNewComputer, 0, &[]),
         3 => {
             h(O::PphVerifyType3, 0, &[]);
@@ -223,7 +223,7 @@ fn load_player(helper: P, file: Pf, major: c_ulong, minor: c_ulong, v: [i64; 2])
     };
     // an unknown player type (a corrupt save) makes no player: the load fails instead of calling through NULL
     r = if pl == 0 { PF_FAILED } else { h(O::PphPlayerLoad, pl, &[v[0], v[1], pa(file.0)]) };
-    let cp = if pl != 0 { hp(O::PphComputerOf, pl, &[]) } else { 0 };
+    let cp = if pl != 0 { hp(O::PlComputerPlayer, pl, &[]) } else { 0 };
     // port: a computer player's engine from 0.251, from 0.253 the next engine's AI id after it; an AI the manifest
     // no longer lists fails the load; a seat saved with the deleted C++ classic plays the manifest's "classic"
     if r == PF_OK && kind == 1 && cp != 0 && (major > 0 || minor >= 251) {
@@ -339,7 +339,7 @@ pub extern "C" fn ee_gamecpp_pph_save(
         if r == PF_OK {
             r = h(O::PphPlayerSave, pl, &[major as i64, minor as i64, pa(file.0)]);
         }
-        let cp = hp(O::PphComputerOf, pl, &[]);
+        let cp = hp(O::PlComputerPlayer, pl, &[]);
         if r == PF_OK && kind == 1 {
             // port: the computer player's engine (Load: from 0.251)
             r = file.write_u8(h(O::PphCpEngine, cp, &[]) as u8);
@@ -378,7 +378,7 @@ pub extern "C" fn ee_gamecpp_pph_save(
 
 /// GetPlayerType: 0 human, 1 computer, 3 both (asserts when neither).
 fn player_type(pl: P) -> c_long {
-    let computer = hp(O::PphComputerOf, pl, &[]) != 0;
+    let computer = hp(O::PlComputerPlayer, pl, &[]) != 0;
     let human = h(O::PphHasHuman, pl, &[]) != 0;
     h(O::PphVerifyPlayerType, 0, &[(computer || human) as i64]);
     if computer && human {
@@ -653,7 +653,7 @@ pub extern "C" fn ee_gamecpp_pch_load(
     let mut count: c_long = 0;
     file.read_long(&mut count);
     for _ in 0..count {
-        let calamity = hp(O::PchNewCalamity, 0, &[]);
+        let calamity = hp(O::CalNewEmpty, 0, &[]);
         h(O::PchCalamityLoad, calamity, &[major as i64, minor as i64, pa(file.0)]);
         h(O::PchPush, helper, &[pa(calamity)]);
     }
@@ -764,10 +764,10 @@ pub extern "C" fn ee_gamecpp_pc_load(chunk: *mut c_void, file: *mut c_void) -> c
     if r != PF_OK {
         return r as c_long;
     }
-    let description = Owned::new(O::PsUStrNew, O::PsUStrDelete);
+    let description = Owned::new(O::UStrNew, O::UStrFree);
     let mut i = 0;
     while i < count && r == PF_OK {
-        r = h(O::PcUStrLoad, description.0, &[pa(file.0)]);
+        r = h(O::DvUStrLoad, description.0, &[pa(file.0)]);
         if r != PF_OK {
             i += 1;
             continue;

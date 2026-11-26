@@ -53,33 +53,18 @@ public:
     unsigned char GetRecordPlaybackMode() const { return ee_net_sv_record_playback_mode(this->mServer); }
     unsigned long GetLastCTMessageID() const { return ee_net_sv_get(this->mServer, EeNetSvGet::LastCtMessageId); }
     unsigned long GetMaxPlayers() const { return ee_net_sv_get(this->mServer, EeNetSvGet::MaxPlayers); }
-    unsigned char GetNumberOfPlayers() const
-    {
-        return (unsigned char)ee_net_sv_get(this->mServer, EeNetSvGet::NumberOfPlayers);
-    }
+    unsigned char GetNumberOfPlayers() const { return (unsigned char)ee_net_sv_get(this->mServer, EeNetSvGet::NumberOfPlayers); }
     void LockSendCommunicationsTick() { ee_net_sv_lock_send_communications_tick(this->mServer); }
-    void ResetClientConnection(unsigned long inIndex)
-    {
-        ee_net_pr_reset(this->Protocol(), this->Server(), false, (uint32_t)inIndex);
-    }
+    void ResetClientConnection(unsigned long inIndex) { ee_net_pr_reset(this->Protocol(), this->Server(), false, (uint32_t)inIndex); }
     void ResetXfer() { ee_net_pr_reset(this->Protocol(), this->Server(), true, 0); }
     void ResumeMigratedGame() { ee_net_sv_set_event(this->mServer, EeNetSvEvent::ResumeMigratedGame); }
-    void SetCurrentPhysicsTick(unsigned long& inTick)
-    {
-        ee_net_sv_set(this->mServer, EeNetSvSet::CurrentPhysicsTick, (uint32_t)inTick);
-    }
+    void SetCurrentPhysicsTick(unsigned long& inTick) { ee_net_sv_set(this->mServer, EeNetSvSet::CurrentPhysicsTick, (uint32_t)inTick); }
     void SetGameState(unsigned char inState) { ee_net_sv_set(this->mServer, EeNetSvSet::GameState, inState); }
     void SetSendInterval(unsigned long inInterval) { ee_net_sv_set_send_interval(this->mServer, (uint32_t)inInterval); }
-    void SetSendToSlotForPlayer(unsigned char inPlayer, unsigned char inSlot)
-    {
-        ee_net_sv_set_send_to_slot_for_player(this->mServer, inPlayer, inSlot);
-    }
+    void SetSendToSlotForPlayer(unsigned char inPlayer, unsigned char inSlot) { ee_net_sv_set_send_to_slot_for_player(this->mServer, inPlayer, inSlot); }
     void StartGame() { ee_net_sv_set_event(this->mServer, EeNetSvEvent::StartGame); }
     void StartPing() { ee_net_sv_set(this->mServer, EeNetSvSet::Ping, 1); }
-    void StartWaitingForReconnects(unsigned long inTime)
-    {
-        ee_net_sv_start_waiting_for_reconnects(this->mServer, (uint32_t)inTime);
-    }
+    void StartWaitingForReconnects(unsigned long inTime) { ee_net_sv_start_waiting_for_reconnects(this->mServer, (uint32_t)inTime); }
     void StopGame() { ee_net_sv_set_event(this->mServer, EeNetSvEvent::StopGame); }
     void StopPing() { ee_net_sv_set(this->mServer, EeNetSvSet::Ping, 0); }
     void UnlockSendCommunicationsTick() { ee_net_sv_unlock_send_communications_tick(this->mServer); }
@@ -91,14 +76,8 @@ public:
     bool SimGameRunning() const { return ee_net_sv_sim_game_running(this->mServer); }   // running, paused
 
     void AbortXfer(unsigned long inXferID) { ee_net_sv_abort_xfer(this->mServer, (uint32_t)inXferID); }
-    unsigned long GetMessageManagerCurrentMessageNumber()
-    {
-        return ee_net_sv_message_manager_current_number(this->mServer);
-    }
-    unsigned char GetSendToSlotForPlayer(unsigned char inPlayer)
-    {
-        return ee_net_sv_send_to_slot_for_player(this->mServer, inPlayer);
-    }
+    unsigned long GetMessageManagerCurrentMessageNumber() { return ee_net_sv_message_manager_current_number(this->mServer); }
+    unsigned char GetSendToSlotForPlayer(unsigned char inPlayer) { return ee_net_sv_send_to_slot_for_player(this->mServer, inPlayer); }
     // Collects world checksums per tick; once every human has answered, marks the out-of-sync slots
     void LogChecksumResponse(NEMRecord* inMessage)   // a world database checksum response
     {
@@ -117,10 +96,7 @@ public:
     {
         return (unsigned long)ee_net_sv_send_to_all_and_wait(this->mServer, inMessage, (uint32_t)inTimeout, (uint32_t)inRetries);
     }
-    void SetMessageManagerLowestCTs(unsigned long inCT)
-    {
-        ee_net_sv_set_message_manager_lowest_cts(this->mServer, (uint32_t)inCT);
-    }
+    void SetMessageManagerLowestCTs(unsigned long inCT) { ee_net_sv_set_message_manager_lowest_cts(this->mServer, (uint32_t)inCT); }
     void UnpauseGame() { ee_net_sv_pause_game(this->mServer, false); }
     long XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot, unsigned long& outXferID,
                           bool inP5)
@@ -169,10 +145,7 @@ public:
     {
         return (long)ee_net_sv_send_message_to(this->mServer, inSlot, inMessage, inGuaranteed);
     }
-    long SendMessageToAll(NEMessage* inMessage, bool inGuaranteed)
-    {
-        return (long)ee_net_sv_send_message_to_all(this->mServer, inMessage, inGuaranteed);
-    }
+    long SendMessageToAll(NEMessage* inMessage, bool inGuaranteed) { return (long)ee_net_sv_send_message_to_all(this->mServer, inMessage, inGuaranteed); }
     void UnregisterSlot(unsigned char inSlot) { ee_net_sv_unregister_slot(this->mServer, inSlot); }
 
     // the server's calls out (ee_net's EeNetSvOp): the engine, the protocol and its server, the messages, the base

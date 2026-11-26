@@ -9,18 +9,10 @@
 #include "lle/GEColor.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
-#include "lle/U2DRectangle.h"
 
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEPersistentTag.h"
-#include "ee/EEStormType.h"
-#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp weather.rs)
 
 // Creates the weather manager, disabled, with no storms, calm wind and at most three storms at a time (the wind's
 // limits: ee_game gamecpp weather.rs)

@@ -5,17 +5,10 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "rust/render/ge.h"   // ee_ge_draw2d_fill (ee_ge list2d.rs)
-#include "lle/GEBitmap.h"
 #include "lle/FSArchive.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -29,7 +22,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUIBMapBackground.h"
-#include "rust/game/screens.h"   // ee_screens_frame_draw (ee_screens frame.rs)
 
 
 // the frame's cells in its 64x64 texture (provisional names)
