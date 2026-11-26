@@ -41949,3 +41949,96 @@ Numbers: docs/progress/headers.md "Round 2". port_metrics 4930a8c9d (round 1 + b
   RESULT PASS; won_host_coverage PASS, `xbuild.py wontest` PASS (183 drivers, exit 0); `gates.sh` GATES PASS (ai-game
   time-cap units [4, 34, 36] alive_computers [2, 3] engines classic_lua x 2; lan-game PT host=2811 joiner=2809).
   Not run: the space, missile, app, placement and transport captures, plain saveload, eedata (untouched), POSIX builds.
+
+
+## R6 WON lobby and network, round 39: the config table reads through compcfg.rs, 56 table setters cfgcomp.rs compositions, the config units one host unit, EELobbyConfig folded, FilterListItem a Rust row; the hash list, PingLogic and 17 one-call logic host cases in Rust; five crypto/URL shims and driver-only members the drivers', five thin headers gone (ee_won_gui cfgtab.rs, compcfg.rs, cfgcomp.rs, guireg.rs; ee_won_lobby rows.rs, lobbyprv.rs, logicshell.rs, netlogicops.rs, cppnet.rs, cppcore.rs; ee_won_net authobj.rs, http.rs; branch rust-wonnet39, 2026-11-25)
+
+The round started from 26237943f (rust-wonnet38) with two forks: wn39a the config object model, then the lobby
+list; wn39b the network list. Both forks stopped on their turn limit once and were resumed; the first lead stopped
+too, and a second lead merged fork A's first part (971ce090a), batch 28 (a102c738e: ComponentConfigHost.cpp ours,
+the headers the round folded dropped), then fork B (e5b50e585, no conflict: fork A's first part was already in) and
+fork A's second part (a7da4d0b0).
+
+### What moved
+- The config table (fork A): cfgtab.rs reads a value through compcfg.rs (`tab_read`) on the config's own object;
+  the nine readers only CfgTabRead used (ReadDirection, ReadHorzAlign, ReadVertAlign, ReadChar, ReadCursor,
+  ReadStandardCursor, ReadSelectionColor, ReadRawImage and the flag read), CfgTabComma, CfgTabEnd and the ReadFlag
+  composition are gone (22539332f). 56 CfgTabSet cases that ran a cfgcomp.rs composition are cfgcomp.rs's own
+  (`ee_won_cfg_comp_setter`, `run_small`; 998232eb8, f45193b35).
+- The config units: ConfigTableHost.cpp, WONGUIConfig.cpp, WONLobbyConfigImages.h and WONLayoutConfigs.h folded
+  into ComponentConfigHost.cpp (928db7215, 574156c58); the GUI registrations' config kinds, shells and skin copies
+  are made in Rust (guireg.rs ENTRIES, compcfg.rs Make).
+- EELobbyConfig folded into LobbyConfig (the file transfer port's key in the constructor); the config allocator
+  (mAllocator, DefaultAllocator, SetAllocator, EELobbyNewConfig, the glue's FactoryConfig) gone (d6c92ab7b). The
+  lobby control configs read their component instead of keeping a typed copy (LobbyCfgComp, d1f786248).
+- FilterListItem is a Rust text row (rows.rs `Filter`, c7dc1fabe): in the game rows.rs answers the filter row's ops,
+  its insertion through the combo box's Rust object; the C++ class and its eight host cases are gone. The drivers'
+  worlds still answer the ops themselves, so won_hostops_test is unchanged.
+- The network side (fork B): WONBlowfish.h, WONElGamal.h, WONAuthPeerData.h, WONMD5Digest.h and WONURL.h moved to
+  tests/won/drv (included under `EE_WON_DRV(Routing_crypto)`); the game's two callers use authobj.rs
+  `ee_won_authctx_peer_num` and http.rs `ee_won_url_kind`. Driver-only members of AsyncOp, AsyncSocket, SocketOp,
+  UDPManager, the UDP ops, RoutingRequestValues, ServerContext, CDKey, AuthContext and WriteBuffer moved to
+  tests/won/drv (50368e456). WONStatus.h and WONRoutingOpTypes.h gone (their 51 includers use the generated headers),
+  and WONLobbyAccountLogic.h, WONLobbyRoutingLogic.h, WONLobbyDialogLogic.h (their slot enums in WONLobbyLogic.h)
+  (e0ae7e99f).
+- The hash file list (mHasSetHashFileList, mHashFileList) is lobbyprv.rs's; `ee_won_lobbyprv_hash_login` replaces
+  GetLobbyAuthContext's SetHashFile / SetHashFileList (948701bc3). PingLogic is a RustLogic of the Ping kind
+  (logicshell.rs; WONLobbyPing.h, the class, LogicCompletion<T> and LobbyCompletion<T> gone, fe89dd4b5).
+- 17 one-call logic host cases of the Account, Init and Ping hosts answered in Rust in the game (netlogicops.rs
+  prv_op, cppnet.rs, cppcore.rs `host_op_of`, `auth_ctx_of`); won_host_coverage counts prv_op as an answer (c316acaa7).
+
+`port_metrics.py`, the round's own commits (26237943f -> 971ce090a plus a5d94a93e -> a7da4d0b0, batch 28 left out):
+C++ lines **-764** (config model -237, the lobby row -25, network -502), files -2 (ConfigTableHost.cpp and WONGUIConfig.cpp, which WON GUI 38 also merged: 0 over origin/rust), logic **-165**, classes -12,
+extern_c +8, unsafe +30. Short of the -1,500 / -1,000 target: about half of fork B's part is header cleanup, and the
+lobby list's remaining items are each small or sit in files the other fork held (Fork A's table below).
+Over origin/rust after batch 29 (47e9ad712 -> 7b268d610, the round alone): C++ lines 88,934 -> 88,210 (-724),
+files 269 -> 269, logic 12,147 -> 11,984 (-163), classes -12, extern_c +8, unsafe +30. From 26237943f with batches
+28 and 29: C++ lines -10,672, files -36, logic -652.
+
+### What was not done, and why
+- LobbyConfig's values in Rust (about -80): its readers are in InitLogic's host cases and the class is in
+  WONLobbyGUI.h, the WON GUI lane's header; left for a round that owns both.
+- WONLobbyCore.h's declarations: every function is live. WONLobbyEvents.h's makers: all used, and
+  won_lobbyevt_test compares every maker. WONLobbyPrv's run state: LobbyServiceSupport.cpp reads mSuspended.
+- SendFileOp as a SocketOp kind needs a "Rust body" kind in sockops.rs; EELobbyTransferCompletion a window-thread
+  Rust completion (about 10 lines). GlueText and EELobbyColorButton/Chooser are thin shells already: the gain needs
+  the WON GUI lane's generic component shells.
+
+### Problems met
+- An `EE_WON_DRV` include at the top of UDPManagerRecvOp's body cannot see the class's later MessageVerifier
+  typedef: the drivers' SetMessageVerifier spells the function pointer type.
+- The ping op body calls its host for the game's AddRef/Release directly, not through the logic's op: it needed the
+  same game-time answer (game_prv_op), or the game would leak.
+- After the header moves, includers of the three slot headers had to include WONLobbyLogic.h and WONLobbyDialogs.h
+  after their other wonapi includes.
+- won_lobby33_test failed once after the hash list moved: its original side now copies the hash list and flag to and
+  from the Rust state (InitAuth's StringParser trace event dropped from the original side; the dump's hashes still
+  compare), and the constructor case clears the world's hash sentinels.
+- Git Bash heredocs turned `\\` into `\` and `\0` into NUL bytes in scripts that wrote Rust: write such scripts with
+  the Write tool, or fix with a byte replace.
+- Disk fell to 13-16 GB mid-round (other lanes); the rust gate's spurious rustc failures went with it once space was back.
+
+### Behaviour changes
+- TOUTimes without a lobby answers 0, 0 (the original left two uninitialised locals); the Rust constructor clears the
+  hash flag (the original left the bool uninitialised).
+- A filter row's cleared text is a null text instead of `GUIString("")`; every reader treats both as empty.
+
+### Gates
+All lane gates PASS on the merged tip 7b268d610 (batch 29 in): `build.py --sim` and the test profile 0 unresolved,
+0 duplicates; `rust_build.py header` current (367); rust gate PASS, 6,790 tests; won_host_coverage PASS; wontest
+185/185 exit 0; oracle seeds 2-7 identical; captures `oracle` and `late` PASS (WON code has no capture tags of its
+own); the saveload matrix PASS; scenario_check 27/27; the LAN game PASS (host 2858, joiner 2866) and
+lan_capture_compare against the base exe built from a102c738e: the lobby captures identical but the game's name
+(the harness's slot number, `lantest1` against `lantest0`) and the text carets; gates.sh GATES PASS (tour, AI game
+`alive_computers [2, 3]`, classic_lua both, LAN game). Before batch 29 (a7da4d0b0) the same chain had passed the
+builds, rust gate (6,786), coverage, wontest 185/185, oracle and the oracle capture when it was stopped for the merge.
+
+### Left
+- LobbyConfig's values into Rust (with the WON GUI lane's header); InitLogic's compound cases that read its lists
+  (InitAddAll, DnsTestReady, the config reads).
+- DocBytes (the document pointer outlives its ByteBufferPtr in the C++); the ping body's RequestSend and Elapsed;
+  RoutingLogic's host through its own op enum; ServerConnectionConnectOp as a Rust op kind.
+- SendFileOp and its completion, TransferSetSavesPath, GlueText, EELobbyColorButton/Chooser, the lobby configs'
+  Virtual24 as kinds (a hook in ComponentConfig::Virtual24), WONLobbyPrv's run state.
+- WONLobbyWindow is never created (lobby_window is always null), but won_wonnet_test sets it.
+- WONRouting.h: the shims the core table needs (CoreObjectOf, the virtual hooks).
