@@ -16,7 +16,6 @@
 #include "ee/EEPWorldHelper.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEPersistentTag.h"
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
 #include "lle/U2DSparseArray.h"
@@ -28,22 +27,16 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include <algorithm>
 #include <memory>
 #include <vector>
 
 
-#include "rust/game/gamecpp.h"
-#include "lle/NEMessage.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEPMultiplayerHelper.h"
-#include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPPlayerHelper.h"
 #include "ee/EECPEngine.h"
-#include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -61,7 +54,6 @@
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEUIFScenarioEditor.h"
 #include "lle/FSChunk.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"

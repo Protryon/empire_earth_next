@@ -12,7 +12,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/Input System.h"
 #include "lle/UIForm.h"
@@ -27,7 +26,6 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEMouse.h"
-#include "ee/EEMiniMap.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
@@ -48,14 +46,11 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEGraphicEffect.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
-#include "rust/game/gamecpp.h"   // the bodies (gamecpp message.rs)
 
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()

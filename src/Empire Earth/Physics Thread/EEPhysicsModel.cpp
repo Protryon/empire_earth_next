@@ -16,7 +16,6 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"
@@ -25,7 +24,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EERules.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"

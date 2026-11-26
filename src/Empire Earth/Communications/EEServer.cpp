@@ -25,7 +25,6 @@
 #include <mbstring.h>
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
-#include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEWonNet.h"
@@ -36,11 +35,8 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEServer.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
-#include "rust/game/gamecpp.h"
-#include "ee/EEUnit.h"
 #include <list>
 #include <string>
 // (gDefaultPlayerColors, the 16 slots' default colours: gamecpp globals.rs)

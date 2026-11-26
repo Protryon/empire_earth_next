@@ -2,21 +2,13 @@
 // "EEPhysics Data" key's init chain, the class in definition order, the inline COMDATs of other classes after their
 // first users). Unit flags: the exe's module set.
 #include <windows.h>
-#include "platform/PlatFile.h"
 #include <vector>
 #include <stdlib.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/Input System.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/FSArchive.h"
-#include "lle/UIForm.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -44,14 +36,12 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EECivPowersManager.h"
-#include "ee/EEDatabaseTables.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEMap.h"
 #include "ee/EEMessageCapture.h"
 #include <functional>
 #include "ee/EEGameLog.h"
-#include "rust/game/physics.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 
