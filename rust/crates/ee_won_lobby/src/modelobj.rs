@@ -1060,6 +1060,100 @@ impl EeWonModel {
 
 // ---- the methods (each the original's statements; a model object reached through its shell)
 
+/// RoutingLogic's client iterator (the C++ `LobbyClientIterator` it made): the list shell and the cursor.
+struct ClientIter {
+    list: isize,
+    cursor: EeWonModelCursor,
+}
+
+/// RoutingLogic's ops on its server list and game list (the shell's two slots, `servers` and `games`, shells of
+/// their Rust model objects), and on another server list (R6 WON lobby and network round 40; RoutingLogic.cpp's
+/// cases): the answer, or `None` for another op. Each is the C++ case's model call.
+pub(crate) fn route_list_op(
+    op: crate::routelogic::EeWonRouteLogicOp,
+    servers: isize,
+    games: isize,
+    a: isize,
+    bb: isize,
+    c: isize,
+) -> Option<isize> {
+    use crate::routelogic::EeWonRouteLogicOp as O;
+    use EeWonModelCall as C;
+    if servers == 0 || games == 0 {
+        return None;
+    }
+    let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
+    // SAFETY (the calls): live shells (the logic's two, the arguments' as the C++ case took them)
+    let call = |shell: isize, k: C, p: isize, q: isize| unsafe { dispatch(must(shell), k, p, q, 0, empty) };
+    let count = || call(servers, C::ServerListCount, 0, 0);
+    Some(match op {
+        // `b == 0 ? GetCount() : IsEmpty()`
+        O::ListNum => {
+            if bb == 0 {
+                count()
+            } else {
+                b(count() == 0)
+            }
+        }
+        O::ListAt => call(servers, C::ServerListAt, a, 0),
+        // `S(b)->GetAddress() == AddressAt(a)`
+        O::ListAddressIs => {
+            let at = call(servers, C::ServerListAddressAt, a, 0) as *const EeWonIpAddr;
+            // SAFETY: the list's live address, or none (an empty address)
+            let at = unsafe { at.as_ref() }.cloned().unwrap_or_default();
+            b(server_address(bb).compare(&at) == std::cmp::Ordering::Equal)
+        }
+        // `FindServer(F(a)->GetAddress())`
+        O::FriendServer => {
+            let f = must(a).friend().address.borrow().clone();
+            call(servers, C::ServerListFind, &f as *const EeWonIpAddr as isize, 0)
+        }
+        // `FindServer(US(a)->GetDestAddr())`: the user status request's server
+        O::StatusOpServer => {
+            let addr = ee_won_net::cppnet::udp_request_address(a as *mut c_void)?;
+            call(servers, C::ServerListFind, &addr as *const EeWonIpAddr as isize, 0)
+        }
+        // `((LobbyServerList*)a)->FindServer(RS(b)->GetAddr())`: the request's first server
+        O::ServerListFind => {
+            let h = ee_won_net::cppcore::host_op_of(bb as *mut c_void)?;
+            // SAFETY: the op's live Rust op; the new address freed below
+            let addr = unsafe { ee_won_net::hostop::ee_won_hostop_addr(h, ee_won_net::reqhost::EE_WON_REQHOST_ADDR) };
+            let r = call(a, C::ServerListFind, addr as isize, 0);
+            // SAFETY: the address made above
+            unsafe { ee_won_net::ipobj::ee_won_ipaddr_free(addr) };
+            r
+        }
+        // the game list's `Clear()`, `Rewind()`, `HasMore()`, `Next()`, `GetGame(b)`, `AddGame(b)`, `RemoveGame(b)` (the
+        // reference the model gives), `GetOrCreateGame(b, c)`
+        O::GameList => match a {
+            1 => {
+                call(games, C::GameListClear, 0, 0);
+                0
+            }
+            2 => {
+                call(games, C::GameListRewind, 0, 0);
+                0
+            }
+            3 => call(games, C::GameListHasMore, 0, 0),
+            4 => call(games, C::GameListNext, 0, 0),
+            5 => call(games, C::GameListGetId, bb as u16 as isize, 0),
+            6 => {
+                call(games, C::GameListAdd, bb, 0);
+                0
+            }
+            7 => call(games, C::GameListRemoveId, bb as u16 as isize, 0),
+            8 => call(games, C::GameListGetOrCreateId, bb as u16 as isize, c),
+            _ => 0,
+        },
+        _ => return None,
+    })
+}
+
+/// A server shell's address (`((LobbyServer*)shell)->GetAddress()`, a copy).
+pub(crate) fn server_address(shell: isize) -> EeWonIpAddr {
+    must(shell).server().address.borrow().clone()
+}
+
 /// The model object of a shell the original dereferenced (a NULL there was a crash).
 fn must<'a>(shell: isize) -> &'a EeWonModel {
     // SAFETY: the callers pass live shells
@@ -2714,6 +2808,81 @@ pub(crate) fn route_op(
                 _ => {}
             }
             0
+        }
+        // R6 WON lobby and network round 40: RoutingLogic.cpp's client iterator (`new LobbyClientIterator(list)`, its
+        // HasMore and Next, its delete) as a Rust cursor over the list (NULL: no clients)
+        O::IterNew => Box::into_raw(Box::new(ClientIter { list: a, cursor: EeWonModelCursor::default() })) as isize,
+        O::IterHasMore | O::IterNext => {
+            // SAFETY: an iterator IterNew made, not yet freed (the logic's contract)
+            let it = unsafe { &mut *(a as *mut ClientIter) };
+            // SAFETY: a live list shell or NULL
+            let Some(l) = (unsafe { of(it.list) }) else { return Some(0) };
+            if op == O::IterHasMore {
+                b(l.cursor_peek(&it.cursor) < l.list().clients.len())
+            } else {
+                let i = l.cursor_next(&mut it.cursor);
+                l.list().clients.at(i)
+            }
+        }
+        O::IterFree => {
+            if a != 0 {
+                // SAFETY: IterNew's box, freed once
+                drop(unsafe { Box::from_raw(a as *mut ClientIter) });
+            }
+            0
+        }
+        // R6 WON lobby and network round 40: RoutingLogic.cpp's cases on a model object's address
+        // `F(a)->GetAddress().IsValid()`
+        O::FriendAddressValid => b(m().friend().address.borrow().valid),
+        // `HeldOp(RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29))`
+        O::GroupQueryNew => {
+            if !ee_won_net::cppnet::bound() {
+                return None;
+            }
+            let six = m().server().address.borrow().six();
+            // SAFETY: a new request op, taken; six bytes
+            let o = unsafe {
+                ee_won_net::reqhost::ee_won_hostop_new_request(
+                    ee_won_net::reqmake::ee_won_reqmake_group_list(0x29),
+                    false,
+                    std::ptr::null_mut(),
+                    six.as_ptr(),
+                    -1,
+                    std::ptr::null_mut(),
+                )
+            };
+            ee_won_net::cppnet::ref_add(o);
+            o as isize
+        }
+        // `HeldOp(RustServerOp::MadeOp(ee_won_servconn_connect_op_new(RC(a), S(b)->GetAddress().GetValue())))`
+        O::ConnectOpNew => {
+            if !ee_won_net::cppnet::bound() {
+                return None;
+            }
+            let addr = must(bb).server().address.borrow().clone();
+            // SAFETY: a live connection; the address copied by the op
+            let o = unsafe { ee_won_net::cppcore::ee_won_servconn_connect_op_new(a as *mut c_void, &addr) };
+            ee_won_net::cppnet::ref_add(o);
+            o as isize
+        }
+        // `HeldOp(RustServerOp::NewRequest(ee_won_reqop_user_id(a, b), (ServerContext*)c))`
+        O::UserIdOpNew => {
+            if !ee_won_net::cppnet::bound() {
+                return None;
+            }
+            // SAFETY: the name's `bb` bytes at `a`; the new request op, taken
+            let o = unsafe {
+                ee_won_net::reqhost::ee_won_hostop_new_request(
+                    ee_won_net::reqops::ee_won_reqop_user_id(a as *const u8, bb as usize),
+                    true,
+                    c as *mut c_void,
+                    std::ptr::null(),
+                    -1,
+                    std::ptr::null_mut(),
+                )
+            };
+            ee_won_net::cppnet::ref_add(o);
+            o as isize
         }
         _ => return None,
     })

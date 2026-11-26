@@ -48,7 +48,6 @@ static RoutingOp* RO(intptr_t a) { return reinterpret_cast<RoutingOp*>(a); }
 static RoutingConnection* RC(intptr_t a) { return reinterpret_cast<RoutingConnection*>(a); }
 static AsyncOp* AO(intptr_t a) { return reinterpret_cast<AsyncOp*>(a); }
 static RustServerOp* RS(intptr_t a) { return static_cast<RustServerOp*>(AO(a)); }
-static UDPManagerSendRecvOp* US(intptr_t a) { return static_cast<UDPManagerSendRecvOp*>(AO(a)); }
 static ChatCommandParser* P(intptr_t a) { return reinterpret_cast<ChatCommandParser*>(a); }
 template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
 {
@@ -74,7 +73,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::TextFree: delete T(a); return 0;
     case O::TextLength: return T(a)->length();
     case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
-    case O::IterFree: delete reinterpret_cast<LobbyClientIterator*>(a); return 0;
     case O::TextUnits: // the text's wchar_t units (to b when not 0); 0 is the empty text
         if (b != 0)
             for (unsigned i = 0; i < TX(a).mData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)TX(a).mData->mText[i];
@@ -97,7 +95,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::HasConfig: return GetLobbyConfig() != NULL;
     case O::ConfigPingCeiling: return GetLobbyConfig() != NULL ? (intptr_t)(uint16_t)GetLobbyConfig()->mPingCeiling : -1;
     case O::AuthContext: return (intptr_t)GetLobbyAuthContext();
-    case O::AuthStopRefresh: reinterpret_cast<AuthContext*>(a)->SetDoAutoRefresh(false); return 0;
     case O::MyGame: return (intptr_t)GetMyLobbyGame();
     case O::MyClient: return (intptr_t)GetMyLobbyClient();
     case O::Parser: return (intptr_t)LobbyGetChatCommandParser();
@@ -122,8 +119,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::SetBlocked: LobbySetClientBlocked(C(a), b != 0, 4); return 0;
     case O::SetIgnored: LobbySetClientIgnored(C(a), b != 0, 4); return 0;
     case O::SetLastRoom: LobbySetLastRoom(S(a)->GetName(), G(b)->GetName()); return 0;
-    case O::ReconnectId: return (intptr_t)LobbyGetReconnectId(S(a)->GetAddress());
-    case O::SetReconnectId: LobbySetReconnectId(S(a)->GetAddress(), (unsigned long)b); return 0;
     case O::ClientOptions: {
         LobbyOpenRustPopup(EeWonLobbyPopupKind::Client, (intptr_t)C(a), (intptr_t)C(b), (int)c);
         return 0;
@@ -135,48 +130,23 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // ---- the model
     // (the model's other values, and the routing records read into it, are its Rust objects': modelobj.rs route_op)
     case O::ServerNum: return b == 4 ? S(a)->GetName() == LobbyGetLastServerName() : S(a)->HasAddress(GetLobbyConfig()->mLanguage);
-    case O::ListNum: return b == 0 ? (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->GetCount() : L->Slot<LobbyServerList>(kRoutingServerList)->IsEmpty();
-    case O::ListAt: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->ServerAt((size_t)a);
-    case O::ListAddressIs: return S(b)->GetAddress() == L->Slot<LobbyServerList>(kRoutingServerList)->AddressAt((size_t)a);
     case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
     case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
-    case O::GameList:
-        switch (a) {
-        case 1: L->Slot<LobbyGameList>(kRoutingGameList)->Clear(); return 0;
-        case 2: L->Slot<LobbyGameList>(kRoutingGameList)->Rewind(); return 0;
-        case 3: return L->Slot<LobbyGameList>(kRoutingGameList)->HasMore();
-        case 4: return (intptr_t)L->Slot<LobbyGameList>(kRoutingGameList)->Next();
-        case 5: return (intptr_t)L->Slot<LobbyGameList>(kRoutingGameList)->GetGame((unsigned short)b);
-        case 6: L->Slot<LobbyGameList>(kRoutingGameList)->AddGame(GM(b)); return 0;
-        case 7: return Held(L->Slot<LobbyGameList>(kRoutingGameList)->RemoveGame((unsigned short)b));
-        case 8: return (intptr_t)L->Slot<LobbyGameList>(kRoutingGameList)->GetOrCreateGame((unsigned short)b, reinterpret_cast<bool*>(c));
-        }
-        return 0;
-    // ---- the routing ops and connection
-    case O::RSetNum: RO(a)->SetNum((int)b, (long long)c); return 0;
+    // ---- the routing ops and connection (the ops' and connections' one-call cases are Rust's: netops.rs route_op)
     case O::RSetText: RO(a)->SetText((int)b, TX(c)); return 0;
-    case O::RConnection: return (intptr_t)RO(a)->mConnection.get();
     case O::ConnNew: { RoutingConnection* aConnection = new RoutingConnection; aConnection->AddRef(); return (intptr_t)aConnection; }
-    case O::RNew: return HeldOp(new RoutingOp(RC(a), (RoutingOpType)b));
-    case O::ConnSetAuth: RC(a)->SetAuth(reinterpret_cast<AuthContext*>(b), AUTH_TYPE_PERSISTENT); return 0;
     case O::ConnSetNotice: RC(a)->SetOpCompletion((int)b, new ShellCompletion(L, EeWonLogicShellDone::RouteNotify, (int)c)); return 0;
     case O::ConnSetClose: RC(a)->SetCloseCompletion(new ShellCompletion(L, EeWonLogicShellDone::RouteClosed)); return 0;
     // SubscribeDataObject(0xffff, the game data type "G", false, the notice completion of code 21)
     case O::ConnSubscribeGames: RoutingRequestValues().N(1).N(0xffff).S(std::string("G")).N(false).Run(RC(a), EE_WON_RTQ_READ_DATA, new ShellCompletion(L, EeWonLogicShellDone::RouteNotify, 21)); return 0;
-    case O::ConnIsConnected: return RC(a)->IsConnected();
-    case O::ConnSendData: // SendData(b, 0, c, NULL)
-        RoutingRequestValues().D(reinterpret_cast<const ByteBuffer*>(b)).N(0).L(std::list<unsigned short>(1, (unsigned short)c))
-            .Run(RC(a), EE_WON_RTQ_DATA, NULL);
-        return 0;
     case O::BufNew: return (intptr_t) new WriteBuffer(0, true);
     case O::GameWriteSummary: GM(a)->WriteSummary(*reinterpret_cast<WriteBuffer*>(b)); return 0;
     // CreateDataObject(true, c, the game data type "G", gEmptyWideString, the summary, NULL)
     case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(gEmptyWideString).D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
-    case O::ConnectOpNew: return HeldOp(new ServerConnectionConnectOp(RC(a), S(b)->GetAddress()));
     // ---- the parser, the events, the dialogs
     case O::ParserNum:
         switch (b) {
@@ -189,16 +159,11 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     case O::ParserText: return (intptr_t) new GUIString(P(a)->GetText());
     case O::ParserSetInput: P(a)->SetInput(C(b)->GetName()); return 0;
-    case O::IterNew: return (intptr_t) new LobbyClientIterator(reinterpret_cast<LobbyClientList*>(a));
-    case O::IterHasMore: return reinterpret_cast<LobbyClientIterator*>(a)->HasMore();
-    case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();
     case O::EventComponent: return (intptr_t)E(a)->mComponent;
     case O::EventType: return E(a)->mType;
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
-    case O::FriendAddressValid: return F(a)->GetAddress().IsValid();
-    case O::FriendServer: { IPAddr anAddress = F(a)->GetAddress(); return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(anAddress); }
     case O::DialogDo:
         switch (a) {
         case 1: return LobbyDoDialog(L->mDialog[kRoutingAddFriend].get());
@@ -283,25 +248,16 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // ---- the friends' searches, the server and room lists
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
     case O::StatusOpNew: return HeldOp(new UDPManagerSendRecvOp(ee_won_userstatus_body(), L->Slot<LobbyServerList>(kRoutingServerList)->AddressAt((size_t)a), reinterpret_cast<UDPManager*>(b)));
-    case O::StatusOpAddId: ee_won_userstatus_add(UserStatusOf(AO(a)), (unsigned long)b); return 0;
     case O::StatusOpRun:
         L->RunOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteUserStatus), 10000);
         return 0;
-    case O::StatusOpServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(US(a)->GetDestAddr());
-    case O::StatusOpRust: return (intptr_t)UserStatusOf(AO(a));
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
-    // GetUserIdFromNameOp: a Rust op (ee_won reqops.rs) with the name, its id read back
-    case O::UserIdOpNew: return HeldOp(RustServerOp::NewRequest(ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(a), (size_t)b), reinterpret_cast<ServerContext*>(c)));
-    case O::OpUserId: return (intptr_t)(unsigned long)ee_won_hostop_num(RS(a)->GetRustOp(), EE_WON_REQOP_USER_ID, 0);
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
-    case O::ServerListFind: return (intptr_t)reinterpret_cast<LobbyServerList*>(a)->FindServer(RS(b)->GetAddr());
-    case O::GroupQueryNew: return HeldOp(RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29));
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteGroups), 0); return 0;
     case O::RoomDirServers: return Held(SmartPtr<ServerContext>(LobbyGetRoomDirServers()));
     case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), GetLobbyConfig()->mProductDirectory, 0x04000622, kDirTypes, 2));
     case O::DirEntitiesNew: return (intptr_t) new DirList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
     case O::DirListEmpty: return reinterpret_cast<DirList*>(a)->empty();
-    case O::DirNotifyFailed: reinterpret_cast<ServerContext*>(a)->NotifyFailed(RS(b)->GetCurAddr()); return 0;
     case O::DirUpdate: L->Slot<LobbyServerList>(kRoutingServerList)->UpdateFromDirectory(*reinterpret_cast<DirList*>(a)); return 0;
     }
     return 0;
@@ -312,6 +268,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
 void* RoutingLogicMake(RustLogic* inSelf)
 {
     return (inSelf->mSlot[kRoutingServerList] = new LobbyServerList, inSelf->mSlot[kRoutingGameList] = new LobbyGameList(2),
-            ee_won_routelogic_new_model(inSelf, RoutingHost));
+            ee_won_routelogic_new_model(inSelf, RoutingHost, inSelf->Slot<LobbyServerList>(kRoutingServerList),
+                                        inSelf->Slot<LobbyGameList>(kRoutingGameList)));
 }
 }

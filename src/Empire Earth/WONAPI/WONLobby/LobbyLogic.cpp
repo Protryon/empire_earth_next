@@ -42,7 +42,7 @@ void LobbyLogic::Kill()
 }
 
 // Runs a network operation with its completion, tracking it so Kill can cancel it
-void LobbyLogic::RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion,
+void LobbyLogic::RunTrackedOp(AsyncOp* inOp, ShellCompletion* inCompletion,
                              unsigned long inTimeout)
 {
     inOp->SetCompletion(inCompletion);

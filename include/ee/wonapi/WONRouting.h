@@ -405,19 +405,13 @@ private:
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
 // vtables 0x84c49c / 0x84c4ac; provisional member names). The templates LobbyCompletion<T> and LogicCompletion<T>
-// have no game user since R6 WON round 39 (PingLogic's two are the logic shell's: ShellCompletion)
+// have no game user since R6 WON round 39 (PingLogic's two are the logic shell's: ShellCompletion); their
+// LogicCompletionBase (RTTI 4558cc, the tracker flag +0x08) is ShellCompletion's since round 40
 class LobbyCompletionBase : public CompletionBase<AsyncOpPtr> {
 public:
     LobbyCompletionBase() throw() {}
     virtual void Complete(AsyncOpPtr theParam);     // +0x04 0x357d70 (calls +0x08)
     virtual void Run(AsyncOp* inOp) {}      // +0x08
-};
-
-// RTTI LogicCompletionBase4558cc derives LobbyCompletionBase; distinct flag-bearing subclass.
-class LogicCompletionBase : public LobbyCompletionBase {
-public:
-    LogicCompletionBase() : mCheckTracker(false) {}
-    bool mCheckTracker;                    // +0x08; original3df809 and3e5b6e
 };
 
 // A Rust object a C++ reference holds (R6 WON round 34): HTTPConnection (RTTI 44d3a4 > RefCount; ctor 2d2c80, dtor
@@ -639,11 +633,7 @@ public:
     // the library's default file directory)
     static RustServerOp* NewHttpDocument(const std::string& inProduct, int inType)
     { return new RustServerOp(ee_won_httpdoc_new(inType, WonBytes(inProduct), inProduct.size(), NULL, 0)); }
-    ByteBufferPtr GetHttpDocument(int inOwner) const // GetDocument(owner): the cache file, NUL-ended
-    {
-        std::string aBytes = this->GetBytes(EE_WON_HTTPDOC_DOCUMENT, inOwner);
-        return new ByteBuffer(aBytes.data(), (unsigned long)aBytes.size(), false);
-    }
+    // (GetDocument(owner), the cache file, is GetBytes(EE_WON_HTTPDOC_DOCUMENT, owner))
     BlockingSocket* GetSocket() const
     { return static_cast<BlockingSocket*>(reinterpret_cast<RefCount*>((intptr_t)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_SOCKET))); }
     void SetSocket(BlockingSocket* inSocket) { ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_SOCKET, 0, static_cast<RefCount*>(inSocket)); }
@@ -681,18 +671,6 @@ inline void HttpSessionKillAll(HTTPSession* inSession) { ee_won_http_session_kil
 inline RustServerOp* NewDnsTestOp(const std::string& inHost) { return new RustServerOp(ee_won_dnstest_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size())); }
 
 
-// The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
-class WONLobbyWindow {
-public:
-    virtual void Virtual04();
-    virtual void Virtual08();
-    virtual ~WONLobbyWindow();              // +0x14
-    virtual void Virtual18();
-    void Close(bool inFlag);                // base exe 0x6a2220
-
-    bool mClosed;                           // +0x04 (the base dtor waits for it after Close)
-};
-
 // A Rust object since net round 16 (rust/crates/ee_won_net/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
 // +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
@@ -727,20 +705,9 @@ private:
     EeWonServerConn* mConn;
 };
 
-// connects a server connection to an address, finishing with the connect's status (2abfc0; its run and completion
-// are Rust's: ee_won cppcore.rs ee_won_servconn_connect_op_run)
-class ServerConnectionConnectOp : public AsyncOp {
-public:
-    ServerConnectionConnectOp(ServerConnection* inConnection, const IPAddr& inAddr) : mConnection(inConnection), mAddr(inAddr) {}
-    virtual void RunHook() //2ac2f0
-    {
-        ee_won_servconn_connect_op_run(static_cast<RefCount*>(this->mConnection.get()), static_cast<RefCount*>(this),
-                                       &this->mAddr, (uint32_t)this->GetTimeout());
-    }
-    virtual void CleanupHook() { this->mConnection->SetConnectCompletion(NULL); } //2ac380
-    SmartPtr<ServerConnection> mConnection; //44
-    IPAddr mAddr; //48
-};
+// ServerConnectionConnectOp (2abfc0: a server connection connected to an address, finishing with the connect's
+// status) is a Rust op since R6 WON lobby and network round 40: RustServerOp::MadeOp(ee_won_servconn_connect_op_new(
+// connection, address)) (ee_won cppcore.rs ServConnConnect)
 
 // The op list, the completions and the reply dispatch are a Rust object since net round 16
 // (rust/crates/ee_won_net/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one

@@ -526,7 +526,10 @@ bool ee_won_routelogic_conn_request(EeWonRouteLogicOp op,
                                     int32_t *kind);
 
 /// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);
+EeWonRouteLogic *ee_won_routelogic_new_model(void *obj,
+                                             EeWonRouteLogicHostFn host,
+                                             void *servers,
+                                             void *games);
 
 /// A new logic for the shell `obj` (the members as the constructor sets them).
 EeWonRouteLogic *ee_won_routelogic_new(void *obj, EeWonRouteLogicHostFn host);

@@ -1110,6 +1110,16 @@ impl EeWonLogic {
         match self.op(Op::OpNum, op, HTTPDOC_TYPE, 0, 0) {
             HTTPDOC_TOU => self.handle_tou(op),
             HTTPDOC_ADV => {
+                // the game's document is read from the op's Rust op (R6 WON round 40: the C++ case's buffer died
+                // before its bytes were read); a driver's through its host
+                if let Some(doc) = crate::netlogicops::game_doc_bytes(op, OWNER_GAME) {
+                    if flow::document_bytes(doc.len()) != 0 {
+                        self.parse_promotion(&doc);
+                        return;
+                    }
+                    self.op0(Op::BroadcastNoPromotion);
+                    return;
+                }
                 let mut length = 0usize;
                 let data = self.op(Op::DocBytes, op, OWNER_GAME, &mut length as *mut usize as isize, 0);
                 if length != usize::MAX && flow::document_bytes(length) != 0 {
@@ -1407,15 +1417,32 @@ impl EeWonPingOp {
             .unwrap_or_else(|| host_call(self.host, self.obj.get(), op, a, b, 0, 0))
     }
 
-    fn run_hook(&self, game: isize) {
+    /// `r`: a body's request (the outgoing bytes set on it, R6 WON lobby and network round 40), else null (the
+    /// host's `RequestSend`).
+    fn run_hook(&self, game: isize, r: *const ee_won_net::udpops::EeWonUdpSendRecvOp) {
         let id = self.request_id.to_le_bytes();
         let kind = self.op(Op::GameType, game, 0) as u8;
         let request = [7u8, id[0], id[1], kind, self.flags.get()];
         self.ping.set(PING_NONE);
-        self.op(Op::RequestSend, request.as_ptr() as isize, request.len() as isize);
+        if r.is_null() {
+            self.op(Op::RequestSend, request.as_ptr() as isize, request.len() as isize);
+        } else {
+            // SAFETY: the body's live request
+            unsafe { ee_won_net::udpops::ee_won_udpsendrecvop_set_outgoing_bytes(r, request.as_ptr(), request.len()) };
+        }
     }
 
-    fn check_response(&self, reader: &mut EeWonReadBuffer) -> i64 {
+    /// The ping time: `WONTickCount() - GetStartTime()` on a body's op (`real`), else the host's `Elapsed`.
+    fn elapsed(&self, real: bool) -> isize {
+        if real {
+            if let Some(start) = ee_won_net::cppcore::op_start_time(self.obj.get()) {
+                return ee_won_net::ops::tick().wrapping_sub(start) as isize;
+            }
+        }
+        self.op(Op::Elapsed, 0, 0)
+    }
+
+    fn check_response(&self, reader: &mut EeWonReadBuffer, real: bool) -> i64 {
         let Some(kind) = take(reader, 1) else { return EE_WON_LOGIC_THREW };
         if kind[0] != 8 {
             return WS_NONE;
@@ -1425,7 +1452,7 @@ impl EeWonPingOp {
         if i16::from_le_bytes([id[0], id[1]]) as i32 != self.request_id as i32 {
             return WS_NONE;
         }
-        self.ping.set(self.op(Op::Elapsed, 0, 0) as u16);
+        self.ping.set(self.elapsed(real) as u16);
         self.flags.set(0);
         if available(reader) <= 0 {
             return WS_SUCCESS;
@@ -1503,19 +1530,19 @@ pub extern "C" fn ee_won_pingop_new(
 unsafe extern "C" fn ping_body_run(
     ctx: *mut c_void,
     op: *mut c_void,
-    _r: *const ee_won_net::udpops::EeWonUdpSendRecvOp,
+    r: *const ee_won_net::udpops::EeWonUdpSendRecvOp,
 ) {
     // SAFETY: the body's contract: the op's live members
     let x = unsafe { &*(ctx as *const EeWonPingOp) };
     x.obj.set(op);
-    x.run_hook(x.game);
+    x.run_hook(x.game, r);
 }
 // `PingGameOp::CheckResponse`
 unsafe extern "C" fn ping_body_check(ctx: *mut c_void, op: *mut c_void, reader: *mut EeWonReadBuffer) -> i64 {
     // SAFETY: the body's contract: the op's live members and a live reader
     let x = unsafe { &*(ctx as *const EeWonPingOp) };
     x.obj.set(op);
-    x.check_response(unsafe { &mut *reader })
+    x.check_response(unsafe { &mut *reader }, true)
 }
 // `~PingGameOp`: the members freed, the game's reference given back
 unsafe extern "C" fn ping_body_free(ctx: *mut c_void) {
@@ -1579,11 +1606,11 @@ pub unsafe extern "C" fn ee_won_pingop_call(p: *const EeWonPingOp, call: EeWonPi
     let Some(x) = (unsafe { p.as_ref() }) else { return 0 };
     match call {
         EeWonPingOpCall::RunHook => {
-            x.run_hook(a);
+            x.run_hook(a, std::ptr::null());
             0
         }
         // SAFETY: the contract
-        EeWonPingOpCall::CheckResponse => x.check_response(unsafe { &mut *(a as *mut EeWonReadBuffer) }),
+        EeWonPingOpCall::CheckResponse => x.check_response(unsafe { &mut *(a as *mut EeWonReadBuffer) }, false),
         EeWonPingOpCall::Field => match a {
             0 => x.request_id as i64,
             1 => x.ping.get() as i64,

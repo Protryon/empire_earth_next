@@ -16,7 +16,7 @@ class ComponentConfig;
 class ComponentEvent;
 class LobbyGame;
 class LobbyClient;
-class LogicCompletionBase;
+class ShellCompletion;
 // RTTI: LobbyLogic > RefCount; vtable 0x855a04 with six slots; derived members begin at 0x40.
 // AsyncOpTracker is 0x34 bytes; constructor 0x7e5930, destructor 0x7e5a40.
 class LobbyLogic : public RefCount {
@@ -29,7 +29,7 @@ public:
     virtual void HandleControlEvent(int inControlId); // slot 0x10: empty, the shared one-argument stub at 0x6fa500
     virtual void HandleComponentEvent(ComponentEvent* inEvent); // slot 0x14: empty, the shared one-argument stub at 0x6fa500
     void Kill();
-    void RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion, unsigned long inTimeout);
+    void RunTrackedOp(AsyncOp* inOp, ShellCompletion* inCompletion, unsigned long inTimeout);
     void RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion, unsigned long inTimeout);
     bool RemoveTrackedOp(AsyncOp* inOp); // 0x7e5c00; LogicCompletion uses it to untrack its operation
     AsyncOpTracker mTracker; // 0x08, 0x34 bytes
@@ -136,12 +136,13 @@ void* LanLogicMake(RustLogic* inSelf);
 void* PingLogicMake(RustLogic* inSelf);
 // A completion of a RustLogic (LogicCompletion<T> with a member of one of the six classes, or RoutingLogic.cpp's
 // RoutingOpCompletion with its code): logicshell.rs runs LogicCompletion's test and the member's call.
-class ShellCompletion : public LogicCompletionBase {
+class ShellCompletion : public LobbyCompletionBase {
 public:
-    ShellCompletion(RustLogic* inLogic, EeWonLogicShellDone inDone, int inCode = 0) : mDone(inDone), mCode(inCode), mLogic(inLogic) {}
+    ShellCompletion(RustLogic* inLogic, EeWonLogicShellDone inDone, int inCode = 0) : mCheckTracker(false), mDone(inDone), mCode(inCode), mLogic(inLogic) {}
     virtual void Run(AsyncOp* inOp)
     { ee_won_logicshell_done(this->mLogic->mKind, this->mLogic->mRust, this->mDone, this->mCode, inOp, this->mLogic->mKilled, this->mCheckTracker, &Untrack, this->mLogic.get()); }
     static bool Untrack(void* inLogic, void* inOp) { return static_cast<RustLogic*>(inLogic)->RemoveTrackedOp(static_cast<AsyncOp*>(inOp)); }
+    bool mCheckTracker; // (the original's LogicCompletionBase +0x08: set when run tracked)
     EeWonLogicShellDone mDone;
     int mCode;
     SmartPtr<RustLogic> mLogic;

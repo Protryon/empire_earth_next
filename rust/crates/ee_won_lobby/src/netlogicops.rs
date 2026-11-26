@@ -47,6 +47,31 @@ pub(crate) fn game_prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize>
     prv_op(op, a, b, c)
 }
 
+/// InitLogic's `DocBytes` in the game: `((RustServerOp*)op)->GetHttpDocument(owner)`'s bytes, read from the op's
+/// Rust op (an op without a document: empty, as the C++ `ByteBuffer` of no bytes); none in a driver or for another op.
+pub(crate) fn game_doc_bytes(op: isize, owner: isize) -> Option<Vec<u8>> {
+    if !ee_won_net::cppnet::bound() {
+        return None;
+    }
+    let h = ee_won_net::cppcore::host_op_of(op as *mut std::ffi::c_void)?;
+    let mut doc: Vec<u8> = Vec::new();
+    unsafe extern "C" fn sink(v: *mut std::ffi::c_void, bytes: *const u8, n: usize) {
+        // SAFETY: the vector below and the bytes given
+        unsafe { (*(v as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, n)) };
+    }
+    // SAFETY: the op's live Rust op; the sink and its vector
+    unsafe {
+        ee_won_net::hostop::ee_won_hostop_bytes(
+            h,
+            ee_won_net::httpdoc::EE_WON_HTTPDOC_DOCUMENT,
+            owner as i64,
+            sink,
+            &mut doc as *mut Vec<u8> as *mut std::ffi::c_void,
+        )
+    };
+    Some(doc)
+}
+
 /// The ops whose C++ cases were one call answered in Rust (R6 WON round 39; those cases are gone): InitLogic's on the
 /// lobby's private state (LobbySetVersionStatus, LobbyResetFirewallTest, LobbySetBehindFirewall, LobbySetTOUTimes and
 /// LobbyGetTOUTimes, the first four gone too: lobbyprv.rs), and the Account, Init and Ping hosts' references and op
@@ -118,6 +143,19 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                     }
                 }
             }
+        }
+        // a ping op's members and their game (PingLogic.cpp's `Rec(a)`, `ee_won_pingop_call(Rec(a), Field, 5)`;
+        // R6 WON round 40)
+        Op::OpRecord | Op::OpGame => {
+            // SAFETY: `a` is null or a live op (its `RefCount*`)
+            let rec = unsafe { ee_won_net::udpops::ee_won_udp_body_of(p, ee_won_net::udpops::EE_WON_UDP_BODY_PING) };
+            if op == Op::OpRecord {
+                return Some(rec as isize);
+            }
+            // SAFETY: null or the op's live members
+            let game =
+                unsafe { crate::logics::ee_won_pingop_call(rec as *const _, crate::logics::EeWonPingOpCall::Field, 5) };
+            return Some(game as isize);
         }
         // `AsyncSocket::HasInternetConnection()`
         Op::HasInternet => return Some(ee_won_net::ffi_net::ee_won_has_internet_connection() as isize),

@@ -20,7 +20,6 @@ static RustServerOp* DirOp(EeWonNetObjects* o) { return static_cast<RustServerOp
 static RustServerOp* AccountOp(EeWonNetObjects* o) { return static_cast<RustServerOp*>(Ref(o->account_op)); }
 static DirList* Servers(EeWonNetObjects* o) { return static_cast<DirList*>(o->servers); }
 static TSCriticalSection*& Lock(void*& ioSlot) { return reinterpret_cast<TSCriticalSection*&>(ioSlot); }
-static WONLobbyWindow* LobbyWindow(EeWonNetObjects* o) { return static_cast<WONLobbyWindow*>(o->lobby_window); }
 static WONAPICore* Lobby(EeWonNetObjects* o) { return static_cast<WONAPICore*>(o->lobby); }
 static AuthContext* User(EeWonNetObjects* o) { return static_cast<AuthContext*>(o->user); }
 static ServerContext* AuthServers(EeWonNetObjects* o) { return static_cast<ServerContext*>(o->auth_servers); }
@@ -37,10 +36,6 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::LockLeave: Lock(o->lock)->Leave(); return 0;
     case Op::Lock8Enter: Lock(o->lock8)->Enter(); return 0;
     case Op::Lock8Leave: Lock(o->lock8)->Leave(); return 0;
-    case Op::LobbyWindowClose: LobbyWindow(o)->Close(true); return 0;
-    case Op::LobbyWindowClosed: return LobbyWindow(o)->mClosed;
-    case Op::LobbyWindowDelete: delete LobbyWindow(o); return 0;
-    case Op::LobbyWindowVirtual18: LobbyWindow(o)->Virtual18(); return 0;
     case Op::LobbyDelete: delete Lobby(o); return 0;
     case Op::LobbyPump: Lobby(o)->Pump((unsigned long)a, 0); return 0;
     case Op::WonNetExists: return gWonNet != NULL;
