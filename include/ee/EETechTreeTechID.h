@@ -27,10 +27,5 @@ const long kTechFirstNodeID = 1000;
 inline long EETechTreeEpochOf(long inID) { return ee_tech_epoch_of((int32_t)inID); }
 // the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for EEEpochCount(), the game options' "Random Epoch"
 inline long EEEpochTitleID(long inEpoch) { return ee_tech_epoch_title_id((int32_t)inEpoch); }
-// one element per epoch (sized when it is made: after the database is loaded)
-template <class T> class EEEpochArray : public std::vector<T> {
-public:
-    EEEpochArray() : std::vector<T>(EEEpochCount()) {}
-};
 
 #endif // EE_EETECHTREETECHID_H
