@@ -18,6 +18,7 @@
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guilayout.h"
 #include "rust/won_gui/gamewin.h"
+#include "ee/wonapi/EELobbySound.h"
 namespace WONAPI {
 static_assert(ComponentFlag_Invisible == EE_WON_COMP_FLAG_INVISIBLE && ComponentFlag_HasFocus == EE_WON_COMP_FLAG_HAS_FOCUS &&
               ComponentFlag_Disabled == EE_WON_COMP_FLAG_DISABLED && ComponentFlag_GrabBG == EE_WON_COMP_FLAG_GRAB_BG &&
@@ -128,4 +129,65 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
 // the Rust objects' references to the game's RefCount objects (gamewin.rs rf: every host's Hold and Release)
 static void RefOf(void* p, int32_t hold) { if (hold) ((RefCount*)p)->AddRef(); else ((RefCount*)p)->Release(); }
 [[maybe_unused]] static const bool sRefHost = (ee_won_gui_ref_register(RefOf), true);
+}
+
+// ---- Sound.cpp until R6 WON GUI round 39
+namespace WONAPI {
+// Creates an empty sound descriptor with no flags (emitted at 0x00729810)
+SoundDescriptor::SoundDescriptor() : mSoundFlags(0) {}
+// Creates a sound descriptor for a file path with the given flags (emitted at 0x00729830)
+SoundDescriptor::SoundDescriptor(const std::string& path,long flags) : mSoundFlags(flags), mPath(path) {}
+// Sets or clears the given sound flags
+void SoundDescriptor::SetSoundFlags(int flags,bool on)
+{
+    if(on) this->mSoundFlags|=flags;
+    else this->mSoundFlags&=~flags;
+}
+// Creates a sound from a copy of the descriptor, not looping (emitted at 0x007299c0)
+Sound::Sound(const SoundDescriptor& descriptor) : mDescriptor(descriptor), mIsLooping(false) {}
+// Plays the sound unless it is muted
+void Sound::Play()
+{
+    if(!this->GetMuted()) this->PlayHook();
+}
+// Mutes or unmutes the sound (flag 4); muting stops it
+void Sound::SetMuted(bool muted)
+{
+    if(muted==this->GetMuted()) return;
+    this->mDescriptor.SetSoundFlags(4,muted);
+    if(muted) this->Stop();
+}
+}
+
+// Stop and Resume forward to the playback hooks
+void WONAPI::Sound::Stop()
+{
+    this->StopHook();
+}
+void WONAPI::Sound::Resume()
+{
+    this->ResumeHook();
+}
+
+// Returns true when the sound's muted flag (4) is set
+bool WONAPI::Sound::GetMuted()
+{
+    return (this->mDescriptor.mSoundFlags&4)?true:false;
+}
+
+namespace WONAPI {
+
+SoundDescriptor::SoundDescriptor(const char *thePath) : mSoundFlags(0), mPath(thePath) {}
+
+void Sound::Rewind()
+{
+	this->RewindHook();
+}
+}
+
+// the sound decoder base (SoundDecoder.cpp until R6 WON GUI round 37): decodes a descriptor through the virtual Decode
+namespace WONAPI {
+SoundDecoder::SoundDecoder() {}
+SoundDecoder::~SoundDecoder() {} // (emitted at 0x00728590)
+SoundPtr SoundDecoder::DecodeDescriptor(const SoundDescriptor& inDescriptor) { return this->Decode(inDescriptor); }
 }

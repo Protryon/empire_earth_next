@@ -1,5 +1,5 @@
 """Writes tests/won/won_leaf34_new.h: the new classes' declarations (include/ee/wonapi/WONLobbyGUI.h) and their hosts'
-one-statement cases (WONGUI/BrowserComponent.cpp, TextListItem.cpp), the formatting functions (WONLobbyResource.h), and the paints' hosts and
+one-statement cases (WONGUI/GuiHost.cpp, TextListItem.cpp), the formatting functions (WONLobbyResource.h), and the paints' hosts and
 methods (Button.cpp, TextListItem.cpp: Graphics and ListArea the
 world's PaintGraphics and PaintList) as they are in the tree, over won_leaf34_world.h, the hosts renamed so the
 driver can put its mutations between them and the Rust.
@@ -23,7 +23,7 @@ def main():
     browser_cls = between(hdr, "class BrowserComponent : public Container {", "\n};")
     tip_cls = between(hdr, "class ListAreaToolTip : public Component {", "\n};")
     tip_cls = tip_cls.replace("ee_won_guicpp_tip_call", "MutTip")
-    b = (GUI / "BrowserComponent.cpp").read_text("utf-8")
+    b = (GUI / "GuiHost.cpp").read_text("utf-8")
     b_host = between(b, 'extern "C" intptr_t ee_won_guicpp_browser_call', "\n}\n").replace(
         'extern "C" intptr_t ee_won_guicpp_browser_call', "static intptr_t HostBrowser")
     b_ctor = between(b, "BrowserComponent::BrowserComponent()", "\n").replace("ee_won_guicpp_browser_call", "MutBrowser")

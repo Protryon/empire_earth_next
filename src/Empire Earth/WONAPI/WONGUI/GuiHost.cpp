@@ -41,6 +41,10 @@
 #include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
+#include <cctype>
+#include <set>
+#include "ee/wonapi/WONLobbyRichText.h"
+#include <stdio.h>
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -679,3 +683,101 @@ void RectangleComponent3D::Paint(Graphics &g)
     ee_won_gui_split_register(EeWonGuiSplitHost::Label, ee_won_guicpp_label_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::Split, ee_won_guicpp_split_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::List, ee_won_guicpp_list_call), true);
+
+// ---- TextFormat.cpp until R6 WON GUI round 39
+// Formatted text for text areas: expands <n>, <cN>, <fN>, <sN> and <lN> commands
+// The format's parse and its run are ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops and
+// ee_won_gui_text_append_formatted: the pending text, the colour and the font; R6 WON GUI round 36); this unit is
+// the area's four calls it makes.
+namespace WONAPI {
+static void FmtAddText(void* area,const void* units,size_t len,int color,void* font,bool lineBreak)
+{ ((TextArea*)area)->AddSegment(GUIString(std::wstring((const wchar_t*)units,len)),color,(Font*)font,lineBreak); }
+static void FmtLineBreak(void* area) { ((TextArea*)area)->LineBreak(0); }
+static void FmtAddString(void* area,const void* string,int color,void* font) { ((TextArea*)area)->AddSegment(*(const GUIString*)string,color,(Font*)font,false); }
+static void FmtAddSegment(void* area,void* segment) { ((TextArea*)area)->AddSegment((TextSegmentBase*)segment); }
+static const EeWonFormatSink kFormatSink = { FmtAddText, FmtLineBreak, FmtAddString, FmtAddSegment };
+// Appends format text to a text area, expanding <n> line breaks, <cN>/<fN> colour and font changes and
+// <sN>/<lN> inserted strings and segments (1-based indices; "<<" is a literal '<')
+void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
+    const GUIString*const* strings,int numStrings,const int* colors,int numColors,
+    Font*const* fonts,int numFonts,TextSegmentBase*const* segments,int numSegments,
+    bool lineBreak)
+{
+    EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
+    ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
+}
+}
+
+// ---- TextLinkState.cpp until R6 WON GUI round 37
+// Text link segments: construction and pressed state
+namespace WONAPI {
+// Creates an unpressed link that turns red while pressed (emitted at 0x007114f0)
+TextLink::TextLink() : mPressed(false), mDownColor(0xff0000) {}
+// Returns the parameter delivered when the link is activated
+const GUIString& TextLink::GetLinkParam() { return this->mLinkParam; }
+// Marks the link pressed and switches it to its pressed colour, remembering the normal colour
+void TextLink::Pressed()
+{
+    this->mPressed=true;
+    this->mNormalColor=this->mColor;
+    this->mColor=this->mDownColor;
+}
+// Restores the normal colour of a pressed link; returns whether it was pressed
+bool TextLink::Released()
+{
+    if(this->mPressed) {
+        this->mColor=this->mNormalColor;
+        this->mPressed=false;
+        return true;
+    }
+    return false;
+}
+// Returns true: a text link is a link (the linker folds this body into the identical one at
+// 0x006f30d0)
+bool TextLink::IsLink() { return true; }
+}
+
+// ---- BrowserComponent.cpp until R6 WON GUI round 39
+// The lobby's page view (layout type BrowserComponent): the message of the day, the terms of use and the help and
+// news tabs. WON's HTML rendering is not ported (docs/RUST_PLAN.md D8): a page is shown as plain text in a TextArea,
+// HTML pages with their tags dropped and entities decoded by ee_won (rust/crates/ee_won_net/src/plaintext.rs). There are
+// no links, so no history; a web address is shown as text (the WON servers are gone).
+// R6 WON round 34: the class is the Rust record's (rust/crates/ee_won_gui/src/browserobj.rs: its data, Go, ShowFiles,
+// the page reads, Refresh, Reset, SetPageText, SetScroller, AddedToParent, SetTransparent); this is its host, each op
+// one of the original's statements, and the constructor and destructor.
+typedef EeWonBrowserOp Bo;
+
+extern "C" intptr_t ee_won_guicpp_browser_call(void* inMe, EeWonBrowserOp op, intptr_t a, intptr_t b)
+{
+    BrowserComponent* t = (BrowserComponent*)inMe;
+    Scroller* s = (Scroller*)a;
+    switch (op) {
+    case Bo::NewView: t->mHTMLView = new TextArea; return 0;
+    case Bo::ViewNoScrollOnBottom: t->mHTMLView->SetTextFlags(TextFlag_ScrollOnBottom, false); return 0;
+    case Bo::ScrollerAssign: t->mScroller = s; return 0;
+    case Bo::ScrollerHasView: return s->GetScrollArea() == t->mHTMLView.get() ? 1 : 0;
+    case Bo::ScrollerSetView: s->SetScrollArea(t->mHTMLView.get()); return 0;
+    case Bo::SameSize: t->Fn2F6140(s, 3, t, 0, 0, 0, 0, 0); return 0; // CLI_SameSize = 3
+    case Bo::AddChild: t->AddChild(s); return 0;
+    case Bo::HasScroller: return t->mScroller.get() != NULL ? 1 : 0;
+    case Bo::NewScrollContainer:
+        return (intptr_t)static_cast<Scroller*>(static_cast<ScrollbarScroller*>(WONShellNew(EeWonShellKind::MsScrollContainer, (intptr_t)static_cast<ScrollArea*>(t->mHTMLView.get()))));
+    case Bo::Ref: s->AddRef(); return 0;
+    case Bo::Unref: s->Release(); return 0;
+    case Bo::ScrollbarsConditional: static_cast<ScrollbarScroller*>(s)->SetScrollbarConditions(ScrollbarCondition_Conditional, ScrollbarCondition_Conditional); return 0;
+    case Bo::BaseAddedToParent: t->Container::AddedToParent(); return 0;
+    case Bo::ViewNoBackground: t->mHTMLView->SetBackground(Background(-1, -1)); return 0;
+    case Bo::ViewGrabBg: t->mHTMLView->SetComponentFlags(ComponentFlag_GrabBG, a != 0); return 0;
+    case Bo::ViewClear: t->mHTMLView->Clear(); return 0;
+    case Bo::ViewAddText: t->mHTMLView->AddFormatedText(GUIString(std::wstring((const wchar_t*)a, (size_t)b)), false); return 0;
+    case Bo::ViewTop: t->mHTMLView->SetOffsets(0, 0); return 0;
+    case Bo::Invalidate: t->Invalidate(); return 0;
+    }
+    return 0;
+}
+
+namespace WONAPI {
+// Creates the view: an empty, word-wrapped, read-only text area (the Rust record's constructor)
+BrowserComponent::BrowserComponent() { this->mRust = ee_won_browser_new(this, ee_won_guicpp_browser_call, sizeof(wchar_t)); }
+BrowserComponent::~BrowserComponent() { ee_won_browser_free(this->mRust); }
+}
