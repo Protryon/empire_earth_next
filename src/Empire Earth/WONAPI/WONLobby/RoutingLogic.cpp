@@ -49,7 +49,6 @@ static RoutingConnection* RC(intptr_t a) { return reinterpret_cast<RoutingConnec
 static AsyncOp* AO(intptr_t a) { return reinterpret_cast<AsyncOp*>(a); }
 static RustServerOp* RS(intptr_t a) { return static_cast<RustServerOp*>(AO(a)); }
 static UDPManagerSendRecvOp* US(intptr_t a) { return static_cast<UDPManagerSendRecvOp*>(AO(a)); }
-static ChatCommandParser* P(intptr_t a) { return reinterpret_cast<ChatCommandParser*>(a); }
 template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
 {
     if (inPtr.get() != NULL) inPtr->AddRef();
@@ -171,16 +170,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
     case O::ConnectOpNew: return HeldOp(new ServerConnectionConnectOp(RC(a), S(b)->GetAddress()));
     // ---- the parser, the events, the dialogs
-    case O::ParserNum:
-        switch (b) {
-        case 0: return (intptr_t)P(a)->GetRoomFlags();
-        case 1: return P(a)->GetCommand();
-        case 2: return (intptr_t)P(a)->GetDuration();
-        case 3: return (intptr_t)P(a)->GetTarget();
-        case 4: return (intptr_t)P(a)->GetClients();
-        }
-        return 0;
-    case O::ParserSetInput: P(a)->SetInput(C(b)->GetName()); return 0;
     case O::IterNew: return (intptr_t) new LobbyClientIterator(reinterpret_cast<LobbyClientList*>(a));
     case O::IterHasMore: return reinterpret_cast<LobbyClientIterator*>(a)->HasMore();
     case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();

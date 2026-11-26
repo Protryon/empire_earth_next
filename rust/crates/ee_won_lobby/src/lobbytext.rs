@@ -217,6 +217,22 @@ fn parser(p: isize) -> *const crate::chatobj::EeWonChatParser {
     of(p + EE_WON_CHAT_PARSER_AT as isize) as *const crate::chatobj::EeWonChatParser
 }
 
+/// `((ChatCommandParser*)p)->SetInput(((LobbyClient*)client)->GetName())` (in the game).
+fn set_parser_input(p: isize, client: isize) {
+    // SAFETY: a live LobbyClient
+    let name = units(unsafe { crate::modelobj::shell_get(client, crate::modelobj::EeWonModelField::ClientName) });
+    // SAFETY: a live ChatCommandParser's Rust object; the units live for the call
+    unsafe {
+        crate::chatobj::ee_won_chatparser_set_text(
+            parser(p).cast_mut(),
+            crate::chatobj::EeWonChatParserText::Input,
+            name.as_ptr().cast(),
+            name.len(),
+            4,
+        )
+    };
+}
+
 /// `n` units at `u` (none for 0).
 fn unit_slice<'a>(u: *const u32, n: usize) -> &'a [u32] {
     if n == 0 || u.is_null() {
@@ -660,6 +676,27 @@ pub(crate) fn route_op(op: crate::routelogic::EeWonRouteLogicOp, logic: isize, a
             let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(a), crate::chatobj::EeWonChatParserText::Text, &mut n) };
             boxed(held_units(unit_slice(u, n)))
         }
+        // the parser's (`a`) `GetRoomFlags()`, `GetCommand()`, `GetDuration()`, `GetTarget()`, `GetClients()`
+        R::ParserNum => {
+            use crate::chatobj::{ee_won_chatparser_number as num, ee_won_chatparser_object as obj, EeWonChatParserNumber as N};
+            let p = parser(a);
+            // SAFETY: a live ChatCommandParser's Rust object
+            unsafe {
+                match b {
+                    0 => num(p, N::RoomFlags) as std::ffi::c_ulong as isize,
+                    1 => num(p, N::Command) as i32 as isize,
+                    2 => num(p, N::Duration) as std::ffi::c_ulong as isize,
+                    3 => obj(p, 1) as isize,
+                    4 => obj(p, 0) as isize,
+                    _ => 0,
+                }
+            }
+        }
+        // `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`
+        R::ParserSetInput => {
+            set_parser_input(a, b);
+            0
+        }
         // (the routing dialogs' slots: 0 add friend, 1 admin action, 3 create room, 5 password)
         R::DialogText => gstring_new(match a {
             1 => dialog_input(logic, 3, 0)?,
@@ -850,18 +887,7 @@ pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, logic: isize, a: isiz
         }
         // `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`
         L::ParserSetInputName => {
-            // SAFETY: a live LobbyClient
-            let name = units(unsafe { crate::modelobj::shell_get(game(b)?, crate::modelobj::EeWonModelField::ClientName) });
-            // SAFETY: a live ChatCommandParser's Rust object; the units live for the call
-            unsafe {
-                crate::chatobj::ee_won_chatparser_set_text(
-                    parser(a).cast_mut(),
-                    crate::chatobj::EeWonChatParserText::Input,
-                    name.as_ptr().cast(),
-                    name.len(),
-                    4,
-                )
-            };
+            set_parser_input(a, game(b)?);
             0
         }
         // `Take(b, LanUtf16(the password dialog's InputText(0)))`
