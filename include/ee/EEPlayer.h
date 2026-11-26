@@ -120,7 +120,6 @@ public:
     EEGroup(const EEGroup&) = delete;
     ~EEGroup() = delete;
     void Add(EEComplexUnit* inUnit) { ee_units_group_do(this, 0, inUnit); }
-    void Remove(long inPathID) { ee_units_group_cancel_path(this, inPathID); }   // the path request's cancel
     bool Contains(EEComplexUnit* inUnit) { return ee_units_group_contains(this, inUnit); }
     EEComplexUnit* GetUnit(long inIndex) { return static_cast<EEComplexUnit*>(ee_units_group_unit(this, inIndex)); }
     unsigned long GetNumUnits() { return ee_units_group_len(this); }
@@ -128,7 +127,6 @@ public:
         { return ee_units_group_file(this, false, &inFile, &EESaveFilePrimitive); }
     void Clear() { ee_units_group_do(this, 2, NULL); }
     void RemoveUnit(EEComplexUnit* inUnit) { ee_units_group_do(this, 1, inUnit); }
-    long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)ee_units_group_get(this, 7, 0); }
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
         { return ee_units_group_file(this, true, &outFile, &EESaveFilePrimitive); }
     EEComplexUnit* GetFirstUnit() { return this->GetUnit(0); }   // NULL when empty
@@ -184,12 +182,7 @@ public:
     void Plan() { ee_units_ag_plan(H(this)); }  // 0x1edcc0 (after SetGoal)
     // a unit's stat, or the group's when it moves together (EEActiveGroup.cpp)
     float GetMaxVelocity(EEComplexUnit* inUnit);
-    float GetAcceleration(EEComplexUnit* inUnit);
-    float GetMaxAngularVelocity(EEComplexUnit* inUnit);
-    float GetAngularAcceleration(EEComplexUnit* inUnit);
     float GetInverseMaxVelocity(EEComplexUnit* inUnit);
-    float GetInverseAcceleration(EEComplexUnit* inUnit);
-    float GetInverseAngularAcceleration(EEComplexUnit* inUnit);
     void SpreadAroundTile(long inTileX, long inTileY) { ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 0); }  // 0x1ef2d4 (EEMDropoffResource: the drop-off's tile)
     void SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY) { ee_units_ag_spread_around_unit(H(this), H(inTarget), (int32_t)inTileX, (int32_t)inTileY); }  // 0x1eecb2 (EEMAttackUnit: the target and its tile)
     void KeepMobileUnits() { ee_units_ag_keep_mobile(H(this)); }
@@ -266,7 +259,6 @@ public:
     // the "Food: n Gold: n ..." cost text for a unit class (wood shown as carbon when used)
     void GetCostString(UWideString& outString, long inUnitClass, float inScale) { ee_gamecpp_tech_cost_string(this, inUnitClass, inScale, &outString); }
     // 0x1cf370: one 0x10c-byte database record, with a cost table per unit class scaled by its factor
-    long Load(FSFile& inFile, EETechTree* inTree) { return ee_gamecpp_tech_node_load(this, &inFile, inTree); }
     bool Contains(long inUnitClass) { return ee_tech_node_classes_contains(this->mData, inUnitClass); }   // 0x1cf6e5
     // whether it makes a building or mine whose media this game needs (TNMT, TEST ONLY)
     bool NeedsUnitMedia() { return ee_gamecpp_tech_needs_unit_media(this, true); }
@@ -652,7 +644,6 @@ public:
     bool CanImprove(long inUnitType, long inImprovement, UWideString* outReason) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_IMPROVE, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outReason) != 0; }
     // 0x165813 (both ctors call it after the vptr store; hides RTSPlayer::Reset): new selection and control groups,
     // upgrades, tech tree and air traffic, zeroed counters and default settings, then the player effects
-    void Reset() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_RESET, 0, 0, 0, 0.0f); }
     const UWideString& GetName() { return this->mName; }           // 0x167eda (&mName, out of line; Reset's; provisional name)
     void UpdateFreeUnitPower() { EEPlayerUnits(this, 12); } // original Player unit-class update, no arguments
     void PulseSight(bool inByID, float inSight, long inID) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_PULSE_SIGHT, (uint64_t)(int64_t)inID, inByID, 0, inSight); } // original169b26, three arguments/ret12 // 0x163138 (ret 4; RepairPointers: each unit's complex unit; provisional name)

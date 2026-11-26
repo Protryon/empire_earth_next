@@ -207,9 +207,6 @@ public:
     virtual EEMapTile* LoadTile(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                                  long inX, long inY) = 0;   // +0x24 (loads one tile: Load 0x123259)
 
-    // 0x24baf6 (thiscall; out of line right after its first user 0x24ba75, EEFOFindNewTargetNearOldTarget.cpp's range):
-    // the same test for a tile (provisional name)
-    bool IsEdgeTile(const EETileLocation& inTile);
     // inline (the volcano's Virtual4C 0xb523e; bool return: push 1; pop edx; fourth test reuses +0x195610)
     bool IsEdgeTile(long inX, long inY) const
         { return inX + inY == this->mL195608 || inY - inX == this->mL195610 || inX + inY == this->mL19560C || inX - inY == this->mL195610; }

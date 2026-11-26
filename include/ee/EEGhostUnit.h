@@ -32,7 +32,6 @@ public:
     // +0x08 0x2049c0 / +0x0c 0x204a48: the class's type and the player's id (ids between Load and the repair)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return (long)ee_units_ghost_more(EE_UNITS_GHOST_M_DO_LOAD, this, &inFile, 0, 0); }
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return (long)ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SAVE, this, &outFile, 0, 0); }
-    void Reset() { ee_units_ghost_more(EE_UNITS_GHOST_M_DO_RESET, this, NULL, 0, 0); }
     void FillSquare() { ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_SQUARE, this, NULL, NULL); }                     // original thiscall, ret0
     // 0x2049fc (cdecl: a static member; the tile next to inGhost's in direction inDirection, 0x24cbd7) (provisional
     // name)

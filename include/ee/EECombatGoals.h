@@ -67,12 +67,6 @@ inline bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal)
 inline bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget)
     { return ee_units_cgq_heal_in_range(EECombatObj(inHealer), EECombatObj(inTarget)); }
 
-// CBSO (TEST ONLY): the outcome of a shot's ActionChanged or Update (the unit's command before and after, animation,
-// physics action, hit points, goal and its target, location, rotting, flight and lifetime timers, opacity, velocity,
-// its player's population) or of the heal goal's Work (the target's hit points, the elapsed time); folded like CBQR
-// (EE_SIM_CAPTURE_CBSO_FULL=1: every call), only the outermost call of each kind (scope slots 1 to 3)
-// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
-uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
 // (the heal's work, EE_COMBAT_SO_HEAL_WORK, is recorded by ee_sim combat/goal_objects.rs)
 
 // The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
