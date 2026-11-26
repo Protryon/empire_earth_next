@@ -448,7 +448,14 @@ pub(crate) fn control_width(control: usize) -> u32 {
 }
 /// `form->GetManager()->CreateBitmapForScaledControl(form->GetManager()->GetBitmap(index), GERectangle(left, top,
 /// right, bottom))`.
-pub(crate) fn form_scaled_manager_bitmap(form: usize, index: u32, left: f32, top: f32, right: f32, bottom: f32) -> usize {
+pub(crate) fn form_scaled_manager_bitmap(
+    form: usize,
+    index: u32,
+    left: f32,
+    top: f32,
+    right: f32,
+    bottom: f32,
+) -> usize {
     let m = mgr(form as Cpp);
     let bitmap = mgr_call(m, M::Bitmap, index as c_ulong as isize, 0, 0);
     direct::manager_call_f(m, M::ScaledBitmap, bitmap, 0, 0, &mut [bottom, left, right, top]) as usize
@@ -478,7 +485,13 @@ fn table_call(t: Cpp, call: crate::tableobj::EeUiTableCall, a: isize, b: isize) 
 fn table_at(index: isize) -> isize {
     // SAFETY: the static array's lookup (no host, no floats)
     unsafe {
-        crate::tableobj::ee_ui_controls_tables(crate::tableobj::EeUiTablesCall::At, index, 0, None, core::ptr::null_mut())
+        crate::tableobj::ee_ui_controls_tables(
+            crate::tableobj::EeUiTablesCall::At,
+            index,
+            0,
+            None,
+            core::ptr::null_mut(),
+        )
     }
 }
 
@@ -599,7 +612,14 @@ ops! {
 ///
 /// # Safety
 /// The host contract.
-pub(crate) unsafe fn bar_slider_set_range(_o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+pub(crate) unsafe fn bar_slider_set_range(
+    _o: *mut c_void,
+    a: isize,
+    b: isize,
+    c: isize,
+    _d: isize,
+    _f: *mut f32,
+) -> isize {
     slider(p(a), S::SetRange, ul(b), ul(c));
     0
 }
@@ -607,7 +627,14 @@ pub(crate) unsafe fn bar_slider_set_range(_o: *mut c_void, a: isize, b: isize, c
 ///
 /// # Safety
 /// The host contract.
-pub(crate) unsafe fn form_hot_key_set_modifier(_o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+pub(crate) unsafe fn form_hot_key_set_modifier(
+    _o: *mut c_void,
+    a: isize,
+    b: isize,
+    c: isize,
+    _d: isize,
+    _f: *mut f32,
+) -> isize {
     hot_key_call(p(a), crate::hotkeyobj::EeUiHotKeyCall::SetModifier, ul(b), c as u8 as isize);
     0
 }
@@ -654,8 +681,14 @@ use crate::tableobj::{ee_ui_controls_tables, EeUiTablesCall};
 pub(crate) unsafe fn db_fonts(file: usize, m: usize) -> core::ffi::c_long {
     // SAFETY: the contract
     unsafe {
-        ee_ui_font_tables(EeUiFontsCall::Create, file as isize, m as isize, 0, 0, Some(crate::lle_hosts::ee_ui_font_table_host))
-            as core::ffi::c_long
+        ee_ui_font_tables(
+            EeUiFontsCall::Create,
+            file as isize,
+            m as isize,
+            0,
+            0,
+            Some(crate::lle_hosts::ee_ui_font_table_host),
+        ) as core::ffi::c_long
     }
 }
 /// `UIForm::Create(*file, m)`.
@@ -716,7 +749,12 @@ pub(crate) unsafe fn db_control_events(file: usize) {
 pub(crate) unsafe fn db_form_events(file: usize, m: usize) {
     // SAFETY: the contract
     unsafe {
-        crate::eventobj::ee_ui_event_create(file as *mut c_void, Some(crate::lle_manager::ee_ui_event_host), 1, m as *mut c_void)
+        crate::eventobj::ee_ui_event_create(
+            file as *mut c_void,
+            Some(crate::lle_manager::ee_ui_event_host),
+            1,
+            m as *mut c_void,
+        )
     };
 }
 /// `UIHotKey::CreateHotKeys(*file)`.
@@ -725,7 +763,9 @@ pub(crate) unsafe fn db_form_events(file: usize, m: usize) {
 /// As [`db_backgrounds`].
 pub(crate) unsafe fn db_hot_keys(file: usize) {
     // SAFETY: the contract
-    unsafe { crate::hotkeyobj::ee_ui_hotkey_create_all(file as *mut c_void, Some(crate::lle_hosts::ee_ui_hotkey_host)) };
+    unsafe {
+        crate::hotkeyobj::ee_ui_hotkey_create_all(file as *mut c_void, Some(crate::lle_hosts::ee_ui_hotkey_host))
+    };
 }
 /// `UIControlsTable::DeleteAll()`.
 pub(crate) fn db_remove_controls() {
@@ -753,16 +793,33 @@ ops! {
 ///
 /// # Safety
 /// The host contract.
-pub(crate) unsafe fn tbl_font_closest(_o: *mut c_void, a: isize, b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+pub(crate) unsafe fn tbl_font_closest(
+    _o: *mut c_void,
+    a: isize,
+    b: isize,
+    _c: isize,
+    _d: isize,
+    _f: *mut f32,
+) -> isize {
     // SAFETY: the contract
-    unsafe { ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, ul(a), ul(b), 0, 0, Some(crate::lle_hosts::ee_ui_font_table_host)) }
+    unsafe {
+        ee_ui_font_tables(
+            EeUiFontsCall::CreateClosestFont,
+            ul(a),
+            ul(b),
+            0,
+            0,
+            Some(crate::lle_hosts::ee_ui_font_table_host),
+        )
+    }
 }
 
 // ---- the combo box's parts (`PartOf(i)`: the Rust combo box's part `i`, a C++ control)
 
 /// `combo->PartOf(i)`.
 fn part_of(combo: Cpp, i: isize) -> Cpp {
-    direct::combo_call(combo, crate::comboobj::EeUiComboCall::Part, i as core::ffi::c_int as isize, 0).unwrap_or(0) as Cpp
+    direct::combo_call(combo, crate::comboobj::EeUiComboCall::Part, i as core::ffi::c_int as isize, 0).unwrap_or(0)
+        as Cpp
 }
 
 ops! {
