@@ -181,7 +181,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         return 0;
     // the mini map, the edge scroll
     case GA_K(MINI_MAP, MM_APPLY): gMiniMapTransformation.Apply(GA_A->mPoint, GA_F2); return 0;
-    case GA_K(SCROLL, S_SPEED): f[0] = gGamePreferences.mSettings.GetSideScrollSpeed(); return 0;
     case GA_K(SCROLL, S_EDGES): *reinterpret_cast<GERectangle*>(f) = GA_A->mEdges; return 0;
     case GA_K(SCROLL, S_POLL_RUNNING): return GA_A->mPoll.GetIsRunning();
     case GA_K(SCROLL, S_POLL): return GA_A->mPoll.Poll();

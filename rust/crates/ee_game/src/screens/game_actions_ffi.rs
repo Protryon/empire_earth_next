@@ -297,6 +297,12 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
             server().is_migrating = true;
             0
         }
+        // the edge scroll's speed (the preferences' settings record: GetSideScrollSpeed)
+        (EE_SCREENS_GA_OP_SCROLL, EE_SCREENS_GA_S_SPEED) => {
+            // SAFETY: the preferences' settings record, read in place
+            f[0] = unsafe { (*crate::gamecpp::global_objects::settings()).mSideScrollSpeed };
+            0
+        }
         // the camera's and the mini map's Rust calls (as the inline members make them)
         (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_SET_LOCATION) => {
             let at = ee_base::math::types::Ge3DPoint::new(f[0], f[1], f[2]);

@@ -177,8 +177,6 @@ pub enum EePhysCpp {
     ShiftKey,
     /// `((ISEntity*)p)->GetValue()`
     EntityValue,
-    AutoSaves,
-    AutoSaveMilliseconds,
     SetLastAutoSave,
     /// `gSavedGameExtension` into the buffer a0 (room a1)
     SavedGameExtension,
@@ -344,6 +342,12 @@ fn options<'a>() -> &'a crate::app::game_options::EeAppOptionsFields {
 /// The client's `mHasLeftGame` (gCommunications an `EEClient`).
 fn client_has_left() -> bool {
     gc::session_objs::client_tail(gc::globals::get!(gCommunications) as P).has_left_game
+}
+
+/// `gGamePreferences.mSettings`' plain members.
+fn settings<'a>() -> &'a crate::app::settings::EeAppSettingsFields {
+    // SAFETY: the preferences' settings record (Rust's global object), read before the next C++ call
+    unsafe { &*gc::global_objects::settings() }
 }
 
 /// `gWorld.mWindYaw` (its address: the world's case).
@@ -647,7 +651,7 @@ fn clear_server_messages(p: P) {
 /// `AutoSave`: with autosaves on, names the file "AutoSave <date - time>", records it in the preferences and sends
 /// every player the save request.
 fn auto_save(_p: P) {
-    if h0(O::AutoSaves) as c_ulong > 0 {
+    if settings().mNumberOfAutoSaves > 0 {
         let t = time_of_day();
         let mut ext = [0u8; 64];
         h(O::SavedGameExtension, 0, &[ext.as_mut_ptr() as usize as i64, ext.len() as i64]);
@@ -1167,11 +1171,11 @@ fn tick(p: P) {
             }
         }
     }
-    if gc::h(gc::O::CommIsServer, 0, &[]) == 0 || !(h0(O::AutoSaveMilliseconds) as c_ulong > 0) {
+    if gc::h(gc::O::CommIsServer, 0, &[]) == 0 || !(settings().mAutoSaveInMilliseconds > 0) {
         return;
     }
     set!(r, mAutoSaveClock, get!(r, mAutoSaveClock).wrapping_add(h(O::TimerInterval, p, &[]) as c_long));
-    if !(get!(r, mAutoSaveClock) as c_ulong > h0(O::AutoSaveMilliseconds) as c_ulong)
+    if !(get!(r, mAutoSaveClock) as c_ulong > settings().mAutoSaveInMilliseconds)
         || (view(|w| w.in_cinematic()) as i64) != 0
         || h0(O::ScenarioShowingDialog) != 0
     {

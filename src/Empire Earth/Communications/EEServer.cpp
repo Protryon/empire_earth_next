@@ -328,10 +328,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
     case O::SsPlayerSendToSlot: return SS->GetPlayerSendToSlot((unsigned char)a[0]);
-    // the server's and client's members (their addresses)
-    case O::SsSHasLeft: return P64(&SS->mHasLeftGame);
-    case O::SsCHasLeft: return P64(&SC->mHasLeftGame);
-    case O::SsCFastId: return P64(&SC->mFastSelectionID);
     // the lobby slot registers (p the register, a0 the other register or the argument)
     case O::SsRegLoadOptions: REG0 = gWorld.mLobbyOptions.mPlayers[a[0]];
         break;
@@ -448,8 +444,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the communications
     case O::SsOpenSaveGame: return EEOpenSaveGameFile((const char*)gWorld.mLobbyOptions.mMapType, a[0] != 0 ? "Saved Games\\" : "Scenarios\\", *(FSFileSpec**)a[1]) == kErrorOK;
-    case O::SsHeaderSetVersions: ((EEPSaveGameHeader*)a[0])->mMajorVersion = kSaveGameMajorVersion, ((EEPSaveGameHeader*)a[0])->mMinorVersion = kSaveGameMinorVersion;
-        break;
     case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, (unsigned char)a[2], *(unsigned long*)a[3], false);
         break;
     // the game start
@@ -495,7 +489,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::ClFileDeleteOnDisk: FILESPEC->Delete();
         break;
     case O::ClFileCreateWrite: return FILESPEC->Create() == kErrorOK && FILESPEC->Open(kFileAccessWrite) == kErrorOK;
-    case O::ClHeaderChecksum: return (long long)((EEPSaveGameHeader*)a[0])->mChecksum;
     case O::ClTimeoutFormat: WSTR(0) = WSTR(1) + UWideString("  (%d ") + WSTR(2) + UWideString(")");
         break;
     case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);

@@ -598,12 +598,23 @@ fn world(f: P, v: &[i64; 8]) -> i64 {
     }
 }
 
+/// A header's versions set to the game's (`kSaveGameMajorVersion`, `kSaveGameMinorVersion`).
+fn set_header_versions(header: P) {
+    let (major, minor) = (h(O::FwSaveMajor, 0, &[]) as c_ulong, h(O::SaveMinorVersion, 0, &[]) as c_ulong);
+    let v = hp(O::PsHdrVersions, header, &[]) as *mut c_ulong;
+    // SAFETY: the live header's mMajorVersion, mMinorVersion
+    unsafe {
+        *v = major;
+        *v.add(1) = minor;
+    }
+}
+
 /// Load type v1's file (the map type) sent to lobby slot v2's client (a saved game or a scenario).
 fn xfer_game_file(f: P, load_type: i64, slot: i64) {
     let mut file: P = 0;
     if h(O::SsOpenSaveGame, f, &[(load_type == 2) as i64, ptr(&mut file)]) != 0 {
         let header = Owned::new(O::PsHeaderNew, O::PsHeaderDelete);
-        h(O::SsHeaderSetVersions, f, &[header.0 as i64]);
+        set_header_versions(header.0);
         let loaded =
             super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as *mut c_void) == 0;
         if loaded && h(O::SsMultiplayerGame, f, &[]) == 0 {
@@ -731,9 +742,10 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
     let ok = if h(O::ClFileOpenRead, 0, &[file]) != 0 {
         h(O::ClFileClose, 0, &[file]);
         let header = Owned::new(O::PsHeaderNew, O::PsHeaderDelete);
-        h(O::SsHeaderSetVersions, 0, &[header.0 as i64]);
+        set_header_versions(header.0);
         super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as P as *mut c_void);
-        if h(O::ClHeaderChecksum, 0, &[header.0 as i64]) as c_ulong == size {
+        // SAFETY: the live header's mL4E4, mNumPlayers, mChecksum
+        if unsafe { *(hp(O::PsHdrNumbers, header.0, &[]) as *const c_ulong).add(2) } == size {
             false
         } else {
             h(O::ClFileDeleteOnDisk, 0, &[file]);

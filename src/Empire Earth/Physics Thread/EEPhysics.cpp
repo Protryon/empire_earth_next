@@ -303,8 +303,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CivTimerFirstWarning: return EEGetCivTimerFirstWarning();
     case O::ShiftKey: return gISKeyboard != NULL ? gISKeyboard->GetEntity(kKeyShift, *(ISEntity**)a[0]) : -1;
     case O::EntityValue: return ((ISEntity*)p)->GetValue();
-    case O::AutoSaves: return gGamePreferences.mSettings.mNumberOfAutoSaves;
-    case O::AutoSaveMilliseconds: return gGamePreferences.mSettings.mAutoSaveInMilliseconds;
     case O::SetLastAutoSave: gGamePreferences.mSettings.mLastAutoSave = UWideString((const char*)a[0]);
         break;
     case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
