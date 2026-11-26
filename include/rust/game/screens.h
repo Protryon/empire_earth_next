@@ -15574,9 +15574,6 @@ enum EEWonNetStatsControl : uint32_t {
 /// in the button texture, its control group, whether it is a full view and whether it paints with the brush.
 struct EditorTab;
 
-/// An op's outputs: a text and values.
-struct EeScreensCbOut;
-
 /// The area sub-screen (opaque to C++).
 struct EeScreensSeArea;
 
@@ -16822,12 +16819,6 @@ void ee_screens_ael_tick(void *list, void *unit, float elapsed);
 
 /// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
 void ee_screens_civ_fill_list(void *list);
-
-/// An op's text appended (the host's answer).
-void ee_screens_cb_out_text(EeScreensCbOut *out, const uint8_t *text, size_t length);
-
-/// An op's value appended (the host's answer).
-void ee_screens_cb_out_value(EeScreensCbOut *out, int64_t value);
 
 /// `CivBuilderEditCivilization`.
 long ee_screens_cb_edit_civilization();
