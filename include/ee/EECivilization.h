@@ -42,10 +42,7 @@ public:
 
     // (provisional names): 0x12c6bc/0x12c6fe/0x12c5d9/0x12c70f never touch this (forwarders to
     // gCivilizationManager; the civilization builder calls them through its civilization)
-    long GetBaseCost(EECivUpgrade inUpgrade) { return ee_tech_civ_base_cost(inUpgrade); }   // its level's bonus times 100, 0 when unknown
     long GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }   // per upgrade already bought in its category
-    // 0x12c5d9: the base cost plus the step for each upgrade already bought in its category
-    long ComputeCost(long inBase, long inStep, long inCount) { return inBase + inStep * inCount; }
     // the upgrades of inUpgrade's category in inList (by default the purchased upgrades)
     long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
     {
