@@ -1110,12 +1110,12 @@ pub(crate) fn route_list_op(
         }
         // `FindServer(US(a)->GetDestAddr())`: the user status request's server
         O::StatusOpServer => {
-            let Some(addr) = ee_won_net::cppnet::udp_request_address(a as *mut c_void) else { return None };
+            let addr = ee_won_net::cppnet::udp_request_address(a as *mut c_void)?;
             call(servers, C::ServerListFind, &addr as *const EeWonIpAddr as isize, 0)
         }
         // `((LobbyServerList*)a)->FindServer(RS(b)->GetAddr())`: the request's first server
         O::ServerListFind => {
-            let Some(h) = ee_won_net::cppcore::host_op_of(bb as *mut c_void) else { return None };
+            let h = ee_won_net::cppcore::host_op_of(bb as *mut c_void)?;
             // SAFETY: the op's live Rust op; the new address freed below
             let addr = unsafe { ee_won_net::hostop::ee_won_hostop_addr(h, ee_won_net::reqhost::EE_WON_REQHOST_ADDR) };
             let r = call(a, C::ServerListFind, addr as isize, 0);
