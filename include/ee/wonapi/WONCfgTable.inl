@@ -1,8 +1,6 @@
 #include "rust/won_gui/cfgcomp.h"
-#include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgset.h"
 #include "rust/won_gui/cfgtab.h"
-#include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinobj.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config

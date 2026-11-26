@@ -1,7 +1,6 @@
 #include "rust/won_lobby/wonnet.h"
 #include "rust/won_net/certhost.h"
 #include "rust/won_net/reqdir.h"
-#include "rust/won_net/routeop.h"
 #include "rust/won_net/smartroute.h"
 // The WON front end's host (R6 WON round 31): every call the Rust EEWonNet (ee_won_lobby wonnet.rs) makes on a C++
 // object, one statement each, in the original's order (EeWonNetOp documents them). Included by EEWonNet.cpp and by

@@ -15,7 +15,6 @@
 #include <string.h>
 #include <wchar.h>
 #include "ee/wonapi/WONConfigObject.h"
-#include "ee/wonapi/WONStringCompare.h"
 #include "rust/won_gui/guistring.h" // guistrobj.rs, guistring.rs
 #include "rust/won_gui/guistrobj.h"
 #include "rust/won_net/wonfile.h"

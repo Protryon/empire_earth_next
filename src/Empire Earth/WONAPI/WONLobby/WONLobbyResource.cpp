@@ -24,12 +24,6 @@ ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
     return aTable;
 }
 
-// The string and background getters fold to one body, the pointer and value getters to another.
-// Returns the lobby string resource with the given id
-const GUIString& LobbyResource_GetString(LobbyResourceId id) { return gLobbyResources[id].mString; }
-// Returns the lobby image resource with the given id (the original's served sounds, fonts, colours and ints too)
-Image* LobbyResource_GetImage(LobbyResourceId id) { return gLobbyResources[id].mImage.get(); }
-Sound* LobbyResource_GetSound(LobbyResourceId id) { return gLobbyResources[id].mSound.get(); }
 
 // Loads every lobby string, image and sound from its section of the resource table (ee_won's rows in order: a
 // section is looked up again where it changes, as the original's statements did)

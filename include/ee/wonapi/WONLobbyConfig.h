@@ -6,8 +6,6 @@
 #include "rust/won_net/regkey.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include <vector>
-#include "ee/wonapi/WONStringCompare.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 namespace WONAPI {

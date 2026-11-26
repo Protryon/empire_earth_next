@@ -5,10 +5,8 @@
 #include <list>
 #include <map>
 #include "ee/EEWonNet.h"
-#include "ee/wonapi/WONStringCompare.h"
 #include "rust/won_net/cfgobject.h"
 #include "rust/won_lobby/cfgval.h"
-#include <string.h>
 namespace WONAPI {
 class ConfigParser;
 class StringParser;
