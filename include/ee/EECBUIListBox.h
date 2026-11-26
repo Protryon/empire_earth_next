@@ -18,7 +18,7 @@ public:
     EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData, GEFont* inFont,
                   const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                   unsigned long inBorderThickness, bool inIsTabable);
-    virtual ~EECBUIListBox() {}
+    virtual ~EECBUIListBox() { ee_screens_cbb_destroy((uintptr_t)static_cast<UIControl*>(this)); }
 
     // the overrides (civ_list.rs)
     virtual void AppendStringArray(std::vector<UWideString>& inLines)
@@ -33,7 +33,7 @@ public:
     virtual long CopyData() { return (long)ee_screens_cbb_copy_data((uintptr_t)static_cast<UIControl*>(this)); }
     virtual void DeleteLine(unsigned long inLine) { ee_screens_cbl_delete_line(this, (uint32_t)inLine); }
     virtual long DrawTextA() { return ee_screens_cbl_draw_text(this); }
-    virtual bool GetTabable() const { return this->mIsTabable; }
+    virtual bool GetTabable() const { return ee_screens_cbl_tabable((uintptr_t)static_cast<const UIControl*>(this)); }
     virtual void TabbedTo() { ee_screens_cbl_tabbed_to(this); }
     virtual void AddLine(const UWideString& inLine)
     {
@@ -47,17 +47,8 @@ public:
     // line 0 selected without an event
     virtual void ResetSelection() { UIListBox<UWideString>::ChangeSelectionIndex(0, false, false); }
 
-    void SetSortLines(bool inSortLines) { this->mSortLines = inSortLines; }
-
-    // (the base's members the builder host's shims call are public: UIListBox.h)
-
-    GEColor mC13C;                          // the header colour (kBlack; the choice form's: (0, 0, 0.39), (0.18, 0.18, 0.28))
-    GEColor mC148;                          // the header colour as of the last CopyData
-    bool mSelectUpgradesOnly;               // upgrade lines only selectable (true)
-    bool mCopiedShowPoints;                 // the points shown as of the last CopyData
-    bool mShowPoints;                       // the points shown (true)
-    bool mSortLines;                        // the lines sorted (true)
-    bool mIsTabable;                        // the ctor's last argument
+    // (the base's members the builder host's shims call are public: UIListBox.h; the list's own members, the
+    // header colours and flags, are Rust's: ee_screens civ_list_state.rs)
 };
 
 #endif

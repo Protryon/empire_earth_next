@@ -512,17 +512,11 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::UiPop: gUIManager->Pop();
         break;
     case O::IsCivList: return dynamic_cast<EECBUIListBox*>(CTL) != NULL;
-    case O::CivListUpgradesOnly: return CL->mSelectUpgradesOnly;
-    case O::CivListShowPoints: return CL->mShowPoints;
-    case O::CivListSortLines: return CL->mSortLines;
-    case O::CivListHeaderColor: return P64(&CL->mC13C);
     case O::CivListReset: CL->ResetSelection();
         break;
     case O::CivListTabbedTo: CL->TabbedTo();
         break;
     case O::CivListCopyData: return CL->CopyData();
-    case O::CivListCopiedShowPoints: return CL->mCopiedShowPoints;
-    case O::CivListCopiedColor: return P64(&CL->mC148);
     case O::ControlTabable: return CTL->GetTabable();
     case O::ListAutoSelect: return CivListAccess::Auto(LBS);
     case O::ListHasSelection: return LBS->GetHasSelection();

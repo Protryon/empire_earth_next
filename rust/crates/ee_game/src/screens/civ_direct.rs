@@ -8,7 +8,10 @@
 //! As the C++ did, a NULL object answers 0 (the toolkit's direct calls answer 0 for an unknown object, where the C++
 //! would have crashed).
 
-use core::ffi::{c_ulong, c_void};
+// (`c_ulong` is `u32` on Windows and `u64` on LP64: the casts between it and the calls' `u32` stay)
+#![allow(clippy::unnecessary_cast)]
+
+use core::ffi::{c_char, c_long, c_ulong, c_void};
 
 use ee_ui::direct::{self, Cpp as UiCpp, Kind};
 use ee_ui::editobj::EeUiEditCall;
@@ -17,13 +20,25 @@ use ee_ui::listobj::{EeUiList, EeUiListCall};
 use ee_ui::managerobj::EeUiManagerCall;
 use ee_ui::obj::EeUiOp;
 
+use ee_audio::sound::managerobj::{
+    ee_sound_manager_load, ee_sound_manager_play, ee_sound_manager_unload, EeSoundManager,
+};
+use ee_net::net::ffi_comms::EeNetCommsField;
+use ee_sim::app::unit_sets::{ee_unit_sets_contains, ee_unit_sets_for_each, ee_unit_sets_get};
+use ee_sim::tech::civ::ee_tech_civ_power_record;
+use ee_sim::tech::nodes::EeTechNodeFields;
+use ee_sim::tech_consts::EECivPowerID;
+use ee_sim::units::player_lists;
 use ee_sim::world::layout::layout;
 use ee_sim::world::player_fields::EeUnitsPlayerSaved;
-use ee_sim::world::{PlayerView, UnitView, WorldRead, WorldView};
+use ee_sim::world::{ClassView, NodeView, PlayerView, StatsView, UnitView, WorldRead, WorldView};
 use ee_sim::world_field;
 
+use crate::app::game_options::EeAppOptionsFields;
+use crate::civilization::EeGameCivFields;
+use crate::screens::civ_list_state;
 use crate::screens::editor_direct::{edit_line, edit_set_text};
-use crate::screens::game_cpp::{EeScreensShimOut, EeScreensShimText, EeScreensShimULongOut};
+use crate::screens::game_cpp::{Cpp as _, EeScreensShimOut, EeScreensShimText, EeScreensShimULongOut, Ffi};
 use crate::screens::hud_direct::{label_set_long, label_set_text, label_text};
 
 fn ui(p: usize) -> UiCpp {
@@ -47,7 +62,7 @@ fn text(t: EeScreensShimText) -> &'static [u8] {
 /// The out text's bytes appended (`EEShimOut`).
 fn out(o: EeScreensShimOut, bytes: &[u8]) {
     // SAFETY: an out text is a live Vec<u8> for the call
-    unsafe { crate::screens::game_cpp::ee_screens_shim_out(o.0 as *mut c_void, bytes.as_ptr(), bytes.len()) };
+    unsafe { crate::screens::game_cpp::ee_screens_shim_out(o.0, bytes.as_ptr(), bytes.len()) };
 }
 
 /// `dynamic_cast<K*>(control)`: the control itself when it is a toolkit object of `kind` (the toolkit's classes
@@ -124,7 +139,7 @@ pub(crate) fn cbh_label_set_text(label: usize, t: EeScreensShimText) {
 
 /// `label->SetText((long)number)`.
 pub(crate) fn cbh_label_set_number(label: usize, number: i32) {
-    label_set_long(ui(label), number as core::ffi::c_long);
+    label_set_long(ui(label), number as c_long);
 }
 
 /// `gUIManager->Push(form)`.
@@ -570,4 +585,397 @@ pub(crate) fn aes_unit_id(unit: usize) -> u64 {
 /// `unit->GetPlayer()->mPlayerID`.
 pub(crate) fn ae_unit_player_id(unit: usize) -> i32 {
     with_unit(unit, 0, |u| u.player().map_or(0, |p| p.id() as i32))
+}
+
+// ---- the game options, the unit sets, the powers, the classes and the tech nodes (Rust's records and tables)
+
+/// `gWorld.mGameOptions` (NULL without a world).
+fn options() -> *mut EeAppOptionsFields {
+    let t = token();
+    // the options' plain members are their base, at the object's start (gamecpp options.rs)
+    WorldView::global(&t).map_or(core::ptr::null_mut(), |w| w.game_options_handle() as *mut EeAppOptionsFields)
+}
+
+/// `gWorld.mGameOptions.CanBuyCivilization()`.
+pub(crate) fn cbh_can_buy() -> bool {
+    let o = options();
+    !o.is_null() && crate::gamecpp::options::ee_gamecpp_options_can_buy_civilization(o as *mut c_void)
+}
+
+/// `gAllowCustomCivs` (`gWorld.mGameOptions.mAllowCustomCivs`).
+pub(crate) fn cbh_custom_civs() -> bool {
+    let o = options();
+    // SAFETY: the world's options
+    !o.is_null() && unsafe { bool_byte(core::ptr::addr_of!((*o).mAllowCustomCivs)) }
+}
+
+/// `gWorld.GetCurrentPlayer()->GetGameResult()`.
+pub(crate) fn cbh_game_result() -> i32 {
+    let s = current_player_saved();
+    if s.is_null() {
+        return 0;
+    }
+    // SAFETY: the live player's member
+    unsafe { (*s).mGameResult as i32 }
+}
+
+/// `gWorld.mGameOptions.CanBuyCivilization()` (the civilization files' host).
+pub(crate) fn civf_can_buy() -> bool {
+    cbh_can_buy()
+}
+
+/// `gAllowCustomCivs`.
+pub(crate) fn civf_custom_civs() -> bool {
+    cbh_custom_civs()
+}
+
+/// `gIsScenarioGame` (`gWorld.mGameOptions.mIsScenarioGame`).
+pub(crate) fn civf_scenario_game() -> bool {
+    let o = options();
+    // SAFETY: the world's options
+    !o.is_null() && unsafe { bool_byte(core::ptr::addr_of!((*o).mIsScenarioGame)) }
+}
+
+/// `gUnitSetManager.GetSet(set) != NULL`.
+pub(crate) fn civh_set_exists(set: i64) -> bool {
+    !ee_unit_sets_get(set as c_ulong as usize).is_null()
+}
+
+/// `gUnitSetManager.GetSet(set)->Contains(kind)` (the callers ask civh_set_exists first).
+pub(crate) fn civh_set_contains(set: i64, kind: i64) -> bool {
+    ee_unit_sets_contains(set as c_ulong as usize, kind as c_ulong as u32)
+}
+
+/// `EEUnitClassCount()`.
+pub(crate) fn civh_class_count() -> i64 {
+    let t = token();
+    ClassView::count(&t) as i64
+}
+
+/// `gUnitClassTable[kind] != NULL`.
+pub(crate) fn civh_class_listed(kind: i64) -> bool {
+    let t = token();
+    usize::try_from(kind).ok().and_then(|k| ClassView::by_index(&t, k)).is_some()
+}
+
+/// `upgrade->mUnitClass`.
+pub(crate) fn civh_upgrade_class(up: usize) -> usize {
+    let t = token();
+    // SAFETY: a live class upgrade
+    unsafe { StatsView::of(&t, up as u64) }.map_or(0, |s| s.class_handle() as usize)
+}
+
+/// `static_cast<EeUnitsUnitClassUpgradeFields*>(upgrade)`.
+pub(crate) fn civh_upgrade_fields(up: usize) -> usize {
+    if up == 0 {
+        0
+    } else {
+        up + layout().stats_fields as usize
+    }
+}
+
+/// `static_cast<EeUnitsUnitClassFields*>(unit_class)`.
+pub(crate) fn civh_class_fields(k: usize) -> usize {
+    if k == 0 {
+        0
+    } else {
+        k + layout().unit_class_fields as usize
+    }
+}
+
+/// The tech node `node`'s record.
+fn node_fields(node: usize) -> *mut EeTechNodeFields {
+    (node + layout().node_fields as usize) as *mut EeTechNodeFields
+}
+
+/// `node->mIsResearched`.
+pub(crate) fn civh_node_researched(node: usize) -> bool {
+    // SAFETY: a live node's member
+    node != 0 && unsafe { bool_byte(core::ptr::addr_of!((*node_fields(node)).mIsResearched)) }
+}
+
+/// `node->mIsAllowed = value`.
+pub(crate) fn civh_node_set_allowed(node: usize, value: bool) {
+    if node != 0 {
+        // SAFETY: a live node's member
+        unsafe { (*node_fields(node)).mIsAllowed = value };
+    }
+}
+
+/// `gUnitSetManager.Contains(t->GetUnitClass()->GetUnitType(), set)`.
+pub(crate) fn aeh_set_contains(t: usize, set: i32) -> bool {
+    ee_unit_sets_contains(set as c_ulong as usize, civh_unit_type(t) as u32)
+}
+
+/// `gCivPowersManager.HasPower(t->GetPlayer(), kCivPowerCamouflage)`.
+pub(crate) fn aeh_has_camouflage(t: usize) -> bool {
+    let player = with_unit(t, 0, |u| u.player().map_or(0, |p| p.handle() as usize));
+    crate::screens::civ_manager_ffi::ee_screens_civm_has_power(player, EECivPowerID::kCivPowerCamouflage as c_long)
+}
+
+/// The camouflage power's unit set (`GetPowerRecord(kCivPowerCamouflage)->mUnitSet`).
+fn camouflage_set() -> usize {
+    let p = ee_tech_civ_power_record(EECivPowerID::kCivPowerCamouflage as i32);
+    if p.is_null() {
+        return usize::MAX;
+    }
+    // SAFETY: a power record of the table (the C++ read it without a check)
+    unsafe { (*p).mUnitSet as c_ulong as usize }
+}
+
+/// `gUnitSetManager.GetSet(camouflage's set) != NULL`.
+pub(crate) fn aeh_camouflage_set_exists() -> bool {
+    !ee_unit_sets_get(camouflage_set()).is_null()
+}
+
+/// `GetSet(camouflage's set)->Contains(t->mUnitClass->mUnitType)`.
+pub(crate) fn aeh_camouflage_set_contains(t: usize) -> bool {
+    ee_unit_sets_contains(camouflage_set(), civh_unit_type(t) as u32)
+}
+
+/// `ee_units_lists_len(player->mLists, EE_UNITS_LISTS_MEDIA)` (the capture's loaded media count).
+pub(crate) fn civc_media_count(player: usize) -> u64 {
+    if player == 0 {
+        0
+    } else {
+        player_lists::player_op(player as u64, player_lists::EE_UNITS_LISTS_MEDIA, player_lists::ListOp::Len)
+    }
+}
+
+// ---- the communications, the sound manager, a unit set's types and a node's kind
+
+/// `gCommunications->GetIsMultiplayerSession()` (false without communications).
+pub(crate) fn cbh_multiplayer() -> bool {
+    let n = crate::gamecpp::net::global();
+    !n.comms.is_null() && n.get(EeNetCommsField::IsMultiplayerSession) != 0
+}
+
+/// `gCommunications->GetIsMultiplayerSession()` (the civilization files' host).
+pub(crate) fn civf_multiplayer() -> bool {
+    cbh_multiplayer()
+}
+
+/// `gSoundManager` (the UI manager's).
+fn sound_manager() -> *const EeSoundManager {
+    direct::manager_call(manager(), EeUiManagerCall::SoundManager, 0, 0, 0) as *const EeSoundManager
+}
+
+/// `gSoundManager->Load(name, 0, 1)`.
+pub(crate) fn cbh_sound_load(name: EeScreensShimText) -> u32 {
+    let m = sound_manager();
+    if m.is_null() {
+        return 0;
+    }
+    let name = direct::c_text(text(name));
+    // SAFETY: the live sound manager; a NUL-terminated name
+    unsafe { ee_sound_manager_load(m, name.as_ptr() as *const c_char, 0, 1) }
+}
+
+/// `gSoundManager->Unload(sound)`.
+pub(crate) fn cbh_sound_unload(sound: u32) {
+    let m = sound_manager();
+    if !m.is_null() {
+        // SAFETY: the live sound manager
+        unsafe { ee_sound_manager_unload(m, sound) };
+    }
+}
+
+/// `gSoundManager->Play(sound, 1.0f, 0.0f, 1.0f, false, NULL)`.
+pub(crate) fn cbh_sound_play(sound: u32) {
+    let m = sound_manager();
+    if !m.is_null() {
+        // SAFETY: the live sound manager
+        unsafe { ee_sound_manager_play(m, sound, 1.0, 0.0, 1.0, false) };
+    }
+}
+
+thread_local! {
+    /// The unit types of the set the civilization capture walked last (`EECivcCollect`'s vector).
+    static SET_TYPES: core::cell::RefCell<Vec<i64>> = const { core::cell::RefCell::new(Vec::new()) };
+}
+
+/// The set walk's visit: the type kept (`EECivcCollect::Execute`, which goes on).
+unsafe extern "C" fn collect_type(_functor: *mut c_void, unit_type: u32) -> bool {
+    SET_TYPES.with(|t| t.borrow_mut().push(unit_type as c_ulong as c_long as i64));
+    true
+}
+
+/// `kScratchCivcTypes.clear()`.
+pub(crate) fn civc_types_clear() {
+    SET_TYPES.with(|t| t.borrow_mut().clear());
+}
+
+/// `gUnitSetManager.ForEach(set, EECivcCollect)`: the set's unit types, in its order.
+pub(crate) fn civc_collect(set: i64) {
+    // SAFETY: the visit takes no functor
+    unsafe { ee_unit_sets_for_each(set as c_long as c_ulong as usize, core::ptr::null_mut(), collect_type) };
+}
+
+/// The types collected.
+pub(crate) fn civc_types_count() -> usize {
+    SET_TYPES.with(|t| t.borrow().len())
+}
+
+/// The type `index` collected.
+pub(crate) fn civc_type_at(index: usize) -> i64 {
+    SET_TYPES.with(|t| t.borrow()[index])
+}
+
+/// `node->mData->mKind`.
+pub(crate) fn aeh_node_kind(node: usize) -> i64 {
+    let t = token();
+    // SAFETY: a live tech node
+    unsafe { NodeView::of(&t, node as u64) }.and_then(|n| n.data()).map_or(0, |d| world_field!(d, mKind) as i64)
+}
+
+// ---- the builder list box's own members (civ_list_state.rs)
+
+/// `list->mSelectUpgradesOnly`.
+pub(crate) fn cbl_upgrades_only(list: usize) -> bool {
+    civ_list_state::get(list).upgrades_only
+}
+
+/// `list->mShowPoints`.
+pub(crate) fn cbl_show_points(list: usize) -> bool {
+    civ_list_state::get(list).show_points
+}
+
+/// `list->mSortLines`.
+pub(crate) fn cbl_sort(list: usize) -> bool {
+    civ_list_state::get(list).sort
+}
+
+/// `list->mCopiedShowPoints`.
+pub(crate) fn cbl_copied_points(list: usize) -> bool {
+    civ_list_state::get(list).copied_points
+}
+
+/// `list->mSelectUpgradesOnly = value`.
+pub(crate) fn cbl_set_upgrades_only(list: usize, value: bool) {
+    civ_list_state::update(list, |s| s.upgrades_only = value);
+}
+
+/// `list->mShowPoints = value`.
+pub(crate) fn cbl_set_show_points(list: usize, value: bool) {
+    civ_list_state::update(list, |s| s.show_points = value);
+}
+
+/// `list->mSortLines = value`.
+pub(crate) fn cbl_set_sort(list: usize, value: bool) {
+    civ_list_state::update(list, |s| s.sort = value);
+}
+
+/// `list->mCopiedShowPoints = value`.
+pub(crate) fn cbl_set_copied_points(list: usize, value: bool) {
+    civ_list_state::update(list, |s| s.copied_points = value);
+}
+
+/// `list->GetTabable()` (the builder list's `mIsTabable`).
+pub(crate) fn cbl_tabable(list: usize) -> bool {
+    civ_list_state::get(list).tabable
+}
+
+/// `text->SetFgColor(list->mC148)`.
+pub(crate) fn cbl_colour_header(text: usize, list: usize) {
+    let [r, g, b] = civ_list_state::get(list).copied_header;
+    Ffi.cbl_colour(text, r, g, b);
+}
+
+/// `list->mC13C = GEColor(red, green, blue)` (the constructor's body).
+pub(crate) fn cbb_set_header_colour(list: usize, red: f32, green: f32, blue: f32) {
+    civ_list_state::update(list, |s| s.header = [red, green, blue]);
+}
+
+/// `list->mSelectUpgradesOnly = value`.
+pub(crate) fn cbb_set_select_upgrades_only(list: usize, value: bool) {
+    cbl_set_upgrades_only(list, value);
+}
+
+/// `list->mShowPoints = value`.
+pub(crate) fn cbb_set_show_points(list: usize, value: bool) {
+    cbl_set_show_points(list, value);
+}
+
+/// `list->mIsTabable = value`.
+pub(crate) fn cbb_set_tabable(list: usize, value: bool) {
+    civ_list_state::update(list, |s| s.tabable = value);
+}
+
+/// `list->mC148 = list->mC13C` (CopyData).
+pub(crate) fn cbb_copy_header(list: usize) {
+    civ_list_state::update(list, |s| s.copied_header = s.header);
+}
+
+/// `list->mCopiedShowPoints = list->mShowPoints`.
+pub(crate) fn cbb_copy_show_points(list: usize) {
+    civ_list_state::update(list, |s| s.copied_points = s.show_points);
+}
+
+/// `list->SetSortLines(value)`.
+pub(crate) fn cbb_set_sort_lines(list: usize, value: bool) {
+    cbl_set_sort(list, value);
+}
+
+/// The choice form's `list->mShowPoints = value` (EEScreens.cpp's).
+pub(crate) fn cb_list_set_show_points(list: usize, value: bool) {
+    cbl_set_show_points(list, value);
+}
+
+/// `list->mSelectUpgradesOnly = value`.
+pub(crate) fn cb_list_set_select_upgrades_only(list: usize, value: bool) {
+    cbl_set_upgrades_only(list, value);
+}
+
+/// `list->SetSortLines(value)`.
+pub(crate) fn cb_list_set_sort(list: usize, value: bool) {
+    cbl_set_sort(list, value);
+}
+
+/// `list->mC13C = GEColor(red, green, blue)`.
+pub(crate) fn cb_list_set_colour(list: usize, red: f32, green: f32, blue: f32) {
+    cbb_set_header_colour(list, red, green, blue);
+}
+
+// ---- a civilization's plain members (its Rust base: ee_game civilization.rs)
+
+fn civ(c: usize) -> EeGameCivFields {
+    if c == 0 {
+        return EeGameCivFields::default();
+    }
+    *crate::civilization::fields(c as crate::gamecpp::P)
+}
+
+/// `civ->GetAvailablePoints()`.
+pub(crate) fn cbh_civ_available(c: usize) -> i32 {
+    civ(c).mAvailablePoints as c_long as i32
+}
+
+/// `civ->GetUnchanged()`.
+pub(crate) fn cbh_civ_unchanged(c: usize) -> i32 {
+    civ(c).mUnchanged as i32
+}
+
+/// `civ->GetMaxPoints()`.
+pub(crate) fn cbh_civ_max(c: usize) -> i32 {
+    civ(c).mMaxPoints as c_long as i32
+}
+
+/// `civ->mAvailablePoints` (the civilization capture's).
+pub(crate) fn civc_civ_available(c: usize) -> u32 {
+    civ(c).mAvailablePoints as u32
+}
+
+/// `civ->mMaxPoints`.
+pub(crate) fn civc_civ_max(c: usize) -> u32 {
+    civ(c).mMaxPoints as u32
+}
+
+/// `civ->mNoPointsAdded`.
+pub(crate) fn civc_civ_no_points(c: usize) -> bool {
+    civ(c).mNoPointsAdded
+}
+
+/// `civ->mUnchanged`.
+pub(crate) fn civc_civ_unchanged(c: usize) -> bool {
+    civ(c).mUnchanged
 }

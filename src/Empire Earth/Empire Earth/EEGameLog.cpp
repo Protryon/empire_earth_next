@@ -346,10 +346,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DcApply: gCheatCodes->ApplyCheatCode((long)a[0], (long)a[1], (long)a[2]);
         break;
     case O::DcSwapCheatsEnabled: return std::exchange(gWorld.mCheatsEnabled, a[0] != 0);
-    case O::DvAvailable: return P64(&B_CV->mAvailablePoints);
-    case O::DvMaximum: return P64(&B_CV->mMaxPoints);
-    case O::DvNoPointsAdded: return P64(&B_CV->mNoPointsAdded);
-    case O::DvUnchanged: return P64(&B_CV->mUnchanged);
     case O::DvPurchased: return P64(&B_CV->mPurchasedUpgrades);
     case O::DvDeferred: return P64(&B_CV->mDeferredUpgrades);
     case O::DvListCount: return (int64_t)B_LIST->size();

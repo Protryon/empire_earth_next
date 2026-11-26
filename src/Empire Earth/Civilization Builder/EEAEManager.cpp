@@ -229,12 +229,8 @@ struct EEAEMFBBuildingInRange {
 #define AE_T(t) ((EEComplexUnit*)(t))
 #define AE_P(p) ((EEPlayer*)(p))
 #define AE_E(e) ((EEAreaEffect*)(e))
-extern "C" bool ee_screenscpp_aeh_set_contains(uintptr_t inT, int32_t inSet)
-{ return gUnitSetManager.Contains(AE_T(inT)->GetUnitClass()->GetUnitType(), inSet); }
 extern "C" uintptr_t ee_screenscpp_aeh_tech_node(int32_t inPlayer, uintptr_t inT)
 { return (uintptr_t)gWorld.mPlayers[inPlayer]->GetTechTree()->Get(AE_T(inT)->GetUnitClass()->mTechnology); }
-extern "C" int64_t ee_screenscpp_aeh_node_kind(uintptr_t inNode)
-{ return (int64_t)((EETechTreeNode*)inNode)->mData->mKind; }
 extern "C" bool ee_screenscpp_aeh_allied(uintptr_t inPlayer, uintptr_t inOther)
 { return AE_P(inPlayer)->IsAlliedWith(AE_P(inOther)); }
 extern "C" bool ee_screenscpp_aeh_repairable(uintptr_t inT) { return AE_T(inT)->IsRepairable(); }
@@ -243,12 +239,6 @@ extern "C" void ee_screenscpp_aeh_tile_y(int32_t inV) { EEScratch<EETileCoordina
 extern "C" int32_t ee_screenscpp_aeh_continent() { return gContinentManager.GetContinent(EEScratch<EETileCoordinate>(kScratchAETile), kAIPathNonSpace); }
 extern "C" void ee_screenscpp_aeh_set_hit_points(uintptr_t inT, int32_t inV) { AE_T(inT)->SetHitPoints(inV); }
 extern "C" void ee_screenscpp_aeh_cloak(uintptr_t inT) { AE_T(inT)->SetCloakableChain(true); }
-extern "C" bool ee_screenscpp_aeh_has_camouflage(uintptr_t inT)
-{ return gCivPowersManager.HasPower(AE_T(inT)->GetPlayer(), kCivPowerCamouflage); }
-extern "C" bool ee_screenscpp_aeh_camouflage_set_exists()
-{ return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL; }
-extern "C" bool ee_screenscpp_aeh_camouflage_set_contains(uintptr_t inT)
-{ return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(AE_T(inT)->mUnitClass->mUnitType); }
 extern "C" bool ee_screenscpp_aeh_idle(uintptr_t inT) { return AE_T(inT)->GetCommandType() == kActionIdle; }
 extern "C" void ee_screenscpp_aeh_set_cloakable_own(uintptr_t inT)
 { AE_T(inT)->SetCloakableChain(AE_T(inT)->mUnitClass->mIsCloakable); }

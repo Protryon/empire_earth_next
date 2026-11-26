@@ -416,11 +416,12 @@ pub(crate) mod area_effect_obj;
 pub(crate) mod area_effect_running;
 pub(crate) mod civ_capture;
 #[cfg(not(test))]
-pub(crate) mod civ_direct;
-#[cfg(not(test))]
 mod civ_capture_ffi;
+#[cfg(not(test))]
+pub(crate) mod civ_direct;
 pub(crate) mod civ_file_calls;
 pub(crate) mod civ_host;
+pub mod civ_list_state;
 pub(crate) mod civ_load;
 pub(crate) mod civ_manager_calls;
 #[cfg(not(test))]
