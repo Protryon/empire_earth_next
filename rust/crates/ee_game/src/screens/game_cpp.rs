@@ -196,6 +196,7 @@ pub(crate) struct Ffi;
 
 /// One shim's FFI declaration: a C++ shim's symbol (one name), or nothing for a call Rust answers itself (a path:
 /// `civ_direct::name`).
+#[cfg(not(test))]
 macro_rules! shim_extern {
     ([$sym:ident] ($($arg:ident : $ty:ty),*) $(-> $ret:ty)?) => {
         extern "C" {
@@ -207,6 +208,7 @@ macro_rules! shim_extern {
 
 /// One shim's FFI call: the C++ shim, or the Rust function that answers it (a path: the same arguments and answer,
 /// made on the Rust objects directly; civ_direct.rs).
+#[cfg(not(test))]
 macro_rules! shim_call {
     ([$sym:ident] ($($arg:ident),*)) => {
         // SAFETY: the shim's own contract: the pointers the moved logic hands it are the C++ host's live objects,
