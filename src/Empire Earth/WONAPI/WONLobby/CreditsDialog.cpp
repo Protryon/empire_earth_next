@@ -68,9 +68,9 @@ static intptr_t ScrollTextHost(void* inComp, EeWonScrollTextOp inOp, intptr_t a,
     case Op::SysShadow: g.SetSysColor(StandardColor_3DShadow); return 0;
     case Op::FillRect: g.FillRect(x, y, w, h); return 0;
     case Op::DrawRect: g.DrawRect(x, y, w, h); return 0;
-    case Op::FontHeight: return g.mFont->GetHeight();
-    case Op::Color: return (intptr_t)(uint32_t)g.mColor;
-    case Op::StringWidth: return g.mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
+    case Op::FontHeight: return g.GetFont()->GetHeight();
+    case Op::Color: return (intptr_t)g.mG.st.color;
+    case Op::StringWidth: return g.GetFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
     case Op::DrawString: g.DrawString(*reinterpret_cast<const GUIString*>(b), x, y); return 0;
     }
     return 0;

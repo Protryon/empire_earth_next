@@ -7,7 +7,6 @@ using namespace GsWorld;
 typedef EeWonGuiOp Op;
 static TextSegment* Seg(intptr_t a) { return (TextSegment*)a; }
 static ListItem* Item(intptr_t a) { return (ListItem*)a; }
-static GUIString sHostText;
 static PopupParams sHostParams(NULL, 0, NULL);
 static SmartPtr<Font> sHostFont;
 static int sMutate = -1; // the op (EeWonGuiOp's value) whose statement is skipped and answer is off by one
@@ -17,9 +16,8 @@ static intptr_t Input(void* inComp, Op op, intptr_t a, intptr_t b, intptr_t c, i
 {
     (void)inComp; (void)b; (void)c; (void)d;
     switch (op) {
-    case Op::HostTextClipboard: sHostText = Clipboard::Get(); return 0;
-    case Op::HostTextSink: ee_won_gui_sink_units((void*)a, sHostText.mData->mText, sHostText.length(), sizeof(wchar_t)); return 0;
-    case Op::HostTextClear: sHostText = GUIString(); return 0;
+    // (GuiHost.cpp's `return (intptr_t)NewGUIStringData(Clipboard::Get());` over this world's text: a Rust text of its units)
+    case Op::ClipboardText: { GUIString t = Clipboard::Get(); return (intptr_t)ee_won_gstr_new(EeWonGstrOp::AssignUnits, t.w.c_str(), (int)t.w.size(), 0); }
     default: Unexpected(op); return 0;
     }
 }
