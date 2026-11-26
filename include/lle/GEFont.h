@@ -21,7 +21,6 @@ public:
     virtual ~GEFont() { ee_ge_font_destroy(this->mRust); }
     bool CompareFont(const UString& inName, unsigned long inStyle, unsigned long inQuality, unsigned long inSize)
         { return ee_ge_font_compare(this->mRust, &inName, inStyle, inQuality, inSize); }
-    void SetFontBitmap(GEFontBitmap* inBitmap) { ee_ge_font_set_bitmap(this->mRust, inBitmap); }
     GEFontBitmap* GetFontBitmap() const { return static_cast<GEFontBitmap*>(ee_ge_font_bitmap(this->mRust)); }
     const UString& GetFontName() const { return *static_cast<const UString*>(ee_ge_font_name(this->mRust)); }
     unsigned long GetFontQuality() const { return (unsigned long)ee_ge_font_value(this->mRust, EeGeFontValue::Quality); }

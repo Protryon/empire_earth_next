@@ -201,9 +201,8 @@ public:
     // The original's eight pure slots after the dtor (vtable 0x10097954 ends at 0x138; DX7HRDisplay.dll's exports
     // ?ActivateRasterizer@DX7Rasterizer@@MAEJXZ, ...). Activate calls ActivateRasterizer and keys mIsActivated on its
     // keseOK result: it enumerates the DirectDraw devices into screens and makes this the active rasterizer. Textures
-    // need no handle here (the original's CreateTextureHandle and DestroyTextureHandle are gone; PromoteTexture does nothing).
+    // need no handle here (the original's CreateTextureHandle, DestroyTextureHandle and PromoteTexture are gone).
     long ActivateRasterizer() { return this->mDX7 != NULL ? ee_dx7r_activate_rasterizer(this->mDX7) : kErrorOK; }   // slot 0x118
-    long PromoteTexture(GETexture* inTexture) { return kErrorOK; }                  // slot 0x130
     // makes a surface the render target (swapping the references) and fits the viewport to its size (slot 0x134)
     void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) { ee_dx7r_set_render_target(this->mDX7, inTarget, inScreen); }
 

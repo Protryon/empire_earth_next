@@ -310,6 +310,17 @@ impl EeGeTexture {
                     return 0;
                 }
                 EeGeTexOp::RasterCreate | EeGeTexOp::RasterDestroy => return 0,
+                // the manager's RemoveTexture and PromoteTexture (a GETextureManager is its Rust manager alone)
+                EeGeTexOp::ManagerRemove => {
+                    return unsafe {
+                        crate::ge::texobj::ee_ge_texman_remove(crate::ge::cppobj::plain(obj), a as *mut c_void)
+                    } as isize
+                }
+                EeGeTexOp::ManagerPromote => {
+                    return unsafe {
+                        crate::ge::texobj::ee_ge_texman_promote(crate::ge::cppobj::plain(obj), a as *mut c_void)
+                    } as isize
+                }
                 _ => {}
             }
         }

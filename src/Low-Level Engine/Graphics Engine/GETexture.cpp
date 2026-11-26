@@ -73,7 +73,8 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
         return ((GESurface*)inObj)->CopyTo((GESurface*)a, ((GERectangle*)b)[0], ((GERectangle*)b)[1], c != 0);
     case EeGeTexOp::ScreenCreateSurface:
         return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
-    // (FileInfo, FileFrame, RasterCreate, RasterDestroy: the Rust object's own, ee_ge texobj_tex.rs)
+    // (FileInfo, FileFrame, RasterCreate, RasterDestroy, ManagerRemove, ManagerPromote: the Rust object's own, ee_ge
+    // texobj_tex.rs)
     case EeGeTexOp::SurfPixelFormat: return (intptr_t)((GESurface*)inObj)->GetPixelFormat();
     case EeGeTexOp::SurfPixelDepth: return (intptr_t)((GESurface*)inObj)->GetPixelDepth();
     case EeGeTexOp::SurfVolatility: return (intptr_t)((GESurface*)inObj)->GetSurfaceVolatility();
@@ -84,10 +85,6 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     case EeGeTexOp::TexBaseDereference:
         ((GETexture*)inObj)->UReferenceCounter::Dereference();
         return 0;
-    case EeGeTexOp::ManagerRemove:
-        return ((GETextureManager*)inObj)->RemoveTexture((GETexture*)a);
-    case EeGeTexOp::ManagerPromote:
-        return ((GETextureManager*)inObj)->PromoteTexture((GETexture*)a);
     default:
         return 0;
     }

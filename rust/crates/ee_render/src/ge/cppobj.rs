@@ -74,6 +74,15 @@ pub unsafe fn plain<T>(cpp: usize) -> *mut T {
     unsafe { *(cpp as *const *mut T) }
 }
 
+/// A C++ `GEScreen`: its texture manager, its rasterizer index and its Rust screen (`mDX7`; dx7 scrobj.rs). The C++
+/// asserts the layout (DX7Rasterizer.cpp).
+#[repr(C)]
+pub struct CppScreen {
+    pub texture_manager: *mut c_void,
+    pub rasterizer_index: c_ulong,
+    pub dx7: *mut c_void,
+}
+
 /// A C++ `GEVertexArray` (or `GEPolygonArray`): its vtable pointer, the GPU's vertices (indices), its Rust array
 /// (`vertarr.rs`; NULL for the store gate's subclass).
 #[repr(C)]

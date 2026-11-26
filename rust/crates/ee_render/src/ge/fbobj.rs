@@ -240,6 +240,61 @@ unsafe fn direct_op(op: EeGeFbOp, obj: usize, a: isize, b: isize) -> Option<isiz
     Some(0)
 }
 
+/// The font bitmap's calls on the font, the surfaces and the screen, each one call of their Rust objects (a `GEFont`
+/// and a `GESurface` are reference-counted objects over theirs, a `GEScreen` is `cppobj::CppScreen`, its texture
+/// manager its Rust manager alone: `cppobj.rs`). The surfaces' logical sizes stay the host's (the C++ surface holds
+/// them).
+///
+/// # Safety
+/// The operation's objects are live C++ objects of the classes `EeGeFbOp` names; `owner` the C++ font bitmap.
+#[cfg(not(test))]
+unsafe fn object_op(op: EeGeFbOp, owner: usize, obj: usize, a: isize, b: isize) -> Option<isize> {
+    use crate::dx7::scrobj::{ee_dx7sc_create_surface, EeDx7Screen};
+    use crate::dx7::surfobj::{
+        ee_dx7sf_bytes_per_row, ee_dx7sf_clear, ee_dx7sf_lock, ee_dx7sf_memory, ee_dx7sf_text_lock, ee_dx7sf_unlock,
+        EeDx7Surface,
+    };
+    use crate::ge::cppobj::{self, CppScreen};
+    // SAFETY (every use): the caller's contract
+    let surface = || unsafe { cppobj::counted::<EeDx7Surface>(obj) };
+    let screen = || unsafe { &*(obj as *const CppScreen) };
+    // SAFETY (each call): the caller's contract
+    unsafe {
+        Some(match op {
+            EeGeFbOp::FontSetBitmap => {
+                crate::ge::smallobj::ee_ge_font_set_bitmap(cppobj::counted(obj), owner as *mut c_void);
+                0
+            }
+            EeGeFbOp::SurfTextUnlock => ee_dx7sf_text_lock(surface(), false) as isize,
+            EeGeFbOp::SurfLock => ee_dx7sf_lock(surface()) as isize,
+            EeGeFbOp::SurfUnlock => ee_dx7sf_unlock(surface()) as isize,
+            EeGeFbOp::SurfBytesPerRow => ee_dx7sf_bytes_per_row(surface()) as isize,
+            EeGeFbOp::SurfMemory => ee_dx7sf_memory(surface()) as isize,
+            EeGeFbOp::SurfClear => ee_dx7sf_clear(surface(), std::ptr::null(), a as *const f32, 1.0) as isize,
+            EeGeFbOp::ScreenCreateSurface => {
+                ee_dx7sc_create_surface(screen().dx7 as *mut EeDx7Screen, a as *mut _, b as *mut *mut c_void) as isize
+            }
+            EeGeFbOp::ScreenMakeTexture => {
+                crate::ge::texobj::ee_ge_texman_make(cppobj::plain(screen().texture_manager as usize), a as *mut c_void)
+                    as isize
+            }
+            // SetBlending on the rasterizer's DX7 object (its second member; `a` holds the source and destination)
+            EeGeFbOp::RasterSetBlending => {
+                let dx7 = *(obj as *const *mut crate::dx7::rastobj::EeDx7Rasterizer).add(1);
+                let blend = a as *const c_ulong;
+                crate::dx7::rastobj::ee_dx7r_set_blending(dx7, *blend, *blend.add(1), b as c_ulong);
+                0
+            }
+            _ => return None,
+        })
+    }
+}
+
+#[cfg(test)]
+unsafe fn object_op(_op: EeGeFbOp, _owner: usize, _obj: usize, _a: isize, _b: isize) -> Option<isize> {
+    None
+}
+
 /// `FontRange`: the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar: `PlatFontGetMetrics`' first and
 /// last character) into `out[0]` and `out[1]`.
 ///
@@ -329,6 +384,10 @@ impl EeGeFontBitmap {
             }
             // SAFETY: the objects are the C++'s live GE objects the operation names
             if let Some(r) = unsafe { direct_op(op, obj, a, b) } {
+                return r;
+            }
+            // SAFETY: as above
+            if let Some(r) = unsafe { object_op(op, owner as usize, obj, a, b) } {
                 return r;
             }
         }

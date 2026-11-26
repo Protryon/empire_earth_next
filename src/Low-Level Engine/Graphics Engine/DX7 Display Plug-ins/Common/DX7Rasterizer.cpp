@@ -32,27 +32,12 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
         return (intptr_t) new GEScreen(NULL, static_cast<GXDirectDraw*>(inObj), UString(reinterpret_cast<const char*>(a)),
                                        (b & 1) != 0, (b & 2) != 0);
     case EeDx7RastOp::ScreenDelete: delete static_cast<GEScreen*>(inObj); return 0;
-    case EeDx7RastOp::ScreenDirectDraw: return (intptr_t)(GXDirectDraw*)*static_cast<GEScreen*>(inObj);
-    case EeDx7RastOp::ScreenIsFullScreen: return static_cast<GEScreen*>(inObj)->GetIsFullScreen();
-    case EeDx7RastOp::ScreenCurrentMode: *reinterpret_cast<GEVideoMode*>(a) = static_cast<GEScreen*>(inObj)->GetCurrentMode(); return 0;
-    case EeDx7RastOp::ScreenModeCount: return (intptr_t)static_cast<GEScreen*>(inObj)->GetModeCount();
-    case EeDx7RastOp::ScreenMode: *reinterpret_cast<GEVideoMode*>(b) = static_cast<GEScreen*>(inObj)->GetMode((unsigned long)a); return 0;
-    case EeDx7RastOp::ScreenCreateSurface:
-        return static_cast<GEScreen*>(inObj)->CreateSurface(*reinterpret_cast<GESurfaceDescription*>(a), reinterpret_cast<GESurface**>(b));
-    case EeDx7RastOp::ScreenSetTextureManager: static_cast<GEScreen*>(inObj)->SetTextureManager(reinterpret_cast<GETextureManager*>(a)); return 0;
-    case EeDx7RastOp::ManagerSetScreen: static_cast<GETextureManager*>(inObj)->SetScreen(reinterpret_cast<GEScreen*>(a)); return 0;
-    case EeDx7RastOp::SurfaceAttached: return (intptr_t)static_cast<GESurface*>(inObj)->GetAttachedSurface(0);
-    case EeDx7RastOp::SurfaceAttach: return static_cast<GESurface*>(inObj)->AttachSurface(reinterpret_cast<GESurface*>(a));
+    // (the screens' calls, the texture manager's SetScreen, the surfaces' attachments, GX surfaces and flips, a stage
+    // texture's GX surface and the window's origin: Rust's own, ee_dx7 rastobj.rs object_op)
     case EeDx7RastOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
-    case EeDx7RastOp::SurfaceGx: return (intptr_t)(GXSurface*)*static_cast<GESurface*>(inObj);
-    case EeDx7RastOp::SurfaceGxChecked: return (intptr_t)(GXSurface*)*static_cast<GESurface*>(inObj);
     case EeDx7RastOp::SurfaceWidth: return (intptr_t)static_cast<GESurface*>(inObj)->GetWidth();
     case EeDx7RastOp::SurfaceHeight: return (intptr_t)static_cast<GESurface*>(inObj)->GetHeight();
-    case EeDx7RastOp::SurfaceFlip: return static_cast<GESurface*>(inObj)->Flip(a != 0);
     case EeDx7RastOp::TextureDereference: static_cast<GETexture*>(inObj)->Dereference(); return 0;
-    case EeDx7RastOp::TextureStageSurface:
-        return (intptr_t)(GXSurface*)*static_cast<GETexture*>(inObj)->GetStageTexture(0)->GetFrameSurface();
-    case EeDx7RastOp::WindowOrigin: *reinterpret_cast<GE2DPoint*>(a) = static_cast<GEWindow*>(inObj)->GetClientOrigin(); return 0;
     // (the drawing lock's Enter and Leave, the clock, the references, a texture's change flag, promotion and stage:
     // Rust's own, ee_dx7 rastobj.rs)
     case EeDx7RastOp::Verify: ESVERIFY_AT(a != 0, (unsigned long)b); return 0;
@@ -65,6 +50,9 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
 static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GEPoint) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
               "ee_ge prim.rs");
 
+static_assert(offsetof(GEScreen, mTextureManager) == 0 && offsetof(GEScreen, mDX7) == 2 * sizeof(void*) &&
+              offsetof(GESurface, mDX7) == 2 * sizeof(void*) && sizeof(GETextureManager) == sizeof(void*),
+              "ee_ge cppobj.rs CppScreen, CppCounted, plain");
 static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
 static_assert(sizeof(std::pair<U2DPoint<long>, U2DPoint<long> >) == 4 * sizeof(long), "ee_dx7 draw_terrain grid lines");
 

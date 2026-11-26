@@ -68,7 +68,7 @@ static_assert(sizeof(GEMaterial) == 3 * sizeof(void*) && sizeof(GEFont) == 3 * s
               sizeof(GETexture) == 3 * sizeof(void*) &&
               sizeof(GEBitmap) == 3 * sizeof(void*) && sizeof(GEFontBitmap) == 3 * sizeof(void*), "cppobj.rs CppCounted");
 static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void*) && sizeof(GETextureSet) == sizeof(void*) &&
-              offsetof(GERasterizer, mRust) == 0, "cppobj.rs plain");
+              offsetof(GERasterizer, mRust) == 0 && offsetof(GERasterizer, mDX7) == sizeof(void*), "cppobj.rs plain");
 static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWideString) == sizeof(void*) + sizeof(EeUWideString),
               "cppobj.rs CppUString");
 
@@ -121,40 +121,21 @@ GEWindow::GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long in
 // direct_op, on the 2D draw list)
 intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    unsigned long* theLongs = (unsigned long*)a;
     switch (inOp) {
     case EeGeFbOp::TextNew:
         return (intptr_t)new GEText((GEFont*)inObj);
     case EeGeFbOp::TextDelete:
         delete ((GEText*)inObj);
         return 0;
-    // (TextSetByte, FontRange, TextOps, RasterScreen, RasterGetBlending and TexSurface: the Rust object's own, fbobj.rs)
-    case EeGeFbOp::FontSetBitmap:
-        ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
-        return 0;
-    case EeGeFbOp::RasterSetBlending:
-        ((GERasterizer*)inObj)->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
-        return 0;
+    // (TextSetByte, FontRange, TextOps, RasterScreen, RasterGetBlending, TexSurface, FontSetBitmap and the surfaces' and
+    // screen's calls but the logical sizes, RasterSetBlending: the Rust object's own, fbobj.rs)
     case EeGeFbOp::BmpNew:
         return (intptr_t)new GEBitmap;
     case EeGeFbOp::BmpDereference:
         ((GEBitmap*)inObj)->Dereference();
         return 0;
-    case EeGeFbOp::SurfTextUnlock:
-        return ((GESurface*)inObj)->TextUnlock();
-    case EeGeFbOp::SurfLock:
-        return ((GESurface*)inObj)->Lock();
-    case EeGeFbOp::SurfUnlock:
-        return ((GESurface*)inObj)->Unlock();
     case EeGeFbOp::SurfWidth: return (intptr_t)((GESurface*)inObj)->GetWidth();
     case EeGeFbOp::SurfHeight: return (intptr_t)((GESurface*)inObj)->GetHeight();
-    case EeGeFbOp::SurfBytesPerRow: return (intptr_t)((GESurface*)inObj)->GetBytesPerRow();
-    case EeGeFbOp::SurfMemory: return (intptr_t)((GESurface*)inObj)->GetMemoryAddress();
-    case EeGeFbOp::SurfClear: return ((GESurface*)inObj)->Clear(*(GEColor*)a, 1.0f);
-    case EeGeFbOp::ScreenCreateSurface:
-        return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
-    case EeGeFbOp::ScreenMakeTexture:
-        return (intptr_t)((GEScreen*)inObj)->GetTextureManager()->MakeTexture((GESurface*)a);
     case EeGeFbOp::VerifySurface: ESVerify(__FILE__, 228, "theResult == keseOK"); return 0;
     case EeGeFbOp::VerifyTexture: ESVerify(__FILE__, 235, "((GETexture*)inObj) != NULL"); return 0;
     default:
