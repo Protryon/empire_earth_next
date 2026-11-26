@@ -70,7 +70,7 @@ static intptr_t ModelHost(EeWonModelOp inOp, intptr_t a, intptr_t b, intptr_t c)
     case O::GameJoinStatusHook: return reinterpret_cast<LobbyGame*>(a)->GetJoinStatusHook();
     case O::GameCanStartHook: return reinterpret_cast<LobbyGame*>(a)->CanStartGameHook();
     case O::ConnectionClose: reinterpret_cast<RoutingConnection*>(a)->QueueClose(-1); return 0;
-    case O::TextOfUnits: return Held(new GUIStringData(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
+    case O::TextOfUnits: return Held(NewGUIStringData(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
     case O::GameReadSummaryBytes: {
         ReadBuffer aBuffer(reinterpret_cast<const char*>(b), (unsigned long)c);
         return reinterpret_cast<LobbyGame*>(a)->ReadSummary(aBuffer);
@@ -148,8 +148,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::SetShort: wb->SetShort((unsigned long)b, (short)c); return 0;
     case Op::ToByteBuffer: return (intptr_t)(HeldConst(wb->ToByteBuffer(true).get()));
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case Op::TextOfUnits: return (intptr_t)(Held(new GUIStringData(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b))));
-    case Op::TextOfBytes: return (intptr_t)(Held(new GUIStringData(reinterpret_cast<const char*>(a))));
+    case Op::TextOfUnits: return (intptr_t)(Held(NewGUIStringData(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b))));
+    case Op::TextOfBytes: return (intptr_t)(Held(NewGUIStringData(reinterpret_cast<const char*>(a))));
     case Op::TextEmpty: return (intptr_t)(GetEmptyGUIStringData());
     case Op::TextLength: return (intptr_t)(reinterpret_cast<GUIStringData*>(a)->mLength);
     case Op::GameType: return (intptr_t)(g->GetGameType());

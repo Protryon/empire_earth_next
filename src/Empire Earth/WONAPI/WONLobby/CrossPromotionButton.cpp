@@ -101,7 +101,7 @@ void ImageTextButtonConfig::SetComponent(Component* component) {
 }
 // Creates the cross-promotion button with an empty caption, listening to lobby broadcasts
 CrossPromotionButton::CrossPromotionButton()
-    : ImageTextButton(GUIString(new GUIStringData("")))
+    : ImageTextButton(GUIString(""))
 {
     this->SubscribeToBroadcast(true);
 }

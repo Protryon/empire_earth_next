@@ -150,7 +150,6 @@ struct ComponentConfigInit : public ComponentInit {
 class Graphics;
 class RootContainer;
 class ComponentListener;
-extern GUIString gEmptyGUIString;
 
 // a GUI component (0x30 bytes: EELobbyColorChooser's members start at +0x30; vtable 0x84d71c, 43
 // slots). Unknown slots are named by vtable offset. The inline bodies are the COMDATs the first lobby unit
@@ -1525,8 +1524,6 @@ inline void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool 
 
 // 0x361390: the local player (NULL when none)
 LobbyPlayer* GetMyLobbyPlayer();
-// 0x34a100 (cdecl): a text with its %s-style argument filled in (provisional name)
-GUIString LobbyFormatString(const GUIString& inFormat, const GUIString& inArg);
 void LobbySetGameInProgress(bool inFlag);   // 0x3612b0, SDK SetGameInProgress(bool)
 bool LobbyLeaveGame(bool inFlag);
 bool LobbyIAmCaptain();

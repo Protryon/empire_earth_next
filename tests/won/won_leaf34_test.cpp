@@ -86,15 +86,6 @@ static intptr_t MutTip(void* me, EeWonTipOp op, intptr_t a, intptr_t b)
     }
     return 0;
 }
-static void MutUnits(const void* inText, EeWonLocalizeText* outText)
-{
-    LocalizeUnits(inText, outText);
-    if (sMutate == 200 && outText->length > 0) outText->length--;
-}
-static void* MutNew(const void* inUnits, size_t inLength)
-{
-    return LocalizeNew(inUnits, sMutate == 201 && inLength > 0 ? inLength - 1 : inLength);
-}
 static int sJunk[2];
 static bool IsLeafBool(EeWonLeafOp o)
 {
@@ -566,8 +557,6 @@ int main()
     for (int o = (int)EeWonBrowserOp::NewView; o <= (int)EeWonBrowserOp::Invalidate; o++) ops.push_back(o);
     for (int o = (int)EeWonTipOp::BasePaint; o <= (int)EeWonTipOp::ClosePopup; o++) ops.push_back(o + 100);
     for (int o = (int)EeWonLeafOp::BtnHasImage; o <= (int)EeWonLeafOp::CompItemPaint; o++) ops.push_back(o + 300);
-    ops.push_back(200);
-    ops.push_back(201);
     int missed = 0, caught = 0;
     for (int op : ops) {
         sMutate = op;

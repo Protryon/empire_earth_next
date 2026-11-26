@@ -22,7 +22,7 @@ using namespace WONAPI;
 static GUIString GeneralStatusError(const GUIString& text,WONStatus status)
 {
     const char* description=WONStatusToString(status);
-    return LobbyFormatString(text,GUIString(new GUIStringData(description)));
+    return LobbyFormatString(text,GUIString(description));
 }
 namespace WONAPI {
 // Returns the player-facing message for a WON status: a specific text for account, login and server errors,

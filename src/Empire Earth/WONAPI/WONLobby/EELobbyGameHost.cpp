@@ -212,7 +212,7 @@ static GUIStringData* ReadText(ReadBuffer* inBuffer)
 {
     std::wstring aText;
     inBuffer->ReadWString(aText, 2);
-    GUIStringData* aData = new GUIStringData(aText);
+    GUIStringData* aData = NewGUIStringData(aText);
     aData->AddRef();
     return aData;
 }
@@ -270,7 +270,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::NumMapTypes: return (intptr_t)EELobbyGetNumMapTypes();
     case Op::SetDefaultOptions: EELobbySetDefaultGameOptions(aGame); return 0;
     // EELobbyGetVersion's statements (eesplit.rs composes Version, R6 WON round 35): the text EELobbyToGUIString makes
-    case Op::VersionTextNew: return (intptr_t) new GUIStringData(StringToWString(std::string(gGameVersion), -1));
+    case Op::VersionTextNew: return (intptr_t) NewGUIStringData(StringToWString(std::string(gGameVersion), -1));
     case Op::VersionChecksum: return (intptr_t)gBinaryChecksum;
     case Op::StringsEqual: return EELobbyStr(a) == EELobbyStr(b) ? 1 : 0;
     case Op::TransferNew: return (intptr_t) new EELobbyFileTransfer;

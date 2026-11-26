@@ -183,7 +183,7 @@ int ListArea::GetTextColor() { return this->mTextColor; }
 // Compares two text items by the numbers their texts start with
 int ListArea::NumberSortFunc(ListArea*,const ListItem* left,const ListItem* right)
 {
-    return ((TextListItem*)left)->mText.mData->ToInt(0)-((TextListItem*)right)->mText.mData->ToInt(0);
+    return ((TextListItem*)left)->mText.ToInt(0)-((TextListItem*)right)->mText.ToInt(0);
 }
 // ---- the default (empty) bodies of ListItem's virtuals (ListItemDefaults.cpp until R6 WON GUI round 36)
 // ListItem's ctor, Virtual04 and Virtual10 live in ListArea.cpp (same object: the ctor must be seen before

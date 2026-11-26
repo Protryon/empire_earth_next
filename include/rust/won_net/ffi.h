@@ -42,11 +42,11 @@ enum class EeWonCert2Query : uint32_t {
   FirstCommunityTrust = 2,
 };
 
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
-
 /// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
 using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
+
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
