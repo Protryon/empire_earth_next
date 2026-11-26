@@ -1024,7 +1024,7 @@ pub fn run<H: crate::units::cu_cargo::CuCargoHost + ?Sized>(
 }
 
 #[cfg(not(test))]
-pub(crate) mod game {
+pub mod game {
     use super::*;
     use std::os::raw::c_void;
 

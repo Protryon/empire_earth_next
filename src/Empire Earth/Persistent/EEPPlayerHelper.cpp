@@ -10,16 +10,9 @@
 #include "lle/FSPersistent.h"
 
 #include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEHumanPlayer.h"
-#include "ee/EEComputerPlayer.h"
 #include "ee/EEPPlayerHelper.h"
-#include "ee/EEPersistentTag.h"
 #include "ee/EECPEngine.h"
-#include "ee/EECPNext.h"
-#include "ee/EECPNextUnits.h"
-#include "ee/EESaveGameFiles.h"
 #include "rust/game/gamecpp.h"
 
 

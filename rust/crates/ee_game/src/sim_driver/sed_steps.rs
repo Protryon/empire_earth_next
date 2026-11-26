@@ -380,7 +380,7 @@ pub fn step(w: &[String]) -> Step {
             // every unit's id, type, player and tile (no hit points: they follow the epochs)
             crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics));
             for i in 0..gc::map::num_players() {
-                let p = gc::h(gc::O::SsWorldPlayer, 0, &[i]) as usize;
+                let p = gc::h(gc::O::WorldPlayer, 0, &[i]) as usize;
                 if p == 0 {
                     continue;
                 }

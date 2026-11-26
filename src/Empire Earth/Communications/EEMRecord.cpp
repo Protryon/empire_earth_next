@@ -10,7 +10,6 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EEMessage.h"
 
-#include "rust/game/gamecpp.h"
 
 // port (round 10, lane C): the codec's and the record's bodies are gamecpp mrecord.rs's (each message hands its
 // members to the Rust as slots in wire order, the header's four first; the layout is ee_netmsg records.rs's)

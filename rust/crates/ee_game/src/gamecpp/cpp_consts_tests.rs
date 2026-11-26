@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 /// The headers the C++ names come from.
-const HEADERS: [&str; 8] = [
+const HEADERS: [&str; 9] = [
     "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
     "include/rust/sim/game_ids.h",
@@ -15,6 +15,7 @@ const HEADERS: [&str; 8] = [
     "include/ee/EEMap.h",
     "include/ee/EEUnitGoal.h",
     "include/rust/sim/tech_tree_ids.h",
+    "include/ee/EEStringIDs.h",
 ];
 
 /// A C++ constant's value: `#define NAME value` or an enumerator `NAME = value,` of the headers.
@@ -102,5 +103,16 @@ fn minimap_map_and_tile_rs_constants() {
         ("kResourceIron", 6),
         ("kUnitTypeCameraObject", 0x167),
         ("kTerrainSpace", 12),
+    ]);
+}
+
+/// The session's strings (server.rs; once EEServer.cpp's id cases).
+#[test]
+fn server_rs_strings() {
+    use super::server::{SS_IDS_HOST_IS_NOT_RESPONDING, SS_IDS_MSG_GAME, SS_IDS_SECONDS};
+    check(&[
+        ("IDS_MSG_GAME", SS_IDS_MSG_GAME),
+        ("IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT", SS_IDS_HOST_IS_NOT_RESPONDING),
+        ("IDS_SECONDS", SS_IDS_SECONDS),
     ]);
 }

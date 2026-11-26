@@ -101,7 +101,7 @@ fn record_of(w: P, o: &EeAppStatsRecord, history_end_time: c_long) -> StatsRecor
             epoch_score: o.epoch_score as c_ulong,
             military_score: o.military_score as c_ulong,
             tech_score: o.tech_score as c_ulong,
-            slot: h(O::PlGetSlot, pl, &[]) as u8,
+            slot: super::message::prts(pl).mSlot,
             is_local: o.is_local,
             is_human: o.is_human,
         },

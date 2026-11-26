@@ -11,13 +11,8 @@
 #include "lle/FSPersistent.h"
 #include "lle/USingleton.h"
 
-#include "ee/RTSWorld.h"
-#include "ee/EEUnit.h"
 #include "ee/EECalamityManager.h"
-#include "ee/EEContagionManager.h"
 #include "ee/EEPCalamityHelper.h"
-#include "ee/EEPersistentTag.h"
-#include "rust/game/gamecpp.h"
 
 // Creates the saved-calamities chunk with no calamity list and a fresh contagion manager
 EEPCalamityHelper::EEPCalamityHelper()
