@@ -133,67 +133,19 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GA_OP_WORLD_UNIT: return (intptr_t) static_cast<EEUnit*>(gWorld.GetUnit(i[0]));
     case EE_SCREENS_GA_OP_ACTION: return (intptr_t) static_cast<EEAction*>(GA_A);
     // the units (i1 set: p an EEComplexUnit*)
-    case GA_K(UNIT, U_ID): return GA_U->GetUnitID();
-    case GA_K(UNIT, U_PLAYER_ID): return GA_U->GetPlayer()->GetPlayerID();
-    case GA_K(UNIT, U_PLAYER): return (intptr_t)GA_U->GetPlayer();
-    case GA_K(UNIT, U_COMPLEX): return (intptr_t)GA_U->GetComplexUnit();
-    case GA_K(UNIT, U_TILE_NODE): return GA_U->GetTileNode() != NULL;
-    case GA_K(UNIT, U_TILE_X): return GA_U->GetTileX();
-    case GA_K(UNIT, U_TILE_Y): return GA_U->GetTileY();
-    case GA_K(UNIT, U_HIT_POINTS): return GA_U->GetHitPoints();
-    case GA_K(UNIT, U_MAX_HIT_POINTS): return GA_U->GetStats()->GetMaxHitPoints();
-    case GA_K(UNIT, U_RESOURCE_TYPE): return GA_U->GetResourceType();
-    case GA_K(UNIT, U_RESOURCE_AMOUNT): return GA_U->GetResourceAmount();
     case GA_K(UNIT, U_ANIMAL_ON_MAP): return EEHerd::IsAnimalOnMap(GA_U->GetComplexUnit());
-    case GA_K(UNIT, U_DISABLED): return GA_C->GetIsDisabled();
     case GA_K(UNIT, U_PROTECTED): return GA_C->IsProtected();
-    case GA_K(UNIT, U_BUILT): return GA_C->mIsBuilt;
     case GA_K(UNIT, U_SEEN): return EECombatIsSeenBy(GA_U, GA_PL, true);
     case GA_K(UNIT, U_FOOTPRINT_VISIBLE): return ee_units_uu_footprint_visible((uint64_t)(uintptr_t)GA_U, (uint64_t)(uintptr_t)GA_PL) != 0;
-    case GA_K(UNIT, U_TILE): return (intptr_t)GA_U->GetRTSTile();
-    case EE_SCREENS_GAH_U_LOC_X: f[0] = GA_C->GetPhysicalModel().GetLocation().GetX(); return 0;
-    case EE_SCREENS_GAH_U_LOC_Y: f[0] = GA_C->GetPhysicalModel().GetLocation().GetY(); return 0;
-    case GA_K(UNIT, U_POSITION): GA_C->mPhysicalModel.GetLocation().GetPosition(GA_F3); return 0;
-    case GA_K(UNIT, U_CLASS_PTR): return (intptr_t)GA_U->GetClass();
-    case GA_K(UNIT, U_CONTAINER): return (intptr_t)GA_C->mContainer;
-    case GA_K(UNIT, U_TILE_HEIGHT): f[0] = GA_U->mTile->mHeight; return 0;
     case GA_K(UNIT, U_IMPROVEMENT_LEVEL): return GA_U->mStats->mImprovement.GetLevel(i[2]);
     case GA_K(UNIT, U_HANDLE): return EEUnitHandleID(GA_U);
     case GA_K(UNIT, U_RESOLVE): return (intptr_t)EEUnitHandle<EEUnit>::FromSavedID((uint32_t)i[2]).Get();
     // the unit classes (of the unit p)
-    case GA_K(CLASS, C_TYPE): return GA_CLASS->GetUnitType();
-    case GA_K(CLASS, C_CATEGORY): return GA_CLASS->GetCategory();
-    case GA_K(CLASS, C_FAMILY): return GA_CLASS->GetFamily();
-    case GA_K(CLASS, C_ANIMAL_ID): return GA_CLASS->GetAnimalID();
-    case GA_K(CLASS, C_AIR_TRAFFIC): return GA_CLASS->GetAirTrafficType();
-    case GA_K(CLASS, C_CAN_RALLY): return GA_CLASS->GetCanSetRallyPoint();
-    case GA_K(CLASS, C_TOWER): return GA_CLASS->GetIsTower();
-    case GA_K(CLASS, C_TREE): return GA_CLASS->GetIsTree();
     case GA_K(CLASS, C_LAND_BUILDING): return GA_CLASS->IsLandBuilding();
-    case GA_K(CLASS, C_DROP_SITE): return GA_CLASS->IsDropSite();
-    case GA_K(CLASS, C_TRANSPORT): return GA_CLASS->IsTransport();
-    case GA_K(CLASS, C_AIR_BASE): return GA_CLASS->IsAirBase();
-    case GA_K(CLASS, C_MEDIC): return GA_CLASS->GetIsMedic();
     case GA_K(CLASS, C_TARGETABLE): return ee_units_uu_targetable(0, (uint64_t)(uintptr_t)GA_CLASS, 0);
     // the current player's selected group
-    case GA_K(GROUP, G_COUNT): return GA_G->GetNumUnits();
-    case GA_K(GROUP, G_KIND_FLAGS): return (uint32_t)GA_G->mKindFlags;
-    case GA_K(GROUP, G_COUNT_KIND): return GA_G->CountUnitsOfKind(i[1]);
-    case GA_K(GROUP, G_UNIT): return (intptr_t)GA_G->GetUnit(i[1]);
-    case GA_K(GROUP, G_TYPE_COUNT): return GA_G->GetUnitTypeCount(i[1]);
-    case GA_K(GROUP, G_FIND_CATEGORY): return (intptr_t)GA_G->FindUnitOfCategory(i[1]);
-    case GA_K(GROUP, G_FIND_FLAGS): return (intptr_t)GA_G->FindUnitWithFlags(i[1]);
-    case GA_K(GROUP, G_CONTAINS): return GA_G->Contains(static_cast<EEComplexUnit*>(p));
     case GA_K(GROUP, G_FOREST): return GA_G->GetFlags().mFlags[kAITileForest] == true;
-    case EE_SCREENS_GAH_G_BOUNDS: GA_G->GetBounds(*reinterpret_cast<GERectangle*>(f)); return 0;
-    case GA_K(GROUP, G_FIRST_ID): return GA_G->GetFirstUnit()->GetUnitID();
-    case GA_K(GROUP, G_ACTIVE_COUNT): return GA_PL->mActiveGroup->GetNumUnits();
-    case GA_K(GROUP, G_ACTIVE_UNIT): return (intptr_t)GA_PL->mActiveGroup->GetUnit(i[1]);
     // the current player
-    case GA_K(PLAYER, P_PTR): return (intptr_t)GA_PL;
-    case GA_K(PLAYER, P_ID): return GA_PL->GetPlayerID();
-    case GA_K(PLAYER, P_ENEMY): return GA_PL->GetEnemy(i[1]);
-    case GA_K(PLAYER, P_CURRENT_ID): return gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID;
     case EE_SCREENS_GAH_P_EVENT: return GA_PL->mEvents.GetNextEventSource(*reinterpret_cast<EETileLocation*>(&i[1]));   // (ee_units player_events.rs)
     // EEGetFirstSelectedUnit, EEPointUnitOrTileXY over the call's slots (in and out: the unit in i1; the tile in i1,
     // x and y the longs at i2 and i3)
@@ -203,10 +155,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(TILE, T_DOPPEL_COUNT): return GA_TILE->GetNumDoppelgangers();
     case GA_K(TILE, T_DOPPEL_PLAYER): return (intptr_t)GA_TILE->GetDoppelganger(i[1])->mPlayer;
     case GA_K(TILE, T_DOPPEL_UNIT): return (intptr_t)GA_TILE->GetDoppelganger(i[1])->mUnit;
-    case GA_K(TILE, T_VISIBLE): return GA_TILE->IsVisibleTo(GA_PL);
-    case EE_SCREENS_GAH_T_FIRST: return (intptr_t)GA_TILE->mUnits;
-    case EE_SCREENS_GAH_T_NEXT: return (intptr_t) static_cast<RTSTileUnitNode*>(p)->mNext;
-    case EE_SCREENS_GAH_T_NODE_UNIT: return (intptr_t) static_cast<RTSTileUnitNode*>(p)->mUnit;
     // a farm's drop sites
     case EE_SCREENS_GAH_FD_CLEAR: sFarmers.clear(); return 0;
     case EE_SCREENS_GAH_FD_FILL: ee_units_uu_farm_drop_sites((uint64_t)(uintptr_t)static_cast<EEComplexUnit*>(p), &sFarmers); return 0;
@@ -215,20 +163,16 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     // the map
     case GA_K(MAP, M_VALID_TILE): return gWorld.GetMap()->GetTerrainMesh().GetIsValidTile((unsigned long)(long)i[1], (unsigned long)(long)i[2]);
     case GA_K(MAP, M_MESH_Z): f[0] = gWorld.mMap->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
-    case EE_SCREENS_GAH_M_TILE_PTR: return (intptr_t)gWorld.mMap->GetTile(i[1], i[2]);
-    case EE_SCREENS_GAH_M_TILE_HEIGHT: f[0] = static_cast<EEMapTile*>(p)->mHeight; return 0;
     case EE_SCREENS_GAH_M_CLOSEST: gWorld.mMap->GetClosestTile(&GA_F3, &GA_LONG(1), &GA_LONG(2)); return 0;
     case EE_SCREENS_GAH_M_PLANE:
         *reinterpret_cast<GE3DPlane*>(f) = i[1] == 0 ? gWorld.mMap->mTerrainMesh.GetLeftPlane() : i[1] == 1 ? gWorld.mMap->mTerrainMesh.GetRightPlane() : i[1] == 2 ? gWorld.mMap->mTerrainMesh.GetFrontPlane() : gWorld.mMap->mTerrainMesh.GetBackPlane();
         return 0;
-    case GA_K(MAP, M_EXISTS): return gWorld.mMap != NULL;
     // the effects
     case EE_SCREENS_GAH_FX_CREATE: gWorld.mEffectManager->CreateEffect(static_cast<EEUnit*>(p), GA_F3, EEGraphicEffect::Get(i[0]), reinterpret_cast<EEEffectHandle*>(&i[1]), 0); return 0;
     case EE_SCREENS_GAH_FX_LOCAL: gWorld.mEffectManager->GetEffect(*reinterpret_cast<EEEffectHandle*>(&i[2]))->SetLocalTo(i[1]); return 0;
     // the current player's technologies
     case GA_K(TECH, K_CAN_PRODUCE): return GA_PL->CanProduce(i[1], 0x20, 1, true, 3, NULL);
     case EE_SCREENS_GAH_K_CLASS: return (intptr_t)gUnitClassTable[GA_PL->mTechnologies->Get(i[1])->mData->mUnitClass];
-    case EE_SCREENS_GAH_K_CLASS_TILE_SIZE: return static_cast<EEUnitClass*>(p)->GetTileSize();
     case GA_K(TECH, K_NODE_CONTAINS): return GA_PL->mTechnologies->Get(i[1])->Contains(i[2]);
     // the calamity class p at the point f0..f2 (in and out)
     case EE_SCREENS_GAH_A_SCREEN_TO_WORLD: gWorld.ScreenToWorld(GE2DPoint(f[0], f[1]), *reinterpret_cast<GE3DPoint*>(f + 3)); return 0;
@@ -249,7 +193,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_CAM_UPDATE: GA_CAM.Update(f[0]); return 0;
     case GA_K(CAMERA, CAM_ZOOM): f[0] = GA_CAM.mZoom; return 0;
     case GA_K(CAMERA, CAM_SCROLL): GA_CAM.Scroll(f[0], f[1]); return 0;
-    case GA_K(CAMERA, CAM_FOLLOWING_OFF): gCameraFollowing = false; return 0;
     // the mini map, the edge scroll
     case GA_K(MINI_MAP, MM_REFRESH): gMiniMap->Refresh(); return 0;
     case GA_K(MINI_MAP, MM_APPLY): gMiniMapTransformation.Apply(GA_A->mPoint, GA_F2); return 0;
@@ -267,7 +210,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_CHAT_MAX: return GA_CHAT->GetScrollBar()->GetSlider()->GetMaxRange();
     case EE_SCREENS_GAH_N_CHAT_CURRENT: return GA_CHAT->GetScrollBar()->GetSlider()->GetCurrentRangeValue();
     case EE_SCREENS_GAH_N_CHAT_START_LINE: GA_CHAT->SetStartingDisplayLine(i[1]); return 0;
-    case EE_SCREENS_GAH_N_WON: return gWonNet != NULL;
     case EE_SCREENS_GAH_N_WON_CLEAR: gWonNet->ClearGameList(); return 0;
     case EE_SCREENS_GAH_N_WON_REJOIN: gWonNet->RejoinRoom(false); return 0;
     case GA_K(NET, N_POP): gUIManager->Pop(); return 0;
@@ -276,16 +218,12 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(NET, N_IS_SERVER): return gCommunications->IsServer() == true;
     case GA_K(NET, N_BOOT_PLAYER): static_cast<EEServer*>(gCommunications)->BootPlayer(GA_A->mPlayer, GA_A->mB0D, GA_A->mIsExiting); return 0;
     case GA_K(NET, N_CTS_PROCESSED): return gCommunications->GetNumberOfCTsProcessedInPhysics() > 0;
-    case GA_K(NET, N_USER_PAUSED): return gWorld.mUserPaused == true;
     case EE_SCREENS_GAH_N_PAUSE: dynamic_cast<EEServer*>(gCommunications)->PauseGame(); return 0;
     case EE_SCREENS_GAH_N_UNPAUSE: dynamic_cast<EEServer*>(gCommunications)->UnpauseGame(); return 0;
     case EE_SCREENS_GAH_N_POST_PAUSE: gUserInterface->PostPauseInformation(i[1] != 0); return 0;
-    case EE_SCREENS_GAH_N_SET_USER_PAUSED: gWorld.mUserPaused = i[1] != 0; return 0;
     case GA_K(NET, N_FIREWALL): return gWonNet ? gWonNet->GetIsBehindFirewall() : false;
     case GA_K(NET, N_VALID_NAME): return EEIsValidName(i[1] ? GA_A->mGameName : GA_A->mPlayerName);
-    case GA_K(NET, N_COMMS): return gCommunications != NULL;
     case EE_SCREENS_GAH_N_DELETE: delete gCommunications; return 0;
-    case EE_SCREENS_GAH_N_CLEAR: gCommunications = NULL; return 0;
     case EE_SCREENS_GAH_N_NEW_CLIENT: gCommunications = new EEClient; return 0;
     case EE_SCREENS_GAH_N_CLIENT_START: GA_CLIENT->StartThreads(); return 0;
     case EE_SCREENS_GAH_N_NEW_SERVER:
@@ -326,21 +264,12 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_RUN_OWED: gPhysics->RunOwedTicks(); return 0;
     case EE_SCREENS_GAH_N_CLIENT_MIGRATING: GA_CLIENT->mIsMigrating = true; return 0;
     case GA_K(NET, N_HAS_LEFT): return GA_CLIENT->mHasLeftGame != 0;
-    case GA_K(NET, N_NUM_PLAYERS): return gWorld.mNumPlayers;
-    case EE_SCREENS_GAH_N_PLAYER_SLOT: return gWorld.mPlayers[i[1]]->mSlot;
-    case EE_SCREENS_GAH_N_PLAYER_FIREWALL: return gWorld.mPlayers[i[1]]->mBehindFirewall != 0;
     case EE_SCREENS_GAH_N_PLAYER_HUMAN: return gWorld.mPlayers[i[1]]->mHumanPlayer != 0;
-    case EE_SCREENS_GAH_N_PLAYER_CURRENT: return GA_PL == gWorld.mPlayers[i[1]];
-    case GA_K(NET, N_LOADING_SAVED): return gWorld.mLoadingSavedGame != 0;
-    case EE_SCREENS_GAH_N_ACTIVE_CLEAR: gWorld.mPlayers[i[1]]->mActiveGroup->Clear(); return 0;
-    case EE_SCREENS_GAH_N_COPY_SELECTION: GA_PL->mSelectedGroup->CopySelection(GA_PL->mActiveGroup); return 0;
     case EE_SCREENS_GAH_N_RESET_FAST: GA_CLIENT->ResetFastSelection(); return 0;
-    case GA_K(NET, N_SET_SLOT): gWorld.mPlayers[i[1]]->mSlot = (unsigned char)i[2]; return 0;
     case EE_SCREENS_GAH_N_KEEP_TEXT: GA_A->mText = gWorld.mPlayers[i[1]]->mName; return 0;
     case EE_SCREENS_GAH_N_KEEP_HUMAN: GA_A->mName = static_cast<EEHumanPlayer*>(gWorld.mPlayers[i[1]])->GetName(); return 0;
     case EE_SCREENS_GAH_N_KEEP_GAME_NAME: GA_A->mGameName = gWorld.mPlayers[i[1]]->mName; return 0;
     case EE_SCREENS_GAH_N_CTS: return gCommunications->GetNumberOfCTsProcessedInPhysics();
-    case EE_SCREENS_GAH_N_CURRENT_TICK: return gPhysics->mCurrentTick;
     case EE_SCREENS_GAH_N_FAST_ID: return GA_CLIENT->mFastSelectionID;
     case EE_SCREENS_GAH_N_NEW_MIGRATED:
         gCommunications = new EEServer(UWideString("Migrated Server"), gGamePreferences.mSettings.GetNetworkAdapter(), (unsigned long)i[1], (unsigned long)i[2], false, false);
@@ -348,7 +277,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_CLEAR_SERVER_MESSAGES: gPhysics->ClearServerMessages(); return 0;
     case EE_SCREENS_GAH_N_MULTI_SESSION: gCommunications->SetIsMultiplayerSession(true); return 0;
     case EE_SCREENS_GAH_N_SEND_TO_SERVER: GA_SERVER->SetSendToSlotForPlayer(gWorld.mCurrentPlayer, kSlotServer); return 0;
-    case EE_SCREENS_GAH_N_SLOT_FE: GA_PL->mSlot = 0xfe; return 0;
     case EE_SCREENS_GAH_N_SERVER_FAST_ID: GA_SERVER->mFastSelectionID = (unsigned char)i[1]; return 0;
     case EE_SCREENS_GAH_N_SERVER_MIGRATING: GA_SERVER->mIsMigrating = true; return 0;
     case EE_SCREENS_GAH_N_WAIT_TIMED_OUT: GA_SERVER->HandleReconnectWaitTimedOut(); return 0;
