@@ -21,7 +21,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONAuthPeerData.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "won_net37_orig.h"
 #include "platform/PlatFile.h"

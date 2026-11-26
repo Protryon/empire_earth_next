@@ -1,7 +1,7 @@
 //! The config subclasses' own bodies in Rust (R6 WON round 34): ButtonConfig's FITTEXT (`HandleFitText`),
 //! ContainerConfig's PERCENTLAYOUT and COLORSCHEME groups (`HandleInstruction`), PercentLayoutConfig's and
 //! ColorSchemeConfig's `PreParse`, FontConfig's `GetFont`, `SetFont` and `GetNamedValue`, ImageConfig's
-//! `GetNamedValue` and ImageFilterConfig's `GetImage` (ConfigTableHost.cpp, ContainerConfigGroups.cpp,
+//! `GetNamedValue` and ImageFilterConfig's `GetImage` (ComponentConfigHost.cpp, ContainerConfigGroups.cpp,
 //! ComponentLayoutConfigs.cpp, FontConfig.cpp, ImageConfig.cpp).
 //!
 //! Each C++ statement is a one-statement op of the host (include/ee/wonapi/WONCfgBody.inl); the C++ locals (the

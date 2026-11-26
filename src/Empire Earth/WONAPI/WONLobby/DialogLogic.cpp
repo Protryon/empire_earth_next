@@ -17,8 +17,10 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
-#include "ee/wonapi/WONLobbyDialogLogic.h"
-#include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONLobbyLogic.h"
+#include "ee/wonapi/WONLobbyModel.h"
+#include "ee/wonapi/WONLobbyEvents.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/dlglogic.h"
 namespace WONAPI {
 

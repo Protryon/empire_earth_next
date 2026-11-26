@@ -6,11 +6,13 @@
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinobj.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
-// handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
+// handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ComponentConfigHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that
-// throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns.
+// throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns. Since R6 WON lobby and
+// network round 39 the value reads, commas and ends are made in Rust on the config's own object (compcfg.rs): a
+// host op's exception there is kept in mCc.
 struct CfgTabFrame {
-    ComponentConfig* mConfig; std::exception_ptr mError;
+    ComponentConfig* mConfig; std::exception_ptr mError; CcFrame mCc;
     int i[12]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
     Component* c[2]; int nc; SmartPtr<ChildLayoutInstructionBase> lay; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
     SmartPtr<RawImage> raw; std::string rs[2]; int nrs; SmartPtr<ComponentConfig> child;
@@ -59,10 +61,10 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::CompSetSize: a.mConfig->mComponent.get()->SetSize((int)x,(int)y); return 0;
     case O::RequestFocus: a.mConfig->mComponent->RequestFocus(); return 0;
     case O::SafeWonButton: return CFG_G(SafeConfigGetComponent<WONButton*>(a.c[0],"WONButton"));
-    case O::SkinSetRadio: WONSkinSet(EeWonSkinSlot::RadioButton,0,(WONButton*)x); return 0;
+    case O::SkinSet: WONSkinSet((EeWonSkinSlot)x,(int)y,(Component*)z); return 0;
+    case O::SkinSetType: ee_won_skin_set_type(WONSkinGlobal(),x!=0,&a.s[0],(Component*)y); return 0;
     case O::RadioFlag: ((WONButton*)x)->SetButtonFlags(8,true); return 0;
-    case O::SafeTabCtrl: return CFG_G(SafeConfigGetSkinPart(a.c[0],"WONTabCtrl"));
-    case O::SkinSetTabCtrl: WONSkinSet(EeWonSkinSlot::TabCtrl,0,(Component*)x); return 0;
+    case O::SafePart: return CFG_G(SafeConfigGetSkinPart(a.c[0],(const char*)x));
     case O::ShellSetSkin: WONShell::Op((Component*)x,EeWonShellOp::SetSkin,0); return 0;
     case O::FontStyleOf: return EE_CFG(FontConfig)->mDescriptor.mStyle;
     case O::SetFontStyle: EE_CFG(FontConfig)->mDescriptor.mStyle=(int)x; return 0;
@@ -105,7 +107,6 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::FilterToParent: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(GUIString(std::string((const char*)x,(size_t)y)),((SmartPtr<ImageFilterConfig>*)z)->get()));
     case O::FilterToParentS0: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(a.s[0],((SmartPtr<ImageFilterConfig>*)z)->get()));
     case O::FilterFree: delete (SmartPtr<ImageFilterConfig>*)x; return 0;
-    case O::ReadFlagText: return CFG_GV(a.s[a.ns++]=a.mConfig->ReadFlag((bool*)x));
     case O::ReadComp: return CFG_G(a.mConfig->ReadComponent());
     case O::IsScrollArea: return dynamic_cast<ScrollArea*>((Component*)x)!=NULL;
     case O::PushScrollArea: a.c[a.nc++]=dynamic_cast<ScrollArea*>((Component*)x); return 0;
@@ -138,8 +139,6 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
 }
 #undef CFG_G
 #undef CFG_GV
-// a composition of cfgcomp.rs over the frame; its op's exception (kept in the frame) rethrown
-static void CfgComp(CfgTabFrame& a,EeWonCfgComp inWhich) { if(!ee_won_cfg_comp(CfgTabOp,&a,inWhich)) std::rethrow_exception(a.mError); }
 static void CfgTabClear(void* p)
 {
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
@@ -156,19 +155,10 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
     return CfgTabTry(p,[inKind](CfgTabFrame& a) {
         ComponentConfig* cfg=a.mConfig;
         switch(inKind) {
-        case EeWonCfgRead::Int: a.i[a.ni++]=cfg->ReadInt(); break;
-        case EeWonCfgRead::Bool: a.i[a.ni++]=cfg->ReadBool(); break;
-        case EeWonCfgRead::Color: a.i[a.ni++]=cfg->ReadColor(); break;
-        case EeWonCfgRead::Char: a.i[a.ni++]=cfg->ReadChar(); break;
-        case EeWonCfgRead::VertAlign: a.i[a.ni++]=cfg->ReadVertAlign(); break;
-        case EeWonCfgRead::HorzAlign: a.i[a.ni++]=cfg->ReadHorzAlign(); break;
-        case EeWonCfgRead::Str: a.s[a.ns++]=cfg->ReadString(false); break;
-        case EeWonCfgRead::Flag: return ee_won_cfg_comp(CfgTabOp,&a,EeWonCfgComp::ReadFlag);
         case EeWonCfgRead::Font: a.f[a.nf++]=cfg->ReadFont(); break;
         case EeWonCfgRead::Image: a.m[a.nm++]=cfg->ReadImage(false); break;
         case EeWonCfgRead::Sound: a.snd=cfg->ReadSound(); break;
         case EeWonCfgRead::Background: a.bg=cfg->ReadBackground(); break;
-        case EeWonCfgRead::SelColor: a.sel=cfg->ReadSelectionColor(); break;
         case EeWonCfgRead::Comp: a.c[a.nc++]=cfg->ReadComponent(); break;
         case EeWonCfgRead::Container: a.c[a.nc++]=SafeConfigGetComponent<Container*>(cfg->ReadComponent(),"Container"); break;
         case EeWonCfgRead::Button: a.c[a.nc++]=SafeConfigGetComponent<Button*>(cfg->ReadComponent(),"Button"); break;
@@ -176,19 +166,26 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
         case EeWonCfgRead::MultiListArea: a.c[a.nc++]=SafeConfigGetComponent<MultiListArea*>(cfg->ReadComponent(),"MultiListArea"); break;
         case EeWonCfgRead::ScrollArea: return ee_won_cfg_comp(CfgTabOp,&a,EeWonCfgComp::ReadScrollArea);
         case EeWonCfgRead::Frame: return ee_won_cfg_comp(CfgTabOp,&a,EeWonCfgComp::ReadFrame);
-        case EeWonCfgRead::Cursor: a.cur=cfg->ReadCursor(); break;
-        case EeWonCfgRead::Direction: a.i[a.ni++]=cfg->ReadDirection(); break;
-        case EeWonCfgRead::StdCursor: a.i[a.ni++]=cfg->ReadStandardCursor(); break;
         case EeWonCfgRead::LayoutPoint: a.c[a.nc++]=SafeConfigGetComponent<LayoutPoint*>(cfg->ReadComponent(),"LayoutPoint"); break;
-        case EeWonCfgRead::Word: a.s[0]=cfg->ReadString(true); a.ns=1; break;
-        case EeWonCfgRead::RawImage: a.raw=cfg->ReadRawImage(); break;
         case EeWonCfgRead::RawStr: a.rs[a.nrs++]=cfg->ReadRawString(false); break;
+        default: break; // the reads made in Rust (CfgTabPut)
         }
         return true;
     });
 }
-static bool CfgTabComma(void* p) { return CfgTabTry(p,[](CfgTabFrame& a) { a.mConfig->EnsureComma(); return true; }); }
-static bool CfgTabEnd(void* p) { return static_cast<CfgTabFrame*>(p)->mConfig->EndOfString(); }
+// where a read made in Rust goes: a string slot's or the selection colour's address; the raw image's reference adopted,
+// the standard cursor's object
+static intptr_t CfgTabPut(void* p,EeWonCfgRead inKind,intptr_t v)
+{
+    CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
+    switch(inKind) {
+    case EeWonCfgRead::Word: a.ns=1; return (intptr_t)&a.s[0];
+    case EeWonCfgRead::SelColor: return (intptr_t)&a.sel;
+    case EeWonCfgRead::RawImage: a.raw=(RawImage*)CcAdopt((Image*)v).get(); return 0;
+    case EeWonCfgRead::Cursor: a.cur=Cursor::GetStandardCursor((StandardCursor)v); return 0;
+    default: return (intptr_t)&a.s[a.ns++]; // Str, Flag
+    }
+}
 static const void* CfgTabText(void* p,int32_t inSlot,uint16_t* outLen,uint32_t* outUnit)
 {
     const GUIString& s=static_cast<CfgTabFrame*>(p)->s[inSlot];
@@ -218,7 +215,8 @@ static intptr_t CfgTabArg(void* p,EeWonCfgArg inWhat,int32_t inSlot)
 }
 #define EE_CFG_KEY(t,n) ((EE_WON_CFG_T_##t)<<8|(n)) // a setter's number: its table's key (cfgtab.rs EE_WON_CFG_T_*) and its place
 // The setters, as each handler called them on its typed component (bools read as 0/1). Those that called an inline
-// forward to the component's Rust object are cfgset.rs's (R6 WONLobby round 27): these are the rest.
+// forward to the component's Rust object are cfgset.rs's (R6 WONLobby round 27), those that ran a composition of
+// cfgcomp.rs are its (ee_won_cfg_comp_setter, R6 WON lobby and network round 39): these are the rest.
 static void CfgTabSet(CfgTabFrame& a,int inSetter)
 {
     const int* i=a.i; const GUIString* s=a.s; Component* const* c=a.c;
@@ -270,70 +268,31 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(TEXTAREA,4): EE_C(TextArea)->mTextColor=i[0]; break;
     case EE_CFG_KEY(TEXTAREA,5): EE_C(TextArea)->mSelColor=a.sel; break;
     case EE_CFG_KEY(TEXTAREA,6): EE_C(TextArea)->SetLinkFont(a.f[0]); break;
-    case EE_CFG_KEY(SIMPLE,1): CfgComp(a,EeWonCfgComp::SimpleType); break;
-    case EE_CFG_KEY(WONBUTTON,1): CfgComp(a,EeWonCfgComp::ButtonType); break;
-    case EE_CFG_KEY(WONBUTTON,12): CfgComp(a,EeWonCfgComp::HorzTextPad); break;
-    case EE_CFG_KEY(WSCROLLBAR,0): CfgComp(a,EeWonCfgComp::ScrollRect); break;
     case EE_CFG_KEY(WLISTCTRL,1): static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea())->SetNumColumns(i[0]); break;
     case EE_CFG_KEY(WLISTCTRL,2): static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea())->SetDynamicSizeColumn(i[0]); break;
     case EE_CFG_KEY(WLISTCTRL,3): static_cast<ListArea*>(static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea()))->SetListFlags((unsigned long)i[1],i[0]!=0); break;
     case EE_CFG_KEY(WCOMBO,2): WONShellFrameOp(EE_C(Component),EeWonShellOp::SetFrame,a.fr); break;
     case EE_CFG_KEY(WTABCTRL,2): WONShellFrameOp(EE_C(Component),EeWonShellOp::SetFrame,a.fr); break;
-    case EE_CFG_KEY(WSCROLLCONT,0): CfgComp(a,EeWonCfgComp::ScrollContNoFrame); break;
     case EE_CFG_KEY(WSCROLLCONT,2): WONShellFrameOp(EE_C(ScrollbarScroller),EeWonShellOp::SetFrame,a.fr); break;
     case EE_CFG_KEY(SCROLLAREA,0): EE_C(ScrollArea)->SetBackground(a.bg); break;
     case EE_CFG_KEY(STRETCHCENTER,0): EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetStretchImage(a.m[0].get()); break;
     case EE_CFG_KEY(STRETCHCENTER,1): EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetCenterImage(a.m[0].get()); break;
     case EE_CFG_KEY(COMPONENT,2): a.mConfig->mComponent.get()->mControlId=i[0]; break;
-    case EE_CFG_KEY(COMPONENT,3): CfgComp(a,EeWonCfgComp::Left); break;
-    case EE_CFG_KEY(COMPONENT,4): CfgComp(a,EeWonCfgComp::Top); break;
-    case EE_CFG_KEY(COMPONENT,5): CfgComp(a,EeWonCfgComp::Width); break;
-    case EE_CFG_KEY(COMPONENT,6): CfgComp(a,EeWonCfgComp::Height); break;
-    case EE_CFG_KEY(COMPONENT,7): a.mConfig->mComponent->SetPos(i[0],i[1]); break;
-    case EE_CFG_KEY(COMPONENT,8): a.mConfig->mComponent->SetSize(i[0],i[1]); break;
     case EE_CFG_KEY(COMPONENT,9): a.mConfig->mComponent->SetTranslucentColor(i[0],a.ni>1?i[1]:4); break;
-    case EE_CFG_KEY(COMPONENT,10): CfgComp(a,EeWonCfgComp::SizeAtLeast); break;
     case EE_CFG_KEY(COMPONENT,11): a.mConfig->mComponent->SetDesiredSize(i[0],i[1]); break;
     case EE_CFG_KEY(COMPONENT,12): a.mConfig->mComponent.get()->SetDesiredWidth(i[0]); break;
     case EE_CFG_KEY(COMPONENT,13): a.mConfig->mComponent.get()->SetDesiredHeight(i[0]); break;
     case EE_CFG_KEY(COMPONENT,14): a.mConfig->mComponent->SetPosSize(i[0],i[1],i[2],i[3]); break;
     case EE_CFG_KEY(COMPONENT,15): a.mConfig->mComponent->SetEnabled(i[0]!=0); break;
     case EE_CFG_KEY(COMPONENT,16): a.mConfig->mComponent->SetVisible(i[0]!=0); break;
-    case EE_CFG_KEY(COMPONENT,17): CfgComp(a,EeWonCfgComp::Focus); break;
     case EE_CFG_KEY(COMPONENT,18): a.mConfig->mComponent->SetDefaultCursor(a.cur); break;
     case EE_CFG_KEY(COMPONENT,19): a.mConfig->mComponent->SetComponentFlags(i[1],i[0]!=0); break;
     case EE_CFG_KEY(COMPONENT,20): Window::GetDefaultWindow()->SetSkipDecodeImages(!(i[0]!=0)); break;
     case EE_CFG_KEY(COMPONENT,21): gShowParseTime=i[0]!=0; break;
-    case EE_CFG_KEY(COMPONENT,22): CfgComp(a,EeWonCfgComp::ParseTimerStart); break;
-    case EE_CFG_KEY(COMPONENT,23): CfgComp(a,EeWonCfgComp::ParseTimerStop); break;
-    case EE_CFG_KEY(COMPONENT,30): a.mConfig->mHasSetWidth=true; break;
-    case EE_CFG_KEY(COMPONENT,31): a.mConfig->mHasSetHeight=true; break;
-    case EE_CFG_KEY(COMPONENT,32): a.mConfig->mHasSetWidth=a.mConfig->mHasSetHeight=true; break;
     case EE_CFG_KEY(COMPONENT,33): a.mConfig->SetDesiredSizeIfNecessary(); break;
-    case EE_CFG_KEY(SKIN,1): ee_won_skin_set_type(WONSkinGlobal(),false,&s[0],static_cast<Component*>(SafeConfigGetComponent<WONButton*>(c[0],"WONButton"))); break;
-    case EE_CFG_KEY(SKIN,2): ee_won_skin_set_type(WONSkinGlobal(),true,&s[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    case EE_CFG_KEY(SKIN,3): WONSkinSet(EeWonSkinSlot::PushButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
-    case EE_CFG_KEY(SKIN,4): WONSkinSet(EeWonSkinSlot::Checkbox,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
-    case EE_CFG_KEY(SKIN,5): CfgComp(a,EeWonCfgComp::SkinRadio); break;
-    case EE_CFG_KEY(SKIN,6): WONSkinSet(EeWonSkinSlot::HeaderButton,0,SafeConfigGetSkinPart(c[0],"WONHeaderButton")); break;
-    case EE_CFG_KEY(SKIN,7): WONSkinSet(EeWonSkinSlot::TabButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
-    case EE_CFG_KEY(SKIN,8): WONSkinSet(EeWonSkinSlot::Arrow0,i[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    case EE_CFG_KEY(SKIN,9): WONSkinSet(EeWonSkinSlot::ComboButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    case EE_CFG_KEY(SKIN,10): WONSkinSet(EeWonSkinSlot::CloseButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    case EE_CFG_KEY(SKIN,11): WONSkinSet(EeWonSkinSlot::ScrollGutter0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    case EE_CFG_KEY(SKIN,12): WONSkinSet(EeWonSkinSlot::ScrollThumb0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    case EE_CFG_KEY(SKIN,13): WONSkinSet(EeWonSkinSlot::Scrollbar0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONScrollbar")); break;
-    case EE_CFG_KEY(SKIN,14): WONSkinSet(EeWonSkinSlot::ScrollContainer,0,SafeConfigGetSkinPart(c[0],"WONScrollContainer")); break;
-    case EE_CFG_KEY(SKIN,15): WONSkinSet(EeWonSkinSlot::ListCtrl,0,SafeConfigGetSkinPart(c[0],"WONListCtrl")); break;
-    case EE_CFG_KEY(SKIN,16): CfgComp(a,EeWonCfgComp::SkinTabCtrl); break;
-    case EE_CFG_KEY(SKIN,17): WONSkinSet(EeWonSkinSlot::ComboBox,0,SafeConfigGetSkinPart(c[0],"WONComboBox")); break;
-    case EE_CFG_KEY(SKIN,18): WONSkinSet(EeWonSkinSlot::PopupBack,0,SafeConfigGetSkinPart(c[0],"WONPopupBack")); break;
-    case EE_CFG_KEY(SKIN,19): WONSkinSet(EeWonSkinSlot::DialogBack,0,SafeConfigGetSkinPart(c[0],"WONDialogBack")); break;
     case EE_CFG_KEY(SKIN,20): CfgSkinClickSound(a.mConfig); break;
-    case EE_CFG_KEY(SKIN,21): CfgComp(a,EeWonCfgComp::SkinCursor); break;
     case EE_CFG_KEY(FONT,0): EE_CFG(FontConfig)->SetFont(a.f[0].get()); break;
     case EE_CFG_KEY(FONT,1): EE_CFG(FontConfig)->mDescriptor.mSize=i[0]; break;
-    case EE_CFG_KEY(FONT,2): CfgComp(a,EeWonCfgComp::FontStyle); break;
     case EE_CFG_KEY(FONT,3): WindowManager::GetDefaultWindowManager()->SetDefaultFont(a.f[0].get()); break;
     case EE_CFG_KEY(FONT,4): WindowManager::GetDefaultWindowManager()->SetNamedFont(s[0],a.f[0].get()); break;
     case EE_CFG_KEY(FONT,5): EE_CFG(FontConfig)->mNeedRecalcFont=true; break;
@@ -344,9 +303,7 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     // layout made by the instruction is the frame's until the container holds it
     case EE_CFG_KEY(CONTAINER,0): EE_CFG(ContainerConfig)->mContainer->AddChild(c[--a.nc]); break;
     case EE_CFG_KEY(CONTAINER,1): EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
-    case EE_CFG_KEY(CONTAINER,2): CfgComp(a,EeWonCfgComp::NewLayoutPoint); break; // NEWLAYOUTPOINT's name
     case EE_CFG_KEY(CONTAINER,4): EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
-    case EE_CFG_KEY(CONTAINER,5): CfgComp(a,EeWonCfgComp::EnableLayout); break;
     case EE_CFG_KEY(CONTAINER,6): EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
     case EE_CFG_KEY(CONTAINER,9): a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,true,true); break;
     case EE_CFG_KEY(CONTAINER,10): a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,true,false); break;
@@ -354,38 +311,21 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(CONTAINER,12): a.lay=new CenterLayout(c[--a.nc],true,true); break;
     case EE_CFG_KEY(CONTAINER,13): a.lay=new CenterLayout(c[--a.nc],true,false); break;
     case EE_CFG_KEY(CONTAINER,14): a.lay=new CenterLayout(c[--a.nc],false,true); break;
-    case EE_CFG_KEY(CONTAINER,15): CfgComp(a,EeWonCfgComp::SpaceEvenlyH); break;
-    case EE_CFG_KEY(CONTAINER,16): CfgComp(a,EeWonCfgComp::SpaceEvenlyV); break;
-    case EE_CFG_KEY(CONTAINER,17): CfgComp(a,EeWonCfgComp::ClearRight); break;
-    case EE_CFG_KEY(CONTAINER,19): CfgComp(a,EeWonCfgComp::SizeAtLeastLayout); break;
     case EE_CFG_KEY(CONTAINER,20): a.lay->AddComponent(c[--a.nc]); break;
     case EE_CFG_KEY(CONTAINER,21): EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
     case EE_CFG_KEY(CONTAINER,22): EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
     case EE_CFG_KEY(CONTAINER,23): EE_CFG(ContainerConfig)->mContainer->SetIsolateTabFocus(i[0]!=0); break;
     case EE_CFG_KEY(CONTAINER,24): EE_CFG(ContainerConfig)->mContainer->SetOnlyChildInput(i[0]!=0); break;
-    // the LAYOUT family's state (cfgtab.rs layout): the previous rule's instructions and offsets, its reference, the
-    // offsets read, the rule added (the frame's last six ints: instructions, offsets, which component stays the reference)
-    case EE_CFG_KEY(CONTAINER,25): CfgComp(a,EeWonCfgComp::LayoutPrev); break;
-    case EE_CFG_KEY(CONTAINER,26): CfgComp(a,EeWonCfgComp::LayoutChain); break;
-    case EE_CFG_KEY(CONTAINER,27): CfgComp(a,EeWonCfgComp::LayoutOffsets); break;
-    case EE_CFG_KEY(CONTAINER,28): CfgComp(a,EeWonCfgComp::LayoutRule); break;
-    case EE_CFG_KEY(CONTAINER,29): CfgComp(a,EeWonCfgComp::NoOverlap); break;
-    // StretchImageConfig (round 41; cfgimg.rs): the exports' children by number or column
+    // StretchImageConfig (round 41; cfgimg.rs)
     case EE_CFG_KEY(STRETCHIMAGE,0): EE_CFG(StretchImageConfig)->mStretchImage->SetImage(a.raw.get()); break;
     case EE_CFG_KEY(STRETCHIMAGE,1): EE_CFG(StretchImageConfig)->mStretchImage->SetTile(i[a.ni-2]!=0,i[a.ni-1]!=0); break;
     case EE_CFG_KEY(STRETCHIMAGE,2): EE_CFG(StretchImageConfig)->mStretchImage->SetBorders(i[0],i[1],i[2],i[3]); break;
     case EE_CFG_KEY(STRETCHIMAGE,3): EE_CFG(StretchImageConfig)->mStretchImage->SetSkipCenter(i[0]!=0); break;
-    case EE_CFG_KEY(STRETCHIMAGE,4): CfgComp(a,EeWonCfgComp::StretchExport); break;
     case EE_CFG_KEY(STRETCHIMAGE,5): a.i[a.ni++]=a.raw->GetWidth()/i[0]; break;
-    case EE_CFG_KEY(STRETCHIMAGE,6): CfgComp(a,EeWonCfgComp::StretchCut); break;
-    case EE_CFG_KEY(STRETCHIMAGE,7): CfgComp(a,EeWonCfgComp::StretchNamed); break;
-    case EE_CFG_KEY(STRETCHIMAGE,8): CfgComp(a,EeWonCfgComp::StretchNewChild); break;
-    // ImageFilterConfig (round 41; cfgimg.rs): the raw image, its copy, the filters by name, the crops' and export's children
+    // ImageFilterConfig (round 41; cfgimg.rs): the raw image, its copy, the filters by name
     case EE_CFG_KEY(IMAGEFILTER,0): EE_CFG(ImageFilterConfig)->SetRawImage(a.raw.get()); break;
     case EE_CFG_KEY(IMAGEFILTER,2): EE_CFG(ImageFilterConfig)->SetRawImage(static_cast<RawImage*>(EE_CFG(ImageFilterConfig)->mRawImage->Duplicate().get())); break;
     case EE_CFG_KEY(IMAGEFILTER,3): a.i[a.ni++]=EE_CFG(ImageFilterConfig)->mRawImage->GetWidth()/i[0]; break;
-    case EE_CFG_KEY(IMAGEFILTER,4): CfgComp(a,EeWonCfgComp::FilterCut); break;
-    case EE_CFG_KEY(IMAGEFILTER,5): CfgComp(a,EeWonCfgComp::FilterNamed); break;
     case EE_CFG_KEY(IMAGEFILTER,10): a.raw=ImageScalePercent(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
     case EE_CFG_KEY(IMAGEFILTER,11): a.raw=ImageScaleTo(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
     case EE_CFG_KEY(IMAGEFILTER,12): a.raw=ImageTint(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
@@ -397,15 +337,20 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
 #undef EE_CFG_KEY
 #undef EE_CFG
 #undef EE_C
-static bool CfgTabApply(void* p,int32_t inSetter) { return CfgTabTry(p,[inSetter](CfgTabFrame& a) { CfgTabSet(a,inSetter); return true; }); }
+// a setter: a composition of cfgcomp.rs over the frame (its op's exception kept in the frame), else CfgTabSet's case
+static bool CfgTabApply(void* p,int32_t inSetter)
+{
+    int r=ee_won_cfg_comp_setter(CfgTabOp,p,inSetter);
+    return r>=0 ? r!=0 : CfgTabTry(p,[inSetter](CfgTabFrame& a) { CfgTabSet(a,inSetter); return true; });
+}
 // The handler of inTable for inKey: true when the table holds the key (and the key was handled), false to ask the
 // base; a read's or setter's exception is rethrown here.
 bool ComponentConfig::RunTable(int inTable,const std::string& inKey)
 {
     CfgTabFrame aFrame; aFrame.mConfig=this; aFrame.ni=aFrame.ns=aFrame.nf=aFrame.nm=aFrame.nc=aFrame.nrs=0;
-    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,CfgTabComma,CfgTabEnd,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear,CfgTabPeek,CfgTabArg};
+    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,NULL,NULL,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear,CfgTabPeek,CfgTabArg,this->mCfg,&aFrame.mCc,CfgTabPut};
     int aResult=ee_won_cfg_tab_run(&aHost,inTable,(const uint8_t*)inKey.data(),inKey.size());
-    if(aResult==1) std::rethrow_exception(aFrame.mError);
+    if(aResult==1) std::rethrow_exception(aFrame.mError ? aFrame.mError : aFrame.mCc.mErr);
     return aResult==0;
 }
 // A config's instructions (R6 WONLobby round 26): its kind's tables and its bases' in the original's order

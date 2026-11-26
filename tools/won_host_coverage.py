@@ -137,7 +137,9 @@ CHECKS = [
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
          hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
          # the cases whose statements are Rust (R6 WON round 32)
-         rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op")], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op"),
+               # the one-call cases answered in Rust (R6 WON round 39)
+               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "prv_op")], allowed={}),
     dict(enum="EeWonEeGameOp", header="won_lobby/eegame.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op"),
