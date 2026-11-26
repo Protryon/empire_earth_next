@@ -2633,12 +2633,6 @@ long ee_cp_pl_hero_count(uint64_t player,
                          bool by_class,
                          bool requests);
 
-/// `EETechTreeNode::GetUnitClass(i)`: the node's unit class `i`, or its default class past the end.
-///
-/// # Safety
-/// `node` is a live tech node.
-long ee_cp_node_unit_class(uint64_t node, unsigned long i);
-
 /// The town's world (EETown.cpp): `town` the `EETown*`.
 extern int64_t ee_cp_town_host(void *town, int32_t op, uint64_t a, uint64_t b, TownIo *io);
 

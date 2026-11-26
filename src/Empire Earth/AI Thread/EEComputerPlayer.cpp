@@ -306,12 +306,6 @@ void EEComputerPlayer::WonderStarted(EEComplexUnit*)
 {
 }
 
-// Returns the tech node's unit class at the index, or its default unit class past the end (ee_sim::cp player_game.rs)
-long EETechTreeNode::GetUnitClass(unsigned long inIndex)
-{
-    return ee_cp_node_unit_class((uint64_t)(uintptr_t)this, inIndex);
-}
-
 // Returns the number of teams in the world
 unsigned long EEWorld::GetNumTeams()
 {
@@ -409,7 +403,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_BASE_EPOCH_MEDIA_UNLOADED: thePlayer->EEPlayer::EpochMediaUnloaded((long)v[0]);
         return 0;
-    case EE_CP_PLAYER_EPOCH_RESEARCH: if (EETechTreeEpoch* theEpoch = dynamic_cast<EETechTreeEpoch*>(thePlayer->mTechnologies->Get((long)v[0]))) theEpoch->ResearchKind(7, true);
+    case EE_CP_PLAYER_EPOCH_RESEARCH: if (EETechTreeNode* theNode = thePlayer->mTechnologies->Get((long)v[0])) if (theNode->mLists != 0) static_cast<EETechTreeEpoch*>(theNode)->ResearchKind(7, true);
         return 0;
     case EE_CP_PLAYER_CIV_NAME:
         return (int64_t)(uintptr_t)(const char*)thePlayer->mCivilizationFile;
@@ -437,7 +431,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_DETACH: thePlayer->DetachUnitFromAI(theComplex);
         return 0;
-    case EE_CP_PLAYER_RESET_SOL: thePlayer->mTechnologies->mEpochs[thePlayer->mTechnologies->mCurrentEpoch].mCurrentSOL = 0;
+    case EE_CP_PLAYER_RESET_SOL: thePlayer->mTechnologies->Get(thePlayer->mTechnologies->mCurrentEpoch)->mCurrentSOL = 0;
         return 0;
     case EE_CP_PLAYER_BASE_EPOCH_REACHED: thePlayer->EEPlayer::EpochReached((long)v[0]);
         return 0;

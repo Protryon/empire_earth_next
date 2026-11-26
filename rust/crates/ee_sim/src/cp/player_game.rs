@@ -2058,13 +2058,3 @@ pub unsafe extern "C" fn ee_cp_pl_hero_count(player: u64, by_class: bool, reques
     count.wrapping_add(requested)
 }
 
-/// `EETechTreeNode::GetUnitClass(i)`: the node's unit class `i`, or its default class past the end.
-///
-/// # Safety
-/// `node` is a live tech node.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_node_unit_class(node: u64, i: c_ulong) -> c_long {
-    let t = unsafe { WorldRead::begin() };
-    // SAFETY: the caller's contract
-    unsafe { crate::world::NodeView::of(&t, node) }.map_or(0, |n| n.unit_class(i as usize) as c_long)
-}

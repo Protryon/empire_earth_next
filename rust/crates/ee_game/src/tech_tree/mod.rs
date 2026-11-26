@@ -8,3 +8,4 @@
 
 pub mod host;
 pub mod load;
+pub mod objects;

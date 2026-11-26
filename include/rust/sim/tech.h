@@ -1584,32 +1584,6 @@ struct EeCalamityFields {
   bool mHasTargetUnit;
 };
 
-/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
-struct EeTechNodeFields {
-  bool mIsResearched;
-  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
-  bool mIsObsolete;
-  bool mIsAvailable;
-  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
-  uint8_t mPrerequisiteFlags;
-  bool mIsAllowed;
-  bool mScenEditorObsoleted;
-  bool mIsUnitMediaLoaded;
-  /// an epoch's: off between a saved game's load and its applied state
-  bool mIsCountingSOL;
-  /// the epoch it belongs to
-  long mEpoch;
-  long mObsoleteEpoch;
-  /// `ResearchNode` counts it down
-  long mResearchDelay;
-  long mRequiredSOL;
-  long mFirstNodeID;
-  long mCurrentSOL;
-  long mNextEpoch;
-  /// the title string (epochs.yaml; 0: 30145 + the epoch)
-  long mTitleID;
-};
-
 /// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
 struct EeTechNodeDataFields {
   /// the costs by resource (`Load` zeroes all seven, then copies five)
@@ -1646,6 +1620,41 @@ struct EeTechNodeDataFields {
   size_t mClassTable;
 };
 
+/// A node's and an epoch's members (ee/EEPlayer.h: `EETechTreeNode` derives from it and adds none; the nodes and
+/// epochs are made and freed by Rust: tree_objects.rs).
+struct EeTechNodeFields {
+  bool mIsResearched;
+  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
+  bool mIsObsolete;
+  bool mIsAvailable;
+  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
+  uint8_t mPrerequisiteFlags;
+  bool mIsAllowed;
+  bool mScenEditorObsoleted;
+  bool mIsUnitMediaLoaded;
+  /// an epoch's: off between a saved game's load and its applied state
+  bool mIsCountingSOL;
+  /// the epoch it belongs to
+  long mEpoch;
+  long mObsoleteEpoch;
+  /// `ResearchNode` counts it down
+  long mResearchDelay;
+  long mRequiredSOL;
+  long mFirstNodeID;
+  long mCurrentSOL;
+  long mNextEpoch;
+  /// the title string (epochs.yaml; 0: 30145 + the epoch)
+  long mTitleID;
+  /// the node data (shared by a tree's copies; made by the load, freed by `Unload`)
+  EeTechNodeDataFields *mData;
+  /// the tree it belongs to
+  class EETechTree *mTree;
+  /// `EEButtonObject::Get` of the record's button
+  class EEButtonObject *mButton;
+  /// an epoch's nodes and loaded unit classes (an [`crate::tech::tree_objects::EeTechEpochLists`]); 0: a node
+  size_t mLists;
+};
+
 /// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
 struct EeTechTreeFields {
   long mCurrentEpoch;
@@ -1662,6 +1671,8 @@ struct EeTechTreeFields {
   long mPlayerIndex;
   /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
   class EEPlayer *mPlayer;
+  /// the epochs, one per epoch of the tech tree file (a `Vec` of nodes: tree_objects.rs; 0 before the first)
+  size_t mEpochs;
 };
 
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
