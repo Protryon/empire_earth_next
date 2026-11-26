@@ -38,8 +38,6 @@ class EEUnit;
 // (init list); the dtor (inline: EETUnitList's ??_E 0x121b37 expands it) dereferences the unit
 class RTSTUnitList {
 public:
-    EEUnit* GetUnit() const { return this->mUnit; }
-    RTSTUnitList* GetNext() const { return this->mNext; }
     RTSTUnitList() : mUnit(NULL), mNext(NULL) {}
     virtual ~RTSTUnitList();                // +0x00 (inline: defined below where ee/EEUnit.h came first)
     EEUnit* mUnit;                          // +0x04 (referenced)
@@ -80,9 +78,7 @@ public:
     void AddSight(EEPlayer* inPlayer);
     void RemoveSight(EEPlayer* inPlayer);   // 0x1246c4 (EEPlayer::RemoveSharedSight/RemoveOwnSight; provisional name)
 
-    long GetTerrainType() const { return this->mTerrainType; }  // inline (EEUCTransport::FilterLoadable 0x61c806 budget) r37_big B2
     long mTerrainType;                      // +0x04 (calamity effects sit at height 0 on 1 and 10)
-    RTSTileUnitNode* GetUnits() const { return this->mUnits; }
     RTSTileUnitNode* mUnits;                // +0x08 the units on the tile (EEGhostUnit 0x203d43 walks them; = 0 by the ctor)
     // inline (COMDAT 0x2035cf; expanded in EEDoppelgangerManager 0x20266e): player inPlayerID's visibility of the
     // tile, two 16-bit entries per dword (provisional name)
@@ -95,7 +91,6 @@ public:
     float GetHeight() const { return this->mHeight; }
     uint32_t* mVisibility;                  // +0x0c (not set by the ctor; 32-bit words: two players per word, saved)
     float mHeight;                          // +0x10 (EECalamityManager::CreateLocationCalamity: the calamity's z)
-    signed char GetAIValue() const { return this->mAIValue; }
     signed char mAIValue;                   // +0x14 the AI tile value (GetTileFlag 0x21f5a movsx; RemoveForestTile 0x425325 -= 10 floored at 0)
 };
 
@@ -248,7 +243,6 @@ public:
     // provisional name)
     std::vector<RTSColoredRectangle>& GetColoredRectangles() { return this->mColoredRectangles; }
 
-
     std::vector<RTSColoredRectangle> mColoredRectangles;   // +0x04 (0x24-byte elements; provisional name)
     TSCriticalSection* mCriticalSectionForColoredRectangles;   // +0x14 (named by the ctor's assert)
     long mL18;                              // +0x18 (untouched by the ctor)
@@ -260,9 +254,6 @@ public:
     long mL1955EC;                          // +0x1955ec
     EEMapTile** mTiles;                     // +0x1955f0 row-major, mSize x mSize
     // +0x1955f4 mF1955F4 .. +0x195620 mB195620: the record EeUnitsRtsMapFields (the base above)
-    long GetL195608() const { return this->mL195608; }
-    long GetL19560C() const { return this->mL19560C; }
-    long GetL195610() const { return this->mL195610; }
     long GetSize() const { return this->mSize; }
 };
 
@@ -336,13 +327,7 @@ public:
     // 0x11df99 (+0x19565c = it, then UpdateCliffs over the whole map)
     void SetCliffTexture(long inCliffTexture) { ee_gamecpp_mx_set_cliff_texture(this, inCliffTexture); }
     unsigned long GetTileCount() { return ee_gamecpp_map_tile_count(this); }
-    // 0x11c3ca (EEPhysics::GetOutOfSynchChecksum: the out-of-synch checksum) (provisional name)
-    long ComputeChecksum() { return ee_gamecpp_map_checksum(this); }
     // EEMap.cpp's other members in address order (provisional names)
-    // 0x11bc03 (the visibility words for a new player count)
-    void SetPlayerCount(unsigned long inPlayerCount) { ee_gamecpp_map_set_player_count(this, inPlayerCount); }
-    // 0x11bf4a (Create + region tables + colours)
-    void CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount) { ee_gamecpp_mx_create_map(this, inWidth, inHeight, inPlayerCount); }
     // 0x11c13f / 0x11d006: inPlayer stops / starts seeing the tiles within inRadius of (inX, inY)
     void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false); }
     // 0x11c9a3 (the ctors' common part)
@@ -350,10 +335,6 @@ public:
     void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true); }
     void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff) { ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff); }
     void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop) { ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop); }
-    // 0x11dd95 (registers the terrain texture and colour sets with the mesh)
-    void RegisterTerrainSets() { ee_gamecpp_map_register_terrain_sets(this); }
-    // 0x11dfb7 (the tile's texture set)
-    void SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload) { ee_gamecpp_map_set_tile_terrain(this, inX, inY, inTextureSet, inUnload); }
 
     // +0x28 0x11cf60 (ret 4: the out-of-synch dump's file, EEPhysics 0x152311) (provisional name)
     virtual void DumpOutOfSynch(FILE* inFile) { ee_gamecpp_map_dump(this, inFile); }
@@ -388,7 +369,6 @@ inline RTSTUnitList::~RTSTUnitList()
         this->mUnit->Dereference();
 }
 #endif
-
 
 // The tile terrain types (EETerrainType): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
 #include "rust/sim/game_ids.h"

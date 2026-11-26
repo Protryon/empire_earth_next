@@ -24,11 +24,6 @@ public:
     static unsigned long Main(void* inThis) { return ee_preload_main(inThis); }
     void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_preload_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
     static void LoadGameErrorDone(UIForm* inForm);          // 0xd4613 (LoadGame's error box callback)
-    // 0xd4621 (message 0x407)
-    void StartQueueing() { ee_preload_start_queueing(); }
-    // 0xd4626 (message 0x408)
-    void FlushQueue() { ee_preload_flush_queue(this); }
-    void QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_preload_queue_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
     // 0xd46a9 (0x402)
     void PostLoadGame(bool inSkipGameMedia, bool inClearWorld) { this->mThread->Post(0x402, (void*)(inSkipGameMedia == true), (void*)(inClearWorld == true), true); }
     // 0xd46d2 (0x40a)

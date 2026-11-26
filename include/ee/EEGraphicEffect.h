@@ -25,7 +25,6 @@ public:
     static unsigned long IndexOf(const EEGraphicEffect* inEffect);
     EEGraphicEffect* GetLinkedEffect1() const { return this->mLinkedEffect1; }  // inline: 0x50225c
     EEGraphicEffect* GetLinkedEffect2() const { return this->mLinkedEffect2; }  // inline: 0x50225c
-    long GetKind() const { return this->mKind; }  // inline: EEEffect2D::CreateParts 0x504623 (the kind loaded into edx after the animation's ?:)
     float GetSize() const { return this->mSize; }  // inline (the hurricane copies it through the FP stack)
     // inline: the 3D effects load the parameters as values (provisional name)
     float GetParam2() const { return this->mParam2; }

@@ -116,9 +116,6 @@ public:
     // 0xdb5c8 (counted by mLoadCount; sets the mesh's texture sets)
     void Load(GETerrainMesh& ioMesh) { ee_gamecpp_db_terrain_mesh(this, &ioMesh, true); }
     void Unload(GETerrainMesh& ioMesh) { ee_gamecpp_db_terrain_mesh(this, &ioMesh, false); }
-    GETexture* LoadTexture(const UString& inFile) { return (GETexture*)ee_gamecpp_db_terrain_texture(this, (const char*)inFile); }
-    // 0xdb762 (Load's worker, outside the lock; provisional name)
-    void LoadTextures() { ee_gamecpp_db_terrain_textures(this); }
     // 0xdb96c (EEMap::RegisterTerrainSets hands it the registered set) (provisional name)
     void AttachTextures(GETextureSet* inTextureSet) { ee_gamecpp_db_terrain_attach(this, inTextureSet); }
     static unsigned long GetNumCliffTerrains() { return EETerrainTable::sCliffTable.size(); }
@@ -184,7 +181,6 @@ public:
                                         gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale));
         return theResult;
     }
-    static void ClearDamageTables() { ee_combat_damage_table_clear(); }
     static constexpr EEDbList<EETerrainTypeTable, EeDataList::TerrainTypes> sTable{};   // Rust's list (ee/EEDbList.h)
     // inline (out-of-line COMDATs 0x11e22b / 0x11e24e after their first user in EEMap.cpp) (provisional names)
     static EETerrainTypeTable* Get(unsigned long inIndex) { return inIndex < EETerrainTypeTable::sTable.size() ? EETerrainTypeTable::sTable[inIndex] : NULL; }

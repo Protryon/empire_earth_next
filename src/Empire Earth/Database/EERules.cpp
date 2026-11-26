@@ -11,14 +11,6 @@
 
 #include "EEDataText.h"   // the ee_data C API
 
-EERuleNumber EERuleNumber::Constant(float inValue)
-{
-    EERuleNumber n;
-    n.mFloat = inValue;
-    n.mLong = (long)inValue;
-    return n;
-}
-
 EERuleNumber EERuleNumber::World(long inRow, int inValue)
 {
     EERuleNumber n;

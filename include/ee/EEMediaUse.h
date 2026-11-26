@@ -60,12 +60,4 @@ template <class U> void EEMediaRelease(EeDataMediaUse* ioUse, TSCriticalSection*
     ee_data_media_release(ioUse, &theLock, &theStep);
 }
 
-// Runs inStep under the lock once any load is done
-template <class F> void EEMediaLocked(EeDataMediaUse* ioUse, TSCriticalSection* inLock, F inStep)
-{
-    EeDataMediaLock theLock = EEMediaLock(inLock);
-    EeDataMediaStep theStep = EEMediaStep(inStep);
-    ee_data_media_locked(ioUse, &theLock, &theStep);
-}
-
 #endif
