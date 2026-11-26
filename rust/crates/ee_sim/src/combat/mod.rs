@@ -42,6 +42,7 @@ pub mod search;
 pub mod search_ffi;
 #[cfg(test)]
 mod search_tests;
+mod shot_view;
 pub mod shots;
 pub mod store;
 #[cfg(test)]
