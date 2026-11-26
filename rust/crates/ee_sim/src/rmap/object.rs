@@ -139,7 +139,6 @@ pub enum EeRmapCpp {
     /// `gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\"` into the sink a0
     ScriptDirectory,
     SetUsingCarbon,
-    LoadProgress,
     /// `ESDebugOut("%s", a0)`
     DebugOut,
     // ---- the script search (p: the EERMFind)
@@ -1086,7 +1085,9 @@ impl RandomMap {
         }
         h(O::SetUsingCarbon, 0, &[(self.sc.map_characteristics as u32 & MAP_MARS == MAP_MARS) as i64]);
         let progress = |value: f32| {
-            hf(O::LoadProgress, 0, &[], &[value]);
+            if let Some(f) = LOAD_PROGRESS.get() {
+                f(value);
+            }
         };
         self.run_step(Step::PlayerPositions);
         progress(0.1);
@@ -1156,6 +1157,15 @@ impl RandomMap {
         debug_out(&format!("EERandomMap::CreateRandomMap processing completed in {:6.2} s\n", elapsed as f64));
         location
     }
+}
+
+/// The loading screen's progress (`gUserInterface->SetLoadProgress`): ee_game registers it at start (`ee_rust_init`;
+/// ee_sim cannot call ee_game). Unregistered (the tests, the rmap gate): no progress.
+static LOAD_PROGRESS: std::sync::OnceLock<fn(f32)> = std::sync::OnceLock::new();
+
+/// Registers the loading screen's progress (once).
+pub fn register_load_progress(f: fn(f32)) {
+    let _ = LOAD_PROGRESS.set(f);
 }
 
 fn debug_out(line: &str) {

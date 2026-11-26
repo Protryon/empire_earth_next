@@ -21,6 +21,7 @@
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/wmobj.h"
+#include "rust/won_gui/winobj.h"
 #include "won_guisplit33_world.h"
 #include "won_guisplit33_orig.h"
 #include "won_guisplit33_new.h"
@@ -35,7 +36,7 @@ static bool IsReadOp(Op op) { return op == Op::ListParent || op == Op::WmHostFon
 static bool IsNumberOp(Op op)
 {
     return op == Op::WinMouseX || op == Op::WinMouseY || op == Op::ListContains || op == Op::TipExists ||
-           op == Op::WmScreenResSet || (op >= Op::WmSizeEvX && op <= Op::WmSizeEvH);
+           op == Op::WmScreenResSet;
 }
 static intptr_t Mutated(intptr_t (*inHost)(void*, Op, intptr_t, intptr_t, intptr_t, intptr_t), void* inComp, Op op,
                         intptr_t a, intptr_t b, intptr_t c, intptr_t d)
@@ -46,6 +47,8 @@ static intptr_t Mutated(intptr_t (*inHost)(void*, Op, intptr_t, intptr_t, intptr
         return inHost(inComp, op, a, b, c, d);
     }
     if (IsReadOp(op)) return 0;
+    // an input event's record: another record (its fields 0, the writes lost)
+    if (op == Op::WmInputRec) { static EeWonWinEvent sOther; sOther = EeWonWinEvent(); return (intptr_t)&sOther; }
     if (IsNumberOp(op)) return inHost(inComp, op, a, b, c, d) + 1;
     return 0;
 }
@@ -217,8 +220,7 @@ int main()
                        Op::ParamsAvoid, Op::QueueDoPopup, Op::ListLocalToRoot, Op::WinQueueMouseUp, Op::WmWin,
                        Op::WmFontHold, Op::WmNativeWindowNew, Op::WinSetOneComponent, Op::WinSetStyle,
                        Op::WinSetParent, Op::WinCreate, Op::WmFontKeep, Op::WmHostFont, Op::WmHostFontClear,
-                       Op::WmScreenResGet, Op::WmScreenResSet, Op::WmSizeEvX, Op::WmSizeEvY, Op::WmSizeEvW,
-                       Op::WmSizeEvH, Op::WmSizeEvSetX, Op::WmSizeEvSetY, Op::WmSizeEvSetW, Op::WmSizeEvSetH};
+                       Op::WmScreenResGet, Op::WmScreenResSet, Op::WmInputRec};
     int missed = 0, caught = 0;
     for (Op op : kOps) {
         GsNew::sMutate = (int)op;

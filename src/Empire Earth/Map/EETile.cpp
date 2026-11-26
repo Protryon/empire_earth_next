@@ -10,13 +10,10 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
-#include "ee/EEDoppelganger.h"
-#include "ee/EEDoppelgangerManager.h"
 #include "rust/game/gamecpp.h"
 
 // chain at 0x521191 (wrapper)

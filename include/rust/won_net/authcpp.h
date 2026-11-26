@@ -22,6 +22,17 @@ const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
                                             const uint8_t *secret_file,
                                             size_t len);
 
+/// `AuthContext::Init` (2ddb70; AuthContext.cpp until R6 WON lobby and network round 37): [`ee_won_authctx_new_core`]
+/// with the login secrets "_wonlogin.ks" in the library's file directory, the new server list `servers` (the C++
+/// `new ServerContext`) and the directory's verifier key.
+///
+/// # Safety
+/// As `ee_won_authctx_new_core`; `servers` is a live object.
+const EeWonAuthCtx *ee_won_authctx_new_default(void *ctx,
+                                               const EeWonCoreHooks *core,
+                                               void *(*new_cert_op)(void *context),
+                                               void *servers);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_NET_AUTHCPP_H

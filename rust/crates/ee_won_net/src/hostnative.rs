@@ -199,6 +199,13 @@ pub(crate) fn crt_srand_and_rand(seed: bool) -> i32 {
     }
 }
 
+/// [`crt_srand_and_rand`] for the C++ `ServerContext::CopyAddresses` (its own static until R6 WON lobby and network
+/// round 37).
+#[no_mangle]
+pub extern "C" fn ee_won_crt_rand(seed: bool) -> i32 {
+    crt_srand_and_rand(seed)
+}
+
 /// The first character of a text-mode open: -2 for no file, -1 for an empty one.
 fn first_char(path: &[u8]) -> i64 {
     let p = c_path(path);

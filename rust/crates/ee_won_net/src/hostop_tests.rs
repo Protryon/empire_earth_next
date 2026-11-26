@@ -1120,8 +1120,8 @@ fn new_op(which: char, addr: &[u8]) -> Op {
         let (t, p) = (addr[0] as usize, addr[1] as usize);
         with(|s| s.doc = true);
         let pr = PRODUCTS[p];
-        // SAFETY: the texts' bytes (the WON directory: none, the driver's names)
-        unsafe { ee_won_httpdoc_new(t as i32, pr.as_ptr(), pr.len(), std::ptr::null(), 0) }
+        // SAFETY: the texts' bytes (the WON directory: none, an empty one: NULL is the WON default; the driver's names)
+        unsafe { ee_won_httpdoc_new(t as i32, pr.as_ptr(), pr.len(), b"".as_ptr(), 0) }
     } else if which == 'H' {
         const URLS: [&str; 4] =
             ["http://www.sierra.com/motd/sys/motd.txt", "www.sierra.com", "http://h:8080/a/b?c=1", "http://onlyhost"];

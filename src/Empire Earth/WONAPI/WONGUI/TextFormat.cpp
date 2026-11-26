@@ -13,6 +13,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "rust/won_gui/guitext.h"
+#include <set>
+#include "ee/wonapi/WONLobbyRichText.h"
 // The format's parse and its run are ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops and
 // ee_won_gui_text_append_formatted: the pending text, the colour and the font; R6 WON GUI round 36); this unit is
 // the area's four calls it makes.
@@ -33,4 +35,33 @@ void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
     EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
     ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
 }
+}
+
+// ---- TextLinkState.cpp until R6 WON GUI round 37
+// Text link segments: construction and pressed state
+namespace WONAPI {
+// Creates an unpressed link that turns red while pressed (emitted at 0x007114f0)
+TextLink::TextLink() : mPressed(false), mDownColor(0xff0000) {}
+// Returns the parameter delivered when the link is activated
+const GUIString& TextLink::GetLinkParam() { return this->mLinkParam; }
+// Marks the link pressed and switches it to its pressed colour, remembering the normal colour
+void TextLink::Pressed()
+{
+    this->mPressed=true;
+    this->mNormalColor=this->mColor;
+    this->mColor=this->mDownColor;
+}
+// Restores the normal colour of a pressed link; returns whether it was pressed
+bool TextLink::Released()
+{
+    if(this->mPressed) {
+        this->mColor=this->mNormalColor;
+        this->mPressed=false;
+        return true;
+    }
+    return false;
+}
+// Returns true: a text link is a link (the linker folds this body into the identical one at
+// 0x006f30d0)
+bool TextLink::IsLink() { return true; }
 }

@@ -130,6 +130,8 @@ pub mod player_econ;
 pub mod player_events;
 pub mod player_events_split;
 pub mod player_lists;
+#[cfg(not(test))]
+pub mod player_native;
 pub mod player_rest;
 pub mod player_save;
 pub mod player_save_split;

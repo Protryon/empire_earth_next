@@ -46,8 +46,6 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
     }
     case Op::RootGrabberClear: ((BackgroundGrabber*)a)->Clear(); return 0;
     case Op::RootGrabberDrop: ((BackgroundGrabber*)a)->Clear(); ((BackgroundGrabber*)a)->mBGImage = NULL; return 0;
-    case Op::RootImageHold: ((NativeImage*)a)->AddRef(); return 0;
-    case Op::RootImageRelease: ((NativeImage*)a)->Release(); return 0;
     case Op::RootImageSize: *(int*)b = ((NativeImage*)a)->GetWidth(); *(int*)c = ((NativeImage*)a)->GetHeight(); return 0;
     case Op::RootDrawImage: {
         const int* q = (const int*)c;

@@ -24,8 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EETechCapture.h"
-#include "ee/EECalamityCapture.h"
+
 
 
 // Creates a unit of the class at the transformation for the player (-1: the calamity's player); NULL if the class

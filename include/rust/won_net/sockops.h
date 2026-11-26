@@ -70,6 +70,19 @@ void ee_won_socketop_init_kind(const EeWonSocketOp *o,
                                const EeWonIpAddr *addr,
                                uint32_t size);
 
+/// `SocketOp(kind, socket, bytes, addr, size)` (R6 WON lobby and network round 37: the C++ constructor's
+/// statements): a new op object for the C++ op `op` on `socket` (a reference held), of the class `kind`.
+///
+/// # Safety
+/// As `ee_won_socketop_new`, `ee_won_socketop_set_socket` and `ee_won_socketop_init_kind`.
+EeWonSocketOp *ee_won_socketop_new_kind(void *op,
+                                        const EeWonCoreHooks *core,
+                                        EeWonCoreSocketOp kind,
+                                        void *socket,
+                                        void *bytes,
+                                        const EeWonIpAddr *addr,
+                                        uint32_t size);
+
 /// The op's class (`EeWonCoreSocketOp`), or -1 for a C++ class of its own.
 ///
 /// # Safety
@@ -105,6 +118,16 @@ void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
 /// # Safety
 /// As `ee_won_socketop_init_send`.
 long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
+
+/// `SocketOp::CleanupHook` (2b60c0, R6 WON lobby and network round 37): the op `cpp_op` (the C++ `SocketOp*`) leaves
+/// the socket thread if it was handed there, then a receive's target file is closed (`RecvBytesOp::CloseFile` with
+/// the op's `status`, 2b5580).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `cpp_op` is the object's C++ op.
+void ee_won_socketop_cleanup(const EeWonSocketOp *o,
+                             void *cpp_op,
+                             long status);
 
 /// The received bytes: a borrowed `ByteBuffer*` (null for none).
 ///

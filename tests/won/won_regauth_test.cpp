@@ -15,6 +15,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "won_regauth.h"
+#include "won_regkey.h" // RegKey (the class over the Rust key; R6 WON lobby and network round 37)
 
 using namespace WONAPI;
 

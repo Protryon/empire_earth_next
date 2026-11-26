@@ -177,12 +177,21 @@ fn st(w: W) -> &'static mut EeWonPlatWin {
 }
 fn host(w: W, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
     let (me, h) = (st(w).me, st(w).host);
+    // a game window's own Rust parts (R6 WON GUI round 37)
+    if let Some(r) = crate::gamewin::plat_win_op(me as isize, op, a, b) {
+        return r;
+    }
     h(me, op, a, b, c, d)
 }
 fn ask(w: W, op: Op) -> bool {
     host(w, op, 0, 0, 0, 0) != 0
 }
 fn wm(w: W, call: EeWonPlatWmCall, a: isize, b: isize) -> isize {
+    // a game window's manager is called directly (R6 WON GUI round 37)
+    if let Some(m) = crate::gamewin::plat_manager_of(st(w).me as isize) {
+        // SAFETY: the manager's live platform manager
+        return if m.is_null() { 0 } else { unsafe { crate::platwm::ee_won_plat_wm(m, call, a, b) } };
+    }
     host(w, Op::Wm, call as isize, a, b, 0)
 }
 fn dirty(w: W) {

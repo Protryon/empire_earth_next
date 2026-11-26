@@ -472,7 +472,7 @@ pub extern "C" fn ee_gamecpp_capture_calamity_saves() {
     }
     let m = hp(O::CalamityManager, 0, &[]);
     for i in 0..h(O::MgrCalamityCount, m, &[]) {
-        h(O::CapSave, hp(O::MgrCalamityAt, m, &[i]), &[i]);
+        ee_gamecpp_capture_calamity_save(hp(O::MgrCalamityAt, m, &[i]) as *mut c_void, i as c_ulong);
     }
     ee_gamecpp_capture_contagion_save();
 }
@@ -485,7 +485,7 @@ pub extern "C" fn ee_gamecpp_capture_calamity_aged(k: *mut c_void, index: c_ulon
     if !active() || (before / 5000.0) as c_long == (alive / 5000.0) as c_long {
         return;
     }
-    h(O::CapSave, k as P, &[index as i64]);
+    ee_gamecpp_capture_calamity_save(k, index);
     ee_gamecpp_capture_contagion_save();
 }
 

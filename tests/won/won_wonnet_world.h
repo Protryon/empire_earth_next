@@ -15,6 +15,8 @@
 #include <functional>
 #include "rust/won_net/reqdir.h"
 #include "rust/won_net/routeop.h"
+#include "rust/won_lobby/wonfront.h"
+#include "rust/won_lobby/wonaction.h"
 #include "rust/won_net/smartroute.h"
 
 namespace W {
@@ -385,6 +387,8 @@ struct UIManagerW {
     void UnlockUIForCopyData() { Log("ui unlock"); }
     void PopTo(UIForm* f) { Log("ui pop to " + N(f->mId)); }
     void Push(UIForm* f) { Log("ui push " + N(f->mId)); }
+    void DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b);
+    void DisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c);
 };
 static UIManagerW sUIManager;
 static UIManagerW* gUIManager = &sUIManager;
@@ -404,12 +408,23 @@ template <class T> struct UIListBox {};
 struct EEAJoinOrHostAGame : EEAction {
     EEAJoinOrHostAGame(long m, const UWideString& p, const UWideString& g) { mText = "join/host " + N(m) + " " + (const char*)p + " " + (const char*)g; }
 };
+// R6 WON lobby and network round 37: the class is the Rust action's shell (wonaction.rs); both sides' stand-ins
+// log the action as the Rust describes it (the type, the list and label given, the texts, the counts, the flags
+// password / from me / in progress / private)
+static std::string WonActionText(long t, bool l, bool c, const char* p, const char* s, long h, long n, bool pw, bool me, bool prog, bool priv)
+{ return "won " + N(t) + " list=" + N(l) + " chat=" + N(c) + " prefix=" + p + " text=" + s + " humans=" + N(h) + " players=" + N(n) + " flags=" + N(pw) + N(me) + N(prog) + N(priv); }
+static std::string WonActionLabel(UITextLabel* l) { return " label=" + (l ? N(l->mForm) + "/" + N(l->mId) : std::string("NULL")); }
 struct EEAWonNet : EEAction {
-    EEAWonNet(long t, UIListBox<UWideString>* l, const UWideString& s, bool b) { mText = "won " + N(t) + " " + N(l != NULL) + " " + (const char*)s + " " + N(b); }
-    EEAWonNet(long t, const UWideString& s, long h, long p, bool a, bool b, bool c)
-    { mText = "won " + N(t) + " " + (const char*)s + " " + N(h) + " " + N(p) + " " + N(a) + N(b) + N(c); }
-    EEAWonNet(long t, UITextLabel* l, const UWideString& p, const UWideString& s, bool m)
-    { mText = "won " + N(t) + " " + (l ? N(l->mForm) + "/" + N(l->mId) : std::string("NULL")) + " " + (const char*)p + " " + (const char*)s + " " + N(m); }
+    EEAWonNet(long t, UIListBox<UWideString>* l, const UWideString& s, bool b) { mText = WonActionText(t, l != NULL, false, "", s, 0, 0, b, false, false, false) + WonActionLabel(NULL); }
+    EEAWonNet(long t, const UWideString& s, long h, long p, bool a, bool b, bool c) { mText = WonActionText(t, false, false, "", s, h, p, a, false, c, b) + WonActionLabel(NULL); }
+    EEAWonNet(long t, UITextLabel* l, const UWideString& p, const UWideString& s, bool m) { mText = WonActionText(t, false, l != NULL, p, s, 0, 0, false, m, false, false) + WonActionLabel(l); }
+    explicit EEAWonNet(EeWonAction* r)
+    {
+        char aText[1024];
+        ee_won_action_describe(r, aText, sizeof(aText));
+        mText = std::string("won ") + aText + WonActionLabel((UITextLabel*)ee_won_action_chat(r));
+        ee_won_action_free(r);
+    }
 };
 struct EEUICWNRBLine { UWideString mName; UWideString mDescription; long mNumPlayers; long mNumGames; };
 struct EEUICWonNetRoomsBox {
@@ -433,13 +448,22 @@ static std::function<std::string(void (*)(UIForm*))> sCallbackName;   // the tes
 static std::function<std::string(UIForm*)> sFormArgName;
 static int sEventIds;
 static long SavePreferences() { Log("save preferences"); return 0; }
-static void DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b)
+static void UiDisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b)
 { Log(std::string("message ") + (const char*)m + " " + N(a) + " " + sFormArgName(f) + " " + sCallbackName(cb) + " " + N(b)); }
-static void DisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c)
+static void UiDisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c)
 { Log(std::string("cancel box ") + (const char*)m + " " + N(a) + " " + sFormArgName(f) + " " + sCallbackName(cb) + " " + N(c->mId)); }
 static UIEvent* NewRooms() { UIEvent* e = new UIEvent{++sEventIds}; Log("new rooms event " + N(e->mId)); return e; }
 static UIEvent* NewGames() { UIEvent* e = new UIEvent{++sEventIds}; Log("new games event " + N(e->mId)); return e; }
-static EEWonNetUI gEEWonNetUI = {SavePreferences, DisplayMessage, DisplayCancel, NewRooms, NewGames};
+static EEWonNetUI gEEWonNetUI = {SavePreferences, UiDisplayMessage, UiDisplayCancel, NewRooms, NewGames};
+// R6 WON lobby and network round 37: the host calls the UI manager, the preferences and the one event class itself
+// (ee/EEWonNetUI.h is gone); the stand-ins log as the table's entries do
+void UIManagerW::DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b) { UiDisplayMessage(m, a, f, cb, b); }
+void UIManagerW::DisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c) { UiDisplayCancel(m, a, f, cb, c); }
+struct GamePreferencesW { long Save() { return SavePreferences(); } };
+static GamePreferencesW gGamePreferences;
+struct EEUIEWonNetEvent : UIEvent {
+    explicit EEUIEWonNetEvent(EeWonFrontCall c) : UIEvent{++sEventIds} { Log(std::string(c == EeWonFrontCall::ArOpenScreen ? "new rooms event " : "new games event ") + N(this->mId)); }
+};
 
 // the network and the directory
 struct NEProtocol {
@@ -859,7 +883,29 @@ struct FEWonNet {
     void ConnectToLobby() { Log("net connect lobby"); }
     void UpdateAccount(const UWideString& a, const UWideString& b, bool f) { Log("net update account " + T(a) + " " + T(b) + " " + N(f)); }
     void SelectServer(const std::wstring& n, WONAPI::IPAddrFE a) { Log("net select server " + W::WS(n) + " " + a.mText); }
+    FEWonNet* mRust = this; // (round 37: the host calls the Rust object, ee_won_wonnet_call below)
 };
 static FEWonNet* gWonNet;
+// R6 WON lobby and network round 37: the host makes the Rust object's calls where EEWonNet's forwards were; this
+// stand-in answers each as the forward's stand-in above did (the controls the casts gave, at their base's address)
+static intptr_t ee_won_wonnet_call(FEWonNet* n, EeWonNetCall inCall, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonNetCall Call;
+    switch (inCall) {
+    case Call::GameListPort: return n->GetGameListPort();
+    case Call::RefreshGameList: n->RefreshGameList((UIControl*)a); return 0;
+    case Call::UpdateGameList: n->UpdateGameList(); return 0;
+    case Call::HostGame: n->HostGame((const char*)a, (const char*)b); return 0;
+    case Call::JoinGame: n->JoinGame((const char*)a, (const char*)b); return 0;
+    case Call::SendChat: n->SendChat(UWideString((const char*)a)); return 0;
+    case Call::RoomListChanged: return n->GetRoomListChanged();
+    case Call::UpdateRoomList: n->UpdateRoomList((UIControl*)a, (UIControl*)b, (UIControl*)c); return 0;
+    case Call::JoinRoom: n->JoinRoom((const char*)a, (const char*)b); return 0;
+    case Call::OpenUpdateAccount: n->OpenUpdateAccount(); return 0;
+    case Call::ConnectToLobby: n->ConnectToLobby(); return 0;
+    case Call::UpdateAccount: n->UpdateAccount(UWideString((const char*)a), UWideString((const char*)b), c != 0); return 0;
+    default: Log("net unexpected call " + N((int)inCall)); return 0;
+    }
+}
 }
 #endif

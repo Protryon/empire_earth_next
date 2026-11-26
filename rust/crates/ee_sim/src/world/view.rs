@@ -21,6 +21,9 @@ use std::marker::PhantomData;
 use std::os::raw::{c_long, c_ulong};
 
 use crate::units::physics_save::EeUnitsPhysicsSaved;
+use crate::units::player_lists::{
+    EeUnitsPlayerLists, EE_UNITS_LISTS_ALLIES, EE_UNITS_LISTS_HERDS, EE_UNITS_LISTS_SIGHT_SHARERS, EE_UNITS_LISTS_TOWNS,
+};
 use crate::world::layout::{layout, EeWorldLayout};
 use crate::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
@@ -1078,19 +1081,29 @@ impl<'t> PlayerView<'t> {
     pub fn save_vis_map(&self) -> bool {
         crate::world_field!(self.rts(), mSaveVisMap)
     }
+    /// The player's Rust list `list` (`mLists`, ee_units player_lists.rs; empty without one)
+    pub fn list(&self, list: u32) -> &[u64] {
+        // SAFETY: a live player's lists (made by its constructor, freed by its destructor) or 0
+        let lists = unsafe { pointer(self.object, layout().player_lists) } as *const EeUnitsPlayerLists;
+        // SAFETY: as above; nothing changes them while the world is read
+        unsafe { lists.as_ref() }.and_then(|l| l.lists.get(list as usize)).map_or(&[], Vec::as_slice)
+    }
+    fn list_at(&self, list: u32, i: usize) -> u64 {
+        self.list(list).get(i).copied().unwrap_or(0)
+    }
     /// `mAllies.size()`, `mAllies[i]`'s handle (0 past the end)
     pub fn allies_len(&self) -> usize {
-        self.vector_len(layout().player_allies)
+        self.list(EE_UNITS_LISTS_ALLIES).len()
     }
     pub fn ally_handle(&self, i: usize) -> u64 {
-        self.vector_at(layout().player_allies, i)
+        self.list_at(EE_UNITS_LISTS_ALLIES, i)
     }
     /// `mSightSharers.size()`, `mSightSharers[i]`'s handle
     pub fn sight_sharers_len(&self) -> usize {
-        self.vector_len(layout().player_sight_sharers)
+        self.list(EE_UNITS_LISTS_SIGHT_SHARERS).len()
     }
     pub fn sight_sharer_handle(&self, i: usize) -> u64 {
-        self.vector_at(layout().player_sight_sharers, i)
+        self.list_at(EE_UNITS_LISTS_SIGHT_SHARERS, i)
     }
     /// `mPendingUnits.size()`, `mPendingUnits[i]`'s handle
     pub fn pending_units_len(&self) -> usize {
@@ -1101,16 +1114,16 @@ impl<'t> PlayerView<'t> {
     }
     /// `mTowns`, `mHerds`: their sizes and entries' handles (`EETown*`, `EEHerd*`)
     pub fn towns_len(&self) -> usize {
-        self.vector_len(layout().player_towns)
+        self.list(EE_UNITS_LISTS_TOWNS).len()
     }
     pub fn town_handle(&self, i: usize) -> u64 {
-        self.vector_at(layout().player_towns, i)
+        self.list_at(EE_UNITS_LISTS_TOWNS, i)
     }
     pub fn herds_len(&self) -> usize {
-        self.vector_len(layout().player_herds)
+        self.list(EE_UNITS_LISTS_HERDS).len()
     }
     pub fn herd_handle(&self, i: usize) -> u64 {
-        self.vector_at(layout().player_herds, i)
+        self.list_at(EE_UNITS_LISTS_HERDS, i)
     }
 }
 
@@ -1183,24 +1196,13 @@ impl<'t> WorldView<'t> {
     pub fn game_options_handle(&self) -> u64 {
         (self.object + layout().world_game_options as usize) as u64
     }
-    /// `mGhostUnits.size()` and `mGhostUnits[i]` (an `EEGhostUnit*`, 0 past the end); the ghosts' own lock
-    /// (`mGhostUnitsLock`) is the caller's to hold
+    /// The ghost units' count and the ghost `i` (an `EEGhostUnit*`, 0 past the end): the list is Rust's
+    /// (ee_sim app ghosts.rs); the ghosts' own lock (`mGhostUnitsLock`) is the caller's to hold
     pub fn ghost_units_len(&self) -> usize {
-        let (begin, end) = self.ghost_range();
-        (end - begin) / std::mem::size_of::<usize>()
+        crate::app::ghosts::count()
     }
     pub fn ghost_unit_handle(&self, i: usize) -> u64 {
-        if i >= self.ghost_units_len() {
-            return 0;
-        }
-        // SAFETY: an element of the vector
-        unsafe { pointer(self.ghost_range().0, (i * std::mem::size_of::<usize>()) as u64) as u64 }
-    }
-    fn ghost_range(&self) -> (usize, usize) {
-        let at = layout().world_ghost_units;
-        let w = std::mem::size_of::<usize>() as u64;
-        // SAFETY: the world's vector member: begin and end are its first two words (EEWorldLayout.cpp checks it)
-        unsafe { (pointer(self.object, at), pointer(self.object, at + w)) }
+        crate::app::ghosts::at(i) as u64
     }
     pub fn victory_enabled(&self) -> bool {
         self.flag(layout().world_victory_enabled)

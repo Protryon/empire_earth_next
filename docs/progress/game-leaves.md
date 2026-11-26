@@ -9,6 +9,12 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 | C++ (deleted or shrunk) | Rust home | What callers keep |
 |---|---|---|
+| **Round 15** (branch `rust-core15`) | | |
+| EEWorld::mResourceUsers (std::map), RTSWorld::mQueuedPlacements (RTSWorldUnitEntry gone), EEWorld::mGhostUnits, EECameraControl::mKeys: four of gWorld's standard containers, their 17 host cases and RTSWorld's four queue shims | gamecpp `world.rs` RESOURCE_USERS, rts `world.rs` QUEUED, ee_sim app `ghosts.rs` (ee_app_ghost_*), gamecpp `camera_io.rs` KEYS | EEWorld::GetGhostUnit / GetNumGhostUnits read the Rust list; the world layout's world_ghost_units is gone (WorldView reads the list); EEScenarioCapture's key count calls `ee_gamecpp_camera_key_count` |
+| EERandomMap's LoadProgress case; the mini map's Redraw, RedrawAll, Refresh, MoveUnit and gMiniMap reset cases | ee_sim rmap `object.rs` `register_load_progress` (registered by `ee_rust_init`); gamecpp `minimap.rs` by path | |
+| fork C: the network engine's handles and the server's and client's tails (57 + 31 cases), EESessionFrame and EESessionRegister, EESession and EESessionAccess, the selection members, the save's chunk list, 40 one-call members of the messages and the save; gU4E6058 | gamecpp `net.rs`, `session_objs.rs` Frame, `message.rs`, `server.rs` | EESimEditor's ChunksBuild still fills a std::vector through PsListPush |
+| fork B: EE-SIM's and the editor driver's host cases (platform CVars, the dump's file, constants, 37 duplicate cases, the unit records and world table, physics reads), EE-SIM's POSIX fault handler, the fixture's lasso hook, FixtureAction and PostAction, EESETestSaveTriggersOnly | sim_driver `fault.rs`, `dump.rs`, `sim_host.rs`, `sed_run.rs`; fixture `boxsel.rs`, `compound.rs` | RequestSaveNew, EESimEditorAction/EESimEditorDone stay |
+| fork A: the include census: 852 `#include` lines no unit needed (byte-identical objects, the same system headers) in 87 lane files | (none: C++ only) | two came back for batch 26 (GEText.h now includes GEColor.h; EESEInstructions.cpp ee/EmpireEarth.h) |
 | **Round 14** (branch `rust-core14`) | | |
 | EEFormation.cpp whole (Place, Arrange, the capture record and sweep) | ee_sim formations `units.rs` | EEFormation.cpp keeps Create and the two vector-resizing wrappers over `ee_formation_arrange_group` / `ee_formation_place_units`; the sweep is called from sim_driver sim_host.rs |
 | EEWorld.cpp's unborn and active lists; EEPhysics::UpdateUnits' tick host; gCollisionPeriod, gCollisionDetectionUnit | ee_game gamecpp `world.rs`, `physics.rs` (UnitTick over ee_sim `update_ordered_units`), `globals.rs` | |
@@ -176,4 +182,18 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Next
 
-Round 14's "Left" (each needs the C++ object's data in Rust first): EEGlobals.cpp's 21 reference aliases into gWorld/gGameState (they sit past standard containers, so the offsets depend on the standard library: EEWorld and EEGameState themselves must move); EESim.cpp's POSIX fault handler (needs a libc dependency and a Linux build to check), RequestSaveNew (a Rust EEMRecord constructor), the fixture's EEAction subclass (FixtureAction, PostAction), LassoHook (a std::vector<long>), EESimEditor's action and event classes; EECreateInstanceMutex, EEInitializeSounds and EEInitializeDisplay (the legacy harness looks them up by name); the remaining global constructions and the POSIX main; the other EEARust.h constructors (chat, save, join: UWideString members); the session frame (EESessionFrame and its registers) and the other C++-owned cases in EEPWorldHelper, EEMessage and EEServer; EERandomMap's LoadProgress (ee_sim cannot call ee_game); gCollisionSphereMode to globals.rs; the dead gU4E6058 (EEClient.cpp); the cross-file switch merges (EECore10OpD, D2, D7); the civ builder cases (player/tech lane).
+Round 15's "Left": EEGlobals.cpp's 21 reference aliases still sit past standard containers: gWorld keeps
+EEStatisticsHistory::mRecords (a vector of C++ records with UWideStrings: EEWorld.cpp, EEGameLog.cpp, EEScreens.cpp,
+EEPlayerStatistics.cpp) and mTeams (vector<EETeam>, each with a vector<unsigned long>: nine files), gGameState its
+four vectors (mPlayers, mLoadedPlayers, mTeams, mRestorables); when those are Rust's, the aliases become
+global_objects.rs refs over #[repr(C)] mirrors and EEGlobals.cpp goes. EESim.cpp's RequestSaveNew (a Rust EEMRecord
+constructor); the fixture's ~25 duplicate UI cases (fork B mapped them to sim/sed/gamecpp ops, not applied);
+EESimEditorAction/EESimEditorDone; EESimEditor's ChunksBuild over the Rust chunk Vec; the camera's
+ClearUnitA/B, ResetPath, SetChanged cases (they need the camera's address from Rust); other lanes' gMiniMap->Redraw
+and MoveUnit cases (player, scenario, units, area effects) can call the Rust by path the same way; EEPWorldHelper's
+C++-filled vectors (PvLongs, PphStr, PsSpecs); EEMessage's C11Nm unit facts not in the record views; the server's
+and client's fast-selection lock cases; the session frame's per-call registers. Round 14's other leftovers stand
+(EECreateInstanceMutex, EEInitializeSounds, EEInitializeDisplay; the global constructions and the POSIX main; the
+other EEARust.h constructors; gCollisionSphereMode; the cross-file switch merges; the civ builder cases).
+
+Older: Round 14's "Left" (each needs the C++ object's data in Rust first): EEGlobals.cpp's 21 reference aliases into gWorld/gGameState (they sit past standard containers, so the offsets depend on the standard library: EEWorld and EEGameState themselves must move); EESim.cpp's POSIX fault handler (needs a libc dependency and a Linux build to check), RequestSaveNew (a Rust EEMRecord constructor), the fixture's EEAction subclass (FixtureAction, PostAction), LassoHook (a std::vector<long>), EESimEditor's action and event classes; EECreateInstanceMutex, EEInitializeSounds and EEInitializeDisplay (the legacy harness looks them up by name); the remaining global constructions and the POSIX main; the other EEARust.h constructors (chat, save, join: UWideString members); the session frame (EESessionFrame and its registers) and the other C++-owned cases in EEPWorldHelper, EEMessage and EEServer; EERandomMap's LoadProgress (ee_sim cannot call ee_game); gCollisionSphereMode to globals.rs; the dead gU4E6058 (EEClient.cpp); the cross-file switch merges (EECore10OpD, D2, D7); the civ builder cases (player/tech lane).

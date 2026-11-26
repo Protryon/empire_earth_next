@@ -434,6 +434,35 @@ pub unsafe extern "C" fn ee_won_elgamal_free(key: *mut ElGamal) {
     }
 }
 
+/// `ElGamal::operator=` (R6 WON lobby and network round 37: the C++ clone-and-swap's): `dst` becomes a copy of
+/// `src`, generator state included; a key assigned to itself is unchanged.
+///
+/// # Safety
+/// Both are live keys.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_elgamal_assign(dst: *mut ElGamal, src: *const ElGamal) {
+    if !std::ptr::eq(dst, src) {
+        // SAFETY: two live keys, not the same
+        unsafe { *dst = (*src).clone() };
+    }
+}
+
+/// `ElGamal::Adopt` (R6 WON lobby and network round 37): `old` freed, the key to hold returned: `adopted`, or a new
+/// empty one for NULL.
+///
+/// # Safety
+/// `old` came from this module and is not used afterwards; `adopted` is NULL or a key from this module.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_elgamal_adopt(old: *mut ElGamal, adopted: *mut ElGamal) -> *mut ElGamal {
+    // SAFETY: the caller's key
+    unsafe { ee_won_elgamal_free(old) };
+    if adopted.is_null() {
+        ee_won_elgamal_new()
+    } else {
+        adopted
+    }
+}
+
 /// `SetPrivateKey` (`is_private` true) or `SetPublicKey`.
 ///
 /// # Safety
@@ -1049,6 +1078,17 @@ mod tests {
         assert!(unsafe { ee_won_elgamal_verify(c, b"m".as_ptr(), 1, sig.as_ptr(), sig.len()) });
         unsafe { ee_won_elgamal_invalidate(c) };
         assert!(!unsafe { ee_won_elgamal_verify(c, b"m".as_ptr(), 1, sig.as_ptr(), sig.len()) });
+        // operator= copies the key in place (itself: unchanged); Adopt frees the old key, NULL leaves an empty one
+        unsafe { ee_won_elgamal_assign(c, k) };
+        assert!(unsafe { ee_won_elgamal_verify(c, b"m".as_ptr(), 1, sig.as_ptr(), sig.len()) });
+        unsafe { ee_won_elgamal_assign(c, c) };
+        assert!(unsafe { ee_won_elgamal_is_private(c) });
+        let c = unsafe { ee_won_elgamal_adopt(c, std::ptr::null_mut()) };
+        assert!(!unsafe { ee_won_elgamal_is_public(c) });
+        let d = unsafe { ee_won_elgamal_clone(k) };
+        assert_eq!(unsafe { ee_won_elgamal_adopt(c, d) }, d);
+        assert!(unsafe { ee_won_elgamal_is_private(d) });
+        let c = d;
         let mut raw = Vec::<u8>::new();
         assert!(unsafe {
             ee_won_elgamal_op(

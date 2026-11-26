@@ -231,11 +231,11 @@ fn mesh_z(x: f32, y: f32) -> f32 {
 }
 
 fn capture(op: i64, a: i64, b: i64, c: f32, d: f32) {
-    hf(O::CapEvent, 0, &[op, a, b], &[c, d]);
+    crate::gamecpp::calamity_capture::ee_gamecpp_capture_calamity_event(op as c_long, a as c_long, b as c_long, c, d);
 }
 
 fn start_point(p: &Ge3DPoint) {
-    hf(O::CapStartPoint, 0, &[1], &[p.x, p.y, p.z]);
+    crate::gamecpp::calamity_capture::ee_gamecpp_capture_start_point(1, p.x, p.y, p.z);
 }
 
 // the effect manager's calls (a handle out when asked for)
@@ -1164,7 +1164,7 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
             let helper = hp(O::ContagionHelper, 0, &[call.index as i64]);
             capture(cap::CAL_W_HELPER_UPDATE, call.index as i64, (helper != 0) as i64, 0.0, 0.0);
             if helper != 0 {
-                hf(O::CapContagion, helper, &[], &[call.x]);
+                crate::gamecpp::calamity_capture::ee_gamecpp_capture_contagion(helper as *mut c_void, call.x);
             }
         }
         C::Sound => {
@@ -1306,7 +1306,13 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
                     &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)],
                     &[volume(sound)],
                 );
-                hf(O::CapStartEvent, 0, &[k::CAL_C_START_SOUND, 0, 0], &[vol, pan]);
+                crate::gamecpp::calamity_capture::ee_gamecpp_capture_start_event(
+                    k::CAL_C_START_SOUND as c_long,
+                    0,
+                    0,
+                    vol,
+                    pan,
+                );
             }
             let node = play_node(sound, vol, pan, pitch);
             keep_sound(c, node, false);

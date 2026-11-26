@@ -518,6 +518,31 @@ pub unsafe extern "C" fn ee_won_udpmanager_free(m: *mut EeWonUdpManager) {
 pub unsafe extern "C" fn ee_won_udpmanager_bind(m: *const EeWonUdpManager, port: i32, broadcast: bool) -> c_long {
     mgr!(m).bind(port, broadcast) as c_long
 }
+/// `LobbyBindUDPPort`'s binds (LobbyUDPManager.cpp until R6 WON lobby and network round 37): the manager bound to
+/// `port` with broadcast; when that fails, `srand(time(NULL))` and a bind without broadcast to
+/// `rand() % 10000 + 10000` (the CRT's); automatic receives on when a bind worked. Returns the port last tried
+/// (`port` itself without a manager).
+///
+/// # Safety
+/// `m` is NULL or as `ee_won_udpmanager_bind`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_udpmanager_bind_lobby(m: *const EeWonUdpManager, port: u16) -> u16 {
+    if m.is_null() {
+        return port;
+    }
+    let m = mgr!(m);
+    let mut port = port;
+    let mut status = m.bind(i32::from(port), true);
+    if status != WS_SUCCESS {
+        crate::hostnative::crt_srand_and_rand(true);
+        port = (crate::hostnative::crt_srand_and_rand(false) % 10000 + 10000) as u16;
+        status = m.bind(i32::from(port), false);
+    }
+    if status == WS_SUCCESS {
+        m.set_auto_recv(true);
+    }
+    port
+}
 /// `Close`.
 ///
 /// # Safety

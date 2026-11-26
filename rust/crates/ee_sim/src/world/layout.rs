@@ -81,13 +81,9 @@ pub struct EeWorldLayout {
     pub player_selected_group: u64,
     /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
     pub player_computer_player: u64,
-    /// lane P: the `std::vector<EEPlayer*>`s `mAllies` and `mSightSharers`, `mPendingUnits` (`RTSUnit*`), `mTowns`,
-    /// `mHerds`; `mViewedUnit` (an `EEUnit*`)
-    pub player_allies: u64,
-    pub player_sight_sharers: u64,
+    /// lane P: the `std::vector<RTSUnit*>` `mPendingUnits` (the allies, sight sharers, towns and herds are the
+    /// player's Rust lists: `player_lists`)
     pub player_pending_units: u64,
-    pub player_towns: u64,
-    pub player_herds: u64,
     // ---- RTSWorld / EEWorld
     /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
     pub world_players: u64,
@@ -95,12 +91,11 @@ pub struct EeWorldLayout {
     pub world_num_players: u64,
     pub world_current_player: u64,
     /// `RTSWorld::mGameSpeed` (a float), `mPopulationLimit` (a `long`); `EEWorld::mNumberOfWondersToWin` (an
-    /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`), `mGhostUnits` (a vector of pointers)
+    /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`)
     pub world_game_speed: u64,
     pub world_population_limit: u64,
     pub world_wonders_to_win: u64,
     pub world_game_options: u64,
-    pub world_ghost_units: u64,
     /// `EEWorld`'s flags (bools): `mVictoryEnabled`, `mGameScreenActive`, `mLoadingSavedGame`, `mCheatsEnabled`,
     /// `mInCinematic`, `mUserPaused`, `mUsingCarbon`
     pub world_victory_enabled: u64,
@@ -148,11 +143,8 @@ pub struct EeWorldLayout {
     /// `EeTechTreeFields` in `EETechTree`, `EeTechNodeFields` in `EETechTreeNode`
     pub tech_tree_fields: u64,
     pub node_fields: u64,
-    /// `RTSTechTreeNode::mData` (an `RTSTechTreeNodeData*`), `EeTechNodeDataFields` in `RTSTechTreeNodeData`, its
-    /// `mUnitClasses` (a `std::vector<unsigned long>`)
+    /// `EETechTreeNode::mData` (an `RTSTechTreeNodeData*`: the record `EeTechNodeDataFields` itself)
     pub node_data: u64,
-    pub node_data_fields: u64,
-    pub node_data_unit_classes: u64,
     /// `&EETechHost` (an address: the tree walks' host, whose lookups the tree view makes)
     pub tech_host: u64,
     /// `EeCpFields` in `EEComputerPlayer`
@@ -232,6 +224,17 @@ pub struct EeWorldLayout {
     pub player_group_lists: u64,
     /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
     pub player_lists: u64,
+    // ---- the player/tech lane, round 2: the pointer members the player's Rust writes itself (player_native.rs)
+    /// `EEPlayer::mActiveGroup`, `mGroups` (20 `EEGroup*`), `mHumanPlayer`, `mHealedUnitSet`, `mAirTraffic` (4
+    /// `EeUnitsAtc*`), `mLastUnit`
+    pub player_active_group: u64,
+    pub player_groups: u64,
+    pub player_human_player: u64,
+    pub player_healed_unit_set: u64,
+    pub player_air_traffic: u64,
+    pub player_last_unit: u64,
+    /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
+    pub town_fields: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

@@ -8,10 +8,8 @@
 #include <map>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/NEMessage.h"
 #include "lle/UResourceFile.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/UIFormManager.h"
 #include "ee/EmpireEarth.h"
@@ -32,17 +30,12 @@
 #include "ee/EEPCalamityHelper.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEGameStateLoader.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EEStartingResources.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEGamePreferences.h"
-#include "ee/EERules.h"
 #include "rust/game/gamecpp.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")

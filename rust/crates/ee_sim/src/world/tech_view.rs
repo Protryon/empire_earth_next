@@ -159,15 +159,10 @@ impl<'t> NodeView<'t> {
             data: self.data_address() as *mut EeTechNodeDataFields,
         }
     }
+    /// `mData` (an `RTSTechTreeNodeData*`: the record itself)
     fn data_address(&self) -> usize {
-        let l = layout();
         // SAFETY: a live node's pointer member
-        let data = unsafe { pointer(self.object, l.node_data) };
-        if data == 0 {
-            0
-        } else {
-            data + l.node_data_fields as usize
-        }
+        unsafe { pointer(self.object, layout().node_data) }
     }
     /// The node's record (`EeTechNodeFields`)
     pub fn fields(&self) -> Record<'t, EeTechNodeFields> {
@@ -209,26 +204,22 @@ impl<'t> NodeView<'t> {
     }
     /// `GetNumUnitClasses()`: `mData->mUnitClasses.size()` (0 without data)
     pub fn unit_classes_len(&self) -> usize {
-        let (begin, end) = self.unit_classes();
-        (end - begin) / std::mem::size_of::<c_ulong>()
+        self.unit_classes().len()
     }
-    fn unit_classes(&self) -> (usize, usize) {
-        let l = layout();
-        // SAFETY: a live node's pointer member
-        let data = unsafe { pointer(self.object, l.node_data) };
-        if data == 0 {
-            return (0, 0);
+    /// `mData`'s unit classes (its Rust class table's)
+    fn unit_classes(&self) -> &'t [c_ulong] {
+        let Some(d) = self.data() else { return &[] };
+        let table: usize = crate::world_field!(d, mClassTable);
+        if table == 0 {
+            return &[];
         }
-        let v = data + l.node_data_unit_classes as usize;
-        let w = std::mem::size_of::<usize>() as u64;
-        // SAFETY: the data's vector: its first two words are its begin and end (EEWorldLayout.cpp checks it)
-        unsafe { (pointer(v, 0), pointer(v, w)) }
+        // SAFETY: the record's table (EeTechNodeDataFields::class_table_mut made it), alive with the node's data
+        let table = unsafe { &*(table as *const crate::tech::nodes::EeTechClassTable) };
+        &table.classes
     }
     /// `GetUnitClass(i)`: `mData->mUnitClasses[i]`, `mData->mDefaultUnitClass` past the end
     pub fn unit_class(&self, i: usize) -> i64 {
-        if i < self.unit_classes_len() {
-            // SAFETY: an element of the live vector
-            let v: c_ulong = unsafe { std::ptr::read((self.unit_classes().0 as *const c_ulong).add(i)) };
+        if let Some(&v) = self.unit_classes().get(i) {
             return v as c_long as i64;
         }
         self.data().map_or(0, |d| {

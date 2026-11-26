@@ -97,7 +97,7 @@ public:
     // 0x1286fa: plays the key list
     void StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
 
-    std::vector<EECameraKey> mKeys;         // +0x004 (0xa4-byte POD elements: `_Buy` 0x12a081; provisional name)
+    // +0x004 the path keys (std::vector<EECameraKey>, 0xa4-byte POD elements): Rust's (gamecpp camera_io.rs KEYS)
     EEUnitHandle<EEUnit> mUnitA;            // +0x0d0 (referenced; ClearUnitA; MoveTo's inUnitA; provisional name; a handle since R5a.4: read on the graphics and physics threads)
     EEUnitHandle<EEUnit> mUnitB;            // +0x0d4 (referenced; ClearUnitB; a handle)
 };

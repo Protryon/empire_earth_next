@@ -12,7 +12,6 @@
 #include <typeinfo>
 #include "rust/sim/units.h"
 #include "ee/EEUnitKind.h"
-#include "ee/EETechCapture.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -968,7 +967,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CONTINENT_BY_ID: return (uint64_t)(uintptr_t)::gContinentManager.GetContinentByID((unsigned short)inB);
     case EE_UNITS_CU_UNIT_TILE: return inB == 0 ? theOther->GetTile().mX : theOther->GetTile().mY;
     case EE_UNITS_CU_NUM_TOWNS: return theUnit->mPlayer->GetNumTowns();
-    case EE_UNITS_CU_TOWN_AT: return (uint64_t)(uintptr_t)theUnit->mPlayer->mTowns[inB];
+    case EE_UNITS_CU_TOWN_AT: return (uint64_t)(uintptr_t)theUnit->mPlayer->GetTown(inB);
     case EE_UNITS_CU_TOWN_CONTAINS: return EECuObject<EETown>(inA)->Contains(U2DPoint<long>((long)inB, (long)inC));
     case EE_UNITS_CU_TOWN_DISTANCE:
         return U2DPoint<long>((long)inB, (long)inC).DistanceToSquared(EECuObject<EETown>(inA)->GetHullClosestOutlinePoint(U2DPoint<long>((long)inB, (long)inC)));

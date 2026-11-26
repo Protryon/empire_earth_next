@@ -67,16 +67,6 @@ enum class EeWonWinCall : uint32_t {
   SetField,
 };
 
-/// The C++ event class a handler's record is read from (`ee_won_win_event`).
-enum class EeWonWinEventShape : uint32_t {
-  /// a `KeyEvent` (the type, the key modifiers, the key).
-  Key = 0,
-  /// a `MouseEvent` (the type, the point, the key modifiers, the button or wheel amount).
-  Mouse,
-  /// an `InputEvent` (the type; a `SizeEvent`'s size for `InputEvent_SizeChange`).
-  Input,
-};
-
 /// The root container's methods the window calls (`WinRoot`'s `a`; `b`, `c`, `d` its arguments).
 enum class EeWonWinRoot : uint32_t {
   /// `SetSize(b, c)`.
@@ -176,7 +166,8 @@ enum class EeWonWinField : uint32_t {
 /// The Rust Window.
 struct EeWonWindow;
 
-/// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
+/// An input event's fields: the C++ `InputEvent`'s own record (`mEv`; `KeyEvent`, `MouseEvent` and `SizeEvent` fill
+/// theirs, the other fields 0).
 struct EeWonWinEvent {
   /// the `WindowEventType`
   int32_t kind;
@@ -209,15 +200,14 @@ void ee_won_win_free(EeWonWindow *win);
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
 
-/// A key, mouse or input handler (`call`) over the record read from the C++ event `event` (a `KeyEvent*`,
-/// `MouseEvent*` or `InputEvent*` as an `InputEvent*`).
+/// A key, mouse or input handler (`call`: HandleKeyEvent, HandleMouseEvent, HandleInputEvent) over the C++ event's
+/// record (R6 WON GUI round 37: the input events carry the record the handlers read, `InputEvent::mEv`).
 ///
 /// # Safety
-/// `win` is live; `event` is a live event of the shape.
+/// `win` is live; `event` is a live record.
 ptrdiff_t ee_won_win_event(const EeWonWindow *win,
                            EeWonWinCall call,
-                           EeWonWinEventShape shape,
-                           ptrdiff_t event);
+                           const EeWonWinEvent *event);
 
 /// `Window::GetFont`'s font (unheld: the C++ wraps it in its SmartPtr).
 ///

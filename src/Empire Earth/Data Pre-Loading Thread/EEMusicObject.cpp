@@ -9,19 +9,11 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/URandom.h"
-#include "lle/SEMixer.h"
 
-#include "ee/RTSGraphics.h"
 #include "ee/EEMedia.h"
 #include "EEDatabase.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEDbRecords.h"
-#include "ee/EEMediaUse.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EERules.h"
 #include "rust/game/preload_media.h"
 

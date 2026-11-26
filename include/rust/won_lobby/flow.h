@@ -103,6 +103,16 @@ bool ee_won_init_tou_saved(int32_t doc_status, int32_t modified, int32_t saved);
 
 size_t ee_won_init_document_bytes(size_t length);
 
+/// InitLogic's `SaveTOU` (InitLogic.cpp's InitSaveTOU over a FileWriter until R6 WON lobby and network round 37): the
+/// terms-of-use `document` written to `path` without its last byte ([`document_bytes`]); a read-only file is made
+/// writable and opened again. True unless the write failed: a file that does not open counts as written.
+///
+/// # Safety
+/// `path` is a C string; `document` holds `length` bytes (or is NULL for none).
+bool ee_won_init_save_tou(const char *path,
+                          const uint8_t *document,
+                          size_t length);
+
 int32_t ee_won_init_event(int32_t kind);
 
 /// `cross_promotion`: the link, then the image, each through the sink (each given once, maybe empty).

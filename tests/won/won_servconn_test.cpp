@@ -10,8 +10,8 @@
 // completions. `--print` prints the lines instead. The exit code is the number of failures.
 //
 // PeerAuthOp is a Rust op on the op base (ee_won peerop.rs) whose real run needs certificates and a WON server:
-// this driver defines PeerAuthOp's constructor and RustServerOp's members itself (ServerOp.cpp is not linked), so
-// the connection's own steps are what the lines show.
+// this driver's stand-in (StandinPeerAuth, made through won_servconn_cpp.h's maker) connects instead, so the
+// connection's own steps are what the lines show.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,12 +76,13 @@ static std::string TypeName(const void* inObject, const std::type_info& inType)
     return aSpace == std::string::npos ? s : s.substr(aSpace + 1);
 }
 // an op of a socket op kind by the original class's name (the kinds are one C++ class since WONLobby round 28)
+static bool IsStandinPeerAuth(const AsyncOp* inObject); // (below)
 static std::string TypeName(const AsyncOp* inObject, const std::type_info& inType)
 {
     const char* aKind = WonSocketOpClass(inObject);
     // (the peer authentication op is a RustServerOp made by NewPeerAuth since R6 WON lobby and network round 36: this
     // driver makes no other RustServerOp; the golden keeps the class's name)
-    if (aKind == NULL && dynamic_cast<const RustServerOp*>(inObject) != NULL) return "PeerAuthOp";
+    if (aKind == NULL && IsStandinPeerAuth(inObject)) return "PeerAuthOp";
     return aKind != NULL ? std::string(aKind) : TypeName(static_cast<const void*>(inObject), inType);
 }
 // a routing op's class name: the original's op classes by type (the ops are one RoutingOp over a Rust op since net
@@ -123,54 +124,54 @@ static WONStatus StandinConnect(BlockingSocket* inSocket, const IPAddr& inAddr, 
     anOp->RunBlock(inTimeout);
     return anOp->GetStatus();
 }
-namespace WONAPI {
-RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp) {}
-RustServerOp::~RustServerOp()
-{
-    StandinMembers aMembers;
-    PlatMutexLock(sLinesLock);
-    std::map<const void*, StandinMembers>::iterator aMember = sPeerMembers.find(this);
-    if (aMember != sPeerMembers.end()) {
-        aMembers = aMember->second;
-        sPeerMembers.erase(aMember);
+// (a class of its own since R6 WON lobby and network round 37: RustServerOp is header-only; the connection makes
+// it through won_servconn_cpp.h's maker)
+class StandinPeerAuth : public AsyncOp {
+public:
+    ~StandinPeerAuth()
+    {
+        StandinMembers aMembers;
+        PlatMutexLock(sLinesLock);
+        std::map<const void*, StandinMembers>::iterator aMember = sPeerMembers.find(this);
+        if (aMember != sPeerMembers.end()) {
+            aMembers = aMember->second;
+            sPeerMembers.erase(aMember);
+        }
+        sPeerAddr.erase(this);
+        sPeerFreed++;
+        PlatMutexUnlock(sLinesLock);
     }
-    sPeerAddr.erase(this);
-    sPeerFreed++;
-    PlatMutexUnlock(sLinesLock);
-}
-// connects the op's socket (the connection) for real, or stays pending for an address of port 0
-void RustServerOp::RunHook()
-{
-    IPAddr anAddr = sPeerAddr[this];
-    bool aPending = anAddr.GetPort() == 0;
-    Log(std::string("peerauth run ") + (aPending ? "pending" : (anAddr.GetPort() == sListenPort ? "listener" : "other"))
-        + " type " + N(sPeerMembers[this].mAuthType) + " context "
-        + (sPeerMembers[this].mAuthContext.get() != NULL ? "set" : "null")
-        + " mode " + N(this->GetMode()) + " timeout " + N((long)this->GetTimeout()) + " socket "
-        + (sPeerMembers[this].mSocket.get() != NULL ? "set" : "null"));
-    if (aPending)
-        return;
-    WONStatus aStatus = StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000);
-    Log("peerauth connect " + St(aStatus));
-    this->Finish(aStatus);
-}
-void RustServerOp::CleanupHook() { this->mTracker.KillAll(); }
-bool RustServerOp::CallbackHook(AsyncOp*, int) { return false; }
-RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
-                                        bool inUseAuth2)
-{
-    RustServerOp* that = new RustServerOp(static_cast<EeWonHostOp*>(NULL));
-    PlatMutexLock(sLinesLock);
-    sPeerMembers[that].mSocket = inSocket;
-    sPeerMembers[that].mAuthContext = inContext;
-    sPeerMembers[that].mAuthType = inType;
-    sPeerAddr[that] = inAddr;
-    sPeerMade++;
-    PlatMutexUnlock(sLinesLock);
-    Log(std::string("peerauth new auth2 ") + N(inUseAuth2));
-    return that;
-}
-}
+    // connects the op's socket (the connection) for real, or stays pending for an address of port 0
+    virtual void RunHook()
+    {
+        IPAddr anAddr = sPeerAddr[this];
+        bool aPending = anAddr.GetPort() == 0;
+        Log(std::string("peerauth run ") + (aPending ? "pending" : (anAddr.GetPort() == sListenPort ? "listener" : "other"))
+            + " type " + N(sPeerMembers[this].mAuthType) + " context "
+            + (sPeerMembers[this].mAuthContext.get() != NULL ? "set" : "null")
+            + " mode " + N(this->GetMode()) + " timeout " + N((long)this->GetTimeout()) + " socket "
+            + (sPeerMembers[this].mSocket.get() != NULL ? "set" : "null"));
+        if (aPending)
+            return;
+        WONStatus aStatus = StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000);
+        Log("peerauth connect " + St(aStatus));
+        this->Finish(aStatus);
+    }
+    static AsyncOp* New(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket)
+    {
+        StandinPeerAuth* that = new StandinPeerAuth;
+        PlatMutexLock(sLinesLock);
+        sPeerMembers[that].mSocket = inSocket;
+        sPeerMembers[that].mAuthContext = inContext;
+        sPeerMembers[that].mAuthType = inType;
+        sPeerAddr[that] = inAddr;
+        sPeerMade++;
+        PlatMutexUnlock(sLinesLock);
+        Log(std::string("peerauth new auth2 ") + N(1));
+        return that;
+    }
+};
+static bool IsStandinPeerAuth(const AsyncOp* inObject) { return dynamic_cast<const StandinPeerAuth*>(inObject) != NULL; }
 
 // ---- the connection, its completions, the peer
 
@@ -598,6 +599,7 @@ static std::string GoldenPath()
 
 int main(int argc, char** argv)
 {
+    ServerConnectionCpp::gPeerAuthMaker = StandinPeerAuth::New;
     BindServerConnectionCpp();
     AsyncSocket::StartWinsock();
     {

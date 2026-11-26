@@ -8,6 +8,7 @@
 #define EE_WONAPI_WONLOBBYMODELOBJ_H
 #include "rust/won_lobby/modelobj.h"
 #include "rust/won_net/ipobj.h"
+// (rust/won_lobby/eegame.h and ee/wonapi/WONLobbyGuard.h: WONLobbyResource.h, at global scope)
 
 typedef EeWonModelField LobbyMF;
 typedef EeWonModelCall LobbyMC;
@@ -142,6 +143,9 @@ private:
     EeWonModelCursor mItr;
 };
 
+// the EE game's text of a refused join by the Rust game's answer (1..3); gEmptyGUIString for 0 (EELobbyGameHost.cpp)
+GUIString EELobbyStatusString(intptr_t inStatus);
+
 // a game of the lobby (0x68 bytes: original factory 0x3a6730; vtable 26 slots, the game's overrides named by offset)
 class LobbyGame : public LobbyModelObject {
 public:
@@ -156,39 +160,55 @@ public:
     ConstSmartPtr<ByteBuffer> GetJoinReply(ReadBuffer& inBuffer, LobbyClient* inClient);
     short HandleJoinReply(ReadBuffer& inBuffer);
     GUIString GetStatusString(short inStatus);
-    LobbyGame() : LobbyModelObject(EeWonModelKind::Game) {}
+    // (the EE factory's game: with the Rust game over its host)
+    LobbyGame(EeWonEeGameHostFn inEEHost = NULL)
+        : LobbyModelObject(EeWonModelKind::Game), mEE(inEEHost ? ee_won_eegame_new_model(this, inEEHost) : NULL) {}
+    // R6 WON lobby and network round 37: the class EELobbyGame (RTTI EELobbyGame > LobbyGame, 0x180 bytes; its
+    // overrides forwards to the Rust game) folded in: a game the EE factory made (EELobbyGameHost.cpp's
+    // EELobbyNewGame) holds the Rust game (ee_won_lobby eegame.rs: the options, the slots, the file transfer, every
+    // hook), and its hooks below are the Rust game's; a plain game's (mEE NULL) are the base's
+    virtual ~LobbyGame() { ee_won_eegame_free(this->mEE); }
+    EeWonEeGame* mEE;                       // owned
+    intptr_t EE(EeWonEeGameCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0)
+    { return ee_won_eegame_call(this->mEE, inCall, a, b, c, d); }
     virtual bool PreNetJoinGameHook() { return true; }
     virtual bool PostNetJoinGameHook() { return true; }
     virtual bool PreNetCreateGameHook() { return true; }
     virtual bool PostNetCreateGameHook() { return true; }
     virtual void PreNetLeaveGameHook() {}
-    virtual void PostNetLeaveGameHook() {}
-    virtual void NotifyStartGameHook() {}
-    virtual bool TryStartGameHook() { return true; } // (EELobbyGame 0x292719: can the game start)
-    virtual bool CanStartGameHook() { return true; }
-    virtual bool CanReadyHook() { return true; }
+    virtual void PostNetLeaveGameHook() { if (this->mEE) this->EE(EeWonEeGameCall::PostNetLeaveGameHook); } // EE +0x18 0x292797
+    virtual void NotifyStartGameHook() { if (this->mEE) this->EE(EeWonEeGameCall::NotifyStartGameHook); }
+    virtual bool TryStartGameHook() { return !this->mEE || this->EE(EeWonEeGameCall::TryStartGameHook) != 0; } // EE 0x292719 (false: everyone is on one team)
+    virtual bool CanStartGameHook() { return !this->mEE || this->EE(EeWonEeGameCall::CanStartGameHook) != 0; }
+    virtual bool CanReadyHook() { return !this->mEE || this->EE(EeWonEeGameCall::CanReadyHook) != 0; } // EE 0x2926df
     virtual short GetJoinStatusHook() { return 0; } // 0x7a7a80: joinable
     // (EELobbyGame's overrides): +0x30 a new game hosted by inClient, +0x34 the game's version
-    virtual void HandleHostGameHook(LobbyClient* inClient) {}
-    virtual void GetJoinGameRequestHook(WriteBuffer& outBuffer) {}
+    virtual void HandleHostGameHook(LobbyClient* inClient) { if (this->mEE) this->EE(EeWonEeGameCall::HandleHostGameHook, (intptr_t)inClient); }
+    virtual void GetJoinGameRequestHook(WriteBuffer& outBuffer) { if (this->mEE) this->EE(EeWonEeGameCall::GetJoinGameRequestHook, (intptr_t)&outBuffer); }
     // +0x38 a join request's check
-    virtual short HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* inClient) { return 0; } // returns 0
+    virtual short HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* inClient) // the base's 0
+    { return this->mEE ? (short)WonRethrow(this->EE(EeWonEeGameCall::HandleJoinGameRequestHook, (intptr_t)&inBuffer, (intptr_t)inClient)) : 0; }
     // +0x3c the game's state for a joining client
-    virtual void GetJoinGameReplyHook(LobbyClient* inClient, WriteBuffer& outBuffer) {}
+    virtual void GetJoinGameReplyHook(LobbyClient* inClient, WriteBuffer& outBuffer)
+    { if (this->mEE) this->EE(EeWonEeGameCall::GetJoinGameReplyHook, (intptr_t)inClient, (intptr_t)&outBuffer); }
     virtual void CopyFromHook(LobbyGame* inGame) {}
-    virtual void HandleJoinGameReplyHook(ReadBuffer& inBuffer) {} // inline; +0x44 a joined game's state read
+    virtual void HandleJoinGameReplyHook(ReadBuffer& inBuffer) // +0x44 a joined game's state read
+    { if (this->mEE) WonRethrow(this->EE(EeWonEeGameCall::HandleJoinGameReplyHook, (intptr_t)&inBuffer)); }
     //: +0x48 a client left (inPlayer: its player), +0x4c a client joined
-    virtual void HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPlayer) {}
-    virtual void HandlePlayerJoinedHook(LobbyClient* inClient) {}
+    virtual void HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPlayer)
+    { if (this->mEE) this->EE(EeWonEeGameCall::HandlePlayerLeftHook, (intptr_t)inClient, (intptr_t)inPlayer); }
+    virtual void HandlePlayerJoinedHook(LobbyClient* inClient) { if (this->mEE) this->EE(EeWonEeGameCall::HandlePlayerJoinedHook, (intptr_t)inClient); }
     //: +0x50 the summary (three options), +0x54 the details (options and the slots' clients), +0x58 the summary
     // read back, +0x64 a join status' text
-    virtual void WriteSummaryHook(WriteBuffer& outBuffer) {}
-    virtual void WriteDetailsHook(WriteBuffer& outBuffer) {}
-    virtual bool ReadSummaryHook(ReadBuffer& inBuffer) { return true; }
-    virtual bool ReadDetailsHook(ReadBuffer& inBuffer) { return true; } // inline; +0x5c the details read back
+    virtual void WriteSummaryHook(WriteBuffer& outBuffer) { if (this->mEE) this->EE(EeWonEeGameCall::WriteSummaryHook, (intptr_t)&outBuffer); }
+    virtual void WriteDetailsHook(WriteBuffer& outBuffer) { if (this->mEE) this->EE(EeWonEeGameCall::WriteDetailsHook, (intptr_t)&outBuffer); }
+    virtual bool ReadSummaryHook(ReadBuffer& inBuffer) { return !this->mEE || WonRethrow(this->EE(EeWonEeGameCall::ReadSummaryHook, (intptr_t)&inBuffer)) != 0; }
+    virtual bool ReadDetailsHook(ReadBuffer& inBuffer) { return !this->mEE || WonRethrow(this->EE(EeWonEeGameCall::ReadDetailsHook, (intptr_t)&inBuffer)) != 0; } // +0x5c
     // +0x60 a game message (inType 0x64..0x6a) from inFrom
-    virtual void HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom) {}
-    virtual GUIString GetStatusStringHook(short inStatus) { return gEmptyGUIString; } // returns an empty string
+    virtual void HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom)
+    { if (this->mEE) WonRethrow(this->EE(EeWonEeGameCall::HandleGameMessageHook, inType, (intptr_t)&inBuffer, (intptr_t)inFrom)); }
+    // the base's an empty string; the EE game's the text of a refused join (EELobbyGameHost.cpp)
+    virtual GUIString GetStatusStringHook(short inStatus) { return EELobbyStatusString(this->mEE ? this->EE(EeWonEeGameCall::GetStatusStringHook, inStatus) : 0); }
     void CopyFrom(LobbyGame* inGame) { this->M(LobbyMC::GameCopyFrom, (intptr_t)inGame); }
     void SetName(const GUIString& inName) { this->MSetText(LobbyMF::GameName, inName); }
     void SetPassword(const GUIString& inPassword) { this->MSetText(LobbyMF::GamePassword, inPassword); }

@@ -2,6 +2,7 @@
 #define EE_WONAPI_WONLOBBYCONFIGIMAGES_H
 #include "ee/wonapi/WONLobbyStretchImage.h"
 #include "rust/won_gui/cfgkind.h"
+#include "rust/won_gui/cfgbody.h"
 namespace WONAPI {
 
 // The media configs (R6 WON GUI round 36): the original's ImageConfig, StretchImageConfig, StretchCenterImageConfig,
@@ -33,5 +34,11 @@ typedef MediaConfig ImageFilterConfig; typedef MediaConfig FontConfig;
 // whether a config is of a media kind (a world's stand-ins answer by their classes: WONCompCfg.inl)
 template<class T> bool WONCfgIs(ConfigObject* inConfig, EeWonCfgKind inKind)
 { MediaConfig* m = dynamic_cast<MediaConfig*>(inConfig); return m != NULL && m->Is(inKind); }
+// a config subclass's body in ee_won_gui cfgbody.rs (R6 WON round 34; the host: WONCfgBody.inl in ComponentConfigHost.cpp)
+intptr_t CfgBodyCall(ComponentConfig* inConfig, EeWonCfgBody inBody, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0);
 }
+// the layout configs (the original's target-local classes with global RTTI names; WONLayoutConfigs.h until R6 WON GUI
+// round 37): PercentLayoutConfig (0xac bytes, constructor 0x787fb0) and ColorSchemeConfig (constructor 0x788260)
+typedef WONAPI::MediaConfig PercentLayoutConfig;
+typedef WONAPI::MediaConfig ColorSchemeConfig;
 #endif

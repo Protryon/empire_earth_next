@@ -73,7 +73,7 @@
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
+#include "ee/EEUIEWonNetEvent.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEARust.h"
 #include "ee/EEDatabaseTables.h"
@@ -279,7 +279,7 @@ extern "C" void ee_screenscpp_control_set_display_mode(uintptr_t inControl, uint
 extern "C" void ee_screenscpp_label_append_wide(uintptr_t inLabel, uintptr_t inText)
 { static_cast<UITextLabel*>(C(inLabel))->AppendText(*reinterpret_cast<const UWideString*>(inText)); }
 extern "C" uintptr_t ee_screenscpp_select_server_event_new()
-{ return (uintptr_t)static_cast<UIEvent*>(new EEWonFrontEvent(EeWonFrontCall::SsOpenScreen)); }
+{ return (uintptr_t)static_cast<UIEvent*>(new EEUIEWonNetEvent(EeWonFrontCall::SsOpenScreen)); }
 extern "C" void ee_screenscpp_manager_form_set_open_event(uint32_t inForm, uintptr_t inEvent)
 { gUIManager->GetFormByID(inForm)->SetFormOpenEvent(reinterpret_cast<UIEvent*>(inEvent)); }
 extern "C" void ee_screenscpp_manager_form_set_close_event(uint32_t inForm, uintptr_t inEvent)

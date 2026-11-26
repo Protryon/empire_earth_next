@@ -9,36 +9,21 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DRectangle.h"
-#include "lle/U2DPolygon.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEUnitGoal.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEFormation.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
-#include "ee/EEPPatrolGroup.h"
-#include "ee/EECombatFormulas.h"
-#include "ee/EESimCapture.h"
-#include "rust/sim/units.h"
 
 namespace {
 

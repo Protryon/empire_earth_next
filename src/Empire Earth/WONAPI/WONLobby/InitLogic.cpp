@@ -23,6 +23,7 @@
 #include "rust/won_net/httpdoc.h"
 #include "rust/won_net/httpget.h"
 #include "rust/won_net/reqdir.h"
+#include "rust/won_net/reqmake.h"
 #include "rust/won_net/reqops.h"
 // A Rust object since R6 WONLobby round 8 (rust/crates/ee_won_lobby/src/logics.rs: the errors, the order of the checks
 // and every decision, over flow.rs's); this unit keeps the shell (the HTTP session, the firewall test's socket, op
@@ -41,23 +42,6 @@ static void InitAddAll(ServerContext* inList, const std::list<std::string>& inNa
     }
 }
 
-// the terms-of-use document of an owner written to its file: true unless the writer threw (the original counts
-// a file it could not open as written)
-static bool InitSaveTOU(RustServerOp* inOp, int inOwner)
-{
-    FileWriter writer;
-    try {
-        if (writer.Open((inOwner == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath()).c_str(), true)) {
-            ByteBufferPtr document = inOp->GetHttpDocument(inOwner);
-            size_t aBytes = document.get() != NULL ? ee_won_init_document_bytes(document->length()) : 0;
-            if (aBytes != 0)
-                writer.WriteBytes(document->data(), aBytes);
-        }
-        return true;
-    } catch (FileWriterException&) {}
-    return false;
-}
-
 static ServerContext* InitList(intptr_t inWhich)
 {
     switch (inWhich) {
@@ -69,14 +53,6 @@ static ServerContext* InitList(intptr_t inWhich)
     return NULL;
 }
 
-// the directory query's paths: the auth, database proxy and firewall services, then the product's patch servers
-// when there is a config
-static const std::wstring* InitDirPaths(LobbyConfig* inConfig)
-{
-    static std::wstring sPaths[4] = { L"/TitanServers/Auth", L"/TitanServers/DBProxy", L"/TitanServers/Firewall" };
-    sPaths[3] = inConfig != NULL ? inConfig->mProductDirectory + L"/Patch" : std::wstring();
-    return sPaths;
-}
 
 static RustServerOp* R(intptr_t a) { return static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a)); }
 static GUIString* T(intptr_t a) { return reinterpret_cast<GUIString*>(a); }
@@ -94,6 +70,9 @@ template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
     return (intptr_t)inPtr.get();
 }
 static const uint8_t* B(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
+// the terms-of-use document of an owner written to its file (ee_won flow.rs: true unless the write failed)
+static bool InitSaveTOU(const std::string& inPath, const std::string& inDocument)
+{ return ee_won_init_save_tou(inPath.c_str(), B(inDocument), inDocument.size()); }
 
 // The host: each case one statement; the decisions and the order are the Rust's (logics.rs, and netlogicops.rs
 // for the cases R6 WON round 32 split).
@@ -152,7 +131,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
         return 0;
     }
     case O::OpNum: return (intptr_t)R(a)->GetNum((int)b, c);
-    case O::SaveTOU: return InitSaveTOU(R(a), (int)b);
+    case O::SaveTOU: return InitSaveTOU(b == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath(), R(a)->GetBytes(EE_WON_HTTPDOC_DOCUMENT, b));
     case O::BroadcastDocument: LobbyBroadcastEvent(GotHTTPDocumentEvent(R(a)), true); return 0;
     case O::DocBytes: {
         ByteBufferPtr document = R(a)->GetHttpDocument((int)b);
@@ -195,7 +174,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::HttpDocSetConfig: R(a)->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage); return 0;
     case O::HttpDocSetSession: R(a)->Set(EE_WON_HTTPDOC_SESSION, aLogic->Slot<HTTPSession>(kInitSession)); return 0;
     case O::DirServers: return (intptr_t)LobbyGetDirServers();
-    case O::DirQueryNew: return Held(RustServerOp::NewGetMultiDir(SC(a), 0x04000002, InitDirPaths(config), (int)b));
+    case O::DirQueryNew: return Held(RustServerOp::NewRequest(ee_won_reqmake_init_dirs(0x04000002, config != NULL ? config->mProductDirectory.data() : NULL, config != NULL ? config->mProductDirectory.size() : 0, sizeof(wchar_t), (int)b), SC(a)));
     case O::VersionReady: return LobbyGetPatchServers() != NULL && config != NULL;
     // CheckValidVersionOp: a Rust op (ee_won reqops.rs) with the product, config and version
     case O::VersionCheckNew: return Held(RustServerOp::NewRequest(ee_won_reqop_version_check(B(config->mProductName), config->mProductName.size(), B(config->mLanguage), config->mLanguage.size(), B(config->mVersion), config->mVersion.size()), LobbyGetPatchServers()));

@@ -532,7 +532,7 @@ public:
                + (this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY()) * (this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY());
     }
     void QueueResearch(long inTechnology, bool inFront) { ee_units_cu_more(EE_UNITS_CUM_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0, 0.0f, 0.0f, 0.0f, NULL, NULL); }  // 0x1f5f97 (EEMResearchTechnology; provisional name)
-    void QueueResearchUncaptured(long inTechnology, bool inFront) { ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0); }  // its body (ee/EETechCapture.h's TQRS)
+    void QueueResearchUncaptured(long inTechnology, bool inFront) { ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0); }  // its body (TQRS records the capture's)
     // inline (out-of-line COMDAT 0x940eb, 26 callers)
     unsigned long GetBuildQueueSize() { return this->mBuildQueue.size(); }
     // inline (the per-class EnabledChanged/B8 switches and EEUCGate::IsPartLeftOut read the current command through it;
@@ -778,7 +778,7 @@ public:
 
 // 0x16d69e (cdecl): the statistics series of inUnit, 0 for none (EEComplexUnit::GarrisonUnit passes it to
 // EEPlayerStatistics::Lower with 1) (provisional name)
-long EEAddDeadUnitStatistic(EEComplexUnit* inUnit);
+inline long EEAddDeadUnitStatistic(EEComplexUnit* inUnit) { return ee_units_dead_unit_statistic((uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit)); }
 // 0x246c87 (cdecl): the complex unit acting on inUnit, 0 if none (SetGatheredResource) (provisional name)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit);
 // 0x23d5c3 (cdecl; EEComplexUnit::ReleaseFireEffect for unit type 0x321): destroys the unit's cloaking effect, if it has

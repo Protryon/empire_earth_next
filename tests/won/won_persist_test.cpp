@@ -24,6 +24,7 @@
 #include "rust/won_lobby/persist.h"
 #include "rust/won_lobby/prefsobj.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "won_file37_orig.h" // FileReader, FileWriter
 #include "ee/wonapi/WONStringCompare.h" // StringToWString (StringUtil.cpp is deleted)
 
 using namespace WONAPI;

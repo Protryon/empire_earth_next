@@ -16,7 +16,6 @@
 #include <list>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NEMessage.h"
@@ -35,7 +34,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"   // EE_SCREENS_MAIN_MULTI_PLAYER (ee_screens menus.rs)
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
 #include "rust/game/gamecpp.h"

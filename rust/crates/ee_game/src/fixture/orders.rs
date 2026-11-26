@@ -156,7 +156,7 @@ fn set_note(note: &str) {
 // ---- reads (the world's lock held by the caller)
 
 fn unit_by_id(t: &WorldRead, id: i64) -> Option<UnitView<'_>> {
-    let h = Call::new(Op::UnitById).i(&[id]).go() as u64;
+    let h = crate::gamecpp::h(crate::gamecpp::O::C11CgUnit, 0, &[id]) as u64;
     // SAFETY: the world's lookup names a live unit (the caller holds the world's lock)
     unsafe { UnitView::of(t, h) }
 }
@@ -1043,7 +1043,7 @@ pub fn mark() {
 /// One marker action posted and run by the UI thread -> false when it did not run within 5 s.
 fn ui_round_trip() -> bool {
     let before = MARKS.load(Ordering::SeqCst);
-    Call::new(Op::Mark).go();
+    crate::sim_driver::sed_run::post_call(|_| mark(), 0);
     for _ in 0..100 {
         if MARKS.load(Ordering::SeqCst) != before {
             return true;

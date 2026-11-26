@@ -103,9 +103,21 @@ def stage_tree(tree, d):
     """Stage a data tree into d (once per tree and checkout data): Data's files hard-linked, the written folders, Users
     and the root files copied; then Data/ai and Data/db replaced by this checkout's data/ai and data/db (copies), so
     a run never plays a stale tree's tables or scripts."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data  # noqa: E402
+    for attempt in range(3):
+        open_data.wait_for_build(tree)   # (a harness rebuilds a stale tree in place: never stage a half-built one)
+        made = (tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else ""
+        _stage_tree(tree, d, made)
+        if made == ((tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else ""):
+            return d
+        print(f"sim: {tree} was replaced while it was staged: staging it again", file=sys.stderr)
+    sys.exit(f"sim: {tree} keeps changing: cannot stage it")
+
+
+def _stage_tree(tree, d, made):
     marker = d / "sim_stage.json"
-    want = dict(tree=str(tree), made=(tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else "",
-                checkout=overlay_hash(tree))
+    want = dict(tree=str(tree), made=made, checkout=overlay_hash(tree))
     if marker.exists() and json.loads(marker.read_text()) == want:
         return d
     if d.exists():
