@@ -308,12 +308,15 @@ pub(crate) unsafe fn host(
 pub(crate) struct Ffi;
 
 macro_rules! shims {
-    ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $sym:ident ; )*) => {
-        /// The C++ shims (one statement each).
+    ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $sym:ident ; )*
+     rust: $( fn $rname:ident ( $($rarg:ident : $rty:ty),* ) $(-> $rret:ty)? = $rsym:path ; )*) => {
+        /// The C++ shims (one statement each), and the calls that were one but are Rust's own now (`rust:`, the
+        /// Rust objects of other crates the shim called: [`own`]); the fake logs both alike.
         #[allow(clippy::too_many_arguments)]
         #[cfg_attr(any(test, feature = "no_cpp"), allow(dead_code))]
         pub(crate) trait Cpp {
             $( fn $name(&mut self, $($arg: $ty),*) $(-> $ret)?; )*
+            $( fn $rname(&mut self, $($rarg: $rty),*) $(-> $rret)?; )*
         }
 
         #[cfg(not(any(test, feature = "no_cpp")))]
@@ -332,6 +335,11 @@ macro_rules! shims {
                 // objects, as the C++ case had them
                 unsafe { sys::$sym($($arg),*) }
             } )*
+            $( #[allow(unused_unsafe)]
+            fn $rname(&mut self, $($rarg: $rty),*) $(-> $rret)? {
+                // SAFETY: as the shims': the moved logic's pointers are the live objects the C++ shim had
+                unsafe { $rsym($($rarg),*) }
+            } )*
         }
 
         #[cfg(test)]
@@ -341,6 +349,12 @@ macro_rules! shims {
                 $( ShimArg::fake($arg, stringify!($name), self); )*
                 self.log.push(format!("{}({})", stringify!($name), args.join(", ")));
                 ShimRet::from_fake(self.next(stringify!($name)))
+            } )*
+            $( fn $rname(&mut self, $($rarg: $rty),*) $(-> $rret)? {
+                let args: Vec<String> = vec![$(format!("{:?}", $rarg)),*];
+                $( ShimArg::fake($rarg, stringify!($rname), self); )*
+                self.log.push(format!("{}({})", stringify!($rname), args.join(", ")));
+                ShimRet::from_fake(self.next(stringify!($rname)))
             } )*
         }
     };
@@ -403,10 +417,8 @@ shims! {
     fn db_remove_controls() = ee_uicpp_db_remove_controls;
     fn db_remove_backgrounds() = ee_uicpp_db_remove_backgrounds;
     fn db_remove_fonts() = ee_uicpp_db_remove_fonts;
-    fn mouse_buttons_ready() -> bool = ee_uicpp_mouse_buttons_ready;
     fn mouse_button_fetch(which: u32, button: u32) = ee_uicpp_mouse_button_fetch;
     fn mouse_left_handed() -> bool = ee_ui_mouse_left_handed;
-    fn mouse_swap_buttons() = ee_uicpp_mouse_swap_buttons;
     fn mouse_set_left_handed(left: bool) = ee_ui_mouse_set_left_handed;
     // UIForm.cpp's (lle_form.rs); the file's open, read and close are UIHotKey.cpp's
     fn file_open(file: usize) = ee_uicpp_file_open;
@@ -422,10 +434,6 @@ shims! {
     fn form_fetch_shift_key() = ee_uicpp_form_fetch_shift_key;
     fn event_uninitialize(event: usize) = ee_uicpp_event_uninitialize;
     fn event_initialize(event: usize) = ee_uicpp_event_initialize;
-    fn entity_value(entity: usize) -> u32 = ee_uicpp_entity_value;
-    fn entity_just_pressed(entity: usize) -> bool = ee_uicpp_entity_just_pressed;
-    fn entity_just_unpressed(entity: usize) -> bool = ee_uicpp_entity_just_unpressed;
-    fn entity_just_double_pressed(entity: usize) -> bool = ee_uicpp_entity_just_double_pressed;
     fn form_screen(form: usize) -> u32 = ee_uicpp_form_screen;
     fn form_keyboard_captured(form: usize) -> usize = ee_uicpp_form_keyboard_captured;
     fn control_ime_result(control: usize, text: usize) = ee_uicpp_control_ime_result;
@@ -437,10 +445,7 @@ shims! {
     fn mgr_add_form(m: usize, form: usize) = ee_uicpp_mgr_add_form;
     fn form_enable_group0(form: usize) = ee_uicpp_form_enable_group0;
     // UIControl.cpp's (lle_control.rs, mouse_ffi.rs)
-    fn control_keys_ready() -> bool = ee_uicpp_control_keys_ready;
     fn control_key_fetch(slot: u32, code: u32) = ee_uicpp_control_key_fetch;
-    fn mouse_l_button() -> usize = ee_uicpp_mouse_l_button;
-    fn mouse_r_button() -> usize = ee_uicpp_mouse_r_button;
     fn control_left_down(control: usize) -> bool = ee_uicpp_control_left_down;
     fn control_right_down(control: usize) -> bool = ee_uicpp_control_right_down;
     fn control_set_left_down(control: usize, down: bool) = ee_uicpp_control_set_left_down;
@@ -480,11 +485,6 @@ shims! {
     fn list_selection(list: usize, selection: EeUiShimULongOut) -> c_long = ee_uicpp_list_selection;
     fn control_mouse_x(control: usize) -> f32 = ee_uicpp_control_mouse_x;
     fn control_mouse_y(control: usize) -> f32 = ee_uicpp_control_mouse_y;
-    fn key_down_pressed() -> bool = ee_uicpp_key_down_pressed;
-    fn key_up_pressed() -> bool = ee_uicpp_key_up_pressed;
-    fn key_home_pressed() -> bool = ee_uicpp_key_home_pressed;
-    fn key_end_pressed() -> bool = ee_uicpp_key_end_pressed;
-    fn key_enter_value() -> bool = ee_uicpp_key_enter_value;
     fn label_set_text_line(label: usize, list: usize, line: u32) = ee_uicpp_label_set_text_line;
     fn edit_set_text_line(edit: usize, list: usize, line: u32) = ee_uicpp_edit_set_text_line;
     fn label_clear_text(label: usize) = ee_uicpp_label_clear_text;
@@ -496,9 +496,6 @@ shims! {
     fn label_text(label: usize) -> usize = ee_uicpp_label_text;
     fn edit_text(edit: usize) -> usize = ee_uicpp_edit_text;
     fn list_text(list: usize) -> usize = ee_uicpp_list_text;
-    fn text_copy_fg(to: usize, from: usize) = ee_uicpp_text_copy_fg;
-    fn text_copy_bg(to: usize, from: usize) = ee_uicpp_text_copy_bg;
-    fn text_copy_transparent(to: usize, from: usize) = ee_uicpp_text_copy_transparent;
     fn combo_process_down(combo: usize) = ee_uicpp_combo_process_down;
     fn combo_process_up(combo: usize) = ee_uicpp_combo_process_up;
     fn form_scaled_manager_bitmap(form: usize, index: u32, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_form_scaled_manager_bitmap;
@@ -524,10 +521,169 @@ shims! {
     fn edit_form_mouse_y(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_y;
     fn line_new_black() -> usize = ee_uicpp_line_new_black;
     fn line_new() -> usize = ee_uicpp_line_new;
-    fn text_fg_red(text: usize) -> f32 = ee_uicpp_text_fg_red;
-    fn text_fg_green(text: usize) -> f32 = ee_uicpp_text_fg_green;
-    fn text_fg_blue(text: usize) -> f32 = ee_uicpp_text_fg_blue;
+    rust:
+    // the input entities, the key slots, the texts (LLE/UI round 2: their shims were one call on a Rust object)
+    fn mouse_buttons_ready() -> bool = own::mouse_buttons_ready;
+    fn mouse_swap_buttons() = own::mouse_swap_buttons;
+    fn entity_value(entity: usize) -> u32 = own::entity_value;
+    fn entity_just_pressed(entity: usize) -> bool = own::entity_just_pressed;
+    fn entity_just_unpressed(entity: usize) -> bool = own::entity_just_unpressed;
+    fn entity_just_double_pressed(entity: usize) -> bool = own::entity_just_double_pressed;
+    fn control_keys_ready() -> bool = own::control_keys_ready;
+    fn mouse_l_button() -> usize = own::mouse_l_button;
+    fn mouse_r_button() -> usize = own::mouse_r_button;
+    fn key_down_pressed() -> bool = own::key_down_pressed;
+    fn key_up_pressed() -> bool = own::key_up_pressed;
+    fn key_home_pressed() -> bool = own::key_home_pressed;
+    fn key_end_pressed() -> bool = own::key_end_pressed;
+    fn key_enter_value() -> bool = own::key_enter_value;
+    fn text_copy_fg(to: usize, from: usize) = own::text_copy_fg;
+    fn text_copy_bg(to: usize, from: usize) = own::text_copy_bg;
+    fn text_copy_transparent(to: usize, from: usize) = own::text_copy_transparent;
+    fn text_fg_red(text: usize) -> f32 = own::text_fg_red;
+    fn text_fg_green(text: usize) -> f32 = own::text_fg_green;
+    fn text_fg_blue(text: usize) -> f32 = own::text_fg_blue;
     // ui13a: the key predicates (lle_control.rs key_pressed)
-    fn entity_long_value(entity: usize) -> c_long = ee_uicpp_entity_long_value;
-    fn num_lock_off() -> bool = ee_uicpp_num_lock_off;
+    fn entity_long_value(entity: usize) -> c_long = own::entity_long_value;
+    fn num_lock_off() -> bool = own::num_lock_off;
+}
+
+/// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's
+/// records, a `GEText`'s only member is ee_render's text, the key slots are [`crate::lle_control`]'s).
+#[cfg(not(any(test, feature = "no_cpp")))]
+mod own {
+    use core::ffi::c_long;
+
+    use ee_base::input::ffi::{self as input, EeInputEntity};
+    use ee_render::ge::smallobj::{self as ge, EeGeText};
+
+    use crate::lle_control::{ee_ui_key_pressed, ee_ui_key_slot, key, EeUiKey, EeUiKeyPress};
+
+    fn entity(e: usize) -> *const EeInputEntity {
+        e as *const EeInputEntity
+    }
+    pub(super) fn entity_value(e: usize) -> u32 {
+        input::ee_input_entity_value(entity(e)) as u32
+    }
+    pub(super) fn entity_long_value(e: usize) -> c_long {
+        input::ee_input_entity_value(entity(e))
+    }
+    pub(super) fn entity_just_pressed(e: usize) -> bool {
+        input::ee_input_entity_just_pressed(entity(e))
+    }
+    pub(super) fn entity_just_unpressed(e: usize) -> bool {
+        input::ee_input_entity_just_unpressed(entity(e))
+    }
+    pub(super) fn entity_just_double_pressed(e: usize) -> bool {
+        input::ee_input_entity_just_double_pressed(entity(e))
+    }
+
+    /// `UIForm::GetNumLockOff`: Num Lock not toggled on.
+    pub(super) fn num_lock_off() -> bool {
+        extern "C" {
+            fn PlatKeyIsToggled(virtual_key: u32) -> core::ffi::c_int;
+        }
+        const VK_NUMLOCK: u32 = 0x90;
+        // SAFETY: the platform's query, no arguments to keep alive
+        unsafe { PlatKeyIsToggled(VK_NUMLOCK) == 0 }
+    }
+
+    // the shared keys' slots (`UIControl::Key`)
+    pub(super) fn control_keys_ready() -> bool {
+        key(EeUiKey::Space) != 0
+    }
+    pub(super) fn mouse_buttons_ready() -> bool {
+        key(EeUiKey::LeftMouse) != 0
+    }
+    pub(super) fn mouse_l_button() -> usize {
+        key(EeUiKey::LeftMouse)
+    }
+    pub(super) fn mouse_r_button() -> usize {
+        key(EeUiKey::RightMouse)
+    }
+    /// The left-handed mouse's swap of the two buttons' entities.
+    pub(super) fn mouse_swap_buttons() {
+        // SAFETY: two distinct live slots
+        unsafe { core::ptr::swap(ee_ui_key_slot(EeUiKey::LeftMouse), ee_ui_key_slot(EeUiKey::RightMouse)) }
+    }
+    pub(super) fn key_down_pressed() -> bool {
+        ee_ui_key_pressed(EeUiKeyPress::Down)
+    }
+    pub(super) fn key_up_pressed() -> bool {
+        ee_ui_key_pressed(EeUiKeyPress::Up)
+    }
+    pub(super) fn key_home_pressed() -> bool {
+        ee_ui_key_pressed(EeUiKeyPress::Home)
+    }
+    pub(super) fn key_end_pressed() -> bool {
+        ee_ui_key_pressed(EeUiKeyPress::End)
+    }
+    pub(super) fn key_enter_value() -> bool {
+        entity_value(key(EeUiKey::Enter)) != 0
+    }
+
+    /// A C++ `GEText*`'s text (the class's one member).
+    ///
+    /// # Safety
+    /// `text` is a live `GEText`.
+    unsafe fn text(text: usize) -> *mut EeGeText {
+        // SAFETY: the contract
+        unsafe { *(text as *const *mut EeGeText) }
+    }
+    /// # Safety
+    /// `t` is a live `GEText`.
+    unsafe fn fg(t: usize, i: usize) -> f32 {
+        // SAFETY: the contract; the colour's three floats
+        unsafe { *ge::ee_ge_text_color(text(t), true).add(i) }
+    }
+    /// # Safety
+    /// `t` is a live `GEText`.
+    pub(super) unsafe fn text_fg_red(t: usize) -> f32 {
+        // SAFETY: the contract
+        unsafe { fg(t, 0) }
+    }
+    /// # Safety
+    /// `t` is a live `GEText`.
+    pub(super) unsafe fn text_fg_green(t: usize) -> f32 {
+        // SAFETY: the contract
+        unsafe { fg(t, 1) }
+    }
+    /// # Safety
+    /// `t` is a live `GEText`.
+    pub(super) unsafe fn text_fg_blue(t: usize) -> f32 {
+        // SAFETY: the contract
+        unsafe { fg(t, 2) }
+    }
+    /// # Safety
+    /// `to` and `from` are live `GEText`s.
+    unsafe fn copy_color(to: usize, from: usize, foreground: bool) {
+        // SAFETY: the contract; each colour three floats
+        unsafe {
+            core::ptr::copy(ge::ee_ge_text_color(text(from), foreground), ge::ee_ge_text_color(text(to), foreground), 3)
+        }
+    }
+    /// `to->SetFgColor(from->GetFgColor())`.
+    ///
+    /// # Safety
+    /// `to` and `from` are live `GEText`s.
+    pub(super) unsafe fn text_copy_fg(to: usize, from: usize) {
+        // SAFETY: the contract
+        unsafe { copy_color(to, from, true) }
+    }
+    /// `to->SetBgColor(from->GetBgColor())`.
+    ///
+    /// # Safety
+    /// `to` and `from` are live `GEText`s.
+    pub(super) unsafe fn text_copy_bg(to: usize, from: usize) {
+        // SAFETY: the contract
+        unsafe { copy_color(to, from, false) }
+    }
+    /// `to->SetIsTransparent(from->GetIsTransparent())`.
+    ///
+    /// # Safety
+    /// `to` and `from` are live `GEText`s.
+    pub(super) unsafe fn text_copy_transparent(to: usize, from: usize) {
+        // SAFETY: the contract
+        unsafe { ge::ee_ge_text_set_transparent(text(to), ge::ee_ge_text_transparent(text(from))) }
+    }
 }

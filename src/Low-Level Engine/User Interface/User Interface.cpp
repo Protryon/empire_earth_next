@@ -223,11 +223,6 @@ extern "C" long ee_uicpp_list_selection(uintptr_t inList, unsigned long* inSelec
 { return LIST(inList)->GetCurrentSelection(*inSelection); }
 extern "C" float ee_uicpp_control_mouse_x(uintptr_t inControl) { return CTL(inControl)->GetMouseLocation().GetX(); }
 extern "C" float ee_uicpp_control_mouse_y(uintptr_t inControl) { return CTL(inControl)->GetMouseLocation().GetY(); }
-extern "C" bool ee_uicpp_key_down_pressed() { return UIControl::DownKeyPressed(); }
-extern "C" bool ee_uicpp_key_up_pressed() { return UIControl::UpKeyPressed(); }
-extern "C" bool ee_uicpp_key_home_pressed() { return UIControl::HomeKeyPressed(); }
-extern "C" bool ee_uicpp_key_end_pressed() { return UIControl::EndKeyPressed(); }
-extern "C" bool ee_uicpp_key_enter_value() { return UIControl::Key(EeUiKey::Enter)->GetValue() != 0; }
 extern "C" void ee_uicpp_label_set_text_line(uintptr_t inLabel, uintptr_t inList, uint32_t inLine)
 { LABEL(inLabel)->SetText(LIST(inList)->GetData(inLine), true); }
 extern "C" void ee_uicpp_edit_set_text_line(uintptr_t inEdit, uintptr_t inList, uint32_t inLine)
@@ -241,12 +236,6 @@ extern "C" void ee_uicpp_control_tabbed_from(uintptr_t inControl) { CTL(inContro
 extern "C" uintptr_t ee_uicpp_label_text(uintptr_t inLabel) { return (uintptr_t)LABEL(inLabel)->GetGEText(); }
 extern "C" uintptr_t ee_uicpp_edit_text(uintptr_t inEdit) { return (uintptr_t)EDIT(inEdit)->GetGEText(); }
 extern "C" uintptr_t ee_uicpp_list_text(uintptr_t inList) { return (uintptr_t)LIST(inList)->GetGEText(); }
-extern "C" void ee_uicpp_text_copy_fg(uintptr_t inTo, uintptr_t inFrom)
-{ TEXT(inTo)->SetFgColor(TEXT(inFrom)->GetFgColor()); }
-extern "C" void ee_uicpp_text_copy_bg(uintptr_t inTo, uintptr_t inFrom)
-{ TEXT(inTo)->SetBgColor(TEXT(inFrom)->GetBgColor()); }
-extern "C" void ee_uicpp_text_copy_transparent(uintptr_t inTo, uintptr_t inFrom)
-{ TEXT(inTo)->SetIsTransparent(TEXT(inFrom)->GetIsTransparent()); }
 extern "C" void ee_uicpp_combo_process_down(uintptr_t inCombo) { COMBO(inCombo)->ProcessDown(); }
 extern "C" void ee_uicpp_combo_process_up(uintptr_t inCombo) { COMBO(inCombo)->ProcessUp(); }
 extern "C" uintptr_t ee_uicpp_form_scaled_manager_bitmap(uintptr_t inForm, uint32_t inIndex, float inLeft, float inTop, float inRight, float inBottom)
@@ -381,11 +370,8 @@ EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0],
 
 // The first control's key lookup (lle_control.rs): the statics in its order, the one-statement shims
 #define CTL(x) reinterpret_cast<UIControl*>(x)
-extern "C" bool ee_uicpp_control_keys_ready() { return UIControl::Key(EeUiKey::Space) != NULL; }
 extern "C" void ee_uicpp_control_key_fetch(uint32_t inSlot, uint32_t inCode)
 { gISKeyboard->GetEntity(inCode, UIControl::Key((EeUiKey)inSlot)); }
-extern "C" uintptr_t ee_uicpp_mouse_l_button() { return (uintptr_t)UIManager::GetLMouseButton(); }
-extern "C" uintptr_t ee_uicpp_mouse_r_button() { return (uintptr_t)UIManager::GetRMouseButton(); }
 extern "C" bool ee_uicpp_control_left_down(uintptr_t inControl) { return CTL(inControl)->mLeftButtonDown; }
 extern "C" bool ee_uicpp_control_right_down(uintptr_t inControl) { return CTL(inControl)->mRightButtonDown; }
 extern "C" void ee_uicpp_control_set_left_down(uintptr_t inControl, bool inDown)
@@ -480,8 +466,6 @@ EE_UI_VOID(obj_part_set_bg_opacity) { part->SetBgOpacity(f[0]); }
 #undef part
 
 // the key predicates' calls (lle_control.rs key_pressed)
-extern "C" long ee_uicpp_entity_long_value(uintptr_t inEntity) { return reinterpret_cast<ISEntity*>(inEntity)->GetValue(); }
-extern "C" bool ee_uicpp_num_lock_off() { return UIForm::GetNumLockOff(); }
 
 // C:\EEX\Low-Level Engine\User Interface\UIControlsTable.cpp
 // 0x10065f69..0x10069cc7: UIControlsTable's header-inline block (0x10065f69, declaration order; the getters ICF
@@ -715,9 +699,6 @@ extern "C" float ee_uicpp_edit_form_mouse_y(uintptr_t inEdit) { return UIEB(inEd
 extern "C" uintptr_t ee_uicpp_line_new_black()
 { return (uintptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
 extern "C" uintptr_t ee_uicpp_line_new() { return (uintptr_t) new GELine(); }
-extern "C" float ee_uicpp_text_fg_red(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetRed(); }
-extern "C" float ee_uicpp_text_fg_green(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetGreen(); }
-extern "C" float ee_uicpp_text_fg_blue(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetBlue(); }
 
 // C:\EEX\Low-Level Engine\User Interface\UIFileListBox.cpp
 // The original units: UIFileListBox.cpp 0x1006fae7..0x1006ff58 and UIFileComboBox.cpp 0x1006f4ef..0x1006fae7.
@@ -842,14 +823,6 @@ extern "C" void ee_uicpp_form_fetch_tab_key() { gISKeyboard->GetEntity(kKeyTab, 
 extern "C" void ee_uicpp_form_fetch_shift_key() { gISKeyboard->GetEntity(kKeyShift, UIControl::Key(EeUiKey::Shift)); }
 extern "C" void ee_uicpp_event_uninitialize(uintptr_t inEvent) { EVENT(inEvent)->Uninitialize(); }
 extern "C" void ee_uicpp_event_initialize(uintptr_t inEvent) { EVENT(inEvent)->Initialize(); }
-extern "C" uint32_t ee_uicpp_entity_value(uintptr_t inEntity)
-{ return (uint32_t)reinterpret_cast<ISEntity*>(inEntity)->GetValue(); }
-extern "C" bool ee_uicpp_entity_just_pressed(uintptr_t inEntity)
-{ return reinterpret_cast<ISEntity*>(inEntity)->JustPressed(); }
-extern "C" bool ee_uicpp_entity_just_unpressed(uintptr_t inEntity)
-{ return reinterpret_cast<ISEntity*>(inEntity)->JustUnpressed(); }
-extern "C" bool ee_uicpp_entity_just_double_pressed(uintptr_t inEntity)
-{ return reinterpret_cast<ISEntity*>(inEntity)->JustDoublePressed(); }
 extern "C" uint32_t ee_uicpp_form_screen(uintptr_t inForm) { return FORM(inForm)->GetManager()->GetScreen(); }
 extern "C" uintptr_t ee_uicpp_form_keyboard_captured(uintptr_t inForm)
 { return (uintptr_t)FORM(inForm)->GetKeyboardCaptured(); }
@@ -1207,11 +1180,9 @@ extern "C" void ee_uicpp_file_delete(uintptr_t inFile) { delete FILE_SPEC(inFile
 extern "C" void ee_uicpp_db_remove_controls() { UIControlsTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_backgrounds() { UIBackgroundTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_fonts() { UIFontTable::DeleteAll(); }
-extern "C" bool ee_uicpp_mouse_buttons_ready() { return UIControl::Key(EeUiKey::LeftMouse) != NULL; }
 // the shared mouse button inButton into the key slot inWhich after the left button's (lle_manager.rs)
 extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich, uint32_t inButton)
 { gISMouse->GetEntity(inButton, UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
-extern "C" void ee_uicpp_mouse_swap_buttons() { std::swap(UIControl::Key(EeUiKey::LeftMouse), UIControl::Key(EeUiKey::RightMouse)); }
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
 #undef FORM   // (the earlier sections' FORM(x))
