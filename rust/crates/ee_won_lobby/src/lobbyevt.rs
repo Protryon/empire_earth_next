@@ -72,6 +72,10 @@ pub enum EeWonLobbyEvtKind {
     SetCrossPromotion = 40,
     UpdateAccount = 41,
     QueryServerGroups = 42,
+    /// The EE game's slot changed (`EELobbySyncPlayerEvent`, R6 WON lobby and network round 37: its slot in `Value`).
+    EELobbySyncPlayer = 43,
+    /// The EE game's option changed (`EELobbySyncOptionEvent`: its option in `Value`).
+    EELobbySyncOption = 44,
 }
 
 /// A member, by the original's name (`mChangeKind` is `LobbyChangeEvent`'s).
@@ -168,6 +172,7 @@ pub fn layout(k: K) -> &'static [(F, Ty)] {
     match k {
         K::AcceptClient => &[(F::Client, Ref), (F::Accepted, Int)],
         K::Alert => &[(F::Kind, Int), (F::Value, Int), (F::Severity, Int), (F::Text, Ref)],
+        K::EELobbySyncPlayer | K::EELobbySyncOption => &[(F::Value, Int)],
         K::AnnounceClientLocation => {
             &[(F::Client, Ref), (F::Server, Ref), (F::Room, Ref), (F::RoomId, Int), (F::Handled, Int)]
         }

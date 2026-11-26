@@ -61,7 +61,6 @@ struct EEAEAliveUnit {
 
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
-extern "C" int32_t ee_screenscpp_aem_floor(float inV) { return UMFloor(inV); }
 extern "C" void ee_screenscpp_aem_units_clear() { EEScratch<std::vector<EEComplexUnit*>>(kScratchAEMUnits).clear(); }
 extern "C" void ee_screenscpp_aem_rect_top(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAEMRect).mTop = inV; }
 extern "C" void ee_screenscpp_aem_rect_left(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAEMRect).mLeft = inV; }
@@ -86,8 +85,6 @@ extern "C" uintptr_t ee_screenscpp_aem_effects_count(uintptr_t inManager)
 { return ((EEAEManager*)inManager)->mEffects.mItems.size(); }
 extern "C" uintptr_t ee_screenscpp_aem_effects_at(uintptr_t inManager, uintptr_t inIndex)
 { return (uintptr_t)((EEAEManager*)inManager)->mEffects.mItems[inIndex]; }
-extern "C" int64_t ee_screenscpp_aem_effect_player(uintptr_t inEffect)
-{ return (int64_t)((EEAreaEffect*)inEffect)->mPlayer; }
 
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
 // loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)
@@ -112,15 +109,10 @@ extern "C" uintptr_t ee_screenscpp_aes_affecting_count(uintptr_t inUnit)
 extern "C" uintptr_t ee_screenscpp_aes_affecting_at(uintptr_t inUnit, uintptr_t inIndex)
 { return (uintptr_t)AES_U(inUnit)->mAffectingAreaEffects.mItems[inIndex]; }
 extern "C" uint64_t ee_screenscpp_aes_unit_id(uintptr_t inUnit) { return (uint64_t)AES_U(inUnit)->GetUnitID(); }
-extern "C" int64_t ee_screenscpp_aes_effect_kind(uintptr_t inEffect) { return (int64_t)AES_E(inEffect)->mKind; }
 extern "C" float ee_screenscpp_aes_effect_x(uintptr_t inEffect) { return AES_E(inEffect)->mLocation.mX; }
 extern "C" float ee_screenscpp_aes_effect_y(uintptr_t inEffect) { return AES_E(inEffect)->mLocation.mY; }
-extern "C" bool ee_screenscpp_aes_effect_dirty(uintptr_t inEffect) { return AES_E(inEffect)->mDirty; }
-extern "C" int64_t ee_screenscpp_aes_effect_count(uintptr_t inEffect) { return (int64_t)AES_E(inEffect)->mCount; }
 extern "C" void ee_screenscpp_aes_set_x(uintptr_t inEffect, float inV) { AES_E(inEffect)->mLocation.mX = inV; }
 extern "C" void ee_screenscpp_aes_set_y(uintptr_t inEffect, float inV) { AES_E(inEffect)->mLocation.mY = inV; }
-extern "C" void ee_screenscpp_aes_set_dirty(uintptr_t inEffect, bool inV) { AES_E(inEffect)->mDirty = inV; }
-extern "C" void ee_screenscpp_aes_set_count(uintptr_t inEffect, int64_t inV) { AES_E(inEffect)->mCount = (long)inV; }
 extern "C" uintptr_t ee_screenscpp_aes_world_unit(uint64_t inId)
 { return (uintptr_t)::gWorld.GetUnit((unsigned long)inId); }
 extern "C" void ee_screenscpp_aes_affecting_clear(uintptr_t inUnit) { AES_U(inUnit)->mAffectingAreaEffects.Clear(); }
@@ -166,7 +158,6 @@ extern "C" uintptr_t ee_screenscpp_aem_templates_count(uintptr_t inManager)
 extern "C" uintptr_t ee_screenscpp_aem_template_at(uintptr_t inManager, uintptr_t inIndex)
 { return (uintptr_t)AEM_M(inManager)->mTemplates[inIndex]; }
 extern "C" void ee_screenscpp_aem_templates_clear(uintptr_t inManager) { AEM_M(inManager)->mTemplates.clear(); }
-extern "C" void ee_screenscpp_aem_capture_tick(float inElapsed) { ee_screens_ae_capture_tick(inElapsed); }
 extern "C" uintptr_t ee_screenscpp_aem_effect_new(uintptr_t inT)
 { return (uintptr_t)new EEAreaEffect((EEAreaEffectTemplate*)inT); }
 extern "C" void ee_screenscpp_aem_set_effect_player(uintptr_t inEffect, uintptr_t inUnit)

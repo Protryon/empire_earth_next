@@ -25,7 +25,8 @@
 #include "rust/sim/units.h"             // the entry points (ee_sim units us_fill.rs, us_check.rs)
 
 class RTSUnit;
-class RTSPlayer;
+class EEPlayer;
+typedef EEPlayer RTSPlayer;
 
 // EEComplexUnit::mPhysicalModel's location was written (EEUnitStoreModel): the record's x, y, z (store.rs
 // EE_UNIT_FIELD_LOCATION_*; EEUnitStore.cpp: the owner from the member's offset)

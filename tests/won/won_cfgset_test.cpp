@@ -56,7 +56,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "ee/wonapi/WONLobbySplitterConfig.h"
 #include "ee/wonapi/WONGUIShell.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/cfgset.h"

@@ -106,9 +106,7 @@ static intptr_t WonNetHost(void* inCpp, EeWonNetOp inOp, intptr_t a, intptr_t b,
 // ---- the screens (R6 WON round 32): the deleted C++ (won_wonfront_orig.h) and the forwards to the Rust
 // (wonfront.rs, over the host's very statements, ee/EEWonFrontHost.inl), each over its own classes and the FE world
 namespace FE { namespace Ori {
-#define FE_ORIGINAL_EVENTS   // the original's event classes (won_wonfront_classes.h)
 #include "won_wonfront_classes.h"
-#undef FE_ORIGINAL_EVENTS
 static void OnGamePassword(const char* inPassword);
 #include "won_wonfront_orig.h"
 }}
@@ -119,97 +117,83 @@ static void OnGamePassword(const char* inPassword);
 // the stand-in front end's user and server list (the game reads the Rust object's slots)
 static auto WonNetUser() { return gWonNet->mUser; }
 static auto& WonNetServers() { return gWonNet->mServers; }
-// The game's events (ee/EEUIEWonNetArenaGameEvents.h, as there): one class holding its front-end call, and the pop.
-// Over the FE world's named UIEvent, the event logs the original class whose ProcessEvent its call is (the driver's
-// table, FrontCallClass), the pop the game's class: the trace holds every event's call against the original's class.
-static const char* FrontCallClass(EeWonFrontCall inCall)
+// the game's one event class (ee/EEUIEWonNetEvent.h), named as the original class of its call so the traces compare
+static const char* FrontEventName(EeWonFrontCall inCall)
 {
-    typedef EeWonFrontCall C;
     switch (inCall) {
-    case C::AgUpdateForm: return "EEUIEWNAGUpdateForm";
-    case C::AgActivateForm: return "EEUIEWNAGActivateForm";
-    case C::AgBack: return "EEUIEWNAGBack";
-    case C::AgCheckPassword: return "EEUIEWNAGCheckPassword";
-    case C::AgClickGameFilter: return "EEUIEWNAGClickGameFilter";
-    case C::AgCloseForm: return "EEUIEWNAGCloseForm";
-    case C::AgDeactivateForm: return "EEUIEWNAGDeactivateForm";
-    case C::AgDoubleclickUser: return "EEUIEWNAGDoubleclickUser";
-    case C::AgHostOrJoinGame: return "EEUIEWNAGHostOrJoinGame";
-    case C::AgSendChat: return "EEUIEWNAGSendChat";
-    case C::AgToggleHostScreen: return "EEUIEWNAGToggleHostScreen";
-    case C::AgToggleJoinScreen: return "EEUIEWNAGToggleJoinScreen";
-    case C::AgOpenScreen: return "EEUIEWNAGOpenScreen";
-    case C::ArUpdateForm: return "EEUIEWNARUpdateForm";
-    case C::ArActivateForm: return "EEUIEWNARActivateForm";
-    case C::ArDeactivateForm: return "EEUIEWNARDeactivateForm";
-    case C::ArDoubleClickRoom: return "EEUIEWNARDoubleClickRoom";
-    case C::ArClickUpdateAccount: return "EEUIEWNARClickUpdateAccount";
-    case C::ArJoinRoom: return "EEUIEWNARJoinRoom";
-    case C::ArOpenScreen: return "EEUIEWNAROpenScreen";
-    case C::MuaSubmit: return "EEUIEWNMUASubmit";
-    case C::MuaOpenScreen: return "EEUIEWNMUAOpenScreen";
-    case C::SsOk: return "EEUIEWNSSOk";
-    case C::SsOpenScreen: return "EEUIEWNSSOpenScreen";
-    case C::StatsOpen: return "EEUIEWNSOpen";
-    case C::StatsCancel: return "EEUIEWNSCancel";
-    default: return "?";   // not an event's call
+    case EeWonFrontCall::AgUpdateForm: return "EEUIEWNAGUpdateForm";
+    case EeWonFrontCall::AgActivateForm: return "EEUIEWNAGActivateForm";
+    case EeWonFrontCall::AgBack: return "EEUIEWNAGBack";
+    case EeWonFrontCall::AgCheckPassword: return "EEUIEWNAGCheckPassword";
+    case EeWonFrontCall::AgClickGameFilter: return "EEUIEWNAGClickGameFilter";
+    case EeWonFrontCall::AgCloseForm: return "EEUIEWNAGCloseForm";
+    case EeWonFrontCall::AgDeactivateForm: return "EEUIEWNAGDeactivateForm";
+    case EeWonFrontCall::AgDoubleclickUser: return "EEUIEWNAGDoubleclickUser";
+    case EeWonFrontCall::AgHostOrJoinGame: return "EEUIEWNAGHostOrJoinGame";
+    case EeWonFrontCall::AgSendChat: return "EEUIEWNAGSendChat";
+    case EeWonFrontCall::AgToggleHostScreen: return "EEUIEWNAGToggleHostScreen";
+    case EeWonFrontCall::AgToggleJoinScreen: return "EEUIEWNAGToggleJoinScreen";
+    case EeWonFrontCall::AgOpenScreen: return "EEUIEWNAGOpenScreen";
+    case EeWonFrontCall::ArUpdateForm: return "EEUIEWNARUpdateForm";
+    case EeWonFrontCall::ArActivateForm: return "EEUIEWNARActivateForm";
+    case EeWonFrontCall::ArDeactivateForm: return "EEUIEWNARDeactivateForm";
+    case EeWonFrontCall::ArDoubleClickRoom: return "EEUIEWNARDoubleClickRoom";
+    case EeWonFrontCall::ArClickUpdateAccount: return "EEUIEWNARClickUpdateAccount";
+    case EeWonFrontCall::ArJoinRoom: return "EEUIEWNARJoinRoom";
+    case EeWonFrontCall::ArOpenScreen: return "EEUIEWNAROpenScreen";
+    case EeWonFrontCall::MuaSubmit: return "EEUIEWNMUASubmit";
+    case EeWonFrontCall::MuaOpenScreen: return "EEUIEWNMUAOpenScreen";
+    case EeWonFrontCall::SsOk: return "EEUIEWNSSOk";
+    case EeWonFrontCall::SsOpenScreen: return "EEUIEWNSSOpenScreen";
+    case EeWonFrontCall::StatsOpen: return "EEUIEWNSOpen";
+    case EeWonFrontCall::StatsCancel: return "EEUIEWNSCancel";
+    case EeWonFrontCall::ArBack: return "EEUIEWNARBack";
+    case EeWonFrontCall::MuaCancel: return "EEUIEWNMUACancel";
+    case EeWonFrontCall::SsCancel: return "EEUIEWNSSCancel";
+    default: return "?";
     }
 }
-struct EEWonFrontEvent : UIEvent {
-    explicit EEWonFrontEvent(EeWonFrontCall inCall) : UIEvent(FrontCallClass(inCall)), mCall(inCall) {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(mCall, inForm, (intptr_t)inEntity); }
+class EEUIEWonNetEvent : public UIEvent {
+public:
+    explicit EEUIEWonNetEvent(EeWonFrontCall inCall) : UIEvent(FrontEventName(inCall)), mCall(inCall) {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(this->mCall, inForm, (intptr_t)inEntity); }
     EeWonFrontCall mCall;
 };
-struct EEUIEWNPop : UIEvent {
-    EEUIEWNPop() : UIEvent("EEUIEWNPop") {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
-};
-inline UIEvent* EEWonFrontNewEvent(int32_t inCall)
-{
-    return inCall < 0 ? static_cast<UIEvent*>(new EEUIEWNPop) : new EEWonFrontEvent((EeWonFrontCall)inCall);
-}
 #include "ee/EEWonFrontHost.inl"
 static int sFrontHits[256];   // the host's ops the sequences reached
 static intptr_t FrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t c) { sFrontHits[(int)inOp & 255]++; return WonFrontHost(inOp, a, b, c); }
-// the test's events by number (kFrontEvents names them), made as the game makes them: those the screens make through
-// the host's EventNew by the Rust's ee_won_front_event_call, the screens' openers and the statistics form's by their call
-static UIEvent* FrontMakeEvent(int inKind)
-{
-    typedef EeWonFrontEvent E;
-    typedef EeWonFrontCall C;
-    auto made = [](E e) { return EEWonFrontNewEvent(ee_won_front_event_call(e)); };
-    switch (inKind) {
-    case 0: return made(E::AgActivateForm);
-    case 1: return made(E::AgBack);
-    case 2: return made(E::AgCheckPassword);
-    case 3: return made(E::AgClickGameFilter);
-    case 4: return made(E::AgCloseForm);
-    case 5: return made(E::AgDeactivateForm);
-    case 6: return made(E::AgDoubleclickUser);
-    case 7: return made(E::AgHostOrJoinGame);
-    case 8: return new EEWonFrontEvent(C::AgOpenScreen);
-    case 9: return made(E::AgSendChat);
-    case 10: return made(E::AgToggleHostScreen);
-    case 11: return made(E::AgToggleJoinScreen);
-    case 12: return made(E::AgUpdateForm);
-    case 13: return made(E::ArActivateForm);
-    case 14: return made(E::ArBack);
-    case 15: return made(E::ArClickUpdateAccount);
-    case 16: return made(E::ArDeactivateForm);
-    case 17: return made(E::ArDoubleClickRoom);
-    case 18: return made(E::ArJoinRoom);
-    case 19: return new EEWonFrontEvent(C::ArOpenScreen);
-    case 20: return made(E::ArUpdateForm);
-    case 21: return made(E::MuaCancel);
-    case 22: return made(E::MuaOpenScreen);
-    case 23: return made(E::MuaSubmit);
-    case 24: return made(E::SsCancel);
-    case 25: return made(E::SsOk);
-    case 26: return new EEWonFrontEvent(C::SsOpenScreen);
-    case 27: return new EEWonFrontEvent(C::StatsCancel);
-    default: return new EEWonFrontEvent(C::StatsOpen);
-    }
-}
+// the units' forwards, as the game has them now
+#define FE_FWD(C, K) long C::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::K, inForm, (intptr_t)inEntity); }
+FE_FWD(EEUIEWNAGUpdateForm, AgUpdateForm)
+FE_FWD(EEUIEWNAGActivateForm, AgActivateForm)
+FE_FWD(EEUIEWNAGBack, AgBack)
+FE_FWD(EEUIEWNAGCheckPassword, AgCheckPassword)
+FE_FWD(EEUIEWNAGClickGameFilter, AgClickGameFilter)
+FE_FWD(EEUIEWNAGCloseForm, AgCloseForm)
+FE_FWD(EEUIEWNAGDeactivateForm, AgDeactivateForm)
+FE_FWD(EEUIEWNAGDoubleclickUser, AgDoubleclickUser)
+FE_FWD(EEUIEWNAGHostOrJoinGame, AgHostOrJoinGame)
+FE_FWD(EEUIEWNAGSendChat, AgSendChat)
+FE_FWD(EEUIEWNAGToggleHostScreen, AgToggleHostScreen)
+FE_FWD(EEUIEWNAGToggleJoinScreen, AgToggleJoinScreen)
+FE_FWD(EEUIEWNAGOpenScreen, AgOpenScreen)
+FE_FWD(EEUIEWNARUpdateForm, ArUpdateForm)
+FE_FWD(EEUIEWNARActivateForm, ArActivateForm)
+FE_FWD(EEUIEWNARDeactivateForm, ArDeactivateForm)
+FE_FWD(EEUIEWNARDoubleClickRoom, ArDoubleClickRoom)
+FE_FWD(EEUIEWNARClickUpdateAccount, ArClickUpdateAccount)
+FE_FWD(EEUIEWNARJoinRoom, ArJoinRoom)
+FE_FWD(EEUIEWNAROpenScreen, ArOpenScreen)
+FE_FWD(EEUIEWNMUASubmit, MuaSubmit)
+FE_FWD(EEUIEWNMUAOpenScreen, MuaOpenScreen)
+FE_FWD(EEUIEWNSSOk, SsOk)
+FE_FWD(EEUIEWNSSOpenScreen, SsOpenScreen)
+FE_FWD(EEUIEWNSOpen, StatsOpen)
+FE_FWD(EEUIEWNSCancel, StatsCancel)
+FE_FWD(EEUIEWNARBack, ArBack)
+FE_FWD(EEUIEWNMUACancel, MuaCancel)
+FE_FWD(EEUIEWNSSCancel, SsCancel)
+#undef FE_FWD
 static void OnGamePassword(const char* inPassword) { ee_won_front_call(EeWonFrontCall::AgOnGamePassword, NULL, (intptr_t)inPassword); }
 EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
                                          unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)

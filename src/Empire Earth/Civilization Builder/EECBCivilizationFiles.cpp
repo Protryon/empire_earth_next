@@ -34,7 +34,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EECivCapture.h"
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"   // the host (civ_file_calls.rs)
 #include "ee/EEScreensShims.h"
@@ -153,7 +152,7 @@ long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer)
     EECivFileContext theContext{&ioName, inPlayer, 0, UWideString(), {}};
     EeTechCivFileHost theHost{&theContext, &EECivFileCall};
     long theResult = ee_tech_civ_apply_file(&theHost, (const char*)ioName);
-    EECivCaptureApplyFile(theName, inPlayer, theResult);   // TEST ONLY: CVAF
+    ee_screens_civc_apply_file((const char*)theName, (uintptr_t)inPlayer, theResult);   // TEST ONLY: CVAF
     return theResult;
 }
 
@@ -195,4 +194,4 @@ extern "C" void ee_screenscpp_civl_message(EeScreensShimText inText)
 extern "C" void ee_screenscpp_civl_close(uintptr_t inSpec) { ((FSFileSpec*)inSpec)->Close(); }
 extern "C" void ee_screenscpp_civl_delete(uintptr_t inSpec) { delete (FSFileSpec*)inSpec; }
 extern "C" void ee_screenscpp_civl_capture(uintptr_t inName, uintptr_t inDirectory, int64_t inResult, uintptr_t inOutName, uintptr_t inOutUpgrades)
-{ EECivCaptureLoad(*(const UString*)inName, *(const UString*)inDirectory, (long)inResult, *(const UWideString*)inOutName, *(const std::vector<EECivUpgrade>*)inOutUpgrades); }
+{ ee_screens_civc_load(*(const UString*)inName, *(const UString*)inDirectory, (long)inResult, *(const UWideString*)inOutName, ((const std::vector<EECivUpgrade>*)inOutUpgrades)->data(), ((const std::vector<EECivUpgrade>*)inOutUpgrades)->size()); }

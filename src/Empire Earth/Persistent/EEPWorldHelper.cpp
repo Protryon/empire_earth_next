@@ -285,8 +285,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
         break;
     case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
-    case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
     case O::PphStrNew: return P64(new std::string);
     case O::PphStrDelete: delete &STR;
         break;
@@ -319,7 +317,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PcUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::PcUStrText: return P64((const char*)*(UString*)p);
     case O::PcSaveText: return UString((const char*)a[0]).Save(*(FSFile*)p);
-    // (EECore11OpC8) the scenario extension's text (gamecpp persist_text.rs; EETechCapture.cpp's EECore11OpC7 default)
+    // (EECore11OpC8) the scenario extension's text (gamecpp persist_text.rs; EETechTree.cpp's EECore11OpC7 default)
     case O::C11ScenarioExtension: return (int64_t)(intptr_t)(const char*)gScenarioExtension;
     // (EEPLoaderOp) The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
     case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
@@ -617,7 +615,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
-double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTree.cpp
 double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;

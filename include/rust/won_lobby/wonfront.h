@@ -68,12 +68,10 @@ enum class EeWonFrontOp : uint32_t {
   TextLength,
   /// `EEIsValidName(UWideString(a))`.
   IsValidName,
-  /// `new <the EeWonFrontEvent a's class>`.
+  /// `new EEUIEWonNetEvent((EeWonFrontCall)a)`: the event that runs the call `a` (round 37: the one event class).
   EventNew = 40,
   /// `((UIEvent*)a)->Dereference()`.
   EventDeref,
-  /// `EEUIEWNSetTriggerEvent((UIEvent*)a, (UIControl*)b, c)`.
-  SetTrigger,
   /// `((UIControl*)a)->SetTriggerEvent(b, (UIEvent*)c)`.
   ControlSetTriggerEvent,
   /// `((UIControl*)a)->SetDisplayMode(b ? kDisplayModeShown : kDisplayModeHidden)`.
@@ -389,34 +387,12 @@ enum class EeWonFrontCall : uint32_t {
   StatRefresh,
   /// EEWonNetAvailableGameFormManager::Get.
   FormManagerGet,
-};
-
-/// The new events the screens make (`EventNew`), one C++ class each.
-enum class EeWonFrontEvent : uint32_t {
-  AgActivateForm = 0,
-  AgBack,
-  AgCheckPassword,
-  AgClickGameFilter,
-  AgCloseForm,
-  AgDeactivateForm,
-  AgDoubleclickUser,
-  AgHostOrJoinGame,
-  AgSendChat,
-  AgToggleHostScreen,
-  AgToggleJoinScreen,
-  AgUpdateForm,
-  ArActivateForm,
+  /// EEUIEWNARBack::ProcessEvent (R6 WON lobby and network round 37: the three Pop events).
   ArBack,
-  ArClickUpdateAccount,
-  ArDeactivateForm,
-  ArDoubleClickRoom,
-  ArJoinRoom,
-  ArUpdateForm,
+  /// EEUIEWNMUACancel::ProcessEvent.
   MuaCancel,
-  MuaOpenScreen,
-  MuaSubmit,
+  /// EEUIEWNSSCancel::ProcessEvent.
   SsCancel,
-  SsOk,
 };
 
 /// A list line's number or flag (`GamesLineGet`, `RoomsLineGet`, `StatLineGet`, `StatLineSet`).
@@ -480,10 +456,6 @@ ptrdiff_t ee_won_front_call(EeWonFrontCall call_, void *obj, ptrdiff_t a);
 
 /// Resets the originals' statics (the driver, between its two sides' runs).
 void ee_won_front_reset();
-
-/// The front-end call a WON screen event's ProcessEvent makes (`EEWonFrontEvent`'s), or -1 for the three events
-/// that pop the manager's form instead (ArBack, MuaCancel, SsCancel: `EEUIEWNPop`): `FrontNewEvent`'s class.
-int32_t ee_won_front_event_call(EeWonFrontEvent event);
 
 }  // extern "C"
 

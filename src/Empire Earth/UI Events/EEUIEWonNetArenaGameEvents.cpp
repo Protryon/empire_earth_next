@@ -64,13 +64,10 @@
 #include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
+#include "ee/EEUIEWonNetEvent.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUICWonNetStatBox.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "rust/won_lobby/wonfront.h"
 #include "rust/won_lobby/wonnet.h"
 static void OnGamePassword(const char* inPassword);

@@ -8,8 +8,11 @@
 #define WON_NETLOGIC_WORLD_H
 #include <string.h>
 #include <list>
+#include <vector>
 #include "rust/won_lobby/lobbyevt.h"
 #include "rust/won_net/adminop.h"
+#include "rust/won_net/reqmake.h"
+#include "rust/won_net/reqop.h"
 #include "rust/won_net/ffi.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/httpdoc.h"
@@ -45,7 +48,7 @@ enum LobbyResourceCtrlId {
     ID_JoinGame, ID_LeaveGame, ID_StartGame, ID_RefreshGameList, ID_AddFriend, ID_RefreshFriends, ID_AddLANName,
     ID_ChangeLANBroadcast, ID_FilterDirtyWordsCheck, ID_AnonymousToFriendsCheck, ID_ChooseNetworkAdapter,
 };
-enum HTTPDocType { HTTPDocType_MOTD = 0, HTTPDocType_TOU = 1, HTTPDocType_ADV = 2 };
+// (HTTPDocType is the Rust enum, rust/won_net/httpdoc.h)
 
 // ---- the lobby's events: real Rust events under a shell
 struct ComponentEvent {
@@ -154,11 +157,17 @@ static void InitAddAll(ServerContext* inList, const std::list<std::string>& inNa
 // a Rust request's description (the op it makes, described and freed)
 static std::string ReqText(EeWonReqOp* inOp)
 {
+    // its members and its first request's bytes (the multi directory query's paths: InitLogic's, round 37), as hex
+    std::string s, m, q;
+    ee_won_reqop_describe(inOp, [](void* c, const uint8_t* d, size_t n) { static_cast<std::string*>(c)->assign((const char*)d, n); }, &m);
+    ee_won_reqop_next_request(inOp, ee_won_reqop_length_field_size(inOp),
+                              [](void* c, const uint8_t* d, size_t n) { static_cast<std::string*>(c)->assign((const char*)d, n); }, &q);
+    static const char kHex[] = "0123456789abcdef";
+    for (unsigned char ch : q) { m += kHex[ch >> 4]; m += kHex[ch & 15]; }
     EeWonHostOp* h = ee_won_hostop_request(inOp);
-    std::string s;
     ee_won_hostop_describe(h, [](void* c, const uint8_t* d, size_t n) { static_cast<std::string*>(c)->assign((const char*)d, n); }, &s);
     ee_won_hostop_free(h);
-    return s;
+    return s + " members " + m;
 }
 static std::string Hex(const std::string& b)
 {
@@ -182,11 +191,14 @@ struct RustServerOp : AsyncOp {
     }
     static RustServerOp* NewHttpGet(const std::string& u) { return new RustServerOp("http get " + u); }
     static RustServerOp* NewHttpDocument(const std::string& p, int t) { return new RustServerOp("http document " + p + " " + N(t)); }
+    // the request's description, as NewRequest's (InitLogic's directory query became ee_won_reqmake_init_dirs in R6
+    // WON lobby and network round 37: the original's paths here, the Rust's in the new host)
     static RustServerOp* NewGetMultiDir(ServerContext* c, DWORD f, const std::wstring* p, int n)
     {
-        std::string s = "multi dir " + Id(c) + " " + N(f);
-        for (int i = 0; i < n; i++) s += " " + Narrow(p[i]);
-        return new RustServerOp(s);
+        std::vector<const void*> aPaths(n + 1);
+        std::vector<size_t> aLengths(n + 1);
+        for (int i = 0; i < n; i++) { aPaths[i] = p[i].data(); aLengths[i] = p[i].size(); }
+        return NewRequest(ee_won_reqmake_get_multi_dir(f, &aPaths[0], &aLengths[0], n, sizeof(wchar_t)), c);
     }
     void SetNum(int w, long long v) { Log(Id(this) + " SetNum " + N(w) + " " + N(v)); }
     void Set(int w, RefCount* o) { Log(Id(this) + " Set " + N(w) + " " + Id(o)); }

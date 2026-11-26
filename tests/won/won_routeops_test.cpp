@@ -8,7 +8,7 @@
 // by a connection-less op. `--print` prints the lines instead. The exit code is the number of failures.
 //
 // PeerAuthOp is a Rust op on the op base whose real run needs certificates: as won_servconn_test, this driver
-// defines PeerAuthOp's constructor and RustServerOp's members itself (ServerOp.cpp is not linked).
+// defines a stand-in peer authentication op (StandinPeerAuth) and makes the connections use it.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,7 +97,7 @@ static std::string Ids(const std::list<unsigned short>& inIds)
     return s + "]";
 }
 
-// ---- the stand-in peer authentication: PeerAuthOp's constructor and RustServerOp's members
+// ---- the stand-in peer authentication
 
 static std::map<const void*, IPAddr> sPeerAddr;
 static int sListenPort;
@@ -117,9 +117,15 @@ static WONStatus StandinConnect(BlockingSocket* inSocket, const IPAddr& inAddr, 
     anOp->RunBlock(inTimeout);
     return anOp->GetStatus();
 }
-namespace WONAPI {
-RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp) {}
-RustServerOp::~RustServerOp()
+// (a class of its own since R6 WON lobby and network round 37: RustServerOp is header-only; the connection makes
+// it through won_servconn_cpp.h's maker)
+class StandinPeerAuth : public AsyncOp {
+public:
+    ~StandinPeerAuth();
+    virtual void RunHook();
+    static AsyncOp* New(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket);
+};
+StandinPeerAuth::~StandinPeerAuth()
 {
     StandinMembers aMembers;
     PlatMutexLock(sLinesLock);
@@ -131,17 +137,14 @@ RustServerOp::~RustServerOp()
     sPeerAddr.erase(this);
     PlatMutexUnlock(sLinesLock);
 }
-void RustServerOp::RunHook()
+void StandinPeerAuth::RunHook()
 {
     IPAddr anAddr = sPeerAddr[this];
     this->Finish(StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000));
 }
-void RustServerOp::CleanupHook() { this->mTracker.KillAll(); }
-bool RustServerOp::CallbackHook(AsyncOp*, int) { return false; }
-RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
-                                        bool)
+AsyncOp* StandinPeerAuth::New(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket)
 {
-    RustServerOp* that = new RustServerOp(static_cast<EeWonHostOp*>(NULL));
+    StandinPeerAuth* that = new StandinPeerAuth;
     PlatMutexLock(sLinesLock);
     sPeerMembers[that].mSocket = inSocket;
     sPeerMembers[that].mAuthContext = inContext;
@@ -149,7 +152,6 @@ RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inCon
     sPeerAddr[that] = inAddr;
     PlatMutexUnlock(sLinesLock);
     return that;
-}
 }
 
 // ---- the op dump: every member the op's readers use (the original's members, or the Rust op's accessors)
@@ -1464,6 +1466,7 @@ static std::string GoldenPath()
 
 int main(int argc, char** argv)
 {
+    ServerConnectionCpp::gPeerAuthMaker = StandinPeerAuth::New;
     BindServerConnectionCpp(false);
     AsyncSocket::StartWinsock();
     {

@@ -32,6 +32,7 @@
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "won_file37_orig.h" // FileReader, FileWriter
 #include "rust/won_lobby/persist.h"
 #include "rust/won_lobby/lobbymap.h"
 #include "rust/won_lobby/resource.h"

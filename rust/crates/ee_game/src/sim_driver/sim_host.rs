@@ -373,7 +373,10 @@ pub fn flare(player: c_ulong) -> EeSimDriverSpot {
     }
     let (x, y) = (gc::h(gc::O::DkTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
-        (0..h(O::PlayerAllyCount, human, &[])).map(|k| gc::h(gc::O::PlAllyAt, human, &[k]) as usize).collect();
+        ee_sim::units::player_lists::player_list(human as u64, ee_sim::units::player_lists::EE_UNITS_LISTS_ALLIES)
+            .into_iter()
+            .map(|a| a as usize)
+            .collect();
     for &a in &allies {
         gc::h(gc::O::PlFlareReceived, a, &[human as i64, x as i64, y as i64]);
     }
@@ -482,9 +485,10 @@ pub fn cancel_game() {
     crate::screens::post_if_ui(0x412);
 }
 
-/// The player's wonder count (`GetNumWonderUnits`).
+/// The player's wonder count (`GetNumWonderUnits`: its wonders' list, ee_sim player_lists.rs).
 pub fn wonders(player: u64) -> c_long {
-    gc::h(gc::O::DwWonderCount, player as usize, &[]) as c_long
+    use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
+    player_op(player, EE_UNITS_LISTS_WONDERS, ListOp::Len) as c_long
 }
 
 /// The AI manifest's ids.

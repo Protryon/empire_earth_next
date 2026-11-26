@@ -39,6 +39,9 @@ pub struct EeWonCompMembers {
     pub timer: i8,
     /// `mExtraStuff` (owned by the C++; the Rust tests only whether it is made).
     pub extra: isize,
+    /// `mCt`: the Rust container of a component that is a container, else 0 (R6 WON GUI round 37: Component's
+    /// virtuals that a container overrides run the container's call, `compobj::ee_won_comp_call`).
+    pub ct: isize,
 }
 
 /// The block's offset in a C++ `Component` (RefCount's vtable pointer and its 32-bit count, padded).
@@ -334,7 +337,7 @@ mod tests {
 
     #[test]
     fn the_block_is_the_c_layout() {
-        assert_eq!(std::mem::size_of::<EeWonCompMembers>(), 48);
+        assert_eq!(std::mem::size_of::<EeWonCompMembers>(), 56);
         let m = EeWonCompMembers::default();
         let base = &m as *const _ as usize;
         assert_eq!(&m.bounds as *const _ as usize - base, 8);
@@ -344,6 +347,7 @@ mod tests {
         assert_eq!(&m.invalid as *const _ as usize - base, 33);
         assert_eq!(&m.timer as *const _ as usize - base, 34);
         assert_eq!(&m.extra as *const _ as usize - base, 40);
+        assert_eq!(&m.ct as *const _ as usize - base, 48);
     }
 
     #[test]

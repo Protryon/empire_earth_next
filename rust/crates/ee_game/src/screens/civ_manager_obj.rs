@@ -81,9 +81,13 @@ pub(crate) fn civilizations<C: Cpp + ?Sized>(c: &mut C, out: usize, era: Option<
 
 /// `ApplyUpgrade(upgrade, player)`: the capture's first half, the simulation's apply over [`Host`], the second.
 pub(crate) fn apply_upgrade<C: Cpp + ?Sized>(c: &mut C, upgrade: u32, player: c_long) -> bool {
-    let capture = c.civm_capture_begin(upgrade, player as i64);
+    let commit = &mut ee_sim::app::capture::commit;
+    let capture =
+        crate::screens::civ_capture::apply_begin(c, upgrade, player, &crate::screens::civ_capture::MANAGER, commit);
     let result = ee_sim::tech::civ_apply::apply_upgrade(&mut Host { c: &mut *c }, upgrade, player as i32);
-    c.civm_capture_end(capture, result);
+    if let Some(a) = capture {
+        crate::screens::civ_capture::apply_end(c, *a, result, commit);
+    }
     result
 }
 

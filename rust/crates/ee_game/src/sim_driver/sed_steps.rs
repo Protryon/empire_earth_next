@@ -148,7 +148,7 @@ pub fn unit_ref(word: &str) -> c_ulong {
         let u = gc::h(gc::O::MmNodeUnit, n, &[]) as usize;
         if u != 0 {
             let p = h(O::NodeUnitPlayer, u, &[]) as usize;
-            if p != 0 && gc::h(gc::O::TcPlayerId, p, &[]) != 0 {
+            if p != 0 && gc::h(gc::O::RoPlayerId, p, &[]) != 0 {
                 id = gc::h(gc::O::RoUnitId, u, &[]) as c_ulong;
             }
         }

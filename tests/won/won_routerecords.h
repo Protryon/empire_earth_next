@@ -5,6 +5,7 @@
 // their statements unchanged: the drivers print the copies as they printed the classes'.
 #ifndef EE_TESTS_WON_ROUTERECORDS_H
 #define EE_TESTS_WON_ROUTERECORDS_H
+#include "won_net37_orig.h" // MatchResult
 #include "rust/won_net/routeop.h"
 #include "rust/won_net/smartroute.h"
 namespace WONAPI {
@@ -307,13 +308,13 @@ public:
     bool GetLastTargetClient(ClientInfo& out) { SMART_GET(EeWonSmartGet::LastClient, 0, 0, CopyClient, out); }
 #undef SMART_GET
     // Finds the client a typed name refers to: exact, unique prefix, ambiguous or not found
-    SmartRoutingConnection::MatchResult FindClient(const std::wstring& inName, ClientInfo& out, bool& outFound)
+    MatchResult FindClient(const std::wstring& inName, ClientInfo& out, bool& outFound)
     {
         AutoCrit aCrit(this->mConn->GetDataLock());
         EeWonSmartRecord r;
         int result = ee_won_smart_find(this->mConn->mModel, inName.data(), inName.length(), &r, &outFound);
         if (outFound) CopyClient(out, r);
-        return (SmartRoutingConnection::MatchResult)result;
+        return (MatchResult)result;
     }
 private:
     SmartRoutingConnection* mConn;

@@ -6,8 +6,6 @@
 #include <map>
 #include <set>
 #include <vector>
-#include <stdlib.h>
-#include <time.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -15,26 +13,16 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "rust/won_net/udpmgr.h"
 
 namespace WONAPI {
 // Binds the lobby UDP port from the config (8888 by default; + the harness slot's offset, TEST ONLY), else a random
-// port 10000-19999, and starts receiving
+// port 10000-19999, and starts receiving (ee_won udpmgr.rs ee_won_udpmanager_bind_lobby)
 void LobbyBindUDPPort()
 {
     LobbyConfig* aConfig=GetLobbyConfig();
     unsigned short aPort=(unsigned short)((aConfig?aConfig->mLobbyPort:8888)+LobbyTestPortOffset());
-    LobbySetLobbyPort(aPort);
     UDPManager* aMgr=LobbyGetUDPManager();
-    if(aMgr==NULL)
-        return;
-    WONStatus aStatus=aMgr->Bind(aPort,true);
-    if(aStatus!=0) {
-        srand(time(NULL));
-        aPort=rand()%10000+10000;
-        aStatus=aMgr->Bind(aPort,false);
-        LobbySetLobbyPort(aPort);
-    }
-    if(aStatus==0)
-        aMgr->SetAutoRecv(true);
+    LobbySetLobbyPort(ee_won_udpmanager_bind_lobby(aMgr!=NULL?aMgr->GetManagerObject():NULL,aPort));
 }
 }

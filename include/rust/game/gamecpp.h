@@ -274,10 +274,6 @@ enum class EeGameCpp : uint32_t {
   VecTilesClear,
   VecUnitsClear,
   SortTilesNear,
-  CapEvent,
-  CapStartEvent,
-  CapStartPoint,
-  CapContagion,
   CxIsColor,
   CxSetColor,
   AeClearEffects,
@@ -363,9 +359,6 @@ enum class EeGameCpp : uint32_t {
   PickerUnlock,
   PlAddOwnSight,
   PlAddPendingUnits,
-  PlAlliesCount,
-  PlAlliesPush,
-  PlAllyAt,
   PlCivApplyDeferred,
   PlCivApplyLevel21,
   PlCivSetName,
@@ -567,16 +560,6 @@ enum class EeGameCpp : uint32_t {
   CalSetSecondaryRaw,
   CalSetSoundRaw,
   CalSetTargetRaw,
-  CanCastScopeDelete,
-  CanCastScopeNew,
-  CanCastScopeRecord,
-  CapAged,
-  CapCast,
-  CapContagionEvent,
-  CapSave,
-  CapStart,
-  CapStop,
-  CapUpdate,
   ContinentOfTile,
   CxFireEffect,
   CxSetFireEffect,
@@ -852,7 +835,6 @@ enum class EeGameCpp : uint32_t {
   PlAssignSavedGroup,
   PlCanBuy,
   PlCivAddUpgrades,
-  PlCopyAllies,
   PlCountQueuedImprovements,
   PlFlareReceived,
   PlGetSlot,
@@ -920,7 +902,6 @@ enum class EeGameCpp : uint32_t {
   UnloadGoalTransport,
   VecCivUpgradesDelete,
   VecCivUpgradesOfMsg,
-  VecPlayersAt,
   VotingPropose,
   WCanBuyCivilization,
   WRemovePlayerFromGame,
@@ -1729,7 +1710,6 @@ enum class EeGameCpp : uint32_t {
   CgUnitsCount,
   CgUnitsAt,
   CgUnitsInArea,
-  CgCaptureContagion,
   CgCalamityIndex,
   CgWriteClassId,
   CgFileReadLong,
@@ -1783,7 +1763,6 @@ enum class EeGameCpp : uint32_t {
   PphLogUnknownAi,
   PphCpSetAi,
   PphIsAllied,
-  PphAddAlly,
   PphStrNew,
   PphStrDelete,
   PphStrSize,
@@ -2207,7 +2186,6 @@ enum class EeGameCpp : uint32_t {
   ClSprintfSeconds,
   TkTreeFields,
   TkCurrentPlayer,
-  TkPlayerIndex,
   TkPlId,
   TkPostShowEpochName,
   TkMainGameForm,
@@ -2220,7 +2198,6 @@ enum class EeGameCpp : uint32_t {
   TkSetRef,
   TkNeedsUnitMedia,
   TkTrigger,
-  TkTreePlayer,
   TkEpochReached,
   TkStatReset,
   TkStatSet,
@@ -2270,7 +2247,6 @@ enum class EeGameCpp : uint32_t {
   TkNodeFields,
   TkNodeData,
   TkNodeTree,
-  TkClassCosts,
   TkUpgrade,
   TkInCostSet,
   TkVariant,
@@ -2528,23 +2504,12 @@ enum class EeGameCpp : uint32_t {
   TbShareData,
   TbSetTree,
   TbNewNode,
-  TbClassesResize,
-  TbClassRead,
-  TbClassCount,
-  TbClassAt,
-  TbCostsInsert,
-  TbCostsCount,
-  TbCostsDelete,
-  TbCostsClear,
   TbButton,
   TbCopyButton,
   TbSetButton,
   TbButtonGet,
   TbSwapButton,
   TbGlobalTree,
-  TbSetPlayerIndex,
-  TbCopyPlayer,
-  TbSetPlayer,
   TbIsHuman,
   TbClassFamily,
   TbNodeIsObsolete,
@@ -2577,15 +2542,6 @@ enum class EeGameCpp : uint32_t {
   DcCount,
   DcAt,
   DcSet,
-  TcBytes,
-  TcUpgradeFirst,
-  TcUpgradeEnd,
-  TcUpgradeMediaCount,
-  TcUpgradeButtonCount,
-  TcPlayerId,
-  TcPlayerPopulationBonus,
-  TcPlayerTributeFee,
-  TcPlayerBB44,
   LcWideText,
   LcLongVecNew,
   LcLongVecDelete,
@@ -2690,7 +2646,6 @@ enum class EeGameCpp : uint32_t {
   DsArea,
   DsSetName,
   DsRandomPlayer,
-  DsTownCount,
   DsRandomTown,
   DsLargestLand,
   DsLargestAny,
@@ -2802,11 +2757,9 @@ enum class EeGameCpp : uint32_t {
   DvNameNarrow,
   DvNameLoad,
   DvNameSave,
-  DvCanAfford,
   DvDeferredPush,
   DvDeferred,
   DwNeeded,
-  DwWonderCount,
   DwWonderTime,
   DwVictoryTime,
   DwGameTime,
@@ -3110,7 +3063,6 @@ enum class EeGameCpp : uint32_t {
   EaStart,
   EaStop,
   EaTimeOfDay,
-  EaTownCount,
   EaTownHullContains,
   EaUnloadMedia,
   EaVisibleSpace,
@@ -3151,14 +3103,6 @@ enum class EeGameCpp : uint32_t {
   EwStatsEndTime,
   EwStatsSeries,
   C11ScenarioExtension,
-  C11TcUnitComplex,
-  C11TcUnitId,
-  C11TcUnitType,
-  C11TcUnitHitPoints,
-  C11TcUnitTileNode,
-  C11TcComplexBuilt,
-  C11TcComplexPrevious,
-  C11TcComplexFlightTime,
   C11NmSender,
   C11NmPlayer,
   C11NmCurrent,
@@ -3230,7 +3174,6 @@ enum class EeGameCpp : uint32_t {
   C11CgFunctor,
   C11CgDump,
   C11CgText,
-  C11CgCapture,
   C11CgUnknown,
   C11CgRandom,
   C11CgDistance,
@@ -5139,18 +5082,6 @@ void *ee_gamecpp_pch_assign(void *helper,
 /// TSWP (EETechCaptureSweep): per player (1 on) its tree's head record, then one record per node and epoch.
 void ee_gamecpp_tech_capture_sweep();
 
-/// EETechCaptureUpgrade: the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
-/// size first; 0 for no upgrade. mMediaCount and mButtonLoadCount count the presentation's media loads
-/// (EEPlayer::LoadUnitClassMedia, SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the
-/// record carries simulation state only.
-void ee_gamecpp_tech_capture_upgrade(void *record,
-                                     void *upgrade);
-
-/// EETechCapturePlayer: the player's fields the effects change (population bonus, tribute fee, mBB44); -1 for no
-/// player.
-void ee_gamecpp_tech_capture_player(void *record,
-                                    void *player);
-
 /// EEMessage::ExportMessage: the codec's bytes in a new[] block (the caller deletes it), and their size.
 ///
 /// # Safety
@@ -5923,31 +5854,6 @@ void ee_gamecpp_server_xfer_status(void *server,
 
 /// EEServer::ServerSlot48: message 0x12 posted to the UI thread (two zero parameters).
 void ee_gamecpp_server_post_12();
-
-/// A node's state record (TNRS, TNPR, ...: id, epochs, flags, delay, prerequisites, the tree's epochs).
-///
-/// # Safety
-/// `record` is the live capture record, `node` a live node.
-void ee_gamecpp_tech_capture_node_rec(void *record,
-                                      void *node);
-
-/// An epoch's state record: its node's, then its SOL counters.
-///
-/// # Safety
-/// As [`ee_gamecpp_tech_capture_node_rec`] (`epoch` a live epoch).
-void ee_gamecpp_tech_capture_epoch_rec(void *record, void *epoch);
-
-/// A tree's state record (its epochs, the player).
-///
-/// # Safety
-/// `record` is the live capture record, `tree` a live tree.
-void ee_gamecpp_tech_capture_tree_rec(void *record, void *tree);
-
-/// EVUN: one unit an effect walks (its id, type, hit points, flags, flight time), when capturing.
-///
-/// # Safety
-/// `unit` is a live unit.
-void ee_gamecpp_tech_capture_unit_step(void *unit, bool applies, long value);
 
 /// The POSIX `main`'s start after EE-SIM's turn: -1 and the command line in `out_line` to run the game (EERun);
 /// else the exit code (the smoke test's, 3 for no game data, 1 when the data root cannot be entered).

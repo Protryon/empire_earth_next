@@ -44,7 +44,7 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1248f6 124a88 RTS Engine/Map/RTSVisibleMap.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
-12c3eb 12cac8 Empire Earth/Empire Earth/EECivilization.cpp
+
 12cac8 12dba8 Empire Earth/Empire Earth/EECommandLine.cpp
 12dba8 12ed4e Empire Earth/Empire Earth/EEEMStorm.cpp
 12ed4e 12f4b2 Empire Earth/Empire Earth/EEEnvironmentManager.cpp
@@ -69,9 +69,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 16066d 16100f Empire Earth/Physics Thread/EEPPatrolGroup.cpp
 16100f 161825 RTS Engine/Physics/RTSPhysics.cpp
 161825 16d346 Empire Earth/Player/EEPlayer.cpp
-16d346 16e1a2 Empire Earth/Player/EEPlayerStatistics.cpp
-16e5b9 16ef03 Empire Earth/Player/EEPPlayerEventList.cpp
-16ef03 16f892 RTS Engine/Player/RTSPlayer.cpp
 16f892 16ff5f Empire Earth/Scenario Editor/EESEEvents.cpp
 16ff5f 1705a2 Empire Earth/Scenario Editor/EESEIAExport.cpp
 1705a2 172125 Empire Earth/Scenario Editor/EESEInstructions.cpp
@@ -96,10 +93,8 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1c5f73 1ca4ee Empire Earth/Scenario Manager/EESMObject.cpp
 1ca4ee 1cba2f Empire Earth/Scenario Manager/EEEvent.cpp
 1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp
-1cedce 1cfeef Empire Earth/Tech Tree/EETechTreeNode.cpp
 1e71cc 1e853a Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
 1e9fed 1eafcb Empire Earth/UI Events/EEUIEWonNetArenaGameEvents.cpp
-1eafcb 1eb5e2 Empire Earth/UI Events/EEUIEWonNetArenaRoomEvents.cpp
 1ebc47 1f1f19 Empire Earth/Units/EEActiveGroup.cpp
 1f1f19 1f57d3 Empire Earth/Units/EEComplexDoppelganger.cpp
 1f57d3 201d85 Empire Earth/Units/EEComplexUnit.cpp
@@ -137,8 +132,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
 27bf4b 27c0f3 Empire Earth/Civilization Builder/EEAreaEffect.cpp
-27c0f3 27c8b9 Empire Earth/Civilization Builder/EEAreaEffectTemplate.cpp
-27cfdb 27efca Empire Earth/Civilization Builder/EECBUIListBox.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
 27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
 2813f4 2830d0 Empire Earth/Civilization Builder/EECivilizationManager.cpp

@@ -3,18 +3,12 @@
 // ee/EEWonNetAvailableGameFormManager.h), over won_wonnet_world.h's FE stand-ins. No include guard: included inside
 // namespace FE::Ori (the deleted C++ defines the members) and FE::Rus (the forwards to the Rust define them).
 
-// The events are the original's only (FE_ORIGINAL_EVENTS, in FE::Ori): the game has one class holding its call
-// (EEWonFrontEvent, the driver's FE::Rus copy). The original's three popping events (ARBack, MUACancel, SSCancel: one
-// ICF-folded body) log the name of the game's one class for them, EEUIEWNPop; the others log their own class's,
-// which the Rus side's event logs for its call.
-#ifdef FE_ORIGINAL_EVENTS
-#define FE_EVENT_NAMED(C, NAME) \
+#define FE_EVENT(C) \
     class C : public UIEvent { \
     public: \
-        C() : UIEvent(NAME) {} \
+        C() : UIEvent(#C) {} \
         virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity); \
     };
-#define FE_EVENT(C) FE_EVENT_NAMED(C, #C)
 FE_EVENT(EEUIEWNAGActivateForm)
 FE_EVENT(EEUIEWNAGBack)
 FE_EVENT(EEUIEWNAGCheckPassword)
@@ -29,24 +23,22 @@ FE_EVENT(EEUIEWNAGToggleHostScreen)
 FE_EVENT(EEUIEWNAGToggleJoinScreen)
 FE_EVENT(EEUIEWNAGUpdateForm)
 FE_EVENT(EEUIEWNARActivateForm)
-FE_EVENT_NAMED(EEUIEWNARBack, "EEUIEWNPop")
+FE_EVENT(EEUIEWNARBack)
 FE_EVENT(EEUIEWNARClickUpdateAccount)
 FE_EVENT(EEUIEWNARDeactivateForm)
 FE_EVENT(EEUIEWNARDoubleClickRoom)
 FE_EVENT(EEUIEWNARJoinRoom)
 FE_EVENT(EEUIEWNAROpenScreen)
 FE_EVENT(EEUIEWNARUpdateForm)
-FE_EVENT_NAMED(EEUIEWNMUACancel, "EEUIEWNPop")
+FE_EVENT(EEUIEWNMUACancel)
 FE_EVENT(EEUIEWNMUAOpenScreen)
 FE_EVENT(EEUIEWNMUASubmit)
-FE_EVENT_NAMED(EEUIEWNSSCancel, "EEUIEWNPop")
+FE_EVENT(EEUIEWNSSCancel)
 FE_EVENT(EEUIEWNSSOk)
 FE_EVENT(EEUIEWNSSOpenScreen)
 FE_EVENT(EEUIEWNSCancel)
 FE_EVENT(EEUIEWNSOpen)
 #undef FE_EVENT
-#undef FE_EVENT_NAMED
-#endif
 
 class EEUICWonNetGamesBox : public UIListBox<EEUICWNGBLine> {
 public:
@@ -135,7 +127,6 @@ public:
     TMPoll* mPoll;
 };
 
-#ifdef FE_ORIGINAL_EVENTS
 // the test's events by number (kFrontEvents in the driver names them) and the form each runs on
 static UIEvent* FrontMakeEvent(int inKind)
 {
@@ -171,4 +162,3 @@ static UIEvent* FrontMakeEvent(int inKind)
     default: return new EEUIEWNSOpen;
     }
 }
-#endif

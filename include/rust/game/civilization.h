@@ -25,6 +25,16 @@ long ee_gamecpp_civ_load(void *civilization,
 /// `Save`: as `Load`, stopping at the first failed upgrade write; the first write error.
 long ee_gamecpp_civ_save(void *civilization, void *file);
 
+/// `CanAfford`: whether the upgrade is affordable (always, with custom civilizations off) and its cost into
+/// `out_cost` (when not null), counted against `list` (null: the purchased upgrades): ee_sim tech civilization.rs.
+bool ee_gamecpp_civ_can_afford(void *civilization,
+                               uint32_t upgrade,
+                               unsigned long *out_cost,
+                               void *list);
+
+/// `CanAffordAll`: every upgrade of the list affordable in turn.
+bool ee_gamecpp_civ_can_afford_all(void *civilization, void *list);
+
 /// `Buy`: an upgrade applied to a player, first paid for and recorded when buying; whether it applied.
 bool ee_gamecpp_civ_buy(void *civilization,
                         uint32_t upgrade,
@@ -40,10 +50,10 @@ void ee_gamecpp_civ_apply_level21(void *civilization);
 /// `Reapply`: after a load the purchased upgrades applied to the player but those of the deferred kind, which wait;
 /// 13 when one fails.
 long ee_gamecpp_civ_reapply(void *civilization,
-                            long player);
+                            void *player);
 
 /// `ApplyDeferred`: the deferred upgrades applied to the player and forgotten; 13 when one fails.
-long ee_gamecpp_civ_apply_deferred(void *civilization, long player);
+long ee_gamecpp_civ_apply_deferred(void *civilization, void *player);
 
 /// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
 bool ee_gamecpp_wonder_enough(size_t team);

@@ -34,14 +34,39 @@ folders).
   its own ee_game module, `rust/game/civilization.h`); the area effects' running state's file I/O Rust; dead code
   dropped.
 
-**C++ left**: EEPlayer.cpp's hosts (`EEPlayerHost`, the save's, the units', the tick's and the towns' operations: one
-statement a case), the class media setters over `EEPlayerClassStats` (they need EEUnitStats complete), the members
-whose bodies need a complete type the header does not have (`UnitsSwapped`: `EEPUnitSwap`; `DetachUnitFromAI`,
-`NoticeForeignUnit`, `GetNearestArea`, `GetNumWonderUnits`, `GetPopulationLimit`: the world), the constructors and
-destructor; the event list's world (`EEPPlayerEventList::Host`) and the statistics' gate (`Record`) and copy
-(`GetSeries`); the tech tree's `Get` lookups (a hot path) and the node data's containers (the world layout reads them
-by offset); EECivilization's `CanAfford` (the lobby's options).
+## Round 2 (branch rust-playertech2, 2026-11-25)
 
-**Next**: RTSPlayer folded into EEPlayer (its pure virtuals and the shims ee_game rts units.rs calls); the player's
-remaining containers (towns, herds, sight sharers, allies, patrol groups) into the Rust lists; the class media
-setters over one Rust operation; the statistics' name into the Rust save.
+Main measure C++ lines (tools/port_metrics.py): -1,257 for the round (forks -779, lead -478; the target was -1,500),
+compiled files -11 (the lane's: RTSPlayer.cpp, EEPPlayerEventList.cpp, EEPlayerStatistics.cpp, EETechCapture.cpp,
+EETechTreeNode.cpp, EECivilization.cpp, EECalamityCapture.cpp, EEAreaEffectTemplate.cpp, EEAECapture.cpp,
+EECBUIListBox.cpp, EECivCapture.cpp), classes -4, logic -70 (the lane's scope 528 -> 496). The whole tree at the tip:
+104,305 C++ lines, 326 compiled files, 15,114 logic lines, 776 classes.
+
+- **The player's hosts** (lead): ee_sim units player_native.rs answers the body, player, tick, save, unit-save and
+  towns' save operations that only wrote a pointer member (the world layout gained mActiveGroup, mGroups,
+  mHumanPlayer, mHealedUnitSet, mAirTraffic, mLastUnit and the town record's base), a Rust record field (the
+  player's, a complex unit's, a unit's, a node's, a town's), read a unit, class, stats or the physics through the
+  world views, or only called another Rust export; the game's hosts ask it before the C++ (the bodies' test hosts
+  are unchanged). About 130 cases and EETownCounter went.
+- **RTSPlayer folded into EEPlayer** (lead): one class (RTSPlayer a typedef for the engine's files); its overridden
+  virtuals gone, the hosts calling the Rust bodies directly. RTSPlayer.cpp, EEPPlayerEventList.cpp and
+  EEPlayerStatistics.cpp joined EEPlayer.cpp (the constructors, the statistics' Load/Save/GetSeries and
+  EEAddDeadUnitStatistic inline). The class media setters share one guard.
+- **The containers** (fork B): mTowns, mHerds, mAllies, mSightSharers, mPatrolGroups, mMediaWarnings,
+  mConstructionSites and mWonders are lists of the player's Rust object (`ListOp` over `EeUnitsPlayerLists`); the
+  world view reads them; their host cases and the four layout fields are gone.
+- **The tech tree and the civilization** (fork A): the node data's class costs and unit classes a Rust table
+  (`EeTechClassTable`), the tree's player index and player in its record, the capture headers gone (Rust calls the
+  capture records), CanAfford and the civilization's other members inline over civilization.rs, the civilization
+  host's per-field shims as record shims; the small civilization builder units merged (lead).
+
+**C++ left**: EEPlayer.cpp's hosts' cases on C++ objects (the tech tree's Get and walks, the unit classes' upgrades
+vector, the herds', patrol groups' and towns' methods, the UI and sound, the text and the temporary vectors the C++
+calls take), the virtuals the computer player overrides (TakeResource, ScaleCost, CanAfford, GetPopulationLimit and
+their host cases), the event list's sounds (mSound, mPlayed, mSounds), the base save's color and name; the tech
+tree's epoch list and the node's mData/mTree/mButton; EECivilization's vectors and name.
+
+**Next**: the event list's sound members into its Rust record; the unit save's loaded id (pass the player to
+ee_units_player_unit); the herds' and patrol groups' fields through the world layout as the towns'; the player's
+remaining C++ pointer members (mUnitClassUpgrades as a Rust list of upgrades, mTechnologies) toward a Rust-owned
+record; the dead Rust exports fork A listed.

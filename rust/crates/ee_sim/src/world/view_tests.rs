@@ -77,7 +77,7 @@ struct FakePlayer {
     viewed_unit: usize,
     selected_viewed_unit: usize,
     computer: usize,
-    allies: [usize; 3],
+    lists: usize,
 }
 
 impl Default for FakePlayer {
@@ -93,7 +93,7 @@ impl Default for FakePlayer {
             viewed_unit: 0,
             selected_viewed_unit: 0,
             computer: 0,
-            allies: [0; 3],
+            lists: 0,
         }
     }
 }
@@ -182,11 +182,8 @@ fn fake_layout() -> EeWorldLayout {
         player_first_unit: offset_of!(FakePlayer, first_unit) as u64,
         player_selected_group: offset_of!(FakePlayer, selected_group) as u64,
         player_computer_player: offset_of!(FakePlayer, computer) as u64,
-        player_allies: offset_of!(FakePlayer, allies) as u64,
-        player_sight_sharers: 0,
         player_pending_units: 0,
-        player_towns: 0,
-        player_herds: 0,
+        player_lists: offset_of!(FakePlayer, lists) as u64,
         world_players: offset_of!(FakeWorld, players) as u64,
         world_map: offset_of!(FakeWorld, map) as u64,
         world_num_players: offset_of!(FakeWorld, num_players) as u64,

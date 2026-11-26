@@ -137,6 +137,7 @@ GUIString WONLocalize(const GUIString& inFormat, const GUIString* a, const GUISt
 {
     return GUIString((GUIStringData*)ee_won_gui_localize(&inFormat, a, b, c, n, MutUnits, MutNew, sizeof(wchar_t)));
 }
+// the lobby's formatting functions (StringLocalizeCalls.cpp until R6 WON GUI round 37)
 // Returns the format string with <s1> replaced by the given string
 GUIString LobbyFormatString(const GUIString& format,const GUIString& first) { return WONLocalize(format,&first,NULL,NULL,1); }
 // Returns the format string with <s1> and <s2> replaced by the given strings

@@ -14966,8 +14966,6 @@ enum EeScreensScratch : uint32_t {
   kScratchCivlGot,
   /// EECivCapture `std::vector<long>` (sCivcTypes): a unit set's types (the original's collector's)
   kScratchCivcTypes,
-  /// EECivCapture `std::vector<long>` (sCivcIDs): a tech tree's node ids
-  kScratchCivcIDs,
   /// EECivCapture `UWideString` (sCivcName): a premade file's name and upgrades as loaded
   kScratchCivcName,
   /// EECivCapture `std::vector<EECivUpgrade>` (sCivcLoaded)
@@ -18794,12 +18792,6 @@ void ee_screens_ael_keep_strongest(size_t list);
 
 /// TEST ONLY: the capture's record after a tick (`EEAECaptureTick`'s target).
 void ee_screens_ae_capture_tick(float elapsed);
-
-/// CVAP's first half: its state (null when the capture is off).
-void *ee_screens_civc_apply_begin(uint32_t upgrade, long player);
-
-/// CVAP's second half (nothing for a null state).
-void ee_screens_civc_apply_end(void *state, bool result);
 
 /// CVLD (the C strings and the upgrades live for the call).
 void ee_screens_civc_load(const char *name,

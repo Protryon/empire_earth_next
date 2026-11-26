@@ -11,8 +11,6 @@
 namespace WONAPI {
 class AuthBase : public RefCount {
     EeWonAuthObj* mImpl;
-    AuthBase(const AuthBase&);
-    AuthBase& operator=(const AuthBase&);
 protected:
     virtual ~AuthBase() { ee_won_authobj_free(this->mImpl); }
 public:

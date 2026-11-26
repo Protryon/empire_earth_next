@@ -111,7 +111,8 @@ public:
     // callers call it) (provisional name)
     unsigned long GetNumGhostUnits() { return ee_app_ghost_count(); }
     EEGhostUnit* GetGhostUnit(size_t inIndex) { return (EEGhostUnit*)ee_app_ghost_at(inIndex); }   // NULL past the end
-    void AddGhostUnit(EEGhostUnit* inGhost);
+    // appends a ghost unit to the world's ghost list (the list: ee_sim app ghosts.rs)
+    void AddGhostUnit(EEGhostUnit* inGhost) { ee_app_ghost_push(inGhost); }
     // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
     void ActivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_activate(inUnit); }
     // 0x13b965 (EEUnit::Remove) (provisional name)

@@ -492,6 +492,35 @@ pub extern "C" fn ee_won_init_document_bytes(length: usize) -> usize {
     document_bytes(length)
 }
 
+/// InitLogic's `SaveTOU` (InitLogic.cpp's InitSaveTOU over a FileWriter until R6 WON lobby and network round 37): the
+/// terms-of-use `document` written to `path` without its last byte ([`document_bytes`]); a read-only file is made
+/// writable and opened again. True unless the write failed: a file that does not open counts as written.
+///
+/// # Safety
+/// `path` is a C string; `document` holds `length` bytes (or is NULL for none).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_init_save_tou(
+    path: *const std::ffi::c_char,
+    document: *const u8,
+    length: usize,
+) -> bool {
+    // SAFETY: the caller's C string
+    let name = unsafe { std::ffi::CStr::from_ptr(path) }.to_bytes();
+    let mut writer = ee_won_net::file::EeWonFileWriter::new();
+    // SAFETY: as above
+    let opened = unsafe { writer.open(path) }
+        || (!name.is_empty() && {
+            ee_won_net::wonfile::EeWonFile::new(name).set_read_only(false);
+            // SAFETY: as above
+            unsafe { writer.open(path) }
+        });
+    let n = document_bytes(length);
+    // SAFETY: the caller's bytes
+    let written = !opened || n == 0 || writer.write(unsafe { std::slice::from_raw_parts(document, n) }) == 0;
+    writer.close();
+    written
+}
+
 #[no_mangle]
 pub extern "C" fn ee_won_init_event(kind: i32) -> i32 {
     init_event(kind)
