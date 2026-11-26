@@ -226,6 +226,9 @@ mod game {
 
     /// One of the path bodies' C++ calls (`EE_UNITS_WP_*`).
     pub fn host(op: i32, unit: u64, arg: u64) -> i64 {
+        if let Some(v) = crate::units::cu_view::wp_view(op, unit) {
+            return v;
+        }
         // SAFETY: the operation's live unit (and goal)
         unsafe { ee_units_wp_host(op, unit, arg, std::ptr::null_mut()) }
     }

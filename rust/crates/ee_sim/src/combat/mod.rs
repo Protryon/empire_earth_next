@@ -18,6 +18,7 @@ pub mod capture_units;
 pub mod captured;
 pub mod cg_goal;
 pub mod cg_query;
+mod cg_view;
 pub mod cg_world;
 pub mod damage;
 pub mod damage_table;
@@ -42,6 +43,7 @@ pub mod search;
 pub mod search_ffi;
 #[cfg(test)]
 mod search_tests;
+mod shot_view;
 pub mod shots;
 pub mod store;
 #[cfg(test)]

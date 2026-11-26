@@ -969,6 +969,11 @@ pub(crate) mod game {
     impl UcHost for GameB {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) =
+                crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Buildings, op, class, unit, a, b, c, f)
+            {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_ucb_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

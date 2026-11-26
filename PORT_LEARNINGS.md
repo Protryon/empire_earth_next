@@ -42187,3 +42187,45 @@ removals (no line joins), compiled files -1, logic -87, 12 headers gone.
   tour and `random-game --box-select --orders --seed 7` PASS; won_host_coverage PASS, wontest exit 0 (185 drivers);
   `gates.sh` GATES PASS (ai-game units [4, 36, 37], alive_computers [2, 3], classic_lua x 2; lan-game). Not run: the
   space, missile, app, placement and transport captures, plain saveload, POSIX builds.
+
+## The units' lane, round 13: the unit hosts' plain cases answered in Rust before the C++ (ee_sim units cu_view.rs, uc_view.rs, uc_kind_view.rs, uc_fwd_view.rs, cls_mv_view.rs, goal_view.rs, ghost_view.rs, dm_group_view.rs; combat shot_view.rs, cg_view.rs; branch rust-units13, 2026-11-26)
+
+Numbers: docs/progress/units.md ("Round 13"). port_metrics 47e9ad712 (origin/rust, batch 29) -> e7f818c6e: cpp_lines
+**-2,089**, logic -7 (12,147 -> 12,140), compiled files 269 -> 269, classes 724 -> 724, extern_c and rust_hdrs unchanged, unsafe
++274. The C++ line target (-2,000) is met; the logic target (-400) is not.
+
+- **One-statement host cases are shim, not logic.** The round answered about 1,460 host cases in Rust (a
+  `*_view.rs` per host returns `Some(answer)` for the plain reads, stores and one-call members, `None` falls through
+  to the C++ host) and deleted their C++ cases. logic_lines.py counts a one-statement case as shim, so the round's
+  -2,089 C++ lines are -1,584 shim and only -7 logic. A round whose aim is logic lines has to move whole bodies or the
+  C++ callees the remaining cases call (actions, the path manager, sounds, effects, the calamity classes, the tech
+  tree, the C++ containers); deleting plain cases moves only the line count.
+- **A case-deletion script took a case ending in a comment for a multi-line case.** Fork A's script decided a case
+  was multi-line when its line did not end in `return ...;` or `break;`; `case EE_UNITS_CU_TILE_LEVEL: ... // ...`
+  ended in a comment, so the script deleted up to the next case's end, and `EE_UNITS_CU_UNIT_LOAD_MEDIA` went with
+  it. EEUnit::LoadMedia was never run and every sim crashed (1cda1fde6
+  restored it). Strip comments before judging a case's end, and after any scripted deletion check every deleted
+  `case EE_X:` against the Rust match arms that now answer it (scratchpad u13_casecheck.py: the deleted cases not
+  re-added that no Rust `=>` arm names). On the merged tip it lists 10, all deliberate: the sight host's eight unit
+  reads (the sight body reads the unit's record itself and never asks), `EE_UNITS_EU_AREA_DAMAGE` (no caller) and two
+  class-host arms written over several lines (the check reads one line at a time).
+- **Merging a header-trimming batch into a lane that deleted the same lines.** Batch 29 (game headers 2) joined
+  wrapped lines and deleted declarations in nine of the lane's files that the forks had already cut. A three-way
+  merge gave conflict hunks in all of them; a resolver (scratchpad u13_resolve.py) took ours as the skeleton, applied
+  theirs' deletions and line joins wherever ours still kept every joined line, and inserted theirs' plain additions
+  at their anchor. The merge built 0/0 and the oracle stayed identical. port_metrics' segments then add up to more
+  than the round's total (-2,305 against -2,089): both sides had deleted some of the same lines.
+- **An include pruner that compiles each removal.** scratchpad u13_incprune.py drops an `#include` when every
+  module's compile job of the unit still passes `-fsyntax-only` without it (the jobs from tools/units.py, compiled
+  through clang_build.compile_to). It removed 45 lines from the class family, EESightRings, EEUGRustCombat and
+  EEWorldLayout; a removal that only compiled because another header pulled the same include transitively stays
+  legal until that header is trimmed (game headers lanes), so prune after their merges, not before.
+- **A Rust view over a C++ object's tail needs a start-up check.** ghost_view.rs reads `EeUnitsGhostFields` one
+  pointer past the `EEGhostUnit` (after its vtable pointer); EEGhostUnit.cpp now checks that offset at start-up, as
+  EEWorldLayoutRegister does for the other records.
+- **Line endings.** Fork B's first leg-2 commit wrote two new Rust files as CRLF; its second returned them to LF.
+  Files that were CRLF before (combat/reads.rs) stay CRLF.
+- **Edits outside the lane**: none in C++; include/rust/sim/combat.h regenerated. Rust call sites that now ask the
+  views first are all in ee_sim units and combat.
+- **Behaviour changes**: none observed (oracle seeds 2-7 identical after each merge; the captures, the saveload
+  matrix and the gates as listed in units.md).
