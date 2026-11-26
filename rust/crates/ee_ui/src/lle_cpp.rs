@@ -455,8 +455,6 @@ shims! {
     fn edit_delete_text(edit: usize) = ee_uicpp_edit_delete_text;
     fn control_tabbed_to(control: usize) = ee_uicpp_control_tabbed_to;
     fn control_tabbed_from(control: usize) = ee_uicpp_control_tabbed_from;
-    fn label_text(label: usize) -> usize = ee_uicpp_label_text;
-    fn edit_text(edit: usize) -> usize = ee_uicpp_edit_text;
     fn list_text(list: usize) -> usize = ee_uicpp_list_text;
     fn combo_process_down(combo: usize) = ee_uicpp_combo_process_down;
     fn combo_process_up(combo: usize) = ee_uicpp_combo_process_up;
@@ -549,6 +547,8 @@ shims! {
     fn radio_set_down_unchecked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_down_unchecked;
     fn radio_set_down_checked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_down_checked;
     fn radio_set_up_checked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_up_checked;
+    fn label_text(label: usize) -> usize = crate::lle_hosts::chains::label_text;
+    fn edit_text(edit: usize) -> usize = crate::lle_hosts::chains::edit_text;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's

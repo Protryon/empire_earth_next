@@ -268,8 +268,8 @@ tables! {
     /// the graph's own ops (the texts, the lines, the border)
     graph {
         TextSetBytes => v ee_uicpp_graph_text_set_bytes,
-        TextFgColor => v ee_uicpp_graph_text_fg_color,
-        TextSetTransparent => v ee_uicpp_graph_text_set_transparent,
+        TextFgColor => x chains::graph_text_fg_color,
+        TextSetTransparent => x own::text_set_transparent,
         SetBgRectangle => x chains::set_bg_rectangle,
         DrawBorder => r ee_uicpp_graph_draw_border,
         LineCreate => r ee_uicpp_graph_line_create,

@@ -234,8 +234,6 @@ extern "C" void ee_uicpp_label_delete_first_line(uintptr_t inLabel) { LABEL(inLa
 extern "C" void ee_uicpp_edit_delete_text(uintptr_t inEdit) { EDIT(inEdit)->DeleteText(); }
 extern "C" void ee_uicpp_control_tabbed_to(uintptr_t inControl) { CTL(inControl)->TabbedTo(); }
 extern "C" void ee_uicpp_control_tabbed_from(uintptr_t inControl) { CTL(inControl)->TabbedFrom(); }
-extern "C" uintptr_t ee_uicpp_label_text(uintptr_t inLabel) { return (uintptr_t)LABEL(inLabel)->GetGEText(); }
-extern "C" uintptr_t ee_uicpp_edit_text(uintptr_t inEdit) { return (uintptr_t)EDIT(inEdit)->GetGEText(); }
 extern "C" uintptr_t ee_uicpp_list_text(uintptr_t inList) { return (uintptr_t)LIST(inList)->GetGEText(); }
 extern "C" void ee_uicpp_combo_process_down(uintptr_t inCombo) { COMBO(inCombo)->ProcessDown(); }
 extern "C" void ee_uicpp_combo_process_up(uintptr_t inCombo) { COMBO(inCombo)->ProcessUp(); }
@@ -497,14 +495,7 @@ EE_UI_VOID(tbl_set_bg_color) { SC->SetBgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(tbl_set_bg_opacity) { SC->SetBgOpacity(f[0]); }
 EE_UI_VOID(tbl_set_set_rectangle) { SC->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(tbl_set_change_font) { SC->ChangeFont(reinterpret_cast<GEFont*>(c)); }
-EE_UI_CASE(tbl_text_button) { return (intptr_t)static_cast<UIButton*>(SC)->GetGEText(); }
-EE_UI_CASE(tbl_text_check) { return (intptr_t)static_cast<UICheckBox*>(SC)->GetTextLabel()->GetGEText(); }
-EE_UI_CASE(tbl_text_combo) { return (intptr_t)static_cast<UIComboBox*>(SC)->GetGEText(); }
-EE_UI_CASE(tbl_text_edit) { return (intptr_t)static_cast<UIEditBox*>(SC)->GetGEText(); }
 EE_UI_CASE(tbl_text_list) { return (intptr_t)static_cast<UILBString*>(SC)->GetGEText(); }
-EE_UI_CASE(tbl_text_radio) { return (intptr_t)static_cast<UIRadioButton*>(SC)->GetTextLabel()->GetGEText(); }
-EE_UI_CASE(tbl_text_label) { return (intptr_t)static_cast<UITextLabel*>(SC)->GetGEText(); }
-EE_UI_CASE(tbl_text_status) { return (intptr_t)static_cast<UIStatusBar*>(SC)->GetGEText(); }
 #undef SC
 // SetupGEText's two calls (lle_table.rs ee_ui_table_setup_text) on the text a
 
@@ -756,8 +747,6 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 #define theText reinterpret_cast<GEText*>(a)
 #define theLine reinterpret_cast<GELine*>(a)
 EE_UI_VOID(graph_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
-EE_UI_VOID(graph_text_fg_color) { *reinterpret_cast<GEColor*>(f) = theText->GetFgColor(); }
-EE_UI_VOID(graph_text_set_transparent) { theText->SetIsTransparent(b != 0); }
 EE_UI_CASE(graph_draw_border) { return g->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
 EE_UI_CASE(graph_line_create) { return (intptr_t) new GELine; }
 EE_UI_VOID(graph_line_delete) { delete theLine; }

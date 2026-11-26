@@ -1015,16 +1015,26 @@ const SET: [Option<SetFn>; 45] = [
 
 /// `SetupText`'s texts by class (tableobj.rs `TEXT_*`).
 #[cfg(not(any(test, feature = "no_cpp")))]
-const TEXT: [Shim; 8] = [
-    ee_uicpp_tbl_text_button,
-    ee_uicpp_tbl_text_check,
-    ee_uicpp_tbl_text_combo,
-    ee_uicpp_tbl_text_edit,
-    ee_uicpp_tbl_text_list,
-    ee_uicpp_tbl_text_radio,
-    ee_uicpp_tbl_text_label,
-    ee_uicpp_tbl_text_status,
+const TEXT: [unsafe fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize; 8] = [
+    chains::tbl_text_button,
+    chains::tbl_text_check,
+    chains::tbl_text_combo,
+    chains::tbl_text_edit,
+    tbl_text_list,
+    chains::tbl_text_check,
+    chains::tbl_text_label,
+    chains::tbl_text_status,
 ];
+
+/// The list box's text (`UILBString::mText`, a C++ member: its shim).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn tbl_text_list(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe { ee_uicpp_tbl_text_list(o, a, b, c, d, f) }
+}
 
 /// `TblMake`: the constructor of the record at `a`'s kind -> the control.
 ///

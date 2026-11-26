@@ -163,9 +163,7 @@ shims! {
     r ee_uicpp_graph_draw_border;
     r ee_uicpp_graph_line_create;
     v ee_uicpp_graph_line_delete;
-    v ee_uicpp_graph_text_fg_color;
     v ee_uicpp_graph_text_set_bytes;
-    v ee_uicpp_graph_text_set_transparent;
     v ee_uicpp_group_hide;
     r ee_uicpp_group_is_button;
     v ee_uicpp_group_set_dirty;
@@ -308,12 +306,5 @@ shims! {
     v ee_uicpp_tbl_set_bg_opacity;
     v ee_uicpp_tbl_set_set_rectangle;
     v ee_uicpp_tbl_set_change_font;
-    r ee_uicpp_tbl_text_button;
-    r ee_uicpp_tbl_text_check;
-    r ee_uicpp_tbl_text_combo;
-    r ee_uicpp_tbl_text_edit;
     r ee_uicpp_tbl_text_list;
-    r ee_uicpp_tbl_text_radio;
-    r ee_uicpp_tbl_text_label;
-    r ee_uicpp_tbl_text_status;
 }

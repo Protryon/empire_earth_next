@@ -1071,3 +1071,48 @@ pub(crate) fn radio_set_down_checked(control: usize, bitmap: usize) {
 pub(crate) fn radio_set_up_checked(control: usize, bitmap: usize) {
     button(control as Cpp, Bt::RadioSetUpChecked, bitmap as isize, 0, [0.0; 4]);
 }
+
+// ---- the made controls' texts (`SetupText`'s, lle_hosts.rs TEXT: `a` the control) and the label's, edit box's and
+// graph's text calls
+
+/// The text of the label `l` (`GetGEText()`).
+fn label_text_of(l: Cpp) -> isize {
+    label(l, Lb::Text, 0, 0, [0.0; 4])
+}
+/// The text of the edit box `e` (`GetGEText()`).
+fn edit_text_of(e: Cpp) -> isize {
+    direct::edit_call(e, crate::editobj::EeUiEditCall::Text, 0, 0).unwrap_or(0)
+}
+
+ops! {
+    /// `static_cast<UIButton*>(a)->GetGEText()`.
+    tbl_text_button => |o, a, b, f| button(p(a), Bt::Text, 0, 0, [0.0; 4]);
+    /// `static_cast<UICheckBox*>(a)->GetTextLabel()->GetGEText()` (a radio button's alike).
+    tbl_text_check => |o, a, b, f| label_text_of(button(p(a), Bt::TextLabel, 0, 0, [0.0; 4]) as Cpp);
+    /// `static_cast<UIComboBox*>(a)->GetGEText()` (the label's or edit box's).
+    tbl_text_combo => |o, a, b, f| {
+        let c = obj::<crate::comboobj::EeUiCombo>(Kind::Combo, p(a));
+        if c.is_null() { 0 } else { crate::comboobj::ee_ui_combo_ge_text(c) as isize }
+    };
+    /// `static_cast<UIEditBox*>(a)->GetGEText()`.
+    tbl_text_edit => |o, a, b, f| edit_text_of(p(a));
+    /// `static_cast<UITextLabel*>(a)->GetGEText()`.
+    tbl_text_label => |o, a, b, f| label_text_of(p(a));
+    /// `static_cast<UIStatusBar*>(a)->GetGEText()`.
+    tbl_text_status => |o, a, b, f| status(p(a), St::Text, 0, 0, [0.0; 4]);
+    /// `*(GEColor*)f = a->GetFgColor()` (a graph's text).
+    graph_text_fg_color => |o, a, b, f| {
+        let text = *(a as *const *mut ee_render::ge::smallobj::EeGeText);
+        put(f, ee_render::ge::smallobj::ee_ge_text_color(text, true), 3);
+        0
+    };
+}
+
+/// `label->GetGEText()` (lle_combo.rs).
+pub(crate) fn label_text(l: usize) -> usize {
+    label_text_of(l as Cpp) as usize
+}
+/// `edit->GetGEText()`.
+pub(crate) fn edit_text(e: usize) -> usize {
+    edit_text_of(e as Cpp) as usize
+}
