@@ -457,9 +457,9 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
                 crate::wmobj::EE_WON_WM_HANDLER_POPUP => crate::gamewin::deliver_popup(b),
                 _ => None,
             };
-            // (a Rust-made event has no C++ Deliver: one whose window went is dropped)
-            // SAFETY: the live event
-            r.or_else(|| unsafe { crate::wmobj::is_rust_event(b) }.then_some(0))
+            // (a Rust-made event, only the game's, has no C++ Deliver: one whose window went is dropped)
+            // SAFETY: the game's live event
+            r.or_else(|| (crate::compobj::is_game() && unsafe { crate::wmobj::is_rust_event(b) }).then_some(0))
         }
         Op::WmWin if a == EeWonWmWin::HandleMouse as isize => handle(b, C::HandleMouseEvent, c),
         Op::WmWin if a == EeWonWmWin::HandleKey as isize => handle(b, C::HandleKeyEvent, c),
