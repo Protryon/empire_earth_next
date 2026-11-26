@@ -32,18 +32,21 @@ use super::{cptr, h, hf, hp, pa, ptr, rec, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::EeNetSvSet;
 use ee_sim::netmsg::session::EE_NETMSG_SESS_DO_SLOT_INFO;
-use ee_sim::units::group_host::{self as gh, ee_units_selection};
-use ee_sim::units::group_obj::EeUnitsGroup;
-use ee_sim::world::view::{PlayerView, UnitView, WorldRead};
-use ee_sim::units::player_body::game::ee_units_player_body;
-use ee_sim::units::cu_cargo::{EE_UNITS_CU_DO_REMOVE_RESEARCH, EE_UNITS_CU_DO_TOGGLE_JIT, EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, EE_UNITS_CU_DO_UPDATE_JIT};
+use ee_sim::units::cu_cargo::{
+    EE_UNITS_CU_DO_REMOVE_RESEARCH, EE_UNITS_CU_DO_TOGGLE_JIT, EE_UNITS_CU_DO_UNLOAD_CARGO_NOW,
+    EE_UNITS_CU_DO_UPDATE_JIT,
+};
 use ee_sim::units::cu_small::EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES;
 use ee_sim::units::cu_world::{EE_UNITS_CU_DO_GO_FANATIC, EE_UNITS_CU_DO_SET_HOME_BASE};
+use ee_sim::units::group_host::{self as gh, ee_units_selection};
+use ee_sim::units::group_obj::EeUnitsGroup;
+use ee_sim::units::player_body::game::ee_units_player_body;
 use ee_sim::units::player_body::{
     EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, EE_UNITS_PLAYER_DO_SET_SELECTED_VIEWED, EE_UNITS_PLAYER_DO_UNSELECT_ALL,
 };
 use ee_sim::units::player_rest::game::ee_units_player_rest;
 use ee_sim::units::player_rest::EE_UNITS_PLAYER_REST_SET_GAME_RESULT;
+use ee_sim::world::view::{PlayerView, UnitView, WorldRead};
 
 // ---- the constants the bodies pass (EEMessage.cpp static_asserts them)
 /// `kGraphicEffectCommandConfirmationMove`, `...Attack`, `...GatherOther`, `kGraphicEffectDisbandUnitEmitter`.
@@ -340,7 +343,8 @@ fn immediate_cargo_unload(m: P) {
         && !cf(complex(transport)).mIsDisabled
         && !self::cargo(complex(transport)).is_empty()
         && self::cargo(hp(O::UnGetComplex, transport, &[])).contains(&(hp(O::UnGetComplex, cargo, &[]) as u64))
-        && cu(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, hp(O::UnGetComplex, transport, &[]), pa(hp(O::UnGetComplex, cargo, &[]))) == 0
+        && cu(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, hp(O::UnGetComplex, transport, &[]), pa(hp(O::UnGetComplex, cargo, &[])))
+            == 0
     {
         if h(O::UcIsTransport, unit_class(transport), &[]) != 0 {
             text = h(O::UcUnloadFailedText, unit_class(transport), &[]) as c_long;
@@ -1040,7 +1044,14 @@ pub unsafe extern "C" fn ee_gamecpp_msg_unit_act(i: *const i64, a: *mut c_void, 
         EE_NETMSG_ACT_SCRAMBLE => {
             let goal = hp(O::NewLocationGoal2D, 0, &[i[1] as c_long as i64, i[2] as c_long as i64]);
             // SAFETY: the live unit (EEComplexUnit::ClearAllGoalQueues)
-            unsafe { ee_sim::units::cu_small::game::ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES, u as *mut c_void, std::ptr::null_mut(), 0) };
+            unsafe {
+                ee_sim::units::cu_small::game::ee_units_cu_small(
+                    EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES,
+                    u as *mut c_void,
+                    std::ptr::null_mut(),
+                    0,
+                )
+            };
             h(O::CxQueueGoal, u, &[pa(goal), 0]);
             h(O::CxQueueGoal, u, &[pa(hp(O::GoalClone, goal, &[])), 1]);
             h(O::CxQueueAddTime, u, &[1, 1000]);
@@ -1126,7 +1137,9 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         }
         EE_NETMSG_PACT_ACKNOWLEDGE => {
             // SAFETY: the live player and unit (EEPlayer::PlayAcknowledgement)
-            unsafe { ee_units_selection(pl as *mut c_void, 9, i[1] as P as *mut c_void, 0, std::ptr::null(), 0, false, false) };
+            unsafe {
+                ee_units_selection(pl as *mut c_void, 9, i[1] as P as *mut c_void, 0, std::ptr::null(), 0, false, false)
+            };
         }
         EE_NETMSG_PACT_LOCK_CIV => psaved(pl).mCivilizationLocked = true,
         EE_NETMSG_PACT_REMOVE => {
@@ -1147,7 +1160,13 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
             let unit = hp(O::UnCastComplex, hp(O::WorldUnit, 0, &[i[1]]), &[]);
             if unit != 0 {
                 // SAFETY: the live unit's patrol group and the player (EEPPatrolGroup's select)
-                unsafe { ee_sim::units::patrol_group::ee_units_pg_select(patrol_group(unit) as *mut _, pl as *mut c_void, true) };
+                unsafe {
+                    ee_sim::units::patrol_group::ee_units_pg_select(
+                        patrol_group(unit) as *mut _,
+                        pl as *mut c_void,
+                        true,
+                    )
+                };
             }
         }
         _ => {}

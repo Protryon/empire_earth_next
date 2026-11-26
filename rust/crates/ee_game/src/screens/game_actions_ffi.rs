@@ -201,7 +201,9 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         _ if key == EE_SCREENS_GAH_T_NODE_UNIT => unsafe { pointer_at(p, l.unit_node_unit) },
         // the map: its presence, tile (i1, i2) (0 off the map), the tile p's height
         (EE_SCREENS_GA_OP_MAP, EE_SCREENS_GA_M_EXISTS) => world.map().is_some() as i64,
-        _ if key == EE_SCREENS_GAH_M_TILE_PTR => world.map()?.tile(i[1] as c_ulong as i64, i[2] as c_ulong as i64).map_or(0, |t| t.handle() as i64),
+        _ if key == EE_SCREENS_GAH_M_TILE_PTR => {
+            world.map()?.tile(i[1] as c_ulong as i64, i[2] as c_ulong as i64).map_or(0, |t| t.handle() as i64)
+        }
         _ if key == EE_SCREENS_GAH_M_TILE_HEIGHT => {
             // SAFETY: the case's object is a live tile
             f[0] = unsafe { TileView::of(&token, p as u64) }?.height();
@@ -240,7 +242,8 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
             0
         }
         (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_SET_SLOT) => {
-            let rts = world.player(i[1] as usize)?.rts().ptr() as *mut ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
+            let rts =
+                world.player(i[1] as usize)?.rts().ptr() as *mut ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
             // SAFETY: the live player's record
             unsafe { (*rts).mSlot = i[2] as u8 };
             0

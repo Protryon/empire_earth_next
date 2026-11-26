@@ -10,11 +10,11 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::netmsg::session::*;
 
+use super::message::prts;
 use super::session_objs::{
     ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert, EeGamecppClientTail,
     EeGamecppServerTail,
 };
-use super::message::prts;
 use super::{h, hp, net, ptr, session_objs, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::{EeNetSvGet, EeNetSvSet};

@@ -27,8 +27,8 @@ use ee_base::math::um::lrintf;
 use ee_base::time::{ee_time_get, ee_time_of_day, EeTimeOfDay};
 use ee_sim::units::physics_save::EeUnitsPhysicsSaved;
 
-use crate::gamecpp::message::{group_len, group_unit};
 use crate::gamecpp as gc;
+use crate::gamecpp::message::{group_len, group_unit};
 use ee_sim::world::view::{PlayerView, UnitView, WorldRead, WorldView};
 
 /// The physics' calls (p: the `EEPhysics`, or the object a call names). See EEPhysics.cpp for each exact call.
@@ -1226,7 +1226,8 @@ fn drain_input(p: P) {
             continue;
         }
         h(O::ServerQueuePopFront, p, &[]);
-        if b(O::RecBool, message, &[2]) && (gc::h(gc::O::CommIsServer, 0, &[]) != 0 || (h0(O::IsClient) != 0 && h0(O::ClientHasLeft) == 0))
+        if b(O::RecBool, message, &[2])
+            && (gc::h(gc::O::CommIsServer, 0, &[]) != 0 || (h0(O::IsClient) != 0 && h0(O::ClientHasLeft) == 0))
         {
             let dump = b(O::RecBool, message, &[3]);
             let checksum = out_of_synch_checksum(p, dump, 1);
@@ -1419,10 +1420,7 @@ fn update_civ_timer(p: P) {
     let current = || current_player();
     if h0(O::CommsIsServer) != 0 {
         if h0(O::CanBuyCivilization) != 0 {
-            if get!(r, mTickWorkCount) == 0
-                && !player_civ_chosen(current())
-                && !player_observer(current())
-            {
+            if get!(r, mTickWorkCount) == 0 && !player_civ_chosen(current()) && !player_observer(current()) {
                 h(O::CivBuilderBlink, 0, &[1]);
             }
             let game_time = get!(r, mGameTime) as c_ulong;
@@ -1446,10 +1444,7 @@ fn update_civ_timer(p: P) {
         }
     } else {
         set!(r, mCivTimerRuns, false);
-        if h0(O::CanBuyCivilization) != 0
-            && !player_civ_chosen(current())
-            && !player_observer(current())
-        {
+        if h0(O::CanBuyCivilization) != 0 && !player_civ_chosen(current()) && !player_observer(current()) {
             h(O::CivBuilderBlink, 0, &[1]);
         }
     }

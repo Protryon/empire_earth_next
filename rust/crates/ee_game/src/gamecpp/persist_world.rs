@@ -28,9 +28,9 @@ use ee_sim::units::save_prim::game::ee_units_save_primitive;
 use ee_sim::units::world_save::*;
 use ee_sim::world::layout::EeWorldLayout;
 use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
-use ee_sim::world::view::{ClassView, MapView, WorldRead};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
+use ee_sim::world::view::{ClassView, MapView, WorldRead};
 
 use super::persistent::{after_load, Longs, Pf, PF_BEYOND_END, PF_OK};
 use super::state::EeGameStateTail;
