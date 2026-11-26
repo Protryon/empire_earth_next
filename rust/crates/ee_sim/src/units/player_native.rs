@@ -181,6 +181,10 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
             | EE_UNITS_PLAYER_BODY_SIGHT_ZERO
             | EE_UNITS_PLAYER_BODY_IS_LOCAL
             | EE_UNITS_PLAYER_BODY_GAME_TIME
+            | EE_UNITS_PLAYER_BODY_PATROL_OF
+            | EE_UNITS_PLAYER_BODY_COMMAND_TYPE
+            | EE_UNITS_PLAYER_BODY_UNBUILT_WALL
+            | EE_UNITS_PLAYER_BODY_MAP_SIZE
             | EE_UNITS_PLAYER_BODY_CLASS_COUNT => {
                 let t = crate::world::WorldRead::begin();
                 let unit = || crate::world::UnitView::of(&t, a);
@@ -198,6 +202,14 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                         0
                     }
                     EE_UNITS_PLAYER_BODY_GAME_TIME => crate::world::WorldView::global(&t)?.game_time(),
+                    // a complex unit's mPatrolGroup, `mCommand ? mCommand->mType : 0`, an unbuilt wall
+                    EE_UNITS_PLAYER_BODY_PATROL_OF => unit()?.patrol_group_handle() as i64,
+                    EE_UNITS_PLAYER_BODY_COMMAND_TYPE => unit()?.command_type() as i64,
+                    EE_UNITS_PLAYER_BODY_UNBUILT_WALL => {
+                        let u = unit()?;
+                        i64::from(u.class()?.wall() && !u.is_built())
+                    }
+                    EE_UNITS_PLAYER_BODY_MAP_SIZE => crate::world::WorldView::global(&t)?.map()?.size(),
                     EE_UNITS_PLAYER_BODY_IS_LOCAL => {
                         let w = crate::world::WorldView::global(&t)?;
                         i64::from(w.current_player().is_some_and(|c| c.handle() == p))
@@ -409,6 +421,11 @@ pub unsafe fn player(
                 return Some(0);
             }
             crate::units::player::EE_UNITS_PLAYER_EXTRA_POPULATION => return Some(1),
+            // a complex unit's mHolder
+            crate::units::player_areas::EE_UNITS_PLAYER_HOLDER => {
+                let t = WorldRead::begin();
+                return Some(UnitView::of(&t, a0 as u64)?.holder_handle() as i64);
+            }
             EE_UNITS_PLAYER_X_WONDER_STARTED => return Some(0),
             _ => {}
         }
