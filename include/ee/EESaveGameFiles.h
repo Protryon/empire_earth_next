@@ -22,9 +22,6 @@ extern const unsigned long kSaveGameMinorVersion;
 long EESaveTowns(FSFile& outFile);
 // inAreas: the save has the towns' areas (EESaveHasTownAreas)
 long EELoadTowns(FSFile& inFile, bool inAreas);
-class FSFile;
-void EESaveActiveGroups(FSFile& outFile);
-long EELoadActiveGroups(FSFile& inFile);   // the groups back at the loaded game's first tick (EEAfterLoad)
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;
