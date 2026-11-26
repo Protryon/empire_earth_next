@@ -54,11 +54,6 @@ EECPASGFlags EEGroup::GetFlags()
     return theResult;
 }
 
-// The active groups in a saved game (save 0.279, EESaveHasActiveGroups; ee_units group_obj.rs save_all, load_all)
-void EESaveActiveGroups(FSFile& outFile) { ee_units_groups_save_active(&outFile, &EESaveFilePrimitive); }
-
-long EELoadActiveGroups(FSFile& inFile) { return ee_units_groups_load_active(&inFile, &EESaveFilePrimitive); }
-
 // The groups' host (ee_units group_host.rs; EE_UNITS_GROUP_OP_*): each operation one C++ statement of the original
 // bodies
 extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsGroupIo* io)

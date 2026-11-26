@@ -76,25 +76,6 @@ void EEUnitClassImprovement::Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrad
 
 static_assert(sizeof(EEUnitClassImprovement::mLevels) == 0x40, "saved levels: 16 4-byte words on every target");
 
-// Reads the levels (and points spent, recounted) from a saved game and applies them to the upgrade's stats; saves
-// up to minor version 0xd8 drop leadership to level 1; returns the read error. The original's five version branches
-// read: up to 0x17 the levels; up to 0x6a the levels and 16 old words (the second read's status); up to 0xa0 the
-// levels; then the levels and the points spent (cleared)
-long EEUnitClassImprovement::Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade,
-                                  unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_LOAD, this->mLevels, &this->mTotalCost,
-                                EEImprovementContext{this, inUnitClass, inUpgrade, &inFile}, &EEImprovementHost,
-                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-}
-
-// Writes the levels and the points spent to the saved game; returns the first write error
-long EEUnitClassImprovement::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_SAVE, this->mLevels, &this->mTotalCost,
-                                EEImprovementContext{this, NULL, NULL, &outFile}, &EEImprovementHost, 0, 0);
-}
-
 // The C++ the record's Rust bodies call (ee_units improvement.rs): ChangeLevel on the context's record, the upgrade's
 // name, the file's primitives (ee/EEPlayer.h EESavePrimitive)
 int32_t EEImprovementHost(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)

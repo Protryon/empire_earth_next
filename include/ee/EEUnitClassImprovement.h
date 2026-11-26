@@ -45,8 +45,6 @@ public:
     void GetName(EEUnitClass* inUnitClass, long inImprovement, UWideString& outName);
     void ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement, long inDelta);
     void Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade);    // 0x23b35b (every level back to 1)
-    long Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
 
     // +0x04 (= 1). int32_t, not long: Load and Save move the array as 0x40 raw bytes (16 4-byte words, as on
     // 32-bit Windows); with an 8-byte long (LP64) only levels 0..7 reached the file and back.
