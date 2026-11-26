@@ -639,11 +639,7 @@ public:
     // the library's default file directory)
     static RustServerOp* NewHttpDocument(const std::string& inProduct, int inType)
     { return new RustServerOp(ee_won_httpdoc_new(inType, WonBytes(inProduct), inProduct.size(), NULL, 0)); }
-    ByteBufferPtr GetHttpDocument(int inOwner) const // GetDocument(owner): the cache file, NUL-ended
-    {
-        std::string aBytes = this->GetBytes(EE_WON_HTTPDOC_DOCUMENT, inOwner);
-        return new ByteBuffer(aBytes.data(), (unsigned long)aBytes.size(), false);
-    }
+    // (GetDocument(owner), the cache file, is GetBytes(EE_WON_HTTPDOC_DOCUMENT, owner))
     BlockingSocket* GetSocket() const
     { return static_cast<BlockingSocket*>(reinterpret_cast<RefCount*>((intptr_t)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_SOCKET))); }
     void SetSocket(BlockingSocket* inSocket) { ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_SOCKET, 0, static_cast<RefCount*>(inSocket)); }

@@ -118,11 +118,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::SessionAddOp: HttpSessionAddOp(aLogic->Slot<HTTPSession>(kInitSession), R(a)); return 0;
     case O::SaveTOU: return InitSaveTOU(b == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath(), R(a)->GetBytes(EE_WON_HTTPDOC_DOCUMENT, b));
     case O::BroadcastDocument: LobbyBroadcastEvent(GotHTTPDocumentEvent(R(a)), true); return 0;
-    case O::DocBytes: {
-        ByteBufferPtr document = R(a)->GetHttpDocument((int)b);
-        *reinterpret_cast<size_t*>(c) = document.get() != NULL ? (size_t)document->length() : (size_t)-1;
-        return (intptr_t)(document.get() != NULL ? document->data() : NULL); // the op keeps the document
-    }
     case O::BroadcastNoPromotion: LobbyBroadcastEvent(SetCrossPromotionEvent(NULL, std::string("")), true); return 0;
     case O::HasAuthConfig: return !config->mAuthServers.empty();
     case O::ServerAddFromDir: SC(a)->AddAddressesFromDir(R(b)->GetEntities(EE_WON_REQOP_DIR_LIST, c), NULL); return 0;

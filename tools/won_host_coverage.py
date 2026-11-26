@@ -140,7 +140,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "prv_op")],
          # R6 WON round 40: a ping op's body answers these itself in the game (logics.rs run_hook, elapsed); the
          # drivers' hosts otherwise
-         allowed={v: "the ping op's Rust body answers it on its real op (logics.rs)" for v in ("RequestSend", "Elapsed")}),
+         allowed={v: "the ping op's Rust body answers it on its real op (logics.rs)" for v in ("RequestSend", "Elapsed")}
+         | {"DocBytes": "R6 WON round 40: the game reads the document from the op's Rust op (netlogicops.rs "
+                        "game_doc_bytes); the drivers' hosts otherwise"}),
     dict(enum="EeWonEeGameOp", header="won_lobby/eegame.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op"),

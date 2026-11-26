@@ -1110,6 +1110,16 @@ impl EeWonLogic {
         match self.op(Op::OpNum, op, HTTPDOC_TYPE, 0, 0) {
             HTTPDOC_TOU => self.handle_tou(op),
             HTTPDOC_ADV => {
+                // the game's document is read from the op's Rust op (R6 WON round 40: the C++ case's buffer died
+                // before its bytes were read); a driver's through its host
+                if let Some(doc) = crate::netlogicops::game_doc_bytes(op, OWNER_GAME) {
+                    if flow::document_bytes(doc.len()) != 0 {
+                        self.parse_promotion(&doc);
+                        return;
+                    }
+                    self.op0(Op::BroadcastNoPromotion);
+                    return;
+                }
                 let mut length = 0usize;
                 let data = self.op(Op::DocBytes, op, OWNER_GAME, &mut length as *mut usize as isize, 0);
                 if length != usize::MAX && flow::document_bytes(length) != 0 {
