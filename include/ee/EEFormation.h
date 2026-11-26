@@ -22,9 +22,7 @@ public:
     // (Arrange and Place, the slots of a group's or a list's units: ee_sim formations units.rs over the members from
     // mOrientation on, its EeFormationFields; EEWorldLayout.cpp registers and checks their place)
 
-    bool IsCircle() const { return this->mType == 6 || this->mType == 7; }
     void SetCenter(const GE3DPoint& inCenter) { this->mCenter = inCenter; }
-    void SetMinRadius(float inRadius) { this->mMinRadius = inRadius; }
     long GetType() const { return this->mType; }
 
     GETransformation mOrientation;
