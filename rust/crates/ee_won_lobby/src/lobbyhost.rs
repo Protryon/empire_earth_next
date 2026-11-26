@@ -722,6 +722,10 @@ impl Host {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn op(&self, op: EeWonLobbyOp, a: *mut c_void, b: *mut c_void, c: isize, d: isize) -> isize {
         let mut c = c;
+        // the texts and the event member, in the game (every caller's: the logics' and lanown.rs's)
+        if let Some(r) = crate::lobbytext::lobby_op(op, self.logic as isize, a as isize, b as isize, c) {
+            return r;
+        }
         if self.model {
             if let Some(r) = crate::modelobj::lobby_op(op, a as isize, b as isize, c) {
                 return r;

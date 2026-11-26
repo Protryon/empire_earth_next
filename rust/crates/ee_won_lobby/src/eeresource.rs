@@ -324,7 +324,10 @@ mod tests {
         let empty = ee_won_gui::guistrobj::ee_won_gstr_empty();
         for i in 0..EE_RESOURCES.len() {
             // SAFETY: a string's GUIString
-            assert_eq!(unsafe { *(ee_won_eeresource_string(i) as *const *mut ee_won_gui::guistrobj::EeWonGstr) }, empty);
+            assert_eq!(
+                unsafe { *(ee_won_eeresource_string(i) as *const *mut ee_won_gui::guistrobj::EeWonGstr) },
+                empty
+            );
         }
     }
 

@@ -298,7 +298,9 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
         Op::InputText => input_text(a),
         Op::ComboEditText => input_text(combo_edit(a)),
         // `LobbyAddFilterValue(Txt(a), Txt(b))`, `LobbyRemoveFilterValue(Txt(a), Txt(b))`
-        Op::AddFilterValue => crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::AddFilterValue, a, b, 0)?,
+        Op::AddFilterValue => {
+            crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::AddFilterValue, a, b, 0)?
+        }
         Op::RemoveFilterValue => {
             crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::RemoveFilterValue, a, b, 0)?
         }
@@ -669,16 +671,22 @@ pub(crate) fn route_op(op: crate::routelogic::EeWonRouteLogicOp, logic: isize, a
             0
         }
         // SAFETY: a live LobbyGame
-        R::GameText => gstring_new(unsafe { crate::modelobj::shell_get(a, if b == 0 { F::GameName } else { F::GamePassword }) }),
+        R::GameText => {
+            gstring_new(unsafe { crate::modelobj::shell_get(a, if b == 0 { F::GameName } else { F::GamePassword }) })
+        }
         R::ParserText => {
             let mut n = 0;
             // SAFETY: a live ChatCommandParser
-            let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(a), crate::chatobj::EeWonChatParserText::Text, &mut n) };
+            let u = unsafe {
+                crate::chatobj::ee_won_chatparser_text(parser(a), crate::chatobj::EeWonChatParserText::Text, &mut n)
+            };
             boxed(held_units(unit_slice(u, n)))
         }
         // the parser's (`a`) `GetRoomFlags()`, `GetCommand()`, `GetDuration()`, `GetTarget()`, `GetClients()`
         R::ParserNum => {
-            use crate::chatobj::{ee_won_chatparser_number as num, ee_won_chatparser_object as obj, EeWonChatParserNumber as N};
+            use crate::chatobj::{
+                ee_won_chatparser_number as num, ee_won_chatparser_object as obj, EeWonChatParserNumber as N,
+            };
             let p = parser(a);
             // SAFETY: a live ChatCommandParser's Rust object
             unsafe {
@@ -844,7 +852,13 @@ pub(crate) fn eegame_op(op: crate::eegame::EeWonEeGameOp, a: isize, b: isize) ->
 
 /// The LAN logic's event member and its dialogs' texts (lanobj.rs, in the game, for the shell `logic`; its dialog
 /// slots: 0 direct connect, 1 LAN name, 3 password).
-pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, logic: isize, a: isize, b: isize, c: isize) -> Option<isize> {
+pub(crate) fn lobby_op(
+    op: crate::lobbyhost::EeWonLobbyOp,
+    logic: isize,
+    a: isize,
+    b: isize,
+    c: isize,
+) -> Option<isize> {
     use crate::lobbyhost::EeWonLobbyOp as L;
     use crate::persistobj::EeWonPersistCall as P;
     // an object argument, read only in the game (a driver's world passes made-up values)
@@ -869,7 +883,13 @@ pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, logic: isize, a: isiz
         L::ParserTextTake => {
             let mut n = 0;
             // SAFETY: a live ChatCommandParser
-            let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(game(a)?), crate::chatobj::EeWonChatParserText::Text, &mut n) };
+            let u = unsafe {
+                crate::chatobj::ee_won_chatparser_text(
+                    parser(game(a)?),
+                    crate::chatobj::EeWonChatParserText::Text,
+                    &mut n,
+                )
+            };
             take(crate::routelogic::utf16le(unit_slice(u, n)))
         }
         // the parser's (`a`) `GetRoomFlags()`, `GetTarget()`, `GetCommand()`
@@ -879,7 +899,9 @@ pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, logic: isize, a: isiz
             // SAFETY: a live ChatCommandParser's Rust object
             unsafe {
                 match op {
-                    L::ParserRoomFlags => crate::chatobj::ee_won_chatparser_number(p, N::RoomFlags) as std::ffi::c_ulong as isize,
+                    L::ParserRoomFlags => {
+                        crate::chatobj::ee_won_chatparser_number(p, N::RoomFlags) as std::ffi::c_ulong as isize
+                    }
                     L::ParserTarget => crate::chatobj::ee_won_chatparser_object(p, 1) as isize,
                     _ => crate::chatobj::ee_won_chatparser_number(p, N::Command) as i32 as isize,
                 }
@@ -906,7 +928,9 @@ pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, logic: isize, a: isiz
         // `LobbySetLanName(the LAN name dialog's InputText(0))`
         L::LanSetLanNameFromDialog => crate::persistobj::game_call_text(P::SetLanName, dialog_input(logic, 1, 0)?, 0)?,
         // `LobbyAddDirectConnect(Addr(b), the direct connect dialog's InputText(c))`
-        L::AddDirectConnectNamed => crate::persistobj::game_call_text(P::AddDirect, dialog_input(logic, 0, c)?, b as i64)?,
+        L::AddDirectConnectNamed => {
+            crate::persistobj::game_call_text(P::AddDirect, dialog_input(logic, 0, c)?, b as i64)?
+        }
         _ => return None,
     };
     Some(r)
