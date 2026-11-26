@@ -202,10 +202,8 @@ extern "C" int64_t ee_scenariocpp_trigger(uint32_t inOp, EESMTrigger* t, int64_t
         return 0;
     case EE_SCENARIO_TR_COPY_TEXT: t->mText = static_cast<EESMTrigger*>((void*)(intptr_t)i)->mText;
         return 0;
-    case EE_SCENARIO_TR_FIELDS: return (int64_t)(intptr_t) static_cast<EeScenarioTriggerFields*>(t);
     case EE_SCENARIO_TR_ADD_TIMED: gWorld.mScenarioManager->AddTimedEffect((long)i, (unsigned long)v, t->mIsInCinematic);
         return 0;
-    case EE_SCENARIO_TR_WORLD_CINEMATIC: return gWorld.mInCinematic;
     }
     return 0;
 }

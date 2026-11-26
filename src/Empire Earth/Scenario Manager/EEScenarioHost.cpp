@@ -76,15 +76,10 @@ extern "C" void ee_scenariocpp_host_write(EESMHostContext* theContext, uint32_t 
     case EE_SCENARIO_WRITE_SET_ATTRIBUTE:
         theContext->mEffect->SetPlayerAttribute(inPlayer, (unsigned long)inB, (long)inC, (long)inD);
         break;
-    case EE_SCENARIO_WRITE_RESOURCE: thePlayer->mResourceCaps[inB] = (long)inC; break;
-    case EE_SCENARIO_WRITE_SHARE_BONUS: thePlayer->mShareBonus = (long)inB; break;
     case EE_SCENARIO_WRITE_DIFFICULTY: thePlayer->mComputerPlayer->mDifficulty = (long)inB; break;
-    case EE_SCENARIO_WRITE_VARIABLE: thePlayer->mScenarioVariables[inB] = (unsigned long)inC; break;
-    case EE_SCENARIO_WRITE_TRIBUTE: thePlayer->mTributes[inB] = (unsigned long)inC; break;
     case EE_SCENARIO_WRITE_ADD_TRIBUTE: thePlayer->AddTribute((long)inB, (long)inC, (long)inD); break;
     case EE_SCENARIO_WRITE_STATISTIC_ADD: thePlayer->mSavedGroups.Reset((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_STATISTIC_SET: thePlayer->mSavedGroups.Set((long)inB, (long)inC); break;
-    case EE_SCENARIO_WRITE_MINING_LIMIT: thePlayer->mMiningLimit = (long)inB; break;
     case EE_SCENARIO_WRITE_TILE: theContext->mTiles->push_back(U2DPoint<long>((long)inB, (long)inC)); break;
     default: EESMObjectWrite(theContext, inOp, inB); break;   // the object's list
     }
@@ -137,7 +132,6 @@ int64_t SMReadPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
 extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
-    case EE_SCENARIO_RX_NODE_SET_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched = a[1] != 0;
     case EE_SCENARIO_RX_NODE_AVAILABLE: return SMReadOf<EETechTreeNode>(a[0])->GetIsAvailable();
     case EE_SCENARIO_RX_OBJECT: return SMReadPtr(gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]));
     case EE_SCENARIO_RX_FIND_OBJECT: return SMReadPtr(gWorld.mScenarioManager->FindObjectByID((long)a[0]));
@@ -209,7 +203,6 @@ extern "C" int64_t ee_scenariocpp_entry(uint32_t inOp, void* p, int64_t a, int64
     case EE_SCENARIO_EN_MANAGER_RESET: EN<EEScenarioManager>(p)->Reset();
         return 0;
     case EE_SCENARIO_EN_SAVE_VERSION: return ((int64_t)kSaveGameMajorVersion << 32) | kSaveGameMinorVersion;
-    case EE_SCENARIO_EN_UNIT_ID: return (int64_t)EN<EEUnit>(p)->mUnitID;
     case EE_SCENARIO_EN_UNIT_BY_ID: return ENP(gWorld.GetUnit((unsigned long)a));
     case EE_SCENARIO_EN_AREA_AT: return ENP(gWorld.mScenarioManager->GetArea((unsigned long)a));
     case EE_SCENARIO_EN_AREA_COUNT: return (int64_t)EN<EEScenarioManager>(p)->mAreas.size();
@@ -225,7 +218,6 @@ extern "C" int64_t ee_scenariocpp_entry(uint32_t inOp, void* p, int64_t a, int64
         return 0;
     case EE_SCENARIO_EN_UNITS_ASSIGN: *EN<std::vector<unsigned long> >(p) = *(const std::vector<unsigned long>*)(intptr_t)a;
         return 0;
-    case EE_SCENARIO_EN_PHYSICS_TICK: return (int64_t)gPhysics->mCurrentTick;
     case EE_SCENARIO_EN_TILES_COUNT: return (int64_t)EN<std::vector<U2DPoint<long> > >(p)->size();
     case EE_SCENARIO_EN_TILES_CLEAR: EN<std::vector<U2DPoint<long> > >(p)->clear();
         return 0;

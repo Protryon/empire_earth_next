@@ -95,7 +95,6 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_NODE_SET_BUTTON:
         P(EETechTreeNode, 0)->SetButton(a[1]);
         return 0;
-    case EE_SCENARIO_EV_NODE_DELAY: return (int64_t)P(EETechTreeNode, 0)->mResearchDelay++;
     case EE_SCENARIO_EV_RESEARCH_NODE: return (int64_t)P(EETechnology, 0)->ResearchNode(NULL);
     case EE_SCENARIO_EV_BUTTON: return R(EEButtonObject::Get((unsigned long)a[0]));
     case EE_SCENARIO_EV_SET_CLASS_BUTTON:
@@ -106,7 +105,6 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_POST_REFRESH_GROUP:
         gUserInterface->PostRefreshSavedGroup(a[0]);
         return 0;
-    case EE_SCENARIO_EV_TREE_SET_MEDIA: return (int64_t)(P(EEPlayer, 0)->GetTechTree()->mMediaID = a[1]);
     case EE_SCENARIO_EV_POST_BACKGROUND:
         gUserInterface->PostUpdateBackgroundMedia();
         return 0;

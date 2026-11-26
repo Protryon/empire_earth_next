@@ -24,12 +24,23 @@ struct Game;
 
 impl CaptureWorld for Game {
     fn read(&mut self, op: u32, p: u64, a: i64, b: i64) -> i64 {
-        // SAFETY: the reads take the addresses the earlier reads answered (live objects for the hook's call)
-        unsafe { ee_scenariocpp_capture(op, p as usize as *const c_void, a, b) }
+        use crate::scenario::{entry, world_views};
+        // SAFETY: the reads take the addresses the earlier reads answered (live objects for the hook's call); the
+        // world's and the records' members are the views' (world_views.rs capture)
+        unsafe {
+            if op == crate::scenario::sm_capture::EE_SCENARIO_CAP_UNIT {
+                return entry::unit_by_id(a) as i64;
+            }
+            world_views::capture(op, p, a, &entry::element_record)
+                .unwrap_or_else(|| ee_scenariocpp_capture(op, p as usize as *const c_void, a, b))
+        }
     }
     fn readf(&mut self, op: u32, p: u64) -> f32 {
         // SAFETY: as above
-        unsafe { ee_scenariocpp_capture_f(op, p as usize as *const c_void) as f32 }
+        unsafe {
+            crate::scenario::world_views::capture_f(op, p, &crate::scenario::entry::element_record)
+                .unwrap_or_else(|| ee_scenariocpp_capture_f(op, p as usize as *const c_void) as f32)
+        }
     }
 }
 

@@ -249,6 +249,12 @@ impl Host for EeScenarioHost {
         if crate::scenario::read_compose::compose_write(&mut w, op, b, c) {
             return;
         }
+        // the player's plain members the records take (world_views.rs write)
+        #[cfg(not(test))]
+        // SAFETY: as `read`
+        if unsafe { crate::scenario::world_views::write(op, player as i64, b, c) } {
+            return;
+        }
         // SAFETY: as `read`
         unsafe { (self.write)(self.ctx, op, player, b, c, d) }
     }

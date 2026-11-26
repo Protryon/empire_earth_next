@@ -152,7 +152,6 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_MODE: return (int64_t)gWorld.mCameraControl.mMode;
     case EE_SCENARIO_ROUND_CAMERA_ZOOM: return EESMBits(gWorld.mCameraControl.GetZoom());
-    case EE_SCENARIO_ROUND_SET_IN_CINEMATIC: return gWorld.mInCinematic = inA != 0;
     case EE_SCENARIO_ROUND_SAVE_GAME_SPEED: return EESMBits(gWorld.mSavedGameSpeed = gWorld.GetGameSpeed());
     case EE_SCENARIO_ROUND_RESTORE_GAME_SPEED: gWorld.SetGameSpeed(gWorld.mSavedGameSpeed);
         return 0;

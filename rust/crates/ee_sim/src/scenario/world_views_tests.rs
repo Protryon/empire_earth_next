@@ -26,6 +26,18 @@ impl Lookups for Look<'_> {
     fn fields(&self, _: u32, _: *mut c_void) -> *const c_void {
         std::ptr::null()
     }
+    fn area_center(&self, index: i64) -> i64 {
+        index + 1
+    }
+    fn area(&self, _: i64) -> *const crate::scenario::area_fields::EeScenarioAreaFields {
+        std::ptr::null()
+    }
+    fn object(&self, _: i64) -> *const crate::scenario::fields::EeScenarioObjectFields {
+        std::ptr::null()
+    }
+    fn trigger(&self, _: i64) -> *const crate::scenario::fields::EeScenarioTriggerFields {
+        std::ptr::null()
+    }
 }
 
 /// `answer(op, a)` over the fixture (the world registered), on a context whose unit is `unit`.
@@ -112,6 +124,7 @@ fn the_class_attribute_reads_on_handles_and_the_world_s() {
     assert_eq!(k(EE_SCENARIO_WORLD_CURRENT_PLAYER, 0), Some(1));
     assert_eq!(k(EE_SCENARIO_WC_MAP_SIZE, 0), Some(2));
     assert_eq!(k(EE_SCENARIO_WY_UNIT_ID, addr(&*f.soldier)), Some(SOLDIER));
+    assert_eq!(k(EE_SCENARIO_WORLD_AREA_CENTER, 4), Some(5));
 }
 
 #[test]
