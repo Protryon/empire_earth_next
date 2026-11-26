@@ -443,15 +443,10 @@ shims! {
     fn table_bitmap_focused(t: usize, m: usize, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_table_bitmap_focused;
     fn bitmap_dereference(b: usize) = ee_uicpp_bitmap_dereference;
     fn file_list_add_extension(control: usize, strings: usize, index: u32) = ee_uicpp_file_list_add_extension;
-    fn radio_set_down_unchecked(control: usize, bitmap: usize) = ee_uicpp_radio_set_down_unchecked;
-    fn radio_set_down_checked(control: usize, bitmap: usize) = ee_uicpp_radio_set_down_checked;
-    fn radio_set_up_checked(control: usize, bitmap: usize) = ee_uicpp_radio_set_up_checked;
     fn mgr_texture_manager_by_screen(m: usize) -> usize = ee_uicpp_mgr_texture_manager_by_screen;
     fn texture_load_ui_string(manager: usize, name: usize, depth: u32, alpha: bool) -> usize = ee_uicpp_texture_load_ui_string;
     fn bitmap_stretch(b: usize, rect: usize, texture_rect: usize, screen: u32) = ee_uicpp_bitmap_stretch;
     // UIComboBox.cpp's (lle_combo.rs)
-    fn list_scroll_bar(list: usize) -> usize = ee_uicpp_list_scroll_bar;
-    fn list_selection(list: usize, selection: EeUiShimULongOut) -> c_long = ee_uicpp_list_selection;
     fn label_set_text_line(label: usize, list: usize, line: u32) = ee_uicpp_label_set_text_line;
     fn edit_set_text_line(edit: usize, list: usize, line: u32) = ee_uicpp_edit_set_text_line;
     fn label_clear_text(label: usize) = ee_uicpp_label_clear_text;
@@ -475,8 +470,6 @@ shims! {
     fn list_change_selection(list: usize, index: u32, a: bool, b: bool) = ee_uicpp_list_change_selection;
     fn control_set_bg_opacity(control: usize, opacity: f32) = ee_uicpp_control_set_bg_opacity;
     fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = ee_uicpp_control_set_bg_color;
-    fn list_set_scroll_bg_opacity(list: usize, opacity: f32) = ee_uicpp_list_set_scroll_bg_opacity;
-    fn list_set_scroll_bg_color(list: usize, red: f32, green: f32, blue: f32) = ee_uicpp_list_set_scroll_bg_color;
     // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
     fn keyboard_entity(key: u32, out: EeUiShimPtrOut) = ee_uicpp_keyboard_entity;
@@ -549,6 +542,13 @@ shims! {
     fn db_remove_fonts() = crate::lle_hosts::chains::db_remove_fonts;
     fn combo_part(combo: usize, part: u32) -> usize = crate::lle_hosts::chains::combo_part;
     fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) = crate::lle_hosts::chains::combo_base_set_rect;
+    fn list_scroll_bar(list: usize) -> usize = crate::lle_hosts::chains::list_scroll_bar;
+    fn list_selection(list: usize, selection: EeUiShimULongOut) -> c_long = crate::lle_hosts::chains::list_selection;
+    fn list_set_scroll_bg_opacity(list: usize, opacity: f32) = crate::lle_hosts::chains::list_set_scroll_bg_opacity;
+    fn list_set_scroll_bg_color(list: usize, red: f32, green: f32, blue: f32) = crate::lle_hosts::chains::list_set_scroll_bg_color;
+    fn radio_set_down_unchecked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_down_unchecked;
+    fn radio_set_down_checked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_down_checked;
+    fn radio_set_up_checked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_up_checked;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's

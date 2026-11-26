@@ -30,7 +30,6 @@ public:
     void DeleteLine(unsigned long inLine) { this->Call(EeUiLabelCall::DeleteLine, inLine); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiLabelCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiLabelCall::DrawText); }
-    bool GetFitRectToText() const { return this->Call(EeUiLabelCall::FitRectToText) != 0; }
     GEText* GetGEText() const { return reinterpret_cast<GEText*>(this->Call(EeUiLabelCall::Text)); }
     unsigned long GetLineCount() const { return (unsigned long)this->Call(EeUiLabelCall::LineCount); }
     unsigned long GetNumberLinesDisplayed() const { return (unsigned long)this->Call(EeUiLabelCall::LinesDisplayed); }

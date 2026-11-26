@@ -27,7 +27,6 @@ public:
     {
         ee_ui_combo_append_lines(this->mRust, this->GetList()->mRust, inLines.data(), inLines.size(), sizeof(UWideString));
     }
-    void ChangeWidth(unsigned long inWidth) { this->Call(EeUiComboCall::ChangeWidth, inWidth); }
     virtual long CopyData() { return (long)this->Call(EeUiComboCall::CopyData); }
     void DeleteAllEntries() { this->Call(EeUiComboCall::DeleteAllEntries); }
     void DeleteLine(unsigned long inLine) { this->Call(EeUiComboCall::DeleteLine, inLine); }

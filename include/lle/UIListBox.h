@@ -83,7 +83,6 @@ public:
     {
         this->Call(UIListBoxCall::ChangeSelectionIndex, inIndex, (inFireEvent ? 1 : 0) | (inScrollTo ? 2 : 0));
     }
-    void ChangeWidth(unsigned long inWidth) { this->Call(UIListBoxCall::ChangeWidth, inWidth); }
     virtual void ClearSelection() { this->Call(UIListBoxCall::ClearSelection); }
     virtual long CopyData() { return (long)this->Call(UIListBoxCall::CopyData); }
     virtual void DeleteAllEntries() { ee_ui_list_delete_all(this->mRust); }

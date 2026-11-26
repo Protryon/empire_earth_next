@@ -791,3 +791,226 @@ pub(crate) fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) {
     let r = UiRect::new(t.left, t.top, d.right, d.bottom);
     direct::control_call_f(combo as Cpp, C::SetRectangle, 0, 0, &mut [r.bottom, r.left, r.right, r.top]);
 }
+
+// ---- the controls' own non-virtual members (the controls table's setters, the combo box's list, the radio
+// button's bitmaps): each the inward call of its C++ forwarder, on the Rust object direct.rs finds
+
+/// The Rust object of `kind` the control `c` has.
+fn obj<T>(kind: Kind, c: Cpp) -> *const T {
+    direct::find(kind, c) as *const T
+}
+/// The forwarder's three-float colour (`CallF(r, g, b)` / `UIF4(GEColor)`: the fourth float 0).
+unsafe fn rgb(f: *const f32) -> [f32; 4] {
+    // SAFETY: the host's buffer holds four floats
+    unsafe { [*f, *f.add(1), *f.add(2), 0.0] }
+}
+/// The forwarder's one float (`CallF(v)`).
+unsafe fn one(f: *const f32) -> [f32; 4] {
+    // SAFETY: as rgb
+    unsafe { [*f, 0.0, 0.0, 0.0] }
+}
+
+macro_rules! sub {
+    ($(#[$m:meta])* $name:ident, $kind:expr, $ty:ty, $call_ty:ty, $call:path) => {
+        $(#[$m])*
+        fn $name(c: Cpp, call: $call_ty, a: isize, b: isize, mut v: [f32; 4]) -> isize {
+            let o = obj::<$ty>($kind, c);
+            if o.is_null() {
+                return 0;
+            }
+            // SAFETY: a live object of the kind (registered between its construction and destruction)
+            unsafe { $call(o, call, a, b, v.as_mut_ptr()) }
+        }
+    };
+}
+sub!(
+    /// One of `UIButton`'s (or a subclass's) methods with the floats `v`.
+    button, Kind::Button, crate::buttonobj::EeUiButton, crate::buttonobj::EeUiButtonCall, crate::buttonobj::ee_ui_button_call
+);
+sub!(
+    /// One of `UIListBox`'s methods with the floats `v`.
+    list, Kind::List, crate::listobj::EeUiList, crate::listobj::EeUiListCall, crate::listobj::ee_ui_list_call
+);
+sub!(
+    /// One of `UIStatusBar`'s methods with the floats `v`.
+    status, Kind::StatusBar, crate::statusobj::EeUiStatusBar, crate::statusobj::EeUiStatusBarCall, crate::statusobj::ee_ui_status_bar_call
+);
+sub!(
+    /// One of `UITextLabel`'s methods with the floats `v`.
+    label, Kind::Label, crate::labelobj::EeUiLabel, crate::labelobj::EeUiLabelCall, crate::labelobj::ee_ui_label_call
+);
+sub!(
+    /// One of `UIComboBox`'s methods with the floats `v`.
+    combo, Kind::Combo, crate::comboobj::EeUiCombo, crate::comboobj::EeUiComboCall, crate::comboobj::ee_ui_combo_call
+);
+/// One of `UIGraph`'s methods (`a`, `b`, `c` and the floats `v`).
+fn graph(g: Cpp, call: crate::graphobj::EeUiGraphCall, a: isize, mut v: [f32; 4]) -> isize {
+    let o = obj::<crate::graphobj::EeUiGraph>(Kind::Graph, g);
+    if o.is_null() {
+        return 0;
+    }
+    // SAFETY: a live graph
+    unsafe { crate::graphobj::ee_ui_graph_call(o, call, a, 0, 0, v.as_mut_ptr()) }
+}
+
+use crate::buttonobj::EeUiButtonCall as Bt;
+use crate::comboobj::EeUiComboCall as Cb;
+use crate::labelobj::EeUiLabelCall as Lb;
+use crate::listobj::EeUiListCall as Ls;
+use crate::statusobj::EeUiStatusBarCall as St;
+
+/// A controls-table setter of a made control (`a` the control, `c`, `d` and `f` its values; lle_hosts.rs SET).
+macro_rules! setters {
+    ($( $(#[$m:meta])* $name:ident => |$a:ident, $c:ident, $d:ident, $f:ident| $e:expr; )*) => {$(
+        $(#[$m])*
+        ///
+        /// # Safety
+        /// The host contract: `a` a live control of the setter's class, `f` its floats.
+        #[allow(unused_variables, unused_unsafe)]
+        pub(crate) unsafe fn $name(_o: *mut c_void, $a: isize, _b: isize, $c: isize, $d: isize, $f: *mut f32) -> isize {
+            // SAFETY: the contract
+            unsafe { $e };
+            0
+        }
+    )*};
+}
+
+setters! {
+    /// `SetFocusedTextColor(GEColor(f))` (a button).
+    tbl_set_button_focused_color => |a, c, d, f| button(p(a), Bt::SetFocusedTextColor, 0, 0, rgb(f));
+    /// `SetChecked(c != 0)` (a check box).
+    tbl_set_check_set_checked => |a, c, d, f| button(p(a), Bt::CheckSetChecked, (c != 0) as isize, 0, [0.0; 4]);
+    /// `SetListBoxFocusedRectColor(GEColor(f))`: the combo box's list's `SetFocusedRectColor`.
+    tbl_set_combo_focused_rect => |a, c, d, f| list(part_of(p(a), 2), Ls::SetFocusedRectColor, 0, 0, rgb(f));
+    /// `SetCurrentSelection(c)`.
+    tbl_set_combo_selection => |a, c, d, f| combo(p(a), Cb::SetCurrentSelection, ul(c), 0, [0.0; 4]);
+    /// `SetListBoxAlwaysDirty(c != 0)`.
+    tbl_set_combo_list_always_dirty => |a, c, d, f| combo(p(a), Cb::SetListBoxAlwaysDirty, (c != 0) as isize, 0, [0.0; 4]);
+    /// `SetText((unsigned long)c)` (an edit box: its decimal).
+    tbl_set_edit_number => |a, c, d, f| {
+        let e = obj::<crate::editobj::EeUiEdit>(Kind::Edit, p(a));
+        if !e.is_null() {
+            crate::editobj::ee_ui_edit_set_number(e, c as c_ulong);
+        }
+    };
+    /// `SetSelectedBgColor(GEColor(f))` (an edit box).
+    tbl_set_edit_selected_bg => |a, c, d, f| {
+        let e = obj::<crate::editobj::EeUiEdit>(Kind::Edit, p(a));
+        if !e.is_null() {
+            crate::editobj::ee_ui_edit_call(e, crate::editobj::EeUiEditCall::SetSelectedBgColor, 0, 0, 0, 0, rgb(f).as_mut_ptr());
+        }
+    };
+    /// `SetFocusedRectColor(GEColor(f))` (a list box).
+    tbl_set_list_focused_rect => |a, c, d, f| list(p(a), Ls::SetFocusedRectColor, 0, 0, rgb(f));
+    /// `SetScrollBarBgOpacity(f[0])`.
+    tbl_set_list_scroll_opacity => |a, c, d, f| list(p(a), Ls::SetScrollBarBgOpacity, 0, 0, one(f));
+    /// `SetFont(c)` (a graph).
+    tbl_set_graph_font => |a, c, d, f| graph(p(a), crate::graphobj::EeUiGraphCall::SetFont, c, [0.0; 4]);
+    /// `SetFontColor(GEColor(f))`.
+    tbl_set_graph_font_color => |a, c, d, f| graph(p(a), crate::graphobj::EeUiGraphCall::SetFontColor, 0, rgb(f));
+    /// `SetUpUncheckedBitmap(c)` (a radio button).
+    tbl_set_radio_up_unchecked => |a, c, d, f| button(p(a), Bt::RadioSetUpUnchecked, c, 0, [0.0; 4]);
+    /// `SetRange(c, d)` (a scroll bar).
+    tbl_set_scroll_range => |a, c, d, f| bar_call(p(a), B::SetRange, ul(c), ul(d));
+    /// `SetCurrentRangeValue(c)`.
+    tbl_set_scroll_value => |a, c, d, f| bar_call(p(a), B::SetCurrentRangeValue, ul(c), 0);
+    /// `SetRange(c, d)` (a slider).
+    tbl_set_slider_range => |a, c, d, f| slider(p(a), S::SetRange, ul(c), ul(d));
+    /// `SetCurrentRangeValue(c)`.
+    tbl_set_slider_value => |a, c, d, f| slider(p(a), S::SetCurrentRangeValue, lg(c), 0);
+    /// `SetPageSize(c)`.
+    tbl_set_slider_page => |a, c, d, f| slider(p(a), S::SetPageSize, ul(c), 0);
+    /// `SetRange(c, d)` (a status bar).
+    tbl_set_status_range => |a, c, d, f| status(p(a), St::SetRange, ul(c), ul(d), [0.0; 4]);
+    /// `SetCurrentRangeValue(c)`.
+    tbl_set_status_value => |a, c, d, f| status(p(a), St::SetCurrentRangeValue, lg(c), 0, [0.0; 4]);
+    /// `SetStatusBarColor(GEColor(f))`.
+    tbl_set_status_color => |a, c, d, f| status(p(a), St::SetStatusBarColor, 0, 0, rgb(f));
+    /// `SetStatusBarOpacity(f[0])`.
+    tbl_set_status_opacity => |a, c, d, f| status(p(a), St::SetStatusBarOpacity, 0, 0, one(f));
+    /// `SetFocusedTextColor(GEColor(f))`.
+    tbl_set_status_focused_color => |a, c, d, f| status(p(a), St::SetFocusedTextColor, 0, 0, rgb(f));
+    /// `SetText((long)c)` (a label: its decimal).
+    tbl_set_label_number => |a, c, d, f| {
+        let l = obj::<crate::labelobj::EeUiLabel>(Kind::Label, p(a));
+        if !l.is_null() {
+            crate::labelobj::ee_ui_label_set_number(l, c as core::ffi::c_long);
+        }
+    };
+    /// `SetAlignment(c)`.
+    tbl_set_label_align => |a, c, d, f| label(p(a), Lb::SetAlignment, ul(c), 0, [0.0; 4]);
+    /// `SetScrollBarBgOpacity(f[0])`.
+    tbl_set_label_scroll_opacity => |a, c, d, f| label(p(a), Lb::SetScrollBarBgOpacity, 0, 0, one(f));
+    /// `SetFitRectToText(c != 0)`.
+    tbl_set_label_fit => |a, c, d, f| label(p(a), Lb::SetFitRectToText, (c != 0) as isize, 0, [0.0; 4]);
+    /// `SetAlwaysDirty(c != 0)` (any control).
+    tbl_set_always_dirty => |a, c, d, f| ctl(p(a), |r| r.mAlwaysDirty = c != 0);
+    /// `SetTriggerEvent(c, d)`.
+    tbl_set_set_trigger => |a, c, d, f| ctl_call2(p(a), C::SetTrigger, ul(c), d);
+}
+
+fn ctl_call2(c: Cpp, call: C, a: isize, b: isize) -> isize {
+    direct::control_call(c, call, a, b)
+}
+
+ops! {
+    /// `static_cast<UIRadioButton*>(a)->GetIsChecked()`.
+    form_ctl_checked => |o, a, b, f| bl(button(p(a), Bt::RadioIsChecked, 0, 0, [0.0; 4]));
+    /// `static_cast<UITextLabel*>(a)->GetFitRectToText()`.
+    form_label_fit => |o, a, b, f| bl(label(p(a), Lb::FitRectToText, 0, 0, [0.0; 4]));
+    /// `CB->GetList()->GetLineHeight()`.
+    combo_q_line_height => |o, a, b, f| ul(list(part_of(o, 2), Ls::LineHeight, 0, 0, [0.0; 4]));
+    /// `CB->GetList()->GetBorderThickness()`.
+    combo_q_list_border => |o, a, b, f| ctl(part_of(o, 2), |r| r.mBorderThickness) as isize;
+    /// `CB->GetList()->GetScrollBarCaptured()`.
+    combo_q_list_scroll_bar_captured => |o, a, b, f| bl(list(part_of(o, 2), Ls::ScrollBarCaptured, 0, 0, [0.0; 4]));
+    /// `CB->GetList()->ChangeWidth(b)`.
+    combo_a_list_change_width => |o, a, b, f| list(part_of(o, 2), Ls::ChangeWidth, ul(b), 0, [0.0; 4]) * 0;
+    /// `FILE_LIST->GetCurrentSelection(*(unsigned long*)f)`.
+    fl_list_selection => |o, a, b, f| {
+        let l = obj::<crate::listobj::EeUiList>(Kind::List, o);
+        if l.is_null() { 0 } else { crate::listobj::ee_ui_list_current_selection(l, f as *mut c_ulong) as isize }
+    };
+    /// `FILE_COMBO->GetCurrentSelection(*(unsigned long*)f)`.
+    fl_combo_selection => |o, a, b, f| {
+        let c = obj::<crate::comboobj::EeUiCombo>(Kind::Combo, o);
+        if c.is_null() { 0 } else { crate::comboobj::ee_ui_combo_current_selection(c, f as *mut c_ulong) as isize }
+    };
+}
+
+/// `list->GetScrollBar()` (lle_combo.rs).
+pub(crate) fn list_scroll_bar(l: usize) -> usize {
+    list(l as Cpp, Ls::ScrollBar, 0, 0, [0.0; 4]) as usize
+}
+/// `list->GetCurrentSelection(*selection)`.
+///
+/// # Safety
+/// `selection` is a live out number.
+pub(crate) unsafe fn list_selection(l: usize, selection: crate::lle_cpp::EeUiShimULongOut) -> core::ffi::c_long {
+    let o = obj::<crate::listobj::EeUiList>(Kind::List, l as Cpp);
+    if o.is_null() {
+        return 0;
+    }
+    // SAFETY: a live list; the contract
+    unsafe { crate::listobj::ee_ui_list_current_selection(o, selection.0) }
+}
+/// `list->SetScrollBarBgOpacity(opacity)`.
+pub(crate) fn list_set_scroll_bg_opacity(l: usize, opacity: f32) {
+    list(l as Cpp, Ls::SetScrollBarBgOpacity, 0, 0, [opacity, 0.0, 0.0, 0.0]);
+}
+/// `list->SetScrollBarBgColor(GEColor(red, green, blue))`.
+pub(crate) fn list_set_scroll_bg_color(l: usize, red: f32, green: f32, blue: f32) {
+    list(l as Cpp, Ls::SetScrollBarBgColor, 0, 0, [red, green, blue, 0.0]);
+}
+/// `radio->SetDownUncheckedBitmap(bitmap)` (the table's).
+pub(crate) fn radio_set_down_unchecked(control: usize, bitmap: usize) {
+    button(control as Cpp, Bt::RadioSetDownUnchecked, bitmap as isize, 0, [0.0; 4]);
+}
+/// `radio->SetDownCheckedBitmap(bitmap)`.
+pub(crate) fn radio_set_down_checked(control: usize, bitmap: usize) {
+    button(control as Cpp, Bt::RadioSetDownChecked, bitmap as isize, 0, [0.0; 4]);
+}
+/// `radio->SetUpCheckedBitmap(bitmap)`.
+pub(crate) fn radio_set_up_checked(control: usize, bitmap: usize) {
+    button(control as Cpp, Bt::RadioSetUpChecked, bitmap as isize, 0, [0.0; 4]);
+}

@@ -224,9 +224,6 @@ EE_UI_VOID(button_label_set_text) { reinterpret_cast<UITextLabel*>(a)->SetText(*
 #define LABEL(x) reinterpret_cast<UITextLabel*>(x)
 #define EDIT(x) reinterpret_cast<UIEditBox*>(x)
 #define BMP(x) reinterpret_cast<GEBitmap*>(x)
-extern "C" uintptr_t ee_uicpp_list_scroll_bar(uintptr_t inList) { return (uintptr_t)LIST(inList)->GetScrollBar(); }
-extern "C" long ee_uicpp_list_selection(uintptr_t inList, unsigned long* inSelection)
-{ return LIST(inList)->GetCurrentSelection(*inSelection); }
 extern "C" void ee_uicpp_label_set_text_line(uintptr_t inLabel, uintptr_t inList, uint32_t inLine)
 { LABEL(inLabel)->SetText(LIST(inList)->GetData(inLine), true); }
 extern "C" void ee_uicpp_edit_set_text_line(uintptr_t inEdit, uintptr_t inList, uint32_t inLine)
@@ -261,10 +258,6 @@ extern "C" void ee_uicpp_control_set_bg_opacity(uintptr_t inControl, float inOpa
 { CTL(inControl)->SetBgOpacity(inOpacity); }
 extern "C" void ee_uicpp_control_set_bg_color(uintptr_t inControl, float inRed, float inGreen, float inBlue)
 { CTL(inControl)->SetBgColor(GEColor(inRed, inGreen, inBlue)); }
-extern "C" void ee_uicpp_list_set_scroll_bg_opacity(uintptr_t inList, float inOpacity)
-{ LIST(inList)->SetScrollBarBgOpacity(inOpacity); }
-extern "C" void ee_uicpp_list_set_scroll_bg_color(uintptr_t inList, float inRed, float inGreen, float inBlue)
-{ LIST(inList)->SetScrollBarBgColor(GEColor(inRed, inGreen, inBlue)); }
 
 // The Rust combo box's calls out (ee_ui lle_hosts.rs combo: ComboQuery's and ComboAct's one shim each, by its
 // number; a the query's argument, or b, c, d, f the action's)
@@ -273,15 +266,11 @@ extern "C" void ee_uicpp_list_set_scroll_bg_color(uintptr_t inList, float inRed,
 #define CB_LIST CB->GetList()
 EE_UI_CASE(combo_q_line_count) { return CB_LIST->GetLineCount(); }
 EE_UI_CASE(combo_q_line) { return (intptr_t)(const char*)CB_LIST->GetData((unsigned long)a); }
-EE_UI_CASE(combo_q_line_height) { return CB_LIST->GetLineHeight(); }
-EE_UI_CASE(combo_q_list_border) { return CB_LIST->GetBorderThickness(); }
-EE_UI_CASE(combo_q_list_scroll_bar_captured) { return CB_LIST->GetScrollBarCaptured(); }
 EE_UI_CASE(combo_q_window_height) { return CB->GetRasterizer()->GetWindow(CB->GetScreenIndex())->GetHeight(); }
 EE_UI_VOID(combo_a_list_change_selection) { CB_LIST->ChangeSelectionIndex((unsigned long)b, (c & 1) != 0, (c & 2) != 0); }
 EE_UI_VOID(combo_a_list_insert_line) { CB_LIST->InsertLine(UWideString(reinterpret_cast<const char*>(b)), (unsigned long)c); }
 EE_UI_VOID(combo_a_list_delete_line) { CB_LIST->DeleteLine((unsigned long)b); }
 EE_UI_VOID(combo_a_list_delete_all) { CB_LIST->DeleteAllEntries(); }
-EE_UI_VOID(combo_a_list_change_width) { CB_LIST->ChangeWidth((unsigned long)b); }
 EE_UI_CASE(combo_a_part_mouse_down) { return CB_PART(b)->MouseLButtonDown(); }
 EE_UI_CASE(combo_a_part_mouse_up) { return CB_PART(b)->MouseLButtonUp(); }
 EE_UI_CASE(combo_a_part_mouse_move) { return CB_PART(b)->MouseMove(GE2DPoint(f[0], f[1])); }
@@ -326,7 +315,6 @@ EE_UI_VOID(ctl_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
 EE_UI_VOID(ctl_release_mouse) { ctl->ReleaseCapturedMouse(); }
 EE_UI_VOID(ctl_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
 EE_UI_VOID(ctl_part_set_bg_color) { ctl->SetBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(ctl_bg_opacity) { f[0] = ctl->GetBgOpacity(); }
 EE_UI_VOID(ctl_tabbed_to) { ctl->TabbedTo(); }
 EE_UI_VOID(ctl_draw_copied_bg) { ctl->GetRasterizer()->Draw(ctl->CopiedBgRhombus(), ctl->GetScreenIndex()); }
 EE_UI_CASE(ctl_virt_draw_border) { return ctl->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
@@ -427,12 +415,6 @@ extern "C" uintptr_t ee_uicpp_table_bitmap_focused(uintptr_t inT, uintptr_t inM,
 extern "C" void ee_uicpp_bitmap_dereference(uintptr_t inB) { reinterpret_cast<GEBitmap*>(inB)->Dereference(); }
 extern "C" void ee_uicpp_file_list_add_extension(uintptr_t inControl, uintptr_t inStrings, uint32_t inIndex)
 { static_cast<UIFileListBox*>(CTL(inControl))->AddValidExtension(UString((const char*)(*STRINGS(inStrings))[inIndex])); }
-extern "C" void ee_uicpp_radio_set_down_unchecked(uintptr_t inControl, uintptr_t inBitmap)
-{ static_cast<UIRadioButton*>(CTL(inControl))->SetDownUncheckedBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
-extern "C" void ee_uicpp_radio_set_down_checked(uintptr_t inControl, uintptr_t inBitmap)
-{ static_cast<UIRadioButton*>(CTL(inControl))->SetDownCheckedBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
-extern "C" void ee_uicpp_radio_set_up_checked(uintptr_t inControl, uintptr_t inBitmap)
-{ static_cast<UIRadioButton*>(CTL(inControl))->SetUpCheckedBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
 extern "C" uintptr_t ee_uicpp_mgr_texture_manager_by_screen(uintptr_t inM)
 { return (uintptr_t)MGR(inM)->GetRasterizer()->GetTextureManager(MGR(inM)->GetScreen()); }
 extern "C" uintptr_t ee_uicpp_texture_load_ui_string(uintptr_t inManager, uintptr_t inName, uint32_t inDepth, bool inAlpha)
@@ -502,47 +484,19 @@ EE_UI_CASE(tbl_make_text_label) { return (intptr_t)static_cast<UIControl*>(new U
 // A made control's (a) setter by selector, its values c, d and f; the texts SetupText sets up
 #define SC reinterpret_cast<UIControl*>(a)
 EE_UI_VOID(tbl_set_button_text) { static_cast<UIButton*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c)), reinterpret_cast<GEFont*>(d)); }
-EE_UI_VOID(tbl_set_button_focused_color) { static_cast<UIButton*>(SC)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(tbl_set_button_down_sound) { static_cast<UIButton*>(SC)->SetButtonDownSound(UString(reinterpret_cast<const char*>(c))); }
 EE_UI_VOID(tbl_set_button_up_sound) { static_cast<UIButton*>(SC)->SetButtonUpSound(UString(reinterpret_cast<const char*>(c))); }
-EE_UI_VOID(tbl_set_check_set_checked) { static_cast<UICheckBox*>(SC)->SetChecked(c != 0); }
-EE_UI_VOID(tbl_set_combo_focused_rect) { static_cast<UIComboBox*>(SC)->SetListBoxFocusedRectColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(tbl_set_combo_selected_bg) { static_cast<UIComboBox*>(SC)->SetListBoxSelectedBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_combo_selection) { static_cast<UIComboBox*>(SC)->SetCurrentSelection((long)c); }
 EE_UI_VOID(tbl_set_combo_text_box_opacity) { static_cast<UIComboBox*>(SC)->SetTextBoxBgOpacity(f[0]); }
 EE_UI_VOID(tbl_set_combo_text_box_color) { static_cast<UIComboBox*>(SC)->SetTextBoxBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_combo_list_always_dirty) { static_cast<UIComboBox*>(SC)->SetListBoxAlwaysDirty(c != 0); }
-EE_UI_VOID(tbl_set_edit_number) { static_cast<UIEditBox*>(SC)->SetText((unsigned long)c); }
 EE_UI_VOID(tbl_set_edit_text) { static_cast<UIEditBox*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c))); }
-EE_UI_VOID(tbl_set_edit_selected_bg) { static_cast<UIEditBox*>(SC)->SetSelectedBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_list_focused_rect) { static_cast<UILBString*>(SC)->SetFocusedRectColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(tbl_set_list_selected_bg) { static_cast<UILBString*>(SC)->GetSelectedBackground()->SetColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_list_scroll_opacity) { static_cast<UILBString*>(SC)->SetScrollBarBgOpacity(f[0]); }
 EE_UI_VOID(tbl_set_list_selection) { static_cast<UILBString*>(SC)->ChangeSelectionIndex((unsigned long)c, false, false); }
-EE_UI_VOID(tbl_set_graph_font) { static_cast<UIGraph*>(SC)->SetFont(reinterpret_cast<GEFont*>(c)); }
-EE_UI_VOID(tbl_set_graph_font_color) { static_cast<UIGraph*>(SC)->SetFontColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_radio_up_unchecked) { static_cast<UIRadioButton*>(SC)->SetUpUncheckedBitmap(reinterpret_cast<GEBitmap*>(c)); }
-EE_UI_VOID(tbl_set_scroll_range) { static_cast<UIScrollBar*>(SC)->SetRange((long)c, (long)d); }
-EE_UI_VOID(tbl_set_scroll_value) { static_cast<UIScrollBar*>(SC)->SetCurrentRangeValue((long)c); }
-EE_UI_VOID(tbl_set_slider_range) { static_cast<UISlider*>(SC)->SetRange((long)c, (long)d); }
-EE_UI_VOID(tbl_set_slider_value) { static_cast<UISlider*>(SC)->SetCurrentRangeValue((long)c); }
-EE_UI_VOID(tbl_set_slider_page) { static_cast<UISlider*>(SC)->SetPageSize((long)c); }
-EE_UI_VOID(tbl_set_status_range) { static_cast<UIStatusBar*>(SC)->SetRange((long)c, (long)d); }
-EE_UI_VOID(tbl_set_status_value) { static_cast<UIStatusBar*>(SC)->SetCurrentRangeValue((long)c); }
-EE_UI_VOID(tbl_set_status_color) { static_cast<UIStatusBar*>(SC)->SetStatusBarColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_status_opacity) { static_cast<UIStatusBar*>(SC)->SetStatusBarOpacity(f[0]); }
 EE_UI_VOID(tbl_set_status_text) { static_cast<UIStatusBar*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c)), reinterpret_cast<GEFont*>(d)); }
-EE_UI_VOID(tbl_set_status_focused_color) { static_cast<UIStatusBar*>(SC)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_label_number) { static_cast<UITextLabel*>(SC)->SetText((long)c); }
-EE_UI_VOID(tbl_set_label_align) { static_cast<UITextLabel*>(SC)->SetAlignment((long)c); }
-EE_UI_VOID(tbl_set_label_scroll_opacity) { static_cast<UITextLabel*>(SC)->SetScrollBarBgOpacity(f[0]); }
-EE_UI_VOID(tbl_set_label_fit) { static_cast<UITextLabel*>(SC)->SetFitRectToText(c != 0); }
 EE_UI_VOID(tbl_set_bg_color) { SC->SetBgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(tbl_set_bg_opacity) { SC->SetBgOpacity(f[0]); }
-EE_UI_VOID(tbl_set_always_dirty) { SC->SetAlwaysDirty(c != 0); }
 EE_UI_VOID(tbl_set_set_rectangle) { SC->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(tbl_set_change_font) { SC->ChangeFont(reinterpret_cast<GEFont*>(c)); }
-EE_UI_VOID(tbl_set_set_trigger) { SC->SetTriggerEvent((unsigned long)c, reinterpret_cast<UIEvent*>(d)); }
 EE_UI_CASE(tbl_text_button) { return (intptr_t)static_cast<UIButton*>(SC)->GetGEText(); }
 EE_UI_CASE(tbl_text_check) { return (intptr_t)static_cast<UICheckBox*>(SC)->GetTextLabel()->GetGEText(); }
 EE_UI_CASE(tbl_text_combo) { return (intptr_t)static_cast<UIComboBox*>(SC)->GetGEText(); }
@@ -633,14 +587,12 @@ EE_UI_VOID(fl_list_append) { FILE_LIST->AppendLine(UWideString(reinterpret_cast<
 // the file lists' case-insensitive alphabetical order (the original's UWSNoCaseAlphaSort)
 static bool UINoCaseLess(const UWideString& inLeft, const UWideString& inRight) { return ee_ui_text_less_no_case(inLeft, inRight); }
 EE_UI_VOID(fl_list_insert_sorted) { FILE_LIST->InsertLine(UWideString(reinterpret_cast<const char*>(a)), 0, &UINoCaseLess); }
-EE_UI_CASE(fl_list_selection) { return FILE_LIST->GetCurrentSelection(*reinterpret_cast<unsigned long*>(f)); }
 EE_UI_CASE(fl_list_line_length) { return strlen(FILE_LIST->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_list_line_copy) { snprintf(reinterpret_cast<char*>(b), (size_t)c, "%s", (const char*)FILE_LIST->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_list_delete_line) { FILE_LIST->DeleteLine((unsigned long)a); }
 EE_UI_VOID(fl_combo_delete_all) { FILE_COMBO->DeleteAllEntries(); }
 EE_UI_VOID(fl_combo_append) { FILE_COMBO->AppendLine(sFileLine = reinterpret_cast<const char*>(a)); }
 EE_UI_VOID(fl_combo_insert_sorted) { FILE_COMBO->GetList()->InsertLine(UWideString(reinterpret_cast<const char*>(a)), 0, &UINoCaseLess); }
-EE_UI_CASE(fl_combo_selection) { return FILE_COMBO->GetCurrentSelection(*reinterpret_cast<unsigned long*>(f)); }
 EE_UI_CASE(fl_combo_line_length) { return strlen(FILE_COMBO->GetList()->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_combo_line_copy) { snprintf(reinterpret_cast<char*>(b), (size_t)c, "%s", (const char*)FILE_COMBO->GetList()->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_combo_delete_line) { FILE_COMBO->DeleteLine((unsigned long)a); }
@@ -744,7 +696,6 @@ EE_UI_VOID(group_set_dirty) { ENTITY_CONTROL->SetDirty(true); }
 EE_UI_CASE(form_ctl_type) { return theControl->GetType(); }
 EE_UI_CASE(form_ctl_entity_type) { return theControl->UIEntity::GetType(); }
 EE_UI_CASE(form_ctl_tabable) { return theControl->GetTabable(); }
-EE_UI_CASE(form_ctl_checked) { return static_cast<UIRadioButton*>(theControl)->GetIsChecked(); }
 EE_UI_CASE(form_ctl_ime_enabled) { return theControl->GetIMEEnabled(); }
 EE_UI_CASE(form_part_copy_data) { return theControl->CopyData(); }
 EE_UI_CASE(form_part_draw_polygons) { return theControl->DrawPolygons(); }
@@ -761,7 +712,6 @@ EE_UI_CASE(form_ctl_wheel_turned) { return theControl->MouseWheelTurned((long)b)
 EE_UI_VOID(form_ctl_release_mouse) { theControl->ReleaseCapturedMouse(); }
 EE_UI_VOID(form_ctl_release_keyboard) { theControl->ReleaseCapturedKeyboard(); }
 EE_UI_VOID(form_help_set_text) { static_cast<UITextLabel*>(theControl)->SetText(sUIFormHelpString, true); }
-EE_UI_CASE(form_label_fit) { return static_cast<UITextLabel*>(theControl)->GetFitRectToText(); }
 EE_UI_CASE(form_group_new) { return (intptr_t) new UIEntityGroup; }
 EE_UI_VOID(form_group_delete) { delete theGroup; }
 EE_UI_VOID(form_bg_open) { theBackground->Open(); }

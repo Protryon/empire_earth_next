@@ -166,7 +166,7 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::ListInsertLine as isize => V(ee_uicpp_combo_a_list_insert_line),
         x if x == A::ListDeleteLine as isize => V(ee_uicpp_combo_a_list_delete_line),
         x if x == A::ListDeleteAll as isize => V(ee_uicpp_combo_a_list_delete_all),
-        x if x == A::ListChangeWidth as isize => V(ee_uicpp_combo_a_list_change_width),
+        x if x == A::ListChangeWidth as isize => X(chains::combo_a_list_change_width),
         x if x == A::PartMouseDown as isize => R(ee_uicpp_combo_a_part_mouse_down),
         x if x == A::PartMouseUp as isize => R(ee_uicpp_combo_a_part_mouse_up),
         x if x == A::PartMouseMove as isize => R(ee_uicpp_combo_a_part_mouse_move),
@@ -207,9 +207,9 @@ fn combo_query_shim(q: isize) -> Option<ComboShim> {
         x if x == Q::TextBoxBorder as isize => X(chains::combo_q_text_box_border),
         x if x == Q::LineCount as isize => R(ee_uicpp_combo_q_line_count),
         x if x == Q::Line as isize => R(ee_uicpp_combo_q_line),
-        x if x == Q::LineHeight as isize => R(ee_uicpp_combo_q_line_height),
-        x if x == Q::ListBorder as isize => R(ee_uicpp_combo_q_list_border),
-        x if x == Q::ListScrollBarCaptured as isize => R(ee_uicpp_combo_q_list_scroll_bar_captured),
+        x if x == Q::LineHeight as isize => X(chains::combo_q_line_height),
+        x if x == Q::ListBorder as isize => X(chains::combo_q_list_border),
+        x if x == Q::ListScrollBarCaptured as isize => X(chains::combo_q_list_scroll_bar_captured),
         x if x == Q::WindowHeight as isize => R(ee_uicpp_combo_q_window_height),
         x if x == Q::EditText as isize => X(chains::combo_q_edit_text),
         x if x == Q::TabbingOn as isize => X(chains::combo_q_tabbing_on),
@@ -932,6 +932,14 @@ type Shim = unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f
 #[cfg(not(any(test, feature = "no_cpp")))]
 type VoidShim = unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32);
 
+/// A table setter: a C++ shim, or a Rust op of [`chains`] (LLE/UI round 2 pass 2).
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[derive(Clone, Copy)]
+enum SetFn {
+    C(VoidShim),
+    R(unsafe fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize),
+}
+
 /// `TblMake`'s constructors by [`EeUiTableKind`](crate::tableobj::EeUiTableKind) (UIControlsTable.cpp).
 #[cfg(not(any(test, feature = "no_cpp")))]
 const MAKE: [Shim; 18] = [
@@ -957,52 +965,52 @@ const MAKE: [Shim; 18] = [
 
 /// `TblSet`'s setters by [`Set`] (`None`: Rust's, [`table_set`] and [`table_call`]).
 #[cfg(not(any(test, feature = "no_cpp")))]
-const SET: [Option<VoidShim>; 45] = [
-    Some(ee_uicpp_tbl_set_button_text),
-    Some(ee_uicpp_tbl_set_button_focused_color),
-    Some(ee_uicpp_tbl_set_button_down_sound),
-    Some(ee_uicpp_tbl_set_button_up_sound),
+const SET: [Option<SetFn>; 45] = [
+    Some(SetFn::C(ee_uicpp_tbl_set_button_text)),
+    Some(SetFn::R(chains::tbl_set_button_focused_color)),
+    Some(SetFn::C(ee_uicpp_tbl_set_button_down_sound)),
+    Some(SetFn::C(ee_uicpp_tbl_set_button_up_sound)),
     None,
-    Some(ee_uicpp_tbl_set_check_set_checked),
-    Some(ee_uicpp_tbl_set_combo_focused_rect),
-    Some(ee_uicpp_tbl_set_combo_selected_bg),
-    Some(ee_uicpp_tbl_set_combo_selection),
-    Some(ee_uicpp_tbl_set_combo_text_box_opacity),
-    Some(ee_uicpp_tbl_set_combo_text_box_color),
-    Some(ee_uicpp_tbl_set_combo_list_always_dirty),
-    Some(ee_uicpp_tbl_set_edit_number),
-    Some(ee_uicpp_tbl_set_edit_text),
-    Some(ee_uicpp_tbl_set_edit_selected_bg),
-    Some(ee_uicpp_tbl_set_list_focused_rect),
-    Some(ee_uicpp_tbl_set_list_selected_bg),
-    Some(ee_uicpp_tbl_set_list_scroll_opacity),
-    Some(ee_uicpp_tbl_set_list_selection),
+    Some(SetFn::R(chains::tbl_set_check_set_checked)),
+    Some(SetFn::R(chains::tbl_set_combo_focused_rect)),
+    Some(SetFn::C(ee_uicpp_tbl_set_combo_selected_bg)),
+    Some(SetFn::R(chains::tbl_set_combo_selection)),
+    Some(SetFn::C(ee_uicpp_tbl_set_combo_text_box_opacity)),
+    Some(SetFn::C(ee_uicpp_tbl_set_combo_text_box_color)),
+    Some(SetFn::R(chains::tbl_set_combo_list_always_dirty)),
+    Some(SetFn::R(chains::tbl_set_edit_number)),
+    Some(SetFn::C(ee_uicpp_tbl_set_edit_text)),
+    Some(SetFn::R(chains::tbl_set_edit_selected_bg)),
+    Some(SetFn::R(chains::tbl_set_list_focused_rect)),
+    Some(SetFn::C(ee_uicpp_tbl_set_list_selected_bg)),
+    Some(SetFn::R(chains::tbl_set_list_scroll_opacity)),
+    Some(SetFn::C(ee_uicpp_tbl_set_list_selection)),
     None,
-    Some(ee_uicpp_tbl_set_graph_font),
-    Some(ee_uicpp_tbl_set_graph_font_color),
-    Some(ee_uicpp_tbl_set_radio_up_unchecked),
+    Some(SetFn::R(chains::tbl_set_graph_font)),
+    Some(SetFn::R(chains::tbl_set_graph_font_color)),
+    Some(SetFn::R(chains::tbl_set_radio_up_unchecked)),
     None,
-    Some(ee_uicpp_tbl_set_scroll_range),
-    Some(ee_uicpp_tbl_set_scroll_value),
-    Some(ee_uicpp_tbl_set_slider_range),
-    Some(ee_uicpp_tbl_set_slider_value),
-    Some(ee_uicpp_tbl_set_slider_page),
-    Some(ee_uicpp_tbl_set_status_range),
-    Some(ee_uicpp_tbl_set_status_value),
-    Some(ee_uicpp_tbl_set_status_color),
-    Some(ee_uicpp_tbl_set_status_opacity),
-    Some(ee_uicpp_tbl_set_status_text),
-    Some(ee_uicpp_tbl_set_status_focused_color),
-    Some(ee_uicpp_tbl_set_label_number),
-    Some(ee_uicpp_tbl_set_label_align),
-    Some(ee_uicpp_tbl_set_label_scroll_opacity),
-    Some(ee_uicpp_tbl_set_label_fit),
-    Some(ee_uicpp_tbl_set_bg_color),
-    Some(ee_uicpp_tbl_set_bg_opacity),
-    Some(ee_uicpp_tbl_set_always_dirty),
-    Some(ee_uicpp_tbl_set_set_rectangle),
-    Some(ee_uicpp_tbl_set_change_font),
-    Some(ee_uicpp_tbl_set_set_trigger),
+    Some(SetFn::R(chains::tbl_set_scroll_range)),
+    Some(SetFn::R(chains::tbl_set_scroll_value)),
+    Some(SetFn::R(chains::tbl_set_slider_range)),
+    Some(SetFn::R(chains::tbl_set_slider_value)),
+    Some(SetFn::R(chains::tbl_set_slider_page)),
+    Some(SetFn::R(chains::tbl_set_status_range)),
+    Some(SetFn::R(chains::tbl_set_status_value)),
+    Some(SetFn::R(chains::tbl_set_status_color)),
+    Some(SetFn::R(chains::tbl_set_status_opacity)),
+    Some(SetFn::C(ee_uicpp_tbl_set_status_text)),
+    Some(SetFn::R(chains::tbl_set_status_focused_color)),
+    Some(SetFn::R(chains::tbl_set_label_number)),
+    Some(SetFn::R(chains::tbl_set_label_align)),
+    Some(SetFn::R(chains::tbl_set_label_scroll_opacity)),
+    Some(SetFn::R(chains::tbl_set_label_fit)),
+    Some(SetFn::C(ee_uicpp_tbl_set_bg_color)),
+    Some(SetFn::C(ee_uicpp_tbl_set_bg_opacity)),
+    Some(SetFn::R(chains::tbl_set_always_dirty)),
+    Some(SetFn::C(ee_uicpp_tbl_set_set_rectangle)),
+    Some(SetFn::C(ee_uicpp_tbl_set_change_font)),
+    Some(SetFn::R(chains::tbl_set_set_trigger)),
 ];
 
 /// `SetupText`'s texts by class (tableobj.rs `TEXT_*`).
@@ -1068,7 +1076,14 @@ unsafe fn table_set(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         unsafe { ee_ui_table_setup_text(o, text as *mut c_void) };
     } else if let Some(Some(set)) = SET.get(b as usize) {
         // SAFETY: the contract; the selector's setter
-        unsafe { set(o, a, b, c, d, f) };
+        unsafe {
+            match *set {
+                SetFn::C(s) => s(o, a, b, c, d, f),
+                SetFn::R(s) => {
+                    s(o, a, b, c, d, f);
+                }
+            }
+        };
     }
     0
 }
