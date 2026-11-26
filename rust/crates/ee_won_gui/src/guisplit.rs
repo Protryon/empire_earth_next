@@ -80,6 +80,12 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
                 return r;
             }
         }
+        if which == EeWonGuiSplitHost::Input {
+            // (the box's own members in place: R6 WON GUI round 41)
+            if let Some(r) = crate::inputobj::game_host_op(comp as isize, op, a, b) {
+                return r;
+            }
+        }
         if which == EeWonGuiSplitHost::Text {
             // (the segments' members, the link and the copy: R6 WON GUI round 40; the clipboard the C++ host's)
             // SAFETY: as above

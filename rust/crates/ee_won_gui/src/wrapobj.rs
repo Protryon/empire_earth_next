@@ -472,6 +472,47 @@ pub(crate) fn game_wrap_op(w: isize, which: crate::guihost::EeWonWbText, c: isiz
     })
 }
 
+/// `WrappedText::Paint(g, x, y)` on the game's wrapped text `w` (R6 WON GUI round 41: the C++ method and the
+/// Graphics host's Text case went): each wrapped line (centred if set) from `x`, `y`, nothing without a font; the
+/// plan's font and string slots the text's own. None in a driver's world.
+///
+/// # Safety
+/// `g` is the game's live Graphics, `w` a live wrapped text.
+pub(crate) unsafe fn game_paint(g: *mut crate::gfxrun::EeWonGraphics, w: isize, x: i32, y: i32) -> Option<()> {
+    let at = wrap_at()?;
+    let slot = |off: usize| (w as usize + off) as *mut isize;
+    // SAFETY: the contract: the text's members at their registered offsets, its font live (its SmartPtr holds it)
+    let (f, obj, t) = unsafe { (*slot(at.font), *slot(at.obj) as *const EeWonWrapText, *slot(at.text) as *const u8) };
+    if f == 0 {
+        return Some(());
+    }
+    // SAFETY: as above
+    let font = unsafe { word(f, at.font_rust) } as *const EeWonPlatFont;
+    let (p, n) = if t.is_null() {
+        (std::ptr::null(), 0)
+    } else {
+        // SAFETY: as above: the text's block
+        let b = unsafe { &*(t.add(crate::guistrobj::EE_WON_GSTR_DATA_AT) as *const crate::guistrobj::EeWonGuiStrBuf) };
+        (b.text as *const c_void, i32::from(b.length))
+    };
+    // SAFETY: the live Rust object and font; the plan asked for its length, then filled
+    let ops = unsafe {
+        let count = ee_won_wrap_paint_font(obj, font, p, n, x, y, std::ptr::null_mut(), 0);
+        let mut v = vec![EeWonDrawOp::default(); count];
+        let count = ee_won_wrap_paint_font(obj, font, p, n, x, y, v.as_mut_ptr(), v.len());
+        v.truncate(count);
+        v
+    };
+    let slots = crate::gfxrun::EeWonDrawSlots {
+        font: f as *mut c_void,
+        string: slot(at.text) as *const c_void,
+        ..Default::default()
+    };
+    // SAFETY: the contract; the slots' objects are the live text's
+    unsafe { crate::gfxrun::ee_won_graphics_draw(g, ops.as_ptr(), ops.len(), &slots) };
+    Some(())
+}
+
 #[cfg(test)]
 #[path = "wrapobj_tests.rs"]
 mod tests;

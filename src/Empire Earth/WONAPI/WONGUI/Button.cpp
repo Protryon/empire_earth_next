@@ -594,9 +594,6 @@ void Background::Paint(Graphics &g, int xpos, int ypos, int width, int height, i
 typedef EeWonTipOp To;
 static_assert(StandardColor_ToolTipBack == EE_WON_TIP_COLOR_BACK && StandardColor_ToolTipText == EE_WON_TIP_COLOR_TEXT, "tipobj.rs colours");
 
-// OpenPopup takes its parameters by reference
-static void OpenWith(Window* inWindow, PopupParams inParams) { inWindow->OpenPopup(inParams); }
-
 extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a, intptr_t b)
 {
     ListAreaToolTip* t = (ListAreaToolTip*)inMe;
@@ -604,10 +601,8 @@ extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a
     switch (op) {
     case To::BasePaint: t->Component::Paint(*g); return 0;
     // (the item, the members, the sizes, SetSize and LocalToRoot are tipobj.rs's in the game: R6 WON GUI round 39)
-    // (the schemes and the list's pads and offset too: R6 WON GUI round 40)
-    case To::ScrollPaint: t->mListArea->ScrollPaint(*g); return 0;
-    case To::OpenPopup: OpenWith(t->mListArea->GetRoot(), PopupParams(t, EE_WON_TIP_POPUP_FLAGS, t->mListArea, (int)a, (int)b)); return 0;
-    case To::ClosePopup: t->mListArea->GetRoot()->ClosePopup(t); return 0;
+    // (the schemes and the list's pads and offset too: R6 WON GUI round 40; the list's ScrollPaint and the popup:
+    // round 41)
     default: return 0;
     }
 }

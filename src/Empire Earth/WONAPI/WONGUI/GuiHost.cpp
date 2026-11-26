@@ -149,34 +149,15 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
 {
     InputBox* t = (InputBox*)inComp;
     switch (op) {
-    case Op::FontHeight: return t->mFont->GetHeight();
-    case Op::FontCharWidth: return t->mFont->GetCharacterWidth((int)a);
-    case Op::TextWidth: return t->mFont->GetStringWidth(t->mText, (unsigned short)a, (unsigned short)b);
-    case Op::TextWidthAll: return t->mFont->GetStringWidth(t->mText);
-    case Op::TextCharWidth: return t->mFont->GetCharacterWidth(t->mText[(int)a]);
-    case Op::FontStringM: return t->mFont->GetStringWidth(GUIString("M"));
-    case Op::TextStoreText: (a == 0 ? t->mText : t->mRealText) = *(const GUIString*)b; return 0;
-    case Op::InputHasFilter: return t->mInputFilter != NULL ? 1 : 0;
+    // (the font measures, the text stores, the colours, the icon and the filter's presence are inputobj.rs
+    // game_host_op's over the members in place: R6 WON GUI round 41)
     case Op::InputFilterText: return t->mInputFilter(t, *(GUIString*)a) ? 1 : 0;
-    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->GetWidth() : -1;
-    case Op::InputDisabled: return t->IsDisabled() ? 1 : 0;
-    case Op::InputUseDisabledColors: return t->mUseDisabledColors ? 1 : 0;
-    case Op::InputHasIcon: return t->mIcon.get() != NULL ? 1 : 0;
-    case Op::InputHasFocus: return t->HasFocus() ? 1 : 0;
-    case Op::InputTextColor: return (int)t->mTextColor;
-    case Op::InputDisabledTextColor: return t->mDisabledTextColor;
-    case Op::InputIconHeight: return t->mIcon->GetHeight();
-    case Op::InputSelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     case Op::InputDrawSlots: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(t->mFont.get(), &t->mText, t->mIcon.get()), WONDrawNoCall()); return 0;
     case Op::InputPaintBack: t->mBackground.Paint(*(Graphics*)a, 0, 0, ((const EeWonDrawOp*)b)->c, ((const EeWonDrawOp*)b)->d, ((const EeWonDrawOp*)b)->e, 0); return 0;
     case Op::InputPaintDisabledBack: t->mDisabledBackground.Paint(*(Graphics*)a, 0, 0, ((const EeWonDrawOp*)b)->c, ((const EeWonDrawOp*)b)->d, ((const EeWonDrawOp*)b)->e, 0); return 0;
     // the constructor's statements (guictor.rs)
     case Op::CtorFontNamed: t->mFont=t->GetNamedFont("InputBox"); return 0;
-    case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
-    case Op::CtorDisabledTextColor: t->mDisabledTextColor=(int)0x80000006; return 0;
     case Op::CtorDisabledBackground: t->mDisabledBackground.SetColor((int)0x80000001); return 0;
-    case Op::CtorUseDisabledColors: t->mUseDisabledColors=true; return 0;
-    case Op::CtorNoFilter: t->mInputFilter=NULL; return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -188,6 +169,15 @@ bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
     return ee_won_input_numeric_filter(theStr.mData->mText, theStr.length(), theInputBox->GetSelStart());
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonInputAt kInputAt = {offsetof(InputBox, mText), offsetof(InputBox, mRealText), offsetof(InputBox, mIcon),
+                                      offsetof(InputBox, mInputFilter), offsetof(InputBox, mUseDisabledColors),
+                                      offsetof(InputBox, mFont), offsetof(InputBox, mTextColor),
+                                      offsetof(InputBox, mDisabledTextColor), offsetof(InputBox, mSelColor), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+static_assert(sizeof(SmartPtr<Font>) == sizeof(void*) && sizeof(SelectionColor) == sizeof(EeWonSelColor), "inputobj.rs EeWonInputAt");
+[[maybe_unused]] static const bool sInputAt = (ee_won_input_members_register(&kInputAt), true);
 // Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the
 // rest: the 500 ms blink, the 100-entry input history, the padding)
 InputBox::InputBox()
@@ -607,15 +597,6 @@ WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won
 void WrappedText::CalcWrap()
 {
     ee_won_wrap_calc_font(this->mObj, this->mFont.get() != NULL ? this->mFont->mRust : NULL, this->mText.mData->mText, this->mText.length());
-}
-// Draws each wrapped line (centred if set) from the given top-left point (wrapobj.rs over guidraw.rs wrapped_text)
-void WrappedText::Paint(Graphics& g, int x, int y)
-{
-    if (this->mFont.get() == NULL)
-        return;
-    WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) {
-        return ee_won_wrap_paint_font(this->mObj, this->mFont->mRust, this->mText.mData->mText, this->mText.length(), x, y, o, n); }),
-        WONDrawSlots(this->mFont.get(), &this->mText));
 }
 }
 

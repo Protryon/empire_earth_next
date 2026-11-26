@@ -523,7 +523,7 @@ public:
     void SetCentered(bool c) { ee_won_wrap_set_centered(this->mObj,c); } //34ad40
     void SetFont(Font* f) { this->mFont=f; this->CalcWrap(); } //34ad50
     void SetMaxWidth(int w) { if(ee_won_wrap_set_max_width(this->mObj,w)) this->CalcWrap(); } //34adb0
-    void Paint(Graphics&,int,int); //34adf0
+    // (Paint, 34adf0, is wrapobj.rs game_paint's: R6 WON GUI round 41)
     int GetWidth() { return ee_won_wrap_width(this->mObj); }
     const GUIString& GetText() { return this->mText; } // inline; returns the text at +0x08
     int GetHeight(); // inline, defined after Font below
