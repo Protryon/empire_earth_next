@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <string>
-#include "lle/UString.h"
-#include "lle/UWideString.h"
 #include "rust/game/screens.h"   // ee_screens_scratch, EeScreensScratch
 #include <new>
 #include <type_traits>

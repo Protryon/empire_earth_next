@@ -5,14 +5,9 @@
 #define EE_EECAMERACONTROL_H
 
 #include <vector>
-#include "lle/GETransformation.h"
-#include "lle/GE3DPoint.h"
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
-#include "rust/base/math.h"
-#include "rust/render/gfx.h"
 
 class GE3DPoint;
 class EEUnit;

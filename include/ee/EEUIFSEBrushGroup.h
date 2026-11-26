@@ -5,7 +5,6 @@
 #ifndef EE_EEUIFSEBRUSHGROUP_H
 #define EE_EEUIFSEBRUSHGROUP_H
 
-#include "lle/LLEForward.h"
 #include "rust/game/screens.h"
 
 class EEUIFSEBrushGroup {

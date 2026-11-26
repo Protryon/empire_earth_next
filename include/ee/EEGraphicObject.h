@@ -10,9 +10,7 @@ struct EeGfxGraphicTags;
 
 #include <vector>
 #include "ee/EEMedia.h"
-#include "rust/data/tables.h"
 #include "rust/data/media.h"
-#include "lle/GE3DPoint.h"          // mDefaultPoint, mTopPoint
 
 class GETexture;
 class GETransformation;
@@ -23,13 +21,8 @@ class EEWheel;
 class EESoundObject;
 class UString;
 
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/preload_media.h"
-#include "rust/render/gfx.h"
 
 // Actual0x50 turret part from ctorD9AB4, allocationD76A1 and two class readers.
 // No vptr; nominal name provisional. Position0, transform0xc, model0x4c.

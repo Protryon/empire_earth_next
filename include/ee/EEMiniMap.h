@@ -5,9 +5,6 @@
 
 #include <list>
 #include <vector>
-#include "lle/UList.h"
-#include "rust/base/math.h"
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
 

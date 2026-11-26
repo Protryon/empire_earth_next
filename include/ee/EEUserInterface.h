@@ -12,13 +12,10 @@
 #define EE_EEUSERINTERFACE_H
 
 #include "rust/game/screens.h"   // EeScreensUserInterfaceFields, the posts, the actions
-#include "rust/data/tables.h"    // ee_data_world_entry (AddChatLogEntry's display time)
 #include "ee/EEWorldConstants.h"
-#include "ee/EEUIEChatLogEvents.h"
 #include "ee/EESMDialogMessage.h"
 #include "ee/EEGraphics.h"
 #include "platform/PlatWindow.h"
-#include "platform/PlatTime.h"
 #include "lle/UIEvent.h"
 
 class EEAction;

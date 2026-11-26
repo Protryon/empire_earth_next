@@ -5,9 +5,7 @@
 #ifndef EE_RTSMOUSE_H
 #define EE_RTSMOUSE_H
 
-#include "lle/GERectangle.h"           // RTSMouse::mBounds
 #include "rust/game/rts.h"              // EeRtsMouseFields (RTSMouse' plain members)
-#include "rust/base/math.h"
 #include "rust/render/gfx.h"
 
 class GEScreen;
