@@ -70,7 +70,7 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
     case Op::ComboDropItem: { SmartPtr<TextListItem> held = Item(a); return 0; }
     case Op::ComboSetListBox: t->mListBox = static_cast<Scroller*>(Comp(a)); return 0;
     case Op::ComboBoxArea: return (intptr_t)static_cast<Component*>(static_cast<Scroller*>(Comp(a))->GetScrollArea());
-    case Op::ComboEditClear: t->mEdit->SetText(GUIString(new GUIStringData("")), a != 0); return 0;
+    case Op::ComboEditClear: t->mEdit->SetText(GUIString(""), a != 0); return 0;
     case Op::ComboEditItemText: t->mEdit->SetText(Item(a)->mText, true); return 0;
     case Op::ComboEditSetText: t->mEdit->SetText(*(const GUIString*)a, b != 0); return 0;
     case Op::ComboEditUndo: t->mEdit->SetText(t->mUndoStr, true); return 0;

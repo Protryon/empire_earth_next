@@ -519,7 +519,7 @@ WON_TESTS = {
     # LobbyPersistentData and the Lobby* functions over it as one Rust object (persistobj.rs, R6 WONLobby round 15):
     # the original's statements (won_persistobj_orig.h) against the game's forwards, the state and files compared
     # after every step
-    "won_persistobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_persistobj_test": [],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
@@ -707,7 +707,7 @@ WON_TESTS = {
     # the resource configs' table reader (cfgtab.rs) against the 45 handlers' original statements over the shipped
     # resource files and random instructions (golden: rust/crates/ee_won_gui/src/golden_cfgtab.txt)
     "won_cfgtab_test": "won_guiconf_test",
-    "won_guiconf_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_guiconf_test": [],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
     # guicfg module (the port's exception-carrying wrapper included)
     "won_guicfg_test": [],
@@ -802,7 +802,7 @@ WON_TESTS = {
     # ComponentConfig's readers, look-ups, map and instructions, ResourceConfig and ResourceConfigTable whole in Rust
     # (R6 WONLobby round 25: compcfg.rs) against the deleted units' statements (tests/won/won_compcfg_orig.h) over one
     # world: random runs of the tree's steps, traces and censuses
-    "won_compcfg_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_compcfg_test": [],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)
@@ -914,32 +914,32 @@ WON_TESTS = {
     # recorded over RegAuth.cpp before its port in net round 27)
     "won_regauth_test": [],
     # the lobby's chat command parser (golden: rust/crates/ee_won_lobby/src/golden_chat.txt)
-    "won_chat_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_chat_test": [],
     # ChatCommandParser whole in Rust (chatobj.rs, R6 WONLobby round 17): ChatCommandParser.cpp's statements as they
     # were (tests/won/won_chatparser_orig.h) against the game's forwards, each over real model shells
-    "won_chatparser_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_chatparser_test": [],
     # the lobby dialogs', popups' and controls' strings as resource rows (string_row, R6 WONLobby round 17) against
     # the switches they replaced (LobbyDialogHost.cpp's AdminString and PopupString, LobbyCtrlHost.cpp's CtlString)
-    "won_restext_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_restext_test": [],
     # the Windows skin's concrete widgets as shell kinds (shell_ms.rs, R6 WONLobby round 20): the deleted classes'
     # statements over a scripted world against the kinds, op for op
-    "won_shell_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_shell_test": [],
     # the table setters that call a widget's Rust object (cfgset.rs, R6 WONLobby round 27): WONCfgTable.inl's cases
     # as they were (tests/won/won_cfgset_orig.h) over the game's classes, their forwards' Rust calls traced, against
     # cfgset.rs's descriptions; and the census of the setters it answers
-    "won_cfgset_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_cfgset_test": [],
     # the WON skin's widgets and the skin as Rust (shell_won.rs, skinobj.rs, R6 WONLobby round 23): the deleted classes'
     # statements over a scripted world against the kinds and the skin, op for op
-    "won_wonskin_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_wonskin_test": [],
     # the lobby's events as Rust objects (lobbyevt.rs, R6 WONLobby round 18): the original 43 classes
     # (tests/won/won_lobbyevt_orig.h) against the makers and readers of WONLobbyEvents.h, members and references
     "won_lobbyevt_test": [],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won_gui/src/golden_guistring.txt)
-    "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_guistring_test": [],
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)
-    "won_guistrobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_guistrobj_test": [],
     # Graphics: the original's statements against gfxobj.rs under traced hooks (golden: rust/crates/ee_won_gui/src/golden_gfxobj.txt)
-    "won_gfxobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],  # (Graphics.cpp as it was: won_gfxobj_port.h)
+    "won_gfxobj_test": [],  # (Graphics.cpp as it was: won_gfxobj_port.h)
     # Window::GetFont's font cache: the original's std::map statements against fontmap.rs (no units)
     "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
@@ -949,11 +949,11 @@ WON_TESTS = {
     "won_cfgobject_test": [WON_SRC / "WONConfig" / "ConfigObject.cpp"],
     # R6 WON round 34's leaf classes (browserobj.rs, tipobj.rs, localize.rs: BrowserComponent, ListAreaToolTip,
     # StringLocalize::GetStr) against the deleted C++ over a stand-in world, real GUIStrings and real page files
-    "won_leaf34_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_leaf34_test": [],
     # R6 WON GUI round 35: the cursors as one Rust object (cursorobj.rs) against the original Cursor, CursorRef,
     # ComponentCursor and PlatCursor, the standard cursors' table and the window's cursor change over a counted world;
     # every host op mutated; the clipboard (clipobj.rs) against PlatClipboard.cpp's bodies
-    "won_win35_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_win35_test": [],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]

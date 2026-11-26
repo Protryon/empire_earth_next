@@ -230,7 +230,6 @@ int LobbyMessageBoxYesNo(const GUIString& inTitle, const GUIString& inText, bool
 void LobbyMessageBox(const GUIString& inTitle, const GUIString& inText);
 bool LobbyAddComponentLoader(ResourceConfigTable* inCollection, void (*inFunc)(ComponentConfig* inConfig)); // 0x361fb0 (the init ignores the result)
 void LobbySetProductName(const std::wstring& inLoginCommunity, const char* inHashFileListStr);
-extern GUIString gEmptyGUIString;
 }
 
 #endif

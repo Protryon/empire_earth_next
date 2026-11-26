@@ -1,5 +1,5 @@
 """Writes tests/won/won_leaf34_new.h: the new classes' declarations (include/ee/wonapi/WONLobbyGUI.h) and their hosts'
-one-statement cases (WONGUI/BrowserComponent.cpp, TextListItem.cpp, StringLocalize.cpp), and the paints' hosts and
+one-statement cases (WONGUI/BrowserComponent.cpp, TextListItem.cpp), the formatting functions (WONLobbyResource.h), and the paints' hosts and
 methods (Button.cpp, TextListItem.cpp: Graphics and ListArea the
 world's PaintGraphics and PaintList) as they are in the tree, over won_leaf34_world.h, the hosts renamed so the
 driver can put its mutations between them and the Rust.
@@ -32,9 +32,10 @@ def main():
     t_open = between(t, "static void OpenWith(", "\n")
     t_host = between(t, 'extern "C" intptr_t ee_won_guicpp_tip_call', "\n}\n").replace(
         'extern "C" intptr_t ee_won_guicpp_tip_call', "static intptr_t HostTip")
-    s = (GUI / "StringLocalize.cpp").read_text("utf-8")
-    s_body = between(s, "static void LocalizeUnits(", "\n}\n}\n")[:-2]
-    s_body = s_body.replace("LocalizeUnits, LocalizeNew", "MutUnits, MutNew")
+    s = (ROOT / "include" / "ee" / "wonapi" / "WONLobbyResource.h").read_text("utf-8")
+    s_body = between(s, "inline GUIString LobbyFormatString(", "\n// a new text").replace("inline GUIString", "GUIString")
+    s_body = ("GUIString WONLocalize(const GUIString& f, const GUIString* a, const GUIString* b, const GUIString* c, int n)\n"
+              "{ return (GUIStringData*)ee_won_gui_localize(&f, a, b, c, n); }\n" + s_body[:-len("\n// a new text")])
     ib = (GUI / "Button.cpp").read_text("utf-8")
     tl = (GUI / "TextListItem.cpp").read_text("utf-8")
     mb = tl
@@ -81,8 +82,6 @@ typedef EeWonTipOp To;
 typedef EeWonLeafOp Lo;
 static intptr_t MutBrowser(void*, EeWonBrowserOp, intptr_t, intptr_t);
 static intptr_t MutTip(void*, EeWonTipOp, intptr_t, intptr_t);
-static void MutUnits(const void*, EeWonLocalizeText*);
-static void* MutNew(const void*, size_t);
 static intptr_t MutImgBtn(void*, EeWonLeafOp, intptr_t, intptr_t);
 static intptr_t MutTextItem(void*, EeWonLeafOp, intptr_t, intptr_t);
 static intptr_t MutMenu(void*, EeWonLeafOp, intptr_t, intptr_t);

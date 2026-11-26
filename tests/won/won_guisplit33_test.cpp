@@ -19,6 +19,7 @@
 #include <vector>
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guisplit.h"
+#include "rust/won_gui/guistrobj.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/wmobj.h"
 #include "rust/won_gui/winobj.h"
@@ -116,7 +117,7 @@ static void Dump(Side& s, intptr_t r, const int* ints, int n)
     Log(o);
     Log("text " + N(s.mText.mLinkParam) + " tip " + Id(s.mList.mItemToolTip.get()) + " size " + N(s.mSize.mx) + "," +
         N(s.mSize.my) + "," + N(s.mSize.mWidth) + "," + N(s.mSize.mHeight) + " refs " + N(s.mNewWindow.mRefs) + " " +
-        N(s.mFont.mRefs) + " host text " + N(GsNew::sHostText.length()) + " " + N(s.mList.mItemToolTip.get() != NULL ? s.mList.mItemToolTip->mRefs : 0));
+        N(s.mFont.mRefs) + " " + N(s.mList.mItemToolTip.get() != NULL ? s.mList.mItemToolTip->mRefs : 0));
 }
 
 struct Case {
@@ -150,6 +151,8 @@ static std::vector<std::string> Run(const Case& c, unsigned k, int v, bool inNew
     default: comp = &s.mWm; break;
     }
     const std::string n = c.mName;
+    // the sink is Rust's Vec since R6 WON GUI round 39 (guisplit.rs fills it): none here; Clipboard::Get is logged
+    if (n == "ClipboardTake") a = 0;
     if (n == "TipShow") a = (v & 1) ? (intptr_t)&s.mItem : 0;
     if (n == "QueueSubMenu") { a = (intptr_t)&s.mMenu; b = (intptr_t)ints; cc = (intptr_t)&q; d = 0x23e7 + v; }
     if (n == "QueueMouseUp") { a = 11 * v; b = -v; cc = v & 3; }
@@ -213,8 +216,9 @@ int main()
     int runs = 0;
     const int base = RunAll(true, &runs);
     printf("won_guisplit33_test: %d cases x worlds, %d mismatches\n", runs, base);
-    // the mutations: each new op of the round (EeWonGuiOp from HostTextClipboard), and the older ops they call
-    const Op kOps[] = {Op::HostTextClipboard, Op::HostTextSink, Op::HostTextClear, Op::TextSetLinkParam,
+    // the mutations: each new op of the round, and the older ops they call (not ClipboardText, whose answer is a
+    // text: R6 WON GUI round 39)
+    const Op kOps[] = {Op::TextSetLinkParam,
                        Op::TextDeliverLinkEvent, Op::ListRoot, Op::WinMouseX, Op::WinMouseY, Op::ListParent,
                        Op::ParentRootToChild, Op::ListContains, Op::TipExists, Op::TipNew, Op::TipDo, Op::ParamsMake,
                        Op::ParamsAvoid, Op::QueueDoPopup, Op::ListLocalToRoot, Op::WinQueueMouseUp, Op::WmWin,
