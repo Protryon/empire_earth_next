@@ -249,6 +249,11 @@ pub fn auth_ctx_of(o: *mut c_void) -> Option<*const crate::authobj::EeWonAuthCtx
     (!c.is_null()).then_some(c)
 }
 
+/// A C++ op's start time (`AsyncOp::GetStartTime()`; none for NULL or another class).
+pub fn op_start_time(o: *mut c_void) -> Option<u32> {
+    op(o).map(EeWonAsyncOp::start_time)
+}
+
 pub(crate) fn op<'a>(o: *mut c_void) -> Option<&'a EeWonAsyncOp> {
     // SAFETY: an op's Rust object lives as long as the op, which the caller holds
     unsafe { (object_of(o, EeWonCoreObject::Op) as *const EeWonAsyncOp).as_ref() }

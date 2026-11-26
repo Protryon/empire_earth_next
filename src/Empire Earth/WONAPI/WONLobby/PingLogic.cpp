@@ -44,8 +44,6 @@ template <class F> static intptr_t WithReader(intptr_t inState, F inRead)
 static LobbyGame* G(intptr_t a) { return reinterpret_cast<LobbyGame*>(a); }
 // a ping op's members (NULL for no op or another op)
 static EeWonPingOp* Rec(AsyncOp* inOp) { return static_cast<EeWonPingOp*>(ee_won_udp_body_of(static_cast<RefCount*>(inOp), EE_WON_UDP_BODY_PING)); }
-// the op of a host call made by a ping op's body
-static UDPManagerSendRecvOp* PingOp(void* inObj) { return static_cast<UDPManagerSendRecvOp*>(static_cast<RefCount*>(inObj)); }
 // a new op with one reference the Rust gives back (the original's SmartPtr local)
 static intptr_t Held(AsyncOp* inOp)
 {
@@ -90,11 +88,7 @@ static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr
                                                reinterpret_cast<UDPManagerRecvOp*>(c)->GetFromAddr());
         return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
-    // (the base's RunHook follows the body's: udpops.rs)
-    case O::RequestSend: ee_won_udpsendrecvop_set_outgoing_bytes(PingOp(inObj)->GetUdpObject(), reinterpret_cast<const uint8_t*>(a), (size_t)b); return 0;
-    case O::Elapsed: return (intptr_t)(unsigned long)(WONTickCount() - PingOp(inObj)->GetStartTime());
-    case O::OpGame: return (intptr_t)ee_won_pingop_call(Rec(reinterpret_cast<AsyncOp*>(a)), EeWonPingOpCall::Field, 5);
-    case O::OpRecord: return (intptr_t)Rec(reinterpret_cast<AsyncOp*>(a));
+    // (the ping op's request bytes and time are its Rust body's: logics.rs EeWonPingOp, R6 WON round 40)
     case O::RunTracked:
         aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::PingDone), (unsigned long)b);
         return 0;

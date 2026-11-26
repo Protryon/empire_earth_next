@@ -119,6 +119,18 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                 }
             }
         }
+        // a ping op's members and their game (PingLogic.cpp's `Rec(a)`, `ee_won_pingop_call(Rec(a), Field, 5)`;
+        // R6 WON round 40)
+        Op::OpRecord | Op::OpGame => {
+            // SAFETY: `a` is null or a live op (its `RefCount*`)
+            let rec = unsafe { ee_won_net::udpops::ee_won_udp_body_of(p, ee_won_net::udpops::EE_WON_UDP_BODY_PING) };
+            if op == Op::OpRecord {
+                return Some(rec as isize);
+            }
+            // SAFETY: null or the op's live members
+            let game = unsafe { crate::logics::ee_won_pingop_call(rec as *const _, crate::logics::EeWonPingOpCall::Field, 5) };
+            return Some(game as isize);
+        }
         // `AsyncSocket::HasInternetConnection()`
         Op::HasInternet => return Some(ee_won_net::ffi_net::ee_won_has_internet_connection() as isize),
         // `LobbyGetVersionStatus()` (as int)

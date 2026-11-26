@@ -137,7 +137,10 @@ CHECKS = [
          # the cases whose statements are Rust (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op"),
                # the one-call cases answered in Rust (R6 WON round 39)
-               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "prv_op")], allowed={}),
+               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "prv_op")],
+         # R6 WON round 40: a ping op's body answers these itself in the game (logics.rs run_hook, elapsed); the
+         # drivers' hosts otherwise
+         allowed={v: "the ping op's Rust body answers it on its real op (logics.rs)" for v in ("RequestSend", "Elapsed")}),
     dict(enum="EeWonEeGameOp", header="won_lobby/eegame.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op"),
