@@ -8,11 +8,14 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref, clippy::missing_safety_doc)]
 
 use std::ffi::{c_long, c_void};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use ee_base::math::types::Ge3DPoint;
 
 use crate::app::camera::{
     EeAppCameraFields, EE_APP_CAMERA_ALIVE, EE_APP_CAMERA_CINEMATIC, EE_APP_CAMERA_EXISTS, EE_APP_CAMERA_FAR_REAR,
     EE_APP_CAMERA_FREE, EE_APP_CAMERA_HAS_MAP, EE_APP_CAMERA_NO_UNIT, EE_APP_CAMERA_ON_MAP, EE_APP_CAMERA_ORTHOGRAPHIC,
-    EE_APP_CAMERA_UNIT_A,
+    EE_APP_CAMERA_UNIT_A, EE_APP_CAMERA_UNIT_B,
 };
 use crate::app::camera_ffi::*;
 
@@ -22,15 +25,156 @@ use super::{cptr, h, hd, hf, hp, ptr, O, P};
 /// The tile coordinate of a unit off the map.
 const OFF_MAP: c_long = -10000;
 
+/// The world's camera (the one `EECameraControl`, gWorld's): the object (the host's context) and its record.
+static CAMERA: AtomicUsize = AtomicUsize::new(0);
+static FIELDS: AtomicUsize = AtomicUsize::new(0);
+/// `EECameraControl()`: the plain members' defaults, no followed unit; the camera is the world's from here on.
+///
+/// # Safety
+/// `camera` is the EECameraControl being constructed and `rec` its record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gamecpp_camera_new(camera: *mut c_void, rec: *mut EeAppCameraFields) {
+    // SAFETY: the caller's record
+    unsafe { ee_app_camera_default(rec) };
+    CAMERA.store(camera as usize, Ordering::Relaxed);
+    FIELDS.store(rec as usize, Ordering::Relaxed);
+    set_unit(EE_APP_CAMERA_UNIT_A, EE_APP_CAMERA_NO_UNIT);
+    set_unit(EE_APP_CAMERA_UNIT_B, EE_APP_CAMERA_NO_UNIT);
+}
+
+/// The world's camera's record.
+pub(crate) fn fields() -> *mut EeAppCameraFields {
+    FIELDS.load(Ordering::Relaxed) as *mut EeAppCameraFields
+}
+
+fn cam() -> *mut c_void {
+    CAMERA.load(Ordering::Relaxed) as *mut c_void
+}
+
+/// The followed unit in `slot` (`mUnitA.Get()`): NULL for none or one that no longer resolves.
+pub fn unit(slot: u32) -> P {
+    crate::rts::units::ee_rts_unit_resolve(ee_app_camera_unit(slot)) as P
+}
+
 /// The camera's followed unit's handle in `slot`: its saved id, or none.
-fn slot_unit(c: P, slot: u32) -> u32 {
-    let (get, saved) =
-        if slot == EE_APP_CAMERA_UNIT_A { (O::EcUnitAGet, O::DkUnitASaved) } else { (O::EcUnitBGet, O::DkUnitBSaved) };
-    if hp(get, c, &[]) != 0 {
-        h(saved, c, &[]) as u32
+fn slot_unit(slot: u32) -> u32 {
+    if unit(slot) != 0 {
+        ee_app_camera_unit(slot)
     } else {
         EE_APP_CAMERA_NO_UNIT
     }
+}
+
+// ---- the world's camera by path (were the hosts' `gWorld.mCameraControl.X()` cases)
+
+/// `ClearUnitA`.
+pub fn clear_unit_a() {
+    // SAFETY (each below): the world's camera and its host
+    unsafe { ee_app_camera_clear_unit_a(fields(), cam(), ee_gamecpp_camera_host) }
+}
+
+/// `ClearUnitB`.
+pub fn clear_unit_b() {
+    unsafe { ee_app_camera_clear_unit_b(fields(), cam(), ee_gamecpp_camera_host) }
+}
+
+/// `ResetPath`.
+pub fn reset_path() {
+    unsafe { ee_app_camera_reset_path(fields(), cam(), ee_gamecpp_camera_host) }
+}
+
+/// `SetChanged`.
+pub fn set_changed() {
+    unsafe { ee_app_camera_set_changed(fields()) }
+}
+
+/// `GetZoom`.
+pub fn zoom() -> f32 {
+    // SAFETY: the world's camera's record
+    unsafe { (*fields()).mZoom }
+}
+
+/// `SetZoom` (`ResetZoom` is `set_zoom(1.0)`).
+pub fn set_zoom(zoom: f32) {
+    unsafe { ee_app_camera_set_zoom(fields(), cam(), ee_gamecpp_camera_host, zoom) }
+}
+
+/// `Update`.
+pub fn update(elapsed: f32) {
+    unsafe { super::camera_host::ee_gamecpp_camera_update(cam(), elapsed) }
+}
+
+/// `GetLocation(mFraction, out)`.
+pub fn location() -> Ge3DPoint {
+    let mut out = Ge3DPoint::default();
+    unsafe { ee_app_camera_point(fields(), 1, (*fields()).mFraction, &mut out) };
+    out
+}
+
+/// `SetLocation`.
+pub fn set_location(location: *const Ge3DPoint, immediate: bool, follow_terrain: bool) {
+    unsafe { ee_app_camera_set_location(fields(), cam(), ee_gamecpp_camera_host, location, immediate, follow_terrain) }
+}
+
+/// `EECameraID`: a unit's handle id, or none.
+fn unit_id(unit: P) -> u32 {
+    if unit != 0 {
+        // SAFETY: the live unit's record
+        unsafe { crate::rts::units::ee_rts_unit_handle_id(super::rec(O::UnRts, unit)) }
+    } else {
+        EE_APP_CAMERA_NO_UNIT
+    }
+}
+
+/// `Follow(unit, flag, duration, turn yaw, turn pitch)` (an EEUnit, or none).
+pub fn follow(unit: P, flag: bool, duration: f32, yaw: f32, pitch: f32) {
+    // SAFETY: the world's camera and its host
+    unsafe { ee_app_camera_follow(fields(), cam(), ee_gamecpp_camera_host, unit_id(unit), flag, duration, yaw, pitch) }
+}
+
+/// `Follow(unit, mIsFollowingUnitB, 1, mTurnYaw, mTurnPitch)`: the swapped unit's successor (an EEUnit, or none).
+pub fn follow_swapped(unit: P) {
+    // SAFETY: the world's camera's record
+    let c = unsafe { *fields() };
+    follow(unit, c.mIsFollowingUnitB, 1.0, c.mTurnYaw, c.mTurnPitch);
+}
+
+// ---- the screens' camera calls (were EEScreens.cpp's, EEUIFMainGame.cpp's and EEUserInterface.cpp's shims)
+
+/// `SetChanged`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_set_changed() {
+    set_changed();
+}
+
+/// `SetLocation((x, y, z), flag1, flag2)`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_set_location(x: f32, y: f32, z: f32, immediate: bool, follow_terrain: bool) {
+    set_location(&Ge3DPoint::new(x, y, z), immediate, follow_terrain);
+}
+
+/// `Follow(unit, follow, 1, 0, 0)`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_follow(unit: usize, flag: bool) {
+    follow(unit, flag, 1.0, 0.0, 0.0);
+}
+
+/// `ClearUnitA`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_clear_unit_a() {
+    clear_unit_a();
+}
+
+/// `ClearUnitB`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_clear_unit_b() {
+    clear_unit_b();
+}
+
+/// `Update(seconds)`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_camera_update(seconds: f32) {
+    update(seconds);
 }
 
 /// A unit's state bits (`EE_APP_CAMERA_EXISTS`, `_ALIVE`, `_ON_MAP`): 0 for none.
@@ -66,19 +210,19 @@ fn on(op: O) -> bool {
 /// `context` is a live EECameraControl and `io` the operation's record.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, io: *mut EeAppCameraIo) -> i32 {
-    let c = context as P;
+    let _ = context;
     // SAFETY: the caller's record for the call
     let io = unsafe { &mut *io };
     let unit = if (EE_APP_CAMERA_OP_REFERENCE..=EE_APP_CAMERA_OP_HIDDEN).contains(&op) {
-        hp(O::EcResolve, 0, &[i64::from(io.id)])
+        crate::rts::units::ee_rts_unit_resolve(io.id) as P
     } else {
         0
     };
     let complex = if unit != 0 { hp(O::UnComplex, unit, &[]) } else { 0 };
     match op {
-        EE_APP_CAMERA_OP_UNIT => io.id = slot_unit(c, io.slot),
+        EE_APP_CAMERA_OP_UNIT => io.id = slot_unit(io.slot),
         EE_APP_CAMERA_OP_SET_UNIT => {
-            h(if io.slot == EE_APP_CAMERA_UNIT_A { O::EcSetUnitA } else { O::EcSetUnitB }, c, &[i64::from(io.id)]);
+            set_unit(io.slot, io.id);
         }
         EE_APP_CAMERA_OP_REFERENCE => {
             h(O::EcReference, unit, &[]);
@@ -181,9 +325,9 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
 /// `AddKey`: a key appended to the camera's path -> 0, or 5 while a path plays (the camera locked).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_camera_add_key(camera: *mut c_void, key: *const c_void) -> c_long {
-    let c = camera as P;
-    // SAFETY: the camera's record, read before the C++ call
-    let locked = unsafe { (*(hp(O::DkFields, c, &[]) as *const EeAppCameraFields)).mLocked };
+    let _ = camera;
+    // SAFETY: the camera's record
+    let locked = unsafe { (*fields()).mLocked };
     if locked {
         return 5;
     }

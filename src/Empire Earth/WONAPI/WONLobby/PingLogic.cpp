@@ -125,7 +125,7 @@ void PingLogic::InitComponent(ComponentConfig*) { this->Call(EeWonLogicCall::Pin
 
 void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    this->Call(EeWonLogicCall::PingEvent, (intptr_t)inEvent, inEvent->mType);
+    this->Call(EeWonLogicCall::PingEvent, (intptr_t)inEvent, inEvent->mEv.kind);
 }
 
 void PingLogic::HandleUDPRecv(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingRecv, (intptr_t)inOp); }

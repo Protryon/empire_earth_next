@@ -22,6 +22,12 @@ wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)
 
 static std::vector<std::string> sLines;
 
+// the reads and case maps the game no longer calls through GUIString (guistrobj.rs's, R6 WON GUI round 39)
+static int Rd(const GUIString& s, EeWonGstrRead op, const void* o, int a = 0, int b = 0)
+{ return ee_won_gstr_read(op, (const EeWonGstr*)s.mData.get(), o, a, b); }
+static void Case(GUIString& s, bool up)
+{ ee_won_gstr_edit(up ? EeWonGstrOp::Upper : EeWonGstrOp::Lower, (EeWonGstr**)&s.mData.mPtr, NULL, 0, 0, 0); }
+
 // Shared with guistring.rs's test
 static const wchar_t* const kTexts[] = {
     L"", L"a", L"abc", L"ABC", L"abd", L"ab", L"abcabc", L"  -42x", L"12", L"-", L" 7 ", L"\x00e9t\x00e9",
@@ -68,9 +74,9 @@ static void Run(const char* inPass)
         char aCase[64];
         snprintf(aCase, sizeof(aCase), "%s t%02d", inPass, (int)i);
         GUIString anUpper = a;
-        anUpper.toUpper();
+        Case(anUpper, true);
         GUIString aLower = a;
-        aLower.toLowerCase();
+        Case(aLower, false);
         std::string aNarrow = a;
         std::string aLine = std::string(aCase) + " " + Units(a) + " upper=" + Units(anUpper) + " lower=" +
                             Units(aLower) + " narrow=" + Hex(aNarrow) + " int=";
@@ -89,7 +95,7 @@ static void Run(const char* inPass)
             }
             for (int s = -1; s < a.length() + 1; s++) {
                 char b[32];
-                snprintf(b, sizeof(b), " r%d", a.rFind(kChars[c], s));
+                snprintf(b, sizeof(b), " r%d", Rd(a, EeWonGstrRead::RFindChar, NULL, kChars[c], s));
                 aLine += b;
             }
             aLine += " |";
@@ -98,20 +104,20 @@ static void Run(const char* inPass)
         for (size_t j = 0; j < n; j++) {
             GUIString b(kTexts[j]);
             std::string l = std::string(aCase) + " u" + std::to_string((int)j) + " cmp=" +
-                            std::to_string(a.mData->Compare(b.mData.get())) + " nocase=" +
+                            std::to_string(ee_won_gstr_read(EeWonGstrRead::Compare, (const EeWonGstr*)a.mData.get(), b.mData.get(), 0, 0)) + " nocase=" +
                             std::to_string(a.CompareNoCase(b)) + " find";
             for (int s = 0; s <= a.length(); s++)
                 l += " " + std::to_string(a.find(b, s)) + "/" + std::to_string(a.findNoCase(b, s)) + "/" +
-                     std::to_string(a.findOneOf(b, s));
+                     std::to_string(Rd(a, EeWonGstrRead::FindOneOf, b.mData.get(), s));
             l += " rfind";
             for (int s = -1; s <= a.length(); s++)
-                l += " " + std::to_string(a.rFind(b, s));
+                l += " " + std::to_string(Rd(a, EeWonGstrRead::RFind, b.mData.get(), s));
             sLines.push_back(l);
         }
         for (size_t j = 0; j < sizeof(kNarrow) / sizeof(kNarrow[0]); j++) {
             std::string l = std::string(aCase) + " n" + std::to_string((int)j);
             for (int o = 0; o <= a.length() + 1; o++)
-                l += " " + std::to_string(a.compare(kNarrow[j], o)) + "/" +
+                l += " " + std::to_string(Rd(a, EeWonGstrRead::CompareNarrow, kNarrow[j], o)) + "/" +
                      std::to_string(a.CompareNoCase(kNarrow[j], o));
             sLines.push_back(l);
         }

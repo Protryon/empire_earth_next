@@ -195,7 +195,7 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_LINK_PART: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->LinkPart(EEUcbObject<EEUnit>((uint64_t)inB)->GetComplexUnit()); return 0;
     case EE_UNITS_UCB_START_ACTION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->StartAction((long)inB); return 0;
     case EE_UNITS_UCB_SET_HEALTH: EEUcbObject<EEUnit>(inA)->SetHitPoints(UMFloatToLong(EEUcbObject<EEUnit>(inA)->GetStats()->mMaxHitPoints * f[0])); return 0;
-    case EE_UNITS_UCB_IN_EDITOR: return gUIManager->mInScenarioEditor && !gGameScreenActive;
+    case EE_UNITS_UCB_IN_EDITOR: return gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive;
     case EE_UNITS_UCB_FLUSH_PLACEMENTS: ::gWorld.FlushQueuedPlacements(); return 0;
     case EE_UNITS_UCB_ADD_PENDING: EEUcbObject<EEPlayer>(inA)->AddPendingUnits(0, true); return 0;
     case EE_UNITS_UCB_REMOVE_KILLED: EEUcbObject<EEPlayer>(inA)->RemoveKilledUnits(); return 0;

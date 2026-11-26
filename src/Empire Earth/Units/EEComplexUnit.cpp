@@ -237,7 +237,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_S_LEAKED_LINE: fprintf(*EECuObject<FSFileSpec>(inA), "Leaking Unit: %s at (%ld,%ld). UnitID: %ld with action:%s, with %6.6f growth rate\n", (const char*)sCuLeaked[inB]->GetUnitClass()->GetName(), sCuLeaked[inB]->GetTileX(), sCuLeaked[inB]->GetTileY(), sCuLeaked[inB]->GetUnitID(), (const char*)EEUnitAction::GetActionName(sCuLeaked[inB]->mCommand->mType), sCuLeaked[inB]->GetGrowth()); return 0;
     case EE_UNITS_CU_S_SOUND_DEREFERENCE: theUnit->mSound->Dereference(); return 0;
     case EE_UNITS_CU_S_SOUND_REFERENCE: theUnit->mSound->Reference(); return 0;
-    case EE_UNITS_CU_S_DESTROY_HEAL_EFFECT: gEffectManager->DestroyEffect(theUnit->mHealEffect); return 0;
+    case EE_UNITS_CU_S_DESTROY_HEAL_EFFECT: gWorld.mEffectManager->DestroyEffect(theUnit->mHealEffect); return 0;
     case EE_UNITS_CU_S_REFERENCE_OTHER: theOther->Reference(); return 0;
     case EE_UNITS_CU_S_SET_HOLDER_OF: theOther->SetHolder(theUnit); return 0;
     case EE_UNITS_CU_S_HELD_PUSH: theUnit->mHeldUnits.push_back(theOther); return 0;
@@ -270,7 +270,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_S_INSURANCE_CHAT_LINE: gUserInterface->AddChatLogEntry(thePlayer->mColor, UWideString(gEmptyString), sCuInsuranceText, 5000, 2); return 0;
     // Kill's
     case EE_UNITS_CU_UNIT_TAKEN: theUnit->mPlayer->UnitTaken(theUnit, inB != 0); return 0;
-    case EE_UNITS_CU_WORLD_CLEARING: return gWorldClearing;
+    case EE_UNITS_CU_WORLD_CLEARING: return gWorld.mClearing;
     case EE_UNITS_CU_UNIT_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet((unsigned long)inB);
     case EE_UNITS_CU_SET_HAS_TYPE: return EECuObject<EEUnitSet>(inA)->Contains(theUnit->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_UPDATE_FREE_UNIT_POWER: thePlayer->UpdateFreeUnitPower(); return 0;
@@ -356,7 +356,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     // PayInsurance's (inA the player)
     case EE_UNITS_CU_CLASS_TECH_NODE: return (uint64_t)(uintptr_t)thePlayer->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
     case EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY: theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB)); return 0;
-    case EE_UNITS_CU_DISBAND_EFFECT: gEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, true, 0, 0); return 0;
+    case EE_UNITS_CU_DISBAND_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, true, 0, 0); return 0;
     case EE_UNITS_CU_INSURANCE_SOUND: return (uint64_t)(uintptr_t)EESoundObject::Get(kSoundInsuranceCollected);
     case EE_UNITS_CU_PLAY_AT_VOLUME: EECuObject<EESoundObject>(inA)->Play(EECuObject<EESoundObject>(inA)->GetVolume(), 0.0f, 1.0f); return 0;
     // FindContacts' (inA a class, 0: the unit's; a tile, a node or another unit)
@@ -457,7 +457,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_POST_UNLOAD_TECHNOLOGY: gDataPreLoading->PostUnloadTechnology(theUnit->mPlayer->mPlayerID, theUnit->mCurrentResearch); return 0;
     case EE_UNITS_CU_UNLOAD_TECHNOLOGY_MEDIA: theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch)->UnloadMedia(theUnit->GetPlayer()); return 0;
     case EE_UNITS_CU_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->mPlayer->mPlayerID, (long)inB); return 0;
-    case EE_UNITS_CU_DESTROY_FIRE_EFFECT: gEffectManager->DestroyEffect(theUnit->mFireEffect); return 0;
+    case EE_UNITS_CU_DESTROY_FIRE_EFFECT: gWorld.mEffectManager->DestroyEffect(theUnit->mFireEffect); return 0;
     case EE_UNITS_CU_REMOVE_CLOAK_EFFECT: EERemoveCloakEffect(theUnit); return 0;
     case EE_UNITS_CU_ATC_CLEAR_AIRPORT_QUEUE: ee_units_atc_clear_airport_queue(theUnit->mPlayer->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theUnit, (uint32_t)inB); return 0;
     case EE_UNITS_CU_RANDOM_POINT_AHEAD: return EEGetRandomPointAhead(theUnit, reinterpret_cast<GE2DPoint*>(f));
@@ -565,7 +565,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CONTACTS_CLEAR: theUnit->mContacts.Clear(); return 0;
     case EE_UNITS_CU_CONTACTS_REMOVE: theUnit->mContacts.Remove(EECuObject<UListNode<EEComplexUnit*> >(inA)); return 0;
     case EE_UNITS_CU_AFFECTING_REMOVED_FROM: theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->RemovedFrom(theUnit); return 0;
-    case EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: gEffectManager->DestroyEffect(sCuHandle = theUnit->mConversionEffect); return 0;
+    case EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: gWorld.mEffectManager->DestroyEffect(sCuHandle = theUnit->mConversionEffect); return 0;
     case EE_UNITS_CU_UNLOAD_CARGO_AT_INDEX: return (uint64_t)(uintptr_t)theUnit->UnloadCargoAt((unsigned long)inB, *EECuObject<const GETransformation>(inA));
     case EE_UNITS_CU_RELOAD_RANGE: return UFloatBits(inB == 0 ? gWorldTable.GetFloatValue(kWorldReloadTimeRandomRange) : gWorldTable.GetFloatValue2(kWorldReloadTimeRandomRange));
     case EE_UNITS_CU_RANDOM_BETWEEN: return UFloatBits(gPhysics->GetRandom(UBitsFloat(inB), UBitsFloat(inC)));

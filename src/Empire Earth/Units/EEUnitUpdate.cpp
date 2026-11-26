@@ -61,7 +61,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_ACT_R_ATTACK_FRAME_SET: return (int64_t)(unsigned long)EEGetAttackFrameSet(EEUpdateUnit(inContext));
     case EE_UNITS_ACT_R_SWIMMING: return EEUpdateUnit(inContext)->IsSwimming() ? 1 : 0;
     case EE_UNITS_ACT_R_RANDOM: return (int64_t)UFloatBits(gPhysics->GetRandom());
-    case EE_UNITS_ACT_R_WORLD_CLEARING: return gWorldClearing ? 1 : 0;
+    case EE_UNITS_ACT_R_WORLD_CLEARING: return gWorld.mClearing ? 1 : 0;
     case EE_UNITS_ACT_R_IS_HUMAN: return EEUpdateUnit(inContext)->mPlayer->IsHuman() ? 1 : 0;
     case EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY: return EEUpdateUnit(inContext)->mCitizenBuildQueue.size() == 0 ? 1 : 0;
     default: return 0;

@@ -18,8 +18,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EEComplexDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
+#include "rust/game/gamecpp.h"   // the game state's restorables (gamecpp state.rs)
 #include "ee/EEGraphicObject.h"
-#include "ee/EEGameState.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EECombatGoals.h"
 
@@ -78,7 +78,7 @@ extern "C" int64_t ee_units_dm_host(int32_t inOp, uint64_t inA, int64_t inB, int
     case EE_UNITS_DM_FLAG: return sDmFlag;
     case EE_UNITS_DM_NEW: return (uint64_t)(uintptr_t)theManager.NewDoppelganger(inB != 0);
     case EE_UNITS_DM_LOAD: theDoppelganger->Load((unsigned long)inB, (unsigned long)inC, *sDmFile); return 0;
-    case EE_UNITS_DM_RESTORABLE: gGameState.mRestorables.push_back(theDoppelganger); return 0;
+    case EE_UNITS_DM_RESTORABLE: ee_gamecpp_state_restorable_push(static_cast<FSRestorable*>(theDoppelganger)); return 0;
     case EE_UNITS_DM_IS_COMPLEX: return theDoppelganger->IsComplex();
     case EE_UNITS_DM_COMPLEX_CLEAR: dynamic_cast<EEComplexDoppelganger*>(theDoppelganger)->Clear(); return 0;
     case EE_UNITS_DM_COMPLEX_POOL_DELETE: theManager.mComplexPool.Delete(dynamic_cast<EEComplexDoppelganger*>(theDoppelganger)); return 0;

@@ -6,34 +6,20 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A text's units as the host reads them (`mData->mText`, `length()`).
-struct EeWonLocalizeText {
-  const void *units;
-  size_t length;
-};
-
-/// Reads the GUIString at `text` into `out`.
-using EeWonLocalizeUnitsFn = void(*)(const void *text, EeWonLocalizeText *out);
-
-/// A new GUIStringData of `length` `wchar_t` units at `units` (a pointer the caller adopts).
-using EeWonLocalizeNewFn = void*(*)(const void *units, size_t length);
+#include "rust/won_gui/guistrobj.h"
 
 extern "C" {
 
-/// `StringLocalize::GetStr(*text, {first, second, third}, count)`: a new GUIStringData (the host's) of the text with
-/// its tags filled; a NULL substitution (or one past `count`) is dropped.
+/// `StringLocalize::GetStr(*text, {first, second, third}, count)`: a new text (no reference) with the tags filled; a
+/// NULL substitution (or one past `count`) is dropped.
 ///
 /// # Safety
-/// `text` and the non-NULL substitutions are GUIStrings `units` reads; `count` is at most 3.
-void *ee_won_gui_localize(const void *text,
-                          const void *first,
-                          const void *second,
-                          const void *third,
-                          int32_t count,
-                          EeWonLocalizeUnitsFn units,
-                          EeWonLocalizeNewFn make,
-                          uint32_t wchar_size);
+/// `text` and the non-NULL substitutions are live `GUIString`s; `count` is at most 3.
+EeWonGstr *ee_won_gui_localize(const void *text,
+                               const void *first,
+                               const void *second,
+                               const void *third,
+                               int32_t count);
 
 }  // extern "C"
 

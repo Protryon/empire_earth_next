@@ -41950,3 +41950,115 @@ Numbers: docs/progress/units.md ("Round 13"). port_metrics 47e9ad712 (origin/rus
   views first are all in ee_sim units and combat.
 - **Behaviour changes**: none observed (oracle seeds 2-7 identical after each merge; the captures, the saveload
   matrix and the gates as listed in units.md).
+
+## The game core lane, round 16: the teams, the statistics history, the game state's vectors and the camera's units Rust's; EEGlobals.cpp gone
+
+- Resumed from a lead stopped after 20 minutes: its two forks' uncommitted edits (the camera's units, the statistics
+  history) were whole in intent and built after one missing import each; they were committed on the fork branches.
+- **The teams** live only in ee_sim app teams_ffi.rs: the C++ `std::vector<EETeam>` mirror, EETeam, EEVCWonder,
+  EEVictoryCondition and EEVCWonder.cpp are gone. The wonder victory takes a team index; the game state's teams and
+  each saved-world helper's teams are gamecpp teams.rs statics (the helpers keyed by address). The team save/load
+  over `Pf` keeps the format byte for byte (the saveload matrix is the check).
+- **The statistics history** (EEWorld::mStatistics, EEStatisticsHistory/EEStatisticsRecord) is gamecpp
+  stats_history.rs's one history: RecordStatistics fills it in Rust, WSTA and the post-game summary read it; the
+  summary's `ee_screenscpp_pr_*` shims are Rust exports now (the screens' extern block resolves to them).
+- **The game state's** mPlayers, mLoadedPlayers and mRestorables are gamecpp state.rs Vecs; the restorable pushes keep
+  only the `FSRestorable` upcast in C++.
+- **The camera's** followed units are ids in camera_ffi.rs (UNITS); `ee_gamecpp_camera_new` records the world's one
+  camera so camera_io.rs calls ClearUnitA/B, ResetPath, SetChanged, SetZoom, Update, GetLocation, SetLocation and
+  Follow by path: the hosts' one-statement camera cases went.
+- **EEGlobals.cpp**: its 19 reference aliases into gWorld/gGameState are gone; users read `gWorld.mX`. The net test
+  stand's EEWorld (tests/net/ee_stand/ee_world.h) binds three reference members to the test's storage instead.
+- EE-SIM's save request and the scripted editor's chunk list are built in Rust (mrecord.rs `new_record`; persist_save.rs
+  `build_chunks`); the fixed EEMRecord constructions of EEARust, EEMessage, EEPhysics, EECommandLine and the server go
+  the same way.
+- Merge lessons: the game headers lane (batch 27) inlines one-line bodies into headers, so a moved member's
+  deletion conflicts with the header's new inline body: take the header's inline form and drop what the move
+  removed. Batch 28's diff3 conflicts had nested `|||||||||`/`=========` markers from a criss-cross merge base: a
+  resolver that splits on `=======` must match the exact seven-character markers, or it keeps half of the base.
+- Left: EESimEditorAction/EESimEditorDone (no generic Rust-callback EEAction/UIEvent class to reuse); the mini map
+  cases reached from ee_sim (need a hook ee_game registers into ee_sim: units lane) and the scenario editor's (behind
+  goldened screens host traits); MiniMapSetViewer/Snapshot (no Rust accessor of RTSMiniMap's pixels); the player's
+  host prologues (player/tech round 2 landed in batch 28: next round).
+
+## R6 WON GUI, round 39: GUIString's text a Rust object, ComponentEvent one class over a Rust record, Graphics made in Rust, the holders read in place, WONGUI in six units (ee_won_gui guistrobj.rs EeWonGstr, compobj.rs EeWonCompEventRec, gfxrun.rs new_graphics, leafpaint.rs, tipobj.rs, grabobj.rs; branch rust-wongui39, 2026-11-25)
+
+The round started from rust-wongui38 (74c30a95a, batch 27 in; round 38 not yet in origin/rust). The brief named the
+three C++ types that blocked the remaining WON GUI C++: GUIString, ComponentEvent and the smart-pointer holders. Two
+forks in hand-made worktrees took them (A: GUIString; B: the events, the holders and round 38's leftovers), the lead
+merged them (three conflicts: guihost.h, regenerated; link/won/units.txt, the union of the removals; GuiHost.cpp's
+ComponentOp, fork A's text ops without fork B's FireEvent), then origin/rust batch 28 (a102c738e; the usual
+cbindgen.toml and PORT_LEARNINGS.md unions), then merged the small WONGUI units.
+
+### What moved (`port_metrics.py` cpp_lines)
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| A a33d56bb5 | GUIStringData is guistrobj.rs's `EeWonGstr` (a NULL vtable slot, an atomic count, the text block at the old offset); the C++ class a view (`GUIStringData() = delete`, three members, one static_assert); GUIString one-call methods over `ee_won_gstr_new/_edit/_read/_narrow/_empty/_free` (copy-on-write inside `_edit`); uncalled methods gone (Fill, setAt, toUpper, toLowerCase, findOneOf, the rFinds, compare(const char*)); the localizer reads GUIStrings in place; GUIStringSingleton.cpp, GUIEmptyWideString.cpp and StringLocalize.cpp deleted (gEmptyWideString gone: its readers pass `L""`) | -146, files -3 |
+| A 11273b2ba | the input box's clipboard, filter and stored texts made in Rust (guisplit.rs GText); UnitsText, sHostText and the HostText* ops gone | -13 |
+| B 33d8abdc6 | ComponentEvent one class over compobj.rs `EeWonCompEventRec` (component held, kind, broadcast, flag, button, x, y, item held; its offset registered by `offsetof`); ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent and TextLinkActivatedEvent inline makers; the hosts' Event* ops and the delivery answered in gamewin.rs | -61, classes -4 |
+| B 5d67b174b | Graphics a Rust record made, attached and freed in gfxrun.rs (context and font held); its constructor, destructor, Attach, Detach, SetFont and PlatNativeImage's Gfx* cases gone | -74 |
+| B 6f54aae31 | WmSetStandardColor gone: the constructor hands the scheme's colours to `ee_won_wm_standard_colors` | -8 |
+| B 6f1ecd0d7, 2ec2a00e9, 3d8a66d61 | ImageButton's `mImages`/`mStretch`, the tooltip's `mListArea`/`mItem` and the grabber's `mBGImage` read in place (one SmartPtr pointer each, a size static_assert) | 0, -5, -20 |
+| B f6b661c84, 85b6255f2, b67b789c6 | PopupValueAdapters.cpp deleted (inline in the header); the root's grabber and image ops and FireEvent answered in gamewin.rs | -38 files -1, -9, -7 |
+| lead e9a10bde3, dfaf103a9 | **no move**: eleven WONGUI units merged into their neighbours (Graphics, BackgroundGrabber -> Window; RootContainer, ComponentLifetime (with Sound) -> Container; PlatNativeImage -> WindowManager; TextFormat, BrowserComponent, GuiShell -> GuiHost; ComboBox, TextListItem -> Button); WONGUI is six units (with ComponentConfigHost) | -120, files -11 |
+| lead 623e32baf | **dead code**: Window::IsOneComponentWindow | -1 |
+
+Lane total (forks' merge against 74c30a95a, then the lead's commits after the batch 28 merge): cpp_lines **-502**,
+cpp_files **-15**, logic -144, classes -4, extern_c +1, rust_hdrs 0, unsafe +51, layout +2. Short of the -1,500
+target again (below).
+
+### Why not -1,500
+
+The three types were the enabling work, and each opened only one-line host cases inside the GUI: every text,
+event or holder op still in a WONGUI host is a case a driver world traces (inputobj, textobj, guisplit33, cfgtab),
+so removing it means a world and its golden rewritten for 1 to 4 lines. The payoff of the Rust text is on the lobby
+lane: about 100 lobby cases that only make, read or release texts (InitLogic Text*, LobbyErrorScreen,
+LobbyModelHost TextOf*/TextLength, EELobbyGlueHost StringLength/UnitAt, LobbyNetCtrlHost TextAlloc/Release, the
+sEELobbyText ops) and about 20 one-statement event reads in seven lobby files, which ee_won_lobby can now answer over
+`gstr_from_units`/`data_units`/`gstr_ref` and `compobj::event_rec`. A third of the round is unit merges.
+
+### Problems met
+- The lobby releases texts through generic `reinterpret_cast<RefCount*>(p)->Release()` ops (modelobj's held lists
+  and others), so the Rust text must look like a RefCount: `RefCount::Release` (EEWonNet.h) hands an object whose
+  vtable slot is NULL to `ee_won_gstr_free`. Nothing dynamic_casts a RefCount*.
+- The other string of an edit is passed as a pointer to its slot and read after the copy-on-write, as the original
+  did: self-assign and self-append stay exact.
+- cbindgen emits a record no extern fn takes only when it is in cbindgen.toml's include list (EeWonCompEventRec;
+  the C++ errors named EeWonWmEventRec).
+- won_host_coverage flags host cases moved into a new Rust function until the function is listed in the tool; its
+  EeWonGuiOp `since=` moved from HostTextSink to ClipboardText.
+- won_leaf34_new.h is stale against round 38: regenerating it would drop round 38's cases, so fork A hand-edited it
+  (the localize mutations 200/201 gone with their callbacks); its generator now reads GuiHost.cpp and Button.cpp.
+- A wontest run (about an hour) builds each driver from what is on disk when it gets there: no commits while it runs.
+- Git Bash heredocs munge long Python scripts and `\\n`: write edit scripts to a file.
+
+### Lessons
+- **A C++ SmartPtr member read in place (one pointer, a static_assert on its size and offset) turns a holder into a
+  Rust handle without touching the C++ that writes it** (ImageButton, the tooltip, the grabber).
+- **A Rust-owned refcounted object can keep a C++ view of its first members** (a NULL vtable slot, the count, the
+  data block at the old offset): the 100+ `mData->mText` readers compiled unchanged.
+- **Unit merges keep file-scope typedefs and statics apart**: check both files' statics first (Window.cpp and
+  WindowManager.cpp both have `sHostFont`, so they stay two units).
+
+### Behaviour changes
+- The empty text is made on first use and leaked at exit (was a static SmartPtr freed at exit).
+- A Graphics' clip rectangle starts zeroed in the game (the C++ constructor left it unset).
+- The event subclasses are one ComponentEvent with a larger record; WindowEventBase's type of every event stays 0.
+
+### Gates (on 623e32baf (batch 28 merged); logs in build/wongui39)
+Builds `--sim` and `--test-profile windowed-software` 0/0; rust header current, rust gate PASS; won_host_coverage PASS;
+oracle 2-7 identical; captures oracle and late PASS (the WON GUI is not in EE-SIM, so no other profile covers it);
+saveload matrix PASS; scenario_check 27/27; gates.sh GATES PASS (tour, ai-game [4, 36, 37] classic_lua x2, lan-game);
+wontest exit 0 (185 drivers); the LAN game PASS (host and joiner PT 2691) and lan_capture_compare against build/w38lanM
+(round 38's merged tip): every lobby capture identical, only the game's frames differ. Fork A and fork B each ran the
+builds, the rust gate, won_host_coverage, wontest and a LAN game PASS on their tips.
+
+### Left
+- The lobby's text and event cases over the Rust text and event record (the lobby lane's files).
+- Window's holders `mOffscreenImage` and `mDisplayContext`; EvNew, LHandle and WQueue; the input events' C++
+  allocations; BrowserComponent's Ref/Unref/HasScroller/Invalidate; WindowManager's FireEndPopup.
+- TextSegment's text ops (SegLength, SegTextTake, SegSetText), TextArea's mSelText ops, the combo box's text ops,
+  CfgTabText/StrUnits/StrLen, FmtAddText, ViewAddText: each a driver world's case.
+- Graphics' BlendSupported, SetPixel, DrawDottedRect, FillEllipse and DrawArc have no game caller but drivers use them.
+- CfgTabRead and the config object model with the lobby lane.

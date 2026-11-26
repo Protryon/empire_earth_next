@@ -21,7 +21,6 @@
 #include "lle/NESynchronousServer.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEScenarioManager.h"
-#include "ee/EETeam.h"
 #include "lle/UIBlinkingButton.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
@@ -222,7 +221,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::RemovePlayer: gCommunications->ExecuteRemovePlayer(REC->Get<unsigned char>(0), REC->Get<bool>(3), REC->Get<bool>(1), REC->Get<bool>(2));
         break;
     case O::NewChecksumResponse: return P64(new NEMRecord(kNetMessageWorldDatabaseChecksumResponse, {(unsigned long)a[0], (unsigned long)a[1]}));
-    case O::NewLoadSaveResponse: return P64(new EEMRecord(kMessageLoadOrSaveGameResponse, {(long)a[0]}));
     case O::NewReportStatistics: return P64(new EEMRecord(kMessageReportStatistics, {(unsigned long)a[0], (unsigned long)a[1]}));
     case O::NewExitShiftMode: return P64(new EEMRecord(kMessageExitShiftMode, {(long)a[0]}));
     case O::NewCivTimerExpired: return P64(new EEMRecord(kMessageCivTimerExpired, {(unsigned char)a[0]}));
@@ -273,18 +271,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ScenarioShowDialog: gWorld.mScenarioManager->ShowDialogMessage();
         break;
     case O::ScenarioReplaceUnit: gWorld.mScenarioManager->ReplaceUnit((unsigned long)a[0], (unsigned long)a[1]);
-        break;
-    case O::TeamsClear: gWorld.mTeams.clear();
-        break;
-    case O::CameraUnitA: return P64(gWorld.mCameraControl.mUnitA.Get());
-    case O::CameraUnitB: return P64(gWorld.mCameraControl.mUnitB.Get());
-    case O::CameraFollow: gWorld.mCameraControl.Follow((EEUnit*)a[0], gWorld.mCameraControl.mIsFollowingUnitB, 1.0f, gWorld.mCameraControl.mTurnYaw, gWorld.mCameraControl.mTurnPitch);
-        break;
-    case O::CameraClearA: gWorld.mCameraControl.ClearUnitA();
-        break;
-    case O::CameraClearB: gWorld.mCameraControl.ClearUnitB();
-        break;
-    case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
         break;
     case O::SetWindYaw: gWorld.mWindYaw = f[0];
         break;
@@ -354,9 +340,9 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::AreaEffectsTick: gAEManager.Tick(f[0]);
         break;
-    case O::EffectManagerUpdate: gEffectManager->Update();
+    case O::EffectManagerUpdate: gWorld.mEffectManager->Update();
         break;
-    case O::EffectReplaceUnit: gEffectManager->ReplaceUnit((EEUnit*)a[0], (EEUnit*)a[1]);
+    case O::EffectReplaceUnit: gWorld.mEffectManager->ReplaceUnit((EEUnit*)a[0], (EEUnit*)a[1]);
         break;
     case O::CalamityUpdate: EECalamityManager::GetInstance()->Update(f[0]);
         break;

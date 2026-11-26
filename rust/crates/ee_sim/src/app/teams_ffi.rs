@@ -1,5 +1,6 @@
-//! The teams' C ABI (rust/sim/app.h), called by EEWorld.cpp: the process's teams (Rust owns them; the C++ mirrors
-//! them into `EEWorld::mTeams` after every change), the stances read through the world's callbacks.
+//! The teams' C ABI (rust/sim/app.h): the world's teams (were `EEWorld::mTeams`, a `std::vector<EETeam>`; Rust owns
+//! them since round 12 and is their only store since game core round 16), the stances read through the world's
+//! callbacks.
 
 use std::ffi::c_void;
 use std::sync::Mutex;
@@ -10,6 +11,27 @@ static TEAMS: Mutex<Teams> = Mutex::new(Vec::new());
 
 fn with_teams<R>(f: impl FnOnce(&mut Teams) -> R) -> R {
     f(&mut TEAMS.lock().unwrap_or_else(|e| e.into_inner()))
+}
+
+/// The team count (`mTeams.size()`).
+pub fn count() -> usize {
+    with_teams(|t| t.len())
+}
+
+/// Team `team`'s players (none past the end).
+pub fn players(team: usize) -> Vec<u32> {
+    with_teams(|t| t.get(team).cloned().unwrap_or_default())
+}
+
+/// The teams, copied.
+pub fn all() -> Teams {
+    with_teams(|t| t.clone())
+}
+
+/// `mTeams[team].ContainsPlayer(player)` (false past the end).
+#[no_mangle]
+pub extern "C" fn ee_app_teams_contains(team: usize, player: u32) -> bool {
+    with_teams(|t| t.get(team).is_some_and(|p| p.contains(&player)))
 }
 
 /// The world's players as the teams read them.
@@ -136,4 +158,26 @@ pub unsafe extern "C" fn ee_app_teams_get(team: usize, out: *mut u32, cap: usize
         }
         players.len()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_store_answers_count_players_and_membership() {
+        ee_app_teams_clear();
+        // SAFETY: local buffers
+        unsafe {
+            ee_app_teams_set(0, [1u32, 3].as_ptr(), 2);
+            ee_app_teams_set(1, [2u32].as_ptr(), 1);
+        }
+        assert_eq!(count(), 2);
+        assert_eq!(players(0), vec![1, 3]);
+        assert!(players(5).is_empty());
+        assert!(ee_app_teams_contains(0, 3) && !ee_app_teams_contains(1, 3) && !ee_app_teams_contains(9, 1));
+        assert_eq!(all(), vec![vec![1, 3], vec![2]]);
+        ee_app_teams_clear();
+        assert_eq!(count(), 0);
+    }
 }

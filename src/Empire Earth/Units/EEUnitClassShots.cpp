@@ -64,12 +64,12 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     // ---- reads
     case EE_COMBAT_SHOT_R_RANDOM: return (int32_t)UFloatBits(gPhysics->mRandom.Generate());
     case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
-    case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorldClearing;
+    case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorld.mClearing;
     case EE_COMBAT_SHOT_R_FREE_CAMERA: return gFreeCamera;
     case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS: return (int32_t)EEShotAttack(theUnit)->GetAttackTarget()->mHitPoints;
     // ---- operations
     case EE_COMBAT_SHOT_UPDATE_ROTTING: theUnit->UpdateRottingAwayTime(); break;
-    case EE_COMBAT_SHOT_DEATH_EFFECT: gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
+    case EE_COMBAT_SHOT_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
     case EE_COMBAT_SHOT_UNLOAD_CARGO:
         theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false);
         break;
@@ -105,7 +105,7 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
     case EE_COMBAT_SHOT_X_COMPLEX_GOAL_TARGET: return (int64_t)(uintptr_t)static_cast<EEUGRust*>(theUnit->mComplexUnit->mGoalState)->GetAttackTarget();
     case EE_COMBAT_SHOT_X_SET_CONTAINS: return reinterpret_cast<EEUnitSet*>(inA)->Contains((unsigned long)inB);
     case EE_COMBAT_SHOT_X_POSITION: theUnit->GetPosition(p); return 0;
-    case EE_COMBAT_SHOT_X_SPLASH_AT: gEffectManager->CreatePlacedEffect(p, theClass->mSplashEffect, NULL); return 0;
+    case EE_COMBAT_SHOT_X_SPLASH_AT: gWorld.mEffectManager->CreatePlacedEffect(p, theClass->mSplashEffect, NULL); return 0;
     case EE_COMBAT_SHOT_X_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(p), p); return 0;
     case EE_COMBAT_SHOT_X_SET_LOCATION_XYZ: theUnit->mPhysicalModel.SetLocationXYZ(p); return 0;
     case EE_COMBAT_SHOT_X_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, reinterpret_cast<EESoundObject*>(inA), &ioF[0], &ioF[1], &ioF[2]); return 0;
