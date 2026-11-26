@@ -296,8 +296,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DcProcessInput: gCommunications->ProcessLocalUserInput((EEMRecord*)p, kSlotNone);
         break;
     case O::DcClassCount: return EEUnitClassCount();
-    case O::DcPlayerUpgradeCount: return (int64_t)B_PL->mUnitClassUpgrades.size();
-    case O::DcPlayerUpgrade: return P64(B_PL->mUnitClassUpgrades[a[0]]);
     case O::DcCanImprove: return B_PL->CanImprove((long)a[0], (unsigned long)a[1], NULL);
     case O::DcClassMaxLevel: return ((EEUnitClass*)p)->mImprovements->mMaxLevel;
     case O::DcUpgradeLevel: return ((EEUnitClassUpgrade*)p)->mImprovement.GetLevel((unsigned long)a[0]);

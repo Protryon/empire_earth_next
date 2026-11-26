@@ -262,7 +262,6 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_WALL_GATE_FIT:
         return EEDoesWallGateFit(EETileCoordinate((long)(int32_t)inB, (long)(int32_t)(inB >> 32)), (long)(int32_t)inC, (unsigned long)(uint32_t)(inC >> 32), *EEUcbObject<std::vector<EEUnit*> >(inA));
     case EE_UNITS_UCB_PLAYER_AT: return EEObj(::gWorld.mPlayers[inB]);
-    case EE_UNITS_UCB_TECH_CLASS: return EEObj(gUnitClassTable[EEUcbObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass]);
     case EE_UNITS_UCB_HIT_RATIO: f[0] = (float)EEUcbObject<EEUnit>(inA)->mHitPoints / EEUcbObject<EEUnit>(inA)->mStats->mMaxHitPoints; return 0;
     case EE_UNITS_UCB_PLAYER_ID: return EEUcbObject<EEPlayer>(inA)->GetPlayerID();
     case EE_UNITS_UCB_REPLACE_UNIT: return EEObj(EEReplaceUnit(theOther, (long)inB, EEUcbObject<EEUnitClass>((uint64_t)inC)));
@@ -279,8 +278,6 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_FLUSH_PLACEMENTS: ::gWorld.FlushQueuedPlacements(); return 0;
     case EE_UNITS_UCB_ADD_PENDING: EEUcbObject<EEPlayer>(inA)->AddPendingUnits(0, true); return 0;
     case EE_UNITS_UCB_REMOVE_KILLED: EEUcbObject<EEPlayer>(inA)->RemoveKilledUnits(); return 0;
-    case EE_UNITS_UCB_SPACE_GATES:
-        return EEUcbObject<EEPlayer>(inA)->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && EEUcbObject<EEUnitClass>((uint64_t)inB)->GetUnitType() != kUnitTypeGatePalisades;
     case EE_UNITS_UCB_ENERGY_WALL: EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(EEUcbObject<EEUnit>(inA))); return 0;
     case EE_UNITS_UCB_COMMAND_TYPE_OF: return EEUcbObject<EEUnit>(inA)->GetComplexUnit()->GetCommandType();
     case EE_UNITS_UCB_GATE_DIRECTION_OF: return EEUcbObject<EEUnit>(inA)->GetComplexUnit()->mGateDirection;

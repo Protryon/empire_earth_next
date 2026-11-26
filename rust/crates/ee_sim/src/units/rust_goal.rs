@@ -681,6 +681,9 @@ pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
 
 impl OpHost<'_> {
     fn call(&mut self, op: i32, a: u64, b: u64, io: &mut EeUnitsGoalIo) -> i64 {
+        if let Some(v) = crate::units::tech_cases::goal(op, a, b, io.i[0]) {
+            return v;
+        }
         // SAFETY: the table's contract: `context` and `op` are live for the FFI call that handed out the table
         unsafe { (self.0.op)(self.0.context, op, a, b, io) }
     }

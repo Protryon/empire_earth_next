@@ -425,7 +425,6 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_FIND_ANIMAL: return EEObj(EEAnimal::Find(static_cast<EEUnitClassRecord*>(inUnit)->mUnitType));
     case EE_UNITS_UC_ANIMAL_ID: return EEUcObject<EEAnimal>(inA)->mAnimalID;
     case EE_UNITS_UC_RECORD_TECH_NODE: return EEObj(gTechTree.Get(static_cast<EEUnitClassRecord*>(inUnit)->mTechnology));
-    case EE_UNITS_UC_NODE_EPOCH: return EEUcObject<EETechTreeNode>(inA)->mEpoch;
     case EE_UNITS_UC_NUM_RESEARCH: return theClass->GetNumResearchTechnologies();
     case EE_UNITS_UC_RESEARCH_TECH_NODE: return EEObj(gTechTree.Get(theClass->mResearchTechnologies[(size_t)inB]));
     case EE_UNITS_UC_SET_IMPROVEMENTS: theClass->mImprovements = EEUCUpgradeTable::sTable[static_cast<EEUnitClassRecord*>(inUnit)->mUpgradeTableIndex]; return 0;
@@ -647,11 +646,8 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_UNITS_UC_TICK_MS: return gPhysics->mTickTimeMs;
     case EE_UNITS_UC_INSTANT_BUILD: return theUnit->mPlayer->mInstantBuild;
-    case EE_UNITS_UC_RESEARCH_MAKES_UNIT: return theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mMakesUnit;
-    case EE_UNITS_UC_RESEARCH_CLASS: return (uint64_t)(uintptr_t)gUnitClassTable[theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mUnitClass];
     case EE_UNITS_UC_IS_LAND_BUILDING: return EEUcObject<EEUnitClass>(inA)->IsLandBuilding();
     case EE_UNITS_UC_PRODUCE_UNIT: return theClass->ProduceUnit(theUnit, EEUcObject<EEUnitClass>(inA), true);
-    case EE_UNITS_UC_RESEARCH: theUnit->mPlayer->mTechnologies->Research(theUnit->mCurrentResearch, theUnit); return 0;
     case EE_UNITS_UC_PLAY_NO_EFFECT: theUnit->PlayEffect(100000); return 0;
     case EE_UNITS_UC_SET_PRODUCTION_TIME: theUnit->SetProductionTime((long)inB); return 0;
     case EE_UNITS_UC_UPDATE_ORBITALS: theUnit->UpdateOrbitals(); return 0;
@@ -929,12 +925,9 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_MODEL_UNLOAD: EEUcObject<EEModel>(inA)->UnloadMedia(); return 0;
     case EE_UNITS_UC_BUTTON_ACQUIRE: EEUcObject<EEButtonObject>(inA)->Acquire(); return 0;
     case EE_UNITS_UC_BUTTON_RELEASE: EEUcObject<EEButtonObject>(inA)->Release(); return 0;
-    case EE_UNITS_UC_TECH_TREE: return EEObj(EEUcObject<EEPlayer>(inA)->mTechnologies);
     case EE_UNITS_UC_RESEARCH_COUNT: return theClass->mResearchTechnologies.size();
     case EE_UNITS_UC_RESEARCH_NODE: return EEObj(EEUcObject<EETechTree>(inA)->Get(theClass->mResearchTechnologies[(size_t)inB]));
     case EE_UNITS_UC_PLAYER_IS_HUMAN: return EEUcObject<EEPlayer>(inA)->IsHuman();
-    case EE_UNITS_UC_NODE_KIND: return EEUcObject<EETechTreeNode>(inA)->mData->mKind;
-    case EE_UNITS_UC_NODE_CALAMITY: return EEUcObject<EETechTreeNode>(inA)->mData->mCalamity;
     case EE_UNITS_UC_CALAMITY_LOAD: USingleton<EECalamityManager>::GetInstance()->LoadMedia(EEUcObject<EEPlayer>(inA), (EECalamityEnum)inB); return 0;
     case EE_UNITS_UC_CALAMITY_UNLOAD: USingleton<EECalamityManager>::GetInstance()->UnloadMedia(EEUcObject<EEPlayer>(inA), (EECalamityEnum)inB); return 0;
     case EE_UNITS_UC_COMMAND: return theClass->mCommands[inB];

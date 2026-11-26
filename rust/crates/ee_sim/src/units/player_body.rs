@@ -1113,7 +1113,9 @@ pub(crate) fn body_host(op: i32, player: u64, a: u64, b: i64, c: i64) -> i64 {
     // SAFETY: the player's own operations (player_native.rs), else the C++ switch over a live player and the objects
     // the bodies hand it
     unsafe {
-        crate::units::player_native::body(op, player, a, b, c).unwrap_or_else(|| {
+        crate::units::player_native::body(op, player, a, b, c)
+            .or_else(|| crate::units::player_upgrades::body(op, player, b))
+            .unwrap_or_else(|| {
             game::ee_units_player_body_host(op, player as *mut std::ffi::c_void, a, b, c, std::ptr::null_mut())
         })
     }

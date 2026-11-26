@@ -666,6 +666,9 @@ pub struct FfiSplit<'a>(pub &'a EeUnitsGoalHost);
 
 impl GoalSplitHost for FfiSplit<'_> {
     fn raw(&mut self, op: i32, a: u64, b: u64, io: &mut EeUnitsGoalIo) -> i64 {
+        if let Some(v) = crate::units::tech_cases::goal(op, a, b, io.i[0]) {
+            return v;
+        }
         // SAFETY: the table's contract: `context` and `op` are live for the FFI call that handed it out
         unsafe { (self.0.op)(self.0.context, op, a, b, io) }
     }

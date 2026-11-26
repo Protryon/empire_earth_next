@@ -680,6 +680,9 @@ pub(crate) unsafe fn sepl(op: u32, p: *const *mut c_void, i: &mut [i32; 4], f: &
             return unsafe { sepl_direct(EE_SCREENS_SEPL_OP_COMBO_SELECTION, p, i, f) }.unwrap_or(-1);
         }
         let mut cpp = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+            if let Some(r) = crate::screens::editor_tech::sepx(op, i) {
+                return r;
+            }
             let p = p.map(|v| v as *mut c_void);
             // SAFETY: the statements take the composed op's live handles
             unsafe { sys::ee_screenscpp_sepx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
@@ -692,6 +695,9 @@ pub(crate) unsafe fn sepl(op: u32, p: *const *mut c_void, i: &mut [i32; 4], f: &
         cpp(op, p, i, f)
     };
     if let Some(r) = crate::screens::editor_sepl::compose(&mut x, op, q, i, f) {
+        return r;
+    }
+    if let Some(r) = crate::screens::editor_tech::sepl(op, i) {
         return r;
     }
     // SAFETY: the contract

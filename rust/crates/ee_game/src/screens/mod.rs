@@ -234,6 +234,7 @@ pub mod editor_selt;
 mod editor_selt_ffi;
 pub mod editor_sepl;
 pub mod editor_seplx;
+pub mod editor_tech;
 pub mod editor_setnx;
 pub mod editor_seunx;
 pub mod editor_subscreens;

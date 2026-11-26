@@ -444,7 +444,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlRepairPointers: PL->RepairPointers((unsigned long)a[0], (unsigned long)a[1]);
         break;
-    case O::PlUpgradeAt: return P64(PL->mUnitClassUpgrades[a[0]]);
     case O::PlUpgradeLoadMedia: PL->mUnitClassUpgrades[a[0]]->LoadMedia(PL, (long)a[1]);
         break;
     case O::PlUpgradeUnloadMedia: PL->mUnitClassUpgrades[a[0]]->UnloadMedia(PL);

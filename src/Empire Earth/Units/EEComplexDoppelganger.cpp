@@ -89,7 +89,6 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     EEUnitGoal* theGoal = EEDopObject<EEUnitGoal>(inA);
     EEComplexUnit* theOther = EEDopObject<EEComplexUnit>(inA);
-    EETechTreeNode* theNode = EEDopObject<EETechTreeNode>(inA);
     EEComplexDoppelganger* theDop = static_cast<EEComplexDoppelganger*>(inUnit);
     FSFile* theFile = EEDopObject<FSFile>(inA);
     EEUnit* theSeen = EEDopObject<EEUnit>(inA);
@@ -155,10 +154,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_HAS_CARGO_ID: return theOther->HasCargo(reinterpret_cast<EEComplexUnit*>(theUnit->mUnitID));
     case EE_UNITS_DOP_CURRENT_RESEARCH: return theUnit->mCurrentResearch;
     case EE_UNITS_DOP_SET_PRODUCTION_TIME: theUnit->mProductionTime = (long)inB; return 0;
-    case EE_UNITS_DOP_TECH_NODE: return EEDopHandle(theUnit->mPlayer->mTechnologies->Get((long)inB));
     case EE_UNITS_DOP_IS_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
-    case EE_UNITS_DOP_NODE_CLASS_MISSING: return theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL;
-    case EE_UNITS_DOP_NODE_DISALLOW: theNode->mIsAllowed = false; return 0;
     case EE_UNITS_DOP_BUILD_QUEUE_COUNT: return (int64_t)theUnit->mBuildQueue.size();
     case EE_UNITS_DOP_BUILD_QUEUE_TECH: return theUnit->mBuildQueue[(size_t)inB].mTechnology;
     case EE_UNITS_DOP_SCRATCH_RESEARCH_CLEAR: sRepairResearch.clear(); return 0;
@@ -185,7 +181,6 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_RESTART_ANIMATION: theUnit->SetAnimationFrame(theUnit->mStats->mModel->mStartFrames[theUnit->mAnimation]); return 0;
     case EE_UNITS_DOP_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->GetPlayer()->mPlayerID, (long)inB); return 0;
     case EE_UNITS_DOP_OWN_TECH_NODE: return EEDopHandle(theUnit->GetTechTreeNode());
-    case EE_UNITS_DOP_NODE_KIND: return theNode->mData->mKind;
     case EE_UNITS_DOP_HIT_POINTS: return theUnit->GetHitPoints();
     case EE_UNITS_DOP_IS_BUILT: return theUnit->mIsBuilt == true;
     case EE_UNITS_DOP_ADD_WONDER: theUnit->GetPlayer()->AddWonder(theUnit, inB != 0); return 0;

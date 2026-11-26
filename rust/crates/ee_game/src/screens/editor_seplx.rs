@@ -574,7 +574,7 @@ fn sepx_statement(op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) ->
             pub fn ee_screenscpp_sepx(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         }
     }
-    if let Some(r) = direct(op, p, i) {
+    if let Some(r) = direct(op, p, i).or_else(|| crate::screens::editor_tech::sepx(op, i)) {
         return r;
     }
     let p = p.map(|v| v as *mut core::ffi::c_void);

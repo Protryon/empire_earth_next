@@ -236,8 +236,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         return 0;
     case EE_UNITS_PLAYER_X_FOREST_REMOVE: gContinentManager.RemoveForestTile(theUnit);
         return 0;
-    case EE_UNITS_PLAYER_X_UPGRADE_SLOTS: return (int64_t)thePlayer->mUnitClassUpgrades.size();
-    case EE_UNITS_PLAYER_X_UPGRADE_AT: return (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mUnitClassUpgrades[(size_t)a[0]]);
     case EE_UNITS_PLAYER_X_STRING: gResource->GetString((long)a[0], *reinterpret_cast<UWideString*>(a[1]));
         return 0;
     case EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2: return (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(a[0]));
@@ -475,10 +473,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     case EE_UNITS_PLAYER_SAVE_EVENTS_LOAD:
         return thePlayer->mEvents.Load(theMajor, theMinor, theFile);
     // the save
-    case EE_UNITS_PLAYER_SAVE_UPGRADE_SLOTS: io->i = (int64_t)thePlayer->mUnitClassUpgrades.size();
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_UPGRADE_PRESENT:
-        return thePlayer->mUnitClassUpgrades[inIndex] != NULL;
     case EE_UNITS_PLAYER_SAVE_UPGRADE_SAVE:
         return thePlayer->mUnitClassUpgrades[inIndex]->Save(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_RTS_SAVE: ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, thePlayer);
@@ -508,7 +502,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_X_DUMMY_VERIFY: ESVERIFY_AT(theContext.mDummyUpgrade != NULL, inIndex);
         return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_X_UPGRADE_PRESENT: return (unsigned long)io->i < EEUnitClassCount() && thePlayer->mUnitClassUpgrades[(size_t)io->i] != NULL;
     case EE_UNITS_PLAYER_SAVE_X_UPGRADE_LOAD: return thePlayer->mUnitClassUpgrades[(size_t)io->i]->Load(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_X_DUMMY_LOAD: return theContext.mDummyUpgrade->Load(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_X_PATROL_LOAD: return ee_units_pg_load(reinterpret_cast<EEPPatrolGroup*>(io->i), (uint32_t)theMajor, (uint32_t)theMinor, &theFile);
@@ -954,8 +947,6 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
         return 0;
     case EE_UNITS_PLAYER_BODY_DUMP_HEADER: fprintf(*EEPlayerPtr<FSFileSpec>(inA), "Media Information For Player %ld, The Players Name is %s\n\n", thePlayer->mPlayerID, (const char*)thePlayer->mName);
         return 0;
-    case EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS: return (int64_t)thePlayer->mUnitClassUpgrades.size();
-    case EE_UNITS_PLAYER_BODY_UPGRADE_AT: return (int64_t)(uintptr_t)thePlayer->mUnitClassUpgrades[(size_t)inB];
     case EE_UNITS_PLAYER_BODY_DUMP_COUNT: EEPlayerPtr<EEUnitStats>(inB)->DumpMediaCount(*EEPlayerPtr<FSFileSpec>(inA));
         return 0;
     case EE_UNITS_PLAYER_BODY_DUMP_TEXT: fprintf(*EEPlayerPtr<FSFileSpec>(inA), "%s", EEPlayerPtr<const char>(inB));

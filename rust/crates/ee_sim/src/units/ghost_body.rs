@@ -672,6 +672,9 @@ pub(crate) mod game {
 
     impl GhostHost for Game {
         fn ghost(&mut self, op: i32, ghost: u64, a: u64, b: i64, c: i64) -> i64 {
+            if let Some(v) = crate::units::tech_cases::ghost(op, a, b) {
+                return v;
+            }
             // SAFETY: the ghosts are the world's, under its ghost lock or the caller's own
             unsafe { ee_units_ghost_host(op, ghost as usize as *mut c_void, a, b, c) }
         }

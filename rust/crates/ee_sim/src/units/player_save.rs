@@ -898,6 +898,9 @@ fn lists_answer(
     if let Some(r) = unsafe { crate::units::player_native::save(op, p, index, io, tree_file) } {
         return Some(r);
     }
+    if let Some(r) = crate::units::player_upgrades::save(op, p, index, io) {
+        return Some(r);
+    }
     if p == 0 {
         return None;
     }

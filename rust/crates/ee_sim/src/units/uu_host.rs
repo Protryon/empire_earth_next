@@ -529,6 +529,9 @@ impl uu_world_ops::UuOps for Ops {
 }
 
 fn world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64 {
+    if let Some(v) = crate::units::tech_cases::world(which, b) {
+        return v;
+    }
     // SAFETY: the objects are live ones the C++ gave (each question's own contract in the C++ switch)
     unsafe { ee_units_uu_host_world(which, a, b, c, x, y, f) }
 }
