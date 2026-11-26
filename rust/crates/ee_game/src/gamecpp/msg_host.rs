@@ -19,7 +19,6 @@ use ee_sim::world::view::{PlayerView, UnitView, WorldRead, WorldView};
 fn unit_fact(which: i64) -> Option<O> {
     Some(match which {
         EE_NETMSG_UNIT_LAND_BUILDING => O::C11NmUnitLandBuilding,
-        EE_NETMSG_UNIT_CAN_DELETE => O::C11NmUnitCanDelete,
         EE_NETMSG_UNIT_AS_COMPLEX => O::C11NmUnitAsComplex,
         EE_NETMSG_UNIT_IN_SET => O::C11NmUnitInSet,
         _ => return None,
@@ -38,7 +37,7 @@ fn player_fact(which: i64) -> Option<O> {
 fn world_fact(which: i64) -> Option<O> {
     Some(match which {
         EE_NETMSG_WORLD_STRING_LENGTH => O::C11NmWorldStringLength,
-        EE_NETMSG_WORLD_COLLISION_SPHERE_MODE => O::C11NmWorldCollisionSphereMode,
+        EE_NETMSG_WORLD_COLLISION_SPHERE_MODE => O::RoCollisionSphereMode,
         _ => return None,
     })
 }
@@ -109,6 +108,7 @@ fn unit_record_fact(which: i64, u: P) -> Option<i64> {
         EE_NETMSG_UNIT_PAID_FOR => cf(u).mIsPaidFor as i64,
         EE_NETMSG_UNIT_BUILT => cf(u).mIsBuilt as i64,
         EE_NETMSG_UNIT_DOMAINS => class().mDomains as i64,
+        EE_NETMSG_UNIT_CAN_DELETE => (cu(ee_sim::units::cu_world::EE_UNITS_CU_DO_CAN_DELETE, u, 0) != 0) as i64,
         EE_NETMSG_UNIT_PACKED_CLASS => class_links(uf(u).mUnitClass as P).mPackedClass as P as i64,
         EE_NETMSG_UNIT_DEATH_SPAWN => !class_links(uf(u).mUnitClass as P).mDeathSpawnClass.is_null() as i64,
         EE_NETMSG_UNIT_TILE_X => rts(u).mTileX as i64,

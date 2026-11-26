@@ -822,7 +822,16 @@ fn restore_players(st: P, helper: P) -> i64 {
                 if tail(st).mInScenarioEditor == false && i as c_ulong >= max {
                     super::state::loaded_push(pl);
                     for j in 0..super::state::players_len() {
-                        h(O::PsPlayerRemoveAlly, super::state::player(j), &[pa(pl)]);
+                        // SAFETY: two live players (EEPlayer::RemoveAlly)
+                        unsafe {
+                            ee_sim::units::player_rest::game::ee_units_player_rest(
+                                super::state::player(j) as *mut c_void,
+                                ee_sim::units::player_rest::EE_UNITS_PLAYER_REST_REMOVE_ALLY,
+                                pl as u64,
+                                0,
+                                0,
+                            )
+                        };
                     }
                     let options = hp(O::StOptionsPtr, st, &[]);
                     // SAFETY: the slot's plain members (the original copies the slot, sets the type, copies it back)

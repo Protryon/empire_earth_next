@@ -520,8 +520,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsRestorableOfEffects: return P64(static_cast<FSRestorable*>((EEEffectManager*)p));
     case O::PsRestorableOfCalamities: return P64(static_cast<FSRestorable*>((EEPCalamityHelper*)p));
     case O::PsRestorableOfEnvironment: return P64(static_cast<FSRestorable*>((EEEnvironmentManager*)p));
-    case O::PsPlayerRemoveAlly: ((EEPlayer*)p)->RemoveAlly((EEPlayer*)a[0]);
-        break;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");
         break;
     case O::PsDataPathFind: return gDataPath->FindFile(*(const UString*)a[0], *(FSFileSpec**)a[1]);
