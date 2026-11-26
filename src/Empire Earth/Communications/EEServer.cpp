@@ -285,8 +285,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the sends
     case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
-    case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
-        break;
     case O::C11SvXferStatus: SV->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {(unsigned char)a[0], (unsigned char)a[1], (uint32_t)a[2], (unsigned char)a[3]}), kSlotNone);
         break;
     // a connection request (a0)

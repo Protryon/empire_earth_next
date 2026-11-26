@@ -15,7 +15,7 @@ use std::sync::{Mutex, MutexGuard};
 use ee_sim::netmsg::session::{ee_netmsg_session, EeNetSessCall, EE_NETMSG_SESS_DO_CONNECTION_REQUEST};
 
 use super::server::{ee_gamecpp_session_host, SS_SLOT_NONE};
-use super::{h, hf, hp, pa, ptr, rec, Owned, O, P};
+use super::{h, hp, pa, ptr, rec, Owned, O, P};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// `kConnectionRemovedByHost` (NEMessageID.h; EEServer.cpp asserts it).
@@ -375,7 +375,14 @@ pub fn send_ping_stat(server: P, player: i64, ping: f32) {
     // SAFETY: the options' slot's plain members, read under the lock
     let kind = unsafe { (*rec::<EeAppOptionsPlayerFields>(O::C11OptionsPlayerFields, player as P)).mType };
     if kind == 1 || kind == 2 {
-        hf(O::C11SvPingStat, server, &[player], &[ping]);
+        // kMessageUpdatePingStat {(unsigned char) player, the ping (a float)} to the server's local input
+        let values = [
+            super::mrecord::EeGamecppMrValue::integer(player as u8 as i64),
+            super::mrecord::EeGamecppMrValue { floats: [ping, 0.0, 0.0], is_float: true, ..super::mrecord::EeGamecppMrValue::integer(0) },
+        ];
+        let message =
+            super::mrecord::new_record(ee_sim::message_ids::EEMessageID::kMessageUpdatePingStat as u8, &values);
+        super::net::net(server as *const c_void).local_input(message as *mut c_void, 0xff);
     }
     h(O::C11OptionsReadUnlock, 0, &[]);
 }

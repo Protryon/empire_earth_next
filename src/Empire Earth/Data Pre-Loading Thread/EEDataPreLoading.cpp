@@ -105,8 +105,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
         break;
     case O::IsMultiplayer: return gCommunications->GetIsMultiplayerSession();
     case O::IsClient: return gCommunications->IsClient();
-    case O::NewLoadedResponseClient: return P64(new EEMRecord(kMessageStartLoadingResponse, {static_cast<EEClient*>(gCommunications)->GetMySendToSlot(), gWorld.GetCurrentPlayer()->GetPlayerID(), 0}));
-    case O::NewLoadedResponseServer: return P64(new EEMRecord(kMessageStartLoadingResponse, {0xfe, gWorld.GetCurrentPlayer()->GetPlayerID(), 0}));
     case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput((NEMessage*)p, kSlotNone);
         break;
     case O::SetHasLoaded: (static_cast<EEClient*>(gCommunications))->mHasLoaded = true;

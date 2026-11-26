@@ -3247,7 +3247,6 @@ enum class EeGameCpp : uint32_t {
   C11SvDestroyFastLock,
   C11SvDestroyAttemptLock,
   C11SvNewResponse,
-  C11SvPingStat,
   C11SvXferStatus,
   C11RequestFirewall,
   C11RequestString,
