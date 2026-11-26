@@ -1306,5 +1306,7 @@ mod fields {
     }
 }
 #[cfg(not(any(test, feature = "no_cpp")))]
-pub(crate) use fields::{left_down as control_left_down, right_down as control_right_down,
-    set_left_down as control_set_left_down, set_right_down as control_set_right_down};
+pub(crate) use fields::{
+    left_down as control_left_down, right_down as control_right_down, set_left_down as control_set_left_down,
+    set_right_down as control_set_right_down,
+};
