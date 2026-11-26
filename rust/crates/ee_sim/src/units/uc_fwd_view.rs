@@ -58,6 +58,11 @@ fn p(h: u64) -> *mut c_void {
     h as usize as *mut c_void
 }
 
+/// A statement's answer: 0 (the member returned nothing, or its answer was dropped).
+fn done(_: i64) -> i64 {
+    0
+}
+
 fn long(v: i64) -> i64 {
     v as c_long as i64
 }
@@ -102,14 +107,14 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 crate::units::waypoints::ee_units_waypoints_drop(unit);
                 0
             }
-            (_, EE_UNITS_UC_SET_ANIMATION) => ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, u, long(b), -1, 0) * 0,
-            (_, EE_UNITS_UC_LOAD_CARGO) => ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, u, a as i64, 1, 0) * 0,
+            (_, EE_UNITS_UC_SET_ANIMATION) => done(ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, u, long(b), -1, 0)),
+            (_, EE_UNITS_UC_LOAD_CARGO) => done(ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, u, a as i64, 1, 0)),
             (_, EE_UNITS_UC_R_SET_TRANSFORMATION) => set_transformation(unit, a),
             (_, EE_UNITS_UC_R_BASE_LOAD_MEDIA) => {
-                ee_units_uc_call(EE_UNITS_UC_DO_BASE_LOAD_MEDIA, k, n, a, 0, 0, null(), null()) * 0
+                done(ee_units_uc_call(EE_UNITS_UC_DO_BASE_LOAD_MEDIA, k, n, a, 0, 0, null(), null()))
             }
             (_, EE_UNITS_UC_R_BASE_UNLOAD_MEDIA) => {
-                ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNLOAD_MEDIA, k, n, a, 0, 0, null(), null()) * 0
+                done(ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNLOAD_MEDIA, k, n, a, 0, 0, null(), null()))
             }
             (_, EE_UNITS_UC_R_CAN_REACH) => i64::from(ee_units_cu_small(EE_UNITS_CU_S_DO_CAN_REACH_UNIT, u, o, 0) != 0),
             (_, EE_UNITS_UC_R_FACES_POINT) => {
@@ -125,29 +130,29 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 crate::units::player_rest::game::ee_units_cloak_chain(a, 0, true);
                 0
             }
-            (_, EE_UNITS_UC_CLEAR_GOAL_QUEUE) => ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, o, 0, 0, 0) * 0,
+            (_, EE_UNITS_UC_CLEAR_GOAL_QUEUE) => done(ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, o, 0, 0, 0)),
             (_, EE_UNITS_UC_PRODUCE_UNIT) => i64::from(ee_units_uc_produce(k, u, o, true)),
-            (_, EE_UNITS_UC_PLAY_NO_EFFECT) => ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, u, 100000, 0, 0) * 0,
+            (_, EE_UNITS_UC_PLAY_NO_EFFECT) => done(ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, u, 100000, 0, 0)),
             (_, EE_UNITS_UC_UPDATE_ORBITALS) => {
-                ee_units_uc_rest(EE_UNITS_UC_DO_R_UPDATE_ORBITALS, n, u, 0, 0, 0, null_mut()) * 0
+                done(ee_units_uc_rest(EE_UNITS_UC_DO_R_UPDATE_ORBITALS, n, u, 0, 0, 0, null_mut()))
             }
             (_, EE_UNITS_UC_UPDATE_CAMOUFLAGE_TIMER) => {
                 ee_units_st_camouflage(class, unit);
                 0
             }
             (_, EE_UNITS_UC_UPDATE_EFFECTS) => {
-                ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE_EFFECTS, k, u, 0, 0, 0, 0.0) * 0
+                done(ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE_EFFECTS, k, u, 0, 0, 0, 0.0))
             }
-            (_, EE_UNITS_UC_UPDATE_RELOAD_TIMER) => ee_units_ucp_call(EE_UNITS_UCP_DO_RELOAD_TIMER, n, u, 0, 0) * 0,
+            (_, EE_UNITS_UC_UPDATE_RELOAD_TIMER) => done(ee_units_ucp_call(EE_UNITS_UCP_DO_RELOAD_TIMER, n, u, 0, 0)),
             (_, EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER) => {
-                ee_units_ucp_call(EE_UNITS_UCP_DO_TARGET_SEARCH_TIMER, n, u, 0, 0) * 0
+                done(ee_units_ucp_call(EE_UNITS_UCP_DO_TARGET_SEARCH_TIMER, n, u, 0, 0))
             }
             (_, EE_UNITS_UC_UPDATE_RESOURCES_ROTTING) | (Kind::Ground, EE_UNITS_UCG_RESOURCES_ROTTING) => {
-                ee_units_ucp_call(EE_UNITS_UCP_DO_RESOURCES_ROTTING, n, u, 0, 0) * 0
+                done(ee_units_ucp_call(EE_UNITS_UCP_DO_RESOURCES_ROTTING, n, u, 0, 0))
             }
             (_, EE_UNITS_UC_STOP) => set_velocity(x, a, 0.0)?,
-            (_, EE_UNITS_UC_SET_OWNER) => ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_OWNER, o, u, 0, 0, 0.0, 0.0, 0.0) * 0,
-            (_, EE_UNITS_UC_START_ACTION) => ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, o, long(b), 0, 0) * 0,
+            (_, EE_UNITS_UC_SET_OWNER) => done(ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_OWNER, o, u, 0, 0, 0.0, 0.0, 0.0)),
+            (_, EE_UNITS_UC_START_ACTION) => done(ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, o, long(b), 0, 0)),
             (_, EE_UNITS_UC_SET_GOAL) => {
                 crate::units::goals::ee_units_unit_set_goal(a, b as u64, false, 0);
                 0
@@ -157,53 +162,55 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 0
             }
             (_, EE_UNITS_UC_SIMPLE_UNIT_CREATED) => {
-                ee_units_uck_dispatch(EE_UNITS_BODY_SIMPLE_UNIT_CREATED as usize, k, n, a, 0, 0, null_mut()) * 0
+                done(ee_units_uck_dispatch(EE_UNITS_BODY_SIMPLE_UNIT_CREATED as usize, k, n, a, 0, 0, null_mut()))
             }
             (_, EE_UNITS_UC_GROUND_LOCATION) => {
-                ee_units_uck_dispatch(EE_UNITS_BODY_GROUND_LOCATION as usize, k, n, 0, 0, 0, f.as_mut_ptr()) * 0
+                done(ee_units_uck_dispatch(EE_UNITS_BODY_GROUND_LOCATION as usize, k, n, 0, 0, 0, f.as_mut_ptr()))
             }
             (_, EE_UNITS_UC_NUM_GOAL_QUEUES) => {
                 i64::from(crate::units::cls_answers::ee_units_cls_num_goal_queues(x.cls()?.fields().ptr()))
             }
             (_, EE_UNITS_UC_UNIT_CREATED) => {
-                ee_units_uck_dispatch(EE_UNITS_BODY_UNIT_CREATED as usize, k, o, 0, 0, 0, null_mut()) * 0
+                done(ee_units_uck_dispatch(EE_UNITS_BODY_UNIT_CREATED as usize, k, o, 0, 0, 0, null_mut()))
             }
-            (_, EE_UNITS_UC_SET_HIT_POINTS_OF) => ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, o, long(b), 0, 0) * 0,
+            (_, EE_UNITS_UC_SET_HIT_POINTS_OF) => {
+                done(ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, o, long(b), 0, 0))
+            }
             (_, EE_UNITS_UC_SET_HIT_POINTS_SELF) => {
-                ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, u, long(b), 0, 0) * 0
+                done(ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, u, long(b), 0, 0))
             }
             (_, EE_UNITS_UC_SET_FULL_HIT_POINTS) => {
                 let max = x.u()?.stats()?.max_hit_points();
-                ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, u, max, 0, 0) * 0
+                done(ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, u, max, 0, 0))
             }
-            (_, EE_UNITS_UC_MOVE_TO) => ee_units_eu_body(EE_UNITS_EU_DO_MOVE_TO, o, long(b), long(c), 1) * 0,
+            (_, EE_UNITS_UC_MOVE_TO) => done(ee_units_eu_body(EE_UNITS_EU_DO_MOVE_TO, o, long(b), long(c), 1)),
             (_, EE_UNITS_UC_SET_ANIMATION_OF) | (Kind::Buildings, EE_UNITS_UCB_SET_ANIMATION_OF) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, o, long(b), -1, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, o, long(b), -1, 0))
             }
             (_, EE_UNITS_UC_SET_VELOCITY_OF) => set_velocity(x, a, f[0])?,
             (_, EE_UNITS_UC_START_ACTION_SELF)
             | (Kind::Air, EE_UNITS_UCA_START_ACTION)
             | (Kind::Buildings, EE_UNITS_UCB_START_ACTION) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, u, long(b), 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, u, long(b), 0, 0))
             }
             (_, EE_UNITS_UC_CLASS_ACTION_CHANGED)
             | (Kind::Air, EE_UNITS_UCA_ACTION_CHANGED)
             | (Kind::Buildings, EE_UNITS_UCB_ACTION_CHANGED) => {
-                ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, k, u, 0, 0, 0, 0.0) * 0
+                done(ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, k, u, 0, 0, 0, 0.0))
             }
             (_, EE_UNITS_UC_ACTION_CHANGED) => {
                 let of = x.o()?.class()?.handle();
-                ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, p(of), o, 0, 0, 0, 0.0) * 0
+                done(ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, p(of), o, 0, 0, 0, 0.0))
             }
             (_, EE_UNITS_UC_ACTION_CHANGED_SELF) => {
                 let of = x.u()?.class()?.handle();
-                ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, p(of), u, 0, 0, 0, 0.0) * 0
+                done(ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, p(of), u, 0, 0, 0, 0.0))
             }
             (_, EE_UNITS_UC_SET_ANIMATION_FRAME) => {
-                ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, u, n, b as c_ulong as i64) * 0
+                done(ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, u, n, b as c_ulong as i64))
             }
-            (_, EE_UNITS_UC_RELEASE_SOUND) => ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_SOUND, u, n, 0) * 0,
-            (_, EE_UNITS_UC_SET_SOUND) => ee_units_cu_small(EE_UNITS_CU_S_DO_SET_SOUND, u, o, 0) * 0,
+            (_, EE_UNITS_UC_RELEASE_SOUND) => done(ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_SOUND, u, n, 0)),
+            (_, EE_UNITS_UC_SET_SOUND) => done(ee_units_cu_small(EE_UNITS_CU_S_DO_SET_SOUND, u, o, 0)),
             (_, EE_UNITS_UC_FIRE_SHOT) => {
                 crate::units::ucn_noted::ee_units_ucn_fire_shot(class, unit);
                 0
@@ -214,7 +221,7 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 0
             }
             (Kind::Air, EE_UNITS_UCA_SET_HOME_BASE) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, u, a as i64, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, u, a as i64, 0, 0))
             }
             (Kind::Air, EE_UNITS_UCA_TAKE_OFF_CARRIER) => {
                 crate::units::ucn_noted::ee_units_ucn_take_off_from_carrier(class, unit);
@@ -239,17 +246,19 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 0
             }
             (Kind::Air, EE_UNITS_UCA_CLEAR_GOALS) | (Kind::People, EE_UNITS_UCP_CLEAR_GOALS) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, u, 0, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, u, 0, 0, 0))
             }
-            (Kind::Air, EE_UNITS_UCA_KILL) => ee_units_cu_body(EE_UNITS_CU_DO_KILL, u, 1, 0, 0) * 0,
+            (Kind::Air, EE_UNITS_UCA_KILL) => done(ee_units_cu_body(EE_UNITS_CU_DO_KILL, u, 1, 0, 0)),
             (Kind::Air, EE_UNITS_UCA_RETURN_TO_AIRPORT) => {
                 crate::units::ucn_noted::ee_units_ucn_return_to_airport(class, unit);
                 0
             }
             (Kind::Air, EE_UNITS_UCA_SET_ANIMATION) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, u, long(b), -1, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, u, long(b), -1, 0))
             }
-            (Kind::Air, EE_UNITS_UCA_LOAD_CARGO) => ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, u, a as i64, 1, 0) * 0,
+            (Kind::Air, EE_UNITS_UCA_LOAD_CARGO) => {
+                done(ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, u, a as i64, 1, 0))
+            }
             (Kind::Air, EE_UNITS_UCA_DROP_PATH_OF) => {
                 crate::units::waypoints::ee_units_waypoints_drop(a);
                 0
@@ -267,19 +276,25 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 ee_units_uck_dispatch(EE_UNITS_BODY_IS_PART_LEFT_OUT as usize, k, o, 0, 0, 0, null_mut()) != 0,
             ),
             (Kind::Buildings, EE_UNITS_UCB_GATE_BASE_SURROUNDING) => {
-                ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, k, o, b as u64, long(c), 1, null_mut()) * 0
+                done(ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, k, o, b as u64, long(c), 1, null_mut()))
             }
-            (Kind::Buildings, EE_UNITS_UCB_BASE_SURROUNDING) => {
-                ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, k, u, a, long(b), i64::from(c != 0), null_mut()) * 0
-            }
+            (Kind::Buildings, EE_UNITS_UCB_BASE_SURROUNDING) => done(ee_units_uc_rest(
+                EE_UNITS_UC_DO_R_BASE_SURROUNDING,
+                k,
+                u,
+                a,
+                long(b),
+                i64::from(c != 0),
+                null_mut(),
+            )),
             (Kind::Buildings, EE_UNITS_UCB_BUILDING_UNIT_CREATED) => {
-                ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, k, u, 0, 0, 0, null()) * 0
+                done(ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, k, u, 0, 0, 0, null()))
             }
             (Kind::Buildings, EE_UNITS_UCB_SPACE_SET_BUILT) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, u, 1, 0, 1) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, u, 1, 0, 1))
             }
             (Kind::Buildings, EE_UNITS_UCB_SET_BUILT) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, u, long(b), long(c & 1), long(c >> 1)) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, u, long(b), long(c & 1), long(c >> 1)))
             }
             (Kind::Buildings, EE_UNITS_UCB_REFRESH_GOALS) => {
                 crate::units::goals::ee_units_unit_refresh_goals(a);
@@ -296,26 +311,26 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_BY_ID, u, b as c_ulong as i64, a as i64, 0)
             }
             (Kind::Buildings, EE_UNITS_UCB_LOAD_CARGO) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, u, a as i64, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, u, a as i64, 0, 0))
             }
             (Kind::Buildings, EE_UNITS_UCB_SET_HOME_BASE) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, o, unit as i64, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, o, unit as i64, 0, 0))
             }
             (Kind::Buildings, EE_UNITS_UCB_UPDATE_HEAL_SEARCH) => {
-                ee_units_ucp_call(EE_UNITS_UCP_DO_HEAL_SEARCH_TIMER, n, u, 0, 0) * 0
+                done(ee_units_ucp_call(EE_UNITS_UCP_DO_HEAL_SEARCH_TIMER, n, u, 0, 0))
             }
             (Kind::Buildings, EE_UNITS_UCB_REGENERATE_POWER) => {
                 ee_units_st_power(class, unit);
                 0
             }
             (Kind::Buildings, EE_UNITS_UCB_PRIEST_CONVERSION) => {
-                ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CONVERSION, k, u, 0, 0) * 0
+                done(ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CONVERSION, k, u, 0, 0))
             }
             (Kind::Buildings, EE_UNITS_UCB_RELEASE_CONVERSION) | (Kind::People, EE_UNITS_UCP_RELEASE_CONVERSION) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CONVERSION_EFFECT, u, 0, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CONVERSION_EFFECT, u, 0, 0, 0))
             }
             (Kind::Buildings, EE_UNITS_UCB_HIDE_CONVERSION) => {
-                ee_units_ucp_call(EE_UNITS_UCP_DO_HIDE_CONVERSION, k, u, 0, 0) * 0
+                done(ee_units_ucp_call(EE_UNITS_UCP_DO_HIDE_CONVERSION, k, u, 0, 0))
             }
             (Kind::Buildings, EE_UNITS_UCB_CAN_GATHER) => {
                 // SAFETY: the resource the body handed over
@@ -330,11 +345,11 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
                 ee_units_uc_call(w, k, n, c as u64, long(b >> 1), b & 1, null(), m)
             }
             (Kind::Ground, EE_UNITS_UCG_SET_LOCATION_OF) => {
-                ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_LOCATION, o, null(), 1, 0, f[0], f[1], f[2]) * 0
+                done(ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_LOCATION, o, null(), 1, 0, f[0], f[1], f[2]))
             }
             // the people's
             (Kind::People, EE_UNITS_UCP_UPDATE_FANATICISM) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_FANATICISM_COLOR, u, 0, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_FANATICISM_COLOR, u, 0, 0, 0))
             }
             // the shots'
             (Kind::Shots, EE_UNITS_UCS_PLACE_ON_GROUND) => {
@@ -352,21 +367,21 @@ pub(crate) fn fwd_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut
             }
             (Kind::Shots, EE_UNITS_UCS_FULL_SPEED) => set_velocity(x, unit, max_velocity(x)?)?,
             (Kind::Shots, EE_UNITS_UCS_UNLOAD_NOW) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, u, a as i64, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, u, a as i64, 0, 0))
             }
             (Kind::Shots, EE_UNITS_UCS_LAUNCH_SHOT) => {
                 let at = f.as_ptr() as *const [f32; 3];
-                ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_SHOT, k, u, a, b, 0, at, null()) * 0
+                done(ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_SHOT, k, u, a, b, 0, at, null()))
             }
             // the transports'
             (Kind::Transports, EE_UNITS_UCX_UNLOAD_AT_TILE) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, u, long(b), long(c), i64::from(a != 0)) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, u, long(b), long(c), i64::from(a != 0)))
             }
             (Kind::Transports, EE_UNITS_UCX_UNLOAD_NOW_OF) => {
-                ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, o, b, 0, 0) * 0
+                done(ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, o, b, 0, 0))
             }
             (Kind::Transports, EE_UNITS_UCX_SET_TRANSFORMATION) => set_transformation(unit, a),
-            (Kind::Transports, EE_UNITS_UCX_SET_BUILT) => ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, u, 0, 1, 1) * 0,
+            (Kind::Transports, EE_UNITS_UCX_SET_BUILT) => done(ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, u, 0, 1, 1)),
             _ => return None,
         };
         Some(v)
