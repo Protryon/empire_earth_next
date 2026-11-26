@@ -5,44 +5,19 @@
 // records, the statics and every method below. The class keeps its vtable (the plug-in's base) and one member,
 // mRust; the methods forward, and GERasterizerHost makes the calls on other objects Rust asks for.
 #include <windows.h>
-#include <stddef.h>
-
-#include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
-#include "lle/UWideString.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/GEColor.h"
+#include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GEBoundingBox.h"
 #include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
 #include "lle/GEPoint.h"
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
-#include "lle/Graphics Engine.h"
 #include "platform/PlatFont.h"
-#include "rust/render/ge.h"
-#include "rust/render/dx7.h"
-#include "GERustMath.h"
 
 static_assert(sizeof(EeGeRastFog) == 0x20 && sizeof(GEColor) == sizeof(EeGeRastColor), "fog");
 

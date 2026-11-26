@@ -41,7 +41,7 @@ pub enum EeGeObjOp {
     PlatFontDestroy,
     /// `PlatFontGetMetrics(obj, ...)`'s `mHeight`.
     PlatFontHeight,
-    /// `GERustTextOps()` -> the platform's text functions (`GeTextOps`).
+    /// The platform's text functions (`GeTextOps`: `font_ffi::platform_text_ops`).
     TextOps,
     /// `PlatWindowDestroy(obj)`.
     PlatWindowDestroy,
@@ -76,11 +76,23 @@ impl Host {
     }
 }
 
-/// The platform font calls (`PlatFontCreate`, `PlatFontDestroy`, `PlatFontGetMetrics`' height: ee_base, Rust since
-/// the platform layer moved) made here rather than through the C++ host; a test's fake host answers them instead.
+/// The platform font, text and window calls (`PlatFontCreate`, `PlatFontDestroy`, `PlatFontGetMetrics`' height, the
+/// text functions' table, `PlatWindowDestroy`, `PlatWindowSetSize`, `PlatWindowGetPosition`: ee_base, Rust since the
+/// platform layer moved) made here rather than through the C++ host; a test's fake host answers them instead.
 ///
 /// # Safety
 /// The operation's arguments are as `EeGeObjOp` describes.
+// platform/PlatWindow.h (ee_base plat_sdl)
+#[cfg(not(test))]
+mod plat_window {
+    use std::ffi::c_void;
+    extern "C" {
+        pub fn PlatWindowDestroy(window: *mut c_void);
+        pub fn PlatWindowSetSize(window: *mut c_void, width: i32, height: i32);
+        pub fn PlatWindowGetPosition(window: *mut c_void, out_x: *mut i32, out_y: *mut i32);
+    }
+}
+
 #[cfg(not(test))]
 unsafe fn platform_op(op: EeGeObjOp, obj: usize, a: isize, b: isize) -> Option<isize> {
     use ee_base::plat_ui::font::{PlatFont, PlatFontCreate, PlatFontDestroy, PlatFontGetMetrics, PlatFontMetrics};
@@ -100,6 +112,19 @@ unsafe fn platform_op(op: EeGeObjOp, obj: usize, a: isize, b: isize) -> Option<i
             let mut metrics: PlatFontMetrics = unsafe { std::mem::zeroed() };
             unsafe { PlatFontGetMetrics(obj as *const PlatFont, &mut metrics) };
             metrics.height as isize
+        }
+        EeGeObjOp::TextOps => crate::ge::font_ffi::platform_text_ops() as isize,
+        EeGeObjOp::PlatWindowDestroy => {
+            unsafe { plat_window::PlatWindowDestroy(obj as *mut c_void) };
+            0
+        }
+        EeGeObjOp::PlatWindowSetSize => {
+            unsafe { plat_window::PlatWindowSetSize(obj as *mut c_void, a as i32, b as i32) };
+            0
+        }
+        EeGeObjOp::PlatWindowPosition => {
+            unsafe { plat_window::PlatWindowGetPosition(obj as *mut c_void, a as *mut i32, b as *mut i32) };
+            0
         }
         _ => return None,
     })

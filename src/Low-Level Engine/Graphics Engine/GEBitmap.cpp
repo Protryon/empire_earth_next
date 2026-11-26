@@ -4,50 +4,18 @@
 //
 // 0x1000dd9e..0x10010550. The unit opens with the header-inline members of every class it is the first to include,
 // in include order (URandom, GEColor, GESurface, GETextureManager, GETexture, GEWindow, GEScreen, GERectangle,
-// GEViewport, GEVertexArray, the U2DPoint/U2DRectangle key statics, GERasterizer, GE2DVertex), then GEBitmap's own
+// GEViewport, GEVertexArray, the U2DPoint/U2DRectangle key statics, GERasterizer, the gone GE2DVertex), then GEBitmap's own
 // code (0x1000f3a4) and the map<UString, GETexture*> / vector<GERScreenState*> COMDATs.
 #include <windows.h>
-#include <stdint.h>
-#include <string.h>
-
-#include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
-#include "lle/URandom.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/GEColor.h"
+#include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GE2DVertex.h"
-#include "lle/GEBitmap.h"
 #include "lle/GELine.h"
-#include "lle/UWideString.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "platform/PlatFont.h"
-#include "platform/PlatWindow.h"
-#include "GERustText.h"
-#include "GERustMath.h"
-#include <mbstring.h>
-#include "lle/Graphics Engine.h"
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
 
 // The RNG trace hook (the draws are Rust: ee_base random)
 extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
@@ -109,8 +77,7 @@ static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void
 static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWideString) == sizeof(void*) + sizeof(EeUWideString),
               "cppobj.rs CppUString");
 
-// ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
-// and GEWindow's forwarders (its header does not include the Rust header)
+// ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects
 extern "C" intptr_t GEObjectHost(void*, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
@@ -132,18 +99,8 @@ extern "C" intptr_t GEObjectHost(void*, EeGeObjOp inOp, void* inObj, intptr_t a,
     case EeGeObjOp::RefDereference:
         ((UReferenceCounter*)inObj)->Dereference();
         return 0;
-    // (PlatFontCreate, PlatFontDestroy and PlatFontHeight: ee_base's, called by the Rust objects themselves)
-    case EeGeObjOp::TextOps:
-        return (intptr_t)GERustTextOps();
-    case EeGeObjOp::PlatWindowDestroy:
-        PlatWindowDestroy((PlatWindow*)inObj);
-        return 0;
-    case EeGeObjOp::PlatWindowSetSize:
-        PlatWindowSetSize((PlatWindow*)inObj, (int32_t)a, (int32_t)b);
-        return 0;
-    case EeGeObjOp::PlatWindowPosition:
-        PlatWindowGetPosition((PlatWindow*)inObj, (int32_t*)a, (int32_t*)b);
-        return 0;
+    // (the platform fonts, the text functions and the platform window's calls: ee_base's, called by the Rust objects
+    // themselves)
     }
     return 0;
 }
@@ -176,9 +133,7 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::TextDelete:
         delete ((GEText*)inObj);
         return 0;
-    // (TextSetByte and FontRange: the Rust object's own, fbobj.rs)
-    case EeGeFbOp::TextOps:
-        return (intptr_t)GERustTextOps();
+    // (TextSetByte, FontRange and TextOps: the Rust object's own, fbobj.rs)
     case EeGeFbOp::FontSetBitmap:
         ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
         return 0;

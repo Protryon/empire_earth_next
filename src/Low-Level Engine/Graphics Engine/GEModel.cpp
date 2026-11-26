@@ -11,57 +11,27 @@
 // (the rasterizer, the vertex and polygon arrays, the materials, the texture manager and textures, the manager, the
 // sub-models' reference counts, the UStrings).
 #include <windows.h>
-#include <stdint.h>
-#include <vector>
-
-#include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/GEColor.h"
+#include <stdio.h>
+#include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEPolygonArray.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "GERustMath.h"
-#include "lle/FSMemoryFile.h"
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
-#include "rust/render/openformats.h"
-#include <stdio.h>
-#include <map>
-#include "lle/UWideString.h"
-#include "lle/FSFileSpec.h"
+#include "lle/GEPhysicalModel.h"
+#include "lle/GETextureSet.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "GEOpenFormats.h"   // the data path's host for ee_of_find_model (a model's .glb/.gltf)
-#include "lle/GEPhysicalModel.h"
-#include <stddef.h>
-#include "lle/URandom.h"       // U2DFractal.h
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DFractal.h"
-#include "lle/GETextureSet.h"
-#include "lle/GETerrainMesh.h"
+#include "lle/GETextureCoordinate.h"
+#include "rust/render/openformats.h"
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// the vertex arrays' values as floats (ee_ge_va_get/set; lle/GEVertexArray.h)
+static_assert(sizeof(GEColor) == 3 * sizeof(float) && sizeof(GE3DPoint) == 3 * sizeof(float) &&
+              sizeof(GEVector) == 3 * sizeof(float) && sizeof(GETextureCoordinate) == 2 * sizeof(float), "vertarr.rs");
 
 // The calls the model makes on other objects (EeGeModOp), in the original's statements; the materials, the
 // strings' records, the references taken and the sub-models' objects are read in place (ee_ge cppobj.rs)
@@ -136,7 +106,10 @@ intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t 
 
 // ---- GEModelManager (GEModelManager.cpp, folded here in R4.3 part 16)
 
-// ---- the open-format lookups' host: the calls ee_openformats find.rs makes on the data path and its files
+// ---- the open-format lookups' host. The game's models and textures are glTF and PNG files only (docs/RUST_PLAN.md
+// D9, docs/MODEL_FORMATS.md): Rust finds them on the data path and decodes them into what the engine stores
+// (ee_openformats find.rs: ee_of_find_model, a model's .glb/.gltf; ee_of_find_texture, GETexture.cpp: a texture's PNG
+// frames); the path and its files are C++, reached through this host
 intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     unsigned long theRead = 0;

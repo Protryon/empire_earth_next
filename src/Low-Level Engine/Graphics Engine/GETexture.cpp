@@ -10,38 +10,21 @@
 // SetSurface and the texture pack's logical shift. This unit is its shell: the forwarders and the host, which makes
 // each call the original made on another object (its surfaces, screen, frames, manager, the rasterizer, the file).
 #include <windows.h>
-#include <math.h>
-#include <string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include "lle/LowLevelEngineCore.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/GEColor.h"
+#include <stdio.h>
+#include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "rust/base/png.h"
-#include "rust/render/ge.h"
-#include "rust/render/openformats.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <map>
+#include "lle/GETextureSet.h"
+#include "lle/GETextureCoordinate.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
-#include "lle/GETextureSet.h"
+#include "rust/render/openformats.h"
+
+// the data path's host for ee_of_find_texture (a texture's PNG frames; GEModel.cpp)
+intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b);
 // the Rust mirrors (texobj_tex.rs), field for field
 static_assert(sizeof(EeGeTexCoord) == sizeof(GETextureCoordinate), "GETextureCoordinate");
 static_assert(offsetof(EeGeTexCoord, v) == offsetof(GETextureCoordinate, mV), "GETextureCoordinate");

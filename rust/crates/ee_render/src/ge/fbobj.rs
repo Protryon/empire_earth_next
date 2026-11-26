@@ -38,7 +38,7 @@ pub enum EeGeFbOp {
     TextLocation,
     /// `&obj->GetFgColor()`.
     TextColor,
-    /// The platform's text functions (`GERustTextOps()`).
+    /// The platform's text functions (`GeTextOps`: `font_ffi::platform_text_ops`).
     TextOps,
     /// `PlatFontGetMetrics(obj->GetOSFont())`'s first and last characters into `*(unsigned long(*)[2])a`.
     FontRange,
@@ -303,6 +303,7 @@ impl EeGeFontBitmap {
                 EeGeFbOp::FontRange => return unsafe { font_range(obj, a as *mut c_ulong) },
                 // SAFETY: a live GEText
                 EeGeFbOp::TextSetByte => return unsafe { text_set_byte(obj, a as u8) },
+                EeGeFbOp::TextOps => return crate::ge::font_ffi::platform_text_ops() as isize,
                 _ => {}
             }
             // SAFETY: the objects are the C++'s live GE objects the operation names
