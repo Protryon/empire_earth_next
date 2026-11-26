@@ -30,26 +30,18 @@ public:
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return ee_cp_pl_repair_pointers(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion); }
     // +0x24 0x3d677
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_cp_pl_save(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion, (uint64_t)(uintptr_t)&outFile); }
-    // the computer player's overrides (NoticeTargetPlayer, Virtual60, GetExtraPopulation and WonderStarted are EEPlayer's) (ret N from the bodies) and members (provisional names)
+    // the computer player's overrides (NoticeTargetPlayer, Virtual60, GetExtraPopulation and WonderStarted are EEPlayer's; GetHeroCount, ScaleCost, GetPopulationLimit and CanAfford EEPlayer's dispatch on mComputerPlayer) (ret N from the bodies) and members (provisional names)
     EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID) : EEPlayer(inName, inPlayerID) { this->Init(); }
     // 0x2f1c8 (both ctors: the tuning members from the AI globals, the managers)
     void Init() { ee_cp_pl_init(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
     // +0x48 0x2d1a5
     virtual void AddResource(long inIndex, long inAmount) { ee_cp_pl_add_resource(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inIndex, inAmount); }
     virtual void DetachUnitFromAI(EEComplexUnit* inUnit);  // +0x4c 0x2db35
-    // +0x50 0x2e248 (the heroes count)
-    virtual long GetHeroCount(bool inByClass, bool inRequests) { return ee_cp_pl_hero_count(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inByClass, inRequests); }
     // +0x54 0x2dc51
     virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason) { return ee_cp_pl_can_produce(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, (uint64_t)(uintptr_t)outReason); }
     virtual void UnitCompleted(EEComplexUnit* inUnit);  // +0x68 0x2e1e9
     // +0xa8 0x2d003
     virtual void SetCombatState(unsigned long inCombatState) { ee_cp_pl_set_combat_state(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inCombatState); }
-    // +0x6c 0x2eace (scaled by GetUnitCostModifier when mIsCheating, at least 0)
-    virtual long ScaleCost(long inCost) { return ee_cp_scale_cost(this, inCost); }
-    // +0x7c 0x2ecca (EEPlayer's when mIgnoreOthers, else mPopulationCap via WorkOutPopulation)
-    virtual long GetPopulationLimit(long inArg) { return ee_cp_pl_population_limit(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inArg); }
-    // +0x80 0x2f033 (epochs: always)
-    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return ee_cp_pl_can_afford(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), (uint64_t)(uintptr_t)inTechnology, inUnitType, inCount); }
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit);  // +0x84 0x2f16d
     // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
     virtual void Clear() { ee_cp_pl_clear(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }

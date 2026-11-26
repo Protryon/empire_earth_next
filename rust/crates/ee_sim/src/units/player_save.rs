@@ -860,6 +860,16 @@ struct FfiHost {
     queued: *mut EeUnitsQueued,
     /// the player (0 for a unit's save): its containers' operations are answered from its lists ([`lists_answer`])
     player: u64,
+    /// the saved game's file and version (the player's tech tree's load and save: player_native.rs)
+    file: SaveFile,
+}
+
+/// The saved game's `FSFile` (0 for a unit's save) and version, as `EEPlayer::Load` and `Save` got them.
+#[derive(Clone, Copy)]
+pub struct SaveFile {
+    pub file: usize,
+    pub major: u32,
+    pub minor: u32,
 }
 
 /// The player `p`'s containers' operations answered from its lists (player_lists.rs; were EEPlayerSaveOperation's
@@ -872,6 +882,7 @@ fn lists_answer(
     index: u32,
     io: &mut EeUnitsPlayerSaveIo,
     file: (*mut c_void, EeUnitsPlayerSaveFn),
+    tree_file: SaveFile,
     cpp: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
 ) -> Option<i32> {
     use crate::units::player_lists::{
@@ -884,7 +895,7 @@ fn lists_answer(
         EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR,
     };
     // the player's own Rust calls and plain reads (player_native.rs); SAFETY: a live player's save (p 0: a unit's)
-    if let Some(r) = unsafe { crate::units::player_native::save(op, p, index, io) } {
+    if let Some(r) = unsafe { crate::units::player_native::save(op, p, index, io, tree_file) } {
         return Some(r);
     }
     if p == 0 {
@@ -965,6 +976,7 @@ fn lists_answer(
     _: u32,
     _: &mut EeUnitsPlayerSaveIo,
     _: (*mut c_void, EeUnitsPlayerSaveFn),
+    _: SaveFile,
     _: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
 ) -> Option<i32> {
     None
@@ -981,16 +993,16 @@ impl PlayerSaveHost for FfiHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
         // the compound operations as the C++'s one-statement ones (player_save_split.rs), the containers' from the
         // player's lists
-        let (ctx, f, player) = (self.ctx, self.f, self.player);
+        let (ctx, f, player, file) = (self.ctx, self.f, self.player, self.file);
         let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| {
             // SAFETY: the C++ callback with its own context; io lives for the call
             let mut cpp = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
-            lists_answer(player, op, index, io, (ctx, f), &mut cpp).unwrap_or_else(|| cpp(op, index, io))
+            lists_answer(player, op, index, io, (ctx, f), file, &mut cpp).unwrap_or_else(|| cpp(op, index, io))
         };
         if let Some(r) = crate::units::player_save_split::split(op, index, io, &mut call) {
             return r;
         }
-        if let Some(r) = lists_answer(player, op, index, io, (ctx, f), &mut |op, index, io| {
+        if let Some(r) = lists_answer(player, op, index, io, (ctx, f), file, &mut |op, index, io| {
             // SAFETY: as above
             unsafe { f(ctx, op, index, io) }
         }) {
@@ -1059,7 +1071,7 @@ fn player_of(rec: *mut EeUnitsPlayerSaved) -> u64 {
 }
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
-/// and its C++ parts through `f`.
+/// and its C++ parts through `f`; `file` the saved game's `FSFile` (the tech tree's load).
 ///
 /// # Safety
 /// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
@@ -1072,8 +1084,10 @@ pub unsafe extern "C" fn ee_units_player_load(
     queued: *mut EeUnitsQueued,
     major: u32,
     minor: u32,
+    file: *mut c_void,
 ) -> i32 {
-    load(&mut FfiHost { ctx, f, queued, player: player_of(rec) }, Rec::new(rec), major, minor)
+    let file = SaveFile { file: file as usize, major, minor };
+    load(&mut FfiHost { ctx, f, queued, player: player_of(rec), file }, Rec::new(rec), major, minor)
 }
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
@@ -1088,8 +1102,10 @@ pub unsafe extern "C" fn ee_units_player_save(
     queued: *mut EeUnitsQueued,
     major: u32,
     minor: u32,
+    file: *mut c_void,
 ) -> i32 {
-    save(&mut FfiHost { ctx, f, queued, player: player_of(rec) }, Rec::new(rec), major, minor)
+    let file = SaveFile { file: file as usize, major, minor };
+    save(&mut FfiHost { ctx, f, queued, player: player_of(rec), file }, Rec::new(rec), major, minor)
 }
 
 /// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
@@ -1106,7 +1122,8 @@ pub unsafe extern "C" fn ee_units_player_unit(
     major: u32,
     minor: u32,
 ) -> i32 {
-    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut(), player: player as u64 };
+    let file = SaveFile { file: 0, major, minor };
+    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut(), player: player as u64, file };
     if save_it {
         save_unit(&mut h, major, minor)
     } else {

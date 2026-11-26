@@ -299,6 +299,14 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     // the random map's loading progress on the loading screen (ee_sim rmap object.rs)
     #[cfg(not(test))]
     ee_sim::rmap::object::register_load_progress(screens::ui_objects::ui_set_load_progress);
+    // the players' trees: made, freed, copied from gTechTree and saved here (ee_sim tech tree_objects.rs)
+    ee_sim::tech::tree_objects::register_tree_bodies(ee_sim::tech::tree_objects::TreeBodies {
+        new: tech_tree::objects::player_tree_new,
+        delete: tech_tree::objects::player_tree_delete,
+        copy_global: tech_tree::objects::player_tree_copy_global,
+        file: tech_tree::objects::player_tree_file,
+        save_version: tech_tree::objects::save_version,
+    });
 }
 
 /// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or

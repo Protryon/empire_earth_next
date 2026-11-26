@@ -312,7 +312,64 @@ mod game {
         // SAFETY: the caller's contract
         unsafe { with(refs, |p| run(p, &mut host, kind, &x)) }
     }
+
+    /// EEPlayer's virtuals GetHeroCount, GetPopulationLimit, CanAfford and ScaleCost (`op` the player host's
+    /// operation: HERO_COUNT `a`, `b` the two flags; POPULATION_LIMIT `a` the argument; CAN_AFFORD `object` the node,
+    /// `a` the unit type, `b` the count; SCALE_COST `a` the cost): EEComputerPlayer's overrides (cp player_game.rs)
+    /// when the player is a computer player (`mComputerPlayer` set), else, or with `base` (`EEPlayer::CanAfford`'s
+    /// qualified calls), EEPlayer's own.
+    ///
+    /// # Safety
+    /// As [`ee_units_player_econ`].
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_units_player_virtual(
+        refs: *const EeUnitsPlayerRefs,
+        op: i32,
+        object: *mut c_void,
+        a: i64,
+        b: i64,
+        base: bool,
+    ) -> i64 {
+        use crate::cp::player_game as cp;
+        use crate::units::player::{
+            EE_UNITS_PLAYER_CAN_AFFORD, EE_UNITS_PLAYER_HERO_COUNT, EE_UNITS_PLAYER_POPULATION_LIMIT,
+        };
+        use crate::world::layout::layout;
+        // SAFETY (every block): the caller's contract: a live player and its records
+        let p = unsafe { (*refs).player } as u64;
+        let l = layout();
+        let computer = !base && unsafe { *((p as usize + l.player_computer_player as usize) as *const usize) } != 0;
+        let econ =
+            |kind: u32| unsafe { ee_units_player_econ(refs, kind, object, a, b, 0, 0, 0, 0.0, std::ptr::null_mut()) };
+        unsafe {
+            match op {
+                EE_UNITS_PLAYER_HERO_COUNT if computer => cp::ee_cp_pl_hero_count(p, a != 0, b != 0) as i64,
+                EE_UNITS_PLAYER_HERO_COUNT => econ(EE_UNITS_ECON_NUM_HEROES) as c_long as i64,
+                EE_UNITS_PLAYER_POPULATION_LIMIT if computer => cp::ee_cp_pl_population_limit(p, a as c_long) as i64,
+                EE_UNITS_PLAYER_POPULATION_LIMIT => {
+                    // mPopulationLimitBonus + mShareBonus + gWorld.mPlayerPopulationLimit
+                    let f = &*((*refs).fields);
+                    let t = WorldRead::begin();
+                    let world = crate::world::WorldView::global(&t).map_or(0, |w| w.player_population_limit());
+                    f.mPopulationLimitBonus.wrapping_add(f.mShareBonus).wrapping_add(world as c_long) as i64
+                }
+                EE_UNITS_PLAYER_CAN_AFFORD if computer => {
+                    i64::from(cp::ee_cp_pl_can_afford(p, object as u64, a as c_long, b as c_long))
+                }
+                EE_UNITS_PLAYER_CAN_AFFORD => i64::from(econ(EE_UNITS_ECON_CAN_AFFORD) != 0),
+                // SCALE_COST
+                _ if computer => {
+                    crate::cp::ffi::ee_cp_scale_cost((p as usize + l.cp_fields as usize) as *const _, a as c_long)
+                        as i64
+                }
+                _ => a,
+            }
+        }
+    }
 }
+
+#[cfg(not(test))]
+pub use game::ee_units_player_virtual;
 
 #[cfg(test)]
 #[path = "player_econ_tests.rs"]

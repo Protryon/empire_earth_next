@@ -20430,6 +20430,21 @@ int64_t ee_units_player_econ(const EeUnitsPlayerRefs *refs,
                              float f,
                              void *text);
 
+/// EEPlayer's virtuals GetHeroCount, GetPopulationLimit, CanAfford and ScaleCost (`op` the player host's
+/// operation: HERO_COUNT `a`, `b` the two flags; POPULATION_LIMIT `a` the argument; CAN_AFFORD `object` the node,
+/// `a` the unit type, `b` the count; SCALE_COST `a` the cost): EEComputerPlayer's overrides (cp player_game.rs)
+/// when the player is a computer player (`mComputerPlayer` set), else, or with `base` (`EEPlayer::CanAfford`'s
+/// qualified calls), EEPlayer's own.
+///
+/// # Safety
+/// As [`ee_units_player_econ`].
+int64_t ee_units_player_virtual(const EeUnitsPlayerRefs *refs,
+                                int32_t op,
+                                void *object,
+                                int64_t a,
+                                int64_t b,
+                                bool base);
+
 /// The list's alert sounds got and loaded (`load`, the constructor's) or unloaded and the one playing released (the
 /// destructor's) over the C++ host on `list` (player_events_split.rs).
 ///
@@ -20606,7 +20621,7 @@ void ee_units_cloak_chain(uint64_t unit,
 int64_t ee_units_player_rest(void *player, uint32_t what, uint64_t a, int64_t b, int64_t c);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
-/// and its C++ parts through `f`.
+/// and its C++ parts through `f`; `file` the saved game's `FSFile` (the tech tree's load).
 ///
 /// # Safety
 /// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
@@ -20616,7 +20631,8 @@ int32_t ee_units_player_load(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
                              uint32_t major,
-                             uint32_t minor);
+                             uint32_t minor,
+                             void *file);
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
 ///
@@ -20627,7 +20643,8 @@ int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
                              uint32_t major,
-                             uint32_t minor);
+                             uint32_t minor,
+                             void *file);
 
 /// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
 /// `ctx` (the loaded unit's id into the player's loaded ids is Rust's: `lists_answer`).
