@@ -4,6 +4,8 @@
 //! [`PlayerBodyHost`](crate::units::player_body::PlayerBodyHost) asks [`body`] before calling the C++; the bodies'
 //! unit tests' hosts answer every operation themselves, so the bodies and their tests are unchanged.
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use crate::units::player_body::*;
 use crate::units::player_rest::{
     EE_UNITS_PLAYER_BODY_ATC_UPDATE, EE_UNITS_PLAYER_BODY_CLOAKED, EE_UNITS_PLAYER_BODY_DETACHED,

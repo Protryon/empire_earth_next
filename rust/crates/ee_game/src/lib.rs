@@ -300,7 +300,6 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     #[cfg(not(test))]
     ee_sim::rmap::object::register_load_progress(screens::ui_objects::ui_set_load_progress);
     // the players' trees: made, freed, copied from gTechTree and saved here (ee_sim tech tree_objects.rs)
-    #[cfg(not(test))]
     ee_sim::tech::tree_objects::register_tree_bodies(ee_sim::tech::tree_objects::TreeBodies {
         new: tech_tree::objects::player_tree_new,
         delete: tech_tree::objects::player_tree_delete,
