@@ -22,7 +22,6 @@ UWideString gLoadSaveErrorMessage;
 #include <functional>
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
 
-extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 
 #include "ee/EEStringIDs.h"
 class EEGameState;
@@ -53,12 +52,6 @@ UString GetDateText()
 void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData)
 {
     EEAfterLoad([inRun, inData]() { inRun(inData); });
-}
-
-// Builds the list of chunks a save writes, in chunk order (each chunk new; the game objects are only borrowed)
-void BuildSaveGameChunks(std::vector<FSPersistent*>& outList)
-{
-    ee_gamecpp_ps_build_chunks(&outList);
 }
 
 // Deletes the files matching a pattern in a directory, lowest (FSFileSpec order) first, until at most a given number

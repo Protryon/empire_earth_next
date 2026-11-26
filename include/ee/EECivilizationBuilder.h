@@ -9,8 +9,6 @@
 class EECivilization;
 class UString;
 
-extern bool& gAllowCustomCivs;              // 0x531256 (a scenario game: the timer opens the builder itself)
-extern bool& gIsScenarioGame;               // 0x531259 (with gAllowCustomCivs: no premade-civilization check)
 
 long CivBuilderEditCivilization();          // 0x280faf (pauses, then opens the builder for the current player)
 long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload);

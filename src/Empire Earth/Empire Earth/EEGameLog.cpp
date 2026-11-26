@@ -48,10 +48,8 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEColorTable.h"
-#include "ee/EEStatisticsRecord.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EETeam.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EEUserInterface.h"
@@ -63,14 +61,11 @@
 #include "ee/EEGameLog.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
-extern bool& gInCinematic;
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
 
-// the members the Rust reads in place (gamecpp music_io.rs EeGamecppMusicMembers, stats_capture.rs' tails)
-static_assert(offsetof(EEMusicManager, mRequestedIntensity) - offsetof(EEMusicManager, mRandom) == 16 + 10 * sizeof(void*) + 5 * sizeof(long) &&
-                  offsetof(EEStatisticsRecord, mIsHuman) - offsetof(EEStatisticsRecord, mResult) == 15 * sizeof(long) + 2 &&
-                  offsetof(EEStatisticsHistory, mIsCampaign) - offsetof(EEStatisticsHistory, mStartTime) == 4 * sizeof(long) + 3,
-              "gamecpp music_io.rs, stats_capture.rs");
+// the members the Rust reads in place (gamecpp music_io.rs EeGamecppMusicMembers)
+static_assert(offsetof(EEMusicManager, mRequestedIntensity) - offsetof(EEMusicManager, mRandom) == 16 + 10 * sizeof(void*) + 5 * sizeof(long),
+              "gamecpp music_io.rs");
 static_assert(kUnitCategoryResource == 1 && kTechEpochPrehistoric == 0, "gamecpp cheats.rs");
 
 // (ee/EEGameLog.h; ee/EEPlayer.h's AddResource declares it without the header)
@@ -94,13 +89,10 @@ void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount)
 #define B_PL ((EEPlayer*)p)
 #define B_UN ((EEUnit*)p)
 #define B_CX ((EEComplexUnit*)p)
-#define B_HIS ((EEStatisticsHistory*)p)
-#define B_REC ((EEStatisticsRecord*)p)
 #define B_AI ((EEComputerPlayer*)p)
 #define B_EM ((EEEnvironmentManager*)p)
 #define B_CV ((EECivilization*)p)
 #define B_LIST ((std::vector<EECivUpgrade>*)p)
-#define B_VC ((EEVictoryCondition*)p)
 #define B_TEXT(x) snprintf((char*)a[0], (size_t)a[1], "%s", (x))
 
 // the C++ calls and members of lane B's bodies in Rust (gamecpp; EeGameCpp's round 11 lane B section): one
@@ -240,17 +232,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the statistics sweep (stats_capture.rs)
     case O::EwRecordStatistics: gWorld.RecordStatistics();
         break;
-    case O::EwHistory: return P64(&gWorld.mStatistics);
-    case O::EwHistoryTail: return P64(&B_HIS->mStartTime);
-    case O::EwCampaignName: return P64(&B_HIS->mCampaignName);
-    case O::EwRecordCount: return (int64_t)B_HIS->mRecords.size();
-    case O::EwRecordAt: return P64(&B_HIS->mRecords[a[0]]);
-    case O::EwRecordTail: return P64(&B_REC->mResult);
-    case O::EwRecordColor: return P64(&B_REC->mColor);
-    case O::EwColorSize: return sizeof(GEColor);
-    case O::EwRecordName: return P64(&B_REC->mName);
-    case O::EwRecordSuffix: return P64(&B_REC->mNameSuffix);
-    case O::EwRecordStatisticsOf: return P64(&B_REC->mStatistics);
     case O::EwStatsSeries: return P64(((EEPlayerStatistics*)p)->mStats);
     case O::EwStatsEndTime: return ((EEPlayerStatistics*)p)->mEndTime;
     case O::EwNumPlayers: return gWorld.mNumPlayers;
@@ -289,13 +270,11 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DeColorSave: return ((GEColor*)p)->Save(*(FSFile*)a[0]);
     case O::EbEnvF40: return P64(&B_EM->mF40);
     case O::EbEnvF44: return P64(&B_EM->mF44);
-    case O::DwTeamCount: return B_VC->mTeam->GetNumPlayers();
-    case O::DwTeamPlayer: return B_VC->mTeam->mPlayers[a[0]];
     case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
     case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
     case O::DwGameTime: return gPhysics->mGameTime;
-    case O::DwInCinematic: return gInCinematic;
+    case O::DwInCinematic: return gWorld.mInCinematic;
     // round 10, lane D: the cheats (cheats.rs) and the civilization (civilization.rs)
     case O::DcStrBytes: return P64((const char*)*(UWideString*)p);
     case O::DcMultiplayer: return gCommunications->GetIsMultiplayerSession();
@@ -314,7 +293,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcExplore: gWorld.mMap->ExploreUnseen(B_PL);
         break;
-    case O::DcNewMakeVisible: return P64(new EEMRecord(kMessageMakeWorldVisible));
     case O::DcSetOriginatingSlot: ((EEMRecord*)p)->SetOriginatingSlot(((EEPlayer*)a[0])->mSlot);
         break;
     case O::DcProcessInput: gCommunications->ProcessLocalUserInput((EEMRecord*)p, kSlotNone);

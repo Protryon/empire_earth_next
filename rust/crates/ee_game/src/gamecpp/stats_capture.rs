@@ -3,82 +3,46 @@
 //! EEWorld::RecordStatistics, the end-of-game scores (EEWorld::Clear runs it when a game is left: no capture game
 //! reaches it), then one record: the history's fields (but the start time, a wall clock), every record (scores,
 //! colour, name and suffix, slot, result, end time, team, resources, flags, statistics), every player's resources
-//! and statistics after it (the top-ups of the computers' gathered totals) and the physics random seed. The C++
-//! members are one-statement cases of EEGameLog.cpp's `EECore11OpB` ([`super::EeGameCpp`]'s `Ew` ops); the
-//! statistics' series are ee_sim units player_stats.rs's.
+//! and statistics after it (the top-ups of the computers' gathered totals) and the physics random seed. The
+//! history and its records are stats_history.rs's; the players' C++ members are one-statement cases of
+//! EEGameLog.cpp's `EECore11OpB` ([`super::EeGameCpp`]'s `Ew` ops); the statistics' series are ee_sim units
+//! player_stats.rs's.
 #![allow(clippy::not_unsafe_ptr_arg_deref, clippy::missing_safety_doc)]
 
-use std::ffi::{c_long, c_ulong};
+use std::ffi::c_ulong;
 
 use ee_sim::app::capture_record::{self, Record};
-use ee_sim::units::player_stats::{ee_units_stats_value, EeUnitsPlayerStats};
+use ee_sim::units::player_stats::{EeUnitsPlayerStats, EeUnitsStatsHistoryTail};
 use ee_sim::world::player_fields::EeUnitsPlayerSaved;
 
-use super::preferences::get_text;
-use super::{h, hp, rec, O, P};
-
-/// `EEStatisticsHistory`'s members from `mStartTime` on (ee/EEStatisticsHistory.h), in order.
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EeGamecppStatsHistoryTail {
-    pub mStartTime: c_long,
-    pub mCurrentRecordIndex: c_long,
-    pub mEndTime: c_long,
-    pub mTileCount: c_long,
-    pub mTeamsLocked: bool,
-    pub mVictoryEnabled: bool,
-    pub mIsScenario: bool,
-    pub mIsCampaign: bool,
-}
-
-/// `EEStatisticsRecord`'s members from `mResult` to `mIsHuman` (ee/EEStatisticsRecord.h), in order.
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EeGamecppStatsRecordTail {
-    pub mResult: c_long,
-    pub mTeam: c_ulong,
-    pub mEndTime: c_ulong,
-    pub mResources: [c_ulong; 7],
-    pub mScore: c_ulong,
-    pub mEconomyScore: c_ulong,
-    pub mEpochScore: c_ulong,
-    pub mMilitaryScore: c_ulong,
-    pub mTechScore: c_ulong,
-    pub mSlot: u8,
-    pub mIsLocal: bool,
-    pub mIsHuman: bool,
-}
+use super::{h, hp, rec, O};
 
 /// The series of a player's statistics.
-const SERIES: c_ulong = 31;
+const SERIES: usize = 31;
 
 /// The history's flags: teams locked, victory, scenario, campaign.
-pub fn history_flags(h: &EeGamecppStatsHistoryTail) -> u32 {
-    u32::from(h.mTeamsLocked)
-        | u32::from(h.mVictoryEnabled) << 1
-        | u32::from(h.mIsScenario) << 2
-        | u32::from(h.mIsCampaign) << 3
+pub fn history_flags(h: &EeUnitsStatsHistoryTail) -> u32 {
+    u32::from(h.teams_locked)
+        | u32::from(h.victory_enabled) << 1
+        | u32::from(h.is_scenario) << 2
+        | u32::from(h.is_campaign) << 3
 }
 
 /// A wide string's bytes, counted (UWideString holds UTF-8 bytes: D6).
-fn text(r: &mut Record, member: P) {
-    let t = get_text(member, true);
+fn text(r: &mut Record, t: &[u8]) {
     r.u32(t.len() as u32);
-    r.bytes(&t);
+    r.bytes(t);
 }
 
 /// A player's statistics: each series' largest and last value, its count of increases and of points, the end time.
-fn statistics(r: &mut Record, s: P) {
-    let series = hp(O::EwStatsSeries, s, &[]) as *const EeUnitsPlayerStats;
+fn statistics(r: &mut Record, s: &EeUnitsPlayerStats, end_time: c_ulong) {
     for k in 0..SERIES {
-        for what in 0..4 {
-            // SAFETY: the statistics' live series
-            r.u32(unsafe { ee_units_stats_value(series, k, what) } as u32);
-        }
+        r.u32(s.max(k) as u32);
+        r.u32(s.last(k) as u32);
+        r.u32(s.count_increases(k) as u32);
+        r.u32(s.series.get(k).map_or(0, |x| x.points.len()) as u32);
     }
-    r.u32(h(O::EwStatsEndTime, s, &[]) as c_ulong as u32);
+    r.u32(end_time as u32);
 }
 
 /// WSTA (`EEAppCaptureStatisticsSweep`).
@@ -88,39 +52,35 @@ pub extern "C" fn ee_gamecpp_capture_statistics_sweep() {
         return;
     }
     h(O::EwRecordStatistics, 0, &[]);
-    let history = hp(O::EwHistory, 0, &[]);
-    // SAFETY: the history's members, copied
-    let t = unsafe { *rec::<EeGamecppStatsHistoryTail>(O::EwHistoryTail, history) };
+    let history = super::stats_history::with(|s| s.clone());
+    let t = history.tail;
     let mut r = Record::new(u32::from_le_bytes(*b"WSTA"));
     // (not mStartTime: the wall clock at the game's start)
-    r.i32(t.mCurrentRecordIndex as i32);
-    r.i32(t.mEndTime as i32);
-    r.i32(t.mTileCount as i32);
+    r.i32(t.current_record_index as i32);
+    r.i32(t.end_time as i32);
+    r.i32(t.tile_count as i32);
     r.u32(history_flags(&t));
-    text(&mut r, hp(O::EwCampaignName, history, &[]));
-    let records = h(O::EwRecordCount, history, &[]);
-    r.u32(records as u32);
-    for i in 0..records {
-        let e = hp(O::EwRecordAt, history, &[i]);
-        // SAFETY: the record's members, copied
-        let m = unsafe { *rec::<EeGamecppStatsRecordTail>(O::EwRecordTail, e) };
-        for score in [m.mScore, m.mEconomyScore, m.mEpochScore, m.mMilitaryScore, m.mTechScore] {
+    text(&mut r, &history.campaign_name);
+    r.u32(history.records.len() as u32);
+    for e in &history.records {
+        let m = e.tail;
+        for score in [m.score, m.economy_score, m.epoch_score, m.military_score, m.tech_score] {
             r.u32(score as u32);
         }
-        let color = hp(O::EwRecordColor, e, &[]) as *const u8;
-        // SAFETY: the record's colour, its size's bytes
-        r.bytes(unsafe { std::slice::from_raw_parts(color, h(O::EwColorSize, 0, &[]) as usize) });
-        text(&mut r, hp(O::EwRecordName, e, &[]));
-        text(&mut r, hp(O::EwRecordSuffix, e, &[]));
-        r.u32(u32::from(m.mSlot));
-        r.i32(m.mResult as i32);
-        r.u32(m.mEndTime as u32);
-        r.u32(m.mTeam as u32);
-        for k in 2..7 {
-            r.u32(m.mResources[k] as u32);
+        for channel in m.color {
+            r.bytes(&channel.to_le_bytes());
         }
-        r.u32(u32::from(m.mIsLocal) | u32::from(m.mIsHuman) << 1);
-        statistics(&mut r, hp(O::EwRecordStatisticsOf, e, &[]));
+        text(&mut r, &e.name);
+        text(&mut r, &e.name_suffix);
+        r.u32(u32::from(m.slot));
+        r.i32(m.result as i32);
+        r.u32(m.end_time as u32);
+        r.u32(m.team as u32);
+        for k in 2..7 {
+            r.u32(m.resources[k] as u32);
+        }
+        r.u32(u32::from(m.is_local) | u32::from(m.is_human) << 1);
+        statistics(&mut r, &e.statistics, e.statistics_end_time);
     }
     let players = h(O::EwNumPlayers, 0, &[]) as c_ulong;
     r.u32(players as u32);
@@ -136,7 +96,13 @@ pub extern "C" fn ee_gamecpp_capture_statistics_sweep() {
         for k in 2..7 {
             r.i32(caps[k] as i32);
         }
-        statistics(&mut r, hp(O::EwPlayerStatistics, p, &[]));
+        let s = hp(O::EwPlayerStatistics, p, &[]);
+        // SAFETY: the player's live series
+        statistics(
+            &mut r,
+            unsafe { &*rec::<EeUnitsPlayerStats>(O::EwStatsSeries, s) },
+            h(O::EwStatsEndTime, s, &[]) as c_ulong,
+        );
     }
     r.u32(h(O::EwPhysicsSeed, 0, &[]) as c_ulong as u32);
     r.commit();
@@ -148,13 +114,13 @@ mod tests {
 
     #[test]
     fn the_history_flags() {
-        let mut t = EeGamecppStatsHistoryTail::default();
+        let mut t = EeUnitsStatsHistoryTail::default();
         assert_eq!(history_flags(&t), 0);
-        t.mTeamsLocked = true;
-        t.mIsCampaign = true;
+        t.teams_locked = true;
+        t.is_campaign = true;
         assert_eq!(history_flags(&t), 9);
-        t.mVictoryEnabled = true;
-        t.mIsScenario = true;
+        t.victory_enabled = true;
+        t.is_scenario = true;
         assert_eq!(history_flags(&t), 15);
     }
 }

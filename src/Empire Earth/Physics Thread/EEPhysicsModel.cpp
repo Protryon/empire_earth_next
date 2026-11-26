@@ -319,8 +319,8 @@ extern "C" void ee_units_pm_host_effect(int32_t inWhich, uint64_t inObject, floa
 {
     GE3DPoint& thePoint = *reinterpret_cast<GE3DPoint*>(inPoint);
     switch (inWhich) {
-    case 0: gEffectManager->CreatePlacedEffect(thePoint, PMUnit(inObject)->mUnitClass->mSplashEffect, NULL); break;
-    case 1: gEffectManager->CreateUnitEffect(PMUnit(inObject), PMUnit(inObject)->mUnitClass->mDeathEffect, NULL, 0, 0, 0); break;
+    case 0: gWorld.mEffectManager->CreatePlacedEffect(thePoint, PMUnit(inObject)->mUnitClass->mSplashEffect, NULL); break;
+    case 1: gWorld.mEffectManager->CreateUnitEffect(PMUnit(inObject), PMUnit(inObject)->mUnitClass->mDeathEffect, NULL, 0, 0, 0); break;
     case 2: EEPlaceImpactDecal(PMUnit(inObject), thePoint); break;
     default: gWorld.GetEffectManager()->CreatePlacedEffect(thePoint, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL); break;
     }

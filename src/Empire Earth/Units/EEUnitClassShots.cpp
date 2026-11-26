@@ -76,7 +76,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
     case EE_COMBAT_SHOT_R_REMAINS: return theClass->mRemainsClass != NULL;
     case EE_COMBAT_SHOT_R_IS_PROJECTILE: return theClass->mIsProjectile;
-    case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorldClearing;
+    case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorld.mClearing;
     case EE_COMBAT_SHOT_R_FREE_CAMERA: return gFreeCamera;
     case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS: return (int32_t)EEShotAttack(theUnit)->GetAttackTarget()->mHitPoints;
     case EE_COMBAT_SHOT_R_POPULATION_COST: return (int32_t)theUnit->mUnitClass->GetPopulationCost();
@@ -86,7 +86,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_SET_ANIMATION: theUnit->SetAnimation(inArg, -1, 0); break;
     case EE_COMBAT_SHOT_SET_ROTTING: theUnit->SetRottingAwayTime(inArg); break;
     case EE_COMBAT_SHOT_UPDATE_ROTTING: theUnit->UpdateRottingAwayTime(); break;
-    case EE_COMBAT_SHOT_DEATH_EFFECT: gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
+    case EE_COMBAT_SHOT_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
     case EE_COMBAT_SHOT_PHYSICS_ACTION: theUnit->SetCurrentPhysicsAction((unsigned long)inArg); break;
     case EE_COMBAT_SHOT_DROP_PATH: theUnit->DropPath(); break;
     case EE_COMBAT_SHOT_UNLOAD_CARGO: theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false); break;
@@ -133,7 +133,7 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
     case EE_COMBAT_SHOT_X_SET_CONTAINS: return reinterpret_cast<EEUnitSet*>(inA)->Contains((unsigned long)inB);
     case EE_COMBAT_SHOT_X_POSITION: theUnit->GetPosition(p); return 0;
     case EE_COMBAT_SHOT_X_LOCATION: p.SetXYZ(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(), theUnit->mPhysicalModel.GetLocation().GetZ()); return 0;
-    case EE_COMBAT_SHOT_X_SPLASH_AT: gEffectManager->CreatePlacedEffect(p, theClass->mSplashEffect, NULL); return 0;
+    case EE_COMBAT_SHOT_X_SPLASH_AT: gWorld.mEffectManager->CreatePlacedEffect(p, theClass->mSplashEffect, NULL); return 0;
     case EE_COMBAT_SHOT_X_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(p), p); return 0;
     case EE_COMBAT_SHOT_X_SET_LOCATION_XYZ: theUnit->mPhysicalModel.SetLocationXYZ(p); return 0;
     case EE_COMBAT_SHOT_X_DEATH_SOUND: return (int64_t)(uintptr_t)theUnit->mStats->mDeathSound;

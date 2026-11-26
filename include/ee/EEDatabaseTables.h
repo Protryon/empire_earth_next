@@ -70,7 +70,6 @@ static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on ever
 // inline operator[]'s begin() is `mov eax, [0x52fca8]` (mEntries._First; what earlier rounds called "gDatabase"),
 // its op+ `imul 0x1c` (refused at some sites: 0x84d7b; the out-of-line operator[] 0x1ae53b, `mov ecx, 0x92fca4`).
 // Since the game's leaves round 2 the rows are ee_data's (tables.rs EeDataWorldEntry); the class is their readers.
-extern float& gGameStateGameSpeed;          // 0x52fb54: entry 42's float, cached after the load (EEGlobals.cpp)
 class EEWorldTable {
 public:
     // 0xdcb79: db\dbworld.dat's rows (the reads stop at the first error), then the game speed cached; the first
@@ -81,7 +80,7 @@ public:
         long theResult = EEDbReadRecords(inFile, ee_data_world_record_size(),
             [](unsigned long inCount) { ee_data_world_begin(inCount); return true; },
             [](unsigned long inIndex, const unsigned char* inRecord) { ee_data_world_load(inIndex, inRecord); }, true);
-        gGameStateGameSpeed = this->GetFloatValue(kWorldGameSpeedDefault);
+        gGameState.mGameSpeed = this->GetFloatValue(kWorldGameSpeedDefault);
         return theResult;
     }
     void Clear() { ee_data_world_clear(); }

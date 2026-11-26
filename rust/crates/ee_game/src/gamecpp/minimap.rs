@@ -398,6 +398,49 @@ pub extern "C" fn ee_gamecpp_minimap_refresh(mm: *mut c_void) {
     unsafe { *corners = view.corners };
 }
 
+/// `RefreshView`: Refresh when a map is attached (were EEMiniMap.cpp's body and the camera host's case).
+pub fn refresh_view(mm: *mut c_void) {
+    if tail(mm as P).map != 0 {
+        ee_gamecpp_minimap_refresh(mm);
+    }
+}
+
+/// `gMiniMap`.
+fn world() -> *mut c_void {
+    super::globals::get!(gMiniMap) as *mut c_void
+}
+
+// ---- the screens' mini map calls (were EEScreens.cpp's and EEUserInterface.cpp's shims)
+
+/// `gMiniMap`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_mini_map() -> usize {
+    world() as usize
+}
+
+/// `gMiniMap->Refresh()`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_mini_map_refresh() {
+    ee_gamecpp_minimap_refresh(world());
+}
+
+/// `gMiniMap->RedrawAll()`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_mini_map_redraw_all() {
+    ee_gamecpp_minimap_redraw_all(world());
+}
+
+/// `gMiniMap->Redraw()`.
+#[no_mangle]
+pub extern "C" fn ee_screenscpp_mini_map_redraw() {
+    ee_gamecpp_minimap_redraw(world());
+}
+
+/// `gMiniMap->CountCellOn` / `CountCellOff` (the map host's COUNT_CELL).
+pub fn count_cell(x: c_long, y: c_long, on: bool) {
+    ee_gamecpp_minimap_count_cell(world(), x, y, on);
+}
+
 /// RedrawAll: every terrain pixel recomputed, the terrain texture flagged changed.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_minimap_redraw_all(mm: *mut c_void) {

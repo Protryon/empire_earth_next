@@ -86,9 +86,9 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_DISABLED_UNPROTECTED: return theComplex->mIsDisabled && !theComplex->IsProtected();
     case EE_UNITS_EU_HIT_POINTS: return theUnit->mHitPoints;
     case EE_UNITS_EU_HAS_SPARKS: return theUnit->mUnitClass->mImpactSparksEffect != NULL;
-    case EE_UNITS_EU_SPARKS: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactSparksEffect, NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_SPARKS: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactSparksEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_HAS_BLOOD: return theUnit->mUnitClass->mImpactBloodEffect != NULL;
-    case EE_UNITS_EU_BLOOD: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_BLOOD: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_SET_INPUT: sHitInput = (long)inB; return 0;
     case EE_UNITS_EU_SET_AREA_DAMAGE: sHitAreaDamage = (long)inB; return 0;
     case EE_UNITS_EU_APPLY_MODIFIERS: theComplex->mAffectingAreaEffects.ApplyModifiers(1, sHitInput, sHitAreaDamage, theComplex); return 0;
@@ -125,9 +125,9 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_SHOWS_DAMAGE: return theUnit->mTileNode == NULL || theUnit->mComplexUnit->mIsBuilt;
     case EE_UNITS_EU_DAMAGE_EFFECT_FORMULA: return EECombatDamageEffect(EeCombatDamageEffectIn{(int32_t)theUnit->mHitPoints, (int32_t)inB, (int32_t)theUnit->mStats->mMaxHitPoints, EEEuObject<EEGraphicEffect>(inA)->GetParam2()});
     case EE_UNITS_EU_CATEGORY: return theUnit->mUnitClass->mCategory;
-    case EE_UNITS_EU_EFFECT_ON_SELF: gEffectManager->CreateUnitEffect(theUnit, EEEuObject<EEGraphicEffect>(inA), NULL, false, 0, 0); return 0;
-    case EE_UNITS_EU_GATE_EFFECT_LINKED: gEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinked(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
-    case EE_UNITS_EU_GATE_EFFECT_CARRIER: gEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinkedCarrier(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_EFFECT_ON_SELF: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEEuObject<EEGraphicEffect>(inA), NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_GATE_EFFECT_LINKED: gWorld.mEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinked(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_GATE_EFFECT_CARRIER: gWorld.mEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinkedCarrier(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_SET_HIT_POINTS: theUnit->mHitPoints = (long)inB; return 0;
     case EE_UNITS_EU_TARGET_SEARCH_TIMER: return theComplex->mTargetSearchTimer;
     case EE_UNITS_EU_CLEAR_TARGET_SEARCH_TIMER: theComplex->mTargetSearchTimer = 0; return 0;
@@ -140,7 +140,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_STATS_RESET: ::gWorld.mPlayers[inB]->mSavedGroups.Reset((long)inC, 1); return 0;
     case EE_UNITS_EU_KILL: theUnit->Kill(true, false, false); return 0;
     case EE_UNITS_EU_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
-    case EE_UNITS_EU_ICBM_EXPLOSION: gEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectAircraftExplosion), NULL, false, 0, 0); return 0;
+    case EE_UNITS_EU_ICBM_EXPLOSION: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectAircraftExplosion), NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_IS_CURRENT_PLAYER: return theUnit->mPlayer == ::gWorld.GetCurrentPlayer();
     case EE_UNITS_EU_MINIMAP_PING: gMiniMap->Ping(GE2DPoint((float)theUnit->mTileX, (float)theUnit->mTileY)); return 0;
     case EE_UNITS_EU_SELECTED: return theUnit->mPlayer->mSelectedGroup->Contains(theComplex);
@@ -180,7 +180,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_HAS_DOPPELGANGER: return gDoppelgangerManager.GetDoppelganger(EEEuObject<EETile>(inA), theUnit, theUnit->mPlayer->mPlayerID) != NULL;
     case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN: gDoppelgangerManager.TileShown(EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, theUnit->mPlayer); return 0;
     case EE_UNITS_EU_HAS_DEATH_EFFECT: return theUnit->mUnitClass->mDeathEffect != NULL;
-    case EE_UNITS_EU_DEATH_EFFECT: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
+    case EE_UNITS_EU_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
     case EE_UNITS_EU_HAS_DEATH_SOUND: return theUnit->mStats->mDeathSound != NULL;
     case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]); return 0;
     case EE_UNITS_EU_DEATH_SOUND_PLAY:
@@ -188,7 +188,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         return 0;
     case EE_UNITS_EU_SET_RESOURCE_AMOUNT: theUnit->mResourceAmount = (long)inB; return 0;
     case EE_UNITS_EU_SIGHT_ON_HERE: theUnit->SightOn(theUnit->mTileX, theUnit->mTileY); return 0;
-    case EE_UNITS_EU_CAMERA_UNIT_IS_THIS: return (inB == 0 ? gWorld.mCameraControl.mUnitA : gWorld.mCameraControl.mUnitB) == theUnit;
+    case EE_UNITS_EU_CAMERA_UNIT_IS_THIS: return EEUnitHandleResolved<EEUnit>(ee_app_camera_unit((uint32_t)inB)) == theUnit;
     case EE_UNITS_EU_CLEAR_CAMERA_UNIT: gWorld.mCameraControl.ClearUnitA(); return 0;
     case EE_UNITS_EU_CLEAR_CAMERA_UNIT_B: gWorld.mCameraControl.ClearUnitB(); return 0;
     case EE_UNITS_EU_UNIT_TAKEN: theUnit->mPlayer->UnitTaken(theUnit, inB != 0); return 0;

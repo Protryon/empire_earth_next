@@ -273,7 +273,7 @@ fn load_main_screen(m: P) {
         } else {
             h(O::UiSwapToScenarioEditor, 0, &[]);
         }
-        hf(O::CameraUpdate, 0, &[], &[1.0]);
+        super::camera_io::update(1.0);
         h(O::CommSendLoadMainScreenResponse, 0, &[]);
     }
 }
@@ -289,7 +289,10 @@ fn load_or_save_game(m: P) {
         h(O::StrFormatS, text.0, &[pa(format.0), pa(hp(O::MsgString, m, &[]))]);
         chat(text.0, 0);
         result = h(O::MsgLoadSavedGame, m, &[get_bool(m, 2) as i64]);
-        let response = hp(O::NewLoadSaveResponse, 0, &[get::<i32>(m, 3) as i64]);
+        let response = super::mrecord::new_record(
+            ee_sim::message_ids::EEMessageID::kMessageLoadOrSaveGameResponse as u8,
+            &[super::mrecord::EeGamecppMrValue::integer(get::<i32>(m, 3) as i64)],
+        );
         h(O::MsgSetOrigin, response, &[prts(current()).mSlot as i64]);
         ee_net::net::ffi_server::ee_net_sv_log_response(super::net::global().server, response as *mut c_void);
     } else {
@@ -375,8 +378,8 @@ fn saved_group_select(m: P) {
         if unit != 0 {
             if get_bool(m, 2) {
                 h(O::UnPosition, unit, &[ptr(&mut location)]);
-                h(O::CameraSetChanged, 0, &[]);
-                h(O::CameraSetLocation, 0, &[cptr(&location), 0, 1]);
+                super::camera_io::set_changed();
+                super::camera_io::set_location(&location, false, true);
                 super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
                 h(O::SetCameraFollowing, 0, &[0]);
             }
@@ -580,7 +583,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             *flags = (flags.wrapping_add(1)) % 16;
         }
         EE_NETMSG_WACT_ZOOM => {
-            hf(O::CameraSetZoom, 0, &[], &[f[0]]);
+            super::camera_io::set_zoom(f[0]);
         }
         EE_NETMSG_WACT_RECORD_FRAMES => {
             // slow or normal playback
@@ -678,7 +681,10 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
                 )
             };
             host_tail().load_state = 2;
-            let message = hp(O::NewLoadMainScreenRecord, 0, &[]);
+            let message = super::mrecord::new_record(
+                ee_sim::message_ids::EEMessageID::kMessageLoadMainScreen as u8,
+                &[super::mrecord::EeGamecppMrValue::integer(0)],
+            );
             super::net::global().local_input(message as *mut c_void, MSG_SLOT_NONE);
         }
         EE_NETMSG_WACT_CHAT_LOG => {

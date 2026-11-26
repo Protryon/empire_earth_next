@@ -103,6 +103,7 @@ fn world_unit(id: c_ulong) -> P {
 pub extern "C" fn ee_gamecpp_pwh_init(helper: *mut c_void) {
     let helper = helper as P;
     h(O::PwhSetScenario, helper, &[0]);
+    super::teams::helper_new(helper);
     // SAFETY: the helper's members
     unsafe {
         *fields(helper) = EePWorldHelperFields {
@@ -124,13 +125,13 @@ pub extern "C" fn ee_gamecpp_pwh_from_world(helper: *mut c_void, world: *mut c_v
     // SAFETY: the helper's and the world's members, each read before the next C++ call
     unsafe {
         (*f).mTimeOfDay = *(hp(O::WTimeOfDay, w, &[]) as *const f32);
-        (*f).mZoom = hd(O::PwCameraZoom, 0, &[], &[]);
+        (*f).mZoom = super::camera_io::zoom();
         (*f).mGameSpeed = hd(O::PwWorldGameSpeed, w, &[], &[]);
         (*f).mPopulationLimit = *(hp(O::PwWorldPopulationLimit, w, &[]) as *const c_long) as c_ulong;
         (*f).mNumberOfWondersToWin = *(hp(O::WWondersToWin, w, &[]) as *const c_ulong);
         (*f).mC36 = 0;
     }
-    h(O::PwhTeamsFromWorld, helper, &[pa(w)]);
+    super::teams::helper_from_world(helper);
     // SAFETY: as above
     unsafe {
         (*f).mVictoryEnabled = *(hp(O::WVictoryEnabled, w, &[]) as *const bool);
@@ -153,7 +154,7 @@ pub extern "C" fn ee_gamecpp_pwh_load(
     file: *mut c_void,
 ) -> c_long {
     let (helper, file) = (helper as P, Pf(file as P));
-    load_teams(helper, major, minor, file);
+    super::teams::helper_load(helper, major, minor, file);
     let f = fields(helper);
     // SAFETY: the helper's members, each address taken for one read
     unsafe {
@@ -198,7 +199,7 @@ pub extern "C" fn ee_gamecpp_pwh_save(
     file: *mut c_void,
 ) -> c_long {
     let (helper, file) = (helper as P, Pf(file as P));
-    save_teams(helper, major, minor, file);
+    super::teams::helper_save(helper, file);
     // SAFETY: the helper's members (no C++ call changes them while they are written)
     let f = unsafe { *fields(helper) };
     file.write_ulong(f.mNumberOfWondersToWin);
@@ -236,7 +237,7 @@ pub extern "C" fn ee_gamecpp_pwh_restore(helper: *mut c_void, state: *mut c_void
     if scenario != 0 {
         h(O::PwStSetScenario, st, &[scenario]);
     }
-    h(O::PwStTeamsFromHelper, st, &[pa(helper)]);
+    super::teams::helper_to_state(helper);
     // SAFETY: the helper's, the state's and its options' members, no C++ call between
     unsafe {
         let f = *fields(helper);
@@ -256,34 +257,6 @@ pub extern "C" fn ee_gamecpp_pwh_restore(helper: *mut c_void, state: *mut c_void
         t.mHerdIDCounter = f.mHerdIDCounter as i16;
         t.mUsingCarbon = f.mUsingCarbon;
     }
-}
-
-/// LoadTeams: the team count and that many teams; the first read error (a failed count resizes nothing).
-fn load_teams(helper: P, major: c_ulong, minor: c_ulong, file: Pf) -> i64 {
-    let mut count: c_ulong = 0;
-    let mut r = file.read_ulong(&mut count);
-    if r != PF_OK {
-        return r;
-    }
-    h(O::PwhTeamsResize, helper, &[count as i64]);
-    let mut i = 0;
-    while i < count && r == PF_OK {
-        r = h(O::PwhTeamLoad, helper, &[i as i64, major as i64, minor as i64, pa(file.0)]);
-        i += 1;
-    }
-    r
-}
-
-/// SaveTeams: the team count and each team; the first write error.
-fn save_teams(helper: P, major: c_ulong, minor: c_ulong, file: Pf) -> i64 {
-    let count = h(O::PwhTeamsCount, helper, &[]) as c_ulong;
-    let mut r = file.write_ulong(count);
-    let mut i = 0;
-    while i < count && r == PF_OK {
-        r = h(O::PwhTeamSave, helper, &[i as i64, major as i64, minor as i64, pa(file.0)]);
-        i += 1;
-    }
-    r
 }
 
 fn fill(io: &mut EeUnitsWorldIo, i: usize, v: u64) {

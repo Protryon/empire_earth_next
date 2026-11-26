@@ -111,8 +111,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::Chat: gUserInterface->AddChatLogEntry(UWideString("TEST chat line: the chat display (EEUICChatLine)"), 0);
         return 1;
-    case EeFixtureOp::Zoom: gWorld.mCameraControl.SetZoom(c->f[0]);
-        return 0;
     case EeFixtureOp::UiUpdate: gUIManager->ForceUIUpdate();
         return 0;
     case EeFixtureOp::SelectControl:
@@ -181,13 +179,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxPhysicsValue: return i[0] == 0 ? (int64_t)(long)gPhysics->mGameTime : i[0] == 1 ? (int64_t)(unsigned long)gPhysics->mNumTicksDone : (gPhysics->mGameOver ? 1 : 0);
     case EeFixtureOp::FxCommsPresent: return gCommunications != NULL;
     case EeFixtureOp::FxCommsValue: return i[0] == 0 ? (int64_t)gCommunications->GetNumberOfCTsProcessedInPhysics() : i[0] == 1 ? (int64_t)(long)gCommunications->GetLastTickReceived() : i[0] == 2 ? (gCommunications->GetIsGamePaused() ? 1 : 0) : (gCommunications->GetIsMultiplayerSession() ? 1 : 0);
-    case EeFixtureOp::FxCameraFocus: CAMERA.GetLocation(CAMERA.mFraction, *(GE3DPoint*)&c->f[0]);
-        return 0;
-    case EeFixtureOp::FxCameraEndFocus: *(GE3DPoint*)&c->f[0] = CAMERA.GetEndFocus();
-        return 0;
-    case EeFixtureOp::FxCameraZoom: c->f[0] = CAMERA.mZoom;
-        return 0;
-    case EeFixtureOp::FxCameraMode: return (long)CAMERA.mMode;
     case EeFixtureOp::FxMapSize: return (long)gWorld.GetMap()->GetSize();
     case EeFixtureOp::FxActiveGroup: return gWorld.GetCurrentPlayer() != NULL ? Handle(gWorld.GetCurrentPlayer()->mActiveGroup) : 0;
     case EeFixtureOp::FxGroupUnitCount: return As<EEGroup>(c->h)->GetNumUnits();

@@ -38,9 +38,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUIFMGStatusButton.h"
-extern float& gSavedGameSpeed;               // 0x5318b0 (the cinematic's end time) (provisional name)
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (= 100, a word: EEUCFortress.cpp defines it)
-extern long& gGameResources;                 // 0x53123c (4: a game kind that delays JIT manufacturing) (provisional name)
 // 0x20d571 / 0x20da86: EEGetConversionCost / EECanConvert (ee/EEAreaUtilities.h; EEUCBasicPriest.cpp)
 
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
@@ -81,7 +79,7 @@ extern "C" void ee_screenscpp_sbm_base_tabbed_from(uintptr_t inButton) { SBM(inB
 // EEUIEndCinematicModeEvent's body (cpp_events.rs): ends the cinematic at its saved end time (EEMEndCinematic takes the
 // end time as a float)
 extern "C" void ee_screenscpp_ev_end_cinematic()
-{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone); }
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gWorld.mSavedGameSpeed}), kSlotNone); }
 
 // ---- the one-statement shims of ee_screens status_button_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
@@ -121,7 +119,7 @@ extern "C" void ee_screenscpp_sbt_start_wall(uintptr_t inRec) { SBRF(inRec)->Sta
 extern "C" void ee_screenscpp_sbt_start_gate(uintptr_t inRec) { SBRF(inRec)->StartGate(SBRB(inRec)->mTechnology); }
 extern "C" void ee_screenscpp_sbt_start_calamity(uintptr_t inRec)
 { SBRF(inRec)->StartCalamity(SBRB(inRec)->mTechnology); }
-extern "C" int64_t ee_screenscpp_sbt_game_resources() { return gGameResources; }
+extern "C" int64_t ee_screenscpp_sbt_game_resources() { return gWorld.mGameOptions.mResources; }
 extern "C" float ee_screenscpp_sbt_game_clock() { return gPhysics->GetGameClock(); }
 extern "C" int64_t ee_screenscpp_sbt_world_long(int64_t inConstant)
 { return gWorldTable.GetLongValue((EEWorldConstant)inConstant); }
