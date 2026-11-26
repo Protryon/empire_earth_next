@@ -30,8 +30,7 @@ from ee import CLANG, MODULE_FLAGS   # noqa: E402
 
 # (module, unit): together they include every class the harness and the exe's member table read
 UNITS = [
-    ("lle", "Low-Level Engine/User Interface/UIManager.cpp"),
-    ("lle", "Low-Level Engine/User Interface/UIForm.cpp"),
+    ("lle", "Low-Level Engine/User Interface/User Interface.cpp"),
     ("lle", "Low-Level Engine/Graphics Engine/GERasterizer.cpp"),
     ("lle", "Low-Level Engine/Input System/Input System.cpp"),
     ("lle", "Low-Level Engine/Network Engine/NESynchronousServer.cpp"),
