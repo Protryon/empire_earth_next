@@ -21362,14 +21362,6 @@ void ee_units_uc_rest_sound(int32_t what,
                             float *pan,
                             float *pitch);
 
-extern int64_t ee_units_uca_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
 /// The air classes' body `what` (`EE_UNITS_UCA_DO_*`) of `class` on `unit`, with its arguments `a`, `b`, `c` and
 /// its floats `p` (three, in and out; NULL for none). For `EE_UNITS_UCA_DO_LANDABLE_OP`: `a` the airport slot's
 /// address, `b` the operation, `c` its argument; `EE_UNITS_UCA_DO_GROUND_HEIGHT`: `a` the output's address. The
@@ -21399,15 +21391,6 @@ int64_t ee_units_ucb_gate(int32_t what,
                           int64_t b,
                           int64_t c,
                           float f);
-
-/// the buildings' host (EEUnitClassBuildings.cpp; ucb_gate.rs's too)
-extern int64_t ee_units_ucb_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The buildings' body `what` (`EE_UNITS_UCB_DO_*`) of `class` on `unit`: `a` an object, `b`, `c` values, `m`
 /// a transformation (or NULL); the created unit, the choice, or 0.
@@ -21715,14 +21698,6 @@ int64_t ee_units_ucs_call(int32_t what,
                           void *unit,
                           uint64_t a,
                           const float (*f)[3]);
-
-extern int64_t ee_units_ucx_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The transports' body `what` (`EE_UNITS_UCX_DO_*`) of `class` on `unit`: `a` an object, `b`, `c` values; the
 /// choice, or 0.

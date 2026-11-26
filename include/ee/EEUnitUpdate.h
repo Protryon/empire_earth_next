@@ -23,7 +23,6 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit);     // EEUCHelicopterPriest.cpp
 void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit);            // EEUCAirAnimal.cpp
 void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit);
-void EEAirplaneCircleSide(EEUnitClass* inClass, EEComplexUnit* inUnit);             // EEUCAirplane.cpp
 void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit);
 void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit);  // EEUCPlanetSpaceship.cpp
 // EEUCLandable.cpp: one of the landable's operations (EE_UNITS_ACT_*); inoutAirport the nearest airport found

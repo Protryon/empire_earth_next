@@ -3,7 +3,7 @@
 //! carrier's exiting unit placed, given its goals and sent off), `BuildingUnitCreated`, `UpdateArmed`,
 //! `PriestVirtualB8` (the temple's tick), `BuildingCreateUnit`/`BuildingCreateUnitAt`, the mining and space
 //! buildings' creations, `BuildingGetSurroundingTiles`, `EEGetWallPiecePart`. Each C++ statement one
-//! `EE_UNITS_UCB_*` case of `ee_units_ucb_host` (EEUnitClassBuildings.cpp; the class host's statements,
+//! `EE_UNITS_UCB_*` case of `ee_units_uc_host` (EEUnitClass.cpp; the class host's statements,
 //! `EE_UNITS_UC_*`, reach EEUnitClass.cpp's through it), in the original's order.
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -932,20 +932,9 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-    extern "C" {
-        /// the buildings' host (EEUnitClassBuildings.cpp; ucb_gate.rs's too)
-        pub(crate) fn ee_units_ucb_host(
-            op: i32,
-            class: *mut c_void,
-            unit: *mut c_void,
-            a: u64,
-            b: i64,
-            c: i64,
-            f: *mut [f32; 4],
-        ) -> i64;
-    }
+    use crate::units::uc_body::game::ee_units_uc_host;
 
-    /// The buildings' host (`ee_units_ucb_host`; the class host's statements pass through it).
+    /// The buildings' host (`ee_units_uc_host`, EEUnitClass.cpp's since units round 14; the plain statements are the views').
     struct GameB;
 
     impl UcbRust for GameB {
@@ -975,7 +964,7 @@ pub(crate) mod game {
                 return v;
             }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_ucb_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

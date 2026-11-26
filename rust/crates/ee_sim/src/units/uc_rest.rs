@@ -5,7 +5,7 @@
 //! `UpdateOrbitals`, `DistanceSquared3D`; the people's `FindNextResource`, `EEHelicopterPriestPathToGoal`,
 //! `HelicopterPriestUnitCreated`, the basic priest's media; the buildings' `EruptVolcano` and the gates' part
 //! links; the air's `EEIsTileFree`. Each C++ statement one `EE_UNITS_UC_*` case of `ee_units_uc_host`
-//! (EEUnitClass.cpp; `EruptVolcano`'s through `ee_units_ucb_host`, where its assert names its file), in the
+//! (EEUnitClass.cpp; `EruptVolcano`'s through `ee_units_uc_host`, where its assert names its file), in the
 //! original's order.
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -828,7 +828,7 @@ pub(crate) mod game {
                 }
                 // SAFETY: the body runs inside the C++ member that handed over its live class and unit
                 unsafe {
-                    crate::units::ucb_release::game::ee_units_ucb_host(
+                    crate::units::uc_body::game::ee_units_uc_host(
                         op,
                         class as usize as *mut c_void,
                         unit as usize as *mut c_void,

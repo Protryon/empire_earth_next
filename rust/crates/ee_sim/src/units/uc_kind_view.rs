@@ -40,13 +40,13 @@ use crate::units::ucx_transports::*;
 pub(crate) fn kind_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     match kind {
         Kind::Class => None,
-        Kind::Air => air(x, op, f),
-        Kind::Buildings => buildings(x, op, b, f),
+        Kind::Air => air(x, op, f).or_else(|| crate::units::uca_view::air_view(x, op, b, c, f)),
+        Kind::Buildings => buildings(x, op, b, f).or_else(|| crate::units::ucb_view::buildings_view(x, op, b, c)),
         Kind::Ground => ground(x, op, b, c, f),
         Kind::Kinds => kinds(x, op, b).or_else(|| kinds_call(x, op, b, c, f)),
         Kind::People => people(x, op, f).or_else(|| crate::units::ucp_view::people_view(x, op, b, c, f)),
         Kind::Shots => shots(x, op, b, c, f),
-        Kind::Transports => transports(x, op, f),
+        Kind::Transports => transports(x, op, f).or_else(|| crate::units::ucx_view::transports_view(x, op, b, c, f)),
     }
 }
 

@@ -3,7 +3,7 @@
 //! `TransportUnitCreated`, `TransportUnloadAt`, `LandTransportBadlyHurt`, `HelicopterTransportUnitCreated`,
 //! `EEHelicopterTransportPathToGoal`, `SpaceTransportUnitCreated`, `SpaceTransportAddToTile`/`RemoveFromTile`,
 //! `SpaceshipVirtual78`, `FortressHasRoom`, `FortressUnitCreated`, `FortressUnloadAt`. Each C++ statement one
-//! `EE_UNITS_UCX_*` case of `ee_units_ucx_host` (EEUnitClassTransports.cpp; the class host's statements,
+//! `EE_UNITS_UCX_*` case of `ee_units_uc_host` (EEUnitClass.cpp; the class host's statements,
 //! `EE_UNITS_UC_*`, reach EEUnitClass.cpp's through it), in the original's order.
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -326,19 +326,9 @@ pub(crate) mod game {
     use crate::units::uc_produce::FindPlacement;
     use std::os::raw::c_void;
 
-    extern "C" {
-        fn ee_units_ucx_host(
-            op: i32,
-            class: *mut c_void,
-            unit: *mut c_void,
-            a: u64,
-            b: i64,
-            c: i64,
-            f: *mut [f32; 4],
-        ) -> i64;
-    }
+    use crate::units::uc_body::game::ee_units_uc_host;
 
-    /// The transports' host (`ee_units_ucx_host`; the class host's statements pass through it).
+    /// The transports' host (`ee_units_uc_host`, EEUnitClass.cpp's since units round 14; the plain statements are the views').
     struct GameX;
 
     impl UcHost for GameX {
@@ -350,7 +340,7 @@ pub(crate) mod game {
                 return v;
             }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_ucx_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

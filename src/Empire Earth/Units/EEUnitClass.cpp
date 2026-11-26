@@ -26,6 +26,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEWheel.h"
 #include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EESoundObject.h"
@@ -223,6 +224,19 @@ template <class T> static T* EEUcObject(uint64_t inHandle) { return reinterpret_
 // the constructor's effects: the record's ids and the class's members, in the original's order (uc_class.rs)
 // CreateUnitClasses' dbobjects file
 static FSFileSpec* sUcDbFile;
+// the gate bodies' vectors (ucb_gate.rs: one per local of the originals) and EEFindGateWall's direction
+static std::vector<EEUnit*> sUcbUnits[8];
+static std::vector<U2DPoint<long> > sUcbTiles[3];
+
+// ReleaseUnit's yaw is the orientation's first float
+static_assert(offsetof(GEOrientation, mYaw) == 0, "a GEOrientation starts with its yaw");
+// EESortUnique: std::sort then unique (the gates' tile lists)
+template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E inEqual)
+{
+    std::sort(ioValues.begin(), ioValues.end(), inLess);
+    ioValues.erase(std::unique(ioValues.begin(), ioValues.end(), inEqual), ioValues.end());
+}
+bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits);   // EEUnitClassBuildings.cpp
 // the Bundeswehr power (ucp_people.rs: GET_BUNDESWEHR, then POWER_IS_PREREQUISITE)
 static EECivPower sUcpPower;
 
@@ -641,6 +655,141 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCP_DESTROY_CLOAKED_EFFECT: gWorld.GetEffectManager()->DestroyEffect(EEEffectHandle{(uint32_t)theUnit->mCloaked}); return 0;
     case EE_UNITS_UCP_DESTROY_GROW_EFFECT: gWorld.GetEffectManager()->DestroyEffect(EEEffectHandle{(uint32_t)theUnit->mGrowTime}); return 0;
     case EE_UNITS_UCP_CAN_CONVERT_CAPTURE: EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'N'), *EEUcObject<EeCombatCanConvertIn>(inA), *EEUcObject<EeCombatCanConvertOut>((uint64_t)inB)); return 0;
+    // the transports' bodies' (ee_units ucx_transports.rs, ucx_view.rs; EE_UNITS_UCX_*: EEUnitClassTransports.cpp's host until units round 14)
+    case EE_UNITS_UCX_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UCX_TOTAL_POPULATION: return theUnit->mPlayer->GetTotalPopulation(false, false);
+    case EE_UNITS_UCX_UNLOAD_COST: return gFortressUnloadCost;
+    case EE_UNITS_UCX_SET_POWER: theUnit->SetPower((long)inB); return 0;
+    case EE_UNITS_UCX_UNLOAD_EVENT: theUnit->mPlayer->mEvents.AddEvent(U2DPoint<long>((long)inB, (long)inC), 2, theUnit->GetPlayer(), 0x274e, false); return 0;
+    case EE_UNITS_UCX_DESTINATION: EEUcObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    // the buildings' bodies' (ee_units ucb_release.rs, ucb_gate.rs, ucb_view.rs; EE_UNITS_UCB_*: EEUnitClassBuildings.cpp's host until units round 14)
+    case EE_UNITS_UCB_R_VOLCANO_CLASS: return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, *EEUcObject<EECalamityClass*>(inA));   // uc_rest.rs EruptVolcano
+    case EE_UNITS_UCB_R_VOLCANO_VERIFY: ESVerify(__FILE__, 261, "EECalamityManager::Instance()->FindCalamityClass(keectVolcano, theVolcanoClass)"); return 0; // the original assert text (provisional names here)
+    case EE_UNITS_UCB_R_RANDOM_LOCATION: EEUcObject<EECalamityClass>(inA)->GetRandomLocation(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCB_R_ATTACK_GROUND: theUnit->SetGoal(EEUGRust::NewAttackGround(*reinterpret_cast<GE3DPoint*>(f), false), 0, 0); return 0;
+    // the gates' (ucb_gate.rs)
+    case EE_UNITS_UCB_UNITS_VEC: return EEObj(&sUcbUnits[inB]);
+    case EE_UNITS_UCB_TILES_VEC: return EEObj(&sUcbTiles[inB]);
+    case EE_UNITS_UCB_UNITS_SIZE: return EEUcObject<std::vector<EEUnit*> >(inA)->size();
+    case EE_UNITS_UCB_UNITS_AT: return EEObj((*EEUcObject<std::vector<EEUnit*> >(inA))[(size_t)inB]);
+    case EE_UNITS_UCB_UNITS_CLEAR: EEUcObject<std::vector<EEUnit*> >(inA)->clear(); return 0;
+    case EE_UNITS_UCB_GATE_TILES_CLEAR: EEUcObject<std::vector<U2DPoint<long> > >(inA)->clear(); return 0;
+    case EE_UNITS_UCB_TILES_SIZE: return EEUcObject<std::vector<U2DPoint<long> > >(inA)->size();
+    case EE_UNITS_UCB_TILE_X: return (*EEUcObject<std::vector<U2DPoint<long> > >(inA))[(size_t)inB].mX;
+    case EE_UNITS_UCB_TILE_Y: return (*EEUcObject<std::vector<U2DPoint<long> > >(inA))[(size_t)inB].mY;
+    case EE_UNITS_UCB_WALL_GATE_TILES: ee_units_ucn_wall_gate_tiles((int32_t)inB, (int32_t)(inB >> 32), (int32_t)inC, inA); return 0;   // EEGetWallGateTiles
+    case EE_UNITS_UCB_UNITS_ON: ee_units_uu_units_on(0, EEUcObject<void>(inA), EEUcObject<void>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCB_WALL_GATE_FIT: return ee_units_ucn_wall_gate_fit((int32_t)inB, (int32_t)(inB >> 32), (int32_t)inC, (uint32_t)(inC >> 32), inA);   // EEDoesWallGateFit
+    case EE_UNITS_UCB_TECH_CLASS: return EEObj(gUnitClassTable[EEUcObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass]);
+    case EE_UNITS_UCB_REPLACE_UNIT: return EEObj(EEReplaceUnit(theOther, (long)inB, EEUcObject<EEUnitClass>((uint64_t)inC)));
+    case EE_UNITS_UCB_TURN_GATE_PART: return ee_units_ucn_turn_gate_part(GERust(*EEUcObject<GETransformation>(inA)), (int32_t)inB, (int32_t)inC);
+    case EE_UNITS_UCB_SET_GATE_DIRECTION_OF: theOther->SetGateDirection((unsigned long)inB); return 0;
+    case EE_UNITS_UCB_POSITION_OF: EEUcObject<EEUnit>(inA)->GetComplexUnit()->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCB_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
+    case EE_UNITS_UCB_SET_LOCATION_OF: EEUcObject<EEUnit>(inA)->GetComplexUnit()->SetLocation(*reinterpret_cast<GE3DPoint*>(f), true); return 0;
+    case EE_UNITS_UCB_LINK_PART: EEUcObject<EEUnit>(inA)->GetComplexUnit()->LinkPart(EEUcObject<EEUnit>((uint64_t)inB)->GetComplexUnit()); return 0;
+    case EE_UNITS_UCB_START_ACTION_OF: EEUcObject<EEUnit>(inA)->GetComplexUnit()->StartAction((long)inB); return 0;
+    case EE_UNITS_UCB_SET_HEALTH: EEUcObject<EEUnit>(inA)->SetHitPoints(UMFloatToLong(EEUcObject<EEUnit>(inA)->GetStats()->mMaxHitPoints * f[0])); return 0;
+    case EE_UNITS_UCB_IN_EDITOR: return gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive;
+    case EE_UNITS_UCB_FLUSH_PLACEMENTS: ::gWorld.FlushQueuedPlacements(); return 0;
+    case EE_UNITS_UCB_ADD_PENDING: EEUcObject<EEPlayer>(inA)->AddPendingUnits(0, true); return 0;
+    case EE_UNITS_UCB_REMOVE_KILLED: EEUcObject<EEPlayer>(inA)->RemoveKilledUnits(); return 0;
+    case EE_UNITS_UCB_SPACE_GATES:
+        return EEUcObject<EEPlayer>(inA)->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && EEUcObject<EEUnitClass>((uint64_t)inB)->GetUnitType() != kUnitTypeGatePalisades;
+    case EE_UNITS_UCB_ENERGY_WALL: EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(EEUcObject<EEUnit>(inA))); return 0;
+    case EE_UNITS_UCB_LOCATION_MATRIX_OF: *EEUcObject<GETransformation>((uint64_t)inB) = theOther->mPhysicalModel.GetLocation(); return 0;
+    case EE_UNITS_UCB_TILES_LEVEL: return ee_units_ucn_tiles_level(inA);
+    case EE_UNITS_UCB_UNITS_OF_TYPE_ON_TILES: ee_units_uu_units_of_type_on_tiles(EEUcObject<void>(inA), (int32_t)inB, EEUcObject<void>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCB_PLAYER_UNITS_OF_TYPE: ee_units_uu_player_units_of_type((int32_t)inB, (int32_t)inC, EEUcObject<void>(inA)); return 0;
+    case EE_UNITS_UCB_SET_COLOR: theOther->SetColor(inB != 0 ? GEColor(0.0f, 1.0f, 0.0f) : GEColor(1.0f, 1.0f, 1.0f)); return 0;
+    case EE_UNITS_UCB_SET_TINTED: theOther->SetIsTinted(inB != 0); return 0;
+    case EE_UNITS_UCB_FIT_ON_UNIT: return EEDoesWallGateFitOnUnit(theOther, (long)(int32_t)inB, (long)(int32_t)(inB >> 32), *EEUcObject<std::vector<EEUnit*> >((uint64_t)inC));
+    case EE_UNITS_UCB_MAP_TILE: return EEObj(::gWorld.GetMap()->GetTile((long)inB, (long)inC));
+    case EE_UNITS_UCB_RING: ee_units_uu_square_ring_tiles((int32_t)inB, (int32_t)(inB >> 32), (int32_t)inC, EEUcObject<void>(inA)); return 0;
+    case EE_UNITS_UCB_TARGET_BUILDING:
+        return EEUcObject<EEUnit>(inA)->mUnitClass->IsLandBuilding() && EEUcObject<EEUnit>(inA)->mHitPoints > 0 && ee_units_uu_targetable(0, EEObj(EEUcObject<EEUnit>(inA)->GetUnitClass()), 0);
+    case EE_UNITS_UCB_SORT_UNIQUE: EESortUnique(*EEUcObject<std::vector<U2DPoint<long> > >(inA), std::less<U2DPoint<long> >(), std::equal_to<U2DPoint<long> >()); return 0;
+    case EE_UNITS_UCB_NEXT_WAYPOINT: return theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f));
+    case EE_UNITS_UCB_LOCATION_YAW: theUnit->mPhysicalModel.GetLocation().ConvertToOrientation(*reinterpret_cast<GEOrientation*>(f)); return 0;
+    case EE_UNITS_UCB_HUMAN_OF: return theOther->GetPlayer()->IsHuman();
+    case EE_UNITS_UCB_QUEUE_SHIFT_MODE: return theUnit->mGoalQueues[(size_t)inB].GetUnit()->mPlayer->mShiftMode;
+    case EE_UNITS_UCB_SET_EXITING: theUnit->SetExitingUnitID((unsigned long)inB); return 0;
+    case EE_UNITS_UCB_CLEAR_QUEUE0: theOther->mGoalQueues[0].Clear(); return 0;
+    case EE_UNITS_UCB_QUEUE_FRONT_OF: return EEObj(theOther->mGoalQueues[(size_t)inB].GetFront());
+    case EE_UNITS_UCB_EXPLORE_CAST: return EEObj(EEExploreGoalCast(EEUcObject<EEUnitGoal>(inA)));
+    case EE_UNITS_UCB_ATTACK_CAST: return EEObj(EEAttackUnitCast(EEUcObject<EEUnitGoal>(inA)));
+    case EE_UNITS_UCB_HAS_LOCATION: return EEGoalHasLocation(EEUcObject<EEUnitGoal>(inA));
+    case EE_UNITS_UCB_PLAYER_HUMAN_OF: return theOther->mPlayer->IsHuman();
+    case EE_UNITS_UCB_TAGS_EMPTY: return EEUcObject<EETagPointList>(inA)->mPoints.empty();
+    case EE_UNITS_UCB_TAGS_SCALE_STATS: EEUcObject<EETagPointList>(inA)->Scale(*EEUcObject<GETransformation>((uint64_t)inB), theUnit->mStats->GetScale()); return 0;
+    case EE_UNITS_UCB_TAG0_POINT: EEUcObject<EETagPointList>(inA)->mPoints[0]->GetPoint(EEUcObject<EEComplexUnit>((uint64_t)inB)->mPhysicalModel.GetFrame(), *EEUcObject<GETransformation>((uint64_t)inC), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCB_SET_CARGO_SCALE: theOther->mPhysicalModel.SetScale(theOther->mStats->GetScale() * ((f[0] * 0.5f) / theOther->mUnitClass->GetCruiseAltitude() + 0.5f)); return 0;
+    case EE_UNITS_UCB_ATC_REMOVE_TAKEOFF: ee_units_atc_remove_from_takeoff_queues(theOther->mPlayer->mAirTraffic[theOther->mUnitClass->mAirTrafficType - 1], theOther); return 0;
+    case EE_UNITS_UCB_TILE_FREE: return EEIsTileFree(theOther, (unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_UCB_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
+    case EE_UNITS_UCB_FACING_QUARTER: return EEGetUnitFacingQuarter(theUnit);
+    case EE_UNITS_UCB_SET_FACING: theUnit->SetFacing((unsigned long)inB); return 0;
+    case EE_UNITS_UCB_NAVY_YARD_FACING: return ee_units_ucn_facing(1, (int32_t)theUnit->GetTileX(), (int32_t)theUnit->GetTileY());
+    case EE_UNITS_UCB_SPACE_DOCK_YAW: f[0] = UBitsFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, theUnit->GetTileX() + 1, theUnit->GetTileY() + 1)); return 0;
+    case EE_UNITS_UCB_UPDATE_TURRETS: theUnit->UpdateTurrets(); return 0;
+    case EE_UNITS_UCB_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
+    case EE_UNITS_UCB_SET_MINE: EEUcObject<EEUnit>(inA)->mComplexUnit->SetMine(EEUcObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCB_FACING_QUARTER_AT: return EEGetFacingQuarter((long)inB, (long)inC);
+    case EE_UNITS_UCB_TILES_CLEAR: EEUcObject<std::vector<EETileCoordinate>>(inA)->clear(); return 0;
+    // the air classes' bodies' (ee_units uca_air.rs, uca_view.rs; EE_UNITS_UCA_*: EEUnitClassAir.cpp's host until units round 14; the closest tile is Rust's cell, its address in inA; the fighters' technologies in inC)
+    case EE_UNITS_UCA_HAS_LOCATION: return EEGoalHasLocation(EEUcObject<EEUGRust>(inA));
+    case EE_UNITS_UCA_GOAL_CAST: return EEObj(EERustGoalCast(EEUcObject<EEUGRust>(inA), (EEUnitGoalKind)inB));
+    case EE_UNITS_UCA_LOCATION_POINT: (*reinterpret_cast<GE3DPoint*>(f)) = EELocationGoalPoint(EEUcObject<EEUGRust>(inA)); return 0;
+    case EE_UNITS_UCA_PATROL_TILE_X: return EEUcObject<EEUGRust>(inA)->GetPatrolTarget()->GetTileX();
+    case EE_UNITS_UCA_PATROL_TILE_Y: return EEUcObject<EEUGRust>(inA)->GetPatrolTarget()->GetTileY();
+    case EE_UNITS_UCA_EXPLORE_CENTER: EEUcObject<EEUGRust>(inA)->GetExploreTileCenter((*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_GOAL_STEP: EEUcObject<EEUGRust>(inA)->Step(theUnit); return 0;
+    case EE_UNITS_UCA_GROUND_TARGET: (*reinterpret_cast<GE3DPoint*>(f)) = EEUcObject<EEUGRust>(inA)->GetGroundTarget(); return 0;
+    case EE_UNITS_UCA_GOAL_LOCATION: EEUcObject<EEUGRust>(inA)->GetGoalLocation((*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_ATTACK_TARGET: return EEObj(EEUcObject<EEUGRust>(inA)->GetAttackTarget());
+    case EE_UNITS_UCA_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, (*reinterpret_cast<GE3DPoint*>(f))));
+    case EE_UNITS_UCA_LANDING_POINT: EEFindLandingPoint(theUnit, &(*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_GET_TILE: return EEObj(::gWorld.mMap->GetTile((long)inB, (long)inC));
+    case EE_UNITS_UCA_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&(*reinterpret_cast<GE3DPoint*>(f)), EEUcObject<long>(inA), EEUcObject<long>(inA) + 1));
+    case EE_UNITS_UCA_TILE_HEIGHT_OF: f[0] = EEUcObject<EEMapTile>(inA)->GetHeight(); return 0;
+    case EE_UNITS_UCA_ATC_REMOVE_PLANE: ee_units_atc_remove_plane(EEUcObject<EeUnitsAtc>(inA), theUnit->mHomeBase, theUnit); return 0;
+    case EE_UNITS_UCA_HOME_LOAD: theUnit->mHomeBase->LoadCargo(theUnit, 1, 0); return 0;
+    case EE_UNITS_UCA_FIND_NEAREST_AIRPORT: return EEObj(ee_units_atc_find_nearest_airport(EEUcObject<EeUnitsAtc>(inA), theUnit));
+    case EE_UNITS_UCA_HOME_FACING: return (uint32_t)theUnit->mHomeBase->mFacing;
+    case EE_UNITS_UCA_TARGETS_ENEMIES: return theUnit->mBehavior->mCanTargetEnemies;
+    case EE_UNITS_UCA_FIND_TARGET_NEAR: return EEObj(EEFindTargetNear(theUnit, (long)inB, (long)inC, f[0]));
+    case EE_UNITS_UCA_SET_ATTACK_TARGET: EEUcObject<EEUGRust>(inA)->SetAttackTarget(EEUcObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCA_GOAL_B1C: return EEUcObject<EEUGRust>(inA)->GetB1C();
+    case EE_UNITS_UCA_NEW_LOCATION: return EEObj(EEUGRust::NewLocation(f[0], f[1], f[2], inB != 0, true, false, 0.0f, false, false));
+    case EE_UNITS_UCA_SET_GOAL: theUnit->SetGoal(EEUcObject<EEUGRust>(inA), 0, 0); return 0;
+    case EE_UNITS_UCA_GOAL_START_ACTION: return EEUcObject<EEUGRust>(inA)->GetStartAction();
+    case EE_UNITS_UCA_ATC_SLOT_COUNT: return ee_units_atc_slot_count(EEUcObject<EeUnitsAtc>(inA));
+    case EE_UNITS_UCA_ATC_SLOT_AIRPORT: return EEObj(ee_units_atc_slot_airport(EEUcObject<EeUnitsAtc>(inA), (unsigned long)inB));
+    case EE_UNITS_UCA_NEXT_WAYPOINT: return theUnit->GetNextWaypointPoint((*reinterpret_cast<GE3DPoint*>(f)));
+    case EE_UNITS_UCA_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_UCA_ATC_QUEUE_LANDING: return (int64_t)ee_units_atc_queue_request(EEUcObject<EeUnitsAtc>(inA), theUnit->mHomeBase, theUnit, 1);
+    case EE_UNITS_UCA_ATTACK_GROUND_GOAL: theUnit->SetGoal(EEUGRust::NewAttackGround((*reinterpret_cast<GE3DPoint*>(f)), EEUcObject<EEUGRust>(inA)->GetB1C()), 0, 0); return 0;
+    case EE_UNITS_UCA_SET_CONTACT: theUnit->SetInitialContactLocation((*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_CONTACT_DIFFERS: return theUnit->mInitialContactLocation != (*reinterpret_cast<GE3DPoint*>(f));
+    case EE_UNITS_UCA_HIT_DISTANCE: f[0] = EECombatHitDistanceSquared(theUnit, EEUcObject<EEUnit>(inA), -10000.0f, -10000.0f); return 0;
+    case EE_UNITS_UCA_DESTINATION: EEUcObject<EEUGRust>(inA)->GetDestination(theUnit, (*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_AIRPLANE_MODEL: return theClass->mPhysicsModel != NULL && theClass->mPhysicsModel->IsAirplane();
+    case EE_UNITS_UCA_COMPUTE_ROLL: theUnit->SetF220(theClass->mPhysicsModel->ComputeRoll(theUnit, f[0])); return 0;
+    case EE_UNITS_UCA_ANGULAR_VELOCITY: (*reinterpret_cast<GE3DPoint*>(f)) = GE3DPoint(theUnit->mAngularVelocity.GetYaw(), theUnit->mAngularVelocity.GetPitch(), theUnit->mAngularVelocity.GetRoll()); return 0;
+    case EE_UNITS_UCA_SET_ANGULAR_VELOCITY: theUnit->mAngularVelocity = GEOrientation(f[0], f[1], f[2]); return 0;
+    case EE_UNITS_UCA_ATC_ADD_WEIGHT: ee_units_atc_add_cargo_weight(theUnit->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theUnit); return 0;
+    case EE_UNITS_UCA_LOCATION_MATRIX: *EEUcObject<GETransformation>(inA) = theUnit->mPhysicalModel.GetLocation(); return 0;
+    case EE_UNITS_UCA_STATS_SCALE: f[0] = theUnit->GetStats()->GetScale(); return 0;
+    case EE_UNITS_UCA_TAG_LIST: return EEObj(theUnit->GetModel()->mTagPoints[theUnit->mAnimation]);
+    case EE_UNITS_UCA_TAG_COUNT: return EEUcObject<EETagPointList>(inA)->mPoints.size();
+    case EE_UNITS_UCA_TAG_OFFSET: EEUcObject<EETagPointList>(inA)->mPoints[theUnit->mWeaponTagPoint]->GetOffset(theUnit->mPhysicalModel.GetFrame(), (*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_FIGHTER_USABLE: return ::gWorld.mPlayers[inB]->mTechnologies->Get(inC)->GetIsAvailable() && ::gWorld.mPlayers[inB]->mTechnologies->Get(inC)->mIsAllowed;
+    case EE_UNITS_UCA_FIGHTER_CLASS: return ::gWorld.mPlayers[inB]->mTechnologies->Get(inC)->mData->mUnitClass;
+    case EE_UNITS_UCA_CLASS_AT: return EEObj(gUnitClassTable[(size_t)inB]);
+    case EE_UNITS_UCA_CREATE_CARRIED: return EEObj(EEUcObject<EEUnitClass>(inA)->CreateUnitAt(*EEUcObject<GETransformation>((uint64_t)inB), (long)inC, 0, theUnit)->mComplexUnit);
+    case EE_UNITS_UCA_POSITION: theUnit->GetPosition((*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_CONVERT: return EEObj(EEConvertUnit(theUnit, 0, 0));
+    case EE_UNITS_UCA_SET_ORIENTATION: theUnit->mOrientation = GEOrientation(f[0], f[1], f[2]); return 0;
     }
     return 0;
 }

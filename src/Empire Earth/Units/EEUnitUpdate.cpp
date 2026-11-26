@@ -162,7 +162,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_X_HELICOPTER_TRANSPORT_PATH: EEHelicopterTransportPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_X_HELICOPTER_PRIEST_PATH: EEHelicopterPriestPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_AIR_ANIMAL_PATH: EEAirAnimalPathToGoal(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
-    case EE_UNITS_ACT_CIRCLE_SIDE: EEAirplaneCircleSide(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
+    case EE_UNITS_ACT_CIRCLE_SIDE: ee_units_cr_circle_side(EEObj(EEUpdateUnit(inContext))); break;   // cls_carrier.rs
     case EE_UNITS_UPD_X_AIRPLANE_HOLDING: EEAirplaneHoldingPattern(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_X_SPACESHIP_HOLDING: EEPlanetSpaceshipHoldingPattern(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_FLY_OFF_MAP: EEUpdateClass(inContext)->FlyOffMap(EEUpdateUnit(inContext)); break;
