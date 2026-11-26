@@ -22,6 +22,9 @@ extern "C" {
 /// `GetWONStatusString` for the C++ (WONLobbyCore.h's inline): a text with one reference.
 EeWonGstr *ee_won_lobby_status_string(int32_t status);
 
+/// Registers `offsetof(LobbyRustDialog, mLobbyDlg)` (the game, at static initialisation).
+void ee_won_lobbytext_dialog_at(size_t at);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_LOBBY_LOBBYTEXT_H

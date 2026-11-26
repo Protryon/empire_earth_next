@@ -1192,6 +1192,15 @@ pub fn string_data(row: usize) -> isize {
     unsafe { *(at as *const isize) }
 }
 
+/// Resource string `row`'s `GUIString*` (its slot; 0 unbound or out of the table).
+pub fn string_slot(row: usize) -> isize {
+    let base = SLOTS.load(std::sync::atomic::Ordering::Relaxed);
+    if base == 0 || row >= RESOURCES.len() {
+        return 0;
+    }
+    (base + row * SLOT_SIZE.load(std::sync::atomic::Ordering::Relaxed)) as isize
+}
+
 /// Resource string `row`'s units (none when unbound).
 pub fn text(row: usize) -> Vec<u32> {
     // SAFETY: a slot's string is a live `GUIStringData` (or NULL)

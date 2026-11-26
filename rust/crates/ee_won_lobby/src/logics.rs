@@ -663,7 +663,9 @@ impl EeWonLogic {
         if let Some(r) = crate::lobbytext::logic_op(op, a, b) {
             return r;
         }
-        let out = |o: Op, a: isize, b: isize, c: isize, d: isize| host_call(self.host, self.obj, o, a, b, c, d);
+        let out = |o: Op, a: isize, b: isize, c: isize, d: isize| {
+            crate::lobbytext::logic_op(o, a, b).unwrap_or_else(|| host_call(self.host, self.obj, o, a, b, c, d))
+        };
         if let Some(r) = crate::netlogicops::game_logic_op(op, a, b, c, d, &out) {
             return r;
         }

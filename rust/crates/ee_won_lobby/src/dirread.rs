@@ -34,8 +34,43 @@ pub enum EeWonDirReadOp {
     ServerAddressAdd,
 }
 
-/// The host: `(op, obj, a, b)`.
-pub type EeWonDirReadHost = unsafe extern "C" fn(op: EeWonDirReadOp, obj: *mut c_void, a: isize, b: isize) -> isize;
+/// The host: `(op, obj, a, b)`; NULL in the game, whose statements are the model's own calls ([`game_op`]).
+pub type EeWonDirReadHost =
+    Option<unsafe extern "C" fn(op: EeWonDirReadOp, obj: *mut c_void, a: isize, b: isize) -> isize>;
+
+/// The game's statements on the list's and the servers' model objects (R6 WON GUI round 40: LobbyModelHost.cpp's
+/// host until then). The model is the shell's member after its vtable and count (LobbyModelHost.cpp asserts it).
+fn game_op(op: EeWonDirReadOp, obj: *mut c_void, a: isize, b: isize) -> isize {
+    use crate::modelobj::{ee_won_model_call, ee_won_model_set, EeWonModelCall as MC, EeWonModelField as MF};
+    type O = EeWonDirReadOp;
+    if obj.is_null() {
+        return 0;
+    }
+    // SAFETY: a live LobbyModelObject: its model at its first member
+    let m = unsafe { *((obj as usize + 2 * std::mem::size_of::<usize>()) as *const *const crate::modelobj::EeWonModel) };
+    let empty = ee_won_gui::guistrobj::ee_won_gstr_empty() as isize;
+    // SAFETY: the shell's live model (the calls' contracts as the C++ made them)
+    unsafe {
+        match op {
+            O::ServerListInsert => ee_won_model_call(m, MC::ServerListInsert, a, 0, 0, empty),
+            O::ServerConnected => ee_won_model_call(m, MC::ServerConnected, 0, 0, 0, empty),
+            // `MSetText(ServerName, GUIString(units))`: the temporary's reference around the set
+            O::ServerSetName => {
+                let text = crate::lobbytext::held_units(&crate::lobbytext::wide_units(a, b as usize));
+                ee_won_model_set(m, MF::ServerName, text);
+                crate::lobbytext::release(text);
+                0
+            }
+            O::ServerSetAddr => {
+                ee_won_model_set(m, MF::ServerAddress, a);
+                0
+            }
+            O::ServerSetListed => ee_won_model_call(m, MC::ServerSetListed, a, 0, 0, empty),
+            O::ServerAddressesClear => ee_won_model_call(m, MC::ServerAddressesClear, 0, 0, 0, empty),
+            O::ServerAddressAdd => ee_won_model_call(m, MC::ServerAddressAdd, a, b, 0, empty),
+        }
+    }
+}
 
 /// `UpdateFromDirectory`'s statements over `out`.
 pub fn update_from_directory(
@@ -81,7 +116,11 @@ pub fn update_from_directory(
 pub unsafe extern "C" fn ee_won_lobby_dir_update(list: *mut c_void, dir: *const EeWonDirList, host: EeWonDirReadHost) {
     // SAFETY: the contract
     let Some(dir) = (unsafe { dir.as_ref() }) else { return };
-    update_from_directory(list, dir, &mut |op, obj, a, b| unsafe { host(op, obj, a, b) });
+    update_from_directory(list, dir, &mut |op, obj, a, b| match host {
+        // SAFETY: the contract
+        Some(f) => unsafe { f(op, obj, a, b) },
+        None => game_op(op, obj, a, b),
+    });
 }
 
 #[cfg(test)]

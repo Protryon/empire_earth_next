@@ -143,7 +143,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     ChatLink* aLink = reinterpret_cast<ChatLink*>(a);
     TextArea* anOutput = reinterpret_cast<TextArea*>(a);
     InputBox* anInput = reinterpret_cast<InputBox*>(a);
-    ChatCommandParser* aParser = reinterpret_cast<ChatCommandParser*>(a);
     switch (inOp) {
     // EvGet's chat link of a WONGUI event (lobbyevt.rs reads the lobby events' members; hostops.rs picks the field)
     case Op::EvTlaLink: return (intptr_t)dynamic_cast<ChatLink*>(reinterpret_cast<ComponentEvent*>(a)->GetItem<TextSegmentBase>());
@@ -167,13 +166,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     case Op::MyClient: return (intptr_t)GetMyLobbyClient();
     case Op::ChatParser: return (intptr_t)LobbyGetChatCommandParser();
     case Op::RoomChatParser: return (intptr_t)LobbyGetRoomChatParser((int)a);
-    case Op::ParserNumber: return b == 0 ? aParser->GetPrefix() : b == 1 ? aParser->GetError() : aParser->GetCommand();
-    case Op::ParserText: return Held(b == 0 ? aParser->GetTargetName() : aParser->GetText());
-    case Op::ParserHandleInput: return aParser->HandleInput(Txt(b)) ? 1 : 0;
-    case Op::ParserHelp: return Held(aParser->GetHelp((unsigned short)b));
-    case Op::ParserClients: return (intptr_t)aParser->GetClients();
-    case Op::FormatTarget: return Held(LobbyFormatString(gLobbyResources[a].mString, reinterpret_cast<ChatCommandParser*>(b)->GetTargetName()));
-    case Op::IgnoredAt: return Held(LobbyGetIgnoredNameAt((size_t)a));
     case Op::DeliverFriendAction: inCtl->DeliverEvent(FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false); return 0;
     case Op::DeliverJoinFriendsRoom: inCtl->DeliverEvent(JoinFriendsRoomEvent(reinterpret_cast<LobbyFriend*>(a)), false); return 0;
     case Op::DeliverJumpToRoom: inCtl->DeliverEvent(JumpToRoomEvent(aLink->mText, aLink->mGroupId, aLink->mAddress), false); return 0;
@@ -205,8 +197,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         return 0;
     case Op::DeliverQuickPlay: inCtl->DeliverEvent(QuickPlayEvent((int)a), false); return 0;
     case Op::ComboAddUserName: return (intptr_t)aCombo->AddString(LobbyGetUserNameAt((size_t)b), -1);
-    case Op::UserPassword: return Held(LobbyGetUserPassword(Txt(a)));
-    case Op::AddUser: LobbyAddUser(Txt(a), Txt(b), true); return 0;
     case Op::ComboSetTextFlag: aCombo->SetText(Txt(b), c != 0); return 0;
     case Op::DeliverLogin: inCtl->DeliverEvent(LoginEvent(anInput->GetText(), reinterpret_cast<Button*>(b)->IsChecked(), reinterpret_cast<ComboBox*>(c)->mEdit.mPtr->GetText()), false); return 0;
     case Op::AuthContext: return (intptr_t)GetLobbyAuthContext();
@@ -379,7 +369,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
         return 0;
     case Op::LabelSetFormat2Res: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString2(ResText(b), Txt(reinterpret_cast<const intptr_t*>(c)[0]), Txt(reinterpret_cast<const intptr_t*>(c)[1])), true);
         return 0;
-    case Op::FilterCount: return (intptr_t)LobbyGetFilterCount(Txt(a));
     case Op::ComboAddFilterValue: aCombo->AddString(LobbyGetFilterValueAt(Txt(b), (size_t)c), -1);
         return 0;
     case Op::DeliverJoinRoomAt: inCtl->DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a)), (unsigned long)b), false);

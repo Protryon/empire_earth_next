@@ -457,6 +457,9 @@ impl EeWonEeGame {
             if let Some(r) = crate::modelobj::eegame_op(op, self.game as isize, a, b) {
                 return r;
             }
+            if let Some(r) = crate::lobbytext::eegame_op(op, a, b) {
+                return r;
+            }
         }
         // the compound cases' statements (R6 WON round 34), while the network core is bound
         if ee_won_net::cppnet::bound() {

@@ -202,12 +202,32 @@ pub(crate) fn format(format: isize, a: isize) -> isize {
     held(r)
 }
 
+/// The Rust object of the C++ `ChatCommandParser*` `p` (its `mParser`).
+fn parser(p: isize) -> *const crate::chatobj::EeWonChatParser {
+    of(p + EE_WON_CHAT_PARSER_AT as isize) as *const crate::chatobj::EeWonChatParser
+}
+
+/// `n` units at `u` (none for 0).
+fn unit_slice<'a>(u: *const u32, n: usize) -> &'a [u32] {
+    if n == 0 || u.is_null() {
+        &[]
+    } else {
+        // SAFETY: the parser's `n` units, valid until it changes
+        unsafe { std::slice::from_raw_parts(u, n) }
+    }
+}
+
 // ---- the events
 
 /// A game event's record (`None` outside the game: the host's world answers).
 fn ev(e: isize) -> Option<EeWonCompEventRec> {
     // SAFETY: a live ComponentEvent (the hosts' argument)
     event_rec(e).map(|r| unsafe { *r })
+}
+
+/// `((ComponentEvent*)e)->GetControlId()`: the event's component's control id (compmem.rs, read in place).
+pub(crate) fn event_control_id(e: isize) -> Option<isize> {
+    Some(ee_won_gui::compmem::control_id(ev(e)?.comp) as isize)
 }
 
 // ---- the list items (TextListItem's text and colour, ListItem's members: read in place)
@@ -272,9 +292,53 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             }
             s as isize
         }
+        // the chat parser's members (its Rust object read from the C++ parser)
+        Op::ParserNumber => {
+            use crate::chatobj::EeWonChatParserNumber as N;
+            let n = match b {
+                0 => N::Prefix,
+                1 => N::Error,
+                _ => N::Command,
+            };
+            // SAFETY: the parser's live Rust object
+            unsafe { crate::chatobj::ee_won_chatparser_number(parser(a), n) as i32 as isize }
+        }
+        Op::ParserText => {
+            use crate::chatobj::EeWonChatParserText as T;
+            let mut n = 0usize;
+            // SAFETY: as above
+            let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(a), if b == 0 { T::TargetName } else { T::Text }, &mut n) };
+            held_units(unit_slice(u, n))
+        }
+        Op::ParserHelp => {
+            let mut n = 0usize;
+            // SAFETY: as above
+            let u = unsafe { crate::chatobj::ee_won_chatparser_help(parser(a).cast_mut(), b as u16, &mut n) };
+            held_units(unit_slice(u, n))
+        }
+        // SAFETY: as above
+        Op::ParserClients => unsafe { crate::chatobj::ee_won_chatparser_object(parser(a), 0) as isize },
+        Op::ParserHandleInput => {
+            let input = t(b);
+            // SAFETY: as above; the input's units
+            let r = unsafe {
+                crate::chatobj::ee_won_chatparser_handle_input_list(parser(a).cast_mut(), (*input).buf.text, (*input).buf.length as usize)
+            };
+            isize::from(r)
+        }
+        // `Held(LobbyFormatString(LOBBY_STRING(a), ((ChatCommandParser*)b)->GetTargetName()))`
+        Op::FormatTarget => {
+            let mut n = 0usize;
+            // SAFETY: as above
+            let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(b), crate::chatobj::EeWonChatParserText::TargetName, &mut n) };
+            let target = held_units(unit_slice(u, n));
+            let r = format(res(a), target);
+            release(target);
+            r
+        }
         // the parser's prefix and command `b`, then the quoted name (`c`, else the target's), one reference
         Op::ParserCommandText => {
-            let p = of(a + EE_WON_CHAT_PARSER_AT as isize) as *const crate::chatobj::EeWonChatParser;
+            let p = parser(a);
             let mut s = held(ee_won_gstr_empty()) as *mut EeWonGstr;
             // SAFETY: the parser's Rust object (the C++ parser's `mParser`); `s` the built text's reference
             unsafe {
@@ -316,6 +380,7 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
         Op::EventY => ev(a)?.y as isize,
         Op::EventActiveSel | Op::EventDoubleClick => ev(a)?.flag as isize,
         Op::EventButton => ev(a)?.button as isize,
+        Op::EventControlId => event_control_id(a)?,
         // a text row's text and colour
         Op::ItemSetText => {
             // SAFETY: a live text row's text
@@ -503,6 +568,17 @@ pub(crate) fn logic_op(op: crate::logics::EeWonLogicOp, a: isize, b: isize) -> O
             gstring_free(a);
             0
         }
+        // AccountLogic's saved users of a lobby event's name (and password): `LobbyAddUser(name, password, false)`,
+        // `LobbyFindUser(name)`
+        L::AddUserNamed | L::AddUserNoPassword | L::AddUserWithPassword | L::FindUserOfEvent => {
+            use crate::lobbyevt::EeWonLobbyEvtField as F;
+            use crate::persistobj::EeWonPersistCall as P;
+            // SAFETY: a bound event lives until its shell's destructor unbinds it; the call holds the shell
+            let e = unsafe { &*crate::lobbyevt::of(a)? };
+            let password: &[u8] = if op == L::AddUserWithPassword { e.bytes(F::Password) } else { &[] };
+            let call = if op == L::FindUserOfEvent { P::FindUser } else { P::AddUser };
+            crate::persistobj::game_text_call(call, e.bytes(F::UserName), password, 0)?
+        }
         // `new GUIString(LobbyFormatString(LOBBY_STRING(a), GetWONStatusString(b)))`
         L::TextStatus => {
             let s = status_string(b as i32);
@@ -539,6 +615,72 @@ pub(crate) fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: is
         _ => return None,
     };
     Some(r)
+}
+
+/// `offsetof(LobbyRustDialog, mLobbyDlg)` (DialogLogic.cpp registers it; 0 in a driver's world).
+static DLG_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Registers `offsetof(LobbyRustDialog, mLobbyDlg)` (the game, at static initialisation).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbytext_dialog_at(at: usize) {
+    DLG_AT.store(at, std::sync::atomic::Ordering::Release);
+}
+
+/// `((LobbyRustDialog*)d)->LCall(call, a, b, c)` on the game's dialog `d` (`None` outside the game).
+fn dlg_call(d: isize, call: crate::lobbydlg::EeWonLobbyDlgCall, a: isize, b: isize, c: isize) -> Option<isize> {
+    let at = DLG_AT.load(std::sync::atomic::Ordering::Acquire);
+    if at == 0 || d == 0 || !is_game() {
+        return None;
+    }
+    // SAFETY: a live game dialog: its Rust object at the registered offset
+    let dlg = unsafe { *((d as usize + at) as *const *const crate::lobbydlg::EeWonLobbyDlg) };
+    // SAFETY: the dialog's live Rust object
+    Some(unsafe { crate::lobbydlg::ee_won_lobbydlg_call(dlg, call, a, b, c) })
+}
+
+/// DialogLogic's dialog texts (dlglogic.rs, in the game): the status dialog's texts and status, the OK/Cancel
+/// dialog's texts and buttons.
+pub(crate) fn dlglogic_op(op: crate::dlglogic::EeWonDlgLogicOp, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
+    use crate::dlglogic::EeWonDlgLogicOp as L;
+    use crate::lobbydlg::EeWonLobbyDlgCall as C;
+    use crate::resource::EeWonLobbyRes as Res;
+    match op {
+        L::StatusSetText => dlg_call(a, C::SetText, b, c, isize::from(d != 0)).map(|_| 0),
+        // `GUIString aStatus = GetWONStatusString(b); a->SetStatus(aStatus, false)`
+        L::StatusSetStatus => {
+            if DLG_AT.load(std::sync::atomic::Ordering::Acquire) == 0 || a == 0 || !is_game() {
+                return None;
+            }
+            let status = status_string(b as i32);
+            let slot = status;
+            dlg_call(a, C::SetStatus, &slot as *const isize as isize, 0, 0);
+            release(status);
+            Some(0)
+        }
+        // `const GUIString* aButtons[2] = {&(Yes or OK), &(No or Cancel)}; a->SetText(b, c, aButtons)`
+        L::OkCancelSetText => {
+            let (first, second) = if d != 0 {
+                (Res::LobbyGlobal_Yes_String, Res::LobbyGlobal_No_String)
+            } else {
+                (Res::LobbyGlobal_OK_String, Res::LobbyGlobal_Cancel_String)
+            };
+            let buttons = [crate::resource::string_slot(first as usize), crate::resource::string_slot(second as usize)];
+            dlg_call(a, C::SetText, b, c, buttons.as_ptr() as isize).map(|_| 0)
+        }
+        _ => None,
+    }
+}
+
+/// The EE game's text comparison (eegame.rs, in the game).
+pub(crate) fn eegame_op(op: crate::eegame::EeWonEeGameOp, a: isize, b: isize) -> Option<isize> {
+    use crate::eegame::EeWonEeGameOp as G;
+    if !is_game() {
+        return None;
+    }
+    match op {
+        G::StringsEqual => Some(isize::from(read(GRead::Compare, a, b, 0, 0) == 0)),
+        _ => None,
+    }
 }
 
 /// The LAN logic's event member (lanobj.rs, in the game).

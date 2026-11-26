@@ -241,7 +241,11 @@ impl EeWonDlgLogic {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
-        // the game's compound cases (logicsplit.rs) over the host's one-statement ones
+        // the game's texts and dialog calls (lobbytext.rs), then its compound cases (logicsplit.rs) over the host's
+        // one-statement ones
+        if let Some(r) = crate::lobbytext::dlglogic_op(op, a, b, c, d) {
+            return r;
+        }
         if let Some(r) = crate::logicsplit::game_dlg_op(op, a, b, c, d, &|op, a, b, c, d| self.host_op(op, a, b, c, d))
         {
             return r;

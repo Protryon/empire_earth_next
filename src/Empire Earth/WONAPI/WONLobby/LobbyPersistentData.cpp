@@ -41,11 +41,6 @@ static intptr_t PersistHost(void*, EeWonPersistOp inOp, intptr_t a, intptr_t b, 
         *reinterpret_cast<size_t*>(b) = aName->mLength;
         return (intptr_t)aName->mText;
     }
-    case EeWonPersistOp::ResText: {
-        const GUIString& aText = gLobbyResources[a].mString;
-        *reinterpret_cast<size_t*>(b) = aText.length();
-        return (intptr_t)aText.mData->mText;
-    }
     // the click sound is used without a null check, as the original did
     case EeWonPersistOp::MuteClick: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
     case EeWonPersistOp::AppendLanNumber: {

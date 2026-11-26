@@ -38,13 +38,6 @@ static intptr_t Held(RefCount* inObj)
     return (intptr_t)inObj;
 }
 
-static std::wstring UnitsText(const uint16_t* inUnits, size_t inCount)
-{
-    std::wstring aText;
-    WonWideSink(&aText, inUnits, inCount);
-    return aText;
-}
-
 // the C++ the model calls (modelobj.rs EeWonModelOp documents each)
 static intptr_t ModelHost(EeWonModelOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -83,25 +76,10 @@ LobbyModelObject::LobbyModelObject(EeWonModelKind inKind)
 LobbyModelObject::~LobbyModelObject() { ee_won_model_free(this->mModel); }
 
 // ---- the directory's records (the routing server's are read in Rust: modelobj.rs route_record_op; the directory's
-// listing by ee_won_lobby dirread.rs since R6 WON round 34, ReadDirEntity among it, over these statements)
+// listing by ee_won_lobby dirread.rs since R6 WON round 34, ReadDirEntity among it, on the model objects themselves
+// since R6 WON GUI round 40)
 
-static intptr_t DirReadHost(EeWonDirReadOp inOp, void* inObj, intptr_t a, intptr_t b)
-{
-    typedef EeWonDirReadOp O;
-    LobbyServer* aServer = static_cast<LobbyServer*>(inObj);
-    switch (inOp) {
-    case O::ServerListInsert: return static_cast<LobbyServerList*>(inObj)->M(LobbyMC::ServerListInsert, a); // the address's value
-    case O::ServerConnected: return aServer->IsConnected();
-    case O::ServerSetName: aServer->MSetText(LobbyMF::ServerName, GUIString(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b))); return 0;
-    case O::ServerSetAddr: aServer->MSet(LobbyMF::ServerAddress, a); return 0; // MSetAddr: the value copied
-    case O::ServerSetListed: aServer->M(LobbyMC::ServerSetListed, a); return 0;
-    case O::ServerAddressesClear: aServer->M(LobbyMC::ServerAddressesClear); return 0;
-    case O::ServerAddressAdd: aServer->M(LobbyMC::ServerAddressAdd, a, b); return 0;
-    }
-    return 0;
-}
-// Adds the directory's servers by address and refreshes the listing of each one not connected
-void LobbyServerList::UpdateFromDirectory(const DirList& inEntities) { ee_won_lobby_dir_update(this, inEntities.get(), DirReadHost); }
+void LobbyServerList::UpdateFromDirectory(const DirList& inEntities) { ee_won_lobby_dir_update(this, inEntities.get(), NULL); }
 
 // ---- the game's buffers: their bodies are modelbuf.rs's (R6 WON round 33) over these statements
 

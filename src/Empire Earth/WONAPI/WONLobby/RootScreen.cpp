@@ -83,7 +83,6 @@ static intptr_t RootHost(void* inScreen, EeWonRootScreenOp inOp, intptr_t a, int
     case RO::Height: return s->Height();
     case RO::Relayout: s->Relayout(); return 0;
     case RO::BaseEvent: s->Component::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
-    case RO::EventControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
     case RO::EventFromTabs: return reinterpret_cast<ComponentEvent*>(a)->GetComponent() == s->mTabCtrl.get();
     case RO::MyGame: return (intptr_t)GetMyLobbyGame();
     case RO::GameMatches: return reinterpret_cast<LobbyGame*>(a)->MatchesRoomSpec((int)b) ? 1 : 0;
