@@ -6,7 +6,8 @@
 // section and key are ee_won's eeresource.rs rows (in this table's order); the loader and the reset run over them.
 // R6 WONLobby round 6: the 73 globals are one array of the rows' strings (row i the original's table entry i); the
 // lobby's code names a string by its global's name through its row (EE_LOBBY_STRING, EELobbyGameCode.h). Their init
-// chains (0x69a43d..0x69b1ed: four SYNTHETIC functions each) went with them.
+// chains (0x69a43d..0x69b1ed: four SYNTHETIC functions each) went with them. R6 WON GUI round 40: the strings and
+// the reset are eeresource.rs's (the getters inline in EELobbyGameCode.h).
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,6 @@ using namespace WONAPI;
 
 // 0x8d0ec8: the strings by id (EELobbyResource_GetString), the original's 73 globals in their order
 static const size_t kEELobbyStringCount = 73;
-static GUIString sEELobbyStrings[kEELobbyStringCount];
 
 static void EELobbyResource_Load(ResourceConfigTable* inTable);
 
@@ -41,27 +41,13 @@ ResourceConfigTablePtr EELobbyResource_Init(ResourceConfigTable* inCollection)
     return theCollection;
 }
 
-// Returns the game lobby string with the given table index (epochs, game options, dialog texts)
-GUIString& EELobbyResource_GetString(int inID)
-{
-    return sEELobbyStrings[inID];
-}
-
-// the string of a global's name (its row in ee_won's table); the program stops for a name the table lacks (the
-// look-up is ee_won's)
-GUIString& EELobbyResource_Named(const char* inName)
-{
-    return sEELobbyStrings[ee_won_eeresource_index(inName, kEELobbyStringCount)];
-}
-
 // the loader's and the reset's statements (R6 WON round 34: their loops are ee_won's eeresource.rs; a read that
 // throws is kept and the loader rethrows it, never through a Rust frame)
 static intptr_t EELobbyResourceHost(EeWonEeResOp inOp, void* inTable, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
     case EeWonEeResOp::Config: return WON_GUARDED(static_cast<ResourceConfigTable*>(inTable)->SafeGetConfig(reinterpret_cast<const char*>(a)));
-    case EeWonEeResOp::Read: return WON_GUARDED_V(sEELobbyStrings[a] = reinterpret_cast<ResourceConfig*>(b)->SafeGetString(reinterpret_cast<const char*>(c)));
-    case EeWonEeResOp::Erase: sEELobbyStrings[a] = GetEmptyGUIStringData(); return 0;
+    case EeWonEeResOp::Read: return WON_GUARDED_V(*static_cast<GUIString*>(ee_won_eeresource_string((size_t)a)) = reinterpret_cast<ResourceConfig*>(b)->SafeGetString(reinterpret_cast<const char*>(c)));
     }
     return 0;
 }
@@ -71,10 +57,4 @@ static intptr_t EELobbyResourceHost(EeWonEeResOp inOp, void* inTable, intptr_t a
 static void EELobbyResource_Load(ResourceConfigTable* inTable)
 {
     WonRethrow(ee_won_eeresource_load(inTable, kEELobbyStringCount, EELobbyResourceHost));
-}
-
-// Resets every game lobby string to the empty string (ee_won's rows in order)
-void EELobbyResource_Destroy()
-{
-    ee_won_eeresource_destroy(kEELobbyStringCount, EELobbyResourceHost);
 }

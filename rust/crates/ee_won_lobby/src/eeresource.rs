@@ -1,8 +1,9 @@
 //! The EE game lobby's resource strings (EELobbyResource.cpp, R6 WONLobby round 5): every game lobby string global,
 //! the section and key of the lobby's resource files it is read from, in the order the original read them
 //! (`EELobbyResource_Load`, which looked a section up where it changed) and emptied them (`EELobbyResource_Destroy`,
-//! the same order). The 73 globals and their index table (`EELobbyResource_GetString`) stay C++: the lobby's code
-//! uses them by name; the C++ runs the loads over these rows, the global of row `i` its table's entry `i`.
+//! the same order). The 73 globals are this module's strings since R6 WON GUI round 40 (each one `GUIString`, read in
+//! place by the C++: `EELobbyResource_GetString` and `EE_LOBBY_STRING`, EELobbyGameCode.h); the C++ reads them from
+//! the resource table over these rows, the string of row `i` the original table's entry `i`, and the reset is here.
 //! `golden_eeresource.txt` holds the original's statements, read from the C++ before the port.
 
 use std::ffi::{c_char, c_void, CStr};
@@ -179,10 +180,36 @@ pub unsafe extern "C" fn ee_won_eeresource_find(name: *const c_char) -> isize {
 pub enum EeWonEeResOp {
     /// `((ResourceConfigTable*)table)->SafeGetConfig((const char*)a)` (the section's config).
     Config = 0,
-    /// `strings[a] = ((ResourceConfig*)b)->SafeGetString((const char*)c)`.
+    /// `strings[a] = ((ResourceConfig*)b)->SafeGetString((const char*)c)` (`strings[a]` the GUIString at
+    /// `ee_won_eeresource_string(a)`).
     Read,
-    /// `strings[a] = GetEmptyGUIStringData()`.
-    Erase,
+}
+
+/// The strings (an empty text until first used).
+static STRINGS: [crate::lobbytext::Slot; 73] = [const { crate::lobbytext::Slot::new() }; 73];
+
+/// String `index`'s `GUIString` (`EELobbyResource_GetString`), the empty text until it is read.
+#[no_mangle]
+pub extern "C" fn ee_won_eeresource_string(index: usize) -> *mut c_void {
+    let Some(slot) = STRINGS.get(index) else {
+        eprintln!("EELobbyResource: no string {}", index as u32);
+        std::process::abort();
+    };
+    // SAFETY: the slot's own pointer (the lobby's thread)
+    if unsafe { *slot.ptr() }.is_null() {
+        slot.set(0);
+    }
+    slot.ptr().cast()
+}
+
+/// The string of a global's name (`EELobbyResource_Named`); the program stops for a name the table lacks.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_eeresource_named(name: *const c_char) -> *mut c_void {
+    // SAFETY: the contract
+    ee_won_eeresource_string(unsafe { ee_won_eeresource_index(name, STRINGS.len()) })
 }
 
 /// The host: `(op, table, a, b, c) -> result`.
@@ -228,12 +255,12 @@ pub extern "C" fn ee_won_eeresource_load(table: *mut c_void, strings: usize, hos
     0
 }
 
-/// EELobbyResource_Destroy: every string reset to the empty one, in the rows' order.
+/// EELobbyResource_Destroy: every string reset to the empty one (`= GetEmptyGUIStringData()`), in the rows' order.
 #[no_mangle]
-pub extern "C" fn ee_won_eeresource_destroy(strings: usize, host: EeWonEeResHostFn) {
-    for i in 0..EE_RESOURCES.len() {
-        check_count(strings);
-        call(host, EeWonEeResOp::Erase, std::ptr::null_mut(), i as isize, 0, 0);
+pub extern "C" fn ee_won_eeresource_destroy() {
+    check_count(STRINGS.len());
+    for slot in &STRINGS {
+        slot.set(0);
     }
 }
 
@@ -273,7 +300,6 @@ mod tests {
         let line = match op {
             EeWonEeResOp::Config => format!("config {}", text(a)),
             EeWonEeResOp::Read => format!("get {} -> {}", text(c), EE_RESOURCES[a as usize].name.to_str().unwrap()),
-            EeWonEeResOp::Erase => format!("erase {}", EE_RESOURCES[a as usize].name.to_str().unwrap()),
         };
         LOG.with(|l| l.borrow_mut().push(line));
         let n = LOG.with(|l| l.borrow().len()) as isize;
@@ -291,8 +317,15 @@ mod tests {
     fn the_loader_and_reset_run_the_tables_statements() {
         LOG.with(|l| l.borrow_mut().clear());
         assert_eq!(ee_won_eeresource_load(std::ptr::null_mut(), EE_RESOURCES.len(), Some(host)), 0);
-        ee_won_eeresource_destroy(EE_RESOURCES.len(), Some(host));
-        assert_eq!(LOG.with(|l| l.take()), statements());
+        let reads: Vec<String> = statements().into_iter().filter(|s| !s.starts_with("erase ")).collect();
+        assert_eq!(LOG.with(|l| l.take()), reads);
+        // the reset: every string the empty text
+        ee_won_eeresource_destroy();
+        let empty = ee_won_gui::guistrobj::ee_won_gstr_empty();
+        for i in 0..EE_RESOURCES.len() {
+            // SAFETY: a string's GUIString
+            assert_eq!(unsafe { *(ee_won_eeresource_string(i) as *const *mut ee_won_gui::guistrobj::EeWonGstr) }, empty);
+        }
     }
 
     #[test]
