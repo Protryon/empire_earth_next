@@ -153,7 +153,8 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                 return Some(rec as isize);
             }
             // SAFETY: null or the op's live members
-            let game = unsafe { crate::logics::ee_won_pingop_call(rec as *const _, crate::logics::EeWonPingOpCall::Field, 5) };
+            let game =
+                unsafe { crate::logics::ee_won_pingop_call(rec as *const _, crate::logics::EeWonPingOpCall::Field, 5) };
             return Some(game as isize);
         }
         // `AsyncSocket::HasInternetConnection()`

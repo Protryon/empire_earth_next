@@ -159,6 +159,7 @@ pub fn route_connection(o: *mut c_void) -> *mut c_void {
     unsafe { r.as_ref() }.map_or(null_mut(), |r| r.1 as *mut c_void)
 }
 /// `((ServerConnection*)conn)->SetAuth(context, type)`.
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the pointers reach only the C++ table, as the host's case passed them
 pub fn servconn_set_auth(conn: *mut c_void, context: *mut c_void, auth_type: i32) {
     let c = cppcore::object_of(conn, EeWonCoreObject::ServerConn) as *const crate::servconn::EeWonServerConn;
     if !c.is_null() {
@@ -173,6 +174,7 @@ pub fn udp_request_address(o: *mut c_void) -> Option<EeWonIpAddr> {
     unsafe { r.as_ref() }.map(|r| r.address())
 }
 /// `new RoutingOp(conn, type)` (no reference yet; null without the table).
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the pointers reach only the C++ table, as the host's case passed them
 pub fn new_route_op(conn: *mut c_void, ty: i32) -> *mut c_void {
     // SAFETY: the table's contract
     cppcore::core().and_then(|c| c.new_route_op).map_or(null_mut(), |h| unsafe { h(conn, ty) })

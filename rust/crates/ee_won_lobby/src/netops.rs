@@ -231,7 +231,9 @@ pub fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize, c:
         // `(unsigned long)ee_won_hostop_num(RS(a)->GetRustOp(), EE_WON_REQOP_USER_ID, 0)`
         R::OpUserId => ee_won_net::cppcore::host_op_of(p).map_or(0, |h| {
             // SAFETY: the op's live Rust op
-            unsafe { ee_won_net::hostop::ee_won_hostop_num(h, ee_won_net::reqops::EE_WON_REQOP_USER_ID, 0) as u32 as isize }
+            unsafe {
+                ee_won_net::hostop::ee_won_hostop_num(h, ee_won_net::reqops::EE_WON_REQOP_USER_ID, 0) as u32 as isize
+            }
         }),
         // `UserStatusOf(AO(a))`, `ee_won_userstatus_add(UserStatusOf(AO(a)), (unsigned long)b)`
         R::StatusOpRust | R::StatusOpAddId => {
