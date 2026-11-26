@@ -75,7 +75,7 @@ static bool InitSaveTOU(const std::string& inPath, const std::string& inDocument
 { return ee_won_init_save_tou(inPath.c_str(), B(inDocument), inDocument.size()); }
 
 // The host: each case one statement; the decisions and the order are the Rust's (logics.rs, and netlogicops.rs
-// for the cases R6 WON round 32 split).
+// for the cases R6 WON round 32 split; the private state's setters are its own since round 39: prv_op).
 static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonLogicOp O;
@@ -90,7 +90,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::InitStatusText: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, *T(b), (d & 1) != 0, (int)(d >> 8)), true); return 0;
     case O::InitStatusRes: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, gLobbyResources[c].mString, (d & 1) != 0, (int)(d >> 8)), true); return 0;
     case O::InitStatusEmpty: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, gEmptyGUIString, (d & 1) != 0, (int)(d >> 8)), true); return 0;
-    case O::SetVersionStatus: LobbySetVersionStatus((WONStatus)a); return 0;
     case O::CheckForInternet: return config != NULL && config->mCheckForInternet;
     case O::HasInternet: return AsyncSocket::HasInternetConnection();
     case O::HasConfig: return config != NULL;
@@ -99,7 +98,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::LoadPrefs: LobbyLoadGlobalPrefs(); IPAddr::SetLocalHost(LobbyGetNetworkAdapter(), true); return 0;
     case O::SysTouModifyTime: return (intptr_t)WONFile(LobbyGetSysTOUPath()).GetModifyTime();
     case O::GameTouModifyTime: return (intptr_t)WONFile(LobbyGetGameTOUPath()).GetModifyTime();
-    case O::SetTOUTimes: LobbySetTOUTimes((long)a, (long)b); return 0;
     case O::BindUdp: LobbyBindUDPPort(); return 0;
     // the three controls the login screen disables while it initialises
     case O::EnableLogin: reinterpret_cast<Container*>(a)->EnableControlsById(ControlIdSet{200001, 200002, 200003}, b != 0); return 0;
@@ -123,13 +121,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::HttpGetSetCache: ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL, ee_won_http_cache_global(B(WONAPICore::GetDefaultFileDirectory()), WONAPICore::GetDefaultFileDirectory().size())); return 0;
     case O::HttpGetSetPromotionCompletion: R(a)->SetCompletion(new ShellCompletion(aLogic, EeWonLogicShellDone::InitPromotionImage)); return 0;
     case O::SessionAddOp: HttpSessionAddOp(aLogic->Slot<HTTPSession>(kInitSession), R(a)); return 0;
-    case O::TOUTimes: {
-        long systemTime, gameTime;
-        LobbyGetTOUTimes(systemTime, gameTime);
-        *reinterpret_cast<int32_t*>(a) = (int32_t)systemTime;
-        *reinterpret_cast<int32_t*>(b) = (int32_t)gameTime;
-        return 0;
-    }
     case O::OpNum: return (intptr_t)R(a)->GetNum((int)b, c);
     case O::SaveTOU: return InitSaveTOU(b == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath(), R(a)->GetBytes(EE_WON_HTTPDOC_DOCUMENT, b));
     case O::BroadcastDocument: LobbyBroadcastEvent(GotHTTPDocumentEvent(R(a)), true); return 0;
@@ -156,7 +147,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::AcceptedFromFirewall:
         return static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetAcceptedSocket()->GetDestAddr().GetHost() ==
                aLogic->mAddr.GetHost();
-    case O::SetBehindFirewall: LobbySetBehindFirewall(a != 0); return 0;
     case O::AcceptOpNewFrom: aLogic->mSlot[kInitAcceptOp] = new SocketOp(EeWonCoreSocketOp::Accept, static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetSocket()); return 0;
     case O::AcceptOpNewFirewall: aLogic->mSlot[kInitAcceptOp] = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->Slot<AsyncSocket>(kInitFirewallSocket)); return 0;
     case O::AcceptOpRun: aLogic->RunOp(aLogic->Slot<AsyncOp>(kInitAcceptOp), new ShellCompletion(aLogic, EeWonLogicShellDone::InitAccept), gLobbyAcceptTimeout); return 0;
@@ -179,7 +169,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     // CheckValidVersionOp: a Rust op (ee_won reqops.rs) with the product, config and version
     case O::VersionCheckNew: return Held(RustServerOp::NewRequest(ee_won_reqop_version_check(B(config->mProductName), config->mProductName.size(), B(config->mLanguage), config->mLanguage.size(), B(config->mVersion), config->mVersion.size()), LobbyGetPatchServers()));
     case O::FirewallServers: return (intptr_t)LobbyGetFirewallDetectServers();
-    case O::ResetFirewallTest: LobbyResetFirewallTest(); return 0;
     case O::FirewallOpNew: return Held(RustServerOp::NewFirewall(SC(a)));
     case O::FirewallSetListenPort: FW(a)->SetNum(EE_WON_FWOP_LISTEN_PORT, LobbyGetLobbyPort()); return 0;
     case O::FirewallSetDoListen: FW(a)->SetNum(EE_WON_FWOP_DO_LISTEN, b != 0); return 0;

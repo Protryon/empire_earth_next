@@ -57,3 +57,18 @@ ConstSmartPtr<AuthPeerData> GetPeerData() { return AuthPeerData::Adopt(ee_won_au
 bool RemoveAddress(const IPAddr& inAddr) { return this->GetServerContext()->RemoveAddress(inAddr); }
 bool SetHashFile(const std::wstring& inCommunity, const std::string& inFile) //2e07f0
 { return this->SetHashFileList(inCommunity, std::list<std::string>(1, inFile)); }
+// (R6 WON round 39: the lobby's CRC check is lobbyprv.rs's ee_won_lobbyprv_hash_login)
+bool SetHashFile(const std::wstring& inCommunity) //2e06d0: the running exe in the data root (authlogin.rs)
+{
+    return ee_won_auth_login_hash_exe(ee_won_authctx_login(this->mCore), inCommunity.data(), sizeof(wchar_t),
+                                      inCommunity.size());
+}
+bool SetHashFileList(const std::wstring& inCommunity, const std::list<std::string>& inFiles) //2e08e0
+{
+    std::string aCommunity = Utf16(inCommunity);
+    std::string aFiles;
+    for (std::list<std::string>::const_iterator i = inFiles.begin(); i != inFiles.end(); ++i)
+        aFiles.append(i->c_str(), i->size() + 1);
+    return ee_won_auth_login_hash_files(ee_won_authctx_login(this->mCore), WonBytes(aCommunity), aCommunity.size(),
+                                        WonBytes(aFiles), aFiles.size());
+}

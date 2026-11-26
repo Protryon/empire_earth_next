@@ -34,7 +34,34 @@ pub(crate) fn game_logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out:
     if !ee_won_net::cppnet::bound() {
         return None;
     }
-    logic_op(op, a, b, c, d, out)
+    // the compositions' calls out reach the private state's ops here too
+    let out = |o: Op, a: isize, b: isize, c: isize, d: isize| prv_op(o, a, b).unwrap_or_else(|| out(o, a, b, c, d));
+    prv_op(op, a, b).or_else(|| logic_op(op, a, b, c, d, &out))
+}
+
+/// InitLogic's ops whose C++ cases called a lobby function that was the private state's own Rust (lobbyprv.rs;
+/// LobbySetVersionStatus, LobbyResetFirewallTest, LobbySetBehindFirewall, LobbySetTOUTimes and LobbyGetTOUTimes, R6
+/// WON round 39: those cases and the four setters are gone), answered on that state.
+pub(crate) fn prv_op(op: Op, a: isize, b: isize) -> Option<isize> {
+    use crate::lobbyprv::{self as prv, EeWonLobbyPrvField as F};
+    match op {
+        Op::SetVersionStatus => prv::ee_won_lobbyprv_set(F::VersionStatus, a as i32 as i64),
+        Op::ResetFirewallTest => prv::ee_won_lobbyprv_reset_firewall(),
+        Op::SetBehindFirewall => prv::ee_won_lobbyprv_set(F::BehindFirewall, (a != 0) as i64),
+        Op::SetTOUTimes => prv::ee_won_lobbyprv_set_tou(a as std::ffi::c_long, b as std::ffi::c_long),
+        Op::TOUTimes => {
+            let (mut system, mut game): (std::ffi::c_long, std::ffi::c_long) = (0, 0);
+            // SAFETY: the locals
+            unsafe { prv::ee_won_lobbyprv_tou_times(&mut system, &mut game) };
+            // SAFETY: the op's two int32 outputs (the caller's locals)
+            unsafe {
+                *(a as *mut i32) = system as i32;
+                *(b as *mut i32) = game as i32;
+            }
+        }
+        _ => return None,
+    }
+    Some(0)
 }
 
 /// A status wait's flags as `RunWithStatusRes`'s `d` (the original's `(a, b)` arguments).

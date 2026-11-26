@@ -97,20 +97,6 @@ public:
     {
         this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY, inCommunity, inKey.KeyBytes(), (inKey.HasKey() ? 1 : 0) | (inKey.IsValid() ? 2 : 0));
     }
-    bool SetHashFile(const std::wstring& inCommunity) //2e06d0: the running exe in the data root (authlogin.rs)
-    {
-        return ee_won_auth_login_hash_exe(ee_won_authctx_login(this->mCore), inCommunity.data(), sizeof(wchar_t),
-                                          inCommunity.size());
-    }
-    bool SetHashFileList(const std::wstring& inCommunity, const std::list<std::string>& inFiles) //2e08e0
-    {
-        std::string aCommunity = Utf16(inCommunity);
-        std::string aFiles;
-        for (std::list<std::string>::const_iterator i = inFiles.begin(); i != inFiles.end(); ++i)
-            aFiles.append(i->c_str(), i->size() + 1);
-        return ee_won_auth_login_hash_files(ee_won_authctx_login(this->mCore), WonBytes(aCommunity), aCommunity.size(),
-                                            WonBytes(aFiles), aFiles.size());
-    }
     void Kill() { ee_won_authctx_kill(this->mCore); } //2df260
     // the Rust object (the certificate ops' host calls answer on it: ee_won hostauth.rs)
     const EeWonAuthCtx* Core() const { return this->mCore; }

@@ -95,12 +95,6 @@ pub enum EeWonLobbyPrvOp {
     AuthKill,
     /// `p->mAuthContext = NULL`.
     AuthClear,
-    /// `p->mHasSetHashFileList = false`.
-    HashSetClear,
-    /// `p->mHashFileList.clear()`.
-    HashListClear,
-    /// `ee_won_cfgval_read_strings(a, &p->mHashFileList)` (the original's `StringParser(a).ReadValue(list)`).
-    HashListRead,
     /// `p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a)`.
     CommunitySet,
     /// `p->mAuthContext->SetCommunity(p->mLoginCommunity)`.
@@ -290,7 +284,7 @@ pub enum EeWonLobbyPrvCall {
 }
 
 use ee_won_net::ipobj::EeWonIpAddr;
-use std::ffi::c_long;
+use std::ffi::{c_long, c_void};
 use std::sync::Mutex;
 use EeWonLobbyPrvOp as Op;
 
@@ -316,6 +310,8 @@ pub enum EeWonLobbyPrvField {
     ProductId,
     /// `mLanProductId` (+0xb6; stamped on the game listings).
     LanProductId,
+    /// `mHasSetHashFileList` (+0xa4; the login's file hashes were given, GetLobbyAuthContext's once: R6 WON round 39).
+    HashFilesSet,
 }
 
 /// The members of the lobby `owner` (the WONLobbyPrv they belong to). None: no lobby, when every read answers what
@@ -332,6 +328,9 @@ struct Vals {
     lan_product_id: u16,
     /// `mPublicAddr` (+0xe8: the address seen from outside)
     public_addr: EeWonIpAddr,
+    hash_files_set: bool,
+    /// `mHashFileList` (+0xa8: the files the CRC check hashes; none: the running executable)
+    hash_files: Vec<Vec<u8>>,
 }
 
 impl Vals {
@@ -348,6 +347,8 @@ impl Vals {
             product_id: 0,
             lan_product_id: 0,
             public_addr: EeWonIpAddr::default(),
+            hash_files_set: false,
+            hash_files: Vec::new(),
         }
     }
 }
@@ -379,6 +380,7 @@ pub extern "C" fn ee_won_lobbyprv_get(f: EeWonLobbyPrvField) -> i64 {
         F::FirewallTestDone => v.firewall_test_done as i64,
         F::ProductId => v.product_id as i64,
         F::LanProductId => v.lan_product_id as i64,
+        F::HashFilesSet => v.hash_files_set as i64,
     }
 }
 
@@ -400,7 +402,58 @@ pub extern "C" fn ee_won_lobbyprv_set(f: EeWonLobbyPrvField, x: i64) {
         F::FirewallTestDone => v.firewall_test_done = x != 0,
         F::ProductId => v.product_id = x as u16,
         F::LanProductId => v.lan_product_id = x as u16,
+        F::HashFilesSet => v.hash_files_set = x != 0,
     }
+}
+
+/// `mHashFileList`, each file NUL-ended, to the sink (nothing without a lobby).
+///
+/// # Safety
+/// `sink` takes `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyprv_hash_files(sink: ee_won_net::ffi::EeWonByteSink, context: *mut c_void) {
+    let joined: Vec<u8> = vals().as_ref().map_or(Vec::new(), |v| v.hash_files.iter().flat_map(|f| f.iter().copied().chain([0])).collect());
+    // SAFETY: the caller's sink
+    unsafe { ee_won_net::ffi::give(sink, context, &joined) };
+}
+
+/// `mHashFileList` from `len` bytes, each file NUL-ended (nothing without a lobby).
+///
+/// # Safety
+/// `bytes` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyprv_set_hash_files(bytes: *const u8, len: usize) {
+    let b = if len == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(bytes, len) } };
+    if let Some(v) = vals().as_mut() {
+        v.hash_files = b.split(|&c| c == 0).map(<[u8]>::to_vec).collect();
+        v.hash_files.pop();
+    }
+}
+
+/// GetLobbyAuthContext's CRC check (its caller tests the config's flag): once per InitAuth, the community's hash
+/// files to the login, the running executable when the list is empty (the original's SetHashFile(community) or
+/// SetHashFileList(community, mHashFileList)); nothing without a lobby.
+///
+/// # Safety
+/// `login` is a live login; `community` holds `count` characters of `wchar_size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyprv_hash_login(
+    login: *const ee_won_net::authlogin::EeWonAuthLogin,
+    community: *const c_void,
+    wchar_size: u32,
+    count: usize,
+) {
+    let files = {
+        let mut g = vals();
+        let Some(v) = g.as_mut() else { return };
+        if v.hash_files_set {
+            return;
+        }
+        v.hash_files_set = true;
+        v.hash_files.clone()
+    };
+    // SAFETY: the caller's login and text
+    unsafe { ee_won_net::authlogin::hash_files_or_exe(login, community, wchar_size, count, &files) };
 }
 
 /// LobbyIsTOUNewer: whether the recorded system or game terms of use are newer than the times given (false without
@@ -680,10 +733,10 @@ fn call(prv: usize, call: EeWonLobbyPrvCall, a: isize, b: isize, op: &dyn Fn(Op,
             0
         }
         EeWonLobbyPrvCall::InitAuth => {
-            on(Op::HashSetClear);
-            on(Op::HashListClear);
-            if b != 0 {
-                op(Op::HashListRead, b);
+            if let Some(v) = vals().as_mut() {
+                v.hash_files_set = false;
+                // `StringParser(b).ReadValue(mHashFileList)`
+                v.hash_files = if b != 0 { crate::cfgval::read_string_list(b as *const u8) } else { Vec::new() };
             }
             op(Op::CommunitySet, a);
             on(Op::AuthSetCommunity);
@@ -773,7 +826,7 @@ mod tests {
         let (_, log) = run(EeWonLobbyPrvCall::Destroy, 0, 0, &|o| (o == Op::AuthIs) as isize);
         assert_eq!(log, ["LogicMgrKill 0", "UdpIs 0", "AuthIs 0", "AuthKill 0", "AuthClear 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::InitAuth, 7, 0, &|_| 0);
-        assert_eq!(log, ["HashSetClear 0", "HashListClear 0", "CommunitySet 7", "AuthSetCommunity 0", "CdKeyCheck 0"]);
+        assert_eq!(log, ["CommunitySet 7", "AuthSetCommunity 0", "CdKeyCheck 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::Construct, 0, 0, &|_| 0);
         assert_eq!((log.len(), log[0].as_str(), log[31].as_str()), (32, "SuspendedClear 0", "AddPingLogic 0"));
     }
@@ -811,5 +864,49 @@ mod tests {
         assert_eq!(ee_won_lobbyprv_get(F::LobbyPort), 8888);
         ee_won_lobbyprv_drop(me);
         assert_eq!((ee_won_lobbyprv_get(F::VersionStatus), ee_won_lobbyprv_get(F::LobbyPort)), (100004, 0));
+    }
+
+    /// R6 WON round 39: InitLogic's private state ops (netlogicops.rs prv_op, the game's answer for the deleted
+    /// LobbySet* forwards) and the hash file list (InitAuth's read, GetLobbyAuthContext's once)
+    #[test]
+    fn init_logic_ops_and_the_hash_list_are_the_state() {
+        use crate::logics::EeWonLogicOp as LOp;
+        use crate::netlogicops::prv_op;
+        use EeWonLobbyPrvField as F;
+        let _turn = LOBBY.lock().unwrap_or_else(|e| e.into_inner());
+        let mut x = 0u8;
+        let me = &mut x as *mut u8 as *mut core::ffi::c_void;
+        call(me as usize, EeWonLobbyPrvCall::Construct, 0, 0, &|_, _| 0);
+        assert_eq!(prv_op(LOp::SetVersionStatus, 100002, 0), Some(0));
+        assert_eq!(ee_won_lobbyprv_get(F::VersionStatus), 100002);
+        prv_op(LOp::SetBehindFirewall, 2, 0);
+        assert_eq!((ee_won_lobbyprv_get(F::BehindFirewall), ee_won_lobbyprv_get(F::FirewallTestDone)), (1, 1));
+        prv_op(LOp::ResetFirewallTest, 0, 0);
+        assert_eq!(ee_won_lobbyprv_get(F::FirewallTestDone), 0);
+        prv_op(LOp::SetTOUTimes, 5, 9);
+        let (mut s, mut g) = (0i32, 0i32);
+        prv_op(LOp::TOUTimes, &mut s as *mut i32 as isize, &mut g as *mut i32 as isize);
+        assert_eq!((s, g), (5, 9));
+        assert_eq!(prv_op(LOp::Release, 0, 0), None);
+        // InitAuth's list: cleared, read; the flag cleared
+        ee_won_lobbyprv_set(F::HashFilesSet, 1);
+        let (_, log) = run(EeWonLobbyPrvCall::InitAuth, 7, c"a.dat, b.dat".as_ptr() as isize, &|_| 0);
+        assert_eq!(log[0], "CommunitySet 7");
+        assert_eq!(ee_won_lobbyprv_get(F::HashFilesSet), 0);
+        unsafe extern "C" fn sink(c: *mut core::ffi::c_void, b: *const u8, n: usize) {
+            // SAFETY: the test's vector and the bytes given
+            unsafe { (*(c as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(b, n)) };
+        }
+        let mut files: Vec<u8> = Vec::new();
+        // SAFETY: the sink and its vector
+        unsafe { ee_won_lobbyprv_hash_files(sink, &mut files as *mut Vec<u8> as *mut core::ffi::c_void) };
+        assert_eq!(files, b"a.dat\0b.dat\0");
+        // SAFETY: the bytes
+        unsafe { ee_won_lobbyprv_set_hash_files(b"x\0".as_ptr(), 2) };
+        files.clear();
+        // SAFETY: as above
+        unsafe { ee_won_lobbyprv_hash_files(sink, &mut files as *mut Vec<u8> as *mut core::ffi::c_void) };
+        assert_eq!(files, b"x\0");
+        ee_won_lobbyprv_drop(me);
     }
 }

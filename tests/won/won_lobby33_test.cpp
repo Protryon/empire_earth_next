@@ -38,6 +38,18 @@ static void PrvToRust(WONLobbyPrv& p)
     ee_won_lobbyprv_set(PF::GameTouTime, (int64_t)p.mGameTOUTime);
     ee_won_lobbyprv_set(PF::BehindFirewall, p.mBehindFirewall);
     ee_won_lobbyprv_set(PF::FirewallTestDone, p.mFirewallTestDone);
+    // R6 WON round 39: the hash file list and its flag too (each file NUL-ended)
+    ee_won_lobbyprv_set(PF::HashFilesSet, p.mHasSetHashFileList);
+    std::string aFiles;
+    for (const std::string& f : p.mHashFileList) aFiles.append(f.c_str(), f.size() + 1);
+    ee_won_lobbyprv_set_hash_files(reinterpret_cast<const uint8_t*>(aFiles.data()), aFiles.size());
+}
+static void HashFilesSink(void* inList, const uint8_t* inBytes, size_t inLength)
+{
+    std::list<std::string>& aList = *static_cast<std::list<std::string>*>(inList);
+    aList.clear();
+    for (size_t i = 0, start = 0; i < inLength; i++)
+        if (inBytes[i] == 0) { aList.push_back(std::string(reinterpret_cast<const char*>(inBytes) + start, i - start)); start = i + 1; }
 }
 static void PrvFromRust(WONLobbyPrv& p)
 {
@@ -49,6 +61,8 @@ static void PrvFromRust(WONLobbyPrv& p)
     p.mGameTOUTime = (time_t)ee_won_lobbyprv_get(PF::GameTouTime);
     p.mBehindFirewall = ee_won_lobbyprv_get(PF::BehindFirewall) != 0;
     p.mFirewallTestDone = ee_won_lobbyprv_get(PF::FirewallTestDone) != 0;
+    p.mHasSetHashFileList = ee_won_lobbyprv_get(PF::HashFilesSet) != 0;
+    ee_won_lobbyprv_hash_files(HashFilesSink, &p.mHashFileList);
     ee_won_lobbyprv_drop(&p);
 }
 

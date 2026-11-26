@@ -93,9 +93,7 @@ public:
     SmartPtr<AuthContext> mAuthContext; // 0x74
     CDKey mCDKey; // 0x78..0x94 (0x1c bytes)
     std::wstring mLoginCommunity; // 0x94..0xa4
-    bool mHasSetHashFileList; // 0xa4
-    typedef std::list<std::string> HashFileList;
-    HashFileList mHashFileList; // 0xa8..0xb4
+    // (mHasSetHashFileList +0xa4 and mHashFileList +0xa8 are lobbyprv.rs's since R6 WON round 39)
     std::string mSysTOUPath,mGameTOUPath; // 0xc8, 0xd8
     SmartPtr<ChatCommandParser> mChatCommandParser; // 0x110
     LobbyGameType mCurGameType; // 0x114..0x118

@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/authlogin.h"
+#include "rust/won_net/ffi.h"
 #include "rust/won_net/ipobj.h"
 
 /// A plain member of the lobby's private state.
@@ -26,6 +28,8 @@ enum class EeWonLobbyPrvField : uint32_t {
   ProductId,
   /// `mLanProductId` (+0xb6; stamped on the game listings).
   LanProductId,
+  /// `mHasSetHashFileList` (+0xa4; the login's file hashes were given, GetLobbyAuthContext's once: R6 WON round 39).
+  HashFilesSet,
 };
 
 /// The host's ops: each one C++ statement.
@@ -104,12 +108,6 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AuthKill,
   /// `p->mAuthContext = NULL`.
   AuthClear,
-  /// `p->mHasSetHashFileList = false`.
-  HashSetClear,
-  /// `p->mHashFileList.clear()`.
-  HashListClear,
-  /// `ee_won_cfgval_read_strings(a, &p->mHashFileList)` (the original's `StringParser(a).ReadValue(list)`).
-  HashListRead,
   /// `p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a)`.
   CommunitySet,
   /// `p->mAuthContext->SetCommunity(p->mLoginCommunity)`.
@@ -306,6 +304,29 @@ int64_t ee_won_lobbyprv_get(EeWonLobbyPrvField f);
 
 /// A member set (nothing without a lobby).
 void ee_won_lobbyprv_set(EeWonLobbyPrvField f, int64_t x);
+
+/// `mHashFileList`, each file NUL-ended, to the sink (nothing without a lobby).
+///
+/// # Safety
+/// `sink` takes `context`.
+void ee_won_lobbyprv_hash_files(EeWonByteSink sink, void *context);
+
+/// `mHashFileList` from `len` bytes, each file NUL-ended (nothing without a lobby).
+///
+/// # Safety
+/// `bytes` holds `len` bytes.
+void ee_won_lobbyprv_set_hash_files(const uint8_t *bytes, size_t len);
+
+/// GetLobbyAuthContext's CRC check (its caller tests the config's flag): once per InitAuth, the community's hash
+/// files to the login, the running executable when the list is empty (the original's SetHashFile(community) or
+/// SetHashFileList(community, mHashFileList)); nothing without a lobby.
+///
+/// # Safety
+/// `login` is a live login; `community` holds `count` characters of `wchar_size` bytes.
+void ee_won_lobbyprv_hash_login(const EeWonAuthLogin *login,
+                                const void *community,
+                                uint32_t wchar_size,
+                                size_t count);
 
 /// LobbyIsTOUNewer: whether the recorded system or game terms of use are newer than the times given (false without
 /// a lobby).
