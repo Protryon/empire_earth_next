@@ -6,18 +6,12 @@
 // ancestors'). Each dispatcher tests the kinds deepest first, as the vtables resolved an override: the first
 // kind with a body of its own runs it; the others run the base body (Base*) or the default.
 #include <windows.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <vector>
-#include <mutex>
 
 #include "lle/LowLevelEngine.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEPlayer.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"
 

@@ -4,9 +4,6 @@
 // members and the EEFOFindNewTarget* functors to 0x23a5bf (EEUnitClassImprovement.cpp follows).
 // Range 0x22f272..0x23a5bf. Unit flags: the exe's module set.
 #include <windows.h>
-#include <stdio.h>
-#include <cstddef>
-#include <string.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEUCUpgradeTable.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
@@ -36,7 +33,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIContinent.h"
-#include "ee/EECPASGFlags.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERules.h"
 #include "ee/EECombatFormulas.h"
@@ -53,7 +49,6 @@
 #include "ee/EEDatabase.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEFOFindNewTargetInMeleeRange.h"
-#include <algorithm>
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"

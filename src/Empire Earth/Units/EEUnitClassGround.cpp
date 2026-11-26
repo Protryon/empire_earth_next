@@ -2,8 +2,6 @@
 // kind (ee/EEUnitKind.h). Each EEUC* class was a subclass with these bodies as its overrides; they now run
 // behind EEUnitClassKinds.cpp's dispatchers. Each section keeps its old file's notes and addresses.
 #include <windows.h>
-#include <stdio.h>
-#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GETerrainMesh.h"

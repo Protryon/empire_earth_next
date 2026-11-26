@@ -6,9 +6,6 @@
 // LoadButtons/LoadMedia (media load), Save, the media setters, SetMaxVelocity (speed), SetRange (range), UnloadButtons/UnloadMedia
 // (media unload).
 #include <windows.h>
-#include <stdio.h>
-#include <math.h>
-#include <stddef.h>
 
 #include "lle/LowLevelEngine.h"
 
