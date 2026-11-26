@@ -12,7 +12,9 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::units::uc_view::{air_traffic, complex_mut, long, obj, stats_links, ulong, word, Ctx, Kind};
+use crate::units::waypoints::{ee_units_waypoints_len, ee_units_waypoints_start, EeUnitsWaypoints};
 use crate::world::layout::layout;
+use crate::world::unit_fields::EeUnitsUnitFields;
 use crate::world::view::{StatsView, UnitView};
 use crate::world_field;
 use std::os::raw::{c_long, c_ulong};
@@ -38,13 +40,18 @@ pub(crate) fn kind_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mu
         Kind::Class => None,
         Kind::Air => air(x, op, f),
         Kind::Buildings => buildings(x, op, b, f),
-        Kind::Ground => ground(x, op, f),
-        Kind::Kinds => kinds(x, op).or_else(|| kinds_call(x, op, b, c, f)),
+        Kind::Ground => ground(x, op, b, c, f),
+        Kind::Kinds => kinds(x, op, b).or_else(|| kinds_call(x, op, b, c, f)),
         Kind::People => people(x, op, f),
-        Kind::Shots => shots(x, op, f),
+        Kind::Shots => shots(x, op, b, c, f),
         Kind::Transports => transports(x, op, f),
     }
 }
+
+/// `kUnitCategoryBomb`, `kUnitTypeCpMissileBase`, `kUnitTypeMissileBase` (rust/sim/unit_ids.h)
+const SHOTS_CATEGORY_BOMB: u64 = 11;
+const SHOTS_TYPE_CP_MISSILE_BASE: u64 = 749;
+const SHOTS_TYPE_MISSILE_BASE: u64 = 67;
 
 /// A goal's `mKind` (an `unsigned char`).
 fn goal_kind(goal: u64) -> Option<i64> {
@@ -234,7 +241,7 @@ fn buildings(x: &Ctx<'_>, op: i32, b: i64, f: &mut [f32; 4]) -> Option<i64> {
     })
 }
 
-fn ground(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
+fn ground(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     let (u, o) = (|| x.u(), || x.o());
     Some(match op {
         EE_UNITS_UCG_TILE_X_OF => o()?.tile_xy().0,
@@ -252,15 +259,83 @@ fn ground(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
             0
         }
         EE_UNITS_UCG_WHEEL_COUNT => ulong(world_field!(u()?.complex(), mNumWheels)),
+        // `theSimple->SetResourceType(theClass->mResourceType)`, `SetResourceAmount(theClass->mResourceAmount)`
+        EE_UNITS_UCG_SET_RESOURCE_TYPE => {
+            let v: c_long = world_field!(x.cls()?.fields(), mResourceType);
+            // SAFETY: the simple unit's own record, written on the simulation thread
+            unsafe { (*(o()?.fields().ptr() as *mut EeUnitsUnitFields)).mResourceType = v as c_ulong };
+            0
+        }
+        EE_UNITS_UCG_SET_RESOURCE_AMOUNT => {
+            let v: c_long = world_field!(x.cls()?.fields(), mResourceAmount);
+            // SAFETY: as above
+            unsafe { (*(o()?.fields().ptr() as *mut EeUnitsUnitFields)).mResourceAmount = v };
+            0
+        }
+        // `theUnit->SetPower(theUnit->mUnitClass->mPower)`
+        EE_UNITS_UCG_SET_CLASS_POWER => {
+            let v: c_long = world_field!(u()?.class()?.fields(), mPower);
+            // SAFETY: the unit's own record
+            unsafe { (*complex_mut(&u()?)).mPower = v };
+            0
+        }
+        // `theOther->SetFlightTime((unsigned long)inB)` (a long member)
+        EE_UNITS_UCG_SET_FLIGHT_TIME_OF => {
+            // SAFETY: the other unit's own record
+            unsafe { (*complex_mut(&o()?)).mFlightTime = b as c_ulong as c_long };
+            0
+        }
+        // `gWorld.GetMap()->GetTile(inB, inC)`
+        EE_UNITS_UCG_MAP_TILE => {
+            x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).map_or(0, |t| t.handle() as i64)
+        }
+        // `theUnit->mWaypoints.size()`, `GetNextWaypointPoint(f)` (the Rust list behind the member)
+        EE_UNITS_UCG_WAYPOINT_COUNT => {
+            // SAFETY: the unit's waypoint list handle (its member's first word, never null)
+            let list = unsafe { word(u()?.handle(), layout().complex_waypoints) } as usize as *const EeUnitsWaypoints;
+            // SAFETY: the live list
+            unsafe { ee_units_waypoints_len(list) as i64 }
+        }
+        EE_UNITS_UCG_NEXT_WAYPOINT => {
+            // SAFETY: as above
+            let list = unsafe { word(u()?.handle(), layout().complex_waypoints) } as usize as *const EeUnitsWaypoints;
+            // SAFETY: the live list; three floats out
+            unsafe { ee_units_waypoints_start(list, f.as_mut_ptr(), std::ptr::null_mut()) };
+            0
+        }
         _ => return None,
     })
 }
 
-fn kinds(x: &Ctx<'_>, op: i32) -> Option<i64> {
+fn kinds(x: &Ctx<'_>, op: i32, b: i64) -> Option<i64> {
     Some(match op {
         EE_UNITS_UCK_D_DOMAINS => i64::from(world_field!(x.cls()?.fields(), mDomains)),
         EE_UNITS_UCK_D_IS_FLARE => i64::from(world_field!(x.cls()?.fields(), mIsFlare)),
         EE_UNITS_UCK_D_UNIT_TYPE_OF => x.o()?.class()?.unit_type() as i64,
+        // `EEUnitClassKinds(theClass)`, `EEClassBody(theClass, inB)` (the category's rows of kinds.rs, cls_dispatch.rs)
+        EE_UNITS_UCK_KINDS => {
+            let category = x.cls()?.category();
+            if category < 256 {
+                crate::units::kinds::EE_UNIT_CLASS_KINDS[category as usize] as i64
+            } else {
+                0
+            }
+        }
+        EE_UNITS_UCK_BODY => {
+            let category = x.cls()?.category();
+            if category < 256 {
+                i64::from(crate::units::cls_dispatch::EE_UNIT_CLASS_BODIES[b as usize][category as usize])
+            } else {
+                0
+            }
+        }
+        // `!theUnit->IsFoundation() || theUnit->mHitPoints <= 0 || theUnit->mCurrentPhysicsAction == 2`
+        EE_UNITS_UCK_PRIEST_UPDATES => {
+            let u = x.u()?;
+            let foundation: bool = world_field!(u.complex(), mIsFoundation);
+            let action: c_ulong = world_field!(u.complex(), mCurrentPhysicsAction);
+            i64::from(!foundation || u.hit_points() <= 0 || action == 2)
+        }
         _ => return None,
     })
 }
@@ -318,7 +393,7 @@ fn people(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
     })
 }
 
-fn shots(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
+fn shots(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     let (u, o) = (|| x.u(), || x.o());
     Some(match op {
         EE_UNITS_UCS_GOAL_STATE => u()?.goal_handle() as i64,
@@ -347,6 +422,59 @@ fn shots(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
             // SAFETY: the unit's member
             unsafe { (*complex_mut(&u()?)).mCloaked = 300000 };
             0
+        }
+        // units round 14: the shots' host's other plain statements
+        EE_UNITS_UCS_IS_BOMB => i64::from(x.cls()?.category() == SHOTS_CATEGORY_BOMB),
+        EE_UNITS_UCS_LOCATION => {
+            let at = u()?.location();
+            f[..3].copy_from_slice(&at);
+            0
+        }
+        EE_UNITS_UCS_LAUNCHER_CP_BASE | EE_UNITS_UCS_LAUNCHER_MISSILE_BASE => {
+            // SAFETY: the unit's launcher class (set for every shot)
+            let l = unsafe { crate::world::view::ClassView::of(x.t, u()?.launcher_class_handle()) }?;
+            let ty =
+                if op == EE_UNITS_UCS_LAUNCHER_CP_BASE { SHOTS_TYPE_CP_MISSILE_BASE } else { SHOTS_TYPE_MISSILE_BASE };
+            i64::from(l.unit_type() == ty)
+        }
+        EE_UNITS_UCS_SET_LAUNCH_DELAY => {
+            // SAFETY: as above
+            let l = unsafe { crate::world::view::ClassView::of(x.t, u()?.launcher_class_handle()) }?;
+            let delay: c_long = world_field!(l.fields(), mMissileDelayTime);
+            // SAFETY: the unit's member
+            unsafe { (*complex_mut(&u()?)).mFlightTime = delay };
+            0
+        }
+        EE_UNITS_UCS_SET_FLIGHT_TIME => {
+            // SAFETY: the unit's member (`SetFlightTime((unsigned long)inB)`, a long)
+            unsafe { (*complex_mut(&u()?)).mFlightTime = b as c_ulong as c_long };
+            0
+        }
+        EE_UNITS_UCS_TILE_HEIGHT => {
+            f[0] = u()?.tile()?.height();
+            0
+        }
+        EE_UNITS_UCS_TILE_PRESENT => {
+            i64::from(x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).is_some())
+        }
+        EE_UNITS_UCS_SAME_TILE => {
+            let (tx, ty) = (ee_base::random::float_to_long(f[0]), ee_base::random::float_to_long(f[1]));
+            let tile = x.world()?.map()?.tile(i64::from(tx), i64::from(ty)).map_or(0, |t| t.handle());
+            i64::from(tile == u()?.tile().map_or(0, |t| t.handle()))
+        }
+        EE_UNITS_UCS_SHELL_HOLE => {
+            i64::from(!world_field!(crate::units::uc_view::links(&u()?.class()?), mShellHoleEffect).is_null())
+        }
+        EE_UNITS_UCS_HAS_TRAIL => {
+            i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mTrailEffect).is_null())
+        }
+        EE_UNITS_UCS_HAS_RIPPLE => {
+            i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mRippleEffect).is_null())
+        }
+        // `EEUnitCast<EEComplexUnit>(a)`
+        EE_UNITS_UCS_COMPLEX_CAST => {
+            // SAFETY: the unit (or 0) the body handed over
+            unsafe { UnitView::of(x.t, x.a) }.filter(|v| v.is_complex()).map_or(0, |v| v.handle() as i64)
         }
         _ => return None,
     })

@@ -166,6 +166,9 @@ pub(crate) fn uc_view(
     if let Some(v) = crate::units::uc_fwd_view::fwd_view(kind, &x, op, b, c, f) {
         return Some(v);
     }
+    if let Some(v) = crate::units::uc_scratch_view::scratch_view(&x, op, b, c, f) {
+        return Some(v);
+    }
     base(&x, op, b, c, f)
 }
 

@@ -664,7 +664,7 @@ pub(crate) mod game {
     use std::os::raw::c_void;
 
     extern "C" {
-        fn ee_units_ghost_host(op: i32, ghost: *mut c_void, a: u64, b: i64, c: i64) -> i64;
+        pub(crate) fn ee_units_ghost_host(op: i32, ghost: *mut c_void, a: u64, b: i64, c: i64) -> i64;
     }
 
     /// the game's host (ghost_make.rs's extern functions use it too)
@@ -672,6 +672,9 @@ pub(crate) mod game {
 
     impl GhostHost for Game {
         fn ghost(&mut self, op: i32, ghost: u64, a: u64, b: i64, c: i64) -> i64 {
+            if let Some(v) = crate::units::ghost_scratch_view::ghost_scratch_view(op, ghost, a, b, c) {
+                return v;
+            }
             if let Some(v) = crate::units::ghost_view::ghost_view(op, ghost, a, b, c) {
                 return v;
             }

@@ -740,14 +740,11 @@ constexpr static const int32_t EE_UNITS_CZ_CAN_TAKE = 27;
 /// player `a`'s units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_UNITS_CZ_PLAYER_UNITS = 31;
 
-/// tag list `d`'s point `c` at plane `b`'s frame in the scratch transformation into `io.p`
+/// tag list `d`'s point `c` at plane `b`'s frame in the transformation `io.list` into `io.p`
 constexpr static const int32_t EE_UNITS_CLS_CR_TAG = 73;
 
 /// unit `a`'s `mOrientation = (io.p[0], io.p[1], io.p[2])`
 constexpr static const int32_t EE_UNITS_CLS_CR_SET_ORIENTATION = 74;
-
-/// the scratch transformation's `SetPosition(io.p)`
-constexpr static const int32_t EE_UNITS_CLS_CR_SET_POSITION = 75;
 
 /// unit `a`'s `mPhysicalModel.SetScale(io.f)`
 constexpr static const int32_t EE_UNITS_CLS_CR_SET_SCALE = 76;
@@ -778,15 +775,6 @@ constexpr static const int32_t EE_UNITS_CLS_CR_TAG_LIST = 215;
 
 /// tag list `b`'s `mPoints.size()`
 constexpr static const int32_t EE_UNITS_CLS_CR_TAG_COUNT = 216;
-
-/// the scratch transformation = unit `a`'s location
-constexpr static const int32_t EE_UNITS_CLS_CR_SCRATCH_LOCATION = 217;
-
-/// `EETagPointList::Scale(the scratch, a->GetStats()->GetScale())`
-constexpr static const int32_t EE_UNITS_CLS_CR_SCRATCH_SCALE = 218;
-
-/// unit `a`'s `SetTransformation(the scratch, true)`
-constexpr static const int32_t EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION = 219;
 
 /// unit `a`'s `GetGoal()`
 constexpr static const int32_t EE_UNITS_CLS_CR_GOAL = 220;
@@ -1273,7 +1261,7 @@ constexpr static const int32_t EE_UNITS_CLS_LV_SET_FACING = 91;
 /// `gCameraFollowing = false`
 constexpr static const int32_t EE_UNITS_CLS_LV_CAMERA_OFF = 92;
 
-/// `gWorld.mMap->GetClosestTile(io.p, ...)`
+/// `gWorld.mMap->GetClosestTile(io.p, ...)` (`io.list`: the tile's x and y, two `long`s)
 constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE = 39;
 
 /// `EEGetPursuerOf(unit a)`
@@ -1414,14 +1402,11 @@ constexpr static const int32_t EE_UNITS_CLS_ST_CHAIN = 98;
 /// class `b`'s `UpdateCloakDetection(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_ST_CLOAK_DETECTION = 99;
 
-/// unit `a`'s area effects' `ApplyModifiers(3, the input, the radius, a)`
+/// unit `a`'s area effects' `ApplyModifiers(3, the input, the radius, a)` (`io.list`: the two `long`s)
 constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
 
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING = 103;
-
-/// `EEGetRules().mCombat.mPowerRegenerationInterval`
-constexpr static const int32_t EE_UNITS_CLS_ST_POWER_INTERVAL = 227;
 
 /// `gMiniMap->MoveUnit(a, -10000, -10000, its tile)`
 constexpr static const int32_t EE_UNITS_CLS_ST_MINI_MAP_SHOW = 228;
@@ -1434,12 +1419,6 @@ constexpr static const int32_t EE_UNITS_CLS_ST_OPACITY_CHAIN = 230;
 
 /// unit `a`'s `HasEffect(8)`
 constexpr static const int32_t EE_UNITS_CLS_ST_HAS_AREA_CLOAK = 231;
-
-/// the modifier's input and radius = 0
-constexpr static const int32_t EE_UNITS_CLS_ST_RESET_MODIFIERS = 232;
-
-/// the modifier's radius
-constexpr static const int32_t EE_UNITS_CLS_ST_MODIFIER_RADIUS = 233;
 
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
@@ -21500,14 +21479,6 @@ int64_t ee_units_ucb_call(int32_t what,
 /// `flag` is a live bool.
 int32_t ee_units_ucb_wall_piece_part(int32_t index, bool *flag);
 
-extern int64_t ee_units_ucg_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
 /// The ground classes' body `what` (`EE_UNITS_UCG_DO_*`) of `class` on `unit`: `a` a simple unit, `f` a value;
 /// the choice, or 0.
 ///
@@ -21556,14 +21527,6 @@ void ee_units_uck_sound(void *class_,
                         float *volume,
                         float *pan,
                         float *pitch);
-
-extern int64_t ee_units_uck_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The kind dispatcher `what` (`EE_UNITS_UCK_DO_*`) of `class` on `unit`: `a` an object (a cargo, a transport,
 /// a tile vector), `b`, `c` values or the caller's points, `f` a value; the answer, or 0.
@@ -21798,15 +21761,6 @@ bool ee_units_ucp_can_convert(void *priest,
 /// # Safety
 /// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit`, on the simulation thread.
 bool ee_units_ucs_impact(int32_t what, void *class_, void *unit);
-
-/// the shots' host (EEUnitClassShots.cpp; ucs_impact.rs's too)
-extern int64_t ee_units_ucs_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The shots' body `what` (`EE_UNITS_UCS_DO_*`) of `class` on `unit`: `a` an object, `f` a point (or NULL);
 /// the choice, or 0.
