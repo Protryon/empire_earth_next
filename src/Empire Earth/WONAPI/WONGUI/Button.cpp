@@ -646,12 +646,7 @@ extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a
     switch (op) {
     case To::BasePaint: t->Component::Paint(*g); return 0;
     // (the item, the members, the sizes, SetSize and LocalToRoot are tipobj.rs's in the game: R6 WON GUI round 39)
-    case To::HasOwnScheme: return t->GetOwnColorScheme() != NULL ? 1 : 0;
-    case To::ListScheme: return (intptr_t)t->mListArea->GetColorScheme();
-    case To::ListLeftPad: return t->mListArea->GetLeftPad();
-    case To::ListRightPad: return t->mListArea->GetRightPad();
-    case To::ListTopPad: return t->mListArea->GetTopPad();
-    case To::ListVertOffset: return t->mListArea->GetVertOffset();
+    // (the schemes and the list's pads and offset too: R6 WON GUI round 40)
     case To::ScrollPaint: t->mListArea->ScrollPaint(*g); return 0;
     case To::OpenPopup: OpenWith(t->mListArea->GetRoot(), PopupParams(t, EE_WON_TIP_POPUP_FLAGS, t->mListArea, (int)a, (int)b)); return 0;
     case To::ClosePopup: t->mListArea->GetRoot()->ClosePopup(t); return 0;

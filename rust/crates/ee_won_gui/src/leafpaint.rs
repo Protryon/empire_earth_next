@@ -264,6 +264,23 @@ pub unsafe extern "C" fn ee_won_leaf_members_register(at: *const EeWonLeafAt) {
     }
 }
 
+/// A field of the game's list `list`'s scroll pane (`GetField(f)`: its pane at the registered offset); None before
+/// the registration.
+pub(crate) fn list_field(list: isize, f: crate::guihost::EeWonGuiField) -> Option<isize> {
+    let at = (*LEAF_AT.lock().ok()?)?;
+    // SAFETY: the game's live list (the caller's) and its Rust pane at the registered offset
+    let w = unsafe {
+        crate::paneobj::ee_won_pane_call(
+            word(list, at.list_pane) as *const crate::paneobj::EeWonScrollPane,
+            crate::paneobj::EeWonPaneCall::GetField,
+            f as isize,
+            0,
+            0,
+        )
+    };
+    Some(w as i32 as isize)
+}
+
 /// A word at `p + off` (a pointer member or a SmartPtr).
 ///
 /// # Safety
