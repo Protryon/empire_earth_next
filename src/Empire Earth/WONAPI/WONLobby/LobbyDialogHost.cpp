@@ -186,13 +186,13 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::FrameRight: return WONShell::Op(reinterpret_cast<Component*>(a), EeWonShellOp::GetFrameBorder, 2);
     case Op::RootWidth: return GetLobbyRoot()->Width();
     case Op::RootHeight: return GetLobbyRoot()->Height();
-    case Op::FontStringWidth: return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
-    case Op::FontStringWidthRange: return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b), 0, reinterpret_cast<const GUIString*>(b)->length());
-    case Op::FontCharWidth: return aLabel->mWrappedText->mFont->GetCharacterWidth((int)b);
-    case Op::FontHeight: return aLabel->mWrappedText->mFont->GetHeight();
+    case Op::FontStringWidth: return aLabel->mWrappedText->GetFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
+    case Op::FontStringWidthRange: return aLabel->mWrappedText->GetFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(b), 0, reinterpret_cast<const GUIString*>(b)->length());
+    case Op::FontCharWidth: return aLabel->mWrappedText->GetFont()->GetCharacterWidth((int)b);
+    case Op::FontHeight: return aLabel->mWrappedText->GetFont()->GetHeight();
     case Op::TickCount: return (intptr_t)(uint32_t)WONTickCount();
     case Op::Invalidate: aComp->Invalidate(); return 0;
-    case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->mText;
+    case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->GetText();
     // round 3: TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog
     // as text (WON's HTML rendering is not ported)
     case Op::BrowserShowTou: reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false); return 0;

@@ -7,18 +7,18 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guihost.h"
 #include "rust/won_gui/platfont.h"
+
+/// The kind of a Rust-made RefCount that is a game WrappedText (guistrobj.rs's texts are 0, wmobj.rs's events 1).
+constexpr static const uint32_t EE_WON_RC_WRAP = 2;
 
 /// The Rust WrappedText (the original's members but the text and font).
 struct EeWonWrapText;
 
-/// Where the game's WrappedText keeps its members and the classes that hold one keep it (offsets in a
-/// `WrappedText`, a `Label`, an `MSButtonBase` and a `Font`; GuiHost.cpp registers them; R6 WON GUI round 40).
+/// Where the classes that hold one keep their wrapped text, and `Font::mRust` (offsets in a `Label`, an
+/// `MSButtonBase` and a `Font`; GuiHost.cpp registers them; R6 WON GUI rounds 40-41).
 struct EeWonWrapAt {
-  /// `WrappedText::mText` (a GUIString: its text's pointer), `mFont` (a SmartPtr), `mObj`
-  size_t text;
-  size_t font;
-  size_t obj;
   /// `Label::mWrappedText`, `MSButtonBase::mText` (SmartPtrs)
   size_t label_text;
   size_t msbtn_text;
@@ -121,11 +121,23 @@ size_t ee_won_wrap_paint_font(const EeWonWrapText *o,
                               EeWonDrawOp *out,
                               size_t cap);
 
-/// Registers the wrapped texts' member offsets (GuiHost.cpp at static initialisation).
+/// Registers the holders' offsets (GuiHost.cpp at static initialisation).
 ///
 /// # Safety
 /// `at` points at the offsets.
 void ee_won_wrap_register(const EeWonWrapAt *at);
+
+/// `new WrappedText` (no reference yet): the empty text, no font, wrapping, not centred.
+void *ee_won_wrapt_new();
+
+/// One of WrappedText's methods on the game's wrapped text `w` (`which`; `c` the argument): `SetText(*(const
+/// GUIString*)c)`, the setters that may rewrap, the size, `GetFont()` and `&GetText()`.
+///
+/// # Safety
+/// `w` is a live object of `ee_won_wrapt_new`; `c` as the method needs it.
+ptrdiff_t ee_won_wrapt_call(void *w,
+                            EeWonWbText which,
+                            ptrdiff_t c);
 
 }  // extern "C"
 

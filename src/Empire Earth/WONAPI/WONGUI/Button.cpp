@@ -134,7 +134,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
 // the colours, alignments, focus style and pads)
 MSButtonBase::MSButtonBase() {
     this->mMsb=ee_won_msbtn_new(this,ee_won_guicpp_msbtn_call);
-    this->mText=new WrappedText;
+    this->mText=WrappedText::New();
     this->mText->SetWrap(false);
     this->mText->SetFont(this->GetNamedFont("MSButton"));
 }
@@ -150,22 +150,12 @@ MSButtonBase::~MSButtonBase() { ee_won_msbtn_free(this->mMsb); }
 static WrappedText* Txt(intptr_t a) { return (WrappedText*)a; }
 static Image* Img(intptr_t a) { return (Image*)a; }
 
-// a wrapped text's method (EeWonWbText; `b` the text)
-static intptr_t TextOp(intptr_t which, intptr_t b, intptr_t c)
-{
-    switch ((EeWonWbText)which) {
-    case EeWonWbText::New: { WrappedText* t = new WrappedText; t->AddRef(); return (intptr_t)t; }
-    // (its methods are wrapobj.rs game_wrap_op's in the game: R6 WON GUI round 40)
-    default: return 0;
-    }
-}
-
 extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WONButton* t = (WONButton*)inComp;
     switch (op) {
     case Op::WbBaseCopy: t->Button::CopyAttributes((Button*)a); return 0;
-    case Op::WbText: return TextOp(a,b,c);
+    // (a wrapped text's methods and New are wrapobj.rs game_wrap_op's: R6 WON GUI rounds 40-41)
     // (WbImage, WbFont and the texts' references are gamewin.rs wonbtn_op's in the game: R6 WON GUI round 38)
     case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, Img(c), Txt(d)), WONDrawNoCall()); return 0;
     default: return 0; // (the size and the button's state: gamewin.rs common_op's)

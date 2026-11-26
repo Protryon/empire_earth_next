@@ -577,6 +577,12 @@ pub unsafe extern "C" fn ee_won_gstr_free(p: *mut EeWonGstr) {
         // SAFETY: one wmobj.rs made
         return unsafe { crate::wmobj::free_rust_event(p as *mut c_void) };
     }
+    // a game wrapped text (R6 WON GUI round 41)
+    // SAFETY: as above
+    if unsafe { (*p).kind } == crate::wrapobj::EE_WON_RC_WRAP {
+        // SAFETY: one wrapobj.rs made
+        return unsafe { crate::wrapobj::free_rc(p as *mut c_void) };
+    }
     // SAFETY: the contract: made by Box
     let mut b = unsafe { Box::from_raw(p) };
     b.buf.free();

@@ -199,7 +199,7 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
     case Op::PaintBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, (int)b, (int)c); return 0;
     case Op::LabelDrawWrapped: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, NULL, t->mWrappedText.get()), WONDrawNoCall()); return 0;
     // the constructor's statements (guictor.rs)
-    case Op::CtorWrapNew: t->mWrappedText=new WrappedText; return 0;
+    // (CtorWrapNew is wrapobj.rs label_new_text's: R6 WON GUI round 41)
     case Op::CtorFontNamed: t->mWrappedText->SetFont(t->GetNamedFont("Label")); return 0;
     case Op::CtorBackgroundNone: t->mBackground.SetColor(-1); return 0;
     default: return ComponentOp(t, op, a, b);
@@ -588,18 +588,6 @@ PopupMenu::PopupMenu()
 PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }
 
-// WrappedText (R6 WON round 38): the Rust object (wrapobj.rs) wraps the text it is handed with the font's measure
-// (the measure is wrapobj.rs's too, over platfont.rs: R6 WON GUI round 36)
-namespace WONAPI {
-WrappedText::WrappedText() : mObj(ee_won_wrap_new()) {}
-WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won_wrap_new()) {}
-// Recomputes the line breaks and the text's width and height for the font and maximum width
-void WrappedText::CalcWrap()
-{
-    ee_won_wrap_calc_font(this->mObj, this->mFont.get() != NULL ? this->mFont->mRust : NULL, this->mText.mData->mText, this->mText.length());
-}
-}
-
 // The image and rectangle components' paints (R6 WON round 37 draw plans; ImageComponent.cpp folded in, round 38)
 namespace WONAPI {
 // Draws the image stretched to the component, once at the origin, or tiled over the component clipped to it
@@ -638,11 +626,10 @@ void RectangleComponent3D::Paint(Graphics &g)
     ee_won_gui_split_register(EeWonGuiSplitHost::Label, ee_won_guicpp_label_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::Split, ee_won_guicpp_split_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::List, ee_won_guicpp_list_call), true);
-// where wrapobj.rs reads a wrapped text's members and its holders' (R6 WON GUI round 40)
+// where wrapobj.rs reads its holders' wrapped texts (R6 WON GUI round 40; the text a Rust object since round 41)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
-static const EeWonWrapAt kWrapAt = {offsetof(WrappedText, mText), offsetof(WrappedText, mFont), offsetof(WrappedText, mObj),
-    offsetof(Label, mWrappedText), offsetof(MSButtonBase, mText), offsetof(Font, mRust)};
+static const EeWonWrapAt kWrapAt = {offsetof(Label, mWrappedText), offsetof(MSButtonBase, mText), offsetof(Font, mRust)};
 #pragma clang diagnostic pop
 [[maybe_unused]] static const bool sWrapAt = (ee_won_wrap_register(&kWrapAt), true);
 // where the Rust area reads a segment's members (gamewin.rs text_host_op, R6 WON GUI round 40)

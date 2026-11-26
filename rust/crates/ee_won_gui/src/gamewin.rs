@@ -956,7 +956,7 @@ pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
         Op::WbText if a == Wt::Hold as isize => rf(b, true),
         Op::WbText if a == Wt::Release as isize => rf(b, false),
         // the wrapped text's methods (wrapobj.rs, R6 WON GUI round 40)
-        Op::WbText if a != Wt::New as isize => {
+        Op::WbText => {
             // SAFETY: `a` an EeWonWbText (the op's contract)
             let which = unsafe { std::mem::transmute::<u32, Wt>(a as u32) };
             crate::wrapobj::game_wrap_op(b, which, c)
