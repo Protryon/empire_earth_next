@@ -17,7 +17,7 @@ use ee_sim::tech::capture_rec::{
 use ee_sim::tech::tech_ids::ee_tech_epoch_count;
 
 use super::persistent::Longs;
-use super::{h, hp, O, P};
+use super::{O, P};
 use crate::tech_tree::host::ee_gamecpp_tech_node_ids;
 use crate::tech_tree::objects as ob;
 use ee_sim::tech::nodes::{EeTechNodeOp, EeTechTreeOp};
@@ -59,7 +59,7 @@ fn node_bytes(r: &mut TbRecord, node: P) {
 /// Whether GetCost and SumCosts index gUnitClassTable and the upgrades in range for the node (the sweep calls them on
 /// every node; the game only on the ones it offers).
 fn node_indexes_safe(node: P) -> bool {
-    let count = h(O::TkClassCount, 0, &[]) as c_ulong;
+    let count = ob::class_count() as c_ulong;
     if ob::unit_class(node, 0) as i64 as c_ulong >= count {
         return false;
     }
@@ -89,8 +89,8 @@ fn sum_costs_safe(tree: P, id: c_long, visiting: &mut BTreeSet<c_long>) -> bool 
         && sum_costs_safe(tree, d.mPrerequisite3, visiting)
         && sum_costs_safe(tree, d.mPrerequisite4, visiting);
     let class_index = ob::unit_class(node, 0) as i64;
-    if safe && hp(O::TkClassAt, 0, &[class_index]) != 0 {
-        safe = sum_costs_safe(tree, h(O::TkClassTechnology, 0, &[class_index]) as c_long, visiting);
+    if safe && ob::class_at(class_index) != 0 {
+        safe = sum_costs_safe(tree, ob::class_technology(class_index) as c_long, visiting);
     }
     visiting.remove(&id);
     safe
@@ -99,9 +99,9 @@ fn sum_costs_safe(tree: P, id: c_long, visiting: &mut BTreeSet<c_long>) -> bool 
 /// TSWP (EETechCaptureSweep): per player (1 on) its tree's head record, then one record per node and epoch.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
-    let players = h(O::TbWorldPlayers, 0, &[]) as c_ulong;
+    let players = ob::world_players() as c_ulong;
     for p in 1..players {
-        let player = hp(O::TbWorldPlayer, 0, &[p as i64]);
+        let player = ob::world_player(p as i64);
         if player == 0 || ob::player_tree(player) == 0 {
             continue;
         }

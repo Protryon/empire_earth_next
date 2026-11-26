@@ -255,7 +255,7 @@ pub fn prepare_human(human_out: bool) {
         return;
     }
     for i in 1..h(O::NumPlayers, 0, &[]) {
-        let other = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
+        let other = crate::tech_tree::objects::world_player(i);
         if other == 0 || other == human {
             continue;
         }
@@ -334,7 +334,7 @@ fn world(id: u32) -> ee_data::tables::EeDataWorldEntry {
 
 /// The player's first living building (0: none).
 fn first_building(player: c_ulong) -> usize {
-    let p = gc::h(gc::O::TbWorldPlayer, 0, &[player as i64]) as usize;
+    let p = crate::tech_tree::objects::world_player(player as i64);
     let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
         if gc::h(gc::O::UnComplex, u, &[]) != 0
@@ -387,7 +387,7 @@ pub fn volcano_boulders() -> Vec<c_ulong> {
     let boulder = EEUnitTypeID::kUnitTypeVolcanoProjectile as i64;
     let mut out = Vec::new();
     for i in 0..h(O::NumPlayers, 0, &[]) {
-        let p = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
+        let p = crate::tech_tree::objects::world_player(i);
         let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
         while u != 0 {
             if h(O::UnitType, u, &[]) == boulder {
@@ -586,7 +586,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
 fn list_search_sweep() {
     capture_only(tag(b"CBSL"));
     for p in 1..h(O::NumPlayers, 0, &[]) {
-        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
+        let player = crate::tech_tree::objects::world_player(p);
         if player == 0 {
             continue;
         }
@@ -640,7 +640,7 @@ fn missile_sweep() {
     }
     let mut armed: Vec<Vec<usize>> = Vec::new();
     for p in 1..h(O::NumPlayers, 0, &[]) {
-        let all = armed_units(gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize, true, false);
+        let all = armed_units(crate::tech_tree::objects::world_player(p), true, false);
         if !all.is_empty() {
             armed.push(all);
         }

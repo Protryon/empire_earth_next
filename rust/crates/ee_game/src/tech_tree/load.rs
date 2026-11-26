@@ -261,7 +261,7 @@ pub extern "C" fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_v
     // SAFETY: the tree's record
     unsafe { (*t).mPlayer = player.cast() };
     if !player.is_null() {
-        let index = h(O::TkPlId, player as P, &[]) as c_long;
+        let index = ob::player_id(player as P) as c_long;
         // SAFETY: as above
         unsafe { (*t).mPlayerIndex = index };
     }
@@ -325,8 +325,8 @@ pub extern "C" fn ee_gamecpp_tech_needs_unit_media(node: *mut c_void, captured: 
     // the node's class (none for an id 0 or less or an empty table entry) and its family
     let class_family = || {
         let unit_class = data_of(n).mUnitClass;
-        let class = if unit_class > 0 { hp(O::TkClassAt, 0, &[unit_class as i64]) } else { 0 };
-        (unit_class, if class != 0 { Some(h(O::TbClassFamily, class, &[]) as i32) } else { None })
+        let class = if unit_class > 0 { ob::class_at(unit_class as i64) } else { 0 };
+        (unit_class, if class != 0 { Some(ob::class_family(class) as i32) } else { None })
     };
     let (_, family) = class_family();
     let f = fields_of(n);

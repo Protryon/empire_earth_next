@@ -351,7 +351,7 @@ pub fn text_elements(out: &mut Vec<String>) {
     }
     let mut s = "  players".to_string();
     for p in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
-        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
+        let player = crate::tech_tree::objects::world_player(p);
         s += &format!(" |{}", if player != 0 { ht(O::PlayerName, player, 0) } else { "-".into() });
     }
     out.push(s);
@@ -836,7 +836,7 @@ pub fn form_digest(first: c_ulong, last: c_ulong, group: c_long, out: &mut Vec<S
 pub fn players_digest(out: &mut Vec<String>) {
     let n = super::sim_ops::h(super::sim_ops::EeSimDriverSim::NumPlayers, 0, &[]) as c_ulong;
     for p in 0..n {
-        let q = gc::h(gc::O::TbWorldPlayer, 0, &[p as i64]) as usize;
+        let q = crate::tech_tree::objects::world_player(p as i64);
         if q == 0 {
             out.push(format!("  player {p} none"));
             continue;

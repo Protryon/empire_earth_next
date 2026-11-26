@@ -60,7 +60,6 @@ void EETechTree::GetChecksum(ESChecksum& ioChecksum)
 #define TREE ((EETechTree*)p)
 #define TPL ((EEPlayer*)p)
 #define TFILE ((FSFileSpec*)p)
-#define TEFFECT ((EEEventEffect*)p)
 
 // the cost factors (host.rs; EEPWorldHelper.cpp's default)
 double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGraphics.cpp
@@ -89,15 +88,11 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TbGlobalTree: return P64(&gTechTree);
     case O::TbIsHuman: return ((EEPlayer*)p)->IsHuman();
-    case O::TbClassFamily: return ((EEUnitClass*)p)->mFamily;
-    case O::TbWorldPlayers: return (int64_t)gWorld.GetNumPlayers();
-    case O::TbWorldPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
     // (EECore9OpD7) the C++ calls and members of the nodes' and epochs' bodies in Rust (gamecpp tech.rs; p the node or the epoch, the
     // player for the Pl ops): one statement each
     case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
     case O::TkVariant: return P64(static_cast<EeDataGameVariantFields*>(TVARIANT));
     case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);
-    case O::TkPlayerJit: return ((EEPlayer*)p)->mJITManufacturing;
     case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
     case O::TkPushId: ((std::vector<long>*)a[0])->push_back((long)a[1]);
         break;
@@ -108,16 +103,12 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // (EECore9OpD6) the C++ calls and members of the tech tree's host in Rust (gamecpp tech.rs; p the tree unless noted): one statement
     // each
-    case O::TkCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::TkPlId: return (int64_t)TPL->mPlayerID;
     case O::TkPostShowEpochName: gUserInterface->PostShowEpochName();
         break;
     case O::TkMainGameForm: return P64(gUIManager->GetMainGameForm());
     case O::TkRefreshGroup: gUIManager->GetMainGameForm()->mRefreshGroup = true;
         break;
     case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
-    case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);
-        break;
     case O::TkEpochReached: TPL->EpochReached((long)a[0]);
         break;
     case O::TkStatReset: TPL->mSavedGroups.Reset((long)a[0], 1);
@@ -138,21 +129,11 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TkEventsEnabled: gEventsEnabled = a[0] != 0;
         break;
-    case O::TkIsLocal: return gWorld.mPlayers[TREE->mPlayerIndex] == gWorld.GetCurrentPlayer();
     case O::TkAssert: ESVERIFY_AT(false, a[0]);
         break;
     case O::TkEvent: return P64(EEEvent::Get((long)a[0]));
     case O::TkEventEffects: return (int64_t)((EEEvent*)p)->GetNumEffects();
     case O::TkEventEffect: return P64(EEEvent::GetEventEffect(((EEEvent*)p)->GetEffect((long)a[0])));
-    case O::TkEffKind: return TEFFECT->mKind;
-    case O::TkEffUnitClass: return TEFFECT->mUnitClass;
-    case O::TkEffTechnology: return TEFFECT->mTechnology;
-    case O::TkEffButton: return TEFFECT->mButton;
-    case O::TkEffAreaEffect: return TEFFECT->mAreaEffect;
-    case O::TkEffMediaIndex: return TEFFECT->mMediaIndex;
-    case O::TkEffNewUnitClass: return TEFFECT->mNewUnitClass;
-    case O::TkEffSoundId: return TEFFECT->mSoundID;
-    case O::TkEffAttribute: return TEFFECT->mAttribute;
     case O::TkButtonAcquire: EEButtonObject::Get(a[0])->Acquire();
         break;
     case O::TkButtonRelease: EEButtonObject::Get(a[0])->Release();
@@ -169,10 +150,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TkSoundUnload: EESoundObject::Get(a[0])->UnloadMedia();
         break;
-    case O::TkClassCount: return (int64_t)EEUnitClassCount();
-    case O::TkClassAt: return P64(gUnitClassTable[a[0]]);
-    case O::TkClassType: return (int64_t)((EEUnitClass*)p)->mUnitType;
-    case O::TkClassTechnology: return gUnitClassTable[a[0]] != NULL ? gUnitClassTable[a[0]]->mTechnology : 100000;
     case O::TkFileOpenRead: TFILE->Open(kFileAccessRead);
         break;
     case O::TkFileLength: TFILE->GetLength(*(unsigned long*)a[0]);

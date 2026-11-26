@@ -122,8 +122,8 @@ fn media(player: P, what: i32, id: i32, load: bool) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_update_interface(tree: *mut c_void, epoch_changed: bool) {
     let tree = tree as P;
-    let current = hp(O::TkCurrentPlayer, 0, &[]);
-    if current == 0 || load::player_index(tree) as i64 != h(O::TkPlId, current, &[]) {
+    let current = ob::current_player();
+    if current == 0 || load::player_index(tree) as i64 != ob::player_id(current) {
         return;
     }
     if epoch_changed {
@@ -189,7 +189,14 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         }
         EE_TECH_HOST_NEEDS_UNIT_MEDIA => return load::ee_gamecpp_tech_needs_unit_media(node as *mut c_void, true) as i32,
         EE_TECH_HOST_TRIGGER => {
-            h(O::TkTrigger, tree, &[v[0] as i64, v[1] as i64, unit as i64]);
+            let (index, player) = (load::player_index(tree), load::player_pointer(tree));
+            ee_sim::scenario::event::ee_scenario_ev_trigger(
+                v[0] as c_long,
+                index,
+                v[1] as c_long,
+                player as *mut c_void,
+                unit as *mut c_void,
+            );
         }
         EE_TECH_HOST_UPDATE_INTERFACE => ee_gamecpp_tech_update_interface(tree as *mut c_void, v[0] != 0),
         EE_TECH_HOST_ON_RESEARCHED => {
@@ -216,7 +223,9 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         EE_TECH_HOST_EVENTS_ENABLED => {
             h(O::TkEventsEnabled, 0, &[(v[0] != 0) as i64]);
         }
-        EE_TECH_HOST_IS_LOCAL => return h(O::TkIsLocal, tree, &[]) as i32,
+        EE_TECH_HOST_IS_LOCAL => {
+            return (ob::world_player(load::player_index(tree) as i64) == ob::current_player()) as i32
+        }
         EE_TECH_HOST_SHOW_EPOCH_NAME => show_epoch_name(tree, Some(v[0] as i64)),
         EE_TECH_HOST_ASSERT => {
             h(O::TkAssert, 0, &[v[0] as i64]);
@@ -226,41 +235,45 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
             return if event != 0 { h(O::TkEventEffects, event, &[]) as i32 } else { 0 };
         }
         EE_TECH_HOST_EFFECT => {
-            let effect = hp(O::TkEventEffect, hp(O::TkEvent, 0, &[node_data(node).mResearchedEvent as i64]), &[v[0] as i64]);
-            v[0] = h(O::TkEffKind, effect, &[]) as i32;
-            v[1] = h(O::TkEffUnitClass, effect, &[]) as i32;
-            v[2] = h(O::TkEffTechnology, effect, &[]) as i32;
+            let e = effect(node, v[0]);
+            (v[0], v[1], v[2]) = (e.mKind, e.mUnitClass, e.mTechnology);
         }
         EE_TECH_HOST_MEDIA_EFFECT => {
-            let effect = hp(O::TkEventEffect, hp(O::TkEvent, 0, &[node_data(node).mResearchedEvent as i64]), &[v[0] as i64]);
-            let kind = h(O::TkEffKind, effect, &[]);
-            v[0] = kind as i32;
-            let field = match kind {
-                1 => O::TkEffButton,
-                2 => O::TkEffAreaEffect,
-                6 => O::TkEffMediaIndex,
-                0x13 => O::TkEffNewUnitClass,
-                _ => O::TkEffSoundId,
+            let e = effect(node, v[0]);
+            v[0] = e.mKind;
+            v[1] = match e.mKind {
+                1 => e.mButton,
+                2 => e.mAreaEffect,
+                6 => e.mMediaIndex,
+                0x13 => e.mNewUnitClass,
+                _ => e.mSoundID,
             };
-            v[1] = h(field, effect, &[]) as i32;
-            v[2] = (h(O::TkEffAttribute, effect, &[]) == 0x28) as i32;
+            v[2] = (e.mAttribute == 0x28) as i32;
         }
         EE_TECH_HOST_MEDIA => media(unit, v[0], v[1], v[2] != 0),
         EE_TECH_HOST_CLASS_TYPE => {
-            let class = if v[0] >= 0 && (v[0] as i64) < h(O::TkClassCount, 0, &[]) {
-                hp(O::TkClassAt, 0, &[v[0] as i64])
+            let class = if v[0] >= 0 && (v[0] as i64) < ob::class_count() {
+                ob::class_at(v[0] as i64)
             } else {
                 0
             };
             if class == 0 {
                 return 0;
             }
-            v[0] = h(O::TkClassType, class, &[]) as i32;
+            v[0] = ob::class_type(class) as i32;
             return 1;
         }
         _ => {}
     }
     0
+}
+
+/// Effect `i` of the node's researched event (a record of gEventEffects, copied out).
+fn effect(node: P, i: i32) -> ee_sim::scenario::event::EeScenarioEvEffect {
+    let event = hp(O::TkEvent, 0, &[node_data(node).mResearchedEvent as i64]);
+    let at = hp(O::TkEventEffect, event, &[i as i64]);
+    // SAFETY: the event's effect record (gEventEffects' element)
+    unsafe { *(at as *const ee_sim::scenario::event::EeScenarioEvEffect) }
 }
 
 /// EETechTree::Load (the tech tree file): every epoch block (the original: exactly 15), the epoch count, and the
@@ -354,7 +367,7 @@ unsafe extern "C" fn sum_cost(tree: *mut c_void, id: i32, resource: i32, unit_cl
 }
 
 unsafe extern "C" fn sum_class_technology(_tree: *mut c_void, unit_class: i32) -> i32 {
-    h(O::TkClassTechnology, 0, &[unit_class as i64]) as i32
+    ob::class_technology(unit_class as i64) as i32
 }
 
 /// EETechTree::SumCostsUncaptured: the resource costs of a tech and every unresearched prerequisite and upgrade path
@@ -422,13 +435,20 @@ pub extern "C" fn ee_gamecpp_tech_node_cost(
         if stats != 0 {
             input.cost_scale = hd(O::TkStatsCostScale, stats, &[], &[]);
         }
-        input.jit = h(O::TkPlayerJit, player, &[]) != 0 && h(O::TkClassHasRallyPoint, 0, &[unit_class as i64]) != 0;
+        input.jit = player_jit(player) && h(O::TkClassHasRallyPoint, 0, &[unit_class as i64]) != 0;
         if input.jit {
             input.jit_factor = hd(O::TkJitFactor, 0, &[], &[]);
         }
     }
     // SAFETY: the record
     unsafe { ee_tech_node_cost(&input) as c_long }
+}
+
+/// The player's `mJITManufacturing`.
+fn player_jit(player: P) -> bool {
+    let at = player + ee_sim::world::layout::layout().player_fields as P;
+    // SAFETY: a live player's record
+    unsafe { (*(at as *const ee_sim::world::player_fields::EeUnitsPlayerFields)).mJITManufacturing }
 }
 
 /// TCST (TEST ONLY: ee_sim tech capture_rec.rs): a node's (`kind` 0) or an epoch's (1) GetCost, recorded while the
@@ -513,7 +533,7 @@ pub(crate) fn tree_player(tree: P) -> P {
     if player != 0 {
         player
     } else {
-        hp(O::TbWorldPlayer, 0, &[load::player_index(tree) as i64])
+        ob::world_player(load::player_index(tree) as i64)
     }
 }
 

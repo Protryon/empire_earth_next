@@ -178,6 +178,65 @@ pub unsafe fn tree_get(t: *mut EeTechTreeFields, id: c_long) -> *mut EeTechNodeF
     node(unsafe { epoch_get(e, id) })
 }
 
+/// The tree's walks' host (`&EETechHost`, the layout's).
+fn host() -> Option<crate::tech::nodes::EeTechHostFn> {
+    let at = crate::world::layout::get()?.tech_host as usize;
+    // SAFETY: the registered address of `EETechHost` (EEWorldLayout.cpp), a function of this signature
+    (at != 0).then(|| unsafe { std::mem::transmute::<usize, crate::tech::nodes::EeTechHostFn>(at) })
+}
+
+/// `node->Walk(op, a, b, unit)` over its tree (0 without the layout).
+///
+/// # Safety
+/// `n` is a live node of a live tree.
+pub unsafe fn walk_node(n: usize, op: crate::tech::nodes::EeTechNodeOp, a: i32, b: bool, unit: usize) -> i32 {
+    let Some(f) = host() else { return 0 };
+    // SAFETY: the contract
+    unsafe {
+        let t = (*node(n)).mTree as *mut EeTechTreeFields;
+        crate::tech::nodes::ee_tech_walk_node(t as *mut _, f, op, t, node_ref(n), a, b, unit as *mut _)
+    }
+}
+
+/// `tree->Walk(op, a, b, unit)`.
+///
+/// # Safety
+/// `t` is a live tree.
+pub unsafe fn walk_tree(t: usize, op: crate::tech::nodes::EeTechTreeOp, a: i32, b: i32, unit: usize) -> i32 {
+    let Some(f) = host() else { return 0 };
+    // SAFETY: the contract
+    unsafe { crate::tech::nodes::ee_tech_walk_tree(t as *mut _, f, op, t as *mut EeTechTreeFields, a, b, unit as *mut _) }
+}
+
+/// The virtual `GetIsObsolete`: an epoch's flag, a node's walk.
+///
+/// # Safety
+/// As [`walk_node`].
+pub unsafe fn is_obsolete(n: usize) -> bool {
+    // SAFETY: the contract
+    unsafe {
+        if is_epoch(n) {
+            return (*node(n)).mIsObsolete;
+        }
+        walk_node(n, crate::tech::nodes::EeTechNodeOp::IsObsolete, 0, false, 0) != 0
+    }
+}
+
+/// `GetUnitClass(i)`: the data's unit class `i`, its default class past the end (0 without data).
+///
+/// # Safety
+/// `n` is a live node.
+pub unsafe fn unit_class(n: usize, i: usize) -> c_long {
+    // SAFETY: the contract
+    let d = unsafe { (*node(n)).mData };
+    if d.is_null() {
+        return 0;
+    }
+    // SAFETY: the node's data
+    let d = unsafe { &*d };
+    d.unit_classes().get(i).map_or(d.mDefaultUnitClass, |&c| c as c_long)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -217,7 +217,7 @@ pub fn dump_state(path: &str) {
 fn dump_players(o: &mut Out) {
     let n = lu(h(O::NumPlayers, 0, &[]));
     for i in 0..n {
-        let p = gc::h(gc::O::TbWorldPlayer, 0, &[i64::from(i)]) as usize;
+        let p = crate::tech_tree::objects::world_player(i64::from(i));
         if p == 0 {
             continue;
         }

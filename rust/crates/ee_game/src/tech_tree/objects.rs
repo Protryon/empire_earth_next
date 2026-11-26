@@ -220,13 +220,8 @@ pub extern "C" fn ee_gamecpp_tech_obj_media(node: *mut c_void, player: *mut c_vo
 
 /// `GetUnitClass(i)`: the node data's unit class `i`, its default class past the end.
 pub(crate) fn unit_class(node: P, i: usize) -> c_long {
-    let d = node_data(node);
-    if d.is_null() {
-        return 0;
-    }
-    // SAFETY: the node's data
-    let d = unsafe { &*d };
-    d.unit_classes().get(i).map_or(d.mDefaultUnitClass, |&c| c as c_long)
+    // SAFETY: a live node
+    unsafe { to::unit_class(node, i) }
 }
 
 /// `GetUnitClass(i)` for the C++.
@@ -251,4 +246,69 @@ pub extern "C" fn ee_gamecpp_tech_tree_free(tree: *mut c_void) {
     for epoch in unsafe { to::epochs_take(t) } {
         node_delete(epoch);
     }
+}
+
+// ---- the world's reads the tree's bodies make (were EETechTree.cpp's host cases), through the world views
+
+/// `EEUnitClassCount()`.
+pub(crate) fn class_count() -> i64 {
+    // SAFETY: a read of the class table
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    ee_sim::world::ClassView::count(&t) as i64
+}
+
+/// `gUnitClassTable[i]` (0: none).
+pub(crate) fn class_at(i: i64) -> P {
+    // SAFETY: as class_count
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    usize::try_from(i).ok().and_then(|i| ee_sim::world::ClassView::by_index(&t, i)).map_or(0, |c| c.handle() as P)
+}
+
+/// A class's `mUnitType`, `mFamily`.
+pub(crate) fn class_type(class: P) -> i64 {
+    // SAFETY: a live class
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    unsafe { ee_sim::world::ClassView::of(&t, class as u64) }.map_or(0, |c| c.unit_type() as i64)
+}
+
+pub(crate) fn class_family(class: P) -> i64 {
+    // SAFETY: a live class
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    unsafe { ee_sim::world::ClassView::of(&t, class as u64) }.map_or(0, |c| c.family() as i64)
+}
+
+/// Class `i`'s `mTechnology` (`kTechNone` without the class).
+pub(crate) fn class_technology(i: i64) -> i64 {
+    // SAFETY: as class_count
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    usize::try_from(i).ok().and_then(|i| ee_sim::world::ClassView::by_index(&t, i)).map_or(100000, |c| c.technology())
+}
+
+/// `gWorld.GetNumPlayers()`.
+pub(crate) fn world_players() -> i64 {
+    // SAFETY: a read of the world
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    ee_sim::world::WorldView::global(&t).map_or(0, |w| w.num_players() as i64)
+}
+
+/// `gWorld.GetPlayer(i)` (0: none).
+pub fn world_player(i: i64) -> P {
+    // SAFETY: a read of the world
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    let w = ee_sim::world::WorldView::global(&t);
+    usize::try_from(i).ok().and_then(|i| w?.player(i)).map_or(0, |p| p.handle() as P)
+}
+
+/// `gWorld.GetCurrentPlayer()` (0: none).
+pub(crate) fn current_player() -> P {
+    // SAFETY: a read of the world
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    ee_sim::world::WorldView::global(&t).and_then(|w| w.current_player()).map_or(0, |p| p.handle() as P)
+}
+
+/// A player's `mPlayerID`.
+pub(crate) fn player_id(player: P) -> i64 {
+    // SAFETY: a live player
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    unsafe { ee_sim::world::PlayerView::of(&t, player as u64) }.map_or(0, |p| p.id() as i64)
 }
