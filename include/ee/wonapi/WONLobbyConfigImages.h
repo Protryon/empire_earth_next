@@ -11,7 +11,7 @@ namespace WONAPI {
 // stretch images' raw aliases of it, the filter's raw image, the font's, the percent layout's, the scheme's).
 class MediaConfig : public ComponentConfig {
 public:
-    explicit MediaConfig(EeWonCfgKind inKind); // the kind's constructor (ConfigTableHost.cpp)
+    explicit MediaConfig(EeWonCfgKind inKind); // the kind's constructor (ComponentConfigHost.cpp)
     virtual bool PreParse(ConfigParser*); // the percent layout's and the scheme's own; the base's for the others
     virtual bool PostParse(ConfigParser*) { return true; } // 0x3099f0, 0x7099f0, 0x787ff0: no desired size
     virtual bool GetNamedValue(const std::string&,int&); // the font's (0x38a580) and the images' (0x38b370)

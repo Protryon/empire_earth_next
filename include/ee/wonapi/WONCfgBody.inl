@@ -1,6 +1,6 @@
 #include "rust/won_gui/cfgbody.h"
 // The config subclasses' bodies (R6 WON round 34): ee_won_gui cfgbody.rs over this host's one-statement ops.
-// Included inside a namespace by ConfigTableHost.cpp (WONAPI) and by tests/won/won_cfgbody34_test.cpp (over its
+// Included inside a namespace by ComponentConfigHost.cpp (WONAPI) and by tests/won/won_cfgbody34_test.cpp (over its
 // stand-ins), so both run these very statements; the classes' one-statement forwards (in their units) call
 // CfgBodyCall. An op that can throw runs under the guard; CfgBodyCall rethrows its exception.
 struct CfgBodyFrame { std::exception_ptr mErr; };
