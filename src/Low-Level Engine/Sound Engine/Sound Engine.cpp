@@ -6,7 +6,6 @@
 #include "lle/SEMixer.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "rust/audio/sound.h"
 
 // The sound classes (SESoundManager, SESample, SESMInstanceNode, SEMixer, SEScore, SEConductor) are inline forwarders
 // over rust/crates/ee_audio/src/sound; this unit keeps the start-up and the C++ the Rust objects call back.

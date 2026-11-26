@@ -171,6 +171,10 @@ pub enum EeWonModelBufOp {
     PlayerReady,
     /// `pl->WriteData(*wb)`.
     PlayerWriteData,
+    /// `return ReadOr([&] { return (intptr_t)rb->ReadByte(); });`.
+    ReadByte,
+    /// `(intptr_t)pl->mModel` (an EELobbyPlayer's slot is read and written here).
+    SelfModel,
 }
 
 /// The calls in (the object is the game, but for the player's calls).
@@ -470,6 +474,16 @@ fn player_read_from(o: Out, buffer: isize) -> isize {
         return 0;
     }
     o(Op::SelfSetReady, ready, 0, 0);
+    // EELobbyPlayer::ReadData: the slot's byte (R6 WON lobby and network round 38)
+    // SAFETY: the host answers the player's model (or 0)
+    if let Some(slot) = unsafe { crate::modelobj::ee_player_slot(o(Op::SelfModel, 0, 0, 0)) } {
+        let s = o(Op::ReadByte, buffer, 0, 0);
+        if s == THREW {
+            return 0;
+        }
+        slot.set(s as u8);
+        return 1;
+    }
     match o(Op::PlayerReadData, buffer, 0, 0) {
         THREW => 0,
         v => (v != 0) as isize,
@@ -480,6 +494,12 @@ fn player_write_to(o: Out, buffer: isize) {
     let ping = o(Op::PlayerPing, 0, 0, 0) as u16;
     let ready = o(Op::PlayerReady, 0, 0, 0) != 0;
     append(o, buffer, &crate::staging::player_head(ping, ready));
+    // EELobbyPlayer::WriteData: the slot's byte
+    // SAFETY: the host answers the player's model (or 0)
+    if let Some(slot) = unsafe { crate::modelobj::ee_player_slot(o(Op::SelfModel, 0, 0, 0)) } {
+        o(Op::AppendByte, buffer, slot.get() as isize, 0);
+        return;
+    }
     o(Op::PlayerWriteData, buffer, 0, 0);
 }
 

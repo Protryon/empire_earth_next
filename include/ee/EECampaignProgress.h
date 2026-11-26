@@ -8,6 +8,7 @@
 #define EE_EECAMPAIGNPROGRESS_H
 
 #include <vector>
+#include "rust/game/campaign.h"
 
 struct EeCampaignProgress;
 
@@ -15,19 +16,19 @@ struct EeCampaignProgress;
 // RestoreCivilization, SaveCompletedScenario; MakeKey is campaign.rs make_key); the class is its handle
 class EECampaignProgress {
 public:
-    EECampaignProgress();                   // 0x28f462 (three vector() ctors, clear()s, mL30 = 0)
-    ~EECampaignProgress();
+    // 0x28f462 (three vector() ctors, clear()s, mL30 = 0)
+    EECampaignProgress() : mRust(ee_campaign_progress_new()) {  }
+    ~EECampaignProgress() { ee_campaign_progress_free(this->mRust); }
     // 0x28f4fc: outScenarios.clear(), resize to the completed count, then copies from the last element down
-    void GetCompletedScenarios(std::vector<UWideString>& outScenarios);
+    void GetCompletedScenarios(std::vector<UWideString>& outScenarios) { ee_campaign_progress_completed(this->mRust, &outScenarios); }
     // 0x28f56d (EEWorld::StartGame: (UWideString("default"), campaign, scenario, checksum); provisional name)
-    long RestoreCivilization(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario, unsigned long inChecksum);
+    long RestoreCivilization(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario, unsigned long inChecksum) { return ee_campaign_progress_restore(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
     // 0x28fb05: loads inUser's progress in inCampaign (keseOK when found); the CSSE passes "default", the campaign
     // name and EECampaignFormManager::mChecksum (argument names are provisional)
-    long Load(const UWideString& inUser, const UWideString& inCampaign, unsigned long inChecksum, bool inFlag);
+    long Load(const UWideString& inUser, const UWideString& inCampaign, unsigned long inChecksum, bool inExtract) { return ee_campaign_progress_load(this->mRust, (const char*)inUser, (const char*)inCampaign, inChecksum, inExtract); }
     // 0x28ffed (`ret 0x10`; EEPhysics::EndGame after a successful Load: user, campaign, scenario, checksum; provisional
     // name)
-    long SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario,
-                  unsigned long inChecksum);
+    long SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario, unsigned long inChecksum) { return ee_campaign_progress_save(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
 
     EeCampaignProgress* mRust;              // (was +0x00 mCompletedScenarios, +0x10 mCivilizationKeys,
                                             // +0x20 mCivPointsAvailable, +0x30 mNumScenariosCompleted)

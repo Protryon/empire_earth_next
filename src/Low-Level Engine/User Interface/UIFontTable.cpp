@@ -11,30 +11,13 @@
 #include <windows.h>
 #include <string.h>
 
-#include "rust/ui/fonttableobj.h"
-#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEFont.h"
 #include "lle/UResourceFile.h"
-#include "lle/TSCriticalSection.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 // The Rust font table's calls out (EeUiOp, obj.rs; ee_ui fonttableobj.rs): a the file, manager, name or font
 static UWideString sFace;

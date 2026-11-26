@@ -452,6 +452,10 @@ public:
     {
         Log(this->mName + " complete hook " + RouteName(inOp) + " " + St(inOp->GetStatus()));
     }
+    // the SDK's mAllDerivedOpsAreUnsolicited (the game's connection never clears it)
+    virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char inType)
+    { return this->mAllDerivedOpsAreUnsolicited ? RoutingConnection::GetUnsolicitedDerivedOp(inType) : NULL; }
+    bool mAllDerivedOpsAreUnsolicited = true;
     std::string mName;
 protected:
     virtual ~LogRouting() { Log(this->mName + " destroyed"); }

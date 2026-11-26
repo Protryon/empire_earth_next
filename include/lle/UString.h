@@ -34,18 +34,13 @@ public:
     unsigned long GetLength() const { return this->mState.length; }
     unsigned long GetAllocatedLength() const { return this->mState.capacity; }
     bool Equals(const UString& inString) const { return ee_ustring_compare(*this, inString) == 0; }
-    bool Equals(const UString& inString, unsigned long inCount) const
-        { return ee_ustring_compare_count(*this, inString, inCount) == 0; }
+    bool Equals(const UString& inString, unsigned long inCount) const { return ee_ustring_compare_count(*this, inString, inCount) == 0; }
     bool Equals(const char* inString) const { return ee_ustring_compare(*this, inString) == 0; }
-    bool Equals(const char* inString, unsigned long inCount) const
-        { return ee_ustring_compare_count(*this, inString, inCount) == 0; }
-    bool EqualsIgnoreCase(const UString& inString) const
-        { return ee_ustring_equals_ignore_case(*this, inString, false, 0); }
-    bool EqualsIgnoreCase(const UString& inString, unsigned long inCount) const
-        { return ee_ustring_equals_ignore_case(*this, inString, true, inCount); }
+    bool Equals(const char* inString, unsigned long inCount) const { return ee_ustring_compare_count(*this, inString, inCount) == 0; }
+    bool EqualsIgnoreCase(const UString& inString) const { return ee_ustring_equals_ignore_case(*this, inString, false, 0); }
+    bool EqualsIgnoreCase(const UString& inString, unsigned long inCount) const { return ee_ustring_equals_ignore_case(*this, inString, true, inCount); }
     bool EqualsIgnoreCase(const char* inString) const { return ee_ustring_equals_ignore_case(*this, inString, false, 0); }
-    bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const
-        { return ee_ustring_equals_ignore_case(*this, inString, true, inCount); }
+    bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const { return ee_ustring_equals_ignore_case(*this, inString, true, inCount); }
     static void SetDefaultAllocationLength(unsigned long inLength) { ee_ustring_set_default_allocation(inLength); }
     unsigned long SizeOf() { return ee_ustring_size_of(&this->mState); }   // 0x1220: mCapacity + 0xc
     // port: the text is UTF-8 (decision D6), so the case change is the platform's (the original's byte-wise tolower/
@@ -65,8 +60,7 @@ public:
     // Find/FindBackwards return GetLength() when not found
     unsigned long Find(const UString& inString, unsigned long inStart) const
         { return ee_ustring_find(&this->mState, inString, inString.GetLength(), inStart, false); }
-    unsigned long Find(const char* inString, unsigned long inStart) const
-        { return ee_ustring_find(&this->mState, inString, strlen(inString), inStart, false); }
+    unsigned long Find(const char* inString, unsigned long inStart) const { return ee_ustring_find(&this->mState, inString, strlen(inString), inStart, false); }
     unsigned long FindBackwards(const UString& inString, unsigned long inStart) const
         { return ee_ustring_find(&this->mState, inString, inString.GetLength(), inStart, true); }
     unsigned long FindBackwards(const char* inString, unsigned long inStart) const
@@ -107,10 +101,8 @@ public:
     EeUString mState;                       // +0x04 mString, +0x08 mLength, +0x0c mCapacity (allocated bytes)
 };
 
-inline UString operator+(const UString& inLeft, const UString& inRight)
-    { return UString(UString::kUnset, ee_ustring_concat, &inLeft.mState, &inRight.mState); }
-inline UString operator+(const UString& inLeft, const char* inRight)
-    { return UString(UString::kUnset, ee_ustring_concat_text, &inLeft.mState, inRight); }
+inline UString operator+(const UString& inLeft, const UString& inRight) { return UString(UString::kUnset, ee_ustring_concat, &inLeft.mState, &inRight.mState); }
+inline UString operator+(const UString& inLeft, const char* inRight) { return UString(UString::kUnset, ee_ustring_concat_text, &inLeft.mState, inRight); }
 // the comparisons: strcmp order
 inline bool operator==(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) == 0; }
 inline bool operator==(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) == 0; }

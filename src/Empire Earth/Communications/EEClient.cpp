@@ -7,19 +7,15 @@
 #include "lle/NESynchronousClient.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUnit.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EESMMediaStrings.h"
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
-#include "rust/game/gamecpp.h"
 
 #include <list>
 #include <string>
 #include <mbstring.h>
 
-#include "ee/EESaveGameFiles.h"
 
 // Boots this client from the canceled game when the host's slot (0) has become open, else refreshes the slot's line
 void EEClient::HandleSlotUpdate(unsigned char inSlot, EEGameOptionsPlayer& inPlayer)

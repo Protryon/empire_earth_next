@@ -8,17 +8,8 @@
 // Unit flags: the exe's module set.
 #include <windows.h>
 
-#include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
 
-#include "ee/EEPlayer.h"
-#include "ee/RTSWorld.h"
-#include "ee/EERenderObject.h"
-#include "ee/EEROTerrain.h"
-#include "rust/game/gamecpp.h"
 
 // the brush highlight colour (0x5293e8), the grid runs of the frame (0x5290a0) and the area-effect textures
 // (gAreaEffectTexture 0x5293f4, gCircleAreaEffectTexture 0x5293f8): gamecpp ro_views.rs

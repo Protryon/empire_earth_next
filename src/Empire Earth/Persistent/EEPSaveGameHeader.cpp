@@ -9,8 +9,6 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
-#include "ee/EESaveGameFiles.h"
-#include "rust/game/gamecpp.h"
 
 
 // Creates a save header with placeholder name and description, version 0.1 and three players

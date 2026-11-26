@@ -11,27 +11,12 @@
 #include <windows.h>
 #include <stdlib.h>
 
-#include "rust/ui/labelobj.h"
-#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/UILayoutUtility.h"
-#include "lle/UIEntity.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIControl.h"
-#include "lle/UIFormManager.h"
-#include "lle/UIForm.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 struct UITextLabelRust {
     static const GERectangle& RectAt(intptr_t inAddress) { return *reinterpret_cast<const GERectangle*>(inAddress); }

@@ -6,20 +6,12 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/UIBackground.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIButton.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "lle/UResourceFile.h"
@@ -192,7 +184,6 @@ extern "C" void ee_screenscpp_sb_bar_dirty(uintptr_t inBar)
 // fill_armor_attributes, update_armor_texts; hud.rs attribute_text)
 
 // the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)
-#include "ee/EEGameUI.h"
 static const bool sIconsRegistered = (gEEGameUI.mLoadIcons = EEUIFMGStatusBox::LoadIcons,
                                       gEEGameUI.mUnloadIcons = EEUIFMGStatusBox::UnloadIcons,
                                       gEEGameUI.mReloadIcons = EEUIFMGStatusBox::ReloadIcons, true);

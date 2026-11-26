@@ -6,6 +6,7 @@
 // setlocale(LC_ALL, "English") as the game's UI thread sets it (isspace is the C runtime's). `--files DIR...`
 // prints, instead, one line per .cfg file under the given directories: the narrow token stream's CRC-16 and count
 // (to compare a build over the C++ with one over the port on the real lobby files). Exit code: the failures.
+#include "won_cfgparser_driver.h" // ConfigParser's driver-only methods (before the game headers)
 #include <windows.h>
 #include <locale.h>
 #include <stdio.h>

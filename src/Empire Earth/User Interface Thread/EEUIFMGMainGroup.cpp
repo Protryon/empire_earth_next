@@ -6,33 +6,22 @@
 // for them). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GERhombus.h"
-#include "lle/Input System.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "lle/UITextLabel.h"
-#include "lle/UResourceFile.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
-#include "rust/game/screens.h"   // ee_screens_panel_*: the command panel's layout (ee_screens command_panel.rs)
 #include "ee/EEUIManager.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEFormation.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEUIFMGStatusBox.h"
@@ -44,12 +33,6 @@ EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
     : EeScreensMainGroupFields(), mOwner(inOwner), mStatusBox(new EEUIFMGStatusBox(inOwner))
 {
     ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
-}
-
-// Destroys the main panel group and its status box
-EEUIFMGMainGroup::~EEUIFMGMainGroup()
-{
-    delete this->mStatusBox;
 }
 
 // (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
@@ -190,6 +173,5 @@ extern "C" int64_t ee_screenscpp_mg_queue_key(uintptr_t inUnit, uint32_t inIndex
 { return MGU(inUnit)->GetComplexUnit()->GetCitizenBuildTarget(inIndex)->GetClass()->GetTechnology(); }
 
 // the command buttons as the rest of the game shows them (the saved group's selection: ee/EEGameUI.h)
-#include "ee/EEGameUI.h"
 static const bool sShowCommandsRegistered =
     (gEEGameUI.mShowCommands = [](EEUIFMGMainGroup* inGroup, EEUnit* inUnit) { inGroup->ShowCommands(inUnit); }, true);

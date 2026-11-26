@@ -23,13 +23,10 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
@@ -38,22 +35,16 @@
 #include "lle/Input System.h"
 #include "lle/UIEntityGroup.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/UIListBox.h"
-#include "lle/GEText.h"
 #include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/UIEditBox.h"
-#include "lle/UICheckBox.h"
 #include "lle/UIESliderChange.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/UIFileListBox.h"
 #include "lle/FSRestorable.h"
 #include "lle/UIBFull.h"
 #include "lle/UIBitmap.h"
-#include "lle/UIBlinkingButton.h"
 #include "lle/UIFileComboBox.h"
 
 #include "ee/EmpireEarth.h"
@@ -78,7 +69,6 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEDisplayDevices.h"
 #include "ee/EEMessage.h"
-#include "ee/EEAction.h"
 #include "ee/EEARust.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESMMediaStrings.h"
@@ -99,31 +89,21 @@
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
 #include "ee/EEUIFMGMainGroup.h"
-#include "ee/EEUIEChatLogEvents.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEMiniMap.h"
-#include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
-#include "lle/UGraph.h"
 #include "lle/UIGraph.h"
 #include "lle/UIStatusBar.h"
-#include "lle/UEncryption.h"
 #include "ee/EEPGSFormManager.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitUtilities.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEFormation.h"
-#include "ee/EECivilizationBuilder.h"
-#include "rust/game/screens.h"
-#include "rust/sim/units.h"
 #include "ee/EEScreensShims.h"
-#include "lle/UITextureBackground.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 #include "gx/GX.h"   // GXGameSize
@@ -138,16 +118,10 @@ EEUIFMainGame* gSavedMainGameForm;          // 0x563144 (.bss among the UI event
 
 
 // the custom campaign form's no-campaigns message, closed
-static void EEScreensNoCustomCampaigns(UIForm* inForm)
-{
-    ee_screens_event(EE_SCREENS_CC_NONE_FOUND, inForm, NULL);
-}
+static void EEScreensNoCustomCampaigns(UIForm* inForm) { ee_screens_event(EE_SCREENS_CC_NONE_FOUND, inForm, NULL); }
 
 // the settings form's Restore Default question, answered yes
-static void EEScreensRestoreDefaultYes(UIForm* inForm)
-{
-    ee_screens_event(EE_SCREENS_GS_RESTORE_YES, inForm, NULL);
-}
+static void EEScreensRestoreDefaultYes(UIForm* inForm) { ee_screens_event(EE_SCREENS_GS_RESTORE_YES, inForm, NULL); }
 
 // ---- the load and save screens' (save_load.rs): the questions' callbacks get the list or the pending save object
 
@@ -155,16 +129,10 @@ static void EEScreensRestoreDefaultYes(UIForm* inForm)
 // its creation and the save event's end
 
 // the delete question, answered yes: the list's selected file deleted
-static void EEScreensDeleteSelectedFile(UIForm* inList)
-{
-    reinterpret_cast<UIFileListBox*>(inList)->DeleteSelectedFile();
-}
+static void EEScreensDeleteSelectedFile(UIForm* inList) { reinterpret_cast<UIFileListBox*>(inList)->DeleteSelectedFile(); }
 
 // the overwrite question, answered no: the pending save dropped
-static void EEScreensDropSave(UIForm* inObject)
-{
-    reinterpret_cast<UReferenceCounter*>(inObject)->Dereference();
-}
+static void EEScreensDropSave(UIForm* inObject) { reinterpret_cast<UReferenceCounter*>(inObject)->Dereference(); }
 
 // ---- the campaign scenario select and scenario intro forms' (scenario_screens.rs)
 
@@ -182,10 +150,7 @@ struct EEScreensMedia {
 };
 
 // the campaign's open-error message, closed
-static void EEScreensCloseCampaign(UIForm* inForm)
-{
-    ee_screens_event(EE_SCREENS_CS_CLOSE_CALLBACK, inForm, NULL);
-}
+static void EEScreensCloseCampaign(UIForm* inForm) { ee_screens_event(EE_SCREENS_CS_CLOSE_CALLBACK, inForm, NULL); }
 
 // ---- the lobby's and its load screens' (lobby_form.rs)
 
@@ -207,23 +172,17 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
     case EE_SCREENS_LE_RULE_UNIT_STEP: return (uint32_t)theRules.mUnitLimitStep;
     case EE_SCREENS_LE_RULE_WONDERS_MAXIMUM: return (uint32_t)EERuleLong(theRules.mWondersMaximum);
     case EE_SCREENS_LE_RULE_MAP_SIZES: return (uint32_t)theRules.mMapSizes.size();
-    case EE_SCREENS_LE_RULE_MAP_SIZE_NAME:
-        return inArg < theRules.mMapSizes.size() ? (uint32_t)theRules.mMapSizes[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_MAP_SIZE_NAME: return inArg < theRules.mMapSizes.size() ? (uint32_t)theRules.mMapSizes[inArg].mNameID : 0;
     case EE_SCREENS_LE_RULE_DIFFICULTIES: return (uint32_t)theRules.mDifficulties.size();
-    case EE_SCREENS_LE_RULE_DIFFICULTY_NAME:
-        return inArg < theRules.mDifficulties.size() ? (uint32_t)theRules.mDifficulties[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_DIFFICULTY_NAME: return inArg < theRules.mDifficulties.size() ? (uint32_t)theRules.mDifficulties[inArg].mNameID : 0;
     case EE_SCREENS_LE_RULE_SPEEDS: return (uint32_t)theRules.mSpeeds.size();
-    case EE_SCREENS_LE_RULE_SPEED_NAME:
-        return inArg < theRules.mSpeeds.size() ? (uint32_t)theRules.mSpeeds[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_SPEED_NAME: return inArg < theRules.mSpeeds.size() ? (uint32_t)theRules.mSpeeds[inArg].mNameID : 0;
     case EE_SCREENS_LE_RULE_VARIANTS: return (uint32_t)gGameVariants.size();
-    case EE_SCREENS_LE_RULE_VARIANT_SELECTABLE:
-        return inArg < gGameVariants.size() && gGameVariants[inArg]->mSelectable == true;
-    case EE_SCREENS_LE_RULE_VARIANT_NAME:
-        return inArg < gGameVariants.size() ? (uint32_t)EEGetGameVariantAt(inArg)->mNameID : 0;
+    case EE_SCREENS_LE_RULE_VARIANT_SELECTABLE: return inArg < gGameVariants.size() && gGameVariants[inArg]->mSelectable == true;
+    case EE_SCREENS_LE_RULE_VARIANT_NAME: return inArg < gGameVariants.size() ? (uint32_t)EEGetGameVariantAt(inArg)->mNameID : 0;
     case EE_SCREENS_LE_RULE_RESOURCE_LEVELS: return (uint32_t)EEGetNumberOfResourceLevels();
     case EE_SCREENS_LE_RULE_RESOURCE_LEVEL_NAME: return (uint32_t)EEGetResourceLevel((long)inArg)->GetNameID();
-    case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME:
-        return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
+    case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME: return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
     case EE_SCREENS_LE_RULE_EPOCH_TITLE: return (uint32_t)EEEpochTitleID((long)(int32_t)inArg);
     case EE_SCREENS_LE_RULE_GENERATORS: return (uint32_t)EERMGetNumberOfGenerators();
     case EE_SCREENS_LE_RULE_ENGINES: return (uint32_t)EECPEngineChoiceCount();
@@ -234,10 +193,7 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
 }
 
 
-static UWideString Text(const uint8_t* inText, size_t inLength)
-{
-    return UWideString(std::string((const char*)inText, inLength).c_str());
-}
+static UWideString Text(const uint8_t* inText, size_t inLength) { return UWideString(std::string((const char*)inText, inLength).c_str()); }
 
 // ---- the hot keys' (hot_keys.rs): inForm is the main game form
 

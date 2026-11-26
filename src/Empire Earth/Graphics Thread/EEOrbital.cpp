@@ -8,13 +8,10 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEModel.h"
 
 #include "ee/EEPhysics.h"
 #include "ee/EEGraphicObject.h"
 
-#include "rust/render/gfx.h"
-#include "rust/game/gamecpp.h"
 
 // The name tests, the speed and the update are ee_gfx effect_orbit.rs' (the prefixes "orbital_cw_" and "orbital_ccw_",
 // any case; the degrees between the prefix and the name's last '_')

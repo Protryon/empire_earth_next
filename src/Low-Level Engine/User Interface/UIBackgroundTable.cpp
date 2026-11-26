@@ -13,29 +13,12 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "rust/ui/bgtableobj.h"
-#include "rust/ui/button.h"
-#include "rust/ui/layout.h"
-#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "lle/GERhombus.h"
-#include "lle/TSCriticalSection.h"
 #include "lle/UIBackgroundTable.h"
-#include "lle/UIEntity.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIControl.h"
-#include "lle/UIFormManager.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UITiledBackground.h"
 #include "lle/UIBFull.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 static_assert(sizeof(EeUiLayout) == sizeof(UILayoutUtility) && sizeof(EeUiColor) == sizeof(GEColor), "bgtableobj.rs");
 

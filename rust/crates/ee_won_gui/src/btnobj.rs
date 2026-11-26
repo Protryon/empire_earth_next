@@ -127,6 +127,10 @@ fn default_of(k: usize) -> isize {
 }
 
 fn sop(host: EeWonGuiHostFn, op: Op, a: isize) -> isize {
+    // (the game's references and repaints are its own: no component asks)
+    if let Some(r) = crate::gamewin::common_op(0, op, a, 0, 0) {
+        return r;
+    }
     match host {
         // SAFETY: the host takes a NULL component for the ops on `a`
         Some(h) => unsafe { h(std::ptr::null_mut(), op, a, 0, 0, 0) },

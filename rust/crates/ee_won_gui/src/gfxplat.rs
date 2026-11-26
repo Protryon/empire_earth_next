@@ -59,7 +59,7 @@ pub unsafe fn surface_hook(
         H::FillEllipse => plat(P::FillEllipse, four),
         H::DrawArc => plat(P::Arc, [a[0], a[1], a[2], a[3], a[4], a[5]]),
         H::FillRectBlend => plat(P::FillRectBlend, [a[0], a[1], a[2], a[3], a[4], 0]),
-        H::ImageEntire | H::ImagePart | H::String => return None,
+        H::ImageEntire | H::ImagePart | H::String | H::SetFont | H::Text | H::ImageSize => return None,
     })
 }
 

@@ -7,16 +7,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <vector>
-
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
-#include "lle/FSArchive.h"
-
 #include "ee/EETerrainColorTable.h"
-#include "rust/game/gamecpp.h"
+
+
 
 std::vector<EETerrainColorTable*> EETerrainColorTable::sTable;
 

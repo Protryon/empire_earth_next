@@ -24,6 +24,35 @@
 
 using namespace L33World;
 
+// R6 WON lobby and network round 38: WONLobbyPrv's plain members are lobbyprv.rs's. The new side starts from the
+// world's values (a lobby made with no host, then each member set) and its values are copied back for the dump.
+typedef EeWonLobbyPrvField PF;
+static void PrvToRust(WONLobbyPrv& p)
+{
+    ee_won_lobbyprv_call(&p, NULL, EeWonLobbyPrvCall::Construct, 0, 0);
+    ee_won_lobbyprv_set(PF::VersionStatus, p.mVersionStatus);
+    ee_won_lobbyprv_set(PF::ProductId, p.mProductId);
+    ee_won_lobbyprv_set(PF::LanProductId, p.mLanProductId);
+    ee_won_lobbyprv_set(PF::LobbyPort, p.mLobbyPort);
+    ee_won_lobbyprv_set(PF::SysTouTime, (int64_t)p.mSysTOUTime);
+    ee_won_lobbyprv_set(PF::GameTouTime, (int64_t)p.mGameTOUTime);
+    ee_won_lobbyprv_set(PF::BehindFirewall, p.mBehindFirewall);
+    ee_won_lobbyprv_set(PF::FirewallTestDone, p.mFirewallTestDone);
+}
+static void PrvFromRust(WONLobbyPrv& p)
+{
+    p.mVersionStatus = (WONStatus)ee_won_lobbyprv_get(PF::VersionStatus);
+    p.mProductId = (unsigned short)ee_won_lobbyprv_get(PF::ProductId);
+    p.mLanProductId = (unsigned short)ee_won_lobbyprv_get(PF::LanProductId);
+    p.mLobbyPort = (unsigned short)ee_won_lobbyprv_get(PF::LobbyPort);
+    p.mSysTOUTime = (time_t)ee_won_lobbyprv_get(PF::SysTouTime);
+    p.mGameTOUTime = (time_t)ee_won_lobbyprv_get(PF::GameTouTime);
+    p.mBehindFirewall = ee_won_lobbyprv_get(PF::BehindFirewall) != 0;
+    p.mFirewallTestDone = ee_won_lobbyprv_get(PF::FirewallTestDone) != 0;
+    ee_won_lobbyprv_drop(&p);
+}
+
+
 // ---- the members that dispatch to a side (a body the moved bodies call)
 
 static intptr_t NewBuf(void* inObj, EeWonModelBufCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0);
@@ -184,11 +213,12 @@ static void PrvCases()
             try {
                 bool r;
                 if (aSide == 0) r = L33Orig::PrvInit(&p, anInput, aFunc);
-                else r = WonRethrow(ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Init, (intptr_t)anInput, (intptr_t)aFunc)) != 0;
+                else PrvToRust(p), r = WonRethrow(ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Init, (intptr_t)anInput, (intptr_t)aFunc)) != 0;
                 Log("result " + N(r));
             } catch (WorldThrow& e) {
                 Log("threw " + N(e.mWhich));
             }
+            if (aSide == 1) PrvFromRust(p);
             p.Dump();
             Refs();
             aTraces[aSide].swap(sTrace);
@@ -206,7 +236,7 @@ static void PrvCases()
             if (k & 2) p.mAuthContext = new AuthContext;
             sTrace.clear();
             if (aSide == 0) L33Orig::PrvDestroy(&p);
-            else ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Destroy, 0, 0);
+            else PrvToRust(p), ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Destroy, 0, 0), PrvFromRust(p);
             p.Dump();
             Refs();
             aTraces[aSide].swap(sTrace);
@@ -226,7 +256,7 @@ static void PrvCases()
             std::wstring aCommunity(L"EmpireEarth");
             sTrace.clear();
             if (aSide == 0) L33Orig::PrvInitAuth(&p, aCommunity, kHashes[k % 3]);
-            else ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::InitAuth, (intptr_t)&aCommunity, (intptr_t)kHashes[k % 3]);
+            else PrvToRust(p), ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::InitAuth, (intptr_t)&aCommunity, (intptr_t)kHashes[k % 3]), PrvFromRust(p);
             p.Dump();
             Refs();
             aTraces[aSide].swap(sTrace);
@@ -242,7 +272,7 @@ static void PrvCases()
             sAllocatedConfig = new LobbyConfig;
             WONLobbyPrv p;
             if (aSide == 0) L33Orig::PrvConstruct(&p);
-            else ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Construct, 0, 0);
+            else PrvToRust(p), ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Construct, 0, 0), PrvFromRust(p);
             p.Dump();
             Refs();
             aTraces[aSide].swap(sTrace);
