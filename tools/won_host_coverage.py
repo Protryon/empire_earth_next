@@ -192,6 +192,8 @@ CHECKS = [
     # (chatlink.rs), LobbyConfig's constructor (lobbyconf.rs), the controls' config readers (lobbycfgrd.rs: one host
     # in LobbyNetCtrlHost.cpp since round 40)
     dict(enum="EeWonLobbyPrvOp", header="won_lobby/lobbyprv.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
+    # the lobby's top container (R6 WON lobby/net round 40: lobbyscreens.rs; LobbyContainer.cpp merged into WONLobbyPrv.cpp)
+    dict(enum="EeWonLobbyScreensOp", header="won_lobby/lobbyscreens.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     dict(enum="EeWonModelBufOp", header="won_lobby/modelbuf.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
     dict(enum="EeWonChatLinkOp", header="won_lobby/chatlink.h", hosts=[LOBBY / "LobbyNetCtrlHost.cpp"], rust=[], allowed={}),
     dict(enum="EeWonLobbyConfOp", header="won_lobby/lobbyconf.h", hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),

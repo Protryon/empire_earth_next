@@ -351,13 +351,13 @@ void LobbySetClientIgnored(LobbyClient* client,bool inIgnored,unsigned int roomS
 // ---- LobbyScreenQueries.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Free lobby functions that show login and Internet screen panels and report which lobby screen is shown
 // Switches the Internet screen to its lobby (rooms) tab
-void LobbyShowLobbyTab() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mInternetScreen->ShowLobbyTab(); }
+void LobbyShowLobbyTab() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Internet()->ShowLobbyTab(); }
 // Shows the create-account panel of the login screen
-void LobbyShowCreateAccount() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mLoginScreen->ShowCreateAccountCtrl(); }
+void LobbyShowCreateAccount() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Login()->ShowCreateAccountCtrl(); }
 // Shows the lost-password panel of the login screen
-void LobbyShowLostPassword() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mLoginScreen->ShowLostPasswordCtrl(); }
+void LobbyShowLostPassword() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Login()->ShowLostPasswordCtrl(); }
 // Shows the lost-username panel of the login screen
-void LobbyShowLostUsername() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mLoginScreen->ShowLostUsernameCtrl(); }
+void LobbyShowLostUsername() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Login()->ShowLostUsernameCtrl(); }
 // Returns whether the lobby is showing the Internet screen
 bool LobbyOnInternetScreen() { return gLobbyData.get()!=NULL?gLobbyData->mLobbyContainer->OnInternetScreen():false; }
 // Returns whether the lobby is showing the LAN screen
@@ -397,9 +397,9 @@ ChatCommandParser* LobbyGetRoomChatParser(int flags)
 Component* LobbyGetCurrentScreen()
 {
     if(gLobbyData.get()==NULL) return NULL;
-    if(LobbyOnInternetScreen()) return gLobbyData->mLobbyContainer->mInternetScreen.get();
-    if(LobbyOnLanScreen()) return gLobbyData->mLobbyContainer->mLanScreen.get();
-    if(LobbyOnLoginScreen()) return gLobbyData->mLobbyContainer->mLoginScreen.get();
+    if(LobbyOnInternetScreen()) return gLobbyData->mLobbyContainer->Internet();
+    if(LobbyOnLanScreen()) return gLobbyData->mLobbyContainer->Lan();
+    if(LobbyOnLoginScreen()) return gLobbyData->mLobbyContainer->Login();
     return NULL;
 }
 // Switches the lobby to the Internet screen and tells its controls they were entered
@@ -409,7 +409,7 @@ void LobbyShowInternetScreen()
         return;
     gLobbyData->mLobbyContainer->ShowInternetScreen();
     LobbyEvent* event=new LobbyEvent(100014);
-    gLobbyData->mLobbyContainer->mInternetScreen->BroadcastEventDown(event);
+    gLobbyData->mLobbyContainer->Internet()->BroadcastEventDown(event);
 }
 // Switches the lobby to the LAN screen and tells its controls they were entered
 void LobbyShowLanScreen()
@@ -418,7 +418,7 @@ void LobbyShowLanScreen()
         return;
     gLobbyData->mLobbyContainer->ShowLanScreen();
     LobbyEvent* event=new LobbyEvent(100014);
-    gLobbyData->mLobbyContainer->mLanScreen->BroadcastEventDown(event);
+    gLobbyData->mLobbyContainer->Lan()->BroadcastEventDown(event);
 }
 // Returns the lobby's root container, or NULL before the lobby exists
 Container* GetLobbyRoot()
@@ -464,7 +464,7 @@ void LobbyShowLoginScreen()
     if(gLobbyData.get()==NULL) return;
     gLobbyData->mLobbyContainer->ShowLoginScreen();
     LobbyEvent* event=new LobbyEvent(100014);
-    gLobbyData->mLobbyContainer->mLoginScreen->BroadcastEventDown(event);
+    gLobbyData->mLobbyContainer->Login()->BroadcastEventDown(event);
 }
 // Broadcasts an event from the lobby container to the lobby screens (emitted at 0x759100)
 
@@ -699,51 +699,44 @@ LobbyLogicMgr::~LobbyLogicMgr() { ee_won_logicmgr_free(this->mRust); }
 void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
 
 // ---- LobbyContainer.cpp (merged into this unit, R6 WON lobby/net round 40)
-// The lobby's top container: switches between the login, Internet and LAN screens
-LobbyContainer::LobbyContainer() {}
-// The original stores its own vtable (0x7bdd7f) before releasing the three screens
-// Destroys the container, releasing its three screens
-LobbyContainer::~LobbyContainer() {}
+// The lobby's top container: switches between the login, Internet and LAN screens (lobbyscreens.rs: the screens and
+// the methods; these are its statements)
 static const char kLobbyContainerFile[] = "C:\\EEX\\Empire Earth\\WONAPI\\WONLobby\\LobbyContainer.cpp"; // its __FILE__
-// Sets the HTML default font, finds and adds the login, Internet and LAN screens and shows the login one
-void LobbyContainer::InitComponent(ComponentInit& inInit)
+template<class T> static intptr_t HeldScreen(ComponentConfig* inConfig, const char* inName, int inLine)
 {
-    if(inInit.mType!=2) return;
-    ComponentConfig* config=static_cast<ComponentConfigInit&>(inInit).mConfig;
-    SafeGetComponent(config,this->mLoginScreen,"LoginScreen",kLobbyContainerFile,37);
-    SafeGetComponent(config,this->mInternetScreen,"InternetScreen",kLobbyContainerFile,38);
-    SafeGetComponent(config,this->mLanScreen,"LanScreen",kLobbyContainerFile,39);
-    this->AddScreen(this->mLoginScreen.get());
-    this->AddScreen(this->mInternetScreen.get());
-    this->AddScreen(this->mLanScreen.get());
-    this->ShowScreen(this->mLoginScreen.get(),true);
+    SmartPtr<T> aScreen;
+    SafeGetComponent(inConfig, aScreen, inName, kLobbyContainerFile, inLine);
+    if (aScreen.get() != NULL) aScreen->AddRef();
+    return (intptr_t)static_cast<Component*>(aScreen.get());
 }
-// Shows the Internet lobby screen
-void LobbyContainer::ShowInternetScreen() { this->ShowScreen(this->mInternetScreen.get(),true); }
-// Shows the LAN lobby screen
-void LobbyContainer::ShowLanScreen() { this->ShowScreen(this->mLanScreen.get(),true); }
-// mLoginScreen is read again after ShowScreen
-// Shows the login screen with the message of the day
-void LobbyContainer::ShowLoginScreen()
+// a screen lobbyscreens.rs holds (as its Component*)
+static Component* Scr(intptr_t a) { return reinterpret_cast<Component*>(a); }
+static intptr_t ScreensHost(void* inContainer, EeWonLobbyScreensOp inOp, intptr_t a, intptr_t b)
 {
-    this->ShowScreen(this->mLoginScreen.get(),true);
-    this->mLoginScreen->ShowMOTD();
-}
-// Returns whether the Internet lobby screen is showing
-bool LobbyContainer::OnInternetScreen() { return this->mCurScreen==this->mInternetScreen.get(); }
-// Returns whether the LAN lobby screen is showing
-bool LobbyContainer::OnLanScreen() { return this->mCurScreen==this->mLanScreen.get(); }
-// Returns whether the login screen is showing
-bool LobbyContainer::OnLoginScreen() { return this->mCurScreen==this->mLoginScreen.get(); }
-// Returns where games are set up: 2 Internet, 1 LAN games tab, 3 direct connect tab, else 0
-int LobbyContainer::GetGameScreenType()
-{
-    if(this->OnInternetScreen()) return 2;
-    if(this->OnLanScreen()) {
-        if(this->mLanScreen->OnLanTab()) return 1;
-        if(this->mLanScreen->OnDirectConnectTab()) return 3;
+    typedef EeWonLobbyScreensOp Op;
+    LobbyContainer* c = static_cast<LobbyContainer*>(inContainer);
+    ComponentConfig* aConfig = reinterpret_cast<ComponentConfig*>(a);
+    switch (inOp) {
+    case Op::GetLogin: return WON_GUARDED(HeldScreen<LoginScreen>(aConfig, "LoginScreen", 37));
+    case Op::GetRoot: return WON_GUARDED(HeldScreen<RootScreen>(aConfig, b ? "LanScreen" : "InternetScreen", b ? 39 : 38));
+    case Op::AddScreen: c->AddScreen(Scr(a)); return 0;
+    case Op::ShowScreen: c->ShowScreen(Scr(a), true); return 0;
+    case Op::CurScreen: return (intptr_t)c->mCurScreen;
+    case Op::ShowMotd: static_cast<LoginScreen*>(Scr(a))->ShowMOTD(); return 0;
+    case Op::OnLanTab: return static_cast<RootScreen*>(Scr(a))->OnLanTab() ? 1 : 0;
+    case Op::OnDirectConnectTab: return static_cast<RootScreen*>(Scr(a))->OnDirectConnectTab() ? 1 : 0;
+    case Op::Release: Scr(a)->Release(); return 0;
     }
     return 0;
+}
+intptr_t LobbyContainer::SC(EeWonLobbyScreensCall inCall, intptr_t a) { return WonRethrow(ee_won_lobbyscreens_call(this, ScreensHost, inCall, a)); }
+LoginScreen* LobbyContainer::Login() { return static_cast<LoginScreen*>(Scr(this->SC(EeWonLobbyScreensCall::Screen, 0))); }
+RootScreen* LobbyContainer::Internet() { return static_cast<RootScreen*>(Scr(this->SC(EeWonLobbyScreensCall::Screen, 1))); }
+RootScreen* LobbyContainer::Lan() { return static_cast<RootScreen*>(Scr(this->SC(EeWonLobbyScreensCall::Screen, 2))); }
+// Finds and adds the login, Internet and LAN screens and shows the login one
+void LobbyContainer::InitComponent(ComponentInit& inInit)
+{
+    if(inInit.mType==2) this->SC(EeWonLobbyScreensCall::Init, (intptr_t)static_cast<ComponentConfigInit&>(inInit).mConfig);
 }
 
 // ---- LobbyAuthContextAccess.cpp (merged into this unit, R6 WON lobby/net round 40)
