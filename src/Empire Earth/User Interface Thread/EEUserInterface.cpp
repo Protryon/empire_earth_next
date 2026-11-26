@@ -65,6 +65,7 @@ extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested s
 #include "rust/game/preload.h"
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
+#include "rust/sim/ai.h"
 
 static const float kGameViewLeft = 0.0f, kGameViewRight = 1600.0f;  // the game view below the top bar (.rdata
 static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c..0x44ba38: separate words)
@@ -91,7 +92,7 @@ extern "C" int64_t ee_screenscpp_ug_save_scenario()
 extern "C" void ee_screenscpp_ug_save_error()
 { gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true); }
 extern "C" void ee_screenscpp_ug_max_players() { gWorld.SetNumPlayers(gWorld.mMaxPlayers); }
-extern "C" void ee_screenscpp_ug_collect_computers() { gArtificialIntelligence->CollectComputerPlayers(); }
+extern "C" void ee_screenscpp_ug_collect_computers() { ee_ai_collect_computer_players(); }
 extern "C" bool ee_screenscpp_ug_timer_running() { return gPhysics->mTimerRunning; }
 extern "C" void ee_screenscpp_ug_state_clear() { gGameState.Clear(); }
 extern "C" void ee_screenscpp_ug_options_defaults() { ee_gamecpp_options_set_defaults(&gWorld.mLobbyOptions); }

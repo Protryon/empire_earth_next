@@ -42,6 +42,8 @@
 #include "ee/EECPNext.h"
 #include "ee/EESimCapture.h"
 #include "rust/sim/cp.h"
+#include "rust/sim/ai.h"
+#include "rust/sim/astar.h"
 
 // ---------------------------------------------------------------------------------------------------------------
 // The Rust bodies' context and world
@@ -106,7 +108,7 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     case EE_CP_PLACE_CONTINENT_FLAG:
         return gContinentManager.AreAdjacent((long)v[0], (long)v[1]) ? 1 : 0;
     case EE_CP_PLACE_ARE_CONNECTED:
-        return gContinentManager.AreConnected(EECPObject<EEAIContinent>(inA), EECPObject<EEAIContinent>(inB), (long)v[0]) ? 1 : 0;
+        return ee_astar_cmq_are_connected((uint64_t)(uintptr_t)(EECPObject<EEAIContinent>(inA)), (uint64_t)(uintptr_t)(EECPObject<EEAIContinent>(inB)), (long)v[0]) ? 1 : 0;
     case EE_CP_PLACE_TILE_CONTINENT:
         return gContinentManager.GetContinent(EETileCoordinate((long)v[0], (long)v[1]), kAIPathLandMass);
     case EE_CP_PLACE_UNIT_CONTINENT:
@@ -124,7 +126,7 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     case EE_CP_PLACE_FACING_QUARTER:
         return EEGetFacingQuarter((long)v[0], (long)v[1]);
     case EE_CP_PLACE_SITE_THREAT:
-        return EECPNextSiteThreat(thePlayer, (long)v[0], (long)v[1], false, NULL) != 0 ? 1 : 0;
+        return ee_ai_next_site_threat(thePlayer, (long)v[0], (long)v[1], false, NULL) != 0 ? 1 : 0;
     case EE_CP_PLACE_RANDOM:
         return gPhysics->GetRandom(0L, (long)v[0]);
     case EE_CP_PLACE_SPACE_DOCK_OPEN:

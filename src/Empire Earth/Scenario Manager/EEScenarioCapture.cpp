@@ -22,6 +22,7 @@
 #include "ee/EECPTrace.h"
 #include "ee/EEEnvironmentManager.h"
 #include "rust/game/gamecpp.h"   // the camera's keys (camera_io.rs)
+#include "rust/sim/ai.h"
 
 namespace {
 
@@ -99,7 +100,7 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_LAST_SUM: return (int64_t)gPhysics->mLastOutOfSynchChecksum;
     case EE_SCENARIO_CAP_SUM: return (int64_t)gPhysics->GetOutOfSynchChecksum(false, (unsigned long)inA);
     case EE_SCENARIO_CAP_SET_LAST_SUM: return (int64_t)(gPhysics->mLastOutOfSynchChecksum = (unsigned long)inA);
-    case EE_SCENARIO_CAP_CP_SUM: return (int64_t)EECPOutOfSynchChecksum();
+    case EE_SCENARIO_CAP_CP_SUM: return (int64_t)ee_ai_out_of_synch_checksum();
     case EE_SCENARIO_CAP_FIRST_UNIT: return P(static_cast<EEUnit*>(gWorld.mUnits.mFirst));
     case EE_SCENARIO_CAP_NEXT_UNIT: return P(static_cast<EEUnit*>(SU(inP)->mTileNode->mNext));
     case EE_SCENARIO_CAP_PLAYER_RESULT: return (int64_t)SP(inP)->mGameResult;

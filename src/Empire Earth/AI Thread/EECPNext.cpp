@@ -43,6 +43,7 @@
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_*: the engine (next_game.rs), the name tables (names.rs)
 #include "rust/sim/units.h"
+#include "rust/game/cp_engine.h"
 #include "rust/game/game_log.h"
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -93,7 +94,7 @@ void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
 {
     // no AI (a manifest without a "classic" AI): the seat stands idle (ee_ai_next_prepare logs it)
     inPlayer->mEngine = kEECPEngineNext;
-    EECPNextSetAI(inPlayer, EECPAIByChoice(inChoice) != NULL ? EECPAIID(EECPAIByChoice(inChoice)) : std::string("none"));
+    EECPNextSetAI(inPlayer, (const EECPAIEntry*)ee_cp_engine_by_choice(inChoice) != NULL ? EECPAIID((const EECPAIEntry*)ee_cp_engine_by_choice(inChoice)) : std::string("none"));
 }
 
 // the engine log's debug output (ee_game cp_engine.rs)
@@ -147,9 +148,9 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     case EE_AI_NEXT_HOST_GAME_SEED:
         return (int64_t)gUserInterface->mRandomSeed;
     case EE_AI_NEXT_HOST_CLASSIC_AI:
-        if (EECPClassicAI() == NULL)
+        if ((const EECPAIEntry*)ee_cp_engine_classic() == NULL)
             return 0;
-        EECPNextAppend(outRecord, EECPAIID(EECPClassicAI()));
+        EECPNextAppend(outRecord, EECPAIID((const EECPAIEntry*)ee_cp_engine_classic()));
         return 1;
     case EE_AI_NEXT_HOST_AI_SCRIPT: {
         const EECPAIEntry* theAI = EECPAIByID((const char*)(uintptr_t)a);

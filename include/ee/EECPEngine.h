@@ -40,10 +40,6 @@ typedef EeCpAiEntry EECPAIEntry;
 inline std::string EECPAIText(const uint8_t* inText, size_t inLength) { return std::string((const char*)inText, inLength); }
 inline std::string EECPAIID(const EECPAIEntry* inAI) { return EECPAIText(inAI->id, inAI->id_len); }
 
-inline unsigned long EECPEngineChoiceCount() { return (unsigned long)ee_cp_engine_choice_count(); }   // 2 + the AIs
-// NULL: random or out of range (choice 0: the "classic" AI, NULL when the manifest marks none)
-inline const EECPAIEntry* EECPAIByChoice(unsigned long inChoice) { return ee_cp_engine_by_choice(inChoice); }
-inline const EECPAIEntry* EECPClassicAI() { return ee_cp_engine_classic(); }   // NULL: none
 inline const EECPAIEntry* EECPAIByID(const std::string& inID)                  // NULL: not in the manifest
 {
     return ee_cp_engine_by_id((const uint8_t*)inID.data(), inID.size());
@@ -76,13 +72,5 @@ bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer);
 // gives a computer player its AI from a resolved choice (classic or 2 + k; none: the seat stands idle)
 void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice);
 
-// the choice a computer player of the lobby slot inSlot (0..15) plays with: the lobby's choice after EE_AI_ENGINE's
-// override for the player id, random resolved from the game's random seed and the slot (identical on every peer,
-// and independent of the game's other draws) uniformly among classic and the AIs marked random -> classic or 2 + k
-inline unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, unsigned long inSlot,
-                                       unsigned long inPlayerID)
-{
-    return (unsigned long)ee_cp_engine_resolve(inChoice, inSeed, inSlot, inPlayerID);
-}
 
 #endif

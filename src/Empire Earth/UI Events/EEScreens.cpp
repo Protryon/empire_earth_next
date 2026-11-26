@@ -108,6 +108,7 @@ extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-ou
 #include "rust/base/math.h"
 #include "rust/game/app.h"
 #include "rust/game/campaign.h"
+#include "rust/game/cp_engine.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/physics.h"
 #include "rust/game/screens.h"
@@ -189,7 +190,7 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
     case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME: return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
     case EE_SCREENS_LE_RULE_EPOCH_TITLE: return (uint32_t)EEEpochTitleID((long)(int32_t)inArg);
     case EE_SCREENS_LE_RULE_GENERATORS: return (uint32_t)EERMGetNumberOfGenerators();
-    case EE_SCREENS_LE_RULE_ENGINES: return (uint32_t)EECPEngineChoiceCount();
+    case EE_SCREENS_LE_RULE_ENGINES: return (uint32_t)(unsigned long)ee_cp_engine_choice_count();
     case EE_SCREENS_LE_RULE_DEFAULT_COLOUR: return inArg < 16 ? (uint32_t)gDefaultPlayerColors[inArg] : 0;
     case EE_SCREENS_LE_RULE_STARTING_CITIZENS: return gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     }

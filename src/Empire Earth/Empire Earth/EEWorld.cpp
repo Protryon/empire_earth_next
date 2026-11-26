@@ -80,6 +80,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
 #include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp world.rs)
+#include "rust/sim/ai.h"
 #include "rust/sim/scenario.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
@@ -655,7 +656,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::UpdateLandContinents: EEUpdateLandContinents();
         break;
-    case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
+    case O::AiCollectComputerPlayers: ee_ai_collect_computer_players();
         break;
     case O::GraphicsReleaseScene: gGraphics->PostReleaseScene();
         break;

@@ -38,6 +38,7 @@
 #include "ee/EEStartingResources.h"
 #include "ee/EEGamePreferences.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/cp_engine.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
@@ -173,7 +174,7 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::NewWorldPlayer: return P64(static_cast<EEPlayer*>(new EEHumanPlayer(UWideString("World"), 0)));
     case O::NewHumanPlayerNamed: return P64(static_cast<EEPlayer*>(new EEHumanPlayer(SLOT->mName, (unsigned long)a[0])));
-    case O::CpEngineResolve: return EECPEngineResolve((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
+    case O::CpEngineResolve: return (unsigned long)ee_cp_engine_resolve((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
     case O::CpEngineSet: EECPEngineSet((EEComputerPlayer*)p, (unsigned long)a[0]);
         break;
     case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);

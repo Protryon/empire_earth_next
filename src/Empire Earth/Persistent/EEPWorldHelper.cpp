@@ -73,6 +73,7 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionManager.h"
+#include "rust/game/cp_engine.h"
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
 
@@ -290,7 +291,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphStrData: return P64(STR.data());
     case O::PphCpEngineAi: *(std::string*)a[0] = EECPEngineAI(CP);
         break;
-    case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID(EECPClassicAI());
+    case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID((const EECPAIEntry*)ee_cp_engine_classic());
         break;
     case O::PphCpSaveState: EECPNextSaveState(CP, *(std::string*)a[0]);
         break;

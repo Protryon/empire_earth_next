@@ -62,6 +62,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
 #include "ee/EEGameState.h"   // gGameState
+#include "rust/game/cp_engine.h"
 #include "rust/ui/lle_table.h"
 
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
@@ -110,7 +111,7 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID) { r
 
 // The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*, ui_manager_ffi.rs
 // picks), each the original's
-extern "C" int64_t ee_screenscpp_um_engine_count() { return EECPEngineChoiceCount(); }
+extern "C" int64_t ee_screenscpp_um_engine_count() { return (unsigned long)ee_cp_engine_choice_count(); }
 extern "C" void ee_screenscpp_um_music(void* inCall)
 { static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
 extern "C" int64_t ee_screenscpp_um_citizens() { return gWorldTable.GetLongValue(kWorldStartingCitizensDefault); }

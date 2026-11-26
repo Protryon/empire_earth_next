@@ -12,7 +12,6 @@
 class EEArtificialIntelligence {
 public:
     virtual ~EEArtificialIntelligence() {}
-    void CollectComputerPlayers() { ee_ai_collect_computer_players(); }   // 0x2cd0e (after a game is set up)
     void Update() { ee_ai_update(); }   // 0x2cd99 (the physics thread: one computer player per interval)
 };
 

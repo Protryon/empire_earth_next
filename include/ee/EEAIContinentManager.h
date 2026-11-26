@@ -91,10 +91,6 @@ public:
     // inline twin of GetContinentByID: its undone COMDAT folds with 0x26fdd; at a low share its const operator[] goes out of line
     EEAIContinent* GetContinentFromID(unsigned short inID) const { return this->GetContinents()[inID]; }
     EEAIContinent* GetContinentByID(unsigned short inID) const { return this->GetContinents()[inID]; }
-    // 0x22872 (ret 0xc): whether inFirst and inSecond are connected under inFlags (1/2/8: the +0x112/+0x116/+0x10e ids)
-    // (provisional name)
-    bool AreConnected(EEAIContinent* inFirst, EEAIContinent* inSecond, long inFlags)
-        { return ee_astar_cmq_are_connected((uint64_t)(uintptr_t)inFirst, (uint64_t)(uintptr_t)inSecond, inFlags); }
     // area lookups by a tile (bodies read; names and the exact return classes inferred): the continent at the tile
     // (GetContinentAt), then the first of its id list (+0x7c chokes, +0x8c forests, +0xac hills) whose area holds
     // the tile
