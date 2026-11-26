@@ -88,13 +88,6 @@ const GUIString& LobbyRustDialog::InputText(int inMember)
     return reinterpret_cast<InputBox*>(this->LCall(EeWonLobbyDlgCall::Slot, inMember))->GetText();
 }
 
-const GUIString& LobbyRustDialog::InputTextOf(intptr_t inInput)
-{
-    if (inInput == 0)
-        return gEmptyGUIString;
-    return reinterpret_cast<InputBox*>(inInput)->GetText();
-}
-
 SmartPtr<LobbyGame> LobbyRustDialog::GetGame()
 {
     LobbyGame* aHeld = reinterpret_cast<LobbyGame*>(this->LCall(EeWonLobbyDlgCall::GetGame));

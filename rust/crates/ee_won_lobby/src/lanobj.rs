@@ -107,7 +107,7 @@ impl EeWonLan {
 
     // ---- the calls out: the held members' ops answered here (lanown.rs), the rest the host's
     fn op(&self, op: Op, a: *mut c_void, b: *mut c_void, c: isize, d: isize) -> isize {
-        if let Some(r) = crate::lobbytext::lobby_op(op, a as isize) {
+        if let Some(r) = crate::lobbytext::lobby_op(op, self.host.logic as isize, a as isize, b as isize, c) {
             return r;
         }
         if let Some(o) = &self.owned {

@@ -64,7 +64,6 @@ static intptr_t Held(RefCount* inObj)
     inObj->AddRef();
     return (intptr_t)inObj;
 }
-static IPAddr Addr(void* inValue) { return IPAddr::FromValue(ee_won_ipaddr_clone(static_cast<const EeWonIpAddr*>(inValue))); }
 
 // ---- LobbyLanSocket: its client and time are a Rust object (qsock.rs EeWonLanSocket); its calls back
 
@@ -113,7 +112,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     LobbyLanSocket* sock = static_cast<LobbyLanSocket*>(inA);
     LobbyGame* g = static_cast<LobbyGame*>(inA);
     AsyncOp* op = static_cast<AsyncOp*>(inA);
-    ChatCommandParser* parser = static_cast<ChatCommandParser*>(inA);
     ByteBufferPtr aHold;
     switch (inOp) {
     case EeWonLobbyOp::LanSocketClient: return (intptr_t)static_cast<LobbyClient*>(sock->GetClient());
@@ -135,7 +133,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanPortDo: return LobbyDoDialog(l->mDialog[kLanPort].get());
     case EeWonLobbyOp::LanTimerAlloc: return Held(new AsyncOp);
     case EeWonLobbyOp::LanTimerSetCompletion: op->SetCompletion(new ShellCompletion(l, inC == 0 ? EeWonLogicShellDone::LanNetworkTimer : EeWonLogicShellDone::LanDiscoveryTimer)); return 0;
-    case EeWonLobbyOp::ClientNameTake: Take(inB, LanUtf16(cl->GetName())); return 0;
     case EeWonLobbyOp::LanClientChanged:
         LobbyBroadcastEvent(ClientChangedEvent(cl, 8, (int)inC), true);
         return 0;
@@ -147,7 +144,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     // LanStagingRead is lobbyops.rs's over this (R6 WON round 36)
     case EeWonLobbyOp::LanStagingBytes: LanStagingBytes(ReadBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD), static_cast<LobbyClient*>(inB)); return 0;
     case EeWonLobbyOp::LanNameDialogRun: l->mDialog[kLanName]->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mDialog[kLanName].get());
-    case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mDialog[kLanName]->InputText(0).length();
     case EeWonLobbyOp::LanBroadcastPort: return LobbyGetLanBroadcastPort();
     case EeWonLobbyOp::LanPortDialogPort: return (unsigned short)l->mDialog[kLanPort]->LCall(EeWonLobbyDlgCall::GetPort);
     case EeWonLobbyOp::SetClientIgnored: LobbySetClientIgnored(cl, inC != 0, (int)inD); return 0;
@@ -156,10 +152,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
         return 0;
     case EeWonLobbyOp::KickClientFromLobby: LobbyKickClient(cl, false); return 0;
     case EeWonLobbyOp::ChatParser: return (intptr_t)LobbyGetChatCommandParser();
-    case EeWonLobbyOp::ParserRoomFlags: return parser->GetRoomFlags();
-    case EeWonLobbyOp::ParserTarget: return (intptr_t)parser->GetTarget();
-    case EeWonLobbyOp::ParserCommand: return parser->GetCommand();
-    case EeWonLobbyOp::ParserTextTake: Take(inB, LanUtf16(parser->GetText())); return 0;
     case EeWonLobbyOp::LanChatCommandError:
         LobbySendEventTo(ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_InvalidCommand_String)), static_cast<Component*>(inA));
         return 0;
@@ -179,7 +171,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::GameWriteSummary: g->WriteSummary(*static_cast<WriteBuffer*>(inB)); return 0;
     case EeWonLobbyOp::WbufSink: ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(static_cast<WriteBuffer*>(inA)->data()), static_cast<WriteBuffer*>(inA)->length()); return 0;
     case EeWonLobbyOp::LanPasswordDialog: l->mDialog[kLanPassword]->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mDialog[kLanPassword].get());
-    case EeWonLobbyOp::LanPasswordTake: Take(inB, LanUtf16(l->mDialog[kLanPassword]->InputText(0))); return 0;
     case EeWonLobbyOp::LanPingGame: LobbyPingGame(g, false); return 0;
     case EeWonLobbyOp::LanDirectAddressAt:
         ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inA), LobbyGetDirectConnectAddressAt((size_t)inC).GetValue());
@@ -192,7 +183,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     // (the configured port moved by the harness slot's offset, as LobbyBindUDPPort's: TEST ONLY)
     case EeWonLobbyOp::ConfigLobbyPortTest: return static_cast<LobbyConfig*>(inA)->mLobbyPort + LobbyTestPortOffset();
     case EeWonLobbyOp::LobbyPort: return LobbyGetLobbyPort();
-    case EeWonLobbyOp::LanDirectHostTake: Take(inB, std::string(l->mDialog[kLanDirectConnect]->InputText(1))); return 0;
     case EeWonLobbyOp::LanDirectDnsHeld: return Held(NewDnsTestOp(l->mDialog[kLanDirectConnect]->InputText(1)));
     case EeWonLobbyOp::DnsOpAddrAssign: ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inA), static_cast<RustServerOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inB)))->AddrOf(EE_WON_DNSTEST_ADDR).GetValue()); return 0;
     case EeWonLobbyOp::LanGameReadSummary: return LobbyReadGuard([&] { return LanGameReadSummary(ReadBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD), static_cast<LobbyGame*>(inB)); });
@@ -221,10 +211,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::ChatSoundEffects: return LobbyGetChatSoundEffects() ? 1 : 0;
     case EeWonLobbyOp::PlayWhisperSound: LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_WhisperRecv_Sound).get());
         return 0;
-    case EeWonLobbyOp::ParserSetInputName: parser->SetInput(static_cast<LobbyClient*>(inB)->GetName());
-        return 0;
-    case EeWonLobbyOp::LanSetLanNameFromDialog: LobbySetLanName(l->mDialog[kLanName]->InputText(0));
-        return 0;
     case EeWonLobbyOp::LanSetBroadcastPortTo: LobbySetLanBroadcastPort((int)inC);
         return 0;
     case EeWonLobbyOp::LanBindLobbyPort: return sock->Fn2B0D90(LobbyGetLobbyPort(), 0);
@@ -250,11 +236,6 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanArmRecvCompletion: sock->SetRepeatCompletion(new ShellCompletion(l, EeWonLogicShellDone::LanRecvMsg));
         return 0;
     case EeWonLobbyOp::LanArmRecvOp: sock->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::RecvMsg));
-        return 0;
-    case EeWonLobbyOp::LanDirectInputLength: return (intptr_t)l->mDialog[kLanDirectConnect]->InputText(0).length();
-    case EeWonLobbyOp::GameSetDirectName: g->SetName(l->mDialog[kLanDirectConnect]->InputText((int)inC));
-        return 0;
-    case EeWonLobbyOp::AddDirectConnectNamed: LobbyAddDirectConnect(Addr(inB), l->mDialog[kLanDirectConnect]->InputText((int)inC));
         return 0;
     default: return 0;
     }
