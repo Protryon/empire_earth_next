@@ -4,7 +4,6 @@
 // (0xc6fd) on it; members only where a decompiled body reads them (gaps elsewhere). Requires ee/EEAIArea.h.
 #ifndef EE_EEAIPATHAREA_H
 #define EE_EEAIPATHAREA_H
-#include "rust/sim/astar.h"
 #include "ee/EEAIArea.h"
 
 // Port: the members are the Rust record EeAStarPathAreaRecord (ee_sim::astar area_kinds.rs), the private base:

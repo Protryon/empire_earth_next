@@ -6,7 +6,6 @@
 #ifndef LLE_UILBSTRING_H
 #define LLE_UILBSTRING_H
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 
 class LLE_API UILBString : public UIListBox<UWideString> {

@@ -6,7 +6,6 @@
 #ifndef EE_EECOMPUTERPLAYER_H
 #define EE_EECOMPUTERPLAYER_H
 
-#include "ee/EEUnitHandle.h"
 #include "rust/sim/cp.h"             // EeCpFields (the plain members), the bodies over them
 #include "ee/EEPlayer.h"
 

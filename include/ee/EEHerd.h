@@ -13,7 +13,6 @@
 #include <vector>
 #include "rust/sim/cp.h"             // EeHerdFields
 #include "ee/EEAIArea.h"
-#include "lle/U2DPoint.h"
 
 class EEComplexUnit;
 class EEAnimal;

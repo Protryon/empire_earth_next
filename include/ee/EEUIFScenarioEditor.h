@@ -15,7 +15,6 @@
 #include "ee/EEUnitHandle.h"
 #include "rust/game/screens.h"
 
-#include "lle/LLEForward.h"
 #include "lle/UIForm.h"
 #include "ee/EECivilization.h"
 class EEAScroll;

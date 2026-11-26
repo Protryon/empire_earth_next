@@ -5,7 +5,6 @@
 #ifndef EE_EECLIENT_H
 #define EE_EECLIENT_H
 
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 #include "lle/NESynchronousClient.h"
 class EEGameOptionsPlayer;

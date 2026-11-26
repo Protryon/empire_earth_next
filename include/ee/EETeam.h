@@ -9,7 +9,6 @@
 #define EE_EETEAM_H
 
 #include "rust/sim/app.h"   // the players' load and save
-#include "rust/sim/units.h"   // EeUnitsPlayerSaveIo
 #include "lle/FSRestorable.h"
 
 class EEVCWonder;                          // RTTI EEVCWonder > EEVictoryCondition (vtable 0x442064)

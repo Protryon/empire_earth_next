@@ -23,9 +23,6 @@ class EEComplexUnit;
 #include "ee/EEGameOptions.h"          // held by value (+0x110, +0x51c)
 #include "ee/EEStatisticsHistory.h"    // held by value (+0xd8)
 #include "ee/EEVoting.h"               // held by value (+0xb5c)
-#include "rust/sim/app.h"              // the active unit lists (ee_app_active_*)
-#include "rust/game/gamecpp.h"
-#include "rust/sim/units.h"
 
 class EEContagionManager;
 class EEEffectManager;

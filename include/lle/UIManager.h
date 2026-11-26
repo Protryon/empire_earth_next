@@ -6,16 +6,10 @@
 // members are the Rust manager's now (see the class). Requires lle/UIForm.h (CreateForm).
 #ifndef LLE_UIMANAGER_H
 #define LLE_UIMANAGER_H
-#include "lle/LLEForward.h"
 
 #include <stdint.h>
 
 #include "lle/UIEvent.h"
-#include "rust/ui/managerobj.h"
-#include "rust/ui/lle_manager.h"
-#include "rust/ui/lle_control.h"
-#include "rust/ui/obj.h"
-#include "lle/UIObjHost.h"
 #include "lle/UIForm.h"
 
 

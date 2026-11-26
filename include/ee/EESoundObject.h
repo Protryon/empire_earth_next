@@ -56,6 +56,5 @@ public:
 };
 
 // dbsounds' sounds by table index (EESoundID): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
-#include "rust/sim/game_ids.h"
 
 #endif

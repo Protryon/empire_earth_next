@@ -12,8 +12,6 @@
 
 #include "ee/EEWorldConstants.h"
 #include "ee/EEGlobalConstants.h"
-#include "rust/data/tables.h"
-#include "rust/sim/combat.h"
 #include "ee/EEDbList.h"
 #include "rust/data/media.h"
 #include "rust/game/gamecpp.h"

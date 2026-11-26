@@ -7,7 +7,6 @@
 #define EE_EEUIBGENERICBACKGROUND_H
 #include "rust/game/screens.h"
 #include "lle/UIBitmapBackground.h"
-#include "lle/GEColor.h"
 
 class EEUIBGenericBackground : public UIBitmapBackground, public EeScreensBackgroundFields {
 public:

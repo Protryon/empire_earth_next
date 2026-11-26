@@ -4,8 +4,6 @@
 #ifndef EE_EEROGROUNDSHADOWS_H
 #define EE_EEROGROUNDSHADOWS_H
 
-#include "rust/game/gamecpp.h"
-#include "rust/render/gfx.h"
 #include "ee/EERenderObject.h"
 class EEROGroundShadows : public EERenderObject {
 public:

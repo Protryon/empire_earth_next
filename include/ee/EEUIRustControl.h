@@ -10,7 +10,6 @@
 
 #include "rust/game/screens.h"
 #include "lle/UIControl.h"
-#include "rust/ui/ids.h"
 
 class EEUIRustControl : public UIControl {
 public:

@@ -4,7 +4,6 @@
 #define EE_EERULESWORLD_H
 
 #include "ee/EERules.h"
-#include "rust/data/world_constants.h"
 #include "ee/EEDatabaseTables.h"
 
 // as a float (a world L value converts as the original's float reads of GetLongValue did)

@@ -4,7 +4,6 @@
 #ifndef EE_EEAICHOKEPOINT_H
 #define EE_EEAICHOKEPOINT_H
 #include <stdint.h>
-#include "rust/sim/astar.h"
 #include "ee/EEAIArea.h"
 
 // Port: the members are the Rust record EeAStarChokeRecord (ee_sim::astar area_kinds.rs), the private base: +0x68 the

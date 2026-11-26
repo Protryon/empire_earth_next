@@ -8,7 +8,6 @@
 
 #include "rust/game/screens.h"   // EeScreensStatusButtonFields
 
-#include "lle/LLEForward.h"
 #include "lle/UIButton.h"
 
 class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields, public EeScreensStatusButtonObjects {

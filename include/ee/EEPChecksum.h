@@ -6,7 +6,6 @@
 // Requires lle/LowLevelEngine.h (ESChecksum), lle/FSRestorable.h, lle/FSPersistent.h.
 #ifndef EE_EEPCHECKSUM_H
 #define EE_EEPCHECKSUM_H
-#include "rust/base/error.h"
 #include "rust/game/gamecpp.h"
 #include "ee/EEPersistentTag.h"
 #include "lle/FSPersistent.h"

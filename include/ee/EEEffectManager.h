@@ -12,8 +12,6 @@
 #include "lle/FSRestorable.h"
 #include "lle/U2DPoint.h"
 #include "ee/EEEffect.h"
-#include "rust/base/math.h"
-#include "rust/game/gamecpp.h"
 
 class EEGraphicEffect;
 class EEUnit;

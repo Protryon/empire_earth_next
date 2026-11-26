@@ -4,7 +4,6 @@
 #ifndef EE_EEROEFFECTS_H
 #define EE_EEROEFFECTS_H
 
-#include "rust/game/gamecpp.h"
 #include "ee/EERenderObject.h"
 class EEROEffects : public EERenderObject {
 public:
