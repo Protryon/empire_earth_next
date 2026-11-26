@@ -34,7 +34,6 @@ enum class EePhysCpp : uint32_t {
   /// `mThread != NULL ? mThread->Post(a0, NULL, NULL, true) : 0`
   ThreadPost,
   RtsHandleMessage,
-  UnitOfId,
   UnitStep,
   PlayerUpdate,
   /// `(*(std::function<void()>*)p)()` (a loaded game's fixup: EEAfterLoad, EEAfterLoadLast)
@@ -60,11 +59,6 @@ enum class EePhysCpp : uint32_t {
   SwapNew,
   SwapPush,
   SwapClear,
-  MsgType,
-  MsgReference,
-  MsgDereference,
-  MsgForSpecificSlot,
-  MsgOriginatingSlot,
   MsgSetOriginatingSlot,
   /// `static_cast<NEMRecord*>(p)->Get<bool>(a0)`
   RecBool,
@@ -73,7 +67,6 @@ enum class EePhysCpp : uint32_t {
   GameCast,
   ExecuteSelection,
   ExecuteGame,
-  Execute,
   /// `static_cast<EEMRecord*>(p)->mRecord`
   RecordBytes,
   /// `ExecuteRemovePlayer` with the record's player, out of synch, exiting and booted
@@ -85,12 +78,10 @@ enum class EePhysCpp : uint32_t {
   CaptureExecuted,
   UnitStoreCheck,
   TestHookCall,
-  IsServer,
   IsClient,
   /// `gCommunications != NULL && gCommunications->IsServer()`
   CommsIsServer,
   ClientHasLeft,
-  CtsInPhysics,
   IncrementCts,
   SetAverageUpdate,
   SetAverageGap,
@@ -116,9 +107,6 @@ enum class EePhysCpp : uint32_t {
   /// (float)
   SetWindDirection,
   EnvironmentTick,
-  WorldWriteLock,
-  WorldWriteUnlock,
-  UnitsFirst,
   UnitNext,
   UnitChecksum,
   UnitDump,
@@ -137,7 +125,6 @@ enum class EePhysCpp : uint32_t {
   PlayerAvailablePoints,
   PlayerSavedGroupLast,
   CivBuilderBlink,
-  PlayerActiveGroup,
   PlayerRunningGroups,
   PlayerRunningGroup,
   PlayerAirTraffic,
@@ -152,11 +139,8 @@ enum class EePhysCpp : uint32_t {
   CalamityDump,
   CalamityChecksum,
   AiUpdate,
-  WorldTableLong,
   HasJitPower,
   /// `new UWideString`
-  TextNew,
-  TextDelete,
   /// `gResource->GetString(a0, *(UWideString*)p)`
   ResourceString,
   /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
@@ -173,12 +157,10 @@ enum class EePhysCpp : uint32_t {
   AutoSaves,
   AutoSaveMilliseconds,
   SetLastAutoSave,
-  SavePreferences,
   /// `gSavedGameExtension` into the buffer a0 (room a1)
   SavedGameExtension,
   LoadOrSave,
   FileOpen,
-  FilePuts,
   FileClose,
   ContinentChecksum,
   /// the campaign user (a0 0), the game's campaign (1) or scenario (2) into the buffer a1 (room a2): its length

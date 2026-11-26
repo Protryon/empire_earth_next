@@ -1877,6 +1877,7 @@ enum class EeGameCpp : uint32_t {
   PsCastCalamities,
   PsCastEnvironment,
   PsHeaderNew,
+  PsHeaderDelete,
   PsHdrSetName,
   PsHdrDefaultDescription,
   PsHdrVersions,
