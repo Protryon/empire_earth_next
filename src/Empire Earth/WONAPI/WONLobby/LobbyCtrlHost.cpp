@@ -2,7 +2,8 @@
 // The lobby screens' controls' shell and host (R6 WONLobby round 4): GameBrowserCtrl, GameStagingCtrl,
 // LobbyOptionsCtrl, GameUserListCtrl and the EE room's EELobbyGameOptionsCtrl are one Rust object each (rust/crates/ee_won_lobby/src/lobbyctl.rs). This unit is
 // the shell's two virtuals, the host (each op the original's statements on a control, an event, the lobby's model,
-// its settings or a global, with no decision) and the two config readers that were in GameBrowserCtrl.cpp and GameUserListCtrl.cpp.
+// its settings or a global, with no decision). The two config readers that were in GameBrowserCtrl.cpp and
+// GameUserListCtrl.cpp are lobby config kinds (lobbycfgrd.rs, R6 WON lobby/net round 40; LobbyNetCtrlHost.cpp).
 #include <windows.h>
 #include <stdio.h>
 #include <string>
@@ -14,7 +15,7 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyControlConfig.h"
+#include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
@@ -25,7 +26,6 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_gui/guiconf.h"
 #include "ee/wonapi/WONLobbyGuard.h"
-#include "rust/won_lobby/lobbycfgrd.h"
 #include "rust/won_lobby/lobbyctl.h"
 #include "rust/won_lobby/rows.h"
 
@@ -215,38 +215,4 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     // round 13's ops (the Internet controls)
     return LobbyNetCtrlHost(aCtl, inOp, a, b, c);
 }
-
-// ---- the config readers (GameBrowserCtrl.cpp's and GameUserListCtrl.cpp's)
-
-
-// The instruction keys and the flag and value names these readers compare are ee_won's guiconf tables
-// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
-// the readers' statements (lobbycfgrd.rs composes them, R6 WON round 33); HOMELOCATION's path is this static
-// the config readers' reads (LobbyNetCtrlHost.cpp)
-intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc);
-static std::string sCfgRdPath;
-static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
-{
-    typedef EeWonLobbyCfgRdOp Op;
-    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
-    GameBrowserCtrlConfig* gb = static_cast<GameBrowserCtrlConfig*>(c);
-    GameUserListCtrlConfig* gu = static_cast<GameUserListCtrlConfig*>(c);
-    switch (inOp) {
-    case Op::BrowserBase: return WON_GUARDED(gb->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
-    case Op::BrowserPathIsFile: return WON_GUARDED(ee_won_url_kind(reinterpret_cast<const uint8_t*>(sCfgRdPath.data()), sCfgRdPath.size()) == EE_WON_URL_FILE); // URL(path).GetType()
-    case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
-    case Op::BrowserSetHome: return WON_GUARDED_V(LobbyCfgComp<GameBrowserCtrl>(c)->SetHomeLocation(sCfgRdPath));
-    case Op::GameUserListBase: return WON_GUARDED(gu->ContainerConfig::Virtual24(*(const std::string*)a));
-    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
-    }
-}
-static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
-
-// Reads the HOMELOCATION layout key, resolving a file URL to the resource file path
-bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::GameBrowser, instruction) != 0; }
-
-
-// Accepts (and ignores) the CTRLLINKID layout key; passes other keys to the container's reader
-bool GameUserListCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::GameUserList, instruction) != 0; }
 }

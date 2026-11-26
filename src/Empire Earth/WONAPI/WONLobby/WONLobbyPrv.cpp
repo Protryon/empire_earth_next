@@ -24,7 +24,8 @@
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
-#include "ee/wonapi/WONLobbyControlConfig.h"
+#include "ee/wonapi/WONLobbyImageButton.h"
+#include "ee/wonapi/WONLobbyCrossPromotion.h"
 #include "ee/wonapi/WONGUIShell.h"
 #include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONLobbyGuard.h"
@@ -117,10 +118,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
-    case Op::SuspendedClear: p->mSuspended = false; return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
-    case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
-    case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
     case Op::ConfigNew: p->mConfig = new LobbyConfig; return 0;
@@ -152,13 +150,13 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::ResInit: sPrvTable = LobbyResource_Init(reinterpret_cast<ResourceConfigTable*>(a)); return 0;
     case Op::ResGuiInit: WONGUIConfig_Init(sPrvTable.get()); return 0;
     case Op::AllocBrowserComponent: sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>); return 0;
-    case Op::AllocChatCtrl: sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>); return 0;
+    case Op::AllocChatCtrl: sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<EeWonCfgKind::LobbyChat>,NewComponentOf<ChatCtrl>); return 0;
     case Op::AllocCreateAccountCtrl: sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>); return 0;
     case Op::AllocDirectConnectCtrl: sPrvTable->AddAllocator("DirectConnectCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::DirectConnect>); return 0;
     case Op::AllocFriendsListCtrl: sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>); return 0;
-    case Op::AllocGameBrowserCtrl: sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>); return 0;
+    case Op::AllocGameBrowserCtrl: sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<EeWonCfgKind::LobbyGameBrowser>,NewComponentOf<GameBrowserCtrl>); return 0;
     case Op::AllocGameStagingCtrl: sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>); return 0;
-    case Op::AllocGameUserListCtrl: sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory); return 0;
+    case Op::AllocGameUserListCtrl: sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<EeWonCfgKind::LobbyGameUserList>,CtlFactory<Ck::UserList>); return 0;
     case Op::AllocInitFailedCtrl: sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>); return 0;
     case Op::AllocInternetOptionsCtrl: sPrvTable->AddAllocator("InternetOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::NetOptions>); return 0;
     case Op::AllocInternetScreen: sPrvTable->AddAllocator("InternetScreen",NewConfigOf<ContainerConfig>,ScreenFactory<false>); return 0;
@@ -173,15 +171,15 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AllocMOTDCtrl: sPrvTable->AddAllocator("MOTDCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<MOTDCtrl>); return 0;
     case Op::AllocQuickPlayCtrl: sPrvTable->AddAllocator("QuickPlayCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::QuickPlay>); return 0;
     case Op::AllocRoomCtrl: sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>); return 0;
-    case Op::AllocRoomLabelCtrl: sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>); return 0;
-    case Op::AllocServerListCtrl: sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>); return 0;
+    case Op::AllocRoomLabelCtrl: sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<EeWonCfgKind::LobbyRoomLabel>,NewComponentOf<RoomLabelCtrl>); return 0;
+    case Op::AllocServerListCtrl: sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<EeWonCfgKind::LobbyServerList>,NewComponentOf<ServerListCtrl>); return 0;
     case Op::AllocUpdateAccountCtrl: sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>); return 0;
-    case Op::AllocUserListCtrl: sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory); return 0;
+    case Op::AllocUserListCtrl: sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<EeWonCfgKind::LobbyUserList>,CtlFactory<Ck::Users>); return 0;
     case Op::AllocAddFriendDialog: sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>); return 0;
     case Op::AllocAdminActionDialog: sPrvTable->AddAllocator("AdminActionDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>); return 0;
     case Op::AllocBadUserDialog: sPrvTable->AddAllocator("BadUserDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>); return 0;
     case Op::AllocChooseNetworkAdapterDialog: sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>); return 0;
-    case Op::AllocCreditsDialog: sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>); return 0;
+    case Op::AllocCreditsDialog: sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<EeWonCfgKind::LobbyCredits>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>); return 0;
     case Op::AllocCreateGameDialog: sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>); return 0;
     case Op::AllocCreateRoomDialog: sPrvTable->AddAllocator("CreateRoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>); return 0;
     case Op::AllocDirectConnectDialog: sPrvTable->AddAllocator("DirectConnectDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>); return 0;
@@ -192,8 +190,8 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AllocRoomDialog: sPrvTable->AddAllocator("RoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Room>); return 0;
     case Op::AllocStatusDialog: sPrvTable->AddAllocator("StatusDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Status>); return 0;
     case Op::AllocTOUDialog: sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>); return 0;
-    case Op::AllocCrossPromotionButton: sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>); return 0;
-    case Op::AllocImageTextButton: sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>); return 0;
+    case Op::AllocCrossPromotionButton: sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<EeWonCfgKind::LobbyCrossPromotion>,NewComponentOf<CrossPromotionButton>); return 0;
+    case Op::AllocImageTextButton: sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<EeWonCfgKind::LobbyImageText>,NewComponentOf<ImageTextButton>); return 0;
     case Op::AllocMaxSplitterButton: sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>); return 0;
     case Op::AllocGameOptionsCtrl: sPrvTable->AddAllocator("GameOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>); return 0;
     case Op::AllocPlayerOptionsCtrl: sPrvTable->AddAllocator("PlayerOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>); return 0;
@@ -353,13 +351,13 @@ void LobbySetClientIgnored(LobbyClient* client,bool inIgnored,unsigned int roomS
 // ---- LobbyScreenQueries.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Free lobby functions that show login and Internet screen panels and report which lobby screen is shown
 // Switches the Internet screen to its lobby (rooms) tab
-void LobbyShowLobbyTab() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mInternetScreen->ShowLobbyTab(); }
+void LobbyShowLobbyTab() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Internet()->ShowLobbyTab(); }
 // Shows the create-account panel of the login screen
-void LobbyShowCreateAccount() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mLoginScreen->ShowCreateAccountCtrl(); }
+void LobbyShowCreateAccount() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Login()->ShowCreateAccountCtrl(); }
 // Shows the lost-password panel of the login screen
-void LobbyShowLostPassword() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mLoginScreen->ShowLostPasswordCtrl(); }
+void LobbyShowLostPassword() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Login()->ShowLostPasswordCtrl(); }
 // Shows the lost-username panel of the login screen
-void LobbyShowLostUsername() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->mLoginScreen->ShowLostUsernameCtrl(); }
+void LobbyShowLostUsername() { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->Login()->ShowLostUsernameCtrl(); }
 // Returns whether the lobby is showing the Internet screen
 bool LobbyOnInternetScreen() { return gLobbyData.get()!=NULL?gLobbyData->mLobbyContainer->OnInternetScreen():false; }
 // Returns whether the lobby is showing the LAN screen
@@ -379,11 +377,7 @@ Window* LobbyGetRootWindow() { return gLobbyData.get()!=NULL?gLobbyData->mLobbyC
 // Returns the default window manager
 WindowManager* GetLobbyWindow() { return WindowManager::GetDefaultWindowManager(); }
 // Returns whether the lobby is suspended; false without a lobby
-bool LobbyIsSuspended()
-{
-    if(gLobbyData.get()==NULL) return false;
-    return gLobbyData->mSuspended;
-}
+bool LobbyIsSuspended() { return ee_won_lobbyprv_get(EeWonLobbyPrvField::Suspended) != 0; } // (lobbyprv.rs's)
 
 // ---- LobbyScreenAccess.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Returns the chat command parser, pointed at the user list of the Internet or LAN screen showing
@@ -403,9 +397,9 @@ ChatCommandParser* LobbyGetRoomChatParser(int flags)
 Component* LobbyGetCurrentScreen()
 {
     if(gLobbyData.get()==NULL) return NULL;
-    if(LobbyOnInternetScreen()) return gLobbyData->mLobbyContainer->mInternetScreen.get();
-    if(LobbyOnLanScreen()) return gLobbyData->mLobbyContainer->mLanScreen.get();
-    if(LobbyOnLoginScreen()) return gLobbyData->mLobbyContainer->mLoginScreen.get();
+    if(LobbyOnInternetScreen()) return gLobbyData->mLobbyContainer->Internet();
+    if(LobbyOnLanScreen()) return gLobbyData->mLobbyContainer->Lan();
+    if(LobbyOnLoginScreen()) return gLobbyData->mLobbyContainer->Login();
     return NULL;
 }
 // Switches the lobby to the Internet screen and tells its controls they were entered
@@ -415,7 +409,7 @@ void LobbyShowInternetScreen()
         return;
     gLobbyData->mLobbyContainer->ShowInternetScreen();
     LobbyEvent* event=new LobbyEvent(100014);
-    gLobbyData->mLobbyContainer->mInternetScreen->BroadcastEventDown(event);
+    gLobbyData->mLobbyContainer->Internet()->BroadcastEventDown(event);
 }
 // Switches the lobby to the LAN screen and tells its controls they were entered
 void LobbyShowLanScreen()
@@ -424,7 +418,7 @@ void LobbyShowLanScreen()
         return;
     gLobbyData->mLobbyContainer->ShowLanScreen();
     LobbyEvent* event=new LobbyEvent(100014);
-    gLobbyData->mLobbyContainer->mLanScreen->BroadcastEventDown(event);
+    gLobbyData->mLobbyContainer->Lan()->BroadcastEventDown(event);
 }
 // Returns the lobby's root container, or NULL before the lobby exists
 Container* GetLobbyRoot()
@@ -470,7 +464,7 @@ void LobbyShowLoginScreen()
     if(gLobbyData.get()==NULL) return;
     gLobbyData->mLobbyContainer->ShowLoginScreen();
     LobbyEvent* event=new LobbyEvent(100014);
-    gLobbyData->mLobbyContainer->mLoginScreen->BroadcastEventDown(event);
+    gLobbyData->mLobbyContainer->Login()->BroadcastEventDown(event);
 }
 // Broadcasts an event from the lobby container to the lobby screens (emitted at 0x759100)
 
@@ -648,11 +642,6 @@ static intptr_t RunHost(EeWonRunOp inOp, intptr_t a)
     case Op::WindowVisible: return reinterpret_cast<Window*>(a)->PlatformIsVisible() ? 1 : 0;
     case Op::WindowRunFailureDialog: reinterpret_cast<Window*>(a)->RunDialog(gLobbyFailureDialog.get()); return 0;
     case Op::HasData: return gLobbyData.get() != NULL;
-    case Op::SetStatus: gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(a); return 0;
-    case Op::Status: return gLobbyData->mLobbyStatus;
-    case Op::SetRunMode: gLobbyData->mRunMode = static_cast<LobbyRunMode>(a); return 0;
-    case Op::RunMode: return gLobbyData->mRunMode;
-    case Op::SetSuspended: gLobbyData->mSuspended = a != 0; return 0;
     case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
     case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
     case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
@@ -708,4 +697,57 @@ LobbyLogicMgr::LobbyLogicMgr() : mRust(ee_won_logicmgr_new(LogicMgrHost)) {}
 LobbyLogicMgr::~LobbyLogicMgr() { ee_won_logicmgr_free(this->mRust); }
 // Turns left clicks on menu items and button presses into control events; passes other events to the logics
 void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
+
+// ---- LobbyContainer.cpp (merged into this unit, R6 WON lobby/net round 40)
+// The lobby's top container: switches between the login, Internet and LAN screens (lobbyscreens.rs: the screens and
+// the methods; these are its statements)
+static const char kLobbyContainerFile[] = "C:\\EEX\\Empire Earth\\WONAPI\\WONLobby\\LobbyContainer.cpp"; // its __FILE__
+template<class T> static intptr_t HeldScreen(ComponentConfig* inConfig, const char* inName, int inLine)
+{
+    SmartPtr<T> aScreen;
+    SafeGetComponent(inConfig, aScreen, inName, kLobbyContainerFile, inLine);
+    if (aScreen.get() != NULL) aScreen->AddRef();
+    return (intptr_t)static_cast<Component*>(aScreen.get());
+}
+// a screen lobbyscreens.rs holds (as its Component*)
+static Component* Scr(intptr_t a) { return reinterpret_cast<Component*>(a); }
+static intptr_t ScreensHost(void* inContainer, EeWonLobbyScreensOp inOp, intptr_t a, intptr_t b)
+{
+    typedef EeWonLobbyScreensOp Op;
+    LobbyContainer* c = static_cast<LobbyContainer*>(inContainer);
+    ComponentConfig* aConfig = reinterpret_cast<ComponentConfig*>(a);
+    switch (inOp) {
+    case Op::GetLogin: return WON_GUARDED(HeldScreen<LoginScreen>(aConfig, "LoginScreen", 37));
+    case Op::GetRoot: return WON_GUARDED(HeldScreen<RootScreen>(aConfig, b ? "LanScreen" : "InternetScreen", b ? 39 : 38));
+    case Op::AddScreen: c->AddScreen(Scr(a)); return 0;
+    case Op::ShowScreen: c->ShowScreen(Scr(a), true); return 0;
+    case Op::CurScreen: return (intptr_t)c->mCurScreen;
+    case Op::ShowMotd: static_cast<LoginScreen*>(Scr(a))->ShowMOTD(); return 0;
+    case Op::OnLanTab: return static_cast<RootScreen*>(Scr(a))->OnLanTab() ? 1 : 0;
+    case Op::OnDirectConnectTab: return static_cast<RootScreen*>(Scr(a))->OnDirectConnectTab() ? 1 : 0;
+    case Op::Release: Scr(a)->Release(); return 0;
+    }
+    return 0;
+}
+intptr_t LobbyContainer::SC(EeWonLobbyScreensCall inCall, intptr_t a) { return WonRethrow(ee_won_lobbyscreens_call(this, ScreensHost, inCall, a)); }
+LoginScreen* LobbyContainer::Login() { return static_cast<LoginScreen*>(Scr(this->SC(EeWonLobbyScreensCall::Screen, 0))); }
+RootScreen* LobbyContainer::Internet() { return static_cast<RootScreen*>(Scr(this->SC(EeWonLobbyScreensCall::Screen, 1))); }
+RootScreen* LobbyContainer::Lan() { return static_cast<RootScreen*>(Scr(this->SC(EeWonLobbyScreensCall::Screen, 2))); }
+// Finds and adds the login, Internet and LAN screens and shows the login one
+void LobbyContainer::InitComponent(ComponentInit& inInit)
+{
+    if(inInit.mType==2) this->SC(EeWonLobbyScreensCall::Init, (intptr_t)static_cast<ComponentConfigInit&>(inInit).mConfig);
+}
+
+// ---- LobbyAuthContextAccess.cpp (merged into this unit, R6 WON lobby/net round 40)
+// Returns the login context; with CRC checks on, first gives it the files to hash for the community (once)
+AuthContext* GetLobbyAuthContext()
+{
+    if(gLobbyData.get()==NULL)
+        return NULL;
+    if(gLobbyData->mConfig->mCRCCheck) // the files once (lobbyprv.rs: the list, or the running executable)
+        ee_won_lobbyprv_hash_login(ee_won_authctx_login(gLobbyData->mAuthContext->Core()), gLobbyData->mLoginCommunity.data(),
+                                   sizeof(wchar_t), gLobbyData->mLoginCommunity.size());
+    return gLobbyData->mAuthContext.get();
+}
 }

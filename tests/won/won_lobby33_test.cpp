@@ -43,6 +43,10 @@ static void PrvToRust(WONLobbyPrv& p)
     std::string aFiles;
     for (const std::string& f : p.mHashFileList) aFiles.append(f.c_str(), f.size() + 1);
     ee_won_lobbyprv_set_hash_files(reinterpret_cast<const uint8_t*>(aFiles.data()), aFiles.size());
+    // R6 WON lobby/net round 40: the run state
+    ee_won_lobbyprv_set(PF::LobbyStatus, p.mLobbyStatus);
+    ee_won_lobbyprv_set(PF::RunMode, p.mRunMode);
+    ee_won_lobbyprv_set(PF::Suspended, p.mSuspended);
 }
 static void HashFilesSink(void* inList, const uint8_t* inBytes, size_t inLength)
 {
@@ -63,6 +67,9 @@ static void PrvFromRust(WONLobbyPrv& p)
     p.mFirewallTestDone = ee_won_lobbyprv_get(PF::FirewallTestDone) != 0;
     p.mHasSetHashFileList = ee_won_lobbyprv_get(PF::HashFilesSet) != 0;
     ee_won_lobbyprv_hash_files(HashFilesSink, &p.mHashFileList);
+    p.mLobbyStatus = (LobbyStatus)ee_won_lobbyprv_get(PF::LobbyStatus);
+    p.mRunMode = (LobbyRunMode)ee_won_lobbyprv_get(PF::RunMode);
+    p.mSuspended = ee_won_lobbyprv_get(PF::Suspended) != 0;
     ee_won_lobbyprv_drop(&p);
 }
 

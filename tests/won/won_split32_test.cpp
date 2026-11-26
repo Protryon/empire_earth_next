@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONEventTypes.h"
 #include "rust/won_lobby/netdisp.h"
 #include "rust/won_lobby/lobbyrun.h"
+#include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/lobbycfg.h"
 #include "rust/won_lobby/rootscreen.h"
 #include "rust/won_lobby/eeglue.h"
@@ -450,6 +451,8 @@ struct WindowManager {
     {
         Log("MessageLoop");
         if (gLobbyData.get() != NULL) gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(sLoopStatus);
+        // the new side's run state is lobbyprv.rs's (R6 WON lobby/net round 40)
+        if (gLobbyData.get() != NULL) ee_won_lobbyprv_set(EeWonLobbyPrvField::LobbyStatus, sLoopStatus);
         if (sLoopEndsData) gLobbyData = NULL;
     }
     void ExitMessageLoop() { Log("ExitMessageLoop"); }
@@ -538,11 +541,6 @@ static intptr_t RunHostCases(EeWonRunOp inOp, intptr_t a)
     case Op::WindowVisible: return reinterpret_cast<Window*>(a)->PlatformIsVisible() ? 1 : 0;
     case Op::WindowRunFailureDialog: reinterpret_cast<Window*>(a)->RunDialog(gLobbyFailureDialog.get()); return 0;
     case Op::HasData: return gLobbyData.get() != NULL;
-    case Op::SetStatus: gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(a); return 0;
-    case Op::Status: return gLobbyData->mLobbyStatus;
-    case Op::SetRunMode: gLobbyData->mRunMode = static_cast<LobbyRunMode>(a); return 0;
-    case Op::RunMode: return gLobbyData->mRunMode;
-    case Op::SetSuspended: gLobbyData->mSuspended = a != 0; return 0;
     case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
     case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
     case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
@@ -561,8 +559,7 @@ static intptr_t RunHostCases(EeWonRunOp inOp, intptr_t a)
 }
 static const Mutation kMutations[] = {
     {(int)EeWonRunOp::InitFailedWithDialog, MUT_FALSE}, {(int)EeWonRunOp::WindowVisible, MUT_FLIP},
-    {(int)EeWonRunOp::WindowRunFailureDialog, MUT_SKIP}, {(int)EeWonRunOp::SetSuspended, MUT_SKIP},
-    {(int)EeWonRunOp::SetStatus, MUT_SKIP}, {(int)EeWonRunOp::Status, MUT_INC}, {(int)EeWonRunOp::RunMode, MUT_FLIP},
+    {(int)EeWonRunOp::WindowRunFailureDialog, MUT_SKIP},
     {(int)EeWonRunOp::MusicOn, MUT_FLIP}, {(int)EeWonRunOp::MusicResume, MUT_SKIP}, {(int)EeWonRunOp::NetResume, MUT_SKIP},
     {(int)EeWonRunOp::PingsToDo, MUT_INC}, {(int)EeWonRunOp::KillPings, MUT_SKIP}, {(int)EeWonRunOp::InitLogicInit, MUT_SKIP},
 };
@@ -603,7 +600,24 @@ static void Run()
                 Make(k);
                 intptr_t aStatus = (intptr_t)(k % 7) - 1;
                 intptr_t r = 0;
-                if (aSide == 1) r = ee_won_lobbyrun_call(RunHost, c, c == RC::Exit ? aStatus : 0);
+                if (aSide == 1) {
+                    // the run state in lobbyprv.rs's lobby while the world has one (R6 WON lobby/net round 40)
+                    typedef EeWonLobbyPrvField PF;
+                    bool aHad = gLobbyData.get() != NULL;
+                    if (aHad) {
+                        ee_won_lobbyprv_call(&sData, NULL, EeWonLobbyPrvCall::Construct, 0, 0);
+                        ee_won_lobbyprv_set(PF::LobbyStatus, sData.mLobbyStatus);
+                        ee_won_lobbyprv_set(PF::RunMode, sData.mRunMode);
+                        ee_won_lobbyprv_set(PF::Suspended, sData.mSuspended);
+                    }
+                    r = ee_won_lobbyrun_call(RunHost, c, c == RC::Exit ? aStatus : 0);
+                    if (aHad) {
+                        sData.mLobbyStatus = static_cast<LobbyStatus>(ee_won_lobbyprv_get(PF::LobbyStatus));
+                        sData.mRunMode = static_cast<LobbyRunMode>(ee_won_lobbyprv_get(PF::RunMode));
+                        sData.mSuspended = ee_won_lobbyprv_get(PF::Suspended) != 0;
+                        ee_won_lobbyprv_drop(&sData);
+                    }
+                }
                 else if (c == RC::Run) r = Orig::LobbyRun();
                 else if (c == RC::Exit) Orig::LobbyExit((int)aStatus);
                 else if (c == RC::Suspend) Orig::LobbySuspend();

@@ -50,7 +50,7 @@ void LobbyDoErrorDialog(const GUIString& title,WONStatus status)
 // Plays the lobby sound unless the lobby is missing or suspended
 void LobbyPlaySound(Sound* sound)
 {
-    if(gLobbyData.get()!=NULL && !gLobbyData->mSuspended && sound!=NULL) sound->Play();
+    if(gLobbyData.get()!=NULL && !LobbyIsSuspended() && sound!=NULL) sound->Play();
 }
 // Pings the game to measure its latency; inForce sends the ping now even when the ping queue is full
 void LobbyPingGame(LobbyGame* game,bool force)

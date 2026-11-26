@@ -107,14 +107,8 @@ pub enum EeWonLobbyPrvOp {
     CdKeyLoad,
     /// `p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey)`.
     AuthSetCdKey,
-    /// `p->mSuspended = false`.
-    SuspendedClear,
     /// `p->mCurGameType = (LobbyGameType)0`.
     CurGameTypeClear,
-    /// `p->mLobbyStatus = (LobbyStatus)0`.
-    LobbyStatusClear,
-    /// `p->mRunMode = (LobbyRunMode)1`.
-    RunModeOne,
     /// `p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"`.
     SysTouPath,
     /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
@@ -177,7 +171,7 @@ pub enum EeWonLobbyPrvOp {
     ResGuiInit,
     /// `sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>)`.
     AllocBrowserComponent,
-    /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>)`.
+    /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<EeWonCfgKind::LobbyChat>,NewComponentOf<ChatCtrl>)`.
     AllocChatCtrl,
     /// `sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>)`.
     AllocCreateAccountCtrl,
@@ -185,11 +179,11 @@ pub enum EeWonLobbyPrvOp {
     AllocDirectConnectCtrl,
     /// `sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>)`.
     AllocFriendsListCtrl,
-    /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>)`.
+    /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<EeWonCfgKind::LobbyGameBrowser>,NewComponentOf<GameBrowserCtrl>)`.
     AllocGameBrowserCtrl,
     /// `sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>)`.
     AllocGameStagingCtrl,
-    /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory)`.
+    /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<EeWonCfgKind::LobbyGameUserList>,CtlFactory<Ck::UserList>)`.
     AllocGameUserListCtrl,
     /// `sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>)`.
     AllocInitFailedCtrl,
@@ -219,13 +213,13 @@ pub enum EeWonLobbyPrvOp {
     AllocQuickPlayCtrl,
     /// `sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>)`.
     AllocRoomCtrl,
-    /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>)`.
+    /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<EeWonCfgKind::LobbyRoomLabel>,NewComponentOf<RoomLabelCtrl>)`.
     AllocRoomLabelCtrl,
-    /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>)`.
+    /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<EeWonCfgKind::LobbyServerList>,NewComponentOf<ServerListCtrl>)`.
     AllocServerListCtrl,
     /// `sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>)`.
     AllocUpdateAccountCtrl,
-    /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory)`.
+    /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<EeWonCfgKind::LobbyUserList>,CtlFactory<Ck::Users>)`.
     AllocUserListCtrl,
     /// `sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>)`.
     AllocAddFriendDialog,
@@ -235,7 +229,7 @@ pub enum EeWonLobbyPrvOp {
     AllocBadUserDialog,
     /// `sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>)`.
     AllocChooseNetworkAdapterDialog,
-    /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
+    /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<EeWonCfgKind::LobbyCredits>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
     AllocCreditsDialog,
     /// `sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>)`.
     AllocCreateGameDialog,
@@ -257,9 +251,9 @@ pub enum EeWonLobbyPrvOp {
     AllocStatusDialog,
     /// `sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>)`.
     AllocTOUDialog,
-    /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>)`.
+    /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<EeWonCfgKind::LobbyCrossPromotion>,NewComponentOf<CrossPromotionButton>)`.
     AllocCrossPromotionButton,
-    /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>)`.
+    /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<EeWonCfgKind::LobbyImageText>,NewComponentOf<ImageTextButton>)`.
     AllocImageTextButton,
     /// `sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>)`.
     AllocMaxSplitterButton,
@@ -312,6 +306,12 @@ pub enum EeWonLobbyPrvField {
     LanProductId,
     /// `mHasSetHashFileList` (+0xa4; the login's file hashes were given, GetLobbyAuthContext's once: R6 WON round 39).
     HashFilesSet,
+    /// `mLobbyStatus` (+0x4c; LobbyRun's result, LobbyExit's status; 0 from the constructor: R6 WON lobby/net 40).
+    LobbyStatus,
+    /// `mRunMode` (+0x50; 1 from the constructor and LobbyRun).
+    RunMode,
+    /// `mSuspended` (+0x54; LobbySuspend's, cleared by LobbyRun, LobbyResume and LobbyStart).
+    Suspended,
 }
 
 /// The members of the lobby `owner` (the WONLobbyPrv they belong to). None: no lobby, when every read answers what
@@ -331,6 +331,10 @@ struct Vals {
     hash_files_set: bool,
     /// `mHashFileList` (+0xa8: the files the CRC check hashes; none: the running executable)
     hash_files: Vec<Vec<u8>>,
+    /// `mLobbyStatus`, `mRunMode`, `mSuspended` (the run state, lobbyrun.rs)
+    status: i32,
+    run_mode: i32,
+    suspended: bool,
 }
 
 impl Vals {
@@ -349,6 +353,9 @@ impl Vals {
             public_addr: EeWonIpAddr::default(),
             hash_files_set: false,
             hash_files: Vec::new(),
+            status: 0,
+            run_mode: 1,
+            suspended: false,
         }
     }
 }
@@ -381,6 +388,9 @@ pub extern "C" fn ee_won_lobbyprv_get(f: EeWonLobbyPrvField) -> i64 {
         F::ProductId => v.product_id as i64,
         F::LanProductId => v.lan_product_id as i64,
         F::HashFilesSet => v.hash_files_set as i64,
+        F::LobbyStatus => v.status as i64,
+        F::RunMode => v.run_mode as i64,
+        F::Suspended => v.suspended as i64,
     }
 }
 
@@ -403,6 +413,9 @@ pub extern "C" fn ee_won_lobbyprv_set(f: EeWonLobbyPrvField, x: i64) {
         F::ProductId => v.product_id = x as u16,
         F::LanProductId => v.lan_product_id = x as u16,
         F::HashFilesSet => v.hash_files_set = x != 0,
+        F::LobbyStatus => v.status = x as i32,
+        F::RunMode => v.run_mode = x as i32,
+        F::Suspended => v.suspended = x != 0,
     }
 }
 
@@ -676,10 +689,7 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
 /// The constructor's statements, in order.
 /// (the plain members' are [`Vals::new`]'s)
 const CONSTRUCT: &[Op] = &[
-    Op::SuspendedClear,
     Op::CurGameTypeClear,
-    Op::LobbyStatusClear,
-    Op::RunModeOne,
     Op::SysTouPath,
     Op::GameTouPath,
     Op::ConfigNew,
@@ -830,7 +840,7 @@ mod tests {
         let (_, log) = run(EeWonLobbyPrvCall::InitAuth, 7, 0, &|_| 0);
         assert_eq!(log, ["CommunitySet 7", "AuthSetCommunity 0", "CdKeyCheck 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::Construct, 0, 0, &|_| 0);
-        assert_eq!((log.len(), log[0].as_str(), log[31].as_str()), (32, "SuspendedClear 0", "AddPingLogic 0"));
+        assert_eq!((log.len(), log[0].as_str(), log[28].as_str()), (29, "CurGameTypeClear 0", "AddPingLogic 0"));
     }
 
     #[test]

@@ -2,7 +2,8 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // R6 WONLobby round 3: the scrolling text's lines, clock and paint are ee_won's scrolltext.rs (this unit keeps the
 // component's shell and its host) and CreditsDialog is the lobby dialog kind Credits (lobbydlg.rs; its shell is in
-// WONLobbyDialogs.h). This unit keeps the dialog config's ADDLINE reader.
+// WONLobbyDialogs.h). Its config's ADDLINE reader is the lobby kind LobbyCredits (lobbycfgrd.rs, R6 WON lobby/net
+// round 40; its host LobbyNetCtrlHost.cpp's).
 #include <windows.h>
 #include <string>
 #include <list>
@@ -16,30 +17,9 @@
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/scrolltext.h"
 #include "ee/wonapi/WONLobbyGuard.h"
-#include "rust/won_lobby/lobbycfgrd.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// the reader's statements (lobbycfgrd.rs composes them, R6 WON round 33)
-// the config readers' reads (LobbyNetCtrlHost.cpp)
-intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc);
-static intptr_t CreditsAddLine(LobbyRustDialog* inCredits, const GUIString& inLine, Component* inComponent, intptr_t inColor) { return inCredits->LCall(EeWonLobbyDlgCall::AddLine, (intptr_t)&inLine, (intptr_t)inComponent, (intptr_t)(uint32_t)inColor); }
-static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
-{
-    typedef EeWonLobbyCfgRdOp Op;
-    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
-    CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
-    switch (inOp) {
-    case Op::CreditsBase: return WON_GUARDED(cr->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(static_cast<LobbyRustDialog*>(c->mComponent.get()), GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
-    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
-    }
-}
-static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
-
-// Reads an ADDLINE layout key (text, optional colour) into the credits; passes other keys to the dialog config
-bool CreditsDialogConfig::Virtual24(const std::string& inInstruction) { return CfgRd(this, EeWonLobbyCfgRdCall::Credits, inInstruction) != 0; }
-
 // ---- ScrollingTextComponent: the shell and its host (each op the original's statements on the component or the
 // paint's Graphics)
 
