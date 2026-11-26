@@ -116,7 +116,7 @@ void EELobbyColorButton::Paint(Graphics& inGraphics) { ee_won_eecolor_call(this-
 bool EELobbyColorButton::HandleActivate() { return ee_won_eecolor_call(this->mRust, CC::Activate, 0, 0, 0) != 0; }
 void EELobbyColorButton::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    ee_won_eecolor_call(this->mRust, CC::Event, (intptr_t)inEvent, inEvent->mType == ComponentEvent_EndPopup, 0);
+    ee_won_eecolor_call(this->mRust, CC::Event, (intptr_t)inEvent, inEvent->mEv.kind == ComponentEvent_EndPopup, 0);
 }
 
 EELobbyColorChooser::EELobbyColorChooser() : mRust(ee_won_eecolor_new(this, EeWonEeColorKind::Chooser, ColorHost)) {}
@@ -459,7 +459,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetColor: g->SetColor((unsigned long)b); return 0;
     case Op::DrawText: g->DrawString(GlueText(b, c), (int)d, (int)e); return 0;
-    case Op::FontHeight: return g->mFont->GetHeight();
+    case Op::FontHeight: return g->GetFont()->GetHeight();
     case Op::ListFontHeight: return reinterpret_cast<MultiListArea*>(a)->mFont->GetHeight();
     case Op::TextFind: return GlueText(b, c).findNoCase(*reinterpret_cast<const GUIString*>(d), 0);
     case Op::TextCompareNoCase: return GlueText(a, b).CompareNoCase(GlueText(c, d));
@@ -742,7 +742,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::GameAddressRef: return (intptr_t)&sEELocalAddress;
     // the statements of the cases gluesplit.rs composes (R6 WON round 32)
     case Op::TextHeld: return HeldData(GlueText(a, b));
-    case Op::GfxTextWidthHeld: return g->mFont->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
+    case Op::GfxTextWidthHeld: return g->GetFont()->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
     case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
     case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
     case Op::FactoryConfig: LobbyConfig::SetAllocator(EELobbyNewConfig); return 0;

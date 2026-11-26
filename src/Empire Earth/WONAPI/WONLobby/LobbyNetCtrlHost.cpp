@@ -143,7 +143,7 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     ChatCommandParser* aParser = reinterpret_cast<ChatCommandParser*>(a);
     switch (inOp) {
     // EvGet's chat link of a WONGUI event (lobbyevt.rs reads the lobby events' members; hostops.rs picks the field)
-    case Op::EvTlaLink: return (intptr_t)dynamic_cast<ChatLink*>(static_cast<TextLinkActivatedEvent*>(reinterpret_cast<ComponentEvent*>(a))->mLink.get());
+    case Op::EvTlaLink: return (intptr_t)dynamic_cast<ChatLink*>(reinterpret_cast<ComponentEvent*>(a)->GetItem<TextSegmentBase>());
     case Op::ChatLinkNew: return HeldRef(new ChatLink(*reinterpret_cast<const EeWonLobbyCtlLink*>(a)));
     case Op::LinkGetKind: return aLink->mKind;
     case Op::LinkGetClient: return (intptr_t)aLink->mClient.get();
@@ -363,7 +363,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxDrawResImage: g->DrawImage(ResImage(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawText: g->DrawString(Txt(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawResText: g->DrawString(ResText(b), Lo(c), Hi(c)); return 0;
-    case Op::GfxTextWidth: return g->mFont->GetStringWidth(Txt(b));
+    case Op::GfxTextWidth: return g->GetFont()->GetStringWidth(Txt(b));
     // the statements of the cases hostops.rs answers (R6 WONLobby round 29: the ping bars, the rows' counts, the
     // summaries, the filter row, the room events, the event items, the numbers, the saved game dialog)
     case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
@@ -392,10 +392,10 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
         return 0;
     case Op::DeliverCreateRoomAny: inCtl->DeliverEvent(CreateRoomEvent(IPAddr()), false);
         return 0;
-    case Op::EvType: return anEvent->mType;
-    case Op::EvComboItem: return (intptr_t) static_cast<ComboSelChangedEvent*>(anEvent)->mItem.get();
-    case Op::EvTreeItem: return (intptr_t) static_cast<TreeItemOpenedEvent*>(anEvent)->mItem.get();
-    case Op::EvListItem: return (intptr_t) static_cast<ListItemClickedEvent*>(anEvent)->mItem.get();
+    case Op::EvType: return anEvent->mEv.kind;
+    case Op::EvComboItem: return anEvent->mEv.item;
+    case Op::EvTreeItem: return anEvent->mEv.item;
+    case Op::EvListItem: return anEvent->mEv.item;
     case Op::LabelSetPercentText: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), Txt(b)));
         return 0;
     case Op::FileDialogGet: return (intptr_t)EELobbyGetFileDialog();
@@ -417,9 +417,9 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::KillPings: LobbyKillPings(1); return 0;
     case Op::DeliverGameAction: inCtl->DeliverEvent(GameActionEvent(7, reinterpret_cast<LobbyGame*>(a)), false); return 0;
     case Op::DeliverJoinGame: inCtl->DeliverEvent(JoinGameEvent(reinterpret_cast<LobbyGame*>(a)), false); return 0;
-    case Op::EventX: return static_cast<ListItemClickedEvent*>(anEvent)->mX;
-    case Op::EventY: return static_cast<ListItemClickedEvent*>(anEvent)->mY;
-    case Op::EventActiveSel: return static_cast<ComboSelChangedEvent*>(anEvent)->mActiveSel ? 1 : 0;
+    case Op::EventX: return anEvent->mEv.x;
+    case Op::EventY: return anEvent->mEv.y;
+    case Op::EventActiveSel: return anEvent->mEv.flag;
     case Op::ButtonSetRes: reinterpret_cast<Button*>(a)->SetText(ResText(b), true); return 0;
     case Op::LabelSetRes: reinterpret_cast<Label*>(a)->SetText(ResText(b), true); return 0;
     case Op::ComboInsertNoFilter:

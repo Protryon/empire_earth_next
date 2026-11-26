@@ -60,7 +60,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     Component* t = (Component*)b;
     Container* p = static_cast<Container*>(t);
     Window* w = (Window*)b;
-    ComponentEvent* e = (ComponentEvent*)b;
     BackgroundGrabber* g = (BackgroundGrabber*)b;
     if (op != EeWonGuiOp::Comp)
         return 0;
@@ -89,7 +88,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     case K::AsRoot: return (intptr_t)dynamic_cast<RootContainer*>(t);
     case K::RootWin: return (intptr_t)((RootContainer*)b)->mWindow;
     case K::RootAddBG: ((RootContainer*)b)->AddBG((BackgroundGrabber*)c); return 0;
-    case K::WBroadcast: w->mManager->BroadcastEvent((ComponentEvent*)c); return 0;
     case K::WQueue: w->QueueEvent((ComponentEvent*)c); return 0;
     case K::WOpenTip: {
         const intptr_t* a = (const intptr_t*)c;
@@ -105,10 +103,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
         if (((const int*)d)[1] != 0) descriptor.mSize = ((const int*)d)[1];
         return (intptr_t)w->GetFont(descriptor).get();
     }
-    case K::EvBroadcast: return e->mBroadcast;
-    case K::EvSetBroadcast: e->mBroadcast = c != 0; return 0;
-    case K::EvComp: return (intptr_t)e->mComponent;
-    case K::EvSetComp: e->SetComponent((Component*)c); return 0;
     case K::EvNew: return (intptr_t)new ComponentEvent(t, (int)c);
     case K::LHandle: ((ComponentListener*)b)->HandleComponentEvent((ComponentEvent*)c); return 0;
     case K::GSizeChanged: g->SizeChanged((Component*)c); return 0;
@@ -124,8 +118,13 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     default: return 0;
     }
 }
-// the one component host every Rust object calls a component through (compobj.rs comp())
-[[maybe_unused]] static const bool sCompHost = (ee_won_comp_host_register(ee_won_guicpp_comp_call), true);
+// the one component host every Rust object calls a component through (compobj.rs comp()); an event's record
+// (EeWonCompEventRec: its members, compobj.rs's in the game since R6 WON GUI round 39)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+[[maybe_unused]] static const bool sCompHost = (ee_won_comp_host_register(ee_won_guicpp_comp_call),
+                                                ee_won_comp_event_register(offsetof(ComponentEvent, mEv)), true);
+#pragma clang diagnostic pop
 // the Rust objects' references to the game's RefCount objects (gamewin.rs rf: every host's Hold and Release)
 static void RefOf(void* p, int32_t hold) { if (hold) ((RefCount*)p)->AddRef(); else ((RefCount*)p)->Release(); }
 [[maybe_unused]] static const bool sRefHost = (ee_won_gui_ref_register(RefOf), true);

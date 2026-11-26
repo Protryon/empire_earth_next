@@ -170,6 +170,9 @@ using EeWonLeafHostFn = ptrdiff_t(*)(void *me, EeWonLeafOp op, ptrdiff_t a, ptrd
 
 extern "C" {
 
+/// `offsetof(ImageButton, mImages)` (Button.cpp at static initialisation; R6 WON GUI round 39).
+void ee_won_leaf_imgbtn_register(size_t at);
+
 /// One of the classes' methods (`EeWonLeafCall`) on the C++ object `me` through its host.
 ///
 /// # Safety

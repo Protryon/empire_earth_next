@@ -38,14 +38,7 @@ public:
     bool mPressed;
     unsigned long mDownColor,mNormalColor;
 };
-// TextLinkActivatedEvent (0x24 bytes, allocated at 0x00713753), RTTI 0x008504ac, two slots.
-// Retains the segment through a SmartPtr at +0x20.
-class TextLinkActivatedEvent : public ComponentEvent {
-public:
-    TextLinkActivatedEvent(Component* component,TextSegmentBase* link)
-      :ComponentEvent(component,ComponentEvent_TextLinkActivated),mLink(link) {}
-    SmartPtr<TextSegmentBase> mLink; //20
-};
+inline ComponentEvent* TextLinkActivatedEvent(Component* c, TextSegmentBase* link) { return new ComponentEvent(c, ComponentEvent_TextLinkActivated, link); }
 enum TextFlags {
     TextFlag_WordWrap=0x01,TextFlag_AllowSelection=0x02,TextFlag_ScrollOnBottom=0x04,
     TextFlag_ShowPartialLines=0x08,TextFlag_ScrollFullLine=0x10,TextFlag_DelayWordWrap=0x20

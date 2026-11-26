@@ -1022,8 +1022,6 @@ pub enum EeWonGuiOp {
     WmImageAttributes,
     /// `new Image(ee_won_image_new_delay(WONImageHost, a, b, sHostAttr.mWidth, sHostAttr.mHeight))` (unheld).
     WmNewDelayImage,
-    /// `mColorScheme->SetStandardColor(a, b)`.
-    WmSetStandardColor,
     // ---- the statements of the cases R6 WON round 33 composes in guisplit.rs (the LAN game reaches none of them;
     // won_guisplit33_test checks them against the original cases)
     /// TextArea: `mLinkParam = ((TextSegment*)a)->GetLinkParam()`.

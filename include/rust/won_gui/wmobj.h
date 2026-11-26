@@ -10,6 +10,10 @@
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/winobj.h"
 
+/// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
+/// bubbled up from the component) is guisplit.rs's.
+constexpr static const uint32_t EE_WON_WM_HANDLER_COMPONENT = 49376;
+
 /// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
 constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
 

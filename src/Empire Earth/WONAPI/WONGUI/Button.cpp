@@ -41,8 +41,6 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
     case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;
     case Op::BtnPlayClick: t->mClickSound->Play(); return 0;
-    // the type is Rust's map, which the golden checks against the enum
-    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
     default: return 0;
     }
 }
@@ -78,18 +76,18 @@ typedef EeWonLeafOp Lo;
 extern "C" intptr_t ee_won_guicpp_imgbtn_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
     ImageButton* t = (ImageButton*)inMe;
-    Graphics* g = (Graphics*)a;
     switch (op) {
-    case Lo::BtnHasImage: return t->mImages[a].get() != NULL ? 1 : 0;
-    case Lo::BtnImageWidth: return t->mImages[a]->GetWidth();
-    case Lo::BtnImageHeight: return t->mImages[a]->GetHeight();
-    case Lo::BtnBasePaint: t->Component::Paint(*g); return 0;
-    case Lo::BtnStretch: return t->mStretch ? 1 : 0;
-    case Lo::BtnImageFit: t->mImages[a]->SetSize(t->Width(), t->Height()); return 0;
-    case Lo::BtnDrawImage: g->DrawImage(t->mImages[b].get(), 0, 0); return 0;
+    // (the images, their sizes and draw and the stretch flag are leafpaint.rs's, read in place: R6 WON GUI round 39)
+    case Lo::BtnBasePaint: t->Component::Paint(*(Graphics*)a); return 0;
     default: return 0;
     }
 }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(sizeof(SmartPtr<Image>) == sizeof(void*) && offsetof(ImageButton, mStretch) == offsetof(ImageButton, mImages) + 5 * sizeof(void*),
+              "leafpaint.rs reads ImageButton's images and stretch flag");
+[[maybe_unused]] static const bool sImgBtnAt = (ee_won_leaf_imgbtn_register(offsetof(ImageButton, mImages)), true);
+#pragma clang diagnostic pop
 // Returns the largest width and height among the button's five state images
 void ImageButton::GetDesiredSize(int& outWidth,int& outHeight)
 {

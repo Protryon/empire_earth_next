@@ -395,6 +395,53 @@ pub unsafe extern "C" fn ee_won_comp_extra_free(x: *mut EeWonCompExtraData) {
     }
 }
 
+/// A component event's record (the C++ `ComponentEvent::mEv`, R6 WON GUI round 39): the original's
+/// ComponentEvent members and its GUI subclasses' (ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent,
+/// TextLinkActivatedEvent: one class since then), read and set in place by Rust in the game. `comp` is the
+/// component (held: the original's `mComponentRef` beside the same `mComponent`), `item` the clicked or selected
+/// list item, the opened tree row or the activated link (held); `flag` a click's double click or a combo
+/// selection's active selection.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeWonCompEventRec {
+    pub comp: isize,
+    pub kind: i32,
+    pub broadcast: u8,
+    pub flag: u8,
+    pub button: i32,
+    pub x: i32,
+    pub y: i32,
+    pub item: isize,
+}
+
+/// The offset of `ComponentEvent::mEv` in the C++ object (registered by ComponentLifetime.cpp; 0 in a driver's
+/// world, whose events are its own).
+static EVENT_AT: AtomicUsize = AtomicUsize::new(0);
+
+/// The `ComponentEvent::mEv` offset (`offsetof`, ComponentLifetime.cpp at static initialisation).
+#[no_mangle]
+pub extern "C" fn ee_won_comp_event_register(at: usize) {
+    EVENT_AT.store(at, Ordering::Release);
+}
+
+/// A game event's record (`e` a live `ComponentEvent*`), None outside the game.
+pub(crate) fn event_rec(e: isize) -> Option<*mut EeWonCompEventRec> {
+    let at = EVENT_AT.load(Ordering::Acquire);
+    (at != 0 && e != 0 && is_game()).then(|| (e as usize + at) as *mut EeWonCompEventRec)
+}
+
+/// `ComponentEvent::SetComponent` on the record: the new component held, the old one given back.
+pub(crate) fn event_set_comp(r: *mut EeWonCompEventRec, c: isize) {
+    if c != 0 {
+        crate::gamewin::rf(c, true);
+    }
+    // SAFETY: a live event's record (the caller's contract)
+    let old = unsafe { std::mem::replace(&mut (*r).comp, c) };
+    if old != 0 {
+        crate::gamewin::rf(old, false);
+    }
+}
+
 /// The game's component host (`ee_won_guicpp_comp_call`, registered by ComponentLifetime.cpp at start).
 static GAME_HOST: AtomicUsize = AtomicUsize::new(0);
 

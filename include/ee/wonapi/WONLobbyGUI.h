@@ -1102,7 +1102,9 @@ public:
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)
 struct PopupParams {
-    PopupParams(Component* inPopup,int inFlags,Component* inOwner,int inX=-1,int inY=-1);
+    // a popup to open: the component, flags, owner component and position (no parent yet)
+    PopupParams(Component* inPopup,int inFlags,Component* inOwner,int inX=-1,int inY=-1)
+      : mParent(NULL),mPopup(inPopup),mInputComponent(NULL),mOwnerComponent(inOwner),mFlags(inFlags),mx(inX),my(inY) {}
     Window* mParent; //00, borrowed
     Component* mPopup; //04, borrowed
     Component* mInputComponent; //08, borrowed
@@ -1141,25 +1143,22 @@ public:
     Component* mComponent;                  // +0x08
 };
 
-// WONAPI's drawing context (provisional method names)
-// Graphics: vtable 0x450fe8;
-// the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
-// R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
-// in): the drawing answered on the surface in Rust (gfxplat.rs over platgfx.rs at the surface's pixel scale). Round
-// 38: its leading members are gfxrun.rs's record (EeWonGraphics: checked in Graphics.cpp), which the methods, the
-// draw plans and the game's scheme and plain-draw ops run on in Rust; the host (Graphics.cpp) answers the image
-// draws, the text and the font.
+// WONAPI's drawing context (provisional method names; the original's was 0x38 bytes, vtable 0x450fe8). R6 WON GUI
+// round 35: the one Graphics is the platform's (MSGraphics and PlatGraphics folded in): the drawing answered on the
+// surface in Rust (gfxplat.rs over platgfx.rs at the surface's pixel scale). Round 39: it is gfxrun.rs's record
+// (EeWonGraphics: the translation, colour and clip, the clip stack, the borrowed colour scheme, the surface, the
+// display context and the font, both held), made, attached and freed by Rust (a native image's, imgobj.rs); the
+// methods, the draw plans and the game's ops run on it in Rust; Graphics.cpp's host answers the text and the
+// wrapped text.
 class Graphics {
 public:
-    Graphics() { ee_won_graphics_init(this->Rec()); } //326ad0
-    ~Graphics(); //326b90
-    void Attach(DisplayContext*); //326c70: the context's surface and pixel scale; the colour starts black
-    void Detach();
     bool BlendSupported() { return true; }
     void SetColor(DWORD c) { this->GCall(EeWonGfxCall::SetColor, (int)c); } //326ce0
     DWORD GetStandardColor(int i) { return this->GCall(EeWonGfxCall::StandardColor, i); }
     void SetSysColor(int i) { this->GCall(EeWonGfxCall::SetSysColor, i); }
-    void SetFont(Font*);
+    void SetFont(Font* f) { ee_won_graphics_set_font(this->Rec(), f); }
+    Font* GetFont() const { return (Font*)this->mG.font; }
+    DisplayContext* GetContext() const { return (DisplayContext*)this->mG.context; }
     void Translate(int dx, int dy) { this->GCall(EeWonGfxCall::Translate, dx, dy); }
     void SetPixel(int x, int y, DWORD c) { this->GCall(EeWonGfxCall::SetPixel, x, y, (int)c); }
     void DrawImage(Image* i, int x, int y) { this->GCall(EeWonGfxCall::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
@@ -1175,19 +1174,12 @@ public:
     void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
     void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
     void PopClipRect() { this->GCall(EeWonGfxCall::PopClip); }
-    // gfxrun.rs's record: the translation, colour and clip rectangle (EeWonGfxState: the original's +08, +0c, +14,
-    // +24), the clip stack (+18), the borrowed colour scheme (+34) and the surface
-    int mTransX, mTransY;
-    DWORD mColor;
-    WONRectangle mClipRect;
-    EeWonGfx* mGfx; // the clip stack, owned
-    ColorScheme* mColorScheme; // borrowed
-    EeWonGfxPlat mPlat; // the context's surface (borrowed; none while detached) and its pixel scale (gfxplat.rs)
-    SmartPtr<DisplayContext> mDisplayContext; //04
-    SmartPtr<Font> mFont; //10
-    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
-    EeWonGraphics* Rec() { return (EeWonGraphics*)this; }
+    const EeWonGfxState* State() const { return &this->mG.st; }
+    EeWonGraphics* Rec() { return &this->mG; }
+    EeWonGraphics mG;
 private:
+    Graphics(); // gfxrun.rs new_graphics, free_graphics
+    ~Graphics();
     DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL)
     { return ee_won_graphics_call(this->Rec(), c, a, b, cc, d, e, f, g, p); }
 };
@@ -1293,7 +1285,6 @@ public:
     intptr_t Call(EeWonPlatWmCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_plat_wm(this->mRust, c, a, b); }
     EeWonPlatWm* mRust = NULL; // the platform manager (platwm.rs); none after the destructor's body
     EventForwardFunc mEventForward;
-    void InitColorScheme(); //32c230
     void NotifyLostFocus() { this->WmCall(EeWonWmCall::NotifyLostFocus); } //32c2d0
     void NotifyGotFocus(Window* w) { this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)w); } //32c300
     void SetScreenResolution(int w, int h) { this->WmCall(EeWonWmCall::SetScreenResolution, w, h); } //32c320
@@ -1460,9 +1451,10 @@ public:
     bool Close() { return this->WCall(EeWonWinCall::Close) != 0; }
     void SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
     void Center(bool p) { this->WCall(EeWonWinCall::Center, p ? 1 : 0); }
-    void EndDialog(int, Component*);
-    void OpenPopup(PopupParams&);
-    void ClosePopup(Component*);
+    // the manager's dialog end, popup (this window its parent) and popup close
+    void EndDialog(int r, Component* c) { this->mManager->EndDialog(r, this, c); }
+    void OpenPopup(PopupParams& p) { p.mParent = this; this->mManager->DoPopup(p); }
+    void ClosePopup(Component* c) { this->mManager->EndPopup(c); }
     void InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
     void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);
@@ -1564,35 +1556,30 @@ struct MouseEvent : InputEvent { MouseEvent(int t, int x, int y, int m, int b = 
 struct KeyEvent : InputEvent { KeyEvent(int t, int k, int m) : InputEvent(t, EeWonWinCall::HandleKeyEvent, 0, 0, m, 0, k) {} };
 struct SizeEvent : InputEvent { SizeEvent(int x, int y, int w, int h) : InputEvent(InputEvent_SizeChange, EeWonWinCall::HandleInputEvent, x, y, 0, 0, 0, w, h) {} };
 
-// a component's event (slot +0x7c; type at +0x14: WONAPI's own ids, 100000 up for the game's)
+// a component's event (slot +0x7c; type at +0x14: WONAPI's own ids, 100000 up for the game's). R6 WON GUI round 39:
+// its members and its GUI subclasses' (ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent,
+// TextLinkActivatedEvent: one class, made by the functions of those names) are compobj.rs's record, read and set in
+// place by Rust in the game: the type, the broadcast flag, the component and the item (both held), a click's mouse
+// button, double click and place, a selection's active flag; its Deliver (broadcast through the manager, or bubbled
+// up from the component) is guisplit.rs's (the record's handler)
 class ComponentEvent : public WindowEventBase {
 public:
-    // an event of the given type for a component (not a broadcast)
-    ComponentEvent(Component* c, int t) : mComponentRef(c), mType(t), mComponent(c) { this->mBroadcast = false; }
-    // broadcast through the window manager, or bubbled up from the component
-    virtual void Deliver()
-    { if (this->mBroadcast) this->GetWindow()->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
-    void SetComponent(Component* c) { this->mComponent = c; this->mComponentRef = c; } // retargets the event
-    int GetControlId() const { return this->mComponent->mControlId; }
-    SmartPtr<Component> mComponentRef;      // +0x10
-    int mType;                              // +0x14
-    bool mBroadcast;                        // +0x18
-    Component* mComponent;                  // +0x1c
+    ComponentEvent(Component* c, int t, RefCount* i = NULL)
+      : WindowEventBase(0, (EeWonWinCall)EE_WON_WM_HANDLER_COMPONENT), mEv{(intptr_t)c, t, 0, 0, 0, 0, 0, (intptr_t)i}
+    { if (c != NULL) c->AddRef(); if (i != NULL) i->AddRef(); }
+    virtual ~ComponentEvent() { if (this->mEv.comp != 0) this->GetComponent()->Release(); if (this->mEv.item != 0) ((RefCount*)this->mEv.item)->Release(); }
+    Component* GetComponent() const { return (Component*)this->mEv.comp; }
+    int GetControlId() const { return this->GetComponent()->mControlId; }
+    void SetComponent(Component* c) { if (c != NULL) c->AddRef(); if (this->mEv.comp != 0) this->GetComponent()->Release(); this->mEv.comp = (intptr_t)c; }
+    template <class T> T* GetItem() const { return static_cast<T*>((RefCount*)this->mEv.item); }
+    EeWonCompEventRec mEv;
 };
-
-// ListItemClickedEvent: RTTI 0x44dd78, 0x34 bytes.
-class ListItemClickedEvent : public ComponentEvent {
-public:
-    ListItemClickedEvent(Component* component,ListItem* item,MouseButton button,bool dbl,bool up,int x,int y)
-      :ComponentEvent(component,up?ComponentEvent_ListItemUpClicked:ComponentEvent_ListItemClicked),
-       mButton(button),mDoubleClick(dbl),mItem(item),mX(x),mY(y) {}
-    bool IsSelectedItem(); // SDK ListBox.cpp; 0x2fa550
-    int mButton;                            // +0x20
-    bool mDoubleClick;                      // +0x24
-    SmartPtr<ListItem> mItem;               // +0x28
-    int mX;                                 // +0x2c
-    int mY;                                 // +0x30
-};
+inline ComponentEvent* ListItemClickedEvent(Component* c, ListItem* i, int button, bool dbl, bool up, int x, int y)
+{
+    ComponentEvent* e = new ComponentEvent(c, up ? ComponentEvent_ListItemUpClicked : ComponentEvent_ListItemClicked, i);
+    e->mEv.button = button; e->mEv.flag = dbl; e->mEv.x = x; e->mEv.y = y;
+    return e;
+}
 
 // LobbyEvent adds no members to ComponentEvent (0x20 bytes).
 // Derived lobby events are declared only in WONLobbyEvents.h, owned by core.
@@ -1648,7 +1635,7 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
 {
     if (c != NULL)
         ee_won_gfx_font_draw(this->mRust, c->mSurface, c->mPixelScale,
-                             c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
+                             c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mG.plat : NULL,
                              s.mData->mText + o, n, x, y);
 }
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
@@ -1763,14 +1750,8 @@ public:
     { return (int)ee_won_row_call(this->mRow,EeWonRowCall::Compare,const_cast<RustTextRow*>(this),l,(intptr_t)static_cast<const RustTextRow*>(o)->mRow,(intptr_t)o,0); }
     EeWonRow* mRow;
 };
-// Allocated at 0x2f4133 (type 0x27), 0x28 bytes; the implicit destructor 0x2f41c0 has no own vptr store.
-class ComboSelChangedEvent : public ComponentEvent {
-public:
-    ComboSelChangedEvent(Component* c,TextListItem* item,bool active)
-        :ComponentEvent(c,ComponentEvent_ComboSelChanged),mItem(item),mActiveSel(active) {}
-    SmartPtr<TextListItem> mItem; //20
-    bool mActiveSel; //24
-};
+inline ComponentEvent* ComboSelChangedEvent(Component* c, TextListItem* i, bool active)
+{ ComponentEvent* e = new ComponentEvent(c, ComponentEvent_ComboSelChanged, i); e->mEv.flag = active; return e; }
 
 // MenuItem (0x38 bytes, allocated at 0x2fd49c): TextListItem (0x28) base.
 // Constructor and implicit destructor out of line.
@@ -1981,13 +1962,7 @@ public:
 private:
     intptr_t NCall(ListArea* l,EeWonTNodeCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0);
 };
-class TreeItemOpenedEvent : public ComponentEvent {
-public:
-    TreeItemOpenedEvent(Component* inComponent,TreeItem* inItem)
-        :ComponentEvent(inComponent,ComponentEvent_TreeItemOpened),mItem(inItem) {}
-    // Implicit destructor (0x314a60): no own vptr write.
-    SmartPtr<TreeItem> mItem; // at +0x20; the event is 0x24 bytes
-};
+inline ComponentEvent* TreeItemOpenedEvent(Component* c, TreeItem* i) { return new ComponentEvent(c, ComponentEvent_TreeItemOpened, i); }
 // TreeArea (0x174 bytes in the original); constructor 0x314ea0.
 class TreeArea : public ListArea {
 public:

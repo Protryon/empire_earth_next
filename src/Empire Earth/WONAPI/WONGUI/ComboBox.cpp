@@ -33,7 +33,7 @@ typedef EeWonGuiOp Op;
 static Component* Comp(intptr_t a) { return (Component*)a; }
 static TextListItem* Item(intptr_t a) { return (TextListItem*)a; }
 
-// the ops on a child component or an event (`a`) that the combo box's, the dialog's, the tab controls' and the layouts'
+// the ops on a child component (`a`) that the combo box's, the dialog's, the tab controls' and the layouts'
 // hosts share, and their own base's; any other the container's (none for a layout, `t` NULL)
 static intptr_t CtlOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
@@ -43,13 +43,7 @@ static intptr_t CtlOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c, i
     case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
     case Op::ButtonSetCheck: static_cast<Button*>(Comp(a))->SetCheck(b != 0, false); return 0;
     case Op::DlgClick: static_cast<Button*>(Comp(a))->Fn2F3440(); return 0;
-    case Op::EventType: return ((ComponentEvent*)a)->mType;
-    case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
-    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
-    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
-    // the type is Rust's map, which the goldens check against the enum
-    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
     default: return t != NULL ? ContainerHostCall(t, op, a, b, c, d) : 0;
     }
 }
@@ -78,7 +72,7 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
     case Op::ComboEditSelect: t->mEdit->SelectRange((int)a, (int)b); return 0;
     case Op::ComboEditAllowSelection: t->mEdit->SetAllowSelection(a != 0); return 0;
     case Op::ComboItemTextLength: return Item(a)->mText.length();
-    case Op::ComboDeliverSel: t->DeliverEvent(new ComboSelChangedEvent(t, Item(a), b != 0), false); return 0;
+    case Op::ComboDeliverSel: t->DeliverEvent(ComboSelChangedEvent(t, Item(a), b != 0), false); return 0;
     case Op::ComboItemTextIs: return Item(a)->mText == (b == 0 ? t->mEdit->GetText() : *(const GUIString*)b) ? 1 : 0; // (b 0: the edit's)
     case Op::ComboOpenPopup: {
         Window* window = t->GetRoot();
@@ -91,7 +85,6 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
         window->OpenPopup(params);
         return 0;
     }
-    case Op::ComboEventButton: return static_cast<ListItemClickedEvent*>((ComponentEvent*)a)->mButton;
     case Op::ComboRelayout: t->Relayout(); return 0;
     case Op::ComboUnlisten: t->mListBox->AddListener(NULL); return 0;
     case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
@@ -132,7 +125,6 @@ extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::DlgEndDialog: t->GetRoot()->EndDialog((int)a, (Component*)b); return 0;
     case Op::DlgIsModal: return t->GetRoot()->mManager->GetModalComponent() == t ? 1 : 0;
     case Op::DlgIsDefault: return ((Button*)(Component*)a)->IsDefaultButton() ? 1 : 0;
-    case Op::DlgEventButtonFlags: return static_cast<Button*>(((ComponentEvent*)a)->mComponent)->GetButtonFlags();
     default: return CtlOp(t, op, a, b, c, d);
     }
 }

@@ -14,7 +14,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/rootobj.h"
 using namespace WONAPI;
@@ -30,17 +29,8 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
         if (a == 0) { *(int*)b = *(int*)c = 0; return 0; }
         return (intptr_t)((Cursor*)a)->GetComponent(*(int*)b, *(int*)c);
     // (the window's state, rectangle and place, the mouse child, the colour scheme, the cursor component's place,
-    // order and showing are gamewin.rs root_op's in the game: R6 WON GUI round 38)
-    case Op::RootGrabberRead: {
-        BackgroundGrabber* g = (BackgroundGrabber*)a;
-        EeWonRootGrab* q = (EeWonRootGrab*)b;
-        ee_won_grab_read(g->mRust, q);
-        q->image = (intptr_t)g->mBGImage.get();
-        return 0;
-    }
-    case Op::RootGrabberClear: ((BackgroundGrabber*)a)->Clear(); return 0;
-    case Op::RootGrabberDrop: ((BackgroundGrabber*)a)->Clear(); ((BackgroundGrabber*)a)->mBGImage = NULL; return 0;
-    case Op::RootImageSize: *(int*)b = ((NativeImage*)a)->GetWidth(); *(int*)c = ((NativeImage*)a)->GetHeight(); return 0;
+    // order and showing are gamewin.rs root_op's in the game: R6 WON GUI round 38; the grabbers' and the images'
+    // round 39)
     default: return ContainerHostCall(t, op, a, b, c, d);
     }
 }

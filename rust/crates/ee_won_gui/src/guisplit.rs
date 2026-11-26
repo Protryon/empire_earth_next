@@ -453,6 +453,7 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
                 x if x == C::HandleMouseEvent as u32 => handle(window, C::HandleMouseEvent, b),
                 x if x == C::HandleKeyEvent as u32 => handle(window, C::HandleKeyEvent, b),
                 x if x == C::HandleInputEvent as u32 => handle(window, C::HandleInputEvent, b),
+                crate::wmobj::EE_WON_WM_HANDLER_COMPONENT => crate::gamewin::deliver_component_event(b),
                 _ => None,
             }
         }
@@ -561,22 +562,6 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
             Some(image)
         }
         _ => None,
-    }
-}
-
-/// `WindowManager::InitColorScheme`: the 17 standard colours set in the manager's scheme.
-///
-/// # Safety
-/// `host` is the manager's host, `wm` the `WindowManager*`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_gui_wm_init_colors(host: EeWonGuiHostFn, wm: *mut c_void) {
-    let Some(host) = host else { return };
-    let mut colors = [0u32; 17];
-    // SAFETY: room for the 17 colours
-    unsafe { crate::wmobj::ee_won_wm_standard_colors(colors.as_mut_ptr()) };
-    for (i, c) in colors.iter().enumerate() {
-        // SAFETY: the caller's host
-        unsafe { host(wm, Op::WmSetStandardColor, i as isize, *c as isize, 0, 0) };
     }
 }
 

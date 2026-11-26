@@ -58,11 +58,8 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
 {
     switch (op) {
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
-    case Op::FireEvent:
-        // the type is Rust's map, which the goldens check against the enum (round 23's lists fired ListSelChanged
-        // through a switch here as InputTextChanged: the LAN lobby's Join Game stayed disabled)
-        c->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), 0);
-        return 0;
+    // (FireEvent is gamewin.rs common_op's in the game: R6 WON GUI round 39; the type Rust's map, which the goldens
+    // check against the enum: round 23's lists fired ListSelChanged here as InputTextChanged)
     // ClipboardTake, ClipboardSet, TextStore and Filter are guisplit.rs's over these and its texts (R6 WON GUI round 39)
     case Op::ClipboardText: return (intptr_t)NewGUIStringData(Clipboard::Get());
     case Op::ClipboardSetText: Clipboard::Set(*(const GUIString*)a); return 0;
@@ -86,7 +83,7 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     // LinkActivated is guisplit.rs's over these two (R6 WON round 33)
     case Op::TextSetLinkParam: t->mLinkParam = Seg(a)->GetLinkParam(); return 0;
-    case Op::TextDeliverLinkEvent: t->DeliverEvent(new TextLinkActivatedEvent(t, Seg(a)), false); return 0;
+    case Op::TextDeliverLinkEvent: t->DeliverEvent(TextLinkActivatedEvent(t, Seg(a)), false); return 0;
     case Op::SelTextAppend: t->mSelText.append(Seg(a)->mText, (unsigned short)b, (unsigned short)c); return 0;
     case Op::SelTextBreak: t->mSelText.append("\r\n"); return 0;
     case Op::SelTextCopy: Clipboard::Set(t->mSelText); t->mSelText.erase(); return 0;
@@ -262,8 +259,6 @@ static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_
     // (the children's references, size and parent are gamewin.rs common_op's in the game: R6 WON GUI round 38)
     case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
     case Op::AddChild: t->AddChild(Comp(a)); return 0;
-    case Op::EventType: return ((ComponentEvent*)a)->mType;
-    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
     case Op::NewComponent: return (intptr_t)new Component;
     case Op::ChildLayoutDrag: ((Container*)Comp(a))->Fn2F6140(Comp(b), 3, (Container*)Comp(a), 0, 0, 0, 0, 0); return 0;
     case Op::ChildAddEx: ((Container*)Comp(a))->AddChildEx(Comp(b), 0); return 0;
@@ -280,9 +275,6 @@ intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     switch (op) {
     case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
     case Op::ButtonIsChecked: return Btn(a)->IsChecked() ? 1 : 0;
-    case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
-    case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
-    case Op::EventButton: return (intptr_t)dynamic_cast<Button*>(((ComponentEvent*)a)->mComponent);
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -422,7 +414,7 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::WinQueueMouseUp: ((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)b, (int)c, ((Window*)a)->GetKeyMod(), (int)d)); return 0;
     case Op::DeliverItemClicked: {
         const EeWonItemClick* k = (const EeWonItemClick*)b;
-        t->DeliverEvent(new ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),
+        t->DeliverEvent(ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),
                                                  t->CheckDoubleClick(k->button), k->up, k->x, k->y), false);
         return 0;
     }
@@ -458,14 +450,10 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::NewTreeItemRaw: return (intptr_t)new TreeItem;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
-    case Op::EventType: return ((ComponentEvent*)a)->mType;
-    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
-    case Op::EventComponentTop: return ((ComponentEvent*)a)->mComponent->Top();
     case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
-    case Op::DeliverTreeOpened: t->DeliverEvent(new TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
+    case Op::DeliverTreeOpened: t->DeliverEvent(TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
     // the popup menu (menuobj.rs)
     case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
-    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
     case Op::MenuSelItem: return (intptr_t)((PopupMenu*)a)->GetSelItem();
     case Op::MenuSetSelAt: ((PopupMenu*)a)->SetSelItem((int)b); return 0;
     case Op::MenuItemOf: return (intptr_t)dynamic_cast<MenuItem*>(Item(a));
@@ -516,12 +504,6 @@ ListArea::~ListArea()
     ee_won_list_free(this->mRust);
 }
 
-// Returns whether the clicked item is the list box's current selection
-bool ListItemClickedEvent::IsSelectedItem()
-{
-    return this->mItem.get()==static_cast<ListArea*>(this->mComponent)->GetSelItem();
-}
-
 // Adds a separator line to the popup menu and resizes the menu to fit (at least 100 pixels wide)
 void PopupMenu::AddSeperator()
 {
@@ -547,16 +529,6 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
     switch (op) {
     case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
     case Op::RemoveChild: t->RemoveChild(Comp(a)); return 0;
-    case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
-    case Op::EventChildUnder: {
-        Component* child = ((ComponentEvent*)a)->mComponent;
-        Container* parent = child->mParent;
-        while (parent != t && parent != NULL) {
-            child = parent;
-            parent = child->mParent;
-        }
-        return parent == NULL ? 0 : (intptr_t)child;
-    }
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
     case Op::CursorIs: return t->GetCurrentCursor() == CursorOf(a) ? 1 : 0;
     case Op::CtorHeaderArea: t->SetMultiListArea((MultiListArea*)a); return 0; // the constructor's (guictor.rs)

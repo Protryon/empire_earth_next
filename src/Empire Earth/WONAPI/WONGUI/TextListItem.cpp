@@ -266,27 +266,22 @@ extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a
     Graphics* g = (Graphics*)a;
     switch (op) {
     case To::BasePaint: t->Component::Paint(*g); return 0;
-    case To::ItemIs: return t->mItem.get() == (ListItem*)a ? 1 : 0;
-    case To::HasItem: return t->mItem.get() != NULL ? 1 : 0;
-    case To::HasParent: return t->mParent != NULL ? 1 : 0;
-    case To::SetItem: t->mItem = (ListItem*)a; return 0;
-    case To::ItemTop: return t->mItem->mTop;
-    case To::ItemWidth: return t->mItem->mWidth;
-    case To::ItemHeight: return t->mItem->mHeight;
+    // (the item, the members, the sizes, SetSize and LocalToRoot are tipobj.rs's in the game: R6 WON GUI round 39)
     case To::HasOwnScheme: return t->GetOwnColorScheme() != NULL ? 1 : 0;
     case To::ListScheme: return (intptr_t)t->mListArea->GetColorScheme();
     case To::ListLeftPad: return t->mListArea->GetLeftPad();
     case To::ListRightPad: return t->mListArea->GetRightPad();
     case To::ListTopPad: return t->mListArea->GetTopPad();
     case To::ListVertOffset: return t->mListArea->GetVertOffset();
-    case To::ListWidth: return t->mListArea->Width();
-    case To::Width: return t->Width();
-    case To::Height: return t->Height();
     case To::ScrollPaint: t->mListArea->ScrollPaint(*g); return 0;
-    case To::ListLocalToRoot: t->mListArea->LocalToRoot(((int*)a)[0], ((int*)a)[1]); return 0;
-    case To::SetSize: t->SetSize((int)a, (int)b); return 0;
     case To::OpenPopup: OpenWith(t->mListArea->GetRoot(), PopupParams(t, EE_WON_TIP_POPUP_FLAGS, t->mListArea, (int)a, (int)b)); return 0;
     case To::ClosePopup: t->mListArea->GetRoot()->ClosePopup(t); return 0;
+    default: return 0;
     }
-    return 0;
 }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(sizeof(SmartPtr<ListItem>) == sizeof(void*) && offsetof(ListAreaToolTip, mItem) == offsetof(ListAreaToolTip, mListArea) + sizeof(void*),
+              "tipobj.rs reads the tip's list and item");
+[[maybe_unused]] static const bool sTipAt = (ee_won_tip_register(offsetof(ListAreaToolTip, mListArea)), true);
+#pragma clang diagnostic pop

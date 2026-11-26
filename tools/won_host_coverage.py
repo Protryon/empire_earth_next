@@ -51,7 +51,9 @@ CHECKS = [
                   for v in ("Comp", "Btn", "MsBtn", "Call")}),
     # the images' calls out (R6 WONLobby round 24: imgobj.rs): every one the images' host answers
     dict(enum="EeWonImageHost", header="won_gui/imgobj.h", hosts=[GUI / "PlatNativeImage.cpp"],
-         rust=[(RS / "ee_won_gui" / "src" / "imgobj.rs", "href", True)], allowed={}),
+         rust=[(RS / "ee_won_gui" / "src" / "imgobj.rs", "href", True),
+               # R6 WON GUI round 39: the Graphics is gfxrun.rs's record, made and run there in the game
+               (RS / "ee_won_gui" / "src" / "gfxrun.rs", "image_host_op")], allowed={}),
     # the component configs' calls out (R6 WONLobby round 25: compcfg.rs): every one the configs' host answers
     dict(enum="EeWonCcOp", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"], rust=[],
          allowed={}),
