@@ -21,8 +21,6 @@ public:
     // +0x00 (??_G 0x11b628; dtor 0x11b644)
     virtual ~RTSMousePointer() { ee_rts_mouse_pointer_destruct(this); }
 
-    // 0x11b66d (the thread function)
-    static unsigned long Main(void* inPointer) { return ee_rts_mouse_pointer_main(inPointer); }
     // 0x11b813: the thread's messages 0x401 (end), 0x402/0x404 (mB1C off/on), 0x405 (mU04 = the surface)
     void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
         { ee_rts_mouse_pointer_handle_message(this, inMessage, inParameter1); }

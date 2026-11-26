@@ -35,11 +35,8 @@ public:
     void Fn10C036() { ee_gamecpp_ro_fn10c036(this); }
     // 0x10eabe (EEROGroundShadows::FrameStarting; provisional name)
     void FillRenderLists() { ee_gamecpp_ro_fill_render_lists(this); }
-    // 0x10e8d1 (EEROTerrain::FrameStarting; provisional name)
-    void Fn10E8D1() { ee_gamecpp_ro_fn10e8d1(this); }
     // FillRenderLists' per-unit helpers (IsUnitDrawn 0x10b3b3, DrawGroundCircle 0x10bba4, FillGhostRecords 0x10c952,
     // FillObject, FillUnit, the doppelgangers' fills, GetUnitOpacity 0x10f412): gamecpp render_object.rs
 };
 
 #endif
-
