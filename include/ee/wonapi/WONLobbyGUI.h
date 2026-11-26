@@ -1468,7 +1468,6 @@ public:
     void SetIsShowing(bool inShowing) { this->WSet(EeWonWinField::IsShowing, inShowing ? 1 : 0); }
     bool IsPopup() const { return this->WField(EeWonWinField::IsPopup) != 0; }
     void SetIsPopup(bool inPopup) { this->WSet(EeWonWinField::IsPopup, inPopup ? 1 : 0); }
-    bool IsOneComponentWindow() const { return this->WField(EeWonWinField::OneComponent) != 0; }
     void SetOneComponentWindow(bool inOne) { this->WSet(EeWonWinField::OneComponent, inOne ? 1 : 0); }
     int GetStyle() const { return (int)this->WField(EeWonWinField::Style); }
     void SetStyle(int inStyle) { this->WSet(EeWonWinField::Style, inStyle); }
