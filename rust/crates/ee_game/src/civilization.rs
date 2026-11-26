@@ -12,6 +12,7 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use ee_sim::app::teams_ffi;
 use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX};
 use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
 
@@ -293,23 +294,24 @@ pub extern "C" fn ee_gamecpp_civ_apply_deferred(civilization: *mut c_void, playe
     0
 }
 
-// ---- the wonder victory (p: an EEVictoryCondition*)
+// ---- the wonder victory of the world's team `team` (were EEVCWonder's and EEVictoryCondition's, each team's
+// condition object: its state was the team; the teams are ee_sim app teams_ffi.rs's)
 
 /// The team's players' ids.
-fn team_players(vc: P) -> Vec<c_ulong> {
-    (0..h(O::DwTeamCount, vc, &[])).map(|i| h(O::DwTeamPlayer, vc, &[i]) as c_ulong).collect()
+#[allow(clippy::unnecessary_cast)] // c_ulong is u32 on Windows, u64 on LP64
+fn team_players(team: usize) -> Vec<c_ulong> {
+    teams_ffi::players(team).into_iter().map(|p| p as c_ulong).collect()
 }
 
 /// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_wonder_enough(condition: *mut c_void) -> bool {
-    let vc = condition as P;
+pub extern "C" fn ee_gamecpp_wonder_enough(team: usize) -> bool {
     let needed = h(O::DwNeeded, 0, &[]) as c_ulong;
     if needed == 0 {
         return false;
     }
     let mut count: c_ulong = 0;
-    for id in team_players(vc) {
+    for id in team_players(team) {
         count = count.wrapping_add(wonder_count(hp(O::WorldPlayer, 0, &[id as i64])));
     }
     count >= needed
@@ -340,12 +342,11 @@ pub fn seconds_left(victory_time: c_long, game_time: c_ulong, built: c_ulong) ->
 /// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
 /// the team lacks the wonders).
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_wonder_countdown(condition: *mut c_void, out: *mut c_ulong) -> *mut c_void {
-    let vc = condition as P;
+pub extern "C" fn ee_gamecpp_wonder_countdown(team: usize, out: *mut c_ulong) -> *mut c_void {
     let needed = h(O::DwNeeded, 0, &[]) as c_ulong;
-    let (winner, value) = if ee_gamecpp_wonder_enough(condition) {
+    let (winner, value) = if ee_gamecpp_wonder_enough(team) {
         let mut entries = Vec::new();
-        for id in team_players(vc) {
+        for id in team_players(team) {
             let pl = hp(O::WorldPlayer, 0, &[id as i64]);
             let mut j: c_ulong = 0;
             while j < wonder_count(pl) && j < needed {
@@ -364,20 +365,18 @@ pub extern "C" fn ee_gamecpp_wonder_countdown(condition: *mut c_void, out: *mut 
     winner as *mut c_void
 }
 
-/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
+/// `EETeam::GetVictoryState` (`EEVCWonder`'s): 1 (won) when the team's countdown has run out, outside cinematics.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_wonder_state(condition: *mut c_void) -> c_long {
+pub extern "C" fn ee_gamecpp_wonder_state(team: usize) -> c_long {
     if h(O::DwInCinematic, 0, &[]) != 0 {
         return 0;
     }
     let mut value: c_ulong = 0;
-    (!ee_gamecpp_wonder_countdown(condition, &mut value).is_null() && value == 0) as c_long
+    (!ee_gamecpp_wonder_countdown(team, &mut value).is_null() && value == 0) as c_long
 }
 
 /// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_wonder_load(major: c_ulong, minor: c_ulong, file: *mut c_void) -> c_long {
-    let f = Pf(file as P);
+pub fn wonder_load(major: c_ulong, minor: c_ulong, f: Pf) -> i64 {
     let mut r = OK;
     if major == 0 && minor < 0xe1 {
         let mut count: c_ulong = 0;
@@ -389,7 +388,7 @@ pub extern "C" fn ee_gamecpp_wonder_load(major: c_ulong, minor: c_ulong, file: *
             }
         }
     }
-    r as c_long
+    r
 }
 
 #[cfg(test)]

@@ -6,7 +6,6 @@
 #define EE_EESERBUNITTYPES_H
 
 // 0x5318cc: the world's player count the editor's player tab sets (EESEAChangeWorldPlayerCount; provisional name)
-extern unsigned long& gMaxPlayers;
 
 // (EESEAChangeWorldPlayerCount, RTTI > EEAction, vtable 0x44310c, Virtual4 0x1737a3: gMaxPlayers set to its count,
 // is the EESEARust kind EE_SCREENS_SEW_PLAYER_COUNT, ee_screens editor_whole.rs)

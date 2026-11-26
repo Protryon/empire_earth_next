@@ -37,7 +37,7 @@ extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uin
     case EE_CP_TOWN_HAS_PATROL: return me->mPatrolGroup != NULL ? 1 : 0;
     case EE_CP_TOWN_SET_PATROL: EEPGSetPatrolPoints(me->mPatrolGroup, std::vector<U2DPoint<long> >((const U2DPoint<long>*)(uintptr_t)io->v[0], (const U2DPoint<long>*)(uintptr_t)io->v[0] + io->v[1]), me->mPlayer->GetPlayerID());
         return 0;
-    case EE_CP_TOWN_FLAGS: return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
+    case EE_CP_TOWN_FLAGS: return (gWorld.mLoadingSavedGame ? 1 : 0) | (gWorld.mClearing ? 2 : 0);
     case EE_CP_TOWN_NODE_KIND: return theUnit->GetTechTreeNode() != NULL ? (int64_t)theUnit->GetTechTreeNode()->mData->mKind : -1;
     case EE_CP_TOWN_AREA_TILE: return EETownPack(theUnit->FindAreaTile(true, 1));
     case EE_CP_TOWN_SET_PATROL_GROUP: me->mPatrolGroup = reinterpret_cast<EEPPatrolGroup*>((uintptr_t)inA);

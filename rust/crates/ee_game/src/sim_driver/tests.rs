@@ -323,7 +323,9 @@ fn an_editor_script_runs_line_by_line() {
 }
 
 #[test]
-fn the_world_constants_are_the_generated_headers() {
+fn the_world_constants_are_the_generated_ones() {
+    // (the enum is ee_data world_constants.rs's since the game headers lane, round 1: ee/EEWorldConstants.h only
+    // includes its header)
     use super::sim_host::*;
     use ee_data::world_constants::EEWorldConstant as W;
     assert_eq!(W::kWorldConversionFaithCost as u32, WORLD_CONVERSION_FAITH_COST);

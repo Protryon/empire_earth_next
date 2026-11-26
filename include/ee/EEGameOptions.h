@@ -115,7 +115,6 @@ public:
     bool GetIsScenarioGame() const { return this->mIsScenarioGame; }  // (MGOE OpenOptionsScreen's inline budget)
 };
 
-extern EEGameOptions& gGameOptions;
 
 class GEColor;
 // 0x1318bd (another unit; provisional name): the colour of player colour inIndex (a vector<...*> at 0x4e610c, the
