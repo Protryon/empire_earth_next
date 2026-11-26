@@ -168,7 +168,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ThreadPost: return PH->mThread != NULL ? PH->mThread->Post((unsigned long)a[0], NULL, NULL, true) : 0;
     case O::RtsHandleMessage: PH->RTSPhysics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
         break;
-    case O::UnitOfId: return P64((EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0]));
     case O::UnitStep: CX->Step();
         break;
     case O::PlayerUpdate: PL->UpdatePlayer();
@@ -207,13 +206,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SwapClear: PH->mUnitSwaps.clear();
         break;
     // a message
-    case O::MsgType: return MSG->GetType();
-    case O::MsgReference: MSG->Reference();
-        break;
-    case O::MsgDereference: MSG->Dereference();
-        break;
-    case O::MsgForSpecificSlot: return MSG->GetForSpecificSlot();
-    case O::MsgOriginatingSlot: return MSG->GetOriginatingSlot();
     case O::MsgSetOriginatingSlot: MSG->SetOriginatingSlot((unsigned char)a[0]);
         break;
     case O::RecBool: return REC->Get<bool>((unsigned long)a[0]);
@@ -223,8 +215,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ExecuteSelection: EEGameMessageCast(MSG)->ExecuteSelectionMessage();
         break;
     case O::ExecuteGame: ((EEMessage*)p)->ExecuteMessage();
-        break;
-    case O::Execute: MSG->Execute();
         break;
     case O::RecordBytes: return P64(static_cast<EEMRecord*>((EEMessage*)p)->mRecord);
     case O::RemovePlayer: gCommunications->ExecuteRemovePlayer(REC->Get<unsigned char>(0), REC->Get<bool>(3), REC->Get<bool>(1), REC->Get<bool>(2));
@@ -241,11 +231,9 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
         break;
     // the communications
-    case O::IsServer: return gCommunications->IsServer();
     case O::IsClient: return gCommunications->IsClient();
     case O::CommsIsServer: return gCommunications != NULL && gCommunications->IsServer();
     case O::ClientHasLeft: return static_cast<EEClient*>(gCommunications)->mHasLeftGame;
-    case O::CtsInPhysics: return gCommunications->GetNumberOfCTsProcessedInPhysics();
     case O::IncrementCts: gCommunications->IncrementNumberOfCTsProcessedInPhysics();
         break;
     case O::SetAverageUpdate: gCommunications->SetAveragePhysicsUpdateTime((long)a[0]);
@@ -280,11 +268,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::EnvironmentTick: gWorld.mEnvironmentManager->Tick((unsigned long)a[0]);
         break;
-    case O::WorldWriteLock: gWorld.mLock->WriteLock();
-        break;
-    case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
-        break;
-    case O::UnitsFirst: return P64(gWorld.mUnits.mFirst);
     case O::UnitNext: return P64(((RTSUnit*)p)->mTileNode->mNext);
     case O::UnitChecksum: return static_cast<EEUnit*>((RTSUnit*)p)->GetChecksum((unsigned long)a[0]);
     case O::UnitDump: static_cast<EEUnit*>((RTSUnit*)p)->OutOfSynchDump(FP(0), (unsigned long)a[1]);
@@ -309,7 +292,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::PlayerAvailablePoints: return static_cast<unsigned long>(PL->mCivilization.GetAvailablePoints());
     case O::PlayerSavedGroupLast: return PL->mSavedGroups.GetLastValue((unsigned long)a[0]);
-    case O::PlayerActiveGroup: return P64(PL->mActiveGroup);
     case O::PlayerRunningGroups: return PL->GetNumRunningGroups();
     case O::PlayerRunningGroup: return P64(PL->GetRunningGroup((unsigned long)a[0]));
     case O::PlayerAirTraffic: return P64(PL->mAirTraffic[a[0]]);
@@ -336,11 +318,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CalamityChecksum: return EECalamityManager::GetInstance()->GetOutOfSynchChecksum();
     case O::AiUpdate: gArtificialIntelligence->Update();
         break;
-    case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);
     case O::HasJitPower: return gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing);
-    case O::TextNew: return P64(new UWideString);
-    case O::TextDelete: delete (UWideString*)p;
-        break;
     case O::ResourceString: return gResource->GetString((unsigned long)a[0], *(UWideString*)p);
     case O::ChatLog: gUserInterface->AddChatLogEntry(*(UWideString*)p, 0);
         break;
@@ -356,16 +334,12 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::AutoSaveMilliseconds: return gGamePreferences.mSettings.mAutoSaveInMilliseconds;
     case O::SetLastAutoSave: gGamePreferences.mSettings.mLastAutoSave = UWideString((const char*)a[0]);
         break;
-    case O::SavePreferences: gGamePreferences.Save();
-        break;
     case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
         break;
     case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
         break;
     case O::LoadOrSave: return EELoadOrSave(static_cast<EEMRecord*>(MSG));
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));
-    case O::FilePuts: fputs((const char*)a[0], (FILE*)p);
-        break;
     case O::FileClose: fclose((FILE*)p);
         break;
     case O::ContinentChecksum: return gContinentManagerChecksum;
