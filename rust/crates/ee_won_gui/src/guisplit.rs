@@ -74,6 +74,12 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
                 return r;
             }
         }
+        if which == EeWonGuiSplitHost::Label {
+            // (the wrapped text's methods: wrapobj.rs, R6 WON GUI round 40)
+            if let Some(r) = crate::wrapobj::wrap_host_op(crate::wrapobj::label_text(comp as isize), op, a) {
+                return r;
+            }
+        }
         if which == EeWonGuiSplitHost::Text {
             // (the segments' members, the link and the copy: R6 WON GUI round 40; the clipboard the C++ host's)
             // SAFETY: as above

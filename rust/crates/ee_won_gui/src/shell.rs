@@ -420,6 +420,8 @@ impl Sh {
     /// One host op.
     pub fn host(&self, op: EeWonShellHostOp, a: isize, b: isize, c: isize, d: isize) -> isize {
         use crate::guihost::EeWonWbImage as I;
+        use crate::guihost::EeWonWbText as T;
+        let wrap = |w: Option<isize>, which: T, c: isize| crate::wrapobj::game_wrap_op(w?, which, c);
         let r = match op {
             EeWonShellHostOp::Ref | EeWonShellHostOp::RefObj => crate::gamewin::rf(a, b > 0),
             EeWonShellHostOp::Img if a == I::Hold as isize || a == I::Release as isize => {
@@ -429,6 +431,12 @@ impl Sh {
             EeWonShellHostOp::Draw if crate::compobj::is_game() => {
                 crate::gfxrun::game_op(crate::guihost::EeWonGuiOp::Draw, a, b)
             }
+            // the MS buttons' and the skins' wrapped texts (wrapobj.rs, R6 WON GUI round 40)
+            EeWonShellHostOp::WrapSetText => wrap(crate::wrapobj::msbtn_text(self.comp), T::SetText, a),
+            EeWonShellHostOp::WrapWidth => wrap(crate::wrapobj::msbtn_text(self.comp), T::Width, 0),
+            EeWonShellHostOp::WrapWidthOf => wrap(crate::wrapobj::msbtn_text(a), T::Width, 0),
+            EeWonShellHostOp::SetWrap => wrap(crate::wrapobj::msbtn_text(a), T::SetWrap, b),
+            EeWonShellHostOp::TextWidth => crate::wrapobj::game_wrap_op(a, T::Width, 0),
             _ => crate::gamewin::msgbox_op(op, a, b, c),
         };
         if let Some(r) = r {

@@ -12,6 +12,20 @@
 /// The Rust WrappedText (the original's members but the text and font).
 struct EeWonWrapText;
 
+/// Where the game's WrappedText keeps its members and the classes that hold one keep it (offsets in a
+/// `WrappedText`, a `Label`, an `MSButtonBase` and a `Font`; GuiHost.cpp registers them; R6 WON GUI round 40).
+struct EeWonWrapAt {
+  /// `WrappedText::mText` (a GUIString: its text's pointer), `mFont` (a SmartPtr), `mObj`
+  size_t text;
+  size_t font;
+  size_t obj;
+  /// `Label::mWrappedText`, `MSButtonBase::mText` (SmartPtrs)
+  size_t label_text;
+  size_t msbtn_text;
+  /// `Font::mRust`
+  size_t font_rust;
+};
+
 extern "C" {
 
 /// A new WrappedText's state (`Init()`).
@@ -106,6 +120,12 @@ size_t ee_won_wrap_paint_font(const EeWonWrapText *o,
                               int32_t y,
                               EeWonDrawOp *out,
                               size_t cap);
+
+/// Registers the wrapped texts' member offsets (GuiHost.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+void ee_won_wrap_register(const EeWonWrapAt *at);
 
 }  // extern "C"
 

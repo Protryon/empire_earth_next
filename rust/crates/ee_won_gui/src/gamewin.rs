@@ -927,7 +927,7 @@ pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize, c: isize, d:
 /// A WONButton's references and images' reads (`WbText`, `WbImage`, `WbFont`; wonbtnobj.rs) in the game (R6 WON GUI
 /// round 38): the game's reference function, the image handles' Rust images, the manager's default font. None in a
 /// driver's world and for the others.
-pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::guihost::{EeWonWbFont as Wf, EeWonWbImage as Wi, EeWonWbText as Wt};
     if !crate::compobj::is_game() {
         return None;
@@ -935,6 +935,12 @@ pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
     match op {
         Op::WbText if a == Wt::Hold as isize => rf(b, true),
         Op::WbText if a == Wt::Release as isize => rf(b, false),
+        // the wrapped text's methods (wrapobj.rs, R6 WON GUI round 40)
+        Op::WbText if a != Wt::New as isize => {
+            // SAFETY: `a` an EeWonWbText (the op's contract)
+            let which = unsafe { std::mem::transmute::<u32, Wt>(a as u32) };
+            crate::wrapobj::game_wrap_op(b, which, c)
+        }
         Op::WbFont if a == Wf::Hold as isize => rf(b, true),
         Op::WbFont if a == Wf::Release as isize => rf(b, false),
         Op::WbFont if a == Wf::Default as isize => wm(EeWonWmCall::GetDefaultFont, 0, 0),

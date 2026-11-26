@@ -121,10 +121,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     (void)d;
     MSButtonBase* t = (MSButtonBase*)inComp;
     switch (op) {
-    case Op::WrapSetMaxWidth: t->mText->SetMaxWidth((int)a); return 0;
-    case Op::WrapSetCentered: t->mText->SetCentered(a != 0); return 0;
-    case Op::WrapWidth: return t->mText->GetWidth();
-    case Op::WrapHeight: return t->mText->GetHeight();
+    // (the wrapped text's methods are wrapobj.rs's in the game: R6 WON GUI round 40)
     case Op::SkinBoxPainter: // the check box's or radio button's default painter function (never replaced), 13 x 13
         WONMsPaint(*(Graphics*)a,WONMsPaintOf((EeWonMsBox)b == EeWonMsBox::Checkbox ? EeWonMsPaintKind::Check : EeWonMsPaintKind::Radio,13,13,(t->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(t->IsChecked()?EE_WON_MSPAINT_CHECKED:0)));
         return 0;
@@ -158,15 +155,7 @@ static intptr_t TextOp(intptr_t which, intptr_t b, intptr_t c)
 {
     switch ((EeWonWbText)which) {
     case EeWonWbText::New: { WrappedText* t = new WrappedText; t->AddRef(); return (intptr_t)t; }
-    case EeWonWbText::SetText: Txt(b)->SetText(*(const GUIString*)c); return 0;
-    case EeWonWbText::SetMaxWidth: Txt(b)->SetMaxWidth((int)c); return 0;
-    case EeWonWbText::SetWrap: Txt(b)->SetWrap(c != 0); return 0;
-    case EeWonWbText::SetCentered: Txt(b)->SetCentered(c != 0); return 0;
-    case EeWonWbText::SetFont: Txt(b)->SetFont((Font*)c); return 0;
-    case EeWonWbText::Width: return Txt(b)->GetWidth();
-    case EeWonWbText::Height: return Txt(b)->GetHeight();
-    case EeWonWbText::Font: return (intptr_t)Txt(b)->mFont.get();
-    case EeWonWbText::Text: return (intptr_t)&Txt(b)->GetText();
+    // (its methods are wrapobj.rs game_wrap_op's in the game: R6 WON GUI round 40)
     default: return 0;
     }
 }

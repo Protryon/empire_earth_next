@@ -205,11 +205,7 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
 {
     Label* t = (Label*)inComp;
     switch (op) {
-    case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
-    case Op::WrapSetCentered: t->mWrappedText->SetCentered(a != 0); return 0;
-    case Op::WrapSetWrap: t->mWrappedText->SetWrap(a != 0); return 0;
-    case Op::WrapWidth: return t->mWrappedText->GetWidth();
-    case Op::WrapHeight: return t->mWrappedText->GetHeight();
+    // (the wrapped text's methods are wrapobj.rs's in the game: R6 WON GUI round 40)
     case Op::PaintBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, (int)b, (int)c); return 0;
     case Op::LabelDrawWrapped: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, NULL, t->mWrappedText.get()), WONDrawNoCall()); return 0;
     // the constructor's statements (guictor.rs)
@@ -661,6 +657,13 @@ void RectangleComponent3D::Paint(Graphics &g)
     ee_won_gui_split_register(EeWonGuiSplitHost::Label, ee_won_guicpp_label_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::Split, ee_won_guicpp_split_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::List, ee_won_guicpp_list_call), true);
+// where wrapobj.rs reads a wrapped text's members and its holders' (R6 WON GUI round 40)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonWrapAt kWrapAt = {offsetof(WrappedText, mText), offsetof(WrappedText, mFont), offsetof(WrappedText, mObj),
+    offsetof(Label, mWrappedText), offsetof(MSButtonBase, mText), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+[[maybe_unused]] static const bool sWrapAt = (ee_won_wrap_register(&kWrapAt), true);
 // where the Rust area reads a segment's members (gamewin.rs text_host_op, R6 WON GUI round 40)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
@@ -783,10 +786,7 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
-    case H::WrapSetText: static_cast<MSButtonBase*>(t)->mText->SetText(*(const GUIString*)a); return 0;
-    case H::WrapWidth: return static_cast<MSButtonBase*>(t)->mText->GetWidth();
-    case H::WrapWidthOf: return static_cast<MSButtonBase*>((Component*)a)->mText->GetWidth();
-    case H::SetWrap: static_cast<MSButtonBase*>((Component*)a)->SetWrap(b != 0); return 0;
+    // (the MS buttons' wrapped texts are wrapobj.rs's in the game: R6 WON GUI round 40)
     case H::SameSize: {
         SmartPtr<ChildLayoutInstructionBase> l = new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize, NULL, NULL, 0, 0, 0, true, true);
         for (intptr_t x : {a, b, c}) l->AddComponent((Component*)x);
@@ -834,7 +834,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     case H::WonBtnCopy: static_cast<WONButton*>((Component*)a)->CopyAttributes(static_cast<WONButton*>((Component*)b)); return 0;
     case H::BtnCopy: static_cast<Button*>((Component*)a)->CopyAttributes(static_cast<Button*>((Component*)b)); return 0;
     case H::ClickSound: static_cast<Button*>((Component*)a)->SetClickSound((Sound*)b); return 0;
-    case H::TextWidth: return ((WrappedText*)a)->GetWidth();
     case H::VDesiredSize: { int* wh = (int*)b; ((Component*)a)->GetDesiredSize(wh[0], wh[1]); return 0; }
     case H::NewStretchImage: { ImageComponent* i = new ImageComponent; i->mStretch = true; i->SetImage((Image*)a); return (intptr_t)static_cast<Component*>(i); }
     case H::NewMsImage: return (intptr_t)WONNewMsImage((unsigned char)a, (unsigned char)b, (int)c, (int)d);
