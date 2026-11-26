@@ -238,6 +238,9 @@ pub struct EeWorldLayout {
     // ---- the player/tech lane, round 4
     /// `EEPlayer::mUnitClassUpgrades` (a `std::vector<EEUnitClassUpgrade*>`: its begin and end pointers first)
     pub player_unit_class_upgrades: u64,
+    /// `EeHerdFields` in `EEHerd`; `EETown::mPatrolGroup` (an `EEPPatrolGroup*`) (player_native.rs, player_rest.rs)
+    pub herd_fields: u64,
+    pub town_patrol_group: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

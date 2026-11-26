@@ -397,23 +397,3 @@ pub unsafe extern "C" fn ee_cp_herd_repair_pointers(
     // SAFETY: the caller's contract
     unsafe { with(herd, f, |h| h.repair_pointers(major, minor)) }
 }
-
-/// The units' count (`mUnits.size()`).
-///
-/// # Safety
-/// `f` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_herd_unit_count(f: *const EeHerdFields) -> usize {
-    // SAFETY: the caller's contract
-    unsafe { (*(*f).mLists).units.as_slice().len() }
-}
-
-/// Unit `i`'s handle (`mUnits[i]`: a unit id).
-///
-/// # Safety
-/// `f` is a live record; `i` below the count.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_herd_unit_handle(f: *const EeHerdFields, i: usize) -> u32 {
-    // SAFETY: the caller's contract
-    unsafe { (*(*f).mLists).units.as_slice()[i] }
-}

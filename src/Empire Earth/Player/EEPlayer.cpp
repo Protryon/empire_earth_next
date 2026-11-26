@@ -897,24 +897,12 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_HULL_POINT: return EEPlayerPackPoint(EEPlayerTownAt(inA)->GetHullPoint((long)inB));
     case EE_UNITS_PLAYER_BODY_TOWN_SET_PATROL: EEPlayerTownAt(inA)->mPatrolGroup = reinterpret_cast<EEPPatrolGroup*>(inB);
         return 0;
-    // ClearFootprint's and ReloadTechTree's (player_rest.rs)
-    case EE_UNITS_PLAYER_BODY_UNITS_NEW: return (int64_t)(uintptr_t)new std::vector<EEUnit*>;
-    case EE_UNITS_PLAYER_BODY_TILES_NEW: return (int64_t)(uintptr_t)new std::vector<EETileCoordinate>;
-    case EE_UNITS_PLAYER_BODY_UNITS_DELETE: delete EEPlayerPtr<std::vector<EEUnit*> >(inA);
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TILES_DELETE: delete EEPlayerPtr<std::vector<EETileCoordinate> >(inA);
-        return 0;
-    case EE_UNITS_PLAYER_BODY_UNITS_SIZE: return (int64_t)EEPlayerPtr<std::vector<EEUnit*> >(inA)->size();
-    case EE_UNITS_PLAYER_BODY_TILES_SIZE: return (int64_t)EEPlayerPtr<std::vector<EETileCoordinate> >(inA)->size();
-    case EE_UNITS_PLAYER_BODY_UNITS_AT: return EEPlayerUnitArg((*EEPlayerPtr<std::vector<EEUnit*> >(inA))[(size_t)inB]);
-    case EE_UNITS_PLAYER_BODY_TILES_AT: return EEPlayerPackPoint((*EEPlayerPtr<std::vector<EETileCoordinate> >(inA))[(size_t)inB]);
+    // ReloadTechTree's (player_rest.rs)
     case EE_UNITS_PLAYER_BODY_SET_MANAGER_CONTAINS: return gUnitSetManager.Contains((long)inB, (long)inC);
     case EE_UNITS_PLAYER_BODY_WAYPOINTS: return (int64_t)theComplex->mWaypoints.size();
     case EE_UNITS_PLAYER_BODY_NEXT_WAYPOINT: return theComplex->NextWaypoint();
     case EE_UNITS_PLAYER_BODY_PATH_START: return theComplex->GetPathStart(*EEPlayerPtr<GE3DPoint>(inB), *EEPlayerPtr<float>(inC));
     case EE_UNITS_PLAYER_BODY_MOVE_TO: theComplex->SetTransformation(EEPlayerMovedLocation(theComplex, EEPlayerPtr<float>(inB)), true);
-        return 0;
-    case EE_UNITS_PLAYER_BODY_SORT_TILES: std::sort(EEPlayerPtr<std::vector<EETileCoordinate> >(inA)->begin(), EEPlayerPtr<std::vector<EETileCoordinate> >(inA)->end(), EETileDistanceLess((long)inB, (long)inC));
         return 0;
     case EE_UNITS_PLAYER_BODY_TILE_EMPTY: return gWorld.mMap->GetTile((long)inB, (long)inC) != NULL && gWorld.mMap->GetTile((long)inB, (long)inC)->mUnits == NULL;
     case EE_UNITS_PLAYER_BODY_MESH_VALID: return gWorld.mMap->mTerrainMesh.GetIsValidTile((long)inB, (long)inC);
@@ -937,13 +925,6 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_CLASS_NAME: return (int64_t)(uintptr_t)(const char*)gUnitClassTable[(size_t)inB]->mName;
     case EE_UNITS_PLAYER_BODY_HERD_DELETE: delete EEPlayerHerdAt(inA);
         return 0;
-    case EE_UNITS_PLAYER_BODY_HERD_UNITS: EEPlayerHerdAt(inA)->GetUnits(*EEPlayerPtr<std::vector<EEComplexUnit*> >(inB));
-        return 0;
-    case EE_UNITS_PLAYER_BODY_COMPLEXES_NEW: return (int64_t)(uintptr_t)new std::vector<EEComplexUnit*>;
-    case EE_UNITS_PLAYER_BODY_COMPLEXES_DELETE: delete EEPlayerPtr<std::vector<EEComplexUnit*> >(inA);
-        return 0;
-    case EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE: return (int64_t)EEPlayerPtr<std::vector<EEComplexUnit*> >(inA)->size();
-    case EE_UNITS_PLAYER_BODY_COMPLEXES_AT: return (int64_t)(uintptr_t)(*EEPlayerPtr<std::vector<EEComplexUnit*> >(inA))[(size_t)inB];
     case EE_UNITS_PLAYER_BODY_KILL_KILLED: EEPlayerPtr<EEComplexUnit>(inA)->Kill(inB != 0, 0, 0);
         return 0;
     case EE_UNITS_PLAYER_BODY_DUMP_HEADER: fprintf(*EEPlayerPtr<FSFileSpec>(inA), "Media Information For Player %ld, The Players Name is %s\n\n", thePlayer->mPlayerID, (const char*)thePlayer->mName);
