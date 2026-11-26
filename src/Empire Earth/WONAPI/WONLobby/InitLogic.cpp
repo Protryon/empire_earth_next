@@ -83,8 +83,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     RustLogic* aLogic = static_cast<RustLogic*>(inObj);
     LobbyConfig* config = GetLobbyConfig();
     switch (inOp) {
-    case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case O::OpStatus: return (int)reinterpret_cast<AsyncOp*>(a)->GetStatus();
     case O::BroadcastLobby: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case O::Exit: LobbyExit((int)a); return 0;
     case O::Root: return (intptr_t)GetLobbyRoot();

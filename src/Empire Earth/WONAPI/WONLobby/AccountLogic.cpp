@@ -54,8 +54,6 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     typedef LobbyEvtField EF;
     RustLogic* aLogic = static_cast<RustLogic*>(inObj);
     switch (inOp) {
-    case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case O::OpStatus: return (int)reinterpret_cast<AsyncOp*>(a)->GetStatus();
     case O::BroadcastLobby: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case O::Exit: LobbyExit((int)a); return 0;
     case O::AuthContext: return (intptr_t)GetLobbyAuthContext();

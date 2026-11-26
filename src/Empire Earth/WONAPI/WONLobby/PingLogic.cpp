@@ -59,10 +59,6 @@ static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr
     RustLogic* aLogic = static_cast<RustLogic*>(inObj);
     LobbyConfig* aConfig;
     switch (inOp) {
-    case O::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
-    case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case O::OpStatus: return (int)reinterpret_cast<AsyncOp*>(a)->GetStatus();
-    case O::OpKilled: return reinterpret_cast<AsyncOp*>(a)->IsKilled();
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
     case O::SetDefaultRecv:
         reinterpret_cast<UDPManager*>(a)->SetDefaultCompletion(new ShellCompletion(aLogic, EeWonLogicShellDone::PingRecv));
