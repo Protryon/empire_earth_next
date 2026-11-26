@@ -429,7 +429,7 @@ fn run(o: &Ops, which: EeWonCfgComp) -> R<()> {
             o.call(O::RadioFlag, radio, 0);
         }
         W::SkinTabCtrl => {
-            let tab = o.op(O::SafePart, b"WONTabCtrl\0".as_ptr() as isize, 0)?;
+            let tab = o.op(O::SafePart, c"WONTabCtrl".as_ptr() as isize, 0)?;
             o.op3(O::SkinSet, Sl::TabCtrl as isize, 0, tab)?;
             o.call(O::ShellSetSkin, tab, 0);
         }
@@ -667,7 +667,7 @@ enum Idx {
 #[derive(Clone, Copy)]
 enum Small {
     /// The slot, its index, whether the part is a WON button, the part's NUL-terminated name.
-    SkinPart(Sl, Idx, bool, &'static [u8]),
+    SkinPart(Sl, Idx, bool, &'static std::ffi::CStr),
     /// The button type `s[0]`: simple (a skin part) or a WON button.
     SkinType(bool),
     Pos,
@@ -680,21 +680,21 @@ fn small_of(setter: i32) -> Option<Small> {
     use crate::cfgtab::*;
     use Small::*;
     Some(match (setter >> 8, setter & 0xff) {
-        (EE_WON_CFG_T_SKIN, 3) => SkinPart(Sl::PushButton, Idx::Zero, true, b"WONButton\0"),
-        (EE_WON_CFG_T_SKIN, 4) => SkinPart(Sl::Checkbox, Idx::Zero, true, b"WONButton\0"),
-        (EE_WON_CFG_T_SKIN, 6) => SkinPart(Sl::HeaderButton, Idx::Zero, false, b"WONHeaderButton\0"),
-        (EE_WON_CFG_T_SKIN, 7) => SkinPart(Sl::TabButton, Idx::Zero, true, b"WONButton\0"),
-        (EE_WON_CFG_T_SKIN, 8) => SkinPart(Sl::Arrow0, Idx::Int, false, b"WONSimpleButton\0"),
-        (EE_WON_CFG_T_SKIN, 9) => SkinPart(Sl::ComboButton, Idx::Zero, false, b"WONSimpleButton\0"),
-        (EE_WON_CFG_T_SKIN, 10) => SkinPart(Sl::CloseButton, Idx::Zero, false, b"WONSimpleButton\0"),
-        (EE_WON_CFG_T_SKIN, 11) => SkinPart(Sl::ScrollGutter0, Idx::Bool, false, b"WONSimpleButton\0"),
-        (EE_WON_CFG_T_SKIN, 12) => SkinPart(Sl::ScrollThumb0, Idx::Bool, false, b"WONSimpleButton\0"),
-        (EE_WON_CFG_T_SKIN, 13) => SkinPart(Sl::Scrollbar0, Idx::Bool, false, b"WONScrollbar\0"),
-        (EE_WON_CFG_T_SKIN, 14) => SkinPart(Sl::ScrollContainer, Idx::Zero, false, b"WONScrollContainer\0"),
-        (EE_WON_CFG_T_SKIN, 15) => SkinPart(Sl::ListCtrl, Idx::Zero, false, b"WONListCtrl\0"),
-        (EE_WON_CFG_T_SKIN, 17) => SkinPart(Sl::ComboBox, Idx::Zero, false, b"WONComboBox\0"),
-        (EE_WON_CFG_T_SKIN, 18) => SkinPart(Sl::PopupBack, Idx::Zero, false, b"WONPopupBack\0"),
-        (EE_WON_CFG_T_SKIN, 19) => SkinPart(Sl::DialogBack, Idx::Zero, false, b"WONDialogBack\0"),
+        (EE_WON_CFG_T_SKIN, 3) => SkinPart(Sl::PushButton, Idx::Zero, true, c"WONButton"),
+        (EE_WON_CFG_T_SKIN, 4) => SkinPart(Sl::Checkbox, Idx::Zero, true, c"WONButton"),
+        (EE_WON_CFG_T_SKIN, 6) => SkinPart(Sl::HeaderButton, Idx::Zero, false, c"WONHeaderButton"),
+        (EE_WON_CFG_T_SKIN, 7) => SkinPart(Sl::TabButton, Idx::Zero, true, c"WONButton"),
+        (EE_WON_CFG_T_SKIN, 8) => SkinPart(Sl::Arrow0, Idx::Int, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 9) => SkinPart(Sl::ComboButton, Idx::Zero, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 10) => SkinPart(Sl::CloseButton, Idx::Zero, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 11) => SkinPart(Sl::ScrollGutter0, Idx::Bool, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 12) => SkinPart(Sl::ScrollThumb0, Idx::Bool, false, c"WONSimpleButton"),
+        (EE_WON_CFG_T_SKIN, 13) => SkinPart(Sl::Scrollbar0, Idx::Bool, false, c"WONScrollbar"),
+        (EE_WON_CFG_T_SKIN, 14) => SkinPart(Sl::ScrollContainer, Idx::Zero, false, c"WONScrollContainer"),
+        (EE_WON_CFG_T_SKIN, 15) => SkinPart(Sl::ListCtrl, Idx::Zero, false, c"WONListCtrl"),
+        (EE_WON_CFG_T_SKIN, 17) => SkinPart(Sl::ComboBox, Idx::Zero, false, c"WONComboBox"),
+        (EE_WON_CFG_T_SKIN, 18) => SkinPart(Sl::PopupBack, Idx::Zero, false, c"WONPopupBack"),
+        (EE_WON_CFG_T_SKIN, 19) => SkinPart(Sl::DialogBack, Idx::Zero, false, c"WONDialogBack"),
         (EE_WON_CFG_T_SKIN, 1) => SkinType(false),
         (EE_WON_CFG_T_SKIN, 2) => SkinType(true),
         (EE_WON_CFG_T_COMPONENT, 7) => Pos,
@@ -708,7 +708,7 @@ fn small_of(setter: i32) -> Option<Small> {
 
 fn run_small(o: &Ops, which: Small) -> R<()> {
     use EeWonCfgTabOp as O;
-    let part = |button: bool, name: &'static [u8]| {
+    let part = |button: bool, name: &'static std::ffi::CStr| {
         if button {
             o.op(O::SafeWonButton, 0, 0)
         } else {
@@ -726,7 +726,7 @@ fn run_small(o: &Ops, which: Small) -> R<()> {
             o.op3(O::SkinSet, slot as isize, i, c)?;
         }
         Small::SkinType(simple) => {
-            let c = part(!simple, b"WONSimpleButton\0")?;
+            let c = part(!simple, c"WONSimpleButton")?;
             o.op(O::SkinSetType, isize::from(simple), c)?;
         }
         Small::Pos => {

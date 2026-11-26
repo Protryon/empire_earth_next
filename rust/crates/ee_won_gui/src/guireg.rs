@@ -251,15 +251,27 @@ const ENTRIES: [(EeWonGuiReg, EeWonCfgKind, Make); 66] = [
     (EeWonGuiReg::MSTabButton, EeWonCfgKind::MsTabButton, Make::Shell(EeWonShellKind::MsTabButton, [0, 1, 3])),
     (EeWonGuiReg::MSHeaderButton, EeWonCfgKind::MsButton, Make::Shell(EeWonShellKind::MsHeaderButton, [0, 0, 0])),
     (EeWonGuiReg::MSScrollbar, EeWonCfgKind::MsScrollbar, Make::Shell(EeWonShellKind::MsScrollbar, [1, 0, 0])),
-    (EeWonGuiReg::MSScrollContainer, EeWonCfgKind::MsScrollContainer, Make::Shell(EeWonShellKind::MsScrollContainer, [0, 0, 0])),
+    (
+        EeWonGuiReg::MSScrollContainer,
+        EeWonCfgKind::MsScrollContainer,
+        Make::Shell(EeWonShellKind::MsScrollContainer, [0, 0, 0]),
+    ),
     (EeWonGuiReg::MSSeperator, EeWonCfgKind::Component, Make::Shell(EeWonShellKind::MsSeperator, [6, 0, 0])),
     (EeWonGuiReg::MS3DFrame, EeWonCfgKind::Ms3DFrame, Make::Shell(EeWonShellKind::Ms3DFrame, [3, 0, 0])),
     (EeWonGuiReg::MSEtchedFrame, EeWonCfgKind::Component, Make::Shell(EeWonShellKind::MsEtchedFrame, [0, 0, 0])),
-    (EeWonGuiReg::MSEtchedFrameGroup, EeWonCfgKind::MsEtchedFrameGroup, Make::Shell(EeWonShellKind::MsEtchedFrameGroup, [0, 0, 0])),
+    (
+        EeWonGuiReg::MSEtchedFrameGroup,
+        EeWonCfgKind::MsEtchedFrameGroup,
+        Make::Shell(EeWonShellKind::MsEtchedFrameGroup, [0, 0, 0]),
+    ),
     (EeWonGuiReg::MSDlgBack, EeWonCfgKind::Component, Make::Shell(EeWonShellKind::MsDlgBack, [0, 0, 0])),
     (EeWonGuiReg::MSTabCtrl, EeWonCfgKind::MsTabCtrl, Make::Shell(EeWonShellKind::MsTabCtrl, [0, 0, 0])),
     (EeWonGuiReg::MSListCtrl, EeWonCfgKind::MsListCtrl, Make::Shell(EeWonShellKind::MsListCtrl, [0, 0, 0])),
-    (EeWonGuiReg::MSHeaderControl, EeWonCfgKind::MsHeaderControl, Make::Shell(EeWonShellKind::MsHeaderControl, [0, 0, 0])),
+    (
+        EeWonGuiReg::MSHeaderControl,
+        EeWonCfgKind::MsHeaderControl,
+        Make::Shell(EeWonShellKind::MsHeaderControl, [0, 0, 0]),
+    ),
     (EeWonGuiReg::Image, EeWonCfgKind::Image, Make::Fn(0)),
     (EeWonGuiReg::StretchImage, EeWonCfgKind::StretchImage, Make::Fn(0)),
     (EeWonGuiReg::StretchCenterImage, EeWonCfgKind::StretchCenterImage, Make::Fn(0)),
@@ -268,9 +280,21 @@ const ENTRIES: [(EeWonGuiReg, EeWonCfgKind, Make); 66] = [
     (EeWonGuiReg::WONSkin, EeWonCfgKind::WonSkin, CPP),
     (EeWonGuiReg::WONButtonSkin, EeWonCfgKind::WonButton, CPP),
     (EeWonGuiReg::WONScrollbarSkin, EeWonCfgKind::WonScrollbar, Make::Shell(EeWonShellKind::WonScrollbar, [1, 0, 0])),
-    (EeWonGuiReg::WONHeaderButtonSkin, EeWonCfgKind::WonButton, Make::Shell(EeWonShellKind::WonHeaderButton, [0, 0, 0])),
-    (EeWonGuiReg::WONSimpleButtonSkin, EeWonCfgKind::WonSimpleButton, Make::Shell(EeWonShellKind::WonSimpleButton, [0, 0, 0])),
-    (EeWonGuiReg::WONScrollContainerSkin, EeWonCfgKind::WonScrollContainer, Make::Shell(EeWonShellKind::WonScrollContainer, [0, 0, 0])),
+    (
+        EeWonGuiReg::WONHeaderButtonSkin,
+        EeWonCfgKind::WonButton,
+        Make::Shell(EeWonShellKind::WonHeaderButton, [0, 0, 0]),
+    ),
+    (
+        EeWonGuiReg::WONSimpleButtonSkin,
+        EeWonCfgKind::WonSimpleButton,
+        Make::Shell(EeWonShellKind::WonSimpleButton, [0, 0, 0]),
+    ),
+    (
+        EeWonGuiReg::WONScrollContainerSkin,
+        EeWonCfgKind::WonScrollContainer,
+        Make::Shell(EeWonShellKind::WonScrollContainer, [0, 0, 0]),
+    ),
     (EeWonGuiReg::WONListCtrlSkin, EeWonCfgKind::WonListCtrl, Make::Shell(EeWonShellKind::WonListCtrl, [0, 0, 0])),
     (EeWonGuiReg::WONTabCtrlSkin, EeWonCfgKind::WonTabCtrl, Make::SkinTab),
     (EeWonGuiReg::WONComboBoxSkin, EeWonCfgKind::WonComboBox, Make::Shell(EeWonShellKind::WonComboBox, [0, 0, 0])),
@@ -287,7 +311,11 @@ const ENTRIES: [(EeWonGuiReg, EeWonCfgKind, Make); 66] = [
     (EeWonGuiReg::WONTabCtrl, EeWonCfgKind::WonTabCtrl, Make::Skin(EeWonSkinGet::TabCtrl)),
     (EeWonGuiReg::WONScrollContainer, EeWonCfgKind::WonScrollContainer, Make::Skin(EeWonSkinGet::ScrollContainer)),
     (EeWonGuiReg::WONListCtrl, EeWonCfgKind::WonListCtrl, Make::Skin(EeWonSkinGet::ListCtrl)),
-    (EeWonGuiReg::WONFrameComponent, EeWonCfgKind::WonFrameComponent, Make::Shell(EeWonShellKind::WonFrameComponent, [0, 0, 0])),
+    (
+        EeWonGuiReg::WONFrameComponent,
+        EeWonCfgKind::WonFrameComponent,
+        Make::Shell(EeWonShellKind::WonFrameComponent, [0, 0, 0]),
+    ),
 ];
 /// An entry whose component is a C++ class: the host's factory.
 const CPP: Make = Make::Fn(usize::MAX);

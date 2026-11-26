@@ -1168,9 +1168,13 @@ fn allocate(cx: &Cx, ty: &[u8]) -> R<Option<[*mut c_void; 2]>> {
         Make::Fn(0) | Make::Kind(_) => Ok(0),
         Make::Fn(f) => cx.op(EeWonCcOp::AllocComp, std::ptr::null_mut(), f as isize, 0, 0, 0),
         Make::Shell(k, a) => shell(k, a),
-        Make::SkinTab => shell(crate::shell::EeWonShellKind::WonTabCtrl, [crate::skinobj::ee_won_skin_global() as isize, 0, 0]),
+        Make::SkinTab => {
+            shell(crate::shell::EeWonShellKind::WonTabCtrl, [crate::skinobj::ee_won_skin_global() as isize, 0, 0])
+        }
         // SAFETY: the game's skin (or none: no copy)
-        Make::Skin(g) => made(unsafe { crate::skinobj::ee_won_skin_get(crate::skinobj::ee_won_skin_global(), g, 0) } as isize),
+        Make::Skin(g) => {
+            made(unsafe { crate::skinobj::ee_won_skin_get(crate::skinobj::ee_won_skin_global(), g, 0) } as isize)
+        }
     };
     match component {
         Ok(component) => Ok(Some([config, component as *mut c_void])),
