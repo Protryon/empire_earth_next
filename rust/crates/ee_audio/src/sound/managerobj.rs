@@ -763,15 +763,6 @@ pub unsafe extern "C" fn ee_sound_manager_set_muted(m: *const EeSoundManager, mu
     unsafe { me(m) }.muted.store(muted, Ordering::SeqCst)
 }
 
-/// The manager's mixer (`GetMasterVolume`, `SetMasterVolume`, `GetMaxChannels`, ... are the mixer's).
-///
-/// # Safety
-/// `m` is a live manager.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_mixer(m: *const EeSoundManager) -> *mut EeSoundMixer {
-    unsafe { me(m) }.mixer
-}
-
 /// `GetHighestTimerDelay`, `GetMaxChannels` (the mixer's).
 ///
 /// # Safety

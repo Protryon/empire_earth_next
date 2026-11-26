@@ -412,16 +412,6 @@ pub unsafe extern "C" fn ee_units_goal_call(
     unsafe { call(op, goal as usize as u64, a, b, io) }
 }
 
-/// `delete inGoal` from Rust's side (`EEUnitGoal::Delete`): see [`goal_delete`].
-///
-/// # Safety
-/// `goal` is a live goal object or null.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_goal_delete(goal: *mut EeUnitsGoalBase) {
-    // SAFETY: the caller's contract
-    unsafe { goal_delete(goal as usize as u64) }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

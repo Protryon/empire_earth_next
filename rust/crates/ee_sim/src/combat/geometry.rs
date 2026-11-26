@@ -381,46 +381,6 @@ pub fn weapon_height(i: &EeCombatWeaponIn, chain: &[[f32; 16]]) -> f32 {
 
 // ---- the C ABI
 
-/// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
-/// a larger buffer when it exceeds `capacity`).
-///
-/// # Safety
-/// `out` must point to `capacity` pairs (or be NULL with `capacity` 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_tile_line(
-    x1: i32,
-    y1: i32,
-    x2: i32,
-    y2: i32,
-    ends: i32,
-    thin: i32,
-    out: *mut [i32; 2],
-    capacity: u32,
-) -> u32 {
-    let tiles = tile_line(x1, y1, x2, y2, ends != 0, thin != 0);
-    if !out.is_null() {
-        for (n, &(x, y)) in tiles.iter().take(capacity as usize).enumerate() {
-            unsafe { *out.add(n) = [x, y] };
-        }
-    }
-    tiles.len() as u32
-}
-
-/// The line of fire's start height (the weapon tag point's world z) over `input.chain` model transforms.
-///
-/// # Safety
-/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_weapon_height(input: *const EeCombatWeaponIn, chain: *const [f32; 16]) -> f32 {
-    let input = unsafe { &*input };
-    let chain: &[[f32; 16]] = if chain.is_null() || input.chain <= 0 {
-        &[]
-    } else {
-        unsafe { std::slice::from_raw_parts(chain, input.chain as usize) }
-    };
-    weapon_height(input, chain)
-}
-
 /// The weapon tag point's world point (`weapon_point`) into `out` (three floats).
 ///
 /// # Safety

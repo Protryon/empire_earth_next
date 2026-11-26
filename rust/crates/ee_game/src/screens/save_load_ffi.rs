@@ -3,7 +3,6 @@
 // `c_ulong` is `u32` on Windows and `u64` on LP64: the casts between it and the host's `u32` stay
 #![allow(clippy::unnecessary_cast)]
 
-use core::ffi::c_ulong;
 use std::sync::Mutex;
 
 use crate::screens::menus::EE_SCREENS_TEXT_STRING;
@@ -31,23 +30,4 @@ impl SaveLoadHost for Form {
     fn string(&mut self, id: u32) -> Vec<u8> {
         self.get(EE_SCREENS_TEXT_STRING, id)
     }
-}
-
-/// The save/load form's event code for a control event id (the screen active and the editor on when the form is
-/// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
-#[no_mangle]
-pub extern "C" fn ee_screens_save_load_event_for(id: c_ulong, screen_active: bool, in_editor: bool) -> u32 {
-    save_load_event_for(id as u32, screen_active, in_editor)
-}
-
-/// The single player load form's event code for a control event id; 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_sp_load_event_for(id: c_ulong) -> u32 {
-    sp_load_event_for(id as u32)
-}
-
-/// The scenario load form's event code for a control event id; 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_scenario_load_event_for(id: c_ulong) -> u32 {
-    scenario_load_event_for(id as u32)
 }

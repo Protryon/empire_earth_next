@@ -432,19 +432,6 @@ fn category_class(c: &ClassView<'_>, has_resource: bool) -> &'static CStr {
     c"soldier"
 }
 
-/// `EECPUnitsCategoryClass` of the class `class` (an `EEUnitClass*`): "citizen", "building", "soldier", ...
-///
-/// # Safety
-/// `class` is a live class.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_category_class(class: u64, has_resource: bool) -> *const c_char {
-    let t = WorldRead::begin();
-    match ClassView::of(&t, class) {
-        Some(c) => category_class(&c, has_resource).as_ptr(),
-        None => c"soldier".as_ptr(),
-    }
-}
-
 fn unit_category(u: &UnitView<'_>) -> &'static CStr {
     match u.class() {
         Some(c) => category_class(&c, u.resource_amount() > 0),
@@ -740,74 +727,6 @@ pub unsafe extern "C" fn ee_ai_units_reflex_on(s: *mut c_void, name: *const c_ch
 #[no_mangle]
 pub unsafe extern "C" fn ee_ai_units_used(s: *mut c_void) -> bool {
     st(s).used
-}
-
-/// `EECPUnitsForward`.
-///
-/// # Safety
-/// `s` is a live state.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_forward(s: *mut c_void, id: c_long) -> c_long {
-    st(s).forward_id(id)
-}
-
-/// `EECPUnitsWithinLimits` at the game ms `now`.
-///
-/// # Safety
-/// `s` is a live state.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_within_limits(s: *mut c_void, units: c_long, now: c_long) -> bool {
-    st(s).within_limits(units, now)
-}
-
-/// The enemy memory's building flag of `id` (-1: not remembered).
-///
-/// # Safety
-/// `s` is a live state.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_remembered_building(s: *mut c_void, id: c_long) -> c_int {
-    st(s).memory.get(&id).map_or(-1, |r| (r.building != 0) as c_int)
-}
-
-/// The threat layer at a tile (`EECPUnitsDangerAt`).
-///
-/// # Safety
-/// `s` is a live state.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_danger_at(s: *mut c_void, x: c_long, y: c_long) -> c_long {
-    st(s).layer_at(Layer::Threat, x, y)
-}
-
-/// The class's data id (`EECPUnitsName`; valid while the state lives).
-///
-/// # Safety
-/// `s` is a live state.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_class_name(s: *mut c_void, unit_type: c_long) -> *const c_char {
-    name_of(st(s), unit_type)
-}
-
-/// A binding was called (`EECPUnitsCharge`'s flag).
-///
-/// # Safety
-/// `s` is a live state.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_mark_used(s: *mut c_void) {
-    st(s).used = true;
-}
-
-/// `EECPUnitsTake` of the complex unit `unit` by the player `me`.
-///
-/// # Safety
-/// `s` is a live state, `me` the live player, `unit` a live complex unit.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_take(s: *mut c_void, me: *mut c_void, unit: u64) {
-    let t = WorldRead::begin();
-    if let Some(g) = Game::new(&t, me) {
-        if let Some(c) = g.unit(unit) {
-            take(&g, st(s), &c);
-        }
-    }
 }
 
 /// The micro step's timer: -1 not started, 0x7fffffff no micro.
@@ -2068,16 +1987,6 @@ pub const EE_AI_UNITS_MSG_SMART_FARMERS: i32 = 22;
 pub const EE_AI_UNITS_MSG_CAST: i32 = 23;
 pub const EE_AI_UNITS_MSG_PATROL_POINT: i32 = 24;
 pub const EE_AI_UNITS_MSG_LOCK: i32 = 25;
-
-/// The message record's size (the C++ checks its copy of the layout against it).
-///
-/// # Safety
-/// None: `m` is not read.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_message_size(m: *const EeAiUnitsMessage) -> usize {
-    let _ = m;
-    std::mem::size_of::<EeAiUnitsMessage>()
-}
 
 enum V {
     I(i64),

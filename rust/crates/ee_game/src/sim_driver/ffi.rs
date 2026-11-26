@@ -2,7 +2,7 @@
 
 use std::ffi::CStr;
 use std::io::BufReader;
-use std::os::raw::{c_char, c_int, c_long};
+use std::os::raw::{c_char, c_int};
 use std::time::Instant;
 
 use super::driver::{self, EeSimDriverEvents};
@@ -139,19 +139,5 @@ pub extern "C" fn ee_sim_driver_game_ended(result: c_int) {
     if let Some(d) = driver::driver() {
         d.write_report(4, "the game ended before the simulation (start-up failed?)");
         d.quit(if result != 0 { result } else { 4 });
-    }
-}
-
-/// The PTs per second and the autosave period the run's settings take (EESimPreferences).
-///
-/// # Safety
-/// The out values are writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sim_driver_preferences(pt_rate: *mut c_long, autosave_ms: *mut c_long) {
-    let (pt, autosave) = driver::driver().map_or((40, 0), |d| d.preferences());
-    // SAFETY: the caller's contract
-    unsafe {
-        *pt_rate = pt;
-        *autosave_ms = autosave;
     }
 }

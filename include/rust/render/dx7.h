@@ -189,16 +189,6 @@ using EeDx7NewWindowFn = void*(*)(void *window,
 
 using EeDx7WindowErrorFn = void(*)(const char *error);
 
-/// What `CreateAWindow` makes of its style, display and origin: which platform call, its size and flags.
-struct EeDx7WindowParams {
-  bool create_at;
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-  uint32_t flags;
-};
-
 /// A C++ object seen from Rust.
 using EeDx7Handle = void*;
 
@@ -341,22 +331,6 @@ int32_t ee_dx7sc_create_window(bool sim,
                                EeDx7NewWindowFn new_window,
                                EeDx7WindowErrorFn error);
 
-/// `CreateAWindow`'s choice of platform call, size and flags (`sim`: the headless simulation).
-void ee_dx7sc_window_params(bool sim,
-                            uint32_t style,
-                            int32_t width,
-                            int32_t height,
-                            int32_t display_width,
-                            int32_t display_height,
-                            float x,
-                            float y,
-                            EeDx7WindowParams *out);
-
-/// `sScreens[index]` and `sScreens.size()`.
-void *ee_dx7sc_screen(unsigned long index);
-
-unsigned long ee_dx7sc_screen_count();
-
 EeDx7Surface *ee_dx7sf_new(EeDx7ObjHostFn host,
                            void *owner,
                            void *gx,
@@ -457,13 +431,6 @@ long ee_dx7r_draw_model(EeDx7Rasterizer *rast,
                         EeDx7Handle model,
                         float detail,
                         bool orthographic);
-
-/// `DrawModelHierarchy` from outside the recursion (no parent transform).
-long ee_dx7r_draw_model_hierarchy(EeDx7Rasterizer *rast,
-                                  unsigned long screen,
-                                  EeDx7Handle model,
-                                  float detail,
-                                  bool orthographic);
 
 /// `Draw3DLine`: `points` is `count` `(x, y, z, advance)` records.
 long ee_dx7r_draw_3d_line(EeDx7Rasterizer *rast,
@@ -578,8 +545,6 @@ void ee_dx7r_destroy(EeDx7Rasterizer *p);
 
 int32_t ee_dx7r_activate_rasterizer(EeDx7Rasterizer *p);
 
-void ee_dx7r_add_valid_screen(EeDx7Rasterizer *p, void *screen);
-
 /// `ActivateScreen`: `width`, `height` are the window's.
 int32_t ee_dx7r_activate_screen(EeDx7Rasterizer *p,
                                 unsigned long screen,
@@ -591,22 +556,11 @@ int32_t ee_dx7r_activate_screen(EeDx7Rasterizer *p,
                                 bool z_buffer,
                                 uint32_t z_format);
 
-int32_t ee_dx7r_activate_rendering_surface(EeDx7Rasterizer *p,
-                                           unsigned long screen,
-                                           void *manager,
-                                           void *window,
-                                           uint32_t width,
-                                           uint32_t height);
-
-int32_t ee_dx7r_activate_the_screen(EeDx7Rasterizer *p, unsigned long screen, void *secondary);
-
 int32_t ee_dx7r_deactivate(EeDx7Rasterizer *p);
 
 int32_t ee_dx7r_begin_scene(EeDx7Rasterizer *p, void *target, unsigned long screen);
 
 int32_t ee_dx7r_end_scene(EeDx7Rasterizer *p, unsigned long screen);
-
-bool ee_dx7r_can_do_current_state(EeDx7Rasterizer *p, void *texture, unsigned long screen);
 
 /// `Clear` (`color` a `GEColor`) or, `color` NULL, `ClearZBuffer` to `z`; `rect` is left, top, right, bottom.
 int32_t ee_dx7r_clear(EeDx7Rasterizer *p,
@@ -632,8 +586,6 @@ int32_t ee_dx7r_add_light(EeDx7Rasterizer *p,
 
 int32_t ee_dx7r_update_light(EeDx7Rasterizer *p, uint32_t index, void *light, unsigned long screen);
 
-int32_t ee_dx7r_remove_light(EeDx7Rasterizer *p, uint32_t index, unsigned long screen);
-
 int32_t ee_dx7r_remove_all_lights(EeDx7Rasterizer *p, unsigned long screen);
 
 void ee_dx7r_set(EeDx7Rasterizer *p, EeDx7RastSet which, unsigned long value, unsigned long screen);
@@ -655,8 +607,6 @@ void ee_dx7r_set_blending(EeDx7Rasterizer *p,
 void ee_dx7r_set_culling(EeDx7Rasterizer *p, unsigned long value);
 
 void ee_dx7r_set_fog_range(EeDx7Rasterizer *p, float start, float end, unsigned long screen);
-
-void ee_dx7r_set_render_target(EeDx7Rasterizer *p, void *target, unsigned long screen);
 
 void ee_dx7r_set_texture(EeDx7Rasterizer *p, void *texture, unsigned long screen);
 

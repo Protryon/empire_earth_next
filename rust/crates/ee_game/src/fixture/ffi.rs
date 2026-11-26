@@ -43,13 +43,6 @@ pub unsafe extern "C" fn ee_fixture_sink_id(sink: *mut EeFixtureSink, id: i64) {
     }
 }
 
-/// An input message before (`phase` 0) and after (1) it executes (EEPhysics::DrainInput, the world's write lock
-/// held); `local`: the local player sent it.
-#[no_mangle]
-pub extern "C" fn ee_fixture_message(message: u64, kind: u64, local: bool, phase: i32) {
-    super::orders::message(message, kind, local, phase);
-}
-
 /// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
 #[no_mangle]
 pub extern "C" fn ee_fixture_lobby_work(_param: std::ffi::c_int) {

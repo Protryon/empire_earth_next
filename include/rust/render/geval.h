@@ -363,33 +363,6 @@ void ee_ge_viewport_init(EeGeViewport *out,
                          float rear,
                          float field_of_view);
 
-/// `GEViewport::ComputeOrthographicMatrix`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_orthographic_matrix(EeGeViewport *v);
-
-/// `GEViewport::ComputePerspectiveMatrix`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_perspective_matrix(EeGeViewport *v);
-
-/// `GEViewport::ComputePlanes`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_planes(EeGeViewport *v);
-
-/// `GEViewport::GetFrustrumWorldPoints(rectangle, points, orthographic)`: the eight corners into `out`.
-///
-/// # Safety
-/// `v` and `rectangle` are valid; `out` holds eight points.
-void ee_ge_viewport_frustum_points(const EeGeViewport *v,
-                                   const EeGeRectangle *rectangle,
-                                   bool orthographic,
-                                   EeGe3DPoint *out);
-
 /// `GEViewport::GetFrustrumWorldPlanes(rectangle, planes, orthographic)`: the six planes into `out`.
 ///
 /// # Safety

@@ -41,12 +41,6 @@ extern "C" {
 /// `file` is a live `FSFileSpec`.
 long ee_ui_bgtable_create(void *file, EeUiHostFn host);
 
-/// `UIBackgroundTable`'s constructor over its record.
-///
-/// # Safety
-/// `rec` is the C++ entry's base.
-void ee_ui_bgtable_init(EeUiBgTableFields *rec);
-
 /// `UIBackgroundTable::DeleteAll()`: each entry deleted (`BgtDelete`) in order, the array emptied.
 void ee_ui_bgtable_delete_all(EeUiHostFn host);
 

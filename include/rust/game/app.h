@@ -764,17 +764,6 @@ void ee_app_ambient_update(EeAppAmbientFields *manager,
                            void *ctx,
                            EeAppAmbientFn call);
 
-/// `UpdateState(time of day, time)`.
-///
-/// # Safety
-/// as [`ee_app_ambient_update`]
-void ee_app_ambient_update_state(EeAppAmbientFields *manager,
-                                 EeAppAmbientCounts *counts,
-                                 void *ctx,
-                                 EeAppAmbientFn call,
-                                 float time_of_day,
-                                 int32_t time);
-
 /// `SetEnabled(enabled)`.
 ///
 /// # Safety
@@ -794,17 +783,6 @@ void ee_app_ambient_stop_sounds(EeAppAmbientFields *manager,
                                 void *ctx,
                                 EeAppAmbientFn call,
                                 bool pause);
-
-/// `EEAmbientSound::PlayAtVolume(volume)` (0 or less: the sound stopped and silent).
-///
-/// # Safety
-/// as [`ee_app_ambient_update`]
-void ee_app_ambient_play_at_volume(EeAppAmbientFields *manager,
-                                   EeAppAmbientCounts *counts,
-                                   void *ctx,
-                                   EeAppAmbientFn call,
-                                   uint32_t slot,
-                                   float volume);
 
 /// `EECameraControl()`'s plain members.
 ///
@@ -829,21 +807,6 @@ void ee_app_camera_turn(const EeAppCameraFields *rec,
                         uint32_t which,
                         float step,
                         EeGeTransformation *out);
-
-/// `SlerpViewTurn` (which 0) or `SlerpOffsetTurn` (1) at a step.
-///
-/// # Safety
-/// live records.
-void ee_app_camera_slerp(const EeAppCameraFields *rec,
-                         uint32_t which,
-                         float step,
-                         EeGeQuaternion *out);
-
-/// `KeepPose`.
-///
-/// # Safety
-/// `rec` is a live record.
-void ee_app_camera_keep_pose(EeAppCameraFields *rec);
 
 /// `SetChanged`.
 ///
@@ -875,37 +838,11 @@ void ee_app_camera_clear_unit_b(EeAppCameraFields *rec, void *ctx, EeAppCameraFn
 /// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
 void ee_app_camera_set_clipping_distances(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
 
-/// `NextKey`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-void ee_app_camera_next_key(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
-
 /// `StartPath`.
 ///
 /// # Safety
 /// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
 void ee_app_camera_start_path(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
-
-/// `BuildView(out, step)`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-void ee_app_camera_build_view(EeAppCameraFields *rec,
-                              void *ctx,
-                              EeAppCameraFn call,
-                              float step,
-                              EeGeTransformation *out);
-
-/// `GetGroundPoint(line, out)`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-void ee_app_camera_ground_point(EeAppCameraFields *rec,
-                                void *ctx,
-                                EeAppCameraFn call,
-                                const EeGe3DLine *line,
-                                EeGe3DPoint *out);
 
 /// `GetUnitTurn(unit, out)`.
 ///
@@ -955,15 +892,6 @@ void ee_app_camera_scroll(EeAppCameraFields *rec,
                           EeAppCameraFn call,
                           float dx,
                           float dy);
-
-/// `GoTo(key)`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-void ee_app_camera_go_to(EeAppCameraFields *rec,
-                         void *ctx,
-                         EeAppCameraFn call,
-                         const EeAppCameraKey *key);
 
 /// `SetOffset(point, immediate)`.
 ///
@@ -1054,28 +982,6 @@ void ee_app_capture_cheat_sweep(const EeAppCheatSweepHost *host);
 /// `out` is a live record.
 void ee_app_options_player_default(EeAppOptionsPlayerFields *out);
 
-/// `EEGameOptions()`'s plain members.
-///
-/// # Safety
-/// `out` and `limits` are live records.
-void ee_app_options_default(EeAppOptionsFields *out, const EeAppOptionsLimits *limits);
-
-/// `EEGameOptions::operator=`'s plain members (the C++ copies the strings and slots).
-///
-/// # Safety
-/// live records; `dst` and `src` may be the same.
-void ee_app_options_assign(EeAppOptionsFields *dst,
-                           const EeAppOptionsFields *src,
-                           const EeAppOptionsLimits *limits);
-
-/// `EEGameOptions::SetDefaults`' plain members after the copy of the lobby's options.
-///
-/// # Safety
-/// live records.
-void ee_app_options_set_defaults(EeAppOptionsFields *options,
-                                 const EeAppOptionsLimits *limits,
-                                 unsigned long preferred_difficulty);
-
 /// `EEGameOptions::Load` over the host (`EESavePrimitive` and the strings); the first read error.
 ///
 /// # Safety
@@ -1086,16 +992,6 @@ int32_t ee_app_options_load(EeAppOptionsFields *options,
                             uint32_t major,
                             uint32_t minor,
                             const EeAppOptionsLimits *limits,
-                            void *ctx,
-                            EeAppSaveFn call);
-
-/// `EEGameOptions::Save` over the host; the first write error.
-///
-/// # Safety
-/// as [`ee_app_options_load`]
-int32_t ee_app_options_save(const EeAppOptionsFields *options,
-                            EeAppOptionsPlayerFields *const *players,
-                            uint32_t count,
                             void *ctx,
                             EeAppSaveFn call);
 
@@ -1152,12 +1048,6 @@ void ee_app_map_sight(const EeAppMapHost *host,
 /// # Safety
 /// As [`ee_app_map_edit`]; `cursor` is live.
 long ee_app_map_checksum(const EeAppMapHost *host, unsigned long *cursor);
-
-/// `GetTileCount`.
-///
-/// # Safety
-/// `dims` is a live record.
-unsigned long ee_app_map_tile_count(const EeAppMapDims *dims);
 
 /// A new mini map's Rust half (no map: every count zero, every list empty).
 EeAppMiniMap *ee_app_minimap_new();
@@ -1246,21 +1136,6 @@ void ee_app_minimap_cell(const EeAppMiniMap *p,
 /// # Safety
 /// `out` is a live record.
 void ee_app_settings_default(EeAppSettingsFields *out);
-
-/// The last game options' defaults (`EEDefaultSettings`'s literals, but the map type).
-///
-/// # Safety
-/// `out` is a live record.
-void ee_app_settings_last_options_default(EeAppOptionsFields *out, long epochs);
-
-/// `Load`'s rest after the rows (settings.rs `after_load`); true when the texture resolution was replaced and is to be
-/// written back.
-///
-/// # Safety
-/// live records.
-bool ee_app_settings_after_load(EeAppSettingsFields *settings,
-                                const EeAppSettingsFields *defaults,
-                                bool korean);
 
 /// MAPK: `EEMap::GetChecksum`'s cursor before, its result and the cursor after.
 void ee_app_capture_map_checksum(unsigned long before, long result, unsigned long after);

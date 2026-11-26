@@ -546,13 +546,6 @@ pub unsafe extern "C" fn ee_time_poll_init(poll: *mut EeTimePoll, delay: u32, un
 /// # Safety
 /// `poll` is a live poll.
 #[no_mangle]
-pub unsafe extern "C" fn ee_time_poll_is_paused(poll: *const EeTimePoll) -> bool {
-    (*poll).is_paused()
-}
-
-/// # Safety
-/// `poll` is a live poll.
-#[no_mangle]
 pub unsafe extern "C" fn ee_time_poll_is_running(poll: *const EeTimePoll) -> bool {
     (*poll).running
 }
@@ -624,17 +617,6 @@ pub unsafe extern "C" fn ee_time_timer_free(timer: *mut EeTimeTimer) {
     }
 }
 
-/// # Safety
-/// `timer` is a live timer.
-#[no_mangle]
-pub unsafe extern "C" fn ee_time_timer_set_callback(
-    timer: *const EeTimeTimer,
-    callback: EeTimeCallback,
-    parameter: *mut c_void,
-) -> c_int {
-    (*timer).set_callback(callback, parameter)
-}
-
 /// `SetEvent`: `event` is the event's platform handle (`TSEvent::mHandle`; NULL for none).
 ///
 /// # Safety
@@ -649,13 +631,6 @@ pub unsafe extern "C" fn ee_time_timer_set_event(timer: *const EeTimeTimer, even
 #[no_mangle]
 pub unsafe extern "C" fn ee_time_timer_set_interval(timer: *const EeTimeTimer, interval: u32, unit: u32) -> c_int {
     (*timer).set_interval(interval, unit)
-}
-
-/// # Safety
-/// `timer` is a live timer.
-#[no_mangle]
-pub unsafe extern "C" fn ee_time_timer_set_repeating(timer: *const EeTimeTimer, repeating: bool) -> c_int {
-    (*timer).set_repeating(repeating)
 }
 
 /// # Safety
@@ -677,24 +652,6 @@ pub unsafe extern "C" fn ee_time_timer_start(timer: *const EeTimeTimer) -> c_int
 #[no_mangle]
 pub unsafe extern "C" fn ee_time_timer_stop(timer: *const EeTimeTimer) -> c_int {
     (*timer).stop(&PlatTimers)
-}
-
-/// `Stop(outElapsed, outRemaining)`: the outputs are written only on success.
-///
-/// # Safety
-/// `timer` is a live timer; the outputs are writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_time_timer_stop_elapsed(
-    timer: *const EeTimeTimer,
-    elapsed: *mut std::ffi::c_ulong,
-    remaining: *mut std::ffi::c_ulong,
-) -> c_int {
-    let (result, out) = (*timer).stop_elapsed(&PlatTimers);
-    if let Some((e, r)) = out {
-        *elapsed = e as std::ffi::c_ulong;
-        *remaining = r as std::ffi::c_ulong;
-    }
-    result
 }
 
 #[cfg(test)]

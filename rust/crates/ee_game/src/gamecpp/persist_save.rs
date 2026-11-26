@@ -588,12 +588,6 @@ fn header_tags(header: P) -> Vec<c_long> {
     (0..n).map(|i| h(O::PsHdrTagAt, header, &[i]) as c_long).collect()
 }
 
-/// `SaveGameToFile`'s C++ entry (EESaveLoad.cpp's `SaveGameToFile`, 0x14d34b).
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_ps_save_to_file(file: *mut c_void, time: c_ulong) -> c_long {
-    save_to_file(file as P, time) as c_long
-}
-
 /// `WriteSaveGame`'s C++ entry.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ps_write_save(
@@ -627,13 +621,6 @@ fn loader_load(state: P, file: P) -> bool {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_loader_load(state: *mut c_void, file: *mut c_void) -> bool {
     loader_load(state as P, file as P)
-}
-
-/// `EEGameStateLoader::LoadGame`: the game state restored from a saved header and its chunks; on failure "Load game
-/// file is corrupt." reported and the state cleared; whether it worked.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_loader_load_game(state: *mut c_void, header_file: *mut c_void, file: *mut c_void) -> bool {
-    load_game(state as P, header_file as P, file as P)
 }
 
 fn load_game(st: P, header_file: P, file: P) -> bool {

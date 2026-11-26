@@ -194,33 +194,6 @@ pub fn launch(i: &EeCombatLaunchIn, chain: &[[f32; 16]]) -> EeCombatLaunchOut {
 
 // ---- the C ABI
 
-/// The tag point `LaunchShot` fires from (-1: none).
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_launch_index(input: *const EeCombatLaunchIn) -> i32 {
-    launch_index(unsafe { &*input })
-}
-
-/// The launch of `input.kind` over `input.chain` model transforms.
-///
-/// # Safety
-/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_launch(
-    input: *const EeCombatLaunchIn,
-    chain: *const [f32; 16],
-) -> EeCombatLaunchOut {
-    let input = unsafe { &*input };
-    let chain: &[[f32; 16]] = if chain.is_null() || input.chain <= 0 {
-        &[]
-    } else {
-        unsafe { std::slice::from_raw_parts(chain, input.chain as usize) }
-    };
-    launch(input, chain)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

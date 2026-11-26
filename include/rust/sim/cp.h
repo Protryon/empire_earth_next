@@ -1475,26 +1475,6 @@ int32_t ee_cp_skip_legacy_combat(void *file,
                                  uint32_t major,
                                  uint32_t minor);
 
-/// Steps over a retail file's civilization manager block and its resource, build, research, unit and wall managers;
-/// `town_center` (x, y) gets the build manager's town centre tile, read in place.
-///
-/// # Safety
-/// As [`ee_cp_skip_legacy_combat`]; `town_center` points to two `int32_t`s.
-int32_t ee_cp_skip_legacy_civilization(void *file,
-                                       EeUnitsPlayerSaveFn host,
-                                       uint32_t major,
-                                       uint32_t minor,
-                                       int32_t *town_center);
-
-/// Steps over a retail file's exploration manager block.
-///
-/// # Safety
-/// As [`ee_cp_skip_legacy_combat`].
-int32_t ee_cp_skip_legacy_exploration(void *file,
-                                      EeUnitsPlayerSaveFn host,
-                                      uint32_t major,
-                                      uint32_t minor);
-
 /// `EEComputerPlayer::Init`'s values (both constructors).
 ///
 /// # Safety
@@ -1530,42 +1510,6 @@ int32_t ee_cp_save(void *ctx,
                    uint32_t game_time,
                    int32_t result);
 
-/// `GetAttackDelayModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_attack_delay_modifier(const EeCpFields *p);
-
-/// `GetAttackFrequencyModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_attack_frequency_modifier(const EeCpFields *p);
-
-/// `GetUnitCostModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_unit_cost_modifier(const EeCpFields *p);
-
-/// `GetDMAttackFrequencyModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_dm_attack_frequency_modifier(const EeCpFields *p);
-
-/// `GetDMInitialAttackModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_dm_initial_attack_modifier(const EeCpFields *p);
-
-/// `GetPopLimitAdjustment`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_pop_limit_adjustment(const EeCpFields *p);
-
 /// `GetIslandExpansionTimer`.
 ///
 /// # Safety
@@ -1577,16 +1521,6 @@ unsigned long ee_cp_island_expansion_timer(const EeCpFields *p);
 /// # Safety
 /// `p` is a computer player's record.
 long ee_cp_scale_cost(const EeCpFields *p, long cost);
-
-/// The scenario effects' setters (`what`: 0 `SetDMAttackFrequencyModifier`, 1 `SetDMInitialAttackModifier`, 2
-/// `SetIslandExpansionTimer` with `value` a whole number of ms) for the player's difficulty.
-///
-/// # Safety
-/// `p` is a computer player's record.
-void ee_cp_set_by_difficulty(EeCpFields *p,
-                             uint32_t what,
-                             float value,
-                             unsigned long timer);
 
 /// `SetNextAttackTime`.
 ///
@@ -1620,16 +1554,6 @@ EeCpInfluence *ee_cp_influence_new(uint32_t map_size,
 /// # Safety
 /// `t` is null or a table of [`ee_cp_influence_new`], not used after.
 void ee_cp_influence_free(EeCpInfluence *t);
-
-/// `GetValue` (`what` 0) or `GetOthersValue` (1) of region (x, y).
-///
-/// # Safety
-/// `t` is a live table.
-long ee_cp_influence_value(const EeCpInfluence *t,
-                           uint32_t what,
-                           uint32_t player,
-                           uint32_t x,
-                           uint32_t y);
 
 /// `SumValue` (`what` 0) or `SumOthersValue` (1) over the regions of `r`.
 ///
@@ -1964,156 +1888,6 @@ EeCpPlacement *ee_cp_placement_new();
 /// `p` is null or came from [`ee_cp_placement_new`] and is not used after.
 void ee_cp_placement_free(EeCpPlacement *p);
 
-/// `HasUnitNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_unit_near(const EeCpPlaceCtx *ctx,
-                         int32_t unit_type,
-                         int32_t x,
-                         int32_t y,
-                         float squared);
-
-/// `HasAntiAirNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_anti_air_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y);
-
-/// `HasTownCenterNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_town_center_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float distance);
-
-/// `HasGateNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_gate_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float radius);
-
-/// `HasTowerNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_tower_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float squared);
-
-/// `HasWallNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_wall_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float squared);
-
-/// `HasEnemyNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_enemy_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y);
-
-/// `CollectSiteTiles`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-void ee_cp_collect_site_tiles(const EeCpPlaceCtx *ctx, int32_t kind);
-
-/// `FindAirportSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_airport_site(const EeCpPlaceCtx *ctx, int32_t *out);
-
-/// `FindAntiAirSiteNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_anti_air_site_near(const EeCpPlaceCtx *ctx, uint64_t unit, int32_t *out);
-
-/// `FindAntiAirSiteAround`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_anti_air_site_around(const EeCpPlaceCtx *ctx,
-                                     int32_t x,
-                                     int32_t y,
-                                     int32_t size,
-                                     int32_t *out);
-
-/// `FindAntiAirSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_anti_air_site(const EeCpPlaceCtx *ctx, int32_t *out);
-
-/// `FindCenterSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_center_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
-
-/// `FindGranarySite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_granary_site(const EeCpPlaceCtx *ctx, int32_t *out);
-
-/// `FindProductionSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_production_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
-
-/// `FindShoreSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_shore_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
-
-/// `FindSpaceSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_space_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
-
-/// `FindTowerSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_tower_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
-
-/// `FindWonderSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_wonder_site(const EeCpPlaceCtx *ctx, int32_t class_, uint32_t size, int32_t *out);
-
-/// `FindSite` (`out`: the tile in and out)
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
-
-/// `IsNearAirportEnd`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_is_near_airport_end(const EeCpPlaceCtx *ctx,
-                               int32_t x,
-                               int32_t y,
-                               int32_t size,
-                               float distance);
-
-/// `HasBuilderFor`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_builder_for(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, int32_t class_);
-
-/// `SetTownCenter`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-void ee_cp_set_town_center(const EeCpPlaceCtx *ctx, uint64_t unit);
-
 /// `UnitAdded`
 ///
 /// # Safety
@@ -2131,21 +1905,6 @@ void ee_cp_placement_reset(const EeCpPlaceCtx *ctx);
 /// # Safety
 /// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
 int32_t ee_cp_placement_restore(const EeCpPlaceCtx *ctx);
-
-/// `CanBuildAt`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_can_build_at(const EeCpPlaceCtx *ctx,
-                        uint16_t continent,
-                        int32_t class_,
-                        int32_t x,
-                        int32_t y,
-                        int32_t size,
-                        bool margin,
-                        bool strict,
-                        int32_t from_x,
-                        int32_t from_y);
 
 /// `EECPCountOwn`
 ///
@@ -2168,23 +1927,11 @@ EeCpPlaceResult ee_cp_next_place_search(const EeCpPlaceCtx *ctx,
                                         size_t count,
                                         int32_t site);
 
-/// `EECPAntiAirClass` of the player's epoch.
-int32_t ee_cp_anti_air_class(int32_t epoch);
-
-/// `EECPFishingBoatClass`
-int32_t ee_cp_fishing_boat_class(int32_t epoch);
-
 /// `EECPGateClass`
 int32_t ee_cp_gate_class(int32_t epoch);
 
-/// `EECPTowerClass`
-int32_t ee_cp_tower_class(int32_t epoch);
-
 /// `EECPWallClass`
 int32_t ee_cp_wall_class(int32_t epoch);
-
-/// `EECPIsSiteClass`
-bool ee_cp_is_site_class(int32_t class_);
 
 /// The player's lists made (`EEComputerPlayer::Init`, after `ee_cp_init`).
 ///
@@ -2365,12 +2112,6 @@ void ee_cp_pl_set_combat_state(uint64_t player, unsigned long state);
 /// As [`ee_cp_pl_set_combat_state`].
 void ee_cp_pl_set_citizen_percentage(uint64_t player, float value);
 
-/// `SetNextIslandExpansionTime`: the difficulty's island timer (minutes) from now.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_set_next_island_expansion_time(uint64_t player);
-
 /// `SetNextAttackTime`.
 ///
 /// # Safety
@@ -2400,18 +2141,6 @@ void ee_cp_pl_add_resource(uint64_t player, long index, long amount);
 /// # Safety
 /// As [`ee_cp_pl_set_combat_state`].
 void ee_cp_pl_take_resource(uint64_t player, long index, long amount);
-
-/// `WorkOutPopulation`.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_work_out_population(uint64_t player);
-
-/// `Regroup`, `UpdateGroups` (`which` 0, 1).
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_regroup(uint64_t player, uint32_t which);
 
 /// `RefreshResourceCenters`: a regroup when there is no centre, else the groups updated; a regroup again when none
 /// is left (RefreshTownGroups is empty since stage 5).
@@ -2542,13 +2271,6 @@ void ee_cp_pl_pay(uint64_t player,
 void ee_cp_pl_unit_goal_done(uint64_t player,
                              uint64_t unit);
 
-/// `EnterEpoch`: the epoch's kind-7 technologies, the four favourites again and, outside a load, the retired units.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_enter_epoch(uint64_t player,
-                          long epoch);
-
 /// `EpochReached`: the reached epoch's SOL count starts over, a real epoch entered, then the player's.
 ///
 /// # Safety
@@ -2662,18 +2384,6 @@ bool ee_cp_town_remove_unit(void *town, void *area, EeTownFields *f, uint64_t un
 /// # Safety
 /// As [`ee_cp_town_add_unit`].
 bool ee_cp_town_can_take(void *town, void *area, EeTownFields *f, uint64_t unit);
-
-/// `EETown::AddTile`.
-///
-/// # Safety
-/// As `with`.
-bool ee_cp_town_add_tile(void *town, void *area, EeTownFields *f, int64_t x, int64_t y);
-
-/// `EETown::RemoveHullTile`.
-///
-/// # Safety
-/// As `with`.
-bool ee_cp_town_remove_hull_tile(void *town, void *area, EeTownFields *f, int64_t x, int64_t y);
 
 /// `EETown::Merge` of the town `other` (its record `o`).
 ///

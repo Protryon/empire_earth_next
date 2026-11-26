@@ -579,34 +579,6 @@ mod ffi {
         let mut calls = PlatWindowCalls { title, new_window, error };
         unsafe { create_window(&mut calls, sim, x, y, width, height, style, &mut *out_window) }
     }
-
-    /// `CreateAWindow`'s choice of platform call, size and flags (`sim`: the headless simulation).
-    #[no_mangle]
-    #[allow(clippy::too_many_arguments)]
-    pub unsafe extern "C" fn ee_dx7sc_window_params(
-        sim: bool,
-        style: u32,
-        width: i32,
-        height: i32,
-        display_width: i32,
-        display_height: i32,
-        x: f32,
-        y: f32,
-        out: *mut WindowParams,
-    ) {
-        unsafe { *out = screen::window_params(sim, style, width, height, display_width, display_height, x, y) };
-    }
-
-    /// `sScreens[index]` and `sScreens.size()`.
-    #[no_mangle]
-    pub extern "C" fn ee_dx7sc_screen(index: c_ulong) -> *mut c_void {
-        screen_at(index as usize)
-    }
-
-    #[no_mangle]
-    pub extern "C" fn ee_dx7sc_screen_count() -> c_ulong {
-        screen_count() as c_ulong
-    }
 }
 
 #[cfg(test)]

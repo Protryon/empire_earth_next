@@ -49,14 +49,6 @@ void ee_data_media_release(EeDataMediaUse *usage,
                            const EeDataMediaLock *lock,
                            const EeDataMediaStep *unload);
 
-/// [`locked`] for the C++.
-///
-/// # Safety
-/// As [`ee_data_media_acquire`].
-void ee_data_media_locked(EeDataMediaUse *usage,
-                          const EeDataMediaLock *lock,
-                          const EeDataMediaStep *step);
-
 }  // extern "C"
 
 #endif  // EE_RUST_DATA_MEDIA_H

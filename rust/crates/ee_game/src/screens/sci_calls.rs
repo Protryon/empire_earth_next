@@ -157,16 +157,6 @@ mod ffi {
     pub extern "C" fn ee_screens_sci_open_map(m: usize) -> bool {
         super::open_map(&mut Ffi, m)
     }
-    /// `EEUISCIFormManager::OpenScenario`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_sci_open_scenario(m: usize) -> bool {
-        super::open_scenario(&mut Ffi, m)
-    }
-    /// `EEUISCIFormManager::OpenSound`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_sci_open_sound(m: usize) -> bool {
-        super::open_sound(&mut Ffi, m)
-    }
     /// `EEUISCIFormManager::GetMap` (`spec` the `FSFileSpec*` out).
     #[no_mangle]
     pub extern "C" fn ee_screens_sci_get_map(m: usize, spec: usize) -> bool {

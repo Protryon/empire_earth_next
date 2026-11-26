@@ -9,7 +9,6 @@
 use core::ffi::{c_long, c_ulong};
 use std::sync::atomic::AtomicBool;
 
-use ee_base::math::types::Ge2DPoint;
 use ee_sim::tech::area_effect::{is_immunity, EeAreaEffectData, EeAreaEffectFields};
 
 use crate::screens::area_effect_obj as obj;
@@ -56,11 +55,6 @@ pub extern "C" fn ee_screens_ae_level(effect: usize) -> i64 {
 #[no_mangle]
 pub extern "C" fn ee_screens_ae_radius(effect: usize) -> f32 {
     obj::radius(&mut Ffi, effect)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_screens_ae_scale(effect: usize) -> f32 {
-    obj::scale(&mut Ffi, effect)
 }
 
 /// `IsImmunity` (`aem_is_immunity`).
@@ -110,11 +104,6 @@ pub extern "C" fn ee_screens_ae_show_on(effect: usize, unit: usize) {
     obj::show_on(&mut Ffi, effect, unit)
 }
 
-#[no_mangle]
-pub extern "C" fn ee_screens_ae_set_unit(effect: usize, unit: usize) {
-    obj::set_unit(&mut Ffi, effect, unit)
-}
-
 /// `IsInRange(point)` (`aem_in_range`).
 #[no_mangle]
 pub extern "C" fn ee_screens_ae_in_range(effect: usize, x: f32, y: f32) -> bool {
@@ -143,27 +132,6 @@ pub extern "C" fn ee_screens_aet_construct(template: usize) {
 #[no_mangle]
 pub extern "C" fn ee_screens_aet_destroy(template: usize) {
     obj::template_destroy(&mut Ffi, template)
-}
-
-/// `AffectsPlayer(player, other)` / `AffectsPlayerReversed` (`reversed`) of a template.
-#[no_mangle]
-pub extern "C" fn ee_screens_aet_affects(template: usize, player: i32, other: i32, reversed: bool) -> bool {
-    obj::template_affects(&mut Ffi, template, player, other, reversed)
-}
-
-/// `IsWithin(center, point, scale, unit)` of a template.
-#[no_mangle]
-pub extern "C" fn ee_screens_aet_is_within(
-    template: usize,
-    center_x: f32,
-    center_y: f32,
-    point_x: f32,
-    point_y: f32,
-    scale: f32,
-    unit: usize,
-) -> bool {
-    let center = Ge2DPoint { x: center_x, y: center_y };
-    obj::template_is_within(&mut Ffi, template, center, Ge2DPoint { x: point_x, y: point_y }, scale, unit)
 }
 
 /// `Init(data)` of a template (`data` an `EEAreaEffectData*`, the record's layout).

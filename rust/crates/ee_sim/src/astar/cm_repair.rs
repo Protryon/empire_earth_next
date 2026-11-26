@@ -329,21 +329,6 @@ pub unsafe extern "C" fn ee_astar_cm_repair_path_area(r: *mut EeAStarCmRecord, x
     repair_path_area(&mut *r, x, y);
 }
 
-/// `GetAdjacentAreaID`.
-///
-/// # Safety
-/// As `ee_astar_cm_repair_path_area`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_adjacent_area_id(
-    r: *const EeAStarCmRecord,
-    kind: i32,
-    x: c_long,
-    y: c_long,
-    area_kind: i32,
-) -> u16 {
-    adjacent_area_id(&*r, kind, x, y, area_kind)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

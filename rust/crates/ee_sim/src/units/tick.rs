@@ -101,18 +101,6 @@ pub fn update_ordered_units(host: &mut impl TickHost, num_players: u32, detectio
     })
 }
 
-/// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`).
-///
-/// # Safety
-/// `host` points to a valid table whose calls are valid for its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_update_units(host: *const EeUnitsTickHost) -> u32 {
-    // SAFETY: the caller's contract
-    let mut host = unsafe { &*host };
-    let (players, unit) = (host.num_players, host.detection_unit);
-    update_ordered_units(&mut host, players, unit)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -289,19 +289,6 @@ mod ffi {
     pub unsafe extern "C" fn ee_rts_mouse_pointer_main(pointer: *mut c_void) -> c_ulong {
         unsafe { main_loop(&mut Ffi, &mut Plat, pointer as usize) }
     }
-
-    /// `RTSMousePointer::HandleMessage`.
-    ///
-    /// # Safety
-    /// `pointer` is the live object.
-    #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_mouse_pointer_handle_message(
-        pointer: *mut c_void,
-        message: c_ulong,
-        first: *mut c_void,
-    ) {
-        unsafe { handle_message(&mut Ffi, pointer as usize, message, first as usize) }
-    }
 }
 
 #[cfg(test)]

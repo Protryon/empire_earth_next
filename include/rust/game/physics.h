@@ -251,8 +251,6 @@ void ee_physics_init(void *p);
 
 void ee_physics_clear_server_messages(void *p);
 
-void ee_physics_auto_save(void *p);
-
 void ee_physics_flush_world(void *p);
 
 /// `RunOwedTicks`: every owed tick, draining the input queue for more whenever none are left.
@@ -287,12 +285,6 @@ void ee_physics_tick(void *p);
 
 void ee_physics_queue_message(void *p, void *message);
 
-void ee_physics_swap_unit(void *old, void *new_);
-
-void ee_physics_process_unit_swaps(void *p);
-
-void ee_physics_drain_input(void *p);
-
 void ee_physics_report_statistics(void *p);
 
 /// `PostAutoSave` (0x50a), `PostShowDialogMessage` (0x508), `PostInit` (0x509): the message posted to the physics
@@ -303,16 +295,6 @@ long ee_physics_post(void *p,
 void ee_physics_update_timing(void *p);
 
 void ee_physics_queue_unit_swap(void *p, void *old, void *new_);
-
-void ee_physics_update_area_effects_clock(void *p);
-
-void ee_physics_update_civ_timer(void *p);
-
-void ee_physics_serve_load_save_requests(void *p);
-
-void ee_physics_check_shift_mode(void *p);
-
-void ee_physics_update_weather(void *p);
 
 }  // extern "C"
 

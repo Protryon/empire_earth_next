@@ -128,8 +128,6 @@ GXRESULT gx_direct_draw_create_device(void *target, void **out);
 
 GXRESULT gx_direct_draw_enumerate(GXDDENUMCALLBACKEX callback, void *context);
 
-unsigned long gx_surface_add_ref(void *surface);
-
 GXRESULT gx_surface_add_attached(void *surface, void *other);
 
 GXRESULT gx_surface_delete_attached(void *surface, void *other);
@@ -154,16 +152,10 @@ GXRESULT gx_surface_unlock(void *surface);
 
 GXRESULT gx_surface_set_color_key(void *surface, const GXCOLORKEY *key);
 
-GXRESULT gx_surface_get_desc(void *surface, GXSURFACEDESC *out);
-
-bool gx_surface_is_gpu_resident(void *surface);
-
 GXRESULT gx_surface_draw_text(void *surface,
                               const RECT *bounds,
                               GXTextCallback draw,
                               void *context);
-
-unsigned long gx_vertex_buffer_add_ref(void *buffer);
 
 GXRESULT gx_vertex_buffer_lock(void *buffer, void **out_data, unsigned long *out_size);
 
@@ -171,15 +163,11 @@ GXRESULT gx_device_get_caps(GXDEVICEDESC *out);
 
 GXRESULT gx_device_enum_texture_formats(GXENUMPIXELFORMATSCALLBACK callback, void *context);
 
-unsigned long gx_device_add_ref(void *device);
-
 GXRESULT gx_device_begin_scene();
 
 GXRESULT gx_device_set_render_target(void *device, void *target);
 
 GXRESULT gx_device_set_viewport(void *device, const GXVIEWPORT *viewport);
-
-GXRESULT gx_device_get_viewport(void *device, GXVIEWPORT *out);
 
 GXRESULT gx_device_clear(void *device,
                          unsigned long count,
@@ -190,11 +178,7 @@ GXRESULT gx_device_clear(void *device,
 
 GXRESULT gx_device_set_transform(void *device, uint32_t state, const GXMATRIX *matrix);
 
-GXRESULT gx_device_get_transform(void *device, uint32_t state, GXMATRIX *out);
-
 GXRESULT gx_device_set_render_state(void *device, uint32_t state, unsigned long value);
-
-GXRESULT gx_device_get_render_state(void *device, uint32_t state, unsigned long *out);
 
 GXRESULT gx_device_set_stage_state(void *device,
                                    unsigned long stage,

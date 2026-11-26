@@ -268,20 +268,6 @@ pub unsafe extern "C" fn ee_units_step_power(
     unsafe { *out = r };
 }
 
-/// TEST ONLY: the leaves' reads whose record differed from the member, and those of units with no record.
-///
-/// # Safety
-/// Both point to writable u32s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_step_reads(out_mismatches: *mut u32, out_unrecorded: *mut u32) {
-    let (m, u) = with_reads(|r| (r.mismatches, r.unrecorded));
-    // SAFETY: the caller's contract
-    unsafe {
-        *out_mismatches = m;
-        *out_unrecorded = u;
-    }
-}
-
 // ---- the eleventh round: the rotting countdowns, the camouflage timers, the cloak fade
 
 /// The resources' rotting (`kActionResourcesRotting`): the time plus the tick; past 4 s the resource amount loses one

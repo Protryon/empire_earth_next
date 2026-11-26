@@ -890,137 +890,6 @@ struct EeAiUnitsFacts {
   long garrisoned;
 };
 
-/// `EEMRecord`'s members as a command sends them: an integer (`kind` 0), a float (1) or a point (2: `x`, `y`).
-struct EeAiUnitsMsgValue {
-  int32_t kind;
-  int64_t i;
-  float x;
-  float y;
-};
-
-/// A command's message (`EE_AI_UNITS_HOST_EXEC`): `message` one of `EE_AI_UNITS_MSG_*`, `mode` 0 run on the
-/// selection under the borrowed slot (`EECPUnitsRun`), 1 run as it is (`Execute`).
-struct EeAiUnitsMessage {
-  int32_t message;
-  int32_t mode;
-  int32_t count;
-  EeAiUnitsMsgValue values[8];
-};
-
-/// `EE_AI_UNITS_HOST_IMPROVE_COST`'s answer.
-struct EeAiUnitsImproveCost {
-  long cost[5];
-  long level;
-  long max;
-};
-
-/// `EE_AI_UNITS_HOST_PLACE`'s arguments and answer.
-struct EeAiUnitsPlace {
-  long unit_type;
-  long mode;
-  long x;
-  long y;
-  long first;
-  long last;
-  /// the site's index (the script's, less one)
-  long site;
-  const long *units;
-  size_t units_len;
-  long out_x;
-  long out_y;
-  long out_gap;
-};
-
-/// What `ai.tuning` reads beyond the computer player's record (`EE_AI_UNITS_HOST_TUNING`): the game's options,
-/// the map, the continents, the manifest's switches, the cheats, the personality and the experiments, the
-/// behaviour table's values.
-struct EeAiUnitsTuning {
-  bool deathmatch;
-  bool all_managers;
-  long epoch_start;
-  long epoch_end;
-  bool space;
-  long water_tiles;
-  long land_tiles;
-  long space_tiles;
-  long largest_sea;
-  bool fills_garrison;
-  bool sees_all;
-  long population_limit;
-  bool cheats[7];
-  /// the personality's id (NUL-terminated)
-  char id[128];
-  float epoch_pressure_start;
-  float epoch_pressure_full;
-  float stone_span;
-  float safe_bonus;
-  long surplus;
-  float surplus_cut;
-  long low_stock;
-  float floor[5];
-  float max_citizen_share;
-  long wood_slots;
-  long moves_per_cycle;
-  bool demand_split;
-  bool coast_fishing;
-  bool forage_patches;
-  bool claim_range;
-  bool claim_needed;
-  long early_town_centers;
-  long early_trainers;
-  bool patch_expand;
-  float standing_army;
-  float army_floor;
-  bool militia;
-  bool militia_towers;
-  long prehistoric_army;
-  bool prehistoric_peace;
-  bool stone_peace;
-  bool naval_flee;
-  float epoch_advance_time_scale;
-  /// the carrier fighters to keep: easy, medium, hard; then in a deathmatch
-  long carrier_fighters[6];
-  float population_cap_own_weight;
-  float population_cap_other_weight;
-};
-
-/// An area's facts (`EE_AI_UNITS_HOST_AREA_INFO`, `AREA_POINT`).
-struct EeAiUnitsArea {
-  long id;
-  long category;
-  long tiles;
-  long x;
-  long y;
-};
-
-/// `EE_AI_UNITS_HOST_AREA_PICK`: `kind` 0 the land's forests, 1 its hills (those whose hull holds (x, y) or comes
-/// within r tiles), 2 its choke points (the `r` nearest when r is above 0); the (pick mod count)-th one's random
-/// point
-struct EeAiUnitsAreaPick {
-  long kind;
-  uint64_t land;
-  long x;
-  long y;
-  long r;
-  int64_t pick;
-  int64_t seed;
-  /// out: the land's ids looked at, the ones picked from, whether the picked one has tiles, its point
-  long total;
-  long found;
-  bool ok;
-  long px;
-  long py;
-};
-
-/// A tile list the host fills or reads: `len` (x, y) pairs at `xy` (room for `cap`); `from`, `to` the ends
-struct EeAiUnitsTiles {
-  long *xy;
-  size_t len;
-  size_t cap;
-  long from[2];
-  long to[2];
-};
-
 /// The C++'s class lookup by name (`EECPNextClassByName`) -> the class, or negative.
 using EeAiUnitsClassByName = long(*)(const char *name);
 
@@ -1049,6 +918,32 @@ struct EeAiUnitsFilter {
   int enemy;
   long kind;
   long limit;
+};
+
+/// `EEMRecord`'s members as a command sends them: an integer (`kind` 0), a float (1) or a point (2: `x`, `y`).
+struct EeAiUnitsMsgValue {
+  int32_t kind;
+  int64_t i;
+  float x;
+  float y;
+};
+
+/// A command's message (`EE_AI_UNITS_HOST_EXEC`): `message` one of `EE_AI_UNITS_MSG_*`, `mode` 0 run on the
+/// selection under the borrowed slot (`EECPUnitsRun`), 1 run as it is (`Execute`).
+struct EeAiUnitsMessage {
+  int32_t message;
+  int32_t mode;
+  int32_t count;
+  EeAiUnitsMsgValue values[8];
+};
+
+/// A tile list the host fills or reads: `len` (x, y) pairs at `xy` (room for `cap`); `from`, `to` the ends
+struct EeAiUnitsTiles {
+  long *xy;
+  size_t len;
+  size_t cap;
+  long from[2];
+  long to[2];
 };
 
 /// The message types of `EE_AI_UNITS_MSG_*` (ee/EEMessageID.h kMessage*: path to, attack unit, attack ground,
@@ -1168,12 +1063,6 @@ size_t ee_ai_manifest_count(const EeAiManifest *m);
 /// `m` is a live manifest; `out` writable.
 bool ee_ai_manifest_entry(const EeAiManifest *m, size_t k, EeAiManifestEntry *out);
 
-/// Whether the document had its "ais" array (false: the read stopped at the document, its one log line says why).
-///
-/// # Safety
-/// `m` is a live manifest.
-bool ee_ai_manifest_listed(const EeAiManifest *m);
-
 /// The log lines of a manifest read.
 ///
 /// # Safety
@@ -1211,9 +1100,6 @@ uint64_t ee_ai_engine_resolve(uint64_t choice,
                               size_t override_count,
                               const bool *random,
                               size_t random_count);
-
-/// `EECPNextCodeName`.
-const char *ee_ai_code_name(int64_t code);
 
 /// `EECPNextReasonName`.
 const char *ee_ai_reason_name(int64_t reason);
@@ -1263,9 +1149,6 @@ void ee_ai_names_free(EeAiNames *t);
 /// # Safety
 /// `class` is 0 or a live unit class.
 bool ee_ai_military_class(uint64_t class_);
-
-/// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
-bool ee_ai_military_type(unsigned long unit_type);
 
 /// The row ids of a table just loaded from its text (dbobjects, dbtechtree; other tables: nothing): kept for the
 /// names tables (emptied first; a table that does not parse leaves what was read before the failure).
@@ -1421,18 +1304,6 @@ long ee_ai_next_assigned(void *me, uint64_t unit);
 /// `me` is a live computer player, `unit` a live unit.
 bool ee_ai_next_has_room(void *me, uint64_t unit);
 
-/// `EECPNextDropReady` (`unit` 0: at the tile (x, y), for food when `food`, `slack` tiles further) or
-/// `EECPNextUnitDropReady` (the unit's own tile and resource, `kNextDropSlack` further).
-///
-/// # Safety
-/// `me` is a live computer player, `unit` 0 or a live unit.
-bool ee_ai_next_drop_ready(void *me,
-                           uint64_t unit,
-                           long x,
-                           long y,
-                           bool food,
-                           long slack);
-
 /// `EECPRMNoteDanger`: a citizen hit by a player's unit: the militia or a danger zone and its defenders.
 ///
 /// # Safety
@@ -1449,12 +1320,6 @@ void ee_ai_next_note_danger(void *me,
 void ee_ai_next_naval_flee(void *me,
                            uint64_t victim,
                            uint64_t attacker);
-
-/// `EECPRMFleeRaids` for the C++.
-///
-/// # Safety
-/// `me` is a live computer player.
-void ee_ai_next_flee_raids(void *me);
 
 /// `EECPNewGame` (EEWorld::StartGame, before its players are made): the computer players' per-game statics cleared as
 /// at the process's start, so a game plays and traces the same after another game in the process (EE-SIM --games) as
@@ -1480,12 +1345,6 @@ void ee_ai_trace_spend(unsigned long player,
 /// # Safety
 /// `me` is a live computer player, `unit` a live unit (or 0).
 void ee_ai_trace_unit_lost(void *me, uint64_t unit);
-
-/// `EECPTraceStats` for the C++.
-///
-/// # Safety
-/// `me` is a live computer player.
-void ee_ai_trace_stats(void *me, unsigned long time);
 
 /// `EECPTraceProfile`: the AI's real time per player: every 60 game s the sum and the largest single update.
 void ee_ai_trace_profile(unsigned long player,
@@ -1553,9 +1412,6 @@ bool ee_ai_experiment(uint64_t id, const char *name);
 /// `EECPExperimentNames`: ",a,b," or "-".
 const char *ee_ai_experiment_names(uint64_t id);
 
-/// `EECPCheatOn(player, cheat)` for the C++ (`id` 0: no player).
-bool ee_ai_cheat_on(uint64_t id, long cheat);
-
 /// `EECPCheatNames` for the C++: the text, valid until the next call (the C++'s static buffer).
 const char *ee_ai_cheat_names_text(uint64_t id);
 
@@ -1566,12 +1422,6 @@ const char *ee_ai_cheat_names_text(uint64_t id);
 /// `find` and `out` are callable with a NUL-terminated string.
 void ee_ai_switches_init(long (*find)(const char*),
                          void (*out)(const char*));
-
-/// `EECPExperiment`: the player `id`'s experiments name `name`.
-///
-/// # Safety
-/// `name` is a NUL-terminated string.
-bool ee_ai_switch_experiment(uint64_t id, const char *name);
 
 /// `EECPExperimentNames`: the player's set as ",a,b," ("-": none or empty); the text lives as long as the game.
 const char *ee_ai_switch_experiment_names(uint64_t id);
@@ -1584,18 +1434,6 @@ long ee_ai_switch_personality(uint64_t id);
 
 /// `EE_AI_CHEATS`'s set for the player (`kAICheatAll` when not set).
 long ee_ai_switch_cheats(uint64_t id);
-
-/// `EECPCheatNames`: the cheats of `bits` by name, "a,b" ("none": none) into `out` (room for `cap` bytes,
-/// NUL-terminated) -> the length.
-///
-/// # Safety
-/// `out` has room for `cap` bytes (at least 1).
-size_t ee_ai_switch_cheat_names(long bits,
-                                char *out,
-                                size_t cap);
-
-/// `std::exchange(gCPTraceManager, name)` for the C++ (`name` a static C string).
-const char *ee_ai_trace_manager_swap(const char *name);
 
 /// `EECPTraceOut` for the C++ (its `printf` already done into `text`).
 ///
@@ -1616,13 +1454,6 @@ extern int64_t ee_ai_units_host_cpp(int32_t op,
                                     int64_t b,
                                     int64_t c,
                                     void *out);
-
-/// `EECPUnitsCategoryClass` of the class `class` (an `EEUnitClass*`): "citizen", "building", "soldier", ...
-///
-/// # Safety
-/// `class` is a live class.
-const char *ee_ai_units_category_class(uint64_t class_,
-                                       bool has_resource);
 
 /// A new state (`EEComputerPlayer::mUnitsState`).
 void *ee_ai_units_state_new();
@@ -1657,48 +1488,6 @@ bool ee_ai_units_reflex_on(void *s,
 /// # Safety
 /// `s` is a live state.
 bool ee_ai_units_used(void *s);
-
-/// `EECPUnitsForward`.
-///
-/// # Safety
-/// `s` is a live state.
-long ee_ai_units_forward(void *s, long id);
-
-/// `EECPUnitsWithinLimits` at the game ms `now`.
-///
-/// # Safety
-/// `s` is a live state.
-bool ee_ai_units_within_limits(void *s, long units, long now);
-
-/// The enemy memory's building flag of `id` (-1: not remembered).
-///
-/// # Safety
-/// `s` is a live state.
-int ee_ai_units_remembered_building(void *s, long id);
-
-/// The threat layer at a tile (`EECPUnitsDangerAt`).
-///
-/// # Safety
-/// `s` is a live state.
-long ee_ai_units_danger_at(void *s, long x, long y);
-
-/// The class's data id (`EECPUnitsName`; valid while the state lives).
-///
-/// # Safety
-/// `s` is a live state.
-const char *ee_ai_units_class_name(void *s, long unit_type);
-
-/// A binding was called (`EECPUnitsCharge`'s flag).
-///
-/// # Safety
-/// `s` is a live state.
-void ee_ai_units_mark_used(void *s);
-
-/// `EECPUnitsTake` of the complex unit `unit` by the player `me`.
-///
-/// # Safety
-/// `s` is a live state, `me` the live player, `unit` a live complex unit.
-void ee_ai_units_take(void *s, void *me, uint64_t unit);
 
 /// The micro step's timer: -1 not started, 0x7fffffff no micro.
 ///
@@ -1863,12 +1652,6 @@ int ee_ai_units_lua_path_len(void *l);
 /// `ai.gatherers()` -> {[resource id] = n}: the own living citizens and boats whose gather goal is that resource
 int ee_ai_units_lua_gatherers(void *l);
 
-/// The message record's size (the C++ checks its copy of the layout against it).
-///
-/// # Safety
-/// None: `m` is not read.
-size_t ee_ai_units_message_size(const EeAiUnitsMessage *m);
-
 /// `ai.move(ids, x, y, {queue, forced, formation})`
 int ee_ai_units_lua_move(void *l);
 
@@ -1993,18 +1776,6 @@ void ee_ai_units_save(void *me,
 bool ee_ai_units_load(void *me,
                       const uint8_t *data,
                       size_t len);
-
-/// The host records' sizes summed (the C++ checks its copy of their layout against it once; it also puts the
-/// records in the header).
-///
-/// # Safety
-/// None: the pointers are not read.
-size_t ee_ai_units_records_size(const EeAiUnitsImproveCost *a,
-                                const EeAiUnitsPlace *b,
-                                const EeAiUnitsTuning *c,
-                                const EeAiUnitsArea *d,
-                                const EeAiUnitsAreaPick *e,
-                                const EeAiUnitsTiles *f);
 
 /// `ai.can_hurt(attacker_type, target_type)` -> whether the attacker's weapon hurts the target's family (the
 /// damage table)

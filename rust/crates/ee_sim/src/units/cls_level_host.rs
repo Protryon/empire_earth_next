@@ -115,12 +115,6 @@ pub unsafe extern "C" fn ee_units_lv_level_ground(class: u64, mesh: u64, x: u64,
     unsafe { *z = value };
 }
 
-/// `EEUnitClass::LevelRunway*(airport)` by the direction's facing (0 +y, 1 -y, 2 +x, else -x).
-#[no_mangle]
-pub extern "C" fn ee_units_lv_level_runway(unit: u64, facing: u64) {
-    lv::level_runway(&mut game(), unit, facing);
-}
-
 /// `EEUnitClass::CreateRunways(airport, player, foundation)`.
 #[no_mangle]
 pub extern "C" fn ee_units_lv_create_runways(class: u64, unit: u64, player: i64, foundation: u8) {

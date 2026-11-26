@@ -465,15 +465,6 @@ pub unsafe extern "C" fn ee_cp_pl_set_citizen_percentage(player: u64, value: f32
     cp.fields().mIsCitizenPercentageSet = true;
 }
 
-/// `SetNextIslandExpansionTime`: the difficulty's island timer (minutes) from now.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_pl_set_next_island_expansion_time(player: u64) {
-    set_next_island_expansion_time(&Cp::of(player));
-}
-
 fn set_next_island_expansion_time(cp: &Cp) {
     let now = cp.now();
     // SAFETY: the player's record
@@ -577,15 +568,6 @@ fn work_out_population(cp: &Cp) {
     unsafe { pg::ee_cp_work_out_population(&cp.ctx) };
 }
 
-/// `WorkOutPopulation`.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_pl_work_out_population(player: u64) {
-    work_out_population(&Cp::of(player));
-}
-
 fn regroup(cp: &Cp) {
     let _s = cp.scope(cpev::REGROUP);
     // SAFETY: as above
@@ -596,20 +578,6 @@ fn update_groups(cp: &Cp) {
     let _s = cp.scope(cpev::UPDATE_GROUPS);
     // SAFETY: as above
     unsafe { pg::ee_cp_update_groups(&cp.ctx) };
-}
-
-/// `Regroup`, `UpdateGroups` (`which` 0, 1).
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_pl_regroup(player: u64, which: u32) {
-    let cp = Cp::of(player);
-    if which == 0 {
-        regroup(&cp)
-    } else {
-        update_groups(&cp)
-    }
 }
 
 fn center_count(cp: &Cp) -> usize {
@@ -1238,15 +1206,6 @@ fn enter_epoch(cp: &Cp, epoch: c_long) {
         // SAFETY: as above
         unsafe { pg::ee_cp_retire_obsolete_units(&cp.ctx) };
     }
-}
-
-/// `EnterEpoch`: the epoch's kind-7 technologies, the four favourites again and, outside a load, the retired units.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_pl_enter_epoch(player: u64, epoch: c_long) {
-    enter_epoch(&Cp::of(player), epoch);
 }
 
 /// `EpochReached`: the reached epoch's SOL count starts over, a real epoch entered, then the player's.

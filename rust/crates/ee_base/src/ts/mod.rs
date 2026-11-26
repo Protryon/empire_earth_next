@@ -844,12 +844,6 @@ pub unsafe extern "C" fn ee_ts_lock_free(lock: *mut EeTsLock) {
 /// # Safety
 /// `lock` is live.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ts_lock_read_count(lock: *const EeTsLock) -> i32 {
-    (*lock).read_count()
-}
-/// # Safety
-/// `lock` is live.
-#[no_mangle]
 pub unsafe extern "C" fn ee_ts_lock_read(lock: *const EeTsLock) {
     (*lock).read_lock(&PlatHost);
     held::note(lock as usize, 1, 0);
@@ -905,11 +899,6 @@ pub unsafe extern "C" fn ee_ts_thread_free(thread: *mut EeTsThread) -> c_long {
 pub extern "C" fn ee_ts_thread_current() -> *mut EeTsThread {
     SCHEDULER.current(&PlatHost)
 }
-/// `TSScheduler::GetCurrentThreadIndex` (-1 when the calling thread is not registered).
-#[no_mangle]
-pub extern "C" fn ee_ts_thread_current_index() -> std::ffi::c_ulong {
-    SCHEDULER.current_index(&PlatHost).map_or(std::ffi::c_ulong::MAX, |i| i as std::ffi::c_ulong)
-}
 /// # Safety
 /// `thread` is live.
 #[no_mangle]
@@ -960,35 +949,11 @@ pub unsafe extern "C" fn ee_ts_thread_receive(
     result
 }
 /// # Safety
-/// `thread` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ts_thread_resume(thread: *const EeTsThread) -> c_long {
-    (*thread).resume(&PlatHost)
-}
-/// # Safety
-/// `thread` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ts_thread_suspend(thread: *const EeTsThread) -> c_long {
-    (*thread).suspend(&PlatHost)
-}
-/// # Safety
-/// `thread` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ts_thread_terminate(thread: *const EeTsThread) -> c_long {
-    (*thread).terminate(&PlatHost)
-}
-/// # Safety
 /// `thread` is live; `name` is NULL or NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ts_thread_set_name(thread: *const EeTsThread, name: *const std::ffi::c_char) {
     let bytes = if name.is_null() { &b""[..] } else { std::ffi::CStr::from_ptr(name).to_bytes() };
     (*thread).set_name(bytes)
-}
-/// # Safety
-/// `thread` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ts_thread_is_suspended(thread: *const EeTsThread) -> bool {
-    (*thread).is_suspended()
 }
 /// The thread's message lock (`LockMessageQueue`/`UnlockMessageQueue` enter and leave it).
 ///

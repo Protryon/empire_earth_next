@@ -332,15 +332,6 @@ pub(crate) mod ffi {
         unsafe { super::checksum(&mut Ffi, world as usize, checksum as usize) }
     }
 
-    /// `RTSWorld::GetPlayerIndex`.
-    ///
-    /// # Safety
-    /// `world` is the live object.
-    #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_world_player_index(world: *mut c_void, player: *mut c_void) -> c_long {
-        unsafe { player_index(&mut Ffi, world as usize, player as usize) }
-    }
-
     /// `RTSWorld::GetUnit`.
     ///
     /// # Safety

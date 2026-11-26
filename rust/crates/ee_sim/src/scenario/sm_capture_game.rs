@@ -127,12 +127,6 @@ pub extern "C" fn ee_scenario_cap_effect(
     sm_capture::effect(&mut Game, h(effect), cinematic, seed, version);
 }
 
-/// SMEW alone.
-#[no_mangle]
-pub extern "C" fn ee_scenario_cap_effect_world(effect: *const c_void, version: EeScenarioCapVersion) {
-    sm_capture::effect_world(&mut Game, h(effect), version);
-}
-
 /// SMSV (`manager` the `EEScenarioManager*`).
 #[no_mangle]
 pub extern "C" fn ee_scenario_cap_saved(

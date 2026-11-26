@@ -23,7 +23,7 @@ use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields,
 
 use crate::app::minimap::{EeAppMiniMap, EeAppMiniMapItem};
 use crate::app::minimap_ffi::{
-    ee_app_minimap_call, ee_app_minimap_free, ee_app_minimap_new, ee_app_minimap_pixel_rect, ee_app_minimap_recolor,
+    ee_app_minimap_call, ee_app_minimap_new, ee_app_minimap_pixel_rect, ee_app_minimap_recolor,
     ee_app_minimap_redraw_pixels, ee_app_minimap_set_map, ee_app_minimap_set_pixels, EeAppMiniMapHost, EeAppMiniMapIo,
     EE_APP_MINIMAP_OP_TERRAIN_COLOR, EE_APP_MINIMAP_OP_TILE_ITEMS, EE_APP_MINIMAP_OP_TILE_SIGHT,
     EE_APP_MINIMAP_OP_UNIT_SHOWN,
@@ -262,13 +262,6 @@ pub extern "C" fn ee_gamecpp_minimap_construct(mm: *mut c_void, map: *mut c_void
     // SAFETY: a local vector
     unsafe { ee_base::math::ffi::ee_ge_vector_normalize(&mut light) };
     *LIGHT.lock().unwrap() = [light.x, light.y, light.z];
-}
-
-/// EEMiniMap's destructor's body.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_minimap_destroy(mm: *mut c_void) {
-    // SAFETY: the mini map's Rust half
-    unsafe { ee_app_minimap_free(rust(mm as P)) };
 }
 
 /// AddDoppelganger (4) and RemoveDoppelganger (5): a building image's dot (a wall's next three segments too).

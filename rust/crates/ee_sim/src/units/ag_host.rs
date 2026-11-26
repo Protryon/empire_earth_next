@@ -641,18 +641,6 @@ pub extern "C" fn ee_units_ag_plan(group: u64) {
     ag::plan(&mut AgGame, group)
 }
 
-/// `EEActiveGroup::LayOutFormation`.
-#[no_mangle]
-pub extern "C" fn ee_units_ag_lay_out_formation(group: u64) {
-    ag::lay_out_formation(&mut AgGame, group)
-}
-
-/// `EEActiveGroup::ComputeValues`.
-#[no_mangle]
-pub extern "C" fn ee_units_ag_compute_values(group: u64) {
-    ag::compute_values(&mut AgGame, group)
-}
-
 /// `EEActiveGroup::KeepAttackers`.
 #[no_mangle]
 pub extern "C" fn ee_units_ag_keep_attackers(group: u64) {

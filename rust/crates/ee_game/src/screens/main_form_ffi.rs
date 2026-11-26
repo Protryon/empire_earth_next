@@ -105,12 +105,6 @@ pub extern "C" fn ee_screens_main_form_copy_data(call: *mut c_void) -> i64 {
     main_form::copy_data(&mut Host(call))
 }
 
-/// `EEUIFMainGame::RefreshStatus` over the host's call record.
-#[no_mangle]
-pub extern "C" fn ee_screens_main_form_refresh_status(call: *mut c_void) {
-    main_form::refresh_status(&mut Host(call));
-}
-
 /// `EEUIFMainGame::DisplayChatLine` of the host's call record's colour, name, text and flags.
 #[no_mangle]
 pub extern "C" fn ee_screens_main_form_chat_line(call: *mut c_void) {
@@ -143,12 +137,6 @@ pub unsafe extern "C" fn ee_screens_main_form_new(
     let form = unsafe { *(call as *const *mut c_void) };
     crate::screens::main_form_fields::ee_screens_main_form_fields(form, fields);
     ee_screens_main_form_construct(call);
-}
-
-/// `EEUIFMainGame::SetHotKeyMode(mode)`.
-#[no_mangle]
-pub extern "C" fn ee_screens_main_form_hot_key_mode(call: *mut c_void, mode: i64) {
-    main_form::set_hot_key_mode(&mut Host(call), mode);
 }
 
 /// `EEUIFMainGame::SetUIState(state)`.
@@ -188,13 +176,6 @@ pub extern "C" fn ee_screens_main_form_start(call: *mut c_void, kind: u32, tech:
 #[no_mangle]
 pub extern "C" fn ee_screens_main_form_member(call: *mut c_void, which: u32, a: i64) -> i64 {
     main_form::member(&mut Host(call), which, a)
-}
-
-/// `EEUIFMainGame::UpdateMouse`'s mode: the mode `mode` (`EE_SCREENS_MF_MODE_*`) at the mouse (x, y); the mode's
-/// answer.
-#[no_mangle]
-pub extern "C" fn ee_screens_main_form_mouse(call: *mut c_void, mode: i64, x: f32, y: f32) -> i64 {
-    crate::screens::mouse_modes::mouse(&mut Host(call), mode, x, y)
 }
 
 /// `EEUIBuildWall::Update(x, y)` over the host's call record (its placement held) and the wall's members.

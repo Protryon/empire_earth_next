@@ -43,54 +43,6 @@ pub extern "C" fn ee_ge_unpack_blue(format: c_ulong, color: c_ulong) -> u8 {
     pixel::unpack_blue(format, color)
 }
 
-/// `GEUnpackAlpha`.
-#[no_mangle]
-pub extern "C" fn ee_ge_unpack_alpha(format: c_ulong, color: c_ulong) -> u8 {
-    pixel::unpack_alpha(format, color)
-}
-
-/// `GETextureSet`'s slot of tile (x, y): the texture column and row.
-///
-/// # Safety
-/// `out_x` and `out_y` are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_set_slot(
-    x: c_ulong,
-    y: c_ulong,
-    coverage: c_ulong,
-    width: c_ulong,
-    height: c_ulong,
-    out_x: *mut c_ulong,
-    out_y: *mut c_ulong,
-) {
-    let (sx, sy) = texture::texture_set_slot(x, y, coverage, width, height);
-    // SAFETY: the caller's contract
-    unsafe {
-        *out_x = sx;
-        *out_y = sy;
-    }
-}
-
-/// `GETextureSet::GetTextureCoordinate`.
-///
-/// # Safety
-/// `u` and `v` are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_set_coordinate(
-    x: c_ulong,
-    y: c_ulong,
-    coverage: c_ulong,
-    u: *mut f32,
-    v: *mut f32,
-) {
-    let (cu, cv) = texture::texture_set_coordinate(x, y, coverage);
-    // SAFETY: the caller's contract
-    unsafe {
-        *u = cu;
-        *v = cv;
-    }
-}
-
 /// `GEMaterial::SizeOf` from the C++'s sizes.
 #[no_mangle]
 pub extern "C" fn ee_ge_material_size_of(

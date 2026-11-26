@@ -214,38 +214,6 @@ pub unsafe extern "C" fn ee_cp_town_can_take(
     unsafe { with(town, area, f, |t| t.can_take(unit)) }
 }
 
-/// `EETown::AddTile`.
-///
-/// # Safety
-/// As `with`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_town_add_tile(
-    town: *mut c_void,
-    area: *mut c_void,
-    f: *mut EeTownFields,
-    x: i64,
-    y: i64,
-) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { with(town, area, f, |t| t.add_tile((x as _, y as _))) }
-}
-
-/// `EETown::RemoveHullTile`.
-///
-/// # Safety
-/// As `with`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_town_remove_hull_tile(
-    town: *mut c_void,
-    area: *mut c_void,
-    f: *mut EeTownFields,
-    x: i64,
-    y: i64,
-) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { with(town, area, f, |t| t.remove_hull_tile((x as _, y as _))) }
-}
-
 /// `EETown::Merge` of the town `other` (its record `o`).
 ///
 /// # Safety

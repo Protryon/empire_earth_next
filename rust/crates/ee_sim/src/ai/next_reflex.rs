@@ -519,15 +519,6 @@ pub(super) unsafe fn flee_raids(me: *mut c_void) {
     }
 }
 
-/// `EECPRMFleeRaids` for the C++.
-///
-/// # Safety
-/// `me` is a live computer player.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_next_flee_raids(me: *mut c_void) {
-    flee_raids(me);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

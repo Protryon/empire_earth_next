@@ -1235,16 +1235,6 @@ pub unsafe extern "C" fn ee_ge_tex_set_frame(p: *mut EeGeTexture, frame: c_ulong
     unsafe { EeGeTexture::set_frame(p, frame) }
 }
 
-/// `SetSurface(surface)`.
-///
-/// # Safety
-/// `p` is live; `surface` a surface.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_tex_set_surface(p: *mut EeGeTexture, surface: *mut c_void) -> c_long {
-    // SAFETY: the caller's contract
-    unsafe { EeGeTexture::set_surface(p, surface as usize) }
-}
-
 /// `Promote`.
 ///
 /// # Safety

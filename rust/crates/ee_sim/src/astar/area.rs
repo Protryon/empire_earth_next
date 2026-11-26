@@ -14,7 +14,6 @@ use std::ffi::{c_long, c_ulong};
 
 use crate::astar::area_geom::EeHullRect;
 use crate::astar::continent_grid::EePoint;
-use crate::astar::ffi::EeSparseArray;
 use crate::astar::hull::{self, EeHullPoint};
 use crate::astar::sparse::{PointList, SparseArray};
 
@@ -197,18 +196,6 @@ pub unsafe extern "C" fn ee_astar_area_hull_points(
     }
 }
 
-/// `SetPoints(points, false)` on the hull.
-///
-/// # Safety
-/// `r` a live record, `points` holds `count` points (NULL when 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_set_hull(r: *mut EeAStarAreaRecord, points: *const EeHullPoint, count: usize) {
-    // SAFETY: the caller's contract
-    let points = unsafe { slice(points, count) };
-    // SAFETY: the caller's contract
-    unsafe { (*r).set_hull(points) };
-}
-
 /// The hull as a saved game has it (points, bounds, center, area).
 ///
 /// # Safety
@@ -246,35 +233,6 @@ pub unsafe extern "C" fn ee_astar_area_clear_hull(r: *mut EeAStarAreaRecord) {
 pub unsafe extern "C" fn ee_astar_area_update_bounds(r: *mut EeAStarAreaRecord, region_size: c_long) {
     // SAFETY: the caller's contract
     unsafe { (*r).update_bounds(region_size) };
-}
-
-/// `UpdateHull`: the hull of `tiles`' extreme edge points, then the region bounds.
-///
-/// # Safety
-/// `r` a live record, `tiles` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_update_hull(
-    r: *mut EeAStarAreaRecord,
-    tiles: *const EeSparseArray,
-    region_size: c_long,
-) {
-    // SAFETY: the caller's contract
-    unsafe { (*r).update_hull(&(*tiles).set, region_size) };
-}
-
-/// `RemoveTile(tile)`: whether the tile was there (then the hull is rebuilt).
-///
-/// # Safety
-/// `r` a live record, `tiles` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_remove_tile(
-    r: *mut EeAStarAreaRecord,
-    tiles: *mut EeSparseArray,
-    x: i32,
-    y: i32,
-) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { (*r).remove_tile(&mut (*tiles).set, EePoint { x, y }) }
 }
 
 /// # Safety

@@ -542,16 +542,6 @@ pub unsafe extern "C" fn ee_ge_modman_footprint(p: *mut EeGeModelManager) -> c_u
     unsafe { mm(p).footprint }
 }
 
-/// `GetModelCount`.
-///
-/// # Safety
-/// `p` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_modman_count(p: *mut EeGeModelManager) -> c_ulong {
-    // SAFETY: the caller's contract
-    unsafe { mm(p).models.len() as c_ulong }
-}
-
 /// `LoadModel(name, shared)`: `shared` the frames the model shares (the original's `std::map<unsigned long, long>`).
 ///
 /// # Safety
@@ -594,16 +584,6 @@ pub unsafe extern "C" fn ee_ge_modman_remove(p: *mut EeGeModelManager, model: *m
 pub unsafe extern "C" fn ee_ge_modman_set_path(p: *mut EeGeModelManager, path: *mut c_void) {
     // SAFETY: the caller's contract
     unsafe { EeGeModelManager::set_path(p, path as usize) }
-}
-
-/// `VerifyModels`.
-///
-/// # Safety
-/// `p` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_modman_verify(p: *mut EeGeModelManager) {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModelManager::verify(p) }
 }
 
 #[cfg(test)]

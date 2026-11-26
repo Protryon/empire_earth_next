@@ -201,14 +201,3 @@ pub unsafe extern "C" fn ee_screens_sebr_build(
         core::ptr::copy_nonoverlapping(c.as_ptr(), out, c.len());
     }
 }
-
-/// `EEUIFSEBrushGroup::SetHighlight`'s square (left, top, right, bottom into `out`) around (`x`, `y`) for the brush
-/// `size`, `centred` or not.
-///
-/// # Safety
-/// `out` points at four floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_sebr_highlight(x: f32, y: f32, size: u32, centred: bool, out: *mut f32) {
-    let r = crate::screens::editor_brush::highlight(x, y, size, centred);
-    unsafe { core::ptr::copy_nonoverlapping(r.as_ptr(), out, 4) };
-}

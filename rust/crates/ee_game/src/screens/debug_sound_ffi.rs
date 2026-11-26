@@ -1,6 +1,6 @@
 //! The debug sound panel's host over the C++ calls (`debug_sound.rs`; `UI Events/EEScreens.cpp`).
 
-use core::ffi::{c_long, c_ulong};
+use core::ffi::c_long;
 
 use crate::screens::debug_sound::DebugSoundHost;
 use crate::screens::menus_ffi::Form;
@@ -17,10 +17,4 @@ impl DebugSoundHost for Form {
     fn put_text(&mut self, which: u32, arg: u32, text: &[u8]) {
         self.put(which, arg, text);
     }
-}
-
-/// The debug sound panel's event code for a control event id, 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_debug_sound_event_for(id: c_ulong) -> u32 {
-    crate::screens::debug_sound::event_for_control(id)
 }

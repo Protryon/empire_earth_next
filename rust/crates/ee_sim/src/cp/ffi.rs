@@ -35,40 +35,6 @@ pub unsafe extern "C" fn ee_cp_skip_legacy_combat(
     legacy_load::skip_combat_manager(&mut f, major, minor)
 }
 
-/// Steps over a retail file's civilization manager block and its resource, build, research, unit and wall managers;
-/// `town_center` (x, y) gets the build manager's town centre tile, read in place.
-///
-/// # Safety
-/// As [`ee_cp_skip_legacy_combat`]; `town_center` points to two `int32_t`s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_skip_legacy_civilization(
-    file: *mut c_void,
-    host: EeUnitsPlayerSaveFn,
-    major: u32,
-    minor: u32,
-    town_center: *mut i32,
-) -> i32 {
-    // SAFETY: the caller's contract
-    let (mut f, tile) = unsafe { (SaveFile::new(file, host), &mut *(town_center as *mut [i32; 2])) };
-    legacy_load::skip_civilization_manager(&mut f, major, minor, tile)
-}
-
-/// Steps over a retail file's exploration manager block.
-///
-/// # Safety
-/// As [`ee_cp_skip_legacy_combat`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_skip_legacy_exploration(
-    file: *mut c_void,
-    host: EeUnitsPlayerSaveFn,
-    major: u32,
-    minor: u32,
-) -> i32 {
-    // SAFETY: the caller's contract
-    let mut f = unsafe { SaveFile::new(file, host) };
-    legacy_load::skip_exploration_manager(&mut f, major, minor)
-}
-
 // ---- the record's bodies (cp::init, cp::save, cp::player)
 
 /// `EEComputerPlayer::Init`'s values (both constructors).
@@ -124,66 +90,6 @@ pub unsafe extern "C" fn ee_cp_save(
     unsafe { save::save(ctx, host, p, major, minor, game_time, result) }
 }
 
-/// `GetAttackDelayModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_attack_delay_modifier(p: *const EeCpFields) -> f32 {
-    // SAFETY: the caller's contract
-    unsafe { (*p).attack_delay_modifier() }
-}
-
-/// `GetAttackFrequencyModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_attack_frequency_modifier(p: *const EeCpFields) -> f32 {
-    // SAFETY: the caller's contract
-    unsafe { (*p).attack_frequency_modifier() }
-}
-
-/// `GetUnitCostModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_unit_cost_modifier(p: *const EeCpFields) -> f32 {
-    // SAFETY: the caller's contract
-    unsafe { (*p).unit_cost_modifier() }
-}
-
-/// `GetDMAttackFrequencyModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_dm_attack_frequency_modifier(p: *const EeCpFields) -> f32 {
-    // SAFETY: the caller's contract
-    unsafe { (*p).dm_attack_frequency_modifier() }
-}
-
-/// `GetDMInitialAttackModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_dm_initial_attack_modifier(p: *const EeCpFields) -> f32 {
-    // SAFETY: the caller's contract
-    unsafe { (*p).dm_initial_attack_modifier() }
-}
-
-/// `GetPopLimitAdjustment`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_pop_limit_adjustment(p: *const EeCpFields) -> f32 {
-    // SAFETY: the caller's contract
-    unsafe { (*p).pop_limit_adjustment() }
-}
-
 /// `GetIslandExpansionTimer`.
 ///
 /// # Safety
@@ -202,22 +108,6 @@ pub unsafe extern "C" fn ee_cp_island_expansion_timer(p: *const EeCpFields) -> c
 pub unsafe extern "C" fn ee_cp_scale_cost(p: *const EeCpFields, cost: c_long) -> c_long {
     // SAFETY: the caller's contract
     unsafe { (*p).scale_cost(cost) }
-}
-
-/// The scenario effects' setters (`what`: 0 `SetDMAttackFrequencyModifier`, 1 `SetDMInitialAttackModifier`, 2
-/// `SetIslandExpansionTimer` with `value` a whole number of ms) for the player's difficulty.
-///
-/// # Safety
-/// `p` is a computer player's record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_set_by_difficulty(p: *mut EeCpFields, what: u32, value: f32, timer: c_ulong) {
-    // SAFETY: the caller's contract
-    let p = unsafe { &mut *p };
-    match what {
-        0 => p.set_dm_attack_frequency_modifier(value),
-        1 => p.set_dm_initial_attack_modifier(value),
-        _ => p.set_island_expansion_timer(timer),
-    }
 }
 
 /// The game's generator for [`ee_cp_set_next_attack_time`]: `GetRandom(min, max)`.
@@ -279,23 +169,6 @@ pub unsafe extern "C" fn ee_cp_influence_free(t: *mut EeCpInfluence) {
         // SAFETY: the caller's contract
         drop(unsafe { Box::from_raw(t) });
     }
-}
-
-/// `GetValue` (`what` 0) or `GetOthersValue` (1) of region (x, y).
-///
-/// # Safety
-/// `t` is a live table.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_influence_value(
-    t: *const EeCpInfluence,
-    what: u32,
-    player: u32,
-    x: u32,
-    y: u32,
-) -> c_long {
-    // SAFETY: the caller's contract
-    let t = unsafe { &*t };
-    (if what == 0 { t.value(player, x, y) } else { t.others_value(player, x, y) }) as c_long
 }
 
 /// `SumValue` (`what` 0) or `SumOthersValue` (1) over the regions of `r`.

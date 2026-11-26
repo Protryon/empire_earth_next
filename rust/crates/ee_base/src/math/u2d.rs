@@ -156,20 +156,6 @@ pub unsafe extern "C" fn ee_u2d_line_tiles(
     }
 }
 
-/// `U2DRectangle<float>::GetClosestPoint(inPoint)` (the rectangle's members in their order: bottom, left, right,
-/// top).
-///
-/// # Safety
-/// `rect` points at four floats, `point` and `out` at two.
-#[no_mangle]
-pub unsafe extern "C" fn ee_u2d_rect_closest_point(rect: *const [f32; 4], point: *const [f32; 2], out: *mut [f32; 2]) {
-    // SAFETY: the caller's contract
-    unsafe {
-        let [bottom, left, right, top] = *rect;
-        *out = rect_closest_point([left, top, right, bottom], *point);
-    }
-}
-
 /// The C++ `kErrorNotOpen`.
 const ERROR_NOT_OPEN: c_long = 4;
 

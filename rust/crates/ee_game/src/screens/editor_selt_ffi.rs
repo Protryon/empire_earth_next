@@ -117,12 +117,6 @@ pub extern "C" fn ee_screens_selt_main(thread: *mut c_void) -> c_ulong {
     main(&mut host(), thread as usize)
 }
 
-/// `EESELoadThread::HandleMessage(message, p1, p2)`.
-#[no_mangle]
-pub extern "C" fn ee_screens_selt_message(thread: *mut c_void, message: c_ulong, p1: *mut c_void, p2: *mut c_void) {
-    handle_message(&mut host(), thread as usize, message, p1 as usize, p2 as usize);
-}
-
 /// The text actions' `Virtual4` (`action` its [`EeScreensSeltInfo`]): the export (`import` false) or the import.
 #[no_mangle]
 pub extern "C" fn ee_screens_seia_run(action: *mut c_void, import_text: bool) {

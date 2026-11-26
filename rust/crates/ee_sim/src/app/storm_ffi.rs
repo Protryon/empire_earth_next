@@ -106,16 +106,6 @@ impl StormHost for Host {
     }
 }
 
-/// `EEEMStorm(kind)`'s plain members.
-///
-/// # Safety
-/// `out` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_storm_init(out: *mut EeAppStormFields, kind: c_long) {
-    // SAFETY: the function's contract
-    unsafe { *out = storm::new_fields(kind) };
-}
-
 /// `Step(time)`: the record copied in, the step run, copied back (no host op touches it).
 ///
 /// # Safety

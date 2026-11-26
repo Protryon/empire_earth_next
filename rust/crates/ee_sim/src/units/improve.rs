@@ -273,16 +273,6 @@ pub fn gain(c: &EeUnitsImproveClass, s: &EeUnitsImproveStats, levels: &[i32; 16]
 
 // ---- the C++ seam
 
-/// `GetBaseValue`
-///
-/// # Safety
-/// `c` points to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_improve_base_value(c: *const EeUnitsImproveClass, improvement: i32) -> f32 {
-    // SAFETY: the caller's contract
-    base_value(unsafe { &*c }, improvement)
-}
-
 /// `GetCost`
 #[no_mangle]
 pub extern "C" fn ee_units_improve_cost(improvement: i32) -> i32 {

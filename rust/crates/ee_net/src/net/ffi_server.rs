@@ -722,11 +722,6 @@ pub extern "C" fn ee_net_sv_stop_threads(s: *const EeNetServer) {
     sv(s).stop_threads()
 }
 
-#[no_mangle]
-pub extern "C" fn ee_net_sv_send_exit_message(s: *const EeNetServer) {
-    sv(s).send_exit_message()
-}
-
 /// A field (`SvGet`) for the accessors
 #[no_mangle]
 pub extern "C" fn ee_net_sv_get(s: *const EeNetServer, field: EeNetSvGet) -> u32 {
@@ -796,12 +791,6 @@ pub extern "C" fn ee_net_sv_unlock_send_communications_tick(s: *const EeNetServe
     sv(s).unlock_send_communications_tick()
 }
 
-/// SimGameRunning (TEST ONLY)
-#[no_mangle]
-pub extern "C" fn ee_net_sv_sim_game_running(s: *const EeNetServer) -> bool {
-    sv(s).sim_game_running()
-}
-
 /// SimCommunicationsTick (TEST ONLY)
 #[no_mangle]
 pub extern "C" fn ee_net_sv_sim_communications_tick(s: *const EeNetServer) {
@@ -815,27 +804,8 @@ pub extern "C" fn ee_net_sv_record_playback_mode(s: *const EeNetServer) -> u8 {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_net_sv_set_slow_playback(s: *const EeNetServer) {
-    if let Some(r) = sv(s).rec() {
-        r.set_slow_playback()
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn ee_net_sv_set_normal_playback(s: *const EeNetServer) {
-    if let Some(r) = sv(s).rec() {
-        r.set_normal_playback()
-    }
-}
-
-#[no_mangle]
 pub extern "C" fn ee_net_sv_abort_xfer(s: *const EeNetServer, id: u32) {
     sv(s).abort_xfer(id)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_net_sv_boot_all_laggers(s: *const EeNetServer, number: u32) {
-    sv(s).boot_all_laggers(number)
 }
 
 #[no_mangle]
@@ -849,18 +819,8 @@ pub extern "C" fn ee_net_sv_message_manager_current_number(s: *const EeNetServer
 }
 
 #[no_mangle]
-pub extern "C" fn ee_net_sv_set_message_manager_current_number(s: *const EeNetServer, number: u32) {
-    sv(s).mm().set_current_number(number)
-}
-
-#[no_mangle]
 pub extern "C" fn ee_net_sv_set_message_manager_lowest_cts(s: *const EeNetServer, ct: u32) {
     sv(s).mm().set_lowest_cts(ct)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_net_sv_is_oos(s: *const EeNetServer) -> bool {
-    sv(s).is_oos()
 }
 
 #[no_mangle]
@@ -961,22 +921,6 @@ pub unsafe extern "C" fn ee_net_sv_xfer_file_to_client(
     }
     *id = x as c_ulong;
     ESError::kErrorOK as c_long
-}
-
-/// The checksums' state (the tests): writes at most `size` bytes of `Server::checks_state` (NUL-terminated) and
-/// answers its length.
-///
-/// # Safety
-/// `out` holds `size` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_net_sv_checks_state(s: *const EeNetServer, out: *mut u8, size: usize) -> usize {
-    let text = sv(s).checks_state();
-    if size > 0 {
-        let n = text.len().min(size - 1);
-        std::ptr::copy_nonoverlapping(text.as_ptr(), out, n);
-        *out.add(n) = 0;
-    }
-    text.len()
 }
 
 /// The queues' lengths (the tests): the incoming inputs, the queued send-to-all-and-waits

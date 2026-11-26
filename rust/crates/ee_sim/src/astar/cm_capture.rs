@@ -181,12 +181,6 @@ pub extern "C" fn ee_astar_cntq_i(v: i32) {
     push(v)
 }
 
-/// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
-#[no_mangle]
-pub extern "C" fn ee_astar_cntq_leave(on: bool) {
-    leave(on)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

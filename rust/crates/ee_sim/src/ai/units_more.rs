@@ -163,29 +163,6 @@ pub struct EeAiUnitsTuning {
     pub population_cap_other_weight: f32,
 }
 
-/// The host records' sizes summed (the C++ checks its copy of their layout against it once; it also puts the
-/// records in the header).
-///
-/// # Safety
-/// None: the pointers are not read.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_units_records_size(
-    a: *const EeAiUnitsImproveCost,
-    b: *const EeAiUnitsPlace,
-    c: *const EeAiUnitsTuning,
-    d: *const EeAiUnitsArea,
-    e: *const EeAiUnitsAreaPick,
-    f: *const EeAiUnitsTiles,
-) -> usize {
-    let _ = (a, b, c, d, e, f);
-    std::mem::size_of::<EeAiUnitsImproveCost>()
-        + std::mem::size_of::<EeAiUnitsPlace>()
-        + std::mem::size_of::<EeAiUnitsTuning>()
-        + std::mem::size_of::<EeAiUnitsArea>()
-        + std::mem::size_of::<EeAiUnitsAreaPick>()
-        + std::mem::size_of::<EeAiUnitsTiles>()
-}
-
 pub const EE_AI_UNITS_MSG_IMPROVE: i32 = 27;
 pub const EE_AI_UNITS_MSG_HACK_NEW_UNIT: i32 = 28;
 pub const EE_AI_UNITS_MSG_BUILD_GATE: i32 = 29;
