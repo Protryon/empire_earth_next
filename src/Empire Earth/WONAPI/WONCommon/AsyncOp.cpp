@@ -1,22 +1,9 @@
 // AsyncOp: lifecycle, status, timeout and completion
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/won_net/status_codes.h"
-#include <string.h>
-#include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
-#include "platform/PlatSocket.h"
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/sockobj.h"
 // The socket error codes WON reports are Winsock's, the platform layer's numbering everywhere (checked by
 // ee_won_net status_codes.rs's the_socket_errors_are_winsocks_numbering)
 namespace WONAPI {

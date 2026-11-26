@@ -8,9 +8,6 @@
 #include <vector>
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"

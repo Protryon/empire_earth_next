@@ -5,28 +5,15 @@
 // its settings or a global, with no decision). The two config readers that were in GameBrowserCtrl.cpp and
 // GameUserListCtrl.cpp are lobby config kinds (lobbycfgrd.rs, R6 WON lobby/net round 40; LobbyNetCtrlHost.cpp).
 #include <windows.h>
-#include <stdio.h>
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/EELobbySound.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyControls.h"
-#include "ee/wonapi/WONLobbyScreens.h"
 #include "rust/won_net/http.h"
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_gui/guiconf.h"
-#include "ee/wonapi/WONLobbyGuard.h"
-#include "rust/won_lobby/lobbyctl.h"
 #include "rust/won_lobby/rows.h"
 
 namespace WONAPI {

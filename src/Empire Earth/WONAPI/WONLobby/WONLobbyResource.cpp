@@ -3,18 +3,8 @@
 // order, EeWonLobbyRes their names); the original's named globals are one slot per row (LOBBY_STRING(name) etc.).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <string>
-#include <list>
-#include <map>
-#include <set>
-#include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyResourceGlobals.h"
-#include "rust/won_lobby/resource.h"
-#include "rust/won_lobby/lobbyids.h"
 using namespace WONAPI;
 
 // the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row

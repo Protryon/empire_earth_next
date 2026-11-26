@@ -6,46 +6,20 @@
 // RoutingLogic.cpp, are merged into this unit.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <string>
-#include <list>
-#include <vector>
-#include <set>
-#include <map>
-#include <time.h>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "ee/wonapi/WONLobbyModel.h"
-#include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyStaging.h"
 #include "ee/wonapi/WONLobbyLan.h"
-#include "ee/wonapi/WONLobbyEventTypes.h"
-#include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
-#include "ee/wonapi/WONLobbyResourceGlobals.h"
-#include "ee/wonapi/EELobbySound.h"
-#include "rust/won_net/status_codes.h"
 #include "rust/won_net/routeop_types.h"
-#include "rust/won_net/hostop.h"
 #include "rust/won_net/reqdir.h"
 #include "rust/won_net/reqops.h"
-#include "rust/won_net/routeop.h"
 #include "rust/won_net/adminop.h"
-#include "rust/won_net/buffer.h"
-#include "rust/won_lobby/routelogic.h"
-#include "rust/won_lobby/logics.h"
-#include "rust/won_lobby/dlglogic.h"
-#include "rust/won_lobby/lobbyhost.h"
 #include "rust/won_lobby/staging.h"
-#include "rust/won_lobby/stagingobj.h"
 
 // ---- LobbyLogic.cpp: the base (runs network ops, tracked so they can be killed) and RustLogic, the shell
 

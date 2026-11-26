@@ -15,18 +15,10 @@
 #include <map>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
 #include "ee/EmpireEarth.h"
-#include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "rust/won_lobby/eegame.h"
-#include "rust/won_lobby/eexfer.h"
-#include "ee/wonapi/WONLobbyGuard.h"
 
 using namespace WONAPI;
 
