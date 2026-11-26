@@ -214,15 +214,9 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
         std::string aPath = thePath;
         return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::SetPath, (intptr_t)aPath.data(), aPath.size());
     }
-    case Op::TransferServe: ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Serve, (unsigned short)b, 0); return 0;
     case Op::TransferName: return (intptr_t)aTransfer->mName.mData.get();
-    case Op::TransferSize: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 2, 0);
-    case Op::TransferChecksum: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 3, 0);
-    case Op::TransferStop: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Stop, 0, 0);
-    case Op::TransferCloseClients: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::CloseClients, 0, 0);
-    case Op::TransferIsFileHere: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::IsFileHere, 0, 0);
-    case Op::TransferDownload: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Download, 0, 0);
-    // R6 WON round 34: the statements of the compound cases eesplit.rs composes
+    // R6 WON round 34: the statements of the compound cases eesplit.rs composes (since round 40 also the transfer's
+    // calls: Serve, Size, Checksum, Stop, CloseClients, IsFileHere, Download)
     case Op::PlayerSetSlotGame: aPlayer->MSet(LobbyMF::PlayerSlotGame, (intptr_t)aGame->mEE); return 0;
     case Op::PlayerSetSlotIndex: aPlayer->MSet(LobbyMF::PlayerSlotIndex, (unsigned char)b); return 0;
     case Op::PlayerSetSlot: aPlayer->MSet(LobbyMF::PlayerSlot, (unsigned char)b); return 0;
