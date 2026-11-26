@@ -22,7 +22,6 @@ class UIControl;
 class UITextLabel;
 
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
-struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
 #include "rust/won_net/dirlist.h"
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
@@ -236,7 +235,6 @@ public:
 
 // Native directory value records. DataObject14, ACL10; node sizes1c/18.
 class ByteBuffer;
-class Blowfish;
 class CDKey; // ee/wonapi/WONAuthContext.h
 
 
@@ -268,10 +266,7 @@ private:
 // Original external lifetime providers only; no local ctor/dtor/copy implementation.
 namespace WONAPI {
 class AsyncOp;
-class GetCertOp;
-class AuthPeerData;
 class WriteBuffer;
-class ElGamal;
 class ServerContext; //actual complete3c owner in Routing
 class AuthContext; // ee/wonapi/WONAuthContext.h (a shim over ee_won authobj.rs)
 } //namespace WONAPI

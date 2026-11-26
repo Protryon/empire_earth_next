@@ -53,3 +53,7 @@ bool Secrets(int inWhich, const void* inKey = NULL, time_t inT0 = 0, time_t inT1
     return ee_won_auth_login_secrets(ee_won_authctx_login(this->mCore), inWhich, static_cast<const uint8_t*>(inKey),
                                      (int64_t)inT0, (int64_t)inT1);
 }
+ConstSmartPtr<AuthPeerData> GetPeerData() { return AuthPeerData::Adopt(ee_won_authctx_peer_data(this->mCore)); } //2e19e0
+bool RemoveAddress(const IPAddr& inAddr) { return this->GetServerContext()->RemoveAddress(inAddr); }
+bool SetHashFile(const std::wstring& inCommunity, const std::string& inFile) //2e07f0
+{ return this->SetHashFileList(inCommunity, std::list<std::string>(1, inFile)); }

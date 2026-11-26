@@ -9,31 +9,15 @@
 #include <wchar.h>
 #include "rust/won_net/ffi.h"
 #include "rust/won_net/strcase.h"
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 namespace WONAPI {
-inline void StringToUpperCaseInPlace(std::string& ioText)
-{
-    if (!ioText.empty()) ee_won_case_bytes(reinterpret_cast<uint8_t*>(&ioText[0]), ioText.length(), true);
-}
 // 0x2a6ab0: -1, 0 or 1 ignoring case, the shorter string first on a common prefix
 inline int StringCompareNoCase(const std::string& inLeft, const std::string& inRight)
 {
     return ee_won_compare_no_case(reinterpret_cast<const uint8_t*>(inLeft.data()), inLeft.length(),
                                   reinterpret_cast<const uint8_t*>(inRight.data()), inRight.length());
 }
-inline int WStringCompareNoCase(const std::wstring& inLeft, const std::wstring& inRight)
-{
-#if WCHAR_MAX > 0xffff
-    return ee_won_compare_no_case32(reinterpret_cast<const int32_t*>(inLeft.data()), inLeft.length(),
-                                    reinterpret_cast<const int32_t*>(inRight.data()), inRight.length());
-#else
-    return ee_won_compare_no_case16(reinterpret_cast<const uint16_t*>(inLeft.data()), inLeft.length(),
-                                    reinterpret_cast<const uint16_t*>(inRight.data()), inRight.length());
-#endif
-}
-struct WStringLessNoCase {
-    bool operator()(const std::wstring& inLeft, const std::wstring& inRight) const
-    { return WStringCompareNoCase(inLeft, inRight) < 0; }
-};
+#include EE_WON_DRV(StringCompare_ns) // the drivers' functions
 struct StringLessNoCase {
     bool operator()(const std::string& inLeft, const std::string& inRight) const
     { return StringCompareNoCase(inLeft, inRight) < 0; }

@@ -3,3 +3,8 @@
 bool HasVerifier() { return ee_won_udprecvop_verifier(this->mUdp) != NULL; }
 void SetFromAddr(const IPAddr& theAddr) { ee_won_udprecvop_set_address(this->mUdp, theAddr.GetValue()); }
 UDPManager* GetUDPManager() const { return static_cast<UDPManager*>(static_cast<RefCount*>(ee_won_udprecvop_manager(this->mUdp))); }
+// (R6 WON round 39)
+void SetUDPManager(UDPManager* theManager) { ee_won_udprecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+void SetSocket(QueueSocket* theSocket) { ee_won_udprecvop_set_socket(this->mUdp, static_cast<RefCount*>(theSocket)); }
+void SetMessageVerifier(WONStatus (*inVerifier)(ReadBuffer&, void*), void* inContext)
+{ ee_won_udprecvop_set_verifier(this->mUdp, reinterpret_cast<void*>(inVerifier), inContext); }
