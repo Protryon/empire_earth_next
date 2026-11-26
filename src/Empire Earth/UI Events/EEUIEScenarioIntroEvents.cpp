@@ -9,12 +9,9 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIBlinkingButton.h"
 #include "lle/UIFormManager.h"
 
@@ -27,7 +24,6 @@
 // The manager's bodies are Rust's (UI lane round 9: ee_game screens sci_calls.rs) over the one-statement shims at
 // the end of this file; each member is one forward
 #include "ee/EEScreensShims.h"
-#include "rust/game/screens.h"   // ee_screens_sci_* (sci_calls.rs)
 
 // ---- the shims (sci_calls.rs), each one statement on the manager (inM) or the main game form
 #define SCI(inM) reinterpret_cast<EEUISCIFormManager*>(inM)

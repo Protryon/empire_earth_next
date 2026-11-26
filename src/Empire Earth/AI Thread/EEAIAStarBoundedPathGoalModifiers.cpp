@@ -16,7 +16,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEInfluenceTable.h"
-#include "rust/sim/astar.h"
 
 // The attackable modifier's references of its walker and target (modifier_obj.rs)
 extern "C" void ee_astar_mod_host_unit_reference(uint64_t inUnit, bool inAdd)

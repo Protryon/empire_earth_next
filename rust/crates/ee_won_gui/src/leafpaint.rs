@@ -174,6 +174,36 @@ pub enum EeWonLeafOp {
 }
 
 /// The host: `me` the C++ object, `op`, two arguments.
+/// The offset of ListItem's members ([`EeWonListItemRec`]) in a C++ `ListItem` (after RefCount's head).
+pub const EE_WON_LIST_ITEM_AT: usize = 16;
+
+/// ListItem's members, in their C++ order (`mSelected` .. `mHeight`), read and written in place in the game (R6 WON
+/// GUI round 38; TextListItem.cpp asserts the layout). A driver's world answers the ops instead.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeWonListItemRec {
+    /// `mSelected` (a `bool`).
+    pub selected: u8,
+    /// `mSelectable` (a `bool`).
+    pub selectable: u8,
+    /// `mTop`.
+    pub top: i32,
+    /// `mWidth`.
+    pub width: i32,
+    /// `mHeight`.
+    pub height: i32,
+}
+const _: () = assert!(
+    std::mem::offset_of!(EeWonListItemRec, top) == 4
+        && std::mem::offset_of!(EeWonListItemRec, width) == 8
+        && std::mem::offset_of!(EeWonListItemRec, height) == 12
+);
+
+/// The members of the game's list item `item` (a `ListItem*`).
+pub(crate) fn item_rec(item: isize) -> *mut EeWonListItemRec {
+    (item as usize).wrapping_add(EE_WON_LIST_ITEM_AT) as *mut EeWonListItemRec
+}
+
 pub type EeWonLeafHostFn = Option<unsafe extern "C" fn(me: *mut c_void, op: EeWonLeafOp, a: isize, b: isize) -> isize>;
 
 /// One C++ object and its host.
@@ -187,11 +217,59 @@ impl EeWonLeaf {
         EeWonLeaf { me, host }
     }
     fn op(&self, o: EeWonLeafOp, a: isize, b: isize) -> isize {
+        if let Some(r) = self.game_op(o) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object
             Some(h) => unsafe { h(self.me, o, a, b) },
             None => 0,
         }
+    }
+    /// The game's answers that are no C++ statement (R6 WON GUI round 38): an image button's state (its component's
+    /// members, its Rust button) and a list item's members in place. None in a driver's world.
+    fn game_op(&self, o: EeWonLeafOp) -> Option<isize> {
+        use crate::compobj::EE_WON_COMP_FLAG_DISABLED;
+        use EeWonLeafOp::*;
+        if !matches!(
+            o,
+            BtnDisabled
+                | BtnChecked
+                | BtnPressed
+                | BtnMouseOver
+                | BtnWidth
+                | BtnHeight
+                | ItemWidthAt
+                | ItemHeightAt
+                | ItemSelected
+        ) || !crate::compobj::is_game()
+        {
+            return None;
+        }
+        let me = self.me as isize;
+        let item = item_rec(me);
+        // SAFETY: the game's live button (the Btn ops' `t`, its Rust button registered by btnobj.rs)
+        let btn =
+            || unsafe { crate::registry::get::<crate::btnobj::EeWonButton>(me, crate::registry::EeWonGuiKind::Button) };
+        let flags = || btn().map_or(0, |b| b.field(crate::btnobj::EeWonBtnField::Flags as i32) as u32);
+        Some(match o {
+            BtnDisabled => isize::from(crate::compmem::bits(me) & EE_WON_COMP_FLAG_DISABLED != 0),
+            BtnChecked => isize::from(flags() & 0x04 != 0),
+            BtnPressed => isize::from(flags() & 0x20 != 0),
+            BtnMouseOver => isize::from(btn().is_some_and(|b| b.is_mouse_over())),
+            BtnWidth => crate::compmem::bounds(me).width as isize,
+            BtnHeight => crate::compmem::bounds(me).height as isize,
+            // SAFETY: the game's live list item (the Item ops' `t`)
+            ItemWidthAt => (unsafe { std::ptr::addr_of_mut!((*item).width) }) as isize,
+            // SAFETY: as above
+            ItemHeightAt => (unsafe { std::ptr::addr_of_mut!((*item).height) }) as isize,
+            // SAFETY: as above
+            _ => isize::from(unsafe { (*item).selected } != 0),
+        })
+    }
+    #[cfg(test)]
+    pub(crate) fn test_op(&self, o: EeWonLeafOp) -> isize {
+        self.op(o, 0, 0)
     }
     fn get(&self, o: EeWonLeafOp, a: isize) -> i32 {
         self.op(o, a, 0) as i32

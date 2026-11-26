@@ -134,3 +134,25 @@ fn the_message_box_runs_in_its_own_window() {
     ];
     assert_eq!(take(), expect);
 }
+
+/// The box's window calls are gamewin.rs msgbox_op's only for a window the game binds (R6 WON GUI round 38): a
+/// driver's window (the one above) and the box's making stay the host's. The game reaches MSMessageBoxMsg only from a
+/// config's SHOWPARSETIME (WONCfgLoad.inl ParseTimeBox; the LAN game and the tour never show it).
+#[test]
+fn only_a_bound_window_is_answered_in_rust() {
+    use crate::shell::EeWonShellHostOp as H;
+    for op in [
+        H::MsgWinParent,
+        H::MsgWinTitle,
+        H::MsgWinStyle,
+        H::MsgWinCreate,
+        H::MsgWinAdd,
+        H::MsgRunDialog,
+        H::MsgWinClose,
+    ] {
+        assert_eq!(crate::gamewin::msgbox_op(op, 7, 0x99, 0), None, "{op:?}");
+    }
+    for op in [H::MsgBoxNew, H::MsgWinNew, H::MsgShellOp, H::MsgFocus] {
+        assert_eq!(crate::gamewin::msgbox_op(op, 7, 0, 0), None, "{op:?}");
+    }
+}

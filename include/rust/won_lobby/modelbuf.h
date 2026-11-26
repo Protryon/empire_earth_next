@@ -157,6 +157,10 @@ enum class EeWonModelBufOp : uint32_t {
   PlayerReady,
   /// `pl->WriteData(*wb)`.
   PlayerWriteData,
+  /// `return ReadOr([&] { return (intptr_t)rb->ReadByte(); });`.
+  ReadByte,
+  /// `(intptr_t)pl->mModel` (an EELobbyPlayer's slot is read and written here).
+  SelfModel,
 };
 
 /// The calls in (the object is the game, but for the player's calls).

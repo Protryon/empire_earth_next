@@ -13,8 +13,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEUIBuildWall.h"
-#include "ee/EEUIBuildGate.h"
 #include "ee/EEARust.h"
 
 // the placements' world calls (placement_ffi.rs: Initialize, Terminate, the gate's ClearGhostUnits)

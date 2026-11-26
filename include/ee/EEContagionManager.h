@@ -33,7 +33,7 @@ public:
     void DumpOutOfSynch(FILE* inFile) { ee_contagion_manager_dump(this->mRust, (uint64_t)(uintptr_t)inFile); }
     long GetOutOfSynchChecksum() { return ee_contagion_manager_checksum(this->mRust); }
     // the loaded helpers' calamities by index (helpers whose calamity is gone are destroyed)
-    long RestorePointers(std::vector<EECalamity*>& inCalamities);
+    long RestorePointers(std::vector<EECalamity*>& inCalamities) { return ee_contagion_manager_restore(this->mRust, reinterpret_cast<const uint64_t*>(inCalamities.data()), inCalamities.size()); }
     // the new helper's id (the plague passes its target unit, the area effects none)
     long CreateContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity, EEUnit* inTargetUnit)
     {

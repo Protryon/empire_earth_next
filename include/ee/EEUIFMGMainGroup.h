@@ -23,7 +23,8 @@ extern GEFont* gU531930;                    // 0x531930 (a UI font; Empire Earth
 class EEUIFMGMainGroup : public EeScreensMainGroupFields {
 public:
     EEUIFMGMainGroup(EEUIFMainGame* inOwner);   // 0x267ec8 (the main game form's CreateGroup(0))
-    ~EEUIFMGMainGroup();                    // (??_G 0x267f1c)
+    // (??_G 0x267f1c)
+    ~EEUIFMGMainGroup() { delete this->mStatusBox; }
     // The group's members but ShowCommands (the original's Refresh, SetUnit, GetSelectedUnit, Open, ShowCommandButton,
     // ShowSpecialButtons, Update, WantsRefresh): ee_screens main_group.rs over the host below
     void Refresh() { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0); }
@@ -31,10 +32,7 @@ public:
     bool WantsRefresh() { return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0; }
     // 0x268162: the first selected unit with a +0x3c value, else the first selected unit, else the local player's
     // +0x9d4 (does not read `this`)
-    EEUnit* GetSelectedUnit()
-    {
-        return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0));
-    }
+    EEUnit* GetSelectedUnit() { return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0)); }
     void Open(EEUIFMainGame* inForm) { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_OPEN, NULL, 0); }       // 0x2681c2 (the main game form's Open; provisional name)
     // Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
     // commands, its available techs with hot keys, airport timers); hides them all for others (main_group_calls.rs)

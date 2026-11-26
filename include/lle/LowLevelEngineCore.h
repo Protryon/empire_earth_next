@@ -53,11 +53,7 @@ LLE_API extern UString gStartupDirectory;
 
 // The Error System is Rust's (rust/crates/ee_base/src/error): ESVerify reports a failed verification (file, line,
 // expression) on stderr, breaks into the debugger and aborts (a nested failure is ignored); ESRecordNativeError
-// records a nonzero native error and returns it.
-inline void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression)
-{
-    ee_error_verify(inFile, inLine, inExpression);
-}
+// records a nonzero native error and returns it.\ninline void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression) { ee_error_verify(inFile, inLine, inExpression); }
 // a float's bits and back (the hosts' intptr_t arguments)
 inline uint32_t UFloatBits(float inValue) { return __builtin_bit_cast(uint32_t, inValue); }
 inline float UBitsFloat(intptr_t inBits) { return __builtin_bit_cast(float, (uint32_t)inBits); }
@@ -90,8 +86,7 @@ inline long UFormat(S* inState, char* (*inBuffer)(S*, unsigned long), void (*inE
 }
 // Formats a debug message (cut at 1023 characters: the original's vsprintf overran its buffer) and sends it to the
 // debugger when the startup directory's Filter.txt lets it through (ee_error_debug_end)
-inline void ESDebugEnd(void*, char* inText, unsigned long inSize)
-    { ee_error_debug_end(inText, inSize, &gStartupVolume, &gStartupDirectory); }
+inline void ESDebugEnd(void*, char* inText, unsigned long inSize) { ee_error_debug_end(inText, inSize, &gStartupVolume, &gStartupDirectory); }
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgcc-compat"
 template <class... A> LLE_PRINTF_TEMPLATE(1, 2) inline void ESDebugOut(const char* inFormat, A... inArguments)
@@ -144,18 +139,12 @@ inline float UMSin(float inAngle) { return UMCos(1.5707964f - inAngle); }
 // low 32 bits: the loader writes 4 bytes, whatever the pointer size). uint32_t on every data model, so the "none"
 // id compares equal to 0xffffffff and to -1, and (int32_t)USavedID(p) is -1 for it (a (long) cast would not be on
 // LP64, where long is 64-bit).
-template <class T> inline uint32_t USavedID(T* inField)
-{
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(inField));
-}
+template <class T> inline uint32_t USavedID(T* inField) { return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(inField)); }
 // The "none" id, index, channel or sample of an unsigned long (or long): all 32 bits set (written -1, (unsigned
 // long)-1 or 0xffffffff). On LP64 a value set to -1 in memory has 64 bits set while one read from a file or message
 // (4 bytes) has 32, so the test looks at the low 32 bits; both are "none" on every data model (on Windows this is
 // `inValue == 0xffffffff`).
-inline bool UIsNone32(unsigned long inValue)
-{
-    return static_cast<uint32_t>(inValue) == 0xffffffffu;
-}
+inline bool UIsNone32(unsigned long inValue) { return static_cast<uint32_t>(inValue) == 0xffffffffu; }
 // lrintf: the float rounded in the current rounding mode. On x86-64 a value well inside 32 bits is rounded by
 // cvtss2si, which rounds in MXCSR's mode, where the CRT's lrintf rounds too (_controlfp sets it; same result), but
 // without the UCRT's floating-point environment calls around it (12% of a late headless game). Other values and other
@@ -169,16 +158,10 @@ inline long UMRint(float inValue)
     return lrintf(inValue);
 }
 // Provisional name. Rounds in the current rounding mode (to nearest), as the VC6 build's fld/fistp did.
-inline long UMFloatToLong(float inValue)
-{
-    return UMRint(inValue);
-}
+inline long UMFloatToLong(float inValue) { return UMRint(inValue); }
 // Provisional name (not exported). Default.dll 0x41ca: `fcom [0.0]; jae; fchs` with no fabs call, re-evaluated
 // whole inside max().
-inline float UMAbs(float inValue)
-{
-    return inValue < 0.0f ? -inValue : inValue;
-}
+inline float UMAbs(float inValue) { return inValue < 0.0f ? -inValue : inValue; }
 // Provisional name. Default.dll (EEClumps 0x7ff1): the same fld/fistp, then `fild r; fcomp v; jbe; dec r`:
 // rounds down when the rounded value is above the input (floor under round-to-nearest).
 // Provisional name. Default.dll units 11/12 (0x15970, 0x16035, 0x16461, ...): the same floor, but the rounded

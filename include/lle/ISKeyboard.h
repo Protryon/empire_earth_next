@@ -15,8 +15,7 @@ public:
     // modifier bit (1 Shift, 2 Control, 4 Alt) of a DIK_* code; 0xe0..0xe2 are the extended (either-side) keys
     static unsigned long ComputeModifierState(unsigned long inKey) { return ee_input_modifier_state(inKey); }
     // the key at a scan code (NULL for a code without one); kErrorBeyondEnd past 255
-    long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
-        { return ee_input_keyboard_entity(Rust(), inIndex, (const EeInputEntity**)&outEntity); }
+    long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const { return ee_input_keyboard_entity(Rust(), inIndex, (const EeInputEntity**)&outEntity); }
     unsigned long GetModifierState() const { return ee_input_keyboard_modifiers(Rust()); }
     bool GetShouldUpdate() const { return ee_input_keyboard_should_update(Rust()); }
     // reads the buffered key events (presses, releases, modifiers, double presses) at TMGetTime

@@ -11,7 +11,6 @@
 #include <windows.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GEViewport.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEModel.h"
@@ -24,7 +23,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
-#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp camera_host.rs)
 #include "ee/EECombatGoals.h"
 
 // the GE value classes and their Rust mirrors share their storage (lle/GERust.h)

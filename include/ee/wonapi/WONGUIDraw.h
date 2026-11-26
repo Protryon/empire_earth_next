@@ -1,6 +1,6 @@
 // WONGUI's draw plans (ee_won's guidraw module, rust/crates/ee_won_gui/src/guidraw.rs): the C++ gathers a paint's
-// inputs, Rust returns the ordered draw operations, and WONDrawRun executes them on the Graphics (the Surface,
-// PlatGraphics, image and font calls stay C++).
+// inputs, Rust returns the ordered draw operations, and gfxrun.rs runs them on the Graphics (R6 WON GUI round 38;
+// the image, font and wrapped-text calls are Graphics.cpp's host).
 #ifndef EE_WONAPI_WONGUIDRAW_H
 #define EE_WONAPI_WONGUIDRAW_H
 #include "rust/won_gui/guidraw.h"
@@ -44,66 +44,20 @@ private:
     size_t mCount;
 };
 
-// executes one operation; EE_WON_DRAW_CALL goes to the caller's handler
-template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, const WONDrawSlots& s, Call&& call)
-{
-    switch (o.kind) {
-        case EE_WON_DRAW_SET_COLOR: g.SetColor((DWORD)(unsigned int)o.a); break;
-        case EE_WON_DRAW_SET_SYS_COLOR: g.SetSysColor(o.a); break;
-        case EE_WON_DRAW_FILL_RECT: g.FillRect(o.a, o.b, o.c, o.d); break;
-        case EE_WON_DRAW_RECT: g.DrawRect(o.a, o.b, o.c, o.d); break;
-        case EE_WON_DRAW_DOTTED_RECT: g.DrawDottedRect(o.a, o.b, o.c, o.d); break;
-        case EE_WON_DRAW_LINE: g.DrawLine(o.a, o.b, o.c, o.d); break;
-        case EE_WON_DRAW_IMAGE: g.DrawImage(s.mImages[o.a], o.b, o.c); break;
-        case EE_WON_DRAW_IMAGE_SIZE: s.mImages[o.a]->SetSize(o.b, o.c); break;
-        case EE_WON_DRAW_PUSH_CLIP: g.PushClipRect(o.a, o.b, o.c, o.d); break;
-        case EE_WON_DRAW_POP_CLIP: g.PopClipRect(); break;
-        case EE_WON_DRAW_TRANSLATE: g.Translate(o.a, o.b); break;
-        case EE_WON_DRAW_SET_FONT: g.SetFont(s.mFont); break;
-        case EE_WON_DRAW_STRING: g.DrawString(*s.mString, (unsigned short)o.b, (unsigned short)o.c, o.d, o.e); break;
-        case EE_WON_DRAW_STRING_ALL: g.DrawString(*s.mString, o.b, o.c); break;
-        case EE_WON_DRAW_TEXT: s.mText->Paint(g, o.b, o.c); break;
-        case EE_WON_DRAW_CALL: call(o); break;
-        case EE_WON_DRAW_DOTTED_LINE: { // every other pixel in the current colour (TreeItem's dotted lines)
-            DWORD aColor = g.mColor;
-            int i = ((o.d ? o.b : o.a) & 1) ? 1 : 0;
-            for (; i < o.c; i += 2) {
-                if (o.d) g.SetPixel(o.a, o.b + i, aColor);
-                else g.SetPixel(o.a + i, o.b, aColor);
-            }
-            break;
-        }
-        case EE_WON_DRAW_PIXEL: g.SetPixel(o.a, o.b, (DWORD)(unsigned int)o.c); break;
-        case EE_WON_DRAW_SYS_PIXEL: g.SetPixel(o.a, o.b, g.GetStandardColor(o.c)); break;
-        case EE_WON_DRAW_FILL_ELLIPSE: g.FillEllipse(o.a, o.b, o.c, o.d); break;
-        case EE_WON_DRAW_ARC: g.DrawArc(o.a, o.b, o.c, o.d, o.e, o.f); break;
-        default: break;
-    }
-}
-
+// executes one operation (gfxrun.rs); EE_WON_DRAW_CALL is the caller's (none asks for it here)
 struct WONDrawNoCall {
     void operator()(const EeWonDrawOp&) {}
 };
-// one operation with no slots and no call (the component hosts' Draw op)
-inline void WONDrawPlain(Graphics& g, const EeWonDrawOp& o)
+template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, const WONDrawSlots& s, Call&&)
 {
-    WONDrawSlots aSlots;
-    WONDrawNoCall aNoCall;
-    WONDrawOne(g, o, aSlots, aNoCall);
-}
-
-template <class Call> inline void WONDrawRun(Graphics& g, const WONDrawOps& ops, const WONDrawSlots& s, Call call)
-{
-    for (const EeWonDrawOp* o = ops.begin(); o != ops.end(); ++o)
-        WONDrawOne(g, *o, s, call);
+    ee_won_graphics_draw(g.Rec(), &o, 1, (const EeWonDrawSlots*)&s);
 }
 inline void WONDrawRun(Graphics& g, const WONDrawOps& ops, const WONDrawSlots& s)
 {
-    WONDrawRun(g, ops, s, WONDrawNoCall());
+    ee_won_graphics_draw(g.Rec(), ops.begin(), (size_t)(ops.end() - ops.begin()), (const EeWonDrawSlots*)&s);
 }
 
-// the Windows skin's drawing (mspaint.rs): one paint's inputs, its plan run on the Graphics; the plan's text call is
-// the button's DrawButtonText
+// the Windows skin's drawing (mspaint.rs): one paint's inputs, its plan run on the Graphics (gfxrun.rs)
 inline EeWonMsPaint WONMsPaintOf(EeWonMsPaintKind k, int w, int h, uint32_t flags = 0, int a = 0, int b = 0,
                                  int c = 0, int d = 0, int e = 0)
 {
@@ -112,11 +66,7 @@ inline EeWonMsPaint WONMsPaintOf(EeWonMsPaintKind k, int w, int h, uint32_t flag
     p.a = a; p.b = b; p.c = c; p.d = d; p.e = e;
     return p;
 }
-inline void WONMsPaint(Graphics& g, const EeWonMsPaint& p, MSButtonBase* text = NULL)
-{
-    WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_mspaint_plan(&p, o, n); }), WONDrawSlots(),
-               [&](const EeWonDrawOp& o) { if (text != NULL && o.a == EE_WON_MSPAINT_CALL_TEXT) text->DrawButtonText(g, o.b, o.c); });
-}
+inline void WONMsPaint(Graphics& g, const EeWonMsPaint& p) { ee_won_graphics_paint(g.Rec(), &p); }
 
 // (the font measures a wrapped text's plan asks for are wrapobj.rs's, over platfont.rs: R6 WON GUI round 36)
 

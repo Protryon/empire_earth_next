@@ -32,8 +32,7 @@ public:
     virtual void SetNormal(const GEVector& inNormal, unsigned long inIndex) { this->Set(EeGeVaField::Normal, inIndex, &inNormal); }
     virtual void SetOpacity(float inOpacity, unsigned long inIndex) { this->Set(EeGeVaField::Opacity, inIndex, &inOpacity); }   // slot 0x2c
     virtual void SetPoint(const GE3DPoint& inPoint, unsigned long inIndex) { this->Set(EeGeVaField::Point, inIndex, &inPoint); }   // slot 0x30
-    virtual void SetTextureCoordinate(const GETextureCoordinate& inCoordinate, unsigned long inIndex)
-        { this->Set(EeGeVaField::Uv, inIndex, &inCoordinate); }
+    virtual void SetTextureCoordinate(const GETextureCoordinate& inCoordinate, unsigned long inIndex) { this->Set(EeGeVaField::Uv, inIndex, &inCoordinate); }
     virtual void SetVertex(const GEColor& inColor, const GE3DPoint& inPoint, const GEVector& inNormal,
                            const GETextureCoordinate& inCoordinate, float inOpacity, unsigned long inIndex)
     {
@@ -44,10 +43,8 @@ public:
     void* GetVertices() const { return this->mVertices; }   // the GPU's vertices (GXVERTEX or GXVERTEX_STD_COLOR)
 
     static float* Floats(const void* inValue) { return reinterpret_cast<float*>(const_cast<void*>(inValue)); }
-    void Get(EeGeVaField inField, unsigned long inIndex, void* outValue) const
-        { ee_ge_va_get(this->mRust, inField, inIndex, Floats(outValue)); }
-    void Set(EeGeVaField inField, unsigned long inIndex, const void* inValue)
-        { ee_ge_va_set(this->mRust, inField, inIndex, Floats(inValue)); }
+    void Get(EeGeVaField inField, unsigned long inIndex, void* outValue) const { ee_ge_va_get(this->mRust, inField, inIndex, Floats(outValue)); }
+    void Set(EeGeVaField inField, unsigned long inIndex, const void* inValue) { ee_ge_va_set(this->mRust, inField, inIndex, Floats(inValue)); }
 
     void* mVertices;                        // the Rust array's vertices
     EeGeVertexArray* mRust;

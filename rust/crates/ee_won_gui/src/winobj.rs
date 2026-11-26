@@ -899,21 +899,6 @@ impl EeWonWindow {
     }
 }
 
-/// A key, mouse or input handler (`call`: HandleKeyEvent, HandleMouseEvent, HandleInputEvent) over the C++ event's
-/// record (R6 WON GUI round 37: the input events carry the record the handlers read, `InputEvent::mEv`).
-///
-/// # Safety
-/// `win` is live; `event` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_win_event(
-    win: *const EeWonWindow,
-    call: EeWonWinCall,
-    event: *const EeWonWinEvent,
-) -> isize {
-    // SAFETY: live (the contract)
-    unsafe { (*win).call(call, event as isize, 0) }
-}
-
 /// The root container's method `call` in the game (the C++ RootContainer's virtuals, which nothing overrides:
 /// its own are the Rust root's, the others Component's and Container's, run by the component's call).
 ///

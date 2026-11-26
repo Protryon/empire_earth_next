@@ -21,8 +21,7 @@ public:
     void SetOpacity(float inOpacity) { ee_ge_prim_set_opacity(this->mRust, 0, inOpacity); }
     void SetPoint(const GE2DPoint& inPoint) { ee_ge_prim_set_xy(this->mRust, 0, (const EeGe2DPoint*)&inPoint); }
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_prim_set_texture(this->mRust, inTexture, inScreen); }
-    void SetTextureCoordinate(const GETextureCoordinate& inCoordinate)
-        { ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexSetUv, 0, (void*)&inCoordinate); }
+    void SetTextureCoordinate(const GETextureCoordinate& inCoordinate) { ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexSetUv, 0, (void*)&inCoordinate); }
     URust<EeGePrim> mRust;                        // the point (ee_ge prim.rs)
 };
 

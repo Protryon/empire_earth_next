@@ -87,10 +87,8 @@ public:
     void ForceUIUpdate() { this->Call(EeUiManagerCall::ForceUiUpdate); }
     GEBitmap* GetAlphaSortDownBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 1)); }
     GEBitmap* GetAlphaSortUpBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 0)); }
-    GEBitmap* GetCheckDownNot() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 16)); }
     GEBitmap* GetCheckDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 12)); }
     GEBitmap* GetCheckDownOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 14)); }
-    GEBitmap* GetCheckNot() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 15)); }
     GEBitmap* GetCheckOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 11)); }
     GEBitmap* GetCheckOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 13)); }
     UIForm* GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
@@ -116,7 +114,6 @@ public:
     unsigned long GetNumberOfSurfaces() const { return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces); }
     GEBitmap* GetRadioDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 18)); }
     GEBitmap* GetRadioOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 17)); }
-    GEBitmap* GetRadioDownOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 20)); }
     GEBitmap* GetRadioOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 19)); }
     GERasterizer* GetRasterizer() const { return reinterpret_cast<GERasterizer*>(this->Call(EeUiManagerCall::Rasterizer)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sRMouseButton inline (27 sites)
@@ -154,8 +151,6 @@ public:
     void RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long)) { this->Call(EeUiManagerCall::RegisterFormCallback, (intptr_t)inCallback); }
     // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
     void RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
-    // Deletes the UI database tables (controls, backgrounds, fonts)
-    void RemoveDatabase() { ee_ui_manager_remove_database(); }
     void SetFont(unsigned long inIndex, GEFont* inFont) { this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont); }
     // Swaps the left and right mouse buttons when the left-handed setting changes
     static void SetMouseLeftHanded(bool inLeftHanded) { ee_ui_manager_set_mouse_left_handed(inLeftHanded); }

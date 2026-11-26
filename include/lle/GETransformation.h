@@ -15,8 +15,7 @@ public:                                                // column 3; rust/base/ma
     // inline (COMDAT 0x1000d5a1 in GE3DPoint.cpp's block): leaves the matrix uninitialized; Revolve/Rotate/Scale
     // (0x3513a..) construct their temporaries with no call, and no module imports it
     GETransformation(bool inInitialize) {}
-    GETransformation(const float inMatrix[4][4])
-        { ee_ge_t_copy(GERust(*this), reinterpret_cast<const float(*)[4][4]>(inMatrix)); }
+    GETransformation(const float inMatrix[4][4]) { ee_ge_t_copy(GERust(*this), reinterpret_cast<const float(*)[4][4]>(inMatrix)); }
     bool operator==(const GETransformation& inTransformation)   // all sixteen elements
         { return ee_ge_t_equal(GERust(*this), GERust(inTransformation)); }
     bool operator==(const GE3DPoint& inPoint) const { return ee_ge_t_at_point(GERust(*this), GERust(inPoint)); }
@@ -40,22 +39,17 @@ public:                                                // column 3; rust/base/ma
     // this x other into outTransformation (the bottom row copied from the other)
     void Apply(const GETransformation& inTransformation, GETransformation& outTransformation) const
         { ee_ge_t_compose(GERust(*this), GERust(inTransformation), GERust(outTransformation)); }
-    void Apply(const GE3DLine& inLine, GE3DLine& outLine) const
-        { ee_ge_t_apply_line(GERust(*this), GERust(inLine), GERust(outLine)); }
+    void Apply(const GE3DLine& inLine, GE3DLine& outLine) const { ee_ge_t_apply_line(GERust(*this), GERust(inLine), GERust(outLine)); }
     void Apply(const GE3DPlane& inPlane, GE3DPlane& outPlane) const   // its point and normal
         { ee_ge_t_apply_plane(GERust(*this), GERust(inPlane), GERust(outPlane)); }
     // yaw, pitch and roll from the rotation part
-    void ConvertToOrientation(GEOrientation& outOrientation) const
-        { ee_ge_t_orientation(GERust(*this), GERust(outOrientation)); }
+    void ConvertToOrientation(GEOrientation& outOrientation) const { ee_ge_t_orientation(GERust(*this), GERust(outOrientation)); }
     // the distances between positions: to a point with the full-precision square root, between transformations
     // with the fast one
     float DistanceTo(const GE3DPoint& inPoint) const { return ee_ge_t_distance_to_point(GERust(*this), GERust(inPoint)); }
-    float DistanceTo(const GETransformation& inTransformation) const
-        { return ee_ge_t_distance_to(GERust(*this), GERust(inTransformation)); }
-    float DistanceSquaredTo(const GE3DPoint& inPoint) const
-        { return ee_ge_t_distance_squared_to_point(GERust(*this), GERust(inPoint)); }
-    float DistanceSquaredTo(const GETransformation& inTransformation) const
-        { return ee_ge_t_distance_squared_to(GERust(*this), GERust(inTransformation)); }
+    float DistanceTo(const GETransformation& inTransformation) const { return ee_ge_t_distance_to(GERust(*this), GERust(inTransformation)); }
+    float DistanceSquaredTo(const GE3DPoint& inPoint) const { return ee_ge_t_distance_squared_to_point(GERust(*this), GERust(inPoint)); }
+    float DistanceSquaredTo(const GETransformation& inTransformation) const { return ee_ge_t_distance_squared_to(GERust(*this), GERust(inTransformation)); }
     void Dump() const {}
     unsigned long GetChecksum() const { return 0; }
     // inline: the exported COMDAT sits in GE3DPoint.cpp's GETransformation block (0x1000d783); GEQuaternion
@@ -74,11 +68,9 @@ public:                                                // column 3; rust/base/ma
     void MakeIdentity() { ee_ge_t_identity(GERust(*this)); }
     void Normalize() { ee_ge_t_normalize(GERust(*this)); }   // the three rotation columns to unit length
     // Revolve: yaw, pitch and roll applied after it (about its own axes); Rotate: before it (the parent axes)
-    void Revolve(const GEOrientation& inOrientation)
-        { this->Revolve(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
+    void Revolve(const GEOrientation& inOrientation) { this->Revolve(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
     void Revolve(float inYaw, float inPitch, float inRoll) { ee_ge_t_revolve(GERust(*this), inYaw, inPitch, inRoll); }
-    void Rotate(const GEOrientation& inOrientation)
-        { this->Rotate(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
+    void Rotate(const GEOrientation& inOrientation) { this->Rotate(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
     void Rotate(float inYaw, float inPitch, float inRoll) { ee_ge_t_rotate(GERust(*this), inYaw, inPitch, inRoll); }
     template <class F> long Save(F& inFile) const { return ee_ge_t_save(GERust(*this), GERustFile(inFile)); }
     // inline: EE-AOC.exe imports only Scale(x, y, z); GEPhysicalModel::Intersects expands it (GE3DPoint.cpp emits the
@@ -88,10 +80,7 @@ public:                                                // column 3; rust/base/ma
     // the rotation from yaw, pitch and roll applied in the order the name gives (the position kept)
     void SetOrientationYPR(const GEOrientation& inO) { this->SetOrientationYPR(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
     void SetOrientationYPR(float inYaw, float inPitch, float inRoll) { this->SetOrientation(4, inYaw, inPitch, inRoll); }
-    void SetOrientation(uint32_t inOrder, float inYaw, float inPitch, float inRoll)
-        { ee_ge_t_set_orientation(GERust(*this), inOrder, inYaw, inPitch, inRoll); }
-    void SetPosition(const GE3DPoint& inPosition)
-        { this->SetPosition(inPosition.GetX(), inPosition.GetY(), inPosition.GetZ()); }
+    void SetOrientation(uint32_t inOrder, float inYaw, float inPitch, float inRoll) { ee_ge_t_set_orientation(GERust(*this), inOrder, inYaw, inPitch, inRoll); }\n    void SetPosition(const GE3DPoint& inPosition) { this->SetPosition(inPosition.GetX(), inPosition.GetY(), inPosition.GetZ()); }
     // inline: SetPosition(const GE3DPoint&) 0xd93d loads z, y, x (call arguments) then stores
     void SetPosition(float inX, float inY, float inZ) { mMatrix[0][3] = inX; mMatrix[1][3] = inY; mMatrix[2][3] = inZ; }
     void SetScale(float inScale) { this->SetScale(inScale, inScale, inScale); }

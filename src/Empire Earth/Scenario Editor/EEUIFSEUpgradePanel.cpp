@@ -4,12 +4,6 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
-#include "lle/UIForm.h"
-#include "lle/NEMessage.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
 #include "lle/UICheckBox.h"
 
 

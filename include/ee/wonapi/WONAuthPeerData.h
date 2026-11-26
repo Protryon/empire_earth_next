@@ -5,6 +5,7 @@
 // the SmartPtrs hold them as before; a certificate's kind is the EE_WON_AUTH_* it was made as.
 #ifndef EE_WONAPI_WONAUTHPEERDATA_H
 #define EE_WONAPI_WONAUTHPEERDATA_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include <time.h>
 #include "ee/wonapi/WONElGamal.h"
 #include "rust/won_net/peerobj.h"
@@ -26,15 +27,13 @@ public:
         return ee_won_authobj_num(this->mImpl, inWhich, inA, inB, inC);
     }
     bool IsValid() const { return this->Num(EE_WON_AUTHOBJ_VALID) != 0; }
-    time_t GetIssueTime() const { return (time_t)this->Num(EE_WON_AUTHOBJ_ISSUE); }
-    time_t GetExpireTime() const { return (time_t)this->Num(EE_WON_AUTHOBJ_EXPIRE); }
+    #include EE_WON_DRV(PeerData_AuthBase) // the drivers' members
     bool VerifyPermissions(DWORD inUser, DWORD inCommunity, unsigned short inTrust) const
     {
         return this->Num(EE_WON_AUTHOBJ_PERMITS, inUser, inCommunity, inTrust) != 0;
     }
     // a key block's (or peer data's) Verify(other)
     bool Verify(const AuthBase* inOther) const { return inOther != NULL && ee_won_authobj_verify(this->mImpl, inOther->mImpl); }
-    bool IsValidAndVerified(const ElGamal& inKey) const { return ee_won_authobj_verified_by(this->mImpl, inKey.Raw()); }
     // the first key's Encrypt (a certificate's public key, a key block's current key); NULL when it cannot
     ByteBufferPtr Encrypt(const void* inData, int inLength) const
     {
@@ -72,10 +71,7 @@ public:
         return inImpl != NULL ? new AuthPeerData(inImpl, 0) : NULL;
     }
     const AuthBase* GetPubKeyBlock() const { return this->mKeyBlock.get(); }
-    time_t GetAuthDelta() const { return (time_t)this->Num(EE_WON_AUTHOBJ_PEER_DELTA); }
-    bool CertificateExpired(time_t inExtra = 0) const { return this->Num(EE_WON_AUTHOBJ_PEER_EXPIRED, inExtra) != 0; }
-    bool Certificate2Expired(time_t inExtra = 0) const { return this->Num(EE_WON_AUTHOBJ_PEER_EXPIRED2, inExtra) != 0; }
-    time_t GetExpireDelta() const { return (time_t)this->Num(EE_WON_AUTHOBJ_PEER_EXPIRE_DELTA); }
+    #include EE_WON_DRV(PeerData_AuthPeerData) // the drivers' members
     unsigned long GetUserId() const { return (unsigned long)this->Num(EE_WON_AUTHOBJ_USER_ID); } // the certificate's
     DWORD GetFirstCommunity() const { return (DWORD)this->Num(EE_WON_AUTHOBJ_FIRST_COMMUNITY); } // the second's
 };

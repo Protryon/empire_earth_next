@@ -48,8 +48,7 @@ public:
     void Clear() { *this = U2DRectangle(); }
     // left, top, right and bottom from (to) an open file, each through its typed call; kErrorNotOpen when it is not
     // open, else the first error (ee_base math u2d.rs; T is long or float)
-    long Load(FSFile& inFile)
-        { return ee_u2d_rect_io(&inFile, inFile.GetIsOpen(), &this->mBottom, std::is_floating_point<T>::value, false); }
+    long Load(FSFile& inFile) { return ee_u2d_rect_io(&inFile, inFile.GetIsOpen(), &this->mBottom, std::is_floating_point<T>::value, false); }
     long Save(FSFile& inFile) const
     {
         return ee_u2d_rect_io(&inFile, inFile.GetIsOpen(), const_cast<T*>(&this->mBottom), std::is_floating_point<T>::value,

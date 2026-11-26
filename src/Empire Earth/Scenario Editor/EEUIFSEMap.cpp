@@ -9,15 +9,9 @@
 // (ee_screenscpp_semp): the controls only the tab makes and the world it reads and posts to.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
-#include "lle/GEText.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIForm.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/UILBString.h"
 #include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"

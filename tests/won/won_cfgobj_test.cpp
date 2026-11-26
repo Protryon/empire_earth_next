@@ -5,6 +5,7 @@
 // the Rust test `cfgobj_golden` checks the decisions against it). `--print` prints the lines instead;
 // `--files DIR` parses each .cfg file of DIR into a plain ConfigObject and prints its result and warnings' CRC.
 // The exit code is the number of failures.
+#include "won_cfgparser_driver.h" // ConfigParser's driver-only methods (before the game headers)
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>

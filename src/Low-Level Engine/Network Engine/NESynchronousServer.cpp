@@ -9,7 +9,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
-#include "rust/net/net.h"
 #include "platform/PlatSim.h"
 
 // ---- the calls out

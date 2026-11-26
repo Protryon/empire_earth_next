@@ -48,8 +48,7 @@ public:
     unsigned long GetPixelFormat() const { return this->GetSurfaceDescription().mPixelFormat; }
     unsigned long GetPixelDepth() const { return this->GetSurfaceDescription().mPixelDepth; }
     unsigned long GetSurfaceVolatility() const { return this->GetSurfaceDescription().mSurfaceVolatility; }
-    const GESurfaceDescription& GetSurfaceDescription() const
-        { return *reinterpret_cast<const GESurfaceDescription*>(ee_dx7sf_description(this->mDX7)); }
+    const GESurfaceDescription& GetSurfaceDescription() const { return *reinterpret_cast<const GESurfaceDescription*>(ee_dx7sf_description(this->mDX7)); }
     unsigned long GetType() const { return this->GetSurfaceDescription().mType; }
     unsigned long GetWidth() const { return ee_dx7sf_logical_size(this->mDX7, this->mLogicalWidth, this->mLogicalShift, false); }
     long Lock() { return ee_dx7sf_lock(this->mDX7); }
@@ -75,8 +74,7 @@ public:
     void SetLogicalShift(unsigned long inShift) { this->mLogicalShift = inShift; }
     // An explicit logical size for a surface whose pixels are not a power of two times it (the WON lobby's frame:
     // 1024x768 logical at the window's pixels); 0, 0 goes back to the logical shift
-    void SetLogicalSize(unsigned long inWidth, unsigned long inHeight)
-        { this->mLogicalWidth = inWidth; this->mLogicalHeight = inHeight; }
+    void SetLogicalSize(unsigned long inWidth, unsigned long inHeight) { this->mLogicalWidth = inWidth; this->mLogicalHeight = inHeight; }
     unsigned long GetLogicalWidthSet() const { return this->mLogicalWidth; }
     unsigned long GetLogicalHeightSet() const { return this->mLogicalHeight; }
     unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }

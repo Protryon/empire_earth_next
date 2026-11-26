@@ -33,7 +33,6 @@ public:
     virtual bool FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }              // slot 0x04
     bool GetAlwaysFire() const { return this->mAlwaysFire; }
     static UIHotKey* GetHotKey(unsigned long inIndex) { return static_cast<UIHotKey*>(ee_ui_hotkey_at(inIndex)); }
-    static unsigned long GetHotKeyCount() { return ee_ui_hotkey_count(); }
     void GetHotKeyName(UWideString& outName) { outName = ee_ui_hotkey_display_name(this); }
     unsigned long GetKeyCount() const { return this->mKeyCount; }
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }

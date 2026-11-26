@@ -8,7 +8,6 @@
 #include <math.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/FSRestorable.h"
 #include "lle/SESoundManager.h"
@@ -16,7 +15,6 @@
 #include "lle/GEModel.h"
 #include "lle/GEViewport.h"
 
-#include "ee/EEEffect.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -28,7 +26,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEffectKindIDs.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EESoundObject.h"
@@ -37,7 +34,6 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEContagionFunctor.h"
@@ -45,7 +41,6 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EESaveGameFiles.h"
-#include "rust/game/gamecpp.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");

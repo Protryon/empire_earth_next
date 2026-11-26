@@ -19,8 +19,7 @@ public:
     void SetAttenuation1(float inAttenuation) { this->mRust.attenuation1 = inAttenuation; }
     void SetAttenuation2(float inAttenuation) { this->mRust.attenuation2 = inAttenuation; }
     void SetColor(const GEColor& inColor) { ee_ge_light_set_color(&this->mRust, reinterpret_cast<const float(*)[3]>(&inColor)); }
-    void SetDirection(const GEVector& inDirection)
-        { ee_ge_light_set_direction(&this->mRust, reinterpret_cast<const float(*)[3]>(&inDirection)); }
+    void SetDirection(const GEVector& inDirection) { ee_ge_light_set_direction(&this->mRust, reinterpret_cast<const float(*)[3]>(&inDirection)); }
     void SetIntensity(float inIntensity) { ee_ge_light_set_intensity(&this->mRust, inIntensity); }
     void SetStyle(unsigned long inStyle) { this->mRust.style = inStyle; }
     EeGeLight mRust;

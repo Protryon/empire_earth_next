@@ -23,8 +23,7 @@ public:
     bool GetCreateMIPMaps() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::CreateMipMaps) != 0; }
     float GetFrameHeight() const { return this->GetFrameSurface()->GetHeight() * this->GetFrameUVSize(); }
     GESurface* GetFrameSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameSurface); }
-    const GETextureCoordinate& GetFrameTopLeftCorner() const
-        { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
+    const GETextureCoordinate& GetFrameTopLeftCorner() const { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
     unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
@@ -35,10 +34,8 @@ public:
     unsigned long GetFrame() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::Frame); }
     unsigned long GetFrameCount() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameCount); }
     float GetFrameUVSize() const { return ee_ge_tex_frame_uv_size(this->mRust); }
-    unsigned long GetMipLevelCount() const
-        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::MipLevelCount); }
-    unsigned long GetNumMipLevelsToDrop() const
-        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::NumMipLevelsToDrop); }
+    unsigned long GetMipLevelCount() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::MipLevelCount); }
+    unsigned long GetNumMipLevelsToDrop() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::NumMipLevelsToDrop); }
     GEScreen* GetScreen() const { return (GEScreen*)ee_ge_tex_get(this->mRust, EeGeTexVal::Screen); }
     const GETStage* GetStage() const { return (const GETStage*)ee_ge_tex_stage(this->mRust); }
     GESurface* GetSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::Surface); }
@@ -47,8 +44,7 @@ public:
     void Dereference() { ee_ge_tex_dereference(this->mRust); }
     // Returns the surface's allocated size, times the frame count when each frame has its own texture
     unsigned long GetAllocatedSize() { return ee_ge_tex_allocated_size(this->mRust); }
-    long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
-        { return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow); }
+    long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow) { return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow); }
     // (Save 0x10033749 wrote a texture file (.sst): retired under D9)
     // Shows the given animation frame: picks the frame texture, or moves the UV corner to its grid cell
     void SetFrame(unsigned long inFrame) { ee_ge_tex_set_frame(this->mRust, inFrame); }
@@ -74,8 +70,7 @@ public:
     // filtering and clamped addressing (the active rasterizer the textures' handles are made on: texobj_tex.rs)
     GETexture(GETextureManager* inManager) { this->mRust = ee_ge_tex_new(&GETexture::Host, this, inManager); }
     // private too (AAE): a texture around an existing surface (referenced), registered with the rasterizer
-    GETexture(GESurface* inSurface, GETextureManager* inManager)
-        { this->mRust = ee_ge_tex_new_on_surface(&GETexture::Host, this, inManager, inSurface); }
+    GETexture(GESurface* inSurface, GETextureManager* inManager) { this->mRust = ee_ge_tex_new_on_surface(&GETexture::Host, this, inManager, inSurface); }
     unsigned long GetFrameFormat() const   // ?GetFrameFormat@GETexture@@ABEKXZ
         { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameFormat); }
     // port (D9): the frames of a texture's PNG files, decoded by Rust (GEFindTextureFile), in place of a texture file
@@ -85,11 +80,9 @@ public:
     // port: the members the friends read and write (the manager's host, the store gate's digest), this texture's own
     // (GetData, GetIsCompressed and GetIsPromoted read the current frame's)
     bool GetIsManaged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsManaged) != 0; }
-    GETexture* GetCurrentFrameTexture() const
-        { return (GETexture*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameTexture); }
+    GETexture* GetCurrentFrameTexture() const { return (GETexture*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameTexture); }
     GETexture* const* GetFrames() const { return (GETexture* const*)ee_ge_tex_frames(this->mRust); }
-    unsigned long GetFramesPerRow() const
-        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FramesPerRow); }
+    unsigned long GetFramesPerRow() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FramesPerRow); }
     void* GetOwnData() const { return (void*)ee_ge_tex_get(this->mRust, EeGeTexVal::Data); }
     bool GetOwnIsCompressed() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsCompressed) != 0; }
     bool GetOwnIsPromoted() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsPromoted) != 0; }

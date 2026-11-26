@@ -9,10 +9,6 @@
 #include <stdlib.h>
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPlayer.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "ee/EEDatabaseTables.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
@@ -20,7 +16,6 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // ee_game gamecpp options.rs's EoSlotEmpty)
 
 #include "ee/EEStartingResources.h"
-#include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp options.rs)
 
 // Creates an empty, closed player slot with no name, colour, team or starting citizens
 EEGameOptionsPlayer::EEGameOptionsPlayer()

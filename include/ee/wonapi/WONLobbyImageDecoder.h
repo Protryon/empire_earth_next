@@ -15,8 +15,9 @@
 #include "rust/won_gui/gfxplat.h"
 namespace WONAPI {
 class DisplayContext;
-class NativeImage;
-class RawImage;
+class Image;
+typedef Image NativeImage;
+typedef Image RawImage;
 class ImageAttributes {
 public:
     int mWidth,mHeight;

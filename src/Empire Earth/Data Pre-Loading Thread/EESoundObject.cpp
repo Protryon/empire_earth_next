@@ -21,7 +21,6 @@
 #include "ee/EEMusicObject.h"
 #include "ee/EERules.h"
 #include "ee/EEPhysics.h"
-#include "rust/game/preload_media.h"
 
 std::vector<EESoundObject*> gSoundObjects;
 

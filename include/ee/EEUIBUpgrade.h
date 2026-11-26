@@ -46,20 +46,14 @@ public:
     }
     // Marks the button and its cost label dirty
     virtual void SetDirty(bool inDirty) { ee_screens_upb_set_dirty((uintptr_t)this, inDirty); }
-    void UpdateCost(const UWideString& inText)
-    {
-        ee_screens_upgrade_update_cost(EEUIBUpgradeCall(this, const_cast<UWideString*>(&inText)).Ptr());
-    }
+    void UpdateCost(const UWideString& inText) { ee_screens_upgrade_update_cost(EEUIBUpgradeCall(this, const_cast<UWideString*>(&inText)).Ptr()); }
     // Presses the button unless the improvement is unavailable, and updates the help text
     virtual void ButtonDown() { ee_screens_upb_button_down((uintptr_t)this); }
     virtual void ButtonUp() { ee_screens_upgrade_button_up(EEUIBUpgradeCall(this, true).Ptr()); }
     // the in-class overrides follow the ctor with the ??_G (0x256943, 0x256949)
     virtual long MouseLButtonDown() { return UIButton::MouseLButtonDown(); }
     virtual long MouseLButtonUp() { return UIButton::MouseLButtonUp(); }
-    virtual long MouseMove(const GE2DPoint& inLocation)
-    {
-        return (long)ee_screens_upgrade_mouse_move(EEUIBUpgradeCall(this, NULL, &inLocation).Ptr());
-    }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)ee_screens_upgrade_mouse_move(EEUIBUpgradeCall(this, NULL, &inLocation).Ptr()); }
     // Shows the hover state only when the improvement can be bought
     virtual void MouseOver() { ee_screens_upb_mouse_over((uintptr_t)this); }
     // Presses the button on a right press, capturing the mouse
