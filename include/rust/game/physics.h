@@ -78,18 +78,10 @@ enum class EePhysCpp : uint32_t {
   CaptureExecuted,
   UnitStoreCheck,
   TestHookCall,
-  IsClient,
   /// `gCommunications != NULL && gCommunications->IsServer()`
-  CommsIsServer,
-  ClientHasLeft,
-  IncrementCts,
-  SetAverageUpdate,
-  SetAverageGap,
   ProcessLocalInput,
   LogChecksumResponse,
   LogResponse,
-  IsPaused,
-  CurrentCommsTick,
   PauseGame,
   /// `SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {...}), 15000, 12)` with the name a0
   SendAutoSave,
@@ -114,9 +106,6 @@ enum class EePhysCpp : uint32_t {
   ContagionDump,
   MapDump,
   CampaignNameLength,
-  CampaignChecksum,
-  IsScenarioGame,
-  Resources,
   CanBuyCivilization,
   CheckUnitList,
   PlayerAddPendingUnits,
@@ -142,9 +131,7 @@ enum class EePhysCpp : uint32_t {
   HasJitPower,
   /// `new UWideString`
   /// `gResource->GetString(a0, *(UWideString*)p)`
-  ResourceString,
   /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
-  ChatLog,
   IsMainGameForm,
   OptionsButtonBlink,
   CivTimerLimit,
@@ -154,8 +141,6 @@ enum class EePhysCpp : uint32_t {
   ShiftKey,
   /// `((ISEntity*)p)->GetValue()`
   EntityValue,
-  AutoSaves,
-  AutoSaveMilliseconds,
   SetLastAutoSave,
   /// `gSavedGameExtension` into the buffer a0 (room a1)
   SavedGameExtension,
