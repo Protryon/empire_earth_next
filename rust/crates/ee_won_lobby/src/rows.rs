@@ -804,6 +804,43 @@ fn connect_call(_: &Connect, c: EeWonRowCall, item: isize, list: isize, a: isize
     }
 }
 
+// ---- FilterListItem (the game list's filter combos' add/remove row; LobbyNetCtrlHost.cpp's C++ class until R6 WON
+// lobby and network round 39: a TextListItem with no new virtuals)
+
+/// FilterListItem's own members: whether the row adds the typed text (false: removes it), the typed text's position
+/// in the combo list, the typed text and the column the combo filters (held `GUIStringData*`; 0 for an empty text).
+struct Filter {
+    is_add: Cell<bool>,
+    sel_pos: Cell<i32>,
+    text: Cell<isize>,
+    column: Cell<isize>,
+}
+
+impl Filter {
+    fn end(&self) {
+        // the members in reverse order: the column, the typed text
+        drop_ref(&self.column);
+        drop_ref(&self.text);
+    }
+}
+
+table!(FILTER, Filter, filter_call);
+
+/// TextListItem's own virtuals (FilterListItem had none of its own).
+fn filter_call(_: &Filter, c: EeWonRowCall, item: isize, list: isize, a: isize, b: isize, _: isize) -> isize {
+    match c {
+        EeWonRowCall::Paint => h(Op::RowTextPaint, item, a, list),
+        EeWonRowCall::CalcDimensions => h(Op::RowTextCalc, item, list, 0),
+        EeWonRowCall::Compare => h(Op::RowTextCompare, item, b, list) as i32 as isize,
+        EeWonRowCall::CanSelect | EeWonRowCall::MouseDown => 0,
+    }
+}
+
+/// A filter row's state (`None` for another row: a driver's world answers its own).
+fn filter_of(item: isize) -> Option<&'static Filter> {
+    state_of::<Filter>(item, &FILTER)
+}
+
 // ---- the controls' row ops
 
 /// The controls' row ops answered here in the game (lobbyctl.rs, after the model's answers); `None` for the rest.
@@ -825,6 +862,37 @@ pub(crate) fn ctl_op(op: LOp, a: isize, b: isize, c: isize) -> Option<isize> {
         LOp::UserRowNew => {
             let s = User { client: Cell::new(0), sort_key: Cell::new(0), show_separator: Cell::new(true) };
             make(&USER, s, true).0
+        }
+        // `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)`: an empty text with the
+        // combo's font, not adding, at position 0, the column named
+        LOp::ComboInsertFilterRow => {
+            let s = Filter { is_add: Cell::new(false), sel_pos: Cell::new(0), text: Cell::new(0), column: Cell::new(0) };
+            assign(&s.column, b);
+            let item = make(&FILTER, s, true).0;
+            h(Op::ItemSetFont, item, c, 0);
+            crate::widgets::combo_insert(a, item, -1)?;
+            0
+        }
+        LOp::FilterIsAdd => isize::from(filter_of(a)?.is_add.get()),
+        LOp::FilterSelPos => filter_of(a)?.sel_pos.get() as isize,
+        LOp::FilterText => filter_of(a)?.text.get(),
+        LOp::FilterColumn => filter_of(a)?.column.get(),
+        LOp::FilterSetSelPos => {
+            filter_of(a)?.sel_pos.set(b as i32);
+            0
+        }
+        LOp::FilterSetIsAdd => {
+            filter_of(a)?.is_add.set(b != 0);
+            0
+        }
+        LOp::FilterSetText => {
+            assign(&filter_of(a)?.text, b);
+            0
+        }
+        // `mFilterText = GUIString("")`: an empty text (0 here; every reader takes it as one)
+        LOp::FilterClearText => {
+            drop_ref(&filter_of(a)?.text);
+            0
         }
         LOp::ItemFriend => state_of::<Friend>(a, &FRIEND)?.friend.get(),
         LOp::ItemSetFriend => {

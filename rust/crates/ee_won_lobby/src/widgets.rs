@@ -41,6 +41,11 @@ fn combo<'a>(a: isize) -> Option<&'a EeWonComboBox> {
     // SAFETY: as `input`
     unsafe { get(a, Kind::Combo) }
 }
+/// `((ComboBox*)combo)->InsertItem(item, pos)` on the combo box's Rust object (None for another component).
+pub(crate) fn combo_insert(combo_box: isize, item: isize, pos: isize) -> Option<()> {
+    combo(combo_box)?.call(EeWonComboCall::InsertItem, item, pos, 0);
+    Some(())
+}
 fn list<'a>(a: isize) -> Option<&'a EeWonList> {
     // SAFETY: as `input`
     unsafe { get(a, Kind::List) }
