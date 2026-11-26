@@ -13,8 +13,10 @@ use crate::units::cu_misc::*;
 use crate::units::cu_more::*;
 use crate::units::cu_small::*;
 use crate::units::cu_world::*;
+use crate::units::eu_body::{EE_UNITS_EU_DO_MOVE_TO, EE_UNITS_EU_DO_SET_HIT_POINTS};
 use crate::units::goals;
 use crate::units::u12a_small::*;
+use crate::units::uc_is::{EE_UNITS_UC_IS_AIR_BASE, EE_UNITS_UC_IS_TRANSPORT};
 use crate::world::layout::{layout, EeWorldLayout};
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use crate::world::stats_fields::{EeUnitsUnitClassUpgradeFields, EeUnitsUnitClassUpgradeLinks};
@@ -218,6 +220,56 @@ impl P {
     unsafe fn enemy_of(self, other: P) -> c_ulong {
         // SAFETY: the caller's contract
         unsafe { (*self.saved()).mEnemies[(*other.rts()).mPlayerID as usize] }
+    }
+}
+
+/// `kUnitCategorySubmergedNaval`, `kUnitCategorySeaAnimal`, `kActionUnderAttack`
+const CU_VIEW_CATEGORY_SUBMERGED_NAVAL: c_ulong = 10;
+const CU_VIEW_CATEGORY_SEA_ANIMAL: c_ulong = 27;
+const CU_VIEW_ACTION_UNDER_ATTACK: i64 = 2018;
+
+/// `ee_units_cu_body(what, unit, a, b, c)` (an `EEComplexUnit` member's Rust body); the host's 0
+///
+/// # Safety
+/// `unit` a live complex unit.
+unsafe fn body(what: i32, unit: u64, a: i64, b: i64, c: i64) -> i64 {
+    // SAFETY: the caller's contract
+    unsafe { crate::units::cu_body::game::ee_units_cu_body(what, unit as usize as _, a, b, c) };
+    0
+}
+
+/// `ee_units_cu_small(what, unit, a, b)`; the host's 0
+///
+/// # Safety
+/// As [`body`].
+unsafe fn small(what: i32, unit: u64, a: u64, b: i64) -> i64 {
+    // SAFETY: the caller's contract
+    unsafe { crate::units::cu_small::game::ee_units_cu_small(what, unit as usize as _, a as usize as _, b) };
+    0
+}
+
+/// `ee_units_cu_tiny(what, unit, a, 0, 0, 0, 0, 0)`; the host's 0
+///
+/// # Safety
+/// As [`body`].
+unsafe fn tiny(what: i32, unit: u64, a: u64) -> i64 {
+    // SAFETY: the caller's contract
+    unsafe {
+        crate::units::u12a_small::game::ee_units_cu_tiny(what, unit as usize as _, a as usize as _, 0, 0, 0.0, 0.0, 0.0)
+    };
+    0
+}
+
+/// `mIsDisabled && !IsProtected()` of a complex unit (protected: disabled, by reason 0x1a or 0x1c)
+///
+/// # Safety
+/// A live complex unit.
+unsafe fn disabled_unprotected(u: U) -> bool {
+    // SAFETY: the caller's contract
+    unsafe {
+        let disabled = flag!(u.cx(), mIsDisabled);
+        let reason = (*u.cx()).mDisabledReason;
+        disabled && !(disabled && (reason == 0x1a || reason == 0x1c))
     }
 }
 
@@ -641,6 +693,123 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
                 f[0] = *at::<f32>(o.complex().0, l.complex_scale);
                 0
             }
+            // the members that are one Rust call (ee/EEUnit.h's inline forwarders), as the C++ statement made it
+            EE_UNITS_CU_START_ACTION => body(EE_UNITS_CU_DO_START_ACTION, unit, b as c_long as i64, 0, 0),
+            EE_UNITS_CU_UNIT_START_ACTION => body(EE_UNITS_CU_DO_START_ACTION, a, b as c_long as i64, 0, 0),
+            EE_UNITS_CU_PLAY_EFFECT => body(EE_UNITS_CU_DO_PLAY_EFFECT, unit, b as c_long as i64, 0, 0),
+            EE_UNITS_CU_CLEAR_GOALS => body(EE_UNITS_CU_DO_CLEAR_GOALS, unit, 0, 0, 0),
+            EE_UNITS_CU_UPDATE_JIT => body(EE_UNITS_CU_DO_UPDATE_JIT, unit, 0, 0, 0),
+            EE_UNITS_CU_KILL_CARGO => body(EE_UNITS_CU_DO_KILL_CARGO, unit, 0, 0, 0),
+            EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION => body(EE_UNITS_CU_DO_CANCEL_QUEUED_PRODUCTION, unit, 0, 0, 0),
+            EE_UNITS_CU_RELEASE_FIRE_EFFECT => body(EE_UNITS_CU_DO_RELEASE_FIRE_EFFECT, unit, 0, 0, 0),
+            EE_UNITS_CU_RELEASE_CONVERSION_EFFECT => body(EE_UNITS_CU_DO_RELEASE_CONVERSION_EFFECT, unit, 0, 0, 0),
+            EE_UNITS_CU_UPDATE_CAMOUFLAGE => body(EE_UNITS_CU_DO_UPDATE_CAMOUFLAGE, unit, b as c_long as i64, 0, 0),
+            EE_UNITS_CU_UPDATE_CAMOUFLAGE_COMMAND => {
+                body(EE_UNITS_CU_DO_UPDATE_CAMOUFLAGE, unit, u.command_type() as c_long as i64, 0, 0)
+            }
+            EE_UNITS_CU_CLEAR_GATHERED | EE_UNITS_CU_CLEAR_GATHERED_RESOURCE => {
+                body(EE_UNITS_CU_DO_SET_GATHERED_RESOURCE, unit, 0, 0, 0)
+            }
+            EE_UNITS_CU_LINK_PART_TO => body(EE_UNITS_CU_DO_LINK_PART, unit, a as i64, 0, 0),
+            EE_UNITS_CU_ADD_BUILD_TARGET_UNIT => body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, unit, a as i64, 0, 0),
+            EE_UNITS_CU_RELEASE_CARGO => body(EE_UNITS_CU_DO_RELEASE_CARGO, unit, a as i64, 0, 0),
+            EE_UNITS_CU_TAKE_OFF_MAP => body(EE_UNITS_CU_DO_TAKE_OFF_MAP, a, 0, 0, 0),
+            EE_UNITS_CU_ADD_CONTACT => body(EE_UNITS_CU_DO_ADD_CONTACT, a, b, 0, 0),
+            EE_UNITS_CU_CLEAR_GOAL_QUEUE | EE_UNITS_CU_S_CLEAR_GOAL_QUEUE => {
+                body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, unit, b as c_ulong as i64, 0, 0)
+            }
+            EE_UNITS_CU_PAY_INSURANCE => body(EE_UNITS_CU_DO_PAY_INSURANCE, unit, i64::from(b as u32), 0, 0),
+            EE_UNITS_CU_T_MOVE_TO_LOCATION => {
+                body(EE_UNITS_CU_DO_MOVE_TO_LOCATION, unit, bits(f[0]), bits(f[1]), i64::from(b != 0))
+            }
+            EE_UNITS_CU_SET_ANIMATION_STATE => body(EE_UNITS_CU_DO_SET_ANIMATION, unit, b as c_long as i64, -1, 0),
+            EE_UNITS_CU_COPY_ANIMATION => {
+                body(EE_UNITS_CU_DO_SET_ANIMATION, unit, (*o.cx()).mAnimation as c_long as i64, -1, 0)
+            }
+            EE_UNITS_CU_UPDATE_WATER_STATE_OFF => body(EE_UNITS_CU_DO_UPDATE_WATER_STATE, unit, 0, 0, 0),
+            EE_UNITS_CU_SET_HIT_POINTS => {
+                crate::units::eu_body::game::ee_units_eu_body(
+                    EE_UNITS_EU_DO_SET_HIT_POINTS,
+                    unit as usize as _,
+                    b as c_long as i64,
+                    0,
+                    0,
+                );
+                0
+            }
+            EE_UNITS_CU_MOVE_TO | EE_UNITS_CU_MOVE_TO_UPDATE => {
+                let update = op == EE_UNITS_CU_MOVE_TO_UPDATE && a != 0;
+                crate::units::eu_body::game::ee_units_eu_body(
+                    EE_UNITS_EU_DO_MOVE_TO,
+                    unit as usize as _,
+                    b as c_long as i64,
+                    c as c_long as i64,
+                    i64::from(update),
+                );
+                0
+            }
+            EE_UNITS_CU_CLEAR_HOLDER => tiny(EE_UNITS_CU_T_DO_CLEAR_HOLDER, unit, 0),
+            EE_UNITS_CU_HELD_CLEAR_HOLDER => {
+                let held = word(u.vector(l.complex_held_units).0, b as u64 * std::mem::size_of::<usize>() as u64);
+                tiny(EE_UNITS_CU_T_DO_CLEAR_HOLDER, held, 0)
+            }
+            EE_UNITS_CU_SET_OWNER => tiny(EE_UNITS_CU_T_DO_SET_OWNER, unit, a),
+            EE_UNITS_CU_CLEAR_GARRISON => {
+                crate::units::u12a_small::clear_garrison(&mut *u.cx());
+                0
+            }
+            EE_UNITS_CU_CLEAR_COLLISION => {
+                crate::units::u12a_small::clear_collision_state(&mut *u.cx());
+                0
+            }
+            EE_UNITS_CU_RELEASE_HEAL_EFFECT => small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, unit, 0, 0),
+            EE_UNITS_CU_RELEASE_SOUND => small(EE_UNITS_CU_S_DO_RELEASE_SOUND, unit, 0, 0),
+            EE_UNITS_CU_COPY_SOUND => small(EE_UNITS_CU_S_DO_SET_SOUND, unit, (*o.cx()).mSound as u64, 0),
+            EE_UNITS_CU_SET_ANIMATION_FRAME => {
+                small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, unit, 0, b as c_ulong as i64)
+            }
+            EE_UNITS_CU_COPY_ANIMATION_FRAME => {
+                small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, unit, 0, ulong(*at::<c_ulong>(a, l.complex_frame)))
+            }
+            EE_UNITS_CU_DROP_PATH => {
+                crate::units::waypoints::ee_units_waypoints_drop(unit);
+                0
+            }
+            EE_UNITS_CU_DROP_FINISHED_GOALS => {
+                goals::ee_units_unit_drop_finished_goals(unit, false);
+                0
+            }
+            EE_UNITS_CU_STOP => {
+                crate::units::cu_inline::ee_units_cu_set_velocity(u.uf(), u.cx(), 0.0);
+                0
+            }
+            EE_UNITS_CU_SET_PRODUCTION_TIME_FIELD => {
+                (*u.cx()).mProductionTime = b as c_long;
+                0
+            }
+            EE_UNITS_CU_SET_RELOAD_TIMER => {
+                (*u.cx()).mReloadTimer = b as c_long;
+                0
+            }
+            EE_UNITS_CU_SET_TINTED => {
+                (*u.cx()).mIsTinted = b != 0;
+                0
+            }
+            EE_UNITS_CU_CLEAR_TINT => {
+                (*u.cx()).mIsTinted = false;
+                0
+            }
+            EE_UNITS_CU_UNIT_DISABLED_UNPROTECTED => i64::from(disabled_unprotected(o)),
+            EE_UNITS_CU_IS_AIR_CATEGORY => i64::from(matches!(
+                (*class(l)).mCategory,
+                CU_VIEW_CATEGORY_SUBMERGED_NAVAL | CU_VIEW_CATEGORY_SEA_ANIMAL
+            )),
+            EE_UNITS_CU_IS_TRANSPORT => {
+                i64::from(crate::units::uc_is::ee_units_uc_is((*u.uf()).mUnitClass as u64, EE_UNITS_UC_IS_TRANSPORT))
+            }
+            EE_UNITS_CU_IS_AIR_BASE => {
+                i64::from(crate::units::uc_is::ee_units_uc_is((*u.uf()).mUnitClass as u64, EE_UNITS_UC_IS_AIR_BASE))
+            }
             // the goal queues (Rust's: goals.rs; past the queues the C++ indexed unchecked)
             EE_UNITS_CU_S_NUM_GOAL_QUEUES | EE_UNITS_CU_GOAL_QUEUE_COUNT => goals::unit_queues(unit).len() as i64,
             EE_UNITS_CU_UNIT_GOAL_QUEUE_COUNT => goals::unit_queues(a).len() as i64,
@@ -901,6 +1070,20 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> 
     let v = unsafe {
         match op {
             EE_UNITS_EU_COMPLEX => u.complex().0 as i64,
+            EE_UNITS_EU_DISABLED_UNPROTECTED => i64::from(disabled_unprotected(u.complex())),
+            EE_UNITS_EU_START_UNDER_ATTACK => {
+                body(EE_UNITS_CU_DO_START_ACTION, u.complex().0, CU_VIEW_ACTION_UNDER_ATTACK, 0, 0)
+            }
+            EE_UNITS_EU_SET_LAST_ATTACKER => {
+                crate::units::eu_more::game::ee_units_eu_more(
+                    crate::units::eu_more::EE_UNITS_EUM_DO_SET_LAST_ATTACKER,
+                    u.complex().0 as usize as _,
+                    a as usize as _,
+                    0,
+                    0,
+                );
+                0
+            }
             EE_UNITS_EU_TARGETABLE => {
                 i64::from(crate::units::uu_ffi::ee_units_uu_targetable(unit, (*o.uf()).mUnitClass as u64, 0))
             }

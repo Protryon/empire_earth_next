@@ -265,7 +265,7 @@ pub fn pool_off(value: Option<&[u8]>) -> bool {
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::cu_body::game::Game;
     use std::os::raw::c_void;

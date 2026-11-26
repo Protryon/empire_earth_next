@@ -107,7 +107,6 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         EEEuObject<EEComplexUnit>(inA)->TakeHit(EEEuObject<EEUnit>((uint64_t)theArgs[0]), (long)theArgs[1], (unsigned long)theArgs[2], (long)theArgs[3]);
         return 0;
     case EE_UNITS_EU_IN_CINEMATIC: return ::gWorld.mInCinematic;
-    case EE_UNITS_EU_DISABLED_UNPROTECTED: return theComplex->mIsDisabled && !theComplex->IsProtected();
     case EE_UNITS_EU_SPARKS: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactSparksEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_BLOOD: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_SET_INPUT: sHitInput = (long)inB; return 0;
@@ -117,9 +116,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_SET_DAMAGE: sHitDamage = (long)inB; return 0;
     case EE_UNITS_EU_APPLY_MORALE: theComplex->ApplyMorale(sHitAreaDamage, sHitDamage); return 0;
     case EE_UNITS_EU_DAMAGE: return sHitDamage;
-    case EE_UNITS_EU_SET_LAST_ATTACKER: theComplex->SetLastAttacker(EEEuObject<EEComplexUnit>(inA)); return 0;
     case EE_UNITS_EU_HAS_UNDER_ATTACK: return theComplex->mUnitClass->FindAction(kActionUnderAttack) != NULL;
-    case EE_UNITS_EU_START_UNDER_ATTACK: theComplex->StartAction(kActionUnderAttack); return 0;
     case EE_UNITS_EU_ACTION_CHANGED: theComplex->mUnitClass->ActionChanged(theComplex); return 0;
     case EE_UNITS_EU_SHOOTS_TRACERS:
         return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
