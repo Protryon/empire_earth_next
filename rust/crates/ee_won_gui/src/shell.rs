@@ -437,6 +437,10 @@ impl Sh {
             EeWonShellHostOp::WrapWidthOf => wrap(crate::wrapobj::msbtn_text(a), T::Width, 0),
             EeWonShellHostOp::SetWrap => wrap(crate::wrapobj::msbtn_text(a), T::SetWrap, b),
             EeWonShellHostOp::TextWidth => crate::wrapobj::game_wrap_op(a, T::Width, 0),
+            // a combo box's parts in place (R6 WON GUI round 41)
+            EeWonShellHostOp::ComboPart => crate::comboobj::game_set_part(self.comp, crate::comboobj::shell_part(a), b),
+            EeWonShellHostOp::ComboPartOn => crate::comboobj::game_set_part(a, crate::comboobj::shell_part(b), c),
+            EeWonShellHostOp::ComboGet => crate::comboobj::game_part(self.comp, crate::comboobj::shell_part(a)),
             _ => crate::gamewin::msgbox_op(op, a, b, c),
         };
         if let Some(r) = r {

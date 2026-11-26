@@ -129,6 +129,14 @@ impl Host {
         }
     }
     fn part(&self, p: EeWonSkinPart) -> isize {
+        // a combo box's parts in place in the game (R6 WON GUI round 41)
+        if matches!(self.kind, EeWonSkinLayKind::MsCombo | EeWonSkinLayKind::WonCombo | EeWonSkinLayKind::WonComboSize)
+            && matches!(p, EeWonSkinPart::Button | EeWonSkinPart::Edit | EeWonSkinPart::ListArea)
+        {
+            if let Some(r) = crate::comboobj::game_part(self.me(), crate::comboobj::shell_part(p as isize)) {
+                return r;
+            }
+        }
         self.op(EeWonSkinLay::Part, self.kind as isize, p as isize, 0)
     }
     fn field(&self, f: EeWonSkinField) -> i32 {

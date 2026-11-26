@@ -204,42 +204,10 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 {
     ComboBox* t = static_cast<ComboBox*>((Component*)inComp);
     switch (op) {
-    // (the list area's methods and an item's width are comboobj.rs game_list_op's in the game: R6 WON GUI round 38)
-    case Op::ComboPart:
-        switch (a) {
-        case 0: return (intptr_t)static_cast<Component*>(t->mEdit.get());
-        case 1: return (intptr_t)static_cast<Component*>(t->mButton.get());
-        case 2: return (intptr_t)static_cast<Component*>(t->mListBox.get());
-        default: return (intptr_t)static_cast<Component*>(t->mListArea.get());
-        }
+    // (the list area's methods and an item's width are comboobj.rs game_list_op's in the game: R6 WON GUI round 38;
+    // the parts, the input box's calls, the item's text, the undo text and the popup its game_combo_op's: round 41)
     case Op::ComboInsertString: return (intptr_t)t->mListArea->InsertString(*(const GUIString*)a, (int)b);
-    case Op::ComboDropItem: { SmartPtr<TextListItem> held = Item(a); return 0; }
-    case Op::ComboSetListBox: t->mListBox = static_cast<Scroller*>(Comp(a)); return 0;
-    case Op::ComboBoxArea: return (intptr_t)static_cast<Component*>(static_cast<Scroller*>(Comp(a))->GetScrollArea());
-    case Op::ComboEditClear: t->mEdit->SetText(GUIString(""), a != 0); return 0;
-    case Op::ComboEditItemText: t->mEdit->SetText(Item(a)->mText, true); return 0;
-    case Op::ComboEditSetText: t->mEdit->SetText(*(const GUIString*)a, b != 0); return 0;
-    case Op::ComboEditUndo: t->mEdit->SetText(t->mUndoStr, true); return 0;
-    case Op::ComboUndoSave: t->mUndoStr = t->mEdit->GetText(); return 0;
-    case Op::ComboEditSelect: t->mEdit->SelectRange((int)a, (int)b); return 0;
-    case Op::ComboEditAllowSelection: t->mEdit->SetAllowSelection(a != 0); return 0;
-    case Op::ComboItemTextLength: return Item(a)->mText.length();
     case Op::ComboDeliverSel: t->DeliverEvent(ComboSelChangedEvent(t, Item(a), b != 0), false); return 0;
-    case Op::ComboItemTextIs: return Item(a)->mText == (b == 0 ? t->mEdit->GetText() : *(const GUIString*)b) ? 1 : 0; // (b 0: the edit's)
-    case Op::ComboOpenPopup: {
-        Window* window = t->GetRoot();
-        int x = 0, y = t->Height();
-        t->LocalToRoot(x, y);
-        PopupParams params(t->mListBox.get(), 0x2347, t, x, y);
-        params.mInputComponent = t; // input component (+0x08)
-        params.mAvoidRect.y = y - t->Height();
-        params.mAvoidRect.height = t->Height();
-        window->OpenPopup(params);
-        return 0;
-    }
-    case Op::ComboRelayout: t->Relayout(); return 0;
-    case Op::ComboUnlisten: t->mListBox->AddListener(NULL); return 0;
-    case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
     case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
     default: return CtlOp(t, op, a, b, c, d);
     }
@@ -248,6 +216,11 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 namespace WONAPI {
 // Creates a combo box that takes focus and passes input to its children (the Rust combo box: the list hidden, a
 // 200 x 150 list box)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+[[maybe_unused]] static const bool sComboAt = (ee_won_combo_parts_register(offsetof(ComboBox, mEdit), offsetof(ComboBox, mButton),
+                                                                        offsetof(ComboBox, mListBox), offsetof(ComboBox, mListArea)), true);
+#pragma clang diagnostic pop
 ComboBox::ComboBox() : mCombo(ee_won_combo_make(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt)) {}
 // Destroys the combo box, first detaching it from its list box's listeners (the Rust combo box)
 ComboBox::~ComboBox() { ee_won_combo_free(this->mCombo); }
@@ -349,11 +322,7 @@ template <class C> static intptr_t SkinScrollPart(C* t, intptr_t which)
 static intptr_t SkinPart(Component* c, SK k, intptr_t which)
 {
     switch (k) {
-    case SK::MsCombo: case SK::WonCombo: case SK::WonComboSize: {
-        ComboBox* t = static_cast<ComboBox*>(c);
-        return (SP)which == SP::Button ? (intptr_t)static_cast<Component*>(t->mButton.get())
-             : (SP)which == SP::Edit ? (intptr_t)static_cast<Component*>(t->mEdit.get()) : (intptr_t)static_cast<Component*>(t->mListArea.get());
-    }
+    // (a combo box's are comboobj.rs's in place: R6 WON GUI round 41)
     case SK::MsScroll: case SK::MsList: case SK::WonScroll: case SK::WonList: case SK::WonListTextHeader: case SK::WonListHeader:
         return SkinScrollPart(static_cast<ScrollbarScroller*>(c), which);
     default: return 0;

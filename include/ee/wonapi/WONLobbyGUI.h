@@ -809,7 +809,7 @@ public:
 // ComboBox (R6 WON round 28): whether the list is open, no-typing, the button while disabled and the list box's
 // configured size are the Rust ComboBox (rust/crates/ee_won_gui/src/comboobj.rs) with every method; this is the type the
 // skins (MSComboBox, WONComboBox), the configs and the lobby use, with one-line forwarders (ComboBox.cpp is its
-// host). The parts and the undo text stay members: the skins make the parts and read them.
+// host). The parts stay members, read and set in place by the Rust (round 41); the undo text is the Rust's.
 class Scroller;
 class ComboBox : public Container {
 public:
@@ -842,7 +842,6 @@ public:
     SmartPtr<Button> mButton; //88
     SmartPtr<Scroller> mListBox; //8c
     SmartPtr<ListArea> mListArea; //90
-    GUIString mUndoStr; // the text Escape restores
     EeWonComboBox* mCombo;
 private:
     intptr_t BCall(EeWonComboCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_combo_call(this->mCombo,c,a,b,cc); }

@@ -142,6 +142,26 @@ pub(crate) fn deliver_popup(e: isize) -> Option<isize> {
     p.parent = unsafe { (*(e as *const crate::wmobj::EeWonRustEvent)).rec.window };
     wm(EeWonWmCall::DoPopup, &p as *const crate::wmobj::EeWonWmPopup as isize, 0).map(z)
 }
+/// `c->GetRoot()->OpenPopup(p)` in the game (R6 WON GUI round 41): the parameters' parent the component's window,
+/// then the manager's DoPopup.
+pub(crate) fn open_popup(c: isize, mut p: crate::wmobj::EeWonWmPopup) -> Option<isize> {
+    // SAFETY: the game's live component; the call re-enters through Component's entry
+    p.parent = unsafe {
+        crate::compobj::ee_won_comp_call(
+            c as *mut c_void,
+            crate::compobj::host(),
+            crate::compobj::EeWonCompCall::Root,
+            0,
+            0,
+            0,
+        )
+    };
+    wm(EeWonWmCall::DoPopup, &p as *const crate::wmobj::EeWonWmPopup as isize, 0).map(z)
+}
+/// `GetRoot()->ClosePopup(c)` in the game: the manager's EndPopup (every window's manager is the default one).
+pub(crate) fn end_popup(c: isize) -> Option<isize> {
+    wm(EeWonWmCall::EndPopup, c, 0).map(z)
+}
 // QueueSubMenu's popup parameters (the list host's PopupParams local until R6 WON GUI round 40)
 static SUBMENU: Mutex<crate::wmobj::EeWonWmPopup> = Mutex::new(crate::wmobj::EeWonWmPopup {
     parent: 0,

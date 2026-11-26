@@ -757,16 +757,6 @@ static Component* NewBase(EeWonShellBaseNew k)
     }
 }
 
-// a combo box's part member = c
-static intptr_t ComboPart(ComboBox* cb, intptr_t which, intptr_t c)
-{
-    switch ((EeWonShellComboPart)which) {
-    case EeWonShellComboPart::Button: cb->mButton = static_cast<Button*>((Component*)c); return 0;
-    case EeWonShellComboPart::Edit: cb->mEdit = static_cast<InputBox*>((Component*)c); return 0;
-    case EeWonShellComboPart::ListArea: cb->mListArea = static_cast<ListArea*>((Component*)c); return 0;
-    default: cb->mListBox = static_cast<Scroller*>((Component*)c); return 0;
-    }
-}
 // an image's method (EeWonWbImage; a duplicate's reference goes to the Rust)
 static intptr_t ImageOp(intptr_t which, intptr_t b)
 {
@@ -783,7 +773,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
 {
     WONShell* s = (WONShell*)inShell;
     Component* t = s ? s->mComp : NULL; // (the skin's calls have no shell: skinobj.rs)
-    ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
     // (the MS buttons' wrapped texts are wrapobj.rs's in the game: R6 WON GUI round 40)
@@ -812,15 +801,7 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         if ((EeWonShellBaseNew)b == EeWonShellBaseNew::InputBox) static_cast<InputBox*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
         else static_cast<ListArea*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
         return 0;
-    case H::ComboPart: return ComboPart(cb, a, b);
-    case H::ComboPartOn: return ComboPart(static_cast<ComboBox*>((Component*)a), b, c);
-    case H::ComboGet:
-        switch ((EeWonShellComboPart)a) {
-        case EeWonShellComboPart::Button: return (intptr_t)static_cast<Component*>(cb->mButton.get());
-        case EeWonShellComboPart::Edit: return (intptr_t)static_cast<Component*>(cb->mEdit.get());
-        case EeWonShellComboPart::ListArea: return (intptr_t)static_cast<Component*>(cb->mListArea.get());
-        default: return (intptr_t)static_cast<Component*>(cb->mListBox.get());
-        }
+    // (a combo box's parts are comboobj.rs's in place: R6 WON GUI round 41)
     case H::Img: return ImageOp(a, b);
     case H::DrawImages: {
         WONDrawSlots aSlots;
