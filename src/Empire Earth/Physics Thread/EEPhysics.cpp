@@ -221,23 +221,12 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
         break;
     // the communications
-    case O::IsClient: return gCommunications->IsClient();
-    case O::CommsIsServer: return gCommunications != NULL && gCommunications->IsServer();
-    case O::ClientHasLeft: return static_cast<EEClient*>(gCommunications)->mHasLeftGame;
-    case O::IncrementCts: gCommunications->IncrementNumberOfCTsProcessedInPhysics();
-        break;
-    case O::SetAverageUpdate: gCommunications->SetAveragePhysicsUpdateTime((long)a[0]);
-        break;
-    case O::SetAverageGap: gCommunications->SetAverageTimeBetweenPhysicsTicks((long)a[0]);
-        break;
     case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput(MSG, (unsigned char)a[0]);
         break;
     case O::LogChecksumResponse: SERVER->LogChecksumResponse(REC);
         break;
     case O::LogResponse: SERVER->LogResponse(MSG);
         break;
-    case O::IsPaused: return gCommunications->GetIsGamePaused();
-    case O::CurrentCommsTick: return gCommunications->GetCurrentCommunicationsTick();
     case O::PauseGame: SERVER->PauseGame();
         break;
     case O::SendAutoSave: SERVER->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, UWideString((const char*)a[0])}), 15000, 12);
@@ -269,9 +258,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::MapDump: gWorld.mMap->DumpOutOfSynch(FP(0));
         break;
     case O::CampaignNameLength: return gWorld.mGameOptions.mCampaignName.GetLength();
-    case O::CampaignChecksum: return gWorld.mGameOptions.mCampaignChecksum;
-    case O::IsScenarioGame: return gWorld.mGameOptions.mIsScenarioGame;
-    case O::Resources: return gWorld.mGameOptions.mResources;
     case O::CanBuyCivilization: return gWorld.mGameOptions.CanBuyCivilization();
     case O::CheckUnitList: RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
         break;
@@ -309,9 +295,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::AiUpdate: gArtificialIntelligence->Update();
         break;
     case O::HasJitPower: return gCivPowersManager.HasPower(gWorld.GetCurrentPlayer(), kCivPowerJustInTimeManufacturing);
-    case O::ResourceString: return gResource->GetString((unsigned long)a[0], *(UWideString*)p);
-    case O::ChatLog: gUserInterface->AddChatLogEntry(*(UWideString*)p, 0);
-        break;
     case O::IsMainGameForm: return dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL;
     case O::OptionsButtonBlink: (static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
         break;
