@@ -412,7 +412,9 @@ pub extern "C" fn ee_won_lobbyprv_set(f: EeWonLobbyPrvField, x: i64) {
 /// `sink` takes `context`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_lobbyprv_hash_files(sink: ee_won_net::ffi::EeWonByteSink, context: *mut c_void) {
-    let joined: Vec<u8> = vals().as_ref().map_or(Vec::new(), |v| v.hash_files.iter().flat_map(|f| f.iter().copied().chain([0])).collect());
+    let joined: Vec<u8> = vals()
+        .as_ref()
+        .map_or(Vec::new(), |v| v.hash_files.iter().flat_map(|f| f.iter().copied().chain([0])).collect());
     // SAFETY: the caller's sink
     unsafe { ee_won_net::ffi::give(sink, context, &joined) };
 }
@@ -902,7 +904,7 @@ mod tests {
         unsafe { ee_won_lobbyprv_hash_files(sink, &mut files as *mut Vec<u8> as *mut core::ffi::c_void) };
         assert_eq!(files, b"a.dat\0b.dat\0");
         // SAFETY: the bytes
-        unsafe { ee_won_lobbyprv_set_hash_files(b"x\0".as_ptr(), 2) };
+        unsafe { ee_won_lobbyprv_set_hash_files(c"x".as_ptr().cast(), 2) };
         files.clear();
         // SAFETY: as above
         unsafe { ee_won_lobbyprv_hash_files(sink, &mut files as *mut Vec<u8> as *mut core::ffi::c_void) };

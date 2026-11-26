@@ -79,9 +79,20 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                 }
                 // SAFETY: the sink and its vector; the op's live Rust op and the cache's new reference
                 unsafe {
-                    ee_won_net::hostnative::ee_won_api_file_directory(sink, &mut dir as *mut Vec<u8> as *mut std::ffi::c_void);
+                    ee_won_net::hostnative::ee_won_api_file_directory(
+                        sink,
+                        &mut dir as *mut Vec<u8> as *mut std::ffi::c_void,
+                    );
                     let cache = ee_won_net::httpcache::ee_won_http_cache_global(dir.as_ptr(), dir.len());
-                    ee_won_net::hostop::ee_won_hostop_set(h, ee_won_net::httpget::EE_WON_HTTPGET_CACHE, 0, null(), 0, null(), cache);
+                    ee_won_net::hostop::ee_won_hostop_set(
+                        h,
+                        ee_won_net::httpget::EE_WON_HTTPGET_CACHE,
+                        0,
+                        null(),
+                        0,
+                        null(),
+                        cache,
+                    );
                 }
             }
         }
@@ -92,7 +103,11 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             };
             if let Some(c) = ee_won_net::cppcore::auth_ctx_of(p) {
                 let admin: Vec<u16> = "Admin".encode_utf16().collect();
-                let which = if op == Op::AuthAddAdmin { EE_WON_AUTH_LOGIN_ADD_COMMUNITY } else { EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY };
+                let which = if op == Op::AuthAddAdmin {
+                    EE_WON_AUTH_LOGIN_ADD_COMMUNITY
+                } else {
+                    EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY
+                };
                 // SAFETY: the context's live Rust object; the key's units (UTF-16, two bytes each)
                 unsafe {
                     if op == Op::AutoRefresh {
@@ -126,8 +141,8 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             unsafe { prv::ee_won_lobbyprv_tou_times(&mut system, &mut game) };
             // SAFETY: the op's two int32 outputs (the caller's locals)
             unsafe {
-                *(a as *mut i32) = system as i32;
-                *(b as *mut i32) = game as i32;
+                *(a as *mut i32) = system;
+                *(b as *mut i32) = game;
             }
         }
         _ => return None,
