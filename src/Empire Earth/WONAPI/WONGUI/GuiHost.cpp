@@ -57,9 +57,6 @@ typedef EeWonGuiField Fd;
 // the standard cursor a host op names (guihost.rs over cursorobj.rs's table; NULL for none)
 static Cursor* CursorOf(intptr_t inCursor) { return (Cursor*)ee_won_gui_cursor(inCursor); }
 
-// QueueSubMenu's local PopupParams (borrowed pointers)
-static PopupParams sHostParams(NULL, 0, NULL);
-
 // a component's services, the same for every component object (the members', Component's own calls and the
 // container's are gamewin.rs common_op's in the game: R6 WON GUI round 37)
 static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
@@ -416,10 +413,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::WinMouseY: return ((Window*)a)->GetMouseY();
     case Op::TipNew: t->mItemToolTip = new ListAreaToolTip(t); return 0;
     case Op::TipDo: t->mItemToolTip->DoTip(Item(a)); return 0;
-    case Op::ParamsMake: sHostParams = PopupParams((PopupMenu*)a, (int)b, t, (int)c, (int)d); return 0;
-    case Op::ParamsAvoid: sHostParams.mAvoidRect = WONRectangle(((const EeWonRect4*)a)->x, ((const EeWonRect4*)a)->y, ((const EeWonRect4*)a)->w, ((const EeWonRect4*)a)->h); return 0;
-    case Op::QueueDoPopup: t->GetRoot()->QueueEvent(new DoPopupEvent(sHostParams)); return 0;
-    case Op::WinQueueMouseUp: ((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)b, (int)c, ((Window*)a)->GetKeyMod(), (int)d)); return 0;
     case Op::DeliverItemClicked: {
         const EeWonItemClick* k = (const EeWonItemClick*)b;
         t->DeliverEvent(ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),
@@ -758,16 +751,12 @@ extern "C" intptr_t ee_won_guicpp_browser_call(void* inMe, EeWonBrowserOp op, in
     switch (op) {
     case Bo::NewView: t->mHTMLView = new TextArea; return 0;
     case Bo::ViewNoScrollOnBottom: t->mHTMLView->SetTextFlags(TextFlag_ScrollOnBottom, false); return 0;
-    case Bo::ScrollerAssign: t->mScroller = s; return 0;
     case Bo::ScrollerHasView: return s->GetScrollArea() == t->mHTMLView.get() ? 1 : 0;
     case Bo::ScrollerSetView: s->SetScrollArea(t->mHTMLView.get()); return 0;
     case Bo::SameSize: t->Fn2F6140(s, 3, t, 0, 0, 0, 0, 0); return 0; // CLI_SameSize = 3
     case Bo::AddChild: t->AddChild(s); return 0;
-    case Bo::HasScroller: return t->mScroller.get() != NULL ? 1 : 0;
     case Bo::NewScrollContainer:
         return (intptr_t)static_cast<Scroller*>(static_cast<ScrollbarScroller*>(WONShellNew(EeWonShellKind::MsScrollContainer, (intptr_t)static_cast<ScrollArea*>(t->mHTMLView.get()))));
-    case Bo::Ref: s->AddRef(); return 0;
-    case Bo::Unref: s->Release(); return 0;
     case Bo::ScrollbarsConditional: static_cast<ScrollbarScroller*>(s)->SetScrollbarConditions(ScrollbarCondition_Conditional, ScrollbarCondition_Conditional); return 0;
     case Bo::BaseAddedToParent: t->Container::AddedToParent(); return 0;
     case Bo::ViewNoBackground: t->mHTMLView->SetBackground(Background(-1, -1)); return 0;
@@ -775,7 +764,7 @@ extern "C" intptr_t ee_won_guicpp_browser_call(void* inMe, EeWonBrowserOp op, in
     case Bo::ViewClear: t->mHTMLView->Clear(); return 0;
     case Bo::ViewAddText: t->mHTMLView->AddFormatedText(GUIString(std::wstring((const wchar_t*)a, (size_t)b)), false); return 0;
     case Bo::ViewTop: t->mHTMLView->SetOffsets(0, 0); return 0;
-    case Bo::Invalidate: t->Invalidate(); return 0;
+    default: return 0; // (the scroller, the references and Invalidate are browserobj.rs's: R6 WON GUI round 40)
     }
     return 0;
 }

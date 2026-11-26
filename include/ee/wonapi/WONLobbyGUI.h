@@ -360,7 +360,6 @@ public:
     void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); }
     void AddChild(Component* c) { this->CCall(EeWonCtCall::AddChild,(intptr_t)c); }
     virtual Component* FindChildAt(int x, int y) { return (Component*)this->CCall(EeWonCtCall::FindChildAt,x,y); }
-    virtual Component* FindClickChildAt(int inX, int inY) { return this->FindChildAt(inX, inY); }
     virtual void SetFocusChild(Component* c) { this->CCall(EeWonCtCall::SetFocusChild,(intptr_t)c); }
     virtual void AddTimerChild(Component* c) { this->CCall(EeWonCtCall::AddTimerChild,(intptr_t)c); }
     virtual void ChildStateChanged(Component* c) { this->CCall(EeWonCtCall::ChildStateChanged,(intptr_t)c); }
@@ -451,11 +450,6 @@ public:
     void SetDefaultButton(Button*); // 0x2f79c0: keeps the button (held)
     bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; }
     virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); }
-    // the config's writes (DialogConfig)
-    // the status dialog keeps the drag across its resize (Virtual08 ends it)
-    bool IsDragging() { return this->DCall(EeWonDlgCall::GetField,(intptr_t)EeWonDlgField::Dragging)!=0; }
-    void SetDragging(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::Dragging,v); }
-
     EeWonDialog* mDlg;
 private:
     intptr_t DCall(EeWonDlgCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_dlg_call(this->mDlg,c,a,b,cc); }
@@ -767,17 +761,14 @@ public:
     void LayoutThumb(bool changePos) { this->Call(EeWonBarCall::LayoutThumb,changePos); } //3061d0
     // the parts the skins, the configs and the scroller read and set
     Button* GetUpArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,0); }
-    void SetUpArrow(Button* b) { this->Call(EeWonBarCall::SetPart,0,(intptr_t)static_cast<Component*>(b)); }
     Button* GetDownArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,1); }
     Button* GetScrollRect() { return (Button*)this->Call(EeWonBarCall::GetPart,2); }
     void SetScrollRect(Button* b) { this->Call(EeWonBarCall::SetPart,2,(intptr_t)static_cast<Component*>(b)); }
     Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
-    void SetThumb(Component* c) { this->Call(EeWonBarCall::SetPart,3,(intptr_t)c); }
     bool IsVertical() { return this->Call(EeWonBarCall::IsVertical)!=0; }
     int GetPosition() { return (int)this->Call(EeWonBarCall::GetPosition); }
     void SetPosition(int p) { this->Call(EeWonBarCall::SetPosition,p); } // the field only (the scroller's update)
     void SetRange(int total,int page) { this->Call(EeWonBarCall::SetRange,total,page); }
-    void SetLineScrollSizes(int up,int down) { this->Call(EeWonBarCall::SetLineScrollSizes,up,down); }
     EeWonScrollbar* mRust;
 private:
     intptr_t Call(EeWonBarCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_bar_call(this->mRust,c,a,b,cc); }
@@ -812,7 +803,6 @@ public:
     void SetScrollbar(Scrollbar* s) { this->SCall(EeWonScrollerCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } //305760
     void AddControls() { this->SCall(EeWonScrollerCall::AddControls); } //305860
     Scrollbar* GetScrollbar(bool vertical) { return (Scrollbar*)this->SCall(EeWonScrollerCall::GetScrollbar,vertical); }
-    void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
     bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
     void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); }
 };
@@ -1152,7 +1142,6 @@ public:
 // wrapped text.
 class Graphics {
 public:
-    bool BlendSupported() { return true; }
     void SetColor(DWORD c) { this->GCall(EeWonGfxCall::SetColor, (int)c); } //326ce0
     DWORD GetStandardColor(int i) { return this->GCall(EeWonGfxCall::StandardColor, i); }
     void SetSysColor(int i) { this->GCall(EeWonGfxCall::SetSysColor, i); }
@@ -1160,16 +1149,12 @@ public:
     Font* GetFont() const { return (Font*)this->mG.font; }
     DisplayContext* GetContext() const { return (DisplayContext*)this->mG.context; }
     void Translate(int dx, int dy) { this->GCall(EeWonGfxCall::Translate, dx, dy); }
-    void SetPixel(int x, int y, DWORD c) { this->GCall(EeWonGfxCall::SetPixel, x, y, (int)c); }
     void DrawImage(Image* i, int x, int y) { this->GCall(EeWonGfxCall::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
     void DrawImage(Image* i, int x, int y, int l, int t, int w, int h) { this->GCall(EeWonGfxCall::DrawImagePart, x, y, l, t, w, h, 0, i); }
     void DrawLine(int x1, int y1, int x2, int y2) { this->GCall(EeWonGfxCall::DrawLine, x1, y1, x2, y2); }
     void DrawRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawRect, x, y, w, h); }
     void FillRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillRect, x, y, w, h); }
     void FillRectBlend(int x, int y, int w, int h, int n) { this->GCall(EeWonGfxCall::FillRectBlend, x, y, w, h, n); }
-    void DrawDottedRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawDottedRect, x, y, w, h); }
-    void FillEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillEllipse, x, y, w, h); }
-    void DrawArc(int x, int y, int w, int h, int s, int a) { this->GCall(EeWonGfxCall::DrawArc, x, y, w, h, s, a); }
     void DrawString(const GUIString& s, int x, int y) { this->GCall(EeWonGfxCall::DrawString, x, y, s.length(), 0, 0, 0, 0, &s); }
     void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
     void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
@@ -1210,7 +1195,6 @@ void LobbyResetReadyFlags();
 // MSWindow : Window : RefCount; MSNativeIcon : NativeIcon : RefCount; MultiImageDecoder, DisplayContext. Sizes from
 // EELobbyInterface 0x2972c6's `new`s (provisional member and slot names).
 class WindowEventBase;
-class InputEvent;
 // a window's drawing context (RTTI: DisplayContext : RefCount)
 // Only the prefix is used: 0x326c70 stores mGraphics at +0x0c.
 // DisplayContext (0x10 bytes): allocated and filled at 0x3cfab4..0x3cfad4; type descriptor 0x4e0ab0.
@@ -1226,7 +1210,6 @@ public:
     // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
     // draws with is logical; the backend scales it to the surface's pixels
     float mPixelScale;
-    SmartPtr<NativeImage> CreateImage(int,int); //3cedd0, nonvirtual
 };
 class SoundDecoder;
 
@@ -1295,7 +1278,6 @@ public:
     Font* GetNamedFont(const std::string& n) { return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)n.data(), (intptr_t)n.size()); } //32c4d0
     Font* GetDefaultFont() { return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont); } //32c540
     Font* GetDefaultFontMod(int,int=0); //32c700
-    static SmartPtr<Font> GetDefaultFont(const FontDescriptor&);
     void RemoveAllTimerEvents() { this->WmCall(EeWonWmCall::RemoveAllTimerEvents); }
     void SetCacheImages(bool c) { this->WmCall(EeWonWmCall::SetCacheImages, c ? 1 : 0); } // 0x32c7f0: a count; at 0 the caches empty
     // the decodes: the Rust answer carries the returned SmartPtr's reference
@@ -1396,8 +1378,6 @@ public:
     bool CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; } //32ab80
     void CheckResize(DWORD t) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)t); } //32ac90
     void SuspendRootResize(bool s) { this->WCall(EeWonWinCall::SuspendRootResize, s ? 1 : 0); }
-    NativeImage* GetOffscreenImage() { return this->mOffscreenImage.get(); }
-    Graphics& GetGraphics();
     void RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
     bool IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }
     void ShowNativeCursor(bool s) { this->WCall(EeWonWinCall::ShowNativeCursor, s ? 1 : 0); }
@@ -1464,7 +1444,6 @@ public:
     int GetMouseX() const { return (int)this->WField(EeWonWinField::MouseX); }
     int GetMouseY() const { return (int)this->WField(EeWonWinField::MouseY); }
     bool IsMouseInClientArea() const { return this->WField(EeWonWinField::InClient) != 0; }
-    bool IsShowing() const { return this->WField(EeWonWinField::IsShowing) != 0; }
     void SetIsShowing(bool inShowing) { this->WSet(EeWonWinField::IsShowing, inShowing ? 1 : 0); }
     bool IsPopup() const { return this->WField(EeWonWinField::IsPopup) != 0; }
     void SetIsPopup(bool inPopup) { this->WSet(EeWonWinField::IsPopup, inPopup ? 1 : 0); }
@@ -1479,8 +1458,8 @@ public:
     intptr_t WCall(EeWonWinCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_win_call(this->mWinObj.p, c, a, b); }
     intptr_t WField(EeWonWinField f) const { return this->WCall(EeWonWinCall::GetField, (intptr_t)f); }
     void WSet(EeWonWinField f, intptr_t v) { this->WCall(EeWonWinCall::SetField, (intptr_t)f, v); }
-    // the members that are C++ objects (the original's offsets)
-    SmartPtr<NativeImage> mOffscreenImage; // +0c
+    // the members that are C++ objects (the original's offsets; the offscreen image, +0c, is gamewin.rs's since R6 WON
+    // GUI round 40): the display context, without a surface (an image decode needs one)
     SmartPtr<DisplayContext> mDisplayContext; // +28
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
@@ -1543,17 +1522,8 @@ public:
     int mParam;                             // +0x14
 };
 
-// the window's input events (R6 WON GUI rounds 37 and 38): the base's record filled with the fields the Rust window's
-// handlers read (winobj.rs EeWonWinEvent) and the handler its original class's Deliver ran (0x32b520, 0x32b630,
-// 0x32b640: guisplit.rs runs it on the window's Rust window); MouseEvent, KeyEvent and SizeEvent fill it
-class InputEvent : public WindowEventBase {
-public:
-    InputEvent(int t, EeWonWinCall h = EeWonWinCall::HandleInputEvent, int x = 0, int y = 0, int m = 0, int b = 0, int k = 0, int w = 0, int ht = 0)
-      : WindowEventBase(t, h) { this->mRec.ev = EeWonWinEvent{t, x, y, m, b, k, w, ht}; }
-};
-struct MouseEvent : InputEvent { MouseEvent(int t, int x, int y, int m, int b = 0) : InputEvent(t, EeWonWinCall::HandleMouseEvent, x, y, m, b) {} };
-struct KeyEvent : InputEvent { KeyEvent(int t, int k, int m) : InputEvent(t, EeWonWinCall::HandleKeyEvent, 0, 0, m, 0, k) {} };
-struct SizeEvent : InputEvent { SizeEvent(int x, int y, int w, int h) : InputEvent(InputEvent_SizeChange, EeWonWinCall::HandleInputEvent, x, y, 0, 0, 0, w, h) {} };
+// (the window's input events, InputEvent, MouseEvent, KeyEvent and SizeEvent, are wmobj.rs's EeWonRustEvent: R6 WON GUI
+// round 40)
 
 // a component's event (slot +0x7c; type at +0x14: WONAPI's own ids, 100000 up for the game's). R6 WON GUI round 39:
 // its members and its GUI subclasses' (ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent,
@@ -1818,7 +1788,6 @@ public:
     // the fields the lists, text areas, scrollers and lobby controls read and set
     int GetField(EeWonGuiField f) { return (int)this->ACall(EeWonPaneCall::GetField,(intptr_t)f); }
     void SetField(EeWonGuiField f,int v) { this->ACall(EeWonPaneCall::SetField,(intptr_t)f,v); }
-    int GetTotalHeight() { return this->GetField(EeWonGuiField::TotalHeight); }
     int GetTotalWidth() { return this->GetField(EeWonGuiField::TotalWidth); }
     int GetLeftPad() { return this->GetField(EeWonGuiField::LeftPad); }
     int GetRightPad() { return this->GetField(EeWonGuiField::RightPad); }
@@ -1906,7 +1875,6 @@ public:
     bool HasMoreSelections() { return this->Call(EeWonListCall::HasMoreSelections)!=0; }
     ListItem* GetNextSelection() { return (ListItem*)this->Call(EeWonListCall::GetNextSelection); }
     int GetTextColor(); //2fb520
-    int GetItemPosAtYPos(int y) { return (int)this->Call(EeWonListCall::GetItemPosAtYPos,y); }
     ListItem* FindSelectableItem(int start,bool up,bool opposite=true) { return (ListItem*)this->Call(EeWonListCall::FindSelectableItem,start,up,opposite); }
     bool ListFlagSet(int flags) { return (this->Call(EeWonListCall::ListFlags)&flags)!=0; }
     ListItem* GetSelItem() { return (ListItem*)this->Call(EeWonListCall::SelItem); }
@@ -1914,10 +1882,7 @@ public:
     const SelectionColor& GetSelColor() { return this->mSelColor; } // inline
     void SetFont(Font* theFont) { this->mFont=theFont; }
     int GetPaintWidth() const { return (int)const_cast<ListArea*>(this)->Call(EeWonListCall::PaintWidth); } // the layout width the items paint to
-    void SetPaintWidth(int w) { this->Call(EeWonListCall::SetPaintWidth,w); } // a subclass's own paint
     ListSortType GetSortType() const { return static_cast<ListSortType>(const_cast<ListArea*>(this)->Call(EeWonListCall::SortType)); }
-    void SetSortTypeOnly(ListSortType t) { this->Call(EeWonListCall::SetSortTypeOnly,t); } // without sorting (MultiListArea::SetSortColumn)
-    void ClearMouseItem() { this->Call(EeWonListCall::ClearMouseItem); } // the field only (not the virtual NotifyMouseItemGone)
     SmartPtr<ListAreaToolTip> mItemToolTip; // made on the first item tip
     SmartPtr<Font> mFont;
     int mTextColor;
@@ -2120,7 +2085,7 @@ class TextArea;
 // ported (docs/RUST_PLAN.md D8): a page is plain text in a TextArea, an HTML page with its tags dropped and entities
 // decoded (ee_won's plaintext.rs). There are no links, so no history: back, forward and stop stay disabled.
 // R6 WON round 34: the Rust record (rust/crates/ee_won_gui/src/browserobj.rs) holds the font size, the background
-// flag and the location and runs every method; the view and the scroller stay C++ members its host sets.
+// flag, the location and (round 40) the scroller and runs every method; the view stays a C++ member its host sets.
 class BrowserComponent : public Container {
 public:
     BrowserComponent();
@@ -2145,8 +2110,7 @@ public:
     { this->BCall(EeWonBrowserCall::ShowFiles,(intptr_t)inFirst.data(),(intptr_t)inFirst.size(),(intptr_t)inSecond.data(),(intptr_t)inSecond.size(),inSkipFirstCharIfText); }
     TextArea* GetHTMLView() { return this->mHTMLView.get(); }
     const GUIString& GetCurStatus() { return gEmptyGUIString; } // (never set)
-    SmartPtr<TextArea> mHTMLView;
-    SmartPtr<Scroller> mScroller;
+    SmartPtr<TextArea> mHTMLView; // (the scroller is the Rust record's)
     EeWonBrowser* mRust;
 private:
     intptr_t BCall(EeWonBrowserCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0,intptr_t e=0)
@@ -2174,15 +2138,6 @@ protected:
     friend intptr_t SplitterHostCall(Splitter*,EeWonGuiOp,intptr_t,intptr_t,intptr_t);
 private:
     intptr_t Call(EeWonSplitCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_split_call(this->mRust,c,a,b,cc); }
-};
-// the event that opens a popup (0x3c bytes; original 0x2fd77e; RTTI 0x44df58; WONLobbyPopupEvent.h until R6 WON GUI
-// round 37): it copies the parameters (borrowed raw pointers)
-class DoPopupEvent : public WindowEventBase {
-protected:
-    PopupParams mParams; //10..3b, full2c POD containing borrowed raw pointers
-public:
-    DoPopupEvent(const PopupParams& params) : mParams(params) {}
-    virtual void Deliver() { this->GetWindow()->OpenPopup(this->mParams); } //32b650
 };
 }
 

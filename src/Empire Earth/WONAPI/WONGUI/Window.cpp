@@ -40,14 +40,7 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     Window* t = (Window*)inWin;
     switch (op) {
     case Op::WinTick: return (intptr_t)(uint32_t)WONTickCount();
-    case Op::WinNewOffscreen: {
-        SmartPtr<NativeImage> anImage = t->CreateImage((int)a, (int)b);
-        Graphics &g = anImage->GetGraphics();
-        g.DrawImage(t->mOffscreenImage.get(), 0, 0);
-        t->mOffscreenImage = anImage;
-        return 0;
-    }
-    case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
+    // (the offscreen image is gamewin.rs's: R6 WON GUI round 40)
     case Op::WinAllowClose: return 1; // (no window ever had an allow-close function)
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
@@ -68,18 +61,7 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     switch (inOp) {
     case Op::WindowCreate: me->BaseCreate((int)c, (int)d); return 0;
     case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
-    case Op::OffscreenOfRoot: me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height()); return 0;
-    case Op::Offscreen: return me->mOffscreenImage.get() != NULL ? (intptr_t)me->mOffscreenImage->mRust : 0;
-    case Op::CopyOffscreen: return ee_won_guicpp_win_call(me, EeWonGuiOp::WinNewOffscreen, a, b, 0, 0);
-    case Op::QueueSize: me->QueueEvent(new SizeEvent((int)a, (int)b, (int)c, (int)d)); return 0;
-    case Op::QueueExit: me->QueueEvent(new InputEvent(InputEvent_MouseExit)); return 0;
-    case Op::QueueMouse: {
-        const int32_t* p = (const int32_t*)a;
-        me->QueueEvent(new MouseEvent(p[0], p[1], p[2], p[3], p[4]));
-        return 0;
-    }
-    case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
-    case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
+    // (the offscreen image and its paints are gamewin.rs's: R6 WON GUI round 40)
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
@@ -134,10 +116,10 @@ Window* Window::GetDefaultWindow()
 	return WONAPI::WindowManager::GetDefaultWindowManager()->GetDefaultWindow();
 }
 
-// Creates an image of the given size for the window's display
+// Creates an image of the given size for the window's display (one reference)
 SmartPtr<NativeImage> Window::CreateImage(int theWidth, int theHeight)
 {
-	return this->mDisplayContext->CreateImage(theWidth,theHeight);
+	return WONImageAdopt<NativeImage>(WONImageHost(EeWonImageHost::CreateImage, 0, theWidth, theHeight, 0));
 }
 
 static bool gWindowSkipDecodeImages = false;
@@ -170,12 +152,6 @@ SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
 
 // Tags the event with this window and posts it to the window manager's queue (the base QueueEvent)
 void Window::QueueEvent(WindowEventBase* event) { event->mRec.window=(intptr_t)this; this->mManager->PostEvent(event); }
-
-// Not identified in the original exe
-Graphics& Window::GetGraphics()
-{
-    return this->mOffscreenImage->GetGraphics();
-}
 
 namespace WONAPI {
 Window* CreateNativeWindow() { return new Window; }
@@ -256,7 +232,6 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     if (op != EeWonGuiOp::Grab)
         return 0;
     switch ((Gb)a) {
-    case Gb::NewImage: t->mBGImage = comp->GetRoot()->CreateImage((int)c, (int)d); return 0;
     case Gb::DebugExists: return t->mDebugWindow.get() != NULL ? 1 : 0;
     case Gb::DebugNew: t->mDebugWindow = CreateNativeWindow(); return 0;
     case Gb::DebugParent: t->mDebugWindow->SetParent(comp->GetRoot()); return 0;
@@ -267,7 +242,6 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     case Gb::ScreenRect: comp->GetRoot()->GetRect(*(WONRectangle*)c, false); return 0;
     case Gb::DebugPos: t->mDebugWindow->SetPosSize((int)c, (int)d, -1, -1); return 0;
     case Gb::DebugInvalidate: t->mDebugWindow->mRoot.get()->Invalidate(); return 0;
-    case Gb::Offscreen: return (intptr_t)comp->GetRoot()->GetOffscreenImage();
     default: return 0;
     }
 }
