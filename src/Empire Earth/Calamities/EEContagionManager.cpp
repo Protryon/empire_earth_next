@@ -47,40 +47,7 @@ EEContagionFunctor::~EEContagionFunctor()
         this->mEffect->Dereference();
 }
 
-// Accepts a unit type in the functor's unit set (every functor's CanInfectType, by ICF)
-bool EEContagionFunctor::CanInfectType(long inCategory, long inUnitType)
-{
-    return gUnitSetManager.Contains(inUnitType, this->mUnitSet);
-}
-
-// Tells whether the functor can infect the unit's category and type
-bool EEContagionFunctor::CanInfect(EEUnit* inUnit)
-{
-    return this->CanInfectType(inUnit->mUnitClass->GetCategory(), inUnit->mUnitClass->GetUnitType());
-}
-
-// Counts the whole discrete update periods elapsed on the calamity for this update's damage
-void EEContagionFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_update(this, inElapsedTime, inCalamity);
-}
-
-void EEContagionFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_infect(this, inUnit, inCalamity);
-}
-
-void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_cure(this, inUnit, inCalamity);
-}
-
-// Damages the unit per elapsed period (ee_tech contagion_functor.rs apply_damage): the fire and the plague keep it
-// from being deleted (the fire before, unless it is carried; the plague after), the area effect shows its hit effect
-void EEContagionFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity)
-{
-    ee_gamecpp_functor_apply(this, inUnit, inElapsedTime, inCalamity);
-}
+// (CanInfect, the update's periods, Infect, Cure and Apply are gamecpp calamity_objects.rs', called by path)
 
 // Reads the helpers and their calamity indexes from a saved game (the last helper id from 0.273 on: ee/
 // EESaveGameFiles.h EESaveHasContagionCounter); the first read error (contagion_store.rs EeContagionManager::load)
@@ -172,15 +139,6 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CalHandleRead: return FSF.Read(CAL->mEffectHandle.mValue);
     case O::C11CalHandleWrite: return FSF.Write(CAL->mEffectHandle.mValue);
     // the contagion world (a0, a1 the unit and the calamity unless noted)
-    case O::C11CgInfect: FNC->Infect((EEUnit*)a[0], (EECalamity*)a[1]);
-        break;
-    case O::C11CgCure: FNC->Cure((EEUnit*)a[0], (EECalamity*)a[1]);
-        break;
-    case O::C11CgApply: FNC->Apply((EEUnit*)a[0], f[0], (EECalamity*)a[1]);
-        break;
-    case O::C11CgFunctorUpdate: FNC->Update(f[0], (EECalamity*)a[0]);
-        break;
-    case O::C11CgCanInfect: return FNC->CanInfectType(((EEUnit*)a[0])->mUnitClass->GetCategory(), ((EEUnit*)a[0])->mUnitClass->GetUnitType());
     case O::C11CgChecksum: return CAL->GetOutOfSynchChecksum();
     case O::C11CgFunctor: return P64(CAL->mClass->GetContagionFunctor());
     case O::C11CgDump: CAL->DumpOutOfSynch((FILE*)a[0]);

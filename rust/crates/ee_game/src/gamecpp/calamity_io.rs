@@ -17,7 +17,7 @@ use ee_sim::tech::ffi::{ee_calamity_start, ee_calamity_stop, ee_calamity_update,
 use super::calamity::{ee_gamecpp_calamity_call, ee_gamecpp_calamity_set_state, ee_gamecpp_calamity_state};
 use super::calamity_hosts::*;
 use super::persistent::Pf;
-use super::{h, hd, hf, hp, rec, Owned, O, P};
+use super::{h, hd, hp, rec, Owned, O, P};
 
 /// `kErrorOK`, `kErrorFailed` (lle_enums.h).
 const ERROR_OK: c_long = 0;
@@ -151,16 +151,30 @@ mod world {
     /// The objects named are live; `io` is what the op says.
     #[no_mangle]
     pub unsafe extern "C" fn ee_contagion_world(op: u32, a: u64, b: u64, c: u64, x: f32, io: *mut c_void) -> i64 {
-        let (pa, ia, ib, ic) = (a as P, a as i64, b as i64, c as i64);
+        use crate::gamecpp::calamity_objects as fo;
+        let (pa, ia, ib) = (a as P, a as i64, b as i64);
         match op {
             EE_CONTAGION_WORLD_REFERENCE => ee_gamecpp_contagion_reference(a, b),
             EE_CONTAGION_WORLD_MARK => ee_gamecpp_contagion_mark(a, b, c),
-            EE_CONTAGION_WORLD_INFECT => h(O::C11CgInfect, pa, &[ib, ic]),
-            EE_CONTAGION_WORLD_CURE => h(O::C11CgCure, pa, &[ib, ic]),
-            EE_CONTAGION_WORLD_APPLY => hf(O::C11CgApply, pa, &[ib, ic], &[x]),
-            EE_CONTAGION_WORLD_FUNCTOR_UPDATE => hf(O::C11CgFunctorUpdate, pa, &[ic], &[x]),
+            // the functor's steps by path (calamity_objects.rs)
+            EE_CONTAGION_WORLD_INFECT => {
+                fo::ee_gamecpp_functor_infect(a as P as *mut c_void, b as P as *mut c_void, c as P as *mut c_void);
+                0
+            }
+            EE_CONTAGION_WORLD_CURE => {
+                fo::ee_gamecpp_functor_cure(a as P as *mut c_void, b as P as *mut c_void, c as P as *mut c_void);
+                0
+            }
+            EE_CONTAGION_WORLD_APPLY => {
+                fo::ee_gamecpp_functor_apply(a as P as *mut c_void, b as P as *mut c_void, x, c as P as *mut c_void);
+                0
+            }
+            EE_CONTAGION_WORLD_FUNCTOR_UPDATE => {
+                fo::ee_gamecpp_functor_update(a as P as *mut c_void, x, c as P as *mut c_void);
+                0
+            }
             EE_CONTAGION_WORLD_NEAR => ee_gamecpp_contagion_near(a, x, io),
-            EE_CONTAGION_WORLD_CAN_INFECT => h(O::C11CgCanInfect, pa, &[ib]),
+            EE_CONTAGION_WORLD_CAN_INFECT => fo::functor_can_infect(pa, b as P) as i64,
             EE_CONTAGION_WORLD_IMMUNE => ee_gamecpp_contagion_immune(a),
             EE_CONTAGION_WORLD_RANDOM => float_bits(hd(O::C11CgRandom, 0, &[], &[])),
             EE_CONTAGION_WORLD_DISTANCE => float_bits(hd(O::C11CgDistance, pa, &[ib], &[])),

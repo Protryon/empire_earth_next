@@ -360,7 +360,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::FnSetEffect3: ((EEContagionFunctor*)p)->mEffect3 = (EEGraphicEffect*)a[0];
         break;
-    case O::FnCanInfect: return ((EEContagionFunctor*)p)->CanInfect((EEUnit*)a[0]);
     case O::CxFireEffect: return CX->mFireEffect.mValue;
     case O::CxSetFireEffect: CX->mFireEffect.mValue = (uint32_t)a[0];
         break;
