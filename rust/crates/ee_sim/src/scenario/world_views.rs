@@ -17,16 +17,29 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::game_ids::EETerrainType::{kTerrainDeepWater, kTerrainShallowWater};
 use crate::scenario::ca_compose::*;
+use crate::scenario::cinematic::*;
 use crate::scenario::effect::*;
 use crate::scenario::effect_text::EE_SCENARIO_WY_UNIT_ID;
-use crate::scenario::entry::EeScenarioHostContext;
-use crate::scenario::fields::EeScenarioEffectFields;
+use crate::scenario::entry::{
+    EeScenarioHostContext, EE_SCENARIO_EN_CONDITION_FIELDS, EE_SCENARIO_EN_OBJECT_FIELDS, EE_SCENARIO_EN_TRIGGER_FIELDS,
+};
+use crate::scenario::event::*;
+use crate::scenario::fields::{
+    EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields, EeScenarioTriggerFields,
+};
+use crate::scenario::host::*;
+use crate::scenario::object_reads::*;
+use crate::scenario::objeval::*;
+use crate::scenario::placement::*;
+use crate::scenario::read_compose::*;
+use crate::scenario::round::*;
 use crate::scenario::unit_change::*;
 use crate::scenario::world_compose::*;
 use crate::scenario::world_route::ee_scenario_f32_bits as bits;
 use crate::unit_ids::EEUnitActionID::kActionGatherResource;
 use crate::unit_ids::EEUnitMovementFlag::{kMovementAir, kMovementSea};
-use crate::world::view::{ClassView, PlayerView, StatsView, UnitView, WorldRead, WorldView};
+use crate::world::view::{ClassView, PlayerView, StatsView, TileView, UnitView, WorldRead, WorldView};
+use crate::world::NodeView;
 use crate::world_field as get;
 
 /// What the C++ host still looks up for the views: a unit by id, an effect's record.
@@ -35,6 +48,13 @@ pub trait Lookups {
     fn unit(&self, id: i64) -> u64;
     /// The effect `effect`'s record (`static_cast<EeScenarioEffectFields*>`).
     fn effect(&self, effect: *mut c_void) -> *const EeScenarioEffectFields;
+    /// The record entry.rs's `EE_SCENARIO_EN_*_FIELDS` operation `op` names of the element `element`.
+    fn fields(&self, op: u32, element: *mut c_void) -> *const c_void;
+}
+
+/// `EEEpochCount()`.
+fn epoch_count() -> i64 {
+    crate::tech::tech_ids::ee_tech_epoch_count() as i64
 }
 
 /// `EEUnitClass::Is*()` (`EE_UNITS_UC_IS_*`) of the class `class`.
@@ -204,8 +224,25 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
         return Some(change_unit_value(by(unsafe { (*(ctx as *const EeScenarioHostContext)).unit } as u64), a[0]));
     }
     let w = WorldView::global(&t)?;
+    let node_of = |handle: i64| unsafe { NodeView::of(&t, handle as u64) };
+    let tile_of = |handle: i64| unsafe { TileView::of(&t, handle as u64) };
+    // an element's record by its entry operation (None for none)
+    let record = |op: u32, element: i64| -> *const c_void { look.fields(op, element as usize as *mut c_void) };
+    // SAFETY: the records are the live elements' (the handles' contract)
+    let trigger =
+        |e: i64| unsafe { (record(EE_SCENARIO_EN_TRIGGER_FIELDS, e) as *const EeScenarioTriggerFields).as_ref() };
+    let condition =
+        |e: i64| unsafe { (record(EE_SCENARIO_EN_CONDITION_FIELDS, e) as *const EeScenarioConditionFields).as_ref() };
+    let object =
+        |e: i64| unsafe { (record(EE_SCENARIO_EN_OBJECT_FIELDS, e) as *const EeScenarioObjectFields).as_ref() };
+    // the context's unit (an `EESMHostContext`'s `mUnit`) and its complex unit
+    // SAFETY: the operation's context
+    let context = || unsafe { &mut *(ctx as *mut EeScenarioHostContext) };
+    let context_complex = || by(context().unit as u64).and_then(|u| u.complex_unit());
     let player = |i: i64| if i < 0 { None } else { w.player(i as usize) };
     let tile = |x: i64, y: i64| w.map().and_then(|m| m.tile(x as c_long as i64, y as c_long as i64));
+    // the effect's technology's node in player slot `i`'s tree
+    let effect_node = |i: i64| player(i)?.tech_tree()?.node(effect()?.mTechnology as i64);
     match op {
         // a class attribute's and Set AI Variable's reads (ca_compose.rs, ai_store.rs; on handles)
         EE_SCENARIO_WK_PLAYER => Some(h(player(a[0]).map(|p| p.handle()))),
@@ -233,6 +270,15 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
         EE_SCENARIO_WC_COMPLEX_POWER => {
             Some(by(a[0] as u64).and_then(|u| u.complex_unit()?.stats()).map_or(0, |s| get!(s.fields(), mPower) as i64))
         }
+        EE_SCENARIO_WC_TECH_NODE => Some(h(w
+            .player(a[0] as c_ulong as usize)
+            .and_then(|p| p.tech_tree()?.node(class_of(a[1])?.technology()))
+            .map(|n| n.handle()))),
+        EE_SCENARIO_WC_TECH_KIND => Some(
+            w.player(a[0] as c_ulong as usize)
+                .and_then(|p| p.tech_tree()?.node(class_of(a[1])?.technology())?.data())
+                .map_or(0, |d| get!(d, mKind) as i64),
+        ),
         EE_SCENARIO_WC_SOUND_LOCAL => {
             b(by(a[0] as u64).and_then(|u| u.player()).is_some_and(|p| p.id() == w.current_player_index() as u32))
         }
@@ -293,6 +339,17 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
         EE_SCENARIO_WX_HOME_BASE => b(complex(a[0]).is_some_and(|c| c.home_base_handle() != 0)),
         EE_SCENARIO_WX_EFFECT_TECH => Some(effect()?.mTechnology as i64),
         EE_SCENARIO_WX_EFFECT_TASK_AREA => Some(effect()?.mTaskArea as i64),
+        EE_SCENARIO_WX_TECH_MAKES_UNIT => {
+            b(effect_node(a[0]).and_then(|n| n.data()).is_some_and(|d| get!(d, mMakesUnit)))
+        }
+        EE_SCENARIO_WX_TECH_CLASS_EXISTS => {
+            b(effect_node(a[0]).and_then(|n| n.data()).is_some_and(|d| class_at(get!(d, mUnitClass) as i64).is_some()))
+        }
+        EE_SCENARIO_WX_TECH_KIND => Some(effect_node(a[0]).and_then(|n| n.data()).map_or(0, |d| get!(d, mKind) as i64)),
+        EE_SCENARIO_WX_TREE_END_EPOCH => {
+            Some(player(a[0]).and_then(|p| p.tech_tree()).map_or(0, |k| get!(k.fields(), mEndEpoch) as i64))
+        }
+        EE_SCENARIO_WX_EPOCH_COUNT => Some(epoch_count()),
         EE_SCENARIO_WX_CLASS_COUNT => Some(ClassView::count(&t) as i64),
         EE_SCENARIO_WX_CLASS_EXISTS => b(class_at(a[0]).is_some()),
         EE_SCENARIO_WX_CLASS_AIR => b(class_at(a[0]).is_some_and(|k| domains(k, kMovementAir as u8))),
@@ -302,8 +359,199 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
         EE_SCENARIO_WX_CLASS_ATTACKS => b(class_at(a[0]).is_some_and(|k| get!(k.fields(), mAttack) > 0)),
         EE_SCENARIO_WX_CLASS_MOVES => b(class_at(a[0]).is_some_and(|k| get!(k.fields(), mMaxVelocity) > 0.0)),
         EE_SCENARIO_WX_CLASS_CATEGORY => Some(class_at(a[0]).map_or(0, |k| k.category() as i64)),
+        // the host's reads' (read_compose.rs; on handles)
+        EE_SCENARIO_RX_TECH_NODE => {
+            Some(h(player(a[0]).and_then(|p| p.tech_tree()?.node(a[1] as c_long as i64)).map(|n| n.handle())))
+        }
+        EE_SCENARIO_RX_NODE_MAKES_UNIT => b(node_of(a[0]).and_then(|n| n.data()).is_some_and(|d| get!(d, mMakesUnit))),
+        EE_SCENARIO_RX_NODE_RESEARCHED => b(node_of(a[0]).is_some_and(|n| n.researched())),
+        EE_SCENARIO_RX_OBJECT_HAS_ATTRIBUTE_CHECK => Some(object(a[0]).map_or(0, |o| o.mHasAttributeCheck as i64)),
+        EE_SCENARIO_RX_UNIT => Some(look.unit(a[0]) as i64),
+        EE_SCENARIO_RX_UNIT_TYPE => Some(by(a[0] as u64).and_then(|u| u.class()).map_or(0, unit_type)),
+        EE_SCENARIO_RX_TRIGGER_FIRED => b(trigger(a[0]).is_some_and(|r| r.mHasFired)),
+        EE_SCENARIO_RX_TRIGGER_ON => b(trigger(a[0]).is_some_and(|r| r.mIsOn)),
+        EE_SCENARIO_RX_CONDITION_TYPE => Some(condition(a[0]).map_or(0, |r| r.mType as i64)),
+        EE_SCENARIO_RX_CONDITION_PLAYER => Some(condition(a[0]).map_or(0, |r| r.mPlayer as i64)),
+        EE_SCENARIO_RX_CONDITION_ATTRIBUTE => Some(condition(a[0]).map_or(0, |r| r.mAttribute as i64)),
+        // the object reads' (object_reads.rs; units by 32-bit id or handle)
+        EE_SCENARIO_WZ_UNIT => Some(look.unit(a[0] as i32 as u32 as i64) as i64),
+        EE_SCENARIO_WZ_UNIT_HIT_POINTS => Some(by(a[0] as u64).map_or(0, |u| u.hit_points())),
+        EE_SCENARIO_WZ_UNIT_IS_TREE => b(by(a[0] as u64).and_then(|u| u.class()).is_some_and(|k| k.tree())),
+        EE_SCENARIO_WZ_UNIT_COMPLEX => b(by(a[0] as u64).is_some_and(|u| u.complex_unit_handle() != 0)),
+        EE_SCENARIO_WZ_UNIT_CARRIED => {
+            b(by(a[0] as u64).and_then(|u| u.complex_unit()).is_some_and(|c| c.previous_part_handle() != 0))
+        }
+        EE_SCENARIO_WZ_PLAYER_SLOT => Some(h(player(a[0]).map(|p| p.handle()))),
+        EE_SCENARIO_WZ_VIEWED_UNIT => b(player_of(a[0]).is_some_and(|p| p.viewed_unit_handle() == a[1] as u64)),
+        EE_SCENARIO_WZ_FIRST_UNIT => Some(h(player_of(a[0]).and_then(|p| p.first_unit()).map(|u| u.handle()))),
+        EE_SCENARIO_WZ_NEXT_UNIT => Some(h(by(a[0] as u64).and_then(|u| u.next()).map(|u| u.handle()))),
+        EE_SCENARIO_WZ_CURSOR => Some(context().cursor as i64),
+        EE_SCENARIO_WZ_SET_CURSOR => {
+            context().cursor = a[0] as usize as *mut c_void;
+            Some(0)
+        }
+        EE_SCENARIO_WZ_CHAIN_UNIT => Some(
+            by(a[0] as u64)
+                .map_or(-1, |u| u.id() as i64 | ((u.class().map_or(0, |k| k.unit_type()) as u32 as i64) << 32)),
+        ),
+        EE_SCENARIO_WZ_TILE => Some(h(tile(a[0], a[1]).map(|k| k.handle()))),
+        EE_SCENARIO_WZ_TILE_TERRAIN => Some(tile_of(a[0]).map_or(0, |k| k.terrain_type())),
+        EE_SCENARIO_WZ_UNIT_VARIABLE => {
+            Some(context_complex().and_then(|c| c.unit_variables().get(a[0] as usize).copied()).unwrap_or(0))
+        }
+        EE_SCENARIO_WZ_UNIT_SCALE => Some(context_complex().map_or(0, |c| bits(c.model_scale()))),
         _ => None,
     }
+}
+
+/// The answer to the host's read `op` (`EE_SCENARIO_READ_*`; the conditions', objects' and placements' reads that
+/// the C++ host answered from the world: EEScenarioHost.cpp's and EESMObject.cpp's cases), or None for the C++
+/// host's. `unit` is `gWorld.GetUnit(id)`'s handle, `object` the scenario object `GetScenarioObject(i)`'s record.
+///
+/// # Safety
+/// As [`answer`].
+pub unsafe fn read(
+    op: u32,
+    a: i32,
+    b: i32,
+    unit: &mut dyn FnMut(i64) -> u64,
+    object: &dyn Fn(i32) -> *const EeScenarioObjectFields,
+) -> Option<i64> {
+    // SAFETY: the caller's contract
+    let t = unsafe { WorldRead::begin() };
+    let w = WorldView::global(&t)?;
+    let pack = |x: i64, y: i64| crate::scenario::world_route::ee_scenario_pack_xy(x as c_long, y as c_long);
+    // the world's player slot a (none outside the array, as no original index reached)
+    let slot = || if a < 0 { None } else { w.player(a as usize) };
+    // SAFETY: a scenario object's record lives with the manager
+    let obj = || unsafe { object(a).as_ref() };
+    let fl = |v: bool| Some(v as i64);
+    match op {
+        EE_SCENARIO_READ_PLAYER_COMPUTER => return fl(slot().is_some_and(|p| p.has_computer_player())),
+        EE_SCENARIO_READ_EPOCH_COUNT => return Some(epoch_count()),
+        EE_SCENARIO_READ_EPOCH => return Some(slot().and_then(|p| p.tech_tree()).map_or(0, |k| k.current_epoch())),
+        EE_SCENARIO_READ_TOWN_COUNT => return Some(slot().map_or(0, |p| p.towns_len() as i64)),
+        EE_SCENARIO_READ_OBJECT_EXISTS => return fl(obj().is_some()),
+        EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP => return fl(obj().is_some_and(|o| o.mIsSelectOnMap)),
+        EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK => return Some(obj().map_or(0, |o| o.mSelectedByCheck as i64)),
+        EE_SCENARIO_READ_MAP_SIZE => {
+            let m = w.map()?;
+            return Some(pack(get!(m.rts(), mL195610) as i64, get!(m.rts(), mL195614) as i64));
+        }
+        EE_SCENARIO_READ_CLASS_TILE_SIZE => {
+            return Some(if a < 0 { None } else { ClassView::by_index(&t, a as usize) }.map_or(0, |k| k.tile_size()))
+        }
+        EE_SCENARIO_READ_MAP_TILE_EXISTS => {
+            return fl(w.map().and_then(|m| m.tile(a as c_ulong as i64, b as c_ulong as i64)).is_some())
+        }
+        _ => {}
+    }
+    // the reads of the unit of 32-bit id a
+    let id = a as u32 as i64;
+    let of_unit = |u: UnitView| -> Option<i64> {
+        Some(match op {
+            EE_SCENARIO_READ_UNIT_CLASS_TYPE => u.class()?.unit_type() as i64,
+            EE_SCENARIO_READ_UNIT_PLAYER => u.player()?.id() as i64,
+            EE_SCENARIO_READ_UNIT_COMMAND => u.complex_unit()?.command_type() as i64,
+            EE_SCENARIO_READ_UNIT_TILE_OF => pack(u.tile_xy().0, u.tile_xy().1),
+            EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT => {
+                let c = u.complex_unit()?;
+                bits(get!(c.stats()?.fields(), mLineOfSight) + c.sight())
+            }
+            EE_SCENARIO_READ_UNIT_RANGE => bits(u.stats()?.range()),
+            EE_SCENARIO_READ_UNIT_TILE_SIZE => u.class()?.tile_size(),
+            _ => return None,
+        })
+    };
+    match op {
+        EE_SCENARIO_READ_UNIT_CLASS_TYPE
+        | EE_SCENARIO_READ_UNIT_PLAYER
+        | EE_SCENARIO_READ_UNIT_COMMAND
+        | EE_SCENARIO_READ_UNIT_TILE_OF
+        | EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT
+        | EE_SCENARIO_READ_UNIT_RANGE
+        | EE_SCENARIO_READ_UNIT_TILE_SIZE => {
+            // SAFETY: a unit by id is the world's
+            Some(unsafe { UnitView::of(&t, unit(id)) }.and_then(of_unit).unwrap_or(0))
+        }
+        _ => None,
+    }
+}
+
+/// The answer to the events' statement `op` (`EE_SCENARIO_EV_*`, event.rs; pointers as integers) that reads the
+/// world (EEEvent.cpp's cases), or None for the C++ host's.
+///
+/// # Safety
+/// As [`answer`]: the handles in `a` the operation's live objects.
+pub unsafe fn event(op: u32, a: &[i64; 4]) -> Option<i64> {
+    // SAFETY: the caller's contract
+    let t = unsafe { WorldRead::begin() };
+    let w = WorldView::global(&t)?;
+    // SAFETY (each view): the operation's live objects
+    let by = |handle: i64| unsafe { UnitView::of(&t, handle as u64) };
+    let player_of = |handle: i64| unsafe { PlayerView::of(&t, handle as u64) };
+    let stats_of = |handle: i64| unsafe { StatsView::of(&t, handle as u64) };
+    let class_of = |handle: i64| unsafe { ClassView::of(&t, handle as u64) };
+    let node_of = |handle: i64| unsafe { NodeView::of(&t, handle as u64) };
+    let h = |v: Option<u64>| v.unwrap_or(0) as i64;
+    let complex = |handle: i64| by(handle).filter(|u| u.is_complex());
+    Some(match op {
+        EE_SCENARIO_EV_LOADING => w.loading_saved_game() as i64,
+        EE_SCENARIO_EV_PLAYER => h(if a[0] < 0 { None } else { w.player(a[0] as usize) }.map(|p| p.handle())),
+        EE_SCENARIO_EV_CURRENT_PLAYER => h(w.current_player().map(|p| p.handle())),
+        EE_SCENARIO_EV_PLAYER_ID => player_of(a[0]).map_or(0, |p| p.id() as i64),
+        EE_SCENARIO_EV_PLAYER_FIELDS => h(player_of(a[0]).map(|p| p.fields().ptr() as u64)),
+        EE_SCENARIO_EV_CLASS => {
+            h(if a[0] < 0 { None } else { ClassView::by_index(&t, a[0] as usize) }.map(|k| k.handle()))
+        }
+        EE_SCENARIO_EV_CLASS_FIELDS => h(class_of(a[0]).map(|k| k.fields().ptr() as u64)),
+        EE_SCENARIO_EV_CLASS_COUNT => ClassView::count(&t) as i64,
+        EE_SCENARIO_EV_UPGRADE_FIELDS => h(stats_of(a[0]).map(|s| s.fields().ptr() as u64)),
+        EE_SCENARIO_EV_UPGRADE_CLASS => h(stats_of(a[0]).map(|s| s.class_handle())),
+        EE_SCENARIO_EV_FIRST_UNIT => h(player_of(a[0]).and_then(|p| p.first_unit()).map(|u| u.handle())),
+        EE_SCENARIO_EV_NEXT_UNIT => h(by(a[0]).and_then(|u| u.next()).map(|u| u.handle())),
+        EE_SCENARIO_EV_PENDING_COUNT => player_of(a[0]).map_or(0, |p| p.pending_units_len() as i64),
+        EE_SCENARIO_EV_PENDING_UNIT => h(player_of(a[0]).map(|p| p.pending_unit_handle(a[1] as c_ulong as usize))),
+        EE_SCENARIO_EV_UNIT_TYPE => by(a[0]).and_then(|u| u.class()).map_or(0, |k| k.unit_type() as i64),
+        EE_SCENARIO_EV_UNIT_HIT_POINTS => by(a[0]).map_or(0, |u| u.hit_points()),
+        EE_SCENARIO_EV_UNIT_COMPLEX | EE_SCENARIO_EV_GET_COMPLEX => h(by(a[0]).map(|u| u.complex_unit_handle())),
+        EE_SCENARIO_EV_COMPLEX_FLIGHT => complex(a[0]).map_or(0, |c| get!(c.complex(), mFlightTime) as i64),
+        EE_SCENARIO_EV_COMPLEX_BUILT => complex(a[0]).is_some_and(|c| c.is_built()) as i64,
+        EE_SCENARIO_EV_UNIT_ON_TILE => by(a[0]).is_some_and(|u| u.has_tile_node()) as i64,
+        EE_SCENARIO_EV_COMPLEX_CARRIED => complex(a[0]).is_some_and(|c| c.previous_part_handle() != 0) as i64,
+        EE_SCENARIO_EV_UNIT_ID => by(a[0]).map_or(0, |u| u.id() as i64),
+        EE_SCENARIO_EV_COMPLEX_CLASS | EE_SCENARIO_EV_UNIT_CLASS => {
+            h(by(a[0]).and_then(|u| u.class()).map(|k| k.handle()))
+        }
+        EE_SCENARIO_EV_COMPLEX_CLASS_TYPE => by(a[0]).and_then(|u| u.class()).map_or(0, |k| k.unit_type() as i64),
+        EE_SCENARIO_EV_COMPLEX_AS_UNIT => a[0],
+        EE_SCENARIO_EV_TREE_NODE => h(player_of(a[0]).and_then(|p| p.tech_tree()?.node(a[1])).map(|n| n.handle())),
+        EE_SCENARIO_EV_NODE_UNIT_CLASS => {
+            node_of(a[0]).and_then(|n| n.data()).map_or(0, |d| get!(d, mUnitClass) as i64)
+        }
+        EE_SCENARIO_EV_NODE_KIND => node_of(a[0]).and_then(|n| n.data()).map_or(0, |d| get!(d, mKind) as i64),
+        _ => return None,
+    })
+}
+
+/// The answer to the round's operation `op` (`EE_SCENARIO_ROUND_*`, round.rs) that reads the world
+/// (EEScenarioManager.cpp's cases), or None for the C++ host's.
+///
+/// # Safety
+/// As [`answer`].
+pub unsafe fn round(op: u32, a: i64) -> Option<i64> {
+    // SAFETY: the caller's contract
+    let t = unsafe { WorldRead::begin() };
+    let w = WorldView::global(&t)?;
+    let player = || if a < 0 { None } else { w.player(a as c_ulong as usize) };
+    Some(match op {
+        EE_SCENARIO_ROUND_GAME_SPEED => bits(w.game_speed()),
+        EE_SCENARIO_ROUND_IN_CINEMATIC => w.in_cinematic() as i64,
+        EE_SCENARIO_ROUND_NUM_PLAYERS => w.num_players() as i64,
+        EE_SCENARIO_ROUND_PLAYER_EXISTS => player().is_some() as i64,
+        EE_SCENARIO_ROUND_PLAYER_OBSERVER => player().is_some_and(|p| p.observer()) as i64,
+        _ => return None,
+    })
 }
 
 #[cfg(test)]

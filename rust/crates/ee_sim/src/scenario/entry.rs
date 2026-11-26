@@ -445,6 +445,18 @@ mod game {
         fn effect(&self, effect: *mut c_void) -> *const EeScenarioEffectFields {
             en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, effect, 0) as *const EeScenarioEffectFields
         }
+        fn fields(&self, op: u32, element: *mut c_void) -> *const c_void {
+            en_ptr(op, element, 0)
+        }
+    }
+
+    /// A round operation: the world views' answer (world_views.rs round), else the C++ host's.
+    unsafe extern "C" fn round_op(ctx: *mut c_void, op: u32, a: i64, b: i64, time: f32) -> i64 {
+        // SAFETY: the round host's contract, passed through
+        unsafe {
+            crate::scenario::world_views::round(op, a)
+                .unwrap_or_else(|| sys::ee_scenariocpp_round_op(ctx, op, a, b, time))
+        }
     }
 
     /// The host table over the context `ctx` (it must outlive the calls).
@@ -524,7 +536,7 @@ mod game {
             ctx: manager,
             fields: en_ptr(EE_SCENARIO_EN_MANAGER_FIELDS, manager, 0) as *mut EeScenarioManagerFields,
             queue: en_ptr(EE_SCENARIO_EN_MANAGER_TIMED, manager, 0) as *mut EeScenarioTimedQueue,
-            op: sys::ee_scenariocpp_round_op,
+            op: round_op,
         }
     }
 

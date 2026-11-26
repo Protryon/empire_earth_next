@@ -74,31 +74,9 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     switch (inOp) {
     case EE_SCENARIO_EV_EFFECTS_DATA: return R(gEventEffects.data());
     case EE_SCENARIO_EV_EFFECTS_COUNT: return (int64_t)gEventEffects.size();
-    case EE_SCENARIO_EV_LOADING: return gWorld.mLoadingSavedGame;
     case EE_SCENARIO_EV_EVENTS_ENABLED: return gEventsEnabled;
-    case EE_SCENARIO_EV_PLAYER: return R(gWorld.mPlayers[a[0]]);
-    case EE_SCENARIO_EV_CURRENT_PLAYER: return R(gWorld.GetCurrentPlayer());
-    case EE_SCENARIO_EV_PLAYER_ID: return (int64_t)P(EEPlayer, 0)->mPlayerID;
-    case EE_SCENARIO_EV_PLAYER_FIELDS: return R(static_cast<EeUnitsPlayerFields*>(P(EEPlayer, 0)));
-    case EE_SCENARIO_EV_CLASS: return R(gUnitClassTable[a[0]]);
-    case EE_SCENARIO_EV_CLASS_FIELDS: return R(static_cast<EeUnitsUnitClassFields*>(P(EEUnitClass, 0)));
-    case EE_SCENARIO_EV_CLASS_COUNT: return (int64_t)EEUnitClassCount();
     case EE_SCENARIO_EV_UPGRADE: return R(P(EEPlayer, 0)->mUnitClassUpgrades[a[1]]);
     case EE_SCENARIO_EV_GET_UPGRADE: return R(P(EEPlayer, 0)->GetUpgrade(a[1]));
-    case EE_SCENARIO_EV_UPGRADE_FIELDS: return R(static_cast<EeUnitsUnitClassUpgradeFields*>(P(EEUnitClassUpgrade, 0)));
-    case EE_SCENARIO_EV_UPGRADE_CLASS: return R(P(EEUnitClassUpgrade, 0)->mUnitClass);
-    case EE_SCENARIO_EV_FIRST_UNIT: return R(P(EEPlayer, 0)->mFirstUnit);
-    case EE_SCENARIO_EV_NEXT_UNIT: return R(static_cast<EEUnit*>(P(EEUnit, 0)->mNext));
-    case EE_SCENARIO_EV_PENDING_COUNT: return (int64_t)P(EEPlayer, 0)->GetNumPendingUnits();
-    case EE_SCENARIO_EV_PENDING_UNIT: return R(static_cast<EEUnit*>(P(EEPlayer, 0)->GetPendingUnit((unsigned long)a[1])));
-    case EE_SCENARIO_EV_UNIT_TYPE: return (int64_t)P(EEUnit, 0)->mUnitClass->mUnitType;
-    case EE_SCENARIO_EV_UNIT_HIT_POINTS: return (int64_t)P(EEUnit, 0)->GetHitPoints();
-    case EE_SCENARIO_EV_UNIT_COMPLEX: return R(P(EEUnit, 0)->mComplexUnit);
-    case EE_SCENARIO_EV_COMPLEX_FLIGHT: return (int64_t)P(EEComplexUnit, 0)->mFlightTime;
-    case EE_SCENARIO_EV_COMPLEX_BUILT: return P(EEComplexUnit, 0)->mIsBuilt == true;
-    case EE_SCENARIO_EV_UNIT_ON_TILE: return P(EEUnit, 0)->mTileNode != NULL;
-    case EE_SCENARIO_EV_COMPLEX_CARRIED: return P(EEComplexUnit, 0)->mPreviousPart != NULL;
-    case EE_SCENARIO_EV_UNIT_ID: return (int64_t)P(EEUnit, 0)->mUnitID;
     case EE_SCENARIO_EV_MAKE_AREA_EFFECTS:
         P(EEUnit, 0)->mComplexUnit->MakeAreaEffects();
         return 0;
@@ -114,17 +92,9 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_SET_HIT_POINTS:
         P(EEUnit, 0)->SetHitPoints((long)a[1]);
         return 0;
-    case EE_SCENARIO_EV_GET_COMPLEX: return R(P(EEUnit, 0)->GetComplexUnit());
-    case EE_SCENARIO_EV_COMPLEX_CLASS: return R(P(EEComplexUnit, 0)->GetUnitClass());
-    case EE_SCENARIO_EV_COMPLEX_CLASS_TYPE: return (int64_t)P(EEComplexUnit, 0)->GetClass()->mUnitType;
-    case EE_SCENARIO_EV_COMPLEX_AS_UNIT: return R(static_cast<EEUnit*>(P(EEComplexUnit, 0)));
-    case EE_SCENARIO_EV_UNIT_CLASS: return R(P(EEUnit, 0)->mUnitClass);
-    case EE_SCENARIO_EV_TREE_NODE: return R(P(EEPlayer, 0)->GetTechTree()->Get(a[1]));
     case EE_SCENARIO_EV_NODE_SET_BUTTON:
         P(EETechTreeNode, 0)->SetButton(a[1]);
         return 0;
-    case EE_SCENARIO_EV_NODE_UNIT_CLASS: return (int64_t)P(EETechTreeNode, 0)->mData->mUnitClass;
-    case EE_SCENARIO_EV_NODE_KIND: return (int64_t)P(EETechTreeNode, 0)->mData->mKind;
     case EE_SCENARIO_EV_NODE_DELAY: return (int64_t)P(EETechTreeNode, 0)->mResearchDelay++;
     case EE_SCENARIO_EV_RESEARCH_NODE: return (int64_t)P(EETechnology, 0)->ResearchNode(NULL);
     case EE_SCENARIO_EV_BUTTON: return R(EEButtonObject::Get((unsigned long)a[0]));

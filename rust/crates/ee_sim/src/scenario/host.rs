@@ -205,6 +205,18 @@ impl Host for EeScenarioHost {
         let world = self.world;
         // SAFETY: as above; `args` lives through the call
         let mut w = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
+        // the world's members the views answer (world_views.rs read)
+        #[cfg(not(test))]
+        {
+            let object = self.object;
+            let mut unit = |id: i64| w(crate::scenario::read_compose::EE_SCENARIO_RX_UNIT, [id, 0, 0, 0, 0, 0]) as u64;
+            // SAFETY: as above: the table's object callback over its context
+            let object = |i: i32| unsafe { object(ctx, i) };
+            // SAFETY: as above
+            if let Some(value) = unsafe { crate::scenario::world_views::read(op, a, b, &mut unit, &object) } {
+                return value;
+            }
+        }
         if let Some(value) = crate::scenario::read_compose::compose(&mut w, op, a, b) {
             return value;
         }

@@ -1092,7 +1092,10 @@ impl EvHost for EeScenarioEvGame {
         #[cfg(not(test))]
         {
             // SAFETY: the C++ host's contract (EEEvent.cpp): the arguments its op names
-            ev_compose(op, a, &mut |op, a| unsafe { sys::ee_scenariocpp_event(op, a.as_ptr()) })
+            // (the world's reads answered by the views: world_views.rs event)
+            ev_compose(op, a, &mut |op, a| unsafe {
+                crate::scenario::world_views::event(op, &a).unwrap_or_else(|| sys::ee_scenariocpp_event(op, a.as_ptr()))
+            })
         }
         #[cfg(test)]
         {

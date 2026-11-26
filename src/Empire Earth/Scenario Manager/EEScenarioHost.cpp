@@ -48,26 +48,20 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_CONTEXT_UNIT: return (int64_t)(uintptr_t)theContext->mUnit;
     case EE_SCENARIO_READ_WORLD: return (int64_t)(uintptr_t)&gWorld;
     case EE_SCENARIO_READ_PLAYER_HUMAN: return thePlayer != NULL && thePlayer->mHumanPlayer != NULL;
-    case EE_SCENARIO_READ_PLAYER_COMPUTER: return thePlayer != NULL && thePlayer->mComputerPlayer != NULL;
     case EE_SCENARIO_READ_RANDOM: return gPhysics->GetRandom((long)inA, (long)inB);
     case EE_SCENARIO_READ_POPULATION: return thePlayer->GetTotalPopulation(false, false);
     case EE_SCENARIO_READ_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
     case EE_SCENARIO_READ_COMPUTER_DIFFICULTY:
         return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
-    case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
-    case EE_SCENARIO_READ_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
     case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;
     case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0) : -1;
     case EE_SCENARIO_READ_CONTINENT: return gContinentManager.GetContinentID(inA, inB);
-    case EE_SCENARIO_READ_TOWN_COUNT: return gWorld.GetPlayer(inA)->GetNumTowns();
     case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->GetTown(inB)->HullContains(U2DPoint<long>(inC, inD));
     case EE_SCENARIO_READ_CATEGORY_IN_SET: return gUnitSetManager.Contains((long)inA, (unsigned long)inB);
     case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
-    case EE_SCENARIO_READ_OBJECT_EXISTS: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA) != NULL;
-    case EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->GetIsSelectOnMap();
     case EE_SCENARIO_READ_OBJECT_PICK: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
     }
@@ -143,15 +137,11 @@ int64_t SMReadPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
 extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
-    case EE_SCENARIO_RX_TECH_NODE: return SMReadPtr(Player((int32_t)a[0])->GetTechTree()->Get((long)a[1]));
-    case EE_SCENARIO_RX_NODE_MAKES_UNIT: return SMReadOf<EETechTreeNode>(a[0])->mData->mMakesUnit;
-    case EE_SCENARIO_RX_NODE_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched;
     case EE_SCENARIO_RX_NODE_SET_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched = a[1] != 0;
     case EE_SCENARIO_RX_NODE_AVAILABLE: return SMReadOf<EETechTreeNode>(a[0])->GetIsAvailable();
     case EE_SCENARIO_RX_OBJECT: return SMReadPtr(gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]));
     case EE_SCENARIO_RX_FIND_OBJECT: return SMReadPtr(gWorld.mScenarioManager->FindObjectByID((long)a[0]));
     case EE_SCENARIO_RX_OBJECT_EVALUATE: return SMReadOf<EESMObject>(a[0])->Evaluate(0);
-    case EE_SCENARIO_RX_OBJECT_HAS_ATTRIBUTE_CHECK: return SMReadOf<EESMObject>(a[0])->mHasAttributeCheck;
     case EE_SCENARIO_RX_OBJECT_UNIT_COUNT: return (int64_t)SMReadOf<EESMObject>(a[0])->mUnits.size();
     case EE_SCENARIO_RX_OBJECT_UNIT_AT: return (int64_t)SMReadOf<EESMObject>(a[0])->GetUnitAt((unsigned long)a[1]);
     case EE_SCENARIO_RX_OBJECT_ATTRIBUTE: return (int64_t)SMReadOf<EESMObject>(a[0])->GetAttribute();
@@ -166,19 +156,12 @@ extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_
         return 0;
     case EE_SCENARIO_RX_IDS_COUNT: return (int64_t)sSMReadIDs.size();
     case EE_SCENARIO_RX_IDS_AT: return (int64_t)sSMReadIDs[(size_t)a[0]];
-    case EE_SCENARIO_RX_UNIT: return SMReadPtr(gWorld.GetUnit((unsigned long)a[0]));
-    case EE_SCENARIO_RX_UNIT_TYPE: return SMReadOf<EEUnit>(a[0])->mUnitClass->GetUnitType();
     case EE_SCENARIO_RX_TRIGGER: return SMReadPtr(gWorld.mScenarioManager->GetTrigger((unsigned long)a[0]));
-    case EE_SCENARIO_RX_TRIGGER_FIRED: return SMReadOf<EESMTrigger>(a[0])->mHasFired;
-    case EE_SCENARIO_RX_TRIGGER_ON: return SMReadOf<EESMTrigger>(a[0])->mIsOn;
     case EE_SCENARIO_RX_UNIT_SET: return SMReadPtr(gUnitSetManager.GetSet((unsigned long)a[0]));
     case EE_SCENARIO_RX_SET_CONTAINS: return SMReadOf<EEUnitSet>(a[0])->Contains((unsigned long)a[1]);
     case EE_SCENARIO_RX_CONDITION: return SMReadPtr(gWorld.mScenarioManager->GetCondition((unsigned long)a[0]));
     case EE_SCENARIO_RX_FIND_CONDITION: return SMReadPtr(gWorld.mScenarioManager->FindConditionByID((long)a[0]));
     case EE_SCENARIO_RX_CONDITION_EVALUATE: return SMReadOf<EESMCondition>(a[0])->Evaluate();
-    case EE_SCENARIO_RX_CONDITION_TYPE: return (int64_t)SMReadOf<EESMCondition>(a[0])->mType;
-    case EE_SCENARIO_RX_CONDITION_PLAYER: return (int64_t)SMReadOf<EESMCondition>(a[0])->mPlayer;
-    case EE_SCENARIO_RX_CONDITION_ATTRIBUTE: return (int64_t)SMReadOf<EESMCondition>(a[0])->mAttribute;
     case EE_SCENARIO_RX_EFFECT_COPY:
         SMReadOf<EESMEffect>(a[0])->Copy(*inContext->mEffect);
         return 0;

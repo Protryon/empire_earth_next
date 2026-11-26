@@ -23,6 +23,9 @@ impl Lookups for Look<'_> {
     fn effect(&self, _: *mut c_void) -> *const EeScenarioEffectFields {
         &self.effect
     }
+    fn fields(&self, _: u32, _: *mut c_void) -> *const c_void {
+        std::ptr::null()
+    }
 }
 
 /// `answer(op, a)` over the fixture (the world registered), on a context whose unit is `unit`.
@@ -138,4 +141,43 @@ fn a_player_s_index_is_the_last_slot_holding_it() {
     let w = unsafe { WorldView::of(&t, addr(&*f.world) as u64) }.unwrap();
     assert_eq!(player_index(&w, p), 1);
     assert_eq!(player_index(&w, 0x10), -1);
+}
+
+#[test]
+fn the_events_rounds_and_host_reads_from_the_views() {
+    let f = fixture();
+    let _guard = with_test_layout(EeWorldLayout { world_address: addr(&*f.world) as u64, ..fake_layout() });
+    let (player, tree, soldier) = (addr(&*f.player) as i64, addr(&*f.tree) as i64, addr(&*f.soldier) as i64);
+    // SAFETY: the fixture's objects live through the calls
+    let ev = |op, a0, a1| unsafe { event(op, &[a0, a1, 0, 0]) };
+    assert_eq!(ev(EE_SCENARIO_EV_PLAYER, 1, 0), Some(player));
+    assert_eq!(ev(EE_SCENARIO_EV_PLAYER_ID, player, 0), Some(1));
+    assert_eq!(ev(EE_SCENARIO_EV_FIRST_UNIT, player, 0), Some(tree));
+    assert_eq!(ev(EE_SCENARIO_EV_NEXT_UNIT, tree, 0), Some(soldier));
+    assert_eq!(ev(EE_SCENARIO_EV_UNIT_TYPE, soldier, 0), Some(0x2e7));
+    assert_eq!(ev(EE_SCENARIO_EV_UNIT_COMPLEX, tree, 0), Some(0));
+    assert_eq!(ev(EE_SCENARIO_EV_COMPLEX_AS_UNIT, soldier, 0), Some(soldier));
+    assert_eq!(ev(EE_SCENARIO_EV_SOUND, 3, 0), None);
+    // SAFETY: as above
+    let round = |op, a| unsafe { round(op, a) };
+    assert_eq!(round(EE_SCENARIO_ROUND_NUM_PLAYERS, 0), Some(2));
+    assert_eq!(
+        (round(EE_SCENARIO_ROUND_PLAYER_EXISTS, 1), round(EE_SCENARIO_ROUND_PLAYER_EXISTS, 0)),
+        (Some(1), Some(0))
+    );
+    assert_eq!(round(EE_SCENARIO_ROUND_GAME_SPEED, 0), Some(bits(1.5)));
+    let mut unit = |id: i64| if id == SOLDIER { soldier as u64 } else { 0 };
+    let none = |_: i32| std::ptr::null::<EeScenarioObjectFields>();
+    // SAFETY: as above
+    let mut rd = |op, a, b| unsafe { read(op, a, b, &mut unit, &none) };
+    assert_eq!(rd(EE_SCENARIO_READ_MAP_SIZE, 0, 0), Some(7 | (8 << 32)));
+    assert_eq!(rd(EE_SCENARIO_READ_UNIT_TILE_OF, SOLDIER as i32, 0), Some(1 | (1 << 32)));
+    assert_eq!(rd(EE_SCENARIO_READ_UNIT_CLASS_TYPE, SOLDIER as i32, 0), Some(0x2e7));
+    assert_eq!(rd(EE_SCENARIO_READ_UNIT_RANGE, SOLDIER as i32, 0), Some(bits(5.5)));
+    assert_eq!(rd(EE_SCENARIO_READ_OBJECT_EXISTS, 4, 0), Some(0));
+    assert_eq!(
+        (rd(EE_SCENARIO_READ_MAP_TILE_EXISTS, 0, 0), rd(EE_SCENARIO_READ_MAP_TILE_EXISTS, -1, 0)),
+        (Some(1), Some(0))
+    );
+    assert_eq!(rd(EE_SCENARIO_READ_RANDOM, 0, 9), None);
 }
