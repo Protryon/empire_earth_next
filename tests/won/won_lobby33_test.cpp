@@ -269,7 +269,12 @@ static void PrvCases()
             p.mAuthContext = new AuthContext;
             std::wstring aCommunity(L"EmpireEarth");
             sTrace.clear();
-            if (aSide == 0) L33Orig::PrvInitAuth(&p, aCommunity, kHashes[k % 3]);
+            if (aSide == 0) {
+                L33Orig::PrvInitAuth(&p, aCommunity, kHashes[k % 3]);
+                // R6 WON round 39: the list is read in Rust (no StringParser): its effect is the dump's hashes
+                for (size_t i = 0; i < sTrace.size(); i++)
+                    if (sTrace[i].rfind("StringParser ReadValue", 0) == 0) sTrace.erase(sTrace.begin() + i--);
+            }
             else PrvToRust(p), ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::InitAuth, (intptr_t)&aCommunity, (intptr_t)kHashes[k % 3]), PrvFromRust(p);
             p.Dump();
             Refs();
@@ -285,7 +290,9 @@ static void PrvCases()
             sTrace.clear();
             sAllocatedConfig = new LobbyConfig;
             WONLobbyPrv p;
-            if (aSide == 0) L33Orig::PrvConstruct(&p);
+            // R6 WON round 39: the hash list and its flag are the Rust state's, cleared by the constructor (the
+            // original's list was empty and its flag unset: the world's sentinels stand for neither)
+            if (aSide == 0) p.mHasSetHashFileList = false, p.mHashFileList.clear(), L33Orig::PrvConstruct(&p);
             else PrvToRust(p), ee_won_lobbyprv_call(&p, MutPrv, EeWonLobbyPrvCall::Construct, 0, 0), PrvFromRust(p);
             p.Dump();
             Refs();
