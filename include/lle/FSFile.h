@@ -121,8 +121,7 @@ public:
     const EeFsSpec* Rec() const { return reinterpret_cast<const EeFsSpec*>(this); }
     static EeFsSpec* Spec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }
     static const EeFsString* Startup(const UString* inPath) { return reinterpret_cast<const EeFsString*>(inPath); }
-    template <typename T> long ReadValue(T& outValue)
-        { return ee_fs_spec_read_value(Rec(), reinterpret_cast<uint8_t*>(&outValue), sizeof(outValue)); }
+    template <typename T> long ReadValue(T& outValue) { return ee_fs_spec_read_value(Rec(), reinterpret_cast<uint8_t*>(&outValue), sizeof(outValue)); }
     template <typename T> long WriteValue(const T& inValue)
         { return ee_fs_spec_write_value(Rec(), reinterpret_cast<const uint8_t*>(&inValue), sizeof(inValue)); }
 

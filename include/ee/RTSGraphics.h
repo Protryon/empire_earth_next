@@ -26,7 +26,8 @@ public:
     virtual void SceneStarting() = 0;       // +0x04 (RTSGraphics::SceneStarting)
     virtual void RenderScene() = 0;         // +0x08 (RTSGraphics::RenderScene)
     virtual void FrameDone() = 0;           // +0x0c (RTSGraphics::FrameDone)
-    virtual ~RTSRenderObject();             // +0x10 (??_G 0x1106e5)
+    // +0x10 (??_G 0x1106e5)
+    virtual ~RTSRenderObject() {  }
 };
 
 // LLE round 8: the bodies are Rust (ee_game rts graphics.rs); the plain members are its record EeRtsGraphicsFields,

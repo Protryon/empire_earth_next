@@ -9,15 +9,11 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 
 #include "ee/EEMiniMap.h"
-#include "lle/GERenderState.h"
-#include "rust/base/math.h"
-#include "rust/game/rts.h"
 
 // the layers' clear colour
 static GEColor sBlack(0.0f, 0.0f, 0.0f);

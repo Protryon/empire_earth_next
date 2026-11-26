@@ -16,8 +16,7 @@ public:                                          // mHeight (z), mDepth (y); rus
         { return *static_cast<GEBoundingBox*>(ee_ge_bbox_define(this, &inBox.mBottomLeftFront, &inBox.mTopRightBack)); }
     // inside, with a 0.00001 tolerance on every face
     bool Contains(const GE3DPoint& inPoint) const { return ee_ge_bbox_contains(GERust(*this), GERust(inPoint)); }
-    void Define(const GE3DPoint& inBottomLeftFront, const GE3DPoint& inTopRightBack)
-        { ee_ge_bbox_define(this, &inBottomLeftFront, &inTopRightBack); }
+    void Define(const GE3DPoint& inBottomLeftFront, const GE3DPoint& inTopRightBack) { ee_ge_bbox_define(this, &inBottomLeftFront, &inTopRightBack); }
     const GE3DPoint& GetBottomLeftFront() const { return GECpp(this->mBottomLeftFront); }
     float GetDepth() const { return this->mDepth; }
     float GetHeight() const { return this->mHeight; }
@@ -25,8 +24,7 @@ public:                                          // mHeight (z), mDepth (y); rus
     float GetWidth() const { return this->mWidth; }
     // two boxes overlap (touching faces count); a line hits one of the six faces (outDistance: the nearest hit)
     bool Intersects(const GEBoundingBox& inBox) const { return ee_ge_bbox_intersects(GERust(*this), GERust(inBox)); }
-    bool Intersects(const GE3DLine& inLine, float& outDistance) const
-        { return ee_ge_bbox_intersects_line(GERust(*this), GERust(inLine), &outDistance); }
+    bool Intersects(const GE3DLine& inLine, float& outDistance) const { return ee_ge_bbox_intersects_line(GERust(*this), GERust(inLine), &outDistance); }
     // the two corners from the file (an FSFileSpec), then the size; the first read error
     template <class F> long Load(F& inFile) { return ee_ge_bbox_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_bbox_save(GERust(*this), GERustFile(inFile)); }

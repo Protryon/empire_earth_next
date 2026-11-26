@@ -10,12 +10,10 @@
 #include "lle/TMTimer.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
-#include "platform/PlatSim.h"
 
 #include "ee/RTSGraphics.h"
 #include "ee/EEPhysics.h"
 #include "ee/EECommunications.h"
-#include "rust/game/rts.h"
 
 UString gRTSPhysicsDataKey("RTSPhysics Data");
 

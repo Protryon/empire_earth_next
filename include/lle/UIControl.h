@@ -43,10 +43,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual long CloseIMECompositionString() { return kErrorFailed; }
     static bool ControlKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Control); }
     virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
-    static bool CopyKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Copy); }
-    static bool CutKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Cut); }
-    // Returns whether Delete (or keypad Del with Num Lock off) is held
-    static bool DeleteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Delete); }
     // Returns whether Down (or keypad 2 with Num Lock off) is held
     static bool DownKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Down); }
     // Draws the copied background (when it has an opacity) and the border (ee_ui controlobj.rs)
@@ -54,8 +50,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual long DrawTextA() { this->mDrawCount--; return kErrorOK; }
     // Returns whether End (or keypad 1 with Num Lock off) is held
     static bool EndKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::End); }
-    // Returns whether Enter or keypad Enter was just released
-    static bool EnterKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Enter); }
     void FireTriggerEvent(unsigned long inEvent) { this->Call(EeUiControlCall::FireTrigger, inEvent); }
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
     float GetBorderOpacity() const { return this->mBorderOpacity; }
@@ -92,8 +86,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual void HideControl() {}
     // Returns whether Home (or keypad 7 with Num Lock off) is held
     static bool HomeKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Home); }
-    // Returns whether Left (or keypad 4 with Num Lock off) is held
-    static bool LeftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Left); }
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
     // The left button down, then MouseLButtonDown (ee_ui controlobj.rs)
@@ -103,11 +95,8 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual long MouseRButtonUp() = 0;
     virtual long MouseWheelTurned(long inDelta) { return kErrorFailed; }
     virtual long OpenIMECompositionString() { return kErrorFailed; }
-    static bool PasteKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Paste); }
     virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
     virtual void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
-    // Returns whether Right (or keypad 6 with Num Lock off) is held
-    static bool RightKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Right); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor) { this->Call(EeUiControlCall::SetBgColor, 0, 0, UIF4(inColor)); }
     virtual void SetBgOpacity(float inOpacity) { this->Call(EeUiControlCall::SetBgOpacity, 0, 0, UIF4(inOpacity)); }

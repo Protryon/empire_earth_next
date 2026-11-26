@@ -12,11 +12,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
-#include "lle/UIForm.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
 
 #include "lle/UITriStateCheckBox.h"
 
@@ -27,9 +22,8 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUIShell.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EESaveGameFiles.h"
+#include "ee/EEUIShell.h"
 #include "ee/EESEARust.h"
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSEffect.cpp
 
@@ -46,10 +40,8 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 {
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(inForm));
     switch (inOp) {
-    case EE_SCREENS_SE_OP_OPEN_CIV_BUILDER:
-        return (uint32_t)gUserInterface->OpenCivilizationBuilder(&theEditor->mC1A0, true);
-    case EE_SCREENS_SE_OP_IN_EDITOR:
-        return gUIManager->GetInScenarioEditor() == true;
+    case EE_SCREENS_SE_OP_OPEN_CIV_BUILDER: return (uint32_t)gUserInterface->OpenCivilizationBuilder(&theEditor->mC1A0, true);
+    case EE_SCREENS_SE_OP_IN_EDITOR: return gUIManager->GetInScenarioEditor() == true;
     }
     return 0;
 }

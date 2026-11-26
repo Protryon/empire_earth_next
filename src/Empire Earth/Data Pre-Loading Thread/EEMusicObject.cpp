@@ -14,8 +14,6 @@
 #include "EEDatabase.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEDbRecords.h"
-#include "ee/EERules.h"
-#include "rust/game/preload_media.h"
 
 URandomIntegers gMusicRandom;
 

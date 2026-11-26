@@ -4,23 +4,14 @@
 // the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
-#include "lle/NEMessage.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EEMessage.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EEAction.h"
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 

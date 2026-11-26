@@ -41910,3 +41910,42 @@ The config object model (taken in round 39), EELobbyConfig; TransferSetSavesPath
 FilterListItem, GlueText, EELobbyColorButton/Chooser, WONLobbyCore.h's declarations, WONLobbyEvents.h's makers,
 WONLobbyPrv's run state; InitLogic's and PingLogic's multi-statement host cases, SetHashFileList's join, WONRouting.h's
 structural rest, LobbyNetworkState; NetworkAdapterListItem and WONLobbyPlatform.h.
+
+## The game headers lane, round 2: the paused lanes' headers inline, uncalled members and stale includes removed, emptied units deleted (branch rust-headers2, 2026-11-25)
+
+Numbers: docs/progress/headers.md "Round 2". port_metrics 4930a8c9d (round 1 + batch 26) -> the merged tip: cpp_lines
+-6,981 (about -3,934 removals, -3,047 formatting), compiled files -5, logic -220.
+
+- **A fork branch older than a batch is cheaper to redo than to merge** when its work is mechanical. hd2a's units
+  pass, merged after batch 26 (units 12) landed, conflicted in 21 files; rerunning its tools (inl.py, the dead-member
+  scan, trim.py, the joiners) on the merged base took one cycle and found mostly the same edits. Keep the tools, not
+  only the commits.
+- **Stale includes are the biggest cheap cut**: about a third of the project `#include "..."` lines of a unit can go
+  (2,523 lines over about 190 units). trim.py removes each, last first, and keeps the removal only if the unit
+  compiles (clang-cl /Zs with the unit's own flags; about 14 s per trial on a loaded machine; it stages into build/eex,
+  so never during a build of the same worktree, and a killed run leaves the file of the trial in progress short of
+  one include: restore those files from git). Traps: a header defining a macro the unit tests in `#if` (checked: none
+  here), includes inside `#if` blocks (hd2b skips them), and the POSIX-only branches: Empire Earth.cpp's `main`
+  (`#else` of `_WIN32`) uses rust/game/gamecpp.h and platform/PlatSim.h, which Windows compiled without; keep the
+  rust/ and platform/ includes of a unit with POSIX branches. Only Windows checked the trim; a POSIX game build should.
+- **Uncalled members**: count code mentions repo-wide, the declaring header included (uncalled.py skips the
+  header, so about 20 of its hits were wrong). Only non-virtual members: a virtual's slot is the vtable's layout.
+  A delete tool keyed on names can hit the wrong member (hd2b's removed GERasterizer::Light for RemoveAllLights;
+  review the diff).
+- **inl.py's rust index misses Rust calls declared by hand in a .cpp** (EEGraphicEffect's ee_preload_* and
+  ee_gfx_geffect_*): such a body cannot go inline until the declaration is in a generated header. `if` bodies are one
+  statement too (KEYWORDS now has `if`).
+- **Line joins are formatting**: compact.py (a one-statement body onto its signature's line) and casejoin.py (a
+  `case X:` with its 1-3 statements) cut 3,047 lines with no change of code; report them apart from removals.
+- **Other lanes' files hide in directories**: a trim list by directory picked up EECivilization.cpp (player/tech)
+  and EEAWonNet.cpp (WON); both were restored. Filter by the running lanes' name patterns, not by folder.
+- **Behaviour changes**: none intended; the oracle is identical. `__LINE__` values in the trimmed and joined units
+  moved.
+- **Gates** (on 50072c064, batch 26 in; the owner's reduced lane set): both builds 0/0 (EE-AOC, EE-SIM; the test
+  profile 366 inputs), headers current, the Rust gate PASS; the oracle seeds 2-7 identical; captures oracle (598
+  digests), late (598), calamity (623), units (510), effects (18), scenario (113), groups (6) PASS; the saveload
+  matrix `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS
+  (4,062); the tour, `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS) and the editor
+  RESULT PASS; won_host_coverage PASS, `xbuild.py wontest` PASS (183 drivers, exit 0); `gates.sh` GATES PASS (ai-game
+  time-cap units [4, 34, 36] alive_computers [2, 3] engines classic_lua x 2; lan-game PT host=2811 joiner=2809).
+  Not run: the space, missile, app, placement and transport captures, plain saveload, eedata (untouched), POSIX builds.

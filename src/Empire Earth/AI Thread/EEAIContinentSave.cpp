@@ -30,14 +30,9 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
-#include "lle/FSMemoryFile.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinent.h"
@@ -50,26 +45,20 @@
 #include "ee/EEAIHill.h"
 #include "ee/EEAIChokePoint.h"
 #include "ee/EETown.h"
-#include "ee/EEHerd.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
-#include "ee/EEPathManager.h"
 
 extern long& gEEAIRegionSize;
 
 namespace {
 
-template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
-{
-    return (size_t)((const char*)inMember - (const char*)inObject);
-}
+template <class T> size_t OffsetOf(const T* inObject, const void* inMember) { return (size_t)((const char*)inMember - (const char*)inObject); }
 
 
 int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
 {
     switch (inOp) {
-    case EE_ASTAR_CM_TOWN_ID:
-        return ((EETown*)(uintptr_t)io->h[0])->mTownID;
+    case EE_ASTAR_CM_TOWN_ID: return ((EETown*)(uintptr_t)io->h[0])->mTownID;
     case EE_ASTAR_CM_CLEAR_MAP: gContinentManager.Clear(gWorld.mMap);
         return 0;
     case EE_ASTAR_CM_BUILD_MAP: gContinentManager.BuildRegions(gWorld.mMap);
@@ -144,27 +133,12 @@ bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outAre
 }
 
 // the block's file part and the block a load keeps are Rust's (ee_sim::astar cm_file.rs)
-long EESaveContinentRegions(FSFile& outFile)
-{
-    return ee_astar_cm_save_regions(&gContinentManager.mRecord, &outFile);
-}
+long EESaveContinentRegions(FSFile& outFile) { return ee_astar_cm_save_regions(&gContinentManager.mRecord, &outFile); }
 
-long EELoadContinentRegions(FSFile& inFile)
-{
-    return ee_astar_cm_load_regions(&inFile);
-}
+long EELoadContinentRegions(FSFile& inFile) { return ee_astar_cm_load_regions(&inFile); }
 
-bool EEContinentRegionsPending()
-{
-    return ee_astar_cm_regions_pending();
-}
+bool EEContinentRegionsPending() { return ee_astar_cm_regions_pending(); }
 
-bool EERestoreContinentRegions()
-{
-    return ee_astar_cm_restore_loaded(&gContinentManager.mRecord);
-}
+bool EERestoreContinentRegions() { return ee_astar_cm_restore_loaded(&gContinentManager.mRecord); }
 
-unsigned long EEContinentRegionsDigest()
-{
-    return ee_astar_cm_regions_digest(&gContinentManager.mRecord);
-}
+unsigned long EEContinentRegionsDigest() { return ee_astar_cm_regions_digest(&gContinentManager.mRecord); }

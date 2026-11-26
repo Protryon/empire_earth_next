@@ -11,8 +11,6 @@
 #include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
-#include "lle/NEMessage.h"
-#include "lle/UITextLabel.h"
 
 
 #include "ee/EmpireEarth.h"

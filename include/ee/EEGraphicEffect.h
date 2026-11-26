@@ -30,8 +30,9 @@ public:
     // inline: the 3D effects load the parameters as values (provisional name)
     float GetParam2() const { return this->mParam2; }
     // the unit EEGraphicEffect.cpp (0xd6bed..0xd72c1); the ctor copies a database record
-    EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject);
-    virtual ~EEGraphicEffect();             // ??_G 0xd6e5d (EEMedia's adjusting thunk 0xd726c), dtor 0xd6e79
+    EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject) : EeDataGraphicEffectFields(inFields), mGraphicObject(inGraphicObject) {  }
+    // ??_G 0xd6e5d (EEMedia's adjusting thunk 0xd726c), dtor 0xd6e79
+    virtual ~EEGraphicEffect() {  }
     virtual long LoadMedia();               // EEMedia +0x04 0xd72a9
     virtual long UnloadMedia();             // EEMedia +0x08 0xd72b6
     static long LoadTable(FSFile* inFile);  // 0xd6e9e (db\dbgfxeffects.dat)
@@ -53,5 +54,7 @@ public:
 
 // dbgfxeffects' effects by table index (EEGraphicEffectID): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
 #include "rust/sim/game_ids.h"
+#include "rust/game/preload_media.h"
+#include "rust/render/gfx.h"
 
 #endif

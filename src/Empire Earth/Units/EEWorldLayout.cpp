@@ -9,34 +9,22 @@
 #include <map>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEUnitAction.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEWorldLayout.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPhysics.h"
 #include <algorithm>
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EETown.h"
 #include "ee/EECPPlacement.h"
-#include "rust/sim/world.h"
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
 #if defined(__clang__)

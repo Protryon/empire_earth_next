@@ -26,8 +26,6 @@ public:
     // reference-leak dump that walks the returned map). Typedef provisional names: line -> counter -> file -> count.
     typedef std::map<const char*, unsigned long> FileCountMap;
     typedef std::map<UReferenceCounter*, FileCountMap*> CounterMap;
-    // always NULL (there is no tracking)
-    static CounterMap* GetBucketMap(unsigned long inLine) { return NULL; }
 #endif
     // exported ??0UReferenceCounter@@IAE@XZ (0x4384): protected, the count assigned in the body (vptr stored first;
     // GEMaterial ctor 0x16b9b)

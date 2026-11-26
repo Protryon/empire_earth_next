@@ -6,16 +6,12 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 #include "lle/USingleton.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -46,27 +42,6 @@
 // 0x241a6a (cdecl): the launch angle from inOwner at inLocation for the ammunition (provisional name)
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 
-static void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit);
-
-// Returns whether a projectile hit the ground (bombs, low launches, after 1 s of flight): attacks the ground there
-// unless it came down on its target building or wall, and leaves a shell hole on land
-// Returns whether a bomb, or a projectile after 1 s of flight, hit water it cannot cross; if so, it attacks the ground
-// Handles the projectile's new action: on a hit plays its effects and sound, drops a parachute's cargo or fires, may
-// set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
-void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, false, EE_COMBAT_SO_PROJECTILE_ACTION, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
-// Sets up a new projectile: records its start point, sets it to full speed and starts it advancing
-// Launches the projectile toward a location at the ballistic pitch for its launcher's stats; returns whether one exists
-// Updates a living projectile's trail (when moving) and ripples when the effect detail allows them
-// Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
-void EEUnitClass::ProjectileUpdate(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, true, EE_COMBAT_SO_PROJECTILE_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
 // New (port): the host of ee_combat shots.rs's plans (EEUCProjectile/EEUCMissile::ActionChanged and Update,
 // EEUCTorpedo::Update): each read the original's expression, each operation its statement, on the unit and its
 // class (the original's `this`, cast as the original's member function saw it: virtual calls dispatch as they did).
@@ -80,11 +55,7 @@ struct EEShotContext {
     int32_t mKind;                          // EE_COMBAT_SHOT_*
 };
 
-
-EEUGRust* EEShotAttack(EEComplexUnit* inUnit)
-{
-    return static_cast<EEUGRust*>(inUnit->mGoalState);
-}
+EEUGRust* EEShotAttack(EEComplexUnit* inUnit) { return static_cast<EEUGRust*>(inUnit->mGoalState); }
 
 int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
 {
@@ -93,123 +64,55 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     EEUnitClass* theClass = theContext->mClass;
     switch (inOp) {
     // ---- reads
-    case EE_COMBAT_SHOT_R_CLASS_ROTTING_TIME:
-        return (int32_t)theClass->mRottingTime;
-    case EE_COMBAT_SHOT_R_TILE_HEIGHT:
-        return (int32_t)UFloatBits(theUnit->mTile->GetHeight());
-    case EE_COMBAT_SHOT_R_SPLASH_EFFECT:
-        return theClass->mSplashEffect != NULL;
-    case EE_COMBAT_SHOT_R_DEATH_EFFECT:
-        return theClass->mDeathEffect != NULL;
-    case EE_COMBAT_SHOT_R_DEATH_SOUND:
-        return theUnit->mStats->mDeathSound != NULL;
-    case EE_COMBAT_SHOT_R_CARGO:
-        return (int32_t)theUnit->GetNumCargoUnits();
-    case EE_COMBAT_SHOT_R_LINE_OF_SIGHT:
-        return (int32_t)UFloatBits(theUnit->GetLineOfSight());
-    case EE_COMBAT_SHOT_R_COMPLEX_GOAL_KIND:
-        return (int32_t)theUnit->mComplexUnit->mGoalState->mKind;
-    case EE_COMBAT_SHOT_R_RANDOM:
-        return (int32_t)UFloatBits(gPhysics->mRandom.Generate());
-    case EE_COMBAT_SHOT_R_FLAMING_CHANCE:
-        return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
-    case EE_COMBAT_SHOT_R_REMAINS:
-        return theClass->mRemainsClass != NULL;
-    case EE_COMBAT_SHOT_R_IS_PROJECTILE:
-        return theClass->mIsProjectile;
-    case EE_COMBAT_SHOT_R_WORLD_CLEARING:
-        return gWorldClearing;
-    case EE_COMBAT_SHOT_R_FREE_CAMERA:
-        return gFreeCamera;
-    case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS:
-        return (int32_t)EEShotAttack(theUnit)->GetAttackTarget()->mHitPoints;
-    case EE_COMBAT_SHOT_R_POPULATION_COST:
-        return (int32_t)theUnit->mUnitClass->GetPopulationCost();
-    case EE_COMBAT_SHOT_R_PHYSICS_MODEL:
-        return theClass->mPhysicsModel != NULL;
-    case EE_COMBAT_SHOT_R_TICK:
-        return (int32_t)gPhysics->mTickTimeMs;
+    case EE_COMBAT_SHOT_R_CLASS_ROTTING_TIME: return (int32_t)theClass->mRottingTime;
+    case EE_COMBAT_SHOT_R_TILE_HEIGHT: return (int32_t)UFloatBits(theUnit->mTile->GetHeight());
+    case EE_COMBAT_SHOT_R_SPLASH_EFFECT: return theClass->mSplashEffect != NULL;
+    case EE_COMBAT_SHOT_R_DEATH_EFFECT: return theClass->mDeathEffect != NULL;
+    case EE_COMBAT_SHOT_R_DEATH_SOUND: return theUnit->mStats->mDeathSound != NULL;
+    case EE_COMBAT_SHOT_R_CARGO: return (int32_t)theUnit->GetNumCargoUnits();
+    case EE_COMBAT_SHOT_R_LINE_OF_SIGHT: return (int32_t)UFloatBits(theUnit->GetLineOfSight());
+    case EE_COMBAT_SHOT_R_COMPLEX_GOAL_KIND: return (int32_t)theUnit->mComplexUnit->mGoalState->mKind;
+    case EE_COMBAT_SHOT_R_RANDOM: return (int32_t)UFloatBits(gPhysics->mRandom.Generate());
+    case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
+    case EE_COMBAT_SHOT_R_REMAINS: return theClass->mRemainsClass != NULL;
+    case EE_COMBAT_SHOT_R_IS_PROJECTILE: return theClass->mIsProjectile;
+    case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorldClearing;
+    case EE_COMBAT_SHOT_R_FREE_CAMERA: return gFreeCamera;
+    case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS: return (int32_t)EEShotAttack(theUnit)->GetAttackTarget()->mHitPoints;
+    case EE_COMBAT_SHOT_R_POPULATION_COST: return (int32_t)theUnit->mUnitClass->GetPopulationCost();
+    case EE_COMBAT_SHOT_R_PHYSICS_MODEL: return theClass->mPhysicsModel != NULL;
+    case EE_COMBAT_SHOT_R_TICK: return (int32_t)gPhysics->mTickTimeMs;
     // ---- operations
-    case EE_COMBAT_SHOT_SET_ANIMATION:
-        theUnit->SetAnimation(inArg, -1, 0);
-        break;
-    case EE_COMBAT_SHOT_SET_ROTTING:
-        theUnit->SetRottingAwayTime(inArg);
-        break;
-    case EE_COMBAT_SHOT_UPDATE_ROTTING:
-        theUnit->UpdateRottingAwayTime();
-        break;
-    case EE_COMBAT_SHOT_DEATH_EFFECT:
-        gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0);
-        break;
-    case EE_COMBAT_SHOT_PHYSICS_ACTION:
-        theUnit->SetCurrentPhysicsAction((unsigned long)inArg);
-        break;
-    case EE_COMBAT_SHOT_DROP_PATH:
-        theUnit->DropPath();
-        break;
-    case EE_COMBAT_SHOT_UNLOAD_CARGO:
-        theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false);
-        break;
-    case EE_COMBAT_SHOT_KILL_CARGO:
-        theUnit->KillCargo();
-        break;
-    case EE_COMBAT_SHOT_FIRE_SHOT:
-        theClass->FireShot(theUnit);
-        break;
-    case EE_COMBAT_SHOT_SIGHT_OFF:
-        theUnit->SightOffHere();
-        break;
-    case EE_COMBAT_SHOT_SET_HIT_POINTS:
-        theUnit->SetHitPoints(inArg);
-        break;
-    case EE_COMBAT_SHOT_SIGHT_ON:
-        theUnit->SightOnHere();
-        break;
+    case EE_COMBAT_SHOT_SET_ANIMATION: theUnit->SetAnimation(inArg, -1, 0); break;
+    case EE_COMBAT_SHOT_SET_ROTTING: theUnit->SetRottingAwayTime(inArg); break;
+    case EE_COMBAT_SHOT_UPDATE_ROTTING: theUnit->UpdateRottingAwayTime(); break;
+    case EE_COMBAT_SHOT_DEATH_EFFECT: gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
+    case EE_COMBAT_SHOT_PHYSICS_ACTION: theUnit->SetCurrentPhysicsAction((unsigned long)inArg); break;
+    case EE_COMBAT_SHOT_DROP_PATH: theUnit->DropPath(); break;
+    case EE_COMBAT_SHOT_UNLOAD_CARGO: theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false); break;
+    case EE_COMBAT_SHOT_KILL_CARGO: theUnit->KillCargo(); break;
+    case EE_COMBAT_SHOT_FIRE_SHOT: theClass->FireShot(theUnit); break;
+    case EE_COMBAT_SHOT_SIGHT_OFF: theUnit->SightOffHere(); break;
+    case EE_COMBAT_SHOT_SET_HIT_POINTS: theUnit->SetHitPoints(inArg); break;
+    case EE_COMBAT_SHOT_SIGHT_ON: theUnit->SightOnHere(); break;
     case EE_COMBAT_SHOT_CREATE_CALAMITY:
         USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(
             0x18, -1, static_cast<EEUGRust*>(theUnit->mComplexUnit->mGoalState)->GetAttackTarget()->GetUnitID(),
             theUnit->mPlayer->GetPlayerID());
         break;
-    case EE_COMBAT_SHOT_START_ACTION:
-        theUnit->StartAction((unsigned long)inArg);
-        break;
-    case EE_COMBAT_SHOT_ACTION_CHANGED:
-        theClass->ActionChanged(theUnit);
-        break;
-    case EE_COMBAT_SHOT_CREATE_REMAINS:
-        theClass->CreateRemainsUnit(theUnit);
-        break;
-    case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED:
-        theClass->HandleActionChanged(theUnit);
-        break;
-    case EE_COMBAT_SHOT_POPULATION:
-        theUnit->mPlayer->mPopulationCount -= inArg;
-        break;
-    case EE_COMBAT_SHOT_MINIMAP_OFF:
-        gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, -10000, -10000);
-        break;
-    case EE_COMBAT_SHOT_STEP_PHYSICS:
-        theClass->mPhysicsModel->Step(theUnit);
-        break;
-    case EE_COMBAT_SHOT_ORBITALS:
-        theUnit->UpdateOrbitals();
-        break;
-    case EE_COMBAT_SHOT_EFFECTS:
-        theClass->UpdateEffects(theUnit);
-        break;
-    case EE_COMBAT_SHOT_REFRESH_SOUND:
-        theClass->RefreshSound(theUnit);
-        break;
-    case EE_COMBAT_SHOT_SET_OPACITY:
-        theUnit->SetOpacityChain(UBitsFloat(inArg));
-        break;
-    case EE_COMBAT_SHOT_SET_FLIGHT_TIME:
-        theUnit->SetFlightTime(inArg);
-        break;
-    case EE_COMBAT_SHOT_SET_CLOAKED:
-        theUnit->mCloaked = (unsigned long)(long)inArg;
-        break;
+    case EE_COMBAT_SHOT_START_ACTION: theUnit->StartAction((unsigned long)inArg); break;
+    case EE_COMBAT_SHOT_ACTION_CHANGED: theClass->ActionChanged(theUnit); break;
+    case EE_COMBAT_SHOT_CREATE_REMAINS: theClass->CreateRemainsUnit(theUnit); break;
+    case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED: theClass->HandleActionChanged(theUnit); break;
+    case EE_COMBAT_SHOT_POPULATION: theUnit->mPlayer->mPopulationCount -= inArg; break;
+    case EE_COMBAT_SHOT_MINIMAP_OFF: gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, -10000, -10000); break;
+    case EE_COMBAT_SHOT_STEP_PHYSICS: theClass->mPhysicsModel->Step(theUnit); break;
+    case EE_COMBAT_SHOT_ORBITALS: theUnit->UpdateOrbitals(); break;
+    case EE_COMBAT_SHOT_EFFECTS: theClass->UpdateEffects(theUnit); break;
+    case EE_COMBAT_SHOT_REFRESH_SOUND: theClass->RefreshSound(theUnit); break;
+    case EE_COMBAT_SHOT_SET_OPACITY: theUnit->SetOpacityChain(UBitsFloat(inArg)); break;
+    case EE_COMBAT_SHOT_SET_FLIGHT_TIME: theUnit->SetFlightTime(inArg); break;
+    case EE_COMBAT_SHOT_SET_CLOAKED: theUnit->mCloaked = (unsigned long)(long)inArg; break;
     }
     return 0;
 }
@@ -261,7 +164,7 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
 
 // A shot's ActionChanged or Update (inUpdate) within its host-read scope and its CBSO record (inFunc): ee_combat
 // shots.rs over this file's host
-static void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit)
+void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
     EEShotContext theContext = {inUnit, inClass, inKind};
     EeCombatShotHost theHost = {&theContext, EEShotOp, EEShotOp64};
@@ -291,20 +194,9 @@ bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget);
 // Returns whether the missile hit the ground after its flight time (0.3 higher over its target): sets it down there
 // and, for an attack-ground goal, leaves a shell hole and returns true (never for a missile base's missiles)
 // Returns whether a unit stands on one of the target's tiles (every part of a multi-part target, its whole footprint)
-bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
-{
-    return ee_units_ucs_call(EE_UNITS_UCS_DO_ON_TARGET_TILES, NULL, inUnit, EEObj(inTarget), NULL) != 0;   // ucs_shots.rs
-}
+bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget) { return ee_units_ucs_call(EE_UNITS_UCS_DO_ON_TARGET_TILES, NULL, inUnit, EEObj(inTarget), NULL) != 0; }  // ucs_shots.rs
 
 // Returns whether the missile hit water (z 0 or below on terrain it cannot cross); if so, it attacks the ground there
-
-
-// Handles the missile's new action: on a hit plays the splash or death effect and sound, fires its shot and dies
-// (attack-unit goals, ICBM ground strikes); switches to attack ground; on retarget follows the target's container
-void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_MISSILE, false, EE_COMBAT_SO_MISSILE_ACTION, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
 
 // Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
 // Launches the missile: tilts it to its launcher's launch pitch and starts the launch delay and a 300 s lifetime; true
@@ -316,31 +208,14 @@ long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long 
     return EECombatCondition(EE_COMBAT_GOAL_MISSILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
 }
 
-// Steps the missile's physics, effects and sound, and counts down its rotting time, launch delay and lifetime
-void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_MISSILE, true, EE_COMBAT_SO_MISSILE_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
 // ---- EEUCTorpedo.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The torpedo's unit class:
 // 0x21b163..0x21b27a (after EEUCSubmergedNaval.cpp; EEUCTransport.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline; +0xe4 is ICF-folded (0x29059d: false).
 
-// When the torpedo has reached ground at or above sea level, gives it an attack-ground goal there and returns
-// true
-// Flies the torpedo as a missile and keeps it from rising above the water plane (height 0)
-void EEUnitClass::TorpedoUpdate(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_TORPEDO, true, EE_COMBAT_SO_TORPEDO_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
 // BombUpdate's blink colour (its function static until round 7)
 static GEColor sBombBlinkColor(0.9f, 0.0f, 0.2f);
 
-template <class T> static T* EEUcsObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUcsObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // The C++ of the shots' Rust bodies (ee_units ucs_shots.rs; EE_UNITS_UCS_*): one statement of the original bodies
 // each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's

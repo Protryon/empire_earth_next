@@ -31,10 +31,19 @@ void WONImageThrow(int inStatus) { FileReaderCheck(inStatus); }
 static NativeImage* NewOffscreen(int inWidth, int inHeight)
 {
     WindowManager* theManager = WindowManager::GetDefaultWindowManager();
-    return new NativeImage(NULL, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f);
+    return new Image(ee_won_image_new_native(WONImageHost, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f));
 }
 
 SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height) { return NewOffscreen(width, height); }
+
+// imgobj.rs reads a handle's mRust and a context's members in place (R6 WON GUI round 38)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(Image, mRust) == EE_WON_IMAGE_RUST_AT && offsetof(DisplayContext, mSurface) == EE_WON_CONTEXT_AT &&
+              offsetof(DisplayContext, mGraphics) == EE_WON_CONTEXT_AT + sizeof(void*) &&
+              offsetof(DisplayContext, mPixelScale) == EE_WON_CONTEXT_AT + 2 * sizeof(void*),
+              "imgobj.rs's EeWonDisplayContextRec");
+#pragma clang diagnostic pop
 
 static intptr_t Held(RefCount* inObject)
 {
@@ -53,18 +62,12 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             EeWonImage* theRust = (EeWonImage*)a;
             Image* theImage;
             switch (ee_won_image_kind(theRust)) {
-                case EeWonImageKind::Raw32: case EeWonImageKind::Raw8: case EeWonImageKind::Raw1: theImage = new RawImage(theRust); break;
-                case EeWonImageKind::Native: theImage = new NativeImage(theRust); break;
                 case EeWonImageKind::Stretch: theImage = new StretchImage(theRust); break;
                 case EeWonImageKind::StretchCenter: theImage = new StretchCenterImage(theRust); break;
                 default: theImage = new Image(theRust); break;
             }
             return (intptr_t)theImage;
         }
-        case H::RustOf: return (intptr_t)((Image*)a)->mRust;
-        case H::CtxGraphics: return theContext != NULL ? (intptr_t)theContext->mGraphics : 0;
-        case H::CtxSurface: return theContext != NULL ? (intptr_t)theContext->mSurface : 0;
-        case H::CtxScale: *(float*)b = theContext->mPixelScale; return 0;
         case H::GfxTrans: ((int*)b)[0] = theGraphics->mTransX; ((int*)b)[1] = theGraphics->mTransY; return 0;
         case H::GfxContext: return (intptr_t)theGraphics->mDisplayContext.get();
         case H::GfxRun: {
