@@ -156,7 +156,9 @@ pub(crate) fn scratch_view(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4
             let (tx, ty) = unsafe { UnitView::of(x.t, b as u64) }?.tile_xy();
             let p = |h: u64| h as usize as *mut c_void;
             // SAFETY: the member's call
-            i64::from(unsafe { crate::units::eu_body::game::ee_units_eu_can_gather(p(x.a), p(b as u64), tx, ty, 0, 1) } != 0)
+            i64::from(
+                unsafe { crate::units::eu_body::game::ee_units_eu_can_gather(p(x.a), p(b as u64), tx, ty, 0, 1) } != 0,
+            )
         }
         // effect a's `Covers(owner's player id, unit b, the owner's location's x and y)` (its owner `mUnit` from the
         // C++ host)

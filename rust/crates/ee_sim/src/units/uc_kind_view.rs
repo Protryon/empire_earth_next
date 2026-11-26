@@ -13,8 +13,8 @@
 
 use crate::units::uc_view::{air_traffic, complex_mut, long, obj, stats_links, ulong, word, Ctx, Kind};
 use crate::units::waypoints::{ee_units_waypoints_len, ee_units_waypoints_start, EeUnitsWaypoints};
-use crate::world::unit_fields::EeUnitsUnitFields;
 use crate::world::layout::layout;
+use crate::world::unit_fields::EeUnitsUnitFields;
 use crate::world::view::{StatsView, UnitView};
 use crate::world_field;
 use std::os::raw::{c_long, c_ulong};
@@ -286,7 +286,9 @@ fn ground(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64>
             0
         }
         // `gWorld.GetMap()->GetTile(inB, inC)`
-        EE_UNITS_UCG_MAP_TILE => x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).map_or(0, |t| t.handle() as i64),
+        EE_UNITS_UCG_MAP_TILE => {
+            x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).map_or(0, |t| t.handle() as i64)
+        }
         // `theUnit->mWaypoints.size()`, `GetNextWaypointPoint(f)` (the Rust list behind the member)
         EE_UNITS_UCG_WAYPOINT_COUNT => {
             // SAFETY: the unit's waypoint list handle (its member's first word, never null)
@@ -431,7 +433,8 @@ fn shots(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> 
         EE_UNITS_UCS_LAUNCHER_CP_BASE | EE_UNITS_UCS_LAUNCHER_MISSILE_BASE => {
             // SAFETY: the unit's launcher class (set for every shot)
             let l = unsafe { crate::world::view::ClassView::of(x.t, u()?.launcher_class_handle()) }?;
-            let ty = if op == EE_UNITS_UCS_LAUNCHER_CP_BASE { SHOTS_TYPE_CP_MISSILE_BASE } else { SHOTS_TYPE_MISSILE_BASE };
+            let ty =
+                if op == EE_UNITS_UCS_LAUNCHER_CP_BASE { SHOTS_TYPE_CP_MISSILE_BASE } else { SHOTS_TYPE_MISSILE_BASE };
             i64::from(l.unit_type() == ty)
         }
         EE_UNITS_UCS_SET_LAUNCH_DELAY => {
@@ -451,7 +454,9 @@ fn shots(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> 
             f[0] = u()?.tile()?.height();
             0
         }
-        EE_UNITS_UCS_TILE_PRESENT => i64::from(x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).is_some()),
+        EE_UNITS_UCS_TILE_PRESENT => {
+            i64::from(x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).is_some())
+        }
         EE_UNITS_UCS_SAME_TILE => {
             let (tx, ty) = (ee_base::random::float_to_long(f[0]), ee_base::random::float_to_long(f[1]));
             let tile = x.world()?.map()?.tile(i64::from(tx), i64::from(ty)).map_or(0, |t| t.handle());
@@ -460,7 +465,9 @@ fn shots(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> 
         EE_UNITS_UCS_SHELL_HOLE => {
             i64::from(!world_field!(crate::units::uc_view::links(&u()?.class()?), mShellHoleEffect).is_null())
         }
-        EE_UNITS_UCS_HAS_TRAIL => i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mTrailEffect).is_null()),
+        EE_UNITS_UCS_HAS_TRAIL => {
+            i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mTrailEffect).is_null())
+        }
         EE_UNITS_UCS_HAS_RIPPLE => {
             i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mRippleEffect).is_null())
         }
