@@ -29,7 +29,7 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST 
 // This section is its shell: the forwarders and the host, which makes each call the original made on another
 // object (the rasterizer, the vertex array, the textures). Floats cross the host as their bits.
 
-// ---- the vertex host: the calls GEBitmap, GELine, GEPoint and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
+// ---- the vertex host: the calls GEBitmap, GELine and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
 
 static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
 

@@ -15,7 +15,6 @@
 #include "lle/GEScreen.h"
 #include "lle/GERasterizer.h"
 #include "lle/GELine.h"
-#include "lle/GEPoint.h"
 #include "lle/GERhombus.h"
 #include "lle/U2DPoint.h"
 #include "gx/GX.h"
@@ -50,7 +49,7 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
 
 
 // the primitives are their Rust objects (one pointer each: the draws walk the C++ arrays, ee_dx7 draw_ffi.rs)
-static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GEPoint) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
+static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
               "ee_ge prim.rs");
 
 static_assert(offsetof(GEScreen, mTextureManager) == 0 && offsetof(GEScreen, mDX7) == 2 * sizeof(void*) &&

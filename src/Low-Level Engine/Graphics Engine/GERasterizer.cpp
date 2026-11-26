@@ -13,7 +13,6 @@
 #include "lle/GERasterizer.h"
 #include "lle/GEFont.h"
 #include "lle/GERhombus.h"
-#include "lle/GEPoint.h"
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
 #include "platform/PlatFont.h"
@@ -49,23 +48,19 @@ struct GERasterizerHost {
     }
 };
 
-// The 2D draw list's executor (ee_ge list2d.rs): one virtual draw per command, for every draw the DX7 rasterizer's
-// Rust does not make itself (the texts; any draw on another rasterizer)
+// The 2D draw list's executor (ee_ge list2d.rs): the texts, the draws the DX7 rasterizer's Rust does not make itself
+// (its bitmaps, rhombi and lines it draws itself; a rasterizer without one, the store gate's, draws nothing)
 static long GERasterizerDraw2D(void* inRasterizer, unsigned long inScreen, const EeGeDraw2D* inCmd)
 {
     switch (inCmd->kind) {
-    case EeGeDraw2DKind::Bitmap: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEBitmap*>(inCmd->object), inScreen);
-    case EeGeDraw2DKind::Rhombus: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GERhombus*>(inCmd->object), inScreen);
-    case EeGeDraw2DKind::Lines: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GELine*>(inCmd->object), inCmd->count, inScreen);
-    case EeGeDraw2DKind::Points: return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEPoint*>(inCmd->object), inCmd->count, inScreen);
     case EeGeDraw2DKind::TextClipped:
         return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEText*>(inCmd->object), *reinterpret_cast<const GERectangle*>(&inCmd->clip),
                                    inCmd->surface ? static_cast<GESurface*>(inCmd->surface)
                                                   : static_cast<GERasterizer*>(inRasterizer)->GetSecondarySurface(inScreen));
     case EeGeDraw2DKind::Text:
         return static_cast<GERasterizer*>(inRasterizer)->Draw(static_cast<GEText*>(inCmd->object), static_cast<GESurface*>(inCmd->surface));
+    default: return 0;
     }
-    return 0;
 }
 
 extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp

@@ -63,8 +63,6 @@ public:
     // a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
     long Draw(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
         { return ee_dx7r_draw_model(this->mDX7, inScreen, inModel, inOpacity, inOrthographic); }
-    long Draw(GEPoint* inPoint, unsigned long inCount, unsigned long inScreen)       // slot 0x48
-        { return ee_dx7r_draw_points(this->mDX7, inScreen, inPoint, inCount); }
     long Draw(GERhombus* inRhombus, unsigned long inScreen) { return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus); }
     // a text with the platform fonts on the target, aligned; shadow fonts get a black or white shadow 1 pixel down-right
     long Draw(GEText* inText, GESurface* inTarget) { return ee_dx7r_draw_text(inText, NULL, *inTarget); }
@@ -139,7 +137,6 @@ public:
 
     long Activate() { return (long)ee_ge_rast_activate(this->mRust); }
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
-    long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
     const GEColor& GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
     float GetAmbientIntensity() const { return ee_ge_rast_ambient_intensity(this->mRust); }
