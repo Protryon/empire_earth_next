@@ -30,7 +30,6 @@ public:
     void CopyString(const UWideString& inString, unsigned long inCount) { ee_uwstring_copy(&this->mState, &inString.mState, inCount); }
     void CopyString(const char* inString, unsigned long inCount) { ee_uwstring_copy_text(&this->mState, inString, inCount); }
     char operator[](int inIndex) const { return ee_uwstring_at(&this->mState, inIndex); }
-    UWideString& operator+=(const UWideString& inString) { return this->Do(ee_uwstring_append, (const char*)inString); }
     UWideString& operator+=(const char* inString) { return this->Do(ee_uwstring_append, inString); }
     void Export(unsigned char* outData) const { ee_uwstring_export(&this->mState, outData); }
     unsigned long Find(const UWideString& inString, unsigned long inStart) const { return ee_uwstring_find(&this->mState, &inString.mState, inStart); }
@@ -42,8 +41,6 @@ public:
     UWideString GetIndexedSubstring(unsigned long inFirst, unsigned long inLast) const
         { return UWideString(kUnset, ee_uwstring_indexed_substring, &this->mState, inFirst, inLast); }
     unsigned long Import(unsigned char* inData) { return ee_uwstring_import(&this->mState, inData); }
-    void InsertString(const UWideString& inString, unsigned long inPosition, bool inReplace)
-        { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
     void InsertString(const char* inString, unsigned long inPosition, bool inReplace) { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
     // the byte size and the bytes, both counting the terminator (lle/FSFile.h: on a failed read the string is left
     // empty and the error returned; an old Windows-1252 string is converted, D6)
@@ -57,12 +54,8 @@ public:
     unsigned long GetTCHARLength() const { return this->mState.byte_length; }
     unsigned long GetAllocatedLength() const { return this->mState.capacity; }
     void Clear() { ee_uwstring_clear(&this->mState); }
-    bool Equals(const UWideString& inString) const { return PlatMbsCmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool Equals(const UWideString& inString, unsigned long inCount) const { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     bool Equals(const char* inString) const { return PlatMbsCmp(Bytes(*this), Bytes(inString)) == 0; }
     bool Equals(const char* inString, unsigned long inCount) const { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
-    bool EqualsIgnoreCase(const UWideString& inString) const { return PlatMbsICmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool EqualsIgnoreCase(const UWideString& inString, unsigned long inCount) const { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     bool EqualsIgnoreCase(const char* inString) const { return PlatMbsICmp(Bytes(*this), Bytes(inString)) == 0; }
     bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     void ToLower() { PlatMbsLwr(reinterpret_cast<unsigned char*>(this->mState.string)); }
@@ -105,19 +98,14 @@ inline UWideString operator+(const UWideString& inLeft, const char* inRight)
     return UWideString(UWideString::kUnset, ee_uwstring_concat, inLeft.GetLength() + strlen(inRight) + 1,
                        &inLeft.mState, inRight);
 }
-// the comparisons: multibyte order
+// the comparisons: multibyte order (a UWideString on the right, or as an argument of Equals, EqualsIgnoreCase,
+// += and InsertString, converts to its text)
 inline int UWCompare(const char* inLeft, const char* inRight) { return PlatMbsCmp(UWideString::Bytes(inLeft), UWideString::Bytes(inRight)); }
-inline bool operator==(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) == 0; }
 inline bool operator==(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) == 0; }
-inline bool operator!=(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) != 0; }
 inline bool operator!=(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) != 0; }
-inline bool operator<(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) < 0; }
 inline bool operator<(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) < 0; }
-inline bool operator<=(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) <= 0; }
 inline bool operator<=(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) <= 0; }
-inline bool operator>(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) > 0; }
 inline bool operator>(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) > 0; }
-inline bool operator>=(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) >= 0; }
 inline bool operator>=(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) >= 0; }
 // formats into the string's buffer, then measures it (lle/LowLevelEngineCore.h UFormat)
 #pragma clang diagnostic push
