@@ -29,9 +29,9 @@ void LobbySendEventTo(ComponentEvent* event,Component* target)
 {
     SmartPtr<ComponentEvent> eventOwner=event;
     if(gLobbyData.get()!=NULL && target!=NULL) {
-        if(event->mComponent==NULL)
+        if(event->mEv.comp==0)
             event->SetComponent(gLobbyData->mLobbyContainer.get());
-        event->mBroadcast=true;
+        event->mEv.broadcast=1;
         target->HandleComponentEvent(event);
     }
 }
@@ -40,7 +40,7 @@ void LobbyDispatchEvent(ComponentEvent* event)
 {
     SmartPtr<ComponentEvent> eventOwner=event;
     if(gLobbyData.get()!=NULL) {
-        if(event->mComponent==NULL)
+        if(event->mEv.comp==0)
             event->SetComponent(gLobbyData->mLobbyContainer.get());
         LobbyLogicEventHook(event);
     }

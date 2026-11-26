@@ -116,7 +116,7 @@ void EELobbyColorButton::Paint(Graphics& inGraphics) { ee_won_eecolor_call(this-
 bool EELobbyColorButton::HandleActivate() { return ee_won_eecolor_call(this->mRust, CC::Activate, 0, 0, 0) != 0; }
 void EELobbyColorButton::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    ee_won_eecolor_call(this->mRust, CC::Event, (intptr_t)inEvent, inEvent->mType == ComponentEvent_EndPopup, 0);
+    ee_won_eecolor_call(this->mRust, CC::Event, (intptr_t)inEvent, inEvent->mEv.kind == ComponentEvent_EndPopup, 0);
 }
 
 EELobbyColorChooser::EELobbyColorChooser() : mRust(ee_won_eecolor_new(this, EeWonEeColorKind::Chooser, ColorHost)) {}

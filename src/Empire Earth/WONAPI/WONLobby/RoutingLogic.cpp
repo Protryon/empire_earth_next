@@ -194,8 +194,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::IterNew: return (intptr_t) new LobbyClientIterator(reinterpret_cast<LobbyClientList*>(a));
     case O::IterHasMore: return reinterpret_cast<LobbyClientIterator*>(a)->HasMore();
     case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();
-    case O::EventComponent: return (intptr_t)E(a)->mComponent;
-    case O::EventType: return E(a)->mType;
+    case O::EventComponent: return E(a)->mEv.comp;
+    case O::EventType: return E(a)->mEv.kind;
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);

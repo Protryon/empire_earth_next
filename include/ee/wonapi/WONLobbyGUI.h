@@ -1570,31 +1570,21 @@ struct SizeEvent : InputEvent { SizeEvent(int x, int y, int w, int h) : InputEve
 // a component's event (slot +0x7c; type at +0x14: WONAPI's own ids, 100000 up for the game's)
 class ComponentEvent : public WindowEventBase {
 public:
-    // an event of the given type for a component (not a broadcast)
-    ComponentEvent(Component* c, int t) : mComponentRef(c), mType(t), mComponent(c) { this->mBroadcast = false; }
-    // broadcast through the window manager, or bubbled up from the component
-    virtual void Deliver()
-    { if (this->mBroadcast) this->GetWindow()->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
-    void SetComponent(Component* c) { this->mComponent = c; this->mComponentRef = c; } // retargets the event
-    int GetControlId() const { return this->mComponent->mControlId; }
-    SmartPtr<Component> mComponentRef;      // +0x10
-    int mType;                              // +0x14
-    bool mBroadcast;                        // +0x18
-    Component* mComponent;                  // +0x1c
-};
-
-// ListItemClickedEvent: RTTI 0x44dd78, 0x34 bytes.
-class ListItemClickedEvent : public ComponentEvent {
-public:
-    ListItemClickedEvent(Component* component,ListItem* item,MouseButton button,bool dbl,bool up,int x,int y)
-      :ComponentEvent(component,up?ComponentEvent_ListItemUpClicked:ComponentEvent_ListItemClicked),
-       mButton(button),mDoubleClick(dbl),mItem(item),mX(x),mY(y) {}
-    bool IsSelectedItem(); // SDK ListBox.cpp; 0x2fa550
-    int mButton;                            // +0x20
-    bool mDoubleClick;                      // +0x24
-    SmartPtr<ListItem> mItem;               // +0x28
-    int mX;                                 // +0x2c
-    int mY;                                 // +0x30
+    ComponentEvent(Component* c, int t, RefCount* i = NULL)
+      : WindowEventBase(0, (EeWonWinCall)EE_WON_WM_HANDLER_COMPONENT), mEv{(intptr_t)c, t, 0, 0, 0, 0, 0, (intptr_t)i}
+    { if (c != NULL) c->AddRef(); if (i != NULL) i->AddRef(); }
+    virtual ~ComponentEvent() { if (this->mEv.comp != 0) this->GetComponent()->Release(); if (this->mEv.item != 0) ((RefCount*)this->mEv.item)->Release(); }
+inline ComponentEvent* ListItemClickedEvent(Component* c, ListItem* i, int button, bool dbl, bool up, int x, int y)
+{
+    ComponentEvent* e = new ComponentEvent(c, up ? ComponentEvent_ListItemUpClicked : ComponentEvent_ListItemClicked, i);
+    e->mEv.button = button; e->mEv.flag = dbl; e->mEv.x = x; e->mEv.y = y;
+    return e;
+}
+    Component* GetComponent() const { return (Component*)this->mEv.comp; }
+    int GetControlId() const { return this->GetComponent()->mControlId; }
+    void SetComponent(Component* c) { if (c != NULL) c->AddRef(); if (this->mEv.comp != 0) this->GetComponent()->Release(); this->mEv.comp = (intptr_t)c; }
+    template <class T> T* GetItem() const { return static_cast<T*>((RefCount*)this->mEv.item); }
+    EeWonCompEventRec mEv;
 };
 
 // LobbyEvent adds no members to ComponentEvent (0x20 bytes).
@@ -1766,14 +1756,8 @@ public:
     { return (int)ee_won_row_call(this->mRow,EeWonRowCall::Compare,const_cast<RustTextRow*>(this),l,(intptr_t)static_cast<const RustTextRow*>(o)->mRow,(intptr_t)o,0); }
     EeWonRow* mRow;
 };
-// Allocated at 0x2f4133 (type 0x27), 0x28 bytes; the implicit destructor 0x2f41c0 has no own vptr store.
-class ComboSelChangedEvent : public ComponentEvent {
-public:
-    ComboSelChangedEvent(Component* c,TextListItem* item,bool active)
-        :ComponentEvent(c,ComponentEvent_ComboSelChanged),mItem(item),mActiveSel(active) {}
-    SmartPtr<TextListItem> mItem; //20
-    bool mActiveSel; //24
-};
+inline ComponentEvent* ComboSelChangedEvent(Component* c, TextListItem* i, bool active)
+{ ComponentEvent* e = new ComponentEvent(c, ComponentEvent_ComboSelChanged, i); e->mEv.flag = active; return e; }
 
 // MenuItem (0x38 bytes, allocated at 0x2fd49c): TextListItem (0x28) base.
 // Constructor and implicit destructor out of line.
@@ -1984,13 +1968,7 @@ public:
 private:
     intptr_t NCall(ListArea* l,EeWonTNodeCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0);
 };
-class TreeItemOpenedEvent : public ComponentEvent {
-public:
-    TreeItemOpenedEvent(Component* inComponent,TreeItem* inItem)
-        :ComponentEvent(inComponent,ComponentEvent_TreeItemOpened),mItem(inItem) {}
-    // Implicit destructor (0x314a60): no own vptr write.
-    SmartPtr<TreeItem> mItem; // at +0x20; the event is 0x24 bytes
-};
+inline ComponentEvent* TreeItemOpenedEvent(Component* c, TreeItem* i) { return new ComponentEvent(c, ComponentEvent_TreeItemOpened, i); }
 // TreeArea (0x174 bytes in the original); constructor 0x314ea0.
 class TreeArea : public ListArea {
 public:
