@@ -18,8 +18,7 @@
 // RTSPlayer::AddPendingUnits) has no handle; storing one is reported once on stderr ("EE-HANDLE").
 //
 // A container of handles keeps a vector's or deque's order (the elements are what they were, resolved on each
-// read); a container keyed by the unit (std::map<EEUnit*, ...>) keyed by handles orders by id instead of by
-// address (EEUnitHandleLess), which is only the same for a container nothing iterates.
+// read).
 #ifndef EE_EEUNITHANDLE_H
 #define EE_EEUNITHANDLE_H
 
@@ -66,13 +65,6 @@ public:
 private:
     EEUnitHandle(uint32_t inUnitID, int) : mUnitID(inUnitID) {}   // FromSavedID's
     uint32_t mUnitID;
-};
-
-// The order of a map keyed by handles: by id (a map keyed by pointers ordered by address). Only for a map nothing
-// iterates, where the order is not observable.
-template <class T>
-struct EEUnitHandleLess {
-    bool operator()(const EEUnitHandle<T>& inFirst, const EEUnitHandle<T>& inSecond) const { return inFirst.GetSavedID() < inSecond.GetSavedID(); }
 };
 
 #endif

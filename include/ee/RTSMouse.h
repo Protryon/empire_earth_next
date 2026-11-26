@@ -5,9 +5,7 @@
 #ifndef EE_RTSMOUSE_H
 #define EE_RTSMOUSE_H
 
-#include "lle/GERectangle.h"           // RTSMouse::mBounds
 #include "rust/game/rts.h"              // EeRtsMouseFields (RTSMouse' plain members)
-#include "rust/base/math.h"
 #include "rust/render/gfx.h"
 
 class GEScreen;
@@ -25,10 +23,6 @@ public:
     // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
     virtual long Load(GEScreen* inScreen) { return ee_rts_mouse_load(this, inScreen); }
     virtual long Release();                 // +0x08 0x11b373 (returns 0)
-    // 0x11af66: finds inFile on the texture path and loads it into *ioSurface on inScreen (EEMouse::Load passes
-    // its 14 pointer files; provisional name)
-    long LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface)
-        { return ee_rts_mouse_load_pointer(inFile, inScreen, reinterpret_cast<void**>(ioSurface)); }
     // 0x11b3cc (under mInputLock after ISMouse::RefreshXY; provisional name)
     void Update() { ee_rts_mouse_update(this); }
     // drawn by RTSGraphics::Render 0x11a71c in this order (provisional names)
@@ -61,10 +55,5 @@ public:
     TSCriticalSection* mRenderLock;         // +0x78
     TSCriticalSection* mInputLock;          // +0x7c
 };
-
-// New (R5a.6): the mouse the input side updates, the game's gMouse (defined in Empire Earth.cpp), so that the RTS
-// layer does not include the game's mouse header for it; RTSMousePointer's thread reads it at each pass, as it read
-// gMouse.
-RTSMouse* RTSGetInputMouse();
 
 #endif

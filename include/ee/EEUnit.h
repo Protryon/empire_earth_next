@@ -15,7 +15,6 @@
 #include "lle/UList.h"                  // EEComplexUnit+0xc4
 #include "lle/U2DPoint.h"               // EEComplexUnit+0x1a4
 #include "lle/GEColor.h"                // EEComplexUnit+0x1ac
-#include "ee/EEUnitClassIDs.h"
 #include "ee/EEResourceType.h"         // kResourceAny (CanTake)
 class GETerrainMesh;
 #include "lle/GEPhysicalModel.h"        // EEComplexUnit+0x130 (it uses GE3DLine/GEViewport by reference)
@@ -29,7 +28,6 @@ class SESMInstanceNode;                 // lle/SESMInstanceNode.h (EEComplexUnit
 class EEGraphicObject;                      // ee/EEGraphicObject.h
 typedef EEGraphicObject EEModel;            // (see below: WriteDetailsHook's)
 class EEActiveGroup;
-struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h (EEUnitClass::GetTerrainFlags)
 class EETechTreeNode;
 class EEUnit;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
@@ -38,7 +36,6 @@ class EETown;
 class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit+0x208, EEUnitClass+0x118)
 #include "ee/EEUnitVectorItem.h"        // the element of EEComplexUnit::mGoalQueues (inline GetQueueGoals, the destructor)
 class GEModel;
-#include "ee/EETileCoordinate.h"     // RTSUnit::GetTile returns one
 class EEPlayer;
 class EEUnitClass;
 class EEUnitGoal;
@@ -49,9 +46,7 @@ class EESoundObject;
 #include "ee/EEUnitClassImprovement.h"
 #include "ee/EEUnitKind.h"               // EEClassBody (EEUnitClass::IsBuilding, Virtual70)
 #include "ee/EEUnitUpdate.h"             // EEUnitClassActionChanged (EEUnitClass::HandleActionChanged)
-#include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 #include "rust/sim/cp.h"                 // ee_cp_distance_squared_to_unit (DistanceSquaredToUnit)
-#include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
 #include "rust/sim/combat.h"             // EE_COMBAT_SHOT_* (the shots' steps)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
@@ -114,7 +109,6 @@ public:
     float GetScale() const { return this->mScale; }  // inline (EESGUnitSorter::Compare loads both operands)
     float GetAttack() const { return this->mAttack; }  // inline (likewise)
     long GetMaxHitPoints() const { return this->mMaxHitPoints; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    float GetAreaEffect() const { return this->mAreaEffect; }  // inline (0x66cbe1)
     // inline (EEWheel::Update 0x23c957 loads them as values) (provisional names)
     float GetMaxVelocity() const { return this->mMaxVelocity; }
     float GetInverseMaxAngularVelocity() const { return this->mInverseMaxAngularVelocity; }
@@ -126,11 +120,9 @@ public:
     UWideString mName;                      // +0x4c (= "" in the ctor)
     // +0x60 mUnitClass, +0x64 mButton .. +0x7c mSelectionSounds[1]: the Rust record EeUnitsUnitClassUpgradeLinks (a base)
     // +0x84 mAreaEffectScale .. +0x168 mIsInitialized: the record EeUnitsUnitClassUpgradeFields (the base above)
-    float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEActiveGroup::ComputeValues 0x5ed692 copies it through fld/fstp)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
-    bool GetIsInitialized() const { return this->mIsInitialized; }
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)
     volatile bool mIsLoadingButtons;        // +0x16a (ctor: false; 0x23bc29 sets it while loading the media and the
                                             //  other loaders poll it with Sleep(1): `mov byte ptr`, re-read each pass)
@@ -309,11 +301,6 @@ public:
         GEPhysicalModel::SetLocation(inLocation);
         EEUnitStoreMoved(this);
     }
-    void SetLocationAndScale(const GETransformation& inLocation, float inScale)
-    {
-        GEPhysicalModel::SetLocationAndScale(inLocation, inScale);
-        EEUnitStoreMoved(this);
-    }
     void SetLocationXY(float inX, float inY)
     {
         GEPhysicalModel::SetLocationXY(inX, inY);
@@ -409,9 +396,6 @@ public:
         return (EEUnitGoal*)(uintptr_t)ee_units_unit_queued_goal((uint64_t)(uintptr_t)this, (uint32_t)inIndex);
     }
     EEGoalDeque& GetQueueGoals(unsigned long inIndex) { return this->mGoalQueues[inIndex].mGoals; }  // 0x1fa1cd (EEUICUnitIconBar 0x25ad01) (provisional name)
-    // 0x1ebdcc (defined in EEActiveGroup.cpp after Virtual48, out of line): mActiveGroup = inGroup, referenced
-    // (provisional name)
-    void SetActiveGroup(EEActiveGroup* inGroup);
     // EEUGHealUnit's callees (now ee_combat goal_heal.rs's host operations, EEUGRustCombat.cpp) (provisional names; types inferred)
     void ReleaseHealEffect() { ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, this, NULL, 0); }               // 0x1f709c (the healee is let go)
     void SetAnimationFrame(unsigned long inFrame) { ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, this, NULL, (int64_t)inFrame); }  // 0x1f414d (ret 4): the state's model at frame inFrame (EEComplexDoppelganger.cpp's range) (provisional name)
@@ -469,10 +453,6 @@ public:
     // 0x15463e / 0x15465b / 0x154c95 / 0x154e7b / 0x154f39 (EEPMLand.cpp, ecx = the unit): the group's stat when
     // mActiveGroup is set (EEActiveGroup::GetMaxAngularVelocity ..), else mStats->mFB4 .. (provisional names)
     float GetMaxAngularVelocity() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY); }
-    float GetAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ANGULAR_ACCELERATION); }
-    float GetAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ACCELERATION); }
-    float GetInverseAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ACCELERATION); }
-    float GetInverseAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ANGULAR_ACCELERATION); }
     // 0x1fe76e (the meteor storm passes the meteor's start point, true) (provisional name)
     void SetLocation(const GE3DPoint& inLocation, bool inUpdateTiles) { ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_LOCATION, this, NULL, inUpdateTiles, 0, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ()); }   // the unit moved, then its model's 3D location (u12a_small.rs)
     void SetFlightTime(long inValue) { if (this->mFlightTime != inValue) this->mFlightTime = inValue; }  // inline (meteor storm 0xb29ac)
@@ -588,11 +568,8 @@ public:
     bool GetIsCloaked() const { return this->mIsCloakable ? this->mIsCloaked : false; }
     bool AddGarrison(long inAmount, long inGarrisonPopulation) { return ee_units_cu_body(EE_UNITS_CU_DO_ADD_GARRISON, this, inAmount, inGarrisonPopulation, 0) != 0; }  // 0x1f5f55: mL288 += inAmount within the class's mL250 (provisional name)
     EEComplexUnit* FindPassenger(unsigned long inUnitID) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_FIND_PASSENGER, this, inUnitID, 0, 0))); }  // 0x1f9f85: the cargo unit with that id (provisional name)
-    void SetGroupPathGoals(std::vector<GE3DPoint>& inPath)   // ee_sim::units waypoints.rs
-        { ee_units_waypoints_group_path_goals((uint64_t)(uintptr_t)this, inPath.empty() ? NULL : &inPath[0].mX, inPath.size()); }  // 0x1fc0a8, actual12-byte point vector; constness inferred
     void ReleaseCargo(EEComplexUnit* inCargo) { ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CARGO, this, (int64_t)(uintptr_t)inCargo, 0, 0); }  // 0x1fcb8c, actual cargo removal member/ret4
     EEComplexUnit* GetConditionTarget() { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_CONDITION_TARGET, this, 0, 0, 0))); }    // 0x1ff58b: actual referenced complex attacker or null
-    bool ShouldMoveToNextAutoWaypoint() { return ee_units_waypoints_next_auto((uint64_t)(uintptr_t)this); }   // 0x1feb61: actual path/goal predicate, no args/AL
     EEComplexUnit* UnloadCargoAt(unsigned long inIndex, const GETransformation& inLocation) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>( ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT, this, inIndex, (int64_t)(uintptr_t)&inLocation, 0))); }
     EEComplexUnit* UnloadCargoByID(unsigned long inUnitID, const GETransformation& inLocation) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_BY_ID, this, inUnitID, (int64_t)(uintptr_t)&inLocation, 0))); }  // 0x1fd2ba: UnloadCargoAt on the cargo unit with that id (provisional name)
     void MoveToLocation(float inX, float inY, bool inUpdateTiles) { ee_units_cu_body(EE_UNITS_CU_DO_MOVE_TO_LOCATION, this, UFloatBits(inX), UFloatBits(inY), inUpdateTiles); }  // 0x1fe611 (before the unit moves to (inX, inY)) (provisional name)
@@ -713,15 +690,12 @@ public:
     // mCollisionTile (+0x1a4) and the effect handles mConversionEffect (+0x2c0), mHealEffect (+0x2c4) and mFireEffect
     // (+0x310): the record's (units round 12)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
     void SetLastAttacker(EEComplexUnit* inUnit) { ee_units_eu_more(EE_UNITS_EUM_DO_SET_LAST_ATTACKER, static_cast<EEUnit*>(this), inUnit, 0, 0); }  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
-    EEUnitAction* GetCommand() const { return this->mCommand; }
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
     bool GetIsDisabled() const { return this->mIsDisabled; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsBuilt() const { return this->mIsBuilt; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    float GetRoll() const { return this->mRoll; }
     // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
     // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
     // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.
@@ -821,8 +795,6 @@ public:
     // inline (COMDAT 0x216d77 right after EEUCLandPriest.cpp's ctor, with +0x68/+0x6c: the place of inline in-class
     // virtuals; every unit class's vtable points there) inferred body
     float GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucn_height_at(H(this), H(inUnit), inLocation.mX, inLocation.mY, inLocation.mZ); }
-    // +0x28: the flags of inUnit (EEGroup::GetFlags 0x2062cb Ands them) (provisional name)
-    void GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags);
     // +0x2c: the volume/pan/pitch of inSound at inUnit (EEUGUnloadTransport::Unload 0x228c29)
     void GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uck_sound(this, inUnit, inSound, outVolume, outPan, outPitch); }
     // +0x30: a new unit of this class at (inX, inY) for player inPlayer (the drop-object calamity) (provisional name)
@@ -1103,14 +1075,10 @@ public:
     std::vector<long> mResearchTechnologies;  // +0x02c 4-byte elements: the ctor's `_Buy(0)`
     // +0x060 mAIScript .. +0x118 mBehavior (the effects, media, related classes, physics model, improvements,
     // behaviour): the Rust record EeUnitsUnitClassLinks (the third base above)
-    EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     // inline (EEE3DDamageVent::SetUp 0xeabb5 loads it as a value before the effect's height)
     // (provisional name)
     float GetScale() const { return this->mScale; }
     float GetMaxVelocity() const { return this->mMaxVelocity; }  // inline (read as a value)
-    float GetRange() const { return this->mRange; }  // inline (EESMObject 0x5c8871)
-    float GetAreaEffect() const { return this->mAreaEffect; }  // inline (0x66cbe1)
-    float GetLineOfSight() const { return this->mLineOfSight; }
     bool GetIsTree() const { return this->mIsTree; }  // inline (EESMEffect 0x5c2b3e)
     bool GetCanSetRallyPoint() const { return this->mCanSetRallyPoint; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsTower() const { return this->mIsTower; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
@@ -1122,8 +1090,6 @@ public:
     bool GetIsProjectile() const { return this->mIsProjectile; }
     unsigned char GetDomains() const { return this->mDomains; }
     float GetAcceleration() const { return this->mAcceleration; }  // inline (read as a value)
-    float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (read as a value)
-    float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
     // inline (the heal goal's Virtual64 0x22569f loads it as an FP value after the ratio; provisional name)
     float GetHealThreshold() const { return this->mHealThreshold; }
     bool GetIsWall() const { return this->mIsWall; }

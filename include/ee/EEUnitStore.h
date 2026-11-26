@@ -38,11 +38,7 @@ inline void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSP
 inline void EEUnitStoreRemove(RTSUnit* inUnit) { ee_units_store_remove_object((uint64_t)(uintptr_t)inUnit); }
 // a player object goes (~RTSPlayer): the records of its list go, by the object (temporary players may share an id), and
 // its diplomacy table (ee_units players.rs)
-inline void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer) { ee_units_store_clear_player_object((uint64_t)(uintptr_t)inPlayer); }
 class EEPlayer;
-// the player's mEnemies (and id) were written: its diplomacy table in the store (ee_units players.rs; EEPlayer::Reset,
-// the loads, SetDiplomaticStance; USCK compares the world's players with the tables)
-inline void EEUnitStorePlayerTable(const EEPlayer* inPlayer) { ee_units_store_player_table((uint64_t)(uintptr_t)inPlayer); }
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 inline void EEUnitStoreLinked(RTSUnit* inUnit) { ee_units_store_linked((uint64_t)(uintptr_t)inUnit); }

@@ -7,7 +7,6 @@
 
 #include <type_traits>
 
-#include "platform/PlatTime.h"
 #include "rust/data/media.h"
 
 // A lambda as a step: its status (a void lambda: 0; a bool one: 1 when true)
@@ -58,14 +57,6 @@ template <class U> void EEMediaRelease(EeDataMediaUse* ioUse, TSCriticalSection*
     EeDataMediaLock theLock = EEMediaLock(inLock);
     EeDataMediaStep theStep = EEMediaStep(theUnload);
     ee_data_media_release(ioUse, &theLock, &theStep);
-}
-
-// Runs inStep under the lock once any load is done
-template <class F> void EEMediaLocked(EeDataMediaUse* ioUse, TSCriticalSection* inLock, F inStep)
-{
-    EeDataMediaLock theLock = EEMediaLock(inLock);
-    EeDataMediaStep theStep = EEMediaStep(inStep);
-    ee_data_media_locked(ioUse, &theLock, &theStep);
 }
 
 #endif

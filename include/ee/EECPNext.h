@@ -47,9 +47,5 @@ inline void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI)
 // the save (EEPPlayerHelper, from version 0.252): the state that must survive as bytes, and back. Load creates the
 // state; a Lua script gets its memory back at the first step (LoadPersonality, RestoreMemory, never init)
 bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes);
-inline bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes)
-{
-    return ee_ai_next_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
-}
 
 #endif

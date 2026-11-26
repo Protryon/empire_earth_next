@@ -163,6 +163,9 @@ void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::v
                             inAreas.size(), this->mTerrainMesh.GetIsSpaceMap(), Ops::Continent, Ops::Run);
 }
 
+// 0x52988c: the map's tile size (written by the ctor, read by EETile::Virtual14; was RTSVisibleMap.cpp's .bss)
+float gMapTileSize;
+
 // The shims map.rs calls (MapCpp; LLE round 8)
 extern "C" {
 EeUnitsRtsMapFields* ee_rtsmapcpp_fields(RTSMap* inMap) { return inMap; }

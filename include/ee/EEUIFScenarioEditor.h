@@ -136,7 +136,6 @@ public:
     EEAScroll* GetEdgeScroll() const { return (EEAScroll*)this->GetSlot(EE_SCREENS_SEFM_EDGE_SCROLL); }
     GEBitmap* GetPanelBackground() const { return (GEBitmap*)this->GetSlot(EE_SCREENS_SEFM_PANEL_BACKGROUND); }
     UIComboBox* GetPlayerComboBox() const { return (UIComboBox*)this->GetSlot(EE_SCREENS_SEFM_PLAYER_COMBO); }
-    UIRadioButton* GetTabButton(long inTab) const { return (UIRadioButton*)this->GetSlot(EE_SCREENS_SEFM_TAB_BUTTON + inTab); }   // shells (EEUIFSEMainButton)
     bool GetIsUIHidden() const { return this->GetSlot(EE_SCREENS_SEFM_UI_HIDDEN) != 0; }
     bool GetWasUIHidden() const { return this->GetSlot(EE_SCREENS_SEFM_WAS_UI_HIDDEN) != 0; }
 

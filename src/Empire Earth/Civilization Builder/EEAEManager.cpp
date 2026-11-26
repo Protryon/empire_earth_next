@@ -26,7 +26,6 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
 #include "rust/game/screens.h"   // CollectEffects, FindEffect (area_effect_manager.rs)
 #include <memory>

@@ -12,7 +12,6 @@
 #include "ee/EESMMediaStrings.h"
 
 #include "ee/EESMDialogMessage.h"
-#include "rust/sim/scenario.h"           // EeScenarioManagerFields, the timed effects' queue
 
 class EESMArea;
 class FSFileSpec;
@@ -149,9 +148,6 @@ public:
     EESMArea* GetArea(unsigned long inIndex) { return EESMAt(this->mAreas, inIndex); }
     EESMObject* GetScenarioObject(unsigned long inIndex) { return EESMAt(this->mObjects, inIndex); }
     EESMTrigger* GetTrigger(unsigned long inIndex) { return EESMAt(this->mTriggers, inIndex); }
-    // inline (out-of-line COMDAT 0x1c5152, emitted by EESMEffect.cpp: Execute's inline budget refuses it)
-    // (provisional name)
-    unsigned long GetNumEffects() { return this->mEffects.size(); }
     // Layout: the ctor 0x1afa90 (member ctors in order) and the Save/Load field census of
     // Vector element types are unproven unless stated (4-byte elements: `_Buy` ICF-folded with vector<long>'s);
     // member names by offset.

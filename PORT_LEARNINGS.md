@@ -42153,3 +42153,37 @@ builds, rust gate (6,786), coverage, wontest 185/185, oracle and the oracle capt
   Virtual24 as kinds (a hook in ComponentConfig::Virtual24), WONLobbyPrv's run state.
 - WONLobbyWindow is never created (lobby_window is always null), but won_wonnet_test sets it.
 - WONRouting.h: the shims the core table needs (CoreObjectOf, the virtual hooks).
+
+## The game headers lane, round 3: the string ids as Rust's, dead declarations, header includes trimmed (ee_base string_ids.rs; branch rust-headers3, 2026-11-26)
+
+Numbers: docs/progress/headers.md "Round 3". port_metrics 47e9ad712 (batch 29) -> the tip: cpp_lines -4,991, all
+removals (no line joins), compiled files -1, logic -87, 12 headers gone.
+
+- **A generated table header is mostly unused by C++**: EEStringIDs.h had 3,765 ids, of which C++ names 164. The
+  table belongs to Rust (`ee_base::string_ids`: consts, `ALL`, `by_name`); the header keeps the C++'s, and one Rust
+  test checks they agree. Count a table's C++ users over src, include and tests (the net and WON drivers include
+  game headers) before moving it. Tests that read a header's text for a value need the new home: a `NAME = value,`
+  line inside a macro invocation parses like an enumerator, so the multi-header parsers only needed the path.
+- **A header include trim needs a self-containment check**: a trial that only compiles the header's users passes
+  whenever the users include the dropped header first, which leaves the header depending on its users' include
+  order. htrim.py also compiles a stub (the units' prelude: the first user's `<...>` includes and
+  lle/LowLevelEngine.h, then the header) and keeps a removal only if the stub still compiles. Comparing error sets
+  for headers that already fail alone does not work: the first error (an unknown base class) hides the rest. Those
+  headers (73 of 198) are skipped.
+- **Wrapper headers empty after the trim**: the ids headers that only included a Rust header (EEAIKindIDs.h,
+  EEUnitClassIDs.h, ...) lose that include when all their users already get the Rust header; then the wrapper and
+  its includes go. The cpp_consts tests listed EEUnitClassIDs.h by path: drop it from their lists (and the array
+  length).
+- **Object scans find dead inline code** (fork a): an inline member that no object of an `-O0` build of both profiles
+  emits is never called from C++; an out-of-line function no relocation (llvm-objdump -r) names is unreferenced. A
+  member template's mangled name pairs it with its template argument, not its class
+  (`??$Table@VEEAIContinent@@@EEAIContinentManager@@`), so skip member templates.
+- **Killing a trim run**: stop only the trim's own python (by its command line), restore the headers from git, and
+  never run it during a build of the same worktree (it edits include/ in place; include/ is not staged).
+- **Behaviour changes**: none intended.
+- **Gates** (on e16793be3, batch 29 in; the reduced lane set): both builds 0/0, headers current, the Rust gate PASS;
+  the oracle seeds 2-7 identical; captures oracle, late, units, scenario, calamity, effects, groups PASS; the saveload
+  matrix PASS; scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS; the editor
+  tour and `random-game --box-select --orders --seed 7` PASS; won_host_coverage PASS, wontest exit 0 (185 drivers);
+  `gates.sh` GATES PASS (ai-game units [4, 36, 37], alive_computers [2, 3], classic_lua x 2; lan-game). Not run: the
+  space, missile, app, placement and transport captures, plain saveload, POSIX builds.

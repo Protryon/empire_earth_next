@@ -88,10 +88,6 @@ EE_CONSTRUCT_GLOBAL_AS(std::vector<unsigned long>, EEUnitClassUnitTypes, EEUnitC
 // tag point
 // (FireShot and its CBXA record: ee_sim units ucn_noted.rs, inline in ee/EEUnit.h)
 
-// Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
-// Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
-void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags) { ee_units_terrain_flags((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inUnit, outFlags.mFlags); }  // gather_spot.rs
-
 // Computes the volume, pan and pitch of a sound played at the unit's position
 // Produces a unit of inClass at the building inUnit: loads aircraft and missiles into it, else places the unit toward
 // the rally point and hands it the queued goals; returns false at the population cap or with no room

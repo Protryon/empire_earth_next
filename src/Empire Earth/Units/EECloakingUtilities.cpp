@@ -20,7 +20,6 @@
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);
-unsigned short EECountTilesAround(long inX, long inY, bool inAny);  // 0x23d4ba (below; provisional name)
 
 // (the cloaked opacity range and the wall pieces' yaws, kWallRotations: ee_units uu_cloak.rs)
 
@@ -84,9 +83,6 @@ float EEGetSpaceDockYaw(long inX, long inY, long inSize) { return UBitsFloat(ee_
 // Returns whether a space dock (unit type 0x2d8) fits at (inX, inY): its inner 2 x 2 tiles placeable, its border on the
 // map with at least two land tiles, and its inner land/space mix fitting a dock
 bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer) { return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)inPlayer, 0, inX, inY) != 0; }  // uu_cloak.rs
-
-// Counts the 3 x 3 tiles around (inX, inY) that are land (inAny) or space (otherwise); 0 when the centre is off the map
-unsigned short EECountTilesAround(long inX, long inY, bool inAny) { return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_COUNT_TILES_AROUND, inAny, 0, inX, inY); }  // uu_cloak.rs
 
 // Sets the planet of every complex air unit, space dock, space turret and orbital space station on the map
 // (cdecl; called by EEWorld.cpp and EEUserInterface.cpp)

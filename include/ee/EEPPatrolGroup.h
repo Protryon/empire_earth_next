@@ -10,7 +10,6 @@
 
 #include <vector>
 
-#include "rust/sim/units.h"
 
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 template <class T> class U2DPoint;

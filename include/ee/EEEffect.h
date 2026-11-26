@@ -9,9 +9,6 @@
 #define EE_EEEFFECT_H
 
 #include <stdint.h>
-#include "lle/GE3DPoint.h"
-#include "rust/render/gfx.h"            // effect_obj.rs, effect_state.rs
-#include "rust/sim/world.h"             // EEEffectHandle (unit_fields.rs EeUnitsEffectHandle)
 #include "rust/game/gamecpp.h"
 
 class EEUnit;
@@ -34,8 +31,6 @@ inline bool operator!=(const EEEffectHandle& inA, const EEEffectHandle& inB) { r
 
 static const EEEffectHandle kNoEffectHandle = {0};
 
-// An FSFile as ee_gfx effect_state.rs's typed reads and writes (EEEffectHost.cpp)
-EeGfxEffectFile EEEffectFile(FSFile& inFile);
 // 0x1487a3 (cdecl): the graphic's sound for the animation frame inFrame at inLocation (inStart: the frame changed);
 // takes a reference to inSound, returns a referenced node (provisional name)
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
@@ -53,13 +48,6 @@ public:
     EEEffectHandle GetHandle() const { return EEEffectHandle{this->mRecord->handle}; }
     // shown only to inPlayer, not saved (a player's confirmations, flares and goal markers; gamecpp fx_world.rs)
     void SetLocalTo(long inPlayer) { ee_gamecpp_fw_set_local(this->mRecord, inPlayer); }
-    EEUnit* GetUnit() const { return this->mUnit; }
-    EEGraphicEffect* GetGraphicEffect() const { return this->mGraphicEffect; }
-    // 0x102f96: the graphic effect's object (a random one of its kind without one; 0 without a graphic effect)
-    // the 3D kinds' transformation and the 2D kinds' position (the record's)
-    GETransformation& Transformation() { return *reinterpret_cast<GETransformation*>(&this->mRecord->transformation); }
-    void SetTransformation(const GETransformation& inTransformation)
-        { ee_gfx_effect_set_transformation(this->Head(), *reinterpret_cast<const EeGeTransformation*>(&inTransformation)); }
     // the weather storms' (EEEMStorm's): the tiles moved one step towards a new centre, the tiles' bounds, the
     // centre, the number of tiles (EEEffectHost.cpp)
     void Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds);

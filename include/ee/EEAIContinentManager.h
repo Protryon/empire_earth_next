@@ -63,7 +63,6 @@ public:
     // 0x1ef12: Reset() of gContinentManager, delete[] the four grids (absolute; Rust: cm_passes.rs)
     static void Shutdown() { ee_astar_cm_shutdown(&gContinentManager.mRecord); }
     // 0x1f503: deletes every area, path sector and sub sector, empties the tables, zeroes the counters (not the grids)
-    void Reset() { ee_astar_cm_reset_all(&this->mRecord); }
     EEAIContinent* GetContinentAt(EEUnit* inUnit)          // 0x22658 (its tile, bounds-checked, then 0x60c7)
         { return (EEAIContinent*)(uintptr_t)ee_astar_cm_unit_continent_at(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
     // 0x21fff: inUnit can reach tile (inX, inY) (EEComplexUnit::IsOnOtherContinent for class flag 1) (provisional name)
@@ -86,8 +85,6 @@ public:
     bool RemoveArea(EEAIArea* inArea) { return ee_astar_cm_remove_object_area(&this->mRecord, (uint64_t)(uintptr_t)inArea); }
     // 0x26f8d: mAreas.insert((its serial, inArea))
     void AddArea(EEAIArea* inArea) { ee_astar_cm_add_object_area(&this->mRecord, (uint64_t)(uintptr_t)inArea); }
-    // 0x26fb3: 0 if not found
-    EEAIArea* GetArea(unsigned long inSerial) const { return (EEAIArea*)(uintptr_t)ee_astar_cm_area(&this->mRecord, inSerial); }
     // 0x22dc8 (ret 8): a random area of kind inKind (EEHerd 0xa4aa2: 5) (provisional name)
     EEAIArea* GetRandomContinent(unsigned char inKind, URandom& inRandom)
         { return (EEAIArea*)(uintptr_t)ee_astar_cmq_random_area(&this->mRecord, true, inKind, (uint64_t)(uintptr_t)&inRandom, 0); }
@@ -153,7 +150,6 @@ public:
     template <class P> static const EeHullPoint* EEAIHullPoints(const std::vector<P>& inPoints)
         { return inPoints.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&inPoints[0]); }
 };
-
 
 // (cdecl; provisional names)
 // (0x1ed2c EEAIGetTileKind, 0x1eea9 EEAIGetTileWallID, 0x1f65f GetResourceWeight: Rust, ee_sim::astar cm_host.rs)

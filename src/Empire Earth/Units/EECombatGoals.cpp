@@ -29,8 +29,6 @@
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
-uint32_t EECombatCommandOf(const EEComplexUnit* inUnit) { return inUnit->mCommand != NULL ? (uint32_t)inUnit->mCommand->mType : 0; }
-
 // ---- the hosts of ee_combat's trigger tests and steps
 
 // The trigger tests and the steps of the combat goals (EECombatCondition, EECombatStep: ee/EECombatGoals.h): their
