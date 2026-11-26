@@ -27,7 +27,8 @@ use ee_base::math::um::lrintf;
 use ee_base::time::{ee_time_get, ee_time_of_day, EeTimeOfDay};
 use ee_sim::units::physics_save::EeUnitsPhysicsSaved;
 
-use crate::gamecpp::message::{group_len, group_unit, unit_id};
+use crate::gamecpp::message::{group_len, group_unit};
+use ee_sim::world::view::{PlayerView, UnitView, WorldRead, WorldView};
 
 /// The physics' calls (p: the `EEPhysics`, or the object a call names). See EEPhysics.cpp for each exact call.
 #[repr(u32)]
@@ -111,7 +112,6 @@ pub enum EePhysCpp {
     // ---- the captures
     CaptureExecuted,
     UnitStoreCheck,
-    TestHookSet,
     TestHookCall,
     // ---- the communications
     IsServer,
@@ -132,10 +132,6 @@ pub enum EePhysCpp {
     /// `SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {...}), 15000, 12)` with the name a0
     SendAutoSave,
     // ---- the world
-    NumPlayers,
-    Player,
-    CurrentPlayer,
-    InCinematic,
     ScenarioResult,
     SetScenarioResult,
     ScenarioUpdate,
@@ -144,14 +140,10 @@ pub enum EePhysCpp {
     ScenarioShowDialog,
     ScenarioReplaceUnit,
     /// `gWorld.GetGameSpeed()` (float)
-    GameSpeed,
     /// `gWorld.mGameSpeed` (float)
-    WorldGameSpeed,
     /// (float)
     TimeOfDay,
     /// (float)
-    WindYaw,
-    SetWindYaw,
     SetWindDirection,
     EnvironmentTick,
     WorldWriteLock,
@@ -169,32 +161,21 @@ pub enum EePhysCpp {
     Resources,
     CanBuyCivilization,
     CheckUnitList,
-    SetGameOverFlag,
     // ---- a player (p: an EEPlayer*)
-    PlayerObserver,
-    PlayerGameResult,
     PlayerAddPendingUnits,
     /// `UnitsSwapped(((EEPhysics*)a0)->mUnitSwaps)`
     PlayerUnitsSwapped,
-    PlayerCivChosen,
-    PlayerShiftMode,
     PlayerAvailablePoints,
     PlayerSavedGroupLast,
     CivBuilderBlink,
-    PlayerId,
-    PlayerSlot,
-    PlayerGetSlot,
     PlayerActiveGroup,
     PlayerRunningGroups,
     PlayerRunningGroup,
     PlayerAirTraffic,
     // ---- the groups (p: an EESelectedGroup*, an EEGroup* for the Group ones)
     // ---- a unit (p: an EEComplexUnit*)
-    UnitPlayer,
-    UnitIsCitizen,
     UnitReference,
     UnitDereference,
-    UnitId,
     // ---- the other systems
     PathManagerUpdate,
     PathManagerDump,
@@ -306,6 +287,87 @@ fn world() -> P {
         WORLD.store(w, Ordering::Relaxed);
     }
     w
+}
+
+// ---- the world's, its players' and units' plain members, read through the world view (ee_sim world view.rs over
+// the world layout: no C++ call; were the host's one-statement cases)
+
+/// `f` over the world's view (the physics thread holds the world).
+fn view<R>(f: impl FnOnce(&WorldView<'_>) -> R) -> R {
+    // SAFETY: the physics thread's reads of the world it runs, as the C++ cases made them
+    let token = unsafe { WorldRead::begin() };
+    f(&WorldView::global(&token).expect("the world's layout"))
+}
+
+/// `gWorld.mNumPlayers`.
+fn num_players() -> i64 {
+    view(|w| w.num_players() as c_ulong as i64)
+}
+
+/// `gWorld.mPlayers[i]`.
+fn player_at(i: i64) -> P {
+    view(|w| w.player(i as usize).map_or(0, |pl| pl.handle() as P))
+}
+
+/// `gWorld.GetCurrentPlayer()`.
+fn current_player() -> P {
+    view(|w| w.current_player().map_or(0, |pl| pl.handle() as P))
+}
+
+/// `f` over the live player `pl`'s view.
+fn player_view<R>(pl: P, f: impl FnOnce(PlayerView<'_>) -> R) -> R {
+    // SAFETY: as view
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: a live player of the world
+    f(unsafe { PlayerView::of(&token, pl as u64) }.expect("a player"))
+}
+
+/// `mPlayerID`, `mSlot` (`GetSlot()`), `mObserverMode`, `mGameResult`, `mCivilizationChosen`, `mShiftMode`.
+fn player_id(pl: P) -> i64 {
+    player_view(pl, |v| v.id() as c_ulong as i64)
+}
+fn player_slot(pl: P) -> i64 {
+    player_view(pl, |v| v.slot() as i64)
+}
+fn player_observer(pl: P) -> bool {
+    player_view(pl, |v| v.observer())
+}
+fn player_game_result(pl: P) -> i64 {
+    player_view(pl, |v| {
+        let r: c_ulong = ee_sim::world_field!(v.saved(), mGameResult);
+        r as i64
+    })
+}
+fn player_civ_chosen(pl: P) -> bool {
+    player_view(pl, |v| ee_sim::world_field!(v.saved(), mCivilizationChosen))
+}
+fn player_shift_mode(pl: P) -> bool {
+    player_view(pl, |v| ee_sim::world_field!(v.fields(), mShiftMode))
+}
+
+/// `f` over the live unit `u`'s view.
+fn unit_view<R>(u: P, f: impl FnOnce(UnitView<'_>) -> R) -> R {
+    // SAFETY: as view
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: a live unit of the world
+    f(unsafe { UnitView::of(&token, u as u64) }.expect("a unit"))
+}
+
+/// A complex unit's `GetPlayer()`, `mIsCitizen`; a unit's `mUnitID`.
+fn unit_player(u: P) -> P {
+    unit_view(u, |v| v.player().map_or(0, |pl| pl.handle() as P))
+}
+fn unit_is_citizen(u: P) -> bool {
+    unit_view(u, |v| ee_sim::world_field!(v.complex(), mIsCitizen))
+}
+fn unit_id(u: P) -> i64 {
+    unit_view(u, |v| v.id() as c_ulong as i64)
+}
+
+/// `gWorld.mWindYaw` (its address: the world's case).
+fn wind_yaw<'a>() -> &'a mut f32 {
+    // SAFETY: the world's float member, used before the next C++ call
+    unsafe { &mut *crate::gamecpp::rec::<f32>(crate::gamecpp::O::WWindYaw, world()) }
 }
 
 /// `EEPlayer::SetGameResult` (player_rest.rs).
@@ -629,11 +691,11 @@ fn auto_save(_p: P) {
 /// `FlushWorld`: the queued placements, every player's pending units, the born units' deactivations, the queued unit
 /// swaps, then every player's killed units removed.
 fn flush_world(p: P) {
-    let players = h0(O::NumPlayers);
+    let players = num_players();
     h0(O::CheckUnitList);
     crate::gamecpp::world::rts_flush_queued(world());
     for i in 0..players {
-        let player = hp(O::Player, 0, &[i]);
+        let player = player_at(i);
         if player != 0 {
             h(O::PlayerAddPendingUnits, player, &[]);
         }
@@ -641,7 +703,7 @@ fn flush_world(p: P) {
     crate::gamecpp::world::ee_gamecpp_world_queue_born();
     process_unit_swaps(p);
     for i in 0..players {
-        let player = hp(O::Player, 0, &[i]);
+        let player = player_at(i);
         if player != 0 {
             crate::gamecpp::world::rts_remove_killed(player);
         }
@@ -651,21 +713,21 @@ fn flush_world(p: P) {
 /// `EndGame`: every non-observer player but player 0 wins or loses, a won campaign scenario is recorded, the in-game
 /// options button blinks, the teams are cleared and a server pauses the game.
 fn end_game(p: P, victory: bool) {
-    h0(O::SetGameOverFlag);
-    for i in 1..h0(O::NumPlayers) {
-        let player = hp(O::Player, 0, &[i]);
-        if !b(O::PlayerObserver, player, &[]) {
+    crate::gamecpp::globals::set!(gB529065, true);
+    for i in 1..num_players() {
+        let player = player_at(i);
+        if !player_observer(player) {
             crate::gamecpp::world::ee_gamecpp_world_remove_player(world() as *mut c_void, victory, i as c_ulong);
-            set_game_result(hp(O::Player, 0, &[i]), if victory { 1 } else { 2 });
+            set_game_result(player_at(i), if victory { 1 } else { 2 });
         }
     }
     if h0(O::CampaignNameLength) > 0
         && h0(O::CampaignChecksum) as c_ulong > 0
-        && h(O::PlayerGameResult, hp(O::CurrentPlayer, 0, &[]), &[]) == 1
+        && player_game_result(current_player()) == 1
     {
         campaign_win();
     }
-    if h(O::PlayerGameResult, hp(O::CurrentPlayer, 0, &[]), &[]) != 0 {
+    if player_game_result(current_player()) != 0 {
         h(O::CivBuilderBlink, 0, &[0]);
         if h0(O::IsMainGameForm) != 0 {
             h0(O::OptionsButtonBlink);
@@ -699,14 +761,14 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
     let name = cstr(&name);
     let file = hp(O::FileOpen, 0, &[sa(&name)]);
     h(O::Verify, 0, &[(file != 0) as i64, 544]);
-    for i in 0..h0(O::NumPlayers) {
-        let player = hp(O::Player, 0, &[i]);
+    for i in 0..num_players() {
+        let player = player_at(i);
         put(file, "\n");
         put(
             file,
             &format!(
                 "OUT OF SYNCH DUMP:  **************  Player Number: {}  *************\n",
-                h(O::PlayerId, player, &[]) as c_long
+                player_id(player) as c_long
             ),
         );
         let group = hp(O::PlayerActiveGroup, player, &[]);
@@ -721,7 +783,7 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
                 ),
             );
             for j in 0..count {
-                let id = unit_id(group_unit(group, j as c_long));
+                let id = unit_id(group_unit(group, j as c_long)) as c_ulong;
                 put(
                     file,
                     &format!("OUT OF SYNCH DUMP: Unit #{} has an id of {}({:08x})\n", j as c_long, id as c_long, id),
@@ -743,7 +805,7 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
                 &format!("OUT OF SYNCH DUMP:  Active Group #{} has a unit count of {}\n", j as c_long, count as c_long),
             );
             for m in 0..count {
-                let id = unit_id(group_unit(group, m as c_long));
+                let id = unit_id(group_unit(group, m as c_long)) as c_ulong;
                 put(
                     file,
                     &format!("OUT OF SYNCH DUMP: Unit #{} has an id of {}({:08x})\n", m as c_long, id as c_long, id),
@@ -838,15 +900,15 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
             unit = hp(O::UnitNext, unit, &[]);
         }
     }
-    for i in 0..h0(O::NumPlayers) {
-        let player = hp(O::Player, 0, &[i]);
+    for i in 0..num_players() {
+        let player = player_at(i);
         if flags & 0x200 != 0 {
             let group = hp(O::PlayerActiveGroup, player, &[]);
             if group != 0 {
                 let count = group_len(group);
                 for j in 0..count {
-                    let id = unit_id(group_unit(group, j as c_long));
-                    let player_id = h(O::PlayerId, player, &[]) as c_ulong;
+                    let id = unit_id(group_unit(group, j as c_long)) as c_ulong;
+                    let player_id = player_id(player) as c_ulong;
                     sum = sum.wrapping_add(id.wrapping_mul(player_id));
                 }
             }
@@ -892,7 +954,7 @@ fn time_string(p: P) -> String {
     }
     let seconds =
         ((time as c_ulong).wrapping_sub(hours.wrapping_mul(3600000)).wrapping_sub(minutes.wrapping_mul(60000))) / 1000;
-    let speed = hd(O::WorldGameSpeed, 0, &[]);
+    let speed = view(|w| w.game_speed());
     if hours < 100 {
         format!("{:03.2} {:02}:{:02}:{:02}", speed, hours as c_long, minutes as c_long, seconds as c_long)
     } else {
@@ -910,13 +972,13 @@ fn unit_swap_kind(p: P, unit: P) -> c_long {
         let new = hp(O::SwapNew, p, &[i]);
         let is_old = old == unit;
         if is_old || new == unit {
-            if h(O::UnitPlayer, old, &[]) == h(O::UnitPlayer, new, &[]) {
+            if (unit_player(old) as i64) == (unit_player(new) as i64) {
                 result = if is_old { 1 } else { 3 };
-                if b(O::UnitIsCitizen, old, &[]) {
-                    if !b(O::UnitIsCitizen, new, &[]) {
+                if unit_is_citizen(old) {
+                    if !unit_is_citizen(new) {
                         result = if is_old { 5 } else { 7 };
                     }
-                } else if b(O::UnitIsCitizen, new, &[]) {
+                } else if unit_is_citizen(new) {
                     result = if is_old { 6 } else { 8 };
                 }
             } else {
@@ -985,7 +1047,7 @@ impl ee_sim::units::tick::TickHost for UnitTick {
         crate::gamecpp::globals::set!(gCollisionPeriod, value as c_ulong);
     }
     fn update_player(&mut self, index: u32) {
-        let player = hp(O::Player, 0, &[i64::from(index)]);
+        let player = player_at(i64::from(index));
         if player != 0 {
             h(O::PlayerUpdate, player, &[]);
         }
@@ -1001,7 +1063,7 @@ impl ee_sim::units::tick::TickHost for UnitTick {
 /// `UpdateUnits`: the collision period set (the active units spread over `gCollisionDetectionUnit` ticks, at least
 /// 1), every player updated, then each stepped unit stepped (last first); the stepped units' count.
 fn update_units() -> u32 {
-    let players = h0(O::NumPlayers) as u32;
+    let players = num_players() as u32;
     let detection_unit = crate::gamecpp::globals::get!(gCollisionDetectionUnit) as u32;
     let count = ee_sim::units::tick::update_ordered_units(&mut UnitTick, players, detection_unit);
     crate::gamecpp::globals::set!(gPhysicsSteppingUnit, std::ptr::null_mut());
@@ -1078,13 +1140,13 @@ fn tick(p: P) {
     hf(O::CalamityUpdate, 0, &[], &[get!(r, mTickTime)]);
     h0(O::AiUpdate);
     let mut result = 0;
-    if h0(O::InCinematic) == 0 {
+    if (view(|w| w.in_cinematic()) as i64) == 0 {
         result = h0(O::ScenarioResult);
     }
     h0(O::ScenarioUpdate);
-    let mut new_result = if h0(O::InCinematic) != 0 { 0 } else { h0(O::ScenarioResult) };
+    let mut new_result = if (view(|w| w.in_cinematic()) as i64) != 0 { 0 } else { h0(O::ScenarioResult) };
     if new_result == 0 {
-        if h0(O::InCinematic) == 0 {
+        if (view(|w| w.in_cinematic()) as i64) == 0 {
             new_result = ee_sim::units::game_over_host::ee_units_check_game_over(world() as u64) as c_long as i64;
             if new_result != 0 {
                 h(O::SetScenarioResult, 0, &[new_result]);
@@ -1118,7 +1180,7 @@ fn tick(p: P) {
     if get!(r, mGameStarted) {
         set!(r, mGameStarted, false);
         if (h0(O::CampaignNameLength) > 0 && h0(O::CampaignChecksum) as c_ulong > 0) || h0(O::IsScenarioGame) != 0 {
-            if h(O::PlayerAvailablePoints, hp(O::CurrentPlayer, 0, &[]), &[]) as c_ulong > 0 {
+            if h(O::PlayerAvailablePoints, current_player(), &[]) as c_ulong > 0 {
                 h(O::CivBuilderBlink, 0, &[1]);
             }
         }
@@ -1128,7 +1190,7 @@ fn tick(p: P) {
     }
     set!(r, mAutoSaveClock, get!(r, mAutoSaveClock).wrapping_add(h(O::TimerInterval, p, &[]) as c_long));
     if !(get!(r, mAutoSaveClock) as c_ulong > h0(O::AutoSaveMilliseconds) as c_ulong)
-        || h0(O::InCinematic) != 0
+        || (view(|w| w.in_cinematic()) as i64) != 0
         || h0(O::ScenarioShowingDialog) != 0
     {
         return;
@@ -1188,7 +1250,7 @@ fn drain_input(p: P) {
             if !dump {
                 let tick = h0(O::CtsInPhysics);
                 let response = hp(O::NewChecksumResponse, 0, &[tick, checksum as i64]);
-                h(O::MsgSetOriginatingSlot, response, &[h(O::PlayerSlot, hp(O::CurrentPlayer, 0, &[]), &[])]);
+                h(O::MsgSetOriginatingSlot, response, &[player_slot(current_player())]);
                 if h0(O::IsClient) != 0 {
                     h(O::ProcessLocalInput, response, &[SLOT_NONE]);
                 } else {
@@ -1219,7 +1281,7 @@ fn drain_input(p: P) {
             if ee_sim::app::capture::ee_app_capture_active() {
                 h(O::UnitStoreCheck, 0, &[h(O::MsgType, input, &[])]);
             }
-            if h0(O::TestHookSet) != 0 {
+            if crate::gamecpp::globals::have!(gEEMessageExecutedTestHook) {
                 h(O::TestHookCall, input, &[0]);
             }
             let ty = h(O::MsgType, input, &[]);
@@ -1238,7 +1300,7 @@ fn drain_input(p: P) {
                     h(O::Execute, input, &[]);
                 }
             }
-            if h0(O::TestHookSet) != 0 {
+            if crate::gamecpp::globals::have!(gEEMessageExecutedTestHook) {
                 h(O::TestHookCall, input, &[1]);
             }
             h(O::MsgDereference, input, &[]);
@@ -1279,7 +1341,7 @@ fn report_statistics(_p: P) {
             return;
         }
         report.last = Some(now);
-        let player = hp(O::CurrentPlayer, 0, &[]);
+        let player = current_player();
         let first = h(O::PlayerSavedGroupLast, player, &[0x14]) as c_ulong;
         let second = h(O::PlayerSavedGroupLast, player, &[0x15]) as c_ulong;
         if first == report.first && second == report.second {
@@ -1316,7 +1378,7 @@ fn swap_unit(old: P, new: P) {
         }
     }
     h(O::ContagionSwapUnit, 0, &[old as i64, new as i64]);
-    h(O::ScenarioReplaceUnit, 0, &[h(O::UnitId, old, &[]), h(O::UnitId, new, &[])]);
+    h(O::ScenarioReplaceUnit, 0, &[unit_id(old), unit_id(new)]);
     h(O::EffectReplaceUnit, 0, &[old as i64, new as i64]);
 }
 
@@ -1325,8 +1387,8 @@ fn process_unit_swaps(p: P) {
     if h(O::SwapCount, p, &[]) <= 0 {
         return;
     }
-    for i in 1..h0(O::NumPlayers) {
-        h(O::PlayerUnitsSwapped, hp(O::Player, 0, &[i]), &[p as i64]);
+    for i in 1..num_players() {
+        h(O::PlayerUnitsSwapped, player_at(i), &[p as i64]);
     }
     let mut k = 0;
     while k < h(O::SwapCount, p, &[]) {
@@ -1343,7 +1405,7 @@ fn process_unit_swaps(p: P) {
 /// `UpdateTiming`: the ticks per game second and the tick's length (s and ms) from the tick rate and the game speed.
 fn update_timing(p: P) {
     let r = rec(p);
-    set!(r, mTicksPerGameSecond, h(O::TicksPerSecond, p, &[]) as c_ulong as f32 / hd(O::GameSpeed, 0, &[]));
+    set!(r, mTicksPerGameSecond, h(O::TicksPerSecond, p, &[]) as c_ulong as f32 / view(|w| w.game_speed()));
     set!(r, mTickSeconds, 1.0f32 / get!(r, mTicksPerGameSecond));
     set!(r, mTickTime, get!(r, mTickSeconds) * 1000.0f32);
     set!(r, mTickTimeMs, lrintf(get!(r, mTickTime)) as c_long);
@@ -1371,12 +1433,12 @@ fn update_area_effects_clock(p: P) {
 /// stops.
 fn update_civ_timer(p: P) {
     let r = rec(p);
-    let current = || hp(O::CurrentPlayer, 0, &[]);
+    let current = || current_player();
     if h0(O::CommsIsServer) != 0 {
         if h0(O::CanBuyCivilization) != 0 {
             if get!(r, mTickWorkCount) == 0
-                && !b(O::PlayerCivChosen, current(), &[])
-                && !b(O::PlayerObserver, current(), &[])
+                && !player_civ_chosen(current())
+                && !player_observer(current())
             {
                 h(O::CivBuilderBlink, 0, &[1]);
             }
@@ -1402,8 +1464,8 @@ fn update_civ_timer(p: P) {
     } else {
         set!(r, mCivTimerRuns, false);
         if h0(O::CanBuyCivilization) != 0
-            && !b(O::PlayerCivChosen, current(), &[])
-            && !b(O::PlayerObserver, current(), &[])
+            && !player_civ_chosen(current())
+            && !player_observer(current())
         {
             h(O::CivBuilderBlink, 0, &[1]);
         }
@@ -1429,7 +1491,7 @@ fn serve_load_save_requests(p: P) {
                 ee_sim::message_ids::EEMessageID::kMessageLoadOrSaveGameResponse as u8,
                 &[crate::gamecpp::mrecord::EeGamecppMrValue::integer(result as std::ffi::c_long as i64)],
             );
-            h(O::MsgSetOriginatingSlot, response, &[h(O::PlayerGetSlot, hp(O::CurrentPlayer, 0, &[]), &[])]);
+            h(O::MsgSetOriginatingSlot, response, &[player_slot(current_player())]);
             if h0(O::IsServer) != 0 {
                 h(O::LogResponse, response, &[]);
                 h(O::MsgDereference, response, &[]);
@@ -1452,7 +1514,7 @@ fn check_shift_mode(p: P) {
         return;
     }
     set!(r, mShiftModeClock, get!(r, mShiftModeClock) - 4000.0);
-    if !b(O::PlayerShiftMode, hp(O::CurrentPlayer, 0, &[]), &[]) {
+    if !player_shift_mode(current_player()) {
         return;
     }
     if shift_key_up() {
@@ -1476,11 +1538,11 @@ fn update_weather(p: P) {
         }
         set!(r, mTimeOfDayStep, t);
     }
-    let angle = hd(O::WindYaw, 0, &[]);
+    let angle = *wind_yaw();
     let elapsed = get!(r, mTickTime);
     let yaw = ((hd(O::Random, p, &[]) * 2.0 - 1.0) * elapsed) * WIND_DRIFT + angle;
-    hf(O::SetWindYaw, 0, &[], &[yaw]);
-    let yaw = hd(O::WindYaw, 0, &[]);
+    *wind_yaw() = yaw;
+    let yaw = *wind_yaw();
     let mut transformation = GeTransformation::IDENTITY;
     transformation.set_orientation(RotationOrder::Ypr, yaw, 0.0, 0.0);
     let wind = transformation.apply_vector(GeVector::new(0.0, 0.001, 0.0));

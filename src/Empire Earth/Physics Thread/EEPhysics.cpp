@@ -238,7 +238,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
         break;
-    case O::TestHookSet: return gEEMessageExecutedTestHook != NULL;
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
         break;
     // the communications
@@ -266,10 +265,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SendAutoSave: SERVER->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, UWideString((const char*)a[0])}), 15000, 12);
         break;
     // the world
-    case O::NumPlayers: return gWorld.mNumPlayers;
-    case O::Player: return P64(gWorld.mPlayers[a[0]]);
-    case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::InCinematic: return gWorld.mInCinematic;
     case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
     case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
         break;
@@ -280,8 +275,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ScenarioShowDialog: gWorld.mScenarioManager->ShowDialogMessage();
         break;
     case O::ScenarioReplaceUnit: gWorld.mScenarioManager->ReplaceUnit((unsigned long)a[0], (unsigned long)a[1]);
-        break;
-    case O::SetWindYaw: gWorld.mWindYaw = f[0];
         break;
     case O::SetWindDirection: gWorld.mWindDirection = GEVector(f[0], f[1], f[2]);
         break;
@@ -309,34 +302,22 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CanBuyCivilization: return gWorld.mGameOptions.CanBuyCivilization();
     case O::CheckUnitList: RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
         break;
-    case O::SetGameOverFlag: gB529065 = true;
-        break;
     // a player
-    case O::PlayerObserver: return PL->mObserverMode;
-    case O::PlayerGameResult: return PL->mGameResult;
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(0, 1);
         break;
     case O::PlayerUnitsSwapped: PL->UnitsSwapped(((EEPhysics*)a[0])->mUnitSwaps);
         break;
-    case O::PlayerCivChosen: return PL->mCivilizationChosen;
-    case O::PlayerShiftMode: return PL->mShiftMode;
     case O::PlayerAvailablePoints: return static_cast<unsigned long>(PL->mCivilization.GetAvailablePoints());
     case O::PlayerSavedGroupLast: return PL->mSavedGroups.GetLastValue((unsigned long)a[0]);
-    case O::PlayerId: return PL->mPlayerID;
-    case O::PlayerSlot: return PL->mSlot;
-    case O::PlayerGetSlot: return PL->GetSlot();
     case O::PlayerActiveGroup: return P64(PL->mActiveGroup);
     case O::PlayerRunningGroups: return PL->GetNumRunningGroups();
     case O::PlayerRunningGroup: return P64(PL->GetRunningGroup((unsigned long)a[0]));
     case O::PlayerAirTraffic: return P64(PL->mAirTraffic[a[0]]);
     // a unit
-    case O::UnitPlayer: return P64(CX->GetPlayer());
-    case O::UnitIsCitizen: return CX->mIsCitizen;
     case O::UnitReference: CX->Reference();
         break;
     case O::UnitDereference: CX->Dereference();
         break;
-    case O::UnitId: return ((EEUnit*)p)->mUnitID;
     // the other systems
     case O::PathManagerUpdate: gPathManager.Update();
         break;
@@ -405,10 +386,7 @@ extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, co
     switch (inOp) {
     case O::Speed: return PH->mSpeed;
     case O::Random: return PH->mRandom.Generate();
-    case O::GameSpeed: return gWorld.GetGameSpeed();
-    case O::WorldGameSpeed: return gWorld.mGameSpeed;
     case O::TimeOfDay: return gWorld.GetTimeOfDay();
-    case O::WindYaw: return gWorld.mWindYaw;
     default: ESVERIFY_AT(false, 1);
     }
     return 0.0;
