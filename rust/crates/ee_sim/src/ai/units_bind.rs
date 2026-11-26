@@ -60,14 +60,7 @@ pub const EE_AI_UNITS_HOST_ASSIGNED: i32 = 14;
 pub const EE_AI_UNITS_HOST_HAS_ROOM: i32 = 15;
 /// The player `a`'s `IsHuman()`.
 pub const EE_AI_UNITS_HOST_IS_HUMAN: i32 = 16;
-/// `gWorld.mTeams.size()`.
-pub const EE_AI_UNITS_HOST_TEAMS: i32 = 17;
-/// `gWorld.mTeams[a].ContainsPlayer(b)`.
-pub const EE_AI_UNITS_HOST_TEAM_HAS: i32 = 18;
-/// `gWorld.mTeams[a].GetNumPlayers()`.
-pub const EE_AI_UNITS_HOST_TEAM_SIZE: i32 = 19;
-/// `gWorld.mTeams[a].GetPlayersAt(b)`.
-pub const EE_AI_UNITS_HOST_TEAM_PLAYER: i32 = 20;
+// (17..20, the teams: ee_sim app teams_ffi.rs, read directly)
 /// The complex unit `a`'s gather goal's resource id, when it has one and it is valid (0: none).
 pub const EE_AI_UNITS_HOST_GATHER_TARGET: i32 = 21;
 /// `gCPTraceOn`.
@@ -1216,7 +1209,7 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_players(l: *mut c_void) -> c_int
     charge(l, s, COST_CALL + 16 * COST_RECORD / 10);
     lua_newtable(l);
     let mut n: lua_Integer = 0;
-    let teams = host(EE_AI_UNITS_HOST_TEAMS, g.me_ptr, 0, 0, 0);
+    let teams = crate::app::teams_ffi::all();
     let np = g.world.num_players();
     for p in 1..np.min(64) {
         let Some(other) = g.world.player(p as usize) else { continue };
@@ -1234,13 +1227,12 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_players(l: *mut c_void) -> c_int
                                                                                 // the teams the player is in (both sides allied): the other players of those teams
         lua_newtable(l);
         let mut na: lua_Integer = 0;
-        for team in 0..teams {
-            if host(EE_AI_UNITS_HOST_TEAM_HAS, g.me_ptr, team, oid as i64, 0) == 0 {
+        for team in &teams {
+            if !team.contains(&(oid as u32)) {
                 continue;
             }
-            let size = host(EE_AI_UNITS_HOST_TEAM_SIZE, g.me_ptr, team, 0, 0);
-            for k in 0..size {
-                let q = host(EE_AI_UNITS_HOST_TEAM_PLAYER, g.me_ptr, team, k, 0) as u64;
+            for &q in team {
+                let q = u64::from(q);
                 if q != oid as u64 && q > 0 && q < np && g.world.player(q as usize).is_some() {
                     lua_pushinteger(l, q as lua_Integer);
                     na += 1;

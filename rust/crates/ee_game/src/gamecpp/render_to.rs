@@ -13,7 +13,7 @@ use ee_base::math::um::{lrintf, um_cos};
 use ee_render::dx7::api::SurfaceDescription;
 
 use super::rast::rast;
-use super::{cptr, h, hd, hf, hp, pa, ptr, O, P};
+use super::{cptr, h, hd, hp, pa, ptr, O, P};
 
 /// RenderTo's constants (the unit's .rdata: the free camera's capture rectangle, scaled by 0.64; the floats widened)
 const RT_CAPTURE_LEFT: f32 = 0.0;
@@ -64,21 +64,21 @@ fn ortho_rectangle() -> GeRectangle {
 }
 
 fn zoom() -> f32 {
-    hd(O::RtCameraZoom, 0, &[], &[])
+    super::camera_io::zoom()
 }
 
 fn set_zoom(z: f32) {
-    hf(O::CameraSetZoom, 0, &[], &[z]);
+    super::camera_io::set_zoom(z);
 }
 
 fn camera_changed() {
-    h(O::CameraSetChanged, 0, &[]);
-    hf(O::CameraUpdate, 0, &[], &[0.0]);
+    super::camera_io::set_changed();
+    super::camera_io::update(0.0);
 }
 
 /// SetLocation(location, false, true), SetChanged, Update(0).
 fn camera_to(location: &Ge3DPoint) {
-    h(O::CameraSetLocation, 0, &[cptr(location), 0, 1]);
+    super::camera_io::set_location(location, false, true);
     camera_changed();
 }
 
@@ -146,10 +146,7 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         h(O::RtRender, g, &[]);
         h(O::RtCaptureSetRenderTarget, capture, &[screen]);
     } else {
-        let mut saved_location = Ge3DPoint::default();
-        let mut saved_target = Ge3DPoint::default();
-        h(O::CameraGetLocation, 0, &[ptr(&mut saved_location)]);
-        h(O::CameraGetLocation, 0, &[ptr(&mut saved_target)]);
+        let saved_location = super::camera_io::location();
         let mut saved_view = GeRectangle::default();
         h(O::RtViewportViewRectangle, 0, &[ptr(&mut saved_view)]);
         let saved_orthographic = ortho_rectangle();
@@ -331,7 +328,7 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         h(O::RtSetOrthographic, 0, &[saved_orthographic_view as i64]);
         rast().set_projection_mode(1);
         set_zoom(the_zoom);
-        h(O::CameraSetLocation, 0, &[cptr(&saved_location), 0, 1]);
+        super::camera_io::set_location(&saved_location, false, true);
         camera_changed();
     }
     super::globals::set!(gB529066, false);

@@ -32,10 +32,6 @@
 #include "ee/EEROUserInterface.h"
 #include <utility>
 
-
-
-
-extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
 extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
 extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
@@ -84,7 +80,7 @@ int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     switch (inOp) {
     case O::RrBarDraw: return gRasterizer->Draw(sBars[a[0]], gScreenIndex);
     case O::RuMainViewport: return RU_P64(&gU4E8F08);
-    case O::RuCollisionSpheres: return gShowCollisionSpheres;
+    case O::RuCollisionSpheres: return gWorld.mShowCollisionSpheres;
     case O::RuInterpolateFrames: return gInterpolateFrames;
     case O::RuModelDetail: return gModelDetail;
     case O::RuWindowWidth: return gGameWindow->GetWidth();

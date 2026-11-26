@@ -57,7 +57,6 @@
 #include "ee/EEHerd.h"
 #include "ee/EEVectorIO.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EETeam.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEGameVariant.h"           // the wonder powers' hit point factors (EEPlayerHost)
 #include "ee/EEUnitUtilities.h"
@@ -87,8 +86,6 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 // TEST ONLY: the player capture (tools/sim_capture.py): PLST, each player's state at every UpdatePlayer (ee_sim app
 // player_capture.rs); PLEC, the economy and improvement decisions (ee_units player_econ.rs)
 #include "ee/EESimCapture.h"
-#include "ee/EEStatisticsHistory.h"
-#include "ee/EEStatisticsRecord.h"
 #include "ee/EEUnitStore.h"
 #include <cstring>
 
@@ -175,7 +172,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_UPDATE_JIT: gUserInterface->UpdateJITManufacturing();
         return 0;
     // the unit bookkeeping and the wonders (ee_units player_units.rs): the units as RTSUnit addresses
-    case EE_UNITS_PLAYER_STATE: return (gLoadingSavedGame ? 1 : 0) | (gGameScreenActive ? 2 : 0) | (gWorldClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0) | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
+    case EE_UNITS_PLAYER_STATE: return (gWorld.mLoadingSavedGame ? 1 : 0) | (gWorld.mGameScreenActive ? 2 : 0) | (gWorld.mClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0) | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
     case EE_UNITS_PLAYER_RTS_ADD_UNIT: ee_rts_player_add_unit(thePlayer, theUnit, a[1] != 0);
         return 0;
     case EE_UNITS_PLAYER_ACTIVATE: gWorld.ActivateUnit(theComplex);
@@ -903,8 +900,8 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
         return 0;
     case EE_UNITS_PLAYER_BODY_CLASS_STATS: return (int64_t)(uintptr_t)EEPlayerClassStats(thePlayer, (unsigned long)inB);
     case EE_UNITS_PLAYER_BODY_TERRAIN_MASK: return reinterpret_cast<EEUnitStats*>(static_cast<uintptr_t>(inA))->mTerrainMask;
-    case EE_UNITS_PLAYER_BODY_TEAM_COUNT: return (int64_t)gWorld.GetNumTeams();
-    case EE_UNITS_PLAYER_BODY_TEAM_HAS: return gWorld.mTeams[inB].ContainsPlayer((unsigned long)inC);
+    case EE_UNITS_PLAYER_BODY_TEAM_COUNT: return (int64_t)ee_app_teams_get(SIZE_MAX, NULL, 0);
+    case EE_UNITS_PLAYER_BODY_TEAM_HAS: return ee_app_teams_contains((size_t)inB, (uint32_t)inC);
     case EE_UNITS_PLAYER_BODY_BUTTON_LOADS: return reinterpret_cast<EEUnitStats*>(static_cast<uintptr_t>(inA))->mButtonLoadCount;
     case EE_UNITS_PLAYER_BODY_IS_HUMAN: return thePlayer->IsHuman() == true;
     case EE_UNITS_PLAYER_BODY_BUTTON_RELEASE: reinterpret_cast<EEButtonObject*>(static_cast<uintptr_t>(inA))->Release();
@@ -1193,27 +1190,6 @@ bool EEPPlayerEventList::GetNextEventSource(EETileLocation& outSource)
 void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
 {
     ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0,
-                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
-                       : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
-}
-
-// Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources (the plain
-// members from mColor to mIsHuman: ee_units player_stats.rs)
-static_assert(offsetof(EEStatisticsRecord, mResources) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, resources) && offsetof(EEStatisticsRecord, mSlot) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, slot) && offsetof(EEStatisticsRecord, mIsHuman) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, is_human), "EeUnitsStatsRecordTail");
-void EEStatisticsRecord::Clear()
-{
-    this->mName = gEmptyString;
-    this->mNameSuffix = gEmptyString;
-    this->mStatistics.Clear();
-    ee_units_stats_record_clear(reinterpret_cast<EeUnitsStatsRecordTail*>(&this->mColor));
-}
-
-// Clears the game history: times, map size, flags (the plain members from mStartTime to mIsCampaign: ee_units
-// player_stats.rs), campaign name and every record
-static_assert(offsetof(EEStatisticsHistory, mTeamsLocked) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, teams_locked) && offsetof(EEStatisticsHistory, mIsCampaign) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, is_campaign), "EeUnitsStatsHistoryTail");
-void EEStatisticsHistory::Reset()
-{
-    ee_units_stats_history_clear(reinterpret_cast<EeUnitsStatsHistoryTail*>(&this->mStartTime));
-    this->mCampaignName.Clear();
-    this->mRecords.clear();
+                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gWorld.mLoadingSavedGame ? EE_UNITS_STATS_LOADING
+                       : gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
 }

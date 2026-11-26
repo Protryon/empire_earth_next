@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "rust/base/math.h"
 #include "rust/game/app.h"
+#include "rust/game/screens.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/app.h"
 #include "rust/sim/netmsg.h"
@@ -219,8 +220,6 @@ enum class EeGameCpp : uint32_t {
   RefDereference,
   UnitSetContains,
   ContinentOfUnit,
-  CameraGetLocation,
-  CameraSetLocation,
   ViewportInverseApply,
   Verify,
   EffUnit,
@@ -283,16 +282,10 @@ enum class EeGameCpp : uint32_t {
   AmbientRestart,
   CalamitiesDestroy,
   CalamitiesRestore,
-  CameraClearUnitA,
-  CameraClearUnitB,
-  CameraResetPath,
-  CameraResetZoom,
-  CameraSetChanged,
   CampaignProgressDelete,
   CampaignProgressNew,
   CampaignRestoreCivilization,
   CivBuilderFree,
-  ClearFormManager,
   ClientFastSelect,
   CommCTsProcessed,
   CommIsMultiplayer,
@@ -432,26 +425,19 @@ enum class EeGameCpp : uint32_t {
   StHerdIDCounter,
   StInScenarioEditor,
   StIsLoadedGame,
-  StLoadedPlayerAt,
-  StLoadedPlayerCount,
   StLocalPlayer,
   StMajorVersion,
   StMap,
   StMapCenter,
   StMinorVersion,
-  StNumPlayers,
   StNumPlayersMade,
-  StNumTeams,
   StOptions,
-  StPlayerAt,
-  StPlayerCount,
   StPlayerIsLocalName,
   StRandomSeed,
   StReadLock,
   StReadUnlock,
   StRevealMap,
   StScenarioManager,
-  StTeamToRust,
   StTimeOfDay,
   StTownIDCounter,
   StUnitImprovementsAllowed,
@@ -543,13 +529,10 @@ enum class EeGameCpp : uint32_t {
   WSetGameSpeed,
   WSetInfluenceRaw,
   WSetMap,
-  WSetPlayer,
   WSetScenarioRaw,
   WShowCollisionSpheres,
   WStartTime,
-  WStatisticsReset,
   WSunDirection,
-  WTeamsClear,
   WTeamsLocked,
   WTimeOfDay,
   WTownIDCounter,
@@ -683,21 +666,14 @@ enum class EeGameCpp : uint32_t {
   EffDestroyedCount,
   HelperUpdate,
   StTail,
-  StTeamsClear,
-  StLoadedPlayersClear,
   StChecksumReset,
-  StPlayersClear,
   StDeleteMap,
   StDeleteScenario,
   StDeleteEffects,
   StDeleteCalamity,
   StDeleteEnvironment,
-  StRestorablesClear,
-  StRestorableCount,
   StRestorableRepair,
   StOptionsPtr,
-  StPlayersResize,
-  StPlayerSet,
   StNewMap,
   StNewScenarioManager,
   StNewEffectManager,
@@ -770,8 +746,6 @@ enum class EeGameCpp : uint32_t {
   ActionDereference,
   BehaviorAt,
   BuildGate,
-  CameraSetZoom,
-  CameraUpdate,
   CanPlace,
   CheatApply,
   CivRequestUpgrades,
@@ -846,8 +820,6 @@ enum class EeGameCpp : uint32_t {
   MsgStartLoading,
   MsgString,
   NewChatAction,
-  NewLoadMainScreenRecord,
-  NewLoadSaveResponse,
   NewLocationGoal2D,
   NewStartGameRecord,
   NewTimerExpiredEvent,
@@ -1664,8 +1636,6 @@ enum class EeGameCpp : uint32_t {
   MpTileVecClear,
   MpTileVecData,
   MpTileVecSize,
-  MpCountCellOn,
-  MpCountCellOff,
   MpOrthographic,
   MpDenormalizePerspective,
   MpDenormalizeOrthographic,
@@ -1816,14 +1786,8 @@ enum class EeGameCpp : uint32_t {
   PwhFields,
   PwhScenario,
   PwhSetScenario,
-  PwhTeamsFromWorld,
-  PwhTeamsCount,
-  PwhTeamsResize,
-  PwhTeamLoad,
-  PwhTeamSave,
   PwWorldPopulationLimit,
   PwStSetScenario,
-  PwStTeamsFromHelper,
   PwMainFormLoad,
   PwMainFormSave,
   PwAreaEffectsLoad,
@@ -1895,7 +1859,6 @@ enum class EeGameCpp : uint32_t {
   PwTreeGet,
   PwNodeAllowed,
   PwNodeSetAllowed,
-  PwCameraZoom,
   PwWorldGameSpeed,
   PfReadULong,
   PfReadLong,
@@ -1919,7 +1882,6 @@ enum class EeGameCpp : uint32_t {
   PvLongsAt,
   PvAfterLoad,
   PsMajorVersion,
-  PsListPush,
   PsPersistentTag,
   PsPersistentDelete,
   PsNewChecksumChunk,
@@ -2040,10 +2002,9 @@ enum class EeGameCpp : uint32_t {
   PsStSetEffectManager,
   PsStSetMap,
   PsStSetEnvironmentManager,
-  PsStRestorablePushEffects,
-  PsStRestorablePushCalamities,
-  PsStRestorablePushEnvironment,
-  PsStLoadedPlayerPush,
+  PsRestorableOfEffects,
+  PsRestorableOfCalamities,
+  PsRestorableOfEnvironment,
   PsPlayerRemoveAlly,
   PsEditorFormPresent,
   PsEditorClearSelection,
@@ -2118,9 +2079,6 @@ enum class EeGameCpp : uint32_t {
   SsNewPlayerInfo,
   SsMsgSetOriginServer,
   SsNewRecord0,
-  SsNewRecord2,
-  SsNewRecord3,
-  SsNewRecord4,
   SsNewString,
   SsDeleteString,
   SsClientAddress,
@@ -2200,7 +2158,6 @@ enum class EeGameCpp : uint32_t {
   SsCommsNewClient,
   SsStartTimeFromMsg,
   SsPhysicsRandom,
-  SsNumTeams,
   SsGetProtocol,
   SsProtocolStatus,
   SsGfxPaused,
@@ -2367,7 +2324,6 @@ enum class EeGameCpp : uint32_t {
   EntryServerStopPing,
   EntryServerLoadState,
   EntryNotInEditor,
-  EntryStartLoadingInput,
   GsClassScale,
   GsDrawGroundShadows,
   GsShadowModel,
@@ -2386,7 +2342,6 @@ enum class EeGameCpp : uint32_t {
   GuTargetHeight,
   GuTargetWidth,
   RcPhysicsPresent,
-  RtCameraZoom,
   RtCaptureSetRenderTarget,
   RtCaptureSurface,
   RtCaptureWidth,
@@ -2770,7 +2725,6 @@ enum class EeGameCpp : uint32_t {
   DcApplyImprovement,
   DcEraseQueued,
   DcExplore,
-  DcNewMakeVisible,
   DcSetOriginatingSlot,
   DcProcessInput,
   DcCurrentEpoch,
@@ -2805,14 +2759,11 @@ enum class EeGameCpp : uint32_t {
   DvNameSave,
   DvDeferredPush,
   DvDeferred,
-  DwTeamCount,
-  DwTeamPlayer,
   DwNeeded,
   DwWonderTime,
   DwVictoryTime,
   DwGameTime,
   DwInCinematic,
-  DkFields,
   DkModelScale,
   DkModelCenter,
   DkModelHeight,
@@ -2823,12 +2774,9 @@ enum class EeGameCpp : uint32_t {
   DkSetOrtho,
   DkSetWorldCamera,
   DkSetFieldOfView,
-  DkMiniMapRefresh,
   DkClearB529066,
   DkClearFollowing,
   DkClearB529068,
-  DkUnitASaved,
-  DkUnitBSaved,
   DkFrontClipping,
   DkRearClipping,
   UsgWorldWriteLock,
@@ -2844,19 +2792,8 @@ enum class EeGameCpp : uint32_t {
   UsgFirstFile,
   UsgFileName,
   UsgLoad,
-  UsgCameraChanged,
-  UsgCameraUpdate,
   UsgSave,
-  WsStart,
   WsTiles,
-  WsVictory,
-  WsTeamsLocked,
-  WsScenarioGame,
-  WsCampaignOptions,
-  WsSetScenario,
-  WsSetCampaign,
-  WsEndTime,
-  WsCampaignName,
   WsNumPlayers,
   WsPlayer,
   WsCurrent,
@@ -2866,24 +2803,6 @@ enum class EeGameCpp : uint32_t {
   WsStatsSet,
   WsStatsCap,
   WsStatsSetCap,
-  WsRecordsAssign,
-  WsRecScore,
-  WsRecEconomy,
-  WsRecEpoch,
-  WsRecMilitary,
-  WsRecTech,
-  WsRecColor,
-  WsRecName,
-  WsRecStatistics,
-  WsRecSlot,
-  WsRecResult,
-  WsRecEndTime,
-  WsRecTeam,
-  WsRecResource,
-  WsRecLocal,
-  WsRecHuman,
-  WsSetCurrentRecord,
-  WsRecPlayTime,
   FwLayGobjFields,
   FwLayGobjModels,
   FwLayGobjTextures,
@@ -3101,16 +3020,11 @@ enum class EeGameCpp : uint32_t {
   EcLocationOnLine,
   EcOrthographic,
   EcReference,
-  EcResolve,
   EcRightPlane,
   EcScreenLine,
   EcSetFrontClipping,
   EcSetRearClipping,
-  EcSetUnitA,
-  EcSetUnitB,
   EcTileXRaw,
-  EcUnitAGet,
-  EcUnitBGet,
   EcValidPoint,
   EcValidTile,
   EcVelocity,
@@ -3181,22 +3095,11 @@ enum class EeGameCpp : uint32_t {
   EgTraceOn,
   EbEnvF40,
   EbEnvF44,
-  EwCampaignName,
-  EwColorSize,
-  EwHistory,
-  EwHistoryTail,
   EwNumPlayers,
   EwPhysicsSeed,
   EwPlayerAt,
   EwPlayerStatistics,
-  EwRecordAt,
-  EwRecordColor,
-  EwRecordCount,
-  EwRecordName,
   EwRecordStatistics,
-  EwRecordStatisticsOf,
-  EwRecordSuffix,
-  EwRecordTail,
   EwStatsEndTime,
   EwStatsSeries,
   C11ScenarioExtension,
@@ -3242,7 +3145,6 @@ enum class EeGameCpp : uint32_t {
   C11UlongsAt,
   C11PickUnits,
   C11CurrentPlayerId,
-  C11NewSelectRecord,
   C11MsgListAssign,
   C11MsgListData,
   C11MsgListSize,
@@ -3286,7 +3188,6 @@ enum class EeGameCpp : uint32_t {
   C11SvDestroyFastLock,
   C11SvDestroyAttemptLock,
   C11SvNewResponse,
-  C11SvPingStat,
   C11SvXferStatus,
   C11RequestFirewall,
   C11RequestString,
@@ -3305,8 +3206,6 @@ enum class EeGameCpp : uint32_t {
   C12DebugText,
   C12WonNetCffdd,
   C12WonNetCfff2,
-  C12TeamsResize,
-  C12TeamSetPlayers,
   C12PlayerObserver,
   C12PlayerEnemy,
   C13bGhostLockFree,
@@ -3941,6 +3840,12 @@ void ee_gamecpp_startup_load_sound(const void *name,
                                    unsigned long *instance,
                                    unsigned long flag);
 
+/// `mRestorables.push_back(r)` (`r` an `FSRestorable*`).
+void ee_gamecpp_state_restorable_push(void *restorable);
+
+/// `gGameState.GetPlayer(i)` (CreateMiniMap's local player).
+void *ee_gamecpp_state_player(long i);
+
 /// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
 /// fresh checksum).
 void ee_gamecpp_state_init(void *st);
@@ -4019,7 +3924,7 @@ void ee_gamecpp_world_remove_player(void *w,
 /// EEWorld::AddComputerPlayers: the empty slots after the state's players filled with computer players in unused
 /// colours and 999,999 of each resource (the scenario editor), their foundation media loaded.
 void ee_gamecpp_world_add_computers(void *w,
-                                    void *st);
+                                    void *_st);
 
 /// EEWorld::StartGame: the world set up from a game state (map, players, teams, local player, camera, sight,
 /// minimap, calamities, music, media), the load progress reported; in multiplayer the local player found by name.
@@ -4639,6 +4544,18 @@ void ee_gamecpp_minimap_recolor(void *mm);
 /// Refresh: the camera's view trapezoid on the mini map (ee_gfx minimap.rs).
 void ee_gamecpp_minimap_refresh(void *mm);
 
+/// `gMiniMap`.
+size_t ee_screenscpp_mini_map();
+
+/// `gMiniMap->Refresh()`.
+void ee_screenscpp_mini_map_refresh();
+
+/// `gMiniMap->RedrawAll()`.
+void ee_screenscpp_mini_map_redraw_all();
+
+/// `gMiniMap->Redraw()`.
+void ee_screenscpp_mini_map_redraw();
+
 /// RedrawAll: every terrain pixel recomputed, the terrain texture flagged changed.
 void ee_gamecpp_minimap_redraw_all(void *mm);
 
@@ -4761,9 +4678,6 @@ long ee_gamecpp_pc_load(void *chunk, void *file);
 
 /// `EEPChecksum::Save`: the verbose flag and the described checksum entries; the first write error.
 long ee_gamecpp_pc_save(void *chunk, void *file);
-
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
-void ee_gamecpp_ps_build_chunks(void *list);
 
 /// `TrimAutoSaves`: the files matching a pattern in a directory deleted, lowest (FSFileSpec order) first, until at
 /// most `max` remain.
@@ -5197,6 +5111,14 @@ void ee_gamecpp_mrecord_init(void *message,
                              const EeGamecppMrValue *values,
                              size_t count);
 
+/// A game action's record message (`new EEMRecord(kind, {values})`, seven values at most; was EEARust.cpp's).
+///
+/// # Safety
+/// `values` points at `count` values.
+void *ee_screenscpp_ga_record(uint32_t kind,
+                              const EeScreensGaValue *values,
+                              uint32_t count);
+
 /// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
 /// text, the list's records, the blob's bytes, the record's members).
 ///
@@ -5586,6 +5508,35 @@ void ee_gamecpp_ambient_count_tree(EeAppAmbientCounts *counts, void *unit);
 void ee_gamecpp_ambient_add_tree(EeAppAmbientCounts *counts,
                                  void *unit);
 
+/// `EECameraControl()`: the plain members' defaults, no followed unit; the camera is the world's from here on.
+///
+/// # Safety
+/// `camera` is the EECameraControl being constructed and `rec` its record.
+void ee_gamecpp_camera_new(void *camera,
+                           EeAppCameraFields *rec);
+
+/// `SetChanged`.
+void ee_screenscpp_camera_set_changed();
+
+/// `SetLocation((x, y, z), flag1, flag2)`.
+void ee_screenscpp_camera_set_location(float x,
+                                       float y,
+                                       float z,
+                                       bool immediate,
+                                       bool follow_terrain);
+
+/// `Follow(unit, follow, 1, 0, 0)`.
+void ee_screenscpp_camera_follow(size_t unit, bool flag);
+
+/// `ClearUnitA`.
+void ee_screenscpp_camera_clear_unit_a();
+
+/// `ClearUnitB`.
+void ee_screenscpp_camera_clear_unit_b();
+
+/// `Update(seconds)`.
+void ee_screenscpp_camera_update(float seconds);
+
 /// The camera's host (camera_ffi.rs `EeAppCameraFn`): the context is the camera.
 ///
 /// # Safety
@@ -5697,6 +5648,88 @@ void ee_gamecpp_prefs_init_defaults();
 
 /// WSTA (`EEAppCaptureStatisticsSweep`).
 void ee_gamecpp_capture_statistics_sweep();
+
+/// `gWorld.mStatistics.mCampaignName`.
+///
+/// # Safety
+/// `out` is an `EeScreensShimOut` of a live `Vec<u8>`.
+void ee_screenscpp_gt_world_campaign_name(void *out);
+
+/// The records' count.
+uint32_t ee_screenscpp_gt_record_count();
+
+/// Record `index`'s name.
+///
+/// # Safety
+/// `out` is an `EeScreensShimOut` of a live `Vec<u8>`.
+void ee_screenscpp_gt_record_name(uint32_t index, void *out);
+
+/// `gWorld.mStatistics.GetRecords().size() == 1`.
+bool ee_screenscpp_ug_one_record();
+
+uint32_t ee_screenscpp_pgs_records();
+
+int32_t ee_screenscpp_pgs_start_time();
+
+int32_t ee_screenscpp_pgs_end_time();
+
+int32_t ee_screenscpp_pgs_current_record();
+
+int32_t ee_screenscpp_pgs_tile_count();
+
+bool ee_screenscpp_pgs_victory_enabled();
+
+bool ee_screenscpp_pgs_is_scenario();
+
+bool ee_screenscpp_pgs_is_campaign();
+
+uint8_t ee_screenscpp_pgs_current_slot();
+
+float ee_screenscpp_pr_red(uint32_t record);
+
+float ee_screenscpp_pr_green(uint32_t record);
+
+float ee_screenscpp_pr_blue(uint32_t record);
+
+int32_t ee_screenscpp_pr_result(uint32_t record);
+
+uint32_t ee_screenscpp_pr_team(uint32_t record);
+
+uint32_t ee_screenscpp_pr_end_time(uint32_t record);
+
+uint32_t ee_screenscpp_pr_resource(uint32_t record, uint32_t index);
+
+uint32_t ee_screenscpp_pr_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_economy_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_epoch_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_military_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_tech_score(uint32_t record);
+
+uint8_t ee_screenscpp_pr_slot(uint32_t record);
+
+bool ee_screenscpp_pr_human(uint32_t record);
+
+/// `mStatistics.GetValue(series)`: the series' largest value.
+uint32_t ee_screenscpp_pr_value(uint32_t record, uint32_t index);
+
+/// `mStatistics.GetLastValue(series)`.
+uint32_t ee_screenscpp_pr_last_value(uint32_t record, uint32_t index);
+
+/// `mStatistics.CountIncreases(series)`.
+uint32_t ee_screenscpp_pr_increases(uint32_t record, uint32_t index);
+
+/// `mStatistics.GetSeries(series)` kept for the three reads below.
+void ee_screenscpp_pr_series_load(uint32_t record, uint32_t index);
+
+uint32_t ee_screenscpp_pr_series_count();
+
+uint32_t ee_screenscpp_pr_series_time(uint32_t index);
+
+uint32_t ee_screenscpp_pr_series_value(uint32_t index);
 
 /// EECalamity::Load (`loading`) or Save: the calamity's record read from or written to the saved game (the class by
 /// id; target and caster as ids, -1 if none); the first error.
@@ -5843,22 +5876,34 @@ unsigned long ee_gamecpp_menu_width(unsigned long width,
                                     unsigned long height);
 
 /// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-void ee_gamecpp_world_teams_add(void *w,
+void ee_gamecpp_world_teams_add(void *_w,
                                 const unsigned long *players,
                                 size_t n);
 
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
-void ee_gamecpp_world_teams_ally(void *w, uint32_t a, uint32_t b);
+void ee_gamecpp_world_teams_ally(void *_w, uint32_t a, uint32_t b);
 
 /// EEWorld::BreakAlliance.
-void ee_gamecpp_world_teams_break(void *w, uint32_t a, uint32_t b);
+void ee_gamecpp_world_teams_break(void *_w, uint32_t a, uint32_t b);
 
 /// EEWorld::RemovePlayerFromTeams.
-void ee_gamecpp_world_teams_remove(void *w, uint32_t player);
+void ee_gamecpp_world_teams_remove(void *_w, uint32_t player);
 
 /// EEWorld::RebuildTeams: the teams from the players' mutual alliances, then Gaia at war with every player.
 void ee_gamecpp_world_teams_rebuild(void *w,
                                     uint32_t players);
+
+/// `gWorld.mTeams[team].mVictoryCondition->GetWonderCountdown(*value)`.
+///
+/// # Safety
+/// `value` is writable.
+size_t ee_screenscpp_team_wonder_countdown(uint32_t team, unsigned long *value);
+
+/// `gWorld.GetNumTeams()`.
+int64_t ee_screenscpp_mf_num_teams();
+
+/// `gWorld.mTeams.size() > 0`.
+bool ee_screenscpp_mf_has_teams();
 
 extern int64_t ee_contagion_world(uint32_t op,
                                   uint64_t a,

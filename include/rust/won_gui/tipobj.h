@@ -85,6 +85,9 @@ using EeWonTipHostFn = ptrdiff_t(*)(void *me, EeWonTipOp op, ptrdiff_t a, ptrdif
 
 extern "C" {
 
+/// `offsetof(ListAreaToolTip, mListArea)` (TextListItem.cpp at static initialisation; R6 WON GUI round 39).
+void ee_won_tip_register(size_t at);
+
 /// One of the class's methods (`EeWonTipCall`) on the C++ tip `me` through its host.
 ///
 /// # Safety

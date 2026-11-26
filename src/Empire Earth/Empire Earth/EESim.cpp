@@ -153,9 +153,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
     case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
-    case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
-        return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
-            {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, UWideString(s)})));
     case O::SendToAllAndWait: static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait((NEMessage*)p, 15000, 12);
         break;
     case O::DerefMessage: ((NEMessage*)p)->Dereference();

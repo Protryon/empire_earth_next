@@ -32,7 +32,6 @@
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEARust.h"
 #include "lle/UResourceFile.h"
-#include "ee/EETeam.h"
 #include "ee/EEClient.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEPhysics.h"
@@ -167,7 +166,7 @@ unsigned char EEServer::GetFreePlayerSlot()
 // Returns true when the world has no teams
 bool EEServer::ServerSlot28()
 {
-    return (gWorld.mTeams.size() > 0) ? false : true;
+    return ee_app_teams_get(SIZE_MAX, NULL, 0) == 0;   // ee_sim app teams_ffi.rs
 }
 
 // Returns whether a server migration is in progress
@@ -286,8 +285,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the sends
     case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
-    case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
-        break;
     case O::C11SvXferStatus: SV->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {(unsigned char)a[0], (unsigned char)a[1], (uint32_t)a[2], (unsigned char)a[3]}), kSlotNone);
         break;
     // a connection request (a0)
@@ -305,11 +302,11 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::C11PlayerNameFromRequest: GOP->mName = REQ->GetString((uint32_t)a[1]);
         break;
-    case O::C11OptionsReadLock: gGameOptions.mLock->ReadLock();
+    case O::C11OptionsReadLock: gWorld.mLobbyOptions.mLock->ReadLock();
         break;
-    case O::C11OptionsReadUnlock: gGameOptions.mLock->ReadUnlock();
+    case O::C11OptionsReadUnlock: gWorld.mLobbyOptions.mLock->ReadUnlock();
         break;
-    case O::C11OptionsPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(&gGameOptions.mPlayers[a[0]]));
+    case O::C11OptionsPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(&gWorld.mLobbyOptions.mPlayers[a[0]]));
     // the sounds and the UI
     case O::C11WarningSound: EELoadSound(UString(a[0] == 1 ? "sounds\\OutOfSynch.wav" : "sounds\\Resending.wav"), 0x31, *(unsigned long*)a[1], *(unsigned long*)a[2], 1);
         break;
@@ -319,9 +316,9 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     // p the session's communications object (the server or client), a register (an EEGameOptionsPlayer) for the
     // SsReg ops, or unused, one statement each
     // the locks
-    case O::SsOptionsWriteLock: gGameOptions.mLock->WriteLock();
+    case O::SsOptionsWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
         break;
-    case O::SsOptionsWriteUnlock: gGameOptions.mLock->WriteUnlock();
+    case O::SsOptionsWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
         break;
     case O::SsWorldWriteLock: gWorld.mLock->WriteLock();
         break;
@@ -341,15 +338,15 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the facts
     case O::SsMultiplayerGame: return EEIsMultiplayerGame(true);
-    case O::SsOptionsMultiplayer: return gGameOptions.mIsMultiplayer;
-    case O::SsLoadType: return gGameOptions.mLoadType;
+    case O::SsOptionsMultiplayer: return gWorld.mLobbyOptions.mIsMultiplayer;
+    case O::SsLoadType: return gWorld.mLobbyOptions.mLoadType;
     case O::SsCitizensDefault: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     case O::SsVersionMatch: return !(*(const UWideString*)p != gGameVersion);
     case O::SsBinaryChecksum: return gBinaryChecksum;
     case O::SsWorldPlayers: return (long long)gWorld.mNumPlayers;
     case O::SsTime: return (long long)TMGetTime();
     case O::SsWon: return gWonNet != NULL;
-    case O::SsScreenActive: return gGameScreenActive;
+    case O::SsScreenActive: return gWorld.mGameScreenActive;
     case O::SsFormById: return P64(gUIManager->GetFormByID(a[0]));
     case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
@@ -359,13 +356,13 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsCHasLeft: return P64(&SC->mHasLeftGame);
     case O::SsCFastId: return P64(&SC->mFastSelectionID);
     // the lobby slot registers (p the register, a0 the other register or the argument)
-    case O::SsRegLoadOptions: REG0 = gGameOptions.mPlayers[a[0]];
+    case O::SsRegLoadOptions: REG0 = gWorld.mLobbyOptions.mPlayers[a[0]];
         break;
     case O::SsRegLoadLobby: REG0 = gWorld.GetLobbyOptions().mPlayers[a[0]];
         break;
     case O::SsRegLoadReg: REG0 = REG1;
         break;
-    case O::SsRegStoreOptions: gGameOptions.mPlayers[a[0]] = REG0;
+    case O::SsRegStoreOptions: gWorld.mLobbyOptions.mPlayers[a[0]] = REG0;
         break;
     case O::SsRegStoreLobby: gWorld.GetLobbyOptions().mPlayers[a[0]] = REG0;
         break;
@@ -381,15 +378,12 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsRegNameIcmpPlayer: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG0.mName),
                                                     reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)a[0])->mName)) == 0;
     // the sends
-    case O::SsSendFullOptions: gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), (unsigned char)a[0]);
+    case O::SsSendFullOptions: gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gWorld.mLobbyOptions), (unsigned char)a[0]);
         break;
     case O::SsNewPlayerInfo: return P64(static_cast<NEMessage*>(EENewFullPlayerInformation(REG0)));
     case O::SsMsgSetOriginServer: MSG->SetOriginatingSlot(kSlotServer);
         break;
     case O::SsNewRecord0: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0])));
-    case O::SsNewRecord2: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2]})));
-    case O::SsNewRecord3: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2], (long long)a[3]})));
-    case O::SsNewRecord4: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0], {(long long)a[1], (long long)a[2], (long long)a[3], (long long)a[4]})));
     case O::SsNewString: return P64(new UWideString);
     case O::SsDeleteString: delete (UWideString*)p;
         break;
@@ -512,7 +506,7 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsExecuteSelection: gWorld.GetCurrentPlayer()->ExecuteSelectionMessage((NEMessage*)a[0]);
         break;
     // the communications
-    case O::SsOpenSaveGame: return EEOpenSaveGameFile((const char*)gGameOptions.mMapType, a[0] != 0 ? "Saved Games\\" : "Scenarios\\", *(FSFileSpec**)a[1]) == kErrorOK;
+    case O::SsOpenSaveGame: return EEOpenSaveGameFile((const char*)gWorld.mLobbyOptions.mMapType, a[0] != 0 ? "Saved Games\\" : "Scenarios\\", *(FSFileSpec**)a[1]) == kErrorOK;
     case O::SsNewHeader: return P64(new EEPSaveGameHeader);
     case O::SsDeleteHeader: delete (EEPSaveGameHeader*)p;
         break;
@@ -525,11 +519,9 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsCommsNewClient: gCommunications = new EEClient;
         break;
     // the game start
-    case O::SsStartTimeFromMsg: gStartTime = ((NEMRecord*)a[0])->Get<uint32_t>(0);
+    case O::SsStartTimeFromMsg: gWorld.mStartTime = ((NEMRecord*)a[0])->Get<uint32_t>(0);
         break;
     case O::SsPhysicsRandom: gPhysics->GetRandom(0L, 0x7fffffffL);
-        break;
-    case O::SsNumTeams: gWorld.GetNumTeams();
         break;
     case O::SsGetProtocol: NEProtocol::GetProtocol(0, *(NEProtocol**)a[0]);
         break;

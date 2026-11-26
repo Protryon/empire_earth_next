@@ -1086,7 +1086,7 @@ public:
     // chain) (provisional name)
     bool HasRallyPoint() { return (this->IsLandBuilding() && this->mCanSetRallyPoint) || ((this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding) && this->mAirTrafficType != 0) || this->mUnitType == kUnitTypeCpMissileBase; }
     // 0x234084: plays the class's +0x94 effect on inUnit (the meteor storm's new meteor) (provisional name)
-    void PlayCreationEffect(EEUnit* inUnit) { if (this->mCreationEffect != NULL) gEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0); }
+    void PlayCreationEffect(EEUnit* inUnit);
     // 0x211747: the last unit of inUnit's +0x1d0 chain; 0x211723: that unit's +0x1cc (the logic bomb; ecx unused)
     // (provisional names)
     EEComplexUnit* GetLastLinked(EEComplexUnit* inUnit) { return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_LAST_LINKED, this, NULL, H(inUnit), 0, 0, NULL); }
