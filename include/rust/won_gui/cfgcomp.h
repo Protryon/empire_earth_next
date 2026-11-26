@@ -313,6 +313,15 @@ bool ee_won_cfg_comp(EeWonCfgTabOpFn ops,
                      void *frame,
                      EeWonCfgComp which);
 
+/// The table setter `setter` when it is a composition: 1 when it ran, 0 when an op threw (the host keeps the
+/// exception), -1 for another setter (the host's own case).
+///
+/// # Safety
+/// As `ee_won_cfg_comp`.
+int32_t ee_won_cfg_comp_setter(EeWonCfgTabOpFn ops,
+                               void *frame,
+                               int32_t setter);
+
 /// Appends bytes to the `Vec<u8>` at `v` (the host's way to hand back a string).
 ///
 /// # Safety

@@ -607,6 +607,61 @@ pub unsafe extern "C" fn ee_won_cfg_comp(ops: EeWonCfgTabOpFn, frame: *mut c_voi
     run(&Ops { f, frame }, which).is_ok()
 }
 
+/// The composition a table setter is (`table << 8 | n`), None for another setter (R6 WON lobby and network round 39:
+/// WONCfgTable.inl's CfgTabSet cases that only ran one).
+fn of_setter(setter: i32) -> Option<EeWonCfgComp> {
+    use crate::cfgtab::*;
+    use EeWonCfgComp as W;
+    Some(match (setter >> 8, setter & 0xff) {
+        (EE_WON_CFG_T_SIMPLE, 1) => W::SimpleType,
+        (EE_WON_CFG_T_WONBUTTON, 1) => W::ButtonType,
+        (EE_WON_CFG_T_WONBUTTON, 12) => W::HorzTextPad,
+        (EE_WON_CFG_T_WSCROLLBAR, 0) => W::ScrollRect,
+        (EE_WON_CFG_T_WSCROLLCONT, 0) => W::ScrollContNoFrame,
+        (EE_WON_CFG_T_COMPONENT, 3) => W::Left,
+        (EE_WON_CFG_T_COMPONENT, 4) => W::Top,
+        (EE_WON_CFG_T_COMPONENT, 5) => W::Width,
+        (EE_WON_CFG_T_COMPONENT, 6) => W::Height,
+        (EE_WON_CFG_T_COMPONENT, 10) => W::SizeAtLeast,
+        (EE_WON_CFG_T_COMPONENT, 17) => W::Focus,
+        (EE_WON_CFG_T_COMPONENT, 22) => W::ParseTimerStart,
+        (EE_WON_CFG_T_COMPONENT, 23) => W::ParseTimerStop,
+        (EE_WON_CFG_T_SKIN, 5) => W::SkinRadio,
+        (EE_WON_CFG_T_SKIN, 16) => W::SkinTabCtrl,
+        (EE_WON_CFG_T_SKIN, 21) => W::SkinCursor,
+        (EE_WON_CFG_T_FONT, 2) => W::FontStyle,
+        (EE_WON_CFG_T_CONTAINER, 2) => W::NewLayoutPoint,
+        (EE_WON_CFG_T_CONTAINER, 5) => W::EnableLayout,
+        (EE_WON_CFG_T_CONTAINER, 15) => W::SpaceEvenlyH,
+        (EE_WON_CFG_T_CONTAINER, 16) => W::SpaceEvenlyV,
+        (EE_WON_CFG_T_CONTAINER, 17) => W::ClearRight,
+        (EE_WON_CFG_T_CONTAINER, 19) => W::SizeAtLeastLayout,
+        (EE_WON_CFG_T_CONTAINER, 25) => W::LayoutPrev,
+        (EE_WON_CFG_T_CONTAINER, 26) => W::LayoutChain,
+        (EE_WON_CFG_T_CONTAINER, 27) => W::LayoutOffsets,
+        (EE_WON_CFG_T_CONTAINER, 28) => W::LayoutRule,
+        (EE_WON_CFG_T_CONTAINER, 29) => W::NoOverlap,
+        (EE_WON_CFG_T_STRETCHIMAGE, 4) => W::StretchExport,
+        (EE_WON_CFG_T_STRETCHIMAGE, 6) => W::StretchCut,
+        (EE_WON_CFG_T_STRETCHIMAGE, 7) => W::StretchNamed,
+        (EE_WON_CFG_T_STRETCHIMAGE, 8) => W::StretchNewChild,
+        (EE_WON_CFG_T_IMAGEFILTER, 4) => W::FilterCut,
+        (EE_WON_CFG_T_IMAGEFILTER, 5) => W::FilterNamed,
+        _ => return None,
+    })
+}
+
+/// The table setter `setter` when it is a composition: 1 when it ran, 0 when an op threw (the host keeps the
+/// exception), -1 for another setter (the host's own case).
+///
+/// # Safety
+/// As `ee_won_cfg_comp`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_cfg_comp_setter(ops: EeWonCfgTabOpFn, frame: *mut c_void, setter: i32) -> i32 {
+    // SAFETY: the contract
+    of_setter(setter).map_or(-1, |w| i32::from(unsafe { ee_won_cfg_comp(ops, frame, w) }))
+}
+
 /// Appends bytes to the `Vec<u8>` at `v` (the host's way to hand back a string).
 ///
 /// # Safety
