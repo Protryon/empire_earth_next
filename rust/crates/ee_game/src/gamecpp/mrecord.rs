@@ -18,9 +18,7 @@ use ee_sim::netmsg::records::{
     EE_NETMSG_RECORD_FIELD_RAW, EE_NETMSG_RECORD_FIELD_STRING,
 };
 
-use crate::screens::game_actions::{
-    EeScreensGaValue, EE_SCREENS_GA_VALUE_FLOAT, EE_SCREENS_GA_VALUE_POINT,
-};
+use crate::screens::game_actions::{EeScreensGaValue, EE_SCREENS_GA_VALUE_FLOAT, EE_SCREENS_GA_VALUE_POINT};
 
 use super::{h, hp, ptr, O, P};
 
@@ -234,8 +232,12 @@ pub fn new_record(kind: u8, values: &[EeGamecppMrValue]) -> P {
 /// integer an integer.
 pub fn ga_value(v: &EeScreensGaValue) -> EeGamecppMrValue {
     match v.kind {
-        EE_SCREENS_GA_VALUE_POINT => EeGamecppMrValue { floats: [v.f[0], v.f[1], 0.0], is_float: true, ..EeGamecppMrValue::integer(0) },
-        EE_SCREENS_GA_VALUE_FLOAT => EeGamecppMrValue { floats: [v.f[0], 0.0, 0.0], is_float: true, ..EeGamecppMrValue::integer(0) },
+        EE_SCREENS_GA_VALUE_POINT => {
+            EeGamecppMrValue { floats: [v.f[0], v.f[1], 0.0], is_float: true, ..EeGamecppMrValue::integer(0) }
+        }
+        EE_SCREENS_GA_VALUE_FLOAT => {
+            EeGamecppMrValue { floats: [v.f[0], 0.0, 0.0], is_float: true, ..EeGamecppMrValue::integer(0) }
+        }
         _ => EeGamecppMrValue::integer(v.i),
     }
 }
@@ -245,8 +247,13 @@ pub fn ga_value(v: &EeScreensGaValue) -> EeGamecppMrValue {
 /// # Safety
 /// `values` points at `count` values.
 #[no_mangle]
-pub unsafe extern "C" fn ee_screenscpp_ga_record(kind: u32, values: *const EeScreensGaValue, count: u32) -> *mut c_void {
-    let values = if count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(values, count.min(7) as usize) } };
+pub unsafe extern "C" fn ee_screenscpp_ga_record(
+    kind: u32,
+    values: *const EeScreensGaValue,
+    count: u32,
+) -> *mut c_void {
+    let values =
+        if count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(values, count.min(7) as usize) } };
     let values: Vec<EeGamecppMrValue> = values.iter().map(ga_value).collect();
     new_record(kind as u8, &values) as *mut c_void
 }

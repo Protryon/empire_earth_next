@@ -378,7 +378,11 @@ pub fn send_ping_stat(server: P, player: i64, ping: f32) {
         // kMessageUpdatePingStat {(unsigned char) player, the ping (a float)} to the server's local input
         let values = [
             super::mrecord::EeGamecppMrValue::integer(player as u8 as i64),
-            super::mrecord::EeGamecppMrValue { floats: [ping, 0.0, 0.0], is_float: true, ..super::mrecord::EeGamecppMrValue::integer(0) },
+            super::mrecord::EeGamecppMrValue {
+                floats: [ping, 0.0, 0.0],
+                is_float: true,
+                ..super::mrecord::EeGamecppMrValue::integer(0)
+            },
         ];
         let message =
             super::mrecord::new_record(ee_sim::message_ids::EEMessageID::kMessageUpdatePingStat as u8, &values);

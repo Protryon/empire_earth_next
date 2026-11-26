@@ -132,7 +132,8 @@ fn action(action: CheatAction, player: c_ulong) {
         CheatAction::MakeVisible => {
             // the message that makes the whole world visible, from the local player only
             if pl == hp(O::WorldCurrentPlayer, 0, &[]) {
-                let message = super::mrecord::new_record(ee_sim::message_ids::EEMessageID::kMessageMakeWorldVisible as u8, &[]);
+                let message =
+                    super::mrecord::new_record(ee_sim::message_ids::EEMessageID::kMessageMakeWorldVisible as u8, &[]);
                 h(O::DcSetOriginatingSlot, message, &[pa(pl)]);
                 h(O::DcProcessInput, message, &[]);
             }
