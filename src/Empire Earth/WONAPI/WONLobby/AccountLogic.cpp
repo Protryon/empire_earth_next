@@ -57,7 +57,6 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::BroadcastLobby: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case O::Exit: LobbyExit((int)a); return 0;
     case O::AuthContext: return (intptr_t)GetLobbyAuthContext();
-    case O::VersionStatus: return (int)LobbyGetVersionStatus();
     case O::YesNoRes: return LobbyDoYesNoDialog(gLobbyResources[a].mString, gLobbyResources[b].mString, true);
     case O::MessageBoxRes: LobbyMessageBox(gLobbyResources[a].mString, gLobbyResources[b].mString); return 0;
     case O::CreditsLCall: aLogic->mDialog[kAccountCredits]->LCall((EeWonLobbyDlgCall)a); return 0;
@@ -69,7 +68,6 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::ShowLostUsername: LobbyShowLostUsername(); return 0;
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     case O::RunWithStatusRes: LobbyRunOpWithStatus(reinterpret_cast<AsyncOp*>(a), gLobbyResources[b].mString, gLobbyResources[c].mString, (int)(d & 0xff), (unsigned long)(d >> 8)); return 0;
-    case O::OpSetNum: R(a)->SetNum((int)b, (long long)c); return 0;
     case O::GetCertNew: return Held(RustServerOp::NewGetCert(A(a)));
     case O::GetAccountNew: return Held(RustServerOp::NewGetAccount(SC(a), A(b)));
     case O::PasswordEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));

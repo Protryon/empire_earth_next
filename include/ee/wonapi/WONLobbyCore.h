@@ -5,7 +5,6 @@
 namespace WONAPI {
 class Component;
 int LobbyDoDialog(Component* inDialog);
-WONStatus LobbyGetVersionStatus(); // 0x75b520 (status 70, or 100004 without a lobby)
 int LobbyDoYesNoDialog(const GUIString& inTitle, const GUIString& inText, bool inPlaySound); // 0x758ef0 (callers pass true)
 void LobbyExit(int inScreen);
 void LobbyShowCreateAccount();

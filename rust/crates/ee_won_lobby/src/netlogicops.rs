@@ -54,12 +54,41 @@ pub(crate) fn game_prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize>
 pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::lobbyprv::{self as prv, EeWonLobbyPrvField as F};
     use ee_won_net::cppnet;
+    use std::ptr::{null, null_mut};
     let p = a as *mut std::ffi::c_void;
     match op {
         Op::AddRef => cppnet::ref_add(p),
         Op::Release => cppnet::ref_release(p),
         Op::OpStatus => return Some(cppnet::op_status(p) as isize),
         Op::OpKilled => return Some(cppnet::op_killed(p) as isize),
+        // `((RustServerOp*)a)->SetNum(b, c)`
+        Op::OpSetNum => {
+            if let Some(h) = ee_won_net::cppcore::host_op_of(p) {
+                // SAFETY: the op's live Rust op; no bytes, address or object
+                unsafe { ee_won_net::hostop::ee_won_hostop_set(h, b as i32, c as i64, null(), 0, null(), null_mut()) };
+            }
+        }
+        // `ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, ..., HTTPCache::GetGlobalCache())`: the
+        // global cache in the WON directory, the op's reference
+        Op::HttpGetSetCache => {
+            if let Some(h) = ee_won_net::cppcore::host_op_of(p) {
+                let mut dir: Vec<u8> = Vec::new();
+                unsafe extern "C" fn sink(v: *mut std::ffi::c_void, bytes: *const u8, n: usize) {
+                    // SAFETY: the vector below and the bytes given
+                    unsafe { (*(v as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, n)) };
+                }
+                // SAFETY: the sink and its vector; the op's live Rust op and the cache's new reference
+                unsafe {
+                    ee_won_net::hostnative::ee_won_api_file_directory(sink, &mut dir as *mut Vec<u8> as *mut std::ffi::c_void);
+                    let cache = ee_won_net::httpcache::ee_won_http_cache_global(dir.as_ptr(), dir.len());
+                    ee_won_net::hostop::ee_won_hostop_set(h, ee_won_net::httpget::EE_WON_HTTPGET_CACHE, 0, null(), 0, null(), cache);
+                }
+            }
+        }
+        // `AsyncSocket::HasInternetConnection()`
+        Op::HasInternet => return Some(ee_won_net::ffi_net::ee_won_has_internet_connection() as isize),
+        // `LobbyGetVersionStatus()` (as int)
+        Op::VersionStatus => return Some(prv::ee_won_lobbyprv_get(F::VersionStatus) as i32 as isize),
         // `((RustServerOp*)a)->GetNum(b, c)`
         Op::OpNum => {
             let n = ee_won_net::cppcore::host_op_of(p).map_or(0, |h| {

@@ -20,7 +20,6 @@
 #include "rust/won_lobby/flow.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_net/hostop.h"
-#include "rust/won_net/httpcache.h"
 #include "rust/won_net/httpdoc.h"
 #include "rust/won_net/httpget.h"
 #include "rust/won_net/reqdir.h"
@@ -90,7 +89,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::InitStatusRes: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, gLobbyResources[c].mString, (d & 1) != 0, (int)(d >> 8)), true); return 0;
     case O::InitStatusEmpty: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, gEmptyGUIString, (d & 1) != 0, (int)(d >> 8)), true); return 0;
     case O::CheckForInternet: return config != NULL && config->mCheckForInternet;
-    case O::HasInternet: return AsyncSocket::HasInternetConnection();
     case O::HasConfig: return config != NULL;
     case O::InitListGet: return (intptr_t)InitList(a);
     case O::ServerClear: SC(a)->Clear(); return 0;
@@ -116,8 +114,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::PromotionBroadcast: LobbyBroadcastEvent(SetCrossPromotionEvent(reinterpret_cast<NativeImage*>(a), aLogic->mText), true); return 0;
     case O::SetPromotionLink: aLogic->mText.assign(reinterpret_cast<const char*>(a), (size_t)b); return 0;
     case O::HttpGetNew: return Held(RustServerOp::NewHttpGet(std::string(reinterpret_cast<const char*>(a), (size_t)b)));
-    // HTTPCache::GetGlobalCache(): the Rust cache in the WON directory (ee_won httpcache.rs), the op's reference
-    case O::HttpGetSetCache: ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL, ee_won_http_cache_global(B(WONAPICore::GetDefaultFileDirectory()), WONAPICore::GetDefaultFileDirectory().size())); return 0;
     case O::HttpGetSetPromotionCompletion: R(a)->SetCompletion(new ShellCompletion(aLogic, EeWonLogicShellDone::InitPromotionImage)); return 0;
     case O::SessionAddOp: HttpSessionAddOp(aLogic->Slot<HTTPSession>(kInitSession), R(a)); return 0;
     case O::SaveTOU: return InitSaveTOU(b == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath(), R(a)->GetBytes(EE_WON_HTTPDOC_DOCUMENT, b));

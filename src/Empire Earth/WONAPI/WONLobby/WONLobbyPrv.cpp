@@ -285,8 +285,6 @@ void LobbyResetRoomDirServers() { if(gLobbyData.get()!=NULL) gLobbyData->mRoomDi
 // the plain members are lobbyprv.rs's since R6 WON lobby and network round 38 (each answers as without a lobby when
 // there is none: the version status 100004, the rest 0 and false; a set then does nothing). InitLogic's setters of
 // them (the version status, the terms' times, the firewall test's) are its Rust's since round 39 (netlogicops.rs prv_op)
-// Returns the result of the game version check
-WONStatus LobbyGetVersionStatus() { return (WONStatus)ee_won_lobbyprv_get(PF::VersionStatus); }
 // Returns whether the recorded system or game terms of use are newer than the given times
 bool LobbyIsTOUNewer(long systemTime,long gameTime) { return ee_won_lobbyprv_tou_newer(systemTime, gameTime); }
 // Returns the lobby's network port
