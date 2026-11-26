@@ -142,7 +142,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     typedef EeWonLobbyCtlOp Op;
     ChatLink* aLink = reinterpret_cast<ChatLink*>(a);
     TextArea* anOutput = reinterpret_cast<TextArea*>(a);
-    InputBox* anInput = reinterpret_cast<InputBox*>(a);
     switch (inOp) {
     // EvGet's chat link of a WONGUI event (lobbyevt.rs reads the lobby events' members; hostops.rs picks the field)
     case Op::EvTlaLink: return (intptr_t)dynamic_cast<ChatLink*>(reinterpret_cast<ComponentEvent*>(a)->GetItem<TextSegmentBase>());
@@ -161,7 +160,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     case Op::TextAreaAddSegment: anOutput->AddSegment(Txt(b), (int)c, true); return 0;
     case Op::TextAreaLineBreak: anOutput->LineBreak((int)b); return 0;
     case Op::TextAreaReset: anOutput->Reset(b != 0); return 0;
-    case Op::InputText: return Dat(anInput->GetText());
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
     case Op::MyClient: return (intptr_t)GetMyLobbyClient();
     case Op::ChatParser: return (intptr_t)LobbyGetChatCommandParser();
@@ -355,8 +353,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
     case Op::ConfigPingCeiling: return reinterpret_cast<LobbyConfig*>(a)->mPingCeiling;
     case Op::ConfigPublic: return reinterpret_cast<LobbyConfig*>(a)->mPublic ? 1 : 0;
-    case Op::ItemTextAppend: aText->mText.append(Txt(b));
-        return 0;
     case Op::FilterSetSelPos: aFilter->mSelPos = (int)b;
         return 0;
     case Op::FilterSetIsAdd: aFilter->mIsAdd = b != 0;
@@ -387,7 +383,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxDrawImage: g->DrawImage(reinterpret_cast<Image*>(b), Lo(c), Hi(c)); return 0;
     case Op::GameCompareAddress:
         return reinterpret_cast<LobbyGame*>(a)->GetAddress().StringCompare(reinterpret_cast<LobbyGame*>(b)->GetAddress());
-    case Op::ComboEditText: return Dat(aCombo->mEdit->GetText());
     case Op::PingsToDo: return LobbyGetNumPingsToDo();
     case Op::KillPings: LobbyKillPings(1); return 0;
     case Op::DeliverGameAction: inCtl->DeliverEvent(GameActionEvent(7, reinterpret_cast<LobbyGame*>(a)), false); return 0;
@@ -409,8 +404,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::FilterSelPos: return aFilter->mSelPos;
     case Op::FilterText: return Dat(aFilter->mFilterText);
     case Op::FilterColumn: return Dat(aFilter->mColumnName);
-    case Op::AddFilterValue: LobbyAddFilterValue(Txt(a), Txt(b)); return 0;
-    case Op::RemoveFilterValue: LobbyRemoveFilterValue(Txt(a), Txt(b)); return 0;
     // the statements of the compound cases hostops.rs composes in the game (R6 WON round 35)
     case Op::BytesOfHttpDocSys: sEELobbyBytes = reinterpret_cast<RustServerOp*>(a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Sys); return 0;
     case Op::BytesOfHttpDocGame: sEELobbyBytes = reinterpret_cast<RustServerOp*>(a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Game); return 0;

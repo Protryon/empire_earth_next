@@ -41,11 +41,11 @@ static Component* FindDialog(ComponentConfig* inConfig, bool inStatus)
 }
 
 // the composed cases' local (logicsplit.rs): NewWindow's window (the dialogs' texts are lobbytext.rs's since R6 WON GUI
-// round 40, which calls a dialog's Rust object, reads a logic's dialogs and an input box's text at these offsets)
+// round 40, which calls a dialog's Rust object, reads a logic's dialogs, an input box's text and a combo box's input box at these offsets)
 static SmartPtr<Window> sDlgNewWindow;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
-static const bool sDlgAtRegistered = (ee_won_lobbytext_dialog_at(offsetof(LobbyRustDialog, mLobbyDlg), offsetof(RustLogic, mDialog), offsetof(InputBox, mRealText)), true);
+static const bool sDlgAtRegistered = (ee_won_lobbytext_dialog_at(offsetof(LobbyRustDialog, mLobbyDlg), offsetof(RustLogic, mDialog), offsetof(InputBox, mRealText), offsetof(ComboBox, mEdit)), true);
 #pragma clang diagnostic pop
 
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)

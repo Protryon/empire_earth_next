@@ -61,6 +61,16 @@ fn read(op: GRead, a: isize, other: isize, x: i32, y: i32) -> isize {
     unsafe { ee_won_gstr_read(op, a as *const EeWonGstr, other as *const c_void, x, y) as isize }
 }
 
+/// `a.findNoCase(b, 0)` of two texts.
+pub(crate) fn find_no_case(a: isize, b: isize) -> isize {
+    read(GRead::FindNoCase, a, b, 0, 0)
+}
+
+/// `a.CompareNoCase(b)` of two texts.
+pub(crate) fn compare_no_case(a: isize, b: isize) -> isize {
+    read(GRead::CompareNoCase, a, b, 0, 0)
+}
+
 /// Resource string `row`'s text (`gLobbyResources[row].mString`, read in place).
 pub(crate) fn res(row: isize) -> isize {
     crate::resource::string_data(row as usize)
@@ -268,6 +278,14 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
         Op::TextAt => units(a).get(b as usize).map_or(0, |&u| u as i32 as isize),
         Op::TextEquals => isize::from(read(GRead::Compare, a, b, 0, 0) == 0),
         Op::TextAlloc => narrow_new(a, b as usize) as isize,
+        // an input box's `GetText()`, a combo box's `mEdit->GetText()` (no reference added)
+        Op::InputText => input_text(a),
+        Op::ComboEditText => input_text(combo_edit(a)),
+        // `LobbyAddFilterValue(Txt(a), Txt(b))`, `LobbyRemoveFilterValue(Txt(a), Txt(b))`
+        Op::AddFilterValue => crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::AddFilterValue, a, b, 0)?,
+        Op::RemoveFilterValue => {
+            crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::RemoveFilterValue, a, b, 0)?
+        }
         // the text's narrow bytes (UTF-8) into the buffer `b` of `c` bytes (as many as fit); their count
         Op::TextBytes => {
             let bytes = ee_won_gui::guistring::narrow(&units(a), gs::EE_WON_GSTR_WCHAR as u32);
@@ -674,15 +692,28 @@ static DLG_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::
 static LOGIC_DIALOGS_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 /// `offsetof(InputBox, mRealText)`, the text `GetText()` answers.
 static INPUT_TEXT_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// `offsetof(ComboBox, mEdit)`, the combo box's input box (`SmartPtr<InputBox>`).
+static COMBO_EDIT_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// Registers `offsetof(LobbyRustDialog, mLobbyDlg)`, `offsetof(RustLogic, mDialog)` and `offsetof(InputBox,
-/// mRealText)` (the game, at static initialisation).
+/// Registers `offsetof(LobbyRustDialog, mLobbyDlg)`, `offsetof(RustLogic, mDialog)`, `offsetof(InputBox,
+/// mRealText)` and `offsetof(ComboBox, mEdit)` (the game, at static initialisation).
 #[no_mangle]
-pub extern "C" fn ee_won_lobbytext_dialog_at(at: usize, logic_dialogs: usize, input_text: usize) {
+pub extern "C" fn ee_won_lobbytext_dialog_at(at: usize, logic_dialogs: usize, input_text: usize, combo_edit: usize) {
     use std::sync::atomic::Ordering::Release;
     LOGIC_DIALOGS_AT.store(logic_dialogs, Release);
     INPUT_TEXT_AT.store(input_text, Release);
+    COMBO_EDIT_AT.store(combo_edit, Release);
     DLG_AT.store(at, Release);
+}
+
+/// A combo box's `mEdit.get()` (0 outside the game).
+fn combo_edit(combo: isize) -> isize {
+    let at = COMBO_EDIT_AT.load(std::sync::atomic::Ordering::Acquire);
+    if at == 0 || combo == 0 {
+        return 0;
+    }
+    // SAFETY: a live ComboBox: its input box pointer at the registered offset
+    of(combo + at as isize)
 }
 
 /// The shell `logic`'s dialog in slot `k` (`L->mDialog[k].get()`; 0 outside the game).

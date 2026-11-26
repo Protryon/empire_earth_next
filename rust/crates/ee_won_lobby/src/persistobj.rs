@@ -1437,12 +1437,15 @@ pub(crate) fn game_text_call(call: EeWonPersistCall, t1: &[u8], t2: &[u8], a: i6
 
 /// `LobbyPC1(call, Txt(t), a)` on the lobby's object, in the game only.
 pub(crate) fn game_call_text(call: EeWonPersistCall, t: isize, a: i64) -> Option<isize> {
+    game_call_texts(call, t, 0, a)
+}
+/// `LobbyPC2(call, Txt(t1), Txt(t2), a)` on the lobby's object, in the game only.
+pub(crate) fn game_call_texts(call: EeWonPersistCall, t1: isize, t2: isize, a: i64) -> Option<isize> {
     if !in_game() {
         return None;
     }
-    let none = text_in(0);
-    // SAFETY: the lobby's object or NULL; the text lives for the call
-    Some(unsafe { ee_won_persist_call(lobby(), call, text_in(t), none, a, 0, std::ptr::null_mut()) })
+    // SAFETY: the lobby's object or NULL; the texts live for the call
+    Some(unsafe { ee_won_persist_call(lobby(), call, text_in(t1), text_in(t2), a, 0, std::ptr::null_mut()) })
 }
 
 /// A text argument as the call's text (`LobbyPersistIn(Txt(t))`; NULL: the empty text).
