@@ -295,15 +295,10 @@ pub extern "C" fn ee_gamecpp_startup_attack_players(player: c_long, flag: u8) {
         }
         let computer = hp(O::EgComputer, other, &[]);
         // SAFETY: as pid
-        let observer = unsafe {
-            (*crate::gamecpp::records::pl_rts(other)).mObserverMode
-        };
+        let observer = unsafe { (*crate::gamecpp::records::pl_rts(other)).mObserverMode };
         if computer != 0 && !observer {
             // SAFETY: the player's saved numbers
-            let enemy = unsafe {
-                (*crate::gamecpp::records::pl_saved(pl)).mEnemies
-                    [pid(computer) as usize]
-            };
+            let enemy = unsafe { (*crate::gamecpp::records::pl_saved(pl)).mEnemies[pid(computer) as usize] };
             let is_enemy = computer != pl && enemy != 0;
             if !is_enemy {
                 allies.push(computer);

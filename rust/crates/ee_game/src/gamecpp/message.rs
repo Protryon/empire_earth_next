@@ -1427,8 +1427,11 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
             i += 1;
             continue;
         }
-        let goal =
-            if h(O::FxQueueGoalCount, unit, &[index as i64]) > 0 { hp(O::CxQueueBack, unit, &[index as i64]) } else { 0 };
+        let goal = if h(O::FxQueueGoalCount, unit, &[index as i64]) > 0 {
+            hp(O::CxQueueBack, unit, &[index as i64])
+        } else {
+            0
+        };
         if goal == 0
             || command == 0xb8
             || ((command != 0xb9 || h(O::GoalHasLocation, goal, &[]) == 0)

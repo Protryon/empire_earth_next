@@ -235,9 +235,7 @@ pub(crate) fn player_record(pl: P) -> Vec<u8> {
         r.i32(-1);
     } else {
         // SAFETY: the live player's records
-        let (rts, f) = unsafe {
-            (&*crate::gamecpp::records::pl_rts(pl), &*crate::gamecpp::records::pl_fields(pl))
-        };
+        let (rts, f) = unsafe { (&*crate::gamecpp::records::pl_rts(pl), &*crate::gamecpp::records::pl_fields(pl)) };
         r.i32(rts.mPlayerID as i32);
         r.i32(f.mPopulationLimitBonus as i32);
         r.bytes(&f.mTributeFee.to_le_bytes());

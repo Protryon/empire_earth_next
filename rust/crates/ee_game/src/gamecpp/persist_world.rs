@@ -742,8 +742,7 @@ fn ghost_fields(u: P, io: &mut EeUnitsWorldIo) {
     io.v[0] = r.mUnitID as i64;
     let class = hp(O::UnClass, u, &[]);
     // SAFETY: the class's record
-    io.v[1] =
-        if class != 0 { unsafe { (*crate::gamecpp::records::uc_fields(class)).mUnitType as i64 } } else { -1 };
+    io.v[1] = if class != 0 { unsafe { (*crate::gamecpp::records::uc_fields(class)).mUnitType as i64 } } else { -1 };
     let pl = hp(O::UnPlayer, u, &[]);
     // SAFETY: the player's record
     io.v[2] = if pl != 0 { unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID as i64 } } else { -1 };

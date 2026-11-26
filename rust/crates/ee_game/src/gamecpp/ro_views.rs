@@ -29,7 +29,6 @@ use ee_render::gfx::ro_terrain::{
 };
 use ee_render::gfx::shadows::{ee_gfx_ground_shadows_render, EeGfxShadow, EeGfxShadowScene, EeGfxUnitShadow};
 
-
 use super::globals;
 use super::rast::{
     frame_viewport, mesh_of, rast, view_rectangle, world_mesh, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA,

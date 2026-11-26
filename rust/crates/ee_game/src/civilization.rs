@@ -16,7 +16,6 @@ use ee_sim::app::teams_ffi;
 use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX};
 use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
 
-
 use crate::gamecpp::persistent::Pf;
 use crate::gamecpp::{h, hp, pa, rec, Owned, O, P};
 

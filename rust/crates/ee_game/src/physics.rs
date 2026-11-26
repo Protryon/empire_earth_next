@@ -350,7 +350,15 @@ fn send_auto_save(name: &[u8]) {
     let text = gc::hp(gc::O::StrNew, 0, &[]);
     gc::h(gc::O::StrAppendC, text, &[sa(name)]);
     let cts = net.get(EeNetCommsField::CtsProcessed) as i64;
-    let values = [V::integer(0), V::integer(1), V::integer(cts), V::integer(ee_time_get() as i64), V::integer(1), V::integer(0), V::string(text)];
+    let values = [
+        V::integer(0),
+        V::integer(1),
+        V::integer(cts),
+        V::integer(ee_time_get() as i64),
+        V::integer(1),
+        V::integer(0),
+        V::string(text),
+    ];
     let record = new_record(ee_sim::message_ids::EEMessageID::kMessageLoadOrSaveGame as u8, &values);
     gc::h(gc::O::StrFree, text, &[]);
     ee_net::net::ffi_server::ee_net_sv_send_to_all_and_wait(net.server, record as *mut c_void, 15000, 12);
@@ -1475,7 +1483,8 @@ fn serve_load_save_requests(p: P) {
             let mut result = 0;
             let mut i = 0;
             while i < h(O::LoadSaveCount, p, &[]) {
-                result = crate::gamecpp::message::ee_gamecpp_msg_load_or_save(hp(O::LoadSaveAt, p, &[i]) as *mut c_void) as i64;
+                result = crate::gamecpp::message::ee_gamecpp_msg_load_or_save(hp(O::LoadSaveAt, p, &[i]) as *mut c_void)
+                    as i64;
                 gc::h(gc::O::LcMsgDereference, hp(O::LoadSaveAt, p, &[i]), &[]);
                 h(O::LoadSaveSetNull, p, &[i]);
                 i += 1;

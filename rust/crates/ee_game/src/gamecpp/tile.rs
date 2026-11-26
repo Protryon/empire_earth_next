@@ -10,7 +10,6 @@
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
-
 use super::{h, hd, hp, pa, ptr, O, P};
 
 /// `kTerrainDeepWater`, `kTerrainShallowWater`, `kTerrainSpace` (static_assert'd in EEEffectHost.cpp and

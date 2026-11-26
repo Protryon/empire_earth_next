@@ -99,8 +99,7 @@ fn building_item(d: P, wall: bool) -> EeAppMiniMapItem {
     item.wall = wall;
     if wall {
         // SAFETY: the complex unit's record
-        item.facing =
-            unsafe { (*crate::gamecpp::records::cx_fields(hp(O::UnComplex, unit, &[]))).mFacing } as c_long;
+        item.facing = unsafe { (*crate::gamecpp::records::cx_fields(hp(O::UnComplex, unit, &[]))).mFacing } as c_long;
     }
     item
 }
@@ -185,10 +184,7 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
                     let unit = super::map::node_unit(node);
                     // SAFETY: the unit's records
                     let (hit_points, r) = unsafe {
-                        (
-                            (*crate::gamecpp::records::un_fields(unit)).mHitPoints,
-                            *crate::gamecpp::records::un_rts(unit),
-                        )
+                        ((*crate::gamecpp::records::un_fields(unit)).mHitPoints, *crate::gamecpp::records::un_rts(unit))
                     };
                     if hit_points != 0
                         && r.mTileX == io.x

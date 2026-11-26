@@ -886,11 +886,7 @@ fn helper_state(r: &mut Record, helper: *const ee_sim::tech::contagion_store::Ee
             r.u32(unit_id(u));
             r.i32((*crate::gamecpp::records::un_fields(u)).mHitPoints as i32);
             let cx = hp(O::UnComplex, u, &[]);
-            r.u32(if cx != 0 {
-                (*crate::gamecpp::records::cx_fields(cx)).mCalamityFlags as u32
-            } else {
-                0xffff_ffff
-            });
+            r.u32(if cx != 0 { (*crate::gamecpp::records::cx_fields(cx)).mCalamityFlags as u32 } else { 0xffff_ffff });
         }
     }
 }
@@ -964,8 +960,7 @@ pub extern "C" fn ee_gamecpp_capture_cast_calamities(call: c_long) {
                 continue;
             }
             // SAFETY: the live player's record
-            let player =
-                unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID };
+            let player = unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID };
             let cid = unit_id(caster) as c_ulong;
             let create = super::calamity_objects::ee_gamecpp_calamity_create;
             if kind == 3 {
