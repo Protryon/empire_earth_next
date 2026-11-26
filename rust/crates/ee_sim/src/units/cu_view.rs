@@ -69,6 +69,12 @@ fn bits(v: f32) -> i64 {
     i64::from(v.to_bits())
 }
 
+/// The low 32 bits of an `unsigned long` (the C++ `(uint32_t)` cast; a no-op where `long` is 32-bit)
+#[allow(clippy::unnecessary_cast)]
+fn low32(v: c_ulong) -> u32 {
+    v as u32
+}
+
 fn float(b: i64) -> f32 {
     f32::from_bits(b as u32)
 }
@@ -296,7 +302,7 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
     let v = unsafe {
         match op {
             // the unit's own members
-            EE_UNITS_CU_T_WEAPON_TAG => i64::from((*u.cx()).mWeaponTagPoint as u32),
+            EE_UNITS_CU_T_WEAPON_TAG => i64::from(low32((*u.cx()).mWeaponTagPoint)),
             EE_UNITS_CU_T_SET_OWNER_FIELD => {
                 (*u.cx()).mOwner = a as usize as _;
                 0
@@ -810,6 +816,41 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
             EE_UNITS_CU_IS_AIR_BASE => {
                 i64::from(crate::units::uc_is::ee_units_uc_is((*u.uf()).mUnitClass as u64, EE_UNITS_UC_IS_AIR_BASE))
             }
+            // the held units, the cargo and the contacts (a vector's elements, the contact list's nodes)
+            EE_UNITS_CU_HELD_COUNT => {
+                let (begin, end) = u.vector(l.complex_held_units);
+                ((end - begin) / std::mem::size_of::<usize>() as u64) as i64
+            }
+            EE_UNITS_CU_HELD_FIND => {
+                let (begin, end) = u.vector(l.complex_held_units);
+                let w = std::mem::size_of::<usize>() as u64;
+                (0..(end - begin) / w).find(|&i| word(begin, i * w) == a).map_or(-1, |i| i as i64)
+            }
+            EE_UNITS_CU_HELD_HOLDER_IS_THIS => {
+                let held = word(u.vector(l.complex_held_units).0, b as u64 * std::mem::size_of::<usize>() as u64);
+                i64::from((*U(held, l).cx()).mHolder as u64 == unit)
+            }
+            EE_UNITS_CU_CARGO_SET_AT => {
+                *at::<usize>(u.vector(l.complex_cargo).0, b as u64 * std::mem::size_of::<usize>() as u64) = a as usize;
+                0
+            }
+            EE_UNITS_CU_CONTACTS_HEAD => word(unit, l.complex_contacts_head) as i64,
+            EE_UNITS_CU_CONTACT_NEXT => word(a, l.contact_node_next) as i64,
+            EE_UNITS_CU_CONTACTS_FIND | EE_UNITS_CU_CONTACT_MISSING => {
+                let node = ee_base::util::pool::ee_util_list_find(at(unit, l.complex_contacts_head), a as usize as _);
+                if op == EE_UNITS_CU_CONTACT_MISSING {
+                    i64::from(node.is_null())
+                } else {
+                    node as usize as i64
+                }
+            }
+            EE_UNITS_CU_CLASS_TABLE => {
+                let t = crate::world::view::WorldRead::begin();
+                usize::try_from(b as c_long)
+                    .ok()
+                    .and_then(|i| crate::world::view::ClassView::by_index(&t, i))
+                    .map_or(0, |k| k.handle() as i64)
+            }
             // the goal queues (Rust's: goals.rs; past the queues the C++ indexed unchecked)
             EE_UNITS_CU_S_NUM_GOAL_QUEUES | EE_UNITS_CU_GOAL_QUEUE_COUNT => goals::unit_queues(unit).len() as i64,
             EE_UNITS_CU_UNIT_GOAL_QUEUE_COUNT => goals::unit_queues(a).len() as i64,
@@ -1318,7 +1359,7 @@ pub(crate) unsafe fn uh_view(op: i32, a: u64, b: u64, f: &mut [f32; 4]) -> Optio
         match op {
             EE_UNITS_UH_TILE_X => long((*id().rts()).mTileX),
             EE_UNITS_UH_TILE_Y => long((*id().rts()).mTileY),
-            EE_UNITS_UH_OBJECT_ID => i64::from((*o.rts()).mUnitID as u32),
+            EE_UNITS_UH_OBJECT_ID => i64::from(low32((*o.rts()).mUnitID)),
             EE_UNITS_UH_SET_SHIFT_QUEUED => {
                 (*id().complex().cx()).mHasShiftQueuedBuild = true;
                 0
@@ -1483,7 +1524,7 @@ pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64) -> Option<i64> {
                     0
                 }
             }
-            EE_UNITS_US_UNIT_ID => i64::from((*o.rts()).mUnitID as u32),
+            EE_UNITS_US_UNIT_ID => i64::from(low32((*o.rts()).mUnitID)),
             EE_UNITS_US_F_OBJECT_KIND => i64::from(*at::<u8>(a, l.unit_object_kind)),
             EE_UNITS_US_F_STATS => h((*o.uf()).mStats),
             EE_UNITS_US_F_LOCATION => bits(o.location(match b {
@@ -1497,7 +1538,7 @@ pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64) -> Option<i64> {
                 _ => o.cx() as i64,
             },
             EE_UNITS_US_B_RAW_PLAYER => o.player() as i64,
-            EE_UNITS_US_B_ENEMY => i64::from(*(*P(a, l).saved()).mEnemies.get(b as usize)? as u32),
+            EE_UNITS_US_B_ENEMY => i64::from(low32(*(*P(a, l).saved()).mEnemies.get(b as usize)?)),
             _ => return None,
         }
     };

@@ -5,30 +5,16 @@
 // 0x22b854/0x22c777/0x22c7a4, GetScript 0x22c7e0, DeleteScripts 0x22cdb6, both Evaluates 0x22b9a0/0x22cd8b in ai.rs);
 // here the script file's reader, the static calls over them and the unit's AI host (ee_units ai.rs).
 #include <windows.h>
-#include <string.h>
-#include <stdlib.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 
-#include <map>
 #include <string>
-#include <vector>
 
-#include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEPhysics.h"
 #include "rust/sim/units.h"
 
 extern FSPath* gDataPath;

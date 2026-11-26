@@ -4,33 +4,16 @@
 // classes EEUnitAreaEffectList, EEOrbital, EEMReplantFarms; the unit's template COMDATs close it.
 
 #include <windows.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <algorithm>
-#include <math.h>
-#include <typeinfo>
 #include "rust/sim/units.h"
-#include "ee/EEUnitKind.h"
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/UMemoryPool.h"
-#include "lle/UList.h"
-#include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/GEModel.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
 #include "ee/RTSWorld.h"
@@ -39,26 +22,17 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEWUnitsOffMapInfo.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAIContinentManager.h"
-#include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EETown.h"
 #include "ee/EEMapDimensions.h"
-#include "ee/EEAreaEffectTemplate.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEPPatrolGroup.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
@@ -66,26 +40,13 @@
 #include "ee/EERules.h"
 #include "ee/EEWheel.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg_trade_price (EEGetTradePrice)
-#include "ee/EEGlobalConstants.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPathManager.h"
-#include "ee/EECPASGFlags.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEUGRust.h"
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
-#include "ee/EEUnitAction.h"
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEFleeFromLocationScreenBase.h"
-#include "ee/EEUGRust.h"
-#include "ee/EEAIPathSector.h"
-#include "ee/EEComputerPlayer.h"
-
-// The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
 
 // chain at 0x5f57d3 (wrapper)
 //   object 0x963228  ctor None  dtor None
@@ -95,19 +56,13 @@
 // the colour of a time-warped unit (SetDisabled 0x1fe5b3: SetColor when +0x358 is 0x1a/0x1c) (provisional name)
 const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
-// 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
-
 // chain at 0x5f5954 (wrapper)
 //   object 0x963198  ctor ??0?$UMemoryPool@VEEComplexUnit@@@@QAE@XZ  dtor ?Release@?$UMemoryPool@VEEComplexUnit@@@@QAE_NXZ
 //   guarded dtor (byte ptr [0x963210], 0x20): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sMemoryPool@EEComplexUnit@@2V?$UMemoryPool@VEEComplexUnit@@@@A
 UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 
-// Makes the unit hold another unit, keeping the held units sorted by growth
-// (the mHeldUnits order, std::sort 0x200df9 by the units' mGrowth: EE_UNITS_CU_S_HELD_SORT's lambda)
-
 #include "ee/EEStringIDs.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EESoundObject.h"
 #include "lle/UResourceFile.h"
 // Original cdecl sight-map family, retained as link calls (no helper implementations).
@@ -117,9 +72,6 @@ void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, f
 bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before this unit's 0x4c76f0 table; EEUserInterface/EEWorld/EEMap read it; provisional name)
 
 extern char gEmptyString[];
-
-// Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
-// (cu_body.rs; the thresholds there: 0x4c76f0)
 
 // Clears every used pool unit's reference count. The original also built a "!Leaking Unit" line per unit and walked
 // the reference-counter buckets, but its report was compiled away: neither had an effect (provisional name, from
@@ -401,7 +353,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CAN_PRODUCE: return theUnit->GetPlayer()->CanProduce((long)inB, theUnit->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
     case EE_UNITS_CU_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
     case EE_UNITS_CU_NODE_UNIT_CLASS: return theNode->mData->mUnitClass;
-    case EE_UNITS_CU_CLASS_TABLE: return (uint64_t)(uintptr_t)gUnitClassTable[(long)inB];
     case EE_UNITS_CU_BUILD_TIME_SCALE: return UFloatBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
     case EE_UNITS_CU_CLASS_IS_AIRCRAFT: return theClass->IsAircraft();
     case EE_UNITS_CU_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], (int32_t)inB);
@@ -496,7 +447,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CARGO_REMOVED: theUnit->GetUnitClass()->CargoRemoved(theUnit, theOther); return 0;
     case EE_UNITS_CU_CARGO_ERASE_AT: theUnit->mCargo.erase(theUnit->mCargo.begin() + (size_t)inB); return 0;
     case EE_UNITS_CU_UNIT_CONTAINER_DEREFERENCE: theOther->mContainer->Dereference(); return 0;
-    case EE_UNITS_CU_CARGO_SET_AT: theUnit->mCargo[(size_t)inB] = theOther; return 0;
     case EE_UNITS_CU_CARGO_UNLOADED: theUnit->GetUnitClass()->CargoUnloaded(theUnit, theOther); return 0;
     case EE_UNITS_CU_UNIT_SET_TRANSFORMATION: theOther->SetTransformation(*EECuObject<GETransformation>((uint64_t)inB), true); return 0;
     case EE_UNITS_CU_UNIT_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
@@ -531,7 +481,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_BUILD_QUEUE_ERASE_AT:
         theUnit->mCitizenBuildQueue.erase(theUnit->mCitizenBuildQueue.begin() + (size_t)inB);   // (Dinkum deque erase(P))
         return 0;
-    case EE_UNITS_CU_CONTACT_MISSING: return theUnit->mContacts.Find(theOther) == 0;
     case EE_UNITS_CU_CONTACT_ADD_HEAD: theUnit->mContacts.AddHead(theOther); return 0;
     case EE_UNITS_CU_REFERENCE_THIS: theUnit->Reference(); return 0;
     // cu_misc.rs's (inA a part or a model, inB a player index)
@@ -713,19 +662,13 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_FANATICISM_COST: return UFloatBits(gWorldTable.GetFloatValue(kWorldFanaticism));
     case EE_UNITS_CU_CITIZEN_TECH_HAS_TYPE:
         return theUnit->GetPlayer()->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->GetUnitClass()->GetUnitType());
-    case EE_UNITS_CU_HELD_FIND: return EECuFind(theUnit->mHeldUnits, theOther);
     case EE_UNITS_CU_HELD_ERASE: theUnit->mHeldUnits.erase(theUnit->mHeldUnits.begin() + (size_t)inB); return 0;
-    case EE_UNITS_CU_HELD_COUNT: return (int64_t)theUnit->mHeldUnits.size();
-    case EE_UNITS_CU_HELD_HOLDER_IS_THIS: return theUnit->mHeldUnits[(size_t)inB]->mHolder == theUnit;
     case EE_UNITS_CU_HELD_DEREFERENCE: theUnit->mHeldUnits[(size_t)inB]->Dereference(); return 0;
     case EE_UNITS_CU_HELD_CLEAR: theUnit->mHeldUnits.clear(); return 0;
     case EE_UNITS_CU_CITIZEN_FRONT_DEREFERENCE: theUnit->mCitizenBuildQueue.front()->Dereference(); return 0;
-    case EE_UNITS_CU_CONTACTS_HEAD: return (uint64_t)(uintptr_t)theUnit->mContacts.mHead;
-    case EE_UNITS_CU_CONTACT_NEXT: return (uint64_t)(uintptr_t)EECuObject<UListNode<EEComplexUnit*> >(inA)->mNext;
     case EE_UNITS_CU_CONTACT_REMOVE_THIS: EECuObject<UListNode<EEComplexUnit*> >(inA)->mData->RemoveContactUnit(theUnit); return 0;
     case EE_UNITS_CU_CONTACT_DEREFERENCE: EECuObject<UListNode<EEComplexUnit*> >(inA)->mData->Dereference(); return 0;
     case EE_UNITS_CU_CONTACTS_CLEAR: theUnit->mContacts.Clear(); return 0;
-    case EE_UNITS_CU_CONTACTS_FIND: return (uint64_t)(uintptr_t)theUnit->mContacts.Find(theOther);
     case EE_UNITS_CU_CONTACTS_REMOVE: theUnit->mContacts.Remove(EECuObject<UListNode<EEComplexUnit*> >(inA)); return 0;
     case EE_UNITS_CU_AFFECTING_REMOVED_FROM: theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->RemovedFrom(theUnit); return 0;
     case EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: gEffectManager->DestroyEffect(sCuHandle = theUnit->mConversionEffect); return 0;
