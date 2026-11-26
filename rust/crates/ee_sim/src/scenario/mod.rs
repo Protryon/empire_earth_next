@@ -77,6 +77,7 @@ pub mod sm_capture;
 pub mod sm_capture_game;
 pub mod stream;
 pub mod task;
+pub mod tech_native;
 pub mod text;
 pub mod tokens;
 pub mod trigger;

@@ -443,8 +443,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlRepairPointers: PL->RepairPointers((unsigned long)a[0], (unsigned long)a[1]);
         break;
-    case O::PlTechnologies: return P64(PL->mTechnologies);
-    case O::PlTechTree: return P64(PL->GetTechTree());
     case O::PlUpgradeAt: return P64(PL->mUnitClassUpgrades[a[0]]);
     case O::PlUpgradeLoadMedia: PL->mUnitClassUpgrades[a[0]]->LoadMedia(PL, (long)a[1]);
         break;
@@ -497,14 +495,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::SaveHasTowns: return EESaveHasTowns((unsigned long)a[0], (unsigned long)a[1]);
     case O::PlayerShareBonus: EEPlayerShareBonus(a[0] != 0);
         break;
-    case O::TechSetPlayer: ((EETechTree*)p)->SetPlayer((EEPlayer*)a[0]);
-        break;
-    case O::TechIsLoaded: return ((EETechTree*)p)->mIsLoaded;
-    case O::TechResetEpochRange: ((EETechTree*)p)->ResetEpochRange((long)a[0], (long)a[1]);
-        break;
     case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gWorld.mLoadingSavedGame, true);
-        break;
-    case O::TechUpdateInterface: ((EETechTree*)p)->UpdateInterface(a[0] != 0);
         break;
     case O::UpgradeUnitType: return ((EEUnitClassUpgrade*)p)->GetUnitClass()->mUnitType;
     case O::UpgradeHitPoints: EEUpgradeHitPoints((EEUnitClassUpgrade*)p, (long)a[0], f[0], (EEPlayer*)a[1]);

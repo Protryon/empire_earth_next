@@ -229,7 +229,6 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FxTileSeenBy: return ((EEMapTile*)p)->IsSeenBy((EEPlayer*)a[0]);
     case O::FxPlIsAlly: return ((EEPlayer*)p)->IsAlly((EEPlayer*)a[0]);
     case O::FxPlSelectedGroup: return P64(((EEPlayer*)p)->mSelectedGroup);
-    case O::FxPlCurrentEpoch: return ((EEPlayer*)p)->mTechnologies->mCurrentEpoch;
     case O::FxGroupHasType: return ((EESelectedGroup*)p)->HasUnitType((unsigned long)a[0]);
     case O::FxGroupUnit: return P64(((EESelectedGroup*)p)->GetUnit((unsigned long)a[0]));
     case O::FxGroupNumUnits: return ((EESelectedGroup*)p)->GetNumUnits();

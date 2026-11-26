@@ -521,12 +521,9 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_FADE_OUT: gGraphics->PostFadeOut(3000);
         return 0;
-    case EE_SCENARIO_WX_TECH_MAKES_UNIT: return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mMakesUnit;
     case EE_SCENARIO_WX_TECH_CLASS_EXISTS: return gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass] != NULL;
     case EE_SCENARIO_WX_TECH_REPLACE_QUEUED:
         EEReplaceQueuedTechnology(SMEPlayer(a[0]), gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass], 100000);
-        return 0;
-    case EE_SCENARIO_WX_TECH_OBSOLETE: SMEPlayer(a[0])->GetTechTree()->MakeObsolete(inRun->mEffect->mTechnology);
         return 0;
     case EE_SCENARIO_WX_SET_SEES_ALL: return SMEPlayer(a[0])->mSeesAll = a[1] != 0;
     case EE_SCENARIO_WX_PLAYER_IS_CURRENT: return SMEPlayer(a[0]) == gWorld.GetPlayer(gWorld.mCurrentPlayer);
@@ -684,27 +681,12 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_HOME_BASE: return SMEUnit(a[0])->GetComplexUnit()->mHomeBase != NULL;
     case EE_SCENARIO_WX_EFFECT_TECH: return inRun->mEffect->mTechnology;
     case EE_SCENARIO_WX_EPOCH_COUNT: return EEEpochCount();
-    case EE_SCENARIO_WX_TREE_END_EPOCH: return SMEPlayer(a[0])->GetTechTree()->mEndEpoch;
-    case EE_SCENARIO_WX_TREE_RESET_RANGE:
         SMEPlayer(a[0])->GetTechTree()->ResetEpochRange(SMEPlayer(a[0])->GetTechTree()->mStartEpoch, inRun->mEffect->mTechnology);
-        return 0;
-    case EE_SCENARIO_WX_TECH_MAKE_AVAILABLE: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->MakeAvailable();
-        return 0;
-    case EE_SCENARIO_WX_TECH_EPOCH_ZERO: return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mEpoch = 0;
-    case EE_SCENARIO_WX_TECH_OBSOLETE_EPOCH: return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mObsoleteEpoch = EEEpochCount();
-    case EE_SCENARIO_WX_TECH_SCEN_OBSOLETED: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->SetScenEditorObsoleted(false, false);
-        return 0;
-    case EE_SCENARIO_WX_TECH_SET_OBSOLETE: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->SetObsolete(false, false);
         return 0;
     case EE_SCENARIO_WX_TECH_NEEDS_MEDIA:
         return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->NeedsUnitMedia() == true && !SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mIsUnitMediaLoaded;
     case EE_SCENARIO_WX_TECH_LOAD_MEDIA:
         SMEPlayer(a[0])->SetUnitClassMedia(SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass, 0x7f);
-        return 0;
-    case EE_SCENARIO_WX_TECH_MEDIA_LOADED: return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mIsUnitMediaLoaded = true;
-    case EE_SCENARIO_WX_TECH_KIND: return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mKind;
-    case EE_SCENARIO_WX_TREE_WONDERS_ZERO: return SMEPlayer(a[0])->GetTechTree()->mEpochsBeforeWonders = 0;
-    case EE_SCENARIO_WX_TECH_RESEARCH: SMEPlayer(a[0])->GetTechTree()->Research(inRun->mEffect->mTechnology, NULL);
         return 0;
     case EE_SCENARIO_WX_CLASS_COUNT: return (int64_t)EEUnitClassCount();
     case EE_SCENARIO_WX_CLASS_EXISTS: return gUnitClassTable[a[0]] != NULL;

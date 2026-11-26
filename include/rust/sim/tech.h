@@ -894,51 +894,6 @@ enum class EeCalamityCastMode : int32_t {
   SpecialAttack,
 };
 
-/// The host calls. "Target" is the unit the slot was given (the covered, ticked, cloaked unit), "owner" the
-/// effect's own unit.
-enum class EeAreaEffectOp {
-  /// Whether the target's unit type is in unit set `a` (`gUnitSetManager.Contains`).
-  TargetInSet = 0,
-  /// Whether player `a`'s tech tree node of the target's class technology is of kind 4.
-  TargetTechKind4 = 1,
-  /// Players `a` and `b` (ids into the world's table): value the `EE_AREA_EFFECT_SAME/ALLIED/AT_WAR` flags.
-  Relation = 2,
-  /// Whether the target is built.
-  TargetBuilt = 3,
-  /// Whether the target can be healed (`IsRepairable`).
-  TargetRepairable = 4,
-  /// The target's position (x, y of its physical model's location).
-  TargetPosition = 5,
-  /// The continent of tile (`a`, `b`) for the ground paths: value.
-  Continent = 6,
-  /// ok when the target is a space dock or turret carried by a complex unit: value that unit's planet.
-  TargetCarrierPlanet = 7,
-  /// The target's hit points: value.
-  TargetHitPoints = 8,
-  /// The target's maximum hit points: value.
-  TargetMaxHitPoints = 9,
-  /// Whether a cinematic runs (the free camera flag).
-  InCinematic = 10,
-  /// The target's `SetHitPoints(a)`.
-  TargetSetHitPoints = 11,
-  /// The target's `SetCloakableChain(true)` (the cloaking's `AppliedTo`).
-  TargetCloak = 12,
-  /// The cloaking's `RemovedFrom` on the target (the camouflage power's test, the uncloak, the mini map).
-  TargetUncloak = 13,
-  /// ok when the effect has an owner unit: x its area-effect scale.
-  OwnerScale = 14,
-  /// The owner's hit points: value.
-  OwnerHitPoints = 15,
-  /// The owner's leadership: x.
-  OwnerLeadership = 16,
-  /// The owner class's garrison bonus: x.
-  OwnerGarrisonBonus = 17,
-  /// The owner player's living, built morale buildings in rectangle (`a` left, `b` top, `c` right, `d` bottom):
-  /// shape `e` 1 those whose footprint meets it, else those whose tile is within `x` (squared) of tile (`f`, `g`):
-  /// value their count.
-  CountBuildings = 18,
-};
-
 /// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
 /// the others to the upgrade of every unit class the effect names.
 enum class EeTechAttributeOp : uint32_t {
@@ -990,38 +945,6 @@ enum class EeTechAttributeOp : uint32_t {
   Power,
   /// 45: the upgrade's name, the string `lrintf(value)`
   Name,
-};
-
-/// `EEEvent::RunEffect`'s dispatch: which handler runs an effect of a kind.
-enum class EeTechEffectHandler : uint32_t {
-  /// a bad effect index, or an effect that does not run while a saved game loads: the result 9
-  Refused = 0,
-  /// an unknown kind: the result 3
-  UnknownKind,
-  /// the result 0 without a handler (kind 22; kind 19 while events are off or a saved game loads)
-  Nothing,
-  /// kind 7: `EEEventKind7` (an empty handler)
-  Kind7,
-  /// kind 2: `ApplyEventAttribute`
-  Attribute,
-  /// kind 8: `SetEventPrerequisite`
-  Prerequisite,
-  /// kind 9: `MakeEventTechnologyObsolete`
-  Obsolete,
-  /// kind 6: `SetEventUnitModel`
-  UnitModel,
-  /// kinds 12..14: `SetEventTechTreeMedia`
-  TechTreeMedia,
-  /// kind 10: `ResearchEventTechnology`
-  Research,
-  /// kind 1: `SetEventButton`
-  Button,
-  /// kind 11: `PlayEventSound`
-  Sound,
-  /// kinds 15..18, 20, 21: `SetEventUnitSound`
-  UnitSound,
-  /// kind 19: `ConvertEventUnits`
-  ConvertUnits,
 };
 
 /// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
@@ -1261,102 +1184,6 @@ struct EeCalamityData {
   bool mUnusedClassFlag;
 };
 
-/// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
-/// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
-struct EeAreaEffectTemplateFields {
-  /// The kind (`EE_AREA_EFFECT_*`): which effect `CreateAreaEffect` makes.
-  long mKind;
-  /// The area's shape: 1 a square, 2 a circle.
-  long mShape;
-  /// The players it affects: 1 the owner, 2 its allies, 3 its enemies, 4 everyone.
-  long mMode;
-  /// The radius in tiles, scaled by the owner unit's area-effect scale (0 or less: everywhere).
-  float mRadius;
-  float mColorAlpha;
-  long mID;
-  /// The unit set it covers (`EEUnitSetManager`; 4: no continent test).
-  long mUnitSet;
-  /// The cloaking's strength; the morale from buildings' cap before the variant's bonus.
-  long mMaxLevel;
-  /// The healing's hit points per second, the morale's level.
-  long mLevel;
-  long mL44;
-  long mL48;
-  long mL4C;
-  float mRed;
-  float mGreen;
-  float mBlue;
-  float mAlpha;
-  float mF60;
-  bool mB64;
-  bool mB65;
-  bool mB66;
-  bool mB67;
-  bool mB68;
-  float mColorRed;
-  float mColorGreen;
-  float mColorBlue;
-};
-
-/// One area-effect template record of the area-effect table (`EEAreaEffectData`, ee/EEAreaEffectTemplate.h: 188
-/// bytes, the same layout).
-struct EeAreaEffectData {
-  char mName[104];
-  int32_t mID;
-  int32_t mKind;
-  int32_t mShape;
-  int32_t mGraphicEffect;
-  int32_t mUnitSet;
-  int32_t mMode;
-  int32_t mGraphicEffect18;
-  int32_t mMedia;
-  int32_t mMaxLevel;
-  int32_t mLevel;
-  int32_t mUnusedValue1;
-  int32_t mUnusedValue2;
-  int32_t mUnusedValue3;
-  float mRadius;
-  float mRed;
-  float mGreen;
-  float mBlue;
-  float mAlpha;
-  float mUnusedFloat;
-  bool mUnusedFlag1;
-  bool mUnusedFlag2;
-  bool mUnusedFlag3;
-  bool mUnusedFlag4;
-  bool mUnusedFlag5;
-  uint8_t mPad[3];
-};
-
-/// One host call.
-struct EeAreaEffectCall {
-  EeAreaEffectOp op;
-  int32_t a;
-  int32_t b;
-  int32_t c;
-  int32_t d;
-  int32_t e;
-  int32_t f;
-  int32_t g;
-  float x;
-};
-
-/// The host's answer.
-struct EeAreaEffectReply {
-  bool ok;
-  int32_t value;
-  float x;
-  float y;
-};
-
-/// The C++ host of an area effect's calls (`EEAreaEffect.cpp`): `call` answers one [`EeAreaEffectCall`] on the C++
-/// objects (the effect and the unit it was given).
-struct EeAreaEffectHostFfi {
-  void *ctx;
-  void (*call)(void *ctx, const EeAreaEffectCall *call, EeAreaEffectReply *reply);
-};
-
 /// An area effect's numbers (`EEAreaEffect` and its kinds' members; its location, template and owner unit are C++
 /// members).
 struct EeAreaEffectFields {
@@ -1584,32 +1411,6 @@ struct EeCalamityFields {
   bool mHasTargetUnit;
 };
 
-/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
-struct EeTechNodeFields {
-  bool mIsResearched;
-  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
-  bool mIsObsolete;
-  bool mIsAvailable;
-  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
-  uint8_t mPrerequisiteFlags;
-  bool mIsAllowed;
-  bool mScenEditorObsoleted;
-  bool mIsUnitMediaLoaded;
-  /// an epoch's: off between a saved game's load and its applied state
-  bool mIsCountingSOL;
-  /// the epoch it belongs to
-  long mEpoch;
-  long mObsoleteEpoch;
-  /// `ResearchNode` counts it down
-  long mResearchDelay;
-  long mRequiredSOL;
-  long mFirstNodeID;
-  long mCurrentSOL;
-  long mNextEpoch;
-  /// the title string (epochs.yaml; 0: 30145 + the epoch)
-  long mTitleID;
-};
-
 /// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
 struct EeTechNodeDataFields {
   /// the costs by resource (`Load` zeroes all seven, then copies five)
@@ -1646,6 +1447,41 @@ struct EeTechNodeDataFields {
   size_t mClassTable;
 };
 
+/// A node's and an epoch's members (ee/EEPlayer.h: `EETechTreeNode` derives from it and adds none; the nodes and
+/// epochs are made and freed by Rust: tree_objects.rs).
+struct EeTechNodeFields {
+  bool mIsResearched;
+  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
+  bool mIsObsolete;
+  bool mIsAvailable;
+  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
+  uint8_t mPrerequisiteFlags;
+  bool mIsAllowed;
+  bool mScenEditorObsoleted;
+  bool mIsUnitMediaLoaded;
+  /// an epoch's: off between a saved game's load and its applied state
+  bool mIsCountingSOL;
+  /// the epoch it belongs to
+  long mEpoch;
+  long mObsoleteEpoch;
+  /// `ResearchNode` counts it down
+  long mResearchDelay;
+  long mRequiredSOL;
+  long mFirstNodeID;
+  long mCurrentSOL;
+  long mNextEpoch;
+  /// the title string (epochs.yaml; 0: 30145 + the epoch)
+  long mTitleID;
+  /// the node data (shared by a tree's copies; made by the load, freed by `Unload`)
+  EeTechNodeDataFields *mData;
+  /// the tree it belongs to
+  class EETechTree *mTree;
+  /// `EEButtonObject::Get` of the record's button
+  class EEButtonObject *mButton;
+  /// an epoch's nodes and loaded unit classes (an [`crate::tech::tree_objects::EeTechEpochLists`]); 0: a node
+  size_t mLists;
+};
+
 /// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
 struct EeTechTreeFields {
   long mCurrentEpoch;
@@ -1662,6 +1498,8 @@ struct EeTechTreeFields {
   long mPlayerIndex;
   /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
   class EEPlayer *mPlayer;
+  /// the epochs, one per epoch of the tech tree file (a `Vec` of nodes: tree_objects.rs; 0 before the first)
+  size_t mEpochs;
 };
 
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
@@ -2123,150 +1961,84 @@ struct EeTechHostIo {
 /// The host: `(ctx, op, io) -> the operation's result`; `ctx` is the tree (`EETechTree*`).
 using EeTechHostFn = int32_t(*)(void*, int32_t, EeTechHostIo*);
 
+/// One area-effect template record of the area-effect table (`EEAreaEffectData`, ee/EEAreaEffectTemplate.h: 188
+/// bytes, the same layout).
+struct EeAreaEffectData {
+  char mName[104];
+  int32_t mID;
+  int32_t mKind;
+  int32_t mShape;
+  int32_t mGraphicEffect;
+  int32_t mUnitSet;
+  int32_t mMode;
+  int32_t mGraphicEffect18;
+  int32_t mMedia;
+  int32_t mMaxLevel;
+  int32_t mLevel;
+  int32_t mUnusedValue1;
+  int32_t mUnusedValue2;
+  int32_t mUnusedValue3;
+  float mRadius;
+  float mRed;
+  float mGreen;
+  float mBlue;
+  float mAlpha;
+  float mUnusedFloat;
+  bool mUnusedFlag1;
+  bool mUnusedFlag2;
+  bool mUnusedFlag3;
+  bool mUnusedFlag4;
+  bool mUnusedFlag5;
+  uint8_t mPad[3];
+};
+
+/// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
+/// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
+struct EeAreaEffectTemplateFields {
+  /// The kind (`EE_AREA_EFFECT_*`): which effect `CreateAreaEffect` makes.
+  long mKind;
+  /// The area's shape: 1 a square, 2 a circle.
+  long mShape;
+  /// The players it affects: 1 the owner, 2 its allies, 3 its enemies, 4 everyone.
+  long mMode;
+  /// The radius in tiles, scaled by the owner unit's area-effect scale (0 or less: everywhere).
+  float mRadius;
+  float mColorAlpha;
+  long mID;
+  /// The unit set it covers (`EEUnitSetManager`; 4: no continent test).
+  long mUnitSet;
+  /// The cloaking's strength; the morale from buildings' cap before the variant's bonus.
+  long mMaxLevel;
+  /// The healing's hit points per second, the morale's level.
+  long mLevel;
+  long mL44;
+  long mL48;
+  long mL4C;
+  float mRed;
+  float mGreen;
+  float mBlue;
+  float mAlpha;
+  float mF60;
+  bool mB64;
+  bool mB65;
+  bool mB66;
+  bool mB67;
+  bool mB68;
+  float mColorRed;
+  float mColorGreen;
+  float mColorBlue;
+};
+
 /// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).
 constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
 
 extern "C" {
-
-/// [`template_reset`] into `t`.
-///
-/// # Safety
-/// `t` must be valid.
-void ee_area_effect_template_reset(EeAreaEffectTemplateFields *t);
-
-/// [`template_init`] of `t` from the record `d`.
-///
-/// # Safety
-/// `t` and `d` must be valid.
-void ee_area_effect_template_init(EeAreaEffectTemplateFields *t, const EeAreaEffectData *d);
-
-/// [`affects_player`] (or, `reversed`, [`affects_player_reversed`]).
-///
-/// # Safety
-/// `t` and `h` must be valid.
-bool ee_area_effect_affects_player(const EeAreaEffectTemplateFields *t,
-                                   const EeAreaEffectHostFfi *h,
-                                   int32_t player,
-                                   int32_t other,
-                                   bool reversed);
-
-/// [`is_within`].
-///
-/// # Safety
-/// `t` and `h` must be valid.
-bool ee_area_effect_is_within(const EeAreaEffectTemplateFields *t,
-                              const EeAreaEffectHostFfi *h,
-                              float center_x,
-                              float center_y,
-                              float point_x,
-                              float point_y,
-                              float scale,
-                              bool has_target);
-
-/// [`known_kind`].
-bool ee_area_effect_known_kind(long kind);
-
-/// [`init`] into `e`.
-///
-/// # Safety
-/// `e` must be valid.
-void ee_area_effect_init(EeAreaEffectFields *e,
-                         long kind,
-                         long template_max_level,
-                         long morale_bonus);
-
-/// [`same_group`].
-bool ee_area_effect_same_group(long kind, long other);
-
-/// [`scale`].
-///
-/// # Safety
-/// `h` must be valid.
-float ee_area_effect_scale(const EeAreaEffectHostFfi *h);
-
-/// [`radius`].
-///
-/// # Safety
-/// `t` and `h` must be valid.
-float ee_area_effect_radius(const EeAreaEffectTemplateFields *t, const EeAreaEffectHostFfi *h);
-
-/// [`level`].
-///
-/// # Safety
-/// `e`, `t` and `h` must be valid.
-long ee_area_effect_level(const EeAreaEffectFields *e,
-                          const EeAreaEffectTemplateFields *t,
-                          const EeAreaEffectHostFfi *h);
-
-/// [`strength`].
-///
-/// # Safety
-/// `e`, `t` and `h` must be valid.
-long ee_area_effect_strength(const EeAreaEffectFields *e,
-                             const EeAreaEffectTemplateFields *t,
-                             const EeAreaEffectHostFfi *h);
-
-/// [`modify`]: whether the kind modifies `value`, the result in `out` (left alone otherwise).
-///
-/// # Safety
-/// `e`, `t`, `h` and `out` must be valid.
-bool ee_area_effect_modify(const EeAreaEffectFields *e,
-                           const EeAreaEffectTemplateFields *t,
-                           const EeAreaEffectHostFfi *h,
-                           long kind,
-                           long value,
-                           long *out);
-
-/// [`is_immunity`].
-///
-/// # Safety
-/// `e` must be valid.
-bool ee_area_effect_is_immunity(const EeAreaEffectFields *e);
-
-/// [`covers`].
-///
-/// # Safety
-/// `e`, `t` and `h` must be valid.
-bool ee_area_effect_covers(const EeAreaEffectFields *e,
-                           const EeAreaEffectTemplateFields *t,
-                           const EeAreaEffectHostFfi *h,
-                           int32_t player,
-                           int32_t owner,
-                           float point_x,
-                           float point_y);
-
-/// [`applied_to`] (`removed`: [`removed_from`]).
-///
-/// # Safety
-/// `e` and `h` must be valid.
-void ee_area_effect_applied(const EeAreaEffectFields *e,
-                            const EeAreaEffectHostFfi *h,
-                            bool removed);
 
 /// [`mark_dirty`].
 ///
 /// # Safety
 /// `e` must be valid.
 void ee_area_effect_mark_dirty(EeAreaEffectFields *e);
-
-/// [`recount`]; `e` in and out.
-///
-/// # Safety
-/// `e`, `t` and `h` must be valid.
-void ee_area_effect_recount(EeAreaEffectFields *e,
-                            const EeAreaEffectTemplateFields *t,
-                            const EeAreaEffectHostFfi *h,
-                            float location_x,
-                            float location_y);
-
-/// [`tick`].
-///
-/// # Safety
-/// `e`, `t` and `h` must be valid.
-void ee_area_effect_tick(const EeAreaEffectFields *e,
-                         const EeAreaEffectTemplateFields *t,
-                         const EeAreaEffectHostFfi *h,
-                         float elapsed);
 
 /// [`checksum`].
 ///
@@ -2982,18 +2754,6 @@ long ee_contagion_helper_load_probe(uint64_t file,
 /// As the module's.
 void ee_contagion_manager_delete_helpers(EeContagionManager *m);
 
-/// `EEApplyEventEffect(float, float, EEEventEffect*)`.
-///
-/// # Safety
-/// `effect` must be valid for reads.
-float ee_tech_effect_f32(float value, float base, const EeTechEffectValues *effect);
-
-/// `EEApplyEventEffect(long, long, EEEventEffect*)`.
-///
-/// # Safety
-/// `effect` must be valid for reads.
-int32_t ee_tech_effect_i32(int32_t value, int32_t base, const EeTechEffectValues *effect);
-
 /// `ApplyEventGatherRate`'s new gather time.
 ///
 /// # Safety
@@ -3029,13 +2789,6 @@ EeTechAttribute ee_tech_attribute(int32_t attribute);
 
 /// Whether an attribute's operation applies to the player.
 bool ee_tech_attribute_is_player(int32_t attribute);
-
-/// `RunEffect`'s handler of an effect.
-EeTechEffectHandler ee_tech_effect_handler(bool known,
-                                           int32_t kind,
-                                           bool loading,
-                                           uint8_t run_on_load,
-                                           bool events_enabled);
 
 /// `EETechTreeNode::GetCost`.
 ///

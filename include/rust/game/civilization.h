@@ -7,6 +7,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `EECivilization`'s plain members, its base (at the object's start: the class has no other base and no virtual).
+struct EeGameCivFields {
+  /// the points left to spend (`unsigned long`: they wrap as the C++'s did)
+  unsigned long mAvailablePoints;
+  unsigned long mMaxPoints;
+  bool mNoPointsAdded;
+  bool mUnchanged;
+};
+
 extern "C" {
 
 /// `EECivilization()`: unnamed, no points or upgrades, unchanged.
