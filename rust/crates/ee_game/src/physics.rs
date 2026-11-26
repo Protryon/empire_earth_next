@@ -114,8 +114,6 @@ pub enum EePhysCpp {
     LogChecksumResponse,
     LogResponse,
     PauseGame,
-    /// `SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {...}), 15000, 12)` with the name a0
-    SendAutoSave,
     // ---- the world
     ScenarioResult,
     SetScenarioResult,
@@ -342,6 +340,21 @@ fn options<'a>() -> &'a crate::app::game_options::EeAppOptionsFields {
 /// The client's `mHasLeftGame` (gCommunications an `EEClient`).
 fn client_has_left() -> bool {
     gc::session_objs::client_tail(gc::globals::get!(gCommunications) as P).has_left_game
+}
+
+/// The host's auto-save request to every client and itself (`SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame,
+/// {0, 1, CTs processed, TMGetTime(), 1, 0, name}), 15000, 12)`; the record's string a UWideString of `name`, a C
+/// string).
+fn send_auto_save(name: &[u8]) {
+    use crate::gamecpp::mrecord::{new_record, EeGamecppMrValue as V};
+    let net = gc::net::global();
+    let text = gc::hp(gc::O::StrNew, 0, &[]);
+    gc::h(gc::O::StrAppendC, text, &[sa(name)]);
+    let cts = net.get(EeNetCommsField::CtsProcessed) as i64;
+    let values = [V::integer(0), V::integer(1), V::integer(cts), V::integer(ee_time_get() as i64), V::integer(1), V::integer(0), V::string(text)];
+    let record = new_record(ee_sim::message_ids::EEMessageID::kMessageLoadOrSaveGame as u8, &values);
+    gc::h(gc::O::StrFree, text, &[]);
+    ee_net::net::ffi_server::ee_net_sv_send_to_all_and_wait(net.server, record as *mut c_void, 15000, 12);
 }
 
 /// `gGamePreferences.mSettings`' plain members.
@@ -670,7 +683,7 @@ fn auto_save(_p: P) {
         let name = cstr(&name);
         h(O::SetLastAutoSave, 0, &[sa(&name)]);
         gc::h(gc::O::PrefSave, 0, &[]);
-        h(O::SendAutoSave, 0, &[sa(&name)]);
+        send_auto_save(&name);
     }
 }
 

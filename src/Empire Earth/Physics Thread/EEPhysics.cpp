@@ -228,8 +228,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::PauseGame: SERVER->PauseGame();
         break;
-    case O::SendAutoSave: SERVER->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, UWideString((const char*)a[0])}), 15000, 12);
-        break;
     // the world
     case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
     case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
