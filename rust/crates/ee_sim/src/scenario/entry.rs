@@ -393,6 +393,20 @@ mod game {
 
     /// One C++ statement or member.
     fn en(op: u32, p: *mut c_void, a: i64, b: i64) -> i64 {
+        use crate::world::view::{UnitView, WorldRead, WorldView};
+        // the unit's id and the physics' tick from the world views
+        if op == EE_SCENARIO_EN_UNIT_ID || op == EE_SCENARIO_EN_PHYSICS_TICK {
+            // SAFETY: inside the C++ call on the simulation thread; `p` the live unit the op names
+            let t = unsafe { WorldRead::begin() };
+            return if op == EE_SCENARIO_EN_UNIT_ID {
+                // SAFETY: as above
+                unsafe { UnitView::of(&t, p as usize as u64) }.map_or(0, |u| u.id() as i64)
+            } else {
+                WorldView::global(&t)
+                    .and_then(|w| w.physics())
+                    .map_or(0, |r| crate::world_field!(r, mCurrentTick) as i64)
+            };
+        }
         // SAFETY: the statement host's contract: `p` the live object its op names, `a` and `b` as the op names
         unsafe { sys::ee_scenariocpp_entry(op, p, a, b) }
     }
@@ -415,6 +429,13 @@ mod game {
     /// A world call: the C++ host world_route.rs names for `op` (the C++ dispatcher's range tests, in its order).
     unsafe extern "C" fn world(ctx: *mut c_void, op: u32, args: *const i64) -> i64 {
         use crate::scenario::world_route::{route, EeScenarioWorldRoute as R};
+        // the reads the world views answer (world_views.rs)
+        // SAFETY: the host table's contract: six arguments, `ctx` the operation's live context
+        if let Some(value) =
+            unsafe { crate::scenario::world_views::answer(ctx, op, &*(args as *const [i64; 6]), &Look) }
+        {
+            return value;
+        }
         let f = match route(op) {
             R::ChangeUnit => sys::ee_scenariocpp_world_cu,
             R::Class => sys::ee_scenariocpp_world_class,
@@ -427,6 +448,66 @@ mod game {
         };
         // SAFETY: the host table's contract, passed through to the host that answers `op`
         unsafe { f(ctx, op, args) }
+    }
+
+    /// The world views' lookups through the C++ host: `gWorld.GetUnit(id)`, an effect's record.
+    struct Look;
+    impl crate::scenario::world_views::Lookups for Look {
+        fn unit(&self, id: i64) -> u64 {
+            en(EE_SCENARIO_EN_UNIT_BY_ID, std::ptr::null_mut(), id, 0) as u64
+        }
+        fn effect(&self, effect: *mut c_void) -> *const EeScenarioEffectFields {
+            en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, effect, 0) as *const EeScenarioEffectFields
+        }
+        fn fields(&self, op: u32, element: *mut c_void) -> *const c_void {
+            en_ptr(op, element, 0)
+        }
+        fn area(&self, index: i64) -> *const EeScenarioAreaFields {
+            en_ptr(EE_SCENARIO_EN_AREA_FIELDS, en_ptr(EE_SCENARIO_EN_AREA_AT, std::ptr::null_mut(), index), 0)
+                as *const EeScenarioAreaFields
+        }
+        fn object(&self, index: i64) -> *const EeScenarioObjectFields {
+            // SAFETY: the host's object lookup (it reads the manager's list)
+            unsafe { sys::ee_scenariocpp_host_object(std::ptr::null_mut(), index as i32) }
+        }
+        fn trigger(&self, index: i64) -> *const EeScenarioTriggerFields {
+            use crate::scenario::read_compose::EE_SCENARIO_RX_TRIGGER;
+            let args = [index, 0, 0, 0, 0, 0];
+            // SAFETY: the host's trigger lookup (no context)
+            let t =
+                unsafe { sys::ee_scenariocpp_world_read(std::ptr::null_mut(), EE_SCENARIO_RX_TRIGGER, args.as_ptr()) };
+            en_ptr(EE_SCENARIO_EN_TRIGGER_FIELDS, t as usize as *mut c_void, 0) as *const EeScenarioTriggerFields
+        }
+        fn area_center(&self, index: i64) -> i64 {
+            let mut tile: [c_long; 2] = [0; 2];
+            // SAFETY: the manager's area `index` (the operation's), its centre into `tile`
+            unsafe {
+                ee_scenario_en_area_center_tile(
+                    en_ptr(EE_SCENARIO_EN_AREA_AT, std::ptr::null_mut(), index),
+                    tile.as_mut_ptr(),
+                )
+            };
+            crate::scenario::world_route::ee_scenario_pack_xy(tile[0], tile[1])
+        }
+    }
+
+    /// The record `EE_SCENARIO_EN_*_FIELDS` operation `op` names of the element `element` (sm_capture_game.rs).
+    pub(crate) fn element_record(op: u32, element: u64) -> u64 {
+        en(op, element as usize as *mut c_void, 0, 0) as u64
+    }
+
+    /// `gWorld.GetUnit((unsigned long)id)`'s handle (sm_capture_game.rs).
+    pub(crate) fn unit_by_id(id: i64) -> u64 {
+        en(EE_SCENARIO_EN_UNIT_BY_ID, std::ptr::null_mut(), id, 0) as u64
+    }
+
+    /// A round operation: the world views' answer (world_views.rs round), else the C++ host's.
+    unsafe extern "C" fn round_op(ctx: *mut c_void, op: u32, a: i64, b: i64, time: f32) -> i64 {
+        // SAFETY: the round host's contract, passed through
+        unsafe {
+            crate::scenario::world_views::round(op, a)
+                .unwrap_or_else(|| sys::ee_scenariocpp_round_op(ctx, op, a, b, time))
+        }
     }
 
     /// The host table over the context `ctx` (it must outlive the calls).
@@ -506,7 +587,7 @@ mod game {
             ctx: manager,
             fields: en_ptr(EE_SCENARIO_EN_MANAGER_FIELDS, manager, 0) as *mut EeScenarioManagerFields,
             queue: en_ptr(EE_SCENARIO_EN_MANAGER_TIMED, manager, 0) as *mut EeScenarioTimedQueue,
-            op: sys::ee_scenariocpp_round_op,
+            op: round_op,
         }
     }
 

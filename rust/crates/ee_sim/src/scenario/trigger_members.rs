@@ -257,7 +257,17 @@ pub fn game(op: u32, t: i64, i: i64, v: i64) -> i64 {
     #[cfg(not(test))]
     {
         // SAFETY: the statement host's contract: `t` a live trigger, `i` and `v` as its op names
-        unsafe { sys::ee_scenariocpp_trigger(op, t as usize as *mut c_void, i, v) }
+        unsafe {
+            match op {
+                // the trigger's record and the world's flag (entry.rs, world_views.rs)
+                EE_SCENARIO_TR_FIELDS => crate::scenario::entry::element_record(
+                    crate::scenario::entry::EE_SCENARIO_EN_TRIGGER_FIELDS,
+                    t as u64,
+                ) as i64,
+                EE_SCENARIO_TR_WORLD_CINEMATIC => crate::scenario::world_views::in_cinematic() as i64,
+                _ => sys::ee_scenariocpp_trigger(op, t as usize as *mut c_void, i, v),
+            }
+        }
     }
     #[cfg(test)]
     {

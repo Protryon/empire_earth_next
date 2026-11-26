@@ -39,6 +39,7 @@ use crate::rmap::rmv::{
     read_script, script_generator, script_name, EeRmapScriptBytes, EeRmapScriptRegion, EeRmapScriptScalars,
     EeRmapScriptTerrain, EeRmapScriptWall, ScriptHost, ScriptTables,
 };
+use crate::rmap::views;
 use crate::units::uu_note::Note;
 use crate::units::uu_tiles::{self, Tile};
 
@@ -48,17 +49,9 @@ use crate::units::uu_tiles::{self, Tile};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeRmapCpp {
     // ---- the map (p: the context)
-    /// `mMap->mL195610` (the map's height in tiles)
-    MapHeight = 1,
-    /// `mMap->mL195614`
-    MapWidth,
-    MapTileCount,
-    /// `mMap->mSize`
-    MapSize,
+    MapTileCount = 1,
     /// `mMap->GetF1955F4()` (float)
     MapTileUnit,
-    /// `mMap->GetTile(a0, a1)` (a pointer, 0 off the map)
-    MapTile,
     MapIsEdgeTile,
     MapPaintTerrain,
     MapSetCliffTexture,
@@ -76,40 +69,22 @@ pub enum EeRmapCpp {
     MeshSetIsWater,
     MeshShorelines,
     // ---- a tile (p: an EEMapTile*)
-    TileTerrain,
-    /// `GetHeight()` (float)
-    TileHeight,
     TileSetHeight,
-    /// `mUnits` (a pointer)
-    TileUnitNode,
-    /// `mUnits->mUnit`
-    TileFirstUnit,
     // ---- the game's players and options (p: the context)
     PlayerCount,
     /// `(*mGamePlayers)[a0]`
     Player,
     // ---- a player (p: an EEPlayer*)
-    PlayerId,
-    PlayerEnemy,
     PlayerMaxCitizens,
     StartEpoch,
     // ---- the rules, the tables, the classes (p: unused)
     RuleMapSizeCount,
     RuleMapSizeTiles,
     RuleMapSizeScript,
-    ClassCount,
-    /// `gUnitClassTable[a0]`
-    Class,
     // ---- a unit class (p: an EEUnitClass*)
-    ClassEnabled,
     /// the name's bytes into the sink a0
     ClassName,
-    ClassTileSizeMember,
-    ClassGetTileSize,
     ClassIsLandCitizen,
-    ClassIsWall,
-    ClassAllowsTerrain,
-    ClassAIKind,
     /// `CreateUnitAtPoint(a0 player, f0, f1, a1 map, f2)`
     ClassCreateAtPoint,
     /// `CreateUnitAtTile(a0 player, a1, a2, a3 map, f0)`
@@ -125,14 +100,7 @@ pub enum EeRmapCpp {
     Cliff,
     CliffName,
     // ---- a unit (p: an EEUnit*, an EEComplexUnit* for the Cx ones)
-    UnitComplex,
-    UnitGetComplex,
-    UnitPlayer,
-    UnitClassOf,
-    UnitResourceType,
-    UnitResourceAmount,
     CxSetBuilt,
-    CxIsPaidFor,
     CxSetPaidFor,
     CxAnimation,
     // ---- the game (p: unused)
@@ -478,10 +446,10 @@ struct PassHost<'a> {
 
 impl GameHost for PassHost<'_> {
     fn tile(&mut self, x: u32, y: u32) -> Option<EeRmapGameTile> {
-        let tile = h(O::MapTile, self.world.context, &[x as i64, y as i64]) as usize;
-        (tile != 0).then(|| EeRmapGameTile {
-            terrain_type: h(O::TileTerrain, tile, &[]) as i32,
-            height: hd(O::TileHeight, tile, &[]),
+        let tile = views::tile(self.world.map, x as i64, y as i64);
+        (tile != 0).then(|| {
+            let (terrain_type, height, _) = views::tile_state(tile);
+            EeRmapGameTile { terrain_type, height }
         })
     }
     fn is_edge_tile(&mut self, x: i32, y: i32) -> bool {
@@ -526,56 +494,57 @@ impl GameHost for PassHost<'_> {
         h(O::MeshShorelines, self.world.context, &[x as i64, y as i64]);
     }
     fn set_tile_height(&mut self, x: u32, y: u32, height: f32) {
-        let tile = h(O::MapTile, self.world.context, &[x as i64, y as i64]) as usize;
+        let tile = views::tile(self.world.map, x as i64, y as i64);
         hf(O::TileSetHeight, tile, &[], &[height]);
     }
     fn unit_class_count(&mut self) -> u32 {
-        h(O::ClassCount, 0, &[]) as u32
+        views::class_count()
     }
     fn unit_class(&mut self, class: u32) -> Option<EeRmapGameClass> {
-        let count = h(O::ClassCount, 0, &[]) as u32;
-        let c = if class < count { h(O::Class, 0, &[class as i64]) as usize } else { 0 };
+        let count = views::class_count();
+        let c = if class < count { views::class(class as i64) } else { 0 };
         (c != 0).then(|| EeRmapGameClass {
-            tile_size: h(O::ClassGetTileSize, c, &[]) as i32,
+            tile_size: views::class_of(c).tile_size,
             is_land_citizen: h(O::ClassIsLandCitizen, c, &[]) as u8,
-            is_wall: h(O::ClassIsWall, c, &[]) as u8,
+            is_wall: views::class_of(c).is_wall as u8,
         })
     }
     fn class_allows_terrain(&mut self, class: u32, terrain_type: i32) -> bool {
-        let c = h(O::Class, 0, &[class as i64]) as usize;
-        h(O::ClassAllowsTerrain, c, &[terrain_type as i64]) != 0
+        let c = views::class(class as i64);
+        views::class_of(c).terrain_types.get(terrain_type as usize).copied().unwrap_or(false)
     }
     fn max_starting_citizens(&mut self, player: u32) -> i32 {
         h(O::PlayerMaxCitizens, self.world.player(player), &[]) as i32
     }
     fn create_unit_at_point(&mut self, owner: u32, class: u32, x: f32, y: f32, heading: f32) -> i32 {
-        let c = h(O::Class, 0, &[class as i64]) as usize;
+        let c = views::class(class as i64);
         let player = self.world.player(owner) as i64;
         let unit = hf(O::ClassCreateAtPoint, c, &[player, self.world.map as i64], &[x, y, heading]) as usize;
         if unit == 0 {
             return -1;
         }
-        let complex = h(O::UnitComplex, unit, &[]) as usize;
+        let u = views::unit(unit);
+        let complex = u.complex;
         if complex != 0 {
             h(O::CxSetBuilt, complex, &[1, 0, 0]);
-            if h(O::CxIsPaidFor, complex, &[]) == 0 {
+            if !views::unit(complex).paid_for {
                 h(O::CxSetPaidFor, complex, &[]);
             }
             return -1;
         }
-        let resource = h(O::UnitResourceType, unit, &[]) as i32;
-        if (RESOURCE_FOOD..7).contains(&resource) && h(O::UnitResourceAmount, unit, &[]) > 0 {
+        let resource = u.resource_type;
+        if (RESOURCE_FOOD..7).contains(&resource) && u.resource_amount > 0 {
             return resource;
         }
         -1
     }
     fn create_unit_at_tile(&mut self, owner: u32, class: u32, x: i32, y: i32, heading: f32) {
-        let c = h(O::Class, 0, &[class as i64]) as usize;
+        let c = views::class(class as i64);
         let player = self.world.player(owner) as i64;
         hf(O::ClassCreateAtTile, c, &[player, x as i64, y as i64, self.world.map as i64], &[heading]);
     }
     fn place_wall(&mut self, class: u32, start: Point, end: Point, player: u32) {
-        let c = h(O::Class, 0, &[class as i64]) as usize;
+        let c = views::class(class as i64);
         let player = self.world.player(player);
         place_wall(self.world, c, start, end, player);
     }
@@ -624,10 +593,8 @@ pub fn place_wall(world: World, class: usize, start: Point, end: Point, player: 
     let mut j = 0usize;
     while j < tiles.len() {
         let [x, y] = tiles[j];
-        let tile = h(O::MapTile, c, &[x as i64, y as i64]) as usize;
-        if tile == 0
-            || h(O::TileTerrain, tile, &[]) as i32 == TERRAIN_CLIFF
-            || h(O::MapIsEdgeTile, c, &[x as i64, y as i64]) != 0
+        let tile = views::tile(world.map, x as i64, y as i64);
+        if tile == 0 || views::tile_state(tile).0 == TERRAIN_CLIFF || h(O::MapIsEdgeTile, c, &[x as i64, y as i64]) != 0
         {
             tiles.remove(j);
         } else {
@@ -638,33 +605,32 @@ pub fn place_wall(world: World, class: usize, start: Point, end: Point, player: 
     let mut units: Vec<u64> = Vec::new();
     let mut placed: Vec<Tile> = Vec::new();
     for (k, &[x, y]) in tiles.iter().enumerate() {
-        let tile = h(O::MapTile, c, &[x as i64, y as i64]) as usize;
+        let tile = views::tile(world.map, x as i64, y as i64);
         if tile == 0 {
             continue;
         }
-        if h(O::TileUnitNode, tile, &[]) == 0 {
-            let terrain = h(O::TileTerrain, tile, &[]) as i32;
-            if terrain == TERRAIN_DEEP_WATER || terrain == TERRAIN_SHALLOW_WATER {
-                continue;
-            }
-            let unit =
-                hf(O::ClassCreateAtTile, class, &[player as i64, x as i64, y as i64, world.map as i64], &[3.1415927]);
-            let complex = h(O::UnitGetComplex, unit as usize, &[]) as usize;
-            h(O::CxSetBuilt, complex, &[1, 0, 0]);
-            placed.push([x, y]);
-            let raised = h(O::MapRaisedCorners, c, &[x as i64, y as i64]) as i32;
-            shape_wall(complex as u64, corners.get(k).copied().unwrap_or(0), raised);
-        } else {
-            let other = h(O::TileFirstUnit, tile, &[]) as usize;
-            let complex = h(O::UnitGetComplex, other, &[]) as usize;
-            let class_of = h(O::UnitClassOf, other, &[]) as usize;
-            if h(O::UnitPlayer, other, &[]) as usize == player
-                && h(O::ClassAIKind, class_of, &[]) as i32 == AI_KIND_FORTIFICATION
+        let (terrain, _, first) = views::tile_state(tile);
+        if let Some(other) = first {
+            let u = views::unit(other);
+            let complex = u.complex;
+            if u.player == player
+                && views::class_of(u.class).ai_kind == AI_KIND_FORTIFICATION
                 && complex != 0
                 && h(O::CxAnimation, complex, &[]) as i32 != ANIMATION_WALL_BUILDING
             {
                 units.push(complex as u64);
             }
+        } else {
+            if terrain == TERRAIN_DEEP_WATER || terrain == TERRAIN_SHALLOW_WATER {
+                continue;
+            }
+            let unit =
+                hf(O::ClassCreateAtTile, class, &[player as i64, x as i64, y as i64, world.map as i64], &[3.1415927]);
+            let complex = views::unit(unit as usize).complex;
+            h(O::CxSetBuilt, complex, &[1, 0, 0]);
+            placed.push([x, y]);
+            let raised = h(O::MapRaisedCorners, c, &[x as i64, y as i64]) as i32;
+            shape_wall(complex as u64, corners.get(k).copied().unwrap_or(0), raised);
         }
     }
     make_wall_junctions(&units, &placed, player as u64, world.map as u64);
@@ -747,9 +713,9 @@ impl RandomMap {
         self.sc.seed = seed as c_ulong;
         self.random.0.seed = seed;
         self.random_integers.0.seed = seed;
-        let height = h(O::MapHeight, c, &[]);
+        let (height, width, _) = views::dimensions(world.map);
         self.sc.maximum_y = (height << 1) as c_ulong;
-        self.sc.maximum_x = (h(O::MapWidth, c, &[]) << 1) as c_ulong;
+        self.sc.maximum_x = (width << 1) as c_ulong;
         self.script_directory = text(O::ScriptDirectory, 0, &[]);
         self.sc.tile_count = h(O::MapTileCount, c, &[]) as c_ulong;
         self.clump_circles.clear();
@@ -768,13 +734,13 @@ impl RandomMap {
             Some((_, script)) => self.sc.map_size = script as c_long,
             None => panic!("Verification failure (no map size of the rules holds the map: EERandomMap.cpp 1735)"),
         }
-        for i in 0..h(O::ClassCount, 0, &[]) {
-            let class = h(O::Class, 0, &[i]) as usize;
-            if class == 0 || h(O::ClassEnabled, class, &[]) == 0 {
+        for i in 0..views::class_count() as i64 {
+            let class = views::class(i);
+            if class == 0 || !views::class_of(class).enabled {
                 continue;
             }
             let Some(name) = script_name(&text(O::ClassName, class, &[])) else { continue };
-            let size = h(O::ClassTileSizeMember, class, &[]) as i32;
+            let size = views::class_of(class).tile_size;
             self.unit_names.push((name, i as i32, if size <= 1 { 1 } else { size as u32 }));
         }
         self.features.clear();
@@ -875,10 +841,8 @@ impl RandomMap {
     /// `CreateGrids`: the grids at the power of two above the map (64 to 1024), at the initial elevation, and the
     /// player, neutral and moon rings.
     pub fn create_grids(&mut self, world: World) {
-        let c = world.context;
-        self.sc.grid_size =
-            grid_size(h(O::MapHeight, c, &[]) as u32, h(O::MapWidth, c, &[]) as u32, self.sc.grid_size as u32)
-                as c_ulong;
+        let (height, width, size) = views::dimensions(world.map);
+        self.sc.grid_size = grid_size(height as u32, width as u32, self.sc.grid_size as u32) as c_ulong;
         let n = (self.sc.grid_size as u32).wrapping_add(1);
         self.claimed_tiles = Grid::new(n, 0);
         self.tiles = Grid::new(n, 0);
@@ -891,7 +855,7 @@ impl RandomMap {
             neutral_inner: self.sc.neutral_inner_radius,
             neutral_outer: self.sc.neutral_outer_radius,
         };
-        let r = rings(self.flat_area, h(O::MapSize, c, &[]) as i32, radii);
+        let r = rings(self.flat_area, size as i32, radii);
         self.sc.half_map_size = r.half_map_size;
         self.ring = r.ring;
         self.neutral_ring = r.neutral_ring;
@@ -929,8 +893,8 @@ impl RandomMap {
                 if assigned[j as usize] {
                     continue;
                 }
-                let id = h(O::PlayerId, world.player(j), &[]);
-                if h(O::PlayerEnemy, world.player(i), &[id]) == 0 {
+                let id = views::player_id(world.player(j));
+                if views::player_enemy(world.player(i), id) == 0 {
                     team.players.push(j as i32);
                     team.positions.push(Point::default());
                     assigned[j as usize] = true;
@@ -1134,24 +1098,23 @@ impl RandomMap {
     /// The instance `CreateRandomMap`: sets up and generates the map, and answers the player's start point (the
     /// centre for 0).
     pub fn create(&mut self, world: World, player: u32, script: &[u8], seed: u32) -> [f32; 3] {
-        let c = world.context;
         let start = ee_base::time::ee_time_get();
         self.set_up(world, script, seed);
         self.generate(world);
         let location = if player > 0 {
             let p = self.players[player as usize - 1].position;
             let (x, y) = (p.x + 0.5, p.y + 0.5);
-            let tile = h(
-                O::MapTile,
-                c,
-                &[crate::rmap::math::floor_unsigned(x) as i64, crate::rmap::math::floor_unsigned(y) as i64],
+            let tile = views::tile(
+                world.map,
+                crate::rmap::math::floor_unsigned(x) as i64,
+                crate::rmap::math::floor_unsigned(y) as i64,
             );
-            [x, y, hd(O::TileHeight, tile as usize, &[])]
+            [x, y, views::tile_state(tile).1]
         } else {
-            let size = h(O::MapSize, c, &[]) as i32;
+            let size = views::dimensions(world.map).2 as i32;
             let middle = (size as f32 + 1.0) * 0.5;
-            let tile = h(O::MapTile, c, &[(size / 2) as i64, (size / 2) as i64]);
-            [middle, middle, hd(O::TileHeight, tile as usize, &[])]
+            let tile = views::tile(world.map, (size / 2) as i64, (size / 2) as i64);
+            [middle, middle, views::tile_state(tile).1]
         };
         let elapsed = (ee_base::time::ee_time_get()).wrapping_sub(start) as f32 * 0.001f32;
         debug_out(&format!("EERandomMap::CreateRandomMap processing completed in {:6.2} s\n", elapsed as f64));

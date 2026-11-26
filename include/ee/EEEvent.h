@@ -4,8 +4,6 @@
 #define EE_EVENT_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
-#include <memory>
-#include <vector>
 #include "rust/sim/scenario.h"
 
 class EEPlayer;
@@ -15,7 +13,6 @@ class EEComplexUnit;
 // One effect of an event (from the tech tree's readers; provisional names): a 0x58-byte record of dbeffects (the
 // original's fixed table at 0x531ff8 held 2000; now as many as the file has). An EEEvent holds indices into it.
 typedef EeScenarioEvEffect EEEventEffect;   // the record is Rust's (ee_scenario event.rs), its fields' notes there
-extern std::vector<EEEventEffect> gEventEffects;   // every dbeffects record (the original: 2000 at 0x531ff8)
 extern bool gEventsEnabled;                 // 0x4c5a84 (= true; EETechTree 0x1ccf5d clears it while it changes the
                                             // epoch; 0x1ca7cf reads it; provisional name)
 
@@ -28,11 +25,10 @@ const long kEventHookEpochAvailable = -0x7d2;
 
 extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a);   // EEEvent.cpp
 
-class EEEvent {
+// The record and the tables (every dbeffects record, the original's 2000 at 0x531ff8; every dbevents row, the
+// original's 1500 at 0x55cf80) are Rust's (ee_sim scenario event.rs EeScenarioEvent, EvTable)
+class EEEvent : public EeScenarioEvent {
 public:
-    // Creates an event with no effects
-    EEEvent() : mEffects(NULL), mNumEffects(0), mID(0) {  }
-    virtual ~EEEvent();
     // 0x1ca76c (cdecl): runs the effects of event inEvent (the tech tree passes the node's event id, the tree's
     // player index, the node id, the tree's player and the research's player) (provisional names)
     // Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result.
@@ -43,27 +39,14 @@ public:
     // out-of-line GetEffect copy 0x1cdf0c (EETechTree.cpp's last function)
     unsigned long GetNumEffects() const { return this->mNumEffects; }
     long GetEffect(unsigned long inIndex) const { return inIndex < this->mNumEffects ? this->mEffects[inIndex] : 100000; }
-    static EEEventEffect* GetEventEffect(unsigned long inIndex)
-    {
-        return inIndex < gEventEffects.size() ? &gEventEffects[inIndex] : NULL;
-    }
-    // the events by id: every dbevents row (the original: 1500 at 0x55cf80)
-    static EEEvent* Get(long inID)
-    {
-        return (inID >= 0 && (unsigned long)inID < EEEvent::sEvents.size()) ? EEEvent::sEvents[inID].get() : NULL;
-    }
-    static std::vector<std::unique_ptr<EEEvent>> sEvents;
+    static EEEventEffect* GetEventEffect(unsigned long inIndex) { return ee_scenario_ev_effect_at(inIndex); }
+    // the events by id: every dbevents row
+    static EEEvent* Get(long inID) { return static_cast<EEEvent*>(ee_scenario_ev_event(inID)); }
     // 0x1ca63b (cdecl, 0x141937): every effect record of inEffects, then every event of inEvents (its 100-byte name,
     // +0x0c, count and indices) to the end of the file (both opened first; provisional names)
     // Loads every event effect and every event with its effect list (as many as the files hold: the original read
     // exactly 2000 effects and 1500 events); returns the last read's result (ee_sim scenario event.rs)
     static long LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects) { return ee_scenario_ev_load(&inEvents, &inEffects); }
-private:
-    // the statements of the effects' Rust (ee_sim scenario event.rs; RunEffect 0x1ca7cf and its handlers) read them
-    friend int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a);
-    int32_t* mEffects;                      // +0x04 the effect indices, 4 bytes each in the file (the dtor 0x1ca57c delete[]s it)
-    unsigned long mNumEffects;              // +0x08 their count (LoadEvents: unsigned long)
-    unsigned long mID;                      // +0x0c (LoadEvents: unsigned long)
 };
 
 #endif

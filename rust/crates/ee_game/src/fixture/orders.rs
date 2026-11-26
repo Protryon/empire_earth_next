@@ -156,7 +156,7 @@ fn set_note(note: &str) {
 // ---- reads (the world's lock held by the caller)
 
 fn unit_by_id(t: &WorldRead, id: i64) -> Option<UnitView<'_>> {
-    let h = crate::gamecpp::h(crate::gamecpp::O::C11CgUnit, 0, &[id]) as u64;
+    let h = (crate::gamecpp::map::world_unit(id) as i64) as u64;
     // SAFETY: the world's lookup names a live unit (the caller holds the world's lock)
     unsafe { UnitView::of(t, h) }
 }

@@ -16,7 +16,6 @@ use ee_render::ge::viewport::GeViewport;
 use ee_render::gfx::effects::EeGfxColor;
 use ee_render::gfx::ffi::{ee_gfx_minimap_transforms, ee_gfx_minimap_view};
 use ee_sim::units::uu_ffi::ee_units_uu_cloaked_enemy;
-use ee_sim::world::map_fields::EeUnitsRtsMapFields;
 use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
@@ -185,7 +184,7 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
                 }
                 let mut node = hp(O::TileUnits, tile, &[]);
                 while node != 0 {
-                    let unit = hp(O::MmNodeUnit, node, &[]);
+                    let unit = super::map::node_unit(node);
                     // SAFETY: the unit's records
                     let (hit_points, r) = unsafe {
                         (
@@ -200,7 +199,7 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
                     {
                         ctx.items.push(unit_item(unit));
                     }
-                    node = hp(O::MmNodeNext, node, &[]);
+                    node = super::map::node_next(node);
                 }
             }
             io.items = if ctx.items.is_empty() { std::ptr::null() } else { ctx.items.as_ptr() };
@@ -220,7 +219,7 @@ static LIGHT: Mutex<[f32; 3]> = Mutex::new([0.0; 3]);
 
 /// The host of a call over its context (the world map's mesh, the terrain light).
 fn host(ctx: &mut HostContext) -> EeAppMiniMapHost {
-    let map = hp(O::MpWorldMap, 0, &[]);
+    let map = super::map::world_map();
     let light = *LIGHT.lock().unwrap();
     EeAppMiniMapHost {
         call: host_op,
@@ -335,7 +334,7 @@ pub extern "C" fn ee_gamecpp_minimap_set_map(mm: *mut c_void, map: *mut c_void) 
     let m = mm as P;
     tail(m).map = map as P;
     // SAFETY: the map's record
-    let r = unsafe { *rec::<EeUnitsRtsMapFields>(O::MpRts, map as P) };
+    let r = unsafe { *super::map::map_rts(map as P) };
     let t = ee_gfx_minimap_transforms(r.mL195610 as i32, r.mL195614 as i32, r.mSize as i32);
     let at = hp(O::MmTransforms, m, &[]) as *mut [GeTransformation; 4];
     // SAFETY: the mini map's four transformations (mMapToPixel, mPixelToMap, mMapToCell, mCellToMap in order)
@@ -357,7 +356,7 @@ pub extern "C" fn ee_gamecpp_minimap_set_map(mm: *mut c_void, map: *mut c_void) 
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_minimap_redraw(mm: *mut c_void) {
     let m = mm as P;
-    let map = hp(O::MpWorldMap, 0, &[]);
+    let map = super::map::world_map();
     if map == 0 {
         return;
     }
@@ -366,7 +365,7 @@ pub extern "C" fn ee_gamecpp_minimap_redraw(mm: *mut c_void) {
     h(O::MmUnitClear, m, &[ptr(&mut black)]);
     ee_gamecpp_minimap_lock_unit_layer(mm);
     // SAFETY: the map's record
-    let r = unsafe { *rec::<EeUnitsRtsMapFields>(O::MpRts, map) };
+    let r = unsafe { *super::map::map_rts(map) };
     call(m, 3, None, r.mL195614, r.mL195610, 0, 0);
 }
 
@@ -375,7 +374,7 @@ pub extern "C" fn ee_gamecpp_minimap_redraw(mm: *mut c_void) {
 pub extern "C" fn ee_gamecpp_minimap_recolor(mm: *mut c_void) {
     let mut units = [0u16; 17];
     let mut colors = [0u16; 17];
-    let players = h(O::MmNumPlayers, 0, &[]) as c_ulong;
+    let players = super::map::num_players() as c_ulong;
     for i in 0..players as usize {
         units[i] = h(O::MmPackPlayerColor, hp(O::WorldPlayer, 0, &[i as i64]), &[]) as u16;
         colors[i] = h(O::MmPackShade, hp(O::WorldPlayer, 0, &[i as i64]), &[]) as u16;

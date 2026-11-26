@@ -1108,6 +1108,18 @@ pub extern "C" fn ee_gamecpp_calamity_class_valid_location(
     valid_location(kl, &cast, cx as P, unit_class_index)
 }
 
+/// `EEContagionFunctor::CanInfect(unit)` (every kind's `CanInfectType`, the ICF-shared 0xb6c4d): the unit's class's
+/// type is in the functor's unit set.
+pub(crate) fn functor_can_infect(functor: P, unit: P) -> bool {
+    use ee_sim::world::view::{UnitView, WorldRead};
+    // SAFETY: a live functor, whose record is its first base
+    let set = unsafe { (*(functor as *const ee_sim::tech::contagion_functor::EeContagionFunctorFields)).mUnitSet };
+    // SAFETY: a live unit, read on the simulation thread
+    let t = unsafe { WorldRead::begin() };
+    let kind = unsafe { UnitView::of(&t, unit as u64) }.and_then(|u| u.class()).map_or(0, |k| k.unit_type() as c_long);
+    ee_sim::app::unit_sets::ee_unit_sets_contains(set as usize, kind as u32)
+}
+
 /// `IsValidTarget` of a unit class: the fire's and the plague's functor decides (CanInfect), the others' the shared
 /// rule.
 #[no_mangle]
@@ -1118,7 +1130,7 @@ pub extern "C" fn ee_gamecpp_calamity_class_valid_target(
 ) -> bool {
     let kl = kl as P;
     if cc::ee_calamity_class_targets_by_functor(klass(kl).mClassEnum as i32) {
-        return h(O::FnCanInfect, hp(O::KlFunctor, kl, &[]), &[target_unit as i64]) != 0;
+        return functor_can_infect(hp(O::KlFunctor, kl, &[]), target_unit as P);
     }
     valid_target(kl, cx as P, target_unit as P)
 }

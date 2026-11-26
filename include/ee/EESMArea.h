@@ -43,7 +43,6 @@ public:
     // Copies another area's name, text, rectangle, anchor, select mode and ID (not its tile cache)
     // 0x1ba2b2 (EEScenarioManager 0x1b12ff; provisional name)
     void Copy(const EESMArea& inArea) { ee_scenario_en_area_copy(this, (void*)&inArea); }
-    U2DPoint<long> GetCenterTile();         // 0x1ba315: hidden-result ABI; by-value spelling inferred
     // Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks; every cached read
     // restarts the timer
     // 0x1ba495: real typed cache/output family
