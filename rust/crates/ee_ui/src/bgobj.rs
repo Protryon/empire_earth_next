@@ -767,13 +767,14 @@ pub unsafe extern "C" fn ee_ui_bg_init(
     visible: bool,
     background: *mut c_void,
 ) {
-    // SAFETY: the contract
-    unsafe { Bg::new(rec).init(cpp, host, id, *layout, form, priority, visible) };
-    // the direct path's registry (direct.rs): the UIBackground's record
+    // the direct path's registry (direct.rs): the UIBackground's record, before the constructor's calls out (its
+    // BgAdd hands the form the UIBackground the registry knows)
     if !background.is_null() {
         // SAFETY: the contract
         unsafe { crate::direct::ee_ui_direct_background(rec, background) };
     }
+    // SAFETY: the contract
+    unsafe { Bg::new(rec).init(cpp, host, id, *layout, form, priority, visible) };
 }
 
 /// `UITextureBackground`'s constructor: the texture's rectangle (four floats), description and NUL-terminated name.
