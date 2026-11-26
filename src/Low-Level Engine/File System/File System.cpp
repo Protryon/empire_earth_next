@@ -6,28 +6,15 @@
 #include <stddef.h>
 #include <memory>
 
-// Not the umbrella: the inline block holds FSArchive, FSChunk, UReferenceCounter,
-// FSPersistent, TSLockable, FSPersistentList and FSMemoryFile, in that order. FSMemoryFile, FSChunk and FSArchive are
-// inline over ee_base fs (memfile.rs, chunk.rs, archive_obj.rs); what stays here is the memory file's stdio copies.
-#include "lle/LowLevelEngineCore.h"
-#include "lle/UWideString.h"
-#include "lle/UString.h"
-#include "lle/FSFile.h"
-#include "lle/FSBasicFile.h"
-#include "lle/FSFileSpec.h"
-#include "lle/TSScheduler.h"
+// FSMemoryFile, FSChunk and FSArchive are inline over ee_base fs (memfile.rs, chunk.rs, archive_obj.rs); what stays
+// here is the memory file's stdio copies.
+#include "lle/LowLevelEngine.h"
 #include "lle/FSArchive.h"
-#include "lle/FSRestorable.h"
 #include "lle/FSChunk.h"
 #include "lle/FSPath.h"
 #include "lle/FSPersistent.h"
-#include "lle/TSReadWriteLock.h"
-#include "TSLockable.h"
 #include "lle/FSPersistentList.h"
-#include "lle/FSMemoryFile.h"
 #include "lle/File System.h"
-#include "rust/base/fs.h"
-#include "platform/PlatThread.h"   // PlatGetLastError
 
 UString gStartupVolume(256);
 UString gStartupDirectory(256);
