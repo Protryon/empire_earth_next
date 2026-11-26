@@ -21498,14 +21498,6 @@ int64_t ee_units_ucb_call(int32_t what,
 /// `flag` is a live bool.
 int32_t ee_units_ucb_wall_piece_part(int32_t index, bool *flag);
 
-extern int64_t ee_units_ucg_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
 /// The ground classes' body `what` (`EE_UNITS_UCG_DO_*`) of `class` on `unit`: `a` a simple unit, `f` a value;
 /// the choice, or 0.
 ///
@@ -21554,14 +21546,6 @@ void ee_units_uck_sound(void *class_,
                         float *volume,
                         float *pan,
                         float *pitch);
-
-extern int64_t ee_units_uck_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The kind dispatcher `what` (`EE_UNITS_UCK_DO_*`) of `class` on `unit`: `a` an object (a cargo, a transport,
 /// a tile vector), `b`, `c` values or the caller's points, `f` a value; the answer, or 0.

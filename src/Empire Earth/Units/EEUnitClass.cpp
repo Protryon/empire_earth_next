@@ -621,6 +621,39 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_EFFECT_DEREFERENCE: EEUcObject<EEGraphicEffect>(inA)->Dereference(); return 0;
     case EE_UNITS_UC_SET_MEDIA_LOADED: theClass->mIsMediaLoaded = inB != 0; return 0;
     case EE_UNITS_UC_CLASS_DEREFERENCE: EEUcObject<EEUnitClass>(inA)->Dereference(); return 0;
+    // the ground kinds' bodies' (ee_units ucg_ground.rs, ucg_sea.rs; EE_UNITS_UCG_*: EEUnitClassGround.cpp's until units round 14)
+    case EE_UNITS_UCG_TILE_ADD: EEUcObject<EEMapTile>(inA)->mUnits = EEUcObject<EEMapTile>(inA)->AddUnit(EEUcObject<EEUnit>((uint64_t)inB), EEUcObject<EEMapTile>(inA)->mUnits); return 0;
+    case EE_UNITS_UCG_TILE_REMOVE: EEUcObject<EEMapTile>(inA)->RemoveUnit(EEUcObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCG_BASE_SIMPLE_CREATED: theClass->BaseSimpleUnitCreated(EEUcObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCG_CREATE_PLANE: return EEObj(EEUcObject<EEUnitClass>(inA)->CreateUnitAt(*EEUcObject<GETransformation>((uint64_t)inB), 0, 0, theUnit)->mComplexUnit);
+    case EE_UNITS_UCG_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, theUnit->mPlayer->mPlayerID); return 0;
+    case EE_UNITS_UCG_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
+    case EE_UNITS_UCG_WORLD_LINE: memcpy(EEUcObject<GE3DLine>(inA), &::gWorld.mLine, sizeof(GE3DLine)); return 0;
+    case EE_UNITS_UCG_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
+    case EE_UNITS_UCG_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCG_TERRAIN_Z: f[0] = ::gWorld.mMap->mTerrainMesh.GetZ((unsigned long)inB, (unsigned long)inC); return 0;
+    case EE_UNITS_UCG_RANDOM_GENERATE: f[0] = gPhysics->mRandom.Generate(); return 0;
+    case EE_UNITS_UCG_RANDOM_RANGE: f[0] = gPhysics->GetRandom(f[0], f[1]); return 0;
+    case EE_UNITS_UCG_WHEEL_UPDATE: theUnit->mWheels[inB]->Update(theUnit); return 0;
+    // the kind dispatchers' bodies (ee_units uck_kinds.rs, uck_dispatch.rs; EE_UNITS_UCK_*: EEUnitClassKinds.cpp's until units round 14)
+    case EE_UNITS_UCK_MISSILE_ACTION_CHANGED: theClass->MissileActionChanged(theUnit); return 0;
+    case EE_UNITS_UCK_PROJECTILE_ACTION_CHANGED: theClass->ProjectileActionChanged(theUnit); return 0;
+    case EE_UNITS_UCK_ACTION_CHANGED: EEUnitClassActionChanged((int32_t)inB, theClass, theUnit); return 0;
+    case EE_UNITS_UCK_UPDATE: EEUnitClassUpdate((int32_t)inB, theClass, theUnit); return 0;
+    case EE_UNITS_UCK_TORPEDO_UPDATE: theClass->TorpedoUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_MISSILE_UPDATE: theClass->MissileUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
+    case EE_UNITS_UCK_RIPPLES_DUE: return theClass->mRippleEffect != NULL && theUnit->mUnitClass->mUnitType == kUnitTypeCatalina && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_3: return theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && (unsigned long)theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_4: return (theClass->mUnitType == kUnitTypeDock || theClass->mUnitType == kUnitTypeNavyYard) && theClass->mRippleEffect != NULL && theUnit->mHitPoints != 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_RIPPLES_DUE_5: return theClass->mRippleEffect != NULL && theUnit->mHitPoints > 0 && theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_TRAIL_DUE: return theUnit->mHitPoints > 0 && theClass->mTrailEffect != NULL && theUnit->mVelocity != 0.0f && theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCK_TORPEDO_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
+    case EE_UNITS_UCK_MISSILE_CONDITION: return theClass->MissileEvaluateCondition(theUnit, (unsigned long)inB);
+    case EE_UNITS_UCK_PROJECTILE_CONDITION: return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, theUnit, (unsigned long)inB, EECombatShotTarget(theUnit), NULL, theClass);
+    case EE_UNITS_UCK_D_AIR_SOUND: theClass->AirGetSoundParameters(EEUcObject<EEUnit>(inA), EEUcObject<EESoundObject>((uint64_t)inB), EEUcObject<float*>((uint64_t)inC)[0], EEUcObject<float*>((uint64_t)inC)[1], EEUcObject<float*>((uint64_t)inC)[2]); return 0;
+    case EE_UNITS_UCK_D_IS_SIDE_PART: return theClass->IsSidePart(theUnit);
+    case EE_UNITS_UCK_D_FIRST_PART_COMMAND: return EEGetFirstPart(theUnit)->GetCommandType();
     }
     return 0;
 }
