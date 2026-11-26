@@ -17,6 +17,8 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEPPatrolGroup.h"
