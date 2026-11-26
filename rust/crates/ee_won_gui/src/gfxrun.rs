@@ -27,7 +27,9 @@ use crate::mspaint::{
     ee_won_mspaint_plan, EeWonMsPaint, EE_WON_DRAW_ARC, EE_WON_DRAW_FILL_ELLIPSE, EE_WON_DRAW_SYS_PIXEL,
 };
 
-/// The C++ Graphics' leading members, in this order (`mTransX` .. `mClipRect`, `mGfx`, `mColorScheme`, `mPlat`).
+/// The game's Graphics (the C++ `Graphics` is this record since R6 WON GUI round 39, made, attached and freed here:
+/// [`new_graphics`], [`free_graphics`]): the translation, colour and clip, the clip stack, the borrowed colour
+/// scheme, the surface, and the display context and font (each held, as the original's SmartPtr members held them).
 #[repr(C)]
 #[derive(Debug)]
 pub struct EeWonGraphics {
@@ -37,6 +39,10 @@ pub struct EeWonGraphics {
     /// the `ColorScheme*` (borrowed; NULL: none)
     pub scheme: *const c_void,
     pub plat: EeWonGfxPlat,
+    /// the `DisplayContext*` (held; 0: none)
+    pub context: isize,
+    /// the `Font*` (held; 0: none)
+    pub font: isize,
 }
 
 /// What a plan's operations name (WONGUIDraw.h's WONDrawSlots): four `Image*`, the `Font*`, the `GUIString*` and the
@@ -75,28 +81,168 @@ pub extern "C" fn ee_won_graphics_register(host: EeWonGfxHost, scheme_colors: us
 unsafe extern "C" fn no_host(_: *mut c_void, _: H, _: *const i32, _: *const c_void) -> u32 {
     0
 }
-fn host() -> EeWonGfxHost {
+fn registered() -> EeWonGfxHost {
     match HOST.load(Ordering::Acquire) {
         0 => no_host,
         // SAFETY: a value ee_won_graphics_register stored from a host function
         f => unsafe { std::mem::transmute::<usize, EeWonGfxHost>(f) },
     }
 }
+fn host() -> EeWonGfxHost {
+    match HOST.load(Ordering::Acquire) {
+        0 => no_host,
+        _ => game_hook,
+    }
+}
 
-/// A new Graphics' members: no translation, no colour scheme, an empty clip stack, no surface (the colour and the
-/// clip are set when it attaches and clips, as the original's constructor left them).
+/// The Graphics hooks: in the game the font set and the image draws and size are answered here (R6 WON GUI round
+/// 39: the record's context and font, imgobj.rs's images); the text and the wrapped text, and every hook in a
+/// test's world, go to the registered host.
+unsafe extern "C" fn game_hook(gp: *mut c_void, h: H, a: *const i32, p: *const c_void) -> u32 {
+    if !crate::compobj::is_game() || !matches!(h, H::SetFont | H::ImageEntire | H::ImagePart | H::ImageSize) {
+        // SAFETY: the hook's contract, passed on
+        return unsafe { registered()(gp, h, a, p) };
+    }
+    let g = gp as *mut EeWonGraphics;
+    if h == H::SetFont {
+        set_font(g, p as isize);
+        return 0;
+    }
+    // SAFETY: the hook's contract: seven ints at `a`, `p` the game's live image handle (or NULL), `g` live
+    unsafe {
+        let a = std::slice::from_raw_parts(a, 7);
+        let Some(i) = crate::imgobj::image_of(p as isize) else { return 0 };
+        let ctx = (*g).context;
+        match h {
+            H::ImageEntire => {
+                let (w, h) = (i.width() as u16 as i32, i.height() as u16 as i32);
+                crate::imgobj::ee_won_image_draw(i, ctx, a[0], a[1], 0, 0, w, h)
+            }
+            H::ImagePart => crate::imgobj::ee_won_image_draw(i, ctx, a[0], a[1], a[2], a[3], a[4], a[5]),
+            _ => {
+                let (w, h) = (a[0] as isize, a[1] as isize);
+                crate::imgobj::ee_won_image_call(i, crate::imgobj::EeWonImageCall::SetSize, w, h, 0, 0);
+            }
+        }
+    }
+    0
+}
+
+/// A new Graphics' members: no translation, no colour scheme, an empty clip stack, no surface, context or font
+/// (the colour is set when it attaches; the clip starts empty).
+fn init() -> EeWonGraphics {
+    EeWonGraphics {
+        st: EeWonGfxState::default(),
+        gfx: crate::gfxobj::ee_won_gfx_new(),
+        scheme: std::ptr::null(),
+        plat: crate::gfxplat::ee_won_gfx_plat_none(),
+        context: 0,
+        font: 0,
+    }
+}
+
+/// `held = p` (a SmartPtr member's assignment: the new reference first).
+fn set_held(held: &mut isize, p: isize) {
+    if p != 0 {
+        crate::gamewin::rf(p, true);
+    }
+    let old = std::mem::replace(held, p);
+    if old != 0 {
+        crate::gamewin::rf(old, false);
+    }
+}
+
+/// `new Graphics` attached to the display context `ctx` (PlatNativeImage.cpp's NewGraphics until R6 WON GUI round
+/// 39): the context held and linked back to the Graphics, its surface drawn into at its pixel scale, the colour
+/// black.
+pub(crate) fn new_graphics(ctx: isize) -> isize {
+    let g = Box::into_raw(Box::new(init()));
+    // SAFETY: the new record; `ctx` the game's live display context (NewGraphics' contract)
+    unsafe {
+        set_held(&mut (*g).context, ctx);
+        if let Some(r) = crate::imgobj::context_rec_mut(ctx) {
+            r.graphics = g as isize;
+            (*g).plat = crate::gfxplat::ee_won_gfx_plat_of(r.surface, r.pixel_scale);
+        }
+        (*g).st.color = 0;
+    }
+    g as isize
+}
+
+/// `delete` a Graphics: detached (the surface and the context left), the clip stack freed, the font and the context
+/// given back.
+pub(crate) fn free_graphics(g: isize) {
+    // SAFETY: a record new_graphics made, freed once (FreeGraphics' contract)
+    let mut g = unsafe { Box::from_raw(g as *mut EeWonGraphics) };
+    if !g.plat.surface.is_null() {
+        g.plat.surface = std::ptr::null_mut();
+        set_held(&mut g.context, 0);
+    }
+    // SAFETY: the record's own clip stack
+    unsafe { crate::gfxobj::ee_won_gfx_free(g.gfx) };
+    set_held(&mut g.font, 0);
+    set_held(&mut g.context, 0);
+}
+
+/// `SetFont(f)`: the font held when it differs from the current one (selecting it into the context did nothing).
+fn set_font(g: *mut EeWonGraphics, f: isize) {
+    // SAFETY: the game's live Graphics
+    unsafe {
+        if f != (*g).font {
+            set_held(&mut (*g).font, f);
+        }
+    }
+}
+
+/// `SetFont(f)` on the game's Graphics `g`.
 ///
 /// # Safety
-/// `g` is a C++ Graphics being constructed.
+/// `g` is a live game Graphics; `f` a live Font or NULL.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_graphics_init(g: *mut EeWonGraphics) {
-    // SAFETY: the contract (raw writes: the other members are not yet set)
+pub unsafe extern "C" fn ee_won_graphics_set_font(g: *mut EeWonGraphics, f: *mut c_void) {
+    set_font(g, f as isize);
+}
+
+/// The image host's Graphics ops in the game (imgobj.rs; PlatNativeImage.cpp's cases went, R6 WON GUI round 39): a
+/// new and a freed Graphics, the translation into the two ints at `b`, the context, a plan's `c` operations at `b`
+/// with the four images at `d`, the image `b` drawn at the two ints at `c`. None in a driver's world.
+pub(crate) fn image_host_op(
+    op: crate::imgobj::EeWonImageHost,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> Option<isize> {
+    use crate::imgobj::EeWonImageHost as I;
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    let g = a as *mut EeWonGraphics;
+    // SAFETY: the game's live Graphics and the ops' arguments (EeWonImageHost's contracts)
     unsafe {
-        (*g).st.trans_x = 0;
-        (*g).st.trans_y = 0;
-        (*g).scheme = std::ptr::null();
-        (*g).gfx = crate::gfxobj::ee_won_gfx_new();
-        (*g).plat = crate::gfxplat::ee_won_gfx_plat_none();
+        Some(match op {
+            I::NewGraphics => new_graphics(a),
+            I::FreeGraphics => {
+                free_graphics(a);
+                0
+            }
+            I::GfxTrans => {
+                *(b as *mut [i32; 2]) = [(*g).st.trans_x, (*g).st.trans_y];
+                0
+            }
+            I::GfxContext => (*g).context,
+            I::GfxRun => {
+                let s = EeWonDrawSlots { images: *(d as *const [*mut c_void; 4]), ..EeWonDrawSlots::default() };
+                ee_won_graphics_draw(g, b as *const EeWonDrawOp, c as usize, &s);
+                0
+            }
+            I::GfxDrawImage => {
+                let xy = *(c as *const [i32; 2]);
+                gc(g, EeWonGfxCall::DrawImage, [xy[0], xy[1], 0, 0], b as *const c_void);
+                0
+            }
+            _ => return None,
+        })
     }
 }
 
@@ -350,15 +496,8 @@ pub(crate) fn grab_op(w: crate::grabobj::EeWonGrab, g: isize, c: isize, d: isize
 /// A game Graphics record for the unit tests (attached to no surface).
 #[cfg(test)]
 pub(crate) fn tests_graphics() -> EeWonGraphics {
-    let mut g = EeWonGraphics {
-        st: EeWonGfxState::default(),
-        gfx: std::ptr::null_mut(),
-        scheme: std::ptr::null(),
-        plat: crate::gfxplat::ee_won_gfx_plat_none(),
-    };
-    // SAFETY: a record being set up (its clip stack leaks with the test)
-    unsafe { ee_won_graphics_init(&mut g) };
-    g
+    // (its clip stack leaks with the test)
+    init()
 }
 
 #[cfg(test)]

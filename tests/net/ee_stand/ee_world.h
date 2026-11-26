@@ -147,6 +147,8 @@ class EEHumanPlayer : public EEPlayer {
 public:
     void SetName(const UWideString& inName) { T("player %lu set name %s", mPlayerID, TName(inName).c_str()); this->mName = inName; }
 };
+extern unsigned long& gStartTime;
+extern bool& gGameScreenActive;
 class EEWorld {
 public:
     EEWorld() : mNumPlayers(0), mLock(new EEFakeLock("world")), mCurrent(0) { memset(mPlayers, 0, sizeof(mPlayers)); }
@@ -167,6 +169,10 @@ public:
     std::vector<int> mTeams;
     EEFakeLock* mLock;
     unsigned long mCurrent;
+    // the members the game's server and client read (the test's own storage: ee_session_test.cpp)
+    EEGameOptions& mLobbyOptions = gGameOptions;
+    unsigned long& mStartTime = gStartTime;
+    bool& mGameScreenActive = gGameScreenActive;
 };
 extern EEWorld gWorld;
 
@@ -312,8 +318,6 @@ extern EEWonNet* gWonNet;
 extern UWideString gGameVersion;
 extern uint32_t gBinaryChecksum;
 extern unsigned long& gNetworkAdapter;
-extern unsigned long& gStartTime;
-extern bool& gGameScreenActive;
 
 // ---- the protocol ----
 class NEProtocol {

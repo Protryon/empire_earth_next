@@ -640,7 +640,7 @@ pub extern "C" fn ee_gamecpp_map_host_sight_at(player: *mut c_void, io: *const E
 pub extern "C" fn ee_gamecpp_map_host_count_cell(io: *const EeAppMapIo) {
     // SAFETY: the host's io
     let io = unsafe { &*io };
-    h(if io.flag { O::MpCountCellOn } else { O::MpCountCellOff }, 0, &[io.x as i64, io.y as i64]);
+    super::minimap::count_cell(io.x as c_long, io.y as c_long, io.flag);
 }
 
 // ---- TSGT (TEST ONLY)

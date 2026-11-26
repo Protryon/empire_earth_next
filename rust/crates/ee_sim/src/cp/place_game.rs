@@ -139,9 +139,7 @@ pub const EE_CP_CENTER_WORLD_COMPLEX: i32 = 115;
 // the player's (EEComputerPlayer.cpp; `a`, `b` units or centres)
 pub const EE_CP_PLAYER_BEHAVIOR_FLOAT: i32 = 300;
 pub const EE_CP_PLAYER_BASE_POP_LIMIT: i32 = 301;
-pub const EE_CP_PLAYER_NUM_TEAMS: i32 = 304;
 pub const EE_CP_PLAYER_TEAM_WONDERS: i32 = 305;
-pub const EE_CP_PLAYER_TEAM_CONTAINS: i32 = 306;
 pub const EE_CP_PLAYER_NUM_PLAYERS: i32 = 307;
 /// player `v0`: -1 none, else `IsHuman()`
 pub const EE_CP_PLAYER_HUMAN: i32 = 308;
@@ -653,13 +651,13 @@ impl PlayerHost for Game {
         crate::ai::personality::cheat_on(self.ctx().player_id as u64, cheat as std::os::raw::c_long)
     }
     fn num_teams(&mut self) -> u32 {
-        self.q(EE_CP_PLAYER_NUM_TEAMS, 0, &[]) as u32
+        crate::app::teams_ffi::count() as u32
     }
     fn team_has_wonders(&mut self, team: u32) -> bool {
         self.q(EE_CP_PLAYER_TEAM_WONDERS, 0, &[team as i64]) != 0
     }
     fn team_contains(&mut self, team: u32, player: u32) -> bool {
-        self.q(EE_CP_PLAYER_TEAM_CONTAINS, 0, &[team as i64, player as i64]) != 0
+        crate::app::teams_ffi::ee_app_teams_contains(team as usize, player)
     }
     fn num_players(&mut self) -> u32 {
         self.q(EE_CP_PLAYER_NUM_PLAYERS, 0, &[]) as u32

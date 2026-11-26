@@ -196,11 +196,82 @@ impl EeWonGrabber {
             if let Some(r) = crate::gfxrun::grab_op(w, b, c, d) {
                 return r;
             }
+            if let Some(r) = self.game_op(w, b, c, d) {
+                return r;
+            }
         }
         match self.host {
             // SAFETY: the host was given with this grabber; no borrow of the state is live here
             Some(h) => unsafe { h(self.me, Op::Grab, w as isize, b, c, d) },
             None => 0,
+        }
+    }
+    /// The game's answers (R6 WON GUI round 39): the component's members and calls, and the background image (the C++
+    /// grabber's `mBGImage`, its first member: an image handle) read in place: its presence and size, its draw on
+    /// the Graphics `b` at (c, d), a capture `c` drawn into it at the two ints at `d`, its raw copy (one reference)
+    /// and that copy's pixels and size. None for the others (the debug window, the new image, the root's rectangle).
+    fn game_op(&self, w: EeWonGrab, b: isize, c: isize, d: isize) -> Option<isize> {
+        use crate::compobj::EeWonCompCall as K;
+        use crate::imgobj::{ee_won_image_call, ee_won_image_get, image_of, EeWonImageCall as I, EeWonImageField as F};
+        use EeWonGrab as G;
+        // SAFETY: the game's live component `b` (each call re-enters through Component's entry)
+        let kc = |k: K, p: isize, q: isize| unsafe {
+            crate::compobj::ee_won_comp_call(b as *mut c_void, crate::compobj::host(), k, p, q, 0)
+        };
+        // SAFETY: the game's live grabber: its background image's pointer first
+        let bg = unsafe { *(self.me as *const isize) };
+        let draw = |g: isize, image: isize, x: i32, y: i32| {
+            // SAFETY: the game's live Graphics and image
+            unsafe {
+                crate::gfxrun::ee_won_graphics_call(
+                    g as *mut crate::gfxrun::EeWonGraphics,
+                    crate::gfxobj::EeWonGfxCall::DrawImage,
+                    x,
+                    y,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    image as *const c_void,
+                )
+            };
+        };
+        // SAFETY: the grabber's or the call's live images (the ops' contracts), each read once
+        unsafe {
+            Some(match w {
+                G::LocalToRoot => {
+                    kc(K::LocalToRoot, c, c + 4);
+                    0
+                }
+                G::RootToChild => {
+                    kc(K::RootToChild, c, c + 4);
+                    0
+                }
+                G::CompSize => {
+                    let r = crate::compmem::bounds(b);
+                    *(c as *mut [i32; 2]) = [r.width, r.height];
+                    0
+                }
+                G::FlagSet => isize::from(crate::compmem::bits(b) & c as i32 != 0),
+                G::HasImage => isize::from(bg != 0),
+                G::ImageWidth => image_of(bg)?.width() as u16 as isize,
+                G::ImageHeight => image_of(bg)?.height() as u16 as isize,
+                G::DrawImage => {
+                    draw(b, bg, c as i32, d as i32);
+                    0
+                }
+                G::CaptureDraw => {
+                    let xy = *(d as *const [i32; 2]);
+                    draw(image_of(bg)?.graphics(), c, xy[0], xy[1]);
+                    0
+                }
+                G::RawNew => ee_won_image_call(image_of(bg)?, I::Raw, 0, 0, 0, 0),
+                G::RawPixels => ee_won_image_get(image_of(c)?, F::Pixels),
+                G::RawWidth => image_of(c)?.width() as u16 as isize,
+                G::RawHeight => image_of(c)?.height() as u16 as isize,
+                _ => return None,
+            })
         }
     }
     fn local_to_root(&self, comp: isize, p: &mut [i32; 2]) {
@@ -409,6 +480,34 @@ pub unsafe extern "C" fn ee_won_grab_free(g: *mut EeWonGrabber) {
 pub unsafe extern "C" fn ee_won_grab_call(g: *const EeWonGrabber, c: EeWonGrabCall, a: isize, b: isize) -> isize {
     // SAFETY: the contract
     unsafe { (*g).call(c, a, b) }
+}
+
+/// The root container's calls on a game grabber `g` (R6 WON GUI round 39; RootContainer.cpp's cases went): its
+/// state with its background image into `*(EeWonRootGrab*)q`, its Clear, and its Clear with the image given back.
+/// The C++ grabber is its image's pointer, its debug window's and its Rust grabber's (checked in
+/// BackgroundGrabber.cpp).
+pub(crate) fn root_grabber_op(op: crate::guihost::EeWonGuiOp, g: isize, q: isize) -> isize {
+    use crate::guihost::EeWonGuiOp as Op;
+    let p = g as *mut isize;
+    // SAFETY: the game's live grabber (the ops' contract): the image's pointer first, the Rust grabber third
+    unsafe {
+        let rust = *p.add(2) as *const EeWonGrabber;
+        match op {
+            Op::RootGrabberRead => {
+                (*rust).read(&mut *(q as *mut EeWonRootGrab));
+                (*(q as *mut EeWonRootGrab)).image = *p;
+            }
+            Op::RootGrabberClear => (*rust).clear(),
+            _ => {
+                (*rust).clear();
+                let image = std::mem::replace(&mut *p, 0);
+                if image != 0 {
+                    crate::gamewin::rf(image, false);
+                }
+            }
+        }
+    }
+    0
 }
 
 /// The root container's read of the grabber's state into `q` (its `image` left as it was).

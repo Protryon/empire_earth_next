@@ -167,7 +167,7 @@ extern "C" int64_t ee_screenscpp_ae_morale_bonus() { return (int64_t)gWorld.GetG
 extern "C" int32_t ee_screenscpp_ae_unit_player_id(uintptr_t inUnit)
 { return (int32_t)AE_T(inUnit)->GetPlayer()->mPlayerID; }
 extern "C" void ee_screenscpp_ae_create_unit_effect(uintptr_t inUnit, uintptr_t inEffect)
-{ gEffectManager->CreateUnitEffect((EEUnit*)inUnit, (EEGraphicEffect*)inEffect, NULL, false, 0, 0); }
+{ gWorld.mEffectManager->CreateUnitEffect((EEUnit*)inUnit, (EEGraphicEffect*)inEffect, NULL, false, 0, 0); }
 extern "C" void ee_screenscpp_aet_set_effect(uintptr_t inT, uintptr_t inEffect)
 { ((EEAreaEffectTemplate*)inT)->mGraphicEffect = (EEGraphicEffect*)inEffect; }
 extern "C" void ee_screenscpp_aet_set_effect18(uintptr_t inT, uintptr_t inEffect)

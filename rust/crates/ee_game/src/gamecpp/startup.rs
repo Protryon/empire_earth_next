@@ -799,8 +799,8 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     if crate::gamecpp::globals::have!(gGraphics) {
         h(O::GfxSetSecondarySurface, 0, &[]);
     }
-    h(O::CameraResetZoom, 0, &[]);
-    h(O::CameraSetChanged, 0, &[]);
+    super::camera_io::set_zoom(1.0);
+    super::camera_io::set_changed();
     // SAFETY: a constant rectangle
     unsafe { ee_gamecpp_startup_game_view(&START_VIEW) };
     render_states(screen, false);

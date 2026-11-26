@@ -135,7 +135,6 @@ wchar_t* kWonProductDirectory = L"/EmpireEarth";
 wchar_t* kWonCommunityName = L"EmpireEarth";
 
 unsigned long gWonClientId;                 // 0x4e60b8 (RegisterCallback stores the server's client id)
-extern wchar_t gEmptyWideString[];          // 0x4e60bc (L"", zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 extern unsigned long& gNetworkAdapter;      // 0x5308a0 (the adapter of the local address)
 
 typedef EeWonNetCall Call;
