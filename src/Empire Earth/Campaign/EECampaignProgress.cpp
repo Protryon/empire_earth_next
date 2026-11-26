@@ -29,6 +29,7 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMEffect.h"
 #include "ee/EEPersistentTemplates.h"
+#include "rust/game/screens.h"
 #include "rust/sim/scenario.h"
 
 
@@ -116,7 +117,7 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::CivBuilderEdit: CivBuilderEditCurrentCivilization();
         break;
     case O::CivBuilderSave: return CivBuilderSaveCivilization(UString((const char*)a[0]), true);
-    case O::CivBuilderFree: CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
+    case O::CivBuilderFree: ee_screens_cb_free_civilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
         break;
     case O::ApplyCivilization: return EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer());
     // EECampaign::Load (p: the campaign, or the UWideString / file named)

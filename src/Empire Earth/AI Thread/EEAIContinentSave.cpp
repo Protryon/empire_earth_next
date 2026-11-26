@@ -48,6 +48,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
 #include "rust/base/random.h"
+#include "rust/sim/units.h"
 
 extern long& gEEAIRegionSize;
 
@@ -63,7 +64,7 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
         return 0;
     case EE_ASTAR_CM_BUILD_MAP: gContinentManager.BuildRegions(gWorld.mMap);
         return 0;
-    case EE_ASTAR_CM_REGISTER: io->i[1] == 0 ? gWorld.mPlayers[(size_t)io->i[0]]->RegisterHerds() : gWorld.mPlayers[(size_t)io->i[0]]->RegisterTowns();
+    case EE_ASTAR_CM_REGISTER: io->i[1] == 0 ? ee_units_player_rest(gWorld.mPlayers[(size_t)io->i[0]], EE_UNITS_PLAYER_REST_REGISTER, 0, 1, 0) : ee_units_player_rest(gWorld.mPlayers[(size_t)io->i[0]], EE_UNITS_PLAYER_REST_REGISTER, 0, 0, 0);
         return 0;
     case EE_ASTAR_CM_DEBUG_OUT: ESDebugOut("%s", (const char*)(uintptr_t)io->h[0]);
         return 0;

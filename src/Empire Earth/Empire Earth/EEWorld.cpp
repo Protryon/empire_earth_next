@@ -80,6 +80,9 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
 #include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp world.rs)
+#include "rust/game/civilization.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
 #include "rust/sim/ai.h"
 #include "rust/sim/scenario.h"
 
@@ -433,7 +436,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::PlAddPendingUnits: PL->AddPendingUnits(a[0] != 0, a[1] != 0);
         break;
     case O::PlNumPending: return PL->GetNumPendingUnits();
-    case O::PlPendingAt: return P64(PL->GetPendingUnit((unsigned long)a[0]));
+    case O::PlPendingAt: return P64(static_cast<RTSUnit*>(ee_rts_player_pending_unit(PL, (unsigned long)a[0])));
     case O::PlSaveTo: PL->EEPlayer::Save((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
         break;
     case O::PlLoadFrom: PL->EEPlayer::Load((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
@@ -462,9 +465,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::PlColorIsPlayerColor: return EEGetPlayerColor((unsigned long)a[0]) == PL->mColor;
     case O::PlSetPlayerColor: PL->SetColor(EEGetPlayerColor((unsigned long)a[0]));
         break;
-    case O::PlCivApplyDeferred: PL->mCivilization.ApplyDeferred(PL, ((EEGameState*)a[0])->mMajorVersion, ((EEGameState*)a[0])->mMinorVersion);
+    case O::PlCivApplyDeferred: ee_gamecpp_civ_apply_deferred(&PL->mCivilization, PL);
         break;
-    case O::PlCivApplyLevel21: PL->mCivilization.ApplyLevel21ToWorld();
+    case O::PlCivApplyLevel21: ee_gamecpp_civ_apply_level21(&PL->mCivilization);
         break;
     case O::PlCivSetName: PL->mCivilization.SetName(*(UWideString*)a[0]);
         break;
@@ -623,7 +626,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WonNetPresent: return gWonNet != NULL;
     case O::WonNetClearGameList: gWonNet->ClearGameList();
         break;
-    case O::CivBuilderFree: CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
+    case O::CivBuilderFree: ee_screens_cb_free_civilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
         break;
     case O::SimNoHumanDefeat: return gPlatSimNoHumanDefeat;
     case O::SimNoHumanDefeatHit: gPlatSimNoHumanDefeatHits++;

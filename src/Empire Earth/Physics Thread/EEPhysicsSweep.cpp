@@ -23,6 +23,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
+#include "rust/sim/units.h"
 
 namespace {
 
@@ -51,9 +52,9 @@ extern "C" int64_t ee_units_sweep_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_SWEEP_OP_NEW_LOCATION_ORDER: return (int64_t)(uintptr_t)EEUnitGoal::NewLocation(&thePoint, false, true, false, 0.0f, false, 0);
     case EE_UNITS_SWEEP_OP_SET_GOAL: Of<EEComplexUnit>(inA)->SetGoal(Of<EEUnitGoal>(inB), 0, 0); return 0;
     case EE_UNITS_SWEEP_OP_GROUP_NEW: return (int64_t)(uintptr_t)EEActiveGroup::New(Of<EEPlayer>(inA));
-    case EE_UNITS_SWEEP_OP_ADD_MEMBER: Of<EEActiveGroup>(inA)->AddMember(Of<EEComplexUnit>(inB), true); return 0;
+    case EE_UNITS_SWEEP_OP_ADD_MEMBER: ee_units_group_do(Of<EEActiveGroup>(inA), true ? 13 : 14, Of<EEComplexUnit>(inB)); return 0;
     case EE_UNITS_SWEEP_OP_FORMATION_CREATE: return (int64_t)(uintptr_t)EEFormation::Create((long)inA);
-    case EE_UNITS_SWEEP_OP_SET_FORMATION: Of<EEActiveGroup>(inA)->SetFormation(Of<EEFormation>(inB)); return 0;
+    case EE_UNITS_SWEEP_OP_SET_FORMATION: ee_units_group_set_formation(static_cast<EEGroup*>(Of<EEActiveGroup>(inA)), Of<EEFormation>(inB)); return 0;
     case EE_UNITS_SWEEP_OP_FORMATION_DEREFERENCE: Of<EEFormation>(inA)->Dereference(); return 0;
     case EE_UNITS_SWEEP_OP_GROUP_SET_GOAL: Of<EEActiveGroup>(inA)->SetGoal(Of<EEUnitGoal>(inB), inC != 0); return 0;
     case EE_UNITS_SWEEP_OP_ADD_PENDING_GROUP: Of<EEActiveGroup>(inA)->GetPlayer()->AddPendingGroup(Of<EEActiveGroup>(inA)); return 0;

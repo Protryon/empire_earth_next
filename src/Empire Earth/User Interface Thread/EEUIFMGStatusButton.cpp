@@ -85,6 +85,7 @@ extern "C" void ee_screenscpp_ev_end_cinematic()
 #include "ee/EEScreensShims.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
+#include "rust/game/tech_tree.h"
 #define SBR(x) reinterpret_cast<EEUIFMGFormCall*>(x)
 #define SBRB(x) static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)
 #define SBRF(x) static_cast<EEUIFMainGame*>(static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)->GetForm())
@@ -174,7 +175,7 @@ extern "C" void ee_screenscpp_sbt_hot_key_name(uintptr_t inRec, uintptr_t inHotK
 extern "C" void ee_screenscpp_sbt_text_upgrade_name(uintptr_t inRec, int64_t inClass)
 { SBR(inRec)->mText = gWorld.GetCurrentPlayer()->mUnitClassUpgrades[gUnitClassTable[inClass]->mUnitType]->mName; }
 extern "C" void ee_screenscpp_sbt_text_node_cost(uintptr_t inRec, uintptr_t inNode)
-{ SBN(inNode)->GetCostString(SBR(inRec)->mText, SBRB(inRec)->mUnitType, 1.0f); }
+{ ee_gamecpp_tech_cost_string(SBN(inNode), (long)(SBRB(inRec)->mUnitType), 1.0f, &(SBR(inRec)->mText)); }
 extern "C" int64_t ee_screenscpp_sbt_text_length(uintptr_t inRec) { return (int64_t)strlen(SBR(inRec)->mText); }
 extern "C" int64_t ee_screenscpp_sbt_trade_price(int64_t inResource, bool inBuy)
 { return EEGetTradePrice(gWorld.GetCurrentPlayer(), (long)inResource, inBuy); }

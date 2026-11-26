@@ -45,13 +45,14 @@ extern "C" int32_t ee_screenscpp_group_wonders_to_win() { return gWorld.mNumberO
 extern "C" bool ee_screenscpp_group_has_player() { return gWorld.GetCurrentPlayer() != NULL; }
 extern "C" int32_t ee_screenscpp_group_start_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mStartEpoch; }
 extern "C" int32_t ee_screenscpp_group_end_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mEndEpoch; }
-extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return EEEpochTitleID(inEpoch); }
+extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return (long)ee_tech_epoch_title_id((int32_t)inEpoch); }
 
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
 // the status buttons' hot keys): each one call, no logic
 #include "ee/EEScreensShims.h"
 #include "rust/game/physics.h"
 #include "rust/game/screens.h"
+#include "rust/sim/tech.h"
 #define MG(x) reinterpret_cast<EEUIFMGMainGroup*>(x)
 #define MGU(x) reinterpret_cast<EEUnit*>(x)
 #define MGC(x) reinterpret_cast<EEComplexUnit*>(x)

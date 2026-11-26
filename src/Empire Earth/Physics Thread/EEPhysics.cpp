@@ -43,6 +43,7 @@
 #include "ee/EEGameLog.h"
 #include "rust/game/game_log.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 
 
 // chain at 0x551c28 (wrapper)
@@ -377,7 +378,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
         break;
-    case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
+    case O::CivBuilderBlink: ee_screens_cb_set_blinking(a[0] != 0);
         break;
     case O::LoadOrSave: return ee_gamecpp_msg_load_or_save(static_cast<EEMRecord*>(MSG));
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));

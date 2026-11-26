@@ -62,6 +62,8 @@
 #include "rust/game/gamecpp.h"
 #include "rust/game/preload_media.h"
 #include "rust/game/screens.h"
+#include "rust/sim/tech.h"
+#include "rust/sim/units.h"
 
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
@@ -724,10 +726,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_WORLD_MAP: return EEObj(::gWorld.mMap);
     case EE_UNITS_UC_PLAYER_AT: return EEObj(::gWorld.mPlayers[inB]);
     case EE_UNITS_UC_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_UC_CHECK_BUTTONS: EEUcObject<EEPlayer>(inA)->CheckButtonsPreloaded(theClass->mUnitType); return 0;
+    case EE_UNITS_UC_CHECK_BUTTONS: ee_units_player_rest(EEUcObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)theClass->mUnitType, 1, 0); return 0;
     case EE_UNITS_UC_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
     case EE_UNITS_UC_SET_ORIENTATION: theOther->mOrientation = GEOrientation(f[0], f[1], f[2]); return 0;
-    case EE_UNITS_UC_LOAD_CLASS_MEDIA_OF: EEUcObject<EEPlayer>(inA)->LoadUnitClassMedia(theClass->mUnitType); return 0;
+    case EE_UNITS_UC_LOAD_CLASS_MEDIA_OF: ee_units_player_rest(EEUcObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)theClass->mUnitType, 0, 0); return 0;
     case EE_UNITS_UC_UNIT_LOAD_MEDIA: EEUcObject<EEUnit>(inA)->LoadMedia(inB != 0); return 0;
     case EE_UNITS_UC_ADD_UNIT_ENTRY: ::gWorld.AddUnitEntry(EEUcObject<EEUnit>(inA), EEUcObject<EEUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UC_CREATE_RUNWAYS: theClass->CreateRunways(theOther, EEUcObject<EEPlayer>((uint64_t)inB), inC != 0); return 0;
@@ -778,7 +780,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CLOSEST_TILE: ::gWorld.mMap->GetClosestTile(reinterpret_cast<GE3DPoint*>(f), &(sUcTile[0] = (long)inB), &(sUcTile[1] = (long)inC)); return 0;
     case EE_UNITS_UC_TILE_OUT_X: return sUcTile[0];
     case EE_UNITS_UC_TILE_OUT_Y: return sUcTile[1];
-    case EE_UNITS_UC_FLAMING_CLASS: return EEObj(gUnitClassTable[gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mUnitType]);
+    case EE_UNITS_UC_FLAMING_CLASS: return EEObj(gUnitClassTable[(reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerFlamingArrows)))->mUnitType]);
     case EE_UNITS_UC_CAN_ATTACK_CLASS: return theUnit->CanAttackClass(EEUcObject<EEUnit>(inA)->GetUnitClass());
     case EE_UNITS_UC_START_ACTION_SELF: theUnit->StartAction((long)inB); return 0;
     case EE_UNITS_UC_CLEAR_SPECIAL: theUnit->mIsSpecialAttack = false; return 0;

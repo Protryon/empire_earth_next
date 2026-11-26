@@ -52,6 +52,7 @@
 #include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/physics.h"
+#include "rust/sim/units.h"
 
 // ------------------------------------------------------------------------------------------------ the host
 // The game's actions' host (ee_screens game_actions.rs: EE_SCREENS_GA_OP_*; ee/EEARust.h). The original units'
@@ -180,9 +181,9 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     // the current player's selected group
     case GA_K(GROUP, G_COUNT): return GA_G->GetNumUnits();
     case GA_K(GROUP, G_KIND_FLAGS): return (uint32_t)GA_G->mKindFlags;
-    case GA_K(GROUP, G_COUNT_KIND): return GA_G->CountUnitsOfKind(i[1]);
+    case GA_K(GROUP, G_COUNT_KIND): return (long)ee_units_group_get(GA_G, 0, i[1]);
     case GA_K(GROUP, G_UNIT): return (intptr_t)GA_G->GetUnit(i[1]);
-    case GA_K(GROUP, G_TYPE_COUNT): return GA_G->GetUnitTypeCount(i[1]);
+    case GA_K(GROUP, G_TYPE_COUNT): return (long)ee_units_group_get(GA_G, 2, i[1]);
     case GA_K(GROUP, G_FIND_CATEGORY): return (intptr_t)GA_G->FindUnitOfCategory(i[1]);
     case GA_K(GROUP, G_FIND_FLAGS): return (intptr_t)GA_G->FindUnitWithFlags(i[1]);
     case GA_K(GROUP, G_CONTAINS): return GA_G->Contains(static_cast<EEComplexUnit*>(p));

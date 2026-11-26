@@ -24,6 +24,7 @@
 #include "ee/EEUIBUpgrade.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFMGStatusBar.h"
+#include "rust/game/tech_tree.h"
 
 
 // The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
@@ -101,7 +102,7 @@ extern "C" int64_t ee_screenscpp_up_class_technology(int64_t inUnitType)
 extern "C" uintptr_t ee_screenscpp_up_node(int64_t inTechnology)
 { return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inTechnology); }
 extern "C" void ee_screenscpp_up_text_cost(uintptr_t inCall, uintptr_t inNode, uintptr_t inUnit, float inFactor)
-{ reinterpret_cast<EETechTreeNode*>(inNode)->GetCostString(UPC(inCall).mText, reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(), inFactor); }
+{ ee_gamecpp_tech_cost_string(reinterpret_cast<EETechTreeNode*>(inNode), reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(), inFactor, &(UPC(inCall).mText)); }
 extern "C" void ee_screenscpp_up_sound(uint32_t inWhich)
 { gSoundManager->Play(EESoundObject::Get(kUpSounds[inWhich])->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL); }
 extern "C" uintptr_t ee_screenscpp_up_help_label(uintptr_t inCall)

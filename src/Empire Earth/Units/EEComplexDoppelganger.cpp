@@ -30,6 +30,7 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUGRust.h"
+#include "rust/sim/units.h"
 
 // port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
 // makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit
@@ -136,7 +137,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SCRATCH_CARGO_CLEAR: sRepairCargo.clear(); return 0;
     case EE_UNITS_DOP_SCRATCH_CARGO_PUSH: sRepairCargo.push_back(theOther); return 0;
     case EE_UNITS_DOP_CARGO_ASSIGN: theUnit->mCargo = sRepairCargo; return 0;
-    case EE_UNITS_DOP_ADD_REPATROL: theUnit->GetPlayer()->AddUnitToRepatrol(theUnit); return 0;
+    case EE_UNITS_DOP_ADD_REPATROL: ee_units_player_rest(theUnit->GetPlayer(), EE_UNITS_PLAYER_REST_ADD_TO_REPATROL, (uint64_t)(int64_t)(uintptr_t)(void*)theUnit, 0, 0); return 0;
     case EE_UNITS_DOP_LOCATION_AUTO: return EELocationGoalCast(theGoal)->GetIsAutoWaypoint() == true;
     case EE_UNITS_DOP_BUILD_TECH: return static_cast<EEUGRust*>(theGoal)->GetBuildTechTreeID();
     case EE_UNITS_DOP_COMMAND_TYPE: return theUnit->GetCommandType();

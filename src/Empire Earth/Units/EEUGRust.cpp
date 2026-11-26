@@ -52,6 +52,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
 #include "rust/game/gamecpp.h"
+#include "rust/sim/units.h"
 
 // the location goal's host hands the unit's transformation to ee_ge's GeTransformation (the same 4x4 floats)
 static_assert(sizeof(GETransformation) == 64, "GETransformation is ee_ge's GeTransformation");
@@ -260,7 +261,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_UNIT_PLAYER: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer);
     case EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH: return ObjectOf<EEPlayer>(inA)->mTechnologies != NULL;
     case EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS: ObjectOf<EEPlayer>(inA)->mTechnologies->Research(ObjectOf<EEComplexUnit>(inB)->mUnitClass->GetTechnology(), NULL); return 0;
-    case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS: ObjectOf<EEPlayer>(inA)->CheckButtonsPreloaded((long)ioArgs->i[0]); return 0;
+    case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS: ee_units_player_rest(ObjectOf<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)((long)ioArgs->i[0]), 1, 0); return 0;
     case EE_UNITS_GOAL_HOST_X_SET_BUILT: ObjectOf<EEComplexUnit>(inA)->SetBuilt(1, 1, 1); return 0;
     case EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE: return ObjectOf<EEPlayer>(inA)->mTechnologies->Get((long)ioArgs->i[0])->GetIsAvailable();
     case EE_UNITS_GOAL_HOST_X_SPACE_WALL: EECreateSpaceWallEnergyWall(ObjectOf<EEComplexUnit>(inA)); return 0;
@@ -284,7 +285,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_PAY: ObjectOf<EEPlayer>(inA)->Pay(ObjectOf<EETechTreeNode>(inB), 0x20, ioArgs->f[0]); return 0;
     case EE_UNITS_GOAL_HOST_SET_HIT_POINTS: ObjectOf<EEComplexUnit>(inA)->SetHitPoints((long)ioArgs->i[0]); return 0;
     case EE_UNITS_GOAL_HOST_X_WONDER_CHAT: WonderStartedChat(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB)); return 0;
-    case EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA: ObjectOf<EEComplexUnit>(inA)->mPlayer->LoadUnitClassMedia(ObjectOf<EEUnit>(inB)->mUnitClass->GetUnitType()); return 0;
+    case EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA: ee_units_player_rest(ObjectOf<EEComplexUnit>(inA)->mPlayer, EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)(ObjectOf<EEUnit>(inB)->mUnitClass->GetUnitType()), 0, 0); return 0;
     case EE_UNITS_GOAL_HOST_X_LOAD_MEDIA: ObjectOf<EEComplexUnit>(inA)->LoadMedia(false); return 0;
     case EE_UNITS_GOAL_HOST_X_POST_UNLOAD_CLASS:
         gDataPreLoading->PostUnloadUnitClass(ObjectOf<EEComplexUnit>(inA)->mPlayer->mPlayerID, ObjectOf<EEComplexUnit>(inA)->mUnitClass->GetUnitType());

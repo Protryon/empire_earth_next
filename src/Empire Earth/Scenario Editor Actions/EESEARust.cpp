@@ -325,9 +325,9 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_POINT_Y: f[0] = sSeaxPoint.mY; return 0;
     case EE_SCREENS_SEAX_POINT_Z: f[0] = sSeaxPoint.mZ; return 0;
     case EE_SCREENS_SEAX_PLAYER_PENDING_COUNT: return (intptr_t)static_cast<EEPlayer*>(p)->GetNumPendingUnits();
-    case EE_SCREENS_SEAX_PENDING: return (intptr_t)static_cast<EEUnit*>(static_cast<EEPlayer*>(p)->GetPendingUnit(i[0]));
+    case EE_SCREENS_SEAX_PENDING: return (intptr_t)static_cast<EEUnit*>(static_cast<RTSUnit*>(ee_rts_player_pending_unit(static_cast<EEPlayer*>(p), i[0])));
     case EE_SCREENS_SEAX_UNIT_LOAD_MEDIA: static_cast<EEUnit*>(p)->LoadMedia(static_cast<EEUnit*>(p)->IsFoundation()); return 0;
-    case EE_SCREENS_SEAX_ADD_UNIT_ENTRY: gWorld.AddUnitEntry(static_cast<EEPlayer*>(p)->GetPendingUnit(i[0]), NULL); return 0;
+    case EE_SCREENS_SEAX_ADD_UNIT_ENTRY: gWorld.AddUnitEntry(static_cast<RTSUnit*>(ee_rts_player_pending_unit(static_cast<EEPlayer*>(p), i[0])), NULL); return 0;
     case EE_SCREENS_SEAX_UNIT_BUILT_LAND_BUILDING:
         return static_cast<EEUnit*>(p)->GetUnitClass()->IsLandBuilding() && static_cast<EEUnit*>(p)->GetComplexUnit()->mIsBuilt == true;
     case EE_SCREENS_SEAX_PLAYER_LOAD_BUTTONS: static_cast<EEPlayer*>(p)->LoadUnitClassButtons(static_cast<EEUnit*>(q)->GetUnitClass()->GetUnitType()); return 0;

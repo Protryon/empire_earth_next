@@ -37,6 +37,7 @@
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"   // the host (civ_file_calls.rs)
 #include "ee/EEScreensShims.h"
+#include "rust/game/civilization.h"
 
 // chain at 0x67fe94 (wrapper)
 //   object 0x965518  ctor __imp_??0FSFileSpec@@QAE@XZ  dtor __imp_??1FSFileSpec@@UAE@XZ
@@ -116,7 +117,7 @@ extern "C" uint64_t ee_screenscpp_civf_cost() { return (uint64_t)EEScratch<unsig
 extern "C" uint64_t ee_screenscpp_civf_civ_max_points(uintptr_t inCtx)
 { return (uint64_t)CF(inCtx)->mPlayer->mCivilization.GetMaxPoints(); }
 extern "C" void ee_screenscpp_civf_civ_buy(uintptr_t inCtx, uint32_t inUpgrade)
-{ CF(inCtx)->mPlayer->mCivilization.Buy((EECivUpgrade)inUpgrade, CF(inCtx)->mPlayer->mPlayerID, true); }
+{ ee_gamecpp_civ_buy(&CF(inCtx)->mPlayer->mCivilization, (EECivUpgrade)inUpgrade, (long)(CF(inCtx)->mPlayer->mPlayerID), true); }
 extern "C" void ee_screenscpp_civf_civ_set_points(uintptr_t inCtx) { CF(inCtx)->mPlayer->mCivilization.SetPoints(0); }
 extern "C" bool ee_screenscpp_civf_can_buy() { return ::gWorld.mGameOptions.CanBuyCivilization(); }
 extern "C" bool ee_screenscpp_civf_purchased(uintptr_t inCtx) { return CF(inCtx)->mPlayer->mCivUpgradesPurchased; }
@@ -124,7 +125,7 @@ extern "C" bool ee_screenscpp_civf_custom_civs() { return gWorld.mGameOptions.mA
 extern "C" bool ee_screenscpp_civf_scenario_game() { return gWorld.mGameOptions.mIsScenarioGame; }
 extern "C" bool ee_screenscpp_civf_in_scenario_editor() { return gUIManager->GetInScenarioEditor(); }
 extern "C" bool ee_screenscpp_civf_can_afford_all(uintptr_t inCtx)
-{ return CF(inCtx)->mPlayer->mCivilization.CanAffordAll(CF(inCtx)->mUpgrades); }
+{ return ee_gamecpp_civ_can_afford_all(&CF(inCtx)->mPlayer->mCivilization, &(CF(inCtx)->mUpgrades)); }
 extern "C" uintptr_t ee_screenscpp_civf_grant_new(uintptr_t inCtx, int64_t inPoints)
 { return (uintptr_t) new EEMRecord(kMessageCivUpgradesPurchased, {CF(inCtx)->mPlayerIndex, (long)inPoints, CF(inCtx)->mUpgrades, CF(inCtx)->mName}); }
 extern "C" bool ee_screenscpp_civf_multiplayer() { return gCommunications->GetIsMultiplayerSession(); }

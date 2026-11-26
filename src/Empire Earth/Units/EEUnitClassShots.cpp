@@ -31,6 +31,7 @@
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
 #include "rust/game/gamecpp.h"
+#include "rust/sim/tech.h"
 
 // ---- EEUCProjectile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The projectile's unit
 // class (EEUCBomb derives from it and shares these slots by ICF): 0x219143..0x219c49 (after EEUCPlanetSpaceship.cpp;
@@ -74,7 +75,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_R_LINE_OF_SIGHT: return (int32_t)UFloatBits(theUnit->GetLineOfSight());
     case EE_COMBAT_SHOT_R_COMPLEX_GOAL_KIND: return (int32_t)theUnit->mComplexUnit->mGoalState->mKind;
     case EE_COMBAT_SHOT_R_RANDOM: return (int32_t)UFloatBits(gPhysics->mRandom.Generate());
-    case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
+    case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)(reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerFlamingArrows)))->mChance);
     case EE_COMBAT_SHOT_R_REMAINS: return theClass->mRemainsClass != NULL;
     case EE_COMBAT_SHOT_R_IS_PROJECTILE: return theClass->mIsProjectile;
     case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorld.mClearing;

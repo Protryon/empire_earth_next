@@ -526,9 +526,9 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::ListDrawCount: return CivListAccess::Drawn(LBS);
     case O::ListDataEquals: return LBS->GetData((unsigned long)a[0]) == s;
     case O::ProcessEventOn: return ((UIEvent*)p)->ProcessEvent((UIForm*)a[0], (UIControl*)a[1]);
-    case O::CivEdit: return CivBuilderEditCivilization();
+    case O::CivEdit: return ee_screens_cb_edit_civilization();
     case O::CivTimer: return EEProcessTimerExpired();
-    case O::CivBlink: return EESetCivBuilderButtonBlinking(a[0] != 0);
+    case O::CivBlink: return ee_screens_cb_set_blinking(a[0] != 0);
     case O::CivAvailablePoints: return CV->mAvailablePoints;
     case O::CivMaxPoints: return CV->mMaxPoints;
     case O::CivUnchanged: return CV->mUnchanged;

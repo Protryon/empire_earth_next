@@ -66,6 +66,7 @@ extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested s
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
 #include "rust/sim/ai.h"
+#include "rust/sim/units.h"
 
 static const float kGameViewLeft = 0.0f, kGameViewRight = 1600.0f;  // the game view below the top bar (.rdata
 static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c..0x44ba38: separate words)
@@ -282,9 +283,9 @@ extern "C" void ee_screenscpp_ui_resume_graphics(uintptr_t inUi)
 { reinterpret_cast<EEUserInterface*>(inUi)->ResumeGraphics(); }
 extern "C" void ee_screenscpp_continents_clear() { gContinentManager.Clear(gWorld.mMap); }
 extern "C" void ee_screenscpp_continents_build_regions() { gContinentManager.BuildRegions(gWorld.mMap); }
-extern "C" void ee_screenscpp_player_register_herds(uint32_t inPlayer) { gWorld.mPlayers[inPlayer]->RegisterHerds(); }
+extern "C" void ee_screenscpp_player_register_herds(uint32_t inPlayer) { ee_units_player_rest(gWorld.mPlayers[inPlayer], EE_UNITS_PLAYER_REST_REGISTER, 0, 1, 0); }
 extern "C" void ee_screenscpp_player_assign_herds(uint32_t inPlayer) { gWorld.mPlayers[inPlayer]->AssignHerds(); }
-extern "C" void ee_screenscpp_player_register_towns(uint32_t inPlayer) { gWorld.mPlayers[inPlayer]->RegisterTowns(); }
+extern "C" void ee_screenscpp_player_register_towns(uint32_t inPlayer) { ee_units_player_rest(gWorld.mPlayers[inPlayer], EE_UNITS_PLAYER_REST_REGISTER, 0, 0, 0); }
 extern "C" void ee_screenscpp_player_assign_towns(uint32_t inPlayer) { gWorld.mPlayers[inPlayer]->AssignTowns(); }
 extern "C" void ee_screenscpp_player_refresh_resource_centres(uint32_t inPlayer)
 { gWorld.mPlayers[inPlayer]->mComputerPlayer->RefreshResourceCenters(); }
@@ -336,7 +337,7 @@ extern "C" void ee_screenscpp_ambient_stop_sounds() { gAmbientSoundManager.StopS
 extern "C" void ee_screenscpp_ambient_pause() { gAmbientSoundManager.Pause(); }
 extern "C" void ee_screenscpp_chat_log_clear() { ee_screens_chat_log_clear(); }
 extern "C" void ee_screenscpp_civ_builder_button_blinking(bool inBlinking)
-{ EESetCivBuilderButtonBlinking(inBlinking); }
+{ ee_screens_cb_set_blinking(inBlinking); }
 extern "C" void ee_screenscpp_player_civilization_chosen()
 { gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen = true; }
 extern "C" void ee_screenscpp_player_civilization_locked()

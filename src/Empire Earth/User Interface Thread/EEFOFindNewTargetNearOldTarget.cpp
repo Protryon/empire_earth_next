@@ -72,9 +72,13 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EEStringIDs.h"
+#include "rust/game/civilization.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/physics.h"
 #include "rust/game/preload_media.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 
 // EEContagionHelper.cpp's collector over complex units (its only instantiation was EECPPlacement.cpp's)
@@ -759,9 +763,9 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_HAS_POWER: return gCivPowersManager.HasPower(UbObj<EEPlayer>(inA), (unsigned long)inC);
     case EE_UNITS_UB_IS_BUILT: return UUUnit(inA)->GetComplexUnit()->mIsBuilt;
     case EE_UNITS_UB_STRINGS_RESET: sUbStrings = EEUbStrings(); return 0;
-    case EE_UNITS_UB_NUM_POWERS: return gCivPowersManager.GetNumPowers();
+    case EE_UNITS_UB_NUM_POWERS: return (unsigned long)ee_tech_civ_power_count();
     case EE_UNITS_UB_UNIT_HAS_POWER: return gCivPowersManager.HasPower(UUUnit(inA)->GetPlayer(), (unsigned long)inC);
-    case EE_UNITS_UB_MAKE_POWER_UPGRADE: return gCivilizationManager.MakePowerUpgrade(EECivilizationManager::PowerLevel((unsigned long)inC));
+    case EE_UNITS_UB_MAKE_POWER_UPGRADE: return (unsigned long)ee_tech_civ_power_upgrade((uint32_t)(EECivilizationManager::PowerLevel((unsigned long)inC)));
     case EE_UNITS_UB_POWER_NAME: gCivPowersManager.GetName((unsigned long)inC, sUbStrings.mName); return 0;
     case EE_UNITS_UB_UPGRADES_COPY: sUbUpgrades = UUUnit(inA)->GetPlayer()->mCivilization.GetPurchasedUpgrades(); return 0;
     case EE_UNITS_UB_UPGRADES_SHUFFLE: EEAIRandomShuffle(sUbUpgrades.begin(), sUbUpgrades.end()); return 0;
@@ -772,7 +776,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_AVAILABLE_POINTS: return UbObj<EEPlayer>(inA)->mCivilization.GetAvailablePoints();
     case EE_UNITS_UB_CAN_AFFORD: return UbObj<EEPlayer>(inA)->mCivilization.CanAfford((EECivUpgrade)inC, &sUbCost, NULL);
     case EE_UNITS_UB_SET_POINTS_AND_MAX: UbObj<EEPlayer>(inA)->mCivilization.SetPointsAndMax(UbObj<EEPlayer>(inA)->mCivilization.GetMaxPoints() + sUbCost); return 0;
-    case EE_UNITS_UB_BUY: UbObj<EEPlayer>(inA)->mCivilization.Buy((EECivUpgrade)inC, UbObj<EEPlayer>(inA)->GetPlayerID(), true); return 0;
+    case EE_UNITS_UB_BUY: ee_gamecpp_civ_buy(&UbObj<EEPlayer>(inA)->mCivilization, (EECivUpgrade)inC, UbObj<EEPlayer>(inA)->GetPlayerID(), true); return 0;
     case EE_UNITS_UB_SET_POINTS: UbObj<EEPlayer>(inA)->mCivilization.SetPoints((long)inC); return 0;
     case EE_UNITS_UB_CURRENT_PLAYER: return UUHandle(::gWorld.GetCurrentPlayer());
     case EE_UNITS_UB_ADAPTATION_FORMAT: gResource->GetString(IDS_ACQUIRED_THROUGH_ADAPTATION, sUbStrings.mFormat); return 0;
@@ -927,7 +931,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_APPLY_TO_UNIT: UbObj<EEUUUnitFunctor>(inA)->ApplyToUnit(UUUnit(inB)); return 0;
     case EE_UNITS_UB_APPLY: UbObj<EEUUUnitFunctor>(inA)->Apply(UbObj<EEComplexUnit>(inB)); return 0;
     case EE_UNITS_UB_NUM_PENDING: return UbObj<EEPlayer>(inA)->GetNumPendingUnits();
-    case EE_UNITS_UB_PENDING_UNIT: return UUHandle(static_cast<EEUnit*>(UbObj<EEPlayer>(inA)->GetPendingUnit((unsigned long)inC)));
+    case EE_UNITS_UB_PENDING_UNIT: return UUHandle(static_cast<EEUnit*>(static_cast<RTSUnit*>(ee_rts_player_pending_unit(UbObj<EEPlayer>(inA), (unsigned long)inC))));
     case EE_UNITS_UB_NUM_PLAYERS: return ::gWorld.mNumPlayers;
     // EEMovePassengers', EETakeOverLoad's, EEGetPlayerClassGraphic's
     case EE_UNITS_UB_NUM_CARGO: return UbObj<EEComplexUnit>(inA)->GetNumCargoUnits();
@@ -970,13 +974,13 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     // EEHasCivilizationUpgrade's, EEFn24E68F's
     case EE_UNITS_UB_PURCHASED_COUNT: return (int64_t)UbObj<EECivilization>(inA)->GetPurchasedUpgrades().size();
     case EE_UNITS_UB_PURCHASED_AT: return (int64_t)UbObj<EECivilization>(inA)->GetPurchasedUpgrades()[(size_t)inC];
-    case EE_UNITS_UB_SPLIT_ATTRIBUTE: gCivilizationManager.SplitAttribute((EECivUpgrade)inC, &sUbAttribute[0], &sUbAttribute[1]); return 0;
+    case EE_UNITS_UB_SPLIT_ATTRIBUTE: ee_screens_civm_split((EECivUpgrade)inC, &sUbAttribute[0], &sUbAttribute[1]); return 0;
     case EE_UNITS_UB_LOOKUP_LEVEL: gCivilizationManager.LookupLevel((EECivUpgrade)inC, &(*ioF)[0], &(*ioF)[1]); return 0;
-    case EE_UNITS_UB_CATEGORY_NAME_ID: return gCivilizationManager.GetCategoryNameID(sUbAttribute[0], &sUbStringID);
+    case EE_UNITS_UB_CATEGORY_NAME_ID: return ee_screens_civm_category_name_id((uint32_t)(sUbAttribute[0]), &sUbStringID);
     case EE_UNITS_UB_CATEGORY_STRING: return gResource->GetString(sUbStringID, sUbCategoryString);
-    case EE_UNITS_UB_LEVEL_NAME_ID: sUbStringID = EECivilizationManager::LevelNameID(sUbAttribute[1]); return 0;
+    case EE_UNITS_UB_LEVEL_NAME_ID: sUbStringID = (long)ee_tech_civ_level_name_id((uint32_t)(sUbAttribute[1])); return 0;
     case EE_UNITS_UB_ATTRIBUTE_STRING: return gResource->GetString(sUbStringID, sUbAttributeString);
-    case EE_UNITS_UB_IS_POWER_LEVEL: return EECivilizationManager::IsPowerLevel(sUbAttribute[1]);
+    case EE_UNITS_UB_IS_POWER_LEVEL: return ee_tech_civ_is_power_level((uint32_t)(sUbAttribute[1]));
     case EE_UNITS_UB_LEVEL_TEXT:
         sprintf(*UbObj<UWideString>(inA), "%s: %s %ld%%", (const char*)sUbCategoryString, (const char*)sUbAttributeString, (long)inC);
         return 0;

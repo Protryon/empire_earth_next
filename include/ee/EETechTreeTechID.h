@@ -23,9 +23,5 @@ extern "C" int32_t ee_tech_epoch_title_id(int32_t epoch);
 inline long EEEpochCount() { return ee_tech_epoch_count(); }
 inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < EEEpochCount(); }
 const long kTechFirstNodeID = 1000;
-// the epoch of a tech id (an epoch's own id; a node's block); -1: none
-inline long EETechTreeEpochOf(long inID) { return ee_tech_epoch_of((int32_t)inID); }
-// the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for EEEpochCount(), the game options' "Random Epoch"
-inline long EEEpochTitleID(long inEpoch) { return ee_tech_epoch_title_id((int32_t)inEpoch); }
 
 #endif // EE_EETECHTREETECHID_H

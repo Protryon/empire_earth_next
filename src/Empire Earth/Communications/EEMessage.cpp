@@ -102,6 +102,7 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 #include <vector>
 #include "rust/game/game_log.h"
 #include "rust/sim/app.h"
+#include "rust/sim/units.h"
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
@@ -337,12 +338,12 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GroupCount: return ((EEGroup*)p)->GetNumUnits();
     case O::GroupUnit: return P64(((EEGroup*)p)->GetUnit((unsigned long)a[0]));
     case O::GroupFormationType: return ((EEGroup*)p)->GetFormation()->mType;
-    case O::GroupSetFormation: ((EEGroup*)p)->SetFormation((EEFormation*)a[0]);
+    case O::GroupSetFormation: ee_units_group_set_formation(((EEGroup*)p), (EEFormation*)a[0]);
         break;
-    case O::SelGroupSetFormation: SEL->SetFormation((EEFormation*)a[0]);
+    case O::SelGroupSetFormation: ee_units_group_set_formation(SEL, (EEFormation*)a[0]);
         break;
     case O::SelGroupSavedGroup: return P64(SEL->GetSavedGroup());
-    case O::SelGroupSelectSaved: SEL->SelectSavedGroup((EEGroup*)a[0], a[1] != 0);
+    case O::SelGroupSelectSaved: ee_units_group_with(SEL, (a[1] != 0) ? 4 : 5, (EEGroup*)a[0]);
         break;
     case O::SelGroupFirstUnit: return P64(SEL->GetFirstUnit());
     case O::FormationCreate: return P64(EEFormation::Create((long)a[0]));

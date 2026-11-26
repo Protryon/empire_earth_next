@@ -42,6 +42,7 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EESaveGameFiles.h"
 #include "rust/game/screens.h"
+#include "rust/sim/units.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
@@ -398,7 +399,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SoSetParams: gSoundManager->SetSoundParameters((SESMInstanceNode*)p, f[0], f[1], f[2]);
         break;
     case O::SoPlayOnce: return gSoundManager->Play(((EESoundObject*)p)->GetSampleID(), f[0], f[1], f[2], false, NULL);
-    case O::PlLoadClassMedia: PL->LoadUnitClassMedia((long)a[0]);
+    case O::PlLoadClassMedia: ee_units_player_rest(PL, EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)((long)a[0]), 0, 0);
         break;
     case O::PlSetClassMedia: PL->SetUnitClassMedia((long)a[0], (long)a[1]);
         break;

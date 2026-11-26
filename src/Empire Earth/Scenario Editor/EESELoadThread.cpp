@@ -27,8 +27,10 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESEARust.h"
+#include "rust/game/rts.h"
 #include "rust/game/screens.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)
@@ -119,9 +121,9 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
     case EE_SCREENS_SELTX_PLAYER: return H(gWorld.mPlayers[a[0]]);
     case EE_SCREENS_SELTX_POST_TEXT: T(p)->mChangeLoadText->Post(Text(p, a));
         return 0;
-    case EE_SCREENS_SELTX_LOAD_ALL_MEDIA: P(p)->LoadAllClassMedia();
+    case EE_SCREENS_SELTX_LOAD_ALL_MEDIA: ee_units_player_rest(P(p), EE_UNITS_PLAYER_REST_LOAD_ALL_CLASS_MEDIA, 0, 0, 0);
         return 0;
-    case EE_SCREENS_SELTX_UNLOAD_ALL_MEDIA: P(p)->UnloadAllClassMedia();
+    case EE_SCREENS_SELTX_UNLOAD_ALL_MEDIA: ee_units_player_rest(P(p), EE_UNITS_PLAYER_REST_UNLOAD_ALL_CLASS_MEDIA, 0, 0, 0);
         return 0;
     case EE_SCREENS_SELTX_TECH_LOAD_MEDIA: P(p)->mTechnologies->Get((unsigned long)a[0])->LoadMedia(P(p));
         return 0;
@@ -151,13 +153,13 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
     case EE_SCREENS_SELTX_GHOST: EEGhostUnit::Create(T(p)->mEditor->GetMouseLocation(), (long)a[0], P(p),
                             a[1] != 0 ? ee_screens_seun_angle(T(p)->mEditor->GetUnitTab()) : 0.0f, false);
         return 0;
-    case EE_SCREENS_SELTX_RELOAD_TECH: P(p)->ReloadTechTree(a[0] != 0);
+    case EE_SCREENS_SELTX_RELOAD_TECH: ee_units_player_rest(P(p), EE_UNITS_PLAYER_REST_RELOAD_TECH_TREE, 0, a[0] != 0, 0);
         return 0;
     case EE_SCREENS_SELTX_FLUSH_PLACEMENTS: gWorld.FlushQueuedPlacements();
         return 0;
     case EE_SCREENS_SELTX_ADD_PENDING: P(p)->AddPendingUnits(0, 0);
         return 0;
-    case EE_SCREENS_SELTX_REMOVE_KILLED: P(p)->RemoveKilledUnits();
+    case EE_SCREENS_SELTX_REMOVE_KILLED: ee_rts_player_remove_killed_units(P(p));
         return 0;
     case EE_SCREENS_SELTX_RELEASE_PENDING: P(p)->ReleasePendingUnits();
         return 0;

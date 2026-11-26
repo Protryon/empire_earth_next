@@ -43,6 +43,7 @@
 #include "lle/FSMemoryFile.h"
 #include "rust/game/gamecpp.h"
 #include "rust/render/gfx.h"
+#include "rust/sim/tech.h"
 
 
 namespace {
@@ -123,9 +124,9 @@ extern "C" void ee_screenscpp_aeh_cloak(uintptr_t inT) { AE_T(inT)->SetCloakable
 extern "C" bool ee_screenscpp_aeh_has_camouflage(uintptr_t inT)
 { return gCivPowersManager.HasPower(AE_T(inT)->GetPlayer(), kCivPowerCamouflage); }
 extern "C" bool ee_screenscpp_aeh_camouflage_set_exists()
-{ return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet) != NULL; }
+{ return gUnitSetManager.GetSet((reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerCamouflage)))->mUnitSet) != NULL; }
 extern "C" bool ee_screenscpp_aeh_camouflage_set_contains(uintptr_t inT)
-{ return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(AE_T(inT)->mUnitClass->mUnitType); }
+{ return gUnitSetManager.GetSet((reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerCamouflage)))->mUnitSet)->Contains(AE_T(inT)->mUnitClass->mUnitType); }
 extern "C" bool ee_screenscpp_aeh_idle(uintptr_t inT) { return AE_T(inT)->GetCommandType() == kActionIdle; }
 extern "C" uint64_t ee_screenscpp_aeh_camouflage_timer(uintptr_t inT) { return (uint64_t)AE_T(inT)->mCamouflageTimer; }
 extern "C" int64_t ee_screenscpp_aeh_u32c(uintptr_t inT) { return (int64_t)AE_T(inT)->mU32C; }

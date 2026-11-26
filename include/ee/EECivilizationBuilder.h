@@ -9,10 +9,8 @@ class EECivilization;
 class UString;
 
 
-long CivBuilderEditCivilization();          // 0x280faf (pauses, then opens the builder for the current player)
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite);  // 0x28015d (the edited civilization as inName)
 void CivBuilderEditCurrentCivilization();   // 0x280bb1 (the current player's civilization edited)
-void CivBuilderFreeCivilization();          // the edited civilization deleted (delete gEditableCivilization)
 // EEProcessTimerExpired: ee/EEUserInterface.h; EESetCivBuilderButtonBlinking: ee/EmpireEarth.h
 
 #endif

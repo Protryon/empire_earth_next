@@ -19,6 +19,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEScenarioHost.h"
 #include "ee/EEUnitUtilities.h"   // EEReplaceQueuedTechnology
+#include "rust/game/rts.h"
 
 // The pathfinding functor of attribute 42 (its step: ee_sim scenario event.rs)
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
@@ -90,7 +91,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_FIRST_UNIT: return R(P(EEPlayer, 0)->mFirstUnit);
     case EE_SCENARIO_EV_NEXT_UNIT: return R(static_cast<EEUnit*>(P(EEUnit, 0)->mNext));
     case EE_SCENARIO_EV_PENDING_COUNT: return (int64_t)P(EEPlayer, 0)->GetNumPendingUnits();
-    case EE_SCENARIO_EV_PENDING_UNIT: return R(static_cast<EEUnit*>(P(EEPlayer, 0)->GetPendingUnit((unsigned long)a[1])));
+    case EE_SCENARIO_EV_PENDING_UNIT: return R(static_cast<EEUnit*>(static_cast<RTSUnit*>(ee_rts_player_pending_unit(P(EEPlayer, 0), (unsigned long)a[1]))));
     case EE_SCENARIO_EV_UNIT_TYPE: return (int64_t)P(EEUnit, 0)->mUnitClass->mUnitType;
     case EE_SCENARIO_EV_UNIT_HIT_POINTS: return (int64_t)P(EEUnit, 0)->GetHitPoints();
     case EE_SCENARIO_EV_UNIT_COMPLEX: return R(P(EEUnit, 0)->mComplexUnit);

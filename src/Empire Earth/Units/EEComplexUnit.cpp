@@ -80,6 +80,7 @@ UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 #include "rust/game/gamecpp.h"
 #include "rust/game/physics.h"
 #include "rust/game/screens.h"
+#include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 // Original cdecl sight-map family, retained as link calls (no helper implementations).
 void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
@@ -645,7 +646,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_KEEP_MAP_POSITION: theUnit->GetPosition(theUnit->mLastMapPosition); return 0;
     case EE_UNITS_CU_DESELECT: theUnit->mPlayer->DeselectUnit(theOther); return 0;
     case EE_UNITS_CU_PLAYER_VIEWS: return EECuObject<EEPlayer>((uint64_t)inB)->mViewedUnit == theOther;
-    case EE_UNITS_CU_PLAYER_UPDATE_SELECTION: EECuObject<EEPlayer>((uint64_t)inB)->UpdateSelection(NULL, true); return 0;
+    case EE_UNITS_CU_PLAYER_UPDATE_SELECTION: ee_units_selection(EECuObject<EEPlayer>((uint64_t)inB), 0, NULL, 0, NULL, 0, true, false); return 0;
     case EE_UNITS_CU_PLAYER_SELECTED_VIEWS: return EECuObject<EEPlayer>((uint64_t)inB)->mSelectedViewedUnit == theOther;
     case EE_UNITS_CU_PLAYER_CLEAR_SELECTED_VIEWED: EECuObject<EEPlayer>((uint64_t)inB)->SetSelectedViewedUnit(NULL); return 0;
     case EE_UNITS_CU_PART_KEEP_MAP_POSITION: theOther->GetPosition(theOther->mLastMapPosition); return 0;
@@ -686,7 +687,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_TIME_WARP_COLOR: theUnit->SetColor(kTimeWarpColor); return 0;
     case EE_UNITS_CU_IS_CLOAKED: return theUnit->IsCloaked();
     case EE_UNITS_CU_HAS_CAMOUFLAGE: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerCamouflage);
-    case EE_UNITS_CU_CAMOUFLAGE_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet);
+    case EE_UNITS_CU_CAMOUFLAGE_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet((reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerCamouflage)))->mUnitSet);
     case EE_UNITS_CU_VITAL_BUILDINGS: return theUnit->mPlayer->mNumVitalBuildings;
     case EE_UNITS_CU_CLOAKABLE: return theUnit->mIsCloakable;
     case EE_UNITS_CU_CLOAKED_FIELD: return theUnit->mIsCloaked;
@@ -934,7 +935,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UPGRADE_FLIGHT_TIME: return EECuObject<EEUnitClassUpgrade>(inA)->mFlightTime;
     case EE_UNITS_CU_UPGRADE_RELOAD_TIME: return EECuObject<EEUnitClassUpgrade>(inA)->mReloadTime;
     case EE_UNITS_CU_HAS_CAMOUFLAGE_POWER: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerCamouflage);
-    case EE_UNITS_CU_CAMOUFLAGE_POWER_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet);
+    case EE_UNITS_CU_CAMOUFLAGE_POWER_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet((reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerCamouflage)))->mUnitSet);
     case EE_UNITS_CU_SET_CONTAINS_UNIT: return EECuObject<EEUnitSet>(inA)->Contains(EECuObject<EEComplexUnit>((uint64_t)inB)->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_COMPLEX_COPY: ee_units_complex_copy((uint32_t)inB, theUnit, EECuObject<EEComplexUnit>((uint64_t)inC), EECuObject<EeUnitsComplexCopyIn>(inA)); return 0;
     case EE_UNITS_CU_UPDATE_CAMOUFLAGE_COMMAND: theUnit->UpdateCamouflage(theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0); return 0;

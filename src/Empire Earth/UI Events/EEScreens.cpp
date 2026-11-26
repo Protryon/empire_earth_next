@@ -112,6 +112,8 @@ extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-ou
 #include "rust/game/gamecpp.h"
 #include "rust/game/physics.h"
 #include "rust/game/screens.h"
+#include "rust/sim/tech.h"
+#include "rust/sim/units.h"
 
 // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it): stored in EEGlobals.cpp (ee/EEGlobalStorage.h),
 // constructed here, where its definition was
@@ -188,7 +190,7 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
     case EE_SCREENS_LE_RULE_RESOURCE_LEVELS: return (uint32_t)EEGetNumberOfResourceLevels();
     case EE_SCREENS_LE_RULE_RESOURCE_LEVEL_NAME: return (uint32_t)EEGetResourceLevel((long)inArg)->GetNameID();
     case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME: return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
-    case EE_SCREENS_LE_RULE_EPOCH_TITLE: return (uint32_t)EEEpochTitleID((long)(int32_t)inArg);
+    case EE_SCREENS_LE_RULE_EPOCH_TITLE: return (uint32_t)(long)ee_tech_epoch_title_id((int32_t)((long)(int32_t)inArg));
     case EE_SCREENS_LE_RULE_GENERATORS: return (uint32_t)EERMGetNumberOfGenerators();
     case EE_SCREENS_LE_RULE_ENGINES: return (uint32_t)(unsigned long)ee_cp_engine_choice_count();
     case EE_SCREENS_LE_RULE_DEFAULT_COLOUR: return inArg < 16 ? (uint32_t)gDefaultPlayerColors[inArg] : 0;
@@ -750,7 +752,7 @@ extern "C" void ee_screenscpp_main_form_background_visible(uint32_t inId, bool i
 extern "C" void ee_screenscpp_formation_set_b5c(uintptr_t inFormation)
 { reinterpret_cast<EEFormation*>(inFormation)->mB5C = true; }
 extern "C" void ee_screenscpp_selected_group_set_formation(uintptr_t inFormation)
-{ gWorld.mPlayers[gWorld.mCurrentPlayer]->mSelectedGroup->SetFormation(reinterpret_cast<EEFormation*>(inFormation)); }
+{ ee_units_group_set_formation(gWorld.mPlayers[gWorld.mCurrentPlayer]->mSelectedGroup, reinterpret_cast<EEFormation*>(inFormation)); }
 extern "C" void ee_screenscpp_formation_dereference(uintptr_t inFormation)
 { reinterpret_cast<EEFormation*>(inFormation)->Dereference(); }
 extern "C" void ee_screenscpp_bitmap_set_corners(uintptr_t inForm, uint32_t inControl, float inTlu, float inTlv, float inTru, float inTrv, float inBru, float inBrv, float inBlu, float inBlv)
@@ -849,7 +851,7 @@ extern "C" void ee_screenscpp_cb_list_set_sort(uintptr_t inList, bool inValue)
 extern "C" void ee_screenscpp_cb_list_set_colour(uintptr_t inList, float inRed, float inGreen, float inBlue)
 { static_cast<EECBUIListBox*>(C(inList))->mC13C = GEColor(inRed, inGreen, inBlue); }
 extern "C" void ee_screenscpp_pdcs_civs_clear() { EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs).clear(); }
-extern "C" void ee_screenscpp_pdcs_civs_get() { gCivilizationManager.GetCivilizations(EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs)); }
+extern "C" void ee_screenscpp_pdcs_civs_get() { ee_screens_civm_civilizations((uintptr_t)&(EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs)), 0, true); }
 extern "C" uint32_t ee_screenscpp_pdcs_civs_count() { return (uint32_t)EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs).size(); }
 extern "C" uintptr_t ee_screenscpp_civ_request_new()
 { return (uintptr_t)static_cast<NEMessage*>(new EEMRecord(kMessageCivUpgradesRequested, {gWorld.mCurrentPlayer, 0, EEScratch<std::vector<EECivUpgrade>>(kScratchPdcsUpgrades), EEScratch<UWideString>(kScratchPdcsName)})); }
@@ -1130,7 +1132,7 @@ extern "C" uint32_t ee_screenscpp_pgs_window_height(uintptr_t inForm)
 // ---- the original dispatcher chain's cases (screens_calls.rs; each one statement)
 #define MGF(inForm) static_cast<EEUIFMainGame*>(F(inForm))
 static const unsigned long kScreensAxes[] = {kMouseXAxis, kMouseYAxis, kMouseMiddleButton, kMouseZAxis};
-extern "C" void ee_screenscpp_sc_hk_update_selection() { gWorld.GetCurrentPlayer()->UpdateSelection(NULL, true); }
+extern "C" void ee_screenscpp_sc_hk_update_selection() { ee_units_selection(gWorld.GetCurrentPlayer(), 0, NULL, 0, NULL, 0, true, false); }
 extern "C" void ee_screenscpp_sc_hk_reset_saved() { gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, true); }
 extern "C" void ee_screenscpp_sc_hk_group_button(uintptr_t inForm, uint32_t inControl)
 { EEUIShell::Op(F(inForm)->GetControl(inControl), EE_SCREENS_SKOP_SG_SET_UNIT, (int64_t)gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit()); }
@@ -1188,7 +1190,7 @@ extern "C" bool ee_screenscpp_sc_pgs_is_bitmap(uintptr_t inForm, uint32_t inCont
 extern "C" void ee_screenscpp_sc_pgs_protocol() { NEProtocol::GetProtocol(0, EEScratch<NEProtocol*>(kScratchPgsProtocol)); }
 extern "C" int32_t ee_screenscpp_sc_preferences_save() { return (int32_t)gGamePreferences.Save(); }
 extern "C" void ee_screenscpp_sc_pdcs_fill(uintptr_t inForm, uint32_t inControl)
-{ gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(F(inForm)->GetControl(inControl))); }
+{ ee_screens_civ_fill_list(static_cast<EECBUIListBox*>(F(inForm)->GetControl(inControl))); }
 extern "C" uintptr_t ee_screenscpp_sc_pdcs_control(uint32_t inIndex)
 { return (uintptr_t)EEScreensPdcsControl(inIndex); }
 extern "C" void ee_screenscpp_sc_pdcs_clear_stats() { EEScreensPdcsControl(4)->DeleteAllEntries(); }

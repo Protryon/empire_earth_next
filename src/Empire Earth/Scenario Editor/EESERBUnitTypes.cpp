@@ -34,6 +34,8 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/tech_tree.h"
+#include "rust/sim/tech.h"
 
 
 
@@ -246,7 +248,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPX_TT_IDS_CLEAR: sSepxIDs.clear();
         return 0;
-    case EE_SCREENS_SEPX_TT_IDS: gTechTree.GetNodeIDs(sSepxIDs);
+    case EE_SCREENS_SEPX_TT_IDS: ee_gamecpp_tech_node_ids(&gTechTree, true, 0, &sSepxIDs);
         return 0;
     case EE_SCREENS_SEPX_TT_COUNT: return (int32_t)sSepxIDs.size();
     case EE_SCREENS_SEPX_TT_CLEAR: SepxTechs(i[0])->clear();
@@ -362,7 +364,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPX_ADD_CONTROL: F(p)->AddControl(H(p), (unsigned long)i[0]);
         return 0;
-    case EE_SCREENS_SEPX_CIV_COUNT: return (int32_t)gCivilizationManager.GetNumCivilizations();
+    case EE_SCREENS_SEPX_CIV_COUNT: return (int32_t)(unsigned long)ee_tech_civ_civilization_count();
     case EE_SCREENS_SEPX_CIV_NAME_ID: return gCivilizationManager.GetCivilization((unsigned long)i[0]).mNameID;
     case EE_SCREENS_SEPX_CIV_FILE: return SepxWrite(UWideString(gCivilizationManager.GetCivilization((unsigned long)i[0]).mFileName), p, i);
     case EE_SCREENS_SEPX_FILES_CLEAR: sSepxFiles.clear();

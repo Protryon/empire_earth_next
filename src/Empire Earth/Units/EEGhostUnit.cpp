@@ -23,6 +23,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "rust/game/gamecpp.h"
 #include "rust/sim/app.h"
+#include "rust/sim/units.h"
 bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUnit's, before EEGoalQueueContainer's; ee/EEGhostUnit.h)
 
 long EETurnGatePart(GETransformation&, long, long);
@@ -166,7 +167,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_M_SET_PLAYER: theGhost->mPlayer = EEGhostObject<EEPlayer>((uint64_t)inB); return 0;
     case EE_UNITS_GHOST_M_SET_CLASS: theGhost->mUnitClass = EEGhostObject<EEUnitClass>((uint64_t)inB); return 0;
     case EE_UNITS_GHOST_M_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_GHOST_M_LOAD_CLASS_MEDIA: EEGhostObject<EEPlayer>(inA)->LoadUnitClassMedia((long)inB); return 0;
+    case EE_UNITS_GHOST_M_LOAD_CLASS_MEDIA: ee_units_player_rest(EEGhostObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)((long)inB), 0, 0); return 0;
     case EE_UNITS_GHOST_M_SET_CLASS_MEDIA: theGhost->mPlayer->SetUnitClassMedia((long)inB, 0x7f); return 0;
     case EE_UNITS_GHOST_M_POST_LOAD: gDataPreLoading->PostLoadUnitClass(EEGhostObject<EEPlayer>(inA)->mPlayerID, (long)inB); return 0;
     case EE_UNITS_GHOST_M_SET_NO_MEDIA: theGhost->mNoMedia = inB != 0; return 0;

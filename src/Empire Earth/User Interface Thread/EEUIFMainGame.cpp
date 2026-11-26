@@ -132,6 +132,7 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == sizeof(EeScreensFormCallObject
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
 #include "rust/sim/app.h"
+#include "rust/sim/tech.h"
 
 // (main_form.rs' sounds and strings and mouse_modes.rs' farms and keys equal the headers': hud_cpp_consts_tests.rs)
 
@@ -522,7 +523,7 @@ extern "C" void ee_screenscpp_mf_mouse_position(float inX, float inY) { gMouse->
 extern "C" void ee_screenscpp_mf_fill_hack(uintptr_t inRec) { static_cast<EEUIFMGUnitHack*>(MF(inRec)->mUnitHack)->FillComboBox(); }
 extern "C" bool ee_screenscpp_mf_has_techs() { return gWorld.GetCurrentPlayer()->mTechnologies != NULL; }
 extern "C" void ee_screenscpp_mf_text_epoch_title(uintptr_t inRec)
-{ gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch), R(inRec)->mText); }
+{ gResource->GetString((long)ee_tech_epoch_title_id((int32_t)(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch)), R(inRec)->mText); }
 extern "C" void ee_screenscpp_mf_unit_info_background(uintptr_t inRec)
 { MF(inRec)->mUnitInfoBackground = MF(inRec)->GetBackgroundByID(0x64); }
 extern "C" void ee_screenscpp_mf_media_old_load(uintptr_t inRec)

@@ -39,6 +39,7 @@
 
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
 #include "ee/EEUnitUtilities.h"   // EEUpgradeHitPoints
+#include "rust/sim/units.h"
 
 // chain at 0x681426 (wrapper)
 //   object 0x9654c0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -86,7 +87,7 @@ extern "C" int64_t ee_screenscpp_civh_population_limit(int32_t inPlayer)
 extern "C" void ee_screenscpp_civh_recompute_area_effects(int32_t inPlayer)
 { CIVH_P(inPlayer)->SuggestRecomputeAllAreaEffects(); }
 extern "C" void ee_screenscpp_civh_show_selection_areas(int32_t inPlayer)
-{ CIVH_P(inPlayer)->mSelectedGroup->ShowSelectionAreas(); }
+{ ee_units_group_do(CIVH_P(inPlayer)->mSelectedGroup, 7, NULL); }
 extern "C" void ee_screenscpp_civh_research(int32_t inPlayer, int64_t inKind)
 { CIVH_P(inPlayer)->GetTechTree()->Research((long)inKind, NULL); }
 extern "C" uintptr_t ee_screenscpp_civh_node(int32_t inPlayer, int64_t inKind)

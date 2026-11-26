@@ -80,7 +80,9 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 #include "rust/base/math.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
+#include "rust/game/tech_tree.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 
 // what one effect's run keeps between its world calls (entry.rs makes and frees it: EE_SCENARIO_WORLD_RUN_*) (ee_scenario effect.rs, effect_ai.rs, task.rs): the
@@ -232,7 +234,7 @@ extern "C" int64_t ee_scenariocpp_world_class(void*, uint32_t inOp, const int64_
     case EE_SCENARIO_WK_SIGHT_OFF: SMEUnitOf(a[0])->mComplexUnit->SightOffHere(); return 0;
     case EE_SCENARIO_WK_SIGHT_ON: SMEUnitOf(a[0])->SightOnHere(); return 0;
     case EE_SCENARIO_WK_HERDS_CLEAR: sSMEHerds.clear(); return 0;
-    case EE_SCENARIO_WK_HERDS: SMEPlayerOf(a[0])->GetHerdsOfType(sSMEHerds, (long)a[1]); return 0;
+    case EE_SCENARIO_WK_HERDS: ee_units_player_rest(SMEPlayerOf(a[0]), EE_UNITS_PLAYER_REST_HERDS_OF_TYPE, (uint64_t)(uintptr_t)&sSMEHerds, (long)a[1], 0); return 0;
     case EE_SCENARIO_WK_HERD_COUNT: return (int64_t)sSMEHerds.size();
     case EE_SCENARIO_WK_HERD_AT: return SMEPtr(sSMEHerds[(size_t)a[0]]);
     case EE_SCENARIO_WK_HERD_ACTIVE: return ((EEHerd*)(intptr_t)a[0])->mIsActive = a[1] != 0;
@@ -382,7 +384,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_GROUP_SPREAD_AT_UNIT: inRun->mGroup->SpreadAroundTile(SMEUnit(a[0])->GetTileX(), SMEUnit(a[0])->GetTileY());
         return 0;
     case EE_SCENARIO_WX_GROUP_SPREAD_AROUND: inRun->mGroup->SpreadAroundUnit(SMEUnit(a[0]), SMEUnit(a[0])->GetTileX(), SMEUnit(a[0])->GetTileY()); return 0;
-    case EE_SCENARIO_WX_GROUP_CLEAR_GOAL: inRun->mGroup->ClearGoal();
+    case EE_SCENARIO_WX_GROUP_CLEAR_GOAL: ee_units_group_do(inRun->mGroup, 16, NULL);
         return 0;
     case EE_SCENARIO_WX_GOAL_GATHER: return SMEPtr(inRun->mGroupGoal = EEUGRust::NewGather(SMEUnit(a[0]), NULL, true));
     case EE_SCENARIO_WX_GOAL_ATTACK: return SMEPtr(inRun->mGroupGoal = EEUGRust::NewAttackUnit(inRun->mGroup->GetFirstUnit(), SMEUnit(a[0]), true, false));
@@ -435,7 +437,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_GROUP_FINISH: inRun->mGroup->Finish();
         return 0;
-    case EE_SCENARIO_WX_GROUP_ADD_REJECTED: inRun->mGroup->AddMember(inRun->mRejected[(size_t)a[0]], true);
+    case EE_SCENARIO_WX_GROUP_ADD_REJECTED: ee_units_group_do(inRun->mGroup, true ? 13 : 14, inRun->mRejected[(size_t)a[0]]);
         return 0;
     case EE_SCENARIO_WX_ORDER_REPAIR: SMEComplex(a[0])->OrderRepair(SMEUnit(a[1]));
         return 0;
@@ -456,7 +458,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_CAL_CLEAR: inRun->mCalamities.clear();
         return 0;
-    case EE_SCENARIO_WX_NODE_IDS: SMEPlayer(a[0])->GetTechTree()->GetNodeIDs(inRun->mNodeIDs);
+    case EE_SCENARIO_WX_NODE_IDS: ee_gamecpp_tech_node_ids(SMEPlayer(a[0])->GetTechTree(), true, 0, &inRun->mNodeIDs);
         return 0;
     case EE_SCENARIO_WX_NODE_COUNT: return (int64_t)inRun->mNodeIDs.size();
     case EE_SCENARIO_WX_NODE_CALAMITY: return (int64_t)SMEPlayer(a[0])->GetTechTree()->Get(inRun->mNodeIDs[(size_t)a[1]])->mData->mCalamity;
@@ -501,7 +503,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_UNIT_GROUP_CREATE: return SMEPtr(inRun->mGroup = EEActiveGroup::New(SMEComplex(a[0])->mPlayer));
     case EE_SCENARIO_WX_UNIT_GROUP_PEND: SMEComplex(a[0])->mPlayer->AddPendingGroup(inRun->mGroup);
         return 0;
-    case EE_SCENARIO_WX_GROUP_ADD_COMPLEX: inRun->mGroup->AddMember(SMEComplex(a[0]), true);
+    case EE_SCENARIO_WX_GROUP_ADD_COMPLEX: ee_units_group_do(inRun->mGroup, true ? 13 : 14, SMEComplex(a[0]));
         return 0;
     case EE_SCENARIO_WX_LOCKED: return SMEComplex(a[0])->mIsLocked;
     case EE_SCENARIO_WX_SET_LOCKED: return SMEComplex(a[0])->mIsLocked = a[1] != 0;
@@ -538,7 +540,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_CIV_ADD: SMEPlayer(a[0])->mCivilization.AddPoints((long)a[1]);
         return 0;
-    case EE_SCENARIO_WX_CIV_BLINK: EESetCivBuilderButtonBlinking(true);
+    case EE_SCENARIO_WX_CIV_BLINK: ee_screens_cb_set_blinking(true);
         return 0;
     case EE_SCENARIO_WX_TRUMPETS: return EESoundObject::Get(kSoundTrumpets) != NULL;
     case EE_SCENARIO_WX_TRUMPETS_PLAY: EESoundObject::Get(kSoundTrumpets)->Play();
@@ -701,7 +703,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_TECH_SET_OBSOLETE: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->SetObsolete(false, false);
         return 0;
     case EE_SCENARIO_WX_TECH_NEEDS_MEDIA:
-        return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->NeedsUnitMedia() == true && !SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mIsUnitMediaLoaded;
+        return ee_gamecpp_tech_needs_unit_media(SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology), true) == true && !SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mIsUnitMediaLoaded;
     case EE_SCENARIO_WX_TECH_LOAD_MEDIA:
         SMEPlayer(a[0])->SetUnitClassMedia(SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass, 0x7f);
         return 0;
@@ -822,7 +824,7 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_RUN_CREATED: return (int64_t)inRun->mCreatedUnits.size();
     case EE_SCENARIO_WORLD_RUN_SET_UNITS: inRun->mObject->SetUnits(inRun->mCreatedUnits); return 0;
     // (the AI military effects' calls went with the C++ attack groups in main's stage 5: ee_scenario effect_ai.rs)
-    case EE_SCENARIO_WORLD_GROUP_ADD: inRun->mGroup->AddMember(SMEUnit(a[0])->mComplexUnit, true); return 0;
+    case EE_SCENARIO_WORLD_GROUP_ADD: ee_units_group_do(inRun->mGroup, true ? 13 : 14, SMEUnit(a[0])->mComplexUnit); return 0;
     case EE_SCENARIO_WORLD_GROUP_COUNT: return (int64_t)inRun->mGroup->GetNumUnits();
     case EE_SCENARIO_WORLD_GROUP_UNIT: return SMEID(inRun->mGroup->GetUnit((unsigned long)a[0]));
     case EE_SCENARIO_WORLD_GROUP_FIRST: return SMEID(inRun->mGroup->GetFirstUnit());

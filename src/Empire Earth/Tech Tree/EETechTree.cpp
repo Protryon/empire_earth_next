@@ -39,6 +39,7 @@
 #include "ee/EEUIFMainGame.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
+#include "rust/game/tech_tree.h"
 
 static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNodeID == 1000 &&
               IDS_PREHISTORIC_AGE == 30145, "ee_game tech_tree load.rs");
@@ -162,7 +163,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkGet: return P64(TREE->Get((long)a[0]));
     case O::TkSetRef: ((EeTechHostIo*)a[0])->node = TNODE->Ref();
         break;
-    case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
+    case O::TkNeedsUnitMedia: return ee_gamecpp_tech_needs_unit_media(TNODE, true);
     case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);
         break;
     case O::TkEpochReached: TPL->EpochReached((long)a[0]);

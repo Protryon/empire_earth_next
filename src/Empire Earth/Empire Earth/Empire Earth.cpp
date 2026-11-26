@@ -402,6 +402,8 @@ void EEReportLeakingUnits();
 #include "rust/game/physics.h"
 #include "rust/game/preload.h"
 #include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/game/tech_tree.h"
 #include "rust/ui/bgtableobj.h"
 
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
@@ -837,7 +839,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DbLoadUpgrade: return EEUCUpgradeTable::Load(SPEC);
     case O::DbLoadCPBehavior: return EECPBehavior::Load(SPEC);
     case O::DbLoadGameVariant: return EEGameVariant::Load(SPEC);
-    case O::DbLoadPremadeCivs: return gCivilizationManager.LoadPremadeCivilizations(SPEC);
+    case O::DbLoadPremadeCivs: return ee_screens_civm_load((uintptr_t)static_cast<FSFile*>(SPEC), 1);
     case O::UiInitialize: return ee_ui_initialize();
     case O::GfxEffectsSortMedia: EEGraphicEffect::SortMediaByKind();
         break;
@@ -889,7 +891,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::WorldTableClear: gWorldTable.Clear();
         break;
-    case O::TechTreeUnloadAll: gTechTree.UnloadAll();
+    case O::TechTreeUnloadAll: ee_gamecpp_tech_unload_all(&gTechTree);
         break;
     case O::CalamityManagerDestroy: USingleton<EECalamityManager>::DestroyInstance();
         break;
