@@ -18,6 +18,7 @@ pub mod capture_units;
 pub mod captured;
 pub mod cg_goal;
 pub mod cg_query;
+mod cg_view;
 pub mod cg_world;
 pub mod damage;
 pub mod damage_table;

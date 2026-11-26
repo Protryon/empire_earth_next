@@ -437,6 +437,9 @@ pub struct Game<'h>(pub &'h crate::combat::world::EeCombatWorldHost);
 #[cfg(not(test))]
 impl CgWorldHost for Game<'_> {
     fn w(&mut self, code: i32, object: u64, other: u64, a: &mut EeCombatWorldArgs) -> u64 {
+        if let Some(r) = crate::combat::cg_view::world_plain(code, object, other, a) {
+            return r;
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.0.op)(self.0.query.ctx, code, object, other, a) }
     }
