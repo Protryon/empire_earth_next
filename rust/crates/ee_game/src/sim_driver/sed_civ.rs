@@ -464,7 +464,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 upgrades(&upgrade_list(O::UpgradesCount, O::UpgradesAt, list))
             ));
             h(O::UpgradesFree, list, &[]);
-            gc::h(gc::O::SsDeleteString, name, &[]);
+            gc::h(gc::O::StrFree, name, &[]);
         }
         "apply" => {
             let player = gc::h(gc::O::WorldPlayer, 0, &[number(arg(2)) as i64]) as usize;

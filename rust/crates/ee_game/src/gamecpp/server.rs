@@ -216,11 +216,11 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
             return 0;
         }
         EE_NETMSG_SESS_LOCK_OPTIONS_WRITE => {
-            h(if on { O::SsOptionsWriteLock } else { O::SsOptionsWriteUnlock }, f, &[]);
+            h(if on { O::EntryOptionsWriteLock } else { O::EntryOptionsWriteUnlock }, f, &[]);
             return 0;
         }
         EE_NETMSG_SESS_LOCK_WORLD_WRITE => {
-            h(if on { O::SsWorldWriteLock } else { O::SsWorldWriteUnlock }, f, &[]);
+            h(if on { O::UsgWorldWriteLock } else { O::UsgWorldWriteUnlock }, f, &[]);
             return 0;
         }
         EE_NETMSG_SESS_LOCK_PING => {
@@ -360,7 +360,7 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
             let message = if slot == SS_SLOT_SERVER {
                 hp(O::SsSlotInfoServer, comms_of(f), &[index, session_objs::frame(f).protocol as i64])
             } else {
-                let address = Owned::new(O::SsNewString, O::SsDeleteString);
+                let address = Owned::new(O::StrNew, O::StrFree);
                 if slot != SS_SLOT_NONE {
                     h(O::SsClientAddress, comms_of(f), &[slot, address.0 as i64]);
                 }
@@ -427,14 +427,14 @@ fn post(f: P, action: P) {
 
 /// A string resource shown in the UI manager's message box (`cancel`: the cancel-game callback).
 fn display(f: P, text: i64, cancel: bool, flag: bool) {
-    let s = Owned::new(O::SsNewString, O::SsDeleteString);
+    let s = Owned::new(O::StrNew, O::StrFree);
     h(O::SsGetString, f, &[text, s.0 as i64]);
     h(O::SsDisplayMessage, f, &[s.0 as i64, cancel as i64, flag as i64]);
 }
 
 /// Back to the game list (the lobby service's leave).
 fn won_leave(f: P) {
-    h(O::SsWonClearGameList, f, &[]);
+    h(O::WonNetClearGameList, f, &[]);
     h(O::SsWonRejoinRoom, f, &[]);
 }
 
@@ -454,21 +454,21 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_UI_DISPLAY => display(f, v[1], v[2] != 0, v[3] != 0),
         EE_NETMSG_SESS_UI_CHAT_PLAYER => {
             // the game's line about player v2 (string v1 formats its name)
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            let format = Owned::new(O::SsNewString, O::SsDeleteString);
-            let name = Owned::new(O::SsNewString, O::SsDeleteString);
+            let text = Owned::new(O::StrNew, O::StrFree);
+            let format = Owned::new(O::StrNew, O::StrFree);
+            let name = Owned::new(O::StrNew, O::StrFree);
             h(O::SsGetString, f, &[v[1], format.0 as i64]);
             h(O::SsSprintfName, f, &[text.0 as i64, format.0 as i64, v[2]]);
             h(O::SsGetString, f, &[SS_IDS_MSG_GAME, name.0 as i64]);
             h(O::SsChatGameLine, f, &[name.0 as i64, text.0 as i64]);
         }
         EE_NETMSG_SESS_UI_CHAT_TEXT => {
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
+            let text = Owned::new(O::StrNew, O::StrFree);
             h(O::SsGetString, f, &[v[1], text.0 as i64]);
             h(O::SsChatText, f, &[text.0 as i64, v[2]]);
         }
         EE_NETMSG_SESS_UI_CLOSE_FORM => {
-            h(O::SsCloseForm, f, &[]);
+            h(O::UiCloseForm, f, &[]);
         }
         EE_NETMSG_SESS_UI_OPEN_FORM => {
             h(O::SsOpenForm, f, &[v[1]]);
@@ -497,8 +497,8 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
         }
         EE_NETMSG_SESS_UI_RETRY => {
             // the connecting box with the retries
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            let format = Owned::new(O::SsNewString, O::SsDeleteString);
+            let text = Owned::new(O::StrNew, O::StrFree);
+            let format = Owned::new(O::StrNew, O::StrFree);
             h(O::SsGetString, f, &[v[1], format.0 as i64]);
             h(O::SsSprintfRetry, comms_of(f), &[text.0 as i64, format.0 as i64]);
             h(O::SsDisplayMessage, f, &[text.0 as i64, 0, 0]);
@@ -506,15 +506,15 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_UI_LEAVE => {
             // back to the game list, the reason shown (with the host's version and ours) or the boot posted, then
             // disconnected
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            let format = Owned::new(O::SsNewString, O::SsDeleteString);
+            let text = Owned::new(O::StrNew, O::StrFree);
+            let format = Owned::new(O::StrNew, O::StrFree);
             if super::globals::have!(gWonNet) {
                 won_leave(f);
             }
             if v[2] == EE_NETMSG_SESS_LEAVE_BOOT {
                 post(f, hp(O::SsNewBootClient, f, &[v[1]]));
             } else if v[2] != EE_NETMSG_SESS_LEAVE_QUIET {
-                h(O::SsCloseForm, f, &[]);
+                h(O::UiCloseForm, f, &[]);
                 h(O::SsGetString, f, &[v[1], format.0 as i64]);
                 let versions = v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS;
                 if versions {
@@ -579,7 +579,7 @@ fn world(f: P, v: &[i64; 8]) -> i64 {
     match v[0] {
         EE_NETMSG_SESS_WORLD_PLAYER => h(O::WorldPlayer, 0, &[v[1]]),
         EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT => super::message::player_by_slot(v[1]) as i64,
-        EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::SsPlIsHuman, pl, &[]),
+        EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::TbIsHuman, pl, &[]),
         EE_NETMSG_SESS_WORLD_SLOT => prts(pl).mSlot as i64,
         EE_NETMSG_SESS_WORLD_HAS_HUMAN => h(O::SsPlHasHuman, pl, &[]),
         EE_NETMSG_SESS_WORLD_ID => prts(pl).mPlayerID as i64,
@@ -602,7 +602,7 @@ fn world(f: P, v: &[i64; 8]) -> i64 {
 fn xfer_game_file(f: P, load_type: i64, slot: i64) {
     let mut file: P = 0;
     if h(O::SsOpenSaveGame, f, &[(load_type == 2) as i64, ptr(&mut file)]) != 0 {
-        let header = Owned::new(O::SsNewHeader, O::SsDeleteHeader);
+        let header = Owned::new(O::PsHeaderNew, O::PsHeaderDelete);
         h(O::SsHeaderSetVersions, f, &[header.0 as i64]);
         let loaded =
             super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as *mut c_void) == 0;
@@ -650,8 +650,8 @@ fn comms(f: P, v: &[i64; 8]) {
             sv::ee_net_sv_unregister_slot(n(f).server, SS_SLOT_SERVER as u8);
             sv::ee_net_sv_register_slot(n(f).server, SS_SLOT_SERVER as u8);
             if net::present() {
-                h(O::SsCommsDelete, f, &[]);
-                h(O::SsCommsNewClient, f, &[]);
+                h(O::EntryDeleteCommunicationsKeep, f, &[]);
+                h(O::EntryNewClient, f, &[]);
                 ee_net::net::ffi_client::ee_net_cl_start_threads(net::global().client);
             }
         }
@@ -680,12 +680,12 @@ fn start(f: P, v: &[i64; 8]) {
         h(O::SsProtocolStatus, f, &[protocol as i64]);
     } else if v[0] == EE_NETMSG_SESS_START_RESUME {
         super::globals::graphics_post_resume();
-        while h(O::SsGfxPaused, f, &[]) != 0 {
+        while h(O::GfxIsPaused, f, &[]) != 0 {
             ee_base::plat_core::time::PlatSleep(1);
         }
     } else {
         h(O::SsPhysicsPostStart, f, &[]);
-        while h(O::SsTimerRunning, f, &[]) == 0 {
+        while h(O::PhysTimerRunning, f, &[]) == 0 {
             ee_base::plat_core::time::PlatSleep(1);
         }
         h(O::SsMainGameUiState0, f, &[]);
@@ -712,9 +712,9 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
     if h(O::ClNameLength, 0, &[name]) < 5 {
         return std::ptr::null_mut();
     }
-    let extension = Owned::new(O::SsNewString, O::SsDeleteString);
+    let extension = Owned::new(O::StrNew, O::StrFree);
     h(O::ClExtension, 0, &[name, extension.0 as i64]);
-    let file = hp(O::ClNewFileSpec, 0, &[]) as i64;
+    let file = hp(O::FileSpecNew, 0, &[]) as i64;
     h(O::ClFileSetVolume, 0, &[file]);
     let folder = if h(O::ClExtIsSaved, 0, &[extension.0 as i64]) != 0 {
         0
@@ -730,7 +730,7 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
     h(O::ClFileSetFile, 0, &[file, name]);
     let ok = if h(O::ClFileOpenRead, 0, &[file]) != 0 {
         h(O::ClFileClose, 0, &[file]);
-        let header = Owned::new(O::SsNewHeader, O::SsDeleteHeader);
+        let header = Owned::new(O::PsHeaderNew, O::PsHeaderDelete);
         h(O::SsHeaderSetVersions, 0, &[header.0 as i64]);
         super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as P as *mut c_void);
         if h(O::ClHeaderChecksum, 0, &[header.0 as i64]) as c_ulong == size {
@@ -754,9 +754,9 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
 /// responding (%d seconds)").
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_client_timeout_warning(remaining: c_ulong) {
-    let text = Owned::new(O::SsNewString, O::SsDeleteString);
-    let seconds = Owned::new(O::SsNewString, O::SsDeleteString);
-    let format = Owned::new(O::SsNewString, O::SsDeleteString);
+    let text = Owned::new(O::StrNew, O::StrFree);
+    let seconds = Owned::new(O::StrNew, O::StrFree);
+    let format = Owned::new(O::StrNew, O::StrFree);
     h(O::SsGetString, 0, &[SS_IDS_HOST_IS_NOT_RESPONDING, text.0 as i64]);
     h(O::SsGetString, 0, &[SS_IDS_SECONDS, seconds.0 as i64]);
     h(O::ClTimeoutFormat, 0, &[format.0 as i64, text.0 as i64, seconds.0 as i64]);

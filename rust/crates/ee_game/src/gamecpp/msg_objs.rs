@@ -65,7 +65,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     unit_type: c_long,
     kind: u8,
 ) -> *mut c_void {
-    let picked = Owned::new(O::C11UlongsNew, O::C11UlongsDelete);
+    let picked = Owned::new(O::MpColorSetNew, O::MpColorSetDelete);
     h(O::C11PickUnits, picked.0, &[pa(rectangle as P), unit_type as i64]);
     // only the low 32 (24) bits count
     let ids: Vec<u32> =

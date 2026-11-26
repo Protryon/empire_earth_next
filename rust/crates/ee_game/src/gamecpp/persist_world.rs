@@ -517,7 +517,7 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
         }
         EE_UNITS_WORLD_FOREST_RENEWAL => h(O::PwForestRenewal, u, &[]),
         EE_UNITS_WORLD_FOREST_TILES => {
-            let points = hp(O::PwPointsNew, 0, &[]);
+            let points = hp(O::DsPointsNew, 0, &[]);
             h(O::PwForestTiles, u, &[pa(points)]);
             let n = h(O::PwPointsCount, points, &[]) as usize;
             for t in 0..n {
@@ -718,12 +718,12 @@ fn gather_ghosts() -> (Vec<P>, Vec<P>) {
             let cx = hp(O::UnComplex, u, &[]);
             let queues = if cx != 0 { h(O::PwCxGoalQueueCount, cx, &[]) } else { 0 };
             for q in 0..queues {
-                let goals = h(O::PwCxGoalCount, cx, &[q]);
+                let goals = h(O::CxQueueSize, cx, &[q]);
                 for g in 0..goals {
                     let goal = hp(O::PwCxGoalAt, cx, &[q, g]);
-                    let attack = hp(O::PwAttackUnitCast, goal, &[]);
+                    let attack = hp(O::FxAttackUnitCast, goal, &[]);
                     if attack != 0 {
-                        add_held_ghost(hp(O::PwAttackTarget, attack, &[]), &mut dead, &mut simple);
+                        add_held_ghost(hp(O::FxGoalAttackTarget, attack, &[]), &mut dead, &mut simple);
                     } else {
                         let gather = hp(O::PwGatherGoalCast, goal, &[]);
                         if gather != 0 {
@@ -758,7 +758,7 @@ fn ghost_fields(u: P, io: &mut EeUnitsWorldIo) {
     if io.b != 0 {
         // a complex unit: built flag and placement
         io.v[6] = cxf(u).mIsBuilt as i64;
-        h(O::PwCxGetPlacement, u, &[io.m.as_mut_ptr() as usize as i64]);
+        h(O::EcLocation, u, &[io.m.as_mut_ptr() as usize as i64]);
     }
 }
 
@@ -826,7 +826,7 @@ pub extern "C" fn ee_gamecpp_find_loaded_ghost_unit(id: c_ulong) -> *mut c_void 
 
 /// The ids of a player's tech tree nodes (`GetNodeIDs`), with the tree (0 for none).
 fn tree_ids(pl: P) -> (P, Vec<c_long>) {
-    let tree = if pl != 0 { hp(O::PwPlayerTechTree, pl, &[]) } else { 0 };
+    let tree = if pl != 0 { hp(O::PlTechTree, pl, &[]) } else { 0 };
     let ids = Longs::new();
     if tree != 0 {
         h(O::PwTreeNodeIds, tree, &[pa(ids.0)]);

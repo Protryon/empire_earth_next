@@ -227,7 +227,7 @@ pub fn physics() -> EeSimDriverPhysics {
     if !p.present {
         return p;
     }
-    p.timer_running = gc::h(gc::O::SsTimerRunning, 0, &[]) != 0;
+    p.timer_running = gc::h(gc::O::PhysTimerRunning, 0, &[]) != 0;
     p.game_over = gc::h(gc::O::FwGameOver, 0, &[]) != 0;
     p.game_ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
     p.pt = physics_record().mNumTicksDone;

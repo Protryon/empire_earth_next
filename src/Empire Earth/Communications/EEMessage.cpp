@@ -445,13 +445,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::LobbyReadUnlock: gWorld.mLobbyOptions.mLock->ReadUnlock();
         break;
     // the user interface, the mouse
-    case O::UiPostAction: gUserInterface->PostAction((EEAction*)p);
-        break;
-    case O::ActionDereference: ((EEAction*)p)->Dereference();
-        break;
     case O::UiPostEvent: gUserInterface->PostEvent((UIEvent*)p, NULL);
-        break;
-    case O::EventDereference: ((UIEvent*)p)->Dereference();
         break;
     case O::UiSetLagStatus: gUserInterface->SetLagStatus((unsigned short)a[0], (unsigned char)a[1]);
         break;
@@ -524,9 +518,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11MsgBuildUndefined: ESVERIFY_AT("Undefined message type" == NULL, 1275);
         break;
     // a box selection (p the record; the picked ids a C++ vector)
-    case O::C11UlongsNew: return P64(new std::vector<unsigned long>);
-    case O::C11UlongsDelete: delete (std::vector<unsigned long>*)p;
-        break;
     case O::C11UlongsCount: return (int64_t)((std::vector<unsigned long>*)p)->size();
     case O::C11UlongsAt: return (int64_t)(*(std::vector<unsigned long>*)p)[a[0]];
     case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);

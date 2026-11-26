@@ -696,13 +696,13 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         }
         EE_NETMSG_WACT_POST_CHAT => {
             let action = hp(O::NewChatAction, m, &[(i[1] != 0) as i64]);
-            h(O::UiPostAction, action, &[]);
-            h(O::ActionDereference, action, &[]);
+            h(O::EntryPostAction, action, &[]);
+            h(O::EntryDereferenceAction, action, &[]);
         }
         EE_NETMSG_WACT_TIMER_EXPIRED => {
             let event = hp(O::NewTimerExpiredEvent, 0, &[]);
             h(O::UiPostEvent, event, &[]);
-            h(O::EventDereference, event, &[]);
+            h(O::EntryDereferenceEvent, event, &[]);
         }
         EE_NETMSG_WACT_START_GAME => {
             // every human has shown the main screen: the start at the offset time

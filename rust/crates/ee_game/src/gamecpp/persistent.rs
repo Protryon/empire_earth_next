@@ -101,11 +101,11 @@ pub struct Longs(pub P);
 
 impl Longs {
     pub fn new() -> Longs {
-        Longs(h(O::PvLongsNew, 0, &[]) as P)
+        Longs(h(O::LcLongVecNew, 0, &[]) as P)
     }
     pub fn to_vec(&self) -> Vec<c_long> {
-        let n = h(O::PvLongsCount, self.0, &[]) as usize;
-        (0..n).map(|i| h(O::PvLongsAt, self.0, &[i as i64]) as c_long).collect()
+        let n = h(O::LcLongVecSize, self.0, &[]) as usize;
+        (0..n).map(|i| h(O::LcLongVecAt, self.0, &[i as i64]) as c_long).collect()
     }
 }
 
@@ -117,7 +117,7 @@ impl Default for Longs {
 
 impl Drop for Longs {
     fn drop(&mut self) {
-        h(O::PvLongsDelete, self.0, &[]);
+        h(O::LcLongVecDelete, self.0, &[]);
     }
 }
 

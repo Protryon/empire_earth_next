@@ -124,7 +124,7 @@ pub fn file_digest(name: &str, out: &mut Vec<String>) {
     gc::h(gc::O::FileClose, spec, &[]);
     let done = |out: &mut Vec<String>, line: &str| {
         out.push(line.into());
-        gc::h(gc::O::SsDeleteHeader, header, &[]);
+        gc::h(gc::O::PsHeaderDelete, header, &[]);
         h(O::MemFree, memory, &[]);
         gc::h(gc::O::DxDelete, spec, &[]);
     };
