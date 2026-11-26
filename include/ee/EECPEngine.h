@@ -48,11 +48,6 @@ inline const EECPAIEntry* EECPAIByID(const std::string& inID)                  /
 {
     return ee_cp_engine_by_id((const uint8_t*)inID.data(), inID.size());
 }
-// classic, random, next (the first AI) or an id -> -1
-inline long EECPChoiceByName(const std::string& inName) { return (long)ee_cp_engine_choice_by_name(inName.c_str()); }
-// a hash of the AI folder's content (ais.json and every .lua by relative path; FNV-1a 32): part of the checksum a
-// joiner must match (EEInitializeNetwork), and logged at the start
-inline uint32_t EECPAIFolderHash() { return ee_cp_engine_folder_hash(); }
 
 // a log line "EE-AI engine <text>" (the debug output, the game log when open, EE-SIM's stderr)
 template <class... A> inline void EECPEngineLog(const char* inFormat, A... inArguments)

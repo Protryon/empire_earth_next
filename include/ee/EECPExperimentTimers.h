@@ -17,28 +17,4 @@ int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnit
 // the schedule's epoch and start, the prehistoric army's threat check and lift, the claim ranges' steps and last
 // step), 64 players each
 
-// the arrays, each as its length (64) and its values; Load reads into a copy and keeps the running
-// timers when the file is short
-inline long EECPSaveExperimentTimers(FSFile& outFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 0, &EESaveFilePrimitive);
-}
-inline long EECPLoadExperimentTimers(FSFile& inFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 1, &EESaveFilePrimitive);
-}
-
-// port (save 0.265, ee/EESaveGameFiles.h EESaveHasResourceState): the state FindResourceTarget reads outside the saved
-// objects: the claim ranges above and each computer player's danger zones (EECPResourceManager::mDangerZones). A load
-// started them empty: a loaded player's claim range was the first one and its first pass took other mines (seed 4's
-// 2100 s save). Load puts them in place at the loaded game's first tick
-inline long EECPSaveResourceState(FSFile& outFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 2, &EESaveFilePrimitive);
-}
-inline long EECPLoadResourceState(FSFile& inFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 3, &EESaveFilePrimitive);
-}
-
 #endif

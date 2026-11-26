@@ -15,7 +15,6 @@ public:
     EEAIAStarView() { this->mView.map = 0; this->mView.quiet = false; }
     // a modifier's view: the given map, its queries not noted when inQuiet
     EEAIAStarView(EEMap* inMap, bool inQuiet) { this->mView.map = inMap; this->mView.quiet = inQuiet; }
-    void SetMap(EEMap* inMap) { this->mView.map = inMap; }
 
 private:
     EeAStarWorldView mView;
