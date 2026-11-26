@@ -339,6 +339,22 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
     // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            // units round 14: CanReachTile's destination (the tile's corner and height, into f) and
+            // attach point (unused: the C++ statics until then)
+            EE_UNITS_CU_SET_DESTINATION => {
+                let tile = map_tile(b, c);
+                if tile == 0 {
+                    return None;
+                }
+                f[0] = b as c_long as f32;
+                f[1] = c as c_long as f32;
+                f[2] = *at::<f32>(tile as u64, l.tile_height);
+                0
+            }
+            EE_UNITS_CU_APPROACH_ATTACH => {
+                crate::units::uu_fill::game::ee_units_lf_attach_point(unit, &mut [0.0; 3]);
+                0
+            }
             // the unit's own members
             EE_UNITS_CU_T_WEAPON_TAG => i64::from(low32((*u.cx()).mWeaponTagPoint)),
             EE_UNITS_CU_T_SET_OWNER_FIELD => {

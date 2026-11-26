@@ -2322,6 +2322,9 @@ constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK = 290;
 /// the index of unit `a` in `mCitizenBuildQueue` (`std::find`; -1: none)
 constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_FIND = 291;
 
+/// `mCitizenBuildQueue[b]` (units round 14: the find is Rust's, cu_body.rs)
+constexpr static const int32_t EE_UNITS_CU_CITIZEN_AT = 14301;
+
 /// `mCitizenBuildQueue.erase(mCitizenBuildQueue.begin() + b)` (the single-iterator erase)
 constexpr static const int32_t EE_UNITS_CU_BUILD_QUEUE_ERASE_AT = 292;
 
@@ -3006,6 +3009,9 @@ constexpr static const int32_t EE_UNITS_CU_FANATICISM_PERIOD = 660;
 
 /// the fanaticism effect's `mParam<b>` (b 1..6; its bits)
 constexpr static const int32_t EE_UNITS_CU_FANATICISM_PARAM = 661;
+
+/// `static_cast<EeDataGraphicEffectFields*>(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect))` (units round 14)
+constexpr static const int32_t EE_UNITS_CU_FANATICISM_FIELDS = 14302;
 
 /// `SetColor(GEColor(f[0], f[1], f[2]))` (the function static `sColor`'s copy)
 constexpr static const int32_t EE_UNITS_CU_SET_COLOR = 662;
