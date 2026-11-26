@@ -1,27 +1,11 @@
-// C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
-// screens that are Rust's whole (rust/crates/ee_game/src/screens menus.rs: the main menu, the editors' sub-menu, the single
-// player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
-// 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
-// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys; diplomacy.rs; camera.rs:
-// the camera, scroll and zoom events; civ_builder.rs: the civilization builder's events; campaign_editor.rs: the
-// campaign editor's events): EEScreenEvent's
-// ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the game's calls the Rust
-// dispatchers make (ee_screenscpp_*; the plain toolkit calls are ee_screens toolkit.rs's, on the toolkit's Rust
-// objects). It replaces EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp,
-// EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp,
-// EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp, EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp,
-// EEUIEChatEvents.cpp, EEUIEHotKeyEvents.cpp, EEUIEDiplomacyEvents.cpp, EEUIECameraEvents.cpp,
-// EEUIEScrollZoomEvents.cpp, EEUIEWheelZoom.cpp, EEUIEFormationChange.cpp, EECBUIEvents.cpp and
-// EEUIECampaignEditorEvents.cpp.
+// C:\EEX\Empire Earth\UI Events: the UI events' units in one (LLE/UI round 2). Unit flags: the exe module set.
+//
+// port: EEScreens.cpp (the port's host of the screens, units.EXTRA_UNITS) and the two original units left beside it,
+// EEUIEScenarioIntroEvents.cpp (0x1e71cc..0x1e853a) and EEUIEWonNetArenaGameEvents.cpp (0x1e9fed..0x1eafcb), are each
+// a section here, headed by its path and keeping its comment. EEScreenEvent.cpp, the screen event class and its
+// factory, stays a leaf unit of its own. The includes are one list.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
-#include <string>
-#include <list>
-#include <set>
-
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
@@ -46,7 +30,6 @@
 #include "lle/UIBFull.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIFileComboBox.h"
-
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECommunications.h"
@@ -55,7 +38,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEServer.h"
-#include "ee/EEWonNet.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
@@ -104,9 +86,34 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEFormation.h"
 #include "ee/EEScreensShims.h"
-
-extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 #include "gx/GX.h"   // GXGameSize
+#include "lle/UIBlinkingButton.h"
+#include "lle/UIFontTable.h"
+#include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
+#include "ee/EEUICWonNetGamesBox.h"
+#include "ee/EEWonNetAvailableGameFormManager.h"
+#include "ee/EEUIEWonNetEvent.h"
+#include "ee/EEUICWonNetRoomsBox.h"
+#include "ee/EEUICWonNetStatBox.h"
+#include "rust/won_lobby/wonnet.h"
+
+// ==== EEScreens.cpp =================================================================================================
+// C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
+// screens that are Rust's whole (rust/crates/ee_game/src/screens menus.rs: the main menu, the editors' sub-menu, the single
+// player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
+// 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
+// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys; diplomacy.rs; camera.rs:
+// the camera, scroll and zoom events; civ_builder.rs: the civilization builder's events; campaign_editor.rs: the
+// campaign editor's events): EEScreenEvent's
+// ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the game's calls the Rust
+// dispatchers make (ee_screenscpp_*; the plain toolkit calls are ee_screens toolkit.rs's, on the toolkit's Rust
+// objects). It replaces EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp,
+// EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp,
+// EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp, EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp,
+// EEUIEChatEvents.cpp, EEUIEHotKeyEvents.cpp, EEUIEDiplomacyEvents.cpp, EEUIECameraEvents.cpp,
+// EEUIEScrollZoomEvents.cpp, EEUIEWheelZoom.cpp, EEUIEFormationChange.cpp, EECBUIEvents.cpp and
+// EEUIECampaignEditorEvents.cpp.
+extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 
 // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it): stored in EEGlobals.cpp (ee/EEGlobalStorage.h),
 // constructed here, where its definition was
@@ -115,7 +122,6 @@ EEUIFMainGame* gSavedMainGameForm;          // 0x563144 (.bss among the UI event
 
 // (EEScreenEvent::ProcessEvent, EECreateScreenEvent, the event group's ee_screenscpp_event and the grab scroll's
 // events: UI Events/EEScreenEvent.cpp)
-
 
 // the custom campaign form's no-campaigns message, closed
 static void EEScreensNoCustomCampaigns(UIForm* inForm) { ee_screens_event(EE_SCREENS_CC_NONE_FOUND, inForm, NULL); }
@@ -135,7 +141,6 @@ static void EEScreensDeleteSelectedFile(UIForm* inList) { reinterpret_cast<UIFil
 static void EEScreensDropSave(UIForm* inObject) { reinterpret_cast<UReferenceCounter*>(inObject)->Dereference(); }
 
 // ---- the campaign scenario select and scenario intro forms' (scenario_screens.rs)
-
 
 // the intro's scenario file (GetScenario's, for Start's load or game)
 static FSFileSpec& EEScreensScenario() { return EEScratch<FSFileSpec>(kScratchScenario); }
@@ -158,8 +163,6 @@ static void EEScreensCloseCampaign(UIForm* inForm) { ee_screens_event(EE_SCREENS
 #define GOP(inPlayer) reinterpret_cast<EEGameOptionsPlayer*>(inPlayer)
 // the saved game checks' (lobby_calls.rs lobby_load; the original EEScreensLobbyLoad's locals): the start check's
 // file, the header's options, the lobby options with the load type, the missing lines
-
-
 
 // a value of the rules' tables the lobby lists (EE_SCREENS_LE_RULE_*)
 static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
@@ -192,7 +195,6 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
     return 0;
 }
 
-
 static UWideString Text(const uint8_t* inText, size_t inLength) { return UWideString(std::string((const char*)inText, inLength).c_str()); }
 
 // ---- the hot keys' (hot_keys.rs): inForm is the main game form
@@ -219,7 +221,6 @@ extern "C" int32_t ee_screenscpp_sel_combo(uintptr_t inControl, unsigned long* i
 // ---- the chat log (chat_log.rs): its C++ entry points are inline (ee/EEUIEChatLogEvents.h); a saved game's reads
 // and writes
 
-
 #define CL_FILE(x) (*reinterpret_cast<FSFile*>(x))
 extern "C" int32_t ee_screenscpp_cl_read_ulong(uintptr_t inFile, unsigned long* inValue)
 { return (int32_t)CL_FILE(inFile).Read(*inValue); }
@@ -242,7 +243,6 @@ extern "C" int32_t ee_screenscpp_cl_write_colour(uintptr_t inFile)
 { return (int32_t)EEScratch<GEColor>(kScratchChatLogColour).Save(CL_FILE(inFile)); }
 
 // ---- the civilization builder's (civ_builder.rs): inForm is the builder's form or one of its dialogs
-
 
 // ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
 
@@ -278,7 +278,6 @@ static EECBUIListBox* EEScreensPdcsControl(unsigned long inIndex)
 
 // ---- the campaign editor's (campaign_editor.rs): inForm is the editor's form (24); its model is Rust's
 // (campaign_model.rs: the original's EECampaignEditorBehavior gCampaignEditor, 0x562df0), over the edited campaign
-
 
 // The model's host's state (campaign_model_calls.rs, EE_SCREENS_CEM_*): the edited campaign, the strings and the
 // files (the original model's calls: Campaign/EECampaignEditorBehavior.cpp)
@@ -1472,3 +1471,98 @@ extern "C" void ee_screenscpp_rc_go_exit() { EEExitGame(); }
 
 // TEST ONLY: the world lock, for the SGVW trace's note of the reading thread's holds (ee_game screens/sgvw.rs)
 extern "C" const void* ee_screenscpp_sgvw_world_lock() { return gWorld.mLock; }
+#undef GOPT
+#undef GOP
+#undef CL_FILE
+#undef DSUC
+#undef CEC
+#undef PGR
+#undef MGF
+
+// ==== EEUIEScenarioIntroEvents.cpp ==================================================================================
+// C:\EEX\Empire Earth\UI Events\EEUIEScenarioIntroEvents.cpp (file name inferred: no __FILE__; class prefixes
+// EEUIESIE, EEUISCIFormManager). The scenario introduction form's (0x13) form manager (its events are Rust's
+// whole: ee_screens scenario_screens.rs, over UI Events/EEScreens.cpp):
+// 0x1e71cc..0x1e853a (the save/load unit ends at 0x1e71cc; the scenario load unit starts at 0x1e853a). The form
+// manager's members come first; its ??_G (0x1e83cb) sits in the ??_G block after the last event, so the manager is
+// not a unit of its own (its only `new` is in Get). The ??_Gs of the classes this unit creates (Briefing, Movie,
+// SoundOver, Start) follow in declaration order; deque<UIEventTrigger>::push_back (UIManager::AddEventToTrigger,
+// SIE Open) closes the unit. Unit flags: the exe module set.
+// The manager's bodies are Rust's (UI lane round 9: ee_game screens sci_calls.rs) over the one-statement shims at
+// the end of this file; each member is one forward
+
+// ---- the shims (sci_calls.rs), each one statement on the manager (inM) or the main game form
+#define SCI(inM) reinterpret_cast<EEUISCIFormManager*>(inM)
+extern "C" void ee_screenscpp_sci_clear_loading(uintptr_t inM) { SCI(inM)->mIsLoadingFromGame = false; }
+extern "C" void ee_screenscpp_sci_clear_in_game(uintptr_t inM) { SCI(inM)->mIsInGame = false; }
+extern "C" void ee_screenscpp_sci_clear_ba0(uintptr_t inM) { SCI(inM)->mBA0 = false; }
+extern "C" void ee_screenscpp_sci_clear_campaign(uintptr_t inM) { SCI(inM)->mIsCampaign = false; }
+extern "C" void ee_screenscpp_sci_clear_scroll(uintptr_t inM) { SCI(inM)->mScrollBriefingToEnd = false; }
+extern "C" uintptr_t ee_screenscpp_sci_map(uintptr_t inM) { return (uintptr_t)SCI(inM)->mMap; }
+extern "C" uintptr_t ee_screenscpp_sci_file(uintptr_t inM) { return (uintptr_t)SCI(inM)->mFile; }
+extern "C" uintptr_t ee_screenscpp_sci_sound(uintptr_t inM) { return (uintptr_t)SCI(inM)->mSound; }
+extern "C" void ee_screenscpp_sci_delete_map(uintptr_t inM) { delete SCI(inM)->mMap; }
+extern "C" void ee_screenscpp_sci_delete_file(uintptr_t inM) { delete SCI(inM)->mFile; }
+extern "C" void ee_screenscpp_sci_delete_sound(uintptr_t inM) { delete SCI(inM)->mSound; }
+extern "C" void ee_screenscpp_sci_map_null(uintptr_t inM) { SCI(inM)->mMap = NULL; }
+extern "C" void ee_screenscpp_sci_file_null(uintptr_t inM) { SCI(inM)->mFile = NULL; }
+extern "C" void ee_screenscpp_sci_sound_null(uintptr_t inM) { SCI(inM)->mSound = NULL; }
+extern "C" uintptr_t ee_screenscpp_sci_form() { return (uintptr_t)gUIManager->GetFormByID(kFormScenarioIntro); }
+extern "C" uintptr_t ee_screenscpp_sci_form_manager(uintptr_t inForm)
+{ return (uintptr_t)static_cast<EEUISCIFormManager*>(reinterpret_cast<UIForm*>(inForm)->GetFormManager()); }
+extern "C" uintptr_t ee_screenscpp_sci_new() { return (uintptr_t)new EEUISCIFormManager; }
+extern "C" void ee_screenscpp_sci_form_set_manager(uintptr_t inForm, uintptr_t inM)
+{ reinterpret_cast<UIForm*>(inForm)->SetFormManager(SCI(inM)); }
+extern "C" void ee_screenscpp_sci_map_name(uintptr_t inM, void* inOut)
+{ EEShimOut(inOut, SCI(inM)->MapFileName()); }
+extern "C" void ee_screenscpp_sci_sound_name(uintptr_t inM, void* inOut)
+{ EEShimOut(inOut, SCI(inM)->SoundFileName()); }
+extern "C" void ee_screenscpp_sci_file_name(uintptr_t inM, void* inOut)
+{ EEShimOut(inOut, SCI(inM)->mFile->GetFile()); }
+extern "C" int64_t ee_screenscpp_sci_open_map(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)EEOpenSaveGameFile(EEShimString(inName), "Scenarios\\", SCI(inM)->mMap); }
+extern "C" int64_t ee_screenscpp_sci_open_file(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)EEOpenSaveGameFile(EEShimString(inName), "Scenarios\\", SCI(inM)->mFile); }
+extern "C" int64_t ee_screenscpp_sci_find_file(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)gDataPath->FindFile(EEShimString(inName), SCI(inM)->mFile); }
+extern "C" int64_t ee_screenscpp_sci_open_sound(uintptr_t inM, EeScreensShimText inName)
+{ return (int64_t)EEOpenSaveGameFile(EEShimString(inName), "Sounds\\", SCI(inM)->mSound); }
+extern "C" void ee_screenscpp_sci_spec_from_map(uintptr_t inM, uintptr_t inSpec)
+{ *reinterpret_cast<FSFileSpec*>(inSpec) = *SCI(inM)->mMap; }
+extern "C" void ee_screenscpp_sci_spec_from_file(uintptr_t inM, uintptr_t inSpec)
+{ *reinterpret_cast<FSFileSpec*>(inSpec) = *SCI(inM)->mFile; }
+extern "C" void ee_screenscpp_sci_spec_from_sound(uintptr_t inM, uintptr_t inSpec)
+{ *reinterpret_cast<FSFileSpec*>(inSpec) = *SCI(inM)->mSound; }
+extern "C" bool ee_screenscpp_sci_has_instructions(uintptr_t inM)
+{ return SCI(inM)->mMediaStrings.GetSection(3).GetLength() > 0; }
+extern "C" bool ee_screenscpp_sci_has_hints(uintptr_t inM) { return SCI(inM)->mMediaStrings.GetSection(0).GetLength() > 0; }
+extern "C" bool ee_screenscpp_sci_has_history(uintptr_t inM)
+{ return SCI(inM)->mMediaStrings.GetSection(2).GetLength() > 0; }
+extern "C" uintptr_t ee_screenscpp_sci_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
+extern "C" uintptr_t ee_screenscpp_sci_main_control(uintptr_t inForm, uint32_t inControl)
+{ return (uintptr_t)static_cast<UIBlinkingButton*>(reinterpret_cast<EEUIFMainGame*>(inForm)->GetControl(inControl)); }
+extern "C" void ee_screenscpp_sci_set_info_blinking(uintptr_t inForm, bool inBlinking)
+{ reinterpret_cast<EEUIFMainGame*>(inForm)->mInfoBlinking = inBlinking; }
+extern "C" void ee_screenscpp_sci_button_blinking(uintptr_t inButton, bool inBlinking)
+{ reinterpret_cast<UIBlinkingButton*>(inButton)->SetIsBlinking(inBlinking); }
+extern "C" void ee_screenscpp_sci_button_shown(uintptr_t inButton)
+{ reinterpret_cast<UIBlinkingButton*>(inButton)->SetDisplayMode(kDisplayModeShown); }
+extern "C" void ee_screenscpp_sci_button_hidden(uintptr_t inButton)
+{ reinterpret_cast<UIBlinkingButton*>(inButton)->SetDisplayMode(kDisplayModeHidden); }
+#undef SCI
+
+// ==== EEUIEWonNetArenaGameEvents.cpp ================================================================================
+// C:\EEX\Empire Earth\UI Events\EEUIEWonNetArenaGameEvents.cpp (file name inferred: no __FILE__; class prefix
+// EEUIEWNAG). The WON game room form's (0x20) events: 0x1e9fed..0x1eafcb. Unit flags: the exe module set.
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs); each ProcessEvent is one call, and this unit
+// holds the screens' host (ee/EEWonFrontHost.inl), set at static initialisation.
+static void OnGamePassword(const char* inPassword);
+// gWonNet's user and server list: the Rust object's slots (R6 WON lobby and network round 35)
+static WONAPI::AuthContext* WonNetUser() { return static_cast<WONAPI::AuthContext*>(ee_won_wonnet_objects(gWonNet->mRust)->user); }
+static WONAPI::DirList& WonNetServers() { return *static_cast<WONAPI::DirList*>(ee_won_wonnet_objects(gWonNet->mRust)->servers); }
+
+#include "ee/EEWonFrontHost.inl"
+static const bool sWonFrontHostSet = (ee_won_front_set_host(WonFrontHost), true);
+
+// the password prompt's callback: joins the selected WON game with the password typed
+static void OnGamePassword(const char* inPassword) { ee_won_front_call(EeWonFrontCall::AgOnGamePassword, NULL, (intptr_t)inPassword); }
