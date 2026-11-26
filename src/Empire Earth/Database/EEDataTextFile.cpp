@@ -67,11 +67,6 @@ void EELoadRules(FSPath* inPath)
     ee_gamecpp_db_load_rules(inPath);
 }
 
-void EEDumpRules()
-{
-    ee_gamecpp_db_dump_rules();
-}
-
 // ------------------------------------------------------------------------- round 10, lane B: the text tables' C++
 
 int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);

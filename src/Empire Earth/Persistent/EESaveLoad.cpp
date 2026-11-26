@@ -87,13 +87,6 @@ long SaveGame(const UString& inFileName, unsigned long inTime, bool inFlag, UStr
     return ee_gamecpp_ps_save_game(&inFileName, inTime, inFlag, &inDescription);
 }
 
-// Writes the game into memory and then to the file (deleting the old text twin first) and reports "Game saved." or
-// an error message; returns the first error (0x14d34b)
-long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime)
-{
-    return ee_gamecpp_ps_save_to_file(&inFile, inTime);
-}
-
 // Checks a save's players against the lobby (scenario slots for a multiplayer scenario, else every lobby player must
 // be a saved one and all saved humans present); lists the problems, returns whether there are none
 bool EECheckSavedGameOptions(EEGameOptions& inSaved, EEGameOptions& inCurrent, bool inFlag,

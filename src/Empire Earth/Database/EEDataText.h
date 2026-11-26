@@ -46,8 +46,5 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
 // EEGetRules(), through the same Content as the db tables (references by id). A missing document keeps the
 // defaults; a broken one stops the game with its message. EEInitializeDatabase calls it first.
 void EELoadRules(FSPath* inPath);
-// EE_DUMP_CONTENT: appends the rules' content dump (after the db tables are loaded: the binary load's songs come from
-// dbmusic's flags)
-void EEDumpRules();
 
 #endif
