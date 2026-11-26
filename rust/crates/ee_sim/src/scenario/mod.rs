@@ -85,6 +85,7 @@ pub mod unit_change;
 pub mod unit_views;
 pub mod world_compose;
 pub mod world_route;
+pub mod world_views;
 
 #[cfg(test)]
 mod cpp_consts_tests;

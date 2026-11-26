@@ -415,6 +415,13 @@ mod game {
     /// A world call: the C++ host world_route.rs names for `op` (the C++ dispatcher's range tests, in its order).
     unsafe extern "C" fn world(ctx: *mut c_void, op: u32, args: *const i64) -> i64 {
         use crate::scenario::world_route::{route, EeScenarioWorldRoute as R};
+        // the reads the world views answer (world_views.rs)
+        // SAFETY: the host table's contract: six arguments, `ctx` the operation's live context
+        if let Some(value) =
+            unsafe { crate::scenario::world_views::answer(ctx, op, &*(args as *const [i64; 6]), &Look) }
+        {
+            return value;
+        }
         let f = match route(op) {
             R::ChangeUnit => sys::ee_scenariocpp_world_cu,
             R::Class => sys::ee_scenariocpp_world_class,
@@ -427,6 +434,17 @@ mod game {
         };
         // SAFETY: the host table's contract, passed through to the host that answers `op`
         unsafe { f(ctx, op, args) }
+    }
+
+    /// The world views' lookups through the C++ host: `gWorld.GetUnit(id)`, an effect's record.
+    struct Look;
+    impl crate::scenario::world_views::Lookups for Look {
+        fn unit(&self, id: i64) -> u64 {
+            en(EE_SCENARIO_EN_UNIT_BY_ID, std::ptr::null_mut(), id, 0) as u64
+        }
+        fn effect(&self, effect: *mut c_void) -> *const EeScenarioEffectFields {
+            en_ptr(EE_SCENARIO_EN_EFFECT_FIELDS, effect, 0) as *const EeScenarioEffectFields
+        }
     }
 
     /// The host table over the context `ctx` (it must outlive the calls).

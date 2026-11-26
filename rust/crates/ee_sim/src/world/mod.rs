@@ -19,7 +19,7 @@ pub mod unit_class_fields;
 pub mod unit_fields;
 pub mod view;
 #[cfg(test)]
-mod view_tests;
+pub(crate) mod view_tests;
 
 pub use layout::EeWorldLayout;
 pub use tech_view::{NodeView, TechTreeView};
