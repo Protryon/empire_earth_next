@@ -171,12 +171,6 @@ SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
 // Tags the event with this window and posts it to the window manager's queue (the base QueueEvent)
 void Window::QueueEvent(WindowEventBase* event) { event->mRec.window=(intptr_t)this; this->mManager->PostEvent(event); }
 
-// Not identified in the original exe
-Graphics& Window::GetGraphics()
-{
-    return this->mOffscreenImage->GetGraphics();
-}
-
 namespace WONAPI {
 Window* CreateNativeWindow() { return new Window; }
 

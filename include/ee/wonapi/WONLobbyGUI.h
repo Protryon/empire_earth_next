@@ -451,11 +451,6 @@ public:
     void SetDefaultButton(Button*); // 0x2f79c0: keeps the button (held)
     bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; }
     virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); }
-    // the config's writes (DialogConfig)
-    // the status dialog keeps the drag across its resize (Virtual08 ends it)
-    bool IsDragging() { return this->DCall(EeWonDlgCall::GetField,(intptr_t)EeWonDlgField::Dragging)!=0; }
-    void SetDragging(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::Dragging,v); }
-
     EeWonDialog* mDlg;
 private:
     intptr_t DCall(EeWonDlgCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_dlg_call(this->mDlg,c,a,b,cc); }
@@ -767,17 +762,14 @@ public:
     void LayoutThumb(bool changePos) { this->Call(EeWonBarCall::LayoutThumb,changePos); } //3061d0
     // the parts the skins, the configs and the scroller read and set
     Button* GetUpArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,0); }
-    void SetUpArrow(Button* b) { this->Call(EeWonBarCall::SetPart,0,(intptr_t)static_cast<Component*>(b)); }
     Button* GetDownArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,1); }
     Button* GetScrollRect() { return (Button*)this->Call(EeWonBarCall::GetPart,2); }
     void SetScrollRect(Button* b) { this->Call(EeWonBarCall::SetPart,2,(intptr_t)static_cast<Component*>(b)); }
     Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
-    void SetThumb(Component* c) { this->Call(EeWonBarCall::SetPart,3,(intptr_t)c); }
     bool IsVertical() { return this->Call(EeWonBarCall::IsVertical)!=0; }
     int GetPosition() { return (int)this->Call(EeWonBarCall::GetPosition); }
     void SetPosition(int p) { this->Call(EeWonBarCall::SetPosition,p); } // the field only (the scroller's update)
     void SetRange(int total,int page) { this->Call(EeWonBarCall::SetRange,total,page); }
-    void SetLineScrollSizes(int up,int down) { this->Call(EeWonBarCall::SetLineScrollSizes,up,down); }
     EeWonScrollbar* mRust;
 private:
     intptr_t Call(EeWonBarCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_bar_call(this->mRust,c,a,b,cc); }
@@ -812,7 +804,6 @@ public:
     void SetScrollbar(Scrollbar* s) { this->SCall(EeWonScrollerCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } //305760
     void AddControls() { this->SCall(EeWonScrollerCall::AddControls); } //305860
     Scrollbar* GetScrollbar(bool vertical) { return (Scrollbar*)this->SCall(EeWonScrollerCall::GetScrollbar,vertical); }
-    void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
     bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
     void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); }
 };
@@ -1152,7 +1143,6 @@ public:
 // wrapped text.
 class Graphics {
 public:
-    bool BlendSupported() { return true; }
     void SetColor(DWORD c) { this->GCall(EeWonGfxCall::SetColor, (int)c); } //326ce0
     DWORD GetStandardColor(int i) { return this->GCall(EeWonGfxCall::StandardColor, i); }
     void SetSysColor(int i) { this->GCall(EeWonGfxCall::SetSysColor, i); }
@@ -1160,16 +1150,12 @@ public:
     Font* GetFont() const { return (Font*)this->mG.font; }
     DisplayContext* GetContext() const { return (DisplayContext*)this->mG.context; }
     void Translate(int dx, int dy) { this->GCall(EeWonGfxCall::Translate, dx, dy); }
-    void SetPixel(int x, int y, DWORD c) { this->GCall(EeWonGfxCall::SetPixel, x, y, (int)c); }
     void DrawImage(Image* i, int x, int y) { this->GCall(EeWonGfxCall::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
     void DrawImage(Image* i, int x, int y, int l, int t, int w, int h) { this->GCall(EeWonGfxCall::DrawImagePart, x, y, l, t, w, h, 0, i); }
     void DrawLine(int x1, int y1, int x2, int y2) { this->GCall(EeWonGfxCall::DrawLine, x1, y1, x2, y2); }
     void DrawRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawRect, x, y, w, h); }
     void FillRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillRect, x, y, w, h); }
     void FillRectBlend(int x, int y, int w, int h, int n) { this->GCall(EeWonGfxCall::FillRectBlend, x, y, w, h, n); }
-    void DrawDottedRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawDottedRect, x, y, w, h); }
-    void FillEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillEllipse, x, y, w, h); }
-    void DrawArc(int x, int y, int w, int h, int s, int a) { this->GCall(EeWonGfxCall::DrawArc, x, y, w, h, s, a); }
     void DrawString(const GUIString& s, int x, int y) { this->GCall(EeWonGfxCall::DrawString, x, y, s.length(), 0, 0, 0, 0, &s); }
     void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
     void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
@@ -1397,7 +1383,6 @@ public:
     void CheckResize(DWORD t) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)t); } //32ac90
     void SuspendRootResize(bool s) { this->WCall(EeWonWinCall::SuspendRootResize, s ? 1 : 0); }
     NativeImage* GetOffscreenImage() { return this->mOffscreenImage.get(); }
-    Graphics& GetGraphics();
     void RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
     bool IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }
     void ShowNativeCursor(bool s) { this->WCall(EeWonWinCall::ShowNativeCursor, s ? 1 : 0); }
@@ -1464,7 +1449,6 @@ public:
     int GetMouseX() const { return (int)this->WField(EeWonWinField::MouseX); }
     int GetMouseY() const { return (int)this->WField(EeWonWinField::MouseY); }
     bool IsMouseInClientArea() const { return this->WField(EeWonWinField::InClient) != 0; }
-    bool IsShowing() const { return this->WField(EeWonWinField::IsShowing) != 0; }
     void SetIsShowing(bool inShowing) { this->WSet(EeWonWinField::IsShowing, inShowing ? 1 : 0); }
     bool IsPopup() const { return this->WField(EeWonWinField::IsPopup) != 0; }
     void SetIsPopup(bool inPopup) { this->WSet(EeWonWinField::IsPopup, inPopup ? 1 : 0); }
@@ -1818,7 +1802,6 @@ public:
     // the fields the lists, text areas, scrollers and lobby controls read and set
     int GetField(EeWonGuiField f) { return (int)this->ACall(EeWonPaneCall::GetField,(intptr_t)f); }
     void SetField(EeWonGuiField f,int v) { this->ACall(EeWonPaneCall::SetField,(intptr_t)f,v); }
-    int GetTotalHeight() { return this->GetField(EeWonGuiField::TotalHeight); }
     int GetTotalWidth() { return this->GetField(EeWonGuiField::TotalWidth); }
     int GetLeftPad() { return this->GetField(EeWonGuiField::LeftPad); }
     int GetRightPad() { return this->GetField(EeWonGuiField::RightPad); }
@@ -1906,7 +1889,6 @@ public:
     bool HasMoreSelections() { return this->Call(EeWonListCall::HasMoreSelections)!=0; }
     ListItem* GetNextSelection() { return (ListItem*)this->Call(EeWonListCall::GetNextSelection); }
     int GetTextColor(); //2fb520
-    int GetItemPosAtYPos(int y) { return (int)this->Call(EeWonListCall::GetItemPosAtYPos,y); }
     ListItem* FindSelectableItem(int start,bool up,bool opposite=true) { return (ListItem*)this->Call(EeWonListCall::FindSelectableItem,start,up,opposite); }
     bool ListFlagSet(int flags) { return (this->Call(EeWonListCall::ListFlags)&flags)!=0; }
     ListItem* GetSelItem() { return (ListItem*)this->Call(EeWonListCall::SelItem); }
@@ -1914,10 +1896,7 @@ public:
     const SelectionColor& GetSelColor() { return this->mSelColor; } // inline
     void SetFont(Font* theFont) { this->mFont=theFont; }
     int GetPaintWidth() const { return (int)const_cast<ListArea*>(this)->Call(EeWonListCall::PaintWidth); } // the layout width the items paint to
-    void SetPaintWidth(int w) { this->Call(EeWonListCall::SetPaintWidth,w); } // a subclass's own paint
     ListSortType GetSortType() const { return static_cast<ListSortType>(const_cast<ListArea*>(this)->Call(EeWonListCall::SortType)); }
-    void SetSortTypeOnly(ListSortType t) { this->Call(EeWonListCall::SetSortTypeOnly,t); } // without sorting (MultiListArea::SetSortColumn)
-    void ClearMouseItem() { this->Call(EeWonListCall::ClearMouseItem); } // the field only (not the virtual NotifyMouseItemGone)
     SmartPtr<ListAreaToolTip> mItemToolTip; // made on the first item tip
     SmartPtr<Font> mFont;
     int mTextColor;
