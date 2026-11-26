@@ -2,7 +2,7 @@
 // EEMusicManager.cpp and EETeam.cpp). 0x13242b..0x136b6d: the game preferences (config.yaml; the original: the registry). EEGamePreferences::sDefaultSettings'
 // init chain first, then EEGameSettings' dtor and ctor (the defaults), EEGamePreferences' ctor/dtor, IsNotKorean,
 // the resource defaults, Load (+ the game options), Save (+ the game options) and SetLastGameOptions.
-// The settings file calls go through the UConfig member (the original's URegistry at +0).
+// The settings file calls are the Rust's (ee_game app settings.rs; the original's URegistry member at +0).
 #include <windows.h>
 #include "gx/GX.h"
 
@@ -18,7 +18,7 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
-// the settings are kept in config.yaml (lle/UConfig.h; the original kept them in the registry key
+// the settings are kept in config.yaml (platform/PlatConfig.h; the original kept them in the registry key
 // HKCU\Software\Mad Doc Software\EE-AOC and its "Game Options" subkey)
 
 // 0x529b90 (init chain 0x13242b: ctor 0x132435, atexit 0x13243f, guarded dtor 0x13244b)

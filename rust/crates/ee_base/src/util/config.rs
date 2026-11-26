@@ -1,4 +1,5 @@
-//! `UConfig`'s reads (lle/UConfig.h) over the settings file (`PlatConfig*`, plat_core config.rs).
+//! `UConfig`'s reads over the settings file (`PlatConfig*`, plat_core config.rs). lle/UConfig.h went in LLE/UI
+//! round 2 (no C++ caller).
 
 use std::ffi::c_char;
 

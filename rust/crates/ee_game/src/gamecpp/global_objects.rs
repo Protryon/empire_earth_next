@@ -257,10 +257,9 @@ struct GameSettingsM {
     mWonNetPassword: UStringM,
 }
 
-/// `EEGamePreferences`: the settings file (UConfig: no data, one byte), the settings.
+/// `EEGamePreferences`: the settings.
 #[repr(C)]
 struct GamePreferencesM {
-    mConfig: u8,
     mSettings: GameSettingsM,
 }
 
