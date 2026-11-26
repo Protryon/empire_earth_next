@@ -363,8 +363,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
-        break;
     case O::WWriteLock: W->mLock->WriteLock();
         break;
     case O::WWriteUnlock: W->mLock->WriteUnlock();
@@ -694,8 +692,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CampaignProgressDelete: delete (EECampaignProgress*)p;
         break;
     case O::CampaignRestoreCivilization: ((EECampaignProgress*)p)->RestoreCivilization(UWideString(gDefaultCampaignUser), ((EEGameState*)a[0])->mGameOptions.mCampaignName, ((EEGameState*)a[0])->mGameOptions.mScenarioName, ((EEGameState*)a[0])->mGameOptions.mCampaignChecksum);
-        break;
-    case O::ClearFormManager: ee_screens_chat_log_clear();
         break;
     case O::StrNew: return P64(new UWideString);
     case O::StrFree: delete (UWideString*)p;
