@@ -17,6 +17,7 @@
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
+#include "ee/EEFormation.h"
 #include "ee/EETown.h"
 #include "ee/EECPPlacement.h"
 
@@ -177,6 +178,11 @@ void EEWorldLayoutRegister()
     theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
     theLayout.world_units_first = offsetof(EEWorld, mUnits) + offsetof(RTSDummyUnit, mFirst);   // units round 14
     theLayout.unit_in_store = offsetof(RTSUnit, mInUnitStore);
+    theLayout.formation_fields = offsetof(EEFormation, mOrientation);
+    // EeFormationFields (ee_sim formations units.rs): the members after mOrientation in its order
+    static_assert(offsetof(EEFormation, mCenter) - offsetof(EEFormation, mOrientation) == 64 && offsetof(EEFormation, mHeading) - offsetof(EEFormation, mOrientation) == 76
+                  && offsetof(EEFormation, mType) - offsetof(EEFormation, mOrientation) == 80 && offsetof(EEFormation, mB5C) - offsetof(EEFormation, mType) == sizeof(long)
+                  && offsetof(EEFormation, mMinRadius) - offsetof(EEFormation, mB5C) == 4, "EeFormationFields");
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

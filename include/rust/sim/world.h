@@ -824,6 +824,8 @@ struct EeWorldLayout {
   /// `RTSWorld::mUnits.mFirst` (the chain's first unit; a unit's next is its `mTileNode->mNext`), `RTSUnit::mInUnitStore`
   uint64_t world_units_first;
   uint64_t unit_in_store;
+  /// `EEFormation::mOrientation`: where the formation's `EeFormationFields` start (formations/units.rs; units round 14)
+  uint64_t formation_fields;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

@@ -4,23 +4,10 @@
 // New (the units' lane, round 2): one concrete class. The original's eight subclasses (EEFShortLine, EEFLongLine,
 // EEFLooseLine, EEFStaggeredLine > EEFLine; EEFDeepWedge, EEFShallowWedge > EEFWedge; EEFInwardCircle,
 // EEFOutwardCircle > EEFCircle) only gave a type its constructor's members (a line's offsets, a wedge's arms, a
-// circle's mode and arc): those are Rust's (rust/crates/ee_sim/src/formations, capture.rs shape_of), and Place is one
-// call there by type. What a caller sets stays here: the frame and a circle's minimum radius.
+// circle's mode and arc): those are Rust's (rust/crates/ee_sim/src/formations, capture.rs shape_of), and so are Place
+// and Arrange. What a caller sets stays here: the frame and a circle's minimum radius.
 #ifndef EE_EEFORMATION_H
 #define EE_EEFORMATION_H
-
-class EEComplexUnit;
-class EEGroup;
-
-// one unit's place in a formation (0x14 bytes, the element of Arrange's output; the implicit operator= is the
-// out-of-line 0x1a95d6, the copy is bitwise; provisional names)
-struct EEFormationSlot {
-    // default ctor (EEFLine::Place 0x4dd9a3 zeroes mUnit/mHeading after the GE3DPoint ctor)
-    EEFormationSlot() : mUnit(NULL), mHeading(0.0f) {}
-    GE3DPoint mPosition;                    // +0x00
-    EEComplexUnit* mUnit;                   // +0x0c
-    float mHeading;                         // +0x10
-};
 
 class EEFormation : public UReferenceCounter {
 public:
@@ -32,10 +19,8 @@ public:
     {
     }
     virtual ~EEFormation() {}
-    // the group's units into a vector, then Place
-    void Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlots);
-    // the formation's slots for inUnits: lines and wedges replace outSlots, a circle appends to it
-    void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);
+    // (Arrange and Place, the slots of a group's or a list's units: ee_sim formations units.rs over the members from
+    // mOrientation on, its EeFormationFields; EEWorldLayout.cpp registers and checks their place)
 
     bool IsCircle() const { return this->mType == 6 || this->mType == 7; }
     void SetCenter(const GE3DPoint& inCenter) { this->mCenter = inCenter; }

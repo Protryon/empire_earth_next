@@ -218,20 +218,9 @@ constexpr static const int32_t EE_CP_HERD_UNIT_WAYPOINTS = 64;
 
 constexpr static const int32_t EE_CP_HERD_UNIT_MODEL = 65;
 
-/// `EEFormation::Create(6)`; the formation `b`'s `mCenter = (f0, f1, f2)`, `SetCenter(..)`, `SetMinRadius(f0)`,
-/// `mMinRadius = f0`, `Place` of the `input` units (the units after it into `list2`, the slots into `list`),
-/// `Dereference()`
+/// `EEFormation::Create(6)`; the formation `b`'s `Dereference()` (67..71, its members and Place: the formation's
+/// Rust record, formations/units.rs, units round 14)
 constexpr static const int32_t EE_CP_HERD_FORM_NEW = 66;
-
-constexpr static const int32_t EE_CP_HERD_FORM_CENTER = 67;
-
-constexpr static const int32_t EE_CP_HERD_FORM_SET_CENTER = 68;
-
-constexpr static const int32_t EE_CP_HERD_FORM_SET_MIN_RADIUS = 69;
-
-constexpr static const int32_t EE_CP_HERD_FORM_MIN_RADIUS = 70;
-
-constexpr static const int32_t EE_CP_HERD_FORM_PLACE = 71;
 
 constexpr static const int32_t EE_CP_HERD_FORM_DEREF = 72;
 

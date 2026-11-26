@@ -9,6 +9,9 @@ use std::ffi::c_void;
 use crate::units::ag::{self, AgHost, EeUnitsAgGroup, EeUnitsAgUnit, LocationFields, NewLocation, Rect, Slot};
 use crate::units::group_host::GameGroups;
 use crate::units::group_obj as go;
+use crate::formations::units::{formation_arrange, formation_fields};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::GeTransformation;
 
 /// One host operation's values.
 #[repr(C)]
@@ -61,15 +64,6 @@ pub const EE_UNITS_AG_GROUP_UNIT: i32 = 2;
 pub const EE_UNITS_AG_MOVES_TOGETHER: i32 = 5;
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 pub const EE_UNITS_AG_SEND: i32 = 8;
-/// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
-/// heading)
-pub const EE_UNITS_AG_ARRANGE: i32 = 9;
-/// group `a`'s formation: `mCenter = io.p` (units round 12)
-pub const EE_UNITS_AG_FORMATION_CENTER: i32 = 13000;
-/// group `a`'s formation: `mHeading = io.f`
-pub const EE_UNITS_AG_FORMATION_HEADING: i32 = 13001;
-/// group `a`'s formation: `mOrientation.SetOrientationYPR(io.f, 0, 0)`
-pub const EE_UNITS_AG_FORMATION_ORIENT: i32 = 13002;
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 pub const EE_UNITS_AG_WORLD_SPHERE: i32 = 15;
 /// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
@@ -251,14 +245,21 @@ impl AgHost for AgGame {
     }
     fn arrange(&mut self, g: u64, center: [f32; 3], yaw: Option<f32>) -> Vec<Slot> {
         // the original's statements in order: the centre, with a yaw the heading and the orientation, then Arrange
-        let mut io = EeUnitsAgIo { p: center, f: yaw.unwrap_or(0.0), ..Default::default() };
-        self.io(EE_UNITS_AG_FORMATION_CENTER, g, 0, 0, 0, &mut io);
-        if yaw.is_some() {
-            self.io(EE_UNITS_AG_FORMATION_HEADING, g, 0, 0, 0, &mut io);
-            self.io(EE_UNITS_AG_FORMATION_ORIENT, g, 0, 0, 0, &mut io);
+        // (the formation's members: its Rust record, formations/units.rs; units round 14)
+        // SAFETY: a live group
+        let formation = unsafe { (*(g as go::G)).mFormation } as u64;
+        // SAFETY: the group's live formation
+        let f = unsafe { formation_fields(formation) };
+        f.mCenter = center;
+        if let Some(yaw) = yaw {
+            f.mHeading = yaw;
+            let mut t = GeTransformation { m: f.mOrientation };
+            t.set_orientation(RotationOrder::Ypr, yaw, 0.0, 0.0);
+            f.mOrientation = t.m;
         }
-        let items = self.list(EE_UNITS_AG_ARRANGE, g, 0, 0, &mut io);
-        items.into_iter().map(|(unit, position, heading)| Slot { position, unit, heading }).collect()
+        // SAFETY: the group's live formation and units
+        let slots = unsafe { formation_arrange(formation, g) };
+        slots.into_iter().map(|s| Slot { position: s.position, unit: s.unit as u64, heading: s.heading }).collect()
     }
     fn new_group(&mut self, g: u64) -> u64 {
         // SAFETY: as above

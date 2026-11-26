@@ -239,6 +239,8 @@ pub struct EeWorldLayout {
     /// `RTSWorld::mUnits.mFirst` (the chain's first unit; a unit's next is its `mTileNode->mNext`), `RTSUnit::mInUnitStore`
     pub world_units_first: u64,
     pub unit_in_store: u64,
+    /// `EEFormation::mOrientation`: where the formation's `EeFormationFields` start (formations/units.rs; units round 14)
+    pub formation_fields: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

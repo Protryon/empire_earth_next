@@ -12,6 +12,7 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::astar::pm::{FileIn, FileOut, Item, RequestRecord};
 use crate::astar::request;
+use crate::formations::units::{formation_fields, formation_place};
 use crate::units::group_obj::{
     self as go, EeUnitsGroup, EeUnitsPlayerGroups, FormationState, GroupHost, GroupUnit, PathWaits, SavedGroup,
     SavedPaths, G,
@@ -91,14 +92,6 @@ pub const EE_UNITS_GROUP_OP_FORMATION_NEW: i32 = 4;
 pub const EE_UNITS_GROUP_OP_FORMATION_REFERENCE: i32 = 5;
 /// formation `a`'s `Dereference()`
 pub const EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE: i32 = 6;
-/// formation `a`'s `mType`
-pub const EE_UNITS_GROUP_OP_FORMATION_KIND: i32 = 7;
-/// formation `a`'s `mCenter` into `io.p`
-pub const EE_UNITS_GROUP_OP_FORMATION_CENTER: i32 = 8;
-/// formation `a`'s `mCenter = io.p`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: i32 = 9;
-/// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
-pub const EE_UNITS_GROUP_OP_FORMATION_PLACE: i32 = 10;
 // (13 was terrain_flags: Rust since the paths lane's round 2)
 /// `gContinentManager.GetContinentID(a)`
 pub const EE_UNITS_GROUP_OP_CONTINENT_OF: i32 = 14;
@@ -164,18 +157,6 @@ pub const EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: i32 = 56;
 /// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
 pub const EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: i32 = 57;
 // the compound statements as one-statement operations (the groups lane, round 2)
-/// formation `a`'s `mOrientation` (16 floats) into `list`
-pub const EE_UNITS_GROUP_OP_FORMATION_ORIENTATION: i32 = 60;
-/// formation `a`'s `mOrientation` from `list`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION: i32 = 61;
-/// formation `a`'s `mHeading` into `f`
-pub const EE_UNITS_GROUP_OP_FORMATION_HEADING: i32 = 62;
-/// formation `a`'s `mHeading = f`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_HEADING: i32 = 63;
-/// formation `a`'s `mB5C`
-pub const EE_UNITS_GROUP_OP_FORMATION_B5C: i32 = 64;
-/// formation `a`'s `mB5C = c != 0`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_B5C: i32 = 65;
 /// the path subsector at (c, d)'s location's x
 pub const EE_UNITS_GROUP_OP_SUBSECTOR_X: i32 = 66;
 /// its y
@@ -313,39 +294,41 @@ impl GroupHost for GameGroups {
     fn formation_dereference(&mut self, formation: u64) {
         self.op(EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE, formation, 0, 0, 0);
     }
+    // the formation's members: its Rust record (formations/units.rs; units round 14)
     fn formation_kind(&mut self, formation: u64) -> i64 {
-        self.op(EE_UNITS_GROUP_OP_FORMATION_KIND, formation, 0, 0, 0)
+        // SAFETY: a live formation
+        unsafe { formation_fields(formation) }.mType as i64
     }
     fn formation_center(&mut self, formation: u64) -> [f32; 3] {
-        let mut io = EeUnitsGroupIo::default();
-        self.io(EE_UNITS_GROUP_OP_FORMATION_CENTER, formation, 0, 0, 0, &mut io);
-        io.p
+        // SAFETY: as above
+        unsafe { formation_fields(formation) }.mCenter
     }
     fn set_formation_center(&mut self, formation: u64, center: [f32; 3]) {
-        let mut io = EeUnitsGroupIo { p: center, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_CENTER, formation, 0, 0, 0, &mut io);
+        // SAFETY: as above
+        unsafe { formation_fields(formation) }.mCenter = center;
     }
     fn formation_place(&mut self, formation: u64, units: &[u64]) -> Vec<[f32; 3]> {
-        let mut io = EeUnitsGroupIo { list: units.as_ptr().cast(), len: units.len(), ..Default::default() };
-        self.fill(EE_UNITS_GROUP_OP_FORMATION_PLACE, formation, 0, &mut io).into_iter().map(|(_, _, p)| p).collect()
+        // SAFETY: a live formation and the group's live units
+        unsafe { formation_place(formation, units) }.into_iter().map(|s| s.position).collect()
     }
     fn formation_state(&mut self, formation: u64) -> FormationState {
-        let mut s = FormationState::default();
-        let mut io = EeUnitsGroupIo { list: s.orientation.as_mut_ptr().cast(), len: 16, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_ORIENTATION, formation, 0, 0, 0, &mut io);
-        s.center = self.formation_center(formation);
-        self.io(EE_UNITS_GROUP_OP_FORMATION_HEADING, formation, 0, 0, 0, &mut io);
-        s.heading = io.f;
-        s.b5c = self.op(EE_UNITS_GROUP_OP_FORMATION_B5C, formation, 0, 0, 0) != 0;
-        s
+        // SAFETY: as above
+        let f = unsafe { formation_fields(formation) };
+        let mut orientation = [0.0f32; 16];
+        for (k, v) in f.mOrientation.iter().flatten().enumerate() {
+            orientation[k] = *v;
+        }
+        FormationState { orientation, center: f.mCenter, heading: f.mHeading, b5c: f.mB5C }
     }
     fn set_formation_state(&mut self, formation: u64, s: &FormationState) {
-        let mut io = EeUnitsGroupIo { list: s.orientation.as_ptr().cast(), len: 16, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION, formation, 0, 0, 0, &mut io);
-        self.set_formation_center(formation, s.center);
-        let mut io = EeUnitsGroupIo { f: s.heading, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_HEADING, formation, 0, 0, 0, &mut io);
-        self.op(EE_UNITS_GROUP_OP_FORMATION_SET_B5C, formation, 0, i64::from(s.b5c), 0);
+        // SAFETY: as above
+        let f = unsafe { formation_fields(formation) };
+        for (k, v) in f.mOrientation.iter_mut().flatten().enumerate() {
+            *v = s.orientation[k];
+        }
+        f.mCenter = s.center;
+        f.mHeading = s.heading;
+        f.mB5C = s.b5c;
     }
     fn terrain_flags(&mut self, unit: u64) -> [u8; 17] {
         // the unit's class's GetTerrainFlags (gather_spot.rs)

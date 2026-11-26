@@ -78,37 +78,12 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         return 0;
     case EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE: theFormation->Dereference();
         return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_KIND: return theFormation->mType;
-    case EE_UNITS_GROUP_OP_FORMATION_CENTER: memcpy(io->p, &theFormation->mCenter, sizeof io->p);
-        return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: memcpy(&theFormation->mCenter, io->p, sizeof io->p);
-        return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_PLACE: {
-        EEComplexUnit* const* theList = static_cast<EEComplexUnit* const*>(io->list);
-        std::vector<EEComplexUnit*> theUnits(theList, theList + io->len);
-        std::vector<EEFormationSlot> theSlots;
-        theFormation->Place(theUnits, theSlots);
-        for (size_t i = 0; i < theSlots.size(); i++)
-            ee_units_group_push(io->out, 0, 0, reinterpret_cast<const float(*)[3]>(&theSlots[i].mPosition.mX));
-        return 0;
-    }
     case EE_UNITS_GROUP_OP_CONTINENT_OF: return gContinentManager.GetContinentID(theUnit);
     case EE_UNITS_GROUP_OP_CONTINENT_AT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     case EE_UNITS_GROUP_OP_SUBSECTOR_X: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetX();
     case EE_UNITS_GROUP_OP_SUBSECTOR_Y: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetY();
     case EE_UNITS_GROUP_OP_MAP_WIDTH: return (int64_t)gMapWidth;
     case EE_UNITS_GROUP_OP_MAP_HEIGHT: return (int64_t)gMapHeight;
-    case EE_UNITS_GROUP_OP_FORMATION_ORIENTATION: memcpy(const_cast<void*>(io->list), &theFormation->mOrientation, 16 * sizeof(float));
-        return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION: memcpy(&theFormation->mOrientation, io->list, 16 * sizeof(float));
-        return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_HEADING: io->f = theFormation->mHeading;
-        return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_SET_HEADING: theFormation->mHeading = io->f;
-        return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_B5C: return theFormation->mB5C;
-    case EE_UNITS_GROUP_OP_FORMATION_SET_B5C: theFormation->mB5C = inC != 0;
-        return 0;
     case EE_UNITS_GROUP_OP_INTERFACE: return gUserInterface != NULL;
     case EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO: gUserInterface->PostRefreshSavedGroup((long)inC);
         return 0;

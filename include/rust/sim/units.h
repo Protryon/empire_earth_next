@@ -373,19 +373,6 @@ constexpr static const int32_t EE_UNITS_AG_MOVES_TOGETHER = 5;
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 constexpr static const int32_t EE_UNITS_AG_SEND = 8;
 
-/// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
-/// heading)
-constexpr static const int32_t EE_UNITS_AG_ARRANGE = 9;
-
-/// group `a`'s formation: `mCenter = io.p` (units round 12)
-constexpr static const int32_t EE_UNITS_AG_FORMATION_CENTER = 13000;
-
-/// group `a`'s formation: `mHeading = io.f`
-constexpr static const int32_t EE_UNITS_AG_FORMATION_HEADING = 13001;
-
-/// group `a`'s formation: `mOrientation.SetOrientationYPR(io.f, 0, 0)`
-constexpr static const int32_t EE_UNITS_AG_FORMATION_ORIENT = 13002;
-
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 constexpr static const int32_t EE_UNITS_AG_WORLD_SPHERE = 15;
 
@@ -6395,13 +6382,8 @@ constexpr static const int32_t EE_UNITS_GHOST_M_DO_SET_ANIMATION = 7;
 
 constexpr static const int32_t EE_UNITS_GHOST_M_DO_ADD_CHECKSUM = 8;
 
-/// the shared point `= GE3DPoint(f[0], f[1], f[2])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT = 800;
-
-/// `f[0..3] = ` the shared point
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_GOAL_POINT_OUT = 801;
-
-/// container `b`'s transport class's `FindBoardingLocation(a, b, GE3DPoint(f[0..3]), the shared point)`
+/// container `b`'s transport class's `FindBoardingLocation(a, b, GE3DPoint(f[0..3]), ` the point at `f[3..6])`
+/// (800 and 801, the shared point's store and read, are gone: the points travel in `f`, round 14)
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_BOARDING_FIND = 802;
 
 /// the shared unit list's `clear()`
@@ -6437,7 +6419,7 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TILE_X = 812;
 /// the tile list's `[i[0]].GetY()`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TILE_Y = 813;
 
-/// `gWorld.GetEffectManager()->CreateEffect(a, ` the shared point`, ` the mining beam `, &` the shared effect `, 0)`
+/// `gWorld.GetEffectManager()->CreateEffect(a, GE3DPoint(f[0..3]), ` the mining beam `, &` the shared effect `, 0)`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT = 814;
 
 /// `a->mFireEffect = ` the shared effect
@@ -6820,18 +6802,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_REFERENCE = 5;
 /// formation `a`'s `Dereference()`
 constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE = 6;
 
-/// formation `a`'s `mType`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_KIND = 7;
-
-/// formation `a`'s `mCenter` into `io.p`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_CENTER = 8;
-
-/// formation `a`'s `mCenter = io.p`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_CENTER = 9;
-
-/// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_PLACE = 10;
-
 /// `gContinentManager.GetContinentID(a)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_OF = 14;
 
@@ -6910,24 +6880,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS = 56;
 
 /// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES = 57;
-
-/// formation `a`'s `mOrientation` (16 floats) into `list`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_ORIENTATION = 60;
-
-/// formation `a`'s `mOrientation` from `list`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION = 61;
-
-/// formation `a`'s `mHeading` into `f`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_HEADING = 62;
-
-/// formation `a`'s `mHeading = f`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_HEADING = 63;
-
-/// formation `a`'s `mB5C`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_B5C = 64;
-
-/// formation `a`'s `mB5C = c != 0`
-constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_B5C = 65;
 
 /// the path subsector at (c, d)'s location's x
 constexpr static const int32_t EE_UNITS_GROUP_OP_SUBSECTOR_X = 66;
