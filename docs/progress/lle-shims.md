@@ -80,6 +80,79 @@ eemodel/storegate.py, xbuild.py tcptest, storegate/fakes.h) and tests (net, inpu
   ne_server_test), so a direct call would re-record them.
 - include/dx7 (not counted): DX7Rasterizer.h is an include list EERenderObject.cpp still uses.
 
+### Pass 2 (fork A2: branch `rust-lleui2-c`, 2026-11-26)
+
+From rust-lleui2 61544a7d6 (pass 1's forks and origin/rust batch 29 merged). `tools/port_metrics.py 61544a7d6 HEAD`:
+cpp_lines 87,963 -> 87,511 (**-452**), compiled files 251 -> 251, logic 12,126 -> 12,106, classes 720 -> 715.
+
+Four kinds of cut. (1) An `-O0` census: every unit compiled at `-O0` (`tools/clang_build.py --opt=-O0 --out
+build/o0`, cache off) emits every inline member and free inline it odr-uses and nothing else, so a member of an LLE
+class whose mangled name no object defines is called by no unit (virtuals, templates and windows.h's A/W renames
+excepted; tools and tests grepped before each deletion). It found what `dead_members.py` cannot (names used by other
+classes): GETransformation's 15, U2DSparseArray's 9, TMTimer's 8 (the game holds only its Rust timer), GELight's
+getters, GEBoundingBox's tests, GEColor::Normalize, four free inlines, and whole classes: UConfig (EEGamePreferences'
+empty member) and GEPoint (nothing made one; the 2D list's Points command was never recorded). (2) Host cases whose
+callee is a Rust call, now made by the Rust object (under `cfg(test)` the fake hosts still answer): the model
+manager's name, sub-model, size and verification; the DX7 objects' surface object, reference, allocated size, logical
+metrics and logical size (a `GESurface` read in place: cppobj.rs `CppSurface`), a window's platform window and the
+event dispatch; the 2D executor's bitmap, rhombus and line draws; the NE queues' verification and floating-point
+control and the client's ProcessLocalUserInput (a native host only: `QFfiHost::native`, `ClHost::native`); the sound
+objects' ESVerify and floating-point control (Sound Engine.cpp's three trampolines; golden_objects.rs keeps its fakes).
+(3) Fewer overloads: FSFile's and FSMemoryFile's 18 scalar virtuals each are two templates over one virtual byte read
+and write (`ReadBytes`/`WriteBytes`; an `int` promotion still writes the int32_t), UString's and UWideString's
+overloads that only converted the string to its text. (4) Headers folded into their one includer or a sibling, each
+class with its comment: TSEvent.h, TSReadWriteLock.h and TSThread.h into TSScheduler.h; GEVector.h into GE3DPoint.h,
+GE3DPlane.h into GE3DLine.h, GEOrientation.h into GETransformation.h, GEFontBitmap.h into GEFont.h, GELight.h into
+GERasterizer.h, GEPolygonArray.h into GEVertexArray.h, GEBoundingBox.h into GEModel.h, UMemoryPool.h into UList.h,
+SEScore.h into SEMixer.h, FSPersistentList.h into FSChunk.h, ESChecksum.h into LowLevelEngine.h; FSBasicFile (only
+constructors left) gone, FSFileSpec derives from FSFile; File System.h (FSInitialize's second declaration),
+U2DGeometry.h (the rmap gate's umbrella) gone; UGraph.h test-only (tests/util).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| 16aa74759 | UGraph.h test-only, U2DGeometry.h gone, FSBasicFile gone | -94 |
+| 303a19771 | GEPoint gone; the 2D executor only the texts | -38 |
+| 140d99b3d | NE queues: a native host's verification and floating-point control in Rust | -9 |
+| d152292e3 | the inline members no unit uses (the -O0 census) | -62 |
+| 46085e469 | UConfig gone; EEGamePreferences without its empty member | -33 |
+| 387b867d3 | the free inlines no unit calls (TMInitialize, TMGetMicroTime, UMSin, TSInitialize) | -10 |
+| ce14714d7 | FSGetVolumeAndDirectory (no caller) and File System.h gone | -20 |
+| cbc2ae240 | UString, UWideString: the overloads that only converted to the text | -22 |
+| 2d3812882 | Sound Engine.cpp's ESVerify and floating-point trampolines | -2 |
+| 23ad4d97b | GE model manager: a model's name, sub-model, size, verification in Rust | -7 |
+| d4baa1f2b | FSFile, FSMemoryFile: the scalars over ReadBytes/WriteBytes | -29 |
+| caf15b30d | NE client: ProcessLocalUserInput in Rust | -1 |
+| c9b218440 | DX7 surfaces and screens: the host cases that end in Rust | -17 |
+| 403c7b634 | TS headers into TSScheduler.h; GEVector, GE3DPlane, GEOrientation into their siblings | -48 |
+| 6614d4c26 | GEFontBitmap, GELight, GEPolygonArray, GEBoundingBox, UMemoryPool, SEScore folded | -44 |
+| 237c68e0e | FSPersistentList.h into FSChunk.h, ESChecksum.h into LowLevelEngine.h | -16 |
+| 7da82f784 | the Rust gate's fixes (a test build's surface size, clippy's Safety sections) | 0 |
+| d568176b3 | tools/harness/layout_gen.py: a member's path from its own depth | 0 |
+
+layout_gen.py's fix: it kept a member's previous sibling on the path stack (`del stack[depth:]` for a depth that
+counts from 1), so every class whose first member is a plain field named its siblings under that field
+(`EeAppSettingsFields`: `mMouseSensitivity.mSideScrollSpeed`); a class opening with a vtable pointer, a base or an
+empty member hid it. UConfig's empty member was that opener in EEGamePreferences, so its removal broke the layout test
+(global_objects.rs `offsets_match_the_build_layout`); the paths are right for every class now (harness self test
+PASS).
+
+Edits outside the lane's files: include/ee/EEGamePreferences.h (UConfig's member and include, 3 lines),
+EEPreferences.cpp (2 comments), rust/crates/ee_game gamecpp global_objects.rs (`GamePreferencesM` without `mConfig`;
+the layout test's comment), include/ee/EEGameState.h (ESChecksum.h's include), EEGraphicObject.h (GEVector.h's and
+GEOrientation.h's includes), EEDoppelgangerManager.h (UMemoryPool.h -> UList.h), EEUnit.h and EESELoadThread.h
+(comments), Empire Earth.cpp (FSPersistentList.h -> FSChunk.h), EEMusicManager.cpp (SEScore.h's include),
+EEWonNet.cpp (FSBasicFile.h's include); tools (storegate.cpp, fakes.h, digest.cpp, rmap_gate, layout_gen.py) and tests
+(util, fs, sound).
+
+What is left after pass 2: GELight (the game's one light, EERenderObject.cpp's `gU4E9198` poked by the graphics
+thread's Rust through nine host ops: the light as a Rust static of render_object.rs would take GELight and
+GERasterizer's AddLight/UpdateLight, a game core lane move); TMTimer (ctor, dtor and Rust(): the game could hold the
+EeTimeTimer itself, in Empire Earth.cpp and RTSPhysics.cpp); the texture host's GESurface reads (the store gate's
+memory surfaces); the NE message and file ops (NEMessage's virtuals are the game's messages; FSFile's are FSMemoryFile's
+too); XferExportSize (ee_sim netmsg's sizes, outside ee_net); URandom.h (tests/net/orig_q includes it); the headers the
+UI thread and UI Events units include by name (ISKeyboard.h, ISMouse.h, TSCriticalSection.h, TMPoll.h, SEMixer.h, ...)
+stay until those units take the umbrella.
+
 ## Round 14 (the LLE and UI floor lane `lu1`, branch `rust-lleui1`; fork `rust-lleui1-a`, 2026-11-24)
 
 Combined with UI round 17 (docs/progress/ui-cluster.md "Round 17": the lane, its measure and the UI half). The LLE
