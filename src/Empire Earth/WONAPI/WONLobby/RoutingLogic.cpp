@@ -131,26 +131,11 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // ---- the model
     // (the model's other values, and the routing records read into it, are its Rust objects': modelobj.rs route_op)
     case O::ServerNum: return b == 4 ? S(a)->GetName() == LobbyGetLastServerName() : S(a)->HasAddress(GetLobbyConfig()->mLanguage);
-    case O::ListNum: return b == 0 ? (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->GetCount() : L->Slot<LobbyServerList>(kRoutingServerList)->IsEmpty();
-    case O::ListAt: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->ServerAt((size_t)a);
-    case O::ListAddressIs: return S(b)->GetAddress() == L->Slot<LobbyServerList>(kRoutingServerList)->AddressAt((size_t)a);
     case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
     case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
-    case O::GameList:
-        switch (a) {
-        case 1: L->Slot<LobbyGameList>(kRoutingGameList)->Clear(); return 0;
-        case 2: L->Slot<LobbyGameList>(kRoutingGameList)->Rewind(); return 0;
-        case 3: return L->Slot<LobbyGameList>(kRoutingGameList)->HasMore();
-        case 4: return (intptr_t)L->Slot<LobbyGameList>(kRoutingGameList)->Next();
-        case 5: return (intptr_t)L->Slot<LobbyGameList>(kRoutingGameList)->GetGame((unsigned short)b);
-        case 6: L->Slot<LobbyGameList>(kRoutingGameList)->AddGame(GM(b)); return 0;
-        case 7: return Held(L->Slot<LobbyGameList>(kRoutingGameList)->RemoveGame((unsigned short)b));
-        case 8: return (intptr_t)L->Slot<LobbyGameList>(kRoutingGameList)->GetOrCreateGame((unsigned short)b, reinterpret_cast<bool*>(c));
-        }
-        return 0;
     // ---- the routing ops and connection (the ops' and connections' one-call cases are Rust's: netops.rs route_op)
     case O::RSetText: RO(a)->SetText((int)b, TX(c)); return 0;
     case O::RConnection: return (intptr_t)RO(a)->mConnection.get();
@@ -182,7 +167,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
-    case O::FriendServer: { IPAddr anAddress = F(a)->GetAddress(); return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(anAddress); }
     case O::DialogDo:
         switch (a) {
         case 1: return LobbyDoDialog(L->mDialog[kRoutingAddFriend].get());
@@ -273,7 +257,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::StatusOpServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(US(a)->GetDestAddr());
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
-    case O::ServerListFind: return (intptr_t)reinterpret_cast<LobbyServerList*>(a)->FindServer(RS(b)->GetAddr());
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteGroups), 0); return 0;
     case O::RoomDirServers: return Held(SmartPtr<ServerContext>(LobbyGetRoomDirServers()));
     case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), GetLobbyConfig()->mProductDirectory, 0x04000622, kDirTypes, 2));
@@ -289,6 +272,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
 void* RoutingLogicMake(RustLogic* inSelf)
 {
     return (inSelf->mSlot[kRoutingServerList] = new LobbyServerList, inSelf->mSlot[kRoutingGameList] = new LobbyGameList(2),
-            ee_won_routelogic_new_model(inSelf, RoutingHost));
+            ee_won_routelogic_new_model(inSelf, RoutingHost, inSelf->Slot<LobbyServerList>(kRoutingServerList),
+                                        inSelf->Slot<LobbyGameList>(kRoutingGameList)));
 }
 }

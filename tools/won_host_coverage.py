@@ -103,6 +103,8 @@ CHECKS = [
     dict(enum="EeWonRouteLogicOp", header="won_lobby/routelogic.h",
          hosts=[LOBBY / "RoutingLogic.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_op"),
+               # the server list and game list ops (R6 WON lobby and network round 40)
+               (RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_list_op"),
                (RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_record_op_in"),
                (RS / "ee_won_lobby" / "src" / "routelogic.rs", "conn_request"),
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "route_op"),
