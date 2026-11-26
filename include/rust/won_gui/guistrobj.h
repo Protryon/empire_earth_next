@@ -81,6 +81,8 @@ struct EeWonGuiStrBuf {
 struct EeWonGstr {
   const void *vtable;
   int32_t refs;
+  /// 0: a text (wmobj.rs's events are the other Rust RefCount, `EE_WON_RC_EVENT`)
+  uint32_t kind;
   EeWonGuiStrBuf buf;
 };
 

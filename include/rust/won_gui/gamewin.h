@@ -25,6 +25,15 @@ void ee_won_win_bind(void *window,
                      void *root,
                      const EeWonRoot *root_obj);
 
+/// The test fixture's input event `ev` for the game window `window` and the handler (its `new MouseEvent` and
+/// `new KeyEvent`); nothing for a window no game binds.
+///
+/// # Safety
+/// `ev` points at a record.
+void ee_won_win_queue_input(void *window,
+                            EeWonWinCall handler,
+                            const EeWonWinEvent *ev);
+
 /// The game's reference function: `f(object, 1)` takes a reference to a `RefCount` object, `f(object, 0)` gives one
 /// back (the object deleted with its last).
 void ee_won_gui_ref_register(void (*f)(void *object, int32_t hold));

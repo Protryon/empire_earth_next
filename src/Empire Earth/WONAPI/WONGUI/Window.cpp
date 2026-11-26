@@ -41,7 +41,6 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     switch (op) {
     case Op::WinTick: return (intptr_t)(uint32_t)WONTickCount();
     // (the offscreen image is gamewin.rs's: R6 WON GUI round 40)
-    case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
     case Op::WinAllowClose: return 1; // (no window ever had an allow-close function)
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
@@ -61,14 +60,8 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     typedef EeWonPlatWinOp Op;
     switch (inOp) {
     case Op::WindowCreate: me->BaseCreate((int)c, (int)d); return 0;
-    // (the display context, the offscreen image and their paints are gamewin.rs's: R6 WON GUI round 40)
-    case Op::QueueSize: me->QueueEvent(new SizeEvent((int)a, (int)b, (int)c, (int)d)); return 0;
-    case Op::QueueExit: me->QueueEvent(new InputEvent(InputEvent_MouseExit)); return 0;
-    case Op::QueueMouse: {
-        const int32_t* p = (const int32_t*)a;
-        me->QueueEvent(new MouseEvent(p[0], p[1], p[2], p[3], p[4]));
-        return 0;
-    }
+    case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
+    // (the offscreen image and its paints are gamewin.rs's: R6 WON GUI round 40)
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
@@ -147,7 +140,7 @@ SmartPtr<NativeImage> Window::DecodeImage(const char* path) {
         }
         return image;
     }
-    return this->mManager->DecodeImage(NULL,path);
+    return this->mManager->DecodeImage(this->mDisplayContext.get(),path);
 }
 
 // Decodes a raw image file; while decoding is off returns a blank 10x10 image
@@ -165,7 +158,7 @@ Window* CreateNativeWindow() { return new Window; }
 
 SmartPtr<Font> Window::PlatformGetFont(const FontDescriptor& inDescriptor)
 {
-    return new Font(NULL, inDescriptor);
+    return new Font(this->mDisplayContext.get(), inDescriptor);
 }
 
 }

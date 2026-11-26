@@ -41,7 +41,7 @@ using namespace WONAPI;
 static_assert(sizeof(WONRectangle) == sizeof(EeWonRect4) && sizeof(PopupParams) == sizeof(EeWonWmPopup) &&
               offsetof(PopupParams, mOwnerComponent) == offsetof(EeWonWmPopup, owner) &&
               offsetof(PopupParams, mFlags) == offsetof(EeWonWmPopup, flags) && offsetof(PopupParams, my) == offsetof(EeWonWmPopup, y) &&
-              offsetof(PopupParams, mAvoidRect) == offsetof(EeWonWmPopup, avoid),
+              offsetof(PopupParams, mAvoidRect) == offsetof(EeWonWmPopup, avoid) && offsetof(WindowEventBase, mRec) == EE_WON_WM_EVENT_REC_AT,
               "wmobj.rs reads a WONRectangle as EeWonRect4 and PopupParams as EeWonWmPopup (DoPopup, AdjustPopupPosition)");
 #pragma clang diagnostic pop
 // R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won_gui/src/wmobj.rs,
@@ -114,8 +114,6 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     typedef EeWonPlatWmOp Op;
     switch (inOp) {
     case Op::IsUiThread: return PlatCurrentThreadId() == WindowManager::GetThreadId();
-    case Op::QueueInput: w->QueueEvent(new InputEvent((int)b)); return 0;
-    case Op::QueueKey: w->QueueEvent(new KeyEvent((int)b, (int)c, (int)d)); return 0;
     case Op::ClosePopup: w->ClosePopup(NULL); return 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
@@ -169,7 +167,7 @@ Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize)
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 {
     Window* aWindow = this->GetDefaultWindow();
-    return aWindow == NULL ? SmartPtr<NativeImage>() : this->DecodeImage(NULL, theFilePath);
+    return aWindow == NULL ? SmartPtr<NativeImage>() : this->DecodeImage(aWindow->mDisplayContext.get(), theFilePath);
 }
 // Decodes a sound with the sound decoder, or returns a plain sound for the descriptor when there is none
 SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)

@@ -57,9 +57,6 @@ typedef EeWonGuiField Fd;
 // the standard cursor a host op names (guihost.rs over cursorobj.rs's table; NULL for none)
 static Cursor* CursorOf(intptr_t inCursor) { return (Cursor*)ee_won_gui_cursor(inCursor); }
 
-// QueueSubMenu's local PopupParams (borrowed pointers)
-static PopupParams sHostParams(NULL, 0, NULL);
-
 // a component's services, the same for every component object (the members', Component's own calls and the
 // container's are gamewin.rs common_op's in the game: R6 WON GUI round 37)
 static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
@@ -416,10 +413,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::WinMouseY: return ((Window*)a)->GetMouseY();
     case Op::TipNew: t->mItemToolTip = new ListAreaToolTip(t); return 0;
     case Op::TipDo: t->mItemToolTip->DoTip(Item(a)); return 0;
-    case Op::ParamsMake: sHostParams = PopupParams((PopupMenu*)a, (int)b, t, (int)c, (int)d); return 0;
-    case Op::ParamsAvoid: sHostParams.mAvoidRect = WONRectangle(((const EeWonRect4*)a)->x, ((const EeWonRect4*)a)->y, ((const EeWonRect4*)a)->w, ((const EeWonRect4*)a)->h); return 0;
-    case Op::QueueDoPopup: t->GetRoot()->QueueEvent(new DoPopupEvent(sHostParams)); return 0;
-    case Op::WinQueueMouseUp: ((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)b, (int)c, ((Window*)a)->GetKeyMod(), (int)d)); return 0;
     case Op::DeliverItemClicked: {
         const EeWonItemClick* k = (const EeWonItemClick*)b;
         t->DeliverEvent(ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),

@@ -1195,7 +1195,6 @@ void LobbyResetReadyFlags();
 // MSWindow : Window : RefCount; MSNativeIcon : NativeIcon : RefCount; MultiImageDecoder, DisplayContext. Sizes from
 // EELobbyInterface 0x2972c6's `new`s (provisional member and slot names).
 class WindowEventBase;
-class InputEvent;
 // a window's drawing context (RTTI: DisplayContext : RefCount)
 // Only the prefix is used: 0x326c70 stores mGraphics at +0x0c.
 // DisplayContext (0x10 bytes): allocated and filled at 0x3cfab4..0x3cfad4; type descriptor 0x4e0ab0.
@@ -1459,9 +1458,9 @@ public:
     intptr_t WCall(EeWonWinCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_win_call(this->mWinObj.p, c, a, b); }
     intptr_t WField(EeWonWinField f) const { return this->WCall(EeWonWinCall::GetField, (intptr_t)f); }
     void WSet(EeWonWinField f, intptr_t v) { this->WCall(EeWonWinCall::SetField, (intptr_t)f, v); }
-    // the members that are C++ objects (the original's offsets); the offscreen image (+0c) is gamewin.rs's, the display
-    // context (+28) never set since R6 WON GUI round 40 (it had no surface: nothing read it; a config filter passes it)
-    SmartPtr<DisplayContext> mDisplayContext;
+    // the members that are C++ objects (the original's offsets; the offscreen image, +0c, is gamewin.rs's since R6 WON
+    // GUI round 40): the display context, without a surface (an image decode needs one)
+    SmartPtr<DisplayContext> mDisplayContext; // +28
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
     // (the close event, +90, and the allow-close function, +94, were never set: gone, R6 WON GUI round 36)
@@ -1523,17 +1522,8 @@ public:
     int mParam;                             // +0x14
 };
 
-// the window's input events (R6 WON GUI rounds 37 and 38): the base's record filled with the fields the Rust window's
-// handlers read (winobj.rs EeWonWinEvent) and the handler its original class's Deliver ran (0x32b520, 0x32b630,
-// 0x32b640: guisplit.rs runs it on the window's Rust window); MouseEvent, KeyEvent and SizeEvent fill it
-class InputEvent : public WindowEventBase {
-public:
-    InputEvent(int t, EeWonWinCall h = EeWonWinCall::HandleInputEvent, int x = 0, int y = 0, int m = 0, int b = 0, int k = 0, int w = 0, int ht = 0)
-      : WindowEventBase(t, h) { this->mRec.ev = EeWonWinEvent{t, x, y, m, b, k, w, ht}; }
-};
-struct MouseEvent : InputEvent { MouseEvent(int t, int x, int y, int m, int b = 0) : InputEvent(t, EeWonWinCall::HandleMouseEvent, x, y, m, b) {} };
-struct KeyEvent : InputEvent { KeyEvent(int t, int k, int m) : InputEvent(t, EeWonWinCall::HandleKeyEvent, 0, 0, m, 0, k) {} };
-struct SizeEvent : InputEvent { SizeEvent(int x, int y, int w, int h) : InputEvent(InputEvent_SizeChange, EeWonWinCall::HandleInputEvent, x, y, 0, 0, 0, w, h) {} };
+// (the window's input events, InputEvent, MouseEvent, KeyEvent and SizeEvent, are wmobj.rs's EeWonRustEvent: R6 WON GUI
+// round 40)
 
 // a component's event (slot +0x7c; type at +0x14: WONAPI's own ids, 100000 up for the game's). R6 WON GUI round 39:
 // its members and its GUI subclasses' (ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent,
@@ -2149,15 +2139,6 @@ protected:
     friend intptr_t SplitterHostCall(Splitter*,EeWonGuiOp,intptr_t,intptr_t,intptr_t);
 private:
     intptr_t Call(EeWonSplitCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_split_call(this->mRust,c,a,b,cc); }
-};
-// the event that opens a popup (0x3c bytes; original 0x2fd77e; RTTI 0x44df58; WONLobbyPopupEvent.h until R6 WON GUI
-// round 37): it copies the parameters (borrowed raw pointers)
-class DoPopupEvent : public WindowEventBase {
-protected:
-    PopupParams mParams; //10..3b, full2c POD containing borrowed raw pointers
-public:
-    DoPopupEvent(const PopupParams& params) : mParams(params) {}
-    virtual void Deliver() { this->GetWindow()->OpenPopup(this->mParams); } //32b650
 };
 }
 

@@ -250,6 +250,58 @@ pub struct EeWonWmEventRec {
     pub handler: u32,
 }
 
+/// The offset of the record in an event (`WindowEventBase::mRec`, after RefCount's head; WindowManager.cpp checks it).
+pub const EE_WON_WM_EVENT_REC_AT: usize = 16;
+/// The kind of a Rust-made RefCount (the 32 bits after its count; guistrobj.rs's texts are 0) that is a window event.
+pub const EE_WON_RC_EVENT: u32 = 1;
+
+/// A window event made in Rust (R6 WON GUI round 40: the C++ InputEvent, MouseEvent, KeyEvent, SizeEvent and
+/// DoPopupEvent went): a C++ RefCount without a vtable (`RefCount::Release` gives its last reference to
+/// `ee_won_gstr_free`, which frees it by its kind), its count (none: the queue's hold is the first), its kind, the
+/// record where WindowEventBase keeps it and a popup's parameters (DoPopupEvent's copy). Its `Deliver` is the
+/// record's handler, run by guisplit.rs.
+#[repr(C)]
+pub struct EeWonRustEvent {
+    vtable: *const c_void,
+    refs: i32,
+    kind: u32,
+    pub rec: EeWonWmEventRec,
+    pub popup: EeWonWmPopup,
+}
+/// A popup event's handler in its record: `GetWindow()->OpenPopup(mParams)` (gamewin.rs deliver_popup).
+pub const EE_WON_WM_HANDLER_POPUP: u32 = 0xC0E1;
+const _: () = assert!(std::mem::offset_of!(EeWonRustEvent, rec) == EE_WON_WM_EVENT_REC_AT);
+
+/// A new input event of the record `ev` for the window `window` and its handler (the original's
+/// `new InputEvent(..)` with `mWindow` set: Window::QueueEvent's).
+pub(crate) fn new_input_event(window: isize, handler: crate::winobj::EeWonWinCall, ev: crate::winobj::EeWonWinEvent) -> isize {
+    new_event(EeWonWmEventRec { ev, window, handler: handler as u32 }, EeWonWmPopup::default())
+}
+/// A new popup event (DoPopupEvent) of the parameters `popup`, for no window yet.
+pub(crate) fn new_popup_event(popup: EeWonWmPopup) -> isize {
+    new_event(EeWonWmEventRec { handler: EE_WON_WM_HANDLER_POPUP, ..EeWonWmEventRec::default() }, popup)
+}
+fn new_event(rec: EeWonWmEventRec, popup: EeWonWmPopup) -> isize {
+    let e = EeWonRustEvent { vtable: std::ptr::null(), refs: 0, kind: EE_WON_RC_EVENT, rec, popup };
+    Box::into_raw(Box::new(e)) as isize
+}
+/// Whether `e` (a live RefCount) is a Rust-made event.
+///
+/// # Safety
+/// `e` is 0 or a live RefCount object.
+pub(crate) unsafe fn is_rust_event(e: isize) -> bool {
+    // SAFETY: the contract: its vtable slot, then (for one without a vtable) its kind
+    e != 0 && unsafe { *(e as *const usize) == 0 && (*(e as *const EeWonRustEvent)).kind == EE_WON_RC_EVENT }
+}
+/// A Rust-made event freed at its last reference.
+///
+/// # Safety
+/// `e` came from `new_input_event` and is not used again.
+pub(crate) unsafe fn free_rust_event(e: *mut c_void) {
+    // SAFETY: the contract: made by Box
+    drop(unsafe { Box::from_raw(e as *mut EeWonRustEvent) });
+}
+
 /// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
 /// bubbled up from the component) is guisplit.rs's.
 pub const EE_WON_WM_HANDLER_COMPONENT: u32 = 0xC0E0;

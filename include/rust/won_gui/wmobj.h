@@ -10,6 +10,15 @@
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/winobj.h"
 
+/// The offset of the record in an event (`WindowEventBase::mRec`, after RefCount's head; WindowManager.cpp checks it).
+constexpr static const size_t EE_WON_WM_EVENT_REC_AT = 16;
+
+/// The kind of a Rust-made RefCount (the 32 bits after its count; guistrobj.rs's texts are 0) that is a window event.
+constexpr static const uint32_t EE_WON_RC_EVENT = 1;
+
+/// A popup event's handler in its record: `GetWindow()->OpenPopup(mParams)` (gamewin.rs deliver_popup).
+constexpr static const uint32_t EE_WON_WM_HANDLER_POPUP = 49377;
+
 /// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
 /// bubbled up from the component) is guisplit.rs's.
 constexpr static const uint32_t EE_WON_WM_HANDLER_COMPONENT = 49376;
