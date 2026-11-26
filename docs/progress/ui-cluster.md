@@ -164,7 +164,7 @@ managers that Rust could call through direct.rs (`GetManager()->GetScreen()` cha
 **-462 C++ lines** against 61544a7d6 (87,963 -> 87,501; compiled files unchanged, 251; logic unchanged, shim -381;
 classes unchanged; extern_c +5: the harness's six EETestUI* are Rust's now, the 200 removed shims were `EE_UI_CASE`
 macros the metric does not count). Behaviour: none intended (oracle seeds 2-7 identical after the background fix
-below).
+below; a fixture tour, RESULT PASS, with `EE_DIRECT_CHECK`: 1,488,000 lookups by C++ pointer, none missing).
 
 | Commit | What | cpp_lines |
 |---|---|---|
