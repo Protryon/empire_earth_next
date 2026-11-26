@@ -21,7 +21,6 @@
 #include "ee/EECameraKey.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EECombatGoals.h"
 
@@ -35,7 +34,6 @@ static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformatio
 UWideString gGameVersion("2002.8.17.v1.00");
 
 extern bool& gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
-extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
 
 // The limits (0x441e48..0x441eb8), the pitch limits, the clipping distances and the move speeds are Rust's (ee_app
 // camera.rs, ee_gfx camera.rs).
@@ -44,7 +42,7 @@ extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps t
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
 EECameraControl::EECameraControl()
 {
-    ee_app_camera_default(this);
+    ee_gamecpp_camera_new(this, this);
 }
 
 // Destroys the camera controller (members only)
@@ -82,7 +80,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::DkFields: return P64(static_cast<EeAppCameraFields*>(CAM));
     case O::DkModelCenter: *(GE3DPoint*)a[0] = CX->mPhysicalModel.GetModel()->GetCenterPoint();
         break;
     case O::DkLocationApply: CX->mPhysicalModel.GetLocation().Apply(*(const GE3DPoint*)a[0], *(GE3DPoint*)a[1]);
@@ -95,24 +92,13 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkSetFieldOfView: gViewport.SetFieldOfView(f[0]);
         break;
-    case O::DkMiniMapRefresh: gMiniMap->RefreshView();
-        break;
     case O::DkClearB529066: gB529066 = false;
         break;
     case O::DkClearFollowing: gCameraFollowing = false;
         break;
     case O::DkClearB529068: gB529068 = false;
         break;
-    case O::DkUnitASaved: return CAM->mUnitA.GetSavedID();
-    case O::DkUnitBSaved: return CAM->mUnitB.GetSavedID();
     // round 11, lane B: the camera's host (gamecpp camera_io.rs)
-    case O::EcUnitAGet: return P64(CAM->mUnitA.Get());
-    case O::EcUnitBGet: return P64(CAM->mUnitB.Get());
-    case O::EcSetUnitA: CAM->mUnitA = EEUnitHandle<EEUnit>::FromSavedID((uint32_t)a[0]);
-        break;
-    case O::EcSetUnitB: CAM->mUnitB = EEUnitHandle<EEUnit>::FromSavedID((uint32_t)a[0]);
-        break;
-    case O::EcResolve: return P64(static_cast<EEUnit*>(RTSResolveUnitID((uint32_t)a[0])));
     case O::EcReference: ((EEUnit*)p)->Reference();
         break;
     case O::EcDereference: ((EEUnit*)p)->Dereference();
@@ -124,7 +110,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcFacesCamera: return ((EEUnit*)p)->mUnitClass->mFacesCamera;
     case O::EcLocation: *(GETransformation*)a[0] = CX->mPhysicalModel.GetLocation();
         break;
-    case O::EcInCinematic: return gInCinematic;
+    case O::EcInCinematic: return gWorld.mInCinematic;
     case O::EcCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::EcIsSeen: return EEIsSeen((EEUnit*)p);
     case O::EcFarRearClipping: return gFarRearClipping;

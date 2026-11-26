@@ -28,7 +28,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EETeam.h"
+#include "rust/game/gamecpp.h"   // the wonder victory (ee_game gamecpp civilization.rs)
 #include "ee/EECPBehavior.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
@@ -95,12 +95,6 @@ bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit) { return ee_cp_pl_av
 // Returns the tech node's unit class at the index, or its default unit class past the end (ee_sim::cp player_game.rs)
 long EETechTreeNode::GetUnitClass(unsigned long inIndex) { return ee_cp_node_unit_class((uint64_t)(uintptr_t)this, inIndex); }
 
-// Returns the number of teams in the world
-unsigned long EEWorld::GetNumTeams() { return this->mTeams.size(); }
-
-// Returns whether the given player is a member of the team
-bool EETeam::ContainsPlayer(unsigned long inPlayerID) { return std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayerID) != this->mPlayers.end(); }
-
 // the after-load fixups of player_game.rs: inCall(inBox) at the loaded game's first tick
 extern "C" void ee_cp_after_load(void (*inCall)(uint64_t), uint64_t inBox)
 {
@@ -129,9 +123,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_BEHAVIOR_FLOAT: io->f[0] = gCPBehaviors[(long)v[0]].mFloatValue;
         return 0;
     case EE_CP_PLAYER_BASE_POP_LIMIT: return thePlayer->EEPlayer::GetPopulationLimit(0);
-    case EE_CP_PLAYER_NUM_TEAMS: return (int64_t)gWorld.GetNumTeams();
-    case EE_CP_PLAYER_TEAM_WONDERS: return gWorld.mTeams[(size_t)v[0]].mVictoryCondition->HasEnoughWonders() ? 1 : 0;
-    case EE_CP_PLAYER_TEAM_CONTAINS: return gWorld.mTeams[(size_t)v[0]].ContainsPlayer((unsigned long)v[1]) ? 1 : 0;
+    case EE_CP_PLAYER_TEAM_WONDERS: return ee_gamecpp_wonder_enough((size_t)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
     case EE_CP_PLAYER_HUMAN: return gWorld.mPlayers[(size_t)v[0]] == NULL ? -1 : gWorld.mPlayers[(size_t)v[0]]->IsHuman() ? 1 : 0;
     case EE_CP_PLAYER_POPULATION: return gWorld.mPlayers[(size_t)v[0]]->GetTotalPopulation(true, true);
@@ -218,7 +210,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_BASE_CAN_AFFORD: return thePlayer->EEPlayer::CanAfford(reinterpret_cast<EETechTreeNode*>((uintptr_t)inA), (long)v[0], (long)v[1]) ? 1 : 0;
     case EE_CP_PLAYER_GAME_RESOURCES: return gWorld.mGameOptions.mResources;
     case EE_CP_PLAYER_SCENARIO_GAME: return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
-    case EE_CP_PLAYER_LOAD_TYPE: return gGameOptions.mLoadType;
+    case EE_CP_PLAYER_LOAD_TYPE: return gWorld.mLobbyOptions.mLoadType;
     case EE_CP_PLAYER_EXPLORE_UNSEEN: gWorld.mMap->ExploreUnseen(thePlayer);
         return 0;
     case EE_CP_PLAYER_ENGINE_NAME: EECPNextAppend((void*)(uintptr_t)inA, EECPEngineName(thePlayer));

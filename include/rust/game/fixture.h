@@ -69,8 +69,6 @@ enum class EeFixtureOp : uint32_t {
   ScreenEvent,
   /// the chat log's test line -> 1, 0 no user interface
   Chat,
-  /// the camera zoom set to f0
-  Zoom,
   /// the pointer set to (f0, f1) under the input lock -> 1 and (f0, f1) where it is now, 0 no mouse
   MouseSet,
   /// the pointer put back at (f0, f1) under the input lock when it is elsewhere -> 1 put back, 0 there, -1 no mouse
@@ -188,10 +186,6 @@ enum class EeFixtureOp : uint32_t {
   FxPhysicsValue,
   FxCommsPresent,
   FxCommsValue,
-  FxCameraFocus,
-  FxCameraEndFocus,
-  FxCameraZoom,
-  FxCameraMode,
   FxMapSize,
   FxActiveGroup,
   FxGroupUnitCount,

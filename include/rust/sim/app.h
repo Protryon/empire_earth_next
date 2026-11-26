@@ -430,6 +430,9 @@ int32_t ee_app_team_save(void *file,
                          const unsigned long *players,
                          size_t count);
 
+/// `mTeams[team].ContainsPlayer(player)` (false past the end).
+bool ee_app_teams_contains(size_t team, uint32_t player);
+
 /// `EEWorld::AddTeam` of `n` players.
 ///
 /// # Safety

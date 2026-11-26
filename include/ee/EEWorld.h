@@ -21,7 +21,6 @@ class EEComplexUnit;
 #include "ee/EEDbList.h"               // gGameVariants
 #include "ee/EECameraControl.h"        // held by value (+0x9d0)
 #include "ee/EEGameOptions.h"          // held by value (+0x110, +0x51c)
-#include "ee/EEStatisticsHistory.h"    // held by value (+0xd8)
 #include "ee/EEVoting.h"               // held by value (+0xb5c)
 
 class EEContagionManager;
@@ -32,7 +31,6 @@ class EEInfluenceTable;
 class EEMap;
 class EEPlayer;
 class EEScenarioManager;
-class EETeam;
 class EEUnit;
 class FSPersistent;
 class TSCriticalSection;
@@ -123,7 +121,6 @@ public:
     void SetEnvironmentManager(EEEnvironmentManager* inManager); // 0x13c1e3 (+0xb28; 0x1a596d: a new 0x5c-byte one)
     void UpdateActiveUnits();               // 0x13b6bc (EEPhysics::Tick, every tick) (provisional name)
     void CreateInfluenceTable(EEMap* inMap);    // 0x13a255: SetInfluenceTable(new EEInfluenceTable(inMap, mNumPlayers))
-    unsigned long GetNumTeams();            // 0x3f81e (mTeams.size(); EECPIntelligence 0x8120b calls it) (provisional name)
     // EEWorld.cpp's other members (provisional names)
     void ApplyShareBonus();                 // 0x138304 (the +0xb20 population bonus of the players)
     void DumpMedia(FSFileSpec& inFile, bool inLeaks) { ee_gamecpp_world_dump_media(this, &inFile, inLeaks); }
@@ -137,7 +134,7 @@ public:
     // 0x13c5ad (thiscall, ret 0x14: the 5th argument is unused; the body names gWorld; EEUIEMGEnterScenarioEditor)
     void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused) { ee_gamecpp_world_move_to_slot(inSlot, (uint8_t)inNewSlot, inPlayer, &inName); }
 
-    EEStatisticsHistory mStatistics;        // +0x0d8 (provisional name; Reset() again at the end of the ctor)
+    // +0x0d8 the statistics history (the end-of-game records): Rust's (ee_game gamecpp stats_history.rs)
     EEGameOptions& GetGameOptions() { return this->mGameOptions; }
     // inline (the lobby reaches gGameOptions 0x53125c through it: GetPlayer(i - k) folds into `lea [eax + base -
     // k*0x38]` only with this from an accessor) (provisional name)
@@ -152,7 +149,7 @@ public:
     GEVector mWindDirection;                // +0x998 (10 readers each of +0x998/+0x99c/+0x9a0)
     // +0x9a4 the resource users (a std::map by unit handle: ReleaseResourceUser/GetResourceUsers/AddResourceUser):
     // Rust's (ee_game gamecpp world.rs RESOURCE_USERS)
-    std::vector<EETeam> mTeams;             // +0x9b0 ("TheTeams"; dtor 0x13dc94, element dtor 0x131b02)
+    // +0x9b0 the teams ("TheTeams", std::vector<EETeam>): Rust's (ee_sim app teams_ffi.rs)
     // +0x9c0 the ghost units (std::vector<EEGhostUnit*>): Rust's (ee_sim app ghosts.rs; GetGhostUnit)
     EECameraControl mCameraControl;         // +0x9d0 (0x531710; wheel zoom, hot-key selection)
     // +0xad0 .. +0xb17 (mActiveUnits, mUpdateUnits, mActivateQueue, mDeactivateQueue): the active unit lists are one

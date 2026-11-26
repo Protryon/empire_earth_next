@@ -23,6 +23,11 @@
 #include "rust/won_gui/clipobj.h"
 #include "platform/PlatWindow.h"
 #include "platform/PlatString.h"
+#include <stddef.h>
+#include "ee/wonapi/WONGUIDraw.h"
+#include <set>
+#include "ee/wonapi/WONComponentFlags.h"
+#include "rust/won_gui/grabobj.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -197,3 +202,84 @@ GUIString Clipboard::Get() { return GUIString(std::wstring((const wchar_t*)ee_wo
 void Clipboard::Set(const GUIString& theStr) { ee_won_clip_set(&kClipFns, theStr.mData->mText, theStr.length()); }
 
 } // namespace WONAPI
+
+// ---- Graphics.cpp until R6 WON GUI round 39
+// Graphics (R6 WONGUI B round 1): translated drawing, colours and the clip stack are ee_won's gfxobj.rs, the draw
+// plans run in gfxrun.rs (round 38), and the Graphics is gfxrun.rs's record, made, attached and freed there (round
+// 39). This unit keeps the host (the font's draw, a wrapped text's) and the Windows-style frames.
+typedef EeWonGfxHook H;
+// the Rust Graphics' calls out that are not the surface's nor Rust's (gfxplat.rs, gfxrun.rs): the font's draw (a[]
+// its ints, p the text) and a wrapped text's paint
+static uint32_t GfxHost(void* inGraphics, EeWonGfxHook inHook, const int32_t* a, const void* p)
+{
+    Graphics* g = (Graphics*)inGraphics;
+    switch (inHook) {
+    case H::String: g->GetFont()->DrawString(g->GetContext(), *(const GUIString*)p, (unsigned short)a[0], (unsigned short)a[1], a[2], a[3]); return 0;
+    case H::Text: ((WrappedText*)p)->Paint(*g, a[0], a[1]); return 0;
+    default: return 0;
+    }
+}
+[[maybe_unused]] static const bool sGfxHost = (ee_won_graphics_register(GfxHost, offsetof(ColorScheme, mColors)), true);
+
+// Windows-style frames (MSGraphicsUtil.cpp folded in, R6 WON GUI round 37): mspaint.rs's plans run on the Graphics
+namespace WONAPI {
+// the standard colours and directions mspaint.rs names
+static_assert(StandardColor_3DDarkShadow==0 && StandardColor_3DFace==1 && StandardColor_3DHilight==2 &&
+              StandardColor_3DShadow==3 && StandardColor_Scrollbar==4 && StandardColor_ButtonText==5 &&
+              StandardColor_GrayText==6 && StandardColor_MenuBack==11 && StandardColor_Back==13 &&
+              StandardColor_Text==14,"mspaint.rs SYS_*");
+static_assert(Direction_Left==0 && Direction_Right==1 && Direction_Up==2 && Direction_Down==3,"mspaint.rs DIR_*");
+// Draws a two-pixel 3D frame, raised or sunken (down), at the given position
+void LobbyDraw3DFrame(Graphics &g, int x, int y, int width, int height, bool down) { WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Frame3D,width,height,down?EE_WON_MSPAINT_PRESSED:0,x,y)); }
+// Draws a raised button frame, or a flat shadow-coloured rectangle when down
+void LobbyDrawFrame(Graphics &g, int x, int y, int width, int height, bool down) { WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Frame,width,height,down?EE_WON_MSPAINT_PRESSED:0,x,y)); }
+}
+
+// ---- BackgroundGrabber.cpp until R6 WON GUI round 39
+// BackgroundGrabber (R6 WON round 37): the Rust grabber (rust/crates/ee_won_gui/src/grabobj.rs) holds the captured image's
+// place, its clip, the flags, the translucent colour and level and the capture's order and runs every method (the
+// capture, the debug window, the tint, putting the background back); this is its host (the component, the Graphics,
+// the background image, the debug window) and the constructor and destructor.
+
+typedef EeWonGrab Gb;
+static_assert(offsetof(BackgroundGrabber, mBGImage) == 0 && sizeof(SmartPtr<NativeImage>) == sizeof(void*) &&
+              offsetof(BackgroundGrabber, mRust) == 2 * sizeof(void*), "grabobj.rs reads the image and its grabber");
+static_assert(ComponentFlag_DebugBG == EE_WON_GRAB_FLAG_DEBUG_BG && ComponentFlag_Translucent == EE_WON_GRAB_FLAG_TRANSLUCENT,
+              "grabobj.rs flags");
+
+// the grabber's calls out, each one of the original's statements (R6 WON round 34: their runs are grabobj.rs's; the
+// component's and the background image's are grabobj.rs's own in the game, R6 WON GUI round 39)
+extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    BackgroundGrabber* t = (BackgroundGrabber*)inMe;
+    Component* comp = (Component*)b;
+    if (op != EeWonGuiOp::Grab)
+        return 0;
+    switch ((Gb)a) {
+    case Gb::NewImage: t->mBGImage = comp->GetRoot()->CreateImage((int)c, (int)d); return 0;
+    case Gb::DebugExists: return t->mDebugWindow.get() != NULL ? 1 : 0;
+    case Gb::DebugNew: t->mDebugWindow = CreateNativeWindow(); return 0;
+    case Gb::DebugParent: t->mDebugWindow->SetParent(comp->GetRoot()); return 0;
+    case Gb::DebugStyle: t->mDebugWindow->SetStyle(0x40); return 0;
+    case Gb::DebugCreateAt: t->mDebugWindow->Create(WONRectangle(0, 0, (int)c, (int)d)); return 0;
+    case Gb::DebugRemoveAll: t->mDebugWindow->mRoot.get()->RemoveAllChildren(); return 0;
+    case Gb::DebugAddImage: t->mDebugWindow->AddComponent(new ImageComponent(t->mBGImage.get())); return 0;
+    case Gb::ScreenRect: comp->GetRoot()->GetRect(*(WONRectangle*)c, false); return 0;
+    case Gb::DebugPos: t->mDebugWindow->SetPosSize((int)c, (int)d, -1, -1); return 0;
+    case Gb::DebugInvalidate: t->mDebugWindow->mRoot.get()->Invalidate(); return 0;
+    case Gb::Offscreen: return (intptr_t)comp->GetRoot()->GetOffscreenImage();
+    default: return 0;
+    }
+}
+
+// Creates a grabber with no captured background and a half-strength translucent tint (the Rust grabber's state)
+BackgroundGrabber::BackgroundGrabber()
+{
+    this->mRust = ee_won_grab_new(this, ee_won_guicpp_grab_call);
+}
+
+// Destroys the grabber: the Rust grabber goes, then the image and the debug window
+BackgroundGrabber::~BackgroundGrabber()
+{
+    ee_won_grab_free(this->mRust);
+}

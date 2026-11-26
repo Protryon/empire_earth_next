@@ -784,6 +784,9 @@ void ee_app_ambient_stop_sounds(EeAppAmbientFields *manager,
                                 EeAppAmbientFn call,
                                 bool pause);
 
+/// The followed unit's saved id in `slot` (`mUnitA` 0, `mUnitB` 1), resolved or not.
+uint32_t ee_app_camera_unit(uint32_t slot);
+
 /// `EECameraControl()`'s plain members.
 ///
 /// # Safety

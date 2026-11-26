@@ -90,6 +90,16 @@ pub enum EeWonTipOp {
     ClosePopup,
 }
 
+/// The offset of `ListAreaToolTip::mListArea` (the borrowed list, then the held item's pointer) in the C++ object
+/// (TextListItem.cpp registers it; 0 in a driver's world).
+static TIP_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// `offsetof(ListAreaToolTip, mListArea)` (TextListItem.cpp at static initialisation; R6 WON GUI round 39).
+#[no_mangle]
+pub extern "C" fn ee_won_tip_register(at: usize) {
+    TIP_AT.store(at, std::sync::atomic::Ordering::Release);
+}
+
 /// The host: `me` the C++ object, `op`, two arguments.
 pub type EeWonTipHostFn = Option<unsafe extern "C" fn(me: *mut c_void, op: EeWonTipOp, a: isize, b: isize) -> isize>;
 
@@ -120,11 +130,86 @@ impl EeWonTip {
         if let Some(r) = g.filter(|_| crate::compobj::is_game()).and_then(|g| crate::gfxrun::game_op(g, a, b)) {
             return r;
         }
+        if let Some(r) = self.game_op(o, a, b) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object
             Some(h) => unsafe { h(self.me, o, a, b) },
             None => 0,
         }
+    }
+    /// The tip's and its list's members in place and Component's calls in the game (R6 WON GUI round 39: the item
+    /// a held handle at its registered offset, the list's and the item's members, the sizes, SetSize and
+    /// LocalToRoot). None in a driver's world.
+    fn game_op(&self, o: EeWonTipOp, a: isize, b: isize) -> Option<isize> {
+        use crate::compobj::EeWonCompCall as K;
+        use EeWonTipOp::*;
+        let at = TIP_AT.load(std::sync::atomic::Ordering::Acquire);
+        if at == 0
+            || !matches!(
+                o,
+                ItemIs
+                    | HasItem
+                    | HasParent
+                    | SetItem
+                    | ItemTop
+                    | ItemWidth
+                    | ItemHeight
+                    | ListWidth
+                    | Width
+                    | Height
+                    | SetSize
+                    | ListLocalToRoot
+            )
+            || !crate::compobj::is_game()
+        {
+            return None;
+        }
+        let me = self.me as isize;
+        let list_at = (me as usize + at) as *mut isize;
+        // SAFETY: the game's live tip: the list's pointer at its registered offset, the item's after it
+        let (list, item_at) = unsafe { (*list_at, list_at.add(1)) };
+        // SAFETY: as above
+        let item = unsafe { *item_at };
+        // SAFETY: the game's live components (each call re-enters through Component's entry)
+        let kc = |x: isize, k: K, p: isize, q: isize| unsafe {
+            crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
+        };
+        let rec = crate::leafpaint::item_rec(item);
+        // SAFETY: the tip's live item (the Item ops are asked with one)
+        Some(unsafe {
+            match o {
+                ItemIs => isize::from(item == a),
+                HasItem => isize::from(item != 0),
+                HasParent => isize::from(crate::compmem::parent(me) != 0),
+                SetItem => {
+                    // `mItem = a` (the SmartPtr assignment: the new reference first)
+                    if a != 0 {
+                        crate::gamewin::rf(a, true);
+                    }
+                    *item_at = a;
+                    if item != 0 {
+                        crate::gamewin::rf(item, false);
+                    }
+                    0
+                }
+                ItemTop => (*rec).top as isize,
+                ItemWidth => (*rec).width as isize,
+                ItemHeight => (*rec).height as isize,
+                ListWidth => crate::compmem::bounds(list).width as isize,
+                Width => crate::compmem::bounds(me).width as isize,
+                Height => crate::compmem::bounds(me).height as isize,
+                SetSize => {
+                    kc(me, K::SetSize, a as i32 as isize, b as i32 as isize);
+                    0
+                }
+                _ => {
+                    kc(list, K::LocalToRoot, a, (a as usize + 4) as isize);
+                    0
+                }
+            }
+        })
     }
     fn get(&self, o: EeWonTipOp) -> i32 {
         self.op(o, 0, 0) as i32

@@ -73,14 +73,14 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::TechUnloadMedia: ((EETechTreeNode*)p)->UnloadMedia((EEPlayer*)a[0]);
         break;
     // the game's load
-    case O::NewOptions: return P64(new EEGameOptions(gGameOptions));
+    case O::NewOptions: return P64(new EEGameOptions(gWorld.mLobbyOptions));
     case O::DeleteOptions: delete (EEGameOptions*)p;
         break;
     case O::NewError: return P64(new UWideString());
     case O::DeleteError: delete (UWideString*)p;
         break;
-    case O::LoadType: return gGameOptions.mLoadType;
-    case O::SetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
+    case O::LoadType: return gWorld.mLobbyOptions.mLoadType;
+    case O::SetLoadingSavedGame: gWorld.mLoadingSavedGame = a[0] != 0;
         break;
     case O::GameStateCreate: return gGameState.Create(*(EEGameOptions*)a[0], *(UWideString*)a[1]);
     case O::GameStateReset: gGameState.Reset();
@@ -97,8 +97,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
         break;
     case O::IsMultiplayer: return gCommunications->GetIsMultiplayerSession();
     case O::IsClient: return gCommunications->IsClient();
-    case O::NewLoadedResponseClient: return P64(new EEMRecord(kMessageStartLoadingResponse, {static_cast<EEClient*>(gCommunications)->GetMySendToSlot(), gWorld.GetCurrentPlayer()->GetPlayerID(), 0}));
-    case O::NewLoadedResponseServer: return P64(new EEMRecord(kMessageStartLoadingResponse, {0xfe, gWorld.GetCurrentPlayer()->GetPlayerID(), 0}));
     case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput((NEMessage*)p, kSlotNone);
         break;
     case O::SetHasLoaded: (static_cast<EEClient*>(gCommunications))->mHasLoaded = true;

@@ -217,7 +217,7 @@ extern "C" void ee_screenscpp_cbh_set_civ_locked(bool inValue)
 extern "C" bool ee_screenscpp_cbh_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_cbh_can_buy() { return gWorld.mGameOptions.CanBuyCivilization(); }
 extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(EEScratch<UWideString>(kScratchCBString)); }
-extern "C" bool ee_screenscpp_cbh_custom_civs() { return gAllowCustomCivs; }
+extern "C" bool ee_screenscpp_cbh_custom_civs() { return gWorld.mGameOptions.mAllowCustomCivs; }
 extern "C" uint32_t ee_screenscpp_cbh_sound_load(EeScreensShimText inName)
 { return (uint32_t)gSoundManager->Load(EEShimString(inName), 0, 1); }
 extern "C" void ee_screenscpp_cbh_sound_unload(uint32_t inSound) { gSoundManager->Unload((unsigned long)inSound); }

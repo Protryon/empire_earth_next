@@ -4,13 +4,12 @@
 // sizeof 0x3c (CreateDefault's `new`). Member types from the FSFile Read/Write overloads of Load/Save; names
 // are provisional (the keys suggest some: teams, wonders to win, time of day, water level, zoom, population limit,
 // game speed, victory, unit improvements, teams locked, cheat codes, town/herd id counters, carbon).
-// Requires lle/LowLevelEngine.h, lle/FSRestorable.h, lle/FSPersistent.h, ee/EETeam.h, <vector>.
+// Requires lle/LowLevelEngine.h, lle/FSRestorable.h, lle/FSPersistent.h.
 #ifndef EE_EEPWORLDHELPER_H
 #define EE_EEPWORLDHELPER_H
 
 #include "rust/game/gamecpp.h"
 #include "lle/FSPersistent.h"
-#include "ee/EETeam.h"
 class EEGameState;
 class EEScenarioManager;
 class EEWorld;
@@ -38,7 +37,7 @@ public:
     // class static keys: guard byte 0x531c58 (bits 1..0x80), then 0x531bd0 (bits 1..0x40)
 
     EEScenarioManager* mScenarioManager;    // +0x08 (0; Restore hands it to the game state when set)
-    std::vector<EETeam> mTeams;             // +0x0c
+    // +0x0c the teams (std::vector<EETeam>): Rust's (ee_game gamecpp teams.rs)
     float mTimeOfDay;                       // +0x1c
     float mZoom;                            // +0x20
     float mGameSpeed;                       // +0x24

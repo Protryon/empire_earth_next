@@ -115,6 +115,13 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
 // ships also count the opposite side
 // (FacesPoint and its CBQR record: ucn_noted.rs, inline in ee/EEUnit.h)
 
+// Plays the class's creation effect on the unit
+void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
+{
+    if (this->mCreationEffect != NULL)
+        gWorld.mEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0);
+}
+
 // Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point (new:
 // the launch transform, its tile and the special attack's choices are ee_combat's launch_shot)
 // Plays the class's ripple effect at the model's ripple tag points that are under water, when the player sees the unit
@@ -323,7 +330,6 @@ bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit) { return ee
 // Ticks a building: finishes its production countdown (a unit, retried in 5 seconds when it cannot be placed,
 // or a technology), then its orbitals, camouflage, effects, rotting, production queue and garrison healing
 // EEUCBuilding::Update; production is instant under the player's mInstantBuild
-extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
 // Ticks an animal: physics, effects, timers and animation; fires on attack frames and lets its carcass rot
 extern GEViewport gViewport;
@@ -634,7 +640,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_DISABLED: return theUnit->mIsDisabled;
     case EE_UNITS_UC_HIT_POINTS: return theUnit->mHitPoints;
     case EE_UNITS_UC_PRODUCTION_TIME: return theUnit->mProductionTime;
-    case EE_UNITS_UC_IN_CINEMATIC: return gInCinematic;
+    case EE_UNITS_UC_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_UNITS_UC_TICK_MS: return gPhysics->mTickTimeMs;
     case EE_UNITS_UC_INSTANT_BUILD: return theUnit->mPlayer->mInstantBuild;
     case EE_UNITS_UC_RESEARCH_MAKES_UNIT: return theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mMakesUnit;
@@ -693,7 +699,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_START_ACTION: theOther->StartAction((long)inB); return 0;
     case EE_UNITS_UC_ACTION_CHANGED: theOther->mUnitClass->ActionChanged(theOther); return 0;
     case EE_UNITS_UC_MUZZLE_FLASH: return (uint64_t)(uintptr_t)theOther->mUnitClass->mMuzzleFlashEffect;
-    case EE_UNITS_UC_PLACED_EFFECT: gEffectManager->CreatePlacedEffect(GE3DPoint(f[0], f[1], f[2]), EEUcObject<EEGraphicEffect>(inA), NULL); return 0;
+    case EE_UNITS_UC_PLACED_EFFECT: gWorld.mEffectManager->CreatePlacedEffect(GE3DPoint(f[0], f[1], f[2]), EEUcObject<EEGraphicEffect>(inA), NULL); return 0;
     // the creations', launches' and deaths' (uc_create.rs; inA an object, a transformation's address or a player)
     case EE_UNITS_UC_IS_COMPLEX: return theClass->mIsComplex;
     case EE_UNITS_UC_PITCHES: return theClass->mPitchesWithTerrain;
@@ -723,7 +729,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_ADD_UNIT_ENTRY: ::gWorld.AddUnitEntry(EEUcObject<EEUnit>(inA), EEUcObject<EEUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UC_CREATE_RUNWAYS: theClass->CreateRunways(theOther, EEUcObject<EEPlayer>((uint64_t)inB), inC != 0); return 0;
     case EE_UNITS_UC_ATTACHED_EFFECT: return EEObj(theClass->mAttachedEffect);
-    case EE_UNITS_UC_ATTACHED_EFFECT_ON: gEffectManager->CreateUnitEffect(EEUcObject<EEUnit>(inA), theClass->mAttachedEffect, NULL, inB != 0, 0, 0); return 0;
+    case EE_UNITS_UC_ATTACHED_EFFECT_ON: gWorld.mEffectManager->CreateUnitEffect(EEUcObject<EEUnit>(inA), theClass->mAttachedEffect, NULL, inB != 0, 0, 0); return 0;
     case EE_UNITS_UC_INSERT_UNLISTED: EEUnitStoreInsertUnlisted(EEUcObject<EEUnit>(inA)); return 0;
     case EE_UNITS_UC_FARM_TYPE: return EEGetFarmType(EEUcObject<EEPlayer>(inA));
     case EE_UNITS_UC_CLASS_AT: return EEObj(gUnitClassTable[(size_t)inB]);
@@ -743,7 +749,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CREATE_UNIT_BY: return EEObj(EEUcObject<EEUnitClass>(inA)->CreateUnit((int32_t)inB, (int32_t)(inB >> 32), (long)inC, false, theUnit));
     case EE_UNITS_UC_PROJECTILE_CLASS: return EEObj(theClass->mProjectileClass);
     case EE_UNITS_UC_CREATION_EFFECT: return EEObj(theClass->mCreationEffect);
-    case EE_UNITS_UC_CREATION_EFFECT_ON: gEffectManager->CreateUnitEffect(EEUcObject<EEUnit>(inA), theClass->mCreationEffect, NULL, false, 0, 0); return 0;
+    case EE_UNITS_UC_CREATION_EFFECT_ON: gWorld.mEffectManager->CreateUnitEffect(EEUcObject<EEUnit>(inA), theClass->mCreationEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_UC_WORLD_CREATION_EFFECT_ON: ::gWorld.GetEffectManager()->CreateUnitEffect(EEUcObject<EEUnit>(inA), theClass->mCreationEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_UC_SET_LAUNCHER: theOther->SetLauncherClass(theClass); return 0;
     case EE_UNITS_UC_NEW_ATTACK_UNIT: return EEObj(EEUGRust::NewAttackUnit(theOther, EEUcObject<EEUnit>((uint64_t)inB), false, false));
@@ -782,7 +788,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_UNIT_TILE: return EEObj(theUnit->mTile);
     case EE_UNITS_UC_CREATE_DEATH_CLASS_UNIT: theClass->mDeathClass->CreateUnit(theUnit->GetTileX(), theUnit->GetTileY(), ::gWorld.mPlayers[0]->GetPlayerID(), 0, NULL); return 0;
     case EE_UNITS_UC_DEATH_EFFECT: return EEObj(theClass->mDeathEffect);
-    case EE_UNITS_UC_DEATH_EFFECT_ON: gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); return 0;
+    case EE_UNITS_UC_DEATH_EFFECT_ON: gWorld.mEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); return 0;
     case EE_UNITS_UC_DEATH_SOUND: return EEObj(theUnit->mStats->mDeathSound);
     case EE_UNITS_UC_PLAY_SOUND: gSoundManager->Play(EEUcObject<EESoundObject>(inA)->mSampleID, f[0], f[1], f[2], EEUcObject<EESoundObject>(inA)->mLooping, NULL); return 0;
     case EE_UNITS_UC_SET_PHYSICS_ACTION: theUnit->SetCurrentPhysicsAction((long)inB); return 0;
@@ -837,7 +843,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_TILE_TERRAIN: return EEUcObject<RTSTile>(inA)->mTerrainType;
     case EE_UNITS_UC_IN_STORM: return gWorld.mEnvironmentManager->IsInStorm(U2DPoint<long>(theUnit->GetTileX(), theUnit->GetTileY()), false, true);
     case EE_UNITS_UC_IS_SEEN: return EEIsSeen(theUnit);
-    case EE_UNITS_UC_HORSE_BREATH: gEffectManager->CreateEffectBetweenUnits(theUnit, theUnit, EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits), NULL); return 0;
+    case EE_UNITS_UC_HORSE_BREATH: gWorld.mEffectManager->CreateEffectBetweenUnits(theUnit, theUnit, EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits), NULL); return 0;
     case EE_UNITS_UC_MODEL_SOUNDS1_AT: return EEObj(theUnit->GetModel()->mSounds1[inB]);
     case EE_UNITS_UC_MODEL_SOUNDS2_AT: return EEObj(theUnit->GetModel()->mSounds2[inB]);
     case EE_UNITS_UC_FRACTION: f[0] = theUnit->mAnimationFraction; return 0;
@@ -858,7 +864,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_SET_TURRET_ANGLE: theUnit->mTurretAngles[inB] = f[0]; return 0;
     case EE_UNITS_UC_TRAIL_TIMER: return theUnit->mTrailEffectTimer;
     case EE_UNITS_UC_SET_TRAIL_TIMER: theUnit->SetTrailEffectTimer((long)inB); return 0;
-    case EE_UNITS_UC_TRAIL_EFFECT_ON: gEffectManager->CreateUnitEffect(theUnit, theClass->mTrailEffect, NULL, 0, 0, 0); return 0;
+    case EE_UNITS_UC_TRAIL_EFFECT_ON: gWorld.mEffectManager->CreateUnitEffect(theUnit, theClass->mTrailEffect, NULL, 0, 0, 0); return 0;
     case EE_UNITS_UC_RESET_TRAIL_TIMER: theUnit->SetTrailEffectTimer(theClass->mTrailEffect->mTime1); return 0;
     case EE_UNITS_UC_WAKE_TIMER: return theUnit->mWakeTimer;
     case EE_UNITS_UC_SET_WAKE_TIMER: theUnit->mWakeTimer = (long)inB; return 0;
@@ -873,7 +879,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
         EEUcObject<EETagPointList>(inA)->GetTagPoint((unsigned long)inB)->GetPoint(theUnit->mPhysicalModel.GetFrame(), *EEUcObject<GETransformation>((uint64_t)inC), *reinterpret_cast<GE3DPoint*>(f));
         return 0;
     case EE_UNITS_UC_TILE_HEIGHT_OF: f[0] = EEUcObject<EEMapTile>(inA)->mHeight; return 0;
-    case EE_UNITS_UC_RIPPLE_EFFECT_AT: gEffectManager->CreateTransformationEffect(*EEUcObject<GETransformation>(inA), theClass->mRippleEffect, NULL); return 0;
+    case EE_UNITS_UC_RIPPLE_EFFECT_AT: gWorld.mEffectManager->CreateTransformationEffect(*EEUcObject<GETransformation>(inA), theClass->mRippleEffect, NULL); return 0;
     case EE_UNITS_UC_HEALING_POINTS: return theUnit->mStats->mHealingPoints;
     case EE_UNITS_UC_CARGO_COUNT: return theUnit->GetNumCargoUnits();
     case EE_UNITS_UC_WORLD_IN_CINEMATIC: return ::gWorld.mInCinematic;

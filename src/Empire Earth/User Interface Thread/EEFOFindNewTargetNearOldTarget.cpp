@@ -609,7 +609,7 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     case 8:
         ee_combat_regions_footprint(::gWorld.mMap->mUnitRegions, inX, inY, (int32_t)inC, (uint64_t)(uintptr_t)static_cast<EEComplexUnit*>(UUUnit(inA)), inB != 0);
         return 0;
-    case 9: return gLoadingSavedGame;
+    case 9: return gWorld.mLoadingSavedGame;
     case 11: static_cast<EEComplexUnit*>(UUUnit(inA))->CanTake(static_cast<EEComplexUnit*>(UUUnit(inB)), (unsigned long)inX); return 0;
     case 12: return UUHandle(static_cast<EEUnit*>(static_cast<EEComplexUnit*>(UUUnit(inA))->mLastResource));
     case 13: {
@@ -925,7 +925,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS: return UbObj<EEUnitClassUpgrade>(inA)->mUnitClass->mHitPoints;
     case EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS: return UbObj<EEUnitClassUpgrade>(inA)->GetMaxHitPoints();
     case EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS: UbObj<EEUnitClassUpgrade>(inA)->mMaxHitPoints = (long)inC; return 0;
-    case EE_UNITS_UB_LOADING_SAVED_GAME: return gLoadingSavedGame;
+    case EE_UNITS_UB_LOADING_SAVED_GAME: return gWorld.mLoadingSavedGame;
     case EE_UNITS_UB_FIRST_UNIT: return UUHandle(UbObj<EEPlayer>(inA)->mFirstUnit);
     case EE_UNITS_UB_NEXT_UNIT: return UUHandle(static_cast<EEUnit*>(UUUnit(inA)->mNext));
     case EE_UNITS_UB_APPLY_TO_UNIT: UbObj<EEUUUnitFunctor>(inA)->ApplyToUnit(UUUnit(inB)); return 0;

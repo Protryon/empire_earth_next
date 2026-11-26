@@ -65,6 +65,5 @@ private:
     static uint64_t U(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
 };
 
-extern EEEffectManager*& gEffectManager;
 
 #endif

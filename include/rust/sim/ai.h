@@ -309,18 +309,6 @@ constexpr static const int32_t EE_AI_UNITS_HOST_HAS_ROOM = 15;
 /// The player `a`'s `IsHuman()`.
 constexpr static const int32_t EE_AI_UNITS_HOST_IS_HUMAN = 16;
 
-/// `gWorld.mTeams.size()`.
-constexpr static const int32_t EE_AI_UNITS_HOST_TEAMS = 17;
-
-/// `gWorld.mTeams[a].ContainsPlayer(b)`.
-constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_HAS = 18;
-
-/// `gWorld.mTeams[a].GetNumPlayers()`.
-constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_SIZE = 19;
-
-/// `gWorld.mTeams[a].GetPlayersAt(b)`.
-constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_PLAYER = 20;
-
 /// The complex unit `a`'s gather goal's resource id, when it has one and it is valid (0: none).
 constexpr static const int32_t EE_AI_UNITS_HOST_GATHER_TARGET = 21;
 

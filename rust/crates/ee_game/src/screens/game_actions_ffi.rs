@@ -1,7 +1,7 @@
 //! `extern "C"` for the game's actions whole in Rust (`game_actions.rs`): the calls of `EEARust` (`ee/EEARust.h`),
 //! its constructor, destructor and run, and its users' (the click's execute and selection, the lasso's selection, the
 //! build placements, the calamity's cast and check, the camera's targets, the edge scroll's update, the improvement's
-//! begin). The host is `ee_screenscpp_ga` and `ee_screenscpp_ga_record` (`Actions/EEARust.cpp`).
+//! begin). The host is `ee_screenscpp_ga` (`Actions/EEARust.cpp`); records are gamecpp mrecord.rs's.
 
 use core::ffi::c_void;
 
@@ -14,11 +14,10 @@ use crate::screens::game_actions_host::{ee_screens_gah_run, GaCpp};
 mod sys {
     use core::ffi::c_void;
 
-    use crate::screens::game_actions::{EeScreensGaFields, EeScreensGaValue};
+    use crate::screens::game_actions::EeScreensGaFields;
 
     extern "C" {
         pub fn ee_screenscpp_ga(op: u32, r: *mut EeScreensGaFields, p: *mut c_void, i: *mut i64, f: *mut f32) -> i64;
-        pub fn ee_screenscpp_ga_record(kind: u32, values: *const EeScreensGaValue, count: u32) -> *mut c_void;
     }
 }
 
@@ -38,7 +37,8 @@ impl GaHost for Host {
         ee_screens_gah_run(&mut Cpp, op, r, p, i, f)
     }
     fn record(&mut self, kind: u32, values: &[EeScreensGaValue]) -> usize {
-        unsafe { sys::ee_screenscpp_ga_record(kind, values.as_ptr(), values.len() as u32) as usize }
+        // SAFETY: the values' slice
+        unsafe { crate::gamecpp::mrecord::ee_screenscpp_ga_record(kind, values.as_ptr(), values.len() as u32) as usize }
     }
     fn editor_call(&mut self, call: GaEditorCall) -> i64 {
         use crate::screens::editor_actions_ffi as sea;

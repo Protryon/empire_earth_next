@@ -53,7 +53,6 @@
 #include "ee/EEMessage.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EETeam.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEEvent.h"
 #include "ee/EECPBehavior.h"
@@ -186,14 +185,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return gCPTraceOn ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_HUMAN:
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
-    case EE_AI_UNITS_HOST_TEAMS:
-        return (int64_t)gWorld.mTeams.size();
-    case EE_AI_UNITS_HOST_TEAM_HAS:
-        return gWorld.mTeams[(size_t)a].ContainsPlayer((unsigned long)b) ? 1 : 0;
-    case EE_AI_UNITS_HOST_TEAM_SIZE:
-        return (int64_t)gWorld.mTeams[(size_t)a].GetNumPlayers();
-    case EE_AI_UNITS_HOST_TEAM_PLAYER:
-        return (int64_t)gWorld.mTeams[(size_t)a].GetPlayersAt((unsigned long)b);
     case EE_AI_UNITS_HOST_GATHER_GOAL:
         return (int64_t)(uintptr_t)EEGatherGoalCast(((EEComplexUnit*)(uintptr_t)a)->GetGoalState());
     case EE_AI_UNITS_HOST_GATHER_RESOURCE:

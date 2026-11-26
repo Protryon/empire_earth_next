@@ -18,6 +18,8 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEGameOptions.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"                // gWorld.mUsingCarbon
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
@@ -147,7 +149,7 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::CxAnimation: return CX->GetAnimation();
     case O::ScriptDirectory: EERMText(a[0], gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\");
         break;
-    case O::SetUsingCarbon: gUsingCarbon = a[0] != 0;
+    case O::SetUsingCarbon: gWorld.mUsingCarbon = a[0] != 0;
         break;
     case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;

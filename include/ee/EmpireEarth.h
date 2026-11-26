@@ -63,7 +63,6 @@ extern UWideString gGameVersion;           // 0x529a08 (the version a client sen
 extern uint32_t gBinaryChecksum;      // 0x5319e4 (likewise, the binary checksum; provisional name)
 extern unsigned long& gNetworkAdapter;      // 0x5308a0 (passed to the local server's ctor by the SP random map; provisional name)
 extern long& gDifficultyLevel2;             // 0x530704 (likewise; provisional name)
-extern unsigned long& gStartTime;           // 0x5318d0 (EEClient 0xb80ef/EEServer 0xcc34e: NEMStartGame's offset start time; provisional name)
 
 // 0x27a432 (User Interface Thread): the text of a resource reference through gResource->GetString, else a copy
 // (provisional name and meaning; the campaign editor shows its fields through it)
@@ -132,10 +131,7 @@ class GERectangle;
 // settings pass (0, 35, 1600, 1085) (provisional name)
 void EESetGameViewRectangle(const GERectangle& inRectangle);
 // (provisional names): what EEDataPreLoading::LoadGame (0xd439f) reads and calls
-extern bool& gLoadingSavedGame;
-extern bool& gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
 extern unsigned long& gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)
-extern bool& gGameScreenActive;             // 0x5318d7 (24 users; the save/load events test it with gUIManager->mInScenarioEditor)
 // 0x13fcda (cdecl): loads a ".wav"/".mp3" sound file (SIE SoundOver: (name, 0x31, theSample, sSoundID, 0), then
 // RegisterOneShotSound(theSample, sSoundID)) (provisional name and parameter names)
 void EELoadSound(const UString& inName, unsigned long inType, unsigned long& outSample, unsigned long& outInstance,
@@ -167,7 +163,6 @@ extern GEFont* gFontTahoma10;              // 0x531998 (EEE3DGoal's countdown; p
 extern GEFont* gFontTahoma12;
 extern GEFont* gFontTahoma14;
 extern GEFont* gFontTahoma16;
-extern bool& gUnitImprovementsAllowed;      // 0x5318db (EEUIBUpgrade only acts when it is true; provisional name)
 
 // 0x13f736 (cdecl; Empire Earth.cpp): a checksum of the file inFile in inDirectory (EECampaignEditorBehavior::Reset
 // compares it with the archived scenario's byte sum; name and the third argument provisional name)
