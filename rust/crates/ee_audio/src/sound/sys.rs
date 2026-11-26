@@ -106,6 +106,9 @@ extern "C" {
 }
 
 /// `ESVerify(__FILE__, line, expression)` (Sound Engine.cpp's file name, as the trampoline reported it).
+///
+/// # Safety
+/// `expression` is NULL or NUL-terminated.
 #[cfg(not(test))]
 pub unsafe fn ee_soundcpp_verify(expression: *const c_char, line: u32) {
     let file = c"C:\\EEX\\Low-Level Engine\\Sound Engine\\Sound Engine.cpp";
@@ -113,12 +116,18 @@ pub unsafe fn ee_soundcpp_verify(expression: *const c_char, line: u32) {
 }
 
 /// `UMSetFloatingPointPrecision(kFPPrecision53)`.
+///
+/// # Safety
+/// None (unsafe as the extern it replaces).
 #[cfg(not(test))]
 pub unsafe fn ee_soundcpp_fp_precision53() {
     unsafe { ee_util_fp_set_precision(0x10000) }
 }
 
 /// The scavenger loop's checks: 53-bit precision and round-to-nearest, set again when they differ.
+///
+/// # Safety
+/// None (unsafe as the extern it replaces).
 #[cfg(not(test))]
 pub unsafe fn ee_soundcpp_fp_check() {
     unsafe { ee_util_fp_check() }

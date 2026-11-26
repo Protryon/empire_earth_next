@@ -38,7 +38,7 @@ pub struct CppSurface {
     pub logical_height: c_ulong,
 }
 
-/// `GESurface::GetWidth()` (`height` false) / `GetHeight()`: its logical size (`ee_dx7sf_logical_size` over the
+/// `GESurface::GetWidth()` (`height` false) / `GetHeight()`: its logical size (`ee_dx7sf_logical_size`'s, over the
 /// logical members).
 ///
 /// # Safety
@@ -48,7 +48,7 @@ pub unsafe fn surface_logical_size(cpp: usize, height: bool) -> c_ulong {
     unsafe {
         let s = &*(cpp as *const CppSurface);
         let set = if height { s.logical_height } else { s.logical_width };
-        crate::dx7::surfobj::ee_dx7sf_logical_size(s.counted.rust.cast(), set, s.logical_shift, height)
+        crate::dx7::surfobj::EeDx7Surface::logical_size(s.counted.rust.cast(), set, s.logical_shift, height)
     }
 }
 
