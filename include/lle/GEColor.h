@@ -20,9 +20,6 @@ public:
     void SetRed(float inRed) { this->mRed = inRed; }
     void SetGreen(float inGreen) { this->mGreen = inGreen; }
     void SetBlue(float inBlue) { this->mBlue = inBlue; }
-    // 0xdec4: clamps each channel to [0, 1]
-    void Normalize() { *this = GEColor(Clamp(this->mRed), Clamp(this->mGreen), Clamp(this->mBlue)); }
-    static float Clamp(float inValue) { return inValue > 1.0f ? 1.0f : (inValue < 0.0f ? 0.0f : inValue); }
     // red, green and blue from (to) the file (open or not); the first error
     template <class F> long Load(F& inFile) { return ee_ge_color_load(reinterpret_cast<float(*)[3]>(&mRed), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_color_save(reinterpret_cast<const float(*)[3]>(&mRed), GERustFile(inFile)); }

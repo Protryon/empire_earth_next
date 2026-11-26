@@ -50,28 +50,17 @@ public:                                                // column 3; rust/base/ma
     float DistanceTo(const GETransformation& inTransformation) const { return ee_ge_t_distance_to(GERust(*this), GERust(inTransformation)); }
     float DistanceSquaredTo(const GE3DPoint& inPoint) const { return ee_ge_t_distance_squared_to_point(GERust(*this), GERust(inPoint)); }
     float DistanceSquaredTo(const GETransformation& inTransformation) const { return ee_ge_t_distance_squared_to(GERust(*this), GERust(inTransformation)); }
-    void Dump() const {}
-    unsigned long GetChecksum() const { return 0; }
     // inline: the exported COMDAT sits in GE3DPoint.cpp's GETransformation block (0x1000d783); GEQuaternion
     // (0x10023219) reads every element through it (fld + faddp/fsubp, no memory operands)
     float GetElement(unsigned long inRow, unsigned long inColumn) const { return this->mMatrix[inRow][inColumn]; }
-    float GetPitch() const { return ee_ge_t_pitch(GERust(*this)); }   // the angles taken from the matrix
     GE3DPoint GetPosition() const { return GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
     void GetPosition(GE3DPoint& outPosition) const { outPosition = GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
-    float GetRoll() const { return ee_ge_t_roll(GERust(*this)); }
     float GetX() const { return this->mMatrix[0][3]; }  // exported, ICF-folded (0x10058d38)
     float GetY() const { return this->mMatrix[1][3]; }
-    float GetYaw() const { return ee_ge_t_yaw(GERust(*this)); }
     float GetZ() const { return this->mMatrix[2][3]; }
     // the sixteen elements from (to) a file, stopping at the first error
     template <class F> long Load(F& inFile) { return ee_ge_t_load(GERust(*this), GERustFile(inFile)); }
     void MakeIdentity() { ee_ge_t_identity(GERust(*this)); }
-    void Normalize() { ee_ge_t_normalize(GERust(*this)); }   // the three rotation columns to unit length
-    // Revolve: yaw, pitch and roll applied after it (about its own axes); Rotate: before it (the parent axes)
-    void Revolve(const GEOrientation& inOrientation) { this->Revolve(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
-    void Revolve(float inYaw, float inPitch, float inRoll) { ee_ge_t_revolve(GERust(*this), inYaw, inPitch, inRoll); }
-    void Rotate(const GEOrientation& inOrientation) { this->Rotate(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
-    void Rotate(float inYaw, float inPitch, float inRoll) { ee_ge_t_rotate(GERust(*this), inYaw, inPitch, inRoll); }
     template <class F> long Save(F& inFile) const { return ee_ge_t_save(GERust(*this), GERustFile(inFile)); }
     // inline: EE-AOC.exe imports only Scale(x, y, z); GEPhysicalModel::Intersects expands it (GE3DPoint.cpp emits the
     // exported copy 0x1000d848)
@@ -84,16 +73,9 @@ public:                                                // column 3; rust/base/ma
     void SetPosition(const GE3DPoint& inPosition) { this->SetPosition(inPosition.GetX(), inPosition.GetY(), inPosition.GetZ()); }
     // inline: SetPosition(const GE3DPoint&) 0xd93d loads z, y, x (call arguments) then stores
     void SetPosition(float inX, float inY, float inZ) { mMatrix[0][3] = inX; mMatrix[1][3] = inY; mMatrix[2][3] = inZ; }
-    void SetScale(float inScale) { this->SetScale(inScale, inScale, inScale); }
-    // a pure scale by x, y and z (the position column kept)
-    void SetScale(float inX, float inY, float inZ) { ee_ge_t_set_scale(GERust(*this), inX, inY, inZ); }
     void SetX(float inX) { this->mMatrix[0][3] = inX; }  // exported, ICF-folded
     void SetY(float inY) { this->mMatrix[1][3] = inY; }
     void SetZ(float inZ) { this->mMatrix[2][3] = inZ; }
-    unsigned long SizeOf() { return sizeof(GETransformation); }
-    void Translate(const GEVector& inVector) { this->Translate(inVector.GetX(), inVector.GetY(), inVector.GetZ()); }
-    void Translate(float inX, float inY, float inZ) { this->mMatrix[0][3] += inX; this->mMatrix[1][3] += inY; this->mMatrix[2][3] += inZ; }
-    bool Verify() const { return true; }    // (no consistency check in the retail build)
 };
 
 inline GE3DPoint::GE3DPoint(const GETransformation& inTransformation)
