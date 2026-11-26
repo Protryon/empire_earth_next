@@ -173,9 +173,16 @@ fn handle_message(p: P, message: u32, parameter1: usize, parameter2: usize) {
         MESSAGE_LOAD_TECHNOLOGY | MESSAGE_UNLOAD_TECHNOLOGY => {
             let player = h(O::Player, 0, &[parameter1 as isize as i64]) as P;
             if player != 0 {
-                let node = crate::tech_tree::objects::get(crate::tech_tree::objects::player_tree(player), parameter2 as isize as std::ffi::c_long);
+                let node = crate::tech_tree::objects::get(
+                    crate::tech_tree::objects::player_tree(player),
+                    parameter2 as isize as std::ffi::c_long,
+                );
                 if node != 0 {
-                    crate::tech_tree::objects::ee_gamecpp_tech_obj_media(node as *mut std::ffi::c_void, player as *mut std::ffi::c_void, message == MESSAGE_LOAD_TECHNOLOGY);
+                    crate::tech_tree::objects::ee_gamecpp_tech_obj_media(
+                        node as *mut std::ffi::c_void,
+                        player as *mut std::ffi::c_void,
+                        message == MESSAGE_LOAD_TECHNOLOGY,
+                    );
                 }
             }
         }

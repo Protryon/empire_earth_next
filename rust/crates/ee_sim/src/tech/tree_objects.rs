@@ -7,6 +7,7 @@
 //! The objects' destructors' world work (media, buttons) is ee_game tech_tree's; this module only makes, finds and
 //! frees memory.
 #![allow(non_snake_case)]
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
 #![allow(clippy::missing_safety_doc)]
 
 use std::collections::BTreeMap;
@@ -226,7 +227,9 @@ pub unsafe fn walk_node(n: usize, op: crate::tech::nodes::EeTechNodeOp, a: i32, 
 pub unsafe fn walk_tree(t: usize, op: crate::tech::nodes::EeTechTreeOp, a: i32, b: i32, unit: usize) -> i32 {
     let Some(f) = host() else { return 0 };
     // SAFETY: the contract
-    unsafe { crate::tech::nodes::ee_tech_walk_tree(t as *mut _, f, op, t as *mut EeTechTreeFields, a, b, unit as *mut _) }
+    unsafe {
+        crate::tech::nodes::ee_tech_walk_tree(t as *mut _, f, op, t as *mut EeTechTreeFields, a, b, unit as *mut _)
+    }
 }
 
 /// The virtual `GetIsObsolete`: an epoch's flag, a node's walk.

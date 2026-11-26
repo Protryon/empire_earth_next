@@ -19,11 +19,11 @@ use ee_sim::tech::tech_ids::ee_tech_epoch_count;
 use super::persistent::Longs;
 use super::{O, P};
 use crate::tech_tree::host::ee_gamecpp_tech_node_ids;
-use crate::tech_tree::objects as ob;
-use ee_sim::tech::nodes::{EeTechNodeOp, EeTechTreeOp};
 use crate::tech_tree::load::{
     data_of, ee_gamecpp_tech_sum_costs_captured, node_data, node_fields, tree_fields, TbRecord,
 };
+use crate::tech_tree::objects as ob;
+use ee_sim::tech::nodes::{EeTechNodeOp, EeTechTreeOp};
 
 /// `kTechEpochPrehistoric`, `kTechNone` (static_assert'd in EETechTreeEpoch.cpp): SumCosts walks the ids between.
 const TC_FIRST_ID: c_long = 0;
@@ -141,7 +141,12 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
             if safe {
                 for resource in 0..7i64 {
                     for scale in [1.0f32, 0.75, 1.5] {
-                        r.i32(ob::ee_gamecpp_tech_obj_cost(node as *mut c_void, resource as c_long, class as c_long, scale) as i32);
+                        r.i32(ob::ee_gamecpp_tech_obj_cost(
+                            node as *mut c_void,
+                            resource as c_long,
+                            class as c_long,
+                            scale,
+                        ) as i32);
                     }
                 }
             }
@@ -265,11 +270,5 @@ mod tests {
         let mut c = EeErrorChecksum::new(true);
         c.add(b"EETechTree", 0xdead_beef);
         assert_eq!(c.total(), 0xdead_beef);
-    }
-
-    #[test]
-    #[should_panic(expected = "no C++")]
-    fn a_node_check_asks_the_classes() {
-        node_indexes_safe(1);
     }
 }

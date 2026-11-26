@@ -8,8 +8,8 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::tech::nodes::{
-    ee_tech_walk_node, ee_tech_walk_tree, EeTechHostIo, EeTechNodeDataFields,
-    EeTechNodeFields, EeTechNodeOp, EeTechNodeRef, EeTechTreeFields, EeTechTreeOp,
+    ee_tech_walk_node, ee_tech_walk_tree, EeTechHostIo, EeTechNodeDataFields, EeTechNodeFields, EeTechNodeOp,
+    EeTechNodeRef, EeTechTreeFields, EeTechTreeOp,
 };
 use ee_sim::tech::tree_objects as to;
 
@@ -158,7 +158,16 @@ pub(crate) fn walk(node: P, op: EeTechNodeOp, a: i32, b: bool, unit: P) -> i32 {
     let tree = tree_of(node);
     // SAFETY: the node's live records and its tree's
     unsafe {
-        ee_tech_walk_node(tree as *mut c_void, tech_host, op, tree_fields(tree), node_ref(node), a, b, unit as *mut c_void)
+        ee_tech_walk_node(
+            tree as *mut c_void,
+            tech_host,
+            op,
+            tree_fields(tree),
+            node_ref(node),
+            a,
+            b,
+            unit as *mut c_void,
+        )
     }
 }
 
@@ -186,7 +195,12 @@ pub extern "C" fn ee_gamecpp_tech_obj_obsolete(node: *mut c_void) -> bool {
 
 /// The virtual `GetCost`: an epoch's or a node's.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_obj_cost(node: *mut c_void, resource: c_long, unit_class: c_long, scale: f32) -> c_long {
+pub extern "C" fn ee_gamecpp_tech_obj_cost(
+    node: *mut c_void,
+    resource: c_long,
+    unit_class: c_long,
+    scale: f32,
+) -> c_long {
     if is_epoch(node as P) {
         super::host::ee_gamecpp_tech_epoch_get_cost(node, resource, unit_class, scale)
     } else {

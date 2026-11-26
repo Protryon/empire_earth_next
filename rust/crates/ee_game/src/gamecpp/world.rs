@@ -971,7 +971,12 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         if !crate::tech_tree::objects::is_loaded(tree) {
             let o = state_options(st);
             let (start, end) = (o.mEpochStart as i64, o.mEpochEnd as i64);
-            crate::tech_tree::objects::tree_walk(tree, ee_sim::tech::nodes::EeTechTreeOp::ResetEpochRange, start as i32, end as i32);
+            crate::tech_tree::objects::tree_walk(
+                tree,
+                ee_sim::tech::nodes::EeTechTreeOp::ResetEpochRange,
+                start as i32,
+                end as i32,
+            );
         }
         let mut j: i64 = 0;
         while j < h(O::PlNumPending, pl, &[]) {
@@ -1476,7 +1481,10 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
         super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
         super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
         player_body(pl, pb::EE_UNITS_PLAYER_DO_REFRESH_TERRAIN);
-        crate::tech_tree::host::ee_gamecpp_tech_update_interface(crate::tech_tree::objects::player_tree(pl) as *mut std::ffi::c_void, true);
+        crate::tech_tree::host::ee_gamecpp_tech_update_interface(
+            crate::tech_tree::objects::player_tree(pl) as *mut std::ffi::c_void,
+            true,
+        );
         h(O::UiPostUpdateBackground, 0, &[]);
         h(O::SetCameraFollowing, 0, &[0]);
     }

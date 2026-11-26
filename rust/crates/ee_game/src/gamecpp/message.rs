@@ -853,7 +853,8 @@ pub extern "C" fn ee_gamecpp_msg_disband(pl: *mut c_void, u: *mut c_void, factor
     let (pl, u) = (pl as P, u as P);
     let class = ucf(unit_class(u));
     let (technology, unit_type) = (class.mTechnology, class.mUnitType);
-    let tech = crate::tech_tree::objects::get(crate::tech_tree::objects::player_tree(pl), technology as std::ffi::c_long);
+    let tech =
+        crate::tech_tree::objects::get(crate::tech_tree::objects::player_tree(pl), technology as std::ffi::c_long);
     hf(O::PlRefundTechnology, pl, &[pa(tech), unit_type as i64], &[factor]);
     let effect = hp(O::GfxEffectGet, 0, &[EFFECT_DISBAND]);
     h(O::EffUnit, u, &[pa(effect), 0, 1, 0, 0]);

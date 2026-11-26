@@ -27,8 +27,8 @@ use super::host::{
     ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs, epoch_insert, epoch_nodes,
     tree_player,
 };
-use crate::gamecpp::persistent::Pf;
 use super::objects as ob;
+use crate::gamecpp::persistent::Pf;
 use crate::gamecpp::{h, hp, O, P};
 
 /// `kErrorOK`.
@@ -151,11 +151,9 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
                 break;
             }
             let node = ob::node_new();
-            result = ee_gamecpp_tech_node_load(
-                node as *mut c_void,
-                file as *mut c_void,
-                ob::tree_of(epoch) as *mut c_void,
-            ) as i64;
+            result =
+                ee_gamecpp_tech_node_load(node as *mut c_void, file as *mut c_void, ob::tree_of(epoch) as *mut c_void)
+                    as i64;
             let id = data_of(node).mID;
             if result == TB_OK && id >= TB_FIRST_NODE_ID {
                 // the node belongs to the epoch whose block holds it (the original: id / 1000 - 1)

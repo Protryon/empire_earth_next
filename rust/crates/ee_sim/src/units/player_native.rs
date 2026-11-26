@@ -342,9 +342,7 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
 unsafe fn tech(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlayerIo) -> Option<i64> {
     use crate::tech::nodes::{EeTechNodeOp, EeTechTreeOp};
     use crate::tech::tree_objects as to;
-    use crate::units::player::{
-        EE_UNITS_PLAYER_NODE, EE_UNITS_PLAYER_NODE_AVAILABLE, EE_UNITS_PLAYER_NODE_UNIT_CLASS,
-    };
+    use crate::units::player::{EE_UNITS_PLAYER_NODE, EE_UNITS_PLAYER_NODE_AVAILABLE, EE_UNITS_PLAYER_NODE_UNIT_CLASS};
     use crate::units::player_split::EE_UNITS_PLAYER_X_NODE;
     use crate::units::player_units::{
         EE_UNITS_PLAYER_CITIZEN_CONTAINS, EE_UNITS_PLAYER_RESEARCH, EE_UNITS_PLAYER_SET_NODE_AVAILABLE,
@@ -358,7 +356,9 @@ unsafe fn tech(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlayerIo) 
         let get = |id: i64| to::tree_get(tree as *mut _, id as c_long) as usize;
         Some(match op {
             EE_UNITS_PLAYER_NODE | EE_UNITS_PLAYER_X_NODE => get(a[0]) as i64,
-            EE_UNITS_PLAYER_NODE_AVAILABLE => to::walk_node(a[0] as usize, EeTechNodeOp::IsAvailable, 0, false, 0) as i64,
+            EE_UNITS_PLAYER_NODE_AVAILABLE => {
+                to::walk_node(a[0] as usize, EeTechNodeOp::IsAvailable, 0, false, 0) as i64
+            }
             EE_UNITS_PLAYER_NODE_UNIT_CLASS => to::unit_class(a[0] as usize, a[1] as usize) as i64,
             EE_UNITS_PLAYER_SET_NODE_AVAILABLE => {
                 to::walk_tree(tree, EeTechTreeOp::SetNodeAvailable, a[0] as i32, i32::from(a[1] != 0), 0);

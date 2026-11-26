@@ -23,13 +23,13 @@ use ee_sim::tech::tree::EeTechCostInput;
 
 use super::load;
 use super::objects as ob;
-use ee_sim::tech::nodes::EeTechNodeOp;
-use ee_sim::tech::tree_objects::EeTechEpochLists;
 use crate::gamecpp::{h, hd, hp, ptr, O, P};
 use ee_data::tables::EeDataGameVariantFields;
 use ee_sim::tech::capture_rec::ee_tech_capture_cost;
 use ee_sim::tech::ffi::ee_tech_epoch_cost_scale;
 use ee_sim::tech::node_media::cost_string;
+use ee_sim::tech::nodes::EeTechNodeOp;
+use ee_sim::tech::tree_objects::EeTechEpochLists;
 
 /// `kErrorOK`.
 const TK_OK: i64 = 0;
@@ -187,7 +187,9 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
             io.node = ob::node_ref(found);
             return 1;
         }
-        EE_TECH_HOST_NEEDS_UNIT_MEDIA => return load::ee_gamecpp_tech_needs_unit_media(node as *mut c_void, true) as i32,
+        EE_TECH_HOST_NEEDS_UNIT_MEDIA => {
+            return load::ee_gamecpp_tech_needs_unit_media(node as *mut c_void, true) as i32
+        }
         EE_TECH_HOST_TRIGGER => {
             let (index, player) = (load::player_index(tree), load::player_pointer(tree));
             ee_sim::scenario::event::ee_scenario_ev_trigger(
@@ -252,11 +254,7 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         }
         EE_TECH_HOST_MEDIA => media(unit, v[0], v[1], v[2] != 0),
         EE_TECH_HOST_CLASS_TYPE => {
-            let class = if v[0] >= 0 && (v[0] as i64) < ob::class_count() {
-                ob::class_at(v[0] as i64)
-            } else {
-                0
-            };
+            let class = if v[0] >= 0 && (v[0] as i64) < ob::class_count() { ob::class_at(v[0] as i64) } else { 0 };
             if class == 0 {
                 return 0;
             }
@@ -514,7 +512,8 @@ pub extern "C" fn ee_gamecpp_tech_cost_string(node: *mut c_void, unit_class: c_l
     let node = node as P;
     // SAFETY: the world's bool member
     let carbon = unsafe { *(hp(O::WUsingCarbon, hp(O::WorldAddr, 0, &[]), &[]) as *const bool) };
-    let mut cost = |r: i32, s: f32| ob::ee_gamecpp_tech_obj_cost(node as *mut c_void, r as c_long, unit_class, s) as i32;
+    let mut cost =
+        |r: i32, s: f32| ob::ee_gamecpp_tech_obj_cost(node as *mut c_void, r as c_long, unit_class, s) as i32;
     let mut text = cost_string(&mut cost, scale, carbon).into_bytes();
     text.truncate(511);
     text.push(0);

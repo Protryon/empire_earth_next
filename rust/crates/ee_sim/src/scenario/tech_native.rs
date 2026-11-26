@@ -3,6 +3,8 @@
 //! walks the event, read and effect-run hosts made in C++ (EEEvent.cpp, EEScenarioHost.cpp, EESMEffect.cpp) are made
 //! here before the C++ is asked. None: the C++ answers.
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use std::os::raw::c_long;
 
 use crate::scenario::event::{

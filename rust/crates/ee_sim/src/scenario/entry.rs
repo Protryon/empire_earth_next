@@ -419,7 +419,11 @@ mod game {
         let a = unsafe { std::slice::from_raw_parts(args, 6) };
         // the tech tree's statements are Rust's (tech_native.rs); the effect's technology is the run's (C++)
         let tech = &mut || unsafe {
-            sys::ee_scenariocpp_world_atom(ctx, crate::scenario::world_compose::EE_SCENARIO_WX_EFFECT_TECH, [0i64; 6].as_ptr())
+            sys::ee_scenariocpp_world_atom(
+                ctx,
+                crate::scenario::world_compose::EE_SCENARIO_WX_EFFECT_TECH,
+                [0i64; 6].as_ptr(),
+            )
         };
         if let Some(v) = crate::scenario::tech_native::world(op, a, tech) {
             return v;

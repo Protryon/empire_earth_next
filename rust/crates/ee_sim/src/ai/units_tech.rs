@@ -3,6 +3,8 @@
 //! event, availability and obsolescence, the epoch ids. The trees and nodes are Rust records (ee_sim tech
 //! tree_objects.rs); the computer player is its EEPlayer base (the first).
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use std::ffi::c_void;
 use std::os::raw::c_long;
 
@@ -33,7 +35,11 @@ unsafe fn node_of(me: *mut c_void, id: i64) -> usize {
 unsafe fn test(n: usize, obsolete: bool) -> i64 {
     // SAFETY: the contract
     unsafe {
-        i64::from(if obsolete { to::is_obsolete(n) } else { to::walk_node(n, EeTechNodeOp::IsAvailable, 0, false, 0) != 0 })
+        i64::from(if obsolete {
+            to::is_obsolete(n)
+        } else {
+            to::walk_node(n, EeTechNodeOp::IsAvailable, 0, false, 0) != 0
+        })
     }
 }
 

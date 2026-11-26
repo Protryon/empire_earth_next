@@ -495,7 +495,12 @@ pub fn unit_value(player: u64, technology: c_long, unit_type: c_ulong) -> c_long
     if node != 0 && !crate::tech_tree::objects::node_data(node).is_null() {
         for r in 2..=6 {
             // kResourceFood .. kResourceIron
-            value = value.wrapping_add(crate::tech_tree::objects::ee_gamecpp_tech_obj_cost(node as *mut std::ffi::c_void, r as std::ffi::c_long, unit_type as std::ffi::c_long, 1.0));
+            value = value.wrapping_add(crate::tech_tree::objects::ee_gamecpp_tech_obj_cost(
+                node as *mut std::ffi::c_void,
+                r as std::ffi::c_long,
+                unit_type as std::ffi::c_long,
+                1.0,
+            ));
         }
     }
     value

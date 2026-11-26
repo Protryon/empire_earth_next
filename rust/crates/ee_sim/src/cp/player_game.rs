@@ -2057,4 +2057,3 @@ pub unsafe extern "C" fn ee_cp_pl_hero_count(player: u64, by_class: bool, reques
     }
     count.wrapping_add(requested)
 }
-

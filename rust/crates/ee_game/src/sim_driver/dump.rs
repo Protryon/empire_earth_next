@@ -225,7 +225,14 @@ fn dump_players(o: &mut Out) {
             "P {i} pop={} eog={} epoch={} res=",
             ld(h(O::DmPlPop, p, &[])),
             ld(h(O::DmPlEog, p, &[])),
-            ld({ let t = crate::tech_tree::objects::player_tree(p as usize); if t != 0 { crate::tech_tree::objects::current_epoch(t) } else { -1 } })
+            ld({
+                let t = crate::tech_tree::objects::player_tree(p as usize);
+                if t != 0 {
+                    crate::tech_tree::objects::current_epoch(t)
+                } else {
+                    -1
+                }
+            })
         );
         for r in 0..5 {
             if r != 0 {
