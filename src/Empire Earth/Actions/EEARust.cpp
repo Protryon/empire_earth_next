@@ -120,17 +120,13 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GA_OP_MESSAGE_RELEASE: static_cast<EEMessage*>(p)->Dereference(); return 0;
     case EE_SCREENS_GA_OP_SELECT_UNITS:   // the box selection's record (0x4e, 0x4f, 0x50)
         return (intptr_t) static_cast<EEMessage*>(EENewSelectUnits(*static_cast<const GERectangle*>(p), i[1], (unsigned char)i[0]));
-    case EE_SCREENS_GA_OP_CLASS_COUNT: return EEUnitClassCount();
     case EE_SCREENS_GA_OP_SAVED_GROUP_RESET: GA_PL->mSavedGroups.Reset(0x15, 1); return 0;
     case EE_SCREENS_GA_OP_MOUSE: GA_F2 = gMouse->mPosition; return 0;
     case EE_SCREENS_GA_OP_MOUSE_FROZEN: return gMouse->mIsFrozen != 0;
     case EE_SCREENS_GA_OP_PICK: return (intptr_t)gUnitPicker.PickUnit(GE2DPoint(f[0], f[1]), i[0] != 0);
-    case EE_SCREENS_GA_OP_UNIT_REFERENCE: static_cast<EEUnit*>(p)->Reference(); return 0;
-    case EE_SCREENS_GA_OP_UNIT_RELEASE: static_cast<EEUnit*>(p)->Dereference(); return 0;
     case EE_SCREENS_GA_OP_CAN_GATHER:
         return static_cast<EEComplexUnit*>(p)->CanGather(reinterpret_cast<EEUnit*>(i[0]), reinterpret_cast<EEUnit*>(i[0])->GetTileX(), reinterpret_cast<EEUnit*>(i[0])->GetTileY(), false, false);
     case EE_SCREENS_GA_OP_CAN_HEAL: return EECanHeal(static_cast<EEComplexUnit*>(p), reinterpret_cast<EEComplexUnit*>(i[0]));
-    case EE_SCREENS_GA_OP_WORLD_UNIT: return (intptr_t) static_cast<EEUnit*>(gWorld.GetUnit(i[0]));
     case EE_SCREENS_GA_OP_ACTION: return (intptr_t) static_cast<EEAction*>(GA_A);
     // the units (i1 set: p an EEComplexUnit*)
     case GA_K(UNIT, U_ANIMAL_ON_MAP): return EEHerd::IsAnimalOnMap(GA_U->GetComplexUnit());
@@ -182,19 +178,10 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(CALAMITY, A_CAN_CAST):
         return static_cast<EECalamityClass*>(p)->CanCastAt(reinterpret_cast<EEComplexUnit*>(i[1]), GA_F3, i[2], i[3], i[4] != 0, reinterpret_cast<EEUnit*>(i[5]));
     // the camera
-    case GA_K(CAMERA, CAM_SET_LOCATION): GA_CAM.SetLocation(GE3DPoint(f[0], f[1], f[2]), false, true); return 0;
-    case GA_K(CAMERA, CAM_KEEP_ZOOM): GA_CAM.SetZoom(GA_CAM.GetZoom()); return 0;
-    case GA_K(CAMERA, CAM_CHANGED): GA_CAM.SetChanged(); return 0;
-    case EE_SCREENS_GAH_CAM_SET_ZOOM: GA_CAM.SetZoom(f[0]); return 0;
-    case EE_SCREENS_GAH_CAM_SET_MODE: GA_CAM.SetMode(i[1]); return 0;
     case EE_SCREENS_GAH_CAM_MOVE_TO:
         GA_CAM.MoveTo(static_cast<EEUnit*>(p)->mComplexUnit, GE3DPoint(-10000.0f, 0.0f, 0.0f), false, 0.0f, static_cast<EEUnit*>(p)->mComplexUnit, GE3DPoint(-10000.0f, 0.0f, 0.0f), false, 0.0f, 0.0f, 0.0f);
         return 0;
-    case EE_SCREENS_GAH_CAM_UPDATE: GA_CAM.Update(f[0]); return 0;
-    case GA_K(CAMERA, CAM_ZOOM): f[0] = GA_CAM.mZoom; return 0;
-    case GA_K(CAMERA, CAM_SCROLL): GA_CAM.Scroll(f[0], f[1]); return 0;
     // the mini map, the edge scroll
-    case GA_K(MINI_MAP, MM_REFRESH): gMiniMap->Refresh(); return 0;
     case GA_K(MINI_MAP, MM_APPLY): gMiniMapTransformation.Apply(GA_A->mPoint, GA_F2); return 0;
     case GA_K(SCROLL, S_SPEED): f[0] = gGamePreferences.mSettings.GetSideScrollSpeed(); return 0;
     case GA_K(SCROLL, S_EDGES): *reinterpret_cast<GERectangle*>(f) = GA_A->mEdges; return 0;
@@ -210,8 +197,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_CHAT_MAX: return GA_CHAT->GetScrollBar()->GetSlider()->GetMaxRange();
     case EE_SCREENS_GAH_N_CHAT_CURRENT: return GA_CHAT->GetScrollBar()->GetSlider()->GetCurrentRangeValue();
     case EE_SCREENS_GAH_N_CHAT_START_LINE: GA_CHAT->SetStartingDisplayLine(i[1]); return 0;
-    case EE_SCREENS_GAH_N_WON_CLEAR: gWonNet->ClearGameList(); return 0;
-    case EE_SCREENS_GAH_N_WON_REJOIN: gWonNet->RejoinRoom(false); return 0;
     case GA_K(NET, N_POP): gUIManager->Pop(); return 0;
     case EE_SCREENS_GAH_N_STRING: gResource->GetString(i[1], sMessage); return 0;
     case EE_SCREENS_GAH_N_SHOW: gUIManager->DisplayMessage(sMessage, true, NULL, i[2] ? (void (*)(UIForm*))ee_screens_join_restart_client : NULL, true); return 0;
@@ -223,8 +208,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_POST_PAUSE: gUserInterface->PostPauseInformation(i[1] != 0); return 0;
     case GA_K(NET, N_FIREWALL): return gWonNet ? gWonNet->GetIsBehindFirewall() : false;
     case GA_K(NET, N_VALID_NAME): return EEIsValidName(i[1] ? GA_A->mGameName : GA_A->mPlayerName);
-    case EE_SCREENS_GAH_N_DELETE: delete gCommunications; return 0;
-    case EE_SCREENS_GAH_N_NEW_CLIENT: gCommunications = new EEClient; return 0;
     case EE_SCREENS_GAH_N_CLIENT_START: GA_CLIENT->StartThreads(); return 0;
     case EE_SCREENS_GAH_N_NEW_SERVER:
         gCommunications = new EEServer(GA_A->mGameName, gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, false, i[1] != 0);
@@ -233,11 +216,9 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(NET, N_PUBLISHED): return GA_SERVER->GetGameWasPublished();
     case EE_SCREENS_GAH_N_PLAYER_NAME: gPlayerName = GA_A->mPlayerName; return 0;
     case EE_SCREENS_GAH_N_HOST_NAME: gGamePreferences.mSettings.mHostGameName = GA_A->mGameName; return 0;
-    case EE_SCREENS_GAH_N_OPT_LOCK: gWorld.mLobbyOptions.mLock->WriteLock(); return 0;
     case EE_SCREENS_GAH_N_OPT_COPY: gWorld.mLobbyOptions = gGamePreferences.GetLastGameOptions(); return 0;
     case EE_SCREENS_GAH_N_OPT_MULTI: gWorld.mLobbyOptions.mIsMultiplayer = true; return 0;
     case EE_SCREENS_GAH_N_OPT_NO_CHEATS: gWorld.mLobbyOptions.mCheatCodes = false; return 0;
-    case EE_SCREENS_GAH_N_OPT_UNLOCK: gWorld.mLobbyOptions.mLock->WriteUnlock(); return 0;
     case EE_SCREENS_GAH_N_SLEEP: PlatSleep(i[1]); return 0;
     case EE_SCREENS_GAH_N_FORMAT: gResource->GetString(i[1], sFormat); return 0;
     case EE_SCREENS_GAH_N_PRINT_TEXT: sprintf(sMessage, sFormat, (const char*)GA_A->mText); return 0;
@@ -252,7 +233,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_INPUT: gCommunications->ProcessLocalUserInput(static_cast<NEMessage*>(p), kSlotNone); return 0;
     case EE_SCREENS_GAH_N_EVENT: return (intptr_t)EECreateScreenEvent(i[1]);
     case EE_SCREENS_GAH_N_OPEN_EVENT: gUIManager->GetFormByID(kFormLobby)->SetFormOpenEvent(static_cast<UIEvent*>(p)); return 0;
-    case EE_SCREENS_GAH_N_EVENT_RELEASE: static_cast<UIEvent*>(p)->Dereference(); return 0;
     case EE_SCREENS_GAH_N_SIERRA_ID: gGamePreferences.mSettings.mSierraUserID = GA_A->mPlayerName; return 0;
     case GA_K(NET, N_DETECTED_COUNT): return GA_SYNC->GetDetectedGameCount();
     case GA_K(NET, N_DETECTED): return GA_SYNC->GetDetectedGame(i[1], GA_A->mFileName, GA_A->mDescription, GA_A->mDetectedName);
@@ -287,7 +267,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         return (intptr_t)static_cast<NEMessage*>(new NEMRecord(kNetMessageClientReconnectionRequest, {gCommunications->GetNumberOfCTsProcessedInPhysics(), gWorld.mCurrentPlayer}));
     case GA_K(NET, N_LAG_CLEAR): gWorld.mLagStatus = 0; return 0;
     // the scenario editor's and the saved games'
-    case GA_K(EDITOR, E_JIT): gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_SCREENS_GAH_E_APPLY_IMPROVEMENT:
         static_cast<EEUnit*>(p)->GetPlayer()->ApplyImprovement(static_cast<EEUnit*>(p)->GetUnitClass()->GetUnitType(), GA_A->mImprovement, i[1] != 0);
         return 0;
@@ -306,32 +285,20 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         GA_FORM->GetLoadThread()->Post407(reinterpret_cast<void*>(GA_A->mPlayers[i[1]]), reinterpret_cast<void*>(GA_ENTRY->GetTechTree()->mStartEpoch));
         return 0;
     case GA_K(EDITOR, E_SAVE): return SaveGame(GA_A->mFileName, TMGetTime(), GA_A->mFlag, GA_A->mDescription);
-    case GA_K(EDITOR, E_CLOSE_FORM): gUserInterface->CloseForm(NULL); return 0;
-    case GA_K(EDITOR, E_SAVE_ERROR): gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true); return 0;
     case GA_K(EDITOR, E_PAUSED): return gCommunications->GetIsGamePaused();
-    case EE_SCREENS_GAH_E_MASTER: f[0] = gSoundManager->GetMasterVolume(); return 0;
-    case EE_SCREENS_GAH_E_MUSIC: f[0] = gConductor->GetConductor().GetVolume(); return 0;
-    case EE_SCREENS_GAH_E_SET_MASTER: gSoundManager->SetMasterVolume(f[0]); return 0;
-    case EE_SCREENS_GAH_E_SET_MUSIC: gConductor->GetConductor().SetVolume(f[0]); return 0;
     case EE_SCREENS_GAH_E_NO_OWED: gPhysics->mTicksOwed = 0; return 0;
     case EE_SCREENS_GAH_E_PAUSE: static_cast<NESynchronousServer*>(gCommunications)->PauseGame(); return 0;
     case EE_SCREENS_GAH_E_UNPAUSE: static_cast<NESynchronousServer*>(gCommunications)->UnpauseGame(); return 0;
-    case EE_SCREENS_GAH_E_NEW_SPEC: return (intptr_t)(new FSFileSpec);   // the quick save's file in data\Scenarios
-    case EE_SCREENS_GAH_E_SPEC_VOLUME: GA_SPEC->SetVolume(gStartupVolume); return 0;
     case EE_SCREENS_GAH_E_SPEC_DIRECTORY: GA_SPEC->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\"); return 0;
     case EE_SCREENS_GAH_E_SPEC_QUICK: GA_SPEC->SetFile(UString("EEQuickSave") + GA_A->mName); return 0;
     case EE_SCREENS_GAH_E_SPEC_FILE_NAME: GA_SPEC->SetFile(GA_A->mFileName); return 0;
     case EE_SCREENS_GAH_E_LOAD: return LoadSavedGameFile(*GA_SPEC, true, true, true) != 0;
-    case EE_SCREENS_GAH_E_DELETE_SPEC: delete GA_SPEC; return 0;
-    case EE_SCREENS_GAH_E_NEW_MEMORY: return (intptr_t)(new FSMemoryFile(0x400, true, 1000));
     case EE_SCREENS_GAH_E_TEXT_NAME: GA_A->mFileName = GetSaveTextName(UString("EEQuickSave") + GA_A->mName, true); return 0;
     case EE_SCREENS_GAH_E_WRITE: WriteSaveGame(GA_A->mFileName, TMGetTime(), *static_cast<FSMemoryFile*>(p), *static_cast<FSMemoryFile*>(p)); return 0;
-    case EE_SCREENS_GAH_E_CREATE: GA_SPEC->Create(); return 0;
     case EE_SCREENS_GAH_E_OPEN: return GA_SPEC->Open(kFileAccessWrite) == 0;
     case EE_SCREENS_GAH_E_SAVE_INTO: static_cast<FSMemoryFile*>(p)->Save(*reinterpret_cast<FSFileSpec*>(i[1])); return 0;
     case EE_SCREENS_GAH_E_CLOSE: GA_SPEC->Close(); return 0;
     case GA_K(EDITOR, E_RESUME_GROUP): GA_FORM->ResumeCurrentGroup(); return 0;
-    case GA_K(EDITOR, E_DELETE_FILE): delete static_cast<FSMemoryFile*>(p); return 0;
     case GA_K(EDITOR, E_OBJECT_SELECTION):   // the trigger tab's object screen's UpdateSelection (it was EESEARust.cpp's)
         GA_FORM->TriggerSubOp(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SEOB_UPDATE_SELECTION);
         return 0;

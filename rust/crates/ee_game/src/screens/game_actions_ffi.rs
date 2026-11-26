@@ -54,9 +54,10 @@ unsafe fn pointer_at(object: usize, offset: u64) -> i64 {
 /// globals): None for the others, which the C++ cases run. `p` is the case's object (a unit: an `EEUnit*` or, with
 /// i1 set, an `EEComplexUnit*`, the same address; a tile; a class), the current player's selection the groups'.
 fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64> {
-    use crate::gamecpp::globals::{have, set};
+    use crate::gamecpp::camera_io as camera;
+    use crate::gamecpp::globals::{get, have, set};
     use crate::gamecpp::message::{group_contains, group_do, group_get, group_len, group_unit, group_with, unit_id};
-    use crate::gamecpp::{hp, O};
+    use crate::gamecpp::{h, hd, hf, hp, O};
     use crate::screens::game_actions::*;
     use crate::screens::game_actions_host::*;
     use ee_sim::units::uc_is::{EE_UNITS_UC_IS_AIR_BASE, EE_UNITS_UC_IS_DROP_SITE, EE_UNITS_UC_IS_TRANSPORT};
@@ -261,6 +262,79 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
             set!(gCameraFollowing, false);
             0
         }
+        // the camera's and the mini map's Rust calls (as the inline members make them)
+        (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_SET_LOCATION) => {
+            let at = ee_base::math::types::Ge3DPoint::new(f[0], f[1], f[2]);
+            camera::set_location(&at, false, true);
+            0
+        }
+        (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_KEEP_ZOOM) => {
+            camera::set_zoom(camera::zoom());
+            0
+        }
+        (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_CHANGED) => {
+            camera::set_changed();
+            0
+        }
+        (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_ZOOM) => {
+            f[0] = camera::zoom();
+            0
+        }
+        (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_SCROLL) => {
+            camera::scroll(f[0], f[1]);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_CAM_SET_ZOOM => {
+            camera::set_zoom(f[0]);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_CAM_SET_MODE => {
+            camera::set_mode(i[1] as c_long);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_CAM_UPDATE => {
+            camera::update(f[0]);
+            0
+        }
+        (EE_SCREENS_GA_OP_MINI_MAP, EE_SCREENS_GA_MM_REFRESH) => {
+            crate::gamecpp::minimap::ee_gamecpp_minimap_refresh(get!(gMiniMap));
+            0
+        }
+        // the class table's size; the world's unit i0; a unit referenced, released (the game's shared cases)
+        _ if key == EE_SCREENS_GA_OP_CLASS_COUNT => ClassView::count(&token) as i64,
+        _ if key == EE_SCREENS_GA_OP_WORLD_UNIT => h(O::WorldUnit, 0, &[i[0] as c_ulong as i64]),
+        _ if key == EE_SCREENS_GA_OP_UNIT_REFERENCE => h(O::PwUnitReference, p, &[]),
+        _ if key == EE_SCREENS_GA_OP_UNIT_RELEASE => h(O::PwUnitDereference, p, &[]),
+        // the network's and the editor's statements the game's cases already make word for word
+        _ if key == EE_SCREENS_GAH_N_WON_CLEAR => h(O::WonNetClearGameList, 0, &[]),
+        _ if key == EE_SCREENS_GAH_N_WON_REJOIN => h(O::SsWonRejoinRoom, 0, &[]),
+        _ if key == EE_SCREENS_GAH_N_DELETE => h(O::EntryDeleteCommunicationsKeep, 0, &[]),
+        _ if key == EE_SCREENS_GAH_N_NEW_CLIENT => h(O::EntryNewClient, 0, &[]),
+        _ if key == EE_SCREENS_GAH_N_OPT_LOCK => h(O::EntryOptionsWriteLock, 0, &[]),
+        _ if key == EE_SCREENS_GAH_N_OPT_UNLOCK => h(O::EntryOptionsWriteUnlock, 0, &[]),
+        _ if key == EE_SCREENS_GAH_N_EVENT_RELEASE => h(O::EntryDereferenceEvent, p, &[]),
+        (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_JIT) => h(O::UiUpdateJit, 0, &[]),
+        (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_CLOSE_FORM) => h(O::UiCloseForm, 0, &[]),
+        (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_SAVE_ERROR) => h(O::UiShowLoadSaveError, 0, &[]),
+        (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_DELETE_FILE) => h(O::PsMemFileDelete, p, &[]),
+        _ if key == EE_SCREENS_GAH_E_NEW_SPEC => h(O::FileSpecNew, 0, &[]),
+        _ if key == EE_SCREENS_GAH_E_DELETE_SPEC => h(O::PsSpecDelete, p, &[]),
+        _ if key == EE_SCREENS_GAH_E_NEW_MEMORY => h(O::PsMemFileNew, 0, &[]),
+        _ if key == EE_SCREENS_GAH_E_SPEC_VOLUME => h(O::PsSpecSetStartupVolume, p, &[]),
+        _ if key == EE_SCREENS_GAH_E_CREATE => {
+            h(O::PsSpecCreate, p, &[]);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_E_MASTER => {
+            f[0] = hd(O::PsMasterVolume, 0, &[], &[]);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_E_MUSIC => {
+            f[0] = hd(O::PsMusicVolume, 0, &[], &[]);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_E_SET_MASTER => hf(O::PsSetMasterVolume, 0, &[], &[f[0]]),
+        _ if key == EE_SCREENS_GAH_E_SET_MUSIC => hf(O::PsSetMusicVolume, 0, &[], &[f[0]]),
         _ => return None,
     })
 }
