@@ -164,6 +164,7 @@ pub mod sight_host;
 pub mod stats;
 pub mod step;
 pub mod store;
+pub mod tech_cases;
 pub mod tick;
 pub mod tile_sight;
 pub mod tile_sight_host;

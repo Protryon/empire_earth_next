@@ -273,6 +273,9 @@ mod game {
     impl UcHost for GameI {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::uc(op, unit, a) {
+                return v;
+            }
             // SAFETY: the test runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_ucs_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

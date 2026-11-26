@@ -159,9 +159,6 @@ template <class T> static T* EEUcaObject(uint64_t inHandle) { return reinterpret
 // GetGroundHeight's closest tile (its x and y are not read)
 static long sUcaTile[2];   // x, y
 
-// the carrier's fighters, best first (EE_UNITS_UCA_FIGHTER_*)
-static const long kUcaFighters[3] = {kTechInf15Watchman, kTechInf14Guardian, kTechInf13Sentinel};
-
 // The C++ of the air classes' Rust bodies (ee_units uca_air.rs; EE_UNITS_UCA_*): one statement of the original
 // bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
 extern "C" int64_t ee_units_uca_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
@@ -264,8 +261,6 @@ extern "C" int64_t ee_units_uca_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCA_AREA_EFFECT: f[0] = theUnit->GetStats()->mAreaEffect; return 0;
     case EE_UNITS_UCA_AMMUNITION: return theUnit->mAmmunition;
     case EE_UNITS_UCA_PLAYER_ID: return theUnit->mPlayer->mPlayerID;
-    case EE_UNITS_UCA_FIGHTER_USABLE: return ::gWorld.mPlayers[inB]->mTechnologies->Get(kUcaFighters[inC])->GetIsAvailable() && ::gWorld.mPlayers[inB]->mTechnologies->Get(kUcaFighters[inC])->mIsAllowed;
-    case EE_UNITS_UCA_FIGHTER_CLASS: return ::gWorld.mPlayers[inB]->mTechnologies->Get(kUcaFighters[inC])->mData->mUnitClass;
     case EE_UNITS_UCA_CLASS_AT: return EEObj(gUnitClassTable[(size_t)inB]);
     case EE_UNITS_UCA_CARGO_COUNT: return theUnit->GetNumCargoUnits();
     case EE_UNITS_UCA_CAPACITY: return theUnit->mUnitClass->mTransportCapacity;

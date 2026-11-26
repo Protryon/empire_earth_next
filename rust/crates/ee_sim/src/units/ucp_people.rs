@@ -719,6 +719,9 @@ mod game {
     impl UcHost for GameP {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::ucp(op, unit, a, b) {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_ucp_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

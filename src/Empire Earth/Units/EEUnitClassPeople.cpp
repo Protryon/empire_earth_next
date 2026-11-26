@@ -250,7 +250,6 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_QUEUE0_LEN: return theUnit->mGoalQueues[0].mGoals.size();
     case EE_UNITS_UCP_QUEUE0_KIND: return (unsigned char)(*(theUnit->mGoalQueues.begin() + 0)).mGoals[(size_t)inB]->mKind;
     case EE_UNITS_UCP_CLEAR_RESOURCE_AMOUNT: theUnit->SetResourceAmount(0); return 0;
-    case EE_UNITS_UCP_RESEARCH: theUnit->mPlayer->mTechnologies->Research((long)inB, theUnit); return 0;
     case EE_UNITS_UCP_REMOVAL_SOUND: return EEObj(EESoundObject::Get(EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalSound));
     case EE_UNITS_UCP_REMOVAL_EFFECT_COUNT: return EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalEffects.size();
     case EE_UNITS_UCP_REMOVAL_EFFECT: gWorld.GetEffectManager()->CreatePlacedEffect(GE3DPoint(f[0], f[1], f[2]), EEGraphicEffect::Get(EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalEffects[(size_t)inB]), &sUcpHandle); return 0;
@@ -265,9 +264,6 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
     case EE_UNITS_UCP_UPDATE_FANATICISM: theUnit->UpdateFanaticismColor(); return 0;
     case EE_UNITS_UCP_CURRENT_RESEARCH: return theUnit->mCurrentResearch;
-    case EE_UNITS_UCP_RESEARCH_NODE: return EEObj(theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch));
-    case EE_UNITS_UCP_NODE_MAKES_UNIT: return EEUcpObject<EETechTreeNode>(inA)->mData->mMakesUnit;
-    case EE_UNITS_UCP_NODE_KIND: return EEUcpObject<EETechTreeNode>(inA)->mData->mKind;
     case EE_UNITS_UCP_GET_BUNDESWEHR: return gCivPowersManager.GetPower(kCivPowerBundeswehr, sUcpPower);
     case EE_UNITS_UCP_POWER_IS_PREREQUISITE: return sUcpPower.mTechnology == EEUcpObject<EETechTreeNode>(inA)->mData->mPrerequisite1;
     case EE_UNITS_UCP_POWER: return theUnit->GetPower();

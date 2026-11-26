@@ -151,7 +151,6 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_CLASS_CATEGORY: return EEGhostObject<EEUnitClass>(inA)->mCategory;
     case EE_UNITS_GHOST_SET_OVERLAP_SET: theGhost->mUnitSet = EEGhostObject<EEUnitClass>(inA)->mOverlapUnitSet; return 0;
     case EE_UNITS_GHOST_GATE_CLASS: return (uint64_t)(uintptr_t)EEUnitClassOfKind<EE_CLASS_KIND_GATE>(EEGhostObject<EEUnitClass>(inA));
-    case EE_UNITS_GHOST_TECH_CLASS: return (uint64_t)(uintptr_t)gUnitClassTable[EEGhostObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass];
     case EE_UNITS_GHOST_TILES_SIZE: return (int64_t)EEGhostObject<std::vector<EETileCoordinate> >(inA)->size();
     case EE_UNITS_GHOST_TILES_AT: return inC == 0 ? (*EEGhostObject<std::vector<EETileCoordinate> >(inA))[(size_t)inB].GetX() : (*EEGhostObject<std::vector<EETileCoordinate> >(inA))[(size_t)inB].mY;
     case EE_UNITS_GHOST_RAISED_CORNERS: return gWorld.GetMap()->GetNumRaisedCorners((long)inB, (long)inC);

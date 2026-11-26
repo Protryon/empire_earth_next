@@ -716,6 +716,9 @@ pub(crate) mod game {
 
     impl DopHost for Game {
         fn dop(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64) -> i64 {
+            if let Some(v) = crate::units::tech_cases::dop(op, unit, a, b) {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ member that handed over its live unit
             unsafe { ee_units_dop_host(op, unit as usize as *mut c_void, a, b, c) }
         }

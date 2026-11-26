@@ -820,6 +820,10 @@ pub(crate) mod game {
     impl UcHost for GameR {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            let tech = if self.buildings { crate::units::tech_cases::ucb(op, unit, a, b) } else { crate::units::tech_cases::uc(op, unit, a) };
+            if let Some(v) = tech {
+                return v;
+            }
             if self.buildings {
                 // SAFETY: the body runs inside the C++ member that handed over its live class and unit
                 unsafe {

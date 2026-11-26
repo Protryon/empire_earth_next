@@ -565,6 +565,9 @@ pub(crate) mod game {
     impl UcHost for GameG {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::ucb(op, unit, a, b) {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ function that handed over its live objects
             unsafe { ee_units_ucb_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

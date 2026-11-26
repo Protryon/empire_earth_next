@@ -443,11 +443,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     // StartProduction's
     case EE_UNITS_CU_QUEUE_FRONT_TECHNOLOGY: return theUnit->mBuildQueue.front().mTechnology;
     case EE_UNITS_CU_QUEUE_FRONT_FLAG: return theUnit->mBuildQueue.front().mFlag;
-    case EE_UNITS_CU_TECH_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get((long)inB);
-    case EE_UNITS_CU_NODE_AVAILABLE: return theNode->GetIsAvailable() == true;
     case EE_UNITS_CU_CAN_PRODUCE: return theUnit->GetPlayer()->CanProduce((long)inB, theUnit->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
-    case EE_UNITS_CU_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
-    case EE_UNITS_CU_NODE_UNIT_CLASS: return theNode->mData->mUnitClass;
     case EE_UNITS_CU_CLASS_TABLE: return (uint64_t)(uintptr_t)gUnitClassTable[(long)inB];
     case EE_UNITS_CU_BUILD_TIME_SCALE: return UFloatBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
     case EE_UNITS_CU_CLASS_IS_AIRCRAFT: return theClass->IsAircraft();
@@ -457,7 +453,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_RANDOM: return UFloatBits(gPhysics->mRandom.Generate());
     case EE_UNITS_CU_CLASS_TECHNOLOGY: return theClass->GetTechnology();
     case EE_UNITS_CU_INSTANT_BUILD: return theUnit->GetPlayer()->mInstantBuild;
-    case EE_UNITS_CU_NODE_BUILD_TIME: return theNode->GetBuildTime();
     case EE_UNITS_CU_SET_PRODUCTION_TIME: theUnit->mProductionTime = (long)inB; return 0;
     case EE_UNITS_CU_UI_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_UNITS_CU_QUEUE_POP_FRONT: theUnit->mBuildQueue.erase(theUnit->mBuildQueue.begin()); return 0;
@@ -506,7 +501,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_PLAY_FRAME_SOUND: theUnit->SetSound(gSoundManager->PlayAndReturnReferencedNode( EECuObject<EESoundObject>(inA)->GetSampleID(), f[0], f[1], f[2], EECuObject<EESoundObject>(inA)->GetLooping(), const_cast<char*>((const char*)theUnit->GetUnitClass()->mName))); return 0;
     // PayInsurance's (inA the player)
     case EE_UNITS_CU_PLAYER: return (uint64_t)(uintptr_t)theUnit->mPlayer;
-    case EE_UNITS_CU_CLASS_TECH_NODE: return (uint64_t)(uintptr_t)thePlayer->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
     case EE_UNITS_CU_REFUND_TOTAL: return thePlayer->mInsuranceRefunds[inB];
     case EE_UNITS_CU_RESOURCE: return thePlayer->mResourceCaps[inB];
     case EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY: theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB)); return 0;
@@ -533,17 +527,12 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CLASS_CATEGORY: return theClass->mCategory;
     case EE_UNITS_CU_ADD_CONTACT: theOther->AddContact(EECuObject<EEComplexUnit>((uint64_t)inB)); return 0;
     // the production queue's (cu_cargo.rs; inA a node or class)
-    case EE_UNITS_CU_CURRENT_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
-    case EE_UNITS_CU_NODE_CLASS_INDEX: return theNode->mData->mUnitClass;
-    case EE_UNITS_CU_SET_NODE_ALLOWED: theNode->mIsAllowed = inB != 0; return 0;
-    case EE_UNITS_CU_NODE_ALLOWED: return theNode->mIsAllowed;
     case EE_UNITS_CU_CLASS_AI_KIND: return theClass->mAIKind;
     case EE_UNITS_CU_HEROES_IN_PRODUCTION: return theUnit->GetPlayer()->mNumHeroesInProduction;
     case EE_UNITS_CU_SET_HEROES_IN_PRODUCTION: theUnit->GetPlayer()->mNumHeroesInProduction = (long)inB; return 0;
     case EE_UNITS_CU_QUEUE_SIZE: return theUnit->mBuildQueue.size();
     case EE_UNITS_CU_QUEUE_BACK_TECHNOLOGY: return theUnit->mBuildQueue.back().mTechnology;
     case EE_UNITS_CU_QUEUE_POP_BACK: theUnit->mBuildQueue.pop_back(); return 0;
-    case EE_UNITS_CU_PLAYER_NODE: return (uint64_t)(uintptr_t)theUnit->mPlayer->mTechnologies->Get((long)inB);
     case EE_UNITS_CU_REFUND_ONE: theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->mUnitType, 1.0f); return 0;
     case EE_UNITS_CU_SET_PRODUCTION_TIME_FIELD: theUnit->SetProductionTime((long)inB); return 0;
     case EE_UNITS_CU_QUEUE_CLEAR: theUnit->mBuildQueue.clear(); return 0;
@@ -558,7 +547,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_HERO_COUNT: return theUnit->mPlayer->GetHeroCount(1, 1);
     case EE_UNITS_CU_JIT_MANUFACTURING: return theUnit->mPlayer->mJITManufacturing;
     case EE_UNITS_CU_PAY: theUnit->mPlayer->Pay(theNode, theUnit->GetUnitClass()->GetUnitType(), 1.0f); return 0;
-    case EE_UNITS_CU_NODE_KIND: return theNode->mData->mKind;
     // the cargo's (inA another unit)
     case EE_UNITS_CU_UNIT_WEIGHT: return theOther->mUnitClass->mWeight;
     case EE_UNITS_CU_CARGO_ROOM: return theUnit->mCargoRoom;
@@ -701,7 +689,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SET_GATHERED_FIELD: theUnit->mGatheredResource = EECuObject<EEUnit>(inA); return 0;
     case EE_UNITS_CU_ADD_RESOURCE_USER: ::gWorld.AddResourceUser(theUnit->mGatheredResource); return 0;
     case EE_UNITS_CU_POST_UNLOAD_TECHNOLOGY: gDataPreLoading->PostUnloadTechnology(theUnit->mPlayer->mPlayerID, theUnit->mCurrentResearch); return 0;
-    case EE_UNITS_CU_UNLOAD_TECHNOLOGY_MEDIA: theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch)->UnloadMedia(theUnit->GetPlayer()); return 0;
     case EE_UNITS_CU_SET_CURRENT_RESEARCH: theUnit->mCurrentResearch = (long)inB; return 0;
     case EE_UNITS_CU_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->mPlayer->mPlayerID, (long)inB); return 0;
     case EE_UNITS_CU_IS_WALL: return theUnit->GetUnitClass()->mIsWall;
@@ -860,7 +847,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_FANATICISM_COST: return UFloatBits(gWorldTable.GetFloatValue(kWorldFanaticism));
     case EE_UNITS_CU_SET_HIT_POINTS: theUnit->SetHitPoints((long)inB); return 0;
     case EE_UNITS_CU_IS_DELETABLE: return theUnit->mIsDeletable;
-    case EE_UNITS_CU_CITIZEN_TECH_HAS_TYPE: return theUnit->GetPlayer()->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_NUM_CAPITOLS: return theUnit->mPlayer->mNumCapitols;
     case EE_UNITS_CU_HELD_FIND: return EECuFind(theUnit->mHeldUnits, theOther);
     case EE_UNITS_CU_HELD_ERASE: theUnit->mHeldUnits.erase(theUnit->mHeldUnits.begin() + (size_t)inB); return 0;

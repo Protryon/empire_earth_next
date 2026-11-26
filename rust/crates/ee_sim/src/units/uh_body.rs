@@ -635,6 +635,9 @@ pub(crate) mod game {
 
     impl UhHost for UhGame {
         fn uh(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::uh(op, a, b, c) {
+                return v;
+            }
             // SAFETY: one statement over the world's live objects (the decision runs on the simulation thread)
             unsafe { ee_units_uh_host(op, a, b, c, d, f.as_mut_ptr()) }
         }
