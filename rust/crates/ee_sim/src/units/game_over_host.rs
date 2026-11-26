@@ -12,11 +12,8 @@ use std::os::raw::c_long;
 pub const EE_UNITS_GAME_OVER_SCENARIO: i32 = 1;
 /// the rules' `mGameOptions.mDefeatWithoutRecovery`
 pub const EE_UNITS_GAME_OVER_DEFEAT_RULE: i32 = 2;
-/// `mTeams.size()`; team a's `GetVictoryState()`; its `mPlayers.size()`; its `mPlayers[b]`
-pub const EE_UNITS_GAME_OVER_TEAMS: i32 = 3;
+/// team a's `GetVictoryState()` (the teams themselves: app teams_ffi.rs)
 pub const EE_UNITS_GAME_OVER_TEAM_STATE: i32 = 4;
-pub const EE_UNITS_GAME_OVER_TEAM_SIZE: i32 = 5;
-pub const EE_UNITS_GAME_OVER_TEAM_PLAYER: i32 = 6;
 /// `mPlayers[a]->IsHuman()`
 pub const EE_UNITS_GAME_OVER_IS_HUMAN: i32 = 7;
 /// `RemovePlayerFromGame(b != 0, a)`
@@ -58,14 +55,13 @@ impl GameOverHost for Game<'_> {
         self.host(EE_UNITS_GAME_OVER_DEFEAT_RULE, 0, 0) != 0
     }
     fn teams(&mut self) -> usize {
-        self.host(EE_UNITS_GAME_OVER_TEAMS, 0, 0) as usize
+        crate::app::teams_ffi::count()
     }
     fn team_state(&mut self, team: usize) -> i64 {
         self.host(EE_UNITS_GAME_OVER_TEAM_STATE, team as i64, 0)
     }
     fn team_players(&mut self, team: usize) -> Vec<u64> {
-        let n = self.host(EE_UNITS_GAME_OVER_TEAM_SIZE, team as i64, 0);
-        (0..n).map(|j| self.host(EE_UNITS_GAME_OVER_TEAM_PLAYER, team as i64, j) as u64).collect()
+        crate::app::teams_ffi::players(team).into_iter().map(u64::from).collect()
     }
     fn exists(&mut self, player: u64) -> bool {
         self.player(player).is_some()

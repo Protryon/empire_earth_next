@@ -70,7 +70,7 @@ static intptr_t ShellFindDialog(void* inLogic, void* inConfig, int32_t inSlot, E
 RustLogic::RustLogic(EeWonLogicShellKind inKind, Maker inMake) : mKilled(false), mKind(inKind), mRust(inMake(this)) {}
 // Frees the Rust object first (it gives back what it holds), then the slots
 RustLogic::~RustLogic() { ee_won_logicshell_free(this->mKind, this->mRust); }
-void RustLogic::HandleComponentEvent(ComponentEvent* inEvent) { this->V(EeWonLogicShellV::HandleComponentEvent, (intptr_t)inEvent, inEvent->mType); }
+void RustLogic::HandleComponentEvent(ComponentEvent* inEvent) { this->V(EeWonLogicShellV::HandleComponentEvent, (intptr_t)inEvent, inEvent->mEv.kind); }
 // LanLogic's Resume left the current game when the lobby resumes (the others' are their Rust objects')
 void RustLogic::Resume() { if (this->V(EeWonLogicShellV::Resume) != 0) LobbyLeaveGame(0); }
 intptr_t RustLogic::V(EeWonLogicShellV inVirtual, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
@@ -82,7 +82,6 @@ intptr_t RustLogic::V(EeWonLogicShellV inVirtual, intptr_t a, intptr_t b, intptr
 // ---- RoutingLogic.cpp: internet play over WON routing servers (routelogic.rs: every decision); the host's ops,
 // each the original's calls on a C++ object. Internet only
 
-extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 
 namespace WONAPI {
 static GUIString* T(intptr_t a) { return reinterpret_cast<GUIString*>(a); }
@@ -187,8 +186,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::ConnNew: { RoutingConnection* aConnection = new RoutingConnection; aConnection->AddRef(); return (intptr_t)aConnection; }
     case O::BufNew: return (intptr_t) new WriteBuffer(0, true);
     case O::GameWriteSummary: GM(a)->WriteSummary(*reinterpret_cast<WriteBuffer*>(b)); return 0;
-    // CreateDataObject(true, c, the game data type "G", gEmptyWideString, the summary, NULL)
-    case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(gEmptyWideString).D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
+    // CreateDataObject(true, c, the game data type "G", L"", the summary, NULL)
+    case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(L"").D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
     // ---- the parser, the events, the dialogs
     case O::ParserNum:
@@ -202,8 +201,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     case O::ParserText: return (intptr_t) new GUIString(P(a)->GetText());
     case O::ParserSetInput: P(a)->SetInput(C(b)->GetName()); return 0;
-    case O::EventComponent: return (intptr_t)E(a)->mComponent;
-    case O::EventType: return E(a)->mType;
+    case O::EventComponent: return E(a)->mEv.comp;
+    case O::EventType: return E(a)->mEv.kind;
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
@@ -262,19 +261,19 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::EvGameChanged: Broadcast(GameChangedEvent(GM(a), (int)b)); return 0;
     case O::EvInvitationRecv:
         Broadcast(GroupInvitationEvent(4, GM(a)->GetName(), GM(a)->GetGroupId(), C(b), c != 0,
-                                           GUIString(new GUIStringData(RO(d)->Text(EE_WON_RTT_COMMENT))), false));
+                                           GUIString(RO(d)->Text(EE_WON_RTT_COMMENT)), false));
         return 0;
     case O::EvInvitationSent:
         Broadcast(GroupInvitationEvent(4, G(a)->GetName(), G(a)->GetId(), C(b), c != 0, TX(d), true));
         return 0;
     case O::EvJoinAttempt:
-        Broadcast(GroupJoinAttemptEvent(6, C(a), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_COMMENT)))));
+        Broadcast(GroupJoinAttemptEvent(6, C(a), GUIString(RO(b)->Text(EE_WON_RTT_COMMENT))));
         return 0;
     case O::EvRecvChat:
         Broadcast(RecvChatEvent((unsigned int)a, (unsigned short)b, C(c), GUIString(RO(d)->Text(EE_WON_RTT_TEXT)), C(e)));
         return 0;
-    case O::EvAlertTimed: Broadcast(AlertEvent(4, (int)a, (unsigned long)RO(b)->Num(EE_WON_RTF_TIME), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
-    case O::EvAlertPlain: Broadcast(AlertEvent(4, (int)a, 0, GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
+    case O::EvAlertTimed: Broadcast(AlertEvent(4, (int)a, (unsigned long)RO(b)->Num(EE_WON_RTF_TIME), GUIString(RO(b)->Text(EE_WON_RTT_TEXT)))); return 0;
+    case O::EvAlertPlain: Broadcast(AlertEvent(4, (int)a, 0, GUIString(RO(b)->Text(EE_WON_RTT_TEXT)))); return 0;
     case O::EvModeratedGroup: Broadcast(ClientModeratedEvent(C(a), (int)b, G(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
     case O::EvModeratedServer: Broadcast(ClientModeratedEvent(C(a), (int)b, S(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
     case O::EvLeftRoom: Broadcast(LeftRoomEvent((int)a, b != 0, c != 0)); return 0;
@@ -367,7 +366,7 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::BroadcastLoginFields: LobbyBroadcastEvent(SetLoginFieldsEvent(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false), true); return 0;
     case O::RootWindow: return (intptr_t)LobbyGetRootWindow();
     case O::KeyMod: return reinterpret_cast<Window*>(a)->GetKeyMod();
-    case O::FindUserOfEvent: return (intptr_t)LobbyFindUser(GUIString(new GUIStringData(LobbyEvtStr<std::wstring>(E(a), EF::UserName))));
+    case O::FindUserOfEvent: return (intptr_t)LobbyFindUser(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)));
     case O::UserTOUNewer: return LobbyIsTOUNewer(LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 0), LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 1));
     case O::AuthSetUserNameOf: A(a)->SetUserName(LobbyEvtStr<std::wstring>(E(b), EF::UserName)); return 0;
     case O::AuthSetPasswordOf: A(a)->SetPassword(LobbyEvtStr<std::wstring>(E(b), EF::Password)); return 0;

@@ -495,7 +495,7 @@ bool ComponentConfig::HandleMapComponent()
     if (!this->EndOfString()) {
         this->EnsureComma();
         GUIString name=this->ReadString(false);
-        int dot=name.rFind('.',-1);
+        int dot=ee_won_gstr_read(EeWonGstrRead::RFindChar,(const EeWonGstr*)name.mData.get(),NULL,'.',-1); // rFind('.',-1)
         if (dot>=0) {
             GUIString component=name.substr(0,(unsigned short)dot);
             name=name.substr((unsigned short)(dot+1));

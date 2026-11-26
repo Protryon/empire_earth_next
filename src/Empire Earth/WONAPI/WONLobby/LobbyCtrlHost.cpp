@@ -43,7 +43,7 @@ void LobbyRustCtrl::InitComponent(ComponentInit& inInit)
 // the event's type goes as it is: the Rust chooses the controls' event (evmap.rs)
 void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    this->CCall(EeWonLobbyCtlCall::RawEvent, (intptr_t)inEvent, inEvent->mType, (intptr_t)inEvent->mComponent);
+    this->CCall(EeWonLobbyCtlCall::RawEvent, (intptr_t)inEvent, inEvent->mEv.kind, inEvent->mEv.comp);
 }
 
 // the Dialog shell (QuickPlayCtrl, LoginCtrl): the same forwards
@@ -58,8 +58,8 @@ void LobbyRustDialogCtrl::InitComponent(ComponentInit& inInit)
 }
 void LobbyRustDialogCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    ee_won_lobbyctl_call(this->mLobbyCtl, EeWonLobbyCtlCall::RawEvent, (intptr_t)inEvent, inEvent->mType,
-                         (intptr_t)inEvent->mComponent);
+    ee_won_lobbyctl_call(this->mLobbyCtl, EeWonLobbyCtlCall::RawEvent, (intptr_t)inEvent, inEvent->mEv.kind,
+                         inEvent->mEv.comp);
 }
 
 // ---- the host
@@ -123,9 +123,9 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
     case Op::Invalidate: aComp->Invalidate(); return 0;
     case Op::EventControlId: return anEvent->GetControlId();
-    case Op::EventIsSelectedItem: return static_cast<ListItemClickedEvent*>(anEvent)->IsSelectedItem() ? 1 : 0;
-    case Op::EventButton: return static_cast<ListItemClickedEvent*>(anEvent)->mButton;
-    case Op::EventDoubleClick: return static_cast<ListItemClickedEvent*>(anEvent)->mDoubleClick ? 1 : 0;
+    case Op::EventIsSelectedItem: return anEvent->GetItem<ListItem>() == static_cast<ListArea*>(anEvent->GetComponent())->GetSelItem() ? 1 : 0;
+    case Op::EventButton: return anEvent->mEv.button;
+    case Op::EventDoubleClick: return anEvent->mEv.flag;
     case Op::BrowserBackEnabled: return aBrowser->BackButtonEnabled() ? 1 : 0;
     case Op::BrowserForwardEnabled: return aBrowser->ForwardButtonEnabled() ? 1 : 0;
     case Op::BrowserStopEnabled: return aBrowser->StopButtonEnabled() ? 1 : 0;

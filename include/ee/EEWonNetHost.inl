@@ -111,7 +111,7 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::RoomLineGames: sRoomLine.mNumGames = (long)a; return 0;
     case Op::ProtocolGet: NEProtocol::GetProtocol(0, sProtocol); return 0;
     case Op::ProtocolLocalAddress: return BytesOut(sProtocol->GetLocalAddress(gNetworkAdapter), a);
-    case Op::ReqRegister: WonRequests(Routing(o)).Register(gEmptyWideString, gEmptyWideString, gWonClientId, 0, 5, (unsigned long)a, Completion(b, true)); return 0;
+    case Op::ReqRegister: WonRequests(Routing(o)).Register(L"", L"", gWonClientId, 0, 5, (unsigned long)a, Completion(b, true)); return 0;
     case Op::ReqSubscribe: WonRequests(Routing(o)).SubscribeDataObject(0xffff, a ? kWonRoomObject : kWonGameObject, true, Completion(b, true)); return 0;
     case Op::ReqUnsubscribeGames: WonRequests(Routing(o)).UnsubscribeDataObject(0xffff, kWonGameObject, true, NULL); return 0;
     case Op::ReqCreateGroup: WonRequests(Routing(o)).CreateGroup(0xffff, (const wchar_t*)a, (const wchar_t*)b, 8, 0, true, 0, Completion(c, true)); return 0;
@@ -119,7 +119,7 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::ReqReplaceGameObject: WonRequests(Routing(o)).ReplaceDataObject((unsigned short)a, kWonGameObject, (const wchar_t*)b, NULL); return 0;
     case Op::ReqModifyGameObject: WonRequests(Routing(o)).ModifyDataObject((unsigned short)a, kWonGameObject, (const wchar_t*)b, 0, 0, new ByteBuffer((const void*)c, (unsigned long)d, false), NULL); return 0;
     case Op::ReqReadGameObject: WonRequests(Routing(o)).ReadDataObject((unsigned short)a, kWonGameObject, true, Completion(b, true)); return 0;
-    case Op::ReqJoinGroup: WonRequests(Routing(o)).JoinGroup((unsigned short)a, (const wchar_t*)b, std::wstring(gEmptyWideString), 0, 0, Completion(c, true)); return 0;
+    case Op::ReqJoinGroup: WonRequests(Routing(o)).JoinGroup((unsigned short)a, (const wchar_t*)b, std::wstring(), 0, 0, Completion(c, true)); return 0;
     case Op::ReqCancelJoinGroup: WonRequests(Routing(o)).CancelJoinGroup((unsigned short)a, true, NULL); return 0;
     case Op::ReqLeaveGroup: WonRequests(Routing(o)).LeaveGroup((unsigned short)a, NULL); return 0;
     case Op::ReqGroupList: WonRequests(Routing(o)).GetGroupList(0xff, Completion(a, true)); return 0;

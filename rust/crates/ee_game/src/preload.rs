@@ -54,8 +54,6 @@ pub enum EePreloadCpp {
     StartGame,
     IsMultiplayer,
     IsClient,
-    NewLoadedResponseClient,
-    NewLoadedResponseServer,
     ProcessLocalInput,
     SetHasLoaded,
     DisplayError,
@@ -240,8 +238,19 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
             crate::screens::ui_objects::ui_set_loading_text(IDS_WAITING_FOR_PLAYERS);
         }
         crate::screens::ui_objects::ui_set_load_progress(1.0);
-        let response =
-            if h0(O::IsClient) != 0 { h0(O::NewLoadedResponseClient) } else { h0(O::NewLoadedResponseServer) };
+        // kMessageStartLoadingResponse {the client's send-to slot (the server's 0xfe), the local player's id, 0}
+        let slot = if h0(O::IsClient) != 0 {
+            ee_net::net::ffi_client::ee_net_cl_my_send_to_slot(crate::gamecpp::net::global().client) as i64
+        } else {
+            0xfe
+        };
+        let player = crate::gamecpp::hp(crate::gamecpp::O::WorldCurrentPlayer, 0, &[]);
+        let id = crate::gamecpp::h(crate::gamecpp::O::RoPlayerId, player, &[]);
+        let values = [slot, id, 0].map(crate::gamecpp::mrecord::EeGamecppMrValue::integer);
+        let response = crate::gamecpp::mrecord::new_record(
+            ee_sim::message_ids::EEMessageID::kMessageStartLoadingResponse as u8,
+            &values,
+        );
         h(O::ProcessLocalInput, response as P, &[]);
         if h0(O::IsClient) != 0 {
             h0(O::SetHasLoaded);

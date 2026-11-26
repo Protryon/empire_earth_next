@@ -116,7 +116,7 @@ void EELobbyColorButton::Paint(Graphics& inGraphics) { ee_won_eecolor_call(this-
 bool EELobbyColorButton::HandleActivate() { return ee_won_eecolor_call(this->mRust, CC::Activate, 0, 0, 0) != 0; }
 void EELobbyColorButton::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    ee_won_eecolor_call(this->mRust, CC::Event, (intptr_t)inEvent, inEvent->mType == ComponentEvent_EndPopup, 0);
+    ee_won_eecolor_call(this->mRust, CC::Event, (intptr_t)inEvent, inEvent->mEv.kind == ComponentEvent_EndPopup, 0);
 }
 
 EELobbyColorChooser::EELobbyColorChooser() : mRust(ee_won_eecolor_new(this, EeWonEeColorKind::Chooser, ColorHost)) {}
@@ -330,7 +330,7 @@ static const GUIString sEELobbySavedGames("data\\Saved Games\\");
 const GUIString& EELobbyFn2988E9() { return sEELobbySavedGames; }
 
 // Returns whether the game is multiplayer when the flag is set, true otherwise
-bool EEIsMultiplayerGame(bool inFlag) { return inFlag ? gGameOptions.mIsMultiplayer : true; }
+bool EEIsMultiplayerGame(bool inFlag) { return inFlag ? gWorld.mLobbyOptions.mIsMultiplayer : true; }
 
 // (EELobbyGetVersion's two statements are EELobbyGameHost.cpp's VersionTextNew and VersionChecksum: eesplit.rs,
 // R6 WON round 35)
@@ -449,7 +449,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetColor: g->SetColor((unsigned long)b); return 0;
     case Op::DrawText: g->DrawString(GlueText(b, c), (int)d, (int)e); return 0;
-    case Op::FontHeight: return g->mFont->GetHeight();
+    case Op::FontHeight: return g->GetFont()->GetHeight();
     case Op::ListFontHeight: return reinterpret_cast<MultiListArea*>(a)->mFont->GetHeight();
     case Op::TextFind: return GlueText(b, c).findNoCase(*reinterpret_cast<const GUIString*>(d), 0);
     case Op::TextCompareNoCase: return GlueText(a, b).CompareNoCase(GlueText(c, d));
@@ -486,13 +486,13 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::FileSize: return (intptr_t)WONFile(reinterpret_cast<const char*>(a)).GetSize();
     case Op::ClientPlayer: return (intptr_t)reinterpret_cast<LobbyClient*>(a)->GetPlayer().mPtr;
     case Op::DefaultOptions: return (intptr_t)&gGamePreferences.GetSettings().mGameOptions;
-    case Op::OptionMapTypeName: gGameOptions.mMapType = EELobbyToWideString(EELobbyStr(a)); return 0;
-    case Op::OptionMapTypeGenerator: gGameOptions.mMapType = EERMGetGeneratorName((unsigned long)a); return 0;
-    case Op::OptionsEnd: gGameOptions.mLock->WriteUnlock(); return 0;
+    case Op::OptionMapTypeName: gWorld.mLobbyOptions.mMapType = EELobbyToWideString(EELobbyStr(a)); return 0;
+    case Op::OptionMapTypeGenerator: gWorld.mLobbyOptions.mMapType = EERMGetGeneratorName((unsigned long)a); return 0;
+    case Op::OptionsEnd: gWorld.mLobbyOptions.mLock->WriteUnlock(); return 0;
     case Op::PlayerNew: sEELobbyPlayer = EEGameOptionsPlayer(); return 0;
     case Op::PlayerType: return (intptr_t)sEELobbyPlayer.mType;
     case Op::PlayerSetName: sEELobbyPlayer.mName = EELobbyToWideString(EELobbyStr(a)); return 0;
-    case Op::PlayerCommit: gGameOptions.mPlayers[a] = sEELobbyPlayer; return 0;
+    case Op::PlayerCommit: gWorld.mLobbyOptions.mPlayers[a] = sEELobbyPlayer; return 0;
     case Op::PlayerCopyTo: *reinterpret_cast<EEGameOptionsPlayer*>(a) = sEELobbyPlayer; return 0;
     case Op::LocalHost: return (intptr_t)WONAPI::IPAddr::GetLocalHost();
     case Op::AddressesCount: return (intptr_t)anAddresses->size();
@@ -673,7 +673,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::JoinProcessRequest: gCommunications->ProcessLocalUserInput(sEELobbyJoinRequest, 0xff);
         return 0;
-    case Op::OptionsReadLock: gGameOptions.mLock->ReadLock();
+    case Op::OptionsReadLock: gWorld.mLobbyOptions.mLock->ReadLock();
         return 0;
     case Op::StartTimeSet: sEELobbyStartTime = TMGetTime();
         return 0;
@@ -696,9 +696,9 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::StartLoading: gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)a, rand()}), 0xff);
         return 0;
-    case Op::SetLastGameOptions: gGamePreferences.SetLastGameOptions(gGameOptions);
+    case Op::SetLastGameOptions: gGamePreferences.SetLastGameOptions(gWorld.mLobbyOptions);
         return 0;
-    case Op::OptionsReadUnlock: gGameOptions.mLock->ReadUnlock();
+    case Op::OptionsReadUnlock: gWorld.mLobbyOptions.mLock->ReadUnlock();
         return 0;
     case Op::SierraFileNew: return (intptr_t)new FSFileSpec;
     case Op::MessageNew: return (intptr_t)new UWideString;
@@ -732,7 +732,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::GameAddressRef: return (intptr_t)&sEELocalAddress;
     // the statements of the cases gluesplit.rs composes (R6 WON round 32)
     case Op::TextHeld: return HeldData(GlueText(a, b));
-    case Op::GfxTextWidthHeld: return g->mFont->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
+    case Op::GfxTextWidthHeld: return g->GetFont()->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
     case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
     case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
     case Op::ResInit: sEELobbyResources = EELobbyResource_Init(NULL); return 0;
@@ -759,10 +759,10 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::SaveSetMajor: aSave->mHeader.SetMajorVersion(kSaveGameMajorVersion); return 0;
     case Op::SaveSetMinor: aSave->mHeader.SetMinorVersion(kSaveGameMinorVersion); return 0;
     case Op::SaveLoadFile: return aSave->mHeader.LoadFromFile(aSave->mSpec) == keseOK ? 1 : 0;
-    case Op::OptionsWriteLock: gGameOptions.mLock->WriteLock(); return 0;
-    case Op::OptionsCopyLobby: gGameOptions = gLobbyGameOptions; return 0;
-    case Op::OptionsSetMultiplayer: gGameOptions.mIsMultiplayer = true; return 0;
-    case Op::OptionsClearCheats: gGameOptions.mCheatCodes = false; return 0;
+    case Op::OptionsWriteLock: gWorld.mLobbyOptions.mLock->WriteLock(); return 0;
+    case Op::OptionsCopyLobby: gWorld.mLobbyOptions = gLobbyGameOptions; return 0;
+    case Op::OptionsSetMultiplayer: gWorld.mLobbyOptions.mIsMultiplayer = true; return 0;
+    case Op::OptionsClearCheats: gWorld.mLobbyOptions.mCheatCodes = false; return 0;
     case Op::AddressListFill: LobbyGetNetAddresses(sEELobbyAddressList, false); return 0;
     case Op::AddressVectorNew: return (intptr_t)new std::vector<LobbyNetAddress>(sEELobbyAddressList.begin(), sEELobbyAddressList.end());
     case Op::AddressListClear: sEELobbyAddressList.clear(); return 0;
@@ -794,21 +794,21 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::OptGetVictory: return (long)anOptions->mVictory;
     case Op::MapIndexClear: sEELobbyMapIndex = 0; return 0;
     case Op::OptGetMapTypeIndex: EERMFindGenerator(anOptions->mMapType, sEELobbyMapIndex); return (long)sEELobbyMapIndex;
-    case Op::OptSetLoadType: gGameOptions.mLoadType = (long)a; return 0;
-    case Op::OptSetMapSize: gGameOptions.mMapSize = (long)a; return 0;
-    case Op::OptSetResources: gGameOptions.mResources = (long)a; return 0;
-    case Op::OptSetEpochStart: gGameOptions.mEpochStart = (long)a; return 0;
-    case Op::OptSetEpochEnd: gGameOptions.mEpochEnd = (long)a; return 0;
-    case Op::OptSetVariant: gGameOptions.mVariant = (long)a; return 0;
-    case Op::OptSetDifficulty: gGameOptions.mDifficulty = (long)a; return 0;
-    case Op::OptSetGameSpeed: gGameOptions.mGameSpeed = (long)a; return 0;
-    case Op::OptSetUnitLimit: gGameOptions.mUnitLimit = (long)a; return 0;
-    case Op::OptSetWondersForVictory: gGameOptions.mWondersForVictory = (long)a; return 0;
-    case Op::OptSetRevealMap: gGameOptions.mRevealMap = a != 0; return 0;
-    case Op::OptSetAllowCustomCivs: gGameOptions.mAllowCustomCivs = a != 0; return 0;
-    case Op::OptSetLockTeams: gGameOptions.mLockTeams = a != 0; return 0;
-    case Op::OptSetLockSpeed: gGameOptions.mLockSpeed = a != 0; return 0;
-    case Op::OptSetVictory: gGameOptions.mVictory = a != 0; return 0;
+    case Op::OptSetLoadType: gWorld.mLobbyOptions.mLoadType = (long)a; return 0;
+    case Op::OptSetMapSize: gWorld.mLobbyOptions.mMapSize = (long)a; return 0;
+    case Op::OptSetResources: gWorld.mLobbyOptions.mResources = (long)a; return 0;
+    case Op::OptSetEpochStart: gWorld.mLobbyOptions.mEpochStart = (long)a; return 0;
+    case Op::OptSetEpochEnd: gWorld.mLobbyOptions.mEpochEnd = (long)a; return 0;
+    case Op::OptSetVariant: gWorld.mLobbyOptions.mVariant = (long)a; return 0;
+    case Op::OptSetDifficulty: gWorld.mLobbyOptions.mDifficulty = (long)a; return 0;
+    case Op::OptSetGameSpeed: gWorld.mLobbyOptions.mGameSpeed = (long)a; return 0;
+    case Op::OptSetUnitLimit: gWorld.mLobbyOptions.mUnitLimit = (long)a; return 0;
+    case Op::OptSetWondersForVictory: gWorld.mLobbyOptions.mWondersForVictory = (long)a; return 0;
+    case Op::OptSetRevealMap: gWorld.mLobbyOptions.mRevealMap = a != 0; return 0;
+    case Op::OptSetAllowCustomCivs: gWorld.mLobbyOptions.mAllowCustomCivs = a != 0; return 0;
+    case Op::OptSetLockTeams: gWorld.mLobbyOptions.mLockTeams = a != 0; return 0;
+    case Op::OptSetLockSpeed: gWorld.mLobbyOptions.mLockSpeed = a != 0; return 0;
+    case Op::OptSetVictory: gWorld.mLobbyOptions.mVictory = a != 0; return 0;
     case Op::OptionsPlayerAt: return (intptr_t)&anOptions->mPlayers[b];
     case Op::PlayerGetType: return (long)aPlayer->mType;
     case Op::PlayerGetLoadedType: return (long)aPlayer->mLoadedType;

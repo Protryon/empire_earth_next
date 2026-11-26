@@ -12,7 +12,7 @@
 use std::ffi::c_void;
 
 use ee_won_net::chat::{units, ChatCtype, CrtChat, EeWonChatText};
-use ee_won_net::ffi::{EeWonByteSink, EeWonWideSink};
+use ee_won_net::ffi::EeWonWideSink;
 
 fn at(t: &[u32], i: i64) -> u32 {
     if i < 0 {
@@ -219,7 +219,7 @@ unsafe fn text(t: *const c_void, length: u16, wchar_size: u32) -> Vec<u32> {
     unsafe { units(EeWonChatText { text: t, length: usize::from(length) }, wchar_size) }
 }
 
-unsafe fn narrow_text<'a>(s: *const u8) -> &'a [u8] {
+pub(crate) unsafe fn narrow_text<'a>(s: *const u8) -> &'a [u8] {
     if s.is_null() {
         &[]
     } else {
@@ -265,33 +265,11 @@ pub unsafe extern "C" fn ee_won_guistring_op(
     }
 }
 
-/// `find(int, start)` (`reverse` false) or `rFind(int, start)`.
-///
-/// # Safety
-/// `a` holds `a_length` units of `wchar_size` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_guistring_find_char(
-    a: *const c_void,
-    a_length: u16,
-    ch: i32,
-    start: i32,
-    reverse: bool,
-    wchar_size: u32,
-) -> i32 {
-    let x = unsafe { text(a, a_length, wchar_size) };
-    if reverse {
-        rfind_char(&x, ch, start)
-    } else {
-        find_char(&x, ch, start)
-    }
-}
-
 /// `compare(const char*, offset)` (`no_case` false) or `CompareNoCase(const char*, offset)`.
 ///
 /// # Safety
-/// `a` as `ee_won_guistring_find_char`; `narrow` is NUL-terminated.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_guistring_compare_narrow(
+/// `a` holds `a_length` units of `wchar_size` bytes; `narrow` is NUL-terminated.
+pub unsafe fn ee_won_guistring_compare_narrow(
     a: *const c_void,
     a_length: u16,
     offset: i32,
@@ -305,51 +283,6 @@ pub unsafe extern "C" fn ee_won_guistring_compare_narrow(
     } else {
         compare_narrow(&x, offset, &n)
     }
-}
-
-/// `ToInt`.
-///
-/// # Safety
-/// `a` as `ee_won_guistring_find_char`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_guistring_to_int(a: *const c_void, a_length: u16, offset: u16, wchar_size: u32) -> i32 {
-    to_int(&unsafe { text(a, a_length, wchar_size) }, offset, &CrtChat)
-}
-
-/// `toUpper` / `toLowerCase` in place.
-///
-/// # Safety
-/// `a` holds `a_length` writable units of `wchar_size` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_guistring_change_case(a: *mut c_void, a_length: u16, upper: bool, wchar_size: u32) {
-    let mut x = unsafe { text(a, a_length, wchar_size) };
-    change_case(&mut x, upper, &CrtChat);
-    for (i, &c) in x.iter().enumerate() {
-        // SAFETY: `a_length` writable units
-        unsafe {
-            if wchar_size == 2 {
-                *(a as *mut u16).add(i) = c as u16;
-            } else {
-                *(a as *mut u32).add(i) = c;
-            }
-        }
-    }
-}
-
-/// `GetString`: the text as UTF-8, given to the sink once.
-///
-/// # Safety
-/// `a` as `ee_won_guistring_find_char`; the sink's contract (`EeWonByteSink`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_guistring_narrow(
-    a: *const c_void,
-    a_length: u16,
-    wchar_size: u32,
-    sink: EeWonByteSink,
-    context: *mut c_void,
-) {
-    let n = narrow(&unsafe { text(a, a_length, wchar_size) }, wchar_size);
-    unsafe { ee_won_net::ffi::give(sink, context, &n) }
 }
 
 /// The narrow constructors' and `AssignStr`'s text: `length` bytes of UTF-8 as `wchar_t` units, given to the sink

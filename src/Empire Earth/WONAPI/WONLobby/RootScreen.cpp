@@ -81,7 +81,7 @@ static intptr_t RootHost(void* inScreen, EeWonRootScreenOp inOp, intptr_t a, int
     case RO::Relayout: s->Relayout(); return 0;
     case RO::BaseEvent: s->Component::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
     case RO::EventControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
-    case RO::EventFromTabs: return reinterpret_cast<ComponentEvent*>(a)->mComponent == s->mTabCtrl.get();
+    case RO::EventFromTabs: return reinterpret_cast<ComponentEvent*>(a)->GetComponent() == s->mTabCtrl.get();
     case RO::MyGame: return (intptr_t)GetMyLobbyGame();
     case RO::GameMatches: return reinterpret_cast<LobbyGame*>(a)->MatchesRoomSpec((int)b) ? 1 : 0;
     case RO::CrossPromotion: return LobbyGetCrossPromotion() ? 1 : 0;
@@ -124,7 +124,7 @@ void RootScreen::ShowLobbyTab() { RootCall(this, RC::ShowLobbyTab); }
 void RootScreen::HandleJoinedGame() { RootCall(this, RC::JoinedGame); }
 void RootScreen::HandleLeftGame() { RootCall(this, RC::LeftGame); }
 void RootScreen::Virtual08() { RootCall(this, RC::SizeChanged); }
-void RootScreen::HandleComponentEvent(ComponentEvent* inEvent) { RootCall(this, RC::Event, (intptr_t)inEvent, inEvent->mType); }
+void RootScreen::HandleComponentEvent(ComponentEvent* inEvent) { RootCall(this, RC::Event, (intptr_t)inEvent, inEvent->mEv.kind); }
 RootScreen::RootScreen(bool inIsLan) { RootCall(this, RC::Construct, inIsLan); }
 // Destroys the root screen (members only)
 RootScreen::~RootScreen() {}

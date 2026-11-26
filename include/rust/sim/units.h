@@ -6025,14 +6025,8 @@ constexpr static const int32_t EE_UNITS_GAME_OVER_SCENARIO = 1;
 /// the rules' `mGameOptions.mDefeatWithoutRecovery`
 constexpr static const int32_t EE_UNITS_GAME_OVER_DEFEAT_RULE = 2;
 
-/// `mTeams.size()`; team a's `GetVictoryState()`; its `mPlayers.size()`; its `mPlayers[b]`
-constexpr static const int32_t EE_UNITS_GAME_OVER_TEAMS = 3;
-
+/// team a's `GetVictoryState()` (the teams themselves: app teams_ffi.rs)
 constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_STATE = 4;
-
-constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_SIZE = 5;
-
-constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_PLAYER = 6;
 
 /// `mPlayers[a]->IsHuman()`
 constexpr static const int32_t EE_UNITS_GAME_OVER_IS_HUMAN = 7;
@@ -17551,35 +17545,6 @@ struct EeUnitsStatPoint {
   unsigned long time;
 };
 
-/// `EEStatisticsRecord`'s members from `mColor` (+0x318) to `mIsHuman` (+0x362): the C++ static_asserts the offsets.
-struct EeUnitsStatsRecordTail {
-  float color[3];
-  long result;
-  unsigned long team;
-  unsigned long end_time;
-  unsigned long resources[7];
-  unsigned long score;
-  unsigned long economy_score;
-  unsigned long epoch_score;
-  unsigned long military_score;
-  unsigned long tech_score;
-  uint8_t slot;
-  bool is_local;
-  bool is_human;
-};
-
-/// `EEStatisticsHistory`'s members from `mStartTime` (+0x24) to `mIsCampaign` (+0x37).
-struct EeUnitsStatsHistoryTail {
-  long start_time;
-  long current_record_index;
-  long end_time;
-  long tile_count;
-  bool teams_locked;
-  bool victory_enabled;
-  bool is_scenario;
-  bool is_campaign;
-};
-
 /// The host: `(ctx, op, index, io) -> the operation's result`.
 using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
@@ -20746,18 +20711,6 @@ int32_t ee_units_stats_save(const EeUnitsPlayerStats *s,
                             void *ctx,
                             EeUnitsPlayerSaveFn f,
                             unsigned long end_time);
-
-/// The record's plain members cleared (`EEStatisticsRecord::Clear`; the C++ clears the names and statistics).
-///
-/// # Safety
-/// `tail` is a live record's `mColor`.
-void ee_units_stats_record_clear(EeUnitsStatsRecordTail *tail);
-
-/// The history's plain members cleared (`EEStatisticsHistory::Reset`; the C++ clears the name and records).
-///
-/// # Safety
-/// `tail` is a live history's `mStartTime`.
-void ee_units_stats_history_clear(EeUnitsStatsHistoryTail *tail);
 
 /// `EEPlayer::UpdatePlayer` (see [`update_player`]).
 ///

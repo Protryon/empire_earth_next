@@ -18,10 +18,10 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/won_gui/guistring.h"
 
 using namespace WONAPI;
 
-wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)
 
 // ---- the original statements (HEAD 6d0c36ca's GUIStringDataMutations.cpp, GUIStringData.cpp, WONLobbyResource.h)
 struct OrigData {
@@ -119,6 +119,12 @@ struct OrigData {
     }
 };
 
+// ---- the port: a text through guistrobj.rs's maker and edits (one reference: no copy)
+static GUIString* NewP(EeWonGstrOp inOp, const void* inOther, int a = 0, int b = 0)
+{ return new GUIString((GUIStringData*)ee_won_gstr_new(inOp, inOther, a, b)); }
+static int Ed(GUIString& s, EeWonGstrOp inOp, const void* inOther = NULL, int a = 0, int b = 0, int c = 0)
+{ return ee_won_gstr_edit(inOp, (EeWonGstr**)&s.mData.mPtr, inOther, a, b, c); }
+
 // ---- the driver
 
 static unsigned sSeed = 1;
@@ -151,11 +157,11 @@ int main(int argc, char** argv)
     for (int q = 0; q < kSeqs; q++) {
         sSeed = 0x9e3779b9u ^ (unsigned)(q * 2654435761u);
         OrigData* o[3];
-        GUIStringData* p[3];
+        GUIString* p[3];
         for (int i = 0; i < 3; i++) {
             int c = R(5);
             o[i] = new OrigData((unsigned short)c);
-            p[i] = new GUIStringData((unsigned short)c);
+            p[i] = NewP(EeWonGstrOp::NewCapacity, NULL, (unsigned short)c);
             char l[64];
             snprintf(l, sizeof(l), "s%d start %d %d", q, i, c);
             if (q < kGolden) aGolden.push_back(l);
@@ -165,39 +171,39 @@ int main(int argc, char** argv)
             int a = 0, b = 0, c = 0;
             std::string aName;
             OrigData& O = *o[i];
-            GUIStringData& P = *p[i];
+            GUIString& P = *p[i];
             int len = O.mLength;
             switch (op) {
             case 0: { // a new string: capacity, copy, substring, wide, narrow
                 int kind = R(5);
-                OrigData* no; GUIStringData* np;
-                if (kind == 0) { a = R(9); no = new OrigData((unsigned short)a); np = new GUIStringData((unsigned short)a); aName = "newcap"; }
-                else if (kind == 1) { no = new OrigData(*o[j]); np = new GUIStringData(*p[j]); aName = "newcopy"; }
+                OrigData* no; GUIString* np;
+                if (kind == 0) { a = R(9); no = new OrigData((unsigned short)a); np = NewP(EeWonGstrOp::NewCapacity, NULL, (unsigned short)a); aName = "newcap"; }
+                else if (kind == 1) { no = new OrigData(*o[j]); np = NewP(EeWonGstrOp::NewCopy, p[j]->mData.get()); aName = "newcopy"; }
                 else if (kind == 2) { int jl = o[j]->mLength; a = R(jl + 1); b = R(jl - a + 1);
-                    no = new OrigData(o[j], (unsigned short)a, (unsigned short)b); np = new GUIStringData(p[j], (unsigned short)a, (unsigned short)b); aName = "newsub"; }
-                else if (kind == 3) { a = R(6); no = new OrigData(kWide[a]); np = new GUIStringData(kWide[a]); aName = "newwide"; }
-                else { a = R(7); no = new OrigData(kNarrow[a]); np = new GUIStringData(kNarrow[a]); aName = "newnarrow"; }
+                    no = new OrigData(o[j], (unsigned short)a, (unsigned short)b); np = NewP(EeWonGstrOp::NewSub, p[j]->mData.get(), (unsigned short)a, (unsigned short)b); aName = "newsub"; }
+                else if (kind == 3) { a = R(6); no = new OrigData(kWide[a]); np = new GUIString(kWide[a]); aName = "newwide"; }
+                else { a = R(7); no = new OrigData(kNarrow[a]); np = new GUIString(kNarrow[a]); aName = "newnarrow"; }
                 delete o[i]; delete p[i]; o[i] = no; p[i] = np;
                 break;
             }
-            case 1: a = R(40); b = R(2); O.Reserve(a, b != 0); P.Reserve(a, b != 0); aName = "reserve"; break;
-            case 2: a = R(40); b = R(2); O.resize(a, b != 0); P.resize(a, b != 0); aName = "resize"; break;
-            case 3: a = R(6); b = (int)wcslen(kWide[a]); b = R(b + 1); O.AssignWStr(kWide[a], b); P.AssignWStr(kWide[a], b); aName = "wstr"; break;
-            case 4: a = R(7); b = (int)strlen(kNarrow[a]); b = R(b + 1); O.AssignStr(kNarrow[a], b); P.AssignStr(kNarrow[a], b); aName = "str"; break;
-            case 5: a = 'A' + R(26); b = R(12); c = R(12); O.Fill(a, (unsigned short)b, (unsigned short)c); P.Fill(a, (unsigned short)b, (unsigned short)c); aName = "fill"; break;
+            case 1: a = R(40); b = R(2); O.Reserve(a, b != 0); Ed(P, EeWonGstrOp::Reserve, NULL, a, b != 0); aName = "reserve"; break;
+            case 2: a = R(40); b = R(2); O.resize(a, b != 0); Ed(P, EeWonGstrOp::Resize, NULL, a, b != 0); aName = "resize"; break;
+            case 3: a = R(6); b = (int)wcslen(kWide[a]); b = R(b + 1); O.AssignWStr(kWide[a], b); Ed(P, EeWonGstrOp::AssignUnits, kWide[a], b); aName = "wstr"; break;
+            case 4: a = R(7); b = (int)strlen(kNarrow[a]); b = R(b + 1); O.AssignStr(kNarrow[a], b); Ed(P, EeWonGstrOp::AssignNarrow, kNarrow[a], b); aName = "str"; break;
+            case 5: a = 'A' + R(26); b = R(12); c = R(12); O.Fill(a, (unsigned short)b, (unsigned short)c); Ed(P, EeWonGstrOp::Fill, NULL, a, (unsigned short)b, (unsigned short)c); aName = "fill"; break;
             case 6: { int jl = o[j]->mLength; a = R(jl + 1); b = R(jl - a + 1);
-                O.assign(o[j], (unsigned short)a, (unsigned short)b); P.assign(p[j], (unsigned short)a, (unsigned short)b); aName = "assign"; break; }
+                O.assign(o[j], (unsigned short)a, (unsigned short)b); P.assign(*p[j], (unsigned short)a, (unsigned short)b); aName = "assign"; break; }
             case 7: a = 'a' + R(26); O.append(a); P.append(a); aName = "appendc"; break;
             case 8: { int jl = o[j]->mLength; a = R(jl + 1); b = R(jl - a + 1);
-                O.append(o[j], (unsigned short)a, (unsigned short)b); P.append(p[j], (unsigned short)a, (unsigned short)b); aName = "append"; break; }
+                O.append(o[j], (unsigned short)a, (unsigned short)b); P.append(*p[j], (unsigned short)a, (unsigned short)b); aName = "append"; break; }
             case 9: case 10: a = R(len + 3) - 1; b = R(len + 3); // (a negative length writes past the end: UB) O.erase(a, b); P.erase(a, b); aName = "erase"; break;
             case 11: case 12: // (into itself: the original's memmove by the other's new length writes past the end, UB)
-                j = (i + 1 + R(2)) % 3; a = R(len + 2); O.insert(a, o[j]); P.insert(a, p[j]); aName = "insert"; break;
-            case 13: { a = R(len + 2); b = 0x20 + R(0x300); int ro = O.setAt(a, b), rp = P.setAt(a, b); c = ro;
+                j = (i + 1 + R(2)) % 3; a = R(len + 2); O.insert(a, o[j]); P.insert(a, *p[j]); aName = "insert"; break;
+            case 13: { a = R(len + 2); b = 0x20 + R(0x300); int ro = O.setAt(a, b), rp = Ed(P, EeWonGstrOp::SetAt, NULL, a, b); c = ro;
                 if (ro != rp) { if (aFailures++ < 20) printf("FAIL s%d k%d setAt answered %d / %d\n", q, k, ro, rp); }
                 aName = "setat"; break; }
             default: { // the substring through GUIString (WONLobbyResource.h's inline substr)
-                GUIString aWhole(new GUIStringData(*p[i]));
+                GUIString aWhole((GUIStringData*)ee_won_gstr_new(EeWonGstrOp::NewCopy, p[i]->mData.get(), 0, 0));
                 a = R(len + 1); b = R(len - a + 1);
                 GUIString aSub = aWhole.substr((unsigned short)a, (unsigned short)b);
                 OrigData aWant(o[i], (unsigned short)a, (unsigned short)b);
@@ -209,7 +215,7 @@ int main(int argc, char** argv)
             }
             for (int t = 0; t < 3; t++) {
                 std::string so = State(o[t]->mText, o[t]->mLength, o[t]->mCapacity);
-                std::string sp = State(p[t]->mText, p[t]->mLength, p[t]->mCapacity);
+                std::string sp = State(p[t]->mData->mText, p[t]->mData->mLength, p[t]->mData->mCapacity);
                 aChecks++;
                 if (so != sp && aFailures++ < 20)
                     printf("FAIL s%d k%d %s %d %d %d %d %d: string %d\n  orig %s\n  port %s\n", q, k, aName.c_str(), i, j, a, b, c, t,

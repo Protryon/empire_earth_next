@@ -4,9 +4,12 @@
 //! kept), the resize and its terminator, the wide and narrow assignments, `Fill`, `assign`, both `append`s, `erase`,
 //! `insert`, `setAt` and the destructor's free. The comparisons, searches and case maps are `guistring`'s.
 //!
-//! The C++ class keeps its three members (`mText`, `mLength`, `mCapacity`: 100+ readers read them inline) as one
-//! block the Rust edits in place, `EeWonGuiStrBuf`; the buffer is Rust's allocation (its real size kept in front of
-//! it, because `mCapacity` is the original's `unsigned short` and wraps past 65,535 units).
+//! Since R6 WON GUI round 39 the whole text is Rust's object, [`EeWonGstr`]: made ([`ee_won_gstr_new`]), counted,
+//! copied on write ([`ee_won_gstr_edit`]), read ([`ee_won_gstr_read`]) and freed here; the C++ `GUIStringData` is
+//! its view (a `RefCount` without a vtable, `mText`, `mLength`, `mCapacity`: 100+ readers read them inline) and
+//! `GUIString` one counted pointer to it. The block, `EeWonGuiStrBuf`, is edited in place; the buffer is Rust's
+//! allocation (its real size kept in front of it, because `mCapacity` is the original's `unsigned short` and wraps
+//! past 65,535 units).
 //!
 //! Corners kept: the length and capacity are `unsigned short` (a resize past 65,535 wraps the length and writes the
 //! terminator at the wrapped index); `Reserve` compares the capacity as an int; the offsets of `Fill`, `assign`,
@@ -65,6 +68,10 @@ pub enum EeWonGstrOp {
     SetAt,
     /// The destructor: the buffer freed.
     Free,
+    /// `toUpper()`: units below 256 through the CRT's `toupper`.
+    Upper,
+    /// `toLowerCase()`.
+    Lower,
 }
 
 // ---- the allocation: the units after a header holding their byte size
@@ -149,9 +156,8 @@ fn write(text: *mut c_void, ws: usize, at: usize, v: &[u32]) {
     }
 }
 
-/// The offset of a C++ `GUIStringData`'s `mText` block (after the vtable pointer and `RefCount::mRefCount`, padded;
-/// asserted by GUIStringSingleton.cpp).
-pub const EE_WON_GSTR_DATA_AT: usize = 2 * std::mem::size_of::<usize>();
+/// The offset of a `GUIStringData`'s text block (`EeWonGstr::buf`).
+pub const EE_WON_GSTR_DATA_AT: usize = std::mem::offset_of!(EeWonGstr, buf);
 /// The `wchar_t` size of the game's texts.
 pub const EE_WON_GSTR_WCHAR: usize = if cfg!(windows) { 2 } else { 4 };
 
@@ -159,8 +165,8 @@ pub const EE_WON_GSTR_WCHAR: usize = if cfg!(windows) { 2 } else { 4 };
 /// Rust objects read the model's and the resources' texts without a host op).
 ///
 /// # Safety
-/// `data` is NULL or a live `GUIStringData` (or a block laid out as one: its `EeWonGuiStrBuf` at
-/// [`EE_WON_GSTR_DATA_AT`]) whose text is this module's allocation.
+/// `data` is NULL or a live `GUIStringData` (an [`EeWonGstr`], or a block laid out as one) whose text is this
+/// module's allocation.
 pub unsafe fn data_units(data: *const c_void) -> Vec<u32> {
     if data.is_null() {
         return Vec::new();
@@ -362,15 +368,14 @@ pub unsafe fn construct_from(b: *mut EeWonGuiStrBuf, o: *const EeWonGuiStrBuf, s
     }
 }
 
-/// One of GUIStringData's edits on `b` (the C++ object's members); `other` is the other string's members
+/// One of GUIStringData's edits on `b` (the text's block); `other` is the other string's block
 /// (`NewCopy`, `NewSub`, `Assign`, `Append`, `Insert`), `wchar_t` units (`AssignUnits`) or UTF-8 bytes
 /// (`AssignNarrow`); answers `SetAt`'s character, else 0.
 ///
 /// # Safety
 /// `b` is a live block whose `text` is NULL or this module's (for the `New*` ops: writable room, unread);
 /// `other` as the op needs it, live for the call (it may be `b` itself for `Assign`, `Append` and `Insert`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_gstr(
+pub unsafe fn ee_won_gstr(
     op: EeWonGstrOp,
     b: *mut EeWonGuiStrBuf,
     other: *const c_void,
@@ -422,9 +427,275 @@ pub unsafe extern "C" fn ee_won_gstr(
             EeWonGstrOp::Insert => insert(b, o, a, ws),
             EeWonGstrOp::SetAt => return (*b).set_at(a, bb, ws),
             EeWonGstrOp::Free => (*b).free(),
+            EeWonGstrOp::Upper | EeWonGstrOp::Lower => {
+                let mut v = (*b).units(ws);
+                crate::guistring::change_case(&mut v, op == EeWonGstrOp::Upper, &ee_won_net::chat::CrtChat);
+                write((*b).text, ws, 0, &v);
+            }
         }
     }
     0
+}
+
+// ---- the text itself (R6 WON GUI round 39): GUIStringData is Rust's object, made, counted, edited and freed here;
+// the C++ `GUIStringData` is a view of it (WONLobbyResource.h) and a `GUIString` one counted reference to it.
+// Unsafe Send/Sync: none; the texts are the lobby thread's, as the original's were (the count is atomic).
+
+/// A lobby text, the C++ `GUIStringData`: a C++ `RefCount` without a vtable (NULL: `RefCount::Release` gives the
+/// last reference's text to [`ee_won_gstr_free`]), its reference count (atomic; a new text has none, the first
+/// `SmartPtr` adds one) and its block.
+#[repr(C)]
+#[derive(Debug)]
+pub struct EeWonGstr {
+    pub vtable: *const c_void,
+    pub refs: i32,
+    pub buf: EeWonGuiStrBuf,
+}
+
+/// The reference count, atomically.
+///
+/// # Safety
+/// `p` is a live text.
+unsafe fn refs<'a>(p: *const EeWonGstr) -> &'a std::sync::atomic::AtomicI32 {
+    // SAFETY: an aligned i32 of a live text, only touched atomically
+    unsafe { std::sync::atomic::AtomicI32::from_ptr(std::ptr::addr_of!((*p).refs).cast_mut()) }
+}
+
+fn boxed() -> *mut EeWonGstr {
+    Box::into_raw(Box::new(EeWonGstr { vtable: std::ptr::null(), refs: 0, buf: EeWonGuiStrBuf::new() }))
+}
+
+/// A new text with no reference: `NewCapacity` (`a` units of room), `NewCopy` (`other` a text), `NewSub` (`b`
+/// units of the text `other` from `a`), `AssignUnits` (`a` `wchar_t` units at `other`) or `AssignNarrow` (`a` bytes
+/// of UTF-8 at `other`).
+///
+/// # Safety
+/// `other` as the op needs it.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gstr_new(op: EeWonGstrOp, other: *const c_void, a: i32, b: i32) -> *mut EeWonGstr {
+    let p = boxed();
+    let o = match op {
+        // SAFETY: a live text (the contract)
+        EeWonGstrOp::NewCopy | EeWonGstrOp::NewSub => unsafe {
+            std::ptr::addr_of!((*other.cast::<EeWonGstr>()).buf).cast()
+        },
+        _ => other,
+    };
+    // SAFETY: a new block; `o` as the op needs it
+    unsafe { ee_won_gstr(op, std::ptr::addr_of_mut!((*p).buf), o, a, b, 0, EE_WON_GSTR_WCHAR as u32) };
+    p
+}
+
+/// A C++ `GUIString*`'s units (the one pointer to its text), read in place.
+///
+/// # Safety
+/// `s` is a live `GUIString`.
+pub unsafe fn gstring_units(s: *const c_void) -> Vec<u32> {
+    // SAFETY: the contract: a GUIString is its text's pointer
+    unsafe { data_units(*s.cast::<*const c_void>()) }
+}
+
+/// One reference to a text Rust holds for a host call: the C++ reads or edits it as the `GUIString` at [`GText::arg`]
+/// (a `GUIString` is its text's pointer), as the original's local GUIString.
+pub struct GText(*mut EeWonGstr);
+
+impl GText {
+    /// A new text of `units`.
+    pub fn new(units: &[u32]) -> Self {
+        let p = gstr_from_units(units);
+        // SAFETY: the new text
+        unsafe { gstr_ref(p) };
+        GText(p)
+    }
+    /// A text a host made with no reference (`NewGUIStringData`).
+    ///
+    /// # Safety
+    /// `p` is a live text no one else holds.
+    pub unsafe fn adopt(p: *mut EeWonGstr) -> Self {
+        // SAFETY: the contract
+        unsafe { gstr_ref(p) };
+        GText(p)
+    }
+    /// The `GUIString*` (the slot; an edit may replace its text).
+    pub fn arg(&mut self) -> isize {
+        &mut self.0 as *mut *mut EeWonGstr as isize
+    }
+    /// The units.
+    pub fn units(&self) -> Vec<u32> {
+        // SAFETY: the held text
+        unsafe { data_units(self.0.cast()) }
+    }
+}
+
+impl Drop for GText {
+    fn drop(&mut self) {
+        // SAFETY: the reference this holds
+        unsafe { gstr_release(self.0) };
+    }
+}
+
+/// A new text of `units` (no reference).
+pub fn gstr_from_units(units: &[u32]) -> *mut EeWonGstr {
+    let p = boxed();
+    // SAFETY: the new text
+    unsafe { (*p).buf.assign_units(units, EE_WON_GSTR_WCHAR) };
+    p
+}
+
+/// `AddRef`: one more reference.
+///
+/// # Safety
+/// `p` is a live text.
+pub unsafe fn gstr_ref(p: *const EeWonGstr) {
+    // SAFETY: the contract
+    unsafe { refs(p) }.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+}
+
+/// `RefCount::Release`: one reference fewer; the text freed at none.
+///
+/// # Safety
+/// `p` is a live text holding the caller's reference.
+pub unsafe fn gstr_release(p: *const EeWonGstr) {
+    // SAFETY: the contract
+    if unsafe { refs(p) }.fetch_sub(1, std::sync::atomic::Ordering::AcqRel) <= 1 {
+        // SAFETY: the last reference
+        unsafe { ee_won_gstr_free(p.cast_mut()) };
+    }
+}
+
+/// A text without references freed (the original's destructor and `delete`).
+///
+/// # Safety
+/// `p` is a text `ee_won_gstr_new` or `gstr_from_units` made, no longer referenced.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gstr_free(p: *mut EeWonGstr) {
+    // SAFETY: the contract: made by Box
+    let mut b = unsafe { Box::from_raw(p) };
+    b.buf.free();
+}
+
+/// The shared empty text (GetEmptyGUIStringData 0x328450: made on first use from the empty wide string, held for
+/// the program).
+#[no_mangle]
+pub extern "C" fn ee_won_gstr_empty() -> *mut EeWonGstr {
+    static EMPTY: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *EMPTY.get_or_init(|| {
+        let p = gstr_from_units(&[]);
+        // SAFETY: the new text; the static's reference
+        unsafe { gstr_ref(p) };
+        p as usize
+    }) as *mut EeWonGstr
+}
+
+/// One of `GUIString`'s edits on the text `*slot` holds: copied first when it is shared (`CopyOnWrite`; not for
+/// `Reserve`, which the original made in the shared text); `other` points to the other `GUIString`'s text for
+/// `Assign`, `Append` and `Insert` (read after the copy, as the original did, so it may be `slot`), else it is the
+/// op's units or bytes. Answers `SetAt`'s character, else 0.
+///
+/// # Safety
+/// `*slot` is a live text holding the slot's reference; `other` as the op needs it.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gstr_edit(
+    op: EeWonGstrOp,
+    slot: *mut *mut EeWonGstr,
+    other: *const c_void,
+    a: i32,
+    b: i32,
+    c: i32,
+) -> i32 {
+    // SAFETY: the contract
+    unsafe {
+        let cur = *slot;
+        if op != EeWonGstrOp::Reserve && refs(cur).load(std::sync::atomic::Ordering::Acquire) > 1 {
+            let copy = ee_won_gstr_new(EeWonGstrOp::NewCopy, cur.cast(), 0, 0);
+            gstr_ref(copy);
+            *slot = copy;
+            gstr_release(cur);
+        }
+        let o = match op {
+            EeWonGstrOp::Assign | EeWonGstrOp::Append | EeWonGstrOp::Insert => {
+                std::ptr::addr_of!((**other.cast::<*const EeWonGstr>()).buf).cast()
+            }
+            _ => other,
+        };
+        ee_won_gstr(op, std::ptr::addr_of_mut!((**slot).buf), o, a, b, c, EE_WON_GSTR_WCHAR as u32)
+    }
+}
+
+/// A read of a text (`GUIString`'s searches and comparisons).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonGstrRead {
+    /// `Compare(other)` (`other` a text).
+    Compare,
+    CompareNoCase,
+    /// `find(other, a)`.
+    Find,
+    FindNoCase,
+    FindOneOf,
+    RFind,
+    /// `find(a, b)`: the character `a` from `b`.
+    FindChar,
+    RFindChar,
+    /// `compare(other, a)`: `other` NUL-terminated UTF-8, from the offset `a`.
+    CompareNarrow,
+    CompareNarrowNoCase,
+    /// `ToInt(a)`.
+    ToInt,
+}
+
+/// One of `GUIString`'s reads of `t`.
+///
+/// # Safety
+/// `t` is a live text; `other` as the read needs it.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gstr_read(
+    op: EeWonGstrRead,
+    t: *const EeWonGstr,
+    other: *const c_void,
+    a: i32,
+    b: i32,
+) -> i32 {
+    use crate::guistring as g;
+    use ee_won_net::chat::CrtChat;
+    // SAFETY: the contract
+    let x = unsafe { data_units(t.cast()) };
+    // SAFETY: the contract (a text)
+    let y = || unsafe { data_units(other) };
+    // SAFETY: the contract (NUL-terminated bytes)
+    let n = || g::widen(unsafe { g::narrow_text(other.cast()) }, EE_WON_GSTR_WCHAR as u32);
+    match op {
+        EeWonGstrRead::Compare => g::compare(&x, &y()),
+        EeWonGstrRead::CompareNoCase => g::compare_no_case(&x, &y(), &CrtChat),
+        EeWonGstrRead::Find => g::find(&x, &y(), a),
+        EeWonGstrRead::FindNoCase => g::find_no_case(&x, &y(), a, &CrtChat),
+        EeWonGstrRead::FindOneOf => g::find_one_of(&x, &y(), a),
+        EeWonGstrRead::RFind => g::rfind(&x, &y(), a),
+        EeWonGstrRead::FindChar => g::find_char(&x, a, b),
+        EeWonGstrRead::RFindChar => g::rfind_char(&x, a, b),
+        EeWonGstrRead::CompareNarrow => g::compare_narrow(&x, a, &n()),
+        EeWonGstrRead::CompareNarrowNoCase => g::compare_no_case_narrow(&x, a, &n(), &CrtChat),
+        EeWonGstrRead::ToInt => g::to_int(&x, a as u16, &CrtChat),
+    }
+}
+
+/// `GetString`: the text as the game's narrow text (UTF-8), given to the sink once (not for an empty text).
+///
+/// # Safety
+/// `t` is a live text; the sink's contract.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gstr_narrow(
+    t: *const EeWonGstr,
+    sink: ee_won_net::ffi::EeWonByteSink,
+    context: *mut c_void,
+) {
+    // SAFETY: the contract
+    let x = unsafe { data_units(t.cast()) };
+    if !x.is_empty() {
+        let n = crate::guistring::narrow(&x, EE_WON_GSTR_WCHAR as u32);
+        // SAFETY: the sink's contract
+        unsafe { ee_won_net::ffi::give(sink, context, &n) }
+    }
 }
 
 #[cfg(test)]

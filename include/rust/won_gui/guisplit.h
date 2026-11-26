@@ -95,12 +95,6 @@ ptrdiff_t ee_won_gui_wm_game(void *comp,
                              ptrdiff_t c,
                              ptrdiff_t d);
 
-/// `WindowManager::InitColorScheme`: the 17 standard colours set in the manager's scheme.
-///
-/// # Safety
-/// `host` is the manager's host, `wm` the `WindowManager*`.
-void ee_won_gui_wm_init_colors(EeWonGuiHostFn host, void *wm);
-
 /// `MultiListHeader::GetSortTypeForButton`: the sort arrow of the header the button is in (`ListSortType_None`, 2,
 /// without one or without arrows). `host` is the header's host; its ops here read only their arguments.
 ///

@@ -10,8 +10,6 @@ typedef EeWonTipOp To;
 typedef EeWonLeafOp Lo;
 static intptr_t MutBrowser(void*, EeWonBrowserOp, intptr_t, intptr_t);
 static intptr_t MutTip(void*, EeWonTipOp, intptr_t, intptr_t);
-static void MutUnits(const void*, EeWonLocalizeText*);
-static void* MutNew(const void*, size_t);
 static intptr_t MutImgBtn(void*, EeWonLeafOp, intptr_t, intptr_t);
 static intptr_t MutTextItem(void*, EeWonLeafOp, intptr_t, intptr_t);
 static intptr_t MutMenu(void*, EeWonLeafOp, intptr_t, intptr_t);
@@ -125,26 +123,12 @@ static intptr_t HostTip(void* inMe, EeWonTipOp op, intptr_t a, intptr_t b)
     return 0;
 }
 
-static void LocalizeUnits(const void* inText, EeWonLocalizeText* outText)
-{
-    *outText = EeWonLocalizeText{static_cast<const GUIString*>(inText)->mData->mText, static_cast<const GUIString*>(inText)->length()};
-}
-static void* LocalizeNew(const void* inUnits, size_t inLength) { return new GUIStringData(std::wstring((const wchar_t*)inUnits, inLength)); }
-GUIString WONLocalize(const GUIString& inFormat, const GUIString* a, const GUIString* b, const GUIString* c, int n)
-{
-    return GUIString((GUIStringData*)ee_won_gui_localize(&inFormat, a, b, c, n, MutUnits, MutNew, sizeof(wchar_t)));
-}
-// the lobby's formatting functions (StringLocalizeCalls.cpp until R6 WON GUI round 37)
-// Returns the format string with <s1> replaced by the given string
-GUIString LobbyFormatString(const GUIString& format,const GUIString& first) { return WONLocalize(format,&first,NULL,NULL,1); }
-// Returns the format string with <s1> and <s2> replaced by the given strings
-GUIString LobbyFormatString2(const GUIString& format,const GUIString& first,const GUIString& second) { return WONLocalize(format,&first,&second,NULL,2); }
-// Returns the format string with <s1>, <s2> and <s3> replaced by the given strings
-GUIString LobbyFormatString3(const GUIString& format,const GUIString& first,const GUIString& second,const GUIString& third)
-{
-    return WONLocalize(format,&first,&second,&third,3);
-}
-
+GUIString WONLocalize(const GUIString& f, const GUIString* a, const GUIString* b, const GUIString* c, int n)
+{ return (GUIStringData*)ee_won_gui_localize(&f, a, b, c, n); }
+GUIString LobbyFormatString(const GUIString& f, const GUIString& a) { return (GUIStringData*)ee_won_gui_localize(&f, &a, NULL, NULL, 1); }
+GUIString LobbyFormatString2(const GUIString& f, const GUIString& a, const GUIString& b) { return (GUIStringData*)ee_won_gui_localize(&f, &a, &b, NULL, 2); }
+GUIString LobbyFormatString3(const GUIString& f, const GUIString& a, const GUIString& b, const GUIString& c)
+{ return (GUIStringData*)ee_won_gui_localize(&f, &a, &b, &c, 3); }
 #include "won_leaf34_paint_classes.h"
 static intptr_t HostImgBtn(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
