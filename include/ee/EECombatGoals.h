@@ -30,12 +30,6 @@ class GE3DPoint;
 // an object's handle for the Rust (a complex unit's EEUnit base is at its address: its first base)
 inline uint64_t EECombatObj(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
 
-// CBTC, CBGS (no record while the capture is off; the records' batches are Rust's: ee_sim combat/capture_fold.rs)
-inline void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut)
-    { ee_combat_capture_condition(&in, &inOut); }
-// writes the tests' last CBTC batch (EE-SIM at the game's end, before the capture closes)
-inline void EECombatCaptureFlush() { ee_combat_capture_fold_flush(); }
-
 // The trigger test inKind (EE_COMBAT_GOAL_*) of inUnit on inEvent with the target inTarget (NULL: none): its record
 // filled (ee_combat store.rs; the attack goal's last target tile and convert flag from inGoal), the test through
 // ee_combat_condition over the C++ host (inGoal for the goals, inClass for the shots), the action applied (a shot's
@@ -65,18 +59,13 @@ inline void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
 // EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
 // (ee_sim combat cg_query.rs: the marshalling and the CBQR records)
-inline EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_cgq_impact_unit(EECombatObj(inUnit)); }
 inline bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget) { return ee_units_cgq_in_reach(EECombatObj(inUnit), EECombatObj(inTarget)); }
 inline bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal)
     { return ee_units_cgq_still_reachable(EECombatObj(inUnit), EECombatObj(inGoal)); }
 inline bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal)
     { return ee_units_cgq_gate_closed(EECombatObj(inUnit), EECombatObj(inGoal)); }
-inline bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit) { return ee_units_cgq_enemy_in_range(EECombatObj(inUnit)); }
 inline bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget)
     { return ee_units_cgq_heal_in_range(EECombatObj(inHealer), EECombatObj(inTarget)); }
-// (a GE3DPoint is its EeGe3DPoint record: x, y first)
-inline bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
-    { return ee_units_cgq_faces_point(EECombatObj(inClass), EECombatObj(inUnit), ((const float*)&inLocation)[0], ((const float*)&inLocation)[1], inUseTolerance); }
 
 // CBSO (TEST ONLY): the outcome of a shot's ActionChanged or Update (the unit's command before and after, animation,
 // physics action, hit points, goal and its target, location, rotting, flight and lifetime timers, opacity, velocity,
@@ -84,8 +73,6 @@ inline bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, cons
 // (EE_SIM_CAPTURE_CBSO_FULL=1: every call), only the outermost call of each kind (scope slots 1 to 3)
 // (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
-inline void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore)
-    { ee_combat_capture_shot(inFunc, (uint64_t)(uintptr_t)inUnit, inBefore); }
 // (the heal's work, EE_COMBAT_SO_HEAL_WORK, is recorded by ee_sim combat/goal_objects.rs)
 
 // The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
@@ -104,14 +91,6 @@ inline void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, c
 inline void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
                                    uint32_t inCheckLocation)
     { ee_units_cgq_capture_ignored(inFunc, EECombatObj(inUnit), EECombatObj(inTarget), inResult, inCheckLocation); }
-// CBXA (TEST ONLY): the outcome of FireShot, Attacked, ApplyHit and ApplyAreaDamage, at each call's end: the unit's
-// command, animation, hit points, reload timer, weapon tag point, ammunition, flight time, special attack and
-// firing high flags, experience, goal kind and attack target, last attacker and the target's hit points and
-// resource amount (inTarget: FireShot's attack goal's target after the shot, ApplyHit's and ApplyAreaDamage's
-// inTarget, none for Attacked); folded like CBQR (EE_SIM_CAPTURE_CBXA_FULL=1)
-// (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
-inline void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
-    { ee_combat_capture_x_action(inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inBefore); }
 // CBGO (TEST ONLY): the attack, attack-ground and heal goals' GetDestination and Suits, at each call's end: the
 // function, the goal's kind, the unit's and target's ids (0 without one), the result, a point's x, y, z bits
 // (GetDestination's out location) and two extras (per function below); folded like CBQR (EE_SIM_CAPTURE_CBGO_FULL=1).
@@ -125,10 +104,6 @@ inline void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUni
 inline int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
                              long* ioX = NULL, long* ioY = NULL)
     { return ee_units_cgq_world(inFunction, EECombatObj(inUnit), EECombatObj(inTarget), EECombatObj(inClass), ioX, ioY); }
-// EEGetFiringPosition (inFiring) or EEGetLeadPosition (ee_combat leaves.rs firing_position, lead_position) over the
-// world host: ioLocation in and out.
-inline void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation)
-    { ee_units_cgq_attack_position(inFiring, EECombatObj(inAttacker), EECombatObj(inTarget), (float(*)[3])&ioLocation); }
 // EEFindDropLocation (ee_combat leaves.rs find_drop_location) over the world host: the target out (NULL: none), the
 // point in outLocation.
 inline EEUnit* EECombatFindDropLocation(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation)
