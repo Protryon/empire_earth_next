@@ -31,7 +31,6 @@ UWideString gLoadSaveErrorMessage;
 #include <functional>
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
 
-extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 
 #include "ee/EEStringIDs.h"
 #include "ee/EEPersistentTag.h"

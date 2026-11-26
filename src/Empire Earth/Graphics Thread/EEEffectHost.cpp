@@ -391,7 +391,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::FwUnitDamaged: ((EEUnit*)p)->mUnitClass->UnitDamaged(((EEUnit*)p)->mComplexUnit, NULL, 0);
         break;
-    case O::FwLoadingSaved: return (bool)gLoadingSavedGame;
+    case O::FwLoadingSaved: return (bool)gWorld.mLoadingSavedGame;
     case O::FwMapEffectRegions: return P64(((EEMap*)p)->mEffectRegions);
     case O::FwViewport: return P64(&gViewport);
     case O::FwGameTime: return (int64_t)gPhysics->mGameTime;
@@ -407,7 +407,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FwAreaEffect: return gAEManager.HasEffect((int32_t)a[0], f[0], f[1], (uint32_t)a[1], false, &((EEComplexUnit*)p)->mAreaEffects);
     case O::FwGlowRows: return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows();
     // the manager's world, the memory files, the effects' file
-    case O::FwManagerRust: return P64(gEffectManager != NULL ? gEffectManager->mRust : (EeGfxEffectManager*)NULL);
+    case O::FwManagerRust: return P64(gWorld.mEffectManager != NULL ? gWorld.mEffectManager->mRust : (EeGfxEffectManager*)NULL);
     case O::FwCurrentPlayerIndex: return (uint32_t)::gWorld.mCurrentPlayer;
     case O::FwNumPlayers: return (uint32_t)::gWorld.mNumPlayers;
     case O::FwMemoryNew: return P64(static_cast<FSFile*>(new FSMemoryFile));

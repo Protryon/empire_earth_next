@@ -95,7 +95,7 @@ static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c.
 // The UI thread's game starts' host (EE_SCREENS_UG_OP_*): Rust's (ui_game_calls.rs and the modules before it)
 // over the one-statement shims below (UI lane round 11)
 #define UG_UI(u) static_cast<EEUserInterface*>((void*)(u))
-extern "C" void ee_screenscpp_ug_screen_active(bool inActive) { gGameScreenActive = inActive; }
+extern "C" void ee_screenscpp_ug_screen_active(bool inActive) { gWorld.mGameScreenActive = inActive; }
 extern "C" void ee_screenscpp_ug_path_reset() { gPathManager.Reset(); }
 extern "C" void ee_screenscpp_ug_sight_on() { gSightUpdatesEnabled = true; }
 extern "C" void ee_screenscpp_ug_restart_units() { gWorld.RestartUnits(); }
@@ -115,7 +115,7 @@ extern "C" void ee_screenscpp_ug_max_players() { gWorld.SetNumPlayers(gWorld.mMa
 extern "C" void ee_screenscpp_ug_collect_computers() { gArtificialIntelligence->CollectComputerPlayers(); }
 extern "C" bool ee_screenscpp_ug_timer_running() { return gPhysics->mTimerRunning; }
 extern "C" void ee_screenscpp_ug_state_clear() { gGameState.Clear(); }
-extern "C" void ee_screenscpp_ug_options_defaults() { gGameOptions.SetDefaults(); }
+extern "C" void ee_screenscpp_ug_options_defaults() { gWorld.mLobbyOptions.SetDefaults(); }
 extern "C" uint64_t ee_screenscpp_ug_file_name_length(uintptr_t inFile)
 { return (uint64_t)reinterpret_cast<FSFile*>(inFile)->GetFile().GetLength(); }
 extern "C" uint64_t ee_screenscpp_ug_file_scenario_at(uintptr_t inFile)
@@ -160,7 +160,7 @@ extern "C" void ee_screenscpp_uim_resize_game(uintptr_t inUi)
 { UIM(inUi)->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true); }
 extern "C" void ee_screenscpp_uim_resize_menu(uintptr_t inUi)
 { UIM(inUi)->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false); }
-extern "C" void ee_screenscpp_uim_screen_active() { gGameScreenActive = true; }
+extern "C" void ee_screenscpp_uim_screen_active() { gWorld.mGameScreenActive = true; }
 extern "C" void ee_screenscpp_uim_post_load_game() { gDataPreLoading->PostLoadGame(false, false); }
 extern "C" bool ee_screenscpp_uim_has_manager() { return gUIManager != NULL; }
 extern "C" uintptr_t ee_screenscpp_uim_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
@@ -327,7 +327,7 @@ extern "C" void ee_screenscpp_server_set_humans(uint32_t inHumans)
 extern "C" void ee_screenscpp_server_set_multiplayer(bool inMultiplayer)
 { static_cast<EEServer*>(gCommunications)->SetIsMultiplayerSession(inMultiplayer); }
 extern "C" void ee_screenscpp_options_map_type_from_file(uintptr_t inFile)
-{ gGameOptions.mMapType = UWideString(reinterpret_cast<FSFile*>(inFile)->GetFile()); }
+{ gWorld.mLobbyOptions.mMapType = UWideString(reinterpret_cast<FSFile*>(inFile)->GetFile()); }
 extern "C" void ee_screenscpp_mouse_resume() { gISMouse->Resume(); }
 extern "C" void ee_screenscpp_keyboard_resume() { gISKeyboard->Resume(); }
 extern "C" void ee_screenscpp_mouse_suspend() { gISMouse->Suspend(); }

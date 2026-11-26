@@ -407,9 +407,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     // the game state
     case O::StOptions: return P64(static_cast<EeAppOptionsFields*>(&ST->mGameOptions));
-    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gGameOptions));
-    case O::LobbyCampaignNameLength: return gGameOptions.mCampaignName.GetLength();
-    case O::LobbyCampaignMapName: return gGameOptions.GetCampaignMapName(*(UWideString*)p);
+    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gWorld.mLobbyOptions));
+    case O::LobbyCampaignNameLength: return gWorld.mLobbyOptions.mCampaignName.GetLength();
+    case O::LobbyCampaignMapName: return gWorld.mLobbyOptions.GetCampaignMapName(*(UWideString*)p);
     case O::StIsLoadedGame: return P64(&ST->mIsLoadedGame);
     case O::StInScenarioEditor: return P64(&ST->mInScenarioEditor);
     case O::StRandomSeed: return P64(&ST->mRandomSeed);
@@ -515,7 +515,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::TechIsLoaded: return ((EETechTree*)p)->mIsLoaded;
     case O::TechResetEpochRange: ((EETechTree*)p)->ResetEpochRange((long)a[0], (long)a[1]);
         break;
-    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gLoadingSavedGame, true);
+    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gWorld.mLoadingSavedGame, true);
         break;
     case O::TechUpdateInterface: ((EETechTree*)p)->UpdateInterface(a[0] != 0);
         break;

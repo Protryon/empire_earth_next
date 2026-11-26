@@ -331,7 +331,7 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_GOALS:
         return (int64_t)theUnit->mGoalQueues[0].mGoals.size();
     case EE_CP_HERD_FLAGS:
-        return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
+        return (gWorld.mLoadingSavedGame ? 1 : 0) | (gWorld.mClearing ? 2 : 0);
     case EE_CP_HERD_PLAYER:
         return (int64_t)EEHerdHandle(gWorld.GetPlayer((unsigned long)v[0]));
     case EE_CP_HERD_UNIT_BY_ID:

@@ -38,7 +38,7 @@
 #define UPX_CALL (*static_cast<EEUIBUpgradeCall*>(reinterpret_cast<void*>(inCall)))
 #define UPX_BUTTON static_cast<EEUIBUpgrade*>(UPX_CALL.mButton)
 #define UPX_UNIT reinterpret_cast<EEUnit*>(inA)
-extern "C" int64_t ee_screenscpp_upx_allowed(uintptr_t inCall, int64_t inA, int64_t inB) { return (int64_t)(gUnitImprovementsAllowed == true); }
+extern "C" int64_t ee_screenscpp_upx_allowed(uintptr_t inCall, int64_t inA, int64_t inB) { return (int64_t)(gWorld.mUnitImprovementsAllowed == true); }
 extern "C" int64_t ee_screenscpp_upx_can_buy(uintptr_t inCall, int64_t inA, int64_t inB) { return (int64_t)(UPX_UNIT->mPlayer->CanBuy(UPX_UNIT->mUnitClass->GetUnitType(), UPX_BUTTON->mAttribute, static_cast<UWideString*>(UPX_CALL.mOut))); }
 extern "C" int64_t ee_screenscpp_upx_editor_unit(uintptr_t inCall, int64_t inA, int64_t inB) { return (int64_t)((int64_t) static_cast<EEUIFScenarioEditor*>(UPX_BUTTON->GetForm())->GetFirstSelectedUnit()); }
 extern "C" int64_t ee_screenscpp_upx_can_raise(uintptr_t inCall, int64_t inA, int64_t inB) { return (int64_t)(UPX_UNIT->mStats->mImprovement.CanUpgrade(UPX_UNIT->mStats->mUnitClass, UPX_BUTTON->mAttribute) == true); }

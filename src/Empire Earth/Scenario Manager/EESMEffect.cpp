@@ -599,14 +599,14 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_TILES_PUSH: inRun->mTiles.push_back(U2DPoint<long>((long)a[0], (long)a[1]));
         return 0;
-    case EE_SCENARIO_WX_WEATHER_CREATE: gEffectManager->CreateWeatherEffect(inRun->mTiles, inRun->mGraphic, NULL);
+    case EE_SCENARIO_WX_WEATHER_CREATE: gWorld.mEffectManager->CreateWeatherEffect(inRun->mTiles, inRun->mGraphic, NULL);
         return 0;
     case EE_SCENARIO_WX_TILE_GET_HEIGHT: return EESMBits(gWorld.mMap->GetTile((long)a[0], (long)a[1])->GetHeight());
     case EE_SCENARIO_WX_TILE_WATER:
         return gWorld.mMap->GetTile((long)a[0], (long)a[1])->mTerrainType == kTerrainDeepWater || gWorld.mMap->GetTile((long)a[0], (long)a[1])->mTerrainType == kTerrainShallowWater;
     case EE_SCENARIO_WX_POINT_SET: inRun->mPoint = GE3DPoint(EESMFloat(a[0]), EESMFloat(a[1]), EESMFloat(a[2]));
         return 0;
-    case EE_SCENARIO_WX_PLACED_CREATE: gEffectManager->CreatePlacedEffect(inRun->mPoint, inRun->mGraphic, NULL);
+    case EE_SCENARIO_WX_PLACED_CREATE: gWorld.mEffectManager->CreatePlacedEffect(inRun->mPoint, inRun->mGraphic, NULL);
         return 0;
     case EE_SCENARIO_WX_ENV_EXISTS: return gWorld.mEnvironmentManager != NULL;
     case EE_SCENARIO_WX_ENV_SET: gWorld.mEnvironmentManager->SetEnabled(a[0] != 0);
@@ -913,8 +913,8 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_CAL_UNIT:
         USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity((unsigned long)a[0], -1, (unsigned long)a[1], 0);
         return 0;
-    case EE_SCENARIO_WORLD_GFX_BETWEEN: gEffectManager->CreateEffectBetweenUnits(SMEUnit(a[0]), SMEUnit(a[1]), inRun->mGraphic, NULL); return 0;
-    case EE_SCENARIO_WORLD_GFX_UNIT: gEffectManager->CreateUnitEffect(SMEUnit(a[0]), inRun->mGraphic, NULL, false, 0, 0); return 0;
+    case EE_SCENARIO_WORLD_GFX_BETWEEN: gWorld.mEffectManager->CreateEffectBetweenUnits(SMEUnit(a[0]), SMEUnit(a[1]), inRun->mGraphic, NULL); return 0;
+    case EE_SCENARIO_WORLD_GFX_UNIT: gWorld.mEffectManager->CreateUnitEffect(SMEUnit(a[0]), inRun->mGraphic, NULL, false, 0, 0); return 0;
     case EE_SCENARIO_WORLD_GFX_END: inRun->mGraphic->Unload(); return 0;
     case EE_SCENARIO_WORLD_START_CINEMATIC: ee_scenario_en_round(gWorld.mScenarioManager, EE_SCENARIO_MN_START_CINEMATIC, NULL, 0, 0); return 0;
     case EE_SCENARIO_WORLD_SET_GAME_SPEED: gWorld.SetGameSpeed(EESMFloat(a[0])); return 0;

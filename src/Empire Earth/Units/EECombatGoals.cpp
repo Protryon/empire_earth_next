@@ -377,7 +377,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_UE_CLEAR: EEQueryContextOf(inContext)->mEffect = NULL; return 0;
     case EE_COMBAT_W_UE_GET: return EEQueryComplex(inObject)->GetEffect(3, EEQueryContextOf(inContext)->mEffect);
     case EE_COMBAT_W_UE_HAS: return EEQueryContextOf(inContext)->mEffect != NULL;
-    case EE_COMBAT_W_UE_CREATE: gEffectManager->CreateUnitEffect(EEQueryComplex(inObject), EEQueryContextOf(inContext)->mEffect, NULL, false, 0, 0); return 0;
+    case EE_COMBAT_W_UE_CREATE: gWorld.mEffectManager->CreateUnitEffect(EEQueryComplex(inObject), EEQueryContextOf(inContext)->mEffect, NULL, false, 0, 0); return 0;
     case EE_COMBAT_W_TAKE_HIT: EEQueryUnit(inObject)->TakeHit(EEQueryComplex(inOther), (long)(*ioArgs)[0], EEQueryComplex(inOther)->mPlayer->GetPlayerID(), 1); return 0;
     case EE_COMBAT_W_UNIT_DAMAGED: EEQueryUnit(inObject)->mUnitClass->UnitDamaged(EEQueryUnit(inObject)->GetComplexUnit(), EEQueryComplex(inOther), (long)(*ioArgs)[0]); return 0;
     case EE_COMBAT_W_PATH_START_AT: EEQueryComplex(inObject)->GetPathStart(*EEObjectOf<GE3DPoint>((*ioArgs)[0]), *EEObjectOf<float>((*ioArgs)[1])); return 0;

@@ -25,7 +25,7 @@
 bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList)
 {
     return ee_tech_civ_can_afford(inUpgrade, this->List(inList).data(), this->List(inList).size(), this->mAvailablePoints,
-                                  gGameOptions.mAllowCustomCivs, outCost);
+                                  gWorld.mLobbyOptions.mAllowCustomCivs, outCost);
 }
 
 // Returns whether the civilization can afford every upgrade in a list, bought one after another
@@ -33,7 +33,7 @@ bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
 {
     return ee_tech_civ_can_afford_all(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(),
                                       inUpgrades.data(), inUpgrades.size(), this->mAvailablePoints,
-                                      gGameOptions.mAllowCustomCivs);
+                                      gWorld.mLobbyOptions.mAllowCustomCivs);
 }
 
 // Reapplies the purchased upgrades to a player after loading, deferring those with attribute index 21; returns 13

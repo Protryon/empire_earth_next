@@ -148,7 +148,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define ST ((EEGameState*)p)
 #define MEM ((FSMemoryFile*)p)
 #define PERSISTENT ((FSPersistent*)p)
-extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 extern EEGameState gGameState;
 extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)
 // The saved world's C++ calls and members (EESaveLoad.cpp's EECore9OpC default): one statement each
@@ -463,7 +462,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsHdrOptionsFromWorld: HDR->mGameOptions = gWorld.mGameOptions;
         break;
-    case O::PsMaxPlayers: return gMaxPlayers;
+    case O::PsMaxPlayers: return gWorld.mMaxPlayers;
     case O::PsSpecNew: return P64(new FSFileSpec);
     case O::PsSpecDelete: delete SPEC;
         break;
@@ -548,7 +547,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsWaitRenderNow: gGraphics->mRenderNow->Wait(kTSWaitInfinite);
         break;
-    case O::PsSetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
+    case O::PsSetLoadingSavedGame: gWorld.mLoadingSavedGame = a[0] != 0;
         break;
     case O::PsStClear: ST->Clear();
         break;

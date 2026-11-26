@@ -121,8 +121,8 @@ extern "C" void ee_screenscpp_civf_civ_buy(uintptr_t inCtx, uint32_t inUpgrade)
 extern "C" void ee_screenscpp_civf_civ_set_points(uintptr_t inCtx) { CF(inCtx)->mPlayer->mCivilization.SetPoints(0); }
 extern "C" bool ee_screenscpp_civf_can_buy() { return ::gWorld.mGameOptions.CanBuyCivilization(); }
 extern "C" bool ee_screenscpp_civf_purchased(uintptr_t inCtx) { return CF(inCtx)->mPlayer->mCivUpgradesPurchased; }
-extern "C" bool ee_screenscpp_civf_custom_civs() { return gAllowCustomCivs; }
-extern "C" bool ee_screenscpp_civf_scenario_game() { return gIsScenarioGame; }
+extern "C" bool ee_screenscpp_civf_custom_civs() { return gWorld.mGameOptions.mAllowCustomCivs; }
+extern "C" bool ee_screenscpp_civf_scenario_game() { return gWorld.mGameOptions.mIsScenarioGame; }
 extern "C" bool ee_screenscpp_civf_in_scenario_editor() { return gUIManager->GetInScenarioEditor(); }
 extern "C" bool ee_screenscpp_civf_can_afford_all(uintptr_t inCtx)
 { return CF(inCtx)->mPlayer->mCivilization.CanAffordAll(CF(inCtx)->mUpgrades); }

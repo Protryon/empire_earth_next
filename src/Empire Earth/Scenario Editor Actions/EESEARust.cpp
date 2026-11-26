@@ -164,7 +164,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
         EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_PAINT), EE_SCREENS_SKOP_PAINT_STORE_TILE);
         return 0;
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_ELEVATION_CHANGED:
-        gEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
+        gWorld.mEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
         return 0;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_POST:
         gUserInterface->PostAction(static_cast<EEAction*>(p));
@@ -245,7 +245,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
         gWorld.mPlayers[i[0]]->UnloadUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass);
         break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SET_MAX_PLAYERS:
-        gMaxPlayers = (unsigned long)i[0];
+        gWorld.mMaxPlayers = (unsigned long)i[0];
         break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
         gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_SELECT);

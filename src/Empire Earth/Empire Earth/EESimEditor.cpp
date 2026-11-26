@@ -299,7 +299,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::NodeUnitPlayer: return P64(UN->GetPlayer());
     case O::TerrainColorType: return EETerrainTable::Get((long)a[0])->mColorType;
     case O::ViewportRect: return P64(&gViewport.GetViewRectangle());
-    case O::WorldMaxPlayers: return gMaxPlayers;
+    case O::WorldMaxPlayers: return gWorld.mMaxPlayers;
     case O::WorldPopulationLimit: return gWorld.mPopulationLimit;
     case O::WorldWondersToWin: return gWorld.mNumberOfWondersToWin;
     case O::WorldVictoryEnabled: return gWorld.mVictoryEnabled;
@@ -558,9 +558,9 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::UpgradesFree: delete UPG;
         break;
     case O::NarrowNew: return P64(new UString(s));
-    case O::SetAllowCustomCivs: gAllowCustomCivs = a[0] != 0;
+    case O::SetAllowCustomCivs: gWorld.mGameOptions.mAllowCustomCivs = a[0] != 0;
         break;
-    case O::SetScenarioGame: gIsScenarioGame = a[0] != 0;
+    case O::SetScenarioGame: gWorld.mGameOptions.mIsScenarioGame = a[0] != 0;
         break;
     default: break;
     }
