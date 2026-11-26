@@ -1284,7 +1284,6 @@ public:
     intptr_t Call(EeWonPlatWmCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_plat_wm(this->mRust, c, a, b); }
     EeWonPlatWm* mRust = NULL; // the platform manager (platwm.rs); none after the destructor's body
     EventForwardFunc mEventForward;
-    void InitColorScheme(); //32c230
     void NotifyLostFocus() { this->WmCall(EeWonWmCall::NotifyLostFocus); } //32c2d0
     void NotifyGotFocus(Window* w) { this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)w); } //32c300
     void SetScreenResolution(int w, int h) { this->WmCall(EeWonWmCall::SetScreenResolution, w, h); } //32c320
@@ -1574,13 +1573,13 @@ public:
     void SetComponent(Component* c) { if (c != NULL) c->AddRef(); if (this->mEv.comp != 0) this->GetComponent()->Release(); this->mEv.comp = (intptr_t)c; }
     template <class T> T* GetItem() const { return static_cast<T*>((RefCount*)this->mEv.item); }
     EeWonCompEventRec mEv;
+};
 inline ComponentEvent* ListItemClickedEvent(Component* c, ListItem* i, int button, bool dbl, bool up, int x, int y)
 {
     ComponentEvent* e = new ComponentEvent(c, up ? ComponentEvent_ListItemUpClicked : ComponentEvent_ListItemClicked, i);
     e->mEv.button = button; e->mEv.flag = dbl; e->mEv.x = x; e->mEv.y = y;
     return e;
 }
-};
 
 // LobbyEvent adds no members to ComponentEvent (0x20 bytes).
 // Derived lobby events are declared only in WONLobbyEvents.h, owned by core.

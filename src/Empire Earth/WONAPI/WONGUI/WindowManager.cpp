@@ -75,7 +75,6 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmHostRawClear: sHostRaw = SmartPtr<RawImage>(); return 0;
     case Op::WmImageAttributes: return t->mImageDecoder.GetImageAttributes(std::string((const char*)a, (size_t)b).c_str(), sHostAttr) ? 1 : 0;
     case Op::WmNewDelayImage: return (intptr_t)new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)a, (size_t)b, sHostAttr.mWidth, sHostAttr.mHeight));
-    case Op::WmSetStandardColor: t->mColorScheme->SetStandardColor((int)a, (DWORD)(uint32_t)b); return 0;
     case Op::WmNextEvent: t->GetNextEvent(); return 0;
     // (an event's type, window and input record and an input event's delivery are guisplit.rs's over its record,
     // the window's calls gamewin.rs's: R6 WON GUI round 38)
@@ -136,7 +135,7 @@ WindowManager::WindowManager() {
     WindowManager::mDefaultWindowManager=this;
     this->WmSet(EeWonWmField::LastTimerTick, (intptr_t)(uint32_t)WONTickCount());
     this->mColorScheme=new ColorScheme;
-    this->InitColorScheme();
+    ee_won_wm_standard_colors((uint32_t*)this->mColorScheme->mColors); // InitColorScheme (0x32c230): wmobj.rs's table
     // the platform manager and the standard cursors: the WON hand from its bits, the others the system's
     this->mRust = ee_won_plat_wm_new(this, PlatWmHost);
     ee_won_wm_bind(this, this->mWmObj.p, this->mRust); // the windows' Rust parts call it directly (gamewin.rs)
@@ -154,12 +153,6 @@ WindowManager::~WindowManager()
     ee_won_plat_wm_free(this->mRust);
     this->mRust = NULL;
     ee_won_wm_bind(this, this->mWmObj.p, NULL);
-}
-
-// Fills the colour scheme with the 17 standard Windows-style colours (wmobj.rs's table)
-void WindowManager::InitColorScheme()
-{
-    ee_won_gui_wm_init_colors(ee_won_guicpp_wm_call, this);
 }
 
 // The default font with another style and, when the size is positive, another size, from the default window

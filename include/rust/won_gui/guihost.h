@@ -882,8 +882,6 @@ enum class EeWonGuiOp : uint32_t {
   WmImageAttributes,
   /// `new Image(ee_won_image_new_delay(WONImageHost, a, b, sHostAttr.mWidth, sHostAttr.mHeight))` (unheld).
   WmNewDelayImage,
-  /// `mColorScheme->SetStandardColor(a, b)`.
-  WmSetStandardColor,
   /// `sHostText = Clipboard::Get()` (ClipboardTake's local).
   HostTextClipboard = 2000,
   /// TextArea: `mLinkParam = ((TextSegment*)a)->GetLinkParam()`.
