@@ -58,45 +58,24 @@ public:                                                // column 3; rust/base/ma
     float GetPitch() const { return ee_ge_t_pitch(GERust(*this)); }   // the angles taken from the matrix
     GE3DPoint GetPosition() const { return GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
     void GetPosition(GE3DPoint& outPosition) const { outPosition = GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
-    float GetRoll() const { return ee_ge_t_roll(GERust(*this)); }
     float GetX() const { return this->mMatrix[0][3]; }  // exported, ICF-folded (0x10058d38)
     float GetY() const { return this->mMatrix[1][3]; }
-    float GetYaw() const { return ee_ge_t_yaw(GERust(*this)); }
     float GetZ() const { return this->mMatrix[2][3]; }
     // the sixteen elements from (to) a file, stopping at the first error
     template <class F> long Load(F& inFile) { return ee_ge_t_load(GERust(*this), GERustFile(inFile)); }
     void MakeIdentity() { ee_ge_t_identity(GERust(*this)); }
-    void Normalize() { ee_ge_t_normalize(GERust(*this)); }   // the three rotation columns to unit length
-    // Revolve: yaw, pitch and roll applied after it (about its own axes); Rotate: before it (the parent axes)
-    void Revolve(const GEOrientation& inOrientation) { this->Revolve(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
-    void Revolve(float inYaw, float inPitch, float inRoll) { ee_ge_t_revolve(GERust(*this), inYaw, inPitch, inRoll); }
-    void Rotate(const GEOrientation& inOrientation) { this->Rotate(inOrientation.GetYaw(), inOrientation.GetPitch(), inOrientation.GetRoll()); }
-    void Rotate(float inYaw, float inPitch, float inRoll) { ee_ge_t_rotate(GERust(*this), inYaw, inPitch, inRoll); }
     template <class F> long Save(F& inFile) const { return ee_ge_t_save(GERust(*this), GERustFile(inFile)); }
     // inline: EE-AOC.exe imports only Scale(x, y, z); GEPhysicalModel::Intersects expands it (GE3DPoint.cpp emits the
     // exported copy 0x1000d848)
     void Scale(float inScale) { this->Scale(inScale, inScale, inScale); }
     void Scale(float inX, float inY, float inZ) { ee_ge_t_scale(GERust(*this), inX, inY, inZ); }   // applied before it
     // the rotation from yaw, pitch and roll applied in the order the name gives (the position kept)
-    void SetOrientationPRY(const GEOrientation& inO) { this->SetOrientationPRY(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
-    void SetOrientationPRY(float inYaw, float inPitch, float inRoll) { this->SetOrientation(0, inYaw, inPitch, inRoll); }
-    void SetOrientationPYR(const GEOrientation& inO) { this->SetOrientationPYR(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
-    void SetOrientationPYR(float inYaw, float inPitch, float inRoll) { this->SetOrientation(1, inYaw, inPitch, inRoll); }
-    void SetOrientationRPY(const GEOrientation& inO) { this->SetOrientationRPY(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
-    void SetOrientationRPY(float inYaw, float inPitch, float inRoll) { this->SetOrientation(2, inYaw, inPitch, inRoll); }
-    void SetOrientationRYP(const GEOrientation& inO) { this->SetOrientationRYP(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
-    void SetOrientationRYP(float inYaw, float inPitch, float inRoll) { this->SetOrientation(3, inYaw, inPitch, inRoll); }
     void SetOrientationYPR(const GEOrientation& inO) { this->SetOrientationYPR(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
     void SetOrientationYPR(float inYaw, float inPitch, float inRoll) { this->SetOrientation(4, inYaw, inPitch, inRoll); }
-    void SetOrientationYRP(const GEOrientation& inO) { this->SetOrientationYRP(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
-    void SetOrientationYRP(float inYaw, float inPitch, float inRoll) { this->SetOrientation(5, inYaw, inPitch, inRoll); }
     void SetOrientation(uint32_t inOrder, float inYaw, float inPitch, float inRoll) { ee_ge_t_set_orientation(GERust(*this), inOrder, inYaw, inPitch, inRoll); }
     void SetPosition(const GE3DPoint& inPosition) { this->SetPosition(inPosition.GetX(), inPosition.GetY(), inPosition.GetZ()); }
     // inline: SetPosition(const GE3DPoint&) 0xd93d loads z, y, x (call arguments) then stores
     void SetPosition(float inX, float inY, float inZ) { mMatrix[0][3] = inX; mMatrix[1][3] = inY; mMatrix[2][3] = inZ; }
-    void SetScale(float inScale) { this->SetScale(inScale, inScale, inScale); }
-    // a pure scale by x, y and z (the position column kept)
-    void SetScale(float inX, float inY, float inZ) { ee_ge_t_set_scale(GERust(*this), inX, inY, inZ); }
     void SetX(float inX) { this->mMatrix[0][3] = inX; }  // exported, ICF-folded
     void SetY(float inY) { this->mMatrix[1][3] = inY; }
     void SetZ(float inZ) { this->mMatrix[2][3] = inZ; }

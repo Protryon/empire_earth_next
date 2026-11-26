@@ -43,8 +43,6 @@ public:
     {
         return Point(ee_sparse_closest_point(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY));
     }
-    // Returns a random point (16 tries at a random column; then the first point; default point when empty)
-    U2DPoint<long> GetRandomPoint(URandom& inRandom) { return Point(ee_sparse_random_point(this->mPoints, Generate, &inRandom)); }
     // Adds a point, growing the column array; a point left of the array with x <= 0 is silently ignored
     void Insert(const U2DPoint<long>& inPoint) { ee_sparse_insert(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY); }
     // Adds every point of the list (from the last)

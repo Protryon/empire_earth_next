@@ -131,10 +131,6 @@ inline unsigned long UMGetFloatingPointRoundingMode() { return ee_util_fp_roundi
 inline float UMArcTan2(float inY, float inX) { return ee_ge_um_arctan2(inY, inX); }
 inline float UMCos(float inAngle) { return ee_ge_um_cos(inAngle); }
 inline float UMArcCos(float inValue) { return ee_ge_um_arccos(inValue); }
-// Provisional name: no UMSin export; GEQuaternion::Slerp (0x23526) computes sines as UMCos(pi/2 - x) inline
-// pi/2 is 1.5707964f (0x3fc90fdb) in every module: the engine's word 0x10097808, the exe's 0x43c008
-// (1.5707963f would be 0x3fc90fda, one ulp lower)
-inline float UMSin(float inAngle) { return UMCos(1.5707964f - inAngle); }
 // Saved games keep an object's 32-bit id in the pointer field the object will fill: the loader reads the id into
 // the field and a fix-up pass (RepairPointers, Restore, ...) looks the object up. The id held by such a field (its
 // low 32 bits: the loader writes 4 bytes, whatever the pointer size). uint32_t on every data model, so the "none"

@@ -16,8 +16,5 @@ inline unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor,
 inline unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned long inGreen,
                                  unsigned long inBlue, unsigned long inAlpha)
     { return ee_ge_pack_color(inFormat, inRed, inGreen, inBlue, inAlpha); }
-inline unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_red(inFormat, inColor); }
-inline unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_green(inFormat, inColor); }
-inline unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_blue(inFormat, inColor); }
 
 #endif

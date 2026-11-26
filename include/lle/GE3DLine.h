@@ -27,11 +27,7 @@ public:
     template <class F> long Save(F& inFile) const { return ee_ge_3d_line_save(GERust(*this), GERustFile(inFile)); }
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }
     void SetStart(const GE3DPoint& inStart) { this->mStart = inStart; }
-    // the parameter (and the point) where the line reaches a given x, y or z; false when it runs parallel to it
-    bool SolveForX(float inX, float& outT) const { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, NULL); }
-    bool SolveForX(float inX, float& outT, GE3DPoint& outPoint) const { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, GERust(outPoint)); }
-    bool SolveForY(float inY, float& outT) const { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, NULL); }
-    bool SolveForY(float inY, float& outT, GE3DPoint& outPoint) const { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, GERust(outPoint)); }
+    // the parameter (and the point) where the line reaches a given z; false when it runs parallel to it
     bool SolveForZ(float inZ, float& outT) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, NULL); }
     bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, GERust(outPoint)); }
 };
