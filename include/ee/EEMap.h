@@ -221,7 +221,6 @@ public:
     // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
     void ClearU1955DC() { this->mU1955DC.clear(); }
     void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles) { ee_rts_map_create(this, inWidth, inHeight, inPlayerCount, inCreateTiles); }
-    void ApplyVertexColors() { ee_rts_map_apply_vertex_colors(this); }
     bool IsTileFlat(unsigned long inX, unsigned long inY);
     EEMapTile* GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface);  // 0x122ee8 (EEMap::PickScreenTile)
     EEMapTile* GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface);  // 0x12307d (EEMap::GetLocationAt)
@@ -313,19 +312,11 @@ public:
     // 0x122c9b: the nearest tile on the map to inPoint; its coordinates in ioX/ioY (EEMPathTo; provisional name)
     EEMapTile* GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY);
     bool IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius);
-    // EEMap.cpp members called by the random map (EERandomMap.cpp; provisional names)
-    // 0x11d34b (the tile's terrain texture)
-    void PaintTerrain(long inX, long inY, long inTerrain) { ee_gamecpp_mx_paint(this, inX, inY, inTerrain); }
-    void UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop) { ee_gamecpp_mx_update_cliffs(this, inLeft, inRight, inBottom, inTop); }
-    // 0x11df99 (+0x19565c = it, then UpdateCliffs over the whole map)
-    void SetCliffTexture(long inCliffTexture) { ee_gamecpp_mx_set_cliff_texture(this, inCliffTexture); }
     unsigned long GetTileCount() { return ee_gamecpp_map_tile_count(this); }
     // EEMap.cpp's other members in address order (provisional names)
     // 0x11c13f / 0x11d006: inPlayer stops / starts seeing the tiles within inRadius of (inX, inY)
     void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false); }
     void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true); }
-    void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff) { ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff); }
-    void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop) { ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop); }
 
     // +0x28 0x11cf60 (ret 4: the out-of-synch dump's file, EEPhysics 0x152311) (provisional name)
     virtual void DumpOutOfSynch(FILE* inFile) { ee_gamecpp_map_dump(this, inFile); }

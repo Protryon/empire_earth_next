@@ -49,6 +49,9 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEARust.h"
 #include "ee/EECombatGoals.h"
+#include "rust/game/app.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
 
 // ------------------------------------------------------------------------------------------------ the host
 // The game's actions' host (ee_screens game_actions.rs: EE_SCREENS_GA_OP_*; ee/EEARust.h). The original units'
@@ -196,7 +199,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_P_EVENT: return GA_PL->mEvents.GetNextEventSource(*reinterpret_cast<EETileLocation*>(&i[1]));   // (ee_units player_events.rs)
     // EEGetFirstSelectedUnit, EEPointUnitOrTileXY over the call's slots (in and out: the unit in i1; the tile in i1,
     // x and y the longs at i2 and i3)
-    case EE_SCREENS_GAH_FS_CALL: return EEGetFirstSelectedUnit(*reinterpret_cast<EEComplexUnit**>(&i[1]));
+    case EE_SCREENS_GAH_FS_CALL: return ee_gamecpp_first_selected_unit((void**)&(*reinterpret_cast<EEComplexUnit**>(&i[1])));
     case EE_SCREENS_GAH_PT_CALL: return EEPointUnitOrTileXY(GE2DPoint(f[0], f[1]), *reinterpret_cast<EETile**>(&i[1]), GA_LONG(2), GA_LONG(3), i[0] != 0);
     // the tile p
     case GA_K(TILE, T_DOPPEL_COUNT): return GA_TILE->GetNumDoppelgangers();
@@ -233,13 +236,13 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_A_SCREEN_TO_WORLD: gWorld.ScreenToWorld(GE2DPoint(f[0], f[1]), *reinterpret_cast<GE3DPoint*>(f + 3)); return 0;
     case EE_SCREENS_GAH_A_TRANSFORM: GETransformation(gWorld.mTransformation).Apply(*reinterpret_cast<GE3DPoint*>(f + 3), GA_F3); return 0;
     case GA_K(CALAMITY, A_DEFAULT_TARGET): return static_cast<EECalamityClass*>(p)->GetDefaultTarget(GA_F3, i[1], i[2], i[3] != 0);
-    case GA_K(CALAMITY, A_ORDER_AT_CURSOR): EEOrderAtCursor(GE2DPoint(f[0], f[1]), reinterpret_cast<EEUnit*>(i[1])); return 0;
+    case GA_K(CALAMITY, A_ORDER_AT_CURSOR): ee_gamecpp_order_at_cursor(&(GE2DPoint(f[0], f[1])), reinterpret_cast<EEUnit*>(i[1])); return 0;
     case GA_K(CALAMITY, A_CAN_CAST):
         return static_cast<EECalamityClass*>(p)->CanCastAt(reinterpret_cast<EEComplexUnit*>(i[1]), GA_F3, i[2], i[3], i[4] != 0, reinterpret_cast<EEUnit*>(i[5]));
     // the camera
     case GA_K(CAMERA, CAM_SET_LOCATION): GA_CAM.SetLocation(GE3DPoint(f[0], f[1], f[2]), false, true); return 0;
     case GA_K(CAMERA, CAM_KEEP_ZOOM): GA_CAM.SetZoom(GA_CAM.GetZoom()); return 0;
-    case GA_K(CAMERA, CAM_CHANGED): GA_CAM.SetChanged(); return 0;
+    case GA_K(CAMERA, CAM_CHANGED): ee_app_camera_set_changed(&GA_CAM); return 0;
     case EE_SCREENS_GAH_CAM_SET_ZOOM: GA_CAM.SetZoom(f[0]); return 0;
     case EE_SCREENS_GAH_CAM_SET_MODE: GA_CAM.SetMode(i[1]); return 0;
     case EE_SCREENS_GAH_CAM_MOVE_TO:
@@ -322,7 +325,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_CLEAR_TEXT: GA_A->mText = UWideString(); return 0;   // the dropped host's name, the new host's and its address
     case EE_SCREENS_GAH_N_CLEAR_GAME_NAME: GA_A->mGameName = UWideString(); return 0;
     case EE_SCREENS_GAH_N_CLEAR_NAME: GA_A->mName = UString(); return 0;
-    case EE_SCREENS_GAH_N_RUN_OWED: gPhysics->RunOwedTicks(); return 0;
+    case EE_SCREENS_GAH_N_RUN_OWED: ee_physics_run_owed_ticks(gPhysics); return 0;
     case EE_SCREENS_GAH_N_CLIENT_MIGRATING: GA_CLIENT->mIsMigrating = true; return 0;
     case GA_K(NET, N_HAS_LEFT): return GA_CLIENT->mHasLeftGame != 0;
     case GA_K(NET, N_NUM_PLAYERS): return gWorld.mNumPlayers;
@@ -344,7 +347,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_NEW_MIGRATED:
         gCommunications = new EEServer(UWideString("Migrated Server"), gGamePreferences.mSettings.GetNetworkAdapter(), (unsigned long)i[1], (unsigned long)i[2], false, false);
         return 0;
-    case EE_SCREENS_GAH_N_CLEAR_SERVER_MESSAGES: gPhysics->ClearServerMessages(); return 0;
+    case EE_SCREENS_GAH_N_CLEAR_SERVER_MESSAGES: ee_physics_clear_server_messages(gPhysics); return 0;
     case EE_SCREENS_GAH_N_MULTI_SESSION: gCommunications->SetIsMultiplayerSession(true); return 0;
     case EE_SCREENS_GAH_N_SEND_TO_SERVER: GA_SERVER->SetSendToSlotForPlayer(gWorld.mCurrentPlayer, kSlotServer); return 0;
     case EE_SCREENS_GAH_N_SLOT_FE: GA_PL->mSlot = 0xfe; return 0;
@@ -392,7 +395,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_E_SPEC_DIRECTORY: GA_SPEC->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\"); return 0;
     case EE_SCREENS_GAH_E_SPEC_QUICK: GA_SPEC->SetFile(UString("EEQuickSave") + GA_A->mName); return 0;
     case EE_SCREENS_GAH_E_SPEC_FILE_NAME: GA_SPEC->SetFile(GA_A->mFileName); return 0;
-    case EE_SCREENS_GAH_E_LOAD: return LoadSavedGameFile(*GA_SPEC, true, true, true) != 0;
+    case EE_SCREENS_GAH_E_LOAD: return ee_gamecpp_ps_load_saved_game_file(&(*GA_SPEC), true, true, true) != 0;
     case EE_SCREENS_GAH_E_DELETE_SPEC: delete GA_SPEC; return 0;
     case EE_SCREENS_GAH_E_NEW_MEMORY: return (intptr_t)(new FSMemoryFile(0x400, true, 1000));
     case EE_SCREENS_GAH_E_TEXT_NAME: GA_A->mFileName = GetSaveTextName(UString("EEQuickSave") + GA_A->mName, true); return 0;

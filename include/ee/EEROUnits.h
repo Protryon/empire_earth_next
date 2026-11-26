@@ -12,7 +12,7 @@ public:
     // +0x10 dtor 0x114516 (??_G 0x1144fa)
     virtual ~EEROUnits() {  }
     // +0x00 0x114521: EERenderObject::Fn10EABE
-    virtual void FrameStarting() { this->FillRenderLists(); }
+    virtual void FrameStarting() { ee_gamecpp_ro_fill_render_lists(this); }
     // +0x04 0xe123d trivial: ret (ICF)
     virtual void SceneStarting() {  }
     // +0x08 0x118203

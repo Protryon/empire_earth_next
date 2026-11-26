@@ -54,9 +54,6 @@ public:
     // EeAppSettingsFields, the base (rust/ee_app.h; ee_app settings.rs: their names, types, order and defaults)
 };
 
-// port: makes the texture manager load the world's textures at inResolution (0, 2 or 4: EEGameSettings::
-// mTextureResolution); textures already loaded keep theirs until released (EEPreferences.cpp)
-void EESetTextureResolution(long inResolution);
 
 // port: puts a settings' modern display and audio settings into effect (camera, GX, mixer; EEPreferences.cpp)
 void EEApplyPortSettings(const EEGameSettings& inSettings);
@@ -74,10 +71,6 @@ public:
     EEGameSettings& GetSettings() { return this->mSettings; }
     // Remembers the options of a new random-map game as the last game options, then saves the preferences
     void SetLastGameOptions(const EEGameOptions& inOptions) { ee_gamecpp_prefs_set_last_options(this, &inOptions); }
-    // 0x132848: false when the resource language or the OS language is Korean (0x412); the video tab shows check box
-    // 13 only when true (provisional name)
-    // Returns whether neither the game resources nor the system language is Korean
-    bool IsNotKorean() { return ee_gamecpp_prefs_is_not_korean(); }
     // Writes every game setting to config.yaml, then the game options; returns the first failure (0 when every value
     // was written)
     // 0x135943: writes the settings to config.yaml (the settings' Ok

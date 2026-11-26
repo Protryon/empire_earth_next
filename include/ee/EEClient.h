@@ -77,6 +77,5 @@ class EEUnit;
 // not read: the server and the client also call it with the address of a zeroed local; provisional name; types
 // inferred)
 void CancelGameCallback(void* inData);
-void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlayerID, long inCommand, long inGoalQueue);
 
 #endif

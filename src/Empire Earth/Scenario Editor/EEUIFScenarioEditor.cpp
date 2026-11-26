@@ -53,6 +53,9 @@
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
 #include "ee/EEUIShell.h"
+#include "rust/game/app.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 
 static_assert(sizeof(EEUIFSEBrushGroup) == sizeof(EeScreensSeBrushGroup) &&
                   offsetof(EEUIFSEBrushGroup, mButtons) == offsetof(EeScreensSeBrushGroup, buttons) &&
@@ -260,7 +263,7 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEFMX_FORM_ADD_HOT_KEY_KEYS: theForm->AddHotKey(sSefmKeys[i[0]], sSefmKeys[i[1]], sSefmKeys[i[2]], kKeyNone, SefxEvents(p)[0], SefxEvents(p)[1], SefxEvents(p)[2], SefxEvents(p)[3], (unsigned long)i[3], false);
         return 0;
     case EE_SCREENS_SEFMX_GRAB_SCROLL: return EESEOut(i, EECreateGrabScroll(1));
-    case EE_SCREENS_SEFMX_RELEASE_GRAB_SCROLL: EEReleaseGrabScroll(1);
+    case EE_SCREENS_SEFMX_RELEASE_GRAB_SCROLL: ee_screens_camera_grab_reset(1);
         return 0;
     case EE_SCREENS_SEFMX_CHECK_DIRECT: EEUIShell::Op(c, EE_SCREENS_SKOP_CHECK_DIRECT);
         return 0;
@@ -320,7 +323,7 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEFMX_THREAD_POST: static_cast<EESELoadThread*>(p[0])->mThread->Post((unsigned long)i[0], p[2], NULL, true);
         return 0;
-    case EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS: gWorld.RebuildActiveUnits();
+    case EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS: ee_gamecpp_world_rebuild_active(&gWorld);
         return 0;
     case EE_SCREENS_SEFMX_IN_EDITOR: return gUIManager->mInScenarioEditor == true;
     case EE_SCREENS_SEFMX_CAMERA_MODE: gWorld.mCameraControl.SetMode(i[0]);
@@ -329,9 +332,9 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEFMX_CAMERA_OFFSET_TURN: gWorld.mCameraControl.SetOffsetTurn(sSefxTurn, i[0] != 0);
         return 0;
-    case EE_SCREENS_SEFMX_CAMERA_CHANGED: gWorld.mCameraControl.SetChanged();
+    case EE_SCREENS_SEFMX_CAMERA_CHANGED: ee_app_camera_set_changed(&gWorld.mCameraControl);
         return 0;
-    case EE_SCREENS_SEFMX_REFRESH_UNITS: gWorld.RefreshUnits();
+    case EE_SCREENS_SEFMX_REFRESH_UNITS: ee_gamecpp_world_sight_all(&gWorld, false);
         return 0;
     case EE_SCREENS_SEFMX_SIGHT_UPDATES_OFF: gSightUpdatesEnabled = false;
         return 0;
@@ -379,7 +382,7 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEFMX_MINIMAP_UPDATE: EEUIMiniMap::Update(gMiniMap);
         return 0;
-    case EE_SCREENS_SEFMX_MINIMAP_REDRAW: gMiniMap->Redraw();
+    case EE_SCREENS_SEFMX_MINIMAP_REDRAW: ee_gamecpp_minimap_redraw(gMiniMap);
         return 0;
     case EE_SCREENS_SEFMX_CAMERA_MOVE_OFF: gWorld.mScenarioManager->mIsMovingCamera = false;
         return 0;

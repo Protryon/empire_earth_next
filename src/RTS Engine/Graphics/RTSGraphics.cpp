@@ -16,6 +16,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEMouse.h"
 #include "platform/PlatSim.h"
+#include "rust/game/rts.h"
 
 // The thread: its passes are Rust; the Sleep(1) between them stays here. Win32 Sleep, not PlatSleep: the test
 // harness's time shim caps the frame rate at the Sleep import by the caller's return address (inside
@@ -114,9 +115,9 @@ void ee_rtsgcpp_lobby_surface_size(int* outWidth, int* outHeight) { EELobbyGetSu
 void ee_rtsgcpp_lobby_set_presentation(float inScale, float inLeft, float inTop, float inWidth, float inHeight) { EELobbySetPresentation(inScale, inLeft, inTop, inWidth, inHeight); }
 bool ee_rtsgcpp_lobby_lock_frame(EeRtsLobbyFrame* outFrame) { return EELobbyLockFrame(outFrame->pixels, outFrame->width, outFrame->height, outFrame->pitch, outFrame->logical_width, outFrame->logical_height, outFrame->serial); }
 void ee_rtsgcpp_lobby_unlock_frame() { EELobbyUnlockFrame(); }
-void ee_rtsgcpp_mouse_begin_frame(RTSMouse* inMouse) { inMouse->BeginFrame(); }
+void ee_rtsgcpp_mouse_begin_frame(RTSMouse* inMouse) { ee_rts_mouse_begin_frame(inMouse); }
 void ee_rtsgcpp_mouse_save_under(RTSMouse* inMouse, GESurface* inSurface) { inMouse->SaveUnder(inSurface, GE2DPoint(0.0f, 0.0f)); }
 void ee_rtsgcpp_mouse_draw(RTSMouse* inMouse, GESurface* inSurface) { inMouse->Draw(inSurface, GE2DPoint(0.0f, 0.0f)); }
 void ee_rtsgcpp_mouse_restore_under(RTSMouse* inMouse, GESurface* inSurface) { inMouse->RestoreUnder(inSurface, GE2DPoint(0.0f, 0.0f), true); }
-void ee_rtsgcpp_mouse_end_frame(RTSMouse* inMouse) { inMouse->EndFrame(); }
+void ee_rtsgcpp_mouse_end_frame(RTSMouse* inMouse) { ee_rts_mouse_end_frame(inMouse); }
 }

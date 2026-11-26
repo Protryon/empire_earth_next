@@ -50,6 +50,8 @@ extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return EEE
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
 // the status buttons' hot keys): each one call, no logic
 #include "ee/EEScreensShims.h"
+#include "rust/game/physics.h"
+#include "rust/game/screens.h"
 #define MG(x) reinterpret_cast<EEUIFMGMainGroup*>(x)
 #define MGU(x) reinterpret_cast<EEUnit*>(x)
 #define MGC(x) reinterpret_cast<EEComplexUnit*>(x)
@@ -145,7 +147,7 @@ extern "C" void ee_screenscpp_mg_box_queued(uintptr_t inGroup, uintptr_t inUnit)
 extern "C" void ee_screenscpp_mg_box_bind(uintptr_t inGroup, uint32_t inSlot, uint32_t inControl)
 { MG(inGroup)->mStatusBox->*kMGBoxSlots[inSlot] = MG(inGroup)->mOwner->GetControl(inControl); }
 extern "C" void ee_screenscpp_mg_box_pair(uintptr_t inGroup, uint32_t inIndex)
-{ MG(inGroup)->mStatusBox->SetControls((long)inIndex, MG(inGroup)->mOwner->GetControl(inIndex + 0x45), MG(inGroup)->mOwner->GetControl(inIndex + 0x20)); }
+{ ee_screens_status_box_set_controls(MG(inGroup)->mStatusBox, (int64_t)((long)inIndex), MG(inGroup)->mOwner->GetControl(inIndex + 0x45), MG(inGroup)->mOwner->GetControl(inIndex + 0x20)); }
 extern "C" void ee_screenscpp_mg_icon_bar_update(uintptr_t inControl)
 { EEUIShell::Op(reinterpret_cast<UIControl*>(inControl), EE_SCREENS_SKOP_IB_UPDATE); }
 extern "C" bool ee_screenscpp_mg_unit_behavior_is(uintptr_t inUnit, int64_t inBehavior)
@@ -155,7 +157,7 @@ extern "C" bool ee_screenscpp_mg_object_has_hot_key(uint32_t inIndex)
 extern "C" uintptr_t ee_screenscpp_mg_object_hot_key(uint32_t inIndex)
 { return (uintptr_t)EEButtonObject::Get(inIndex)->GetHotKey(); }
 extern "C" void ee_screenscpp_mg_minutes_seconds(uint32_t inTime, unsigned long* inMinutes, unsigned long* inSeconds)
-{ gPhysics->GetMinutesAndSeconds(inMinutes, inSeconds, inTime); }
+{ ee_physics_minutes_and_seconds(gPhysics, inMinutes, inSeconds, (unsigned long)(inTime)); }
 extern "C" void ee_screenscpp_mg_timer_text(uintptr_t inGroup, uint32_t inControl, EeScreensShimText inText)
 { static_cast<UIButton*>(MG(inGroup)->mOwner->GetControl(inControl))->SetText(EEShimText(inText), gU531930); }
 extern "C" uintptr_t ee_screenscpp_mg_world_unit(uint32_t inId)
@@ -174,4 +176,4 @@ extern "C" int64_t ee_screenscpp_mg_queue_key(uintptr_t inUnit, uint32_t inIndex
 
 // the command buttons as the rest of the game shows them (the saved group's selection: ee/EEGameUI.h)
 static const bool sShowCommandsRegistered =
-    (gEEGameUI.mShowCommands = [](EEUIFMGMainGroup* inGroup, EEUnit* inUnit) { inGroup->ShowCommands(inUnit); }, true);
+    (gEEGameUI.mShowCommands = [](EEUIFMGMainGroup* inGroup, EEUnit* inUnit) { ee_screens_mg_show_commands((uintptr_t)inGroup, (uintptr_t)inUnit); }, true);

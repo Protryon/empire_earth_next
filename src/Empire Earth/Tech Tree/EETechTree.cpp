@@ -38,6 +38,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 
 static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNodeID == 1000 &&
               IDS_PREHISTORIC_AGE == 30145, "ee_game tech_tree load.rs");
@@ -207,9 +208,9 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TkItemUnload: EEMedia::Get(a[0])->UnloadMedia();
         break;
-    case O::TkAeTemplateLoad: gAEManager.LoadTemplateMedia((unsigned long)a[0]);
+    case O::TkAeTemplateLoad: ee_screens_aem_template_media((uintptr_t)&gAEManager, (unsigned long)a[0], true);
         break;
-    case O::TkAeTemplateUnload: gAEManager.UnloadTemplateMedia((unsigned long)a[0]);
+    case O::TkAeTemplateUnload: ee_screens_aem_template_media((uintptr_t)&gAEManager, (unsigned long)a[0], false);
         break;
     case O::TkSoundLoad: EESoundObject::Get(a[0])->LoadMedia();
         break;

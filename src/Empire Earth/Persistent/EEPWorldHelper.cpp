@@ -73,6 +73,8 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionManager.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
 
 // The saved world's bodies are ee_game gamecpp persist_world.rs (game core lane, round 9): the constructors, Load,
 // Save, Restore, the teams' load and save, the host of ee_sim's world_save.rs (the running state from save 0.254 on),
@@ -101,13 +103,9 @@ EEPWorldHelper::EEPWorldHelper(EEWorld& inWorld)
 // their pointers (EEComplexUnit::RepairPointers, the goals'), held by world_save.rs until the first tick.
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
 {
-    return dynamic_cast<EEComplexUnit*>(EEFindLoadedGhostUnit(inID));
+    return dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID)));
 }
 
-EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
-{
-    return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
-}
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
@@ -163,7 +161,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
-    case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);
+    case O::PwAreaEffectsLoad: return ee_screens_aes_load(&FILE_);
     case O::PwAreaEffectsSave: EEAESaveRunningState(FILE_);
         break;
     case O::PwTownsLoad: return EELoadTowns(FILE_, a[0] != 0);
@@ -320,7 +318,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     // (EECore11OpC8) the scenario extension's text (gamecpp persist_text.rs; EETechTree.cpp's EECore11OpC7 default)
     case O::C11ScenarioExtension: return (int64_t)(intptr_t)(const char*)gScenarioExtension;
     // (EEPLoaderOp) The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
-    case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
+    case O::PsSetLoadingScenario: sLoadingScenario = ee_gamecpp_is_scenario_file(((FSFile*)p)->GetFile());
         break;
     case O::PsClearLoadingScenario: sLoadingScenario = false;
         break;
@@ -528,7 +526,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsGameState: return P64(&gGameState);
     case O::PsValidateIntoMessage: return EEValidateSaveGameFile(FILE_, gLoadSaveErrorMessage);
-    case O::PsMapApplyVertexColors: gWorld.GetMap()->ApplyVertexColors();
+    case O::PsMapApplyVertexColors: ee_rts_map_apply_vertex_colors(static_cast<RTSMap*>(gWorld.GetMap()));
         break;
     case O::PsSetMasterVolume: gSoundManager->SetMasterVolume(f[0]);
         break;
@@ -583,7 +581,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsMapL195610: return ((EEMap*)p)->mL195610;
     case O::PsMapL195614: return ((EEMap*)p)->mL195614;
     case O::PsPphMaxPlayers: return (int64_t)((EEPPlayerHelper*)p)->mMaxPlayers;
-    case O::PsPphLocalIndex: return ((EEPPlayerHelper*)p)->GetLocalPlayerIndex(*(long*)a[0]);
+    case O::PsPphLocalIndex: return ee_gamecpp_pph_local_index(((EEPPlayerHelper*)p), (long*)a[0]);
     case O::PsPphPlayerCount: return (int64_t)((EEPPlayerHelper*)p)->mPlayers.size();
     case O::PsPphPlayerAt: return P64(((EEPPlayerHelper*)p)->mPlayers[a[0]]);
     case O::PsWStrsNew: return P64(new std::vector<UWideString>);

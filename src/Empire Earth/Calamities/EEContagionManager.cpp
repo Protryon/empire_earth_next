@@ -28,6 +28,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
+#include "rust/game/gamecpp.h"
 
 
 // Destroys the functor, releasing the fire's burning effect
@@ -107,7 +108,7 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CgUnitsAt: return P64((*(std::vector<EEComplexUnit*>*)p)[a[0]]);
     case O::CgUnitsInArea: EEGetUnitsInRectangle(*(const EETileArea*)a[0], *(std::vector<EEComplexUnit*>*)p, EEAnyUnit(), true);
         break;
-    case O::CgCalamityIndex: return EECalamityManager::GetInstance()->GetCalamityIndex((EECalamity*)p, *(long*)a[0]);
+    case O::CgCalamityIndex: return ee_gamecpp_calamity_index(EECalamityManager::GetInstance(), (EECalamity*)p, false, (long*)a[0]);
     case O::CgWriteClassId: return ((FSFile*)a[0])->Write((unsigned long)((EECalamity*)p)->mClass->mID);
     case O::CgFileReadLong: return ((FSFile*)p)->Read(*(long*)a[0]);
     case O::CgFileWriteLong: return ((FSFile*)p)->Write((long)a[0]);
@@ -130,9 +131,9 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CalHandleRead: return FSF.Read(CAL->mEffectHandle.mValue);
     case O::C11CalHandleWrite: return FSF.Write(CAL->mEffectHandle.mValue);
     // the contagion world (a0, a1 the unit and the calamity unless noted)
-    case O::C11CgInfect: FNC->Infect((EEUnit*)a[0], (EECalamity*)a[1]);
+    case O::C11CgInfect: ee_gamecpp_functor_infect(FNC, (EEUnit*)a[0], (EECalamity*)a[1]);
         break;
-    case O::C11CgCure: FNC->Cure((EEUnit*)a[0], (EECalamity*)a[1]);
+    case O::C11CgCure: ee_gamecpp_functor_cure(FNC, (EEUnit*)a[0], (EECalamity*)a[1]);
         break;
     case O::C11CgApply: FNC->Apply((EEUnit*)a[0], f[0], (EECalamity*)a[1]);
         break;

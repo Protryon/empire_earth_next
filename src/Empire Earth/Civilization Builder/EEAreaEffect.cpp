@@ -41,6 +41,8 @@
 #include <string.h>
 #include "ee/EEAEManager.h"
 #include "lle/FSMemoryFile.h"
+#include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 
 
 namespace {
@@ -131,7 +133,7 @@ extern "C" uintptr_t ee_screenscpp_aeh_current_player() { return (uintptr_t)(gWo
 extern "C" void ee_screenscpp_aeh_set_cloakable_own(uintptr_t inT)
 { AE_T(inT)->SetCloakableChain(AE_T(inT)->mUnitClass->mIsCloakable); }
 extern "C" void ee_screenscpp_aeh_minimap_hide(uintptr_t inT)
-{ gMiniMap->MoveUnit(AE_T(inT), -10000, -10000, AE_T(inT)->mTileX, AE_T(inT)->mTileY); }
+{ ee_gamecpp_minimap_move_unit(gMiniMap, AE_T(inT), -10000, -10000, AE_T(inT)->mTileX, AE_T(inT)->mTileY); }
 extern "C" uintptr_t ee_screenscpp_aeh_owner(uintptr_t inEffect) { return (uintptr_t)AE_E(inEffect)->mUnit; }
 extern "C" float ee_screenscpp_aeh_owner_scale(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mAreaEffectScale; }
 extern "C" float ee_screenscpp_aeh_leadership(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mLeadership; }
@@ -251,7 +253,7 @@ extern "C" uintptr_t ee_screenscpp_aec_template_count() { return gAEManager.mTem
 extern "C" uintptr_t ee_screenscpp_aec_template_at(uintptr_t inIndex)
 { return (uintptr_t)gAEManager.mTemplates[inIndex]; }
 extern "C" int32_t ee_screenscpp_aec_effect_index(uintptr_t inEffect)
-{ return (int32_t)EEGraphicEffect::IndexOf((EEGraphicEffect*)inEffect); }
+{ return (int32_t)ee_gfx_geffect_index_of((EEGraphicEffect*)inEffect); }
 extern "C" uint64_t ee_screenscpp_aec_media_count() { return (uint64_t)EEMedia::GetCount(); }
 extern "C" uintptr_t ee_screenscpp_aec_media_at(uint64_t inIndex)
 { return (uintptr_t)EEMedia::Get((unsigned long)inIndex); }

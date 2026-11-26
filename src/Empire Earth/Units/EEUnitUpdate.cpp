@@ -31,6 +31,7 @@
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
+#include "rust/game/gamecpp.h"
 
 namespace {
 
@@ -168,7 +169,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_X_SET_HEAL_GOAL: EEUpdateUnit(inContext)->SetGoal(EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(EEUpdateContextOf(inContext)->mHealee), false), inA != 0, 0); break;
     case EE_UNITS_ACT_GOAL_START_TIME: EEUpdateUnit(inContext)->mGoalState->SetStartTime(gPhysics->mGameTime); break;
     case EE_UNITS_ACT_CALL_PARATROOP_PLANE: EEUpdateClass(inContext)->CallParatroopPlane(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_ACT_PLACE_TRACK_DECAL: EEPlaceTrackDecal(EEUpdateUnit(inContext)); break;
+    case EE_UNITS_ACT_PLACE_TRACK_DECAL: ee_gamecpp_fx_place_track_decal(EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_X_DEATH_SOUND: return EEObj(EEUpdateUnit(inContext)->mStats->mDeathSound);
     case EE_UNITS_UPD_X_SOUND_PARAMETERS: EEUpdateClass(inContext)->GetSoundParameters(EEUpdateUnit(inContext), EEObjectOf<EESoundObject>(inA), EEObjectOf<float>(inB), EEObjectOf<float>(inB) + 1, EEObjectOf<float>(inB) + 2); break;
     case EE_UNITS_UPD_X_PLAY_SAMPLE: gSoundManager->Play(EEObjectOf<EESoundObject>(inA)->mSampleID, EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2], EEObjectOf<EESoundObject>(inA)->mLooping, NULL); break;

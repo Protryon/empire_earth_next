@@ -48,6 +48,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEAEManager.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/game/preload_media.h"
 
 // The effects' meshes built in Rust (rust/crates/ee_render/src/gfx mesh.rs: the farm's, the volcano's) are stored
 // into a model's vertex and polygon arrays. Each record says which values its builder set; only those are stored
@@ -127,12 +128,6 @@ void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
     ee_gamecpp_fx_place_impact_decal(inUnit, reinterpret_cast<const EeGe3DPoint*>(&inLocation));
 }
 
-// Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
-// (moved forward along the heading for giraffes and horses)
-void EEPlaceTrackDecal(EEComplexUnit* inUnit)
-{
-    ee_gamecpp_fx_place_track_decal(inUnit);
-}
 
 // ------------------------------------------------------------------------- round 9, lane B: this file's bodies' C++
 
@@ -355,7 +350,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::FwGeffUnload: ((EEGraphicEffect*)p)->Unload();
         break;
-    case O::FwGeffMedia: return P64(static_cast<EEGraphicObject*>(((EEGraphicEffect*)p)->GetMedia()));
+    case O::FwGeffMedia: return P64(static_cast<EEGraphicObject*>(static_cast<EEMedia*>(ee_preload_effect_media(((EEGraphicEffect*)p)))));
     case O::FwGeffGet: return P64(EEGraphicEffect::Get((uint32_t)a[0]));
     case O::FwGeffCount: return (uint32_t)EEGraphicEffect::GetCount();
     case O::FwModelDeref: ((GEModel*)p)->Dereference();

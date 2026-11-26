@@ -75,7 +75,7 @@ extern "C" void ee_screenscpp_ib_button_release(uintptr_t inButton) { ((EEButton
 extern "C" void ee_screenscpp_ib_icon_texture(uintptr_t inP, uintptr_t inButton)
 { static_cast<GEBitmap*>(IB(inP)->mSlots[0])->SetTexture(((EEButtonObject*)inButton)->GetTexture(), IB(inP)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_ib_icon_face(uintptr_t inP, uintptr_t inButton, float inLeft, float inTop, float inRight, float inBottom)
-{ ((EEButtonObject*)inButton)->SetFaceBitmap(static_cast<GEBitmap*>(IB(inP)->mSlots[0]), GERectangle(inLeft, inTop, inRight, inBottom), gScreenIndex); }
+{ ee_gamecpp_db_button_bitmap(((EEButtonObject*)inButton), true, static_cast<GEBitmap*>(IB(inP)->mSlots[0]), &(GERectangle(inLeft, inTop, inRight, inBottom)), gScreenIndex); }
 extern "C" void ee_screenscpp_ib_slot_location(uintptr_t inP, uint32_t inSlot, float inX, float inY)
 { static_cast<GEBitmap*>(IB(inP)->mSlots[inSlot])->SetLocation(GE2DPoint(inX, inY)); }
 extern "C" int64_t ee_screenscpp_ib_slot_draw(uintptr_t inP, uint32_t inSlot)
@@ -176,7 +176,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_SE_DIPLOMACY: gEEUIShellDiplomacyShow(static_cast<UIButton*>(c), (unsigned long)a, b != 0); break;
     case EE_SCREENS_SH_SE_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EEAction*>(a)); break;
     case EE_SCREENS_SH_SE_ACTION_RELEASE: reinterpret_cast<EEAction*>(a)->Dereference(); break;
-    case EE_SCREENS_SH_BRUSH_HIGHLIGHT: gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(f[0], f[1], a != 0); break;
+    case EE_SCREENS_SH_BRUSH_HIGHLIGHT: ee_screens_sebr_group_highlight(reinterpret_cast<EeScreensSeBrushGroup*>(gUIManager->GetScenarioEditorForm()->GetBrushGroup()), f[0], f[1], a != 0); break;
     case EE_SCREENS_SH_BRUSH_GROUP_SIZE: return reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize;
     case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a));
     // the game's
@@ -194,6 +194,9 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
 // ---- the shims of the moved cases (UI lane round 7: ee_game screens shell_calls.rs, game_cpp.rs), each one C++
 // statement on the shell's control or the world
 #include "ee/EEScreensShims.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
+#include "rust/sim/app.h"
 static UIControl* C(uintptr_t inControl) { return reinterpret_cast<UIControl*>(inControl); }
 // shims6
 extern "C" void ee_screenscpp_shell_text_fg(uintptr_t inControl, uint32_t inWhich, float inRed, float inGreen, float inBlue)
@@ -231,7 +234,7 @@ extern "C" void ee_screenscpp_send_saved_group_clear(uint32_t inGroup)
 extern "C" uintptr_t ee_screenscpp_unit_stats_button(uintptr_t inUnit)
 { return (uintptr_t)reinterpret_cast<EEComplexUnit*>(inUnit)->mStats->mButton; }
 extern "C" void ee_screenscpp_button_set_face(uintptr_t inButton, uintptr_t inBitmap, uintptr_t inControl)
-{ reinterpret_cast<EEButtonObject*>(inButton)->SetFaceBitmap(reinterpret_cast<GEBitmap*>(inBitmap), C(inControl)->GetRectangle(), gScreenIndex); }
+{ ee_gamecpp_db_button_bitmap(reinterpret_cast<EEButtonObject*>(inButton), true, reinterpret_cast<GEBitmap*>(inBitmap), &(C(inControl)->GetRectangle()), gScreenIndex); }
 extern "C" float ee_screenscpp_button_cell_u(uintptr_t inButton)
 { return reinterpret_cast<EEButtonObject*>(inButton)->GetCellU(); }
 extern "C" float ee_screenscpp_button_cell_v(uintptr_t inButton)
@@ -372,7 +375,7 @@ extern "C" int64_t ee_screenscpp_sh_unit_name_id(uintptr_t inUnit)
 { return (int64_t)reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mNameStringID; }
 extern "C" uint32_t ee_screenscpp_sh_unit_id(uintptr_t inUnit)
 { return (uint32_t)reinterpret_cast<EEUnit*>(inUnit)->GetUnitID(); }
-extern "C" uint32_t ee_screenscpp_sh_ghost_count() { return (uint32_t)gWorld.GetNumGhostUnits(); }
+extern "C" uint32_t ee_screenscpp_sh_ghost_count() { return (uint32_t)(unsigned long)ee_app_ghost_count(); }
 extern "C" void ee_screenscpp_sh_ghosts_enter() { gWorld.mGhostUnitsLock->Enter(); }
 extern "C" void ee_screenscpp_sh_ghosts_leave() { gWorld.mGhostUnitsLock->Leave(); }
 extern "C" bool ee_screenscpp_sh_ghost_turns(uint32_t inIndex)
@@ -411,7 +414,7 @@ extern "C" bool ee_screenscpp_sh_right_down(uintptr_t inControl) { return C(inCo
 extern "C" bool ee_screenscpp_sh_left_down(uintptr_t inControl) { return C(inControl)->GetLeftMouseButtonDown(); }
 extern "C" bool ee_screenscpp_sh_has_capture(uintptr_t inControl) { return C(inControl)->GetHasMouseCapture(); }
 extern "C" int64_t ee_screenscpp_sh_paint_area(uintptr_t inPaint, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom)
-{ return (int64_t)reinterpret_cast<EESEAPaint*>(inPaint)->SetArea(inLeft, inTop, inRight, inBottom); }
+{ return (int64_t)ee_screens_ga_paint_set_area(reinterpret_cast<EESEAPaint*>(inPaint), (int32_t)inLeft, (int32_t)inTop, (int32_t)(long)(inRight), (int32_t)(long)(inBottom)); }
 extern "C" int64_t ee_screenscpp_sh_slider_max(uintptr_t inControl, int64_t inId)
 { return (int64_t)static_cast<UISlider*>(C(inControl)->GetForm()->GetControlById((unsigned long)inId))->GetMaxRange(); }
 extern "C" uint32_t ee_screenscpp_sh_slider_current(uintptr_t inControl, int64_t inId)

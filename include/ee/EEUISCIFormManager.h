@@ -14,12 +14,10 @@
 class EEUISCIFormManager : public UIFormManager, public EeScreensSciFormFields {
 public:
     EEUISCIFormManager() { this->Clear(); }  // inline (Get: UIFormManager's vptr, the media strings, then Clear)
-    virtual ~EEUISCIFormManager() { this->DeleteObjects(); }  // inline (the ??_G 0x1e83cb expands it)
+    virtual ~EEUISCIFormManager() { ee_screens_sci_delete_objects((uintptr_t)this); }  // inline (the ??_G 0x1e83cb expands it)
 
     // Resets the scenario intro manager: no open files and every flag cleared
     void Clear() { ee_screens_sci_clear((uintptr_t)this); }
-    // Closes and deletes the manager's map, scenario and sound files
-    void DeleteObjects() { ee_screens_sci_delete_objects((uintptr_t)this); }                   // 0x1e7205: deletes the three files (the original's four, with the movie) (the post-game Open calls it)
     // Returns the scenario intro form's manager, creating and attaching it on first use
     static EEUISCIFormManager* Get() { return reinterpret_cast<EEUISCIFormManager*>(ee_screens_sci_get()); }
     // Returns the scenario's briefing text
@@ -27,9 +25,6 @@ public:
     // the map's and the sound's file names (sci_calls.rs' shims: the strings are private to the friends)
     const UWideString& MapFileName() const { return this->mMediaStrings.mMapFile; }
     const UWideString& SoundFileName() const { return this->mMediaStrings.mSoundFile; }
-    // Opens the scenario's map picture (.jpg, else .png; the original's second choice was .tga) from Scenarios; returns
-    // whether one was found
-    bool OpenMap() { return ee_screens_sci_open_map((uintptr_t)this); }                         // 0x1e72e4 (mMapFile + ".jpg", else ".png", in "Scenarios\")
     // Returns the scenario's history text
     UWideString GetHistory() { return this->mMediaStrings.mHistory; }               // 0x1e7563 (mHistory)
     // Returns the scenario's hints text
@@ -37,11 +32,7 @@ public:
     // Opens the scenario's map picture, the scenario file or the sound and copies its file spec; returns whether it was
     // found
     bool GetMap(FSFileSpec& outSpec) { return ee_screens_sci_get_map((uintptr_t)this, (uintptr_t)&outSpec); }
-    bool GetScenario(FSFileSpec& outSpec) { return ee_screens_sci_get_scenario((uintptr_t)this, (uintptr_t)&outSpec); }
     bool GetSound(FSFileSpec& outSpec) { return ee_screens_sci_get_sound((uintptr_t)this, (uintptr_t)&outSpec); }
-    // Returns whether the scenario has any briefing, hints, history, map or sound (the original counted its movie too;
-    // no movie plays)
-    bool HasMedia() { return ee_screens_sci_has_media((uintptr_t)this); }                        // 0x1e762d (0x27a56f)
     // Starts or stops the main game's briefing button blinking, showing the large briefing alert while it blinks
     void SetBlinking(bool inBlinking) { ee_screens_sci_set_blinking(inBlinking); }      // 0x1e766a (the main game form's info button; 0x1be512, 0x26615a)
     // 0x1d2ae5 (out of line COMDAT; the SCL/SPL load events call it): owns the opened scenario file

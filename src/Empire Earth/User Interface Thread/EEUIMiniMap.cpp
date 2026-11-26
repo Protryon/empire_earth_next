@@ -51,6 +51,7 @@ static GEColor sFlareColor(1.0f, 0.0f, 0.0f);
 
 // ---- the one-statement shims of ee_screens mini_map_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
+#include "rust/game/gamecpp.h"
 #define MM(x) reinterpret_cast<EEUIMiniMap*>(x)
 static GEBitmap** const kMMBitmaps[3] = {&EEScratch<GEBitmap*>(kScratchMapBitmap), &EEScratch<GEBitmap*>(kScratchWorldBitmap), &EEScratch<GEBitmap*>(kScratchFlareBitmap)};
 static const GEColor* const kMMFlareColors[2] = {&sFlareColor, &EEScratch<GEColor>(kScratchFlareBlinkColor)};
@@ -84,7 +85,7 @@ extern "C" float ee_screenscpp_mm_rect_right(uintptr_t inRect)
 extern "C" float ee_screenscpp_mm_rect_bottom(uintptr_t inRect)
 { return reinterpret_cast<const GERectangle*>(inRect)->GetBottom(); }
 extern "C" bool ee_screenscpp_mm_flare_on() { return gMiniMap->mB12185; }
-extern "C" void ee_screenscpp_mm_update_world_texture() { gMiniMap->UpdateWorldTexture(); }
+extern "C" void ee_screenscpp_mm_update_world_texture() { ee_gamecpp_minimap_update_world_texture(gMiniMap); }
 extern "C" float ee_screenscpp_mm_corner_x(uint32_t inCorner) { return (gMiniMap->*kMMCorners[inCorner]).GetX(); }
 extern "C" float ee_screenscpp_mm_corner_y(uint32_t inCorner) { return (gMiniMap->*kMMCorners[inCorner]).GetY(); }
 extern "C" uint32_t ee_screenscpp_mm_window_width() { return (uint32_t)gGameWindow->GetWidth(); }

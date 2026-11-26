@@ -42,6 +42,10 @@
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
 #include "ee/EEUIShell.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/sim/app.h"
 
 // ------------------------------------------------------------------------------------------------ the classes' parts
 // The editor kinds' C++ (ee/EEARust.h): the load text's post from the load thread (the trigger tab's object
@@ -130,13 +134,13 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     // long, x - 1 at 0 wraps), the placements' (sep: p, t a GETransformation, i, f), the selection's (seu: p a unit,
     // a message or an action, q its integer or message)
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_TILE: return gWorld.mMap->GetTile(i[0], i[1]) != NULL;
-    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_PAINT_RECT: gWorld.mMap->PaintTerrainRect(i[0], i[1], i[2], i[3], i[4], i[5]); return 0;
-    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_UPDATE_CLIFFS: gWorld.mMap->UpdateCliffs(i[0], i[1], i[2], i[3]); return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_PAINT_RECT: ee_gamecpp_mx_paint_rect(gWorld.mMap, i[0], i[1], i[2], i[3], i[4], i[5]); return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_UPDATE_CLIFFS: ee_gamecpp_mx_update_cliffs(gWorld.mMap, i[0], i[1], i[2], i[3]); return 0;
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_MINIMAP_RECT: gMiniMap->RedrawRect(i[0], i[1], i[2], i[3]); return 0;
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_MINIMAP_REFRESH: gMiniMap->Refresh(); return 0;
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_TERRAIN_CLASS: return (int32_t)EETerrainTable::Get(i[0])->GetUnitClass((unsigned long)(long)i[1]);
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_TIME: return (int32_t)TMGetTime();
-    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS: gWorld.mMap->RemoveFlatCliffs((long)i[0], (long)i[1], (long)i[2], (long)i[3]); return 0;
+    case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS: ee_gamecpp_mx_remove_flat_cliffs(gWorld.mMap, (long)i[0], (long)i[1], (long)i[2], (long)i[3]); return 0;
     case EE_SCREENS_SEAX_SEA + EE_SCREENS_SEA_STORE_MOUSE_TILE:
         EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_ELEVATION_PAINT), EE_SCREENS_SKOP_PAINT_STORE_TILE);
         return 0;
@@ -161,11 +165,11 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SHORELINES:
         gWorld.mMap->mTerrainMesh.ComputeShorelines((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
         break;
-    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_PAINT_TERRAIN: gWorld.mMap->PaintTerrain(i[0], i[1], i[2]); break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_PAINT_TERRAIN: ee_gamecpp_mx_paint(gWorld.mMap, i[0], i[1], i[2]); break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_WATER_COLOR:
         gWorld.mMap->mTerrainMesh.SetWaterColorSet((unsigned long)(long)i[0], (unsigned long)(long)i[1]);
         break;
-    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_UPDATE_CLIFFS: gWorld.mMap->UpdateCliffs(i[0], i[1], i[2], i[3]); break;
+    case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_UPDATE_CLIFFS: ee_gamecpp_mx_update_cliffs(gWorld.mMap, i[0], i[1], i[2], i[3]); break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_CONTINENTS_CLEAR: gContinentManager.Clear(gWorld.mMap); break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_CONTINENTS_BUILD: gContinentManager.BuildRegions(gWorld.mMap); break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_TERRAIN_AMBIENT: return EETerrainTable::Get(i[0])->mAmbientUnitChance > 0;
@@ -178,14 +182,14 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_UNLOAD_MEDIA: gWorld.mPlayers[i[0]]->UnloadUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass); break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SET_MAX_PLAYERS: gWorld.mMaxPlayers = (unsigned long)i[0]; break;
     case EE_SCREENS_SEAX_SEW + EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE: gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_SELECT); break;
-    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_GHOST_COUNT: return (int32_t)gWorld.GetNumGhostUnits();
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_GHOST_COUNT: return (int32_t)(unsigned long)ee_app_ghost_count();
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_UNDER_MOUSE: return (int32_t)gUIManager->GetScenarioEditorForm()->GetUnitUnderMouse();
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_LOAD_MEDIA: gWorld.mPlayers[i[0]]->SetUnitClassMedia(i[1], 0x7f); break;
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_POST: gUserInterface->PostAction(static_cast<EEAction*>(p)); break;
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_PITCHES: return gUnitClassTable[i[0]]->mPitchesWithTerrain != 0;
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_TERRAIN_PITCH: f[0] = gWorld.mMap->GetTerrainPitch(*reinterpret_cast<GETransformation*>(t)); break;
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_LIFT: EESEPUnit(i[0])->MoveTo(-10000, -10000, true); break;
-    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_CLEAR_GHOSTS: gWorld.ClearGhostUnits(); break;
+    case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_CLEAR_GHOSTS: ee_gamecpp_world_clear_ghosts(&gWorld); break;
     case EE_SCREENS_SEAX_SEP + EE_SCREENS_SEP_GHOST_FOR:
         EEGhostUnit::Create(gMouse->mPosition, EESEPUnit(i[0])->GetUnitClass()->mUnitType, EESEPUnit(i[0])->mPlayer, f[0], true);
         break;
@@ -274,7 +278,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_QUICK_SAVE_WRITE: static_cast<EEAQuickSaveLoad*>(static_cast<EEAction*>(p))->mWriteToFile = true; return 0;
     case EE_SCREENS_SEAX_TECH_FILL: EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(i[0]), EE_SCREENS_SKOP_TECH_FILL, i[1], i[2]); return 0;
     case EE_SCREENS_SEAX_PAINT_AREA: gUIManager->GetScenarioEditorForm()->SetPaintArea(GERectangle((long)i[0], (long)i[1], (long)i[2], (long)i[3])); return 0;
-    case EE_SCREENS_SEAX_PAUSE_POST: gGraphics->PostPause(); return 0;
+    case EE_SCREENS_SEAX_PAUSE_POST: ee_rts_graphics_post_pause(gGraphics); return 0;
     case EE_SCREENS_SEAX_WORLD_WRITE_UNLOCK: gWorld.mLock->WriteUnlock(); return 0;
     case EE_SCREENS_SEAX_UI_UNLOCK: gUIManager->UnlockUIForCopyData(); return 0;
     case EE_SCREENS_SEAX_GRAPHICS_PAUSED: return gGraphics->mIsPaused;
@@ -293,11 +297,11 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_TILE_SET_HEIGHT: gWorld.mMap->GetTile((unsigned long)(long)i[0], (unsigned long)(long)i[1])->mHeight = f[0]; return 0;
     case EE_SCREENS_SEAX_PAINT_NEW:
         return (intptr_t)static_cast<EEAction*>(new EESEAPaintRust(EE_SCREENS_SEA_PAINT_TERRAIN, i[0], EETerrainTable::Get(i[0])->mColorType));
-    case EE_SCREENS_SEAX_PAINT_SET_AREA: static_cast<EESEAPaint*>(static_cast<EEAction*>(p))->SetArea(i[0], i[1], i[2], i[3]); return 0;
+    case EE_SCREENS_SEAX_PAINT_SET_AREA: ee_screens_ga_paint_set_area(static_cast<EESEAPaint*>(static_cast<EEAction*>(p)), (int32_t)(i[0]), (int32_t)(i[1]), (int32_t)(i[2]), (int32_t)(i[3])); return 0;
     case EE_SCREENS_SEAX_MINIMAP_SET_MAP: gMiniMap->SetMap(gWorld.mMap); return 0;
     case EE_SCREENS_SEAX_MINIMAP_UPDATE: EEUIMiniMap::Update(gMiniMap); return 0;
     case EE_SCREENS_SEAX_MINIMAP_REDRAW_ALL: gMiniMap->RedrawAll(); return 0;
-    case EE_SCREENS_SEAX_MINIMAP_REDRAW: gMiniMap->Redraw(); return 0;
+    case EE_SCREENS_SEAX_MINIMAP_REDRAW: ee_gamecpp_minimap_redraw(gMiniMap); return 0;
     case EE_SCREENS_SEAX_MINIMAP_REFRESH: gMiniMap->Refresh(); return 0;
     case EE_SCREENS_SEAX_GRAPHICS_RELEASE_SCENE: gGraphics->PostReleaseScene(); return 0;
     case EE_SCREENS_SEAX_GRAPHICS_INITIALISE_SCENE: gGraphics->PostInitialiseScene(); return 0;
@@ -305,7 +309,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_OPTIONS_NEW: return (intptr_t)new EEGameOptions;
     case EE_SCREENS_SEAX_OPTIONS_MAP_SIZE: static_cast<EEGameOptions*>(p)->mMapSize = (unsigned long)i[0]; return 0;
     case EE_SCREENS_SEAX_OPTIONS_EPOCH: static_cast<EEGameOptions*>(p)->mEpochStart = i[0]; return 0;
-    case EE_SCREENS_SEAX_OPTIONS_DIMENSIONS: static_cast<EEGameOptions*>(p)->GetMapDimensions(sSeaxLong[0], sSeaxLong[1]); return 0;
+    case EE_SCREENS_SEAX_OPTIONS_DIMENSIONS: ee_gamecpp_options_map_dimensions(static_cast<EEGameOptions*>(p), &(sSeaxLong[0]), &(sSeaxLong[1])); return 0;
     case EE_SCREENS_SEAX_OPTIONS_DELETE: delete static_cast<EEGameOptions*>(p); return 0;
     case EE_SCREENS_SEAX_PLAYER: return (intptr_t)gWorld.mPlayers[i[0]];
     case EE_SCREENS_SEAX_PLAYER_OBSERVER: return static_cast<EEPlayer*>(p)->mObserverMode != false;
@@ -338,7 +342,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
         gWorld.mGhostUnitsLock->Leave();
         return 0;
     case EE_SCREENS_SEAX_GHOST_COUNT:
-        return (intptr_t)gWorld.GetNumGhostUnits();
+        return (intptr_t)(unsigned long)ee_app_ghost_count();
     case EE_SCREENS_SEAX_GHOST:
         return (intptr_t)gWorld.GetGhostUnit(i[0]);
     case EE_SCREENS_SEAX_BUILD_GATE:

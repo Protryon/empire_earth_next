@@ -21,6 +21,8 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/game/gamecpp.h"
+#include "rust/sim/app.h"
 bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUnit's, before EEGoalQueueContainer's; ee/EEGhostUnit.h)
 
 long EETurnGatePart(GETransformation&, long, long);
@@ -103,7 +105,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_LOCK_ENTER: gWorld.mGhostUnitsLock->Enter(); return 0;
     case EE_UNITS_GHOST_LOCK_LEAVE: gWorld.mGhostUnitsLock->Leave(); return 0;
     case EE_UNITS_GHOST_VIEW_CONTAINS: return gViewport.GetViewRectangle().Contains(*theLocation);
-    case EE_UNITS_GHOST_NUM_GHOSTS: return (int64_t)gWorld.GetNumGhostUnits();
+    case EE_UNITS_GHOST_NUM_GHOSTS: return (int64_t)(unsigned long)ee_app_ghost_count();
     case EE_UNITS_GHOST_SET_CHANGED: gGhostUnitsChanged = inB != 0; return 0;
     case EE_UNITS_GHOST_GHOST_AT: return (uint64_t)(uintptr_t)gWorld.GetGhostUnit((size_t)inB);
     case EE_UNITS_GHOST_POINT_UNIT_OR_TILE: return EEPointUnitOrTile(*theLocation, sGhostTile, sGhostPosition, true);
@@ -138,10 +140,10 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_POSITION_RESET: sGhostPosition = GE3DPoint(); return 0;
     // ghost_make.rs's
     case EE_UNITS_GHOST_CLASS_AT: return (uint64_t)(uintptr_t)gUnitClassTable[inB];
-    case EE_UNITS_GHOST_CLEAR_GHOSTS: gWorld.ClearGhostUnits(); return 0;
+    case EE_UNITS_GHOST_CLEAR_GHOSTS: ee_gamecpp_world_clear_ghosts(&gWorld); return 0;
     case EE_UNITS_GHOST_NEW: return (uint64_t)(uintptr_t)new EEGhostUnit(EEGhostObject<EEUnitClass>(inA)->GetUnitType(), EEGhostObject<EEPlayer>((uint64_t)inB), inC != 0);
     case EE_UNITS_GHOST_CLASS_FIXED: return EEGhostObject<EEUnitClass>(inA)->mMaxAngularVelocity == 0.0f;
-    case EE_UNITS_GHOST_ADD: gWorld.AddGhostUnit(theGhost); return 0;
+    case EE_UNITS_GHOST_ADD: ee_app_ghost_push(theGhost); return 0;
     case EE_UNITS_GHOST_CLASS_TYPE: return EEGhostObject<EEUnitClass>(inA)->GetUnitType();
     case EE_UNITS_GHOST_FARM_TYPE: return EEGetFarmType(EEGhostObject<EEPlayer>(inA));
     case EE_UNITS_GHOST_CLASS_TILE_SIZE: return EEGhostObject<EEUnitClass>(inA)->GetTileSize();

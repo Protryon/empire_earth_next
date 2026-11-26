@@ -17,6 +17,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
+#include "rust/sim/app.h"
 
 // the holders' owners from their offsets: the unit classes derive singly (RTSUnit -> EEUnit -> EEComplexUnit), so an
 // offsetof is the member's place in every object of the class
@@ -61,8 +62,8 @@ extern "C" int64_t ee_units_us_host(int32_t inOp, uint64_t inA, int64_t inB, uin
     case EE_UNITS_US_CHAIN_NEXT: return (int64_t)reinterpret_cast<uintptr_t>(UsUnit(inA)->mTileNode->mNext);
     case EE_UNITS_US_UNIT_ID: return (uint32_t)UsUnit(inA)->mUnitID;
     case EE_UNITS_US_CHECKSUM: return (uint32_t)static_cast<EEUnit*>(UsUnit(inA))->GetChecksum((unsigned long)inB);
-    case EE_UNITS_US_ORDER_COUNT: return (int64_t)gWorld.GetNumUpdateUnits();
-    case EE_UNITS_US_ORDER_ID: return gWorld.GetUpdateUnitID((size_t)inB);
+    case EE_UNITS_US_ORDER_COUNT: return (int64_t)ee_app_active_list(0, NULL, 0);
+    case EE_UNITS_US_ORDER_ID: return ee_app_active_at(0, (size_t)inB);
     case EE_UNITS_US_TICK: return gPhysics != NULL ? (int64_t)gPhysics->mNumTicksDone : 0;
     case EE_UNITS_US_EXIT: exit(3);
     // us_fill.rs's

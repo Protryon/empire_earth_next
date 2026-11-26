@@ -46,6 +46,7 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x21
 // are mutable
 #include "ee/EEStringIDs.h"
 #include "ee/EEGraphics.h"
+#include "rust/game/gamecpp.h"
 
 
 
@@ -200,7 +201,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEUNX_GATE_DIRECTION: return (int32_t)SeunTab(p[1])->mBuildGate.mDirection;
     case EE_SCREENS_SEUNX_LOCK_ENTER: gWorld.mGhostUnitsLock->Enter(); return 0;
     case EE_SCREENS_SEUNX_LOCK_LEAVE: gWorld.mGhostUnitsLock->Leave(); return 0;
-    case EE_SCREENS_SEUNX_CLEAR_GHOSTS: gWorld.ClearGhostUnits(); return 0;
+    case EE_SCREENS_SEUNX_CLEAR_GHOSTS: ee_gamecpp_world_clear_ghosts(&gWorld); return 0;
     case EE_SCREENS_SEUNX_PREVIEW_PLACEMENT: EEPreviewPlacement(gMouse->mPosition); return 0;
     case EE_SCREENS_SEUNX_MOUSE_TILE:
         EEPointUnitOrTileXY(gMouse->mPosition, *static_cast<EETile**>(p[0]), *static_cast<long*>(p[1]),

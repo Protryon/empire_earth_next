@@ -75,13 +75,10 @@ public:
     void PostLoginDone() { this->Post(0x441); }   // DEAD-IN-AOC (base exe 0x661aef; only EEWonNet's MOTD callback)
     // the load percentage (0x40a; in multiplayer also EEMLoadPercent at every 20 percent step)
     void SetLoadingText(long inX) { this->Post(0x40b, (void*)(intptr_t)inX); }
-    // 0x424 once until it is handled (nothing on a NULL object)
-    void PostMessage424Once() { ee_screens_ui_post_icon_bar_once(this); }
 
     // the posts that build C++ objects
     // 0x40e and 0x40c post a reference (ee_screens ui_objects_ffi.rs)
     long PostEvent(UIEvent* inEvent, UIForm* inForm) { return (long)ee_screens_ui_post_event(this, inEvent, inForm); }
-    void ShowLoadedObject(UReferenceCounter* inObject) { ee_screens_ui_show_loaded(this, inObject); }
     // 0x41b: a new EEScreenCapture of a width (no surface or completion event yet)
     void PostScreenShot(long inX, bool inFlag1, bool inFlag2)
     {

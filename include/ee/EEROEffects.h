@@ -14,7 +14,7 @@ public:
     virtual ~EEROEffects() {  }
     // Sorts the visible effects into the render queues for this frame
     // +0x00 0x111d76: EERenderObject::QueueEffects
-    virtual void FrameStarting() { this->QueueEffects(); }
+    virtual void FrameStarting() { ee_gamecpp_ro_queue_effects(this); }
     // Clears the z buffer of the game view before the effects draw
     // +0x04 0x111d7b: clears the z buffer
     virtual void SceneStarting() { ee_gamecpp_ov_effects_scene_starting(); }

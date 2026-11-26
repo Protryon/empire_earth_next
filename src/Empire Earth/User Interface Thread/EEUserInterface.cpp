@@ -60,6 +60,11 @@ void EELobbyShutdown();
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
+#include "rust/game/preload.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
 
 static const float kGameViewLeft = 0.0f, kGameViewRight = 1600.0f;  // the game view below the top bar (.rdata
 static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c..0x44ba38: separate words)
@@ -72,7 +77,7 @@ static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c.
 extern "C" void ee_screenscpp_ug_screen_active(bool inActive) { gWorld.mGameScreenActive = inActive; }
 extern "C" void ee_screenscpp_ug_path_reset() { gPathManager.Reset(); }
 extern "C" void ee_screenscpp_ug_sight_on() { gSightUpdatesEnabled = true; }
-extern "C" void ee_screenscpp_ug_restart_units() { gWorld.RestartUnits(); }
+extern "C" void ee_screenscpp_ug_restart_units() { ee_gamecpp_world_sight_all(&gWorld, true); }
 extern "C" void ee_screenscpp_ug_resize_game(uintptr_t inUi, bool inA, bool inB)
 { UG_UI(inUi)->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA, inB); }
 extern "C" void ee_screenscpp_ug_resize_menu(uintptr_t inUi, bool inA, bool inB)
@@ -89,7 +94,7 @@ extern "C" void ee_screenscpp_ug_max_players() { gWorld.SetNumPlayers(gWorld.mMa
 extern "C" void ee_screenscpp_ug_collect_computers() { gArtificialIntelligence->CollectComputerPlayers(); }
 extern "C" bool ee_screenscpp_ug_timer_running() { return gPhysics->mTimerRunning; }
 extern "C" void ee_screenscpp_ug_state_clear() { gGameState.Clear(); }
-extern "C" void ee_screenscpp_ug_options_defaults() { gWorld.mLobbyOptions.SetDefaults(); }
+extern "C" void ee_screenscpp_ug_options_defaults() { ee_gamecpp_options_set_defaults(&gWorld.mLobbyOptions); }
 extern "C" uint64_t ee_screenscpp_ug_file_name_length(uintptr_t inFile)
 { return (uint64_t)reinterpret_cast<FSFile*>(inFile)->GetFile().GetLength(); }
 extern "C" uint64_t ee_screenscpp_ug_file_scenario_at(uintptr_t inFile)
@@ -99,14 +104,14 @@ extern "C" void ee_screenscpp_ug_delete_file(uintptr_t inFile) { delete reinterp
 extern "C" void ee_screenscpp_ug_update_interface(uintptr_t inUi) { UG_UI(inUi)->UpdateInterface(); }
 extern "C" bool ee_screenscpp_ug_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_ug_sim_run() { return gPlatSimRun; }
-extern "C" void ee_screenscpp_ug_wait_preload() { gDataPreLoading->WaitForMessageQueue(); }
+extern "C" void ee_screenscpp_ug_wait_preload() { (long)ee_preload_wait_for_queue(gDataPreLoading); }
 extern "C" void ee_screenscpp_ug_world_clear() { gWorld.Clear(); }
 extern "C" bool ee_screenscpp_ug_has_communications() { return gCommunications != NULL; }
 extern "C" bool ee_screenscpp_ug_is_client() { return gCommunications->IsClient(); }
 extern "C" bool ee_screenscpp_ug_server_lost_after_loading()
 { return static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading; }
 extern "C" bool ee_screenscpp_ug_lobby_open() { return EEIsLobbyOpen(); }
-extern "C" void ee_screenscpp_ug_create_editor() { gUIManager->CreateScenarioEditor(); }
+extern "C" void ee_screenscpp_ug_create_editor() { ee_screens_um_create_editor((uintptr_t)gUIManager); }
 extern "C" int64_t ee_screenscpp_ug_load_scendefault()
 { return EELoadSavedGameFile(UString("ScenDefault") + gScenarioExtension, true, true, UString("data\\") + UString("Scenarios\\"), 0); }
 extern "C" void ee_screenscpp_ug_stop_one_shots() { gSoundManager->StopAllOneShotSounds(); }
@@ -140,7 +145,7 @@ extern "C" bool ee_screenscpp_uim_has_manager() { return gUIManager != NULL; }
 extern "C" uintptr_t ee_screenscpp_uim_main_form() { return (uintptr_t)gUIManager->GetMainGameForm(); }
 extern "C" void ee_screenscpp_uim_main_rust(uintptr_t inMain, uint32_t inWhich, int64_t inA)
 { ((EEUIFMainGame*)inMain)->Rust(inWhich, inA); }
-extern "C" bool ee_screenscpp_uim_gfx_post_pause() { return gGraphics->PostPause() == kErrorOK; }
+extern "C" bool ee_screenscpp_uim_gfx_post_pause() { return ee_rts_graphics_post_pause(static_cast<RTSGraphics*>(gGraphics)) == kErrorOK; }
 extern "C" bool ee_screenscpp_uim_gfx_paused() { return gGraphics->mIsPaused; }
 extern "C" void ee_screenscpp_uim_gfx_post_resume() { gGraphics->PostResume(); }
 extern "C" bool ee_screenscpp_uim_capture_event(uintptr_t inCapture)
@@ -213,7 +218,7 @@ extern "C" void ee_screenscpp_ui_translated_key(uintptr_t inText) { gUIManager->
 // statement
 static UIControl* C(uintptr_t inControl) { return reinterpret_cast<UIControl*>(inControl); }
 // shims4
-extern "C" void ee_screenscpp_gfx_post_pause() { gGraphics->PostPause(); }
+extern "C" void ee_screenscpp_gfx_post_pause() { ee_rts_graphics_post_pause(static_cast<RTSGraphics*>(gGraphics)); }
 extern "C" bool ee_screenscpp_gfx_paused() { return gGraphics->mIsPaused; }
 extern "C" void ee_screenscpp_sleep(uint32_t inMilliseconds) { PlatSleep(inMilliseconds); }
 extern "C" bool ee_screenscpp_pointer_shown() { return gMousePointer->mIsShown; }
@@ -316,9 +321,9 @@ extern "C" bool ee_screenscpp_fpu_precision_is_53() { return UMGetFloatingPointP
 extern "C" uint32_t ee_screenscpp_fpu_rounding_mode() { return (uint32_t)UMGetFloatingPointRoundingMode(); }
 extern "C" void ee_screenscpp_fpu_set_rounding_mode(uint32_t inMode) { UMSetFloatingPointRoundingMode(inMode); }
 extern "C" void ee_screenscpp_gfx_release_scene() { gGraphics->PostReleaseScene(); }
-extern "C" void ee_screenscpp_gfx_wait_50a() { gGraphics->PostMessage50AAndWait(); }
-extern "C" void ee_screenscpp_physics_post_init() { gPhysics->PostInit(); }
-extern "C" void ee_screenscpp_physics_run_owed_ticks() { gPhysics->RunOwedTicks(); }
+extern "C" void ee_screenscpp_gfx_wait_50a() { ee_gamecpp_gfx_post_50a_and_wait(gGraphics); }
+extern "C" void ee_screenscpp_physics_post_init() { ee_physics_post(gPhysics, 0x509); }
+extern "C" void ee_screenscpp_physics_run_owed_ticks() { ee_physics_run_owed_ticks(gPhysics); }
 extern "C" void ee_screenscpp_physics_init() { gPhysics->Init(); }
 extern "C" uintptr_t ee_screenscpp_communications() { return (uintptr_t)gCommunications; }
 extern "C" void ee_screenscpp_new_client() { gCommunications = new EEClient; }

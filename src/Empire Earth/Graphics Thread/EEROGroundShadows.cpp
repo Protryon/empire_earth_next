@@ -12,12 +12,13 @@
 
 #include "ee/EERenderObject.h"
 #include "ee/EEROGroundShadows.h"
+#include "rust/game/gamecpp.h"
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 
 // Prepares the frame and fills the render lists of shadows and units
 void EEROGroundShadows::FrameStarting()
 {
-    this->Fn10C036();
-    this->FillRenderLists();
+    ee_gamecpp_ro_fn10c036(static_cast<EERenderObject*>(this));
+    ee_gamecpp_ro_fill_render_lists(static_cast<EERenderObject*>(this));
 }

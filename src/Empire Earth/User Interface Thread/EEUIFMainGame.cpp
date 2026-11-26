@@ -129,6 +129,9 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == sizeof(EeScreensFormCallObject
 
 #include "ee/EEScenarioManager.h"
 #include "ee/EECombatGoals.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
+#include "rust/sim/app.h"
 
 // (main_form.rs' sounds and strings and mouse_modes.rs' farms and keys equal the headers': hud_cpp_consts_tests.rs)
 
@@ -247,14 +250,14 @@ extern "C" bool ee_screenscpp_mf_first_from_group(uintptr_t inRec)
 { return (R(inRec)->mFirst = gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit()) != NULL; }
 extern "C" void ee_screenscpp_mf_first_clear(uintptr_t inRec) { R(inRec)->mFirst = NULL; }
 extern "C" bool ee_screenscpp_mf_first_selected(uintptr_t inRec)
-{ return EEGetFirstSelectedUnit(reinterpret_cast<EEComplexUnit*&>(R(inRec)->mFirst)) == true; }
+{ return ee_gamecpp_first_selected_unit((void**)&(reinterpret_cast<EEComplexUnit*&>(R(inRec)->mFirst))) == true; }
 extern "C" bool ee_screenscpp_mf_has_first(uintptr_t inRec) { return static_cast<EEComplexUnit*>(R(inRec)->mFirst) != NULL; }
 extern "C" float ee_screenscpp_first_distance_squared(uintptr_t inRec, float inX, float inY, float inZ)
 { return static_cast<EEComplexUnit*>(R(inRec)->mFirst)->mComplexUnit->DistanceSquared3D(GE3DPoint(inX, inY, inZ)); }
 extern "C" float ee_screenscpp_first_min_range(uintptr_t inRec) { return static_cast<EEComplexUnit*>(R(inRec)->mFirst)->GetUnitClass()->mMinRange; }
 extern "C" void ee_screenscpp_player_add_event(int64_t inX, int64_t inY, int32_t inKind)
 { gWorld.GetCurrentPlayer()->mEvents.AddEvent(U2DPoint<long>((long)inX, (long)inY), 2, gWorld.GetCurrentPlayer(), inKind, false); }
-extern "C" uint32_t ee_screenscpp_ghost_count() { return (uint32_t)gWorld.GetNumGhostUnits(); }
+extern "C" uint32_t ee_screenscpp_ghost_count() { return (uint32_t)(unsigned long)ee_app_ghost_count(); }
 extern "C" bool ee_screenscpp_ghost_can_place(uint32_t inGhost)
 { return static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inGhost))->mCanPlace; }
 extern "C" uint32_t ee_screenscpp_ghost_type(uint32_t inGhost)
@@ -329,7 +332,7 @@ extern "C" bool ee_screenscpp_unit_class_exists(uint32_t inKind) { return gUnitC
 extern "C" bool ee_screenscpp_player_class_has_button(uint32_t inKind)
 { return gWorld.GetCurrentPlayer()->mUnitClassUpgrades[inKind]->mButton != NULL; }
 extern "C" void ee_screenscpp_mf_info_set_face(uintptr_t inRec, uintptr_t inBitmap, uintptr_t inPortrait)
-{ gWorld.GetCurrentPlayer()->mUnitClassUpgrades[static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mUnitType]->mButton->SetFaceBitmap(reinterpret_cast<GEBitmap*>(inBitmap), C(inPortrait)->GetRectangle(), C(inPortrait)->GetScreenIndex()); }
+{ ee_gamecpp_db_button_bitmap(gWorld.GetCurrentPlayer()->mUnitClassUpgrades[static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mUnitType]->mButton, true, reinterpret_cast<GEBitmap*>(inBitmap), &(C(inPortrait)->GetRectangle()), C(inPortrait)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_ui_bitmap_set_bitmap(uintptr_t inControl, uintptr_t inBitmap)
 { static_cast<UIBitmap*>(C(inControl))->SetBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
 extern "C" void ee_screenscpp_control_refresh_opacity(uintptr_t inControl)
@@ -451,7 +454,7 @@ extern "C" void ee_screenscpp_mf_scroll(uintptr_t inRec) { static_cast<EEAScroll
 extern "C" void ee_screenscpp_mf_tile_x(int64_t inX) { EEScratch<EETileCoordinate>(kScratchMFTile).mX = (long)inX; }
 extern "C" void ee_screenscpp_mf_tile_y(int64_t inY) { EEScratch<EETileCoordinate>(kScratchMFTile).mY = (long)inY; }
 extern "C" bool ee_screenscpp_mf_find_gate_wall(long* inDirection) { return EEFindGateWall(EEScratch<EETileCoordinate>(kScratchMFTile), *inDirection); }
-extern "C" void ee_screenscpp_mf_clear_ghosts() { gWorld.ClearGhostUnits(); }
+extern "C" void ee_screenscpp_mf_clear_ghosts() { ee_gamecpp_world_clear_ghosts(&gWorld); }
 extern "C" void ee_screenscpp_mf_tiles_clear() { EEScratch<std::vector<EETileCoordinate>>(kScratchMFTiles).clear(); }
 extern "C" void ee_screenscpp_mf_tiles_add() { EEScratch<std::vector<EETileCoordinate>>(kScratchMFTiles).push_back(EEScratch<EETileCoordinate>(kScratchMFTile)); }
 extern "C" void ee_screenscpp_mf_preview_wall_call(uintptr_t inRec)
@@ -478,7 +481,7 @@ extern "C" void ee_screenscpp_mf_lag_color(uintptr_t inRec, int64_t inControl, i
 { static_cast<UIBitmap*>(MF(inRec)->GetControl((unsigned long)inControl))->GetBitmap()->SetColor(gWorld.mPlayers[inPlayer]->mColor); }
 extern "C" bool ee_screenscpp_mf_has_instructions()
 { return gWorld.mScenarioManager->mMediaStrings.GetSection(3).GetLength() > 0; }
-extern "C" void ee_screenscpp_mf_update_cursor(uintptr_t inRec) { MF(inRec)->UpdateCursorKind(); }
+extern "C" void ee_screenscpp_mf_update_cursor(uintptr_t inRec) { ee_screens_update_cursor_kind(MF(inRec)); }
 extern "C" int64_t ee_screenscpp_mf_info_duration(uintptr_t inRec) { return (int64_t)static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mDuration; }
 extern "C" void ee_screenscpp_mf_chat_top(uintptr_t inRec, int64_t inValue)
 { MF(inRec)->Rust(EE_SCREENS_MF_DO_CHAT_TOP, inValue); }
@@ -568,11 +571,11 @@ extern "C" void ee_screenscpp_md_send_convert(uintptr_t inRec, bool inShielded)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackUnit, {static_cast<EEUnit*>(R(inRec)->mPicked)->mComplexUnit->mUnitID, inShielded, true}), kSlotNone); }
 extern "C" void ee_screenscpp_md_send_rally(uintptr_t inRec, float inX, float inY, int64_t inKind, int64_t inFlag)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(inX, inY), (long)inKind, static_cast<EEComplexUnit*>(R(inRec)->mFirst)->mComplexUnit->GetUnitID(), (unsigned char)inFlag}), kSlotNone); }
-extern "C" void ee_screenscpp_md_order_at_none(float inX, float inY) { EEOrderAtCursor(GE2DPoint(inX, inY), NULL); }
+extern "C" void ee_screenscpp_md_order_at_none(float inX, float inY) { ee_gamecpp_order_at_cursor(&(GE2DPoint(inX, inY)), NULL); }
 extern "C" void ee_screenscpp_md_order_at_picked(uintptr_t inRec, float inX, float inY)
-{ EEOrderAtCursor(GE2DPoint(inX, inY), static_cast<EEUnit*>(R(inRec)->mPicked)); }
+{ ee_gamecpp_order_at_cursor(&(GE2DPoint(inX, inY)), static_cast<EEUnit*>(R(inRec)->mPicked)); }
 extern "C" void ee_screenscpp_md_order_at_complex(uintptr_t inRec, float inX, float inY)
-{ EEOrderAtCursor(GE2DPoint(inX, inY), static_cast<EEUnit*>(static_cast<EEUnit*>(R(inRec)->mPicked)->mComplexUnit)); }
+{ ee_gamecpp_order_at_cursor(&(GE2DPoint(inX, inY)), static_cast<EEUnit*>(static_cast<EEUnit*>(R(inRec)->mPicked)->mComplexUnit)); }
 extern "C" void ee_screenscpp_md_calamity_effect(uintptr_t inRec, float inX, float inY, float inZ)
 { EEMakeCalamityEffect(GE3DPoint(inX, inY, inZ), static_cast<EEUnit*>(R(inRec)->mPicked)); }
 extern "C" void ee_screenscpp_md_preview(uintptr_t inRec) { EEPreviewPlacement(MF(inRec)->GetMouseLocation()); }
@@ -599,7 +602,7 @@ extern "C" bool ee_screenscpp_mfb_background_contains(uintptr_t inBackground, fl
 extern "C" bool ee_screenscpp_mfb_view_contains(float inX, float inY)
 { return gViewport.GetViewRectangle().Contains(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_mfb_grab_scroll_dereference(uintptr_t inForm) { static_cast<UIEvent*>(MFB(inForm)->mGrabScroll)->Dereference(); }
-extern "C" void ee_screenscpp_mfb_release_grab_scroll() { EEReleaseGrabScroll(0); }
+extern "C" void ee_screenscpp_mfb_release_grab_scroll() { ee_screens_camera_grab_reset(0); }
 extern "C" void ee_screenscpp_mfb_wheel_zoom_dereference(uintptr_t inForm) { static_cast<UIEvent*>(MFB(inForm)->mWheelZoom)->Dereference(); }
 extern "C" void ee_screenscpp_mfb_scroll_dereference(uintptr_t inForm) { static_cast<EEAScroll*>(MFB(inForm)->mScroll)->Dereference(); }
 extern "C" void ee_screenscpp_mfb_mouse_click_dereference(uintptr_t inForm) { static_cast<EEAMouseClick*>(MFB(inForm)->mMouseClick)->Dereference(); }

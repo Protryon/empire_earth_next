@@ -32,6 +32,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEAppCapture.h"
+#include "rust/game/gamecpp.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
@@ -177,7 +178,7 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpTerrainColorType: return ((EETerrainTable*)p)->mColorType;
     case O::MpTerrainIsWater: return ((EETerrainTable*)p)->mIsWater == true;
     case O::MpTerrainWaterPeriod: return ((EETerrainTable*)p)->mWaterAnimationPeriod;
-    case O::MpTerrainAttach: ((EETerrainTable*)p)->AttachTextures((GETextureSet*)a[0]);
+    case O::MpTerrainAttach: ee_gamecpp_db_terrain_attach(((EETerrainTable*)p), (GETextureSet*)a[0]);
         break;
     case O::MpTerrainSetTextureSet: ((EETerrainTable*)p)->mTextureSetID = (unsigned long)a[0];
         break;

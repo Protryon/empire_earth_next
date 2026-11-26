@@ -64,6 +64,8 @@
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationBuilder.h"
 #include "rust/game/sim_driver.h"   // EeSimDriverSed
+#include "rust/game/screens.h"
+#include "rust/sim/app.h"
 
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
@@ -251,7 +253,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::BrushHighlight: return ((EEUIFSEBrushGroup*)p)->mIsHighlightShown;
     case O::BrushCentered: return ((EEUIFSEBrushGroup*)p)->mIsCentered;
     case O::BrushSize: return ((EEUIFSEBrushGroup*)p)->mBrushSize;
-    case O::BrushSetHighlight: ((EEUIFSEBrushGroup*)p)->SetHighlight(f[0], f[1], a[0] != 0);
+    case O::BrushSetHighlight: ee_screens_sebr_group_highlight(reinterpret_cast<EeScreensSeBrushGroup*>(((EEUIFSEBrushGroup*)p)), f[0], f[1], a[0] != 0);
         break;
     case O::EdgeScrollEdges: return P64(&((EEAScroll*)p)->mEdges);
     case O::LoadThreadPostDone: return ((EESELoadThread*)p)->mThread->Post(EE_SCREENS_SE_LOAD_THREAD_MESSAGE_QUEUE_DONE, NULL, NULL, true);
@@ -271,7 +273,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
             new EESEARust((uint32_t)a[0], (void*)p, (int32_t)a[1], (int32_t)a[2], (int32_t)a[3], (int32_t)a[4])));
     case O::SeaAction: return P64(static_cast<EESEARust*>(ACT)->mAction);
     case O::PaintNew: return P64(static_cast<EEAction*>(new EESEAPaintRust((uint32_t)a[0], (int32_t)a[1], (int32_t)a[2])));
-    case O::PaintSetArea: return static_cast<EESEAPaint*>(ACT)->SetArea((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
+    case O::PaintSetArea: return ee_screens_ga_paint_set_area(static_cast<EESEAPaint*>(ACT), (int32_t)((long)a[0]), (int32_t)((long)a[1]), (int32_t)((long)a[2]), (int32_t)((long)a[3]));
     case O::PostAction: gUserInterface->PostAction(ACT);
         break;
     case O::ClickNew: return P64(static_cast<EEAction*>(new EESEAMouseClick));
@@ -331,7 +333,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     // the ghosts
     case O::GhostsChanged: gGhostUnitsChanged = true;
         break;
-    case O::GhostCount: return gWorld.GetNumGhostUnits();
+    case O::GhostCount: return (unsigned long)ee_app_ghost_count();
     case O::GhostAt: return P64(gWorld.GetGhostUnit(a[0]));
     case O::GhostCreate: EEGhostUnit::Create(GE2DPoint(f[0], f[1]), (long)a[0], gWorld.mPlayers[a[1]], f[2], false);
         break;

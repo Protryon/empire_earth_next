@@ -33,6 +33,7 @@
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EECommunications.h"
 #include "ee/EEScenarioHost.h"
+#include "rust/game/app.h"
 
 bool gScenarioSimDialogs = false;
 
@@ -141,7 +142,7 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_SET_OFFSET_TURN: gWorld.mCameraControl.SetOffsetTurn(theManager->mK008.mT40, true);
         return 0;
-    case EE_SCENARIO_ROUND_CAMERA_SET_CHANGED: gWorld.mCameraControl.SetChanged();
+    case EE_SCENARIO_ROUND_CAMERA_SET_CHANGED: ee_app_camera_set_changed(&gWorld.mCameraControl);
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_UPDATE: gWorld.mCameraControl.Update(0.0f);
         return 0;

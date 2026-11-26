@@ -26,6 +26,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj
 #include "ee/EECombatGoals.h"
+#include "rust/game/gamecpp.h"
 
 // Returns the unit's top speed: its active group's value when it is in one, else its stats'
 // (was EECPEngineHelpers.cpp's, out of line after its first user there)
@@ -46,7 +47,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     EEUnitGoal* theOther = (EEUnitGoal*)(uintptr_t)inB;
     switch (inOp) {
     // (the goals' kinds, the gather and patrol goals' units, a unit's sphere and the regions' size: ag_host.rs)
-    case EE_UNITS_AG_SEND: EESendGroupCommand(theGroup, (EEUnit*)(uintptr_t)inB, theGroup->GetPlayer()->GetPlayerID(), (long)inC, 0);
+    case EE_UNITS_AG_SEND: ee_gamecpp_msg_group_command(theGroup, (EEUnit*)(uintptr_t)inB, theGroup->GetPlayer()->GetPlayerID(), (long)inC, 0);
         return 0;
     case EE_UNITS_AG_FORMATION_CENTER: theGroup->GetFormation()->mCenter = *reinterpret_cast<GE3DPoint*>(io->p);
         return 0;

@@ -77,6 +77,10 @@ UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 #include "ee/EEStringIDs.h"
 #include "ee/EESoundObject.h"
 #include "lle/UResourceFile.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
+#include "rust/game/screens.h"
+#include "rust/sim/units.h"
 // Original cdecl sight-map family, retained as link calls (no helper implementations).
 void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
 void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
@@ -138,9 +142,9 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     case EE_UNITS_SIGHT_TILE_SIGHT_OFF: ((EEMapTile*)(uintptr_t)inA)->RemoveSight((EEPlayer*)(uintptr_t)inB); return 0;
     case EE_UNITS_SIGHT_SHARED: thePlayer->AddSharedSight((EEMapTile*)(uintptr_t)inB, (long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_SHARED_OFF: thePlayer->RemoveSharedSight((EEMapTile*)(uintptr_t)inB); return 0;
-    case EE_UNITS_SIGHT_SHOW: gMiniMap->CountCellOn((long)inC, (long)inD); return 0;
+    case EE_UNITS_SIGHT_SHOW: ee_gamecpp_minimap_count_cell(gMiniMap, (long)inC, (long)inD, true); return 0;
     case EE_UNITS_SIGHT_SHOW_TILE: ::gWorld.mMap->mTerrainMesh.ReferenceTile((long)inC, (long)inD); return 0;
-    case EE_UNITS_SIGHT_SHOW_OFF: gMiniMap->CountCellOff((long)inC, (long)inD); return 0;
+    case EE_UNITS_SIGHT_SHOW_OFF: ee_gamecpp_minimap_count_cell(gMiniMap, (long)inC, (long)inD, false); return 0;
     case EE_UNITS_SIGHT_SHOW_TILE_OFF: ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_WONDER: ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
     case EE_UNITS_SIGHT_WONDER_OFF: ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
@@ -312,7 +316,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_S_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
     case EE_UNITS_CU_S_SIGHT_ON_HERE: theUnit->SightOn(theUnit->GetTileX(), theUnit->GetTileY()); return 0;
     case EE_UNITS_CU_S_NOT_CURRENT_PLAYER: return ::gWorld.GetCurrentPlayer() != theUnit->mPlayer;
-    case EE_UNITS_CU_S_MINIMAP_SHOW: gMiniMap->MoveUnit(theUnit, -10000, -10000, theUnit->GetTileX(), theUnit->GetTileY()); return 0;
+    case EE_UNITS_CU_S_MINIMAP_SHOW: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, -10000, -10000, theUnit->GetTileX(), theUnit->GetTileY()); return 0;
     case EE_UNITS_CU_S_WORLD_IGNORE: EECombatWorld(EE_COMBAT_WORLD_IGNORE, theUnit, theOther); return 0;
     case EE_UNITS_CU_S_CAPTURE_IGNORE: EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, theUnit, theOther, 0, 0); return 0;
     case EE_UNITS_CU_S_WORLD_IS_IGNORED: return EECombatWorld(inB != 0 ? EE_COMBAT_WORLD_IS_IGNORED : EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE, theUnit, theOther) != 0;
@@ -353,7 +357,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_ACTIVATE: ::gWorld.ActivateUnit(theUnit); return 0;
     case EE_UNITS_CU_PREVIOUS_PART: return (uint64_t)(uintptr_t)theUnit->mPreviousPart;
     case EE_UNITS_CU_SHUTDOWN: return UShutdownInProgress();
-    case EE_UNITS_CU_SWAP_KIND: return gPhysics->GetUnitSwapKind(theUnit);
+    case EE_UNITS_CU_SWAP_KIND: return ee_physics_unit_swap_kind(gPhysics, theUnit);
     case EE_UNITS_CU_UNIT_TYPE: return theUnit->GetUnitClass()->GetUnitType();
     case EE_UNITS_CU_CATEGORY: return theUnit->GetUnitClass()->mCategory;
     case EE_UNITS_CU_STATS_RESET: theUnit->mPlayer->mSavedGroups.Reset((long)inB, 1); return 0;
@@ -399,7 +403,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION: theUnit->CancelQueuedProduction(); return 0;
     case EE_UNITS_CU_GOAL_QUEUE_COUNT: return theUnit->mGoalQueues.size();
     case EE_UNITS_CU_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
-    case EE_UNITS_CU_AFFECTING_KEEP_STRONGEST: theUnit->mAffectingAreaEffects.KeepStrongest(); return 0;
+    case EE_UNITS_CU_AFFECTING_KEEP_STRONGEST: ee_screens_ael_keep_strongest((uintptr_t)&theUnit->mAffectingAreaEffects); return 0;
     case EE_UNITS_CU_AFFECTING_CLEAR: theUnit->mAffectingAreaEffects.Clear(); return 0;
     case EE_UNITS_CU_AFFECTING_ITEMS_CLEAR: theUnit->mAffectingAreaEffects.mItems.clear(); return 0;
     case EE_UNITS_CU_AREA_EFFECTS_CLEAR: theUnit->mAreaEffects.Clear(); return 0;
@@ -573,7 +577,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_IS_TRANSPORT: return theUnit->GetUnitClass()->IsTransport();
     case EE_UNITS_CU_CARGO_ADDED: theUnit->GetUnitClass()->CargoAdded(theUnit, theOther, inB != 0); return 0;
     case EE_UNITS_CU_ACTIVE_GROUP_HAS: return theUnit->mPlayer->mActiveGroup->Contains(theOther);
-    case EE_UNITS_CU_POST_424: gUserInterface->PostMessage424Once(); return 0;
+    case EE_UNITS_CU_POST_424: ee_screens_ui_post_icon_bar_once(gUserInterface); return 0;
     case EE_UNITS_CU_UNIT_HIT_POINTS: return theOther->mHitPoints;
     case EE_UNITS_CU_UNIT_POPULATION_COST: return theOther->mUnitClass->GetPopulationCost();
     case EE_UNITS_CU_GARRISON_CAPACITY: return theUnit->GetUnitClass()->mGarrisonCapacity;
@@ -687,7 +691,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CLOAKABLE: return theUnit->mIsCloakable;
     case EE_UNITS_CU_CLOAKED_FIELD: return theUnit->mIsCloaked;
     case EE_UNITS_CU_CLOAKED_ENEMY: return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer()));
-    case EE_UNITS_CU_MINIMAP_REMOVE: gMiniMap->MoveUnit(theUnit, -10000, -10000, theUnit->GetTileX(), theUnit->GetTileY()); return 0;
+    case EE_UNITS_CU_MINIMAP_REMOVE: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, -10000, -10000, theUnit->GetTileX(), theUnit->GetTileY()); return 0;
     case EE_UNITS_CU_CLEAR_CLOAKABLE: theUnit->mIsCloakable = false; return 0;
     case EE_UNITS_CU_CLEAR_CLOAKED: theUnit->mIsCloaked = false; return 0;
     case EE_UNITS_CU_SET_CAMOUFLAGE_TIMER: theUnit->mCamouflageTimer = (unsigned long)inB; return 0;
@@ -808,7 +812,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_APPROACH_ATTACH: EEApproachAttachPoint(theUnit, sCuUnused = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
     case EE_UNITS_CU_GET_POSITION: theUnit->GetPosition(sCuPosition = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
     case EE_UNITS_CU_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit, theUnit->GetStats(), &sCuPosition, &sCuDestination, &sCuPitch);
-    case EE_UNITS_CU_LINE_BLOCKED: return EEIsLineBlocked(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, &sCuBlocker, &sCuBlockTile[0], &sCuBlockTile[1]);
+    case EE_UNITS_CU_LINE_BLOCKED: return ee_units_uu_line_blocked_at(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, reinterpret_cast<uint64_t*>((&sCuBlocker)), &sCuBlockTile[0], &sCuBlockTile[1]);
     case EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE: return UFloatBits(theUnit->DistanceSquaredToTileXY((long)inB, (long)inC));
     case EE_UNITS_CU_CAN_GET_TO: return ::gContinentManager.CanGetTo(theUnit, (long)inB, (long)inC);
     case EE_UNITS_CU_IS_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
@@ -848,7 +852,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
     case EE_UNITS_CU_QUEUE_GOAL: theUnit->QueueGoal(EECuObject<EEUnitGoal>(inA), (unsigned long)inB); return 0;
     case EE_UNITS_CU_AREA_EFFECTS_SIZE: return (int64_t)theUnit->mAreaEffects.GetSize();
-    case EE_UNITS_CU_AREA_EFFECT_RADIUS: return UFloatBits(theUnit->mAreaEffects.mItems[(size_t)inB]->GetRadius());
+    case EE_UNITS_CU_AREA_EFFECT_RADIUS: return UFloatBits(ee_screens_ae_radius((uintptr_t)theUnit->mAreaEffects.mItems[(size_t)inB]));
     case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(UBitsFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
     case EE_UNITS_CU_PLAYER_ID: return theUnit->mPlayer->mPlayerID;
     case EE_UNITS_CU_AFFECTING_KIND: return theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->mTemplate->mKind;
@@ -877,7 +881,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CONTACTS_CLEAR: theUnit->mContacts.Clear(); return 0;
     case EE_UNITS_CU_CONTACTS_FIND: return (uint64_t)(uintptr_t)theUnit->mContacts.Find(theOther);
     case EE_UNITS_CU_CONTACTS_REMOVE: theUnit->mContacts.Remove(EECuObject<UListNode<EEComplexUnit*> >(inA)); return 0;
-    case EE_UNITS_CU_AFFECTING_REMOVED_FROM: theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->RemovedFrom(theUnit); return 0;
+    case EE_UNITS_CU_AFFECTING_REMOVED_FROM: ee_screens_ae_removed_from((uintptr_t)theUnit->mAffectingAreaEffects.mItems[(size_t)inB], (uintptr_t)theUnit); return 0;
     case EE_UNITS_CU_CONVERSION_IS_NONE: return UIsNone32(theUnit->mConversionEffect.mValue);
     case EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: gWorld.mEffectManager->DestroyEffect(sCuHandle = theUnit->mConversionEffect); return 0;
     case EE_UNITS_CU_SET_HOLDER_FIELD: theUnit->mHolder = theOther; return 0;
@@ -1104,7 +1108,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SET_IS_CITIZEN: theUnit->mIsCitizen = inB != 0; return 0;
     case EE_UNITS_CU_INIT_DELETABLE: theUnit->mIsDeletable = theClass->mIsDeletable; return 0;
     case EE_UNITS_CU_UPGRADE_AREA_TEMPLATE: return thePlayer->GetUpgrade(theUnit->GetUnitClass()->GetUnitType())->mAreaEffectTemplates[inB];
-    case EE_UNITS_CU_CREATE_AREA_EFFECT: return (uint64_t)(uintptr_t)gAEManager.CreateAreaEffect((long)inB, theUnit);
+    case EE_UNITS_CU_CREATE_AREA_EFFECT: return (uint64_t)(uintptr_t)(EEAreaEffect*)ee_screens_aem_create((uintptr_t)&gAEManager, (unsigned long)((long)inB), (uintptr_t)theUnit);
     case EE_UNITS_CU_AREA_EFFECTS_ADD: theUnit->mAreaEffects.Add(EECuObject<EEAreaEffect>(inA)); return 0;
     case EE_UNITS_CU_EFFECT_DEREFERENCE: EECuObject<EEAreaEffect>(inA)->Dereference(); return 0;
     case EE_UNITS_CU_CLASS_CATEGORY_OF: return theClass->mCategory;

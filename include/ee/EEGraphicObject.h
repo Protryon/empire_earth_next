@@ -143,9 +143,6 @@ public:
     // blast wave's and the shield's; null without one) (provisional name)
     // Returns the tag points of a kind on a part's model, or NULL when it has none (ee_gfx tags.rs)
     EETagPointList* GetTagPoints(unsigned long inPart, long inKind) { return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind)); }
-    // 0xd85aa: the index of inModel among the parts (0: found; 3: not) (provisional name)
-    // Finds the turret part for a model and returns its index; returns 0 when found, else 3 (preload_media.rs)
-    long FindTurretPart(GEModel* inModel, unsigned long& outIndex) { return ee_preload_find_turret_part(this, inModel, &outIndex); }
     // the part count (ICF-folded into 0x91f11, a vector size; EEUnitClass 0x2364f3) (provisional name)
     unsigned long GetNumParts() const { return this->mTurretParts.size(); }
 

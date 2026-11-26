@@ -33,15 +33,16 @@ extern "C" void ee_screenscpp_su_click_release(EEUICSelectUnits* inBox) { static
 extern "C" void ee_screenscpp_su_lasso_release(EEUICSelectUnits* inBox) { static_cast<EEALasso*>(inBox->mLasso)->Dereference(); }
 
 #include "ee/EEScreensShims.h"
+#include "rust/game/screens.h"
 // the class's ops (select_units_ops.rs; its RustOp until UI lane round 16)
 #define SUC(x) reinterpret_cast<EEUICSelectUnits*>(x)
 extern "C" uintptr_t ee_screenscpp_su_pick() { return (uintptr_t)gUnitPicker.PickUnit(gMouse->mPosition, 0); }
 extern "C" void ee_screenscpp_su_lasso_type(uintptr_t inBox, uintptr_t inUnit, int64_t inMode)
-{ static_cast<EEALasso*>(SUC(inBox)->mLasso)->SelectUnits(gU4E8F08.GetViewRectangle(), (long)inMode, reinterpret_cast<EEUnit*>(inUnit)->GetUnitClass()->mUnitType, reinterpret_cast<EEUnit*>(inUnit)->mUnitID); }
+{ ee_screens_ga_select_units(static_cast<EEALasso*>(SUC(inBox)->mLasso), &(gU4E8F08.GetViewRectangle()), (int32_t)((long)inMode), (uint32_t)(reinterpret_cast<EEUnit*>(inUnit)->GetUnitClass()->mUnitType), (int32_t)(reinterpret_cast<EEUnit*>(inUnit)->mUnitID)); }
 extern "C" void ee_screenscpp_su_unit_release(uintptr_t inUnit) { reinterpret_cast<EEUnit*>(inUnit)->Dereference(); }
 extern "C" void ee_screenscpp_su_lasso_box(uintptr_t inBox, float inA, float inB, float inC, float inD, int64_t inMode)
-{ static_cast<EEALasso*>(SUC(inBox)->mLasso)->SelectUnits(GERectangle(inA, inB, inC, inD), (long)inMode, kAnyUnitType, 0); }
-extern "C" void ee_screenscpp_su_click(uintptr_t inBox, uint32_t inMode) { static_cast<EEAMouseClick*>(SUC(inBox)->mClick)->SelectAtMouse((unsigned long)inMode); }
+{ ee_screens_ga_select_units(static_cast<EEALasso*>(SUC(inBox)->mLasso), &(GERectangle(inA, inB, inC, inD)), (int32_t)((long)inMode), (uint32_t)kAnyUnitType, (int32_t)0); }
+extern "C" void ee_screenscpp_su_click(uintptr_t inBox, uint32_t inMode) { ee_screens_ga_select_at_mouse(static_cast<EEARust*>(static_cast<EEAMouseClick*>(SUC(inBox)->mClick)), (uint32_t)((unsigned long)inMode)); }
 // the trigger tab's (EESEUICTriggerSelectUnits): the point under the mouse into the unit hack's scratch point
 extern "C" void ee_screenscpp_su_point_at(uintptr_t inBox)
 { EEPointUnitOrTile(SUC(inBox)->GetMouseLocation(), EEScratch<EETile*>(kScratchShimTile), EEScratch<GE3DPoint>(kScratchUHPoint), false); }

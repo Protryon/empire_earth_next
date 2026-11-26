@@ -115,14 +115,14 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::OptMapType: return P64(&OPT->mMapType);
     case O::OptCampaignNameLength: return OPT->mCampaignName.GetLength();
-    case O::OptGetCampaignMapName: return OPT->GetCampaignMapName(WSTR(0));
+    case O::OptGetCampaignMapName: return ee_gamecpp_options_campaign_map_name(OPT, &(WSTR(0)));
     case O::OptCopyCampaignName: OPT->mCampaignName = ((EEGameOptions*)a[0])->mCampaignName;
         break;
     case O::OptCopyScenarioName: OPT->mScenarioName = ((EEGameOptions*)a[0])->mScenarioName;
         break;
     case O::OptSetMapName: OPT->mMapName = WSTR(0);
         break;
-    case O::OptGetMapDimensions: OPT->GetMapDimensions(*(long*)a[0], *(long*)a[1]);
+    case O::OptGetMapDimensions: ee_gamecpp_options_map_dimensions(OPT, (long*)a[0], (long*)a[1]);
         break;
     case O::OptAssign: *OPT = *(EEGameOptions*)a[0];
         break;

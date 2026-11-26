@@ -185,7 +185,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         return 0;
     case EE_UNITS_PLAYER_CITIZEN_CONTAINS: return thePlayer->GetTechTree()->Get(kTechCitizen)->Contains((long)a[0]);
     case EE_UNITS_PLAYER_TECH_OBSOLETE: return thePlayer->mTechnologies->Get((long)a[0]) != NULL && thePlayer->mTechnologies->Get((long)a[0])->GetIsObsolete();
-    case EE_UNITS_PLAYER_SWAP_KIND: return gPhysics->GetUnitSwapKind(theComplex);
+    case EE_UNITS_PLAYER_SWAP_KIND: return ee_physics_unit_swap_kind(gPhysics, theComplex);
     case EE_UNITS_PLAYER_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theComplex);
     case EE_UNITS_PLAYER_STATS_RESET: thePlayer->mSavedGroups.Reset((long)a[0], (long)a[1]);
         return 0;
@@ -193,7 +193,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_ADD_TO_TOWN: return ee_units_player_areas(EEPlayerRefs(thePlayer), 0, static_cast<RTSUnit*>(theComplex));
     case EE_UNITS_PLAYER_ADD_TO_HERD: return ee_units_player_areas(EEPlayerRefs(thePlayer), 1, static_cast<RTSUnit*>(theComplex));
     case EE_UNITS_PLAYER_CIV_POWER: return gCivPowersManager.HasPower(thePlayer, (long)a[0]);
-    case EE_UNITS_PLAYER_LOG_LOST: EEGameLogUnitLost(thePlayer, theComplex);   // port: the game log (ee/EEGameLog.h)
+    case EE_UNITS_PLAYER_LOG_LOST: ee_game_log_unit_lost((uint64_t)(uintptr_t)thePlayer, (uint64_t)(uintptr_t)theComplex);   // port: the game log (ee/EEGameLog.h)
         return 0;
     case EE_UNITS_PLAYER_UNIT_NODE: return (int64_t)reinterpret_cast<uintptr_t>(theUnit->GetTechTreeNode());
     case EE_UNITS_PLAYER_REMOVE_FROM_TOWN: ee_units_player_areas(EEPlayerRefs(thePlayer), 2, static_cast<RTSUnit*>(theComplex));
@@ -243,7 +243,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_X_EVENTS_HIDE: theOther->mEvents.HideEvents(theOther);
         return 0;
     case EE_UNITS_PLAYER_X_MINIMAP: return gMiniMap != NULL;
-    case EE_UNITS_PLAYER_X_MINIMAP_REDRAW: gMiniMap->Redraw();
+    case EE_UNITS_PLAYER_X_MINIMAP_REDRAW: ee_gamecpp_minimap_redraw(gMiniMap);
         return 0;
     case EE_UNITS_PLAYER_X_STATS_LOWER: thePlayer->mSavedGroups.Lower((long)a[0], (long)a[1]);
         return 0;
@@ -263,7 +263,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2: return (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(a[0]));
     case EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1: return (long)gWorldTable.GetLongValue(EEWorldImprovementTime(a[0]));
     // the towns and herds (ee_units player_areas.rs): list a[0] (0 the towns, 1 the herds), the areas and units by address
-    case EE_UNITS_PLAYER_TOWN_UNIT: return EETown::IsTownUnit(theUnit);
+    case EE_UNITS_PLAYER_TOWN_UNIT: return ee_cp_town_is_town_unit((uint64_t)(uintptr_t)theUnit);
     case EE_UNITS_PLAYER_HERD_ANIMAL: return EEHerd::IsAnimalOnMap(theUnit);
     case EE_UNITS_PLAYER_AREA_CAN_TAKE:
         return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->CanTake(EEPlayerUnitAt(a[2])) : reinterpret_cast<EEHerd*>(a[1])->CanTake(EEPlayerUnitAt(a[2]), true);
@@ -724,6 +724,10 @@ void EEPlayer::SuggestRecomputeAllAreaEffects()
 
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
+#include "rust/game/game_log.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
+#include "rust/sim/cp.h"
 
 // The context of UpdatePlayer's operations: the player
 struct EEPlayerTickContext {
@@ -1132,9 +1136,9 @@ int32_t EEPPlayerEventList::Host(void* inList, void* inPlayer, int32_t inOp, con
         return 0;
     case EE_UNITS_EVENTS_X_SIGHT_OFF: thePlayer->RemoveSharedSightAt(EETileLocation(inEvent->x, inEvent->y));
         return 0;
-    case EE_UNITS_EVENTS_X_CELL_ON: gMiniMap->CountCellOn(inEvent->x, inEvent->y);
+    case EE_UNITS_EVENTS_X_CELL_ON: ee_gamecpp_minimap_count_cell(gMiniMap, inEvent->x, inEvent->y, true);
         return 0;
-    case EE_UNITS_EVENTS_X_CELL_OFF: gMiniMap->CountCellOff(inEvent->x, inEvent->y);
+    case EE_UNITS_EVENTS_X_CELL_OFF: ee_gamecpp_minimap_count_cell(gMiniMap, inEvent->x, inEvent->y, false);
         return 0;
     case EE_UNITS_EVENTS_X_TILE_ON: gWorld.mMap->mTerrainMesh.ReferenceTile(inEvent->x, inEvent->y);
         return 0;

@@ -72,6 +72,10 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EEStringIDs.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
+#include "rust/game/preload_media.h"
+#include "rust/sim/units.h"
 
 // EEContagionHelper.cpp's collector over complex units (its only instantiation was EECPPlacement.cpp's)
 template long EEGetUnitsInRectangle<EEAnyUnit, std::vector<EEComplexUnit*> >(const U2DRectangle<long>&, std::vector<EEComplexUnit*>&,
@@ -93,7 +97,6 @@ static const U2DPoint<long>* UUPoints(const long (*inTiles)[2]) { return reinter
 
 // TEST ONLY: the unit utilities' record (UUTL) is Rust's (ee_units uu_note.rs); the host's writes note their events
 static long UUId(const EEUnit* inUnit) { return inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2; }
-static void UUEvent(long inA, long inB = 0, long inC = 0) { ee_units_uu_note_event((int32_t)inA, (int32_t)inB, (int32_t)inC); }
 // the record's tick (the capture's state and the UUTL record itself are Rust's: uu_note.rs)
 extern "C" uint32_t ee_units_uu_host_ticks() { return gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0; }
 
@@ -275,7 +278,7 @@ extern "C" float ee_units_uu_host_sound_view(int32_t inWhich, const float (*inLo
 {
     switch (inWhich) {
     case EE_UNITS_UU_SOUND_SEEN: return UUSeenTile(::gWorld.mMap->GetTile(UMFloor((*inLocation)[0]), UMFloor((*inLocation)[1])));
-    case EE_UNITS_UU_SOUND_CAMERA_POINT: EEGetCameraPoint(*(const GE3DPoint*)*inLocation, *(GE3DPoint*)*outValues, (*outValues)[3]); return 0.0f;
+    case EE_UNITS_UU_SOUND_CAMERA_POINT: ee_gamecpp_camera_point(&(*(const GE3DPoint*)*inLocation), &(*(GE3DPoint*)*outValues), &((*outValues)[3])); return 0.0f;
     case EE_UNITS_UU_SOUND_CAMERA: ::gWorld.mTransformation.GetPosition(*(GE3DPoint*)*outValues); return 0.0f;
     case EE_UNITS_UU_SOUND_Y_CLIP: return gViewport.GetYClippingPlane();
     case EE_UNITS_UU_SOUND_ZOOM: return ::gWorld.mCameraControl.GetZoom();
@@ -346,9 +349,6 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
 
 // (the U2DPoint<long> twin of 0x648ecc is gone: one tile type)
 
-// Returns a random number in [min, max]
-// (URandomIntegers::Generate's arithmetic: ee_base random.rs)
-long EEGetRandomInt(long inMin, long inMax, URandom& inRandom) { return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&inRandom), inMin, inMax); }
 
 // (the U2DPoint<long> twin of 0x64b556 is gone: one tile type)
 
@@ -363,10 +363,6 @@ void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>&
 // Tells whether a wall blocks a tile line (diagonal steps between two pieces count); reports the last free tile
 // Whether a wall blocks the line from (inX1, inY1) to (inX2, inY2) (diagonal steps between two pieces count);
 // outX/outY the last free tile
-bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg5, long* outX, long* outY)
-{
-    return ee_units_uu_line_blocked_at(inX1, inY1, inX2, inY2, reinterpret_cast<uint64_t*>(outArg5), outX, outY);   // uu_adapt.rs
-}
 // Tells whether something on the tile line from a unit to a target blocks its shot
 // Whether something on the tile line from inUnit to inTarget blocks inUnit's shot (the shot's height runs from
 // inUnit's weapon point to the top of inTarget); outX/outY: the last tile reached (inferred)
@@ -395,7 +391,7 @@ extern "C" int64_t ee_units_lf_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_LF_WEAPON_INDEX: return (int64_t)UbObj<EEComplexUnit>(inA)->mWeaponTagPoint;
     case EE_UNITS_LF_SCALE: (*ioF)[0] = UbObj<EEComplexUnit>(inA)->mPhysicalModel.GetScale(); return 0;
     case EE_UNITS_LF_NUM_PARTS: return (int64_t)UbObj<EEModel>(inA)->GetNumParts();
-    case EE_UNITS_LF_FIND_TURRET: return UbObj<EEModel>(inA)->FindTurretPart(UbObj<EETagPointList>(inB)->GetTagPoint((unsigned long)inC)->mModel, *UbObj<unsigned long>(inD));
+    case EE_UNITS_LF_FIND_TURRET: return ee_preload_find_turret_part(UbObj<EEModel>(inA), UbObj<EETagPointList>(inB)->GetTagPoint((unsigned long)inC)->mModel, &(*UbObj<unsigned long>(inD)));
     case EE_UNITS_LF_TURRET_ANGLE: (*ioF)[0] = UbObj<EEComplexUnit>(inA)->mTurretAngles[inC]; return 0;
     case EE_UNITS_LF_LIST_POINT_AT: return UUHandle(*(UbObj<EETagPointList>(inA)->mPoints.begin() + inC));
     case EE_UNITS_LF_LIST_SIZE: return (int64_t)UbObj<EETagPointList>(inA)->mPoints.size();
@@ -619,7 +615,7 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     }
     case 14: {   // the deposit (inA the container, inB the unit, inC near, inX the amount, inY the carried load, inF the bonus)
         EEComplexUnit* theCarrier = static_cast<EEComplexUnit*>(UUUnit(inB));
-        UUEvent(inX, (long)inC, 3);   // TEST ONLY (UUTL)
+        ee_units_uu_note_event((int32_t)inX, (int32_t)((long)inC), (int32_t)3);   // TEST ONLY (UUTL)
         static_cast<EEComplexUnit*>(UUUnit(inA))->mPlayer->AddResource(theCarrier->mResourceType, inX);
         // TEST ONLY (docs/AI_RESEARCH.md §8.51, EE_AI_TRACE with EE_AI_EXP deposits): each deposit of a computer player,
         // to time a gatherer's loads (trace only: nothing here changes the game)
@@ -803,7 +799,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_START_COMMAND_OF:
         UbObj<EEComplexUnit>(inA)->StartAction(UUUnit(inB)->GetComplexUnit()->mCommand != NULL ? UUUnit(inB)->GetComplexUnit()->mCommand->mType : 0);
         return 0;
-    case EE_UNITS_UB_QUEUE_SWAP: gPhysics->QueueUnitSwap(UbObj<EEComplexUnit>(inA), UbObj<EEComplexUnit>(inB)); return 0;
+    case EE_UNITS_UB_QUEUE_SWAP: ee_physics_queue_unit_swap(gPhysics, UbObj<EEComplexUnit>(inA), UbObj<EEComplexUnit>(inB)); return 0;
     case EE_UNITS_UB_PREVIOUS_PART: return UUHandle(UbObj<EEComplexUnit>(inA)->mPreviousPart);
     case EE_UNITS_UB_GATE_REPLACED: UUUnit(inA)->GetUnitClass()->GateReplaced(UUUnit(inA), UbObj<EEComplexUnit>(inB)); return 0;
     case EE_UNITS_UB_CLEAR_ALL_GOAL_QUEUES: UbObj<EEComplexUnit>(inA)->ClearAllGoalQueues(); return 0;

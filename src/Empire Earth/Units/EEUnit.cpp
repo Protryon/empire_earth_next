@@ -36,6 +36,8 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIForest.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
@@ -91,7 +93,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_BLOOD: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_SET_INPUT: sHitInput = (long)inB; return 0;
     case EE_UNITS_EU_SET_AREA_DAMAGE: sHitAreaDamage = (long)inB; return 0;
-    case EE_UNITS_EU_APPLY_MODIFIERS: theComplex->mAffectingAreaEffects.ApplyModifiers(1, sHitInput, sHitAreaDamage, theComplex); return 0;
+    case EE_UNITS_EU_APPLY_MODIFIERS: ee_screens_ael_apply_modifiers(&theComplex->mAffectingAreaEffects, 1, &sHitInput, &sHitAreaDamage, theComplex); return 0;
     case EE_UNITS_EU_AREA_DAMAGE: return sHitAreaDamage;
     case EE_UNITS_EU_SET_DAMAGE: sHitDamage = (long)inB; return 0;
     case EE_UNITS_EU_APPLY_MORALE: theComplex->ApplyMorale(sHitAreaDamage, sHitDamage); return 0;
@@ -144,7 +146,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_IS_CURRENT_PLAYER: return theUnit->mPlayer == ::gWorld.GetCurrentPlayer();
     case EE_UNITS_EU_MINIMAP_PING: gMiniMap->Ping(GE2DPoint((float)theUnit->mTileX, (float)theUnit->mTileY)); return 0;
     case EE_UNITS_EU_SELECTED: return theUnit->mPlayer->mSelectedGroup->Contains(theComplex);
-    case EE_UNITS_EU_POST_424: gUserInterface->PostMessage424Once(); return 0;
+    case EE_UNITS_EU_POST_424: ee_screens_ui_post_icon_bar_once(gUserInterface); return 0;
     // eu_body.rs's
     case EE_UNITS_EU_REGIONS: return (uint64_t)(uintptr_t)(gWorld.mMap ? gWorld.mMap->mUnitRegions : 0);
     case EE_UNITS_EU_TILE: return (uint64_t)(uintptr_t)theUnit->mTile;
@@ -154,7 +156,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_CLEAR_COLLISION_COUNT: theComplex->mCollisionResolutionCount = 0.0f; return 0;
     case EE_UNITS_EU_CLOAKED_ENEMY: return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer());
     case EE_UNITS_EU_IS_FOUNDATION: return theUnit->IsFoundation();
-    case EE_UNITS_EU_MINIMAP_MOVE: gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
+    case EE_UNITS_EU_MINIMAP_MOVE: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
     case EE_UNITS_EU_SIGHT_MOVED: theUnit->SightMoved(theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
     case EE_UNITS_EU_CLASS_TILE_SIZE: return theUnit->mUnitClass->mTileSize;
     case EE_UNITS_EU_REGIONS_SIZE: return ee_combat_regions_size(EEEuObject<EeCombatUnitRegions>(inA));

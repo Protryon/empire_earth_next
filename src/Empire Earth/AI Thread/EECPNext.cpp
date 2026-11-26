@@ -43,6 +43,7 @@
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_*: the engine (next_game.rs), the name tables (names.rs)
 #include "rust/sim/units.h"
+#include "rust/game/game_log.h"
 
 // ---------------------------------------------------------------------------------------------------------------
 // The state (Rust's record)
@@ -134,9 +135,9 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     case EE_AI_NEXT_HOST_SET_LOCATION: ((EEComplexUnit*)(uintptr_t)a)->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)b, (float)c), true, true, false, 0.0f, false, false), 0, 0);
         return 0;
     case EE_AI_NEXT_HOST_GAME_LOG_ON:
-        return EEGameLogOn() ? 1 : 0;
+        return ee_game_log_on() ? 1 : 0;
     case EE_AI_NEXT_HOST_GAME_LOG:
-        EEGameLogLine((const char*)(uintptr_t)a);
+        ee_game_log_line((const char*)(uintptr_t)a);
         return 0;
     case EE_AI_NEXT_HOST_SIM_MODE:
         return gPlatSimMode ? 1 : 0;
@@ -198,7 +199,7 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
     case EE_AI_NEXT_HOST_COMPUTER:
         return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mComputerPlayer;
-    case EE_AI_NEXT_HOST_GAME_LOG_TICK: EEGameLogTick((unsigned long)a);
+    case EE_AI_NEXT_HOST_GAME_LOG_TICK: ee_game_log_tick((unsigned long)a);
         return 0;
     case EE_AI_NEXT_HOST_TRACE_HASH_ON:
         return gCPTraceHashOn ? 1 : 0;

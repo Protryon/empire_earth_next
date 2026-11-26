@@ -51,6 +51,7 @@
 #include "ee/EEStringIDs.h"
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
+#include "rust/game/gamecpp.h"
 
 // the location goal's host hands the unit's transformation to ee_ge's GeTransformation (the same 4x4 floats)
 static_assert(sizeof(GETransformation) == 64, "GETransformation is ee_ge's GeTransformation");
@@ -306,7 +307,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_SET_GATHERED: ObjectOf<EEComplexUnit>(inA)->SetGatheredResource(ObjectOf<EEUnit>(inB)); return 0;
     case EE_UNITS_GOAL_HOST_LAST_WAYPOINT: PointOut(ioArgs, GE3DPoint(ObjectOf<EEComplexUnit>(inA)->mWaypoints.back().mLocation)); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST: return Handle(EEFindLoadedGhost((unsigned long)inA));
-    case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT: return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
+    case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT: return Handle(static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit((unsigned long)inA)));
     case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: return EEIsLineToUnitBlocked(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), &sGoalBlocker, &sGoalBlockTile[0], &sGoalBlockTile[1]);
     // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
     case EE_UNITS_GOAL_HOST_TAKE_HIT: ObjectOf<EEUnit>(inA)->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1); return 0;

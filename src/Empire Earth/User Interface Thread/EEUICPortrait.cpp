@@ -26,6 +26,7 @@
 #include "ee/EEUICPortrait.h"
 #include "ee/EEScreensShims.h"
 #include "ee/EEStringIDs.h"
+#include "rust/game/gamecpp.h"
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text
 
@@ -52,7 +53,7 @@ extern "C" void ee_screenscpp_pt_button_acquire(uintptr_t inP) { static_cast<EEB
 extern "C" void ee_screenscpp_pt_face_texture(uintptr_t inP)
 { static_cast<GEBitmap*>(PT(inP)->mPortrait)->SetTexture(static_cast<EEButtonObject*>(PT(inP)->mButton)->GetTexture(), gScreenIndex); }
 extern "C" void ee_screenscpp_pt_face_bitmap(uintptr_t inP)
-{ static_cast<EEButtonObject*>(PT(inP)->mButton)->SetFaceBitmap(static_cast<GEBitmap*>(PT(inP)->mPortrait), PT(inP)->GetRectangle(), gScreenIndex); }
+{ ee_gamecpp_db_button_bitmap(static_cast<EEButtonObject*>(PT(inP)->mButton), true, static_cast<GEBitmap*>(PT(inP)->mPortrait), &(PT(inP)->GetRectangle()), gScreenIndex); }
 extern "C" uint64_t ee_screenscpp_pt_level(uintptr_t inP) { return (uint64_t)PT(inP)->mLevel; }
 extern "C" bool ee_screenscpp_pt_first_bar(uintptr_t inP) { return PT(inP)->mShowFirstBar; }
 extern "C" bool ee_screenscpp_pt_second_bar(uintptr_t inP) { return PT(inP)->mShowSecondBar; }

@@ -22,8 +22,6 @@ public:
     static EEGraphicEffect* Get(unsigned long inIndex);
     // (inline in the original: COMDAT 0x185a71 after its first user, EESETSETGame.cpp's GraphicEffect::Virtual14 loop)
     static unsigned long GetCount();
-    // port: the effect's table index (the count when it is not in the table: the captures')
-    static unsigned long IndexOf(const EEGraphicEffect* inEffect);
     EEGraphicEffect* GetLinkedEffect1() const { return this->mLinkedEffect1; }  // inline: 0x50225c
     EEGraphicEffect* GetLinkedEffect2() const { return this->mLinkedEffect2; }  // inline: 0x50225c
     float GetSize() const { return this->mSize; }  // inline (the hurricane copies it through the FP stack)
@@ -37,7 +35,6 @@ public:
     virtual long UnloadMedia();             // EEMedia +0x08 0xd72b6
     static long LoadTable(FSFile* inFile);  // 0xd6e9e (db\dbgfxeffects.dat)
     static void DumpIDs(FSFileSpec& inFile);    // 0xd6fe6 (fprintf to the spec's stream; EEWorld::DumpMedia)
-    EEMedia* GetMedia();                    // 0xd7074 (the graphic object, or a random one of this effect's kind)
     static void SortMediaByKind();
     void Load(bool inIsOnDemand);           // 0xd7100 (counts a use at +0x80) (provisional name)
     void Unload();

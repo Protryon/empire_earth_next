@@ -23,8 +23,6 @@ UString GetDateText();                  // 0x14ced5 (asctime of now, or "Date/ti
 // 0x14ce06: writes the save header and the game into inFile (EEAQuickSaveLoad::Virtual4 passes its memory file
 // twice) (provisional name; types inferred)
 long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, FSFile& inOther);
-// 0x14cf33: loads the game from inFile (EEAQuickSaveLoad::Virtual4) (provisional name; types inferred)
-long LoadSavedGameFile(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics);
 // loads a saved game (or scenario) by name from a directory (EESaveLoad.cpp; EEMessage.cpp and EECommandLine.cpp
 // declare it too)
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);

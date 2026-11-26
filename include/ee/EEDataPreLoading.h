@@ -33,8 +33,6 @@ public:
     void PostUnloadTechnology(long inPlayer, long inTechnology) { this->mThread->Post(0x40b, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true); }
     // 0xd4723 (0x409)
     void PostUnloadUnitClass(long inPlayer, long inUnitClass) { this->mThread->Post(0x409, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true); }
-    // 0xd473e (0x40c, then mMessageQueueDone)
-    long WaitForMessageQueue() { return (long)ee_preload_wait_for_queue(this); }
 
     TSThread* mThread;                                      // +0x04
     TSEvent* mThreadCreated;                                // +0x08

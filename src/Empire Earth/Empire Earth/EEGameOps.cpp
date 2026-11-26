@@ -41,6 +41,7 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/game/screens.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
@@ -213,7 +214,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ContagionDestroyVerify: ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper((long)a[0]), a[1]);
         break;
     case O::AeHas: return gAEManager.HasAreaEffect((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
-    case O::AeCreate: return P64(gAEManager.CreateAreaEffect((unsigned long)a[0], (EEComplexUnit*)a[1]));
+    case O::AeCreate: return P64((EEAreaEffect*)ee_screens_aem_create((uintptr_t)&gAEManager, (unsigned long)a[0], (uintptr_t)((EEComplexUnit*)a[1])));
     case O::RefDereference: ((UReferenceCounter*)(EEAreaEffect*)p)->Dereference();
         break;
     case O::UnitSetContains: return gUnitSetManager.Contains((long)a[0], (unsigned long)a[1]);
@@ -461,7 +462,7 @@ extern "C" double ee_gamecpp_f(EeGameCpp inOp, uintptr_t p, const int64_t* a, co
     case O::PhysGetRandom: return gPhysics->GetRandom();
     case O::PhysGenerate: return gPhysics->mRandom.Generate();
     case O::PhysRandomRange: return gPhysics->GetRandom(f[0], f[1]);
-    case O::AeRadius: return ((EEAreaEffect*)p)->GetRadius();
+    case O::AeRadius: return ee_screens_ae_radius((uintptr_t)((EEAreaEffect*)p));
     case O::SoVolume: return ((EESoundObject*)p)->GetVolume();
     case O::GeModelRadius: return ((GEModel*)p)->GetBoundingRadius((unsigned long)a[0]);
     case O::GfxEffectSize: return ((EEGraphicEffect*)p)->GetSize();

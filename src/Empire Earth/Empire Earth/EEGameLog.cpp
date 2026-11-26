@@ -59,6 +59,7 @@
 #include "ee/EECivilizationManager.h"
 #include <utility>
 #include "ee/EEGameLog.h"
+#include "rust/game/physics.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
@@ -312,7 +313,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcSetHitPoints: B_UN->SetHitPoints((long)a[0]);
         break;
-    case O::DcEndGame: gPhysics->EndGame(a[0] != 0);
+    case O::DcEndGame: ee_physics_end_game(gPhysics, a[0] != 0);
         break;
     case O::DcAddResource: B_PL->AddResource((long)a[0], (long)a[1]);
         break;

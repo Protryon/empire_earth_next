@@ -107,42 +107,23 @@ struct MMMapUnit {
     // rectangle: ee_app minimap.rs)
     // +0x08 0x120115 (EEMiniMap's own slot)
     virtual void RedrawRect(long inLeft, long inRight, long inBottom, long inTop) { ee_gamecpp_minimap_redraw_rect(this, inLeft, inRight, inBottom, inTop); }
-    // Copies the 64 x 64 unit layer into the world texture and relocks it for drawing
-    // 0x11e7c0 (EEUIMiniMap::CopyData calls it first; provisional name)
-    void UpdateWorldTexture() { ee_gamecpp_minimap_update_world_texture(this); }
     // Recomputes the camera's view trapezoid on the mini map (camera tilted 30 degrees, at least height 5),
     // shortening its sides to the width of its near edge (at least 32)
     // (the trapezoid: ee_gfx minimap.rs)
     // 0x11fc62 (after the camera jumps to a unit; provisional name)
     void Refresh() { ee_gamecpp_minimap_refresh(this); }
-    // Clears the unit layer and all dots, then re-reads every tile's sight and contents diagonal by diagonal (the walk:
-    // 0x11f743 (EEMMakeWorldVisible; provisional name)
-    void Redraw() { ee_gamecpp_minimap_redraw(this); }
-    // Counts one sight source off the mini map cell holding a tile and redraws the cell
-    // 0x11e83a (EEPPlayerEvent::Deactivate; provisional name)
-    void CountCellOff(long inX, long inY) { ee_gamecpp_minimap_count_cell(this, inX, inY, false); }
-    // Counts one sight source onto the mini map cell holding a tile (an unexplored cell starts at 2), redraws it
-    // 0x11e8bf (EEPPlayerEvent::Activate; provisional name)
-    void CountCellOn(long inX, long inY) { ee_gamecpp_minimap_count_cell(this, inX, inY, true); }
     // 0x11e53b / 0x11e956: a doppelganger appears at / leaves tile (inX, inY) (EEDoppelgangerManager) (provisional
     // names)
     // Adds a building's remembered image as a dot in its mini map cell; a wall also adds its next three segments
     void AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall) { ee_gamecpp_minimap_doppelganger(this, inDoppelganger, inX, inY, inIsWall, true); }
     // Removes a building image's dot from its mini map cell (and a wall's next three segments)
     void RemoveDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall) { ee_gamecpp_minimap_doppelganger(this, inDoppelganger, inX, inY, inIsWall, false); }
-    // Moves a unit's dot between mini map cells (or just updates its position within a cell); -10000 means
-    // not on the map. Classes without a mini map colour and other players' foundations get no dot
-    // 0x1203b9 (EEUnit::Fn229D73; -10000, -10000) (provisional name)
-    void MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, long inY) { ee_gamecpp_minimap_move_unit(this, inUnit, inOldX, inOldY, inX, inY); }
     // EEMiniMap.cpp's other members in address order (provisional names)
     // Attaches a map: builds the map/pixel and map/cell transformations (rotated 45 degrees, centred) and the
     // map size of one pixel, then redraws the mini map
     // (the transformations: ee_gfx minimap.rs; its translation adds are written `-x + m03` / `m13 - y`, as here)
     // 0x11eb87: the four transformations from the map's size
     void SetMap(EEMap* inMap) { ee_gamecpp_minimap_set_map(this, inMap); }
-    // Recolours every player's dots after a colour change (units in player colour, buildings in shade)
-    // 0x11fa55 (the dots take the players' current colours)
-    void Recolor() { ee_gamecpp_minimap_recolor(this); }
 
     // port: the original's dots per 0x40 x 0x40 cell (UList<MMPlayerUnit>[0x1000] at +0x0015c, UList<MMMapUnit>
     // [0x1000] at +0x0815c) and the cells' sight counts (+0x1015c) are the Rust half's (ee_app minimap.rs; the dots

@@ -15,6 +15,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEARust.h"
+#include "rust/game/gamecpp.h"
 
 // cdecl helpers (the units range 0x21048f..0x216d57; types inferred) (provisional names)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
@@ -27,7 +28,7 @@ extern "C" void ee_screenscpp_pl_gate_unhighlight(int32_t inPlayer, int32_t inWa
 { EEClearGateHighlights(gWorld.GetPlayer(inPlayer), inWallType); }
 extern "C" void ee_screenscpp_pl_ghosts_enter() { gWorld.mGhostUnitsLock->Enter(); }
 extern "C" void ee_screenscpp_pl_ghosts_leave() { gWorld.mGhostUnitsLock->Leave(); }
-extern "C" void ee_screenscpp_pl_ghosts_clear() { gWorld.ClearGhostUnits(); }
+extern "C" void ee_screenscpp_pl_ghosts_clear() { ee_gamecpp_world_clear_ghosts(&gWorld); }
 extern "C" void ee_screenscpp_pl_gate_load_media(int32_t inPlayer, EEUnitClass* inClass)
 { gWorld.GetPlayer(inPlayer)->SetUnitClassMedia(inClass->mUnitType, 0x7f); }
 extern "C" void ee_screenscpp_pl_gate_unload_media(int32_t inPlayer, EEUnitClass* inClass)

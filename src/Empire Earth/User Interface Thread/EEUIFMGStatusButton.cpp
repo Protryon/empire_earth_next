@@ -73,7 +73,7 @@ extern "C" bool ee_screenscpp_sbm_is_command(uintptr_t inButton) { return SBM(in
 extern "C" void ee_screenscpp_sbm_capture_mouse(uintptr_t inButton) { SBM(inButton)->BaseCaptureMouse(); }
 extern "C" void ee_screenscpp_sbm_base_button_down(uintptr_t inButton) { SBM(inButton)->BaseButtonDown(); }
 extern "C" uint32_t ee_screenscpp_sbm_state(uintptr_t inButton) { return (uint32_t)SBM(inButton)->GetState(); }
-extern "C" void ee_screenscpp_sbm_hot_key_up(uintptr_t inButton) { SBM(inButton)->HotKeyUp(); }
+extern "C" void ee_screenscpp_sbm_hot_key_up(uintptr_t inButton) { ee_screens_sbt_hot_key_up((uintptr_t)SBM(inButton)); }
 extern "C" void ee_screenscpp_sbm_base_tabbed_from(uintptr_t inButton) { SBM(inButton)->BaseTabbedFrom(); }
 
 // EEUIEndCinematicModeEvent's body (cpp_events.rs): ends the cinematic at its saved end time (EEMEndCinematic takes the
@@ -83,6 +83,8 @@ extern "C" void ee_screenscpp_ev_end_cinematic()
 
 // ---- the one-statement shims of ee_screens status_button_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 #define SBR(x) reinterpret_cast<EEUIFMGFormCall*>(x)
 #define SBRB(x) static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)
 #define SBRF(x) static_cast<EEUIFMainGame*>(static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)->GetForm())
@@ -181,7 +183,7 @@ extern "C" void ee_screenscpp_sbt_set_draw_icon(uintptr_t inRec, bool inDraw) { 
 extern "C" void ee_screenscpp_sbt_object_pressed_icon(uintptr_t inRec)
 { static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject)->SetPressedBitmap(static_cast<GEBitmap*>(SBRB(inRec)->mIcon), SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sbt_object_face_icon(uintptr_t inRec)
-{ static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject)->SetFaceBitmap(static_cast<GEBitmap*>(SBRB(inRec)->mIcon), SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
+{ ee_gamecpp_db_button_bitmap(static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject), true, static_cast<GEBitmap*>(SBRB(inRec)->mIcon), &(SBRB(inRec)->GetRectangle()), SBRB(inRec)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sbt_main_group_l1c(int64_t inValue)
 { gUIManager->GetMainGameForm()->mMainGroup->mL1C = (long)inValue; }
 extern "C" void ee_screenscpp_sbt_main_group_reset()

@@ -54,11 +54,6 @@ EEGameStateLoader::EEGameStateLoader(EEGameState* inState)
     this->mState = inState;
 }
 
-// Returns whether a file name ends in the scenario extension (case-insensitive)
-bool EEIsScenarioFile(const UString& inFile)
-{
-    return ee_gamecpp_is_scenario_file(inFile);   // gamecpp persist_text.rs
-}
 
 // Returns whether a scenario file is being loaded right now
 bool GetIsLoadingScenario()

@@ -737,7 +737,6 @@ extern EEPhysicsModel* gPhysicsModels[12];
 // 0x563a6c is gUnitClassTable[0xf0] (inside the table, not after it): the wall class the ghost of unit type 0x42 adds
 // three of (EEGhostUnit::Create); there is no separate gWallUnitClass extern (the readers index the table)
 
-bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg5, long* outX, long* outY);
 
 // 0x12a52e (cdecl): whether inUnit is seen by the current player (the land priest's sounds) (provisional name)
 bool EEIsSeen(EEUnit* inUnit);

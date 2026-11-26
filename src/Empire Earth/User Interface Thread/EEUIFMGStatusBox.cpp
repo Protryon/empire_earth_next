@@ -28,6 +28,7 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
+#include "rust/game/screens.h"
 
 static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);
 static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);
@@ -49,7 +50,7 @@ extern "C" bool ee_screenscpp_status_box_bar4(void* inCall) { return static_cast
 // ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
 // EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
 #define SBC(x) (*reinterpret_cast<EEUIFMGStatusBoxCall*>(x))
-#define SBX(x, i) static_cast<EEUIFMGStatusBox*>(SBC(x).mBox)->GetBoxControl(i)
+#define SBX(x, i) static_cast<UIControl*>(ee_screens_status_box_control(static_cast<const EEUIFMGStatusBox*>(static_cast<EEUIFMGStatusBox*>(SBC(x).mBox)), i))
 #define SBBAR(x, i) static_cast<EEUIFMGStatusBar*>(SBX(x, i))
 static const GEColor* const kSBBarColors[3] = {&kStatusColor3, &kStatusColor1, &kStatusColor2};
 static const char* const kSBTextureNames[4] = {"", "textures\\unit improvements_01", "textures\\unit improvements_02",

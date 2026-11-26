@@ -103,7 +103,7 @@ inline void EECombatEffectWeaponPoint(int32_t inSite, Unit* inUnit, Model* inMod
         if (inModel->GetNumParts() > 0) {
             in.kind = EE_COMBAT_WEAPON_KIND_TURRET;
             unsigned long thePart;
-            if (inModel->FindTurretPart(thePoint->mModel, thePart) == 0) {
+            if (ee_preload_find_turret_part(inModel, thePoint->mModel, &thePart) == 0) {
                 in.turret = 1;
                 in.yaw = inUnit->mTurretAngles[thePart];
             }

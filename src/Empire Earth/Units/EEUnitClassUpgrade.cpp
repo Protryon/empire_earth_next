@@ -19,6 +19,7 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEAEManager.h"
 #include "EEDatabase.h"
+#include "rust/game/screens.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
@@ -64,9 +65,9 @@ extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObj
         return 0;
     case EE_UNITS_UPGRADE_OP_BUTTON_RELEASE: static_cast<EEButtonObject*>(inObject)->Release();
         return 0;
-    case EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD: gAEManager.LoadTemplateMedia((unsigned long)(uintptr_t)inObject);
+    case EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD: ee_screens_aem_template_media((uintptr_t)&gAEManager, (unsigned long)(uintptr_t)inObject, true);
         return 0;
-    case EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD: gAEManager.UnloadTemplateMedia((unsigned long)(uintptr_t)inObject);
+    case EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD: ee_screens_aem_template_media((uintptr_t)&gAEManager, (unsigned long)(uintptr_t)inObject, false);
         return 0;
     case EE_UNITS_UPGRADE_OP_CLASS_LOAD_MEDIA: theUpgrade->mUnitClass->LoadMedia(static_cast<EEPlayer*>(inPlayer));
         return 0;

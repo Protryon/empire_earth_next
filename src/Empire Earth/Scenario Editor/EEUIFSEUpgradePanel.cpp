@@ -15,6 +15,7 @@
 #include "ee/EEUIFMGAttribute.h"
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUICPortrait.h"
+#include "rust/game/screens.h"
 // the shared empty byte string (the original references it at 0x1a4eb4; no other string has its contents)
 
 // The panel whole in Rust (ee_screens editor_tabsx.rs SeupPanel: the status box and its controls as handles; once
@@ -60,7 +61,7 @@ extern "C" int32_t ee_screenscpp_seupx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEUPX_NEW_BAR: return EESEOut(i, static_cast<UIControl*>(new EEUIFMGStatusBar((unsigned long)i[0], (unsigned long)i[1], SeupxLayout(p), 0x400, 0x300, SeupxRect(f), theForm, true, true, false)));
     case EE_SCREENS_SEUPX_NEW_ATTRIBUTE: return EESEOut(i, static_cast<UIControl*>(new EEUIFMGAttribute(gFontTahoma10, theForm, SeupxRect(f), (unsigned long)i[1], (unsigned long)i[0], GEColor(0.0f, 0.0f, 0.0f), true, 0)));
     case EE_SCREENS_SEUPX_NEW_ROW_LABEL: return EESEOut(i, static_cast<UIControl*>(new UITextLabel(UWideString(gEmptyString), gFontTahoma12, (unsigned long)i[0], GERectangle(GE2DPoint(f[0], f[1]), f[2], f[3]), theForm, 0, (unsigned long)i[1], 0)));
-    case EE_SCREENS_SEUPX_BOX_ROW: SeupxBox(p)->SetControls(i[2], static_cast<UIControl*>(p[1]), static_cast<UIControl*>(p[2]));
+    case EE_SCREENS_SEUPX_BOX_ROW: ee_screens_status_box_set_controls(SeupxBox(p), (int64_t)(long)(i[2]), static_cast<UIControl*>(p[1]), static_cast<UIControl*>(p[2]));
         return 0;
     case EE_SCREENS_SEUPX_NEW_ARMOR_LABEL: return EESEOut(i, static_cast<UIControl*>(new UITextLabel(gSefxText, gFontTahoma12, (unsigned long)i[0], GERectangle(156.0f, 634.0f, 240.0f, 650.0f), theForm, 0, (unsigned long)i[1], 0)));
     case EE_SCREENS_SEUPX_BOX_PORTRAIT: SeupxBox(p)->mC8C = SeupxAs<EEUICPortrait>(p[1]);

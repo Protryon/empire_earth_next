@@ -62,10 +62,6 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
     return ee_gamecpp_db_find_file(inPath, (const char*)inName, (void**)&outFile);
 }
 
-void EELoadRules(FSPath* inPath)
-{
-    ee_gamecpp_db_load_rules(inPath);
-}
 
 // ------------------------------------------------------------------------- round 10, lane B: the text tables' C++
 

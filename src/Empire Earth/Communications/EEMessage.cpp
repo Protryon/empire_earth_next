@@ -100,16 +100,13 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 
 #include "ee/EESaveLoad.h"
 #include <vector>
+#include "rust/game/game_log.h"
+#include "rust/sim/app.h"
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
 // (0x14cbc7 TrimAutoSaves: ee/EESaveLoad.h)
 
-// Saves the game under the request's name (the old EEMLoadOrSave::LoadOrSave; Rust: gamecpp message.rs)
-long EELoadOrSave(EEMRecord* m)
-{
-    return ee_gamecpp_msg_load_or_save(m);
-}
 
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
 // compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
@@ -121,11 +118,6 @@ EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, uns
     return (EEMRecord*)ee_gamecpp_msg_select_units(&inRectangle, inUnitType, inType);   // gamecpp msg_objs.rs
 }
 
-// Decodes a box selection's compact buffer into unit ids, replacing the list
-void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
-{
-    ee_gamecpp_msg_select_ids(inMessage, &outUnits);   // gamecpp msg_objs.rs
-}
 
 // inline (header-declared; its COMDAT 0x4c7486 follows its first user EEMSetRallyGoal::Execute): the unit can
 // attack inClass: its stats' +0xd8 is positive, and the damage table entry of inClass against this class
@@ -192,17 +184,6 @@ void EEMRecord::Execute()
     EENetMsgExecute(this, 0);
 }
 
-// (moved from EEClient.cpp in game messages round 6, unchanged: the command messages' local markers; EEClient.cpp
-// keeps the client)
-// Shows the local command markers of a group order (move, attack, target, unload) on the goal the units just
-// queued, else on the first unit whose last goal fits
-// NEAR: the original refuses vector::operator[]'s begin()/operator+ in the first loop (more inline pressure than
-// ours), mL29C compares unsigned (jb; EEUnit.h has long)
-// effects 0xb8 move, 0xb9 attack, 0xba target, 0xbb unload
-void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlayerID, long inCommand, long inGoalQueue)
-{
-    ee_gamecpp_msg_group_command(inGroup, inTarget, inPlayerID, inCommand, inGoalQueue);
-}
 
 // ------------------------------------------------------------------------- the message bodies' C++ (gamecpp message.rs)
 
@@ -297,7 +278,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::UiAddChatMsgLine: gUserInterface->AddChatLogEntry(((EEPlayer*)a[0])->mColor, ((EEPlayer*)a[0])->mName, WSTR + ((EEMRecord*)a[1])->mString, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
         break;
-    case O::GameLogChat: EEGameLogChat((unsigned long)a[0], (const char*)MSG->mString);
+    case O::GameLogChat: ee_game_log_chat((unsigned long)a[0], (const char*)MSG->mString);
         break;
     // the players
     case O::PlName: return P64(&PL->mName);
@@ -341,7 +322,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PlSetSelectedViewedUnit: PL->SetSelectedViewedUnit(PL->mViewedUnit);
         break;
-    case O::PlayForLocalSelectionSound: EEPlayForLocalPlayer(PL, ((EEComplexUnit*)a[0])->mStats->GetSelectionSound(-1));
+    case O::PlayForLocalSelectionSound: ee_gamecpp_play_for_local(PL, ((EEComplexUnit*)a[0])->mStats->GetSelectionSound(-1));
         break;
     case O::PatrolGroupSelect: ee_units_pg_select(CX->mPatrolGroup, (EEPlayer*)a[0], true);
         break;
@@ -435,7 +416,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the world, the physics, the graphics, the communications
     case O::BuildGate: EEBuildGate(*(EETileCoordinate*)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
-    case O::VotingPropose: gWorld.mVoting.Propose((unsigned short)a[0], 15);
+    case O::VotingPropose: ee_app_voting_propose(&gWorld.mVoting, (unsigned short)a[0], 15);
         break;
     case O::PhysClearF84: gPhysics->mF84 = 0.0f;
         break;
@@ -599,7 +580,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::LcBytesDelete: delete[] (unsigned char*)p;
         break;
     case O::LcMsgCodecSlots: return (int64_t)EEGameMessageCast(MCMSG)->GetCodecSlots((EeNetMsgSlot*)a[0], *(uint32_t*)a[1]);
-    case O::LcMsgSelectIDs: EESelectUnitsIDs(static_cast<EEMRecord*>(EEGameMessageCast(MCMSG)), *(std::vector<long>*)a[0]);
+    case O::LcMsgSelectIDs: ee_gamecpp_msg_select_ids(static_cast<const EEMRecord*>(static_cast<EEMRecord*>(EEGameMessageCast(MCMSG))), (std::vector<long>*)a[0]);
         break;
     case O::LcMsgBuildGame: return P64(EEMessage::BuildEEMessage((unsigned char*)a[0]));
     case O::LcMsgBuildEngine: return P64(NEMessage::BuildNEMessage((unsigned char*)a[0]));

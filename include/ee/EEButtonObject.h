@@ -44,11 +44,6 @@ public:
     static void Unload() { ee_gamecpp_db_button_unload(); }
     // Writes each button image with a non-zero reference count to a media dump file
     static void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_gamecpp_db_button_dump(&inFile); }
-    // 0xd584e (ret 0xc): sets inBitmap to this button's cell for inRectangle (EEUIBSavedGroup::SetUnit; provisional
-    // name)
-    // Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle; a button without a texture (or
-    // whose surface is not loaded: EE-SIM's textures, a scenario's information portrait) is skipped
-    void SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen) { ee_gamecpp_db_button_bitmap(this, true, inBitmap, &inRectangle, inScreen); }
     // 0xd5a2e: the same for a pressed button (EEUIFMGStatusButton::CopyData; provisional name)
     // Shows the pressed button's cell (no texel inset) on a bitmap scaled to a rectangle (no texture test)
     void SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen) { ee_gamecpp_db_button_bitmap(this, false, inBitmap, &inRectangle, inScreen); }

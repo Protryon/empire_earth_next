@@ -31,6 +31,7 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
+#include "rust/sim/app.h"
 
 // ---- EEUCBasicCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The citizens'
 // unit class: gathering (resource and storage searches), building and repairing. 0x20bcf7..0x20d571 (after
@@ -326,7 +327,7 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_CAN_CONVERT_CAPTURE: EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'N'), *EEUcpObject<EeCombatCanConvertIn>(inA), *EEUcpObject<EeCombatCanConvertOut>((uint64_t)inB)); return 0;
     case EE_UNITS_UCP_TIMER: return EEUcpTimer(theUnit, inB, f);
     case EE_UNITS_UCP_SET_TIMER: EEUcpSetTimer(theUnit, inB, inC, f); return 0;
-    case EE_UNITS_UCP_CAPTURE_ACTIVE: return EESimCaptureRecord::Active();
+    case EE_UNITS_UCP_CAPTURE_ACTIVE: return ee_app_capture_active();
     case EE_UNITS_UCP_TICK_TIME: f[0] = gPhysics->mTickTime; return 0;
     case EE_UNITS_UCP_UNITS_CLEAR: sUcpUnits.clear(); return 0;
     case EE_UNITS_UCP_UNITS_LEN: return sUcpUnits.size();

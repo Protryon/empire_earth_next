@@ -30,6 +30,7 @@
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
+#include "rust/game/gamecpp.h"
 
 // ---- EEUCProjectile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The projectile's unit
 // class (EEUCBomb derives from it and shares these slots by ICF): 0x219143..0x219c49 (after EEUCPlanetSpaceship.cpp;
@@ -105,7 +106,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_CREATE_REMAINS: theClass->CreateRemainsUnit(theUnit); break;
     case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED: theClass->HandleActionChanged(theUnit); break;
     case EE_COMBAT_SHOT_POPULATION: theUnit->mPlayer->mPopulationCount -= inArg; break;
-    case EE_COMBAT_SHOT_MINIMAP_OFF: gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, -10000, -10000); break;
+    case EE_COMBAT_SHOT_MINIMAP_OFF: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, theUnit->mTileX, theUnit->mTileY, -10000, (long)(-10000)); break;
     case EE_COMBAT_SHOT_STEP_PHYSICS: theClass->mPhysicsModel->Step(theUnit); break;
     case EE_COMBAT_SHOT_ORBITALS: theUnit->UpdateOrbitals(); break;
     case EE_COMBAT_SHOT_EFFECTS: theClass->UpdateEffects(theUnit); break;

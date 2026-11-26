@@ -41,6 +41,8 @@
 #include "ee/EEMessageCapture.h"
 #include <functional>
 #include "ee/EEGameLog.h"
+#include "rust/game/game_log.h"
+#include "rust/game/gamecpp.h"
 
 
 // chain at 0x551c28 (wrapper)
@@ -110,7 +112,7 @@ extern void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase);
 extern "C" size_t ee_units_order_log_host(uint8_t inOp, int64_t inKey, uint8_t* ioText, size_t inCapacity)
 {
     if (inOp == 2) {
-        EEGameLogLine((const char*)ioText);
+        ee_game_log_line((const char*)ioText);
         return 0;
     }
     return ee_ai_name_copy(inOp, inKey, ioText, inCapacity);   // ee_ai names_db.rs
@@ -225,7 +227,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NewExitShiftMode: return P64(new EEMRecord(kMessageExitShiftMode, {(long)a[0]}));
     case O::NewCivTimerExpired: return P64(new EEMRecord(kMessageCivTimerExpired, {(unsigned char)a[0]}));
     // the captures (TEST ONLY)
-    case O::CaptureExecuted: EEMessageCaptureExecuted(MSG);
+    case O::CaptureExecuted: ee_gamecpp_msgcap_executed(MSG);
         break;
     case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
         break;
@@ -377,7 +379,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
         break;
-    case O::LoadOrSave: return EELoadOrSave(static_cast<EEMRecord*>(MSG));
+    case O::LoadOrSave: return ee_gamecpp_msg_load_or_save(static_cast<EEMRecord*>(MSG));
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));
     case O::FilePuts: fputs((const char*)a[0], (FILE*)p);
         break;

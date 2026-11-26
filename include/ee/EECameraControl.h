@@ -52,8 +52,6 @@ public:
     void SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain) { ee_app_camera_set_location(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inLocation), inIsImmediate, inFollowTerrain); }
     // 0x1299c0: mMode = inMode, then SetZoom(mZoom)
     void SetMode(long inMode) { ee_app_camera_set_mode(EE_CAMERA_HOST, inMode); }
-    // 0x1299dc: if (!mLocked) mChanged = true
-    void SetChanged() { ee_app_camera_set_changed(this); }
     // 0x1299ed: dereferences and clears mUnitA (provisional name)
     void ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST); }
     // 0x129a04: the same for mUnitB, then resets mIsFollowingUnitB/mF0C4.. (provisional name)
@@ -80,10 +78,6 @@ public:
     void SetOffsetTurn(const GETransformation& inTransformation, bool inFlag) { ee_app_camera_set_offset_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag); }
     // the rest of the camera unit (provisional names)
     EECameraControl();
-    // 0x1277e5: appends a key unless locked (5)
-    long AddKey(const EECameraKey& inKey) { return ee_gamecpp_camera_add_key(this, &inKey); }
-    // 0x12844f: the point to look at on a unit
-    void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint) { ee_gamecpp_camera_unit_point(inUnit, &outPoint); }
     void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation) { ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation)); }
     // 0x1286fa: plays the key list
     void StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }

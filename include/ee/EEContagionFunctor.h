@@ -29,10 +29,6 @@ public:
     bool CanInfect(EEUnit* inUnit);         // 0xb66f8 (EEContagionManager.cpp) (provisional name)
     // the discrete updates of the calamity in this helper update (0xb6c7c, 0xb6eae, 0xb6ff2)
     void Update(float inElapsedTime, EECalamity* inCalamity) { ee_gamecpp_functor_update(this, inElapsedTime, inCalamity); }
-    // a unit was infected
-    void Infect(EEUnit* inUnit, EECalamity* inCalamity) { ee_gamecpp_functor_infect(this, inUnit, inCalamity); }
-    // a unit was cured
-    void Cure(EEUnit* inUnit, EECalamity* inCalamity) { ee_gamecpp_functor_cure(this, inUnit, inCalamity); }
     // once per infected unit and update
     void Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity) { ee_gamecpp_functor_apply(this, inUnit, inElapsedTime, inCalamity); }
 

@@ -58,6 +58,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECivPowersManager.h"
 #include "rust/sim/units.h"   // ee_units_lists_len
+#include "rust/game/gamecpp.h"
 
 // the civilization file being saved or loaded (EECBCivilizationFiles.cpp's file spec 0x565518: EELoadCivilization
 // shares it)
@@ -216,7 +217,7 @@ extern "C" void ee_screenscpp_cbh_set_civ_locked(bool inValue)
 { gWorld.GetCurrentPlayer()->mCivilizationLocked = inValue; }
 extern "C" bool ee_screenscpp_cbh_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_cbh_can_buy() { return gWorld.mGameOptions.CanBuyCivilization(); }
-extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(EEScratch<UWideString>(kScratchCBString)); }
+extern "C" bool ee_screenscpp_cbh_campaign_name() { return ee_gamecpp_options_campaign_map_name(&gWorld.mGameOptions, &(EEScratch<UWideString>(kScratchCBString))); }
 extern "C" bool ee_screenscpp_cbh_custom_civs() { return gWorld.mGameOptions.mAllowCustomCivs; }
 extern "C" uint32_t ee_screenscpp_cbh_sound_load(EeScreensShimText inName)
 { return (uint32_t)gSoundManager->Load(EEShimString(inName), 0, 1); }

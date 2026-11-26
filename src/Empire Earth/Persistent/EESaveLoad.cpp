@@ -67,12 +67,6 @@ long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, 
     return ee_gamecpp_ps_write_save(&inName, inTime, &inFile, &inOther);
 }
 
-// Validates and loads a saved game file with the sound muted (multiplayer reload or into the game state),
-// optionally resuming the graphics after; returns 9 when the file is not a valid save
-long LoadSavedGameFile(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics)
-{
-    return ee_gamecpp_ps_load_saved_game_file(&inFile, inArg2, inQuiet, inResumeGraphics);
-}
 
 // Opens and validates a saved game from a directory and loads it into the game state with the sound muted,
 // optionally resuming the graphics after; returns the first error

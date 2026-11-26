@@ -27,6 +27,7 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "rust/sim/cp.h"
+#include "rust/game/screens.h"
 
 static uint64_t EECPRCHandle(const void* inObject)
 {
@@ -63,11 +64,11 @@ extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return (int64_t)EECPRCHandle(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))->mAreaEffects.mItems[(size_t)v[0]]);
     case EE_CP_CENTER_EFFECT_KIND:
         return theEffect->mKind;
-    case EE_CP_CENTER_EFFECT_RADIUS: io->f[0] = theEffect->GetRadius();
+    case EE_CP_CENTER_EFFECT_RADIUS: io->f[0] = ee_screens_ae_radius((uintptr_t)theEffect);
         return 0;
     case EE_CP_CENTER_EFFECT_DIRTY: theEffect->MarkDirty();
         return 0;
-    case EE_CP_CENTER_EFFECT_RECOUNT: theEffect->Recount(0);
+    case EE_CP_CENTER_EFFECT_RECOUNT: ee_screens_ae_recount((uintptr_t)theEffect, (float)0);
         return 0;
     case EE_CP_CENTER_EFFECT_LEVEL:
         return theEffect->GetLevel();

@@ -52,9 +52,6 @@ public:
     bool mIsEnabled;                        // +0x58 (= false)
     // Advances the storms and the wind, clears a finished state and schedules the next weather step by game speed
     void Step(unsigned long inTime) { ee_gamecpp_env_step(this, inTime); }
-    // EEEnvironmentManager.cpp's other members (provisional names)
-    // Returns whether a tile lies inside a storm: rain or hurricane storms and/or snow or blizzard storms, as asked
-    bool IsInStorm(const U2DPoint<long>& inPoint, bool inTypes13, bool inTypes24) { return ee_gamecpp_env_is_in_storm(this, &inPoint, inTypes13, inTypes24); }
     // (DeleteStorms, UpdateStorms, UpdateWind: ee_game gamecpp weather.rs)
     // inline (out-of-line COMDAT 0x15439f at the end of EEPhysics.cpp, its first user UpdateWeather passes mLD0; unsigned: ja)
     // Provisional name

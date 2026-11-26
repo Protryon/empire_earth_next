@@ -59,6 +59,9 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/preload_media.h"
+#include "rust/game/screens.h"
 
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
@@ -264,15 +267,15 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_ST_CINEMATIC_INTERVAL: return ::gWorld.mInCinematic ? 1 : 0;
     case EE_UNITS_CLS_ST_POWER_INTERVAL: return EEGetRules().mCombat.mPowerRegenerationInterval;
     case EE_UNITS_CLS_ST_CLOAKED_ENEMY: return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer()));
-    case EE_UNITS_CLS_ST_MINI_MAP: gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000); return 0;
-    case EE_UNITS_CLS_ST_MINI_MAP_SHOW: gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY()); return 0;
+    case EE_UNITS_CLS_ST_MINI_MAP: ee_gamecpp_minimap_move_unit(gMiniMap, inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000); return 0;
+    case EE_UNITS_CLS_ST_MINI_MAP_SHOW: ee_gamecpp_minimap_move_unit(gMiniMap, inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY()); return 0;
     case EE_UNITS_CLS_ST_CHAIN: inUnit->SetCloakableChain(inD != 0); return 0;
     case EE_UNITS_CLS_ST_CLOAKED_CHAIN: inUnit->SetCloakedChain(inD != 0); return 0;
     case EE_UNITS_CLS_ST_OPACITY_CHAIN: inUnit->SetOpacityChain(io->f); return 0;
     case EE_UNITS_CLS_ST_CLOAK_DETECTION: ((EEUnitClass*)(uintptr_t)inB)->UpdateCloakDetection(inUnit); return 0;
     case EE_UNITS_CLS_ST_HAS_AREA_CLOAK: return inUnit->HasEffect(8);
     case EE_UNITS_CLS_ST_RESET_MODIFIERS: sMvInput = sMvRadius = 0; return 0;
-    case EE_UNITS_CLS_ST_AREA_CLOAK: inUnit->mAffectingAreaEffects.ApplyModifiers(3, sMvInput, sMvRadius, inUnit); return 0;
+    case EE_UNITS_CLS_ST_AREA_CLOAK: ee_screens_ael_apply_modifiers(&inUnit->mAffectingAreaEffects, 3, &sMvInput, &sMvRadius, inUnit); return 0;
     case EE_UNITS_CLS_ST_MODIFIER_RADIUS: return sMvRadius;
     case EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: io->f = gWorldTable.GetFloatValue(kWorldCamouflageTiming); return 0;
     // round 9 (cls_host.rs EE_UNITS_CLS_R_*: the class bodies' compound reads split; b the object)
@@ -781,7 +784,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CLEAR_SPECIAL: theUnit->mIsSpecialAttack = false; return 0;
     case EE_UNITS_UC_CLASS_OF: return EEObj(theOther->GetUnitClass());
     case EE_UNITS_UC_MOVE_PASSENGERS: EEMovePassengers(theOther, theUnit, false); return 0;
-    case EE_UNITS_UC_FIND_TURRET_PART: return theUnit->GetModel()->FindTurretPart(theUnit->GetModel()->mTagPoints[theUnit->GetAnimation()]->GetTagPoint(theUnit->mWeaponTagPoint)->mModel, sUcPart);
+    case EE_UNITS_UC_FIND_TURRET_PART: return ee_preload_find_turret_part(theUnit->GetModel(), theUnit->GetModel()->mTagPoints[theUnit->GetAnimation()]->GetTagPoint(theUnit->mWeaponTagPoint)->mModel, &sUcPart);
     case EE_UNITS_UC_TURRET_PART: return sUcPart;
     case EE_UNITS_UC_TURRET_ANGLE: f[0] = theUnit->mTurretAngles[inB]; return 0;
     case EE_UNITS_UC_DEATH_CLASS: return EEObj(theClass->mDeathClass);
@@ -841,7 +844,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_MODEL_TAGS: return EEObj(theUnit->GetModel()->GetTagPoints((unsigned long)inB, (long)inC));
     case EE_UNITS_UC_TIME_OF_DAY: f[0] = gWorld.mTimeOfDay; return 0;
     case EE_UNITS_UC_TILE_TERRAIN: return EEUcObject<RTSTile>(inA)->mTerrainType;
-    case EE_UNITS_UC_IN_STORM: return gWorld.mEnvironmentManager->IsInStorm(U2DPoint<long>(theUnit->GetTileX(), theUnit->GetTileY()), false, true);
+    case EE_UNITS_UC_IN_STORM: return ee_gamecpp_env_is_in_storm(gWorld.mEnvironmentManager, &(U2DPoint<long>(theUnit->GetTileX(), theUnit->GetTileY())), false, true);
     case EE_UNITS_UC_IS_SEEN: return EEIsSeen(theUnit);
     case EE_UNITS_UC_HORSE_BREATH: gWorld.mEffectManager->CreateEffectBetweenUnits(theUnit, theUnit, EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits), NULL); return 0;
     case EE_UNITS_UC_MODEL_SOUNDS1_AT: return EEObj(theUnit->GetModel()->mSounds1[inB]);

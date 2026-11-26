@@ -188,11 +188,6 @@ void EEWorld::RecordStatistics()
     ee_gamecpp_world_record_statistics((uintptr_t)this);
 }
 
-// Applies the queued unit activations and deactivations to the list of units updated every tick
-void EEWorld::UpdateActiveUnits()
-{
-    ee_gamecpp_world_update_active();   // (gamecpp world.rs: QueueBornDeactivations, then the lists' update)
-}
 
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
 void EEWorld::RemoveShareBonus()
@@ -400,7 +395,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StOptions: return P64(static_cast<EeAppOptionsFields*>(&ST->mGameOptions));
     case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gWorld.mLobbyOptions));
     case O::LobbyCampaignNameLength: return gWorld.mLobbyOptions.mCampaignName.GetLength();
-    case O::LobbyCampaignMapName: return gWorld.mLobbyOptions.GetCampaignMapName(*(UWideString*)p);
+    case O::LobbyCampaignMapName: return ee_gamecpp_options_campaign_map_name(&gWorld.mLobbyOptions, (UWideString*)p);
     case O::StIsLoadedGame: return P64(&ST->mIsLoadedGame);
     case O::StInScenarioEditor: return P64(&ST->mInScenarioEditor);
     case O::StRandomSeed: return P64(&ST->mRandomSeed);

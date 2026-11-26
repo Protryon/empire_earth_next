@@ -42,6 +42,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
 #include "ee/EECombatGoals.h"
+#include "rust/game/gamecpp.h"
 
 static EEUnit* UnitOf(uint32_t inID) { return EEUnitHandleResolved<EEUnit>(inID); }
 static EEComplexUnit* ComplexOf(uint32_t inID) { return EEUnitHandleResolved<EEComplexUnit>(inID); }
@@ -63,7 +64,7 @@ extern "C" void ee_units_host_play_acknowledgement(void* inPlayer, void* inGroup
 
 extern "C" void ee_units_host_send_group_command(void* inGroup, uint32_t inTarget, void* inPlayer, int32_t inCommand, int32_t inQueue)
 {
-    EESendGroupCommand(static_cast<EEGroup*>(inGroup), inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL, static_cast<EEPlayer*>(inPlayer)->mPlayerID, inCommand, inQueue);
+    ee_gamecpp_msg_group_command(static_cast<EEGroup*>(inGroup), inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL, static_cast<EEPlayer*>(inPlayer)->mPlayerID, inCommand, inQueue);
 }
 
 extern "C" void ee_units_host_acknowledge_unit(void* inPlayer, uint32_t inUnit)

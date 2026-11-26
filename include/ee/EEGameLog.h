@@ -27,18 +27,7 @@
 class EEPlayer;
 class EEUnit;
 
-// (the plain forwarders are inline: their callers name ee_game_log, not EEGameLog.cpp; PORT_LEARNINGS "Cycle cuts")
-inline bool EEGameLogOn() { return ee_game_log_on(); }      // a game log is open
-// every physics tick (EEArtificialIntelligence::Update)
-inline void EEGameLogTick(unsigned long inGameTime) { ee_game_log_tick(inGameTime); }
-// a whole line, newline included (the AI trace)
-inline void EEGameLogLine(const char* inText) { ee_game_log_line(inText); }
 // EEPlayer::AddResource (NULL: none; out of line: ee/EEPlayer.h declares it without this header)
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);
-// EEPlayer::UnitTaken (not swapped; a unit without a class is not counted)
-inline void EEGameLogUnitLost(EEPlayer* inPlayer, EEUnit* inUnit)
-    { ee_game_log_unit_lost((uint64_t)(uintptr_t)inPlayer, (uint64_t)(uintptr_t)inUnit); }
-// EEMInGameChat::Execute: a chat line (notes while playing)
-inline void EEGameLogChat(unsigned long inPlayer, const char* inText) { ee_game_log_chat(inPlayer, inText); }
 
 #endif

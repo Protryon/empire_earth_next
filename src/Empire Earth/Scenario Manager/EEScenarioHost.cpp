@@ -29,6 +29,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+#include "rust/sim/app.h"
 
 namespace {
 
@@ -56,7 +57,7 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;
-    case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0) : -1;
+    case EE_SCENARIO_READ_CAPTURE_SEED: return ee_app_capture_active() ? ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0) : -1;
     case EE_SCENARIO_READ_CONTINENT: return gContinentManager.GetContinentID(inA, inB);
     case EE_SCENARIO_READ_TOWN_COUNT: return gWorld.GetPlayer(inA)->GetNumTowns();
     case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->GetTown(inB)->HullContains(U2DPoint<long>(inC, inD));

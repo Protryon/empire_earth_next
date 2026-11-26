@@ -27,6 +27,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESEARust.h"
+#include "rust/game/screens.h"
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)
@@ -102,7 +103,7 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_DEREFERENCE: reinterpret_cast<UReferenceCounter*>(p[1])->Dereference();
         return 0;
-    case EE_SCREENS_SELTX_SHOW_LOADED: gUserInterface->ShowLoadedObject(reinterpret_cast<UReferenceCounter*>(p[1]));
+    case EE_SCREENS_SELTX_SHOW_LOADED: ee_screens_ui_show_loaded(gUserInterface, reinterpret_cast<UReferenceCounter*>(p[1]));
         return 0;
     case EE_SCREENS_SELTX_QUEUE_DONE: T(p)->mMessageQueueDone->Set();
         return 0;
