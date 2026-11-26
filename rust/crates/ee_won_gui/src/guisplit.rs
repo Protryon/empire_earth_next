@@ -74,6 +74,14 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
                 return r;
             }
         }
+        if which == EeWonGuiSplitHost::Text {
+            // (the segments' members, the link and the copy: R6 WON GUI round 40; the clipboard the C++ host's)
+            // SAFETY: as above
+            let area = |op: Op, a: isize| unsafe { host(comp, op, a, 0, 0, 0) };
+            if let Some(r) = crate::gamewin::text_host_op(op, a, b, c, &area) {
+                return r;
+            }
+        }
         if matches!(which, EeWonGuiSplitHost::List | EeWonGuiSplitHost::Text) {
             if let Some(r) = crate::gamewin::list_host_op(comp as isize, op, a, b, c, d) {
                 return r;

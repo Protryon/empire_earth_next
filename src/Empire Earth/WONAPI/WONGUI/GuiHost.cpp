@@ -23,6 +23,7 @@
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guictor.h"
 #include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/gamewin.h" // ee_won_text_seg_register
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/guitext.h"
@@ -86,26 +87,10 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     switch (op) {
     // (the fields, ScrollTranslate and the segments' references are gamewin.rs list_host_op's in the game)
     case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
-    // LinkActivated is guisplit.rs's over these two (R6 WON round 33)
-    case Op::TextSetLinkParam: t->mLinkParam = Seg(a)->GetLinkParam(); return 0;
+    // LinkActivated is guisplit.rs's over these two (R6 WON round 33); a segment's members, a link's state and the
+    // copy's text are gamewin.rs text_host_op's in the game (R6 WON GUI round 40)
     case Op::TextDeliverLinkEvent: t->DeliverEvent(TextLinkActivatedEvent(t, Seg(a)), false); return 0;
-    case Op::SelTextAppend: t->mSelText.append(Seg(a)->mText, (unsigned short)b, (unsigned short)c); return 0;
-    case Op::SelTextBreak: t->mSelText.append("\r\n"); return 0;
-    case Op::SelTextCopy: Clipboard::Set(t->mSelText); t->mSelText.erase(); return 0;
-    case Op::SegLineBreak: return Seg(a)->mLineBreak ? 1 : 0;
-    case Op::SegLength: return Seg(a)->mText.length();
-    case Op::SegFontStringWidth: return Seg(a)->mFont->GetStringWidth(Seg(a)->mText);
-    case Op::SegFontHeight: return Seg(a)->mFont->GetHeight();
-    case Op::SegFontAscent: return Seg(a)->mFont->GetAscent();
-    case Op::SegStringWidth: return Seg(a)->mFont->GetStringWidth(Seg(a)->mText, (unsigned short)b, (unsigned short)c);
-    case Op::SegCharWidth: return Seg(a)->mFont->GetCharacterWidth(Seg(a)->mText[(int)b]);
-    case Op::SegTextTake:
-        ee_won_gui_sink_units((void*)b, Seg(a)->mText.mData->mText, Seg(a)->mText.length(), sizeof(wchar_t));
-        return 0;
     case Op::SegIsLink: return Seg(a)->IsLink() ? 1 : 0;
-    case Op::SegPressed: Seg(a)->Pressed(); return 0;
-    case Op::SegReleased: return Seg(a)->Released() ? 1 : 0;
-    case Op::SegColor: return Seg(a)->mColor;
     case Op::TextDrawSeg: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(Seg(c)->mFont.get(), &Seg(c)->mText), WONDrawNoCall()); return 0;
     // the constructor's statements (guictor.rs)
     case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
@@ -117,10 +102,6 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::CtorPads: t->SetPads((int)a,(int)a,(int)a,(int)a); return 0;
     case Op::CtorReset: t->Reset(false); return 0;
     case Op::SegNew: return (intptr_t)new TextSegment;
-    case Op::SegSetText: Seg(a)->mText.mData=((const GUIString*)b)->mData; return 0;
-    case Op::SegSetColor: Seg(a)->mColor=(int)b; return 0;
-    case Op::SegSetFont: Seg(a)->mFont=(Font*)b; return 0;
-    case Op::SegSetLineBreak: Seg(a)->mLineBreak=b!=0; return 0;
     case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
     case Op::TextAddPart: t->AddSegment(((const GUIString*)a)->substr((unsigned short)b, (unsigned short)c), d != 0); return 0;
     default: return ComponentOp(t, op, a, b);
@@ -146,19 +127,19 @@ void TextArea::AddSegment(const GUIString& text,bool lineBreak)
 // Appends a text segment in the given colour and the area's font (the body at 0x00713c80)
 void TextArea::AddSegment(const GUIString& text,int color,bool lineBreak)
 {
-    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, this->mFont.get(), lineBreak);
+    ee_won_gui_add_segment(this, ee_won_gui_text_game, &text, color, this->mFont.get(), lineBreak);
 }
 // Appends a text segment in the given colour and font (the body at 0x00713da0)
 void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBreak)
 {
-    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, font, lineBreak);
+    ee_won_gui_add_segment(this, ee_won_gui_text_game, &text, color, font, lineBreak);
 }
 
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
 // only when lineBreak is set
 void TextArea::AddFormatedText(const GUIString& text,bool lineBreak)
 {
-    ee_won_gui_add_formatted(this,ee_won_guicpp_text_call,&text,text.mData->mText,text.length(),sizeof(wchar_t),lineBreak);
+    ee_won_gui_add_formatted(this,ee_won_gui_text_game,&text,text.mData->mText,text.length(),sizeof(wchar_t),lineBreak);
 }
 }
 
@@ -680,6 +661,14 @@ void RectangleComponent3D::Paint(Graphics &g)
     ee_won_gui_split_register(EeWonGuiSplitHost::Label, ee_won_guicpp_label_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::Split, ee_won_guicpp_split_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::List, ee_won_guicpp_list_call), true);
+// where the Rust area reads a segment's members (gamewin.rs text_host_op, R6 WON GUI round 40)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonSegAt kSegAt = {offsetof(TextSegment, mText), offsetof(TextSegment, mColor), offsetof(TextSegment, mFont),
+    offsetof(TextSegment, mLineBreak), offsetof(TextLink, mPressed), offsetof(TextLink, mDownColor),
+    offsetof(TextLink, mNormalColor), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+[[maybe_unused]] static const bool sSegAt = (ee_won_text_seg_register(&kSegAt), true);
 
 // ---- TextFormat.cpp until R6 WON GUI round 39
 // Formatted text for text areas: expands <n>, <cN>, <fN>, <sN> and <lN> commands
@@ -703,35 +692,6 @@ void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
     EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
     ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
 }
-}
-
-// ---- TextLinkState.cpp until R6 WON GUI round 37
-// Text link segments: construction and pressed state
-namespace WONAPI {
-// Creates an unpressed link that turns red while pressed (emitted at 0x007114f0)
-TextLink::TextLink() : mPressed(false), mDownColor(0xff0000) {}
-// Returns the parameter delivered when the link is activated
-const GUIString& TextLink::GetLinkParam() { return this->mLinkParam; }
-// Marks the link pressed and switches it to its pressed colour, remembering the normal colour
-void TextLink::Pressed()
-{
-    this->mPressed=true;
-    this->mNormalColor=this->mColor;
-    this->mColor=this->mDownColor;
-}
-// Restores the normal colour of a pressed link; returns whether it was pressed
-bool TextLink::Released()
-{
-    if(this->mPressed) {
-        this->mColor=this->mNormalColor;
-        this->mPressed=false;
-        return true;
-    }
-    return false;
-}
-// Returns true: a text link is a link (the linker folds this body into the identical one at
-// 0x006f30d0)
-bool TextLink::IsLink() { return true; }
 }
 
 // ---- BrowserComponent.cpp until R6 WON GUI round 39

@@ -204,7 +204,9 @@ CHECKS = [
               # R6 WON GUI round 37: a game window's and the manager's own Rust parts (gamewin.rs)
               [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("win_op", "wm_ref_op")] +
               # R6 WON GUI round 38: the list and text areas' scroll-pane and Component statements, the children's, in the game
-              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("list_host_op", "child_op")],
+              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("list_host_op", "child_op")] +
+              # R6 WON GUI round 40: the text area's segments, its link and its copy, in the game
+              [(RS / "ee_won_gui" / "src" / "gamewin.rs", "text_host_op")],
          allowed={}),
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
     # the front end's UI-thread action (R6 WON lobby and network round 37: wonaction.rs; ee/EEAWonNetHost.inl)
