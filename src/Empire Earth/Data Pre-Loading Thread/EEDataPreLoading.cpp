@@ -58,7 +58,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
         break;
     case O::Player: return P64(gWorld.mPlayers[a[0]]);
     case O::Class: return P64(gUnitClassTable[a[0]]);
-    case O::Technology: return P64(PL->mTechnologies->Get((long)a[0]));
     case O::ClassUnitType: return ((EEUnitClass*)p)->mUnitType;
     case O::SetUnitClassMedia: PL->SetUnitClassMedia((long)a[0], 0x7f);
         break;
@@ -67,10 +66,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::UnloadUnitClassMedia: PL->UnloadUnitClassMedia((long)a[0]);
         break;
     case O::UnloadUnitClassButtons: PL->UnloadUnitClassButtons((long)a[0]);
-        break;
-    case O::TechLoadMedia: ((EETechTreeNode*)p)->LoadMedia((EEPlayer*)a[0]);
-        break;
-    case O::TechUnloadMedia: ((EETechTreeNode*)p)->UnloadMedia((EEPlayer*)a[0]);
         break;
     // the game's load
     case O::NewOptions: return P64(new EEGameOptions(gGameOptions));

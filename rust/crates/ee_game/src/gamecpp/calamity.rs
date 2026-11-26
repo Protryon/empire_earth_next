@@ -870,7 +870,7 @@ fn bomb_disable(kl: P, c: P) {
     }
     set_disabled(cx, true, 0x1c);
     let node = hp(O::UnTechNode, cx, &[]);
-    if node != 0 && h(O::NodeDataKind, node, &[]) == 4 {
+    if node != 0 && crate::tech_tree::objects::data_kind(node) == 4 {
         h(O::PlRemoveWonder, unit_player(cx), &[pa(cx)]);
     }
     if ucf(unit_class(target_unit)).mCategory as u64 != k::CAL_C_UNIT_CATEGORY_GATE {
@@ -1077,13 +1077,19 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         set_disabled(complex(caster_unit), false, 0);
     } else if is(kind::CAL_K_CONSCRIPTION, 1) {
         let player = unit_player(caster_unit);
-        let tech = hp(O::PlTechnology, player, &[k::CAL_C_TECH_CONSCRIPTION_SPELL]);
+        let tech = crate::tech_tree::objects::get(
+            crate::tech_tree::objects::player_tree(player),
+            k::CAL_C_TECH_CONSCRIPTION_SPELL as std::ffi::c_long,
+        );
         let unit_type = ucf(unit_class(caster_unit)).mUnitType as i64;
         out.ok = h(O::PlCanAfford, player, &[pa(tech), unit_type, 1]) != 0;
     } else if is(kind::CAL_K_CONSCRIPTION, 2) {
         let target_cx = complex(target_unit);
         let player = unit_player(caster_unit);
-        let tech = hp(O::PlTechnology, player, &[k::CAL_C_TECH_CONSCRIPTION_SPELL]);
+        let tech = crate::tech_tree::objects::get(
+            crate::tech_tree::objects::player_tree(player),
+            k::CAL_C_TECH_CONSCRIPTION_SPELL as std::ffi::c_long,
+        );
         let unit_type = ucf(unit_class(caster_unit)).mUnitType as i64;
         hf(O::PlPay, player, &[pa(tech), unit_type], &[1.0]);
         h(O::CxPlayEffect, target_cx, &[0x138d]);
@@ -1099,7 +1105,7 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         set_disabled(complex(target_unit), false, 0);
         h(O::UcActionChanged, unit_class(target_unit), &[pa(complex(target_unit))]);
         let node = hp(O::UnTechNode, target_unit, &[]);
-        out.value = if node != 0 { h(O::NodeDataKind, node, &[]) as i32 } else { -1 };
+        out.value = if node != 0 { crate::tech_tree::objects::data_kind(node) as i32 } else { -1 };
     } else if is(kind::CAL_K_LOGIC_BOMB, 3) {
         h(O::PlAddWonder, unit_player(target_unit), &[pa(complex(target_unit)), 0]);
     } else if is(kind::CAL_K_DROP_OBJECT, 1) {

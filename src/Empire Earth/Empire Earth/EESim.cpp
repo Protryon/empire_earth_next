@@ -151,8 +151,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
 
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(false, true);
         break;
-    case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
-    case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
     case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
         return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
             {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, UWideString(s)})));
@@ -228,7 +226,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmActiveUnitId: return EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0])->mUnitID;
     case O::DmPlPop: return (long)PL->mPopulationCount;
     case O::DmPlEog: return (long)PL->mEndOfGameCount;
-    case O::DmPlEpoch: return PL->mTechnologies ? (long)PL->mTechnologies->mCurrentEpoch : -1L;
     case O::DmTownId: return (long)((EETown*)p)->mTownID;
     case O::DmTownUnits: return (long)((EETown*)p)->mNumUnits;
     case O::DmTownPatrol: return P64(((EETown*)p)->mPatrolGroup);

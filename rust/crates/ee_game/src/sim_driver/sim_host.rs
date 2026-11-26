@@ -255,7 +255,7 @@ pub fn prepare_human(human_out: bool) {
         return;
     }
     for i in 1..h(O::NumPlayers, 0, &[]) {
-        let other = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
+        let other = crate::tech_tree::objects::world_player(i);
         if other == 0 || other == human {
             continue;
         }
@@ -334,7 +334,7 @@ fn world(id: u32) -> ee_data::tables::EeDataWorldEntry {
 
 /// The player's first living building (0: none).
 fn first_building(player: c_ulong) -> usize {
-    let p = gc::h(gc::O::TbWorldPlayer, 0, &[player as i64]) as usize;
+    let p = crate::tech_tree::objects::world_player(player as i64);
     let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
         if gc::h(gc::O::UnComplex, u, &[]) != 0
@@ -387,7 +387,7 @@ pub fn volcano_boulders() -> Vec<c_ulong> {
     let boulder = EEUnitTypeID::kUnitTypeVolcanoProjectile as i64;
     let mut out = Vec::new();
     for i in 0..h(O::NumPlayers, 0, &[]) {
-        let p = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
+        let p = crate::tech_tree::objects::world_player(i);
         let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
         while u != 0 {
             if h(O::UnitType, u, &[]) == boulder {
@@ -489,13 +489,18 @@ pub fn engine_ids() -> Vec<String> {
 
 /// A unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource.
 pub fn unit_value(player: u64, technology: c_long, unit_type: c_ulong) -> c_long {
-    let tree = gc::h(gc::O::PlTechnologies, player as usize, &[]) as usize;
-    let node = if tree != 0 { gc::h(gc::O::PwTreeGet, tree, &[technology as i64]) as usize } else { 0 };
+    let tree = crate::tech_tree::objects::player_tree(player as usize);
+    let node = if tree != 0 { crate::tech_tree::objects::get(tree, technology) } else { 0 };
     let mut value: c_long = 0;
-    if node != 0 && h(O::NodeData, node, &[]) != 0 {
+    if node != 0 && !crate::tech_tree::objects::node_data(node).is_null() {
         for r in 2..=6 {
             // kResourceFood .. kResourceIron
-            value = value.wrapping_add(h(O::NodeCost, node, &[r, unit_type as i64]) as c_long);
+            value = value.wrapping_add(crate::tech_tree::objects::ee_gamecpp_tech_obj_cost(
+                node as *mut std::ffi::c_void,
+                r as std::ffi::c_long,
+                unit_type as std::ffi::c_long,
+                1.0,
+            ));
         }
     }
     value
@@ -586,7 +591,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
 fn list_search_sweep() {
     capture_only(tag(b"CBSL"));
     for p in 1..h(O::NumPlayers, 0, &[]) {
-        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
+        let player = crate::tech_tree::objects::world_player(p);
         if player == 0 {
             continue;
         }
@@ -640,7 +645,7 @@ fn missile_sweep() {
     }
     let mut armed: Vec<Vec<usize>> = Vec::new();
     for p in 1..h(O::NumPlayers, 0, &[]) {
-        let all = armed_units(gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize, true, false);
+        let all = armed_units(crate::tech_tree::objects::world_player(p), true, false);
         if !all.is_empty() {
             armed.push(all);
         }

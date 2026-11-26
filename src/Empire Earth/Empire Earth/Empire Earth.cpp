@@ -911,8 +911,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::WorldTableClear: gWorldTable.Clear();
         break;
-    case O::TechTreeUnloadAll: gTechTree.UnloadAll();
-        break;
     case O::CalamityManagerDestroy: USingleton<EECalamityManager>::DestroyInstance();
         break;
     case O::DeleteResource: delete gResource;
@@ -946,8 +944,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MouseSetSensitivityPref: gMouse->SetSensitivity(SETTINGS.mMouseSensitivity);
         break;
     case O::CreateUnitClasses: EEUnitClass::CreateUnitClasses();
-        break;
-    case O::TechBuildUnitClassInfo: EETechTree::BuildUnitClassInfo();
         break;
     case O::NewUIManager: gUIManager = gEEGameUI.mNewManager(gRasterizer, SETTINGS.GetScreenMode() + 1, SCREEN_ID, "db\\");
         break;
