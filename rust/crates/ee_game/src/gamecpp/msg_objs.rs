@@ -87,18 +87,12 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     message as *mut c_void
 }
 
-/// EESelectUnitsIDs: a box selection's compact buffer decoded into unit ids, replacing the list (a C++
-/// `std::vector<long>`: each the 32-bit value, sign-extended on LP64).
-///
-/// # Safety
-/// `message` is a live record, `out` a live `std::vector<long>`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_msg_select_ids(message: *const c_void, out: *mut c_void) {
-    let m = message as P;
+/// EESelectUnitsIDs: a box selection's compact buffer (the live record `m`'s list) decoded into unit ids.
+pub(super) fn selection_ids(m: P) -> Vec<i32> {
     let data = hp(O::C11MsgListData, m, &[]) as *const u8;
     let size = h(O::C11MsgListSize, m, &[]) as u8 as usize;
-    let ids = select_ids(data, size);
-    h(O::C11LongsAssign, out as P, &[pa(ids.as_ptr() as P), ids.len() as i64]);
+    // SAFETY: the record's list holds `size` bytes
+    unsafe { select_ids(data, size) }
 }
 
 /// A farm's sort key: built, paid for, its tile (EEMessage.cpp's `C11FarmKey` fills it in one statement).

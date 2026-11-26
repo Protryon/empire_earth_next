@@ -306,7 +306,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
         break;
-    case O::LoadOrSave: return EELoadOrSave(static_cast<EEMRecord*>(MSG));
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));
     case O::FileClose: fclose((FILE*)p);
         break;

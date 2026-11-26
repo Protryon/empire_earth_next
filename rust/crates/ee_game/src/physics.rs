@@ -178,7 +178,6 @@ pub enum EePhysCpp {
     SetLastAutoSave,
     /// `gSavedGameExtension` into the buffer a0 (room a1)
     SavedGameExtension,
-    LoadOrSave,
     FileOpen,
     FileClose,
     ContinentChecksum,
@@ -1476,7 +1475,7 @@ fn serve_load_save_requests(p: P) {
             let mut result = 0;
             let mut i = 0;
             while i < h(O::LoadSaveCount, p, &[]) {
-                result = h(O::LoadOrSave, hp(O::LoadSaveAt, p, &[i]), &[]);
+                result = crate::gamecpp::message::ee_gamecpp_msg_load_or_save(hp(O::LoadSaveAt, p, &[i]) as *mut c_void) as i64;
                 gc::h(gc::O::LcMsgDereference, hp(O::LoadSaveAt, p, &[i]), &[]);
                 h(O::LoadSaveSetNull, p, &[i]);
                 i += 1;
