@@ -178,6 +178,27 @@ pub unsafe fn tree_get(t: *mut EeTechTreeFields, id: c_long) -> *mut EeTechNodeF
     node(unsafe { epoch_get(e, id) })
 }
 
+/// The player's tree (`mTechnologies`; 0 for no player or no tree).
+///
+/// # Safety
+/// `player` is 0 or a live `EEPlayer`.
+pub unsafe fn player_tree(player: usize) -> usize {
+    let Some(l) = crate::world::layout::get() else { return 0 };
+    if player == 0 {
+        return 0;
+    }
+    // SAFETY: the contract: a live player's pointer member
+    unsafe { *((player + l.player_technologies as usize) as *const usize) }
+}
+
+/// `gWorld.mPlayers[i]` (0 off the slots or for an empty one).
+pub fn world_player(i: i64) -> usize {
+    // SAFETY: a read of the world's player slots
+    let t = unsafe { crate::world::WorldRead::begin() };
+    let w = crate::world::WorldView::global(&t);
+    usize::try_from(i).ok().and_then(|i| w?.player(i)).map_or(0, |p| p.handle() as usize)
+}
+
 /// The tree's walks' host (`&EETechHost`, the layout's).
 fn host() -> Option<crate::tech::nodes::EeTechHostFn> {
     let at = crate::world::layout::get()?.tech_host as usize;
