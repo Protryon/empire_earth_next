@@ -281,6 +281,28 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
                 ee_units_player_rest(pv, EE_UNITS_PLAYER_REST_CLEAR_FOOTPRINT, a0 as u64, 0, 0);
                 return Some(0);
             }
+            // the virtuals EEComputerPlayer overrides, dispatched here on the player's `mComputerPlayer`
+            // (ee/EEComputerPlayer.h): ScaleCost, TakeResource; GetExtraPopulation is 1 and WonderStarted empty for
+            // every player
+            crate::units::player::EE_UNITS_PLAYER_SCALE_COST => {
+                let l = layout();
+                return Some(if *slot(p, l.player_computer_player) != 0 {
+                    crate::cp::ffi::ee_cp_scale_cost((p as usize + l.cp_fields as usize) as *const _, a0 as c_long)
+                        as i64
+                } else {
+                    a0
+                });
+            }
+            crate::units::player::EE_UNITS_PLAYER_TAKE => {
+                if *slot(p, layout().player_computer_player) != 0 {
+                    crate::cp::player_game::ee_cp_pl_take_resource(p, a0 as c_long, io.i[1] as c_long);
+                } else {
+                    (*saved(p)).mResourceCaps[a0 as usize] -= io.i[1] as c_long;
+                }
+                return Some(0);
+            }
+            crate::units::player::EE_UNITS_PLAYER_EXTRA_POPULATION => return Some(1),
+            EE_UNITS_PLAYER_X_WONDER_STARTED => return Some(0),
             _ => {}
         }
     }

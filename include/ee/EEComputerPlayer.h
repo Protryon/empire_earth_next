@@ -30,7 +30,7 @@ public:
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return ee_cp_pl_repair_pointers(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion); }
     // +0x24 0x3d677
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_cp_pl_save(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion, (uint64_t)(uintptr_t)&outFile); }
-    // the computer player's overrides (ret N from the bodies) and members (provisional names)
+    // the computer player's overrides (NoticeTargetPlayer, Virtual60, GetExtraPopulation and WonderStarted are EEPlayer's) (ret N from the bodies) and members (provisional names)
     EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID) : EEPlayer(inName, inPlayerID) { this->Init(); }
     // 0x2f1c8 (both ctors: the tuning members from the AI globals, the managers)
     void Init() { ee_cp_pl_init(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
@@ -41,17 +41,11 @@ public:
     virtual long GetHeroCount(bool inByClass, bool inRequests) { return ee_cp_pl_hero_count(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inByClass, inRequests); }
     // +0x54 0x2dc51
     virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason) { return ee_cp_pl_can_produce(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, (uint64_t)(uintptr_t)outReason); }
-    // +0x58 0x2dca6
-    virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag) { EEPlayer::NoticeTargetPlayer(inPlayer, inFlag); }
-    // +0x60 0x2e1e4
-    virtual void Virtual60() { EEPlayer::Virtual60(); }
     virtual void UnitCompleted(EEComplexUnit* inUnit);  // +0x68 0x2e1e9
     // +0xa8 0x2d003
     virtual void SetCombatState(unsigned long inCombatState) { ee_cp_pl_set_combat_state(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inCombatState); }
     // +0x6c 0x2eace (scaled by GetUnitCostModifier when mIsCheating, at least 0)
     virtual long ScaleCost(long inCost) { return ee_cp_scale_cost(this, inCost); }
-    // +0x78 0x2ef32 (50 for 0x1e0 with a garrison or a fortress time)
-    virtual long GetExtraPopulation(long) { return 1; }
     // +0x7c 0x2ecca (EEPlayer's when mIgnoreOthers, else mPopulationCap via WorkOutPopulation)
     virtual long GetPopulationLimit(long inArg) { return ee_cp_pl_population_limit(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inArg); }
     // +0x80 0x2f033 (epochs: always)
@@ -83,8 +77,6 @@ public:
     // +0xcc 0x3f142
     virtual void EpochMediaUnloaded(long inEpoch) { ee_cp_pl_epoch_media(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inEpoch, false); }
     virtual bool AvoidsEnemies(EEComplexUnit* inUnit);  // +0xd0 0x3f73e (a citizen, or a transport holding only citizens)
-    // +0xd4 0x3f7ba
-    virtual void WonderStarted(EEComplexUnit*) {  }
     // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
     void SetActive(bool inActive) { ee_cp_pl_set_active(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inActive); }
     // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
