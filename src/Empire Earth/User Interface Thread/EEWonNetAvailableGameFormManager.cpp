@@ -28,7 +28,7 @@
 #include "lle/TMPoll.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/TSScheduler.h"
-#include "lle/SESample.h"
+#include "lle/SEMixer.h"
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/Input System.h"

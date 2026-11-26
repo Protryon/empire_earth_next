@@ -1,3 +1,5 @@
+// TEST ONLY (tests/sound/se_golden.cpp): the engine's SESample class, which the game no longer names (LLE/UI round 2:
+// the sound manager and the mixer plug-in are Rust's and hold the samples themselves).
 // C:\EEX\Low-Level Engine\Sound Engine\SESample.h (RECONSTRUCTION). A sound sample bound to the mixer that was
 // active when it was made: the mixer's wave data and its playing state. Whole in Rust (rust/crates/ee_audio/src/sound
 // objects.rs, LLE lane round 6): an SESample* is an EeSoundSample*; the members are inline forwarders.
@@ -10,11 +12,7 @@
 
 #include "lle/SEMixer.h"
 
-// a none (-1) or paused (-2) id or channel keeps all bits set on LP64, as the C++ stored it (`= -1`)
-inline unsigned long EeSoundWide(uint32_t inValue)
-{
-    return inValue >= 0xfffffffeu ? (unsigned long)(long)(int32_t)inValue : (unsigned long)inValue;
-}
+#include "lle/SESoundManager.h"   // EeSoundWide
 
 class LLE_API SESample : URustView {
 public:
