@@ -19,7 +19,6 @@
 #include "ee/EEUnit.h"
 #include "lle/SESoundManager.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GEBitmap.h"
 #include "lle/UIForm.h"
 #include "lle/GEScreen.h"
@@ -43,8 +42,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEARust.h"
-#include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
 
 
 // chain at 0x5482e4 (wrapper)

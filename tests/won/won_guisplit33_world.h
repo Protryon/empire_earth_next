@@ -136,8 +136,13 @@ static const int InputEvent_MouseUp = 4;
 struct MouseEvent : WindowEventBase {
     MouseEvent(int t, int x, int y, int m, int b) { mText = "mouse " + N(t) + " " + N(x) + " " + N(y) + " " + N(m) + " " + N(b); }
 };
+// (the game's input events carry winobj.rs's record: the original's fields are its)
 struct SizeEvent : WindowEventBase {
-    int mx = 0, my = 0, mWidth = 0, mHeight = 0;
+    EeWonWinEvent mEv = EeWonWinEvent();
+    int& mx = mEv.x;
+    int& my = mEv.y;
+    int& mWidth = mEv.width;
+    int& mHeight = mEv.height;
 };
 struct Component : RefCount {
     Window* mRoot = NULL;

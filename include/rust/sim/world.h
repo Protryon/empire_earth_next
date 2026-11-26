@@ -679,25 +679,20 @@ struct EeWorldLayout {
   uint64_t player_selected_group;
   /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
   uint64_t player_computer_player;
-  /// lane P: the `std::vector<EEPlayer*>`s `mAllies` and `mSightSharers`, `mPendingUnits` (`RTSUnit*`), `mTowns`,
-  /// `mHerds`; `mViewedUnit` (an `EEUnit*`)
-  uint64_t player_allies;
-  uint64_t player_sight_sharers;
+  /// lane P: the `std::vector<RTSUnit*>` `mPendingUnits` (the allies, sight sharers, towns and herds are the
+  /// player's Rust lists: `player_lists`)
   uint64_t player_pending_units;
-  uint64_t player_towns;
-  uint64_t player_herds;
   /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
   uint64_t world_players;
   uint64_t world_map;
   uint64_t world_num_players;
   uint64_t world_current_player;
   /// `RTSWorld::mGameSpeed` (a float), `mPopulationLimit` (a `long`); `EEWorld::mNumberOfWondersToWin` (an
-  /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`), `mGhostUnits` (a vector of pointers)
+  /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`)
   uint64_t world_game_speed;
   uint64_t world_population_limit;
   uint64_t world_wonders_to_win;
   uint64_t world_game_options;
-  uint64_t world_ghost_units;
   /// `EEWorld`'s flags (bools): `mVictoryEnabled`, `mGameScreenActive`, `mLoadingSavedGame`, `mCheatsEnabled`,
   /// `mInCinematic`, `mUserPaused`, `mUsingCarbon`
   uint64_t world_victory_enabled;
@@ -740,11 +735,8 @@ struct EeWorldLayout {
   /// `EeTechTreeFields` in `EETechTree`, `EeTechNodeFields` in `EETechTreeNode`
   uint64_t tech_tree_fields;
   uint64_t node_fields;
-  /// `RTSTechTreeNode::mData` (an `RTSTechTreeNodeData*`), `EeTechNodeDataFields` in `RTSTechTreeNodeData`, its
-  /// `mUnitClasses` (a `std::vector<unsigned long>`)
+  /// `EETechTreeNode::mData` (an `RTSTechTreeNodeData*`: the record `EeTechNodeDataFields` itself)
   uint64_t node_data;
-  uint64_t node_data_fields;
-  uint64_t node_data_unit_classes;
   /// `&EETechHost` (an address: the tree walks' host, whose lookups the tree view makes)
   uint64_t tech_host;
   /// `EeCpFields` in `EEComputerPlayer`
@@ -819,6 +811,16 @@ struct EeWorldLayout {
   uint64_t player_group_lists;
   /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
   uint64_t player_lists;
+  /// `EEPlayer::mActiveGroup`, `mGroups` (20 `EEGroup*`), `mHumanPlayer`, `mHealedUnitSet`, `mAirTraffic` (4
+  /// `EeUnitsAtc*`), `mLastUnit`
+  uint64_t player_active_group;
+  uint64_t player_groups;
+  uint64_t player_human_player;
+  uint64_t player_healed_unit_set;
+  uint64_t player_air_traffic;
+  uint64_t player_last_unit;
+  /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
+  uint64_t town_fields;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

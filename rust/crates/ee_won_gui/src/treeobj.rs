@@ -31,6 +31,9 @@ const COLOR_SHADOW: i32 = 3;
 const COLOR_TEXT: i32 = 14;
 
 fn call_host(host: EeWonGuiHostFn, comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+    if let Some(r) = crate::gamewin::common_op(comp as isize, op, a, b, c) {
+        return r;
+    }
     match host {
         // SAFETY: the host was given with this object's component; no borrow of a state is live here
         Some(h) => unsafe { h(comp, op, a, b, c, d) },

@@ -17,7 +17,14 @@ use super::editor::Step;
 use super::options::c_atol;
 use super::sed_digest::{self as d, g, head_of, rect_text};
 use super::sed_host::{self as x, h, hf, hs, ht, sel, EeSimDriverSed as O};
+use crate::screens::editor_form::{
+    EE_SCREENS_SEFM_CLEAR_SELECTION, EE_SCREENS_SEFM_DESELECT_FIRST, EE_SCREENS_SEFM_DESELECT_UNIT,
+    EE_SCREENS_SEFM_RESUME_GROUP, EE_SCREENS_SEFM_SELECT_UNIT, EE_SCREENS_SEFM_SET_GAME_VIEW,
+    EE_SCREENS_SEFM_STORE_GROUP,
+};
 use crate::screens::editor_tscreen::EE_SCREENS_SETS_SCREEN_REFRESH;
+use crate::screens::hud_ctl::EeScreensPoint;
+use crate::screens::mouse_modes::{EeScreensBuildGateFields, EeScreensBuildWallFields};
 use crate::screens::shells::EE_SCREENS_SKOP_SET_SELECTED_PLAYER;
 
 // the editor's long-lived actions (the tabs keep one of each and post it again)
@@ -93,7 +100,7 @@ fn placed(yaw: f32, x: f32, y: f32, z: f32) -> GeTransformation {
 fn tile_height(tx: c_long, ty: c_long) -> f32 {
     let tile = h(O::MapTile, 0, &[tx as i64, ty as i64]) as usize;
     if tile != 0 {
-        x::hd(O::TileHeight, tile, 0) as f32
+        gc::hd(gc::O::TileHeight, tile, &[], &[])
     } else {
         0.0
     }
@@ -141,8 +148,8 @@ pub fn unit_ref(word: &str) -> c_ulong {
         let u = gc::h(gc::O::MmNodeUnit, n, &[]) as usize;
         if u != 0 {
             let p = h(O::NodeUnitPlayer, u, &[]) as usize;
-            if p != 0 && h(O::PlayerId, p, &[]) != 0 {
-                id = h(O::NodeUnitId, u, &[]) as c_ulong;
+            if p != 0 && gc::h(gc::O::RoPlayerId, p, &[]) != 0 {
+                id = gc::h(gc::O::RoUnitId, u, &[]) as c_ulong;
             }
         }
         n = gc::h(gc::O::MmNodeNext, n, &[]) as usize;
@@ -172,7 +179,9 @@ fn put_ghosts(tx: c_long, ty: c_long) {
         let py = gy as f32 + half;
         let mut pz = 0.0f32;
         if h(O::MapGetTile, 0, &[gx as i64, gy as i64]) != 0 {
-            pz = x::hdf(O::MeshZ, 0, &[], &[px, py]) as f32;
+            let mesh = h(O::MapMesh, 0, &[]) as usize as *const ee_render::ge::tmobj::EeGeTerrainMesh;
+            // SAFETY: the map's live mesh; the tile under the point exists
+            pz = unsafe { ee_render::ge::tmobj::ee_ge_tm_mesh_z(mesh, px, py) };
             if pz < 0.0 {
                 pz = 0.0;
             }
@@ -199,7 +208,7 @@ fn ghost_text() -> String {
             h(O::GhostUnitType, ghost, &[]) as c_long,
             h(O::GhostTileX, ghost, &[]) as c_long,
             h(O::GhostTileY, ghost, &[]) as c_long,
-            if h(O::GhostCanPlace, ghost, &[]) != 0 { "+" } else { "-" }
+            if gc::h(gc::O::RoGhostCanPlace, ghost, &[]) != 0 { "+" } else { "-" }
         );
     }
     gc::h(gc::O::RoGhostUnlock, 0, &[]);
@@ -232,20 +241,20 @@ pub fn elevation_heights(width: c_long, height: c_long) -> Vec<i16> {
 fn write_elevation_file(name: &str, width: c_long, height: c_long) {
     const DIRECTORY: &str = "data\\Scenarios\\Elevation Maps\\";
     let dir = x::spec_in(DIRECTORY);
-    h(O::SpecCreateDirectory, dir, &[]);
-    h(O::SpecFree, dir, &[]);
+    gc::h(gc::O::FileSpecCreateDirectory, dir, &[]);
+    gc::h(gc::O::DxDelete, dir, &[]);
     let data: Vec<u8> = elevation_heights(width, height).iter().flat_map(|v| v.to_le_bytes()).collect();
     let info = format!("{width} {height}\n");
     for (extension, bytes) in [(".dat", data.as_slice()), (".txt", info.as_bytes())] {
         let file = x::spec_in(DIRECTORY);
         hs(O::SpecSetFile, file, &format!("{name}{extension}"));
-        h(O::SpecCreate, file, &[]);
+        gc::h(gc::O::UsgCreate, file, &[]);
         let mut written: c_ulong = 0;
         if h(O::SpecOpenWrite, file, &[]) == 0 {
             h(O::SpecWrite, file, &[bytes.as_ptr() as i64, bytes.len() as i64, &mut written as *mut c_ulong as i64]);
-            h(O::SpecClose, file, &[]);
+            gc::h(gc::O::FileClose, file, &[]);
         }
-        h(O::SpecFree, file, &[]);
+        gc::h(gc::O::DxDelete, file, &[]);
     }
 }
 
@@ -379,10 +388,10 @@ pub fn step(w: &[String]) -> Step {
                 while u != 0 {
                     out.push(format!(
                         "  unit {} type={} player={i} tile={},{}",
-                        h(O::UnitId, u, &[]) as c_ulong,
-                        h(O::UnitType, u, &[]) as c_long,
-                        h(O::UnitTileX, u, &[]) as c_long,
-                        h(O::UnitTileY, u, &[]) as c_long
+                        gc::h(gc::O::RoUnitId, u, &[]) as c_ulong,
+                        super::sim_ops::h(super::sim_ops::EeSimDriverSim::DmUnitTypeRaw, u, &[]) as c_long,
+                        gc::h(gc::O::DkTileX, u, &[]) as c_long,
+                        gc::h(gc::O::DkTileY, u, &[]) as c_long
                     ));
                     u = gc::h(gc::O::UnNext, u, &[]) as usize;
                 }
@@ -390,9 +399,8 @@ pub fn step(w: &[String]) -> Step {
         }),
         "selection" => Box::new(|out: &mut Vec<String>| {
             let e = x::editor();
-            let ids: String = (0..h(O::SelectedCount, e, &[]))
-                .map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong))
-                .collect();
+            let ids: String =
+                (0..x::selected_count(e)).map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong)).collect();
             out.push(format!("  selection{ids}"));
         }),
         "rotate" => Box::new(|_: &mut Vec<String>| {
@@ -804,25 +812,30 @@ pub fn step(w: &[String]) -> Step {
             let s = unsafe { x::ee_screens_segr_parts(x::tab_group(3)) };
             let flags = unsafe { x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) };
             match w1 {
-                "wall" => {
-                    hf(O::UnitWallStart, s, &[], &[f(2), f(3)]);
-                    hf(O::UnitWallEnd, s, &[], &[f(4), f(5)]);
-                    h(O::UnitWallBuild, s, &[]); // PlaceWall
-                }
-                "gate" => {
-                    h(O::UnitGateTileX, s, &[l(2) as i64]);
-                    h(O::UnitGateTileY, s, &[l(3) as i64]);
-                    h(O::UnitGateDirection, s, &[l(4) as i64]);
-                    hf(O::UnitGateBuild, s, &[l(4) as i64], &[f(2), f(3)]); // PlaceGate
-                }
-                _ => {
+                // SAFETY (these): the EESEUnit's wall and gate placements, live while the tab is
+                "wall" => unsafe {
+                    let wall = h(O::UnitBuildWall, s, &[]) as usize as *mut EeScreensBuildWallFields;
+                    (*wall).start = EeScreensPoint { x: f(2), y: f(3) };
+                    (*wall).end = EeScreensPoint { x: f(4), y: f(5) };
+                    x::ee_screens_wall_build(wall); // PlaceWall
+                },
+                "gate" => unsafe {
+                    let gate = h(O::UnitBuildGate, s, &[]) as usize as *mut EeScreensBuildGateFields;
+                    (*gate).tile_x = l(2) as i32;
+                    (*gate).tile_y = l(3) as i32;
+                    (*gate).direction = l(4) as i32;
+                    x::ee_screens_gate_build(gate, f(2), f(3), l(4) as i32); // PlaceGate
+                },
+                _ => unsafe {
                     if flags & 2 != 0 {
-                        h(O::UnitWallCancel, s, &[]); // EndWall
+                        x::ee_screens_wall_cancel(h(O::UnitBuildWall, s, &[]) as usize as *mut _);
+                        // EndWall
                     }
-                    if unsafe { x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) } & 4 != 0 {
-                        h(O::UnitGateCancel, s, &[]); // EndGate
+                    if x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) & 4 != 0 {
+                        x::ee_screens_gate_cancel(h(O::UnitBuildGate, s, &[]) as usize as *mut _);
+                        // EndGate
                     }
-                }
+                },
             }
         }),
         "epoch" => Box::new(|out: &mut Vec<String>| {
@@ -929,29 +942,36 @@ pub fn step(w: &[String]) -> Step {
             let e = x::editor();
             match w1 {
                 "first" => {
-                    h(O::FormDeselectFirst, e, &[]);
+                    x::form_call(e, EE_SCREENS_SEFM_DESELECT_FIRST, 0, 0, None);
                 }
                 "clear" => {
-                    h(O::FormClearSelection, e, &[]);
+                    x::form_call(e, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, 0, None);
                 }
                 _ => {
                     let u = gc::h(gc::O::EcResolve, 0, &[unit_ref(w.get(2).map_or("", |s| s.as_str())) as u32 as i64])
                         as usize;
                     if u != 0 && w1 == "add" {
-                        h(O::FormSelectUnit, e, &[u as i64]);
+                        x::form_call(e, EE_SCREENS_SEFM_SELECT_UNIT, 0, u, None);
                     } else if u != 0 {
-                        h(O::FormDeselectUnit, e, &[u as i64]);
+                        x::form_call(e, EE_SCREENS_SEFM_DESELECT_UNIT, 0, u, None);
                     }
                 }
             }
         }),
         "formcall" => Box::new(|_: &mut Vec<String>| {
             // formcall store|resume: the form's RefreshCurrentGroup / ResumeCurrentGroup
-            h(if w1 == "store" { O::FormRefreshGroup } else { O::FormResumeGroup }, x::editor(), &[]);
+            let what = if w1 == "store" { EE_SCREENS_SEFM_STORE_GROUP } else { EE_SCREENS_SEFM_RESUME_GROUP };
+            x::form_call(x::editor(), what, 0, 0, None);
         }),
         "gameview" => Box::new(|_: &mut Vec<String>| {
             // gameview L T R B HIDDEN: the form's SetGameView
-            hf(O::FormSetGameView, x::editor(), &[(l(5) != 0) as i64], &[f(1), f(2), f(3), f(4)]);
+            x::form_call(
+                x::editor(),
+                EE_SCREENS_SEFM_SET_GAME_VIEW,
+                i32::from(l(5) != 0),
+                0,
+                Some(&[f(1), f(2), f(3), f(4)]),
+            );
         }),
         "trigreport" => Box::new(|out: &mut Vec<String>| d::trigger_report(w1 == "setup", out)),
         "terrainstate" => Box::new(|out: &mut Vec<String>| d::terrain_digest(out)),

@@ -94,6 +94,18 @@ pub struct EeGamecppClientTail {
     pub was_booted: bool,
 }
 
+/// A live server's plain tail (no C++ call that changes it while the reference is used).
+pub fn server_tail(server: P) -> &'static mut EeGamecppServerTail {
+    // SAFETY: the live server's members from mVoted on
+    unsafe { &mut *rec::<EeGamecppServerTail>(O::C11SvTail, server) }
+}
+
+/// A live client's plain tail (as server_tail).
+pub fn client_tail(client: P) -> &'static mut EeGamecppClientTail {
+    // SAFETY: the live client's members from mHasLeftGame on
+    unsafe { &mut *rec::<EeGamecppClientTail>(O::C11ClTail, client) }
+}
+
 /// The constructor's members (the votes, the loads, the lag mask, the flags), in the C++'s order.
 pub fn server_members(t: &mut EeGamecppServerTail) {
     t.vote_edict = 0;
@@ -163,7 +175,7 @@ pub extern "C" fn ee_gamecpp_server_init(server: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_drop(server: *mut c_void) {
     let s = server as P;
-    h(O::C11SvStopThreads, s, &[]);
+    ee_net::net::ffi_server::ee_net_sv_stop_threads(super::net::net(server).server);
     h(O::C11SvDestroySearchLock, s, &[]);
     h(O::C11SvDestroyFastLock, s, &[]);
     h(O::C11SvDestroyAttemptLock, s, &[]);
@@ -187,7 +199,7 @@ pub extern "C" fn ee_gamecpp_client_init(client: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_client_drop(client: *mut c_void) {
     let c = client as P;
-    h(O::C11ClStopThreads, c, &[]);
+    ee_net::net::ffi_client::ee_net_cl_stop_threads(super::net::net(client).client);
     h(O::C11ClDestroyLock, c, &[]);
 }
 
@@ -220,10 +232,42 @@ pub unsafe extern "C" fn ee_gamecpp_session(
     player: *const c_void,
     version: *const c_void,
 ) -> i64 {
-    let frame = hp(O::C11FrameNew, 0, &[comms as i64, server as i64, player as i64, version as i64]);
-    let r = ee_netmsg_session(session_host, frame as *mut c_void, server, what, a, b, c, d);
-    h(O::C11FrameDelete, frame, &[]);
+    let registers = [hp(O::C11PlayerNew, 0, &[]), hp(O::C11PlayerNew, 0, &[])];
+    let mut frame =
+        Frame { comms: comms as P, server, registers, player: player as P, version: version as P, protocol: 0 };
+    let r = ee_netmsg_session(session_host, &mut frame as *mut Frame as *mut c_void, server, what, a, b, c, d);
+    for register in registers {
+        h(O::C11PlayerDelete, register, &[]);
+    }
     r
+}
+
+/// The session host's frame (was EEServer.cpp's EESessionFrame), one per EESession call: the communications object
+/// and whether it is the server, the bodies' two lobby slot registers (EEGameOptionsPlayers), a join request's player
+/// and version, protocol 0 for the slot info.
+pub struct Frame {
+    pub comms: P,
+    pub server: bool,
+    pub registers: [P; 2],
+    pub player: P,
+    pub version: P,
+    pub protocol: P,
+}
+
+/// The frame the session host was handed.
+pub fn frame(f: P) -> &'static mut Frame {
+    // SAFETY: the live frame of the current ee_gamecpp_session call (the host's context)
+    unsafe { &mut *(f as *mut Frame) }
+}
+
+/// A frame's register: 0, 1, or the join request's player (EE_NETMSG_SESS_R_IN).
+pub fn register(f: P, r: i64) -> P {
+    let frame = frame(f);
+    if r == ee_sim::netmsg::session::EE_NETMSG_SESS_R_IN {
+        frame.player
+    } else {
+        frame.registers[r as usize]
+    }
 }
 
 /// A lobby slot player's plain members.
@@ -277,10 +321,11 @@ pub fn take_connection_request(server: P, request: P) {
 pub fn send_connection_response(server: P, slot: i64, error: i64, send_to: i64, ui_slot: i64, unregister: bool) {
     let response = hp(O::C11SvNewResponse, server, &[error, send_to, ui_slot]);
     h(O::SsMsgSetOriginServer, 0, &[pa(response)]);
-    h(O::C11SvSendTo, server, &[slot, pa(response)]);
+    let engine = super::net::net(server as *const c_void).server;
+    ee_net::net::ffi_server::ee_net_sv_send_message_to(engine, slot as u8, response as *mut c_void, true);
     h(O::SsMsgDereference, 0, &[pa(response)]);
     if unregister {
-        h(O::C11SvUnregister, server, &[slot]);
+        ee_net::net::ffi_server::ee_net_sv_unregister_slot(engine, slot as u8);
     }
 }
 
@@ -304,7 +349,8 @@ pub fn send_full_player_information(server: P, options: P) {
         to.mSlot
     };
     h(O::C11PlayerNameCopy, player.0, &[pa(options)]);
-    h(O::C11SvSendPlayerInfo, server, &[pa(player.0)]);
+    let info = hp(O::SsNewPlayerInfo, player.0, &[]);
+    super::net::net(server as *const c_void).local_input(info as *mut c_void, SS_SLOT_NONE as u8);
     h(O::SsLobbyUpdatePlayer, 0, &[slot as i64]);
 }
 
@@ -337,7 +383,7 @@ pub fn send_ping_stat(server: P, player: i64, ping: f32) {
 /// EEServer::GetFreePlayerSlot: the first world player index below the maximum that holds no player, else 0xff.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_free_player_slot(server: *mut c_void) -> u8 {
-    let max = h(O::C11SvMaxPlayers, server as P, &[]) as u8;
+    let max = super::net::net(server).sv_get(ee_net::net::ffi_server::EeNetSvGet::MaxPlayers) as u8;
     free_player_slot(max, |i| hp(O::SsWorldPlayer, 0, &[i as i64]) != 0)
 }
 
@@ -367,9 +413,9 @@ pub extern "C" fn ee_gamecpp_server_post_12() {
     h(O::C11UiPost12, 0, &[ptr(&mut first), ptr(&mut second)]);
 }
 
-/// The server of a session frame.
-pub fn frame_server(frame: P) -> P {
-    hp(O::C11FrameComms, frame, &[])
+/// The communications object (the server or the client) of a session frame.
+pub fn frame_server(f: P) -> P {
+    frame(f).comms
 }
 
 #[cfg(test)]

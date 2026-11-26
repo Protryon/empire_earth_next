@@ -33,10 +33,11 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "build" / "sim_editor" / "out.txt")
     ap.add_argument("--exe", help="EE-SIM.exe (tools/sim.py's default)")
     ap.add_argument("--data", default="open", help="the data tree (tools/sim.py --data)")
-    ap.add_argument("--slot", default="sim-editor", help="the stage's name (one per concurrent run)")
+    ap.add_argument("--slot", help="the stage's name (one per concurrent run; default sim-editor, sim-editor-cb)")
     ap.add_argument("--civbuilder", action="store_true",
                     help="the civilization builder's gate (civbuilder.txt, civbuilder_expected.txt)")
     a = ap.parse_args()
+    a.slot = a.slot or ("sim-editor-cb" if a.civbuilder else "sim-editor")   # (a run deletes its stage at the end)
     if a.civbuilder:
         a.script, a.expected = HERE / "civbuilder.txt", HERE / "civbuilder_expected.txt"
         if a.out == ROOT / "build" / "sim_editor" / "out.txt":

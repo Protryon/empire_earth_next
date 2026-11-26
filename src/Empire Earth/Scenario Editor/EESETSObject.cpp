@@ -6,44 +6,24 @@
 #include <windows.h>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
 
-#include "lle/UITriStateCheckBox.h"
 
-#include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
-#include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "lle/USingleton.h"
-#include "ee/EEMedia.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUIShell.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EESMObject.h"
-#include "ee/EEMessage.h"
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
@@ -51,9 +31,6 @@
 // Unit action names are the real EEUnitAction::sActionNames table at 0x563668.
 
 // 0x563678: the unit action ids by name (the object screen's action combo box) are EEUnitAction::sActionIDs
-#include "ee/EEStringIDs.h"
-#include "rust/game/screens.h"
-#include "rust/sim/scenario.h"
 // The unit type combo box's sort (0x19330c, the std::sort instantiation 0x193077..0x19370e): type 0 first, then the
 // unit classes by name (provisional name; the comparison is ee_screens editor_trigx.rs unit_type_less)
 struct EESETSOUnitTypeNameLess {

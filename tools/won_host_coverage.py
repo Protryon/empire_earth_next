@@ -42,11 +42,14 @@ CHECKS = [
          allowed={}),
     # the generic widget shells' calls out (R6 WONLobby round 20): the C++ host answers what the base classes'
     # Rust objects do not (shell.rs Sh routes the component's, button's and MS button's calls to them in the game)
-    dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiShell.cpp"], rust=[],
+    dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiShell.cpp"],
+         # R6 WON GUI round 37: the references are the game's reference function's (gamewin.rs rf)
+         rust=[(RS / "ee_won_gui" / "src" / "shell.rs", "host", True)],
          allowed={v: "a base class's Rust object answers it in the game (shell.rs Sh); a driver's host otherwise"
                   for v in ("Comp", "Btn", "MsBtn", "Call")}),
     # the images' calls out (R6 WONLobby round 24: imgobj.rs): every one the images' host answers
-    dict(enum="EeWonImageHost", header="won_gui/imgobj.h", hosts=[GUI / "PlatNativeImage.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonImageHost", header="won_gui/imgobj.h", hosts=[GUI / "PlatNativeImage.cpp"],
+         rust=[(RS / "ee_won_gui" / "src" / "imgobj.rs", "href", True)], allowed={}),
     # the component configs' calls out (R6 WONLobby round 25: compcfg.rs): every one the configs' host answers
     dict(enum="EeWonCcOp", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"], rust=[],
          allowed={}),
@@ -169,7 +172,9 @@ CHECKS = [
     dict(enum="EeWonGuiOp", header="won_gui/guihost.h", since="HostTextSink",
          hosts=sorted(GUI.glob("*.cpp")),
          rust=[(RS / "ee_won_gui" / "src" / "guisplit.rs", fn)
-               for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")],
+               for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")] +
+              # R6 WON GUI round 37: a game window's and the manager's own Rust parts (gamewin.rs)
+              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("win_op", "wm_ref_op")],
          allowed={}),
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
     # the front end's UI-thread action (R6 WON lobby and network round 37: wonaction.rs; ee/EEAWonNetHost.inl)
@@ -195,7 +200,8 @@ CHECKS = [
     dict(enum="EeWonLogicMgrOp", header="won_lobby/logicmgr.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     dict(enum="EeWonErrScreenOp", header="won_lobby/errscreen.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     # R6 WON GUI round 35: the cursors' calls out (cursorobj.rs)
-    dict(enum="EeWonCursorOp", header="won_gui/cursorobj.h", hosts=[GUI / "Cursor.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonCursorOp", header="won_gui/cursorobj.h", hosts=[GUI / "WindowManager.cpp"],
+         rust=[(RS / "ee_won_gui" / "src" / "cursorobj.rs", "host", True)], allowed={}),
 ]
 
 

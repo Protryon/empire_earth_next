@@ -88,8 +88,6 @@ enum class EeFixtureOp : uint32_t {
   /// a game message sent as local input (a UI action): i0 0 EEMSelectTheseUnits(ids), 1 EEMKillUnit(0),
   /// 2 EEMPathTo(f0, f1), 3 EEMStopActiveGroup
   Post,
-  /// a UI action that calls ee_fixture_mark when it runs
-  Mark,
   /// EEACenterCamera on tile (i0, i1)
   CenterCamera,
   /// the visible status button of the form on top for button object i0 -> 1 and its centre (f0, f1), 0 none
@@ -105,8 +103,6 @@ enum class EeFixtureOp : uint32_t {
   Camera,
   /// the local player's active group's unit ids into the sink -> 1, 0 no player or group
   ActiveGroup,
-  /// gWorld.GetUnit(i0) -> its handle (0 none)
-  UnitById,
   /// player h's GetUnit(i0) -> its handle (0 none)
   PlayerUnit,
   /// unit h's CanDelete()
@@ -152,48 +148,26 @@ enum class EeFixtureOp : uint32_t {
   LobbySnapshot,
   /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
   EditNumber,
-  FxInstallLasso,
   FxMessageType,
   FxMessageLocal,
-  FxUiLockOn,
-  FxUiLockOff,
   FxCurrentForm,
   FxFormMouseOver,
-  FxFormId,
-  FxFormControlCount,
-  FxFormControl,
   FxControlIndex,
-  FxFormCount,
-  FxStackedForm,
   FxUiScreen,
   FxScreenCount,
   FxWindowAt,
   FxWindowWidth,
   FxWindowHeight,
-  FxHasTrigger,
-  FxAsCombo,
   FxAsCheck,
-  FxAsListString,
   FxAsRadio,
   FxAsStatusButton,
-  FxComboSelection,
-  FxComboListBox,
-  FxComboSetSelection,
-  FxListSelection,
-  FxListLineCount,
   FxListLine,
-  FxListChangeSelection,
-  FxCheckIsChecked,
-  FxCheckSet,
-  FxRadioCheck,
-  FxFireTrigger,
   FxScreenEventOf,
   FxMousePresent,
   FxMouseLock,
   FxMouseUnlock,
   FxMouseX,
   FxMouseY,
-  FxMouseSetPosition,
   FxModifierState,
   FxShiftModifier,
   FxSelectCaptured,
@@ -201,10 +175,11 @@ enum class EeFixtureOp : uint32_t {
   FxSelectDragX,
   FxSelectDragY,
   FxViewSide,
-  FxPostSelect,
-  FxPostKill,
-  FxPostPath,
-  FxPostStop,
+  /// the messages Post sends (a new EEMRecord each)
+  FxMsgSelect,
+  FxMsgKill,
+  FxMsgPath,
+  FxMsgStop,
   FxNewCenterCamera,
   FxCenterCameraAt,
   FxActionDereference,
@@ -218,18 +193,14 @@ enum class EeFixtureOp : uint32_t {
   FxCameraZoom,
   FxCameraMode,
   FxMapSize,
-  FxMeshValidPoint,
   FxActiveGroup,
   FxGroupUnitCount,
   FxGroupUnit,
   FxPickUnit,
-  FxUnitId,
   FxPointUnitOrTile,
   FxTileSeenByLocal,
   FxNearestTown,
   FxTownPatrolGroup,
-  FxUnitTileX,
-  FxUnitTileY,
   FxUnitPatrolGroup,
   FxGoalKind,
   FxGoalGatherResource,
@@ -339,7 +310,6 @@ enum class EeFixtureOp : uint32_t {
   /// game h's name's character i0
   FxGameNameAt,
   FxAsEdit,
-  FxEditSetNumber,
 };
 
 /// The texts and ids a call answers with (`ee_fixture_sink_text`, `ee_fixture_sink_id`).
@@ -381,15 +351,6 @@ void ee_fixture_sink_text(EeFixtureSink *sink, const char *text);
 /// # Safety
 /// `sink` is the call's sink.
 void ee_fixture_sink_id(EeFixtureSink *sink, int64_t id);
-
-/// The marker action ran (the UI thread).
-void ee_fixture_mark();
-
-/// A box selection message's ids (EEMSelectUnits' ctor, the UI thread).
-///
-/// # Safety
-/// `ids` holds `n` ids.
-void ee_fixture_lasso(const int64_t *ids, size_t n);
 
 /// An input message before (`phase` 0) and after (1) it executes (EEPhysics::DrainInput, the world's write lock
 /// held); `local`: the local player sent it.

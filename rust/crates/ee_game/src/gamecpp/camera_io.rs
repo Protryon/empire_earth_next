@@ -123,13 +123,13 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
                 && hp(O::UnPlayer, unit, &[]) != hp(O::EcCurrentPlayer, 0, &[])
                 && h(O::EcIsSeen, unit, &[]) == 0;
         }
-        EE_APP_CAMERA_OP_KEY_COUNT => io.id = h(O::DkKeyCount, c, &[]) as u32,
+        EE_APP_CAMERA_OP_KEY_COUNT => io.id = keys().len() as u32,
         EE_APP_CAMERA_OP_KEY => {
-            h(O::DkKeyAt, c, &[i64::from(io.id), ptr(&mut io.key)]);
+            if let Some(k) = keys().get(io.id as usize) {
+                io.key = *k;
+            }
         }
-        EE_APP_CAMERA_OP_CLEAR_KEYS => {
-            h(O::EcClearKeys, c, &[]);
-        }
+        EE_APP_CAMERA_OP_CLEAR_KEYS => keys().clear(),
         EE_APP_CAMERA_OP_FLAGS => {
             io.id = switches(
                 crate::gamecpp::globals::get!(gFreeCamera),
@@ -187,8 +187,23 @@ pub extern "C" fn ee_gamecpp_camera_add_key(camera: *mut c_void, key: *const c_v
     if locked {
         return 5;
     }
-    h(O::EcPushKey, c, &[key as usize as i64]);
+    // SAFETY: the caller's live key (an EECameraKey: this record's layout)
+    keys().push(unsafe { *(key as *const crate::app::camera::EeAppCameraKey) });
     0
+}
+
+/// The camera's path keys (the C++'s `EECameraControl::mKeys`, a `std::vector<EECameraKey>` at +0x04 of the
+/// world's camera, whose standard-library size moved every later member of gWorld). One camera (gWorld's).
+static KEYS: std::sync::Mutex<Vec<crate::app::camera::EeAppCameraKey>> = std::sync::Mutex::new(Vec::new());
+
+pub(crate) fn keys() -> std::sync::MutexGuard<'static, Vec<crate::app::camera::EeAppCameraKey>> {
+    KEYS.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The camera's key count (`mKeys.size()`: the scenario capture's SMCK).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_camera_key_count() -> usize {
+    keys().len()
 }
 
 #[cfg(test)]

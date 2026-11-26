@@ -11,36 +11,26 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/LowLevelEngineCore.h"
 
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAIAStarView.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIHill.h"
 #include "ee/EETown.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "rust/sim/app.h"
-#include "rust/sim/astar.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEStormType.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEEffect.h"
 #include "ee/EEEffectManager.h"
 #include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp weather.rs)
 
@@ -123,8 +113,7 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DsSetName: S->mName = EEEMStorm::GetTypeName((long)a[0]);
         break;
     case O::DsRandomPlayer: return P64(gWorld.mPlayers[gPhysics->GetRandom(1L, gWorld.mNumPlayers - 1)]);
-    case O::DsTownCount: return (int64_t)PL->mTowns.size();
-    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->mTowns[gPhysics->GetRandom(0L, (long)PL->mTowns.size() - 1)]));
+    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->GetTown(gPhysics->GetRandom(0L, (long)PL->GetNumTowns() - 1))));
     case O::DsLargestLand: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)]));
     case O::DsLargestAny: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)]));
     case O::DsLargestWater: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)]));

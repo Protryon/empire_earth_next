@@ -183,9 +183,13 @@ pub(crate) fn put<C: Cpp + ?Sized>(c: &mut C, form: usize, which: u32, arg: u32,
             0
         }
         EE_SCREENS_TEXT_LABEL_LINES => {
+            // a closed form's label is gone (Close deletes the database controls): a page event still queued when
+            // the form closed (the scenario intro's briefing after Start) writes nothing (the original faulted)
             let label = c.manager_form_control(arg >> 16, arg & 0xffff);
-            c.label_delete_array(label);
-            c.label_append_text(label, t);
+            if label != 0 {
+                c.label_delete_array(label);
+                c.label_append_text(label, t);
+            }
             0
         }
         EE_SCREENS_TEXT_CAMPAIGN_LOAD => {

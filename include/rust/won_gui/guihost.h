@@ -842,26 +842,8 @@ enum class EeWonGuiOp : uint32_t {
   ViewportAddChild,
   /// `new TreeItem` (unheld).
   NewTreeItemRaw,
-  /// `((InputEvent*)a)->mEventType`.
-  WinEvType = 900,
-  /// `static_cast<KeyEvent*>((InputEvent*)a)->mKeyMod`.
-  WinKeyEvKeyMod,
-  /// `static_cast<KeyEvent*>((InputEvent*)a)->mKey`.
-  WinKeyEvKey,
-  /// `static_cast<MouseEvent*>((InputEvent*)a)->mx`.
-  WinMouseEvX,
-  /// `static_cast<MouseEvent*>((InputEvent*)a)->my`.
-  WinMouseEvY,
-  /// `static_cast<MouseEvent*>((InputEvent*)a)->mKeyMod`.
-  WinMouseEvKeyMod,
-  /// `static_cast<MouseEvent*>((InputEvent*)a)->mButtonOrAmount`.
-  WinMouseEvButton,
-  /// `static_cast<SizeEvent*>((InputEvent*)a)->mWidth`.
-  WinSizeEvWidth,
-  /// `static_cast<SizeEvent*>((InputEvent*)a)->mHeight`.
-  WinSizeEvHeight,
   /// `sHostFont = PlatformGetFont(*(const FontDescriptor*)a)` (the original's local SmartPtr).
-  WinPlatformFont,
+  WinPlatformFont = 909,
   /// `sHostFont.get()`.
   WinHostFont,
   /// `((Font*)a)->AddRef()`.
@@ -872,16 +854,8 @@ enum class EeWonGuiOp : uint32_t {
   WinHasIcon,
   /// `mIcon = mManager->mDefaultWindowIcon.get()`.
   WinIconDefault,
-  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx`.
-  WmMouseEvX = 930,
-  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my`.
-  WmMouseEvY,
-  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx = b`.
-  WmMouseEvSetX,
-  /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my = b`.
-  WmMouseEvSetY,
   /// `((Font*)a)->AddRef()`.
-  WmFontHold,
+  WmFontHold = 934,
   /// `((Font*)a)->Release()`.
   WmFontRelease,
   /// `((RawImage*)a)->AddRef()`.
@@ -962,24 +936,11 @@ enum class EeWonGuiOp : uint32_t {
   WmScreenResGet,
   /// `SetScreenResolutionHook(a, b)` (0 or 1).
   WmScreenResSet,
-  /// `((SizeEvent*)a)->mx`.
-  WmSizeEvX,
-  /// `((SizeEvent*)a)->my`.
-  WmSizeEvY,
-  /// `((SizeEvent*)a)->mWidth`.
-  WmSizeEvW,
-  /// `((SizeEvent*)a)->mHeight`.
-  WmSizeEvH,
-  /// `((SizeEvent*)a)->mx = b`.
-  WmSizeEvSetX,
-  /// `((SizeEvent*)a)->my = b`.
-  WmSizeEvSetY,
-  /// `((SizeEvent*)a)->mWidth = b`.
-  WmSizeEvSetW,
-  /// `((SizeEvent*)a)->mHeight = b`.
-  WmSizeEvSetH,
   /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
   TextAddPart = 3400,
+  /// `&static_cast<InputEvent*>((WindowEventBase*)a)->mEv`: an input event's record (winobj.rs `EeWonWinEvent`),
+  /// which guisplit.rs reads and sets for the manager's `WmEvent` mouse, size, button and key cases.
+  WmInputRec = 3800,
   /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
   TabNewContainer = 3200,
   /// TabCtrl's constructor: `new TabBar((EeWonTabCtrl*)a)` (unheld, as a `Component*`).
@@ -988,6 +949,55 @@ enum class EeWonGuiOp : uint32_t {
   TabBarOf,
   /// TabCtrl's constructor: `mContainerLayout = new LayoutPoint` (the member holds it), as a `Component*`.
   TabNewPoint,
+};
+
+/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
+/// `CtChild`, `CtParentCall`, `CtVirt`).
+enum class EeWonCtVirt : uint32_t {
+  NeedsPaint = 1,
+  /// `PrePaint(*(Graphics*)arg)`.
+  PrePaint,
+  /// `Paint(*(Graphics*)arg)`.
+  Paint,
+  /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
+  EnableControlsById,
+  NotifyRootVisibility,
+  HitTest,
+  MouseEnter,
+  MouseExit,
+  MouseMove,
+  MouseDrag,
+  MouseWheel,
+  MouseHover,
+  /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
+  HandleBroadcastEvent,
+  AddedToParent,
+  Invalidate,
+  MarkInvalid,
+  ClearGrabBG,
+  TabFocus,
+  KeyDown,
+  KeyChar,
+  KeyUp,
+  CanClose,
+  GotFocus,
+  LostFocus,
+  TimerEvent,
+  /// `RequestTimer(arg != 0)` (not virtual).
+  RequestTimer,
+  /// `RequestFocus()` (not virtual).
+  RequestFocus,
+  /// `Virtual08()` (SizeChanged).
+  SizeChanged,
+  SetFocusChild,
+  AddTimerChild,
+  ChildInvalidated,
+  /// `SetCursor((Cursor*)arg)`.
+  SetCursor,
+  FindChildAt,
+  RemoveChild,
+  /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
+  SetHasFocus,
 };
 
 /// The events a component object fires (`FireEvent`).
@@ -1064,55 +1074,6 @@ enum class EeWonGuiCursor : uint32_t {
   EastWest = 4,
   /// `Cursor::GetStandardCursor(StandardCursor_NorthSouth)`.
   NorthSouth = 5,
-};
-
-/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
-/// `CtChild`, `CtParentCall`, `CtVirt`).
-enum class EeWonCtVirt : uint32_t {
-  NeedsPaint = 1,
-  /// `PrePaint(*(Graphics*)arg)`.
-  PrePaint,
-  /// `Paint(*(Graphics*)arg)`.
-  Paint,
-  /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
-  EnableControlsById,
-  NotifyRootVisibility,
-  HitTest,
-  MouseEnter,
-  MouseExit,
-  MouseMove,
-  MouseDrag,
-  MouseWheel,
-  MouseHover,
-  /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
-  HandleBroadcastEvent,
-  AddedToParent,
-  Invalidate,
-  MarkInvalid,
-  ClearGrabBG,
-  TabFocus,
-  KeyDown,
-  KeyChar,
-  KeyUp,
-  CanClose,
-  GotFocus,
-  LostFocus,
-  TimerEvent,
-  /// `RequestTimer(arg != 0)` (not virtual).
-  RequestTimer,
-  /// `RequestFocus()` (not virtual).
-  RequestFocus,
-  /// `Virtual08()` (SizeChanged).
-  SizeChanged,
-  SetFocusChild,
-  AddTimerChild,
-  ChildInvalidated,
-  /// `SetCursor((Cursor*)arg)`.
-  SetCursor,
-  FindChildAt,
-  RemoveChild,
-  /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
-  SetHasFocus,
 };
 
 /// The button's and component's methods a skin button calls (`SkinBtn`).

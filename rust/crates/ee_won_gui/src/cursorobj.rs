@@ -59,6 +59,12 @@ pub struct EeWonCursor {
 
 impl EeWonCursor {
     fn host(&self, op: EeWonCursorOp, a: isize, b: isize, c: isize) -> isize {
+        use EeWonCursorOp as O;
+        if let O::Hold | O::Release | O::CompHold | O::CompRelease = op {
+            if let Some(r) = crate::gamewin::rf(a, matches!(op, O::Hold | O::CompHold)) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host's contract (the constructors')
             Some(h) => unsafe { h(op, a, b, c) },

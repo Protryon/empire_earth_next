@@ -7,9 +7,27 @@ use core::ffi::{c_long, c_ulong};
 
 use ee_sim::tech::civ;
 use ee_sim::tech::civ_apply::*;
+use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
+use ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
+use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 
 use crate::screens::civ_whole::CbHost;
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut};
+
+/// The class upgrade's record (`EEUnitClassUpgrade`'s `EeUnitsUnitClassUpgradeFields`), read and written in place.
+fn upgrade_fields<C: Cpp + ?Sized>(c: &mut C, u: usize) -> *mut EeUnitsUnitClassUpgradeFields {
+    c.civh_upgrade_fields(u) as *mut EeUnitsUnitClassUpgradeFields
+}
+
+/// The player's records (`EEPlayer`'s `EeUnitsPlayerSaved` and `EeUnitsPlayerFields`), read and written in place.
+fn player_records<'a, C: Cpp + ?Sized>(
+    c: &mut C,
+    player: i32,
+) -> (&'a mut EeUnitsPlayerSaved, &'a mut EeUnitsPlayerFields) {
+    let pl = c.civc_player(player as i64);
+    // SAFETY: the live player's records (no other reference to them lives across the caller's use)
+    unsafe { (&mut *(c.civc_player_saved(pl) as *mut _), &mut *(c.civc_player_fields(pl) as *mut _)) }
+}
 
 /// One call of the civilization simulation's host (`EeTechCivHost`'s): its reply in `r`.
 pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeTechCivReply) {
@@ -29,63 +47,68 @@ pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeT
             }
             // the upgrade's class: the base values and the category
             let k = c.civh_upgrade_class(u);
+            // SAFETY: the live upgrade's and its class's records, read in place
+            let (up, cl) =
+                unsafe { (&*upgrade_fields(c, u), &*(c.civh_class_fields(k) as *const EeUnitsUnitClassFields)) };
             let s = &mut r.stats;
-            s.up_attack = c.civh_up_attack(u);
-            s.up_reload_time = c.civh_up_reload_time(u);
-            s.up_range = c.civh_up_range(u);
-            s.up_line_of_sight = c.civh_up_line_of_sight(u);
-            s.up_max_velocity = c.civh_up_max_velocity(u);
-            s.up_flight_time = c.civh_up_flight_time(u);
-            s.up_area_effect = c.civh_up_area_effect(u);
-            s.up_build_time_scale = c.civh_up_build_time_scale(u);
-            s.up_repair_rate = c.civh_up_repair_rate(u);
-            s.up_area_effect_scale = c.civh_up_area_effect_scale(u);
-            s.up_cost_scale = c.civh_up_cost_scale(u);
-            s.class_attack = c.civh_class_attack(k);
-            s.class_reload_time = c.civh_class_reload_time(k);
-            s.class_range = c.civh_class_range(k);
-            s.class_line_of_sight = c.civh_class_line_of_sight(k);
-            s.class_max_velocity = c.civh_class_max_velocity(k);
-            s.class_flight_time = c.civh_class_flight_time(k);
-            s.class_area_effect = c.civh_class_area_effect(k);
-            s.class_repair_rate = c.civh_class_repair_rate(k);
-            s.class_area_effect_scale = c.civh_class_area_effect_scale(k);
-            s.class_category = c.civh_class_category(k);
+            s.up_attack = up.mAttack;
+            s.up_reload_time = up.mReloadTime as i64;
+            s.up_range = up.mRange;
+            s.up_line_of_sight = up.mLineOfSight;
+            s.up_max_velocity = up.mMaxVelocity;
+            s.up_flight_time = up.mFlightTime as i64;
+            s.up_area_effect = up.mAreaEffect;
+            s.up_build_time_scale = up.mBuildTimeScale;
+            s.up_repair_rate = up.mRepairRate as i64;
+            s.up_area_effect_scale = up.mAreaEffectScale;
+            s.up_cost_scale = up.mCostScale;
+            s.class_attack = cl.mAttack as i64;
+            s.class_reload_time = cl.mReloadTime as i64;
+            s.class_range = cl.mRange;
+            s.class_line_of_sight = cl.mLineOfSight;
+            s.class_max_velocity = cl.mMaxVelocity;
+            s.class_flight_time = cl.mFlightTime as i64;
+            s.class_area_effect = cl.mAreaEffect;
+            s.class_repair_rate = cl.mRepairRate as i64;
+            s.class_area_effect_scale = cl.mAreaEffectScale;
+            s.class_category = cl.mCategory as c_long as i64;
             for i in 0..6 {
-                s.up_armor[i] = c.civh_up_armor(u, i as u32);
-                s.class_armor[i] = c.civh_class_armor(k, i as u32);
+                s.up_armor[i] = up.mArmor[i];
+                s.class_armor[i] = cl.mArmor[i] as i64;
             }
             for i in 0..7 {
-                s.up_gather_times[i] = c.civh_up_gather_time(u, i as u32);
-                s.class_gather_times[i] = c.civh_class_gather_time(k, i as u32);
+                s.up_gather_times[i] = up.mGatherTimes[i] as i64;
+                s.class_gather_times[i] = cl.mGatherTimes[i] as i64;
             }
             r.value = 1;
         }
         EE_TECH_CIV_OP_PUT => {
             let u = c.civh_upgrade(player, kind);
             let s = &call.stats;
+            // the range and the speed through their setters; the rest written in place
             match call.b {
-                EE_TECH_CIV_STAT_ATTACK => c.civh_put_attack(u, s.up_attack),
-                EE_TECH_CIV_STAT_RELOAD_TIME => c.civh_put_reload_time(u, s.up_reload_time),
-                EE_TECH_CIV_STAT_ARMOR => {
-                    for (i, &v) in s.up_armor.iter().enumerate() {
-                        c.civh_put_armor(u, i as u32, v);
-                    }
-                }
-                EE_TECH_CIV_STAT_RANGE => c.civh_put_range(u, s.up_range),
-                EE_TECH_CIV_STAT_LINE_OF_SIGHT => c.civh_put_line_of_sight(u, s.up_line_of_sight),
-                EE_TECH_CIV_STAT_SPEED => c.civh_put_max_velocity(u, s.up_max_velocity),
-                EE_TECH_CIV_STAT_FLIGHT_TIME => c.civh_put_flight_time(u, s.up_flight_time),
-                EE_TECH_CIV_STAT_AREA_EFFECT => c.civh_put_area_effect(u, s.up_area_effect),
+                EE_TECH_CIV_STAT_RANGE => return c.civh_put_range(u, s.up_range),
+                EE_TECH_CIV_STAT_SPEED => return c.civh_put_max_velocity(u, s.up_max_velocity),
+                _ => {}
+            }
+            // SAFETY: the live upgrade's record
+            let up = unsafe { &mut *upgrade_fields(c, u) };
+            match call.b {
+                EE_TECH_CIV_STAT_ATTACK => up.mAttack = s.up_attack,
+                EE_TECH_CIV_STAT_RELOAD_TIME => up.mReloadTime = s.up_reload_time as c_long,
+                EE_TECH_CIV_STAT_ARMOR => up.mArmor = s.up_armor,
+                EE_TECH_CIV_STAT_LINE_OF_SIGHT => up.mLineOfSight = s.up_line_of_sight,
+                EE_TECH_CIV_STAT_FLIGHT_TIME => up.mFlightTime = s.up_flight_time as c_long,
+                EE_TECH_CIV_STAT_AREA_EFFECT => up.mAreaEffect = s.up_area_effect,
                 EE_TECH_CIV_STAT_GATHER_TIMES => {
                     for (i, &v) in s.up_gather_times.iter().enumerate() {
-                        c.civh_put_gather_time(u, i as u32, v);
+                        up.mGatherTimes[i] = v as c_long;
                     }
                 }
-                EE_TECH_CIV_STAT_BUILD_TIME => c.civh_put_build_time_scale(u, s.up_build_time_scale),
-                EE_TECH_CIV_STAT_REPAIR_RATE => c.civh_put_repair_rate(u, s.up_repair_rate),
-                EE_TECH_CIV_STAT_AREA_EFFECT_SCALE => c.civh_put_area_effect_scale(u, s.up_area_effect_scale),
-                EE_TECH_CIV_STAT_COST => c.civh_put_cost_scale(u, s.up_cost_scale),
+                EE_TECH_CIV_STAT_BUILD_TIME => up.mBuildTimeScale = s.up_build_time_scale,
+                EE_TECH_CIV_STAT_REPAIR_RATE => up.mRepairRate = s.up_repair_rate as c_long,
+                EE_TECH_CIV_STAT_AREA_EFFECT_SCALE => up.mAreaEffectScale = s.up_area_effect_scale,
+                EE_TECH_CIV_STAT_COST => up.mCostScale = s.up_cost_scale,
                 _ => {}
             }
         }
@@ -107,21 +130,23 @@ pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeT
             }
         }
         EE_TECH_CIV_OP_GET_FIELD => {
+            let (saved, fields) = player_records(c, player);
             if call.a == EE_TECH_CIV_FIELD_CONVERSION as i64 {
-                r.real = c.civh_conversion(player);
+                r.real = fields.mConversionFactor;
             } else if call.a == EE_TECH_CIV_FIELD_HIGH_GROUND as i64 {
-                r.real = c.civh_high_ground(player);
+                r.real = saved.mHighGroundBonus;
             } else {
-                r.value = c.civh_share_bonus(player);
+                r.value = fields.mShareBonus as i64;
             }
         }
         EE_TECH_CIV_OP_SET_FIELD => {
+            let (saved, fields) = player_records(c, player);
             if call.a == EE_TECH_CIV_FIELD_CONVERSION as i64 {
-                c.civh_set_conversion(player, call.real);
+                fields.mConversionFactor = call.real;
             } else if call.a == EE_TECH_CIV_FIELD_HIGH_GROUND as i64 {
-                c.civh_set_high_ground(player, call.real);
+                saved.mHighGroundBonus = call.real;
             } else {
-                c.civh_set_share_bonus(player, call.b);
+                fields.mShareBonus = call.b as c_long;
             }
         }
         EE_TECH_CIV_OP_POPULATION_LIMIT => r.value = c.civh_population_limit(player),
@@ -161,7 +186,7 @@ pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeT
             }
         }
         EE_TECH_CIV_OP_PULSE_SIGHT => c.civh_pulse_sight(player, call.real, kind),
-        EE_TECH_CIV_OP_MINING_LIMIT => c.civh_mining_limit(player, kind),
+        EE_TECH_CIV_OP_MINING_LIMIT => player_records(c, player).1.mMiningLimit = kind as c_long,
         EE_TECH_CIV_OP_CAMOUFLAGE => c.civh_camouflage(player),
         EE_TECH_CIV_OP_ALLOW_TECH => {
             let node = c.civh_node(player, kind);
@@ -233,27 +258,33 @@ mod tests {
 
     #[test]
     fn a_class_reads_the_upgrade_and_its_class() {
+        // SAFETY: plain records of numbers
+        let (mut up, mut cl): (EeUnitsUnitClassUpgradeFields, EeUnitsUnitClassFields) =
+            unsafe { (std::mem::zeroed(), std::mem::zeroed()) };
+        (up.mAttack, up.mArmor[2], cl.mCategory, cl.mGatherTimes[1]) = (3.0, 4.0, 5, 9);
         let mut fake = Fake::default();
         fake.answer("civh_class_listed", &[1]).answer("civh_upgrade", &[100]).answer("civh_upgrade_class", &[200]);
-        fake.answer("civh_up_attack", &[3]).answer("civh_class_category", &[5]);
-        fake.answer("civh_up_armor", &[0, 0, 4]).answer("civh_class_gather_time", &[0, 9]);
+        fake.answer("civh_upgrade_fields", &[&mut up as *mut _ as i64]);
+        fake.answer("civh_class_fields", &[&mut cl as *mut _ as i64]);
         let mut r = EeTechCivReply::default();
         host(&mut fake, &call(EE_TECH_CIV_OP_CLASS, 7, 0), &mut r);
         assert_eq!(r.value, 1);
         assert_eq!((r.stats.up_attack, r.stats.class_category), (3.0, 5));
         assert_eq!((r.stats.up_armor[2], r.stats.class_gather_times[1]), (4.0, 9));
-        assert_eq!(fake.log.len(), 3 + 21 + 12 + 14);
+        assert_eq!(fake.log.len(), 5);
     }
 
     #[test]
     fn a_put_writes_its_stat_only() {
+        // SAFETY: a plain record of numbers
+        let mut up: EeUnitsUnitClassUpgradeFields = unsafe { std::mem::zeroed() };
         let mut fake = Fake::default();
-        fake.answer("civh_upgrade", &[100]);
+        fake.answer("civh_upgrade", &[100]).answer("civh_upgrade_fields", &[&mut up as *mut _ as i64]);
         let mut c = call(EE_TECH_CIV_OP_PUT, 7, EE_TECH_CIV_STAT_GATHER_TIMES);
         c.stats.up_gather_times[6] = 12;
         host(&mut fake, &c, &mut EeTechCivReply::default());
-        assert_eq!(fake.log.len(), 8);
-        assert_eq!(fake.log[7], "civh_put_gather_time(100, 6, 12)");
+        assert_eq!(fake.calls(), "civh_upgrade(2, 7)\ncivh_upgrade_fields(100)");
+        assert_eq!((up.mGatherTimes[6], up.mGatherTimes[5]), (12, 0));
     }
 
     #[test]
@@ -283,12 +314,15 @@ mod tests {
 
     #[test]
     fn the_fields_by_their_code() {
+        let (mut saved, mut fields) = (EeUnitsPlayerSaved::default(), EeUnitsPlayerFields::default());
+        fields.mShareBonus = 3;
+        let (s, f) = (&mut saved as *mut _ as i64, &mut fields as *mut _ as i64);
         let mut fake = Fake::default();
-        fake.answer("civh_share_bonus", &[3]);
+        fake.answer("civc_player", &[9, 9]).answer("civc_player_saved", &[s, s]).answer("civc_player_fields", &[f, f]);
         let mut r = EeTechCivReply::default();
         host(&mut fake, &call(EE_TECH_CIV_OP_GET_FIELD, EE_TECH_CIV_FIELD_SHARE_BONUS as i64, 0), &mut r);
         assert_eq!(r.value, 3);
         host(&mut fake, &call(EE_TECH_CIV_OP_SET_FIELD, EE_TECH_CIV_FIELD_HIGH_GROUND as i64, 0), &mut r);
-        assert_eq!(fake.calls(), "civh_share_bonus(2)\ncivh_set_high_ground(2, 1.5)");
+        assert_eq!(saved.mHighGroundBonus, 1.5);
     }
 }

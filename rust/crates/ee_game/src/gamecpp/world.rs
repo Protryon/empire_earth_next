@@ -30,6 +30,7 @@ use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields,
 
 use crate::app::game_options::EeAppOptionsFields;
 
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_ALLIES};
 use ee_sim::units::{player_body as pb, player_rest as pr};
 
 use super::{cptr, h, hd, hf, hp, pa, rec, O, P};
@@ -120,6 +121,11 @@ fn sm<'a, T>(op: O, st: P) -> &'a mut T {
 
 fn num_players(w: P) -> c_ulong {
     *wm::<c_ulong>(O::WNumPlayers, w)
+}
+
+/// One operation on player `pl`'s allies (`mAllies`: ee_sim player_lists.rs).
+fn allies(pl: P, op: ListOp) -> u64 {
+    player_op(pl as u64, EE_UNITS_LISTS_ALLIES, op)
 }
 
 fn player(w: P, i: c_ulong) -> P {
@@ -259,13 +265,10 @@ fn kill_units(pl: P) {
 }
 
 /// The queued placements' units dereferenced and the queue emptied.
-fn drop_queued(w: P) {
-    let mut i: c_ulong = 0;
-    while (i as i64) < h(O::WQueuedCount, w, &[]) {
-        h(O::RefUnitDereference, hp(O::WQueuedUnit, w, &[i as i64]), &[]);
-        i += 1;
+fn drop_queued() {
+    for (u, _) in crate::rts::world::take_queued() {
+        h(O::RefUnitDereference, u as P, &[]);
     }
-    h(O::WQueuedClear, w, &[]);
 }
 
 /// The player's units' media and, for a built land building, its class's buttons.
@@ -336,12 +339,10 @@ pub extern "C" fn ee_gamecpp_world_destroy(w: *mut c_void) {
     h(O::C13bGhostLockFree, w, &[]);
     h(O::WDeleteInfluence, w, &[]);
     h(O::WSetEffectManager, w, &[0]);
-    for i in 0..h(O::WGhostCount, w, &[]) {
-        h(O::GhostDelete, hp(O::C13bGhostAt, w, &[i]), &[]);
+    for i in 0..ee_sim::app::ghosts::count() {
+        h(O::GhostDelete, ee_sim::app::ghosts::at(i), &[]);
     }
-    while h(O::WGhostCount, w, &[]) > 0 {
-        h(O::WGhostPop, w, &[]);
-    }
+    while !ee_sim::app::ghosts::ee_app_ghost_pop().is_null() {}
     h(O::WDeleteScenario, w, &[]);
     h(O::WDeleteEnvironment, w, &[]);
     h(O::WDeleteCalamityHelper, w, &[]);
@@ -413,7 +414,7 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     }
     super::startup::ee_gamecpp_startup_stop_sounds();
     h(O::MiniMapDelete, 0, &[]);
-    h(O::MiniMapSetNull, 0, &[]);
+    super::globals::set!(gMiniMap, core::ptr::null_mut());
     h(O::PathReset, 0, &[]);
     h(O::SetLocalPlayerOut, 0, &[0]);
     active_clear();
@@ -465,24 +466,24 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
     h(O::MemFileRewind, file, &[]);
     h(O::PlLoadFrom, new, &[major as i64, minor as i64, pa(file)]);
     kill_units(old);
-    drop_queued(w);
+    drop_queued();
     for i in 0..num_players(w) {
         if old != player(w, i) {
-            let mut j: i64 = 0;
-            while j < h(O::PlAlliesCount, player(w, i), &[]) {
-                if hp(O::PlAllyAt, player(w, i), &[j]) != old {
+            let mut j = 0;
+            while j < allies(player(w, i), ListOp::Len) {
+                if allies(player(w, i), ListOp::At(j as usize)) as P != old {
                     j += 1;
                     continue;
                 }
                 player_rest(player(w, i), pr::EE_UNITS_PLAYER_REST_REMOVE_ALLY, old as u64, 0, 0);
-                h(O::PlAlliesPush, player(w, i), &[pa(new)]);
+                allies(player(w, i), ListOp::Add(new as u64));
                 j += 1;
             }
         } else {
-            let mut j: i64 = 0;
-            while j < h(O::PlAlliesCount, player(w, i), &[]) {
-                let ally = hp(O::PlAllyAt, old, &[j]);
-                h(O::PlAlliesPush, new, &[pa(ally)]);
+            let mut j = 0;
+            while j < allies(player(w, i), ListOp::Len) {
+                let ally = allies(old, ListOp::At(j as usize));
+                allies(new, ListOp::Add(ally));
                 j += 1;
             }
         }
@@ -529,7 +530,7 @@ pub extern "C" fn ee_gamecpp_world_remove_all_units(w: *mut c_void) {
         h(O::PlAddPendingUnits, pl, &[0, 1]);
         kill_units(pl);
     }
-    drop_queued(w);
+    drop_queued();
     h(O::WSetFirstUnitRaw, w, &[0]);
     if was_clear {
         *wm::<bool>(O::WClearing, w) = false;
@@ -541,9 +542,11 @@ pub extern "C" fn ee_gamecpp_world_remove_all_units(w: *mut c_void) {
 pub extern "C" fn ee_gamecpp_world_clear_ghosts(w: *mut c_void) {
     let w = w as P;
     h(O::WGhostLock, w, &[]);
-    while h(O::WGhostCount, w, &[]) > 0 {
-        let ghost = hp(O::WGhostBack, w, &[]);
-        h(O::WGhostPop, w, &[]);
+    loop {
+        let ghost = ee_sim::app::ghosts::ee_app_ghost_pop() as P;
+        if ghost == 0 {
+            break;
+        }
         h(O::GhostDelete, ghost, &[]);
     }
     h(O::WGhostUnlock, w, &[]);
@@ -624,7 +627,7 @@ pub extern "C" fn ee_gamecpp_world_remove_player(w: *mut c_void, won: bool, id: 
     h(O::PlSetEndTimeNow, pl, &[]);
     h(O::ScenarioEndCinematic, 0, &[]);
     if pl == player(w, current(w) as c_ulong) {
-        h(O::MiniMapRedraw, 0, &[]);
+        super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
         h(O::SetLocalPlayerOut, 0, &[1]);
     }
 }
@@ -834,13 +837,13 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
         }
         h(O::SightScopeDelete, scope, &[]);
     }
-    h(O::MiniMapRedrawAll, 0, &[]);
-    h(O::MiniMapRedraw, 0, &[]);
-    h(O::MiniMapRefresh, 0, &[]);
+    super::minimap::ee_gamecpp_minimap_redraw_all(super::globals::get!(gMiniMap));
+    super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
+    super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
     ee_gamecpp_world_sight_all(w as *mut c_void, true);
-    h(O::MiniMapRedrawAll, 0, &[]);
-    h(O::MiniMapRedraw, 0, &[]);
-    h(O::MiniMapRefresh, 0, &[]);
+    super::minimap::ee_gamecpp_minimap_redraw_all(super::globals::get!(gMiniMap));
+    super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
+    super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
     progress(24);
     if saved_regions {
         h(O::ContinentRestoreRegions, 0, &[]); // port (0.263): the saved regions (it builds them itself if it cannot read them)
@@ -872,7 +875,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     h(O::PickerLock, 0, &[]);
     h(O::PickerReset, 0, &[]);
     h(O::PickerUnlock, 0, &[]);
-    h(O::MiniMapRefresh, 0, &[]);
+    super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
     h(O::PathRequestPending, 0, &[pa(map(w))]);
     progress(27);
     for i in 1..num_players(w) {
@@ -1366,10 +1369,8 @@ pub extern "C" fn ee_gamecpp_world_set_time_of_day(w: *mut c_void, time_of_day: 
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_world_place_queued(w: *mut c_void) {
     let w = w as P;
-    let count = h(O::WQueuedCount, w, &[]);
-    for i in 0..count {
-        let u = hp(O::WQueuedUnit, w, &[i]);
-        let mut at = hp(O::WQueuedAfter, w, &[i]);
+    for (u, at) in crate::rts::world::queued() {
+        let (u, mut at) = (u as P, at as P);
         // port: a unit removed between its creation and this placement (Invalidate keeps its node until the node is
         // freed) was linked into the x-sorted list as a dead unit, and the list broke later. It is not placed.
         if !rts(u).mIsValid {
@@ -1387,7 +1388,14 @@ pub extern "C" fn ee_gamecpp_world_place_queued(w: *mut c_void) {
         let x = rts(u).mTileX;
         h(O::UcAddToTile, unit_class(u), &[pa(u)]);
         let (tx, ty) = (rts(u).mTileX, rts(u).mTileY);
-        h(O::MiniMapMoveUnit, u, &[-10000, -10000, tx as i64, ty as i64]);
+        super::minimap::ee_gamecpp_minimap_move_unit(
+            super::globals::get!(gMiniMap),
+            u as *mut c_void,
+            -10000,
+            -10000,
+            tx as c_long,
+            ty as c_long,
+        );
         if hp(O::UnTileNode, u, &[]) == 0 {
             continue;
         }
@@ -1465,8 +1473,8 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
         let _ = selected;
         *wm::<c_long>(O::WCurrentPlayer, world) = index as c_long;
         h(O::MiniMapSetViewer, 0, &[pa(player(world, index))]);
-        h(O::MiniMapRedraw, 0, &[]);
-        h(O::MiniMapRefresh, 0, &[]);
+        super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
+        super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
         player_body(pl, pb::EE_UNITS_PLAYER_DO_REFRESH_TERRAIN);
         h(O::TechUpdateInterface, hp(O::PlTechTree, pl, &[]), &[1]);
         h(O::UiPostUpdateBackground, 0, &[]);
@@ -1526,43 +1534,57 @@ pub unsafe extern "C" fn ee_gamecpp_world_screen_to_world(point: *const [f32; 2]
     unsafe { *out = [x * size, 0.0, -(y * size)] };
 }
 
+/// EEWorld's resource users (the C++'s `mResourceUsers`, +0x9a4): a resource unit's gatherer count by the unit's
+/// handle id. Looked up only, never iterated, never cleared (the world's lifetime: the C++ map was gWorld's member).
+static RESOURCE_USERS: std::sync::Mutex<std::collections::BTreeMap<u32, c_ulong>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
 /// EEWorld::ReleaseResourceUser (`delta` -1), AddResourceUser (1), GetResourceUsers (0): a resource unit's gatherer
 /// count (an untracked unit starts at 0 when read, 1 when added, and is left alone when released).
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_world_resource_users(w: *mut c_void, u: *mut c_void, delta: i32) -> c_ulong {
-    let (w, u) = (w as P, u as P);
-    let tracked = h(O::WResourceUserHas, w, &[pa(u)]) != 0;
+pub extern "C" fn ee_gamecpp_world_resource_users(_w: *mut c_void, u: *mut c_void, delta: i32) -> c_ulong {
+    // EEUnitHandle's key: the RTSUnit's id
+    let id = rts(u as P).mUnitID as u32;
+    resource_users(&mut RESOURCE_USERS.lock().unwrap_or_else(|e| e.into_inner()), id, delta)
+}
+
+fn resource_users(map: &mut std::collections::BTreeMap<u32, c_ulong>, id: u32, delta: i32) -> c_ulong {
     match delta {
         -1 => {
-            if tracked && h(O::WResourceUserGet, w, &[pa(u)]) > 0 {
-                let n = h(O::WResourceUserGet, w, &[pa(u)]);
-                h(O::WResourceUserSet, w, &[pa(u), n - 1]);
+            if let Some(n) = map.get_mut(&id).filter(|n| **n > 0) {
+                *n -= 1;
             }
             0
         }
         1 => {
-            if !tracked {
-                h(O::WResourceUserSet, w, &[pa(u), 1]);
-            } else {
-                let n = h(O::WResourceUserGet, w, &[pa(u)]);
-                h(O::WResourceUserSet, w, &[pa(u), (n as c_ulong).wrapping_add(1) as i64]);
-            }
+            let n = map.entry(id).or_insert(0);
+            *n = n.wrapping_add(1);
             0
         }
-        _ => {
-            if !tracked {
-                h(O::WResourceUserSet, w, &[pa(u), 0]);
-                0
-            } else {
-                h(O::WResourceUserGet, w, &[pa(u)]) as c_ulong
-            }
-        }
+        _ => *map.entry(id).or_insert(0),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resource_users_count_as_the_cpp_map_did() {
+        let mut m = std::collections::BTreeMap::new();
+        assert_eq!(resource_users(&mut m, 7, -1), 0);
+        assert!(m.is_empty(), "a release of an untracked unit adds nothing");
+        assert_eq!(resource_users(&mut m, 7, 0), 0);
+        assert_eq!(m.get(&7), Some(&0), "a read adds the unit at 0");
+        resource_users(&mut m, 7, -1);
+        assert_eq!(m.get(&7), Some(&0), "not below 0");
+        resource_users(&mut m, 7, 1);
+        resource_users(&mut m, 7, 1);
+        resource_users(&mut m, 8, 1);
+        resource_users(&mut m, 7, -1);
+        assert_eq!(resource_users(&mut m, 7, 0), 1);
+        assert_eq!(resource_users(&mut m, 8, 0), 1);
+    }
 
     #[test]
     fn the_media_lists_hold_the_cpp_constants_in_order() {

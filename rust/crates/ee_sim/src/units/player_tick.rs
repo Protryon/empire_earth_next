@@ -362,6 +362,9 @@ pub fn reset(r: &mut EeUnitsPlayerSaved, player_id: u32, part: u32) {
 struct FnHost {
     ctx: *mut c_void,
     f: EeUnitsPlayerTickFn,
+    /// the player: its herds' count and a herd's kill answered here (player_lists.rs, player_rest.rs)
+    #[cfg_attr(test, allow(dead_code))]
+    player: u64,
 }
 
 impl PlayerTickHost for FnHost {
@@ -376,9 +379,36 @@ impl PlayerTickHost for FnHost {
                 return v as i32;
             }
         }
+        #[cfg(not(test))]
+        {
+            use crate::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_HERDS};
+            use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_KILL_HERD_UNITS};
+            match op {
+                EE_UNITS_PLAYER_TICK_HERD_COUNT => {
+                    return player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::Len) as i32
+                }
+                EE_UNITS_PLAYER_TICK_HERD_KILL => {
+                    let herd = player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::At(index as usize));
+                    let player = self.player as usize as *mut c_void;
+                    // SAFETY: the live player and its herd
+                    unsafe { ee_units_player_rest(player, EE_UNITS_PLAYER_REST_KILL_HERD_UNITS, herd, 0, 0) };
+                    return 0;
+                }
+                _ => {}
+            }
+        }
         let (ctx, f) = (self.ctx, self.f);
         // SAFETY (both): the C++ callback's contract
-        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
+        #[cfg_attr(test, allow(unused_variables))]
+        let player = self.player;
+        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe {
+            // the player's own Rust bodies and plain reads first (player_native.rs)
+            #[cfg(not(test))]
+            if let Some(r) = crate::units::player_native::tick(op, player, io) {
+                return r;
+            }
+            f(ctx, op, index, io)
+        };
         // the compound operations as the C++'s one-statement ones ([`split`])
         if let Some(r) = split(op, index, io, &mut call) {
             return r;
@@ -398,8 +428,9 @@ pub unsafe extern "C" fn ee_units_player_update(
     rec: *mut EeUnitsPlayerSaved,
     fields: *mut EeUnitsPlayerFields,
 ) {
+    let player = (fields as usize).wrapping_sub(crate::world::layout::layout().player_fields as usize) as u64;
     // SAFETY: the caller's contract
-    unsafe { update_player(&mut FnHost { ctx, f }, rec, fields) };
+    unsafe { update_player(&mut FnHost { ctx, f, player }, rec, fields) };
 }
 
 /// `EEPlayer::Reset`'s fields of the record (see [`reset`]).

@@ -11,7 +11,6 @@
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/UResourceFile.h"
 
@@ -19,7 +18,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
@@ -152,8 +150,6 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::ScriptDirectory: EERMText(a[0], gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\");
         break;
     case O::SetUsingCarbon: gUsingCarbon = a[0] != 0;
-        break;
-    case O::LoadProgress: gUserInterface->SetLoadProgress(f[0]);
         break;
     case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;

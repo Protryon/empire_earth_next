@@ -15,15 +15,9 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 }
 
 #include "lle/LowLevelEngine.h"
-#include "platform/PlatFile.h"
-#include "lle/UResourceFile.h"
-#include "lle/GETextureManager.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EETechTreeTechID.h"
 #include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp preferences.rs)
 // the settings are kept in config.yaml (lle/UConfig.h; the original kept them in the registry key
 // HKCU\Software\Mad Doc Software\EE-AOC and its "Game Options" subkey)

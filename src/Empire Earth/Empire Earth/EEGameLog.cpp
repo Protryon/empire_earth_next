@@ -13,9 +13,7 @@
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/SESoundManager.h"
-#include "lle/SEScore.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/UResourceFile.h"
@@ -28,7 +26,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
@@ -41,10 +38,8 @@
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGameVariant.h"
@@ -55,11 +50,9 @@
 #include "ee/EECPEngine.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEStatisticsRecord.h"
-#include "ee/EEStatisticsHistory.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EETeam.h"
-#include "ee/EEVCWonder.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EEUserInterface.h"
@@ -67,11 +60,8 @@
 #include "ee/EECommunications.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EECivilizationManager.h"
-#include "rust/sim/app.h"
-#include "rust/sim/tech.h"
 #include <utility>
 #include "rust/game/gamecpp.h"
-#include "rust/game/game_log.h"
 #include "ee/EEGameLog.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
@@ -220,8 +210,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EaGoalState: return P64(B_CX->mGoalState);
     case O::EaGoalKind: return ((EEUnitGoal*)p)->mKind;
     case O::EaPlayerEpoch: return B_PL->mTechnologies->mCurrentEpoch;
-    case O::EaTownCount: return (int64_t)B_PL->mTowns.size();
-    case O::EaTownHullContains: return B_PL->mTowns[a[0]]->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
+    case O::EaTownHullContains: return B_PL->GetTown((unsigned long)a[0])->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
     case O::EaForestAt: return P64(gContinentManager.GetForestAt((EEUnit*)a[0]));
     case O::EaForestKind: return ((EEAIForest*)p)->GetResourceKind();
     // the music manager (music_io.rs)
@@ -305,7 +294,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DwTeamCount: return B_VC->mTeam->GetNumPlayers();
     case O::DwTeamPlayer: return B_VC->mTeam->mPlayers[a[0]];
     case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
-    case O::DwWonderCount: return ((EEPlayer*)p)->GetNumWonderUnits();
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
     case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
     case O::DwGameTime: return gPhysics->mGameTime;
@@ -379,7 +367,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DvUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::DvNameNarrow: B_CV->mName = (const char*)*(UString*)a[0];
         break;
-    case O::DvCanAfford: return B_CV->CanAfford((EECivUpgrade)a[0], (unsigned long*)a[1], NULL);
     case O::DvApplyUpgrade: return gCivilizationManager.ApplyUpgrade((EECivUpgrade)a[0], (long)a[1]);
     default: return EECore11OpC2(inOp, p, a, f);
     }

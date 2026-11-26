@@ -1642,6 +1642,8 @@ struct EeTechNodeDataFields {
   bool mObsoletedByDefault;
   bool mAvailableWithEpoch;
   bool mResearchedWithEpoch;
+  /// the unit classes and their cost tables (an [`EeTechClassTable`], Rust's; 0 before the load makes it)
+  size_t mClassTable;
 };
 
 /// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
@@ -1656,6 +1658,10 @@ struct EeTechTreeFields {
   bool mIsLoaded;
   /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
   EeTechTreeSaved *mSaved;
+  /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
+  long mPlayerIndex;
+  /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
+  class EEPlayer *mPlayer;
 };
 
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
@@ -3174,6 +3180,25 @@ size_t ee_tech_cost_string(void *ctx,
                            bool carbon,
                            uint8_t *out,
                            size_t size);
+
+/// `~RTSTechTreeNodeData`: the class table freed.
+///
+/// # Safety
+/// `d` is a live record whose table no one uses after.
+void ee_tech_node_classes_free(EeTechNodeDataFields *d);
+
+/// `GetNumUnitClasses`: the node data's unit class count.
+///
+/// # Safety
+/// `d` is a live record.
+unsigned long ee_tech_node_classes_count(const EeTechNodeDataFields *d);
+
+/// `Contains`: whether the unit class is one of the node data's (compared as the list's `unsigned long`).
+///
+/// # Safety
+/// `d` is a live record.
+bool ee_tech_node_classes_contains(const EeTechNodeDataFields *d,
+                                   long class_);
 
 /// Frees a tree record's saved lists (the C++ destructor).
 ///
