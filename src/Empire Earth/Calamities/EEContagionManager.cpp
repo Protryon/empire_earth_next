@@ -57,16 +57,6 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
 // (the calamities' addresses as the Rust's 64-bit handles: every target is 64-bit)
 static_assert(sizeof(EECalamity*) == sizeof(uint64_t), "the calamities' handles");
 
-bool EEContagionHelperAddUnit(EEContagionHelper* inHelper, EEUnit* inUnit, bool inNotify)
-{
-    return ee_contagion_helper_add_unit(inHelper, (uint64_t)(uintptr_t)inUnit, inNotify);
-}
-
-void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime)
-{
-    EECalamity* theCalamity = reinterpret_cast<EECalamity*>((uintptr_t)ee_contagion_helper_calamity(inHelper));
-    ee_contagion_helper_update(inHelper, theCalamity->mClass->mIsBlockedByImmunity, inElapsedTime);
-}
 
 // ------------------------------------------------------------------------- round 9, lane B: the hosts' compound cases' C++
 

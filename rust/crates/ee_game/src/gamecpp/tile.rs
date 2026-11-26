@@ -145,7 +145,7 @@ pub extern "C" fn ee_gamecpp_tile_set_terrain_type(
             }
         }
     }
-    h(O::TlSetTerrainTypeField, t, &[kind as i64]);
+    super::map::tile_set_terrain_type(t, kind as c_long);
 }
 
 #[cfg(test)]

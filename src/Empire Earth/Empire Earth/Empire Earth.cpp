@@ -921,8 +921,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::NodePoolDumpStats: UList<EEComplexUnit*>::sNodePool.DumpStats(false);
         break;
     // the game objects
-    case O::RandomMapInitialize: EERandomMap::Initialize(EEStartupDirectorySpec());
-        break;
     case O::LobbyOptionsSetDefaults: gWorld.mLobbyOptions.SetDefaults();
         break;
     case O::WorldOptionsSetDefaults: gWorld.mGameOptions.SetDefaults();

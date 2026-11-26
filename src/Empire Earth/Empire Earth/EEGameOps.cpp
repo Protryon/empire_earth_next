@@ -439,8 +439,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::EffectManagerPresent: return gWorld.mEffectManager != NULL;
     case O::EffCount: return (int64_t)gWorld.mEffectManager->Count();
     case O::EffDestroyedCount: return (int64_t)gWorld.mEffectManager->DestroyedCount();
-    case O::HelperUpdate: EEContagionHelperUpdate((EEContagionHelper*)p, f[0]);
-        break;
     default: return EEWorldOp(inOp, p, a, f);   // the world bodies' (EEWorld.cpp)
     }
     return 0;

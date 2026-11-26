@@ -111,19 +111,12 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MpDeleteTiles: delete[] M->mTileArray;
         break;
-    case O::MpTileArray: return P64(M->mTileArray);
     case O::MpSetTiles: M->mTileArray = (EETile*)a[0];
         break;
     case O::MpNewTiles: M->mTileArray = new EETile[a[0]];
         break;
-    case O::MpWords: return P64(M->mVisibilityWords);
     case O::MpSetWords: M->mVisibilityWords = (uint32_t*)a[0];
         break;
-    case O::MpTileAt: return P64(&M->mTileArray[a[0]]);
-    case O::MpTileSetVisibility: ((EETile*)a[0])->mVisibility = &M->mVisibilityWords[a[1]];
-        break;
-    case O::MpTileSize: return sizeof(EETile);
-    case O::MpRtsTile: return P64(M->mTiles[a[0]]);
     case O::MpRtsCreate: M->Create((long)a[0], (long)a[1], (unsigned long)a[2], true);
         break;
     case O::MpSightEnabled: return gSightUpdatesEnabled == true;
@@ -143,8 +136,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpClosestTileToLine: M->mTerrainMesh.GetClosestTile(*(GE3DLine*)a[0], *(long*)a[1], *(long*)a[2]);
         break;
     // the tiles
-    case O::MpTileSetHeight: ((EETile*)p)->mHeight = f[0];
-        break;
     case O::MpTileLoad: ((EETile*)p)->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2], (unsigned long)a[3]);
         break;
     case O::MpTileSave: return ((EETile*)p)->Save(*(FSFile*)a[0], (unsigned long)a[1]);
@@ -297,7 +288,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MmPackColor2: return GEPackColor(kPixelFormatA4R4G4B4, EEColorTable::GetColor2((unsigned long)a[0]), 1.0f);
     case O::MmPackShade: return GEPackColor(kPixelFormatA4R4G4B4, ((EEPlayer*)p)->mShadeColor, 1.0f);
     case O::MmPackPlayerColor: return GEPackColor(kPixelFormatA4R4G4B4, ((EEPlayer*)p)->mColor, 1.0f);
-    case O::MmTileVisibility: return ((EETile*)p)->GetVisibility((unsigned long)a[0]);
     case O::MmTileDoppCount: return ((EETile*)p)->GetNumDoppelgangers();
     case O::MmTileDopp: return P64(((EETile*)p)->mDoppelgangers[a[0]]);
     case O::MmTerrainColor: *(GEColor*)a[1] = EETerrainTable::Get((long)a[0])->mColor;
@@ -323,8 +313,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::TlSetIsSpace: ((EEMap*)p)->mTerrainMesh.SetIsSpace((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
         break;
     case O::TlValidPoint: return ((EEMap*)p)->mTerrainMesh.GetIsValidPoint((unsigned long)a[0], (unsigned long)a[1]);
-    case O::TlSetTerrainTypeField: ((EETile*)p)->mTerrainType = (long)a[0];
-        break;
     default: return EECore9OpB5(inOp, p, a, f);
     }
     return 0;

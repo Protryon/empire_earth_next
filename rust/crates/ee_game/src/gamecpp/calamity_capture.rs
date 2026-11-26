@@ -863,6 +863,13 @@ pub extern "C" fn ee_gamecpp_capture_calamity_start(kl: *mut c_void, k: *mut c_v
     result
 }
 
+/// `EEContagionHelperUpdate`: the helper's update, blocked by immunity as its calamity's class says.
+pub(crate) fn helper_update(helper: *mut ee_sim::tech::contagion_store::EeContagionHelper, elapsed: f32) {
+    let blocked = klass(hp(O::CalClass, helper_calamity(helper), &[])).mIsBlockedByImmunity;
+    // SAFETY: a live helper and its functor
+    unsafe { cs::ee_contagion_helper_update(helper, blocked, elapsed) };
+}
+
 fn helper_calamity(helper: *const ee_sim::tech::contagion_store::EeContagionHelper) -> P {
     // SAFETY: a live helper
     unsafe { cs::ee_contagion_helper_calamity(helper) as P }
@@ -911,7 +918,7 @@ pub extern "C" fn ee_gamecpp_capture_contagion_event(op: c_long, a: c_long, b: c
 pub extern "C" fn ee_gamecpp_capture_contagion(helper: *mut c_void, elapsed: f32) {
     let hl = helper as *mut ee_sim::tech::contagion_store::EeContagionHelper;
     if !active() || events(&CONTAGION_EVENTS).collecting != 0 {
-        hf(O::HelperUpdate, helper as P, &[], &[elapsed]);
+        helper_update(hl, elapsed);
         return;
     }
     let mut r = Record::default();
@@ -924,7 +931,7 @@ pub extern "C" fn ee_gamecpp_capture_contagion(helper: *mut c_void, elapsed: f32
         e.clear();
         e.collecting += 1;
     }
-    hf(O::HelperUpdate, helper as P, &[], &[elapsed]);
+    helper_update(hl, elapsed);
     events(&CONTAGION_EVENTS).collecting -= 1;
     helper_state(&mut r, hl);
     events(&CONTAGION_EVENTS).drain_into(&mut r);

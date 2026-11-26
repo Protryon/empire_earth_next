@@ -164,7 +164,7 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
             // SAFETY: the player's record
             let sees_all = unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, player)).mSeesAll };
             io.all = sees_all || h(O::FxFreeCamera, 0, &[]) != 0;
-            io.visibility = h(O::MmTileVisibility, tile, &[player_id(player) as i64]) as c_ulong;
+            io.visibility = super::map::tile_visibility(tile, player_id(player) as usize);
         }
         EE_APP_MINIMAP_OP_TILE_ITEMS => {
             // the tile's building images of the local player (a complex one on its own tile), then its living units

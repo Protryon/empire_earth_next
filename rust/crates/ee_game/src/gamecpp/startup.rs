@@ -1104,7 +1104,7 @@ pub extern "C" fn ee_gamecpp_startup_game_pools() {
 /// unit classes, the UI manager, the AI, the cheat codes and the game timer; their shutdown registered.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_game_objects() {
-    h(O::RandomMapInitialize, 0, &[]);
+    ee_sim::rmap::object::ee_rmap_initialize_generators();
     h(O::LobbyOptionsSetDefaults, 0, &[]);
     h(O::WorldOptionsSetDefaults, 0, &[]);
     h(O::InitPhysicsModels, 0, &[]);
