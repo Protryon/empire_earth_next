@@ -43,8 +43,6 @@ enum class EePreloadCpp : uint32_t {
   StartGame,
   IsMultiplayer,
   IsClient,
-  NewLoadedResponseClient,
-  NewLoadedResponseServer,
   ProcessLocalInput,
   SetHasLoaded,
   DisplayError,

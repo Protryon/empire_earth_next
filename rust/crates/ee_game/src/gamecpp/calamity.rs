@@ -1363,11 +1363,10 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
                 *shaken = true;
                 let (angle, amplitude) = (call.x, call.y);
                 capture(cap::CAL_W_SHAKE, 0, 0, angle, amplitude);
-                let mut at = Ge3DPoint::default();
-                h(O::CameraGetLocation, 0, &[ptr(&mut at)]);
+                let mut at = super::camera_io::location();
                 at.x += um_cos(angle) * amplitude;
                 at.y = at.y + um_cos(1.5707964 - angle) * amplitude;
-                h(O::CameraSetLocation, 0, &[cptr(&at), 1, 1]);
+                super::camera_io::set_location(&at, true, true);
                 *point_at(O::CalShakeLoc, c) = at;
             }
         }

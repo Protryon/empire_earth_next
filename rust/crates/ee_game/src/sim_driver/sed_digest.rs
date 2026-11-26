@@ -86,19 +86,15 @@ fn selection_text(s: Option<c_ulong>) -> String {
 
 // ------------------------------------------------------------------------------------------------ the save
 
-/// The save's chunk objects (EESaveLoad.cpp's BuildSaveGameChunks), each deleted after its line.
-fn chunk_list() -> (usize, i64) {
-    let list = h(O::ChunksNew, 0, &[]) as usize;
-    h(O::ChunksBuild, list, &[]);
-    (list, h(O::ChunksCount, list, &[]))
+/// The save's chunk objects (BuildSaveGameChunks: gamecpp persist_save.rs), each deleted after its line.
+fn chunk_list() -> Vec<usize> {
+    crate::gamecpp::persist_save::build_chunks()
 }
 
 /// The save's body: the game's save chunks (each written as WriteSaveGameChunks writes it) -> one line per chunk:
 /// its tag, length and hash. The header (the date, the time) is not written.
 pub fn save_digest(out: &mut Vec<String>) {
-    let (list, count) = chunk_list();
-    for i in 0..count {
-        let persistent = h(O::ChunksAt, list, &[i]) as usize;
+    for persistent in chunk_list() {
         let chunk = h(O::ChunkNew, 0, &[]) as usize;
         let file = h(O::MemNew, 0, &[0x400, 1, 1000]) as usize;
         let mut result = h(O::ChunkSavePersistent, chunk, &[persistent as i64]);
@@ -111,7 +107,6 @@ pub fn save_digest(out: &mut Vec<String>) {
         h(O::MemFree, file, &[]);
         h(O::ChunkFree, chunk, &[]);
     }
-    h(O::ChunksFree, list, &[]);
 }
 
 /// A saved file's chunks: the file read whole, its header loaded, then each chunk as written (tags in the order of
@@ -137,10 +132,8 @@ pub fn file_digest(name: &str, out: &mut Vec<String>) {
         done(out, "  unreadable");
         return;
     }
-    let (list, count) = chunk_list();
     let length = x::mem_length(memory);
-    for i in 0..count {
-        let persistent = h(O::ChunksAt, list, &[i]) as usize;
+    for persistent in chunk_list() {
         let start = x::mem_position(memory);
         let chunk = h(O::ChunkNew, 0, &[]) as usize;
         let read = if (start as c_ulong) < length { h(O::ChunkLoadFromFile, chunk, &[memory as i64]) } else { 9 };
@@ -150,7 +143,6 @@ pub fn file_digest(name: &str, out: &mut Vec<String>) {
         h(O::PersistentFree, persistent, &[]);
         h(O::ChunkFree, chunk, &[]);
     }
-    h(O::ChunksFree, list, &[]);
     let end = x::mem_position(memory);
     done(out, &format!("  rest {}", length.wrapping_sub(end as c_ulong)));
 }

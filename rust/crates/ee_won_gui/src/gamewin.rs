@@ -378,6 +378,25 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
     match k {
         K::RefHold | K::EvHold => rf(b, true),
         K::RefDrop | K::EvRelease => rf(b, false),
+        // an event's members: its record in place (R6 WON GUI round 39)
+        K::EvBroadcast | K::EvSetBroadcast | K::EvComp | K::EvSetComp => {
+            let r = crate::compobj::event_rec(b)?;
+            // SAFETY: the game's live event's record (the ops' contract); no reference outlives the statement
+            unsafe {
+                Some(match k {
+                    K::EvBroadcast => isize::from((*r).broadcast != 0),
+                    K::EvSetBroadcast => {
+                        (*r).broadcast = u8::from(c != 0);
+                        0
+                    }
+                    K::EvComp => (*r).comp,
+                    _ => {
+                        crate::compobj::event_set_comp(r, c);
+                        0
+                    }
+                })
+            }
+        }
         K::PNextChild | K::PIsModal | K::PEnsureOnTopOf => {
             if !crate::compobj::is_game() {
                 return None;
@@ -395,6 +414,11 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
             })
         }
         K::DefaultWindow => wm_field(EeWonWmField::DefaultWindow),
+        // `w->mManager->BroadcastEvent(e)`: the one manager's
+        K::WBroadcast => {
+            parts(b)?;
+            wm(EeWonWmCall::BroadcastEvent, c, 0).map(z)
+        }
         K::WSubscribe => {
             parts(b)?;
             wm(EeWonWmCall::SubscribeToBroadcast, c, on(d)).map(z)
@@ -435,6 +459,44 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
         Op::ChildRelease | Op::CtCursorRelease | Op::RootImageRelease => return rf(a, false),
         Op::ItemHold | Op::LayHold => return rf(a, true),
         Op::ItemRelease | Op::LayRelease => return rf(a, false),
+        Op::EventType
+        | Op::EventComponent
+        | Op::EventControlId
+        | Op::EventCompControlId
+        | Op::EventComponentTop
+        | Op::EventIsButtonPress
+        | Op::EventButton
+        | Op::EventChildUnder
+        | Op::ComboEventButton
+        | Op::DlgEventButtonFlags => return event_op(comp, op, a),
+        // `FireEvent(type, b != 0)` on the asking component, the type Rust's map (R6 WON GUI round 39: the hosts'
+        // cases went)
+        Op::FireEvent if comp != 0 && crate::compobj::is_game() => {
+            use crate::guihost::EeWonGuiEvent as E;
+            let e = [
+                E::InputReturn,
+                E::InputTextChanged,
+                E::ListSelChanged,
+                E::Scroll,
+                E::TabCtrlTabSelected,
+                E::ButtonPressed,
+            ]
+            .into_iter()
+            .find(|e| *e as isize == a)?;
+            let kind = crate::guihost::ee_won_gui_event_type(e) as isize;
+            // SAFETY: the game's live component (the op's contract); the call re-enters through Component's entry
+            unsafe {
+                crate::compobj::ee_won_comp_call(
+                    comp as *mut c_void,
+                    crate::compobj::host(),
+                    crate::compobj::EeWonCompCall::FireEvent,
+                    kind,
+                    on(b),
+                    0,
+                )
+            };
+            return Some(0);
+        }
         _ => {}
     }
     if !matches!(
@@ -548,6 +610,68 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             }
             0
         }
+    })
+}
+
+/// `ComponentEvent::Deliver` (R6 WON GUI round 39): a broadcast through the manager, else bubbled up from the
+/// component. None outside the game.
+pub(crate) fn deliver_component_event(e: isize) -> Option<isize> {
+    let r = crate::compobj::event_rec(e)?;
+    // SAFETY: the game's live event's record, copied
+    let rec = unsafe { *r };
+    if rec.broadcast != 0 {
+        wm(EeWonWmCall::BroadcastEvent, e, 0)?;
+    } else {
+        crate::compobj::comp().bubble(rec.comp, e);
+    }
+    Some(0)
+}
+
+/// An event's members (`a` a game `ComponentEvent*`) read in place (compobj.rs's record; R6 WON GUI round 39):
+/// its type and component, the component's control id and top, a button press, `dynamic_cast<Button*>` of the
+/// component (every game button registers its Rust button) and its button flags, the child of the asking container
+/// `comp` the component is under, a click's mouse button. None in a driver's world.
+fn event_op(comp: isize, op: Op, a: isize) -> Option<isize> {
+    let r = crate::compobj::event_rec(a)?;
+    // SAFETY: the game's live event's record (the ops' contract), copied
+    let e = unsafe { *r };
+    let c = e.comp;
+    Some(match op {
+        Op::EventType => e.kind as isize,
+        Op::EventComponent => c,
+        Op::EventControlId | Op::EventCompControlId => crate::compmem::get(c).control_id as isize,
+        Op::EventComponentTop => crate::compmem::bounds(c).y as isize,
+        Op::EventIsButtonPress => {
+            isize::from(e.kind == crate::guihost::ee_won_gui_event_type(crate::guihost::EeWonGuiEvent::ButtonPressed))
+        }
+        Op::EventButton => {
+            if crate::registry::find(c, crate::registry::EeWonGuiKind::Button).is_null() {
+                0
+            } else {
+                c
+            }
+        }
+        Op::EventChildUnder => {
+            let (mut child, mut parent) = (c, crate::compmem::parent(c));
+            while parent != comp && parent != 0 {
+                child = parent;
+                parent = crate::compmem::parent(child);
+            }
+            if parent == 0 {
+                0
+            } else {
+                child
+            }
+        }
+        Op::DlgEventButtonFlags => {
+            // SAFETY: a game button's Rust object lives as long as its C++ object, the event's component
+            let b = unsafe {
+                crate::registry::get::<crate::btnobj::EeWonButton>(c, crate::registry::EeWonGuiKind::Button)
+            }?;
+            b.call(crate::btnobj::EeWonBtnCall::GetField, crate::btnobj::EeWonBtnField::Flags as isize, 0, 0) as u32
+                as isize
+        }
+        _ => e.button as isize,
     })
 }
 
@@ -769,6 +893,10 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
             | Op::ChildSetPos
             | Op::ChildSetVisible
             | Op::RootDrawImage
+            | Op::RootGrabberRead
+            | Op::RootGrabberClear
+            | Op::RootGrabberDrop
+            | Op::RootImageSize
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -786,6 +914,19 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
         // (no class overrides SetVisible)
         Op::ChildSetVisible => return Some(z(kc(a, K::SetVisible, on(b), 0))),
         Op::RootDrawImage => return Some(crate::gfxrun::draw_image_part(a, b, c)),
+        // a queued grabber's state, clear and drop, a background image's size (R6 WON GUI round 39)
+        Op::RootGrabberRead | Op::RootGrabberClear | Op::RootGrabberDrop => {
+            return Some(crate::grabobj::root_grabber_op(op, a, b))
+        }
+        Op::RootImageSize => {
+            // SAFETY: the game's live image handle; `b` and `c` the two ints (the op's contract)
+            unsafe {
+                let i = crate::imgobj::image_of(a)?;
+                *(b as *mut i32) = i.width() as u16 as i32;
+                *(c as *mut i32) = i.height() as u16 as i32;
+            }
+            return Some(0);
+        }
         _ => {}
     }
     let Some(me) = window_of_root(root) else {

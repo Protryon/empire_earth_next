@@ -18,6 +18,8 @@ use ee_sim::netmsg::records::{
     EE_NETMSG_RECORD_FIELD_RAW, EE_NETMSG_RECORD_FIELD_STRING,
 };
 
+use crate::screens::game_actions::{EeScreensGaValue, EE_SCREENS_GA_VALUE_FLOAT, EE_SCREENS_GA_VALUE_POINT};
+
 use super::{h, hp, ptr, O, P};
 
 /// The codec's slots a message hands over (kNetMsgMaxSlots).
@@ -197,6 +199,65 @@ pub unsafe extern "C" fn ee_gamecpp_mrecord_init(message: *mut c_void, values: *
     }
 }
 
+impl EeGamecppMrValue {
+    /// An integer value (`EEMRecordValue(T)` of an integral or enum `T`).
+    pub fn integer(integer: i64) -> Self {
+        EeGamecppMrValue {
+            integer,
+            floats: [0.0; 3],
+            is_float: false,
+            string: std::ptr::null(),
+            list: std::ptr::null(),
+            list_count: 0,
+            list_element: 0,
+        }
+    }
+
+    /// A string member's value (`EEMRecordValue(const UWideString&)`: `string` a UWideString alive for the call).
+    pub fn string(string: P) -> Self {
+        EeGamecppMrValue { string: string as *const c_void, ..Self::integer(0) }
+    }
+}
+
+/// `new EEMRecord(kind, {values})` from Rust: the bare record (`EEMRecord(kind)`), then its members in wire order.
+pub fn new_record(kind: u8, values: &[EeGamecppMrValue]) -> P {
+    let m = hp(O::SsNewRecord0, 0, &[i64::from(kind)]);
+    // SAFETY: the new record; the values and their strings alive for the call
+    unsafe { ee_gamecpp_mrecord_init(m as *mut c_void, values.as_ptr(), values.len()) };
+    m
+}
+
+/// A game action's record value (`EeScreensGaValue`) as the sender's (were EEARust.cpp's EEMRecordValue
+/// conversions): a point (`EEMRecordValue(GE2DPoint)`) and a float (`EEMRecordValue(double)`) are float values, an
+/// integer an integer.
+pub fn ga_value(v: &EeScreensGaValue) -> EeGamecppMrValue {
+    match v.kind {
+        EE_SCREENS_GA_VALUE_POINT => {
+            EeGamecppMrValue { floats: [v.f[0], v.f[1], 0.0], is_float: true, ..EeGamecppMrValue::integer(0) }
+        }
+        EE_SCREENS_GA_VALUE_FLOAT => {
+            EeGamecppMrValue { floats: [v.f[0], 0.0, 0.0], is_float: true, ..EeGamecppMrValue::integer(0) }
+        }
+        _ => EeGamecppMrValue::integer(v.i),
+    }
+}
+
+/// A game action's record message (`new EEMRecord(kind, {values})`, seven values at most; was EEARust.cpp's).
+///
+/// # Safety
+/// `values` points at `count` values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screenscpp_ga_record(
+    kind: u32,
+    values: *const EeScreensGaValue,
+    count: u32,
+) -> *mut c_void {
+    let values =
+        if count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(values, count.min(7) as usize) } };
+    let values: Vec<EeGamecppMrValue> = values.iter().map(ga_value).collect();
+    new_record(kind as u8, &values) as *mut c_void
+}
+
 /// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
 /// text, the list's records, the blob's bytes, the record's members).
 ///
@@ -332,6 +393,25 @@ mod tests {
             list_count: 0,
             list_element: 0,
         }
+    }
+
+    #[test]
+    fn a_game_action_value_is_a_senders_value() {
+        let point = ga_value(&EeScreensGaValue { kind: EE_SCREENS_GA_VALUE_POINT, i: 9, f: [1.5, 2.5] });
+        assert_eq!((point.integer, point.is_float, point.floats), (0, true, [1.5, 2.5, 0.0]));
+        let float = ga_value(&EeScreensGaValue { kind: EE_SCREENS_GA_VALUE_FLOAT, i: 9, f: [3.0, 4.0] });
+        assert_eq!(value_forms(&float), (3, 3.0, true));
+        let int = ga_value(&EeScreensGaValue { kind: 0, i: -4, f: [3.0, 4.0] });
+        assert_eq!((value_forms(&int), int.is_float), ((-4, -4.0, true), false));
+    }
+
+    #[test]
+    fn the_value_constructors() {
+        let v = EeGamecppMrValue::integer(7);
+        assert_eq!(value_forms(&v), (7, 7.0, true));
+        assert!(v.string.is_null() && v.list.is_null());
+        let w = EeGamecppMrValue::string(0x1000);
+        assert_eq!((w.string as usize, w.integer, w.is_float), (0x1000, 0, false));
     }
 
     #[test]

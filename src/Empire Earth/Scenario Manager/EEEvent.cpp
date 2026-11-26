@@ -74,7 +74,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     switch (inOp) {
     case EE_SCENARIO_EV_EFFECTS_DATA: return R(gEventEffects.data());
     case EE_SCENARIO_EV_EFFECTS_COUNT: return (int64_t)gEventEffects.size();
-    case EE_SCENARIO_EV_LOADING: return gLoadingSavedGame;
+    case EE_SCENARIO_EV_LOADING: return gWorld.mLoadingSavedGame;
     case EE_SCENARIO_EV_EVENTS_ENABLED: return gEventsEnabled;
     case EE_SCENARIO_EV_PLAYER: return R(gWorld.mPlayers[a[0]]);
     case EE_SCENARIO_EV_CURRENT_PLAYER: return R(gWorld.GetCurrentPlayer());

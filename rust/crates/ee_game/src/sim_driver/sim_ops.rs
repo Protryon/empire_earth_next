@@ -38,7 +38,6 @@ pub enum EeSimDriverSim {
     PlayerSetStance,
 
     PlayerAddPendingUnits,
-    RequestSaveNew,
     SendToAllAndWait,
     DerefMessage,
     // the platform switches

@@ -65,7 +65,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_ACT_R_ATTACK_FRAME_SET: return (int64_t)(unsigned long)EEGetAttackFrameSet(EEUpdateUnit(inContext));
     case EE_UNITS_ACT_R_SWIMMING: return EEUpdateUnit(inContext)->IsSwimming() ? 1 : 0;
     case EE_UNITS_ACT_R_RANDOM: return (int64_t)UFloatBits(gPhysics->GetRandom());
-    case EE_UNITS_ACT_R_WORLD_CLEARING: return gWorldClearing ? 1 : 0;
+    case EE_UNITS_ACT_R_WORLD_CLEARING: return gWorld.mClearing ? 1 : 0;
     case EE_UNITS_ACT_R_QUEUED_GOALS: return EEUpdateUnit(inContext)->GetQueueGoals(0).size() > 1 ? 1 : 0;
     case EE_UNITS_ACT_R_DEATH_EFFECT: return EEUpdateClass(inContext)->mDeathEffect != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_DEATH_SOUND: return EEUpdateUnit(inContext)->mStats->mDeathSound != NULL ? 1 : 0;

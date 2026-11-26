@@ -14,7 +14,7 @@ inline GUIString LobbyMapUnitsText(const uint32_t* inUnits, size_t inCount)
     aText.reserve(inCount);
     for (size_t i = 0; i < inCount; i++)
         aText.push_back((wchar_t)inUnits[i]);
-    return GUIString(new GUIStringData(aText));
+    return GUIString(aText);
 }
 
 // the keys: an id (unsigned zero-extended, long sign-extended), an address, a GUIString's units, narrow text
@@ -1055,7 +1055,7 @@ void LobbyAddGameOption(const GUIString& inName, const GUIString& inValues, bool
         aParser.ReadString(aValue, false);
         if (aValue.empty())
             break;
-        anOptions.Add(GUIString(new GUIStringData(aValue)));
+        anOptions.Add(GUIString(aValue));
         if (!aParser.CheckNextChar(','))
             break;
     }
@@ -1081,7 +1081,7 @@ void LobbySetLanName(const GUIString& inName)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL || inName.mData->mLength == 0 ||
-        inName.mData->Compare(aData->GetLanName().mData.get()) == 0) return;
+        inName == aData->GetLanName()) return;
     long aTime = time(NULL);
     aData->LanNameInfoMap().SetNumAt(aData->LanNameInfoMap().Insert(inName), aTime);
     aData->SetLanName(inName);

@@ -151,9 +151,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
 
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(false, true);
         break;
-    case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
-        return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
-            {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, UWideString(s)})));
     case O::SendToAllAndWait: static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait((NEMessage*)p, 15000, 12);
         break;
     case O::DerefMessage: ((NEMessage*)p)->Dereference();

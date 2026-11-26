@@ -18,8 +18,9 @@
 #include "ee/EEUnit.h"
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EETeam.h"
 #include "ee/EEGameState.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERulesWorld.h"
@@ -59,12 +60,6 @@ EEStartingResources* EEGetResourceLevel(long inIndex)
 }
 
 
-// Destroys the team, deleting its victory condition
-EETeam::~EETeam()
-{
-    delete this->mVictoryCondition;
-}
-
 // ------------------------------------------------------------------------- the state bodies' C++ (gamecpp state.rs)
 
 int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
@@ -83,13 +78,7 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     typedef EeGameCpp O;
     switch (inOp) {
     case O::StTail: return P64(&ST->mMap);
-    case O::StTeamsClear: ST->mTeams.clear();
-        break;
-    case O::StLoadedPlayersClear: ST->mLoadedPlayers.clear();
-        break;
     case O::StChecksumReset: ST->mChecksum = ESChecksum(false);
-        break;
-    case O::StPlayersClear: ST->mPlayers.clear();
         break;
     case O::StDeleteMap: delete ST->mMap;
         break;
@@ -101,16 +90,9 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::StDeleteEnvironment: delete ST->mEnvironmentManager;
         break;
-    case O::StRestorablesClear: ST->mRestorables.clear();
-        break;
-    case O::StRestorableCount: return (int64_t)ST->mRestorables.size();
-    case O::StRestorableRepair: ST->mRestorables[a[0]]->RepairPointers((long)a[1], (unsigned long)a[2]);
+    case O::StRestorableRepair: ((FSRestorable*)p)->RepairPointers((long)a[0], (unsigned long)a[1]);
         break;
     case O::StOptionsPtr: return P64(&ST->mGameOptions);
-    case O::StPlayersResize: ST->mPlayers.resize((size_t)a[0]);
-        break;
-    case O::StPlayerSet: ST->mPlayers[a[0]] = (EEPlayer*)a[1];
-        break;
     case O::StNewMap: ST->mMap = new EEMap((long)a[0], (long)a[1], (unsigned long)a[2], gDefaultTerrain);
         break;
     case O::StNewScenarioManager: ST->mScenarioManager = new EEScenarioManager;
@@ -213,11 +195,11 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::RandomSetSeed: ((URandomIntegers*)p)->SetSeed((long)a[0]);
         break;
     case O::RandomGenerate: return ((URandomIntegers*)p)->Generate((long)a[0], (long)a[1]);
-    case O::LobbyWriteLock: gGameOptions.mLock->WriteLock();
+    case O::LobbyWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
         break;
-    case O::LobbyWriteUnlock: gGameOptions.mLock->WriteUnlock();
+    case O::LobbyWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
         break;
-    case O::LobbyMapTypeScenDefault: gGameOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
+    case O::LobbyMapTypeScenDefault: gWorld.mLobbyOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
         break;
     case O::CxSetPoolSize: EEComplexUnit::SetPoolSize((unsigned long)a[0], (unsigned long)a[1]);
         break;

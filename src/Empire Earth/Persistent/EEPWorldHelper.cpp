@@ -13,7 +13,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGameState.h"
-#include "ee/EETeam.h"
 #include "ee/EEPWorldHelper.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
@@ -140,7 +139,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define CALAMITIES (*(std::vector<EECalamity*>*)p)
 #define CAFILE (*(FSFile*)a[2])
 #define SPEC ((FSFileSpec*)p)
-#define LIST (*(std::vector<FSPersistent*>*)p)
 #define CHUNKS (*(std::vector<FSChunk>*)p)
 #define CHUNK ((FSChunk*)p)
 #define SPECS (*(std::vector<FSFileSpec>*)p)
@@ -149,7 +147,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define ST ((EEGameState*)p)
 #define MEM ((FSMemoryFile*)p)
 #define PERSISTENT ((FSPersistent*)p)
-extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 extern EEGameState gGameState;
 extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)
 // The saved world's C++ calls and members (EESaveLoad.cpp's EECore9OpC default): one statement each
@@ -161,17 +158,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwhScenario: return P64(PWH->mScenarioManager);
     case O::PwhSetScenario: PWH->mScenarioManager = (EEScenarioManager*)a[0];
         break;
-    case O::PwhTeamsFromWorld: PWH->mTeams = ((EEWorld*)a[0])->mTeams;
-        break;
-    case O::PwhTeamsCount: return (int64_t)PWH->mTeams.size();
-    case O::PwhTeamsResize: PWH->mTeams.resize((size_t)a[0]);
-        break;
-    case O::PwhTeamLoad: return PWH->mTeams[a[0]].Load((unsigned long)a[1], (unsigned long)a[2], *(FSFile*)a[3]);
-    case O::PwhTeamSave: return PWH->mTeams[a[0]].Save((unsigned long)a[1], (unsigned long)a[2], *(FSFile*)a[3]);
     case O::PwWorldPopulationLimit: return P64(&((EEWorld*)p)->mPopulationLimit);
     case O::PwStSetScenario: ((EEGameState*)p)->SetScenarioManager((EEScenarioManager*)a[0]);
-        break;
-    case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
@@ -396,8 +384,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PvAfterLoad: EEAfterLoadRust((void (*)(uintptr_t))a[0], (uintptr_t)a[1]);
         break;
     case O::PsMajorVersion: return kSaveGameMajorVersion;
-    case O::PsListPush: LIST.push_back((FSPersistent*)a[0]);
-        break;
     case O::PsPersistentTag: return PERSISTENT->GetTagID();
     case O::PsPersistentDelete: delete PERSISTENT;
         break;
@@ -466,7 +452,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsHdrOptionsFromWorld: HDR->mGameOptions = gWorld.mGameOptions;
         break;
-    case O::PsMaxPlayers: return gMaxPlayers;
+    case O::PsMaxPlayers: return gWorld.mMaxPlayers;
     case O::PsSpecNew: return P64(new FSFileSpec);
     case O::PsSpecDelete: delete SPEC;
         break;
@@ -551,7 +537,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsWaitRenderNow: gGraphics->mRenderNow->Wait(kTSWaitInfinite);
         break;
-    case O::PsSetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
+    case O::PsSetLoadingSavedGame: gWorld.mLoadingSavedGame = a[0] != 0;
         break;
     case O::PsStClear: ST->Clear();
         break;
@@ -575,14 +561,9 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsStSetEnvironmentManager: ST->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
         break;
-    case O::PsStRestorablePushEffects: ST->mRestorables.push_back((EEEffectManager*)a[0]);
-        break;
-    case O::PsStRestorablePushCalamities: ST->mRestorables.push_back((EEPCalamityHelper*)a[0]);
-        break;
-    case O::PsStRestorablePushEnvironment: ST->mRestorables.push_back((EEEnvironmentManager*)a[0]);
-        break;
-    case O::PsStLoadedPlayerPush: ST->mLoadedPlayers.push_back((EEPlayer*)a[0]);
-        break;
+    case O::PsRestorableOfEffects: return P64(static_cast<FSRestorable*>((EEEffectManager*)p));
+    case O::PsRestorableOfCalamities: return P64(static_cast<FSRestorable*>((EEPCalamityHelper*)p));
+    case O::PsRestorableOfEnvironment: return P64(static_cast<FSRestorable*>((EEEnvironmentManager*)p));
     case O::PsPlayerRemoveAlly: ((EEPlayer*)p)->RemoveAlly((EEPlayer*)a[0]);
         break;
     case O::PsEditorFormPresent: return gUIManager->GetScenarioEditorForm() != NULL;
@@ -634,7 +615,6 @@ double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::PwCameraZoom: return gWorld.mCameraControl.GetZoom();
     case O::PwWorldGameSpeed: return ((EEWorld*)p)->GetGameSpeed();
     // (EECore9OpCF)
     case O::PsMasterVolume: return gSoundManager->GetMasterVolume();

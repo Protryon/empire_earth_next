@@ -68,7 +68,6 @@
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
 // EESaveLoad.cpp: the save's chunks (the map, the scenario, the players, the world, ...), in their order
-void BuildSaveGameChunks(std::vector<FSPersistent*>& outList);
 
 // the plain layouts the Rust reads (GERectangle, GEColor, GETransformation)
 static_assert(sizeof(GERectangle) == 16 && sizeof(GEColor) == 12 && sizeof(GETransformation) == 64, "plain layouts");
@@ -136,7 +135,6 @@ std::string sText;                          // the last text answered (the UI th
 #define GH ((EEGhostUnit*)p)
 #define SP ((FSFileSpec*)p)
 #define MF ((FSMemoryFile*)p)
-#define CH ((std::vector<FSPersistent*>*)p)
 #define NM ((std::vector<UWideString>*)p)
 #define SU ((EESEUnit*)p)
 #define UF ((UIForm*)p)
@@ -299,7 +297,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::NodeUnitPlayer: return P64(UN->GetPlayer());
     case O::TerrainColorType: return EETerrainTable::Get((long)a[0])->mColorType;
     case O::ViewportRect: return P64(&gViewport.GetViewRectangle());
-    case O::WorldMaxPlayers: return gMaxPlayers;
+    case O::WorldMaxPlayers: return gWorld.mMaxPlayers;
     case O::WorldPopulationLimit: return gWorld.mPopulationLimit;
     case O::WorldWondersToWin: return gWorld.mNumberOfWondersToWin;
     case O::WorldVictoryEnabled: return gWorld.mVictoryEnabled;
@@ -483,12 +481,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::MemLength: return MF->GetLength(*(unsigned long*)a[0]);
     case O::HeaderNew: return P64(new EEPSaveGameHeader());
     case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, *(FSMemoryFile*)a[0]);
-    case O::ChunksNew: return P64(new std::vector<FSPersistent*>());
-    case O::ChunksBuild: BuildSaveGameChunks(*CH);
-        break;
-    case O::ChunksCount: return CH->size();
-    case O::ChunksAt: return P64((*CH)[a[0]]);
-    case O::ChunksFree: delete CH;
         break;
     case O::PersistentTag: return ((FSPersistent*)p)->GetTagID();
     case O::PersistentFree: delete (FSPersistent*)p;
@@ -549,9 +541,9 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::UpgradesFree: delete UPG;
         break;
     case O::NarrowNew: return P64(new UString(s));
-    case O::SetAllowCustomCivs: gAllowCustomCivs = a[0] != 0;
+    case O::SetAllowCustomCivs: gWorld.mGameOptions.mAllowCustomCivs = a[0] != 0;
         break;
-    case O::SetScenarioGame: gIsScenarioGame = a[0] != 0;
+    case O::SetScenarioGame: gWorld.mGameOptions.mIsScenarioGame = a[0] != 0;
         break;
     default: break;
     }

@@ -806,6 +806,9 @@ void ee_app_ambient_play_at_volume(EeAppAmbientFields *manager,
                                    uint32_t slot,
                                    float volume);
 
+/// The followed unit's saved id in `slot` (`mUnitA` 0, `mUnitB` 1), resolved or not.
+uint32_t ee_app_camera_unit(uint32_t slot);
+
 /// `EECameraControl()`'s plain members.
 ///
 /// # Safety

@@ -65,20 +65,15 @@ long ee_gamecpp_civ_reapply(void *civilization,
 long ee_gamecpp_civ_apply_deferred(void *civilization, void *player);
 
 /// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
-bool ee_gamecpp_wonder_enough(void *condition);
+bool ee_gamecpp_wonder_enough(size_t team);
 
 /// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
 /// the team lacks the wonders).
-void *ee_gamecpp_wonder_countdown(void *condition,
+void *ee_gamecpp_wonder_countdown(size_t team,
                                   unsigned long *out);
 
-/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
-long ee_gamecpp_wonder_state(void *condition);
-
-/// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
-long ee_gamecpp_wonder_load(unsigned long major,
-                            unsigned long minor,
-                            void *file);
+/// `EETeam::GetVictoryState` (`EEVCWonder`'s): 1 (won) when the team's countdown has run out, outside cinematics.
+long ee_gamecpp_wonder_state(size_t team);
 
 }  // extern "C"
 

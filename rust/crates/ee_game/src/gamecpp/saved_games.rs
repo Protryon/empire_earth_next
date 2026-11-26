@@ -6,7 +6,7 @@ use std::ffi::{c_char, CStr, CString};
 
 use ee_base::time::{ee_time_get, ee_time_of_day, EeTimeOfDay};
 
-use super::{h, hf, hp, pa, Owned, O, P};
+use super::{h, hp, pa, Owned, O, P};
 
 /// The log's first line (the C++'s `%02ld/%02ld/%02ld, %02ld:%02ld.%02ld`, the month counted from 1).
 pub fn saved_games_log_start(t: &EeTimeOfDay) -> String {
@@ -54,8 +54,8 @@ fn convert(directory: &CStr, file: &CStr, new_file: &CStr) -> i64 {
     if result != 0 {
         return result;
     }
-    h(O::UsgCameraChanged, 0, &[]);
-    hf(O::UsgCameraUpdate, 0, &[], &[1.0]);
+    super::camera_io::set_changed();
+    super::camera_io::update(1.0);
     h(O::UsgSave, 0, &[pa(new_file.as_ptr() as P), ee_time_get() as i64, pa(directory.as_ptr() as P)])
 }
 

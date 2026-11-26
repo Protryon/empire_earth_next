@@ -185,11 +185,11 @@ extern "C" uintptr_t ee_screenscpp_um_current_form(uintptr_t inManager)
 { return (uintptr_t)UMG(inManager)->GetCurrentForm(); }
 extern "C" bool ee_screenscpp_form_keyboard_captured(uintptr_t inForm)
 { return reinterpret_cast<UIForm*>(inForm)->GetIsKeyboardCaptured(); }
-extern "C" bool ee_screenscpp_loading_saved_game() { return gLoadingSavedGame; }
+extern "C" bool ee_screenscpp_loading_saved_game() { return gWorld.mLoadingSavedGame; }
 extern "C" uintptr_t ee_screenscpp_form_manager(uintptr_t inForm)
 { return (uintptr_t)reinterpret_cast<UIForm*>(inForm)->GetManager(); }
 extern "C" bool ee_screenscpp_um_in_editor(uintptr_t inManager) { return UMG(inManager)->mInScenarioEditor; }
-extern "C" bool ee_screenscpp_game_screen_active() { return gGameScreenActive; }
+extern "C" bool ee_screenscpp_game_screen_active() { return gWorld.mGameScreenActive; }
 extern "C" uintptr_t ee_screenscpp_um_editor_form(uintptr_t inManager)
 { return (uintptr_t)static_cast<UIForm*>(UMG(inManager)->GetScenarioEditorForm()); }
 extern "C" uintptr_t ee_screenscpp_um_main_game_form(uintptr_t inManager)

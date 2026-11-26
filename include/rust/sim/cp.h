@@ -456,11 +456,7 @@ constexpr static const int32_t EE_CP_PLAYER_BEHAVIOR_FLOAT = 300;
 
 constexpr static const int32_t EE_CP_PLAYER_BASE_POP_LIMIT = 301;
 
-constexpr static const int32_t EE_CP_PLAYER_NUM_TEAMS = 304;
-
 constexpr static const int32_t EE_CP_PLAYER_TEAM_WONDERS = 305;
-
-constexpr static const int32_t EE_CP_PLAYER_TEAM_CONTAINS = 306;
 
 constexpr static const int32_t EE_CP_PLAYER_NUM_PLAYERS = 307;
 

@@ -271,7 +271,7 @@ extern "C" void ee_screenscpp_ae_unit_reference(uintptr_t inUnit) { AE_T(inUnit)
 extern "C" void ee_screenscpp_ae_unit_dereference(uintptr_t inUnit) { AE_T(inUnit)->Dereference(); }
 extern "C" int64_t ee_screenscpp_ae_morale_bonus() { return (int64_t)gWorld.GetGameVariant()->mMoraleBonus; }
 extern "C" void ee_screenscpp_ae_create_unit_effect(uintptr_t inUnit, uintptr_t inEffect)
-{ gEffectManager->CreateUnitEffect((EEUnit*)inUnit, (EEGraphicEffect*)inEffect, NULL, false, 0, 0); }
+{ gWorld.mEffectManager->CreateUnitEffect((EEUnit*)inUnit, (EEGraphicEffect*)inEffect, NULL, false, 0, 0); }
 extern "C" void ee_screenscpp_aet_set_effect(uintptr_t inT, uintptr_t inEffect)
 { ((EEAreaEffectTemplate*)inT)->mGraphicEffect = (EEGraphicEffect*)inEffect; }
 extern "C" void ee_screenscpp_aet_set_effect18(uintptr_t inT, uintptr_t inEffect)

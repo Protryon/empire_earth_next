@@ -141,7 +141,6 @@ double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::RtCameraZoom: return gWorld.mCameraControl.mZoom;
     case O::RtViewportYClipping: return gViewport.GetYClippingPlane();
     case O::RuTextHeight: return RU_TEXT->GetTextExtent().GetHeight();
     case O::GsClassScale: return gUnitClassTable[a[0]]->GetScale();
