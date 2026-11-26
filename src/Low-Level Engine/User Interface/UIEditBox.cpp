@@ -12,38 +12,16 @@
 #include <windows.h>
 #include <stdlib.h>
 
-#include "rust/ui/editobj.h"
-#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
-#include "platform/PlatWindow.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
-#include "lle/GELine.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
 #include "lle/TMPoll.h"
 #include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 #define e static_cast<UIEditBox*>(inObj)
 #define theBar reinterpret_cast<UIScrollBar*>(a)

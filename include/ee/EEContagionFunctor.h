@@ -8,6 +8,7 @@
 #define EE_EECONTAGIONFUNCTOR_H
 
 #include "rust/sim/tech.h"   // EeContagionFunctorFields (ee_tech contagion_functor.rs)
+#include "rust/game/gamecpp.h"
 
 class EECalamity;
 class EECalamityClass;
@@ -16,22 +17,17 @@ class EEUnit;
 
 // New (port): the six functor classes as one, keyed by its kind (mKind, the EE_CALAMITY_FUNCTOR_* the class's
 // Initialize made). Its numbers are the Rust record EeContagionFunctorFields (ee_tech contagion_functor.rs: what
-// each kind's constructor stored, the getters the helper's update reads, Apply's damage); its effects and its world
-// steps (Infect, Cure, Apply) are here, one switch by kind (EEContagionManager.cpp). Every kind's CanInfectType was
+// each kind's constructor stored, the getters the helper's update reads, Apply's damage); its effects stay here; its world
+// steps (Infect, Cure, Apply) are gamecpp calamity_objects.rs', one switch by kind. Every kind's CanInfectType was
 // the unit set test (the ICF-shared 0xb6c4d), every UpdateUnits empty.
 class EEContagionFunctor : public EeContagionFunctorFields {
 public:
     // the functor of inKind for the class (its record, effects and immunity flag; the fire references its effect)
-    EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind);
+    EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind) { ee_gamecpp_functor_construct(this, inClass, inKind); }
     ~EEContagionFunctor();                  // the fire's 0xb6c2f: its effect released
 
-    bool CanInfectType(long inCategory, long inUnitType);   // 0xb6c4d: the unit type is in the functor's unit set
-    bool CanInfect(EEUnit* inUnit);         // 0xb66f8 (EEContagionManager.cpp) (provisional name)
-    // the discrete updates of the calamity in this helper update (0xb6c7c, 0xb6eae, 0xb6ff2)
-    void Update(float inElapsedTime, EECalamity* inCalamity);
-    void Infect(EEUnit* inUnit, EECalamity* inCalamity);   // a unit was infected
-    void Cure(EEUnit* inUnit, EECalamity* inCalamity);     // a unit was cured
-    void Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity);   // once per infected unit and update
+    // CanInfect (0xb66f8, every kind's CanInfectType 0xb6c4d: the unit set test), the update's periods (0xb6c7c,
+    // 0xb6eae, 0xb6ff2), Infect, Cure and Apply are gamecpp calamity_objects.rs'
 
     EEGraphicEffect* mEffect;               // the fire's burning effect (referenced), the mind control's effect
     EEGraphicEffect* mEffect2;              // the area effect's target effect

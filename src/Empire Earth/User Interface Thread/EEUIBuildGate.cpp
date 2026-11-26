@@ -14,7 +14,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEUIBuildGate.h"
 #include "ee/EEARust.h"
 
 // cdecl helpers (the units range 0x21048f..0x216d57; types inferred) (provisional names)

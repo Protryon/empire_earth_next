@@ -1261,6 +1261,15 @@ pub unsafe extern "C" fn ee_won_comp_call(
     // (only the game's components carry the member: a driver's world may lay out fewer)
     let ct = if is_game() { mem::get(me as isize).ct } else { 0 };
     if ct != 0 {
+        // SAFETY: a live container's own Rust object; its root, when it is a root container's, lives until it
+        // clears the link
+        let root = unsafe { (*(ct as *const crate::ctobj::EeWonContainer)).root.get() };
+        if !root.is_null() {
+            if let Some(k) = root_call(call) {
+                // SAFETY: as above
+                return unsafe { crate::rootobj::ee_won_root_call(root, k, a, b, c) };
+            }
+        }
         if let Some(k) = container_call(call) {
             // (GetMouseChild is the container's field)
             let a = if call == EeWonCompCall::MouseChild { crate::ctobj::EeWonCtField::MouseChild as isize } else { a };
@@ -1269,6 +1278,29 @@ pub unsafe extern "C" fn ee_won_comp_call(
         }
     }
     Comp::new(host).call(me as isize, call, a, b, c)
+}
+
+/// The root's call for a Component virtual that RootContainer overrides (R6 WON GUI round 38: the C++ RootContainer
+/// no longer repeats them), None for the others.
+pub fn root_call(k: EeWonCompCall) -> Option<crate::rootobj::EeWonRootCall> {
+    use crate::rootobj::EeWonRootCall as R;
+    use EeWonCompCall as C;
+    Some(match k {
+        C::SizeChanged => R::SizeChanged,
+        C::PrePaint => R::PrePaint,
+        C::Paint => R::Paint,
+        C::MouseExit => R::MouseExit,
+        C::MouseDown => R::MouseDown,
+        C::MouseUp => R::MouseUp,
+        C::MouseMove => R::MouseMove,
+        C::MouseDrag => R::MouseDrag,
+        C::KeyChar => R::KeyChar,
+        C::KeyDown => R::KeyDown,
+        C::KeyUp => R::KeyUp,
+        C::InvalidateRect => R::InvalidateRect,
+        C::SetCursor => R::SetCursor,
+        _ => return None,
+    })
 }
 
 /// The container's call for a Component virtual that Container overrides (R6 WON GUI round 37: the C++ Container
@@ -1310,40 +1342,33 @@ pub fn container_call(k: EeWonCompCall) -> Option<crate::ctobj::EeWonCtCall> {
     })
 }
 
-/// Component's own virtual `v` on the container `me` (the original's `Component::X()` from a Container body: the
-/// container's base call, `CtBase`), not routed to the container.
-///
-/// # Safety
-/// As `ee_won_comp_call`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_comp_base_call(
-    me: *mut c_void,
-    host: EeWonGuiHostFn,
-    v: crate::guihost::EeWonCtVirt,
-    a: isize,
-    b: isize,
-) -> isize {
+/// Component's own virtual `v` on the game's container or button `me` (the original's `Component::X()` from a
+/// Container or Button body: the hosts' `CtBase`, gamewin.rs common_op's in the game since R6 WON GUI round 38),
+/// not routed to the container.
+pub(crate) fn base_call(me: isize, v: isize, a: isize, b: isize) -> isize {
     use crate::guihost::EeWonCtVirt as V;
     use EeWonCompCall as C;
-    let k = match v {
-        V::SizeChanged => C::SizeChanged,
-        V::PrePaint => C::PrePaint,
-        V::Paint => C::Paint,
-        V::EnableControlsById => C::EnableControlsById,
-        V::NotifyRootVisibility => C::NotifyRootVisibility,
-        V::HitTest => C::HitTest,
-        V::MouseEnter => C::MouseEnter,
-        V::MouseExit => C::MouseExit,
-        V::MouseHover => C::MouseHover,
-        V::HandleBroadcastEvent => C::HandleBroadcast,
-        V::AddedToParent => C::AddedToParent,
-        V::MarkInvalid => C::MarkInvalid,
-        V::ClearGrabBG => C::ClearGrabBG,
-        V::GotFocus => C::GotFocus,
-        V::LostFocus => C::LostFocus,
-        _ => return 0,
-    };
-    Comp::new(host).call(me as isize, k, a, b, 0)
+    const MAP: [(V, C); 15] = [
+        (V::SizeChanged, C::SizeChanged),
+        (V::PrePaint, C::PrePaint),
+        (V::Paint, C::Paint),
+        (V::EnableControlsById, C::EnableControlsById),
+        (V::NotifyRootVisibility, C::NotifyRootVisibility),
+        (V::HitTest, C::HitTest),
+        (V::MouseEnter, C::MouseEnter),
+        (V::MouseExit, C::MouseExit),
+        (V::MouseHover, C::MouseHover),
+        (V::HandleBroadcastEvent, C::HandleBroadcast),
+        (V::AddedToParent, C::AddedToParent),
+        (V::MarkInvalid, C::MarkInvalid),
+        (V::ClearGrabBG, C::ClearGrabBG),
+        (V::GotFocus, C::GotFocus),
+        (V::LostFocus, C::LostFocus),
+    ];
+    match MAP.iter().find(|m| m.0 as isize == v) {
+        Some(m) => Comp::new(host()).call(me, m.1, a, b, 0),
+        None => 0,
+    }
 }
 
 #[cfg(test)]

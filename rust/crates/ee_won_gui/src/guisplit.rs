@@ -11,6 +11,7 @@
 use crate::guictl::EeWonRect4;
 use crate::guidraw::{EeWonDrawOp, EeWonInputPaint, EeWonSelColor, EE_WON_DRAW_CALL};
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp, EeWonGuiOp as Op};
+use crate::winobj::EeWonWinCall as C;
 use crate::wmcache::EeWonWmRefKind;
 use crate::wmobj::{EeWonWmEvent, EeWonWmMouse, EeWonWmWin};
 use std::ffi::c_void;
@@ -62,6 +63,18 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
     let out = |op: Op, a: isize, b: isize, c: isize, d: isize| {
         if which == EeWonGuiSplitHost::Wm {
             if let Some(r) = crate::gamewin::wm_ref_op(comp as isize, op, a, b, c) {
+                return r;
+            }
+        }
+        // (the component services guisplit's own statements ask for: Component's and the children's, as every
+        // Rust object's own calls; the manager is no component)
+        if which != EeWonGuiSplitHost::Wm {
+            if let Some(r) = crate::gamewin::common_op(comp as isize, op, a, b, c) {
+                return r;
+            }
+        }
+        if matches!(which, EeWonGuiSplitHost::List | EeWonGuiSplitHost::Text) {
+            if let Some(r) = crate::gamewin::list_host_op(comp as isize, op, a, b) {
                 return r;
             }
         }
@@ -368,17 +381,52 @@ fn list_op(op: Op, v: [isize; 4], out: Out) -> Option<isize> {
 }
 
 fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
-    // an input event's record (the C++ `InputEvent::mEv`, R6 WON GUI round 37), read or edited at once
-    let rec_at = |e: isize| out(Op::WmInputRec, e, 0, 0, 0) as *mut crate::winobj::EeWonWinEvent;
-    // SAFETY: the event `e` is a live input event (the case's contract), its record a plain value
-    let rec = |e: isize| unsafe { *rec_at(e) };
+    // an event's record (the C++ `WindowEventBase::mRec`, R6 WON GUI rounds 37 and 38), read or edited at once
+    let rec_at = |e: isize| out(Op::WmInputRec, e, 0, 0, 0) as *mut crate::wmobj::EeWonWmEventRec;
+    // SAFETY: the event `e` is a live event (the case's contract), its record a plain value
+    let rec = |e: isize| unsafe { (*rec_at(e)).ev };
     // SAFETY: as `rec`; `f` makes no call out
-    let rec_edit = |e: isize, f: &dyn Fn(&mut crate::winobj::EeWonWinEvent)| unsafe { f(&mut *rec_at(e)) };
+    let rec_edit = |e: isize, f: &dyn Fn(&mut crate::winobj::EeWonWinEvent)| unsafe { f(&mut (*rec_at(e)).ev) };
+    // an input event's handler run on its game window's Rust window (the original's `Window::Handle*Event`)
+    let handle = |window: isize, handler: C, e: isize| {
+        let r = rec_at(e);
+        let p = if r.is_null() { None } else { crate::gamewin::parts(window) }?;
+        // SAFETY: the live record, copied; the window's live Rust window (the bind's contract)
+        unsafe {
+            let ev = (*r).ev;
+            (*p.win).call(handler, &ev as *const crate::winobj::EeWonWinEvent as isize, 0);
+        }
+        Some(0)
+    };
     const MOUSE: isize = EeWonWmEvent::Mouse as isize;
     const SET_MOUSE: isize = EeWonWmEvent::SetMouse as isize;
     const SIZE: isize = EeWonWmEvent::Size as isize;
     const SET_SIZE: isize = EeWonWmEvent::SetSize as isize;
     match op {
+        // ---- R6 WON GUI round 38: an event's type and window are its record's; an input event's delivery and the
+        // manager's handler calls run the window's handler here (any other event's `Deliver` is the C++ virtual)
+        Op::WmEvent if a == EeWonWmEvent::Type as isize => Some(rec(b).kind as isize),
+        // SAFETY: the live event's record
+        Op::WmEvent if a == EeWonWmEvent::Window as isize => Some(unsafe { (*rec_at(b)).window }),
+        Op::WmEvent if a == EeWonWmEvent::SetWindow as isize => {
+            // SAFETY: the live event's record
+            unsafe { (*rec_at(b)).window = c };
+            Some(0)
+        }
+        Op::WmEvent if a == EeWonWmEvent::Deliver as isize => {
+            let r = rec_at(b);
+            // SAFETY: the live event's record
+            let (window, handler) = if r.is_null() { (0, 0) } else { unsafe { ((*r).window, (*r).handler) } };
+            match handler {
+                x if x == C::HandleMouseEvent as u32 => handle(window, C::HandleMouseEvent, b),
+                x if x == C::HandleKeyEvent as u32 => handle(window, C::HandleKeyEvent, b),
+                x if x == C::HandleInputEvent as u32 => handle(window, C::HandleInputEvent, b),
+                _ => None,
+            }
+        }
+        Op::WmWin if a == EeWonWmWin::HandleMouse as isize => handle(b, C::HandleMouseEvent, c),
+        Op::WmWin if a == EeWonWmWin::HandleKey as isize => handle(b, C::HandleKeyEvent, c),
+        Op::WmWin if a == EeWonWmWin::HandleInput as isize => handle(b, C::HandleInputEvent, c),
         // ---- R6 WON round 33
         // a size event's place and size read into the record `c`, or set from it
         Op::WmEvent if a == SIZE => {
@@ -426,7 +474,8 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
         Op::WmResolution => Some(out(Op::WmScreenResSet, b, c, 0, 0)),
         // a mouse event's window, point and button read, or its window and point set (`b` the event, `c` the record)
         Op::WmEvent if a == MOUSE => {
-            let window = out(Op::WmEvent, EeWonWmEvent::Window as isize, b, 0, 0);
+            // SAFETY: the live event's record
+            let window = unsafe { (*rec_at(b)).window };
             let e = rec(b);
             // SAFETY: `c` is the record (the op's contract)
             unsafe { *(c as *mut EeWonWmMouse) = EeWonWmMouse { window, x: e.x, y: e.y, button: e.button } };
@@ -435,7 +484,8 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
         Op::WmEvent if a == SET_MOUSE => {
             // SAFETY: `c` is the record (the op's contract)
             let m = unsafe { *(c as *const EeWonWmMouse) };
-            out(Op::WmEvent, EeWonWmEvent::SetWindow as isize, b, m.window, 0);
+            // SAFETY: the live event's record
+            unsafe { (*rec_at(b)).window = m.window };
             rec_edit(b, &|e| (e.x, e.y) = (m.x, m.y));
             Some(0)
         }
@@ -651,25 +701,39 @@ mod tests {
 
     #[test]
     fn the_manager_ops() {
-        // the mouse record read and set over the event's record (WmInputRec, R6 WON GUI round 37)
-        let mut e = crate::winobj::EeWonWinEvent { x: 11, y: 12, button: 2, key: 65, ..Default::default() };
-        let ep = &mut e as *mut crate::winobj::EeWonWinEvent as isize;
+        // the mouse record read and set over the event's record (WmInputRec, R6 WON GUI rounds 37 and 38)
+        let mut whole = crate::wmobj::EeWonWmEventRec {
+            ev: crate::winobj::EeWonWinEvent { kind: 9, x: 11, y: 12, button: 2, key: 65, ..Default::default() },
+            window: 70,
+            handler: 0,
+        };
+        let ep = &mut whole as *mut crate::wmobj::EeWonWmEventRec as isize;
+        // SAFETY: the test's own record
+        let e = unsafe { &mut (*(ep as *mut crate::wmobj::EeWonWmEventRec)).ev };
         let mut m = EeWonWmMouse { window: 0, x: 0, y: 0, button: 0 };
         let mp = &mut m as *mut EeWonWmMouse as isize;
-        let rec = move |op: Op, a: isize| match op {
-            Op::WmEvent if a == EeWonWmEvent::Window as isize => 70,
+        let rec = move |op: Op, _: isize| match op {
             Op::WmInputRec => ep,
             _ => 0,
         };
         let (_, log) = run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Mouse as isize, 6, mp, o), rec);
         assert_eq!((m.window, m.x, m.y, m.button), (70, 11, 12, 2));
-        assert_eq!(log, [format!("WmEvent {} 6 0 0", EeWonWmEvent::Window as isize), "WmInputRec 6 0 0 0".into()]);
+        assert_eq!(log, ["WmInputRec 6 0 0 0", "WmInputRec 6 0 0 0"]);
         // SAFETY: the test's own record
         unsafe { (*(mp as *mut EeWonWmMouse)).x = 21 };
         // SAFETY: as above
         unsafe { (*(mp as *mut EeWonWmMouse)).y = 22 };
+        // SAFETY: as above
+        unsafe { (*(mp as *mut EeWonWmMouse)).window = 71 };
         let (_, log) = run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetMouse as isize, 6, mp, o), rec);
-        assert_eq!(log, [format!("WmEvent {} 6 70 0", EeWonWmEvent::SetWindow as isize), "WmInputRec 6 0 0 0".into()]);
+        assert_eq!(log, ["WmInputRec 6 0 0 0", "WmInputRec 6 0 0 0"]);
+        // the type and the window are the record's
+        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Type as isize, 6, 0, o), rec).0, Some(9));
+        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Window as isize, 6, 0, o), rec).0, Some(71));
+        run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetWindow as isize, 6, 72, o), rec);
+        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Window as isize, 6, 0, o), rec).0, Some(72));
+        // an input event for a window the game did not bind (a driver's) is the host's to deliver
+        assert_eq!(run(|o| wm_op(Op::WmWin, EeWonWmWin::HandleKey as isize, 72, 6, o), rec).0, None);
         assert_eq!((e.x, e.y), (21, 22));
         // the button and the key are the record's
         assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Button as isize, 6, 0, o), rec).0, Some(2));
@@ -684,6 +748,7 @@ mod tests {
         run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetSize as isize, 6, rp, o), rec);
         assert_eq!((e.x, e.y, e.width, e.height), (1, 2, 3, 4));
         // other events are the C++ host's
+        assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Deliver as isize, 6, mp, o), rec).0, None);
         assert_eq!(run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Deliver as isize, 6, mp, o), |_, _| 0).0, None);
         // references
         assert_eq!(

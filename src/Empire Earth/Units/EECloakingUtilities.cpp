@@ -6,29 +6,17 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEAIKindIDs.h"
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);
@@ -46,8 +34,7 @@ template <class T> static T* CkObj(uint64_t inHandle) { return reinterpret_cast<
 extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int64_t inD, float (*ioF)[4])
 {
     switch (inOp) {
-    case EE_UNITS_CK_TERRAIN:
-        return gWorld.mMap->GetTile((long)inC, (long)inD) != NULL ? gWorld.mMap->GetTile((long)inC, (long)inD)->mTerrainType : -1;
+    case EE_UNITS_CK_TERRAIN: return gWorld.mMap->GetTile((long)inC, (long)inD) != NULL ? gWorld.mMap->GetTile((long)inC, (long)inD)->mTerrainType : -1;
     case EE_UNITS_CK_IS_EDGE: return gWorld.mMap->IsEdgeTile((long)inC, (long)inD);
     case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
     case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>((*ioF)), (long)inC, (long)inD, 0, 0);
@@ -64,8 +51,7 @@ extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int
     case EE_UNITS_CK_ENEMY_OF_VIEWER: return CkObj<EEUnit>(inA)->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID];
     case EE_UNITS_CK_OBSERVER: return gWorld.GetCurrentPlayer()->mObserverMode;
     case EE_UNITS_CK_SET_FLOAT: *CkObj<float>(inA) = (*ioF)[0]; return 0;
-    case EE_UNITS_CK_CREATE_CLOAK:
-        return gWorld.GetEffectManager()->CreateUnitEffect(CkObj<EEUnit>(inA), EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
+    case EE_UNITS_CK_CREATE_CLOAK: return gWorld.GetEffectManager()->CreateUnitEffect(CkObj<EEUnit>(inA), EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
     case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = sCkHandle.mValue; return 0;
     case EE_UNITS_CK_CLOAKED: return (long)EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked;
     case EE_UNITS_CK_DESTROY_EFFECT: gWorld.GetEffectManager()->DestroyEffect((sCkHandle.mValue = (decltype(sCkHandle.mValue))inC, sCkHandle)); return 0;
@@ -93,27 +79,15 @@ bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity)
 
 // Returns a space dock's yaw from which of the 2 x 2 tiles at (inX, inY) are space (one or two space tiles), else the
 // yaw of EEGetDockFacing
-float EEGetSpaceDockYaw(long inX, long inY, long inSize)
-{
-    return UBitsFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, inX, inY));   // uu_cloak.rs
-}
+float EEGetSpaceDockYaw(long inX, long inY, long inSize) { return UBitsFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, inX, inY)); }  // uu_cloak.rs
 
 // Returns whether a space dock (unit type 0x2d8) fits at (inX, inY): its inner 2 x 2 tiles placeable, its border on the
 // map with at least two land tiles, and its inner land/space mix fitting a dock
-bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer)
-{
-    return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)inPlayer, 0, inX, inY) != 0;   // uu_cloak.rs
-}
+bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer) { return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)inPlayer, 0, inX, inY) != 0; }  // uu_cloak.rs
 
 // Counts the 3 x 3 tiles around (inX, inY) that are land (inAny) or space (otherwise); 0 when the centre is off the map
-unsigned short EECountTilesAround(long inX, long inY, bool inAny)
-{
-    return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_COUNT_TILES_AROUND, inAny, 0, inX, inY);   // uu_cloak.rs
-}
+unsigned short EECountTilesAround(long inX, long inY, bool inAny) { return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_COUNT_TILES_AROUND, inAny, 0, inX, inY); }  // uu_cloak.rs
 
 // Sets the planet of every complex air unit, space dock, space turret and orbital space station on the map
 // (cdecl; called by EEWorld.cpp and EEUserInterface.cpp)
-void EEUpdateLandContinents()
-{
-    ee_units_ck_body(EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS, 0, 0, 0, 0);   // uu_cloak.rs
-}
+void EEUpdateLandContinents() { ee_units_ck_body(EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS, 0, 0, 0, 0); }  // uu_cloak.rs

@@ -16,68 +16,68 @@ use super::view::{
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeUnit {
-    vptr: usize,
-    tile_node: usize,
-    next: usize,
-    tile: usize,
-    player: usize,
-    rts: EeUnitsRtsUnitFields,
-    kind: u8,
-    class: usize,
-    complex_unit: usize,
-    stats: usize,
-    unit: EeUnitsUnitFields,
-    location: [[f32; 4]; 4],
-    active_group: usize,
-    container: usize,
-    command: usize,
-    goal: usize,
-    active_goal: usize,
-    herd: usize,
-    cargo: [usize; 3],
-    previous_part: usize,
-    next_part: usize,
-    build_queue: [usize; 3],
-    complex: EeUnitsComplexUnitFields,
+pub(crate) struct FakeUnit {
+    pub(crate) vptr: usize,
+    pub(crate) tile_node: usize,
+    pub(crate) next: usize,
+    pub(crate) tile: usize,
+    pub(crate) player: usize,
+    pub(crate) rts: EeUnitsRtsUnitFields,
+    pub(crate) kind: u8,
+    pub(crate) class: usize,
+    pub(crate) complex_unit: usize,
+    pub(crate) stats: usize,
+    pub(crate) unit: EeUnitsUnitFields,
+    pub(crate) location: [[f32; 4]; 4],
+    pub(crate) active_group: usize,
+    pub(crate) container: usize,
+    pub(crate) command: usize,
+    pub(crate) goal: usize,
+    pub(crate) active_goal: usize,
+    pub(crate) herd: usize,
+    pub(crate) cargo: [usize; 3],
+    pub(crate) previous_part: usize,
+    pub(crate) next_part: usize,
+    pub(crate) build_queue: [usize; 3],
+    pub(crate) complex: EeUnitsComplexUnitFields,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeClass {
-    count: u64,
-    fields: EeUnitsUnitClassFields,
+pub(crate) struct FakeClass {
+    pub(crate) count: u64,
+    pub(crate) fields: EeUnitsUnitClassFields,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeStats {
-    pad: [u64; 3],
-    fields: EeUnitsUnitClassUpgradeFields,
+pub(crate) struct FakeStats {
+    pub(crate) pad: [u64; 3],
+    pub(crate) fields: EeUnitsUnitClassUpgradeFields,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeGoal {
-    vptr: usize,
-    pad: [u8; 5],
-    kind: u8,
-    id: c_ulong,
+pub(crate) struct FakeGoal {
+    pub(crate) vptr: usize,
+    pub(crate) pad: [u8; 5],
+    pub(crate) kind: u8,
+    pub(crate) id: c_ulong,
 }
 
 #[repr(C)]
-struct FakePlayer {
-    vptr: usize,
-    rts: EeUnitsRtsPlayerFields,
-    color: [f32; 3],
-    first_unit: usize,
-    saved: EeUnitsPlayerSaved,
-    fields: EeUnitsPlayerFields,
-    selected_group: usize,
-    viewed_unit: usize,
-    selected_viewed_unit: usize,
-    computer: usize,
-    lists: usize,
+pub(crate) struct FakePlayer {
+    pub(crate) vptr: usize,
+    pub(crate) rts: EeUnitsRtsPlayerFields,
+    pub(crate) color: [f32; 3],
+    pub(crate) first_unit: usize,
+    pub(crate) saved: EeUnitsPlayerSaved,
+    pub(crate) fields: EeUnitsPlayerFields,
+    pub(crate) selected_group: usize,
+    pub(crate) viewed_unit: usize,
+    pub(crate) selected_viewed_unit: usize,
+    pub(crate) computer: usize,
+    pub(crate) lists: usize,
 }
 
 impl Default for FakePlayer {
@@ -100,48 +100,48 @@ impl Default for FakePlayer {
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeTile {
-    vptr: usize,
-    terrain: c_long,
-    units: usize,
-    visibility: usize,
-    height: f32,
-    ai: i8,
+pub(crate) struct FakeTile {
+    pub(crate) vptr: usize,
+    pub(crate) terrain: c_long,
+    pub(crate) units: usize,
+    pub(crate) visibility: usize,
+    pub(crate) height: f32,
+    pub(crate) ai: i8,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeNode {
-    vptr: usize,
-    unit: usize,
-    next: usize,
+pub(crate) struct FakeNode {
+    pub(crate) vptr: usize,
+    pub(crate) unit: usize,
+    pub(crate) next: usize,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeMap {
-    vptr: usize,
-    tiles: usize,
-    rts: EeUnitsRtsMapFields,
-    fields: EeUnitsMapFields,
+pub(crate) struct FakeMap {
+    pub(crate) vptr: usize,
+    pub(crate) tiles: usize,
+    pub(crate) rts: EeUnitsRtsMapFields,
+    pub(crate) fields: EeUnitsMapFields,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FakeWorld {
-    vptr: usize,
-    players: [usize; 17],
-    map: usize,
-    num_players: c_ulong,
-    current: c_long,
-    speed: f32,
-    population_limit: c_long,
-    wonders: c_ulong,
-    options: [u8; 16],
-    flags: [bool; 8],
+pub(crate) struct FakeWorld {
+    pub(crate) vptr: usize,
+    pub(crate) players: [usize; 17],
+    pub(crate) map: usize,
+    pub(crate) num_players: c_ulong,
+    pub(crate) current: c_long,
+    pub(crate) speed: f32,
+    pub(crate) population_limit: c_long,
+    pub(crate) wonders: c_ulong,
+    pub(crate) options: [u8; 16],
+    pub(crate) flags: [bool; 8],
 }
 
-fn fake_layout() -> EeWorldLayout {
+pub(crate) fn fake_layout() -> EeWorldLayout {
     EeWorldLayout {
         size: std::mem::size_of::<EeWorldLayout>() as u64,
         rts_unit_fields: offset_of!(FakeUnit, rts) as u64,
@@ -220,31 +220,31 @@ fn fake_layout() -> EeWorldLayout {
     }
 }
 
-fn addr<T>(v: &T) -> usize {
+pub(crate) fn addr<T>(v: &T) -> usize {
     v as *const T as usize
 }
 
 /// A small world: player 1 with an EEUnit (a tree) and a complex unit carrying cargo, a 2 x 2 map with one tile
 /// missing; all boxed so the addresses stay.
-struct Fixture {
-    world: Box<FakeWorld>,
-    player: Box<FakePlayer>,
-    tree: Box<FakeUnit>,
-    soldier: Box<FakeUnit>,
-    cargo: Box<FakeUnit>,
-    cargo_list: Box<[usize; 2]>,
-    class: Box<FakeClass>,
-    stats: Box<FakeStats>,
-    goal: Box<FakeGoal>,
-    action: Box<u32>,
-    map: Box<FakeMap>,
-    tiles: Vec<FakeTile>,
-    tile_array: Box<[usize; 4]>,
-    visibility: Box<[u32; 6]>,
-    nodes: Vec<FakeNode>,
+pub(crate) struct Fixture {
+    pub(crate) world: Box<FakeWorld>,
+    pub(crate) player: Box<FakePlayer>,
+    pub(crate) tree: Box<FakeUnit>,
+    pub(crate) soldier: Box<FakeUnit>,
+    pub(crate) cargo: Box<FakeUnit>,
+    pub(crate) cargo_list: Box<[usize; 2]>,
+    pub(crate) class: Box<FakeClass>,
+    pub(crate) stats: Box<FakeStats>,
+    pub(crate) goal: Box<FakeGoal>,
+    pub(crate) action: Box<u32>,
+    pub(crate) map: Box<FakeMap>,
+    pub(crate) tiles: Vec<FakeTile>,
+    pub(crate) tile_array: Box<[usize; 4]>,
+    pub(crate) visibility: Box<[u32; 6]>,
+    pub(crate) nodes: Vec<FakeNode>,
 }
 
-fn fixture() -> Fixture {
+pub(crate) fn fixture() -> Fixture {
     let mut f = Fixture {
         world: Box::default(),
         player: Box::default(),

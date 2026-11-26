@@ -43,7 +43,6 @@ public:
     // Copies another area's name, text, rectangle, anchor, select mode and ID (not its tile cache)
     // 0x1ba2b2 (EEScenarioManager 0x1b12ff; provisional name)
     void Copy(const EESMArea& inArea) { ee_scenario_en_area_copy(this, (void*)&inArea); }
-    U2DPoint<long> GetCenterTile();         // 0x1ba315: hidden-result ABI; by-value spelling inferred
     // Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks; every cached read
     // restarts the timer
     // 0x1ba495: real typed cache/output family
@@ -54,10 +53,7 @@ public:
     // inline (COMDAT 0x17d381, first emitted by the editor's area screen; Reset 0x1afbb1 calls it) (provisional name)
     void SetAnchor(const U2DPoint<long>& inAnchor) { ee_scenario_en_area_set_anchor(this, inAnchor.mX, inAnchor.mY); }
     // inline (COMDAT 0x17d34c, before SetAnchor's: the editor's area screen 0x17d272 calls both) (provisional name)
-    void SetRectangle(const GERectangle& inRectangle)
-    {
-        ee_scenario_en_area_set_rectangle(this, reinterpret_cast<const EeScenarioAreaRect*>(&inRectangle));
-    }
+    void SetRectangle(const GERectangle& inRectangle) { ee_scenario_en_area_set_rectangle(this, reinterpret_cast<const EeScenarioAreaRect*>(&inRectangle)); }
 
     const UWideString& GetText() const { return this->mText; }
     const GERectangle& GetRect() const { return *reinterpret_cast<const GERectangle*>(&this->mRect); }

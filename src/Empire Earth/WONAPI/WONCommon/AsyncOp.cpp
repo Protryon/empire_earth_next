@@ -97,17 +97,12 @@ static void* CoreNewOp() { return static_cast<RefCount*>(new AsyncOp); }
 static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inBytes,const EeWonIpAddr* inAddr,
                              uint32_t inSize)
 {
-    IPAddr anAddr=inAddr!=NULL ? IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)) : IPAddr();
-    SocketOp* anOp=new SocketOp(inKind,static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)),
-                                static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),&anAddr,inSize);
-    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(new SocketOp(inKind,static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)),
+                                static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),inAddr,inSize)));
 }
 static void* CoreNewQueueSocket(int32_t inType,bool inBlocking)
 { return static_cast<RefCount*>(inBlocking ? new BlockingSocket(inType) : new QueueSocket(inType)); }
-static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
-{
-    return static_cast<RefCount*>(inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr))) : new UDPManagerRecvOp);
-}
+static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr) { return static_cast<RefCount*>(new UDPManagerRecvOp(inAddr)); }
 static long CoreUdpCheck(void* inOp,const uint8_t* inData,size_t inLength,bool* outThrew)
 {
     *outThrew=false;
@@ -164,7 +159,6 @@ static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t in
     anOp->AddRef();
     return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp.get()));
 }
-bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
 static long CoreSocketOpContinue(void* inOp)
 {
     return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();
@@ -177,5 +171,9 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreAddToSocketThread,CoreBytesAdopt,NULL /* the transform: cppcore.rs n_transform */,
                                         CoreSocketDuplicate,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
+// the Rust objects' maker of a Rust op's C++ op (cppcore.rs new_host_op: the peer auth and HTTP get ops a Rust op
+// makes, GameSpySupport's service lookup; ServerOp.cpp's until R6 WON lobby and network round 38)
+static void* NewHostOp(EeWonHostOp* inOp) { return static_cast<RefCount*>(static_cast<AsyncOp*>(new RustServerOp(inOp))); }
+[[maybe_unused]] static const bool sHostOpMaker = (ee_won_core_set_new_host_op(NewHostOp), true);
 
 }

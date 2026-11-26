@@ -7,7 +7,6 @@
 // Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "rust/game/gamecpp.h"   // round 10 (ee_game gamecpp)
 #include <vector>
 #include <algorithm>
 #include <mbstring.h>
@@ -19,7 +18,6 @@
 #include "ee/EEUnit.h"
 #include "lle/SESoundManager.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GEBitmap.h"
 #include "lle/UIForm.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
@@ -35,12 +33,10 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEDisplayDevices.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
 #include "ee/EEMap.h"
-#include "ee/EEGraphicEffect.h"
 #include "ee/EEARust.h"
 
 

@@ -241,7 +241,7 @@ public:
 // loop releases them while the lobby runs and takes them back, in ProcessActions' order, before the action returns
 // (the locks are gluesplit.rs's LocksRelease and LocksRetake, one op per lock: R6 WON round 32)
 
-static LobbyPlayer* EELobbyNewPlayer() { return new EELobbyPlayer; }
+static LobbyPlayer* EELobbyNewPlayer() { return new LobbyPlayer(EeWonModelKind::EePlayer); }
 static ComponentConfig* EELobbyNewButtonConfig() { return CfgNewOfKind(EeWonCfgKind::Button); }
 static ComponentConfig* EELobbyNewContainerConfig() { return new ContainerConfig; }
 static ComponentConfig* EELobbyNewDialogConfig() { return CfgNewOfKind(EeWonCfgKind::Dialog); }
@@ -491,7 +491,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::OptionsPlayerName: return HeldData(EELobbyToGUIString(reinterpret_cast<const EEGameOptions*>(a)->mPlayers[b].mName));
     case Op::FileName: return HeldData(GUIString(WONFile(reinterpret_cast<const char*>(a)).GetFileName()));
     case Op::FileSize: return (intptr_t)WONFile(reinterpret_cast<const char*>(a)).GetSize();
-    case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)reinterpret_cast<LobbyClient*>(a)->GetPlayer().mPtr;
+    case Op::ClientPlayer: return (intptr_t)reinterpret_cast<LobbyClient*>(a)->GetPlayer().mPtr;
     case Op::DefaultOptions: return (intptr_t)&gGamePreferences.GetSettings().mGameOptions;
     case Op::OptionMapTypeName: gWorld.mLobbyOptions.mMapType = EELobbyToWideString(EELobbyStr(a)); return 0;
     case Op::OptionMapTypeGenerator: gWorld.mLobbyOptions.mMapType = EERMGetGeneratorName((unsigned long)a); return 0;

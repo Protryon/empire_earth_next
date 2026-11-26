@@ -4,11 +4,8 @@
 #include <windows.h>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
 #include "lle/SESoundManager.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIButton.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -21,14 +18,12 @@
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEAction.h"
 #include "ee/EEARust.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIBUpgrade.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFMGStatusBar.h"
-#include "rust/game/screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
 
 
 // The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
@@ -77,7 +72,6 @@ extern "C" int64_t ee_screenscpp_upx_bar_base_r_down(uintptr_t inCall) { return 
 
 // ---- the host's multi-statement cases (UI lane round 9: ee_game screens upgrade_calls.rs), each one statement on
 // the call record's button
-#include "ee/EEScreensShims.h"
 #define UPC(inCall) (*reinterpret_cast<EEUIBUpgradeCall*>(inCall))
 #define UPB(inCall) static_cast<EEUIBUpgrade*>(UPC(inCall).mButton)
 static const unsigned long kUpSounds[] = {kSoundButton2, kSoundButton1};

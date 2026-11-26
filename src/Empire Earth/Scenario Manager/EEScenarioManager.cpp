@@ -32,7 +32,6 @@
 #include "ee/EEGameSound.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EECommunications.h"
-#include "ee/EEPersistentTag.h"
 #include "ee/EEScenarioHost.h"
 
 bool gScenarioSimDialogs = false;
@@ -54,12 +53,10 @@ static GE3DPoint sRoundStart;   // MoveCameraToStart's point (the original's loc
 extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32_t inOp, int64_t inA, int64_t inB, float inTime)
 {
     switch (inOp) {
-    case EE_SCENARIO_ROUND_GAME_SPEED: return EESMBits(gWorld.mGameSpeed);
     case EE_SCENARIO_ROUND_TICK_SECONDS: return EESMBits(gPhysics->GetTickSeconds());
     case EE_SCENARIO_ROUND_MESSAGE_COUNT: return (int64_t)theManager->mMessages.size();
     case EE_SCENARIO_ROUND_DIALOG_PAUSED: return gCommunications == NULL || gCommunications->GetIsGamePaused();
     case EE_SCENARIO_ROUND_MESSAGE_CINEMATIC: return theManager->mMessages[(size_t)inA].mIsCinematic;
-    case EE_SCENARIO_ROUND_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_SCENARIO_ROUND_MOVE_CAMERA: ee_scenario_en_round(theManager, EE_SCENARIO_MN_MOVE_CAMERA, NULL, 0, 0); return 0;
     case EE_SCENARIO_ROUND_TRIGGER_COUNT: return (int64_t)theManager->mTriggers.size();
     case EE_SCENARIO_ROUND_EVALUATE_TRIGGER: theManager->GetTrigger((unsigned long)inA)->Evaluate(inTime); return 0;
@@ -106,12 +103,9 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_MESSAGE_ERASE: theManager->mMessages.erase(theManager->mMessages.begin() + (size_t)inA);
         return 0;
-    case EE_SCENARIO_ROUND_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
-    case EE_SCENARIO_ROUND_PLAYER_EXISTS: return gWorld.GetPlayer((unsigned long)inA) != NULL;
     case EE_SCENARIO_ROUND_DELAY_WONDERS: gWorld.GetPlayer((unsigned long)inA)->DelayWonderTimers((long)inB);
         return 0;
     case EE_SCENARIO_ROUND_PLAYER_HUMAN: return gWorld.GetPlayer((unsigned long)inA)->IsHuman();
-    case EE_SCENARIO_ROUND_PLAYER_OBSERVER: return gWorld.GetPlayer((unsigned long)inA)->mObserverMode;
     case EE_SCENARIO_ROUND_UNSELECT: gWorld.GetPlayer((unsigned long)inA)->UnselectAllUnits();
         return 0;
     case EE_SCENARIO_ROUND_COPY_SELECTION:
@@ -152,12 +146,9 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_GET_VIEW_TURN: gWorld.mCameraControl.GetViewTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT00);
         return 0;
-    case EE_SCENARIO_ROUND_CAMERA_GET_OFFSET_TURN:
-        gWorld.mCameraControl.GetOffsetTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT40);
-        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_GET_OFFSET_TURN: gWorld.mCameraControl.GetOffsetTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT40); return 0;
     case EE_SCENARIO_ROUND_CAMERA_MODE: return (int64_t)gWorld.mCameraControl.mMode;
     case EE_SCENARIO_ROUND_CAMERA_ZOOM: return EESMBits(gWorld.mCameraControl.GetZoom());
-    case EE_SCENARIO_ROUND_SET_IN_CINEMATIC: return gWorld.mInCinematic = inA != 0;
     case EE_SCENARIO_ROUND_SAVE_GAME_SPEED: return EESMBits(gWorld.mSavedGameSpeed = gWorld.GetGameSpeed());
     case EE_SCENARIO_ROUND_RESTORE_GAME_SPEED: gWorld.SetGameSpeed(gWorld.mSavedGameSpeed);
         return 0;
@@ -167,9 +158,7 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_FORM_CURSOR_LOCK: return gUIManager->GetMainGameForm()->mIsCursorLocked = inA != 0;
     case EE_SCENARIO_ROUND_MOUSE_POINTER: return gMouse->mPointer = (long)inA;
-    case EE_SCENARIO_ROUND_MOUSE_CENTER:
-        gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() / 2), (float)(gGameWindow->GetHeight() / 2)));
-        return 0;
+    case EE_SCENARIO_ROUND_MOUSE_CENTER: gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() / 2), (float)(gGameWindow->GetHeight() / 2))); return 0;
     case EE_SCENARIO_ROUND_MESSAGE_VOICED: return theManager->mMessages[(size_t)inA].mSound.GetLength() > 0;
     case EE_SCENARIO_ROUND_POST_DIALOG: gUserInterface->PostDialogMessage(theManager->mMessages[(size_t)inA]);
         return 0;
@@ -218,8 +207,7 @@ template<class T> int32_t EESMListIO(EESMStream* inStream, std::vector<T*>& ioLi
         return 0;
     case EE_SCENARIO_IO_ELEMENT_FREE: delete static_cast<T*>(ioValue);
         return 0;
-    case EE_SCENARIO_IO_ELEMENT_SAVE:
-        return (int32_t)ioList[inIndex]->Save(inStream->mMajor, inStream->mMinor, *inStream->mFile);
+    case EE_SCENARIO_IO_ELEMENT_SAVE: return (int32_t)ioList[inIndex]->Save(inStream->mMajor, inStream->mMinor, *inStream->mFile);
     case EE_SCENARIO_IO_ELEMENT_COUNT: *static_cast<unsigned long*>(ioValue) = ioList.size(); return 0;
     }
     return 0;
@@ -251,13 +239,11 @@ int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsi
     }
     switch (inSlot) {
     case EE_SCENARIO_ELEMENT_TRIGGERS: return EESMListIO(inStream, theManager->mTriggers, inOp, inSlot, inIndex, ioValue);
-    case EE_SCENARIO_ELEMENT_CONDITIONS:
-        return EESMListIO(inStream, theManager->mConditions, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_CONDITIONS: return EESMListIO(inStream, theManager->mConditions, inOp, inSlot, inIndex, ioValue);
     case EE_SCENARIO_ELEMENT_EFFECTS: return EESMListIO(inStream, theManager->mEffects, inOp, inSlot, inIndex, ioValue);
     case EE_SCENARIO_ELEMENT_OBJECTS: return EESMListIO(inStream, theManager->mObjects, inOp, inSlot, inIndex, ioValue);
     case EE_SCENARIO_ELEMENT_AREAS: return EESMListIO(inStream, theManager->mAreas, inOp, inSlot, inIndex, ioValue);
-    case EE_SCENARIO_ELEMENT_PENDING:
-        return EESMListIO(inStream, theManager->mPendingEffects, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_PENDING: return EESMListIO(inStream, theManager->mPendingEffects, inOp, inSlot, inIndex, ioValue);
     }
     return 0;
 }
@@ -322,9 +308,7 @@ extern "C" void* ee_scenariocpp_list_op(EeScenarioListContext* inContext, uint32
         return NULL;
     case EE_SCENARIO_LIST_OP_MEDIA_KEEP: m->mUnitClassMedia.push_back({(long)inList, (long)inIndex});
         return NULL;
-    case EE_SCENARIO_LIST_OP_ANCHOR:
-        static_cast<EESMArea*>(inElement)->SetAnchor(U2DPoint<long>((long)(int32_t)inList, (long)(intptr_t)inIndex));
-        return NULL;
+    case EE_SCENARIO_LIST_OP_ANCHOR: static_cast<EESMArea*>(inElement)->SetAnchor(U2DPoint<long>((long)(int32_t)inList, (long)(intptr_t)inIndex)); return NULL;
     case EE_SCENARIO_LIST_OP_OUT_NAME: static_cast<std::vector<UWideString>*>(inContext->names)->push_back(UWideString(inText)); return NULL;
     }
     switch (inList) {
@@ -377,9 +361,7 @@ extern "C" void* ee_scenariocpp_text_op(EeScenarioTextContext* inContext, uint32
     case EE_SCENARIO_TEXT_OP_GET: return (void*)(const char*)EESMText(inElement, inSlot);
     case EE_SCENARIO_TEXT_OP_SET: EESMText(inElement, inSlot) = inText; break;
     case EE_SCENARIO_TEXT_OP_PLAYERS: return (void*)(uintptr_t)gWorld.mNumPlayers;
-    case EE_SCENARIO_TEXT_OP_PLAYER_NAME:
-        thePlayer = gWorld.GetPlayer(inValue);
-        return thePlayer != NULL ? (void*)(const char*)thePlayer->mName : NULL;
+    case EE_SCENARIO_TEXT_OP_PLAYER_NAME: thePlayer = gWorld.GetPlayer(inValue); return thePlayer != NULL ? (void*)(const char*)thePlayer->mName : NULL;
     case EE_SCENARIO_TEXT_OP_SET_PLAYER_NAME: gWorld.GetPlayer(inValue)->mName = inText; break;
     case EE_SCENARIO_TEXT_OP_WRITE: return fprintf(theFile, "%s", inText) < 0 ? NULL : inContext;
     case EE_SCENARIO_TEXT_OP_EOF: return feof(theFile) ? inContext : NULL;

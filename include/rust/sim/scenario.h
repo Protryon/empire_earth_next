@@ -4453,6 +4453,58 @@ struct EeScenarioObjectFields {
   bool mIsAttributePercent;
 };
 
+/// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
+/// every target; provisional names from the tech tree's readers).
+struct EeScenarioEvEffect {
+  int32_t mUnused1;
+  int32_t mUnusedID;
+  /// +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
+  float mValue;
+  /// +0x0c the offset added to the base
+  float mOffset;
+  /// +0x10 the factor of the value
+  float mFactor;
+  /// +0x14 a gUnitClassTable index (< EEUnitClassCount())
+  int32_t mUnitClass;
+  /// +0x18 a unit class (kind 0x13: its media)
+  int32_t mNewUnitClass;
+  int32_t mUnitSet;
+  /// +0x20
+  int32_t mKind;
+  /// +0x24 an EEMedia index (kind 6)
+  int32_t mMediaIndex;
+  /// +0x28 a tech tree id (kind 9)
+  int32_t mTechnology;
+  /// +0x2c (kind 2: 0x28 = an area effect)
+  int32_t mAttribute;
+  /// +0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)
+  int32_t mSoundID;
+  /// +0x34 an EEButtonObject index (kind 1)
+  int32_t mButton;
+  /// +0x38 an EEAEManager index (kind 2)
+  int32_t mAreaEffect;
+  int32_t mTerrainType;
+  int32_t mUnused2;
+  /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
+  unsigned char mRunOnLoad;
+  unsigned char mUnused3;
+  uint16_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnused6;
+  int32_t mUnused7;
+  /// (sizeof 0x58)
+  int32_t mUnused8;
+};
+
+/// An event (`EEEvent`, ee/EEEvent.h's class over this record): its effect indices (4 bytes each in the file) and id.
+struct EeScenarioEvent {
+  /// the effect indices (null for none)
+  int32_t *mEffects;
+  /// their count
+  unsigned long mNumEffects;
+  unsigned long mID;
+};
+
 /// The C ABI's host: a context and the read callback.
 struct EeScenarioHost {
   void *ctx;
@@ -4752,49 +4804,6 @@ struct EeScenarioTextContext {
   void *file;
 };
 
-/// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
-/// every target; provisional names from the tech tree's readers).
-struct EeScenarioEvEffect {
-  int32_t mUnused1;
-  int32_t mUnusedID;
-  /// +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
-  float mValue;
-  /// +0x0c the offset added to the base
-  float mOffset;
-  /// +0x10 the factor of the value
-  float mFactor;
-  /// +0x14 a gUnitClassTable index (< EEUnitClassCount())
-  int32_t mUnitClass;
-  /// +0x18 a unit class (kind 0x13: its media)
-  int32_t mNewUnitClass;
-  int32_t mUnitSet;
-  /// +0x20
-  int32_t mKind;
-  /// +0x24 an EEMedia index (kind 6)
-  int32_t mMediaIndex;
-  /// +0x28 a tech tree id (kind 9)
-  int32_t mTechnology;
-  /// +0x2c (kind 2: 0x28 = an area effect)
-  int32_t mAttribute;
-  /// +0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)
-  int32_t mSoundID;
-  /// +0x34 an EEButtonObject index (kind 1)
-  int32_t mButton;
-  /// +0x38 an EEAEManager index (kind 2)
-  int32_t mAreaEffect;
-  int32_t mTerrainType;
-  int32_t mUnused2;
-  /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
-  unsigned char mRunOnLoad;
-  unsigned char mUnused3;
-  uint16_t mUnused4;
-  int32_t mUnused5;
-  int32_t mUnused6;
-  int32_t mUnused7;
-  /// (sizeof 0x58)
-  int32_t mUnused8;
-};
-
 /// One condition entry of a trigger (`EESMTConditionWrapper`, ee/EESMTrigger.h's typedef of this record; the C++ news
 /// it value-initialized: every field 0, the operator `EE_SCENARIO_SM_TRIGGER_OPERATOR_END`): the condition's index,
 /// the operator to the next entry, the negation.
@@ -5079,6 +5088,12 @@ extern void ee_scenariocpp_host_tiles(void *ctx,
                                       EeScenarioTiles *list);
 
 extern const EeScenarioObjectFields *ee_scenariocpp_host_object(void *ctx, int32_t index);
+
+/// `EEEvent::GetEventEffect(index)`: the effect record `index` (null past the table).
+EeScenarioEvEffect *ee_scenario_ev_effect_at(unsigned long index);
+
+/// `EEEvent::Get(id)`: the event of id `id` (null off the table).
+EeScenarioEvent *ee_scenario_ev_event(long id);
 
 /// `EEEvent::Trigger`: runs every effect of event `event` for a player (a given player's own index wins); the last
 /// effect's result.

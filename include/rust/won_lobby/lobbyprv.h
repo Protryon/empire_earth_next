@@ -6,6 +6,27 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/ipobj.h"
+
+/// A plain member of the lobby's private state.
+enum class EeWonLobbyPrvField : uint32_t {
+  /// `mVersionStatus` (+0x70; `WS_None` 100004 from the constructor, and without a lobby).
+  VersionStatus = 1,
+  /// `mSysTOUTime` (+0xbc).
+  SysTouTime,
+  /// `mGameTOUTime` (+0xc0).
+  GameTouTime,
+  /// `mLobbyPort` (+0xb8; 8888 from the constructor, the config's from Init, the bound port after the UDP bind).
+  LobbyPort,
+  /// `mBehindFirewall` (+0xc4; a write also marks the firewall test done, as LobbySetBehindFirewall did).
+  BehindFirewall,
+  /// `mFirewallTestDone` (+0xc5).
+  FirewallTestDone,
+  /// `mProductId` (+0xb4).
+  ProductId,
+  /// `mLanProductId` (+0xb6; stamped on the game listings).
+  LanProductId,
+};
 
 /// The host's ops: each one C++ statement.
 enum class EeWonLobbyPrvOp : uint32_t {
@@ -25,8 +46,8 @@ enum class EeWonLobbyPrvOp : uint32_t {
   ErrorParseHead,
   /// `p->mInitError.append(GUIString(sPrvParser->GetAbortReason()))`.
   ErrorParseReason,
-  /// `p->mLobbyPort = p->mConfig->mLobbyPort`.
-  LobbyPortFromConfig,
+  /// `p->mConfig->mLobbyPort` (the lobby port: the Rust's member, R6 WON lobby and network round 38).
+  ConfigLobbyPort,
   /// `sPrvComponentConfig = new ContainerConfig`.
   ComponentConfigNew,
   /// `p->mLobbyContainer = new LobbyContainer`.
@@ -55,14 +76,12 @@ enum class EeWonLobbyPrvOp : uint32_t {
   CrcPutProductName,
   /// `sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length())`.
   CrcPutVersion,
-  /// `p->mProductId = sPrvCrc.Get()`.
-  ProductIdFromCrc,
+  /// `sPrvCrc.Get()` (a product id).
+  CrcGet,
   /// `sPrvCrc.Reset()`.
   CrcReset,
   /// `sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length())`.
   CrcPutLanVersion,
-  /// `p->mLanProductId = sPrvCrc.Get()`.
-  LanProductIdFromCrc,
   /// `p->mChatCommandParser->InitCommands()`.
   ChatParserInitCommands,
   /// `sPrvTable = NULL`.
@@ -89,7 +108,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   HashSetClear,
   /// `p->mHashFileList.clear()`.
   HashListClear,
-  /// `StringParser(reinterpret_cast<const char*>(a)).ReadValue(p->mHashFileList)`.
+  /// `ee_won_cfgval_read_strings(a, &p->mHashFileList)` (the original's `StringParser(a).ReadValue(list)`).
   HashListRead,
   /// `p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a)`.
   CommunitySet,
@@ -103,14 +122,6 @@ enum class EeWonLobbyPrvOp : uint32_t {
   CdKeyLoad,
   /// `p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey)`.
   AuthSetCdKey,
-  /// `p->mLobbyPort = 8888`.
-  LobbyPort8888,
-  /// `p->mSysTOUTime = p->mGameTOUTime = 0`.
-  TouTimesClear,
-  /// `p->mBehindFirewall = false`.
-  BehindFirewallClear,
-  /// `p->mFirewallTestDone = false`.
-  FirewallTestDoneClear,
   /// `p->mSuspended = false`.
   SuspendedClear,
   /// `p->mCurGameType = (LobbyGameType)0`.
@@ -119,10 +130,6 @@ enum class EeWonLobbyPrvOp : uint32_t {
   LobbyStatusClear,
   /// `p->mRunMode = (LobbyRunMode)1`.
   RunModeOne,
-  /// `p->mProductId = 0`.
-  ProductIdClear,
-  /// `p->mLanProductId = 0`.
-  LanProductIdClear,
   /// `p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"`.
   SysTouPath,
   /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
@@ -147,8 +154,6 @@ enum class EeWonLobbyPrvOp : uint32_t {
   FirewallServersNew,
   /// `p->mPatchServers = new ServerContext`.
   PatchServersNew,
-  /// `p->mVersionStatus = WS_None`.
-  VersionStatusNone,
   /// `p->mAuthContext = new AuthContext`.
   AuthContextNew,
   /// `p->mAuthContext->SetServerContext(p->mAuthServers.get())`.
@@ -295,6 +300,47 @@ enum class EeWonLobbyPrvCall : uint32_t {
 using EeWonLobbyPrvHostFn = ptrdiff_t(*)(void *prv, EeWonLobbyPrvOp op, ptrdiff_t a);
 
 extern "C" {
+
+/// A member's value (without a lobby: `WS_None` for the version status, else 0).
+int64_t ee_won_lobbyprv_get(EeWonLobbyPrvField f);
+
+/// A member set (nothing without a lobby).
+void ee_won_lobbyprv_set(EeWonLobbyPrvField f, int64_t x);
+
+/// LobbyIsTOUNewer: whether the recorded system or game terms of use are newer than the times given (false without
+/// a lobby).
+bool ee_won_lobbyprv_tou_newer(long sys,
+                               long game);
+
+/// LobbySetTOUTimes (nothing without a lobby).
+void ee_won_lobbyprv_set_tou(long sys, long game);
+
+/// LobbyGetTOUTimes: the two times into `sys` and `game` (left as they are without a lobby).
+///
+/// # Safety
+/// `sys` and `game` are live.
+void ee_won_lobbyprv_tou_times(long *sys, long *game);
+
+/// LobbyResetFirewallTest: the test not done, the public address forgotten (nothing without a lobby).
+void ee_won_lobbyprv_reset_firewall();
+
+/// LobbySetPublicAddress (nothing without a lobby).
+///
+/// # Safety
+/// `a` is a live address.
+void ee_won_lobbyprv_set_public_addr(const EeWonIpAddr *a);
+
+/// LobbyGetPublicAddress: a new copy (an empty address without a lobby).
+EeWonIpAddr *ee_won_lobbyprv_public_addr();
+
+/// LobbyGetMyAddress: the address to give peers, a new value: the public address unless room spec 1, no valid
+/// public address or the config's UseLocalIP (`use_local_ip`), else the local one; on the lobby port. An empty
+/// address without a lobby.
+EeWonIpAddr *ee_won_lobbyprv_my_address(int32_t room_spec,
+                                        bool use_local_ip);
+
+/// `~WONLobbyPrv`: the lobby `prv` gone, its members with it (a newer lobby's stay).
+void ee_won_lobbyprv_drop(void *prv);
 
 /// One of WONLobbyPrv's methods on `prv` over the host `host`.
 ///

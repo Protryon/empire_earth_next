@@ -15,8 +15,7 @@ class LLE_API UConfig {                     // no data
 public:
     long GetValue(const char* inBlock, const char* inKey, long& outValue) { return ee_uconfig_get_long(inBlock, inKey, &outValue); }
     // a string of at most 1023 bytes
-    long GetValue(const char* inBlock, const char* inKey, UWideString& outValue)
-        { return ee_uconfig_get_text(inBlock, inKey, UConfig::Assign, &outValue); }
+    long GetValue(const char* inBlock, const char* inKey, UWideString& outValue) { return ee_uconfig_get_text(inBlock, inKey, UConfig::Assign, &outValue); }
     static void Assign(void* inString, const char* inText) { *static_cast<UWideString*>(inString) = inText; }
     long SetValue(const char* inBlock, const char* inKey, long inValue)
         { return PlatConfigSetInt(inBlock, inKey, (int32_t)inValue) ? kErrorOK : kErrorNotFound; }
@@ -26,8 +25,7 @@ public:
     long GetFlag(const char* inBlock, const char* inKey, bool& outValue) { return ee_uconfig_get_flag(inBlock, inKey, &outValue); }
     long SetFlag(const char* inBlock, const char* inKey, bool inValue)
         { return PlatConfigSetBool(inBlock, inKey, inValue ? 1 : 0) ? kErrorOK : kErrorNotFound; }
-    long DeleteValue(const char* inBlock, const char* inKey)
-        { return PlatConfigDelete(inBlock, inKey) ? kErrorOK : kErrorNotFound; }
+    long DeleteValue(const char* inBlock, const char* inKey) { return PlatConfigDelete(inBlock, inKey) ? kErrorOK : kErrorNotFound; }
 };
 
 #endif

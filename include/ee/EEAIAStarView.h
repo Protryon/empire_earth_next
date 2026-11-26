@@ -16,23 +16,9 @@ public:
     // a modifier's view: the given map, its queries not noted when inQuiet
     EEAIAStarView(EEMap* inMap, bool inQuiet) { this->mView.map = inMap; this->mView.quiet = inQuiet; }
     void SetMap(EEMap* inMap) { this->mView.map = inMap; }
-    // the queries the Rust goals and modifiers make (valid while the view lives)
-    EeAStarViewCallbacks Callbacks() { return ee_astar_world_view_callbacks(&this->mView); }
 
 private:
     EeAStarWorldView mView;
 };
-
-// A rectangle (U2DRectangle<long>) as ee_astar's EeAStarRect
-template <class R>
-inline EeAStarRect EEAIAStarRectOf(const R& inRect)
-{
-    EeAStarRect theRect;
-    theRect.bottom = inRect.mBottom;
-    theRect.left = inRect.mLeft;
-    theRect.right = inRect.mRight;
-    theRect.top = inRect.mTop;
-    return theRect;
-}
 
 #endif

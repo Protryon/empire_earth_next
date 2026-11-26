@@ -43,8 +43,7 @@ public:
     const GERectangle& GetRectangle() const { return *reinterpret_cast<const GERectangle*>(&this->mRectangle); }
     void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiBgCall::SetRectangle, inRectangle); }
     void SetVisibility(bool inVisible) { this->Call(EeUiBgCall::SetVisibility, inVisible); }
-    intptr_t Call(EeUiBgCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-        { return ee_ui_bg_call(this, inCall, a, b, f); }
+    intptr_t Call(EeUiBgCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) { return ee_ui_bg_call(this, inCall, a, b, f); }
     intptr_t CallRect(EeUiBgCall inCall, const GERectangle& inRectangle) { return ee_ui_bg_call(this, inCall, 0, 0, UIF4(inRectangle)); }
 };
 

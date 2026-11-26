@@ -4,7 +4,6 @@
 #include <windows.h>
 #include <vector>
 #include <stdlib.h>
-
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/Input System.h"
@@ -352,10 +351,3 @@ extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, co
 // (EndGame: the campaign progress's user; not EEUIECampaignSelectScreenEvents.cpp's gCampaignDefaultUser 0x562ee0)
 UString gCampaignUser("default");
 
-// Steps the environment manager when it is enabled and its next step time has come
-// not inline: defined here after the unit's init chain (UpdateWeather calls it)
-void EEEnvironmentManager::Tick(unsigned long inTime)
-{
-    if (this->mNextStep <= inTime && this->mIsEnabled == true)
-        this->Step(inTime);
-}

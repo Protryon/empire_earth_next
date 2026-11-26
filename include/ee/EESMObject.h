@@ -82,7 +82,6 @@ public:
     void SetName(const UWideString& inName) { ee_scenario_en_object_set_name(this, &inName); }
 
     UWideString mName;                      // +0x04 (ctor: gResource string 0x32c9)
-    unsigned long GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<unsigned long> mUnits;      // +0x18 (unit ids; Load reads them as unsigned long)
 };
 

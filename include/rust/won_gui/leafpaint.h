@@ -18,6 +18,10 @@ constexpr static const ptrdiff_t EE_WON_IMGBTN_DISABLED = 3;
 
 constexpr static const ptrdiff_t EE_WON_IMGBTN_CHECKED = 4;
 
+/// The host: `me` the C++ object, `op`, two arguments.
+/// The offset of ListItem's members ([`EeWonListItemRec`]) in a C++ `ListItem` (after RefCount's head).
+constexpr static const size_t EE_WON_LIST_ITEM_AT = 16;
+
 /// The host's calls (`t` the C++ object: an ImageButton for the `Btn` ops, a TextListItem for the `Item` ops, a
 /// MenuItem for the `Menu` ops; `g` the Graphics at `a`, `l` the ListArea at `a` where they take one).
 enum class EeWonLeafOp : uint32_t {
@@ -162,7 +166,6 @@ enum class EeWonLeafCall : uint32_t {
   ComponentItemPaint,
 };
 
-/// The host: `me` the C++ object, `op`, two arguments.
 using EeWonLeafHostFn = ptrdiff_t(*)(void *me, EeWonLeafOp op, ptrdiff_t a, ptrdiff_t b);
 
 extern "C" {

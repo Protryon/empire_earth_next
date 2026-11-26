@@ -7,19 +7,12 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/Input System.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIButton.h"
 #include "lle/UIControlsTable.h"
 #include "lle/NEMessage.h"
@@ -31,11 +24,8 @@
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEText.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEMedia.h"
-#include "ee/EESoundObject.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
@@ -48,8 +38,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUIFMGStatusButton.h"
-#include "ee/EEStringIDs.h"
-#include "rust/game/screens.h"   // ee_screens_button_*, ee_screens_command_*: the command panel (ee_screens command_panel.rs)
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (= 100, a word: EEUCFortress.cpp defines it)
 // 0x20d571 / 0x20da86: EEGetConversionCost / EECanConvert (ee/EEAreaUtilities.h; EEUCBasicPriest.cpp)
 
@@ -77,10 +65,7 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
 
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
-long EEUIFMGStatusButton::MouseRButtonUp()
-{
-    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP);   // (0)
-}
+long EEUIFMGStatusButton::MouseRButtonUp() { return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP); }  // (0)
 
 // the right press's and tab's shims (ee_screens hud_more.rs)
 #define SBM(b) reinterpret_cast<EEUIFMGStatusButton*>(b)
@@ -277,12 +262,6 @@ extern "C" float ee_screenscpp_sbt_texture_height(uintptr_t inTexture)
 extern "C" void ee_screenscpp_sbt_dither_stretch(uintptr_t inButton, uintptr_t inRectangle, float inWidth, float inHeight, uintptr_t inManager)
 { static_cast<GEBitmap*>(SBB(inButton)->mDither)->ComputeStretchedCoordsAndScale(*reinterpret_cast<const GERectangle*>(inRectangle), *reinterpret_cast<const GERectangle*>(inRectangle), GERectangle(0.0f, 0.0f, inWidth, inHeight), SBM(inManager)->GetScreen()); }
 
-void EEUIFMGStatusButton::ButtonUp()
-{
-    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP);
-}
+void EEUIFMGStatusButton::ButtonUp() { static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP); }
 
-long EEUIFMGStatusButton::CopyData()
-{
-    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA);
-}
+long EEUIFMGStatusButton::CopyData() { return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA); }

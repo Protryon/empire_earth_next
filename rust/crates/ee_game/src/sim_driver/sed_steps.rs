@@ -145,14 +145,14 @@ pub fn unit_ref(word: &str) -> c_ulong {
     let mut id: c_ulong = 0xffff_ffff;
     let mut n = if tile != 0 { gc::h(gc::O::TileUnits, tile, &[]) as usize } else { 0 };
     while n != 0 {
-        let u = gc::h(gc::O::MmNodeUnit, n, &[]) as usize;
+        let u = (gc::map::node_unit(n) as i64) as usize;
         if u != 0 {
             let p = h(O::NodeUnitPlayer, u, &[]) as usize;
             if p != 0 && gc::h(gc::O::RoPlayerId, p, &[]) != 0 {
                 id = gc::h(gc::O::RoUnitId, u, &[]) as c_ulong;
             }
         }
-        n = gc::h(gc::O::MmNodeNext, n, &[]) as usize;
+        n = (gc::map::node_next(n) as i64) as usize;
     }
     id
 }
@@ -379,7 +379,7 @@ pub fn step(w: &[String]) -> Step {
         "units" => Box::new(|out: &mut Vec<String>| {
             // every unit's id, type, player and tile (no hit points: they follow the epochs)
             crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics));
-            for i in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
+            for i in 0..gc::map::num_players() {
                 let p = gc::h(gc::O::WorldPlayer, 0, &[i]) as usize;
                 if p == 0 {
                     continue;

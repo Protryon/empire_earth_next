@@ -26,6 +26,7 @@
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "rust/won_lobby/netdisp.h"
+#include "rust/won_lobby/lobbyprv.h"
 namespace WONAPI {
 // the network entry points' statements (netdisp.rs composes them, R6 WON round 32)
 static intptr_t NetHost(EeWonNetDispOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -82,7 +83,7 @@ void LobbyHostGame() { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Cal
 // Logs out through the staging logic; returns false when cancelled or without a lobby
 bool LobbyLogout(bool confirm) { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Call(EeWonStagingCall::Logout, NULL, NULL, confirm)!=0:false; }
 // Sets the port the lobby uses
-void LobbySetLobbyPort(unsigned short port) { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyPort=port; }
+void LobbySetLobbyPort(unsigned short port) { ee_won_lobbyprv_set(EeWonLobbyPrvField::LobbyPort, port); }
 // Kicks or bans a client from our game
 void LobbyKickClient(LobbyClient* client,bool ban) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::KickClient, NULL, client, ban); }
 // Passes a game room message from a client to the staging logic
@@ -153,10 +154,10 @@ LobbyGame* GetMyLobbyGame() { return gLobbyData.get()!=NULL?gLobbyData->mStaging
 bool LobbyIAmCaptain() { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Call(EeWonStagingCall::IAmCaptain)!=0:false; }
 // (SDK LobbyStaging::IsBehindFirewall)
 // Returns whether the firewall test found us behind a firewall
-bool LobbyIsBehindFirewall() { return gLobbyData.get()!=NULL?gLobbyData->mBehindFirewall:false; }
+bool LobbyIsBehindFirewall() { return ee_won_lobbyprv_get(EeWonLobbyPrvField::BehindFirewall) != 0; }
 // (SDK LobbyStaging::IsFirewallTestDone)
 // Returns whether the firewall test has finished
-bool LobbyIsFirewallTestDone() { return gLobbyData.get()!=NULL?gLobbyData->mFirewallTestDone:false; }
+bool LobbyIsFirewallTestDone() { return ee_won_lobbyprv_get(EeWonLobbyPrvField::FirewallTestDone) != 0; }
 }
 
 namespace WONAPI {

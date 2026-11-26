@@ -8,7 +8,6 @@
 #include <math.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/FSRestorable.h"
 #include "lle/SESoundManager.h"
@@ -16,7 +15,6 @@
 #include "lle/GEModel.h"
 #include "lle/GEViewport.h"
 
-#include "ee/EEEffect.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -28,7 +26,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEffectKindIDs.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EESoundObject.h"
@@ -37,7 +34,6 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEContagionFunctor.h"
@@ -45,7 +41,6 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EESaveGameFiles.h"
-#include "rust/game/gamecpp.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
@@ -254,7 +249,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CalEffectHandle: return P64(&CL->mEffectHandle.mValue);
     case O::CalSound: return P64(CL->mSound);
     case O::CalSecondary: return P64(CL->mSecondarySound);
-    case O::CalCreateUnit: return P64(EECreateCalamityUnit(CL, (long)a[0], TR(1), (long)a[2]));
     case O::KlFields: return P64(static_cast<EeCalamityClassFields*>(KL));
     case O::KlEffect1: return P64(KL->mGraphicEffect1);
     case O::KlEffect2: return P64(KL->mGraphicEffect2);
@@ -361,7 +355,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::FnSetEffect3: ((EEContagionFunctor*)p)->mEffect3 = (EEGraphicEffect*)a[0];
         break;
-    case O::FnCanInfect: return ((EEContagionFunctor*)p)->CanInfect((EEUnit*)a[0]);
     case O::CxFireEffect: return CX->mFireEffect.mValue;
     case O::CxSetFireEffect: CX->mFireEffect.mValue = (uint32_t)a[0];
         break;

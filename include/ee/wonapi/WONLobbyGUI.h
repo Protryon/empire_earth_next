@@ -30,6 +30,7 @@
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
+#include "rust/won_gui/gfxrun.h"
 #include "rust/won_gui/guidraw.h" // SelectionColor
 #include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/imgobj.h"
@@ -109,7 +110,8 @@ public:
 };
 class Font;
 class Image;
-class NativeImage;
+typedef Image NativeImage; // the one image handle (R6 WON GUI round 38)
+typedef Image RawImage;
 class SelectionColor;
 class DisplayContext;
 struct FontDescriptor;
@@ -369,8 +371,6 @@ public:
 
     // the Rust container of a component that is a container, else 0 (the hosts' CtContainerOf)
     static intptr_t ObjectOf(Component* c) { return c != NULL ? (intptr_t)c->mCt : 0; }
-    // a child placed at a rectangle Rust made (the hosts' ChildSetPosSize)
-    static void Place(Component* c, const EeWonRect4& r) { c->SetPosSize(r.x, r.y, r.w, r.h); }
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
@@ -511,8 +511,6 @@ public:
 private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
-// the skinned buttons' hosts' shared ops (WONButton, MSButtonBase: the size, the button's and component's state; Button.cpp)
-intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c);
 
 // WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
 // object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
@@ -1095,26 +1093,12 @@ class RootContainer : public Container {
 public:
     RootContainer(Window*);
     virtual ~RootContainer();
-    virtual void Virtual08() { this->RCall(EeWonRootCall::SizeChanged); } //304730 SizeChanged
-    virtual void PrePaint(Graphics& g) { this->RCall(EeWonRootCall::PrePaint,(intptr_t)&g); } //304760
-    virtual void Paint(Graphics& g) { this->RCall(EeWonRootCall::Paint,(intptr_t)&g); } //304900
-    virtual void MouseExit() { this->RCall(EeWonRootCall::MouseExit); } //304c60
-    virtual void MouseDown(int x,int y,int b) { this->RCall(EeWonRootCall::MouseDown,x,y,b); } //304bd0
-    virtual void MouseUp(int x,int y,int b) { this->RCall(EeWonRootCall::MouseUp,x,y,b); } //304c90
-    virtual void MouseMove(int x,int y) { this->RCall(EeWonRootCall::MouseMove,x,y); } //304a30
-    virtual void MouseDrag(int x,int y) { this->RCall(EeWonRootCall::MouseDrag,x,y); } //304ac0
-    virtual bool KeyChar(int k) { return this->RCall(EeWonRootCall::KeyChar,k)!=0; } //304a00
-    virtual bool KeyDown(int k) { return this->RCall(EeWonRootCall::KeyDown,k)!=0; } //3049a0
-    virtual bool KeyUp(int k) { return this->RCall(EeWonRootCall::KeyUp,k)!=0; } //3049d0
-    virtual void InvalidateRect(WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); } //304980
-    virtual void SetCursor(Cursor* c) { this->RCall(EeWonRootCall::SetCursor,(intptr_t)c); } //304cf0
-    virtual void RemoveChild(Component* c) { this->RCall(EeWonRootCall::RemoveChild,(intptr_t)c); } //304cc0
-    void AddBG(BackgroundGrabber* g) { this->RCall(EeWonRootCall::AddBG,(intptr_t)g); } //304510
+    // (its overrides of Component's virtuals and of RemoveChild are the Rust root's calls: Component's and the
+    // container's entries run them through the container's link to it, R6 WON GUI round 38)
+    void AddBG(BackgroundGrabber* g) { ee_won_root_call(this->mRootObj,EeWonRootCall::AddBG,(intptr_t)g,0,0); } //304510
 
     Window* mWindow;
     EeWonRoot* mRootObj;
-private:
-    intptr_t RCall(EeWonRootCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_root_call(this->mRootObj,c,a,b,cc); }
 };
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)
@@ -1162,13 +1146,13 @@ public:
 // Graphics: vtable 0x450fe8;
 // the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
 // R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
-// in): the virtual hooks are gone, the drawing ones answered on the surface in Rust (gfxplat.rs over platgfx.rs:
-// a software surface with the results the GDI backend had, at the surface's pixel scale); the host (Graphics.cpp)
-// answers the image draws and the text. The polygon hooks, which nothing called, are platgfx.rs's
-// ee_won_plat_gfx_polygon.
+// in): the drawing answered on the surface in Rust (gfxplat.rs over platgfx.rs at the surface's pixel scale). Round
+// 38: its leading members are gfxrun.rs's record (EeWonGraphics: checked in Graphics.cpp), which the methods, the
+// draw plans and the game's scheme and plain-draw ops run on in Rust; the host (Graphics.cpp) answers the image
+// draws, the text and the font.
 class Graphics {
 public:
-    Graphics(); //326ad0
+    Graphics() { ee_won_graphics_init(this->Rec()); } //326ad0
     ~Graphics(); //326b90
     void Attach(DisplayContext*); //326c70: the context's surface and pixel scale; the colour starts black
     void Detach();
@@ -1192,20 +1176,21 @@ public:
     void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
     void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
     void PopClipRect() { this->GCall(EeWonGfxCall::PopClip); }
-    SmartPtr<DisplayContext> mDisplayContext; //04
-    // R6 WONGUI B round 1: the methods are ee_won's gfxobj.rs. The translation, colour and clip rectangle are the block
-    // of members it edits in place (EeWonGfxState: the original's +08, +0c, +14, +24; checked in Graphics.cpp), the
-    // clip stack (+18) its object
+    // gfxrun.rs's record: the translation, colour and clip rectangle (EeWonGfxState: the original's +08, +0c, +14,
+    // +24), the clip stack (+18), the borrowed colour scheme (+34) and the surface
     int mTransX, mTransY;
     DWORD mColor;
     WONRectangle mClipRect;
-    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
-    SmartPtr<Font> mFont; //10
-    ColorScheme* mColorScheme; //34, borrowed
     EeWonGfx* mGfx; // the clip stack, owned
+    ColorScheme* mColorScheme; // borrowed
     EeWonGfxPlat mPlat; // the context's surface (borrowed; none while detached) and its pixel scale (gfxplat.rs)
+    SmartPtr<DisplayContext> mDisplayContext; //04
+    SmartPtr<Font> mFont; //10
+    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
+    EeWonGraphics* Rec() { return (EeWonGraphics*)this; }
 private:
-    DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL);
+    DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL)
+    { return ee_won_graphics_call(this->Rec(), c, a, b, cc, d, e, f, g, p); }
 };
 
 // 0x2fdcd0 / 0x2fddf0 (cdecl): a 3D frame (inPressed: sunken) and a flat frame (provisional names)
@@ -1244,6 +1229,7 @@ public:
     // surface an image owns, which carries the clip. The original held the GDI device context (HDC) here.
     DisplayContext(EeWonSurface* surface=NULL,float scale=1.0f) : mSurface(surface),mGraphics(NULL),mPixelScale(scale) {}
     virtual ~DisplayContext() {}
+    // R6 WON GUI round 38: these three are imgobj.rs's EeWonDisplayContextRec, read in place (PlatNativeImage.cpp)
     EeWonSurface* mSurface; // at +0x08, not owned (the owning image's, imgobj.rs); NULL: nothing to draw into
     Graphics* mGraphics; //0c borrowed
     // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
@@ -1252,7 +1238,6 @@ public:
     SmartPtr<NativeImage> CreateImage(int,int); //3cedd0, nonvirtual
 };
 class SoundDecoder;
-class RawImage;
 
 // The decoder classes are in WONLobbyImageDecoder.h.
 // 0x3d2a20 / 0x3d24e0 (cdecl): add the JPG decoder (4 extensions) / the PNG decoder to a multi-decoder (provisional names)
@@ -1430,7 +1415,6 @@ public:
     bool CheckDoubleClick(MouseButton b) { return this->WCall(EeWonWinCall::CheckDoubleClick,(intptr_t)b)!=0; }
     void HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); } //32b120
     // HandleKeyEvent (0x32b170), HandleMouseEvent (0x32b260) and HandleInputEvent (0x32b390) over the event's record
-    inline void HandleEvent(EeWonWinCall c, InputEvent* e);
 
     Window();
     virtual ~Window();                     // 0x32a020, out of line
@@ -1551,11 +1535,12 @@ void LobbyNotifyStagingChange();
 
 class WindowEventBase : public RefCount {
 public:
-    WindowEventBase(long inType = 0) : mEventType(inType), mWindow(NULL) {}
-    virtual void Deliver() = 0;             // +0x04: original vtable 0x44df64 -> _purecall
-
-    long mEventType;                        // +0x08
-    Window* mWindow;                        // +0x0c
+    WindowEventBase(long inType = 0, EeWonWinCall inHandler = (EeWonWinCall)0) : mRec{{(int32_t)inType}, 0, (uint32_t)inHandler} {}
+    virtual void Deliver() {}               // +0x04 (pure in the original); an input event's is Rust's (guisplit.rs wm_op)
+    Window* GetWindow() const { return (Window*)this->mRec.window; }
+    // the type (+0x08), an input event's fields and handler and the window (+0x0c): wmobj.rs's record, which the
+    // Rust manager reads and sets in place (R6 WON GUI round 38)
+    EeWonWmEventRec mRec;
 };
 
 // an event that calls a function with one argument when it is delivered
@@ -1570,15 +1555,13 @@ public:
     int mParam;                             // +0x14
 };
 
-// the window's input events (R6 WON GUI round 37): one class over the record the Rust window's handlers read
-// (winobj.rs EeWonWinEvent) and the handler its original class picked; MouseEvent, KeyEvent and SizeEvent fill it
+// the window's input events (R6 WON GUI rounds 37 and 38): the base's record filled with the fields the Rust window's
+// handlers read (winobj.rs EeWonWinEvent) and the handler its original class's Deliver ran (0x32b520, 0x32b630,
+// 0x32b640: guisplit.rs runs it on the window's Rust window); MouseEvent, KeyEvent and SizeEvent fill it
 class InputEvent : public WindowEventBase {
 public:
     InputEvent(int t, EeWonWinCall h = EeWonWinCall::HandleInputEvent, int x = 0, int y = 0, int m = 0, int b = 0, int k = 0, int w = 0, int ht = 0)
-      : WindowEventBase(t), mHandler(h), mEv{t, x, y, m, b, k, w, ht} {}
-    virtual void Deliver() { this->mWindow->HandleEvent(this->mHandler, this); } // 0x32b520, 0x32b630, 0x32b640
-    EeWonWinCall mHandler;
-    EeWonWinEvent mEv;
+      : WindowEventBase(t, h) { this->mRec.ev = EeWonWinEvent{t, x, y, m, b, k, w, ht}; }
 };
 struct MouseEvent : InputEvent { MouseEvent(int t, int x, int y, int m, int b = 0) : InputEvent(t, EeWonWinCall::HandleMouseEvent, x, y, m, b) {} };
 struct KeyEvent : InputEvent { KeyEvent(int t, int k, int m) : InputEvent(t, EeWonWinCall::HandleKeyEvent, 0, 0, m, 0, k) {} };
@@ -1591,7 +1574,7 @@ public:
     ComponentEvent(Component* c, int t) : mComponentRef(c), mType(t), mComponent(c) { this->mBroadcast = false; }
     // broadcast through the window manager, or bubbled up from the component
     virtual void Deliver()
-    { if (this->mBroadcast) this->mWindow->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
+    { if (this->mBroadcast) this->GetWindow()->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
     void SetComponent(Component* c) { this->mComponent = c; this->mComponentRef = c; } // retargets the event
     int GetControlId() const { return this->mComponent->mControlId; }
     SmartPtr<Component> mComponentRef;      // +0x10
@@ -1671,7 +1654,6 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
                              c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
                              s.mData->mText + o, n, x, y);
 }
-inline void Window::HandleEvent(EeWonWinCall c, InputEvent* e) { ee_won_win_event(this->mWinObj.p, c, &e->mEv); }
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
@@ -1699,6 +1681,21 @@ public:
     EeWonImageKind GetKind() const { return ee_won_image_kind(this->mRust); }
     intptr_t Get(EeWonImageField f) const { return ee_won_image_get(this->mRust,f); }
     intptr_t Call(EeWonImageCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0) { return ee_won_image_call(this->mRust,c,a,b,cc,d); }
+    // R6 WON GUI round 38: NativeImage and RawImage are this class (the kind is the Rust image's, imgobj.rs). A
+    // native image's: its Graphics, a 32-bit copy, its surface (PlatGUIPixels(size, scale) pixels) and pixel scale
+    Graphics& GetGraphics() { return *(Graphics*)this->Call(EeWonImageCall::Graphics); }
+    SmartPtr<Image> GetRaw();
+    uint32_t* GetPixels() { return (uint32_t*)this->Get(EeWonImageField::Pixels); }
+    int GetPitchPixels() { return (int)this->Get(EeWonImageField::PitchPixels); }
+    int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
+    int GetPixelHeight() { return (int)this->Get(EeWonImageField::PixelHeight); }
+    float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
+    EeWonSurface* GetSurface() { return (EeWonSurface*)this->Get(EeWonImageField::Surface); }
+    // a raw image's: its type (0 1-bit, 1 8-bit, 2 32-bit) and a 32-bit image's data and transparency
+    int GetType() const { return (int)this->Get(EeWonImageField::RawType); }
+    bool HasTransparency() const { return this->Get(EeWonImageField::HasTransparency)!=0; }
+    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); }
+    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); }
 };
 template <class T> inline SmartPtr<T> WONImageAdopt(intptr_t p) { SmartPtr<T> s; s.mPtr=static_cast<T*>((Image*)p); return s; }
 // a private duplicate of the other frame's image (none when it has none), then its borders
@@ -1714,32 +1711,6 @@ inline ImageComponent::ImageComponent(Image* i,bool t) { this->SetImageAndTile(i
 inline void ImageComponent::GetDesiredSize(int& w,int& h) { if(this->mImage.get()!=NULL) { w=this->mImage->GetWidth(); h=this->mImage->GetHeight(); } else w=h=10; }
 inline void ImageComponent::SetImageAndTile(Image* i,bool t) { this->mImage=i; this->mTile=t; if(i!=NULL) this->SetSize(i->GetWidth(),i->GetHeight()); }
 inline void ImageComponent::SetImage(Image* i) { this->mImage=i; if(i!=NULL) this->SetSize(i->GetWidth(),i->GetHeight()); }
-// PlatNativeImage (the one native image; PlatNativeImage is its other name, WONLobbyPlatform.h): a logical size, a
-// surface of PlatGUIPixels(size, scale) pixels and its own display context, a transparency mask, its Graphics
-class NativeImage : public Image {
-public:
-    explicit NativeImage(EeWonImage* r) : Image(r) {}
-    // black, inWidth x inHeight logical pixels at the pixel scale (at least 1); the context is not kept
-    NativeImage(DisplayContext*,int inWidth,int inHeight,float inScale=1.0f) : Image(ee_won_image_new_native(WONImageHost,inWidth,inHeight,inScale)) {}
-    Graphics& GetGraphics() { return *(Graphics*)this->Call(EeWonImageCall::Graphics); }
-    SmartPtr<RawImage> GetRaw(); // a 32-bit copy
-    uint32_t* GetPixels() { return (uint32_t*)this->Get(EeWonImageField::Pixels); }
-    int GetPitchPixels() { return (int)this->Get(EeWonImageField::PitchPixels); }
-    int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
-    int GetPixelHeight() { return (int)this->Get(EeWonImageField::PixelHeight); }
-    float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
-    EeWonSurface* GetSurface() { return (EeWonSurface*)this->Get(EeWonImageField::Surface); }
-};
-// R6 WON GUI round 35: RawImage32 and RawImage8 were RawImage with a constructor of their kind and the 32-bit image's
-// two calls; the kind is the Rust image's (imgobj.rs), so the one class is every raw image's handle
-class RawImage : public Image {
-public:
-    explicit RawImage(EeWonImage* r) : Image(r) {}
-    int GetType() const { return (int)this->Get(EeWonImageField::RawType); } // 0 1-bit, 1 8-bit, 2 32-bit
-    bool HasTransparency() const { return this->Get(EeWonImageField::HasTransparency)!=0; }
-    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); } // a 32-bit image's
-    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); } // a 32-bit image's
-};
 typedef RawImage RawImage32;
 inline SmartPtr<Image> Image::Duplicate() { return WONImageAdopt<Image>(this->Call(EeWonImageCall::Duplicate)); }
 inline SmartPtr<NativeImage> Image::GetNative(DisplayContext* c) { return WONImageAdopt<NativeImage>(this->Call(EeWonImageCall::Native,(intptr_t)c)); }
@@ -2240,7 +2211,7 @@ protected:
     PopupParams mParams; //10..3b, full2c POD containing borrowed raw pointers
 public:
     DoPopupEvent(const PopupParams& params) : mParams(params) {}
-    virtual void Deliver() { this->mWindow->OpenPopup(this->mParams); } //32b650
+    virtual void Deliver() { this->GetWindow()->OpenPopup(this->mParams); } //32b650
 };
 }
 

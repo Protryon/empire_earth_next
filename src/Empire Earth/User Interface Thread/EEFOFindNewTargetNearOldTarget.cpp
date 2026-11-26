@@ -21,107 +21,51 @@
 #include <mutex>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
 #include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
-#include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/SESoundManager.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "lle/UResourceFile.h"
 #include "lle/USingleton.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/LowLevelEngineCore.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEMathInline.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
-#include "ee/EEUnitRegions.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EETileCoordinate.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEPhysics.h"
 #include "ee/EECPTrace.h"
-#include "ee/EEPhysicsModel.h"
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
-#include "ee/EEAirTrafficControl.h"
-#include "ee/AStarGraphableObjectBase.h"
-#include "ee/EECPASGFlags.h"
-#include "ee/EEAIPathSector.h"
-#include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIPathArea.h"
-#include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEPathManager.h"
-#include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
-#include "ee/EEUnitGoal.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEDebugTrace.h"
 #include "ee/EEGameVariant.h"
-#include "ee/EERandomMapClass.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/UReferenceContainer.h"
-#include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEFOFindNewTargetNearOldTarget.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EESEUnit.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEFOLocationScreenBase.h"
-#include "ee/EEAIUnitTargetingTable.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEAIRandom.h"
@@ -369,10 +313,7 @@ EEComplexUnit* EEReplaceUnit(EEComplexUnit* inUnit, unsigned long inPlayer, EEUn
 // (0x6450f1, EEClearUnderBuilding: ee_units uu_world.rs clear_under_building)
 
 // Tells whether an enemy the unit may target is within its reach
-bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
-{
-    return ee_units_cgq_is_enemy_within_range(UUHandle(inUnit));   // cg_query.rs (CBQR)
-}
+bool EEIsEnemyWithinRange(EEComplexUnit* inUnit) { return ee_units_cgq_is_enemy_within_range(UUHandle(inUnit)); }  // cg_query.rs (CBQR)
 
 // Finds the nearest free farm of the unit's player, ring by ring (the ring reached goes back)
 EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRing)
@@ -391,10 +332,7 @@ void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCala
 // Tells whether a unit can heal a target (wounded enough, not an enemy, in its heal set)
 // (new: the decision is ee_combat's can_heal over a record of pure reads; the unit set is looked up only for a set
 // in the manager's range, which the original indexed unchecked)
-bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
-{
-    return ee_units_lf_can_heal(UUHandle(inUnit), UUHandle(inTarget)) != 0;   // uu_fill.rs
-}
+bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget) { return ee_units_lf_can_heal(UUHandle(inUnit), UUHandle(inTarget)) != 0; }  // uu_fill.rs
 
 // Returns a unit around the given one whose gather goal works on it (searched in a random rotation)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
@@ -424,10 +362,7 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
 
 // Returns a random number in [min, max]
 // (URandomIntegers::Generate's arithmetic: ee_base random.rs)
-long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
-{
-    return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&inRandom), inMin, inMax);
-}
+long EEGetRandomInt(long inMin, long inMax, URandom& inRandom) { return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&inRandom), inMin, inMax); }
 
 // (the U2DPoint<long> twin of 0x64b556 is gone: one tile type)
 

@@ -5,6 +5,7 @@
 // result or exception, the parser's error, warnings, line and stop flag and the process-wide line count, then the
 // whole tree (every member, every key's text and default flag, both ToString texts), then SetKeyValue,
 // CopyKeyValsFrom and Reset on each and the tree again. Also the dummy community. Exit code: the mismatches.
+#include "won_cfgparser_driver.h" // ConfigParser's driver-only methods (before the game headers)
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>

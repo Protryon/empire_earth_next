@@ -20,55 +20,83 @@ class EEComputerPlayer : public EEPlayer, public EeCpFields {
 public:
     static const UString sData;             // 0x4e5c70 "EEComputerPlayer-Data" (chain 0x2ce2e; guard 0x4e5c68 bit 1) (provisional name)
     static const UString sCPUOnlyFlag;      // 0x4e5c58 "EEComputerPlayer-CPU Only Flag" (chain 0x2ce71; bit 2) (provisional name)
-    EEComputerPlayer();                     // 0x2d03d (EEPPlayerHelper's CreatePlayer)
-    virtual ~EEComputerPlayer();            // +0x00 (??_G 0x2d021, dtor 0x2d0bb)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x2fd50 (no /Og)
-    virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // +0x20 0x3cff8
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x3d677
+    // 0x2d03d (EEPPlayerHelper's CreatePlayer)
+    EEComputerPlayer() { this->Init(); }
+    // +0x00 (??_G 0x2d021, dtor 0x2d0bb)
+    virtual ~EEComputerPlayer() { ee_cp_pl_destroy(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
+    // +0x18 0x2fd50 (no /Og)
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_cp_pl_load(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion, (uint64_t)(uintptr_t)&inFile); }
+    // +0x20 0x3cff8
+    virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return ee_cp_pl_repair_pointers(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion); }
+    // +0x24 0x3d677
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_cp_pl_save(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inMajorVersion, inMinorVersion, (uint64_t)(uintptr_t)&outFile); }
     // the computer player's overrides (ret N from the bodies) and members (provisional names)
-    EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID);
-    void Init();                            // 0x2f1c8 (both ctors: the tuning members from the AI globals, the managers)
-    virtual void AddResource(long inIndex, long inAmount);  // +0x48 0x2d1a5
+    EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID) : EEPlayer(inName, inPlayerID) { this->Init(); }
+    // 0x2f1c8 (both ctors: the tuning members from the AI globals, the managers)
+    void Init() { ee_cp_pl_init(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
+    // +0x48 0x2d1a5
+    virtual void AddResource(long inIndex, long inAmount) { ee_cp_pl_add_resource(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inIndex, inAmount); }
     virtual void DetachUnitFromAI(EEComplexUnit* inUnit);  // +0x4c 0x2db35
-    virtual long GetHeroCount(bool inArg1, bool inArg2);    // +0x50 0x2e248 (the heroes count)
-    virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason);  // +0x54 0x2dc51
-    virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag);  // +0x58 0x2dca6
-    virtual void Virtual60();               // +0x60 0x2e1e4
+    // +0x50 0x2e248 (the heroes count)
+    virtual long GetHeroCount(bool inByClass, bool inRequests) { return ee_cp_pl_hero_count(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inByClass, inRequests); }
+    // +0x54 0x2dc51
+    virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason) { return ee_cp_pl_can_produce(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, (uint64_t)(uintptr_t)outReason); }
+    // +0x58 0x2dca6
+    virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag) { EEPlayer::NoticeTargetPlayer(inPlayer, inFlag); }
+    // +0x60 0x2e1e4
+    virtual void Virtual60() { EEPlayer::Virtual60(); }
     virtual void UnitCompleted(EEComplexUnit* inUnit);  // +0x68 0x2e1e9
-    virtual void SetCombatState(unsigned long inCombatState);  // +0xa8 0x2d003
-    virtual long ScaleCost(long inCost);    // +0x6c 0x2eace (scaled by GetUnitCostModifier when mIsCheating, at least 0)
-    virtual long GetExtraPopulation(long inUnitClass);  // +0x78 0x2ef32 (50 for 0x1e0 with a garrison or a fortress time)
-    virtual long GetPopulationLimit(long inArg);  // +0x7c 0x2ecca (EEPlayer's when mIgnoreOthers, else mPopulationCap via WorkOutPopulation)
-    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount);   // +0x80 0x2f033 (epochs: always)
+    // +0xa8 0x2d003
+    virtual void SetCombatState(unsigned long inCombatState) { ee_cp_pl_set_combat_state(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inCombatState); }
+    // +0x6c 0x2eace (scaled by GetUnitCostModifier when mIsCheating, at least 0)
+    virtual long ScaleCost(long inCost) { return ee_cp_scale_cost(this, inCost); }
+    // +0x78 0x2ef32 (50 for 0x1e0 with a garrison or a fortress time)
+    virtual long GetExtraPopulation(long) { return 1; }
+    // +0x7c 0x2ecca (EEPlayer's when mIgnoreOthers, else mPopulationCap via WorkOutPopulation)
+    virtual long GetPopulationLimit(long inArg) { return ee_cp_pl_population_limit(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inArg); }
+    // +0x80 0x2f033 (epochs: always)
+    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return ee_cp_pl_can_afford(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), (uint64_t)(uintptr_t)inTechnology, inUnitType, inCount); }
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit);  // +0x84 0x2f16d
-    // per-difficulty (mDifficulty 0/1/2) scales: a member in percent times 0.01, else 1 (provisional names)
-    unsigned long GetIslandExpansionTimer() { return ee_cp_island_expansion_timer(this); }   // 0x2ed01 (else 60000)
-    virtual void Clear();                   // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
-    virtual void EpochMediaLoaded(long inEpoch);  // +0x88 0x3c992
+    // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
+    virtual void Clear() { ee_cp_pl_clear(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
+    // +0x88 0x3c992
+    virtual void EpochMediaLoaded(long inEpoch) { ee_cp_pl_epoch_media(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inEpoch, true); }
     virtual void FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile);  // same EEPlayer slot, 0x3ce2e
     virtual void UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps);  // +0x9c 0x3ced7 (the EEPlayer slot)
-    virtual void PayImprovement(EEUnitClass* inClass, long inImprovement);  // same EEPlayer slot, 0x3edc0
-    virtual void RefreshTownGroups();       // +0x90 0x3cec9
-    void UpdateGroups();
-    void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
-    virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
+    // same EEPlayer slot, 0x3edc0
+    virtual void PayImprovement(EEUnitClass* inClass, long inImprovement) { ee_cp_pl_pay_improvement(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), (uint64_t)(uintptr_t)inClass, inImprovement); }
+    // +0x90 0x3cec9
+    virtual void RefreshTownGroups() {  }
+    void UpdateGroups() { ee_cp_pl_regroup(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), 1); }
+    // 0x3d4cd (Update) (provisional name)
+    void SetNextAttackTime(unsigned long inTime) { ee_cp_pl_set_next_attack_time(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inTime); }
+    // +0xa4 0x3d45d
+    virtual void EpochReached(long inEpoch) { ee_cp_pl_epoch_reached(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inEpoch); }
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
-    virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction);   // +0xb4 0x3ed98 (epochs: free)
-    virtual void TakeResource(long inIndex, long inAmount);  // +0xb8 0x3ed81 (only a positive inArg2)
+    // +0xb4 0x3ed98 (epochs: free)
+    virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction) { ee_cp_pl_pay(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), (uint64_t)(uintptr_t)inTechnology, inUnitType, inFraction); }
+    // +0xb8 0x3ed81 (only a positive inArg2)
+    virtual void TakeResource(long inIndex, long inAmount) { ee_cp_pl_take_resource(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inIndex, inAmount); }
     virtual void UnitPlaced(EEComplexUnit* inUnit);  // +0xc0 0x3ef5d
     virtual void UnitTaken(RTSUnit* inUnit, bool inSwapped);  // +0xc4 0x3ef91 (the EEPlayer slot: a unit leaves)
     virtual void UnitGoalDone(EEComplexUnit* inUnit); // original ret4, Player slot C8
-    virtual void EpochMediaUnloaded(long inEpoch);  // +0xcc 0x3f142
+    // +0xcc 0x3f142
+    virtual void EpochMediaUnloaded(long inEpoch) { ee_cp_pl_epoch_media(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inEpoch, false); }
     virtual bool AvoidsEnemies(EEComplexUnit* inUnit);  // +0xd0 0x3f73e (a citizen, or a transport holding only citizens)
-    virtual void WonderStarted(EEComplexUnit* inUnit);  // +0xd4 0x3f7ba
-    void SetActive(bool inActive);          // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
-    void SetCitizenPercentage(float inValue);  // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
+    // +0xd4 0x3f7ba
+    virtual void WonderStarted(EEComplexUnit*) {  }
+    // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
+    void SetActive(bool inActive) { ee_cp_pl_set_active(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inActive); }
+    // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
+    void SetCitizenPercentage(float inValue) { ee_cp_pl_set_citizen_percentage(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inValue); }
     // 0x3ec9d, 0x3ecd6, 0x3ed0f: the difficulty's slot (provisional names)
     void SetDMAttackFrequencyModifier(float inValue) { ee_cp_set_by_difficulty(this, 0, inValue, 0); }
     void SetDMInitialAttackModifier(float inValue) { ee_cp_set_by_difficulty(this, 1, inValue, 0); }
     void SetIslandExpansionTimer(unsigned long inValue) { ee_cp_set_by_difficulty(this, 2, 0.0f, inValue); }
-    virtual void RefreshResourceCenters();  // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
-    void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
+    // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
+    virtual void RefreshResourceCenters() { ee_cp_pl_refresh_resource_centers(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
+    // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
+    void Update(unsigned long inTime) { ee_cp_pl_update(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this)), inTime); }
     // inline float getters: the AI compares load them onto the x87 stack (fld [mAidThreatThreshold]; fld st(1); fcompp) instead of
     // comparing against a memory operand (EECPMilitaryAidPackage 0x485892..0x485a2d) (provisional names)
     void SetCanAttack(bool inValue) { this->mCanAttack = inValue; }  // inline (EESMEffect::SetAIToggle 0x5c26da: 7 free sites set the budget)
@@ -81,8 +109,10 @@ public:
     void SetFavoriteLandType(unsigned long inValue) { this->mFavoriteLandType = inValue; }  // inline (EESMEffect 0x5c2507)
     void SetFavoriteSeaType(unsigned long inValue) { this->mFavoriteSeaType = inValue; }
     void SetFavoriteAirType(unsigned long inValue) { this->mFavoriteAirType = inValue; }
-    bool IsDeathmatch();                    // 0x2ec52 (gWorld.mGameOptions.mResources == 4 and a byte clear) (provisional name)
-    void WorkOutPopulation();               // 0x2d1c7 (EECPDefenseCommander 0x78148) (provisional name)
+    // 0x2ec52 (gWorld.mGameOptions.mResources == 4 and a byte clear) (provisional name)
+    bool IsDeathmatch() { return ee_cp_pl_is_deathmatch(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
+    // 0x2d1c7 (EECPDefenseCommander 0x78148) (provisional name)
+    void WorkOutPopulation() { ee_cp_pl_work_out_population(((uint64_t)(uintptr_t)static_cast<EEPlayer*>(this))); }
     // 0x2e851 (ret 8): deletes inScorer.mCount own units by its scores (EECPDefenseCommander) (provisional name)
 
     // +0xb80 (0x68849 = its size(), 0x2ef5e = operator[]: EECPCivilizationManager 0x6fb5e/0x711ac)
@@ -105,12 +135,10 @@ public:
 };
 
 // the epoch advance one of the player's buildings researches or has queued (kTechNone: none)
-long EECPPendingEpoch(EEComputerPlayer* inPlayer);
+inline long EECPPendingEpoch(EEComputerPlayer* inPlayer) { return ee_cp_pl_pending_epoch((uint64_t)(uintptr_t)static_cast<EEPlayer*>(inPlayer)); }
 
 
 // port: true while EEWorld::CreatePlayers repairs a loaded game's players (EEComputerPlayer::RestoreManagers)
 extern bool gDeferComputerPlayerRestore;
-// the managers of the computer players repaired meanwhile, in that order
-void EECPRestoreDeferredManagers(unsigned long inMajorVersion, unsigned long inMinorVersion);
 
 #endif

@@ -315,3 +315,34 @@ fn compose_splits_length_and_name() {
     assert_eq!(log[1].1, [0x3f80_0000, 0, 0, 0]);
     assert_eq!(log[2].1, [0x50, 0, 0, 0]);
 }
+
+#[test]
+fn the_tables_hold_the_effects_and_the_events_with_their_lists() {
+    let mut t = EvTable::default();
+    let mut reads = vec![7 as c_ulong, 2];
+    let mut read = |file: i64, value: &mut c_ulong| {
+        assert_eq!(file, 0x99);
+        *value = reads.remove(0);
+        0
+    };
+    assert_eq!(t.op(EE_SCENARIO_EV_EFFECTS_ASSIGN, &[3, 0, 0, 0], &mut read), Some(0));
+    assert_eq!(t.op(EE_SCENARIO_EV_EFFECTS_COUNT, &[0; 4], &mut read), Some(3));
+    assert!(!t.effect_at(2).is_null() && t.effect_at(3).is_null());
+    let e = t.op(EE_SCENARIO_EV_EVENT_NEW, &[0; 4], &mut read).unwrap();
+    assert_eq!(t.op(EE_SCENARIO_EV_READ_ID, &[0x99, e, 0, 0], &mut read), Some(0));
+    assert_eq!(t.op(EE_SCENARIO_EV_READ_COUNT, &[0x99, e, 0, 0], &mut read), Some(0));
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENT_NUM, &[e, 0, 0, 0], &mut read), Some(2));
+    let list = t.op(EE_SCENARIO_EV_EVENT_ALLOC, &[e, 2, 0, 0], &mut read).unwrap();
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENT_EFFECTS, &[e, 0, 0, 0], &mut read), Some(list));
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENT_COUNT, &[0; 4], &mut read), Some(1));
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENT_AT, &[0; 4], &mut read), Some(e));
+    let ev = t.event(0);
+    // SAFETY: the table's event
+    assert_eq!(unsafe { ((*ev).mID, (*ev).mNumEffects) }, (7, 2));
+    assert!(t.event(1).is_null() && t.event(-1).is_null());
+    let e2 = t.op(EE_SCENARIO_EV_EVENT_NEW, &[0; 4], &mut read).unwrap();
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENT_NO_EFFECTS, &[e2, 0, 0, 0], &mut read), Some(0));
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENTS_CLEAR, &[0; 4], &mut read), Some(0));
+    assert_eq!(t.op(EE_SCENARIO_EV_EVENT_COUNT, &[0; 4], &mut read), Some(0));
+    assert_eq!(t.op(EE_SCENARIO_EV_SOUND, &[0; 4], &mut read), None);
+}

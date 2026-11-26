@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/UResourceFile.h"
 
@@ -62,7 +61,6 @@ static long EERMResourceString(int64_t inSink, unsigned long inID)
 #define PL ((EEPlayer*)p)
 #define UC ((EEUnitClass*)p)
 #define TT ((EETerrainTable*)p)
-#define UN ((EEUnit*)p)
 #define CX ((EEComplexUnit*)p)
 
 extern "C" double ee_rmap_cpp_f(EeRmapCpp inOp, uintptr_t p, const int64_t* a, const float* f);
@@ -72,11 +70,7 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
 {
     typedef EeRmapCpp O;
     switch (inOp) {
-    case O::MapHeight: return W->mMap->mL195610;
-    case O::MapWidth: return W->mMap->mL195614;
     case O::MapTileCount: return W->mMap->GetTileCount();
-    case O::MapSize: return W->mMap->mSize;
-    case O::MapTile: return P64(W->mMap->GetTile((unsigned long)a[0], (unsigned long)a[1]));
     case O::MapIsEdgeTile: return W->mMap->IsEdgeTile((long)a[0], (long)a[1]);
     case O::MapPaintTerrain: W->mMap->PaintTerrain((long)a[0], (long)a[1], (long)a[2]);
         break;
@@ -99,31 +93,18 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
         break;
     case O::MeshShorelines: W->mMap->mTerrainMesh.ComputeShorelines((unsigned long)a[0], (unsigned long)a[1]);
         break;
-    case O::TileTerrain: return TILE->mTerrainType;
     case O::TileSetHeight: TILE->mHeight = f[0];
         break;
-    case O::TileUnitNode: return P64(TILE->mUnits);
-    case O::TileFirstUnit: return P64(TILE->mUnits->mUnit);
     case O::PlayerCount: return (int64_t)W->mPlayers->size();
     case O::Player: return P64((*W->mPlayers)[(size_t)a[0]]);
-    case O::PlayerId: return PL->GetPlayerID();
-    case O::PlayerEnemy: return PL->mEnemies[a[0]];
     case O::PlayerMaxCitizens: return PL->mMaxStartingCitizens;
     case O::StartEpoch: return W->mOptions->mEpochStart;
     case O::RuleMapSizeCount: return (int64_t)EEGetRules().mGameOptions.mMapSizes.size();
     case O::RuleMapSizeTiles: return EEGetRules().mGameOptions.mMapSizes[(size_t)a[0]].mTiles;
     case O::RuleMapSizeScript: return EEGetRules().mGameOptions.mMapSizes[(size_t)a[0]].mScriptSize;
-    case O::ClassCount: return EEUnitClassCount();
-    case O::Class: return P64(gUnitClassTable[a[0]]);
-    case O::ClassEnabled: return UC->mIsEnabled;
     case O::ClassName: EERMText(a[0], UC->mName);
         break;
-    case O::ClassTileSizeMember: return UC->mTileSize;
-    case O::ClassGetTileSize: return UC->GetTileSize();
     case O::ClassIsLandCitizen: return EEUnitClassOfKind<EE_CLASS_KIND_LAND_CITIZEN>(UC) != NULL;
-    case O::ClassIsWall: return UC->mIsWall;
-    case O::ClassAllowsTerrain: return UC->mTerrainTypes[a[0]];
-    case O::ClassAIKind: return UC->mAIKind;
     case O::ClassCreateAtPoint: return P64(UC->CreateUnitAtPoint((EEPlayer*)a[0], f[0], f[1], (EEMap*)a[1], f[2]));
     case O::ClassCreateAtTile: return P64(UC->CreateUnitAtTile((EEPlayer*)a[0], (long)a[1], (long)a[2], (EEMap*)a[3], f[0]));
     case O::TerrainCount: return EETerrainTable::GetNumTables();
@@ -137,15 +118,8 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::Cliff: return P64(EETerrainTable::sCliffTable[a[0]]);
     case O::CliffName: EERMText(a[0], ((EECliffTerrainTable*)p)->mName);
         break;
-    case O::UnitComplex: return P64(UN->mComplexUnit);
-    case O::UnitGetComplex: return P64(UN->GetComplexUnit());
-    case O::UnitPlayer: return P64(UN->GetPlayer());
-    case O::UnitClassOf: return P64(UN->GetUnitClass());
-    case O::UnitResourceType: return UN->mResourceType;
-    case O::UnitResourceAmount: return UN->mResourceAmount;
     case O::CxSetBuilt: CX->SetBuilt((long)a[0], (long)a[1], (long)a[2]);
         break;
-    case O::CxIsPaidFor: return CX->mIsPaidFor;
     case O::CxSetPaidFor: CX->mIsPaidFor = true;
         break;
     case O::CxAnimation: return CX->GetAnimation();
@@ -178,7 +152,6 @@ extern "C" double ee_rmap_cpp_f(EeRmapCpp inOp, uintptr_t p, const int64_t* a, c
     switch (inOp) {
     case O::MapTileUnit: return W->mMap->GetF1955F4();
     case O::MeshZ: return W->mMap->mTerrainMesh.GetZ((unsigned long)a[0], (unsigned long)a[1]);
-    case O::TileHeight: return TILE->GetHeight();
     default: ESVERIFY_AT(false, 1);
     }
     return 0.0;
@@ -189,7 +162,6 @@ extern "C" double ee_rmap_cpp_f(EeRmapCpp inOp, uintptr_t p, const int64_t* a, c
 #undef PL
 #undef UC
 #undef TT
-#undef UN
 #undef CX
 
 // Finds the named generator and generates the map, retrying with a new seed (11 tries at most) until the players

@@ -9,28 +9,18 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
 
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEDoppelganger.h"
 #include "ee/EEComplexDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // the game state's restorables (gamecpp state.rs)
 #include "ee/EEGraphicObject.h"
 #include "ee/EEMiniMap.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EECombatGoals.h"
 
 // Creates the manager with empty simple and complex doppelganger pools
@@ -44,40 +34,22 @@ EEDoppelgangerManager::~EEDoppelgangerManager()
 }
 
 // Takes a new doppelganger from the complex or the simple pool
-EEDoppelganger* EEDoppelgangerManager::NewDoppelganger(bool inComplex)
-{
-    return inComplex ? static_cast<EEDoppelganger*>(this->mComplexPool.New()) : this->mPool.New();
-}
+EEDoppelganger* EEDoppelgangerManager::NewDoppelganger(bool inComplex) { return inComplex ? static_cast<EEDoppelganger*>(this->mComplexPool.New()) : this->mPool.New(); }
 
 // EEDoppelganger's bodies that read its unit, the unit's class or its owner (EEDoppelganger.cpp's; the others are
 // inline in ee/EEDoppelganger.h)
-EEModel* EEDoppelganger::GetModel()
-{
-    return this->GetPlayer()->mUnitClassUpgrades[this->mUnit->mUnitClass->mUnitType]->mModel;   // the owner's model of the class
-}
+EEModel* EEDoppelganger::GetModel() { return this->GetPlayer()->mUnitClassUpgrades[this->mUnit->mUnitClass->mUnitType]->mModel; }  // the owner's model of the class
 
-float EEDoppelganger::GetScale()
-{
-    return this->mUnit->mUnitClass->mScale;
-}
+float EEDoppelganger::GetScale() { return this->mUnit->mUnitClass->mScale; }
 
-bool EEDoppelganger::GetIsValid()
-{
-    return this->mUnit->mIsValid;
-}
+bool EEDoppelganger::GetIsValid() { return this->mUnit->mIsValid; }
 
-EEPlayer* EEDoppelganger::GetPlayer()
-{
-    return this->mUnit->mPlayer;
-}
+EEPlayer* EEDoppelganger::GetPlayer() { return this->mUnit->mPlayer; }
 
 // Returns whether a terrain kind is land (not deep or shallow water, cliff or space)
 // Kinds 1, 9, 10, 12 are not land. An ordinary function at the end of this unit, called from EEGhostUnit.cpp
 // and EECloakingUtilities.cpp 0x23d2f9 (provisional name)
-bool EEIsLandTerrain(long inTerrainType)
-{
-    return inTerrainType != kTerrainDeepWater && inTerrainType != kTerrainShallowWater && inTerrainType != kTerrainCliff && inTerrainType != kTerrainSpace;
-}
+bool EEIsLandTerrain(long inTerrainType) { return inTerrainType != kTerrainDeepWater && inTerrainType != kTerrainShallowWater && inTerrainType != kTerrainCliff && inTerrainType != kTerrainSpace; }
 
 // dm_body.rs's scratch values: the saved game's file and the bool read last (Load's locals)
 static FSFile* sDmFile;
@@ -85,10 +57,7 @@ static bool sDmFlag;
 static unsigned long sDmValue;
 static long sDmCoordinate;
 
-template <class T> static T* EEDmObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEDmObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // The C++ of EEDoppelgangerManager's Rust bodies (ee_units dm_body.rs; EE_UNITS_DM_*): one statement of the
 // originals each, in their order; inA an object (a doppelganger, a tile, a unit, a player), inB and inC values or a
@@ -145,17 +114,11 @@ extern "C" int64_t ee_units_dm_host(int32_t inOp, uint64_t inA, int64_t inB, int
     case EE_UNITS_DM_NEXT_PART: return (uint64_t)(uintptr_t)EEDmObject<EEComplexUnit>(inA)->mNextPart;
     case EE_UNITS_DM_HAS_SCALE: return theUnit->mUnitClass->mScale != 0.0f;
     case EE_UNITS_DM_UNIT_TILE_SIZE: return theUnit->mUnitClass->mTileSize;
-    case EE_UNITS_DM_INITIALIZE:
-        theDoppelganger->Initialize(EEDmObject<EEUnit>((uint64_t)inB), EEDmObject<EEPlayer>((uint64_t)inC), EEDmObject<EEUnit>((uint64_t)inB)->mTile);
-        return 0;
-    case EE_UNITS_DM_MINIMAP_ADD:
-        gMiniMap->AddDoppelganger(theDoppelganger, EEDmObject<EEUnit>((uint64_t)inB)->mTileX, EEDmObject<EEUnit>((uint64_t)inB)->mTileY, inC != 0);
-        return 0;
+    case EE_UNITS_DM_INITIALIZE: theDoppelganger->Initialize(EEDmObject<EEUnit>((uint64_t)inB), EEDmObject<EEPlayer>((uint64_t)inC), EEDmObject<EEUnit>((uint64_t)inB)->mTile); return 0;
+    case EE_UNITS_DM_MINIMAP_ADD: gMiniMap->AddDoppelganger(theDoppelganger, EEDmObject<EEUnit>((uint64_t)inB)->mTileX, EEDmObject<EEUnit>((uint64_t)inB)->mTileY, inC != 0); return 0;
     case EE_UNITS_DM_UNIT_TILE_XY: return inB == 0 ? theUnit->mTileX : theUnit->mTileY;
-    case EE_UNITS_DM_IS_WONDER:
-        return EEDmObject<EEComplexUnit>(inA)->GetTechTreeNode() != NULL && EEDmObject<EEComplexUnit>(inA)->GetTechTreeNode()->mData->mKind == 4;
-    case EE_UNITS_DM_IS_CLOAKED:
-        return EEDmObject<EEComplexUnit>(inA)->mIsCloakable ? EEDmObject<EEComplexUnit>(inA)->mIsCloaked : false;
+    case EE_UNITS_DM_IS_WONDER: return EEDmObject<EEComplexUnit>(inA)->GetTechTreeNode() != NULL && EEDmObject<EEComplexUnit>(inA)->GetTechTreeNode()->mData->mKind == 4;
+    case EE_UNITS_DM_IS_CLOAKED: return EEDmObject<EEComplexUnit>(inA)->mIsCloakable ? EEDmObject<EEComplexUnit>(inA)->mIsCloaked : false;
     case EE_UNITS_DM_SAVES_VIS_MAP: return thePlayer->mSaveVisMap == true;
     case EE_UNITS_DM_IS_SEEN_BY: return EECombatIsSeenBy(EEDmObject<EEComplexUnit>(inA), EEDmObject<EEPlayer>((uint64_t)inB), true);
     case EE_UNITS_DM_IS_CLOAKABLE: return theUnit->mComplexUnit->mIsCloakable;

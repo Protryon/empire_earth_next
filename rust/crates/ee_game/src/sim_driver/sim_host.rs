@@ -757,7 +757,7 @@ pub fn sight_capture_sweep() {
     let map_size = gc::h(gc::O::TeMapSize, 0, &[]) as c_long;
     let size = map_size as f32;
     let points = [[size * 0.5, size * 0.5], [5.5, 7.5], [size - 3.25, size * 0.3]];
-    let n = gc::h(gc::O::MmNumPlayers, 0, &[]) as c_ulong;
+    let n = gc::map::num_players() as c_ulong;
     for p in 1..n {
         let player = gc::h(gc::O::WorldPlayer, 0, &[p as i64]) as usize;
         if player == 0 {
@@ -777,7 +777,7 @@ pub fn sight_capture_sweep() {
     }
     // two full cycles of the checksum's 64 x 64 windows
     let bands = (map_size + 63) / 64;
-    let map = crate::gamecpp::hp(crate::gamecpp::O::MpWorldMap, 0, &[]) as *mut c_void;
+    let map = crate::gamecpp::map::world_map() as *mut c_void;
     for _ in 0..2 * bands * bands + 1 {
         crate::gamecpp::map::ee_gamecpp_map_checksum(map);
     }

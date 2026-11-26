@@ -26,10 +26,7 @@ struct UIButtonRust {
     {
         return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
     }
-    static GERectangle Rect(const EeUiRect& inRectangle)
-    {
-        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
-    }
+    static GERectangle Rect(const EeUiRect& inRectangle) { return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom); }
 };
 
 #endif

@@ -7,11 +7,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEMap.h"
-#include "rust/game/rts.h"
 
 // Creates a tile at the given height with no units and terrain type 0
 RTSTile::RTSTile(float inHeight)
