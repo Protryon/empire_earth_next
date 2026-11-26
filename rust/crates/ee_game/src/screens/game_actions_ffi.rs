@@ -63,6 +63,7 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
     use ee_sim::units::uc_is::{EE_UNITS_UC_IS_AIR_BASE, EE_UNITS_UC_IS_DROP_SITE, EE_UNITS_UC_IS_TRANSPORT};
     use ee_sim::world::layout;
     use ee_sim::world::view::{ClassView, TileView, UnitView, WorldRead, WorldView};
+    use ee_net::net::ffi_comms::EeNetCommsField;
     use ee_sim::world_field;
     use std::ffi::{c_long, c_ulong};
 
@@ -78,6 +79,9 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
     let current = || world.current_player();
     let selection = || current().map_or(0, |pl| pl.selected_group_handle() as usize);
     let active = |pl: usize| hp(O::PlActiveGroup, pl, &[]);
+    let comms = crate::gamecpp::net::global;
+    let client = || crate::gamecpp::session_objs::client_tail(get!(gCommunications) as usize);
+    let server = || crate::gamecpp::session_objs::server_tail(get!(gCommunications) as usize);
     let (op, field) = (key >> 8, (key & 0xff) as i64);
     Some(match (op, field) {
         // the units (GetUnitID, GetPlayer()->GetPlayerID(), GetPlayer(), GetComplexUnit(), GetTileNode() != NULL, ...)
@@ -263,6 +267,34 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         }
         (EE_SCREENS_GA_OP_CAMERA, EE_SCREENS_GA_CAM_FOLLOWING_OFF) => {
             set!(gCameraFollowing, false);
+            0
+        }
+        // the communications' state (the network engine's) and the client's and server's plain tails (only a LAN
+        // game reaches these)
+        (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_IS_SERVER) => !crate::gamecpp::net::global().server.is_null() as i64,
+        (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_CTS_PROCESSED) => (comms().get(EeNetCommsField::CtsProcessed) > 0) as i64,
+        _ if key == EE_SCREENS_GAH_N_CTS => comms().get(EeNetCommsField::CtsProcessed) as c_ulong as i64,
+        (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_PAUSED) => (comms().get(EeNetCommsField::IsGamePaused) != 0) as i64,
+        _ if key == EE_SCREENS_GAH_N_LAST_TICK => {
+            comms().set(EeNetCommsField::LastTickReceived, -2i64 as c_ulong as u32);
+            0
+        }
+        _ if key == EE_SCREENS_GAH_N_MULTI_SESSION => {
+            comms().set(EeNetCommsField::IsMultiplayerSession, 1);
+            0
+        }
+        (EE_SCREENS_GA_OP_NET, EE_SCREENS_GA_N_HAS_LEFT) => client().has_left_game as i64,
+        _ if key == EE_SCREENS_GAH_N_FAST_ID => client().fast_selection_id as i64,
+        _ if key == EE_SCREENS_GAH_N_CLIENT_MIGRATING => {
+            client().is_migrating = true;
+            0
+        }
+        _ if key == EE_SCREENS_GAH_N_SERVER_FAST_ID => {
+            server().fast_selection_id = i[1] as u8;
+            0
+        }
+        _ if key == EE_SCREENS_GAH_N_SERVER_MIGRATING => {
+            server().is_migrating = true;
             0
         }
         // the camera's and the mini map's Rust calls (as the inline members make them)

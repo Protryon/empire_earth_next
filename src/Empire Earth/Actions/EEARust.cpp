@@ -198,9 +198,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(NET, N_POP): gUIManager->Pop(); return 0;
     case EE_SCREENS_GAH_N_STRING: gResource->GetString(i[1], sMessage); return 0;
     case EE_SCREENS_GAH_N_SHOW: gUIManager->DisplayMessage(sMessage, true, NULL, i[2] ? (void (*)(UIForm*))ee_screens_join_restart_client : NULL, true); return 0;
-    case GA_K(NET, N_IS_SERVER): return gCommunications->IsServer() == true;
     case GA_K(NET, N_BOOT_PLAYER): static_cast<EEServer*>(gCommunications)->BootPlayer(GA_A->mPlayer, GA_A->mB0D, GA_A->mIsExiting); return 0;
-    case GA_K(NET, N_CTS_PROCESSED): return gCommunications->GetNumberOfCTsProcessedInPhysics() > 0;
     case EE_SCREENS_GAH_N_PAUSE: dynamic_cast<EEServer*>(gCommunications)->PauseGame(); return 0;
     case EE_SCREENS_GAH_N_UNPAUSE: dynamic_cast<EEServer*>(gCommunications)->UnpauseGame(); return 0;
     case EE_SCREENS_GAH_N_POST_PAUSE: gUserInterface->PostPauseInformation(i[1] != 0); return 0;
@@ -240,26 +238,18 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_CLEAR_GAME_NAME: GA_A->mGameName = UWideString(); return 0;
     case EE_SCREENS_GAH_N_CLEAR_NAME: GA_A->mName = UString(); return 0;
     case EE_SCREENS_GAH_N_RUN_OWED: gPhysics->RunOwedTicks(); return 0;
-    case EE_SCREENS_GAH_N_CLIENT_MIGRATING: GA_CLIENT->mIsMigrating = true; return 0;
-    case GA_K(NET, N_HAS_LEFT): return GA_CLIENT->mHasLeftGame != 0;
     case EE_SCREENS_GAH_N_PLAYER_HUMAN: return gWorld.mPlayers[i[1]]->mHumanPlayer != 0;
     case EE_SCREENS_GAH_N_RESET_FAST: GA_CLIENT->ResetFastSelection(); return 0;
     case EE_SCREENS_GAH_N_KEEP_TEXT: GA_A->mText = gWorld.mPlayers[i[1]]->mName; return 0;
     case EE_SCREENS_GAH_N_KEEP_HUMAN: GA_A->mName = static_cast<EEHumanPlayer*>(gWorld.mPlayers[i[1]])->GetName(); return 0;
     case EE_SCREENS_GAH_N_KEEP_GAME_NAME: GA_A->mGameName = gWorld.mPlayers[i[1]]->mName; return 0;
-    case EE_SCREENS_GAH_N_CTS: return gCommunications->GetNumberOfCTsProcessedInPhysics();
-    case EE_SCREENS_GAH_N_FAST_ID: return GA_CLIENT->mFastSelectionID;
     case EE_SCREENS_GAH_N_NEW_MIGRATED:
         gCommunications = new EEServer(UWideString("Migrated Server"), gGamePreferences.mSettings.GetNetworkAdapter(), (unsigned long)i[1], (unsigned long)i[2], false, false);
         return 0;
     case EE_SCREENS_GAH_N_CLEAR_SERVER_MESSAGES: gPhysics->ClearServerMessages(); return 0;
-    case EE_SCREENS_GAH_N_MULTI_SESSION: gCommunications->SetIsMultiplayerSession(true); return 0;
     case EE_SCREENS_GAH_N_SEND_TO_SERVER: GA_SERVER->SetSendToSlotForPlayer(gWorld.mCurrentPlayer, kSlotServer); return 0;
-    case EE_SCREENS_GAH_N_SERVER_FAST_ID: GA_SERVER->mFastSelectionID = (unsigned char)i[1]; return 0;
-    case EE_SCREENS_GAH_N_SERVER_MIGRATING: GA_SERVER->mIsMigrating = true; return 0;
     case EE_SCREENS_GAH_N_WAIT_TIMED_OUT: GA_SERVER->HandleReconnectWaitTimedOut(); return 0;
     case EE_SCREENS_GAH_N_WAIT_START: GA_SERVER->StartWaitingForReconnects(i[1]); return 0;
-    case EE_SCREENS_GAH_N_LAST_TICK: gCommunications->SetLastTickReceived(-2); return 0;
     case EE_SCREENS_GAH_N_MY_SLOT_NONE: GA_SYNC->SetMySendToSlot(kSlotNone); return 0;
     case EE_SCREENS_GAH_N_NEW_RECONNECT:   // the tick, the player
         return (intptr_t)static_cast<NEMessage*>(new NEMRecord(kNetMessageClientReconnectionRequest, {gCommunications->GetNumberOfCTsProcessedInPhysics(), gWorld.mCurrentPlayer}));
@@ -283,7 +273,6 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         GA_FORM->GetLoadThread()->Post407(reinterpret_cast<void*>(GA_A->mPlayers[i[1]]), reinterpret_cast<void*>(GA_ENTRY->GetTechTree()->mStartEpoch));
         return 0;
     case GA_K(EDITOR, E_SAVE): return SaveGame(GA_A->mFileName, TMGetTime(), GA_A->mFlag, GA_A->mDescription);
-    case GA_K(EDITOR, E_PAUSED): return gCommunications->GetIsGamePaused();
     case EE_SCREENS_GAH_E_NO_OWED: gPhysics->mTicksOwed = 0; return 0;
     case EE_SCREENS_GAH_E_PAUSE: static_cast<NESynchronousServer*>(gCommunications)->PauseGame(); return 0;
     case EE_SCREENS_GAH_E_UNPAUSE: static_cast<NESynchronousServer*>(gCommunications)->UnpauseGame(); return 0;
