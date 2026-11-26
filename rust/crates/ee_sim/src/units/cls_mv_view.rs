@@ -24,7 +24,10 @@ use std::os::raw::c_long;
 const RESOURCE_WOOD: u64 = 3;
 
 /// The statement `op` when it is a plain one; None for the C++ host's.
-pub(crate) fn cls_mv_view(op: i32, a: u64, b: u64, io: &mut EeUnitsClsIo) -> Option<i64> {
+pub(crate) fn cls_mv_view(op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
+    if let Some(v) = calls(op, a, b, c, d, io) {
+        return Some(v);
+    }
     // SAFETY: the class bodies run inside the C++ caller's hold of the world; their handles are live
     let t = unsafe { WorldRead::begin() };
     // SAFETY: as above (`a` a complex unit)
@@ -85,4 +88,83 @@ pub(crate) fn cls_mv_view(op: i32, a: u64, b: u64, io: &mut EeUnitsClsIo) -> Opt
         }
         _ => return None,
     })
+}
+
+/// The statements that were one call of a unit or class member whose inline body (ee/EEUnit.h) is one call of a
+/// Rust entry point: the entry point called with the arguments the member passed on (`a` the unit, `b` the other
+/// unit, the class or the goal).
+fn calls(op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
+    use crate::units::cu_body::game::ee_units_cu_body;
+    use crate::units::cu_body::*;
+    use crate::units::cu_misc::*;
+    use crate::units::cu_small::game::ee_units_cu_small;
+    use crate::units::cu_small::*;
+    use crate::units::cu_world::*;
+    use crate::units::u12a_small::game::ee_units_cu_tiny;
+    use crate::units::u12a_small::*;
+    use crate::units::uca_air::game::ee_units_uca_call;
+    use crate::units::uca_air::*;
+    use crate::units::uck_kinds::game::ee_units_uck_call;
+    use crate::units::uck_kinds::*;
+    use std::os::raw::c_void;
+    let (u, o) = (a as usize as *mut c_void, b as usize as *mut c_void);
+    // SAFETY: the Rust entry points the C++ members called, with the live unit and objects the body handed over,
+    // as the members passed them on
+    unsafe {
+        match op {
+            EE_UNITS_CLS_MV_IGNORE_TARGET => {
+                ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, u, o, 0);
+            }
+            EE_UNITS_CLS_MV_SET_BLOCKING => {
+                ee_units_cu_body(EE_UNITS_CU_DO_SET_BLOCKING_UNIT, u, b as i64, 0, 0);
+            }
+            EE_UNITS_CLS_MV_SET_VELOCITY => {
+                // SAFETY: the live unit (its two records, as the member passed them)
+                let t = WorldRead::begin();
+                let v = UnitView::of(&t, a)?;
+                crate::units::cu_inline::ee_units_cu_set_velocity(v.fields().ptr(), v.complex().ptr() as *mut _, io.f);
+            }
+            EE_UNITS_CLS_MV_START_ACTION => {
+                ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, u, c as c_long as i64, 0, 0);
+            }
+            EE_UNITS_CLS_MV_ACTION_CHANGED => {
+                ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, o, u, 0, 0, 0, 0.0);
+            }
+            EE_UNITS_CLS_MV_UPDATE_WATER_STATE => {
+                ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_WATER_STATE, u, 1, 0, 0);
+            }
+            EE_UNITS_CLS_CR_ROUTE_DOCK => crate::units::ucn_noted::ee_units_ucn_route_dock_waypoint(b, a),
+            EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE => {
+                ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, u, 0, 0, 0);
+            }
+            EE_UNITS_CLS_CR_SET_GOAL => crate::units::goals::ee_units_unit_set_goal(a, b, false, 0),
+            EE_UNITS_CLS_R_SET_GOAL_KEEP => crate::units::goals::ee_units_unit_set_goal(a, b, c != 0, 0),
+            EE_UNITS_CLS_CR_KILL => {
+                ee_units_cu_body(EE_UNITS_CU_DO_KILL, u, 1, 0, 0);
+            }
+            EE_UNITS_CLS_CR_HOME_FIRST_SLOT => {
+                let t = WorldRead::begin();
+                let atc = air_traffic(&UnitView::of(&t, a)?)?;
+                drop(t);
+                let airport = crate::units::atc::ee_units_atc_slot_airport(atc as usize as *const _, 0);
+                ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, u, airport as usize as i64, 0, 0);
+            }
+            EE_UNITS_CLS_LV_LINK_PART => {
+                ee_units_cu_body(EE_UNITS_CU_DO_LINK_PART, u, b as i64, 0, 0);
+            }
+            EE_UNITS_CLS_ST_CHAIN => crate::units::player_rest::game::ee_units_cloak_chain(a, 0, d != 0),
+            EE_UNITS_CLS_ST_CLOAKED_CHAIN => crate::units::player_rest::game::ee_units_cloak_chain(a, 1, d != 0),
+            EE_UNITS_CLS_ST_OPACITY_CHAIN => {
+                let mut value = io.f;
+                ee_units_uca_call(EE_UNITS_UCA_DO_OPACITY_CHAIN, std::ptr::null_mut(), u, 0, 0, 0, &mut value);
+            }
+            EE_UNITS_CLS_ST_CLOAK_DETECTION => ee_units_st_cloak_detection(b, a),
+            EE_UNITS_CLS_ST_HAS_AREA_CLOAK => {
+                let has = ee_units_cu_tiny(EE_UNITS_CU_T_DO_HAS_EFFECT, u, std::ptr::null(), 8, 0, 0.0, 0.0, 0.0);
+                return Some(i64::from(has != 0));
+            }
+            _ => return None,
+        }
+    }
+    Some(0)
 }

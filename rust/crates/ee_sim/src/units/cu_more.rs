@@ -274,7 +274,7 @@ pub fn run<H: CuMoreHost + ?Sized>(h: &mut H, what: i32, unit: u64, a: i64, b: i
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::cu_body::game::Game;
     use std::os::raw::c_void;

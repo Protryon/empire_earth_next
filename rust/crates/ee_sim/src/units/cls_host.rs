@@ -170,12 +170,12 @@ pub const EE_UNITS_CLS_REQUEST_QUEUED: i32 = 38;
 /// The class bodies' host's plain reads over the world views (the units' behaviour lane, round 2; they were
 /// EEUnitClassTransports.cpp `ee_units_cls_host`'s cases): the unit `a`'s cargo, container, command, home base and
 /// stats' turn speeds, the class `b`'s projectile's category, the map's size; None for the C++ host's.
-fn cls_view(op: i32, a: u64, b: u64, c: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
+fn cls_view(op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
     use crate::world::view::{ClassView, UnitView, WorldRead, WorldView};
     if let Some(v) = waypoint_op(op, a, c, io) {
         return Some(v);
     }
-    if let Some(v) = crate::units::cls_mv_view::cls_mv_view(op, a, b, io) {
+    if let Some(v) = crate::units::cls_mv_view::cls_mv_view(op, a, b, c, d, io) {
         return Some(v);
     }
     if !matches!(
@@ -306,7 +306,7 @@ pub(crate) fn has_sunk(unit: u64) -> bool {
 
 impl ClsGame {
     pub(crate) fn call(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> i64 {
-        if let Some(v) = cls_view(op, a, b, c, io) {
+        if let Some(v) = cls_view(op, a, b, c, d, io) {
             return v;
         }
         // SAFETY: the C++ switch reads live objects the bodies hand it

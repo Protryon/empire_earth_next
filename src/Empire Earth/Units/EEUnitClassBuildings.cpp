@@ -300,7 +300,6 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_TECH_CLASS: return EEObj(gUnitClassTable[EEUcbObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass]);
     case EE_UNITS_UCB_REPLACE_UNIT: return EEObj(EEReplaceUnit(theOther, (long)inB, EEUcbObject<EEUnitClass>((uint64_t)inC)));
     case EE_UNITS_UCB_TURN_GATE_PART: return EETurnGatePart(*EEUcbObject<GETransformation>(inA), (long)inB, (long)inC);
-    case EE_UNITS_UCB_SET_TRANSFORMATION_OF: theOther->SetTransformation(*EEUcbObject<GETransformation>((uint64_t)inB), true); return 0;
     case EE_UNITS_UCB_SET_GATE_DIRECTION_OF: theOther->SetGateDirection((unsigned long)inB); return 0;
     case EE_UNITS_UCB_POSITION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCB_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
@@ -315,9 +314,7 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_SPACE_GATES:
         return EEUcbObject<EEPlayer>(inA)->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && EEUcbObject<EEUnitClass>((uint64_t)inB)->GetUnitType() != kUnitTypeGatePalisades;
     case EE_UNITS_UCB_ENERGY_WALL: EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(EEUcbObject<EEUnit>(inA))); return 0;
-    case EE_UNITS_UCB_GET_PART: return EEObj(theClass->GetPart(theOther, (long)inB));
     case EE_UNITS_UCB_LOCATION_MATRIX_OF: *EEUcbObject<GETransformation>((uint64_t)inB) = theOther->mPhysicalModel.GetLocation(); return 0;
-    case EE_UNITS_UCB_SET_ANIMATION_OF: theOther->SetAnimation((long)inB, -1, 0); return 0;
     case EE_UNITS_UCB_TILES_LEVEL: return EEAreTilesLevel(*EEUcbObject<std::vector<U2DPoint<long> > >(inA));
     case EE_UNITS_UCB_UNITS_OF_TYPE_ON_TILES: ee_units_uu_units_of_type_on_tiles(EEUcbObject<void>(inA), (int32_t)inB, EEUcbObject<void>((uint64_t)inC)); return 0;
     case EE_UNITS_UCB_PLAYER_UNITS_OF_TYPE: ee_units_uu_player_units_of_type((int32_t)inB, (int32_t)inC, EEUcbObject<void>(inA)); return 0;
@@ -328,42 +325,29 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_RING: ee_units_uu_square_ring_tiles((int32_t)inB, (int32_t)(inB >> 32), (int32_t)inC, EEUcbObject<void>(inA)); return 0;
     case EE_UNITS_UCB_TARGET_BUILDING:
         return EEUcbObject<EEUnit>(inA)->mUnitClass->IsLandBuilding() && EEUcbObject<EEUnit>(inA)->mHitPoints > 0 && ee_units_uu_targetable(0, EEObj(EEUcbObject<EEUnit>(inA)->GetUnitClass()), 0);
-    case EE_UNITS_UCB_PART_LEFT_OUT: return theClass->IsPartLeftOut(theOther);
-    case EE_UNITS_UCB_GATE_BASE_SURROUNDING: theClass->BaseGetSurroundingTiles(theOther, *EEUcbObject<std::vector<EETileCoordinate> >((uint64_t)inB), (long)inC, true); return 0;
     case EE_UNITS_UCB_SORT_UNIQUE: EESortUnique(*EEUcbObject<std::vector<U2DPoint<long> > >(inA), std::less<U2DPoint<long> >(), std::equal_to<U2DPoint<long> >()); return 0;
     case EE_UNITS_UCB_NEXT_WAYPOINT: return theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f));
-    case EE_UNITS_UCB_BUILDING_UNIT_CREATED: theClass->BuildingUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCB_START_ACTION: theUnit->StartAction((long)inB); return 0;
-    case EE_UNITS_UCB_ACTION_CHANGED: theClass->ActionChanged(theUnit); return 0;
-    case EE_UNITS_UCB_SPACE_SET_BUILT: theUnit->SetBuilt(1, 0, 1); return 0;
     case EE_UNITS_UCB_LOCATION_YAW: theUnit->mPhysicalModel.GetLocation().ConvertToOrientation(*reinterpret_cast<GEOrientation*>(f)); return 0;
     case EE_UNITS_UCB_HUMAN_OF: return theOther->GetPlayer()->IsHuman();
     case EE_UNITS_UCB_QUEUE_SHIFT_MODE: return theUnit->mGoalQueues[(size_t)inB].GetUnit()->mPlayer->mShiftMode;
     case EE_UNITS_UCB_SET_EXITING: theUnit->SetExitingUnitID((unsigned long)inB); return 0;
     case EE_UNITS_UCB_CLEAR_QUEUE0: theOther->mGoalQueues[0].Clear(); return 0;
-    case EE_UNITS_UCB_REFRESH_GOALS: theOther->RefreshGoals(); return 0;
-    case EE_UNITS_UCB_REFRESH_ACTIVE: theOther->RefreshActiveGoal(); return 0;
     case EE_UNITS_UCB_QUEUE_LEN_OF: return theOther->GetQueueGoals((unsigned long)inB).size();
     case EE_UNITS_UCB_QUEUE_FRONT_OF: return EEObj(theOther->mGoalQueues[(size_t)inB].GetFront());
     case EE_UNITS_UCB_EXPLORE_CAST: return EEObj(EEExploreGoalCast(EEUcbObject<EEUnitGoal>(inA)));
     case EE_UNITS_UCB_ATTACK_CAST: return EEObj(EEAttackUnitCast(EEUcbObject<EEUnitGoal>(inA)));
     case EE_UNITS_UCB_HAS_LOCATION: return EEGoalHasLocation(EEUcbObject<EEUnitGoal>(inA));
     case EE_UNITS_UCB_PLAYER_HUMAN_OF: return theOther->mPlayer->IsHuman();
-    case EE_UNITS_UCB_FIND_PASSENGER: return EEObj(theUnit->FindPassenger((unsigned long)inB));
     case EE_UNITS_UCB_TAGS_EMPTY: return EEUcbObject<EETagPointList>(inA)->mPoints.empty();
     case EE_UNITS_UCB_TAGS_SCALE_STATS: EEUcbObject<EETagPointList>(inA)->Scale(*EEUcbObject<GETransformation>((uint64_t)inB), theUnit->mStats->GetScale()); return 0;
     case EE_UNITS_UCB_TAG0_POINT: EEUcbObject<EETagPointList>(inA)->mPoints[0]->GetPoint(EEUcbObject<EEComplexUnit>((uint64_t)inB)->mPhysicalModel.GetFrame(), *EEUcbObject<GETransformation>((uint64_t)inC), *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCB_SET_CARGO_SCALE: theOther->mPhysicalModel.SetScale(theOther->mStats->GetScale() * ((f[0] * 0.5f) / theOther->mUnitClass->GetCruiseAltitude() + 0.5f)); return 0;
-    case EE_UNITS_UCB_UNLOAD_BY_ID: return EEObj(theUnit->UnloadCargoByID((unsigned long)inB, *EEUcbObject<GETransformation>(inA)));
     case EE_UNITS_UCB_QUEUE_GOAL_OF: return EEObj(theOther->GetQueueGoals((unsigned long)inB)[(size_t)inC]);
-    case EE_UNITS_UCB_LOAD_CARGO: theUnit->LoadCargo(theOther, false, 0); return 0;
     case EE_UNITS_UCB_ATC_REMOVE_TAKEOFF: ee_units_atc_remove_from_takeoff_queues(theOther->mPlayer->mAirTraffic[theOther->mUnitClass->mAirTrafficType - 1], theOther); return 0;
     case EE_UNITS_UCB_UNIT_QUEUE_LEN: return theUnit->mGoalQueues[(size_t)inB].mGoals.size();
     case EE_UNITS_UCB_UNIT_QUEUE_GOAL: return EEObj(theUnit->mGoalQueues[(size_t)inB].mGoals[(size_t)inC]);
     case EE_UNITS_UCB_TILE_FREE: return EEIsTileFree(theOther, (unsigned long)inB, (unsigned long)inC);
     case EE_UNITS_UCB_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
-    case EE_UNITS_UCB_SET_HOME_BASE: theOther->SetHomeBase(theUnit); return 0;
-    case EE_UNITS_UCB_SET_BUILT: theUnit->SetBuilt((long)inB, (long)(inC & 1), (long)(inC >> 1)); return 0;
     case EE_UNITS_UCB_SET_RESOURCE_TYPE: theUnit->SetResourceType(theClass->mResourceType); return 0;
     case EE_UNITS_UCB_SET_RESOURCE_AMOUNT: theUnit->SetResourceAmount(theClass->mResourceAmount); return 0;
     case EE_UNITS_UCB_FACING_QUARTER: return EEGetUnitFacingQuarter(theUnit);
@@ -371,17 +355,10 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_NAVY_YARD_FACING: return GetNavyYardFacing(theUnit->GetTileX(), theUnit->GetTileY());
     case EE_UNITS_UCB_SPACE_DOCK_YAW: f[0] = EEGetSpaceDockYaw(theUnit->GetTileX() + 1, theUnit->GetTileY() + 1, theUnit->mUnitClass->GetTileSize()); return 0;
     case EE_UNITS_UCB_UPDATE_TURRETS: theUnit->UpdateTurrets(); return 0;
-    case EE_UNITS_UCB_UPDATE_HEAL_SEARCH: theUnit->UpdateHealSearchTimer(); return 0;
     case EE_UNITS_UCB_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
-    case EE_UNITS_UCB_REGENERATE_POWER: theClass->RegeneratePower(theUnit); return 0;
-    case EE_UNITS_UCB_PRIEST_CONVERSION: theClass->BasicPriestUpdateConversion(theUnit); return 0;
-    case EE_UNITS_UCB_RELEASE_CONVERSION: theUnit->ReleaseConversionEffect(); return 0;
-    case EE_UNITS_UCB_HIDE_CONVERSION: theClass->BasicPriestHideConversionEffects(theUnit); return 0;
-    case EE_UNITS_UCB_CAN_GATHER: return EEUcbObject<EEUnit>(inA)->CanGather(EEUcbObject<EEUnit>((uint64_t)inB), EEUcbObject<EEUnit>((uint64_t)inB)->GetTileX(), EEUcbObject<EEUnit>((uint64_t)inB)->GetTileY(), 0, 0);
     case EE_UNITS_UCB_SET_MINE: EEUcbObject<EEUnit>(inA)->mComplexUnit->SetMine(EEUcbObject<EEUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UCB_FACING_QUARTER_AT: return EEGetFacingQuarter((long)inB, (long)inC);
     case EE_UNITS_UCB_TILES_CLEAR: EEUcbObject<std::vector<EETileCoordinate>>(inA)->clear(); return 0;
-    case EE_UNITS_UCB_BASE_SURROUNDING: theClass->BaseGetSurroundingTiles(theUnit, *EEUcbObject<std::vector<EETileCoordinate>>(inA), (long)inB, inC != 0); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }
 }

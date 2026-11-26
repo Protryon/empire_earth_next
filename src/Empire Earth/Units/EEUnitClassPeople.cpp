@@ -296,7 +296,6 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_RESET_HANDLE: sUcpHandle.mValue = 0; return 0;
     case EE_UNITS_UCP_SET_WORK_TIMER: theUnit->SetWorkTimer((long)inB); return 0;
     case EE_UNITS_UCP_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
-    case EE_UNITS_UCP_UPDATE_FANATICISM: theUnit->UpdateFanaticismColor(); return 0;
     case EE_UNITS_UCP_RESEARCH_NODE: return EEObj(theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch));
     case EE_UNITS_UCP_NODE_MAKES_UNIT: return EEUcpObject<EETechTreeNode>(inA)->mData->mMakesUnit;
     case EE_UNITS_UCP_NODE_KIND: return EEUcpObject<EETechTreeNode>(inA)->mData->mKind;
@@ -305,8 +304,6 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_CONVERSION_COST: return EEGetConversionCost(theOther);
     case EE_UNITS_UCP_CONVERSION_TARGET: return EEObj(static_cast<EEComplexUnit*>(EEAttackUnitCast(theUnit->GetGoal())->GetAttackTarget()));
     case EE_UNITS_UCP_SAME_PLAYER: return theOther->mPlayer == theUnit->mPlayer;
-    case EE_UNITS_UCP_RELEASE_CONVERSION: theUnit->ReleaseConversionEffect(); return 0;
-    case EE_UNITS_UCP_CLEAR_GOALS: theUnit->ClearGoals(0); return 0;
     case EE_UNITS_UCP_NO_CONVERSION_EFFECT: return UIsNone32(theUnit->mConversionEffect.mValue);
     case EE_UNITS_UCP_CREATE_INDICATOR: return gWorld.GetEffectManager()->CreateUnitEffect(theOther, EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator), &sUcpHandle, 0, 0, 0);
     case EE_UNITS_UCP_HANDLE_DIFFERS: return theUnit->mConversionEffect != sUcpHandle;

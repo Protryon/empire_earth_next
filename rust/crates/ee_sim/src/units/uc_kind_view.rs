@@ -17,12 +17,16 @@ use crate::world::view::{StatsView, UnitView};
 use crate::world_field;
 use std::os::raw::{c_long, c_ulong};
 
+use crate::units::uc_anim::*;
+use crate::units::uc_create::*;
+use crate::units::uc_rest::*;
 use crate::units::uca_air::*;
 use crate::units::ucb_gate::*;
 use crate::units::ucb_release::*;
 use crate::units::ucg_ground::*;
 use crate::units::ucg_sea::*;
 use crate::units::uck_dispatch::*;
+use crate::units::uck_kinds::*;
 use crate::units::ucp_people::*;
 use crate::units::ucs_impact::*;
 use crate::units::ucs_shots::*;
@@ -30,13 +34,12 @@ use crate::units::ucx_transports::*;
 
 /// The kind `kind`'s statement `op` when it is a plain one.
 pub(crate) fn kind_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
-    let _ = c;
     match kind {
         Kind::Class => None,
         Kind::Air => air(x, op, f),
         Kind::Buildings => buildings(x, op, b, f),
         Kind::Ground => ground(x, op, f),
-        Kind::Kinds => kinds(x, op),
+        Kind::Kinds => kinds(x, op).or_else(|| kinds_call(x, op, b, c, f)),
         Kind::People => people(x, op, f),
         Kind::Shots => shots(x, op, f),
         Kind::Transports => transports(x, op, f),
@@ -371,4 +374,317 @@ fn transports(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
         EE_UNITS_UCX_TRANSPORT_CAPACITY => long(world_field!(u()?.class()?.fields(), mTransportCapacity)),
         _ => return None,
     })
+}
+
+/// `unit->mPlayer->mPopulationCount -=` (or `+=`) `a->mUnitClass->GetPopulationCost()`.
+fn population(x: &Ctx<'_>, add: bool) -> Option<()> {
+    let cost: c_long = world_field!(x.o()?.class()?.fields(), mWeight);
+    let p = x.u()?.player()?.saved().ptr() as *mut crate::world::player_fields::EeUnitsPlayerSaved;
+    // SAFETY: the unit's player's member
+    unsafe {
+        if add {
+            (*p).mPopulationCount += cost;
+        } else {
+            (*p).mPopulationCount -= cost;
+        }
+    }
+    Some(())
+}
+
+/// The kinds' host's statements that were a call of an `EEUnitClass` member whose inline body is one call of a
+/// Rust entry point (ee/EEUnit.h): the entry point called here with the arguments the member passed on (a `long`
+/// truncated, a bool 0 or 1, the location's and the transformation's floats in place), and the population count
+/// stores of `POPULATION_SUB` and `_ADD`.
+fn kinds_call(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
+    use crate::units::cls_host::{
+        ee_units_cls_condition, ee_units_cls_landing_has_arrived, ee_units_tr_naval_has_arrived,
+    };
+    use crate::units::cls_move_host::ee_units_mv_has_arrived;
+    use crate::units::uc_create::game::ee_units_uc_call;
+    use crate::units::uc_rest::game::ee_units_uc_rest;
+    use crate::units::uca_air::game::ee_units_uca_call;
+    use crate::units::ucb_gate::game::ee_units_ucb_gate;
+    use crate::units::ucb_release::game::ee_units_ucb_call;
+    use crate::units::ucg_ground::game::ee_units_ucg_call;
+    use crate::units::ucg_sea::game::ee_units_ucg_sea;
+    use crate::units::ucp_people::game::ee_units_ucp_call;
+    use crate::units::ucs_impact::game::ee_units_ucs_impact;
+    use crate::units::ucs_shots::game::ee_units_ucs_call;
+    use crate::units::ucx_transports::game::ee_units_ucx_call;
+    use std::os::raw::c_void;
+    use std::ptr::{null, null_mut};
+    let (class, unit, a) = (x.class, x.unit, x.a);
+    let (k, u, n) = (class as usize as *mut c_void, unit as usize as *mut c_void, null_mut::<c_void>());
+    // `(long)inB`, `(long)inC`, `inC != 0`, `(long)(inC >> 1)` and `inC & 1`, as the members took them
+    let (lb, lc, bc) = (b as c_long as i64, c as c_long as i64, i64::from(c != 0));
+    let (player, found) = ((c >> 1) as c_long as i64, c & 1);
+    let m = b as usize as *const [[f32; 4]; 4];
+    let mut value = [f[0], 0.0, 0.0, 0.0];
+    let flag = |v: i64| i64::from(v != 0);
+    let p = |h: u64| h as usize as *mut c_void;
+    // SAFETY: the Rust entry points the C++ members called, with the live class, unit and objects the body handed
+    // over, as the members passed them on
+    unsafe {
+        match op {
+            EE_UNITS_UCK_BOMB_UPDATE => {
+                ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_UPDATE, k, u, 0, null());
+            }
+            EE_UNITS_UCK_PRIEST_UPDATE => {
+                ee_units_ucb_call(EE_UNITS_UCB_DO_PRIEST_UPDATE, k, u, 0, 0, 0, null());
+            }
+            EE_UNITS_UCK_CITIZEN_UPDATE => {
+                ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CITIZEN, k, u, 0, 0);
+            }
+            EE_UNITS_UCK_UPDATE_RIPPLES => {
+                ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_RIPPLES, k, u, 0, 0, 0, null(), null());
+            }
+            EE_UNITS_UCK_UPDATE_TRAIL => {
+                ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_TRAIL, k, u, 0, 0, 0, null(), null());
+            }
+            EE_UNITS_UCK_PROJECTILE_EFFECTS => {
+                ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_EFFECTS, k, u, 0, null());
+            }
+            EE_UNITS_UCK_CONDITION => return Some(i64::from(ee_units_cls_condition(class, unit, b as u32))),
+            EE_UNITS_UCK_LANDING_ARRIVED => {
+                return Some(i64::from(ee_units_cls_landing_has_arrived(class, unit, f[0], b != 0)))
+            }
+            EE_UNITS_UCK_SPACE_BUILDING_ARRIVED => {
+                return Some(flag(ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_ARRIVED, k, u, 0, 0, 0, f[0])))
+            }
+            EE_UNITS_UCK_NAVAL_TRANSPORT_ARRIVED => return Some(i64::from(ee_units_tr_naval_has_arrived(unit, f[0]))),
+            EE_UNITS_UCK_NAVAL_ARRIVED => {
+                return Some(flag(ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_ARRIVED, k, u, 0, f[0])))
+            }
+            EE_UNITS_UCK_SUBMERGED_ARRIVED => {
+                let v = ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED, k, u, 0, 0, 0, value.as_mut_ptr());
+                return Some(flag(v));
+            }
+            EE_UNITS_UCK_BASE_ARRIVED => return Some(i64::from(ee_units_mv_has_arrived(class, unit, f[0]) != 0)),
+            EE_UNITS_UCK_FORTRESS_HAS_ROOM => {
+                return Some(flag(ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_HAS_ROOM, k, u, a, 0, 0)))
+            }
+            EE_UNITS_UCK_NAVAL_SELECT => {
+                return Some(flag(ee_units_ucb_call(EE_UNITS_UCB_DO_NAVAL_SELECT_TO_RELEASE, k, u, 0, 0, 0, null())))
+            }
+            EE_UNITS_UCK_BUILDING_SELECT => {
+                return Some(flag(ee_units_ucb_call(EE_UNITS_UCB_DO_SELECT_TO_RELEASE, k, u, 0, 0, 0, null())))
+            }
+            EE_UNITS_UCK_GATE_SURROUNDING => {
+                ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_SURROUNDING, k, u, a, lb, bc, 0.0);
+            }
+            EE_UNITS_UCK_BUILDING_SURROUNDING => {
+                ee_units_ucb_call(EE_UNITS_UCB_DO_SURROUNDING_TILES, k, u, a, lb, bc, null());
+            }
+            EE_UNITS_UCK_BASE_SURROUNDING => {
+                ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, k, u, a, lb, bc, null_mut());
+            }
+            EE_UNITS_UCK_D_BASE_ADD_TO_REGION => {
+                ee_units_uc_call(EE_UNITS_UC_DO_ADD_TO_REGION, k, n, a, 0, 0, null(), null());
+            }
+            EE_UNITS_UCK_D_SPACE_TRANSPORT_ADD_TO_TILE => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_ADD, k, n, a, 0, 0);
+            }
+            EE_UNITS_UCK_D_AMBIENT_ADD_TO_TILE => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_ADD, k, n, a, 0.0);
+            }
+            EE_UNITS_UCK_D_RESOURCE_ADD_TO_TILE => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_ADD, k, n, a, 0.0);
+            }
+            EE_UNITS_UCK_D_SUBMERGED_ADD_TO_TILE => {
+                ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE, k, n, a, 0, 0, null_mut());
+            }
+            EE_UNITS_UCK_D_LAND_TRANSPORT_BADLY_HURT => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_BADLY_HURT, k, n, a, 0, 0);
+            }
+            EE_UNITS_UCK_D_LAND_CALL_PARATROOP_PLANE => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_CALL_PARATROOP_PLANE, k, u, 0, 0.0);
+            }
+            EE_UNITS_UCK_D_POPULATION_SUB | EE_UNITS_UCK_D_POPULATION_ADD => {
+                population(x, op == EE_UNITS_UCK_D_POPULATION_ADD)?
+            }
+            EE_UNITS_UCK_BOARDING_LOCATION => {
+                let (at, out) = (b as usize as *const [f32; 3], c as usize as *mut [f32; 3]);
+                return Some(i64::from(crate::units::ucx_transports::game::ee_units_ucx_boarding(k, u, p(a), at, out)));
+            }
+            EE_UNITS_UCK_D_BASE_SIMPLE_CREATED => {
+                let max = x.o()?.stats()?.max_hit_points();
+                crate::units::eu_body::game::ee_units_eu_body(
+                    crate::units::eu_body::EE_UNITS_EU_DO_SET_HIT_POINTS,
+                    p(a),
+                    max,
+                    0,
+                    0,
+                );
+            }
+            EE_UNITS_UCK_D_TORPEDO_GROUND_IMPACT => {
+                return Some(i64::from(ee_units_ucs_impact(EE_UNITS_UCS_DO_TORPEDO_GROUND, k, u)))
+            }
+            EE_UNITS_UCK_D_MISSILE_GROUND_IMPACT => {
+                return Some(i64::from(ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_GROUND, k, u)))
+            }
+            EE_UNITS_UCK_D_PROJECTILE_GROUND_IMPACT => {
+                return Some(i64::from(ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_GROUND, k, u)))
+            }
+            EE_UNITS_UCK_D_MISSILE_WATER_IMPACT => {
+                return Some(i64::from(ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_WATER, k, u)))
+            }
+            EE_UNITS_UCK_D_PROJECTILE_WATER_IMPACT => {
+                return Some(i64::from(ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_WATER, k, u)))
+            }
+            // the creations (b the tile, x | y << 32; c the player * 2 + the foundation flag): the unit made
+            EE_UNITS_UCK_D_MINING_CREATE_UNIT => {
+                return Some(ee_units_ucb_call(
+                    EE_UNITS_UCB_DO_MINING_CREATE_UNIT,
+                    k,
+                    n,
+                    a,
+                    b,
+                    player * 2 + found,
+                    null(),
+                ))
+            }
+            EE_UNITS_UCK_D_NAVAL_CITIZEN_CREATE_UNIT => {
+                let w = EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT;
+                return Some(ee_units_ucg_sea(w, k, n, a, b, player * 2 + found, null_mut()));
+            }
+            EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT => {
+                return Some(ee_units_ucb_call(
+                    EE_UNITS_UCB_DO_SPACE_CREATE_UNIT,
+                    k,
+                    n,
+                    a,
+                    b,
+                    player * 2 + found,
+                    null(),
+                ))
+            }
+            EE_UNITS_UCK_D_BUILDING_CREATE_UNIT => {
+                return Some(ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT, k, n, a, b, player * 2 + found, null()))
+            }
+            EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT => {
+                let w = EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT;
+                return Some(ee_units_ucg_sea(w, k, n, a, b, player * 2 + found, null_mut()));
+            }
+            EE_UNITS_UCK_D_BASE_CREATE_UNIT => {
+                let w = EE_UNITS_UC_DO_BASE_CREATE_UNIT;
+                return Some(ee_units_uc_call(w, k, n, a, b, player * 2 + found, null(), null()));
+            }
+            // b the transformation
+            EE_UNITS_UCK_D_MINING_CREATE_UNIT_AT => {
+                return Some(ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, k, n, a, player, found, m))
+            }
+            EE_UNITS_UCK_D_NAVAL_PRIEST_CREATE_UNIT_AT => {
+                let w = EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT;
+                return Some(ee_units_ucg_sea(w, k, n, a, player * 2 + found, 0, m as *mut f32));
+            }
+            EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT_AT => {
+                return Some(ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, k, n, a, player, found, m))
+            }
+            EE_UNITS_UCK_D_BUILDING_CREATE_UNIT_AT => {
+                return Some(ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT_AT, k, n, a, player, found, m))
+            }
+            EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT_AT => {
+                let w = EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT;
+                return Some(ee_units_ucg_sea(w, k, n, a, player * 2 + found, 0, m as *mut f32));
+            }
+            EE_UNITS_UCK_D_BASE_CREATE_UNIT_AT => {
+                return Some(ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT_AT, k, n, a, player, found, null(), m))
+            }
+            EE_UNITS_UCK_D_GATE_GATE_REPLACED => {
+                ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_REPLACED, k, a as usize as *mut c_void, b as u64, 0, 0, 0.0);
+            }
+            EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION => {
+                ee_units_ucg_sea(EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION, k, n, 0, 0, 0, f.as_mut_ptr());
+            }
+            EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION => {
+                ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION, k, n, 0, 0, 0, f.as_mut_ptr());
+            }
+            EE_UNITS_UCK_D_BOMB_LAUNCH => {
+                return Some(flag(ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_LAUNCH, k, u, 0, null())))
+            }
+            EE_UNITS_UCK_D_MISSILE_LAUNCH => {
+                return Some(flag(ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_LAUNCH, k, u, 0, null())))
+            }
+            EE_UNITS_UCK_D_PROJECTILE_LAUNCH => {
+                let at = a as usize as *const [f32; 3];
+                return Some(flag(ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_LAUNCH, k, u, 0, at)));
+            }
+            // a the location, b and c the tile's x and y outputs
+            EE_UNITS_UCK_D_NAVAL_CITIZEN_TO_TILE => {
+                let w = EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE;
+                ee_units_ucg_sea(w, k, n, b as u64, c, 0, a as usize as *mut f32);
+            }
+            EE_UNITS_UCK_D_SPACE_BUILDING_TO_TILE => {
+                let w = EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE;
+                ee_units_ucg_sea(w, k, n, b as u64, c, 0, a as usize as *mut f32);
+            }
+            EE_UNITS_UCK_D_AMBIENT_TO_TILE => {
+                let w = EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE;
+                ee_units_ucg_sea(w, k, n, b as u64, c, 0, a as usize as *mut f32);
+            }
+            EE_UNITS_UCK_D_SUBMERGED_TO_TILE => {
+                let w = EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE;
+                ee_units_ucg_sea(w, k, n, b as u64, c, 0, a as usize as *mut f32);
+            }
+            EE_UNITS_UCK_D_BASE_REMOVE_FROM_REGION => {
+                ee_units_uc_call(EE_UNITS_UC_DO_REMOVE_FROM_REGION, k, n, a, 0, 0, null(), null());
+            }
+            EE_UNITS_UCK_D_SPACE_TRANSPORT_REMOVE => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_REMOVE, k, n, a, 0, 0);
+            }
+            EE_UNITS_UCK_D_AMBIENT_REMOVE => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_REMOVE, k, n, a, 0.0);
+            }
+            EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_CREATED, k, n, a, 0.0);
+            }
+            EE_UNITS_UCK_D_AIR_ANIMAL_CREATED => {
+                ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED, k, u, 0, 0, 0, null_mut());
+            }
+            EE_UNITS_UCK_D_FORTRESS_CREATED => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_CREATED, k, u, 0, 0, 0);
+            }
+            EE_UNITS_UCK_D_GATE_CREATED => {
+                ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_UNIT_CREATED, k, u, 0, 0, 0, 0.0);
+            }
+            EE_UNITS_UCK_D_HELICOPTER_TRANSPORT_CREATED => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_CREATED, k, u, 0, 0, 0);
+            }
+            EE_UNITS_UCK_D_SPACE_BUILDING_CREATED => {
+                ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_UNIT_CREATED, k, u, 0, 0, 0, 0.0);
+            }
+            EE_UNITS_UCK_D_SPACE_TRANSPORT_CREATED => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_CREATED, k, u, 0, 0, 0);
+            }
+            EE_UNITS_UCK_D_BUILDING_CREATED => {
+                ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, k, u, 0, 0, 0, null());
+            }
+            EE_UNITS_UCK_D_LAND_CREATED => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_LAND_CREATED, k, u, 0, 0.0);
+            }
+            EE_UNITS_UCK_D_LANDABLE_CREATED => {
+                ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_CREATED, k, u, 0, 0, 0, null_mut());
+            }
+            EE_UNITS_UCK_D_MISSILE_CREATED => {
+                ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_CREATED, k, u, 0, null());
+            }
+            EE_UNITS_UCK_D_NAVAL_CREATED => {
+                ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_CREATED, k, u, 0, 0.0);
+            }
+            EE_UNITS_UCK_D_PROJECTILE_CREATED => {
+                ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_CREATED, k, u, 0, null());
+            }
+            EE_UNITS_UCK_D_TRANSPORT_CREATED => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, k, u, 0, 0, 0);
+            }
+            EE_UNITS_UCK_D_FORTRESS_UNLOAD_AT => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_UNLOAD_AT, k, u, 0, lb, lc);
+            }
+            EE_UNITS_UCK_D_TRANSPORT_UNLOAD_AT => {
+                ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, k, u, 0, lb, lc);
+            }
+            _ => return None,
+        }
+    }
+    Some(0)
 }

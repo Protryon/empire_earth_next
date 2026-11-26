@@ -501,7 +501,7 @@ pub fn produce_unit<H: UcRust + ?Sized>(h: &mut H, class: u64, unit: u64, made: 
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::uc_body::game::Game;
     use std::os::raw::c_void;

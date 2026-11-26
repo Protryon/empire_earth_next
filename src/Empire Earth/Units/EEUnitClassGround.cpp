@@ -112,16 +112,12 @@ extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCG_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, theUnit->mPlayer->mPlayerID); return 0;
     case EE_UNITS_UCG_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
     case EE_UNITS_UCG_SET_FLIGHT_TIME_OF: theOther->SetFlightTime((unsigned long)inB); return 0;
-    case EE_UNITS_UCG_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcgObject<GETransformation>(inA), true); return 0;
     case EE_UNITS_UCG_WAYPOINT_COUNT: return theUnit->mWaypoints.size();
     case EE_UNITS_UCG_NEXT_WAYPOINT: theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f)); return 0;
-    case EE_UNITS_UCG_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
     case EE_UNITS_UCG_WORLD_LINE: memcpy(EEUcgObject<GE3DLine>(inA), &::gWorld.mLine, sizeof(GE3DLine)); return 0;
     case EE_UNITS_UCG_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
     case EE_UNITS_UCG_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCG_TERRAIN_Z: f[0] = ::gWorld.mMap->mTerrainMesh.GetZ((unsigned long)inB, (unsigned long)inC); return 0;
-    case EE_UNITS_UCG_BASE_CREATE_AT: return EEObj(theClass->BaseCreateUnitAt(*EEUcgObject<GETransformation>(inA), (long)(inB >> 1), (inB & 1) != 0, EEUcgObject<EEUnit>((uint64_t)inC)));
-    case EE_UNITS_UCG_SET_LOCATION_OF: theOther->SetLocation(GE3DPoint(f[0], f[1], f[2]), true); return 0;
     case EE_UNITS_UCG_RANDOM_GENERATE: f[0] = gPhysics->mRandom.Generate(); return 0;
     case EE_UNITS_UCG_RANDOM_RANGE: f[0] = gPhysics->GetRandom(f[0], f[1]); return 0;
     case EE_UNITS_UCG_WHEEL_UPDATE: theUnit->mWheels[inB]->Update(theUnit); return 0;

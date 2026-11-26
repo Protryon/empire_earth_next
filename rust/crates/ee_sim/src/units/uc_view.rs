@@ -163,6 +163,9 @@ pub(crate) fn uc_view(
             return Some(v);
         }
     }
+    if let Some(v) = crate::units::uc_fwd_view::fwd_view(kind, &x, op, b, c, f) {
+        return Some(v);
+    }
     base(&x, op, b, c, f)
 }
 
