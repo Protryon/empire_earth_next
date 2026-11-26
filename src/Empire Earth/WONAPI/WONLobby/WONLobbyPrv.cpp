@@ -24,9 +24,6 @@
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
-#include "ee/wonapi/WONLobbyControls.h"
-#include "ee/wonapi/WONLobbyScreens.h"
-#include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONLobbyCrossPromotion.h"
 #include "ee/wonapi/WONGUIShell.h"
@@ -700,4 +697,64 @@ LobbyLogicMgr::LobbyLogicMgr() : mRust(ee_won_logicmgr_new(LogicMgrHost)) {}
 LobbyLogicMgr::~LobbyLogicMgr() { ee_won_logicmgr_free(this->mRust); }
 // Turns left clicks on menu items and button presses into control events; passes other events to the logics
 void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
+
+// ---- LobbyContainer.cpp (merged into this unit, R6 WON lobby/net round 40)
+// The lobby's top container: switches between the login, Internet and LAN screens
+LobbyContainer::LobbyContainer() {}
+// The original stores its own vtable (0x7bdd7f) before releasing the three screens
+// Destroys the container, releasing its three screens
+LobbyContainer::~LobbyContainer() {}
+static const char kLobbyContainerFile[] = "C:\\EEX\\Empire Earth\\WONAPI\\WONLobby\\LobbyContainer.cpp"; // its __FILE__
+// Sets the HTML default font, finds and adds the login, Internet and LAN screens and shows the login one
+void LobbyContainer::InitComponent(ComponentInit& inInit)
+{
+    if(inInit.mType!=2) return;
+    ComponentConfig* config=static_cast<ComponentConfigInit&>(inInit).mConfig;
+    SafeGetComponent(config,this->mLoginScreen,"LoginScreen",kLobbyContainerFile,37);
+    SafeGetComponent(config,this->mInternetScreen,"InternetScreen",kLobbyContainerFile,38);
+    SafeGetComponent(config,this->mLanScreen,"LanScreen",kLobbyContainerFile,39);
+    this->AddScreen(this->mLoginScreen.get());
+    this->AddScreen(this->mInternetScreen.get());
+    this->AddScreen(this->mLanScreen.get());
+    this->ShowScreen(this->mLoginScreen.get(),true);
+}
+// Shows the Internet lobby screen
+void LobbyContainer::ShowInternetScreen() { this->ShowScreen(this->mInternetScreen.get(),true); }
+// Shows the LAN lobby screen
+void LobbyContainer::ShowLanScreen() { this->ShowScreen(this->mLanScreen.get(),true); }
+// mLoginScreen is read again after ShowScreen
+// Shows the login screen with the message of the day
+void LobbyContainer::ShowLoginScreen()
+{
+    this->ShowScreen(this->mLoginScreen.get(),true);
+    this->mLoginScreen->ShowMOTD();
+}
+// Returns whether the Internet lobby screen is showing
+bool LobbyContainer::OnInternetScreen() { return this->mCurScreen==this->mInternetScreen.get(); }
+// Returns whether the LAN lobby screen is showing
+bool LobbyContainer::OnLanScreen() { return this->mCurScreen==this->mLanScreen.get(); }
+// Returns whether the login screen is showing
+bool LobbyContainer::OnLoginScreen() { return this->mCurScreen==this->mLoginScreen.get(); }
+// Returns where games are set up: 2 Internet, 1 LAN games tab, 3 direct connect tab, else 0
+int LobbyContainer::GetGameScreenType()
+{
+    if(this->OnInternetScreen()) return 2;
+    if(this->OnLanScreen()) {
+        if(this->mLanScreen->OnLanTab()) return 1;
+        if(this->mLanScreen->OnDirectConnectTab()) return 3;
+    }
+    return 0;
+}
+
+// ---- LobbyAuthContextAccess.cpp (merged into this unit, R6 WON lobby/net round 40)
+// Returns the login context; with CRC checks on, first gives it the files to hash for the community (once)
+AuthContext* GetLobbyAuthContext()
+{
+    if(gLobbyData.get()==NULL)
+        return NULL;
+    if(gLobbyData->mConfig->mCRCCheck) // the files once (lobbyprv.rs: the list, or the running executable)
+        ee_won_lobbyprv_hash_login(ee_won_authctx_login(gLobbyData->mAuthContext->Core()), gLobbyData->mLoginCommunity.data(),
+                                   sizeof(wchar_t), gLobbyData->mLoginCommunity.size());
+    return gLobbyData->mAuthContext.get();
+}
 }

@@ -16,7 +16,6 @@
 34a1c0 34a521 WONGUI/TextFormat.cpp
 357f30 358de2 WONLobby/LobbyConfig.cpp
 358e50 35b9be WONLobby/LobbyServiceSupport.cpp
-35b490 35b4fe WONLobby/LobbyAuthContextAccess.cpp
 35baa0 360e91 WONLobby/LobbyPersistentData.cpp
 361260 361ee7 WONLobby/LobbyStagingSupport.cpp
 3628c0 366167 WONLobby/WONLobbyPrv.cpp
@@ -24,7 +23,6 @@
 366170 366b2f WONLobby/WONStatusString.cpp
 377670 381801 WONLobby/WONLobbyResource.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
-3bdd60 3bdfbe WONLobby/LobbyContainer.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3db150 3dc3ef WONLobby/AccountLogic.cpp
 3dc3f0 3dd0f5 WONLobby/DialogLogic.cpp
