@@ -28,7 +28,6 @@
 #include "ee/EERules.h"
 
 #include "EEDataTextSpecs.h"
-#include "rust/game/gamecpp.h"
 #include <stdio.h>
 #include <string.h>
 #include <utility>
@@ -38,15 +37,12 @@
 #include "lle/GETexture.h"
 #include "ee/EEDbRecords.h"
 #include <EEDatabase.h>
-#include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
 #include "ee/EEUnit.h"
 #include "ee/EEButtonObject.h"
 #include "lle/UIHotKey.h"
 #include "lle/GEScreen.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"

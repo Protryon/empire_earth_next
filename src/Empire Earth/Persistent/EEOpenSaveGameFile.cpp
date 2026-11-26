@@ -9,7 +9,6 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EESaveGameFiles.h"
 
 // Finds a save file by name in a directory on the data path; returns the find error
 long EEOpenSaveGameFile(const UString& inName, const UString& inDirectory, FSFileSpec*& outFile)

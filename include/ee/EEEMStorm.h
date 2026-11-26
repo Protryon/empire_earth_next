@@ -10,6 +10,7 @@
 #include <vector>
 #include "ee/EETileCoordinate.h"
 #include "rust/sim/app.h"   // EeAppStormFields (ee_app storm.rs)
+#include "rust/game/gamecpp.h"
 
 class EEEnvironmentManager;
 class FSFile;
@@ -18,16 +19,19 @@ class EEAutoPathRequest;
 
 class EEEMStorm : public EeAppStormFields {
 public:
-    EEEMStorm(long inType, EEEnvironmentManager* inManager);
-    virtual ~EEEMStorm();                   // +0x00
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04
+    EEEMStorm(long inType, EEEnvironmentManager* inManager) : mManager(inManager) { ee_gamecpp_storm_init(this, inType); }
+    // +0x00
+    virtual ~EEEMStorm() { ee_gamecpp_storm_release(this); }
+    // +0x04
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_storm_load(this, &inFile); }
     // +0x08 0x12e6b5 (RepairPointers: mStorm from its saved handle, 9 when gone; the name again; state 2 -> 8;
     // non-zero: EEEnvironmentManager::RepairPointers drops the storm)
-    virtual long Restore();
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c
+    virtual long Restore() { return ee_gamecpp_storm_restore(this); }
+    // +0x0c
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_storm_save(this, &outFile); }
     // 0x12ddbf (cdecl, by value): 0 "Unknown", 1 "Rain", 2 "Snow", 3 "Hurricane", 4 "Blizzard", 5..8 "PlaceHolder1".."4"
     // (each `theName += ...`), else `theName = "Type Not defined"` (provisional name)
-    static UWideString GetTypeName(long inType);
+    static UWideString GetTypeName(long inType) { return UWideString(ee_app_storm_type_name(inType)); }
     // In-class getters: EEEnvironmentManager::IsInStorm 0x52ee1b reads the type and tests the area
     // through them (the extra free inline sites make VC6 refuse the first four _Ptrit::operator+ as the original does;
     // exact only with both).

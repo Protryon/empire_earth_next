@@ -8,7 +8,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/UIEvent.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"
 
 // a new screen event of the code, NULL for code 0
 UIEvent* EECreateScreenEvent(unsigned long inEvent) { return inEvent == 0 ? NULL : new EEScreenEvent(inEvent); }

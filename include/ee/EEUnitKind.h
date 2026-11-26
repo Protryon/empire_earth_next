@@ -27,28 +27,16 @@ extern const uint8_t EE_UNIT_CLASS_BODIES[EE_UNITS_BODY_COUNT][256];  // each vi
 // by these bits (EEUnitClassKinds.cpp's dispatchers run each kind's bodies).
 
 // a class's kind bits (its category's entry: its own kind's EE_CLASS_KIND_* bit and its ancestors')
-template <class C> inline uint64_t EEUnitClassKinds(const C* inClass)
-{
-    return (unsigned long)inClass->mCategory < 256 ? EE_UNIT_CLASS_KINDS[inClass->mCategory] : 0;
-}
+template <class C> inline uint64_t EEUnitClassKinds(const C* inClass) { return (unsigned long)inClass->mCategory < 256 ? EE_UNIT_CLASS_KINDS[inClass->mCategory] : 0; }
 
 // the body EEUnitClass's virtual inVirtual (an EE_UNITS_BODY_* row) runs for inClass: 0 the default, n its n-th
-template <class C> inline unsigned EEClassBody(const C* inClass, size_t inVirtual)
-{
-    return (unsigned long)inClass->mCategory < 256 ? EE_UNIT_CLASS_BODIES[inVirtual][inClass->mCategory] : 0;
-}
+template <class C> inline unsigned EEClassBody(const C* inClass, size_t inVirtual) { return (unsigned long)inClass->mCategory < 256 ? EE_UNIT_CLASS_BODIES[inVirtual][inClass->mCategory] : 0; }
 
 // whether inClass (not NULL) is of kind B (an EE_CLASS_KIND_* bit): what dynamic_cast<EEUC*> tested
-template <uint64_t B, class C> inline bool EEUnitClassIsKind(const C* inClass)
-{
-    return (EEUnitClassKinds(inClass) & B) != 0;
-}
+template <uint64_t B, class C> inline bool EEUnitClassIsKind(const C* inClass) { return (EEUnitClassKinds(inClass) & B) != 0; }
 
 // inClass when it is of kind B, else NULL (NULL stays NULL)
-template <uint64_t B, class C> inline C* EEUnitClassOfKind(C* inClass)
-{
-    return inClass != NULL && EEUnitClassIsKind<B>(inClass) ? inClass : NULL;
-}
+template <uint64_t B, class C> inline C* EEUnitClassOfKind(C* inClass) { return inClass != NULL && EEUnitClassIsKind<B>(inClass) ? inClass : NULL; }
 
 class EEUnit;
 class EEComplexUnit;
@@ -59,19 +47,10 @@ template <> struct EEUnitObjectKindBit<EEUnit> { static const uint32_t kBit = EE
 template <> struct EEUnitObjectKindBit<EEComplexUnit> { static const uint32_t kBit = EE_OBJECT_KIND_COMPLEX_UNIT; };
 
 // whether inUnit (an RTSUnit or derived, not NULL) is a T
-template <class T, class U> inline bool EEUnitIs(const U* inUnit)
-{
-    return (EE_UNIT_OBJECT_KINDS[inUnit->mObjectKind.mValue] & EEUnitObjectKindBit<T>::kBit) != 0;
-}
+template <class T, class U> inline bool EEUnitIs(const U* inUnit) { return (EE_UNIT_OBJECT_KINDS[inUnit->mObjectKind.mValue] & EEUnitObjectKindBit<T>::kBit) != 0; }
 
 // dynamic_cast<T*>(inUnit) for the unit object classes
-template <class T, class U> inline T* EEUnitCast(U* inUnit)
-{
-    return inUnit != NULL && EEUnitIs<T>(inUnit) ? static_cast<T*>(inUnit) : NULL;
-}
-template <class T, class U> inline const T* EEUnitCast(const U* inUnit)
-{
-    return inUnit != NULL && EEUnitIs<T>(inUnit) ? static_cast<const T*>(inUnit) : NULL;
-}
+template <class T, class U> inline T* EEUnitCast(U* inUnit) { return inUnit != NULL && EEUnitIs<T>(inUnit) ? static_cast<T*>(inUnit) : NULL; }
+template <class T, class U> inline const T* EEUnitCast(const U* inUnit) { return inUnit != NULL && EEUnitIs<T>(inUnit) ? static_cast<const T*>(inUnit) : NULL; }
 
 #endif

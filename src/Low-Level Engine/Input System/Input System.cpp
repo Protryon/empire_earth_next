@@ -11,15 +11,8 @@
 #include <vector>
 
 #include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
-#include "lle/UWideString.h"
-#include "lle/UResourceFile.h"
-#include "lle/GE2DPoint.h"
-#include "lle/TSScheduler.h"
-#include "lle/FSMemoryFile.h"
 #include "GEWindow.h"
 #include "lle/Input System.h"
-#include "lle/ISDeviceInput.h"
 #include "platform/PlatWindow.h"
 
 ISKeyboard* gISKeyboard;

@@ -55,20 +55,15 @@ public:
         return *this;
     }
     void Clear() { ee_units_gq_clear(this->mGoals.mQueue); }   // 0x2057a7: every goal deleted, the timer stopped
-    EEComplexUnit* GetUnit() const   // mUnit (+0x18: the goals' owner)
-    {
-        return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_gq_unit(this->mGoals.mQueue)));
-    }
+    EEComplexUnit* GetUnit() const { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_gq_unit(this->mGoals.mQueue))); }  // mUnit (+0x18: the goals' owner)
     // 0x205807: the game time left on the timer (0 when it is not running)
     unsigned long GetTimeLeft() { return ee_units_gq_timer(this->mGoals.mQueue, 0, 0); }
     // 0x205821: starts the timer at the game time the first time, then adds inTime (EEMIncrementRallyTimer 60000,
     // EEMScrambleAircraft 1000)
     void AddTime(long inTime) { ee_units_gq_timer(this->mGoals.mQueue, 1, inTime); }
-    void ResetTimer() { ee_units_gq_timer(this->mGoals.mQueue, 2, 0); }
     // 0x205843: inserts a goal at a position (appending past the end), the unit its owner
     void Insert(unsigned long inIndex, EEUnitGoal* inGoal) { this->GoalOp(2, inIndex, inGoal); }
     void Add(EEUnitGoal* inGoal) { this->GoalOp(0, 0, inGoal); }       // 0x1ed61b: appended, the unit its owner
-    void AddFront(EEUnitGoal* inGoal) { this->GoalOp(1, 0, inGoal); }
     void PopBack() { this->GoalOp(3, 0, NULL); }                         // the last goal removed and deleted
     void PopFront() { this->GoalOp(4, 0, NULL); }                        // the first goal removed and deleted
     EEUnitGoal* GetFront() { return this->mGoals.front(); }             // 0x1f8a26 (EEUICUnitIconBar 0x25ad15)
@@ -77,10 +72,7 @@ public:
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_units_gq_load_file(this->mGoals.mQueue, &inFile, inMajorVersion, inMinorVersion); }
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_units_gq_save_file(this->mGoals.mQueue, &outFile, inMajorVersion, inMinorVersion); }
 
-    void GoalOp(int32_t inOp, unsigned long inIndex, EEUnitGoal* inGoal)
-    {
-        ee_units_gq_goal_op(this->mGoals.mQueue, inOp, inIndex, EEGoalDeque::H(inGoal));
-    }
+    void GoalOp(int32_t inOp, unsigned long inIndex, EEUnitGoal* inGoal) { ee_units_gq_goal_op(this->mGoals.mQueue, inOp, inIndex, EEGoalDeque::H(inGoal)); }
 
     EEGoalDeque mGoals;                     // the Rust queue (+0x04 of the original: its goals' deque)
 };

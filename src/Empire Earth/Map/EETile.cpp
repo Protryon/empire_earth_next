@@ -9,12 +9,10 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
-#include "rust/game/gamecpp.h"
 
 // chain at 0x521191 (wrapper)
 //   object 0x9297e0  ctor UMemoryPool<EETUnitList>::UMemoryPool 0x121734  dtor (unguarded: a plain global) 0x1211b1

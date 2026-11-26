@@ -48,8 +48,7 @@ public:                                             // URandom::Generate on the 
     // fld/fistp, `== max + 1` clamp) and GEModel Caching.cpp expands it (MutateTriGenes 0x17735, MutateVertexGenes
     // 0x1784f) as well as the ctor (OptimizeMemoryCoherency 0x17912, OptimizeVertexCaching 0x180e1): both are inline
     // after the class in the newer-header view (emitted by GEBitmap.cpp, the first includer, at 0xde5f/0xde95).
-    long Generate(long inMinimum, long inMaximum)
-        { return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(this), inMinimum, inMaximum); }
+    long Generate(long inMinimum, long inMaximum) { return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(this), inMinimum, inMaximum); }
 };
 
 #endif

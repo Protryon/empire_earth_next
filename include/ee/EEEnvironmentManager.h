@@ -56,7 +56,7 @@ public:
     // (DeleteStorms, UpdateStorms, UpdateWind: ee_game gamecpp weather.rs)
     // inline (out-of-line COMDAT 0x15439f at the end of EEPhysics.cpp, its first user UpdateWeather passes mLD0; unsigned: ja)
     // Provisional name
-    void Tick(unsigned long inTime);
+    void Tick(unsigned long inTime) { if (this->mNextStep <= inTime && this->mIsEnabled == true) this->Step(inTime); }
 };
 
 #endif
