@@ -74,11 +74,6 @@ extern "C" float ee_screenscpp_civh_variant_factor(int64_t inKind)
 { return ::gWorld.GetGameVariant()->GetFactor((long)inKind); }
 extern "C" void ee_screenscpp_civh_hit_points(int32_t inPlayer, int64_t inKind, float inFactor)
 { EEUpgradeHitPoints(CIVH_P(inPlayer)->mUnitClassUpgrades[(long)inKind], (long)inKind, inFactor, CIVH_P(inPlayer)); }
-extern "C" uintptr_t ee_screenscpp_civh_first_unit(int32_t inPlayer) { return (uintptr_t)CIVH_P(inPlayer)->mFirstUnit; }
-extern "C" uintptr_t ee_screenscpp_civh_next_unit(uintptr_t inUnit)
-{ return (uintptr_t)static_cast<EEUnit*>(((EEUnit*)inUnit)->mNext); }
-extern "C" uint64_t ee_screenscpp_civh_unit_type(uintptr_t inUnit)
-{ return (uint64_t)((EEUnit*)inUnit)->mUnitClass->mUnitType; }
 extern "C" void ee_screenscpp_civh_sight_on(uintptr_t inUnit) { ((EEUnit*)inUnit)->SightOnHere(); }
 extern "C" void ee_screenscpp_civh_sight_off(uintptr_t inUnit) { ((EEUnit*)inUnit)->SightOffHere(); }
 extern "C" int64_t ee_screenscpp_civh_population_limit(int32_t inPlayer)

@@ -194,9 +194,37 @@ impl Fake {
 #[cfg(not(test))]
 pub(crate) struct Ffi;
 
+/// One shim's FFI declaration: a C++ shim's symbol (one name), or nothing for a call Rust answers itself (a path:
+/// `civ_direct::name`).
+macro_rules! shim_extern {
+    ([$sym:ident] ($($arg:ident : $ty:ty),*) $(-> $ret:ty)?) => {
+        extern "C" {
+            pub fn $sym($($arg: $ty),*) $(-> $ret)?;
+        }
+    };
+    ([$($path:ident)::+] ($($arg:ident : $ty:ty),*) $(-> $ret:ty)?) => {};
+}
+
+/// One shim's FFI call: the C++ shim, or the Rust function that answers it (a path: the same arguments and answer,
+/// made on the Rust objects directly; civ_direct.rs).
+macro_rules! shim_call {
+    ([$sym:ident] ($($arg:ident),*)) => {
+        // SAFETY: the shim's own contract: the pointers the moved logic hands it are the C++ host's live objects,
+        // as the C++ case had them
+        unsafe { sys::$sym($($arg),*) }
+    };
+    ([$($path:ident)::+] ($($arg:ident),*)) => {
+        $($path)::+($($arg),*)
+    };
+}
+
+#[cfg(not(test))]
+use crate::screens::civ_direct;
+
 macro_rules! shims {
-    ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $sym:ident ; )*) => {
-        /// The C++ shims (one statement each; some are only the FFI hosts', absent from a test binary).
+    ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $($sym:ident)::+ ; )*) => {
+        /// The C++ shims (one statement each; some are only the FFI hosts', absent from a test binary), and the
+        /// calls Rust answers itself (`= module::name`; the tests' fake records both alike).
         #[allow(clippy::too_many_arguments)]
         #[cfg_attr(test, allow(dead_code))]
         pub(crate) trait Cpp {
@@ -207,17 +235,13 @@ macro_rules! shims {
         mod sys {
             #[allow(unused_imports)]
             use super::*;
-            extern "C" {
-                $( pub fn $sym($($arg: $ty),*) $(-> $ret)?; )*
-            }
+            $( shim_extern!([$($sym)::+] ($($arg: $ty),*) $(-> $ret)?); )*
         }
 
         #[cfg(not(test))]
         impl Cpp for Ffi {
             $( fn $name(&mut self, $($arg: $ty),*) $(-> $ret)? {
-                // SAFETY: the shim's own contract: the pointers the moved logic hands it are the C++ host's live
-                // objects, as the C++ case had them
-                unsafe { sys::$sym($($arg),*) }
+                shim_call!([$($sym)::+] ($($arg),*))
             } )*
         }
 
@@ -2326,24 +2350,24 @@ shims! {
     fn cl_write_string(file: usize, text: EeScreensShimText) -> i32 = ee_screenscpp_cl_write_string;
     fn cl_write_colour(file: usize) -> i32 = ee_screenscpp_cl_write_colour;
     // EECivilizationBuilder.cpp's builder host whole and EECBUIListBox's list ops (civ_host.rs)
-    fn cbh_form(id: u32) -> usize = ee_screenscpp_cbh_form;
-    fn cbh_control_by_id(form: usize, id: u32) -> usize = ee_screenscpp_cbh_control_by_id;
-    fn cbh_control(form: usize, index: u32) -> usize = ee_screenscpp_cbh_control;
-    fn cbh_as_edit(control: usize) -> usize = ee_screenscpp_cbh_as_edit;
-    fn cbh_as_label(control: usize) -> usize = ee_screenscpp_cbh_as_label;
+    fn cbh_form(id: u32) -> usize = civ_direct::cbh_form;
+    fn cbh_control_by_id(form: usize, id: u32) -> usize = civ_direct::cbh_control_by_id;
+    fn cbh_control(form: usize, index: u32) -> usize = civ_direct::cbh_control;
+    fn cbh_as_edit(control: usize) -> usize = civ_direct::cbh_as_edit;
+    fn cbh_as_label(control: usize) -> usize = civ_direct::cbh_as_label;
     fn cbh_as_file_list(control: usize) -> usize = ee_screenscpp_cbh_as_file_list;
     fn cbh_as_list(control: usize) -> usize = ee_screenscpp_cbh_as_list;
-    fn cbh_edit_text(edit: usize, out: EeScreensShimOut) = ee_screenscpp_cbh_edit_text;
-    fn cbh_edit_set_text(edit: usize, text: EeScreensShimText) = ee_screenscpp_cbh_edit_set_text;
-    fn cbh_edit_select(edit: usize) = ee_screenscpp_cbh_edit_select;
-    fn cbh_edit_index(edit: usize) -> u32 = ee_screenscpp_cbh_edit_index;
-    fn cbh_form_set_tab_stop(form: usize, index: u32) = ee_screenscpp_cbh_form_set_tab_stop;
-    fn cbh_label_text(label: usize, out: EeScreensShimOut) = ee_screenscpp_cbh_label_text;
-    fn cbh_label_set_text(label: usize, text: EeScreensShimText) = ee_screenscpp_cbh_label_set_text;
-    fn cbh_label_set_number(label: usize, number: i32) = ee_screenscpp_cbh_label_set_number;
-    fn cbh_push(form: usize) -> i32 = ee_screenscpp_cbh_push;
+    fn cbh_edit_text(edit: usize, out: EeScreensShimOut) = civ_direct::cbh_edit_text;
+    fn cbh_edit_set_text(edit: usize, text: EeScreensShimText) = civ_direct::cbh_edit_set_text;
+    fn cbh_edit_select(edit: usize) = civ_direct::cbh_edit_select;
+    fn cbh_edit_index(edit: usize) -> u32 = civ_direct::cbh_edit_index;
+    fn cbh_form_set_tab_stop(form: usize, index: u32) = civ_direct::cbh_form_set_tab_stop;
+    fn cbh_label_text(label: usize, out: EeScreensShimOut) = civ_direct::cbh_label_text;
+    fn cbh_label_set_text(label: usize, text: EeScreensShimText) = civ_direct::cbh_label_set_text;
+    fn cbh_label_set_number(label: usize, number: i32) = civ_direct::cbh_label_set_number;
+    fn cbh_push(form: usize) -> i32 = civ_direct::cbh_push;
     fn cbh_close_form() -> i32 = ee_screenscpp_cbh_close_form;
-    fn cbh_current_form() -> usize = ee_screenscpp_cbh_current_form;
+    fn cbh_current_form() -> usize = civ_direct::cbh_current_form;
     fn cbh_path_new() = ee_screenscpp_cbh_path_new;
     fn cbh_spec_volume() = ee_screenscpp_cbh_spec_volume;
     fn cbh_spec_directory() = ee_screenscpp_cbh_spec_directory;
@@ -2356,10 +2380,10 @@ shims! {
     fn cbh_fl_line(list: usize, line: u32, out: EeScreensShimOut) = ee_screenscpp_cbh_fl_line;
     fn cbh_fl_delete(list: usize) -> i32 = ee_screenscpp_cbh_fl_delete;
     fn cbh_screen_event(code: u32) -> usize = ee_screenscpp_cbh_screen_event;
-    fn cbh_form_set_open_event(form: usize, event: usize) = ee_screenscpp_cbh_form_set_open_event;
-    fn cbh_form_set_close_event(form: usize, event: usize) = ee_screenscpp_cbh_form_set_close_event;
+    fn cbh_form_set_open_event(form: usize, event: usize) = civ_direct::cbh_form_set_open_event;
+    fn cbh_form_set_close_event(form: usize, event: usize) = civ_direct::cbh_form_set_close_event;
     fn cbh_event_release(event: usize) = ee_screenscpp_cbh_event_release;
-    fn cbh_form_id(form: usize) -> u32 = ee_screenscpp_cbh_form_id;
+    fn cbh_form_id(form: usize) -> u32 = civ_direct::cbh_form_id;
     fn cbh_string_load(id: u32) -> i32 = ee_screenscpp_cbh_string_load;
     fn cbh_string_out(out: EeScreensShimOut) = ee_screenscpp_cbh_string_out;
     fn cbh_format_percent() = ee_screenscpp_cbh_format_percent;
@@ -2385,13 +2409,13 @@ shims! {
     fn cbh_game_result() -> i32 = ee_screenscpp_cbh_game_result;
     fn cbh_pause() -> i32 = ee_screenscpp_cbh_pause;
     fn cbh_unpause() -> i32 = ee_screenscpp_cbh_unpause;
-    fn cbh_current_player() -> usize = ee_screenscpp_cbh_current_player;
+    fn cbh_current_player() -> usize = civ_direct::cbh_current_player;
     fn cbh_player_civ(player: usize) -> usize = ee_screenscpp_cbh_player_civ;
-    fn cbh_player_id() -> u8 = ee_screenscpp_cbh_player_id;
-    fn cbh_civ_chosen() -> bool = ee_screenscpp_cbh_civ_chosen;
-    fn cbh_civ_locked() -> bool = ee_screenscpp_cbh_civ_locked;
-    fn cbh_set_civ_chosen(value: bool) = ee_screenscpp_cbh_set_civ_chosen;
-    fn cbh_set_civ_locked(value: bool) = ee_screenscpp_cbh_set_civ_locked;
+    fn cbh_player_id() -> u8 = civ_direct::cbh_player_id;
+    fn cbh_civ_chosen() -> bool = civ_direct::cbh_civ_chosen;
+    fn cbh_civ_locked() -> bool = civ_direct::cbh_civ_locked;
+    fn cbh_set_civ_chosen(value: bool) = civ_direct::cbh_set_civ_chosen;
+    fn cbh_set_civ_locked(value: bool) = civ_direct::cbh_set_civ_locked;
     fn cbh_free_camera() -> bool = ee_screenscpp_cbh_free_camera;
     fn cbh_can_buy() -> bool = ee_screenscpp_cbh_can_buy;
     fn cbh_campaign_name() -> bool = ee_screenscpp_cbh_campaign_name;
@@ -2404,7 +2428,7 @@ shims! {
     fn cbh_set_blink_flag(value: bool) = ee_screenscpp_cbh_set_blink_flag;
     fn cbh_main_builder_button(form: usize) -> usize = ee_screenscpp_cbh_main_builder_button;
     fn cbh_main_alert_button() -> usize = ee_screenscpp_cbh_main_alert_button;
-    fn cbh_main_game_form_id() -> u32 = ee_screenscpp_cbh_main_game_form_id;
+    fn cbh_main_game_form_id() -> u32 = civ_direct::cbh_main_game_form_id;
     fn cbh_button_blink(button: usize, value: bool) = ee_screenscpp_cbh_button_blink;
     fn cbh_f_volume() = ee_screenscpp_cbh_f_volume;
     fn cbh_f_directory(text: EeScreensShimText) = ee_screenscpp_cbh_f_directory;
@@ -2417,7 +2441,7 @@ shims! {
     fn cbh_f_write(bytes: EeScreensShimText) -> i32 = ee_screenscpp_cbh_f_write;
     fn cbh_f_file(out: EeScreensShimOut) = ee_screenscpp_cbh_f_file;
     fn cbh_startup_directory(out: EeScreensShimOut) = ee_screenscpp_cbh_startup_directory;
-    fn cbh_num_players() -> u32 = ee_screenscpp_cbh_num_players;
+    fn cbh_num_players() -> u32 = civ_direct::cbh_num_players;
     fn cbh_player_civ_file_is(player: u32, file: EeScreensShimText) -> bool = ee_screenscpp_cbh_player_civ_file_is;
     fn cbh_players_clear() = ee_screenscpp_cbh_players_clear;
     fn cbh_players_push(player: u32) = ee_screenscpp_cbh_players_push;
@@ -2426,18 +2450,18 @@ shims! {
     fn cbh_action_release(action: usize) = ee_screenscpp_cbh_action_release;
     fn cbh_string_clear() = ee_screenscpp_cbh_string_clear;
     fn cbh_load_civilization(name: EeScreensShimText, user: bool) -> i32 = ee_screenscpp_cbh_load_civilization;
-    fn cbl_count(list: usize) -> u32 = ee_screenscpp_cbl_count;
-    fn cbl_line(list: usize, line: u32, out: EeScreensShimOut) = ee_screenscpp_cbl_line;
+    fn cbl_count(list: usize) -> u32 = civ_direct::cbl_count;
+    fn cbl_line(list: usize, line: u32, out: EeScreensShimOut) = civ_direct::cbl_line;
     fn cbl_set_line(list: usize, line: u32, text: EeScreensShimText) = ee_screenscpp_cbl_set_line;
-    fn cbl_append(list: usize, text: EeScreensShimText) = ee_screenscpp_cbl_append;
-    fn cbl_delete(list: usize, line: u32) = ee_screenscpp_cbl_delete;
-    fn cbl_delete_all(list: usize) = ee_screenscpp_cbl_delete_all;
-    fn cbl_select(list: usize, line: u32, fire: bool, scroll: bool) = ee_screenscpp_cbl_select;
-    fn cbl_current(list: usize, index: EeScreensShimULongOut) -> i32 = ee_screenscpp_cbl_current;
-    fn cbl_auto(list: usize) -> bool = ee_screenscpp_cbl_auto;
-    fn cbl_has(list: usize) -> bool = ee_screenscpp_cbl_has;
-    fn cbl_index(list: usize) -> u32 = ee_screenscpp_cbl_index;
-    fn cbl_dirty(list: usize) = ee_screenscpp_cbl_dirty;
+    fn cbl_append(list: usize, text: EeScreensShimText) = civ_direct::cbl_append;
+    fn cbl_delete(list: usize, line: u32) = civ_direct::cbl_delete;
+    fn cbl_delete_all(list: usize) = civ_direct::cbl_delete_all;
+    fn cbl_select(list: usize, line: u32, fire: bool, scroll: bool) = civ_direct::cbl_select;
+    fn cbl_current(list: usize, index: EeScreensShimULongOut) -> i32 = civ_direct::cbl_current;
+    fn cbl_auto(list: usize) -> bool = civ_direct::cbl_auto;
+    fn cbl_has(list: usize) -> bool = civ_direct::cbl_has;
+    fn cbl_index(list: usize) -> u32 = civ_direct::cbl_index;
+    fn cbl_dirty(list: usize) = civ_direct::cbl_dirty;
     fn cbl_upgrades_only(list: usize) -> bool = ee_screenscpp_cbl_upgrades_only;
     fn cbl_show_points(list: usize) -> bool = ee_screenscpp_cbl_show_points;
     fn cbl_sort(list: usize) -> bool = ee_screenscpp_cbl_sort;
@@ -2447,7 +2471,7 @@ shims! {
     fn cbl_set_sort(list: usize, value: bool) = ee_screenscpp_cbl_set_sort;
     fn cbl_set_copied_points(list: usize, value: bool) = ee_screenscpp_cbl_set_copied_points;
     fn cbl_draw_base(list: usize) = ee_screenscpp_cbl_draw_base;
-    fn cbl_draw_count(list: usize) -> u32 = ee_screenscpp_cbl_draw_count;
+    fn cbl_draw_count(list: usize) -> u32 = civ_direct::cbl_draw_count;
     fn cbl_copy_line(list: usize, line: u32, out: EeScreensShimOut) = ee_screenscpp_cbl_copy_line;
     fn cbl_rect_copy(list: usize) = ee_screenscpp_cbl_rect_copy;
     fn cbl_rect_left() -> f32 = ee_screenscpp_cbl_rect_left;
@@ -2456,7 +2480,7 @@ shims! {
     fn cbl_rect_set_right(value: f32) = ee_screenscpp_cbl_rect_set_right;
     fn cbl_rect_set_top(value: f32) = ee_screenscpp_cbl_rect_set_top;
     fn cbl_rect_set_bottom(value: f32) = ee_screenscpp_cbl_rect_set_bottom;
-    fn cbl_line_height(list: usize) -> u32 = ee_screenscpp_cbl_line_height;
+    fn cbl_line_height(list: usize) -> u32 = civ_direct::cbl_line_height;
     fn cbl_copy_top(list: usize) -> f32 = ee_screenscpp_cbl_copy_top;
     fn cbl_text(list: usize) -> usize = ee_screenscpp_cbl_text;
     fn cbl_font_bold(text: usize) = ee_screenscpp_cbl_font_bold;
@@ -2469,7 +2493,7 @@ shims! {
     fn cbl_location_top_right(text: usize) = ee_screenscpp_cbl_location_top_right;
     fn cbl_location_top_left(text: usize) = ee_screenscpp_cbl_location_top_left;
     fn cbl_draw_clipped(list: usize, text: usize) -> i32 = ee_screenscpp_cbl_draw_clipped;
-    fn cbl_draw_end(list: usize) -> i32 = ee_screenscpp_cbl_draw_end;
+    fn cbl_draw_end(list: usize) -> i32 = civ_direct::cbl_draw_end;
     // EECivilizationManager.cpp's simulation host and premade list (civ_manager_calls.rs)
     fn civh_set_exists(set: i64) -> bool = ee_screenscpp_civh_set_exists;
     fn civh_class_count() -> i64 = ee_screenscpp_civh_class_count;
@@ -2483,9 +2507,9 @@ shims! {
     fn civh_put_max_velocity(up: usize, v: f32) = ee_screenscpp_civh_put_max_velocity;
     fn civh_variant_factor(kind: i64) -> f32 = ee_screenscpp_civh_variant_factor;
     fn civh_hit_points(player: i32, kind: i64, factor: f32) = ee_screenscpp_civh_hit_points;
-    fn civh_first_unit(player: i32) -> usize = ee_screenscpp_civh_first_unit;
-    fn civh_next_unit(unit: usize) -> usize = ee_screenscpp_civh_next_unit;
-    fn civh_unit_type(unit: usize) -> u64 = ee_screenscpp_civh_unit_type;
+    fn civh_first_unit(player: i32) -> usize = civ_direct::civh_first_unit;
+    fn civh_next_unit(unit: usize) -> usize = civ_direct::civh_next_unit;
+    fn civh_unit_type(unit: usize) -> u64 = civ_direct::civh_unit_type;
     fn civh_sight_on(unit: usize) = ee_screenscpp_civh_sight_on;
     fn civh_sight_off(unit: usize) = ee_screenscpp_civh_sight_off;
     fn civh_population_limit(player: i32) -> i64 = ee_screenscpp_civh_population_limit;
@@ -2674,37 +2698,37 @@ shims! {
     fn aeh_set_contains(t: usize, set: i32) -> bool = ee_screenscpp_aeh_set_contains;
     fn aeh_tech_node(player: i32, t: usize) -> usize = ee_screenscpp_aeh_tech_node;
     fn aeh_node_kind(node: usize) -> i64 = ee_screenscpp_aeh_node_kind;
-    fn aeh_player(index: i32) -> usize = ee_screenscpp_aeh_player;
+    fn aeh_player(index: i32) -> usize = civ_direct::aeh_player;
     fn aeh_allied(player: usize, other: usize) -> bool = ee_screenscpp_aeh_allied;
-    fn aeh_enemy(player: usize, other: usize) -> bool = ee_screenscpp_aeh_enemy;
-    fn aeh_built(t: usize) -> bool = ee_screenscpp_aeh_built;
+    fn aeh_enemy(player: usize, other: usize) -> bool = civ_direct::aeh_enemy;
+    fn aeh_built(t: usize) -> bool = civ_direct::aeh_built;
     fn aeh_repairable(t: usize) -> bool = ee_screenscpp_aeh_repairable;
-    fn aeh_position_x(t: usize) -> f32 = ee_screenscpp_aeh_position_x;
-    fn aeh_position_y(t: usize) -> f32 = ee_screenscpp_aeh_position_y;
+    fn aeh_position_x(t: usize) -> f32 = civ_direct::aeh_position_x;
+    fn aeh_position_y(t: usize) -> f32 = civ_direct::aeh_position_y;
     fn aeh_tile_x(v: i32) = ee_screenscpp_aeh_tile_x;
     fn aeh_tile_y(v: i32) = ee_screenscpp_aeh_tile_y;
     fn aeh_continent() -> i32 = ee_screenscpp_aeh_continent;
-    fn aeh_carrier(t: usize) -> usize = ee_screenscpp_aeh_carrier;
-    fn aeh_unit_type(t: usize) -> u64 = ee_screenscpp_aeh_unit_type;
-    fn aeh_planet(carrier: usize) -> i32 = ee_screenscpp_aeh_planet;
-    fn aeh_hit_points(t: usize) -> i32 = ee_screenscpp_aeh_hit_points;
-    fn aeh_max_hit_points(t: usize) -> i32 = ee_screenscpp_aeh_max_hit_points;
-    fn aeh_in_cinematic() -> bool = ee_screenscpp_aeh_in_cinematic;
+    fn aeh_carrier(t: usize) -> usize = civ_direct::aeh_carrier;
+    fn aeh_unit_type(t: usize) -> u64 = civ_direct::aeh_unit_type;
+    fn aeh_planet(carrier: usize) -> i32 = civ_direct::aeh_planet;
+    fn aeh_hit_points(t: usize) -> i32 = civ_direct::aeh_hit_points;
+    fn aeh_max_hit_points(t: usize) -> i32 = civ_direct::aeh_max_hit_points;
+    fn aeh_in_cinematic() -> bool = civ_direct::aeh_in_cinematic;
     fn aeh_set_hit_points(t: usize, v: i32) = ee_screenscpp_aeh_set_hit_points;
     fn aeh_cloak(t: usize) = ee_screenscpp_aeh_cloak;
     fn aeh_has_camouflage(t: usize) -> bool = ee_screenscpp_aeh_has_camouflage;
     fn aeh_camouflage_set_exists() -> bool = ee_screenscpp_aeh_camouflage_set_exists;
     fn aeh_camouflage_set_contains(t: usize) -> bool = ee_screenscpp_aeh_camouflage_set_contains;
     fn aeh_idle(t: usize) -> bool = ee_screenscpp_aeh_idle;
-    fn aeh_camouflage_timer(t: usize) -> u64 = ee_screenscpp_aeh_camouflage_timer;
-    fn aeh_u32c(t: usize) -> i64 = ee_screenscpp_aeh_u32c;
-    fn aeh_current_player() -> usize = ee_screenscpp_aeh_current_player;
+    fn aeh_camouflage_timer(t: usize) -> u64 = civ_direct::aeh_camouflage_timer;
+    fn aeh_u32c(t: usize) -> i64 = civ_direct::aeh_u32c;
+    fn aeh_current_player() -> usize = civ_direct::aeh_current_player;
     fn aeh_set_cloakable_own(t: usize) = ee_screenscpp_aeh_set_cloakable_own;
     fn aeh_minimap_hide(t: usize) = ee_screenscpp_aeh_minimap_hide;
     fn aeh_owner(effect: usize) -> usize = ee_screenscpp_aeh_owner;
-    fn aeh_owner_scale(owner: usize) -> f32 = ee_screenscpp_aeh_owner_scale;
-    fn aeh_leadership(owner: usize) -> f32 = ee_screenscpp_aeh_leadership;
-    fn aeh_garrison_bonus(owner: usize) -> f32 = ee_screenscpp_aeh_garrison_bonus;
+    fn aeh_owner_scale(owner: usize) -> f32 = civ_direct::aeh_owner_scale;
+    fn aeh_leadership(owner: usize) -> f32 = civ_direct::aeh_leadership;
+    fn aeh_garrison_bonus(owner: usize) -> f32 = civ_direct::aeh_garrison_bonus;
     fn aeh_rect_top(v: i32) = ee_screenscpp_aeh_rect_top;
     fn aeh_rect_left(v: i32) = ee_screenscpp_aeh_rect_left;
     fn aeh_rect_right(v: i32) = ee_screenscpp_aeh_rect_right;
@@ -2820,12 +2844,12 @@ shims! {
     fn ug_civ_edit() -> core::ffi::c_long = ee_screens_cb_edit_civilization;
     fn ug_civ_create(civ: usize, reload: bool) -> core::ffi::c_long = ee_screens_cb_create_civilization;
     // EEAEManager.cpp's Load and running state (area_effect_running.rs)
-    fn aes_unit_complex(unit: usize) -> usize = ee_screenscpp_aes_unit_complex;
+    fn aes_unit_complex(unit: usize) -> usize = civ_direct::aes_unit_complex;
     fn aes_own_count(unit: usize) -> usize = ee_screenscpp_aes_own_count;
     fn aes_own_at(unit: usize, index: usize) -> usize = ee_screenscpp_aes_own_at;
     fn aes_affecting_count(unit: usize) -> usize = ee_screenscpp_aes_affecting_count;
     fn aes_affecting_at(unit: usize, index: usize) -> usize = ee_screenscpp_aes_affecting_at;
-    fn aes_unit_id(unit: usize) -> u64 = ee_screenscpp_aes_unit_id;
+    fn aes_unit_id(unit: usize) -> u64 = civ_direct::aes_unit_id;
     fn aes_effect_x(effect: usize) -> f32 = ee_screenscpp_aes_effect_x;
     fn aes_effect_y(effect: usize) -> f32 = ee_screenscpp_aes_effect_y;
     fn aes_set_x(effect: usize, v: f32) = ee_screenscpp_aes_set_x;
@@ -2877,7 +2901,7 @@ shims! {
     fn ae_unit_reference(unit: usize) = ee_screenscpp_ae_unit_reference;
     fn ae_unit_dereference(unit: usize) = ee_screenscpp_ae_unit_dereference;
     fn ae_morale_bonus() -> i64 = ee_screenscpp_ae_morale_bonus;
-    fn ae_unit_player_id(unit: usize) -> i32 = ee_screenscpp_ae_unit_player_id;
+    fn ae_unit_player_id(unit: usize) -> i32 = civ_direct::ae_unit_player_id;
     fn ae_create_unit_effect(unit: usize, effect: usize) = ee_screenscpp_ae_create_unit_effect;
     fn aet_set_effect(t: usize, effect: usize) = ee_screenscpp_aet_set_effect;
     fn aet_set_effect18(t: usize, effect: usize) = ee_screenscpp_aet_set_effect18;
@@ -2902,12 +2926,12 @@ shims! {
     fn ael_list_new() -> usize = ee_screenscpp_ael_list_new;
     fn ael_list_assign(list: usize, other: usize) = ee_screenscpp_ael_list_assign;
     fn ael_list_free(list: usize) = ee_screenscpp_ael_list_free;
-    fn aec_num_players() -> u64 = ee_screenscpp_aec_num_players;
-    fn aec_player(index: u64) -> usize = ee_screenscpp_aec_player;
-    fn aec_first_unit(player: usize) -> usize = ee_screenscpp_aec_first_unit;
-    fn aec_next_unit(unit: usize) -> usize = ee_screenscpp_aec_next_unit;
-    fn aec_cloakable(unit: usize) -> bool = ee_screenscpp_aec_cloakable;
-    fn aec_cloaked(unit: usize) -> bool = ee_screenscpp_aec_cloaked;
+    fn aec_num_players() -> u64 = civ_direct::aec_num_players;
+    fn aec_player(index: u64) -> usize = civ_direct::aec_player;
+    fn aec_first_unit(player: usize) -> usize = civ_direct::aec_first_unit;
+    fn aec_next_unit(unit: usize) -> usize = civ_direct::aec_next_unit;
+    fn aec_cloakable(unit: usize) -> bool = civ_direct::aec_cloakable;
+    fn aec_cloaked(unit: usize) -> bool = civ_direct::aec_cloaked;
     fn aec_checksum(effect: usize) -> i64 = ee_screenscpp_aec_checksum;
     fn aec_template_count() -> usize = ee_screenscpp_aec_template_count;
     fn aec_template_at(index: usize) -> usize = ee_screenscpp_aec_template_at;
@@ -2921,9 +2945,9 @@ shims! {
     fn aec_mem_free(file: usize) = ee_screenscpp_aec_mem_free;
     fn aec_active() -> bool = ee_app_capture_active;
     // the civilization capture (civ_capture.rs)
-    fn civc_player(index: i64) -> usize = ee_screenscpp_civc_player;
-    fn civc_player_saved(player: usize) -> usize = ee_screenscpp_civc_player_saved;
-    fn civc_player_fields(player: usize) -> usize = ee_screenscpp_civc_player_fields;
+    fn civc_player(index: i64) -> usize = civ_direct::civc_player;
+    fn civc_player_saved(player: usize) -> usize = civ_direct::civc_player_saved;
+    fn civc_player_fields(player: usize) -> usize = civ_direct::civc_player_fields;
     fn civc_types_clear() = ee_screenscpp_civc_types_clear;
     fn civc_collect(set: i64) = ee_screenscpp_civc_collect;
     fn civc_types_count() -> usize = ee_screenscpp_civc_types_count;
@@ -3022,13 +3046,13 @@ shims! {
     fn cbb_set_select_upgrades_only(list: usize, value: bool) = ee_screenscpp_cbb_set_select_upgrades_only;
     fn cbb_set_show_points(list: usize, value: bool) = ee_screenscpp_cbb_set_show_points;
     fn cbb_set_tabable(list: usize, value: bool) = ee_screenscpp_cbb_set_tabable;
-    fn cbb_scroll_bg_colour(list: usize, red: f32, green: f32, blue: f32) = ee_screenscpp_cbb_scroll_bg_colour;
-    fn cbb_scroll_bg_opacity(list: usize, opacity: f32) = ee_screenscpp_cbb_scroll_bg_opacity;
+    fn cbb_scroll_bg_colour(list: usize, red: f32, green: f32, blue: f32) = civ_direct::cbb_scroll_bg_colour;
+    fn cbb_scroll_bg_opacity(list: usize, opacity: f32) = civ_direct::cbb_scroll_bg_opacity;
     fn cbb_lines_count(lines: usize) -> usize = ee_screenscpp_cbb_lines_count;
     fn cbb_line(lines: usize, index: usize, out: EeScreensShimOut) = ee_screenscpp_cbb_line;
     fn cbb_base_copy_data(list: usize) -> i64 = ee_screenscpp_cbb_base_copy_data;
-    fn cbb_selection(list: usize) -> u64 = ee_screenscpp_cbb_selection;
-    fn cbb_copied_no_selection(list: usize) = ee_screenscpp_cbb_copied_no_selection;
+    fn cbb_selection(list: usize) -> u64 = civ_direct::cbb_selection;
+    fn cbb_copied_no_selection(list: usize) = civ_direct::cbb_copied_no_selection;
     fn cbb_copy_header(list: usize) = ee_screenscpp_cbb_copy_header;
     fn cbb_copy_show_points(list: usize) = ee_screenscpp_cbb_copy_show_points;
     fn cbb_set_sort_lines(list: usize, value: bool) = ee_screenscpp_cbb_set_sort_lines;

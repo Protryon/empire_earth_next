@@ -122,36 +122,11 @@ static void EECBAnswerAccept(UIForm* inForm)
 
 static const EEUIFErrorCallback kCBAnswers[3] = {EECBAnswerWrite, EECBAnswerDelete, EECBAnswerAccept};
 
-extern "C" uintptr_t ee_screenscpp_cbh_form(uint32_t inId) { return (uintptr_t)gUIManager->GetFormByID(inId); }
-extern "C" uintptr_t ee_screenscpp_cbh_control_by_id(uintptr_t inForm, uint32_t inId)
-{ return (uintptr_t)((UIForm*)inForm)->GetControlById(inId); }
-extern "C" uintptr_t ee_screenscpp_cbh_control(uintptr_t inForm, uint32_t inIndex)
-{ return (uintptr_t)((UIForm*)inForm)->GetControl(inIndex); }
-extern "C" uintptr_t ee_screenscpp_cbh_as_edit(uintptr_t inControl)
-{ return (uintptr_t)dynamic_cast<UIEditBox*>((UIControl*)inControl); }
-extern "C" uintptr_t ee_screenscpp_cbh_as_label(uintptr_t inControl)
-{ return (uintptr_t)dynamic_cast<UITextLabel*>((UIControl*)inControl); }
 extern "C" uintptr_t ee_screenscpp_cbh_as_file_list(uintptr_t inControl)
 { return (uintptr_t)dynamic_cast<UIFileListBox*>((UIControl*)inControl); }
 extern "C" uintptr_t ee_screenscpp_cbh_as_list(uintptr_t inControl)
 { return (uintptr_t)dynamic_cast<EECBUIListBox*>((UIControl*)inControl); }
-extern "C" void ee_screenscpp_cbh_edit_text(uintptr_t inEdit, void* inOut)
-{ EEShimOutC(inOut, ((UIEditBox*)inEdit)->GetText(0)); }
-extern "C" void ee_screenscpp_cbh_edit_set_text(uintptr_t inEdit, EeScreensShimText inText)
-{ ((UIEditBox*)inEdit)->SetText(EEShimText(inText)); }
-extern "C" void ee_screenscpp_cbh_edit_select(uintptr_t inEdit) { ((UIEditBox*)inEdit)->SelectText(); }
-extern "C" uint32_t ee_screenscpp_cbh_edit_index(uintptr_t inEdit) { return ((UIEditBox*)inEdit)->GetIndex(); }
-extern "C" void ee_screenscpp_cbh_form_set_tab_stop(uintptr_t inForm, uint32_t inIndex)
-{ ((UIForm*)inForm)->SetTabStop(inIndex); }
-extern "C" void ee_screenscpp_cbh_label_text(uintptr_t inLabel, void* inOut)
-{ EEShimOut(inOut, ((UITextLabel*)inLabel)->GetText(0)); }
-extern "C" void ee_screenscpp_cbh_label_set_text(uintptr_t inLabel, EeScreensShimText inText)
-{ ((UITextLabel*)inLabel)->SetText(EEShimText(inText)); }
-extern "C" void ee_screenscpp_cbh_label_set_number(uintptr_t inLabel, int32_t inNumber)
-{ ((UITextLabel*)inLabel)->SetText((long)inNumber); }
-extern "C" int32_t ee_screenscpp_cbh_push(uintptr_t inForm) { return gUIManager->Push((UIForm*)inForm); }
 extern "C" int32_t ee_screenscpp_cbh_close_form() { return gUserInterface->CloseForm(NULL); }
-extern "C" uintptr_t ee_screenscpp_cbh_current_form() { return (uintptr_t)gUIManager->GetCurrentForm(); }
 extern "C" void ee_screenscpp_cbh_path_new() { EEScratch<FSPath*>(kScratchCBPath) = new FSPath; }
 extern "C" void ee_screenscpp_cbh_spec_volume() { EEScratch<FSFileSpec>(kScratchCBSpec).SetVolume(gStartupVolume); }
 extern "C" void ee_screenscpp_cbh_spec_directory()
@@ -169,12 +144,7 @@ extern "C" void ee_screenscpp_cbh_fl_line(uintptr_t inList, uint32_t inLine, voi
 extern "C" int32_t ee_screenscpp_cbh_fl_delete(uintptr_t inList)
 { return ((UIFileListBox*)inList)->DeleteSelectedFile(); }
 extern "C" uintptr_t ee_screenscpp_cbh_screen_event(uint32_t inCode) { return (uintptr_t)EECreateScreenEvent(inCode); }
-extern "C" void ee_screenscpp_cbh_form_set_open_event(uintptr_t inForm, uintptr_t inEvent)
-{ ((UIForm*)inForm)->SetFormOpenEvent((UIEvent*)inEvent); }
-extern "C" void ee_screenscpp_cbh_form_set_close_event(uintptr_t inForm, uintptr_t inEvent)
-{ ((UIForm*)inForm)->SetFormCloseEvent((UIEvent*)inEvent); }
 extern "C" void ee_screenscpp_cbh_event_release(uintptr_t inEvent) { ((UIEvent*)inEvent)->Dereference(); }
-extern "C" uint32_t ee_screenscpp_cbh_form_id(uintptr_t inForm) { return ((UIForm*)inForm)->GetFormID(); }
 extern "C" int32_t ee_screenscpp_cbh_string_load(uint32_t inId) { return gResource->GetString(inId, EEScratch<UWideString>(kScratchCBString)); }
 extern "C" void ee_screenscpp_cbh_string_out(void* inOut) { EEShimOut(inOut, EEScratch<UWideString>(kScratchCBString)); }
 extern "C" void ee_screenscpp_cbh_format_percent() { gResource->GetString(IDS_FORMAT_PERCENT_6_2G, EEScratch<UWideString>(kScratchCBFormat)); }
@@ -209,16 +179,8 @@ extern "C" void ee_screenscpp_cbh_message_release(uintptr_t inMessage) { ((NEMes
 extern "C" int32_t ee_screenscpp_cbh_game_result() { return gWorld.GetCurrentPlayer()->GetGameResult(); }
 extern "C" int32_t ee_screenscpp_cbh_pause() { return gWorld.PauseGame(); }
 extern "C" int32_t ee_screenscpp_cbh_unpause() { return gWorld.UnpauseGame(); }
-extern "C" uintptr_t ee_screenscpp_cbh_current_player() { return (uintptr_t)gWorld.GetCurrentPlayer(); }
 extern "C" uintptr_t ee_screenscpp_cbh_player_civ(uintptr_t inPlayer)
 { return (uintptr_t)&((EEPlayer*)inPlayer)->mCivilization; }
-extern "C" uint8_t ee_screenscpp_cbh_player_id() { return (unsigned char)gWorld.mCurrentPlayer; }
-extern "C" bool ee_screenscpp_cbh_civ_chosen() { return gWorld.GetCurrentPlayer()->mCivilizationChosen; }
-extern "C" bool ee_screenscpp_cbh_civ_locked() { return gWorld.GetCurrentPlayer()->mCivilizationLocked; }
-extern "C" void ee_screenscpp_cbh_set_civ_chosen(bool inValue)
-{ gWorld.GetCurrentPlayer()->mCivilizationChosen = inValue; }
-extern "C" void ee_screenscpp_cbh_set_civ_locked(bool inValue)
-{ gWorld.GetCurrentPlayer()->mCivilizationLocked = inValue; }
 extern "C" bool ee_screenscpp_cbh_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_cbh_can_buy() { return gWorld.mGameOptions.CanBuyCivilization(); }
 extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(EEScratch<UWideString>(kScratchCBString)); }
@@ -238,7 +200,6 @@ extern "C" uintptr_t ee_screenscpp_cbh_main_builder_button(uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(dynamic_cast<UIBlinkingButton*>(((UIForm*)inForm)->GetControl(kMainGameCivSelectorBuilder))); }
 extern "C" uintptr_t ee_screenscpp_cbh_main_alert_button()
 { return (uintptr_t)gUIManager->GetMainGameForm()->GetControl(kMainGameLargeCivBuilderAlert); }
-extern "C" uint32_t ee_screenscpp_cbh_main_game_form_id() { return kFormMainGame; }
 extern "C" void ee_screenscpp_cbh_button_blink(uintptr_t inButton, bool inValue)
 { static_cast<UIBlinkingButton*>((UIControl*)inButton)->SetIsBlinking(inValue); }
 extern "C" void ee_screenscpp_cbh_f_volume() { gU565518.SetVolume(gStartupVolume); }
@@ -253,7 +214,6 @@ extern "C" int32_t ee_screenscpp_cbh_f_write(EeScreensShimText inBytes)
 { return gU565518.Write((const char*)inBytes.ptr, (unsigned long)inBytes.len, EEScratch<unsigned long>(kScratchCBWritten)); }
 extern "C" void ee_screenscpp_cbh_f_file(void* inOut) { EEShimOut(inOut, gU565518.GetFile()); }
 extern "C" void ee_screenscpp_cbh_startup_directory(void* inOut) { EEShimOut(inOut, gStartupDirectory); }
-extern "C" uint32_t ee_screenscpp_cbh_num_players() { return gWorld.mNumPlayers; }
 extern "C" bool ee_screenscpp_cbh_player_civ_file_is(uint32_t inPlayer, EeScreensShimText inFile)
 { return gWorld.mPlayers[inPlayer]->mCivilizationFile + ".civ" == EEShimString(inFile); }
 extern "C" void ee_screenscpp_cbh_players_clear() { EEScratch<std::vector<unsigned long>>(kScratchCBPlayers).clear(); }
@@ -264,24 +224,8 @@ extern "C" void ee_screenscpp_cbh_action_release(uintptr_t inAction) { ((EEActio
 extern "C" void ee_screenscpp_cbh_string_clear() { EEScratch<UWideString>(kScratchCBString) = UWideString(); }
 extern "C" int32_t ee_screenscpp_cbh_load_civilization(EeScreensShimText inName, bool inUser)
 { return EELoadCivilization(EEShimString(inName), EEGetCivilizationDirectory(inUser), EEScratch<UWideString>(kScratchCBString), EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades)); }
-extern "C" uint32_t ee_screenscpp_cbl_count(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetNumLines(); }
-extern "C" void ee_screenscpp_cbl_line(uintptr_t inList, uint32_t inLine, void* inOut)
-{ EEShimOut(inOut, ((EECBUIListBox*)inList)->mData[inLine]); }
 extern "C" void ee_screenscpp_cbl_set_line(uintptr_t inList, uint32_t inLine, EeScreensShimText inText)
 { ((EECBUIListBox*)inList)->mData[inLine] = EEShimText(inText); }
-extern "C" void ee_screenscpp_cbl_append(uintptr_t inList, EeScreensShimText inText)
-{ ((EECBUIListBox*)inList)->UIListBox<UWideString>::AppendLine(EEShimText(inText)); }
-extern "C" void ee_screenscpp_cbl_delete(uintptr_t inList, uint32_t inLine)
-{ ((EECBUIListBox*)inList)->UIListBox<UWideString>::DeleteLine(inLine); }
-extern "C" void ee_screenscpp_cbl_delete_all(uintptr_t inList) { ((EECBUIListBox*)inList)->DeleteAllEntries(); }
-extern "C" void ee_screenscpp_cbl_select(uintptr_t inList, uint32_t inLine, bool inFire, bool inScroll)
-{ ((EECBUIListBox*)inList)->UIListBox<UWideString>::ChangeSelectionIndex(inLine, inFire, inScroll); }
-extern "C" int32_t ee_screenscpp_cbl_current(uintptr_t inList, unsigned long* inIndex)
-{ return ((EECBUIListBox*)inList)->GetCurrentSelection(*inIndex); }
-extern "C" bool ee_screenscpp_cbl_auto(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetAutoSelect(); }
-extern "C" bool ee_screenscpp_cbl_has(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetHasSelection(); }
-extern "C" uint32_t ee_screenscpp_cbl_index(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetSelectionIndex(); }
-extern "C" void ee_screenscpp_cbl_dirty(uintptr_t inList) { ((EECBUIListBox*)inList)->SetDirty(true); }
 extern "C" bool ee_screenscpp_cbl_upgrades_only(uintptr_t inList)
 { return ((EECBUIListBox*)inList)->mSelectUpgradesOnly; }
 extern "C" bool ee_screenscpp_cbl_show_points(uintptr_t inList) { return ((EECBUIListBox*)inList)->mShowPoints; }
@@ -297,7 +241,6 @@ extern "C" void ee_screenscpp_cbl_set_sort(uintptr_t inList, bool inValue)
 extern "C" void ee_screenscpp_cbl_set_copied_points(uintptr_t inList, bool inValue)
 { ((EECBUIListBox*)inList)->mCopiedShowPoints = inValue; }
 extern "C" void ee_screenscpp_cbl_draw_base(uintptr_t inList) { ((EECBUIListBox*)inList)->UIControl::DrawTextA(); }
-extern "C" uint32_t ee_screenscpp_cbl_draw_count(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetDrawCount(); }
 extern "C" void ee_screenscpp_cbl_copy_line(uintptr_t inList, uint32_t inLine, void* inOut)
 { EEShimOut(inOut, ((EECBUIListBox*)inList)->mCopyLineArray[inLine]); }
 extern "C" void ee_screenscpp_cbl_rect_copy(uintptr_t inList)
@@ -308,8 +251,6 @@ extern "C" void ee_screenscpp_cbl_rect_set_left(float inValue) { EEScratch<GERec
 extern "C" void ee_screenscpp_cbl_rect_set_right(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetRight(inValue); }
 extern "C" void ee_screenscpp_cbl_rect_set_top(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetTop(inValue); }
 extern "C" void ee_screenscpp_cbl_rect_set_bottom(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetBottom(inValue); }
-extern "C" uint32_t ee_screenscpp_cbl_line_height(uintptr_t inList)
-{ return ((EECBUIListBox*)inList)->GetLineHeight(); }
 extern "C" float ee_screenscpp_cbl_copy_top(uintptr_t inList)
 { return ((EECBUIListBox*)inList)->GetCopyTextRectangle().GetTop(); }
 extern "C" uintptr_t ee_screenscpp_cbl_text(uintptr_t inList)
@@ -332,8 +273,6 @@ extern "C" void ee_screenscpp_cbl_location_top_left(uintptr_t inText)
 { ((GEText*)inText)->SetLocation(EEScratch<GERectangle>(kScratchCBRect).GetTopLeft()); }
 extern "C" int32_t ee_screenscpp_cbl_draw_clipped(uintptr_t inList, uintptr_t inText)
 { return ((EECBUIListBox*)inList)->GetForm()->DrawClippedText(EEScratch<GERectangle>(kScratchCBRect), (GEText*)inText, (EECBUIListBox*)inList); }
-extern "C" int32_t ee_screenscpp_cbl_draw_end(uintptr_t inList)
-{ return ((EECBUIListBox*)inList)->DrawScrollBarText(); }
 
 // C:\EEX\Empire Earth\Civilization Builder\EECBUIListBox.cpp (__FILE__ 0x27e426). The civilization builder's list
 // box: 0x27cfdb..0x27efca. Its logic is Rust's (ee_screens civ_list.rs: AddLine, AddCategory, SortLines and the
@@ -363,18 +302,12 @@ extern "C" void ee_screenscpp_cbb_set_select_upgrades_only(uintptr_t inList, boo
 extern "C" void ee_screenscpp_cbb_set_show_points(uintptr_t inList, bool inValue)
 { CBB(inList)->mShowPoints = inValue; }
 extern "C" void ee_screenscpp_cbb_set_tabable(uintptr_t inList, bool inValue) { CBB(inList)->mIsTabable = inValue; }
-extern "C" void ee_screenscpp_cbb_scroll_bg_colour(uintptr_t inList, float inRed, float inGreen, float inBlue)
-{ CBB(inList)->SetScrollBarBgColor(GEColor(inRed, inGreen, inBlue)); }
-extern "C" void ee_screenscpp_cbb_scroll_bg_opacity(uintptr_t inList, float inOpacity)
-{ CBB(inList)->SetScrollBarBgOpacity(inOpacity); }
 extern "C" uintptr_t ee_screenscpp_cbb_lines_count(uintptr_t inLines)
 { return ((std::vector<UWideString>*)inLines)->size(); }
 extern "C" void ee_screenscpp_cbb_line(uintptr_t inLines, uintptr_t inIndex, void* inOut)
 { EEShimOut(inOut, (*(std::vector<UWideString>*)inLines)[inIndex]); }
 extern "C" int64_t ee_screenscpp_cbb_base_copy_data(uintptr_t inList)
 { return (int64_t)CBB(inList)->UILBString::CopyData(); }
-extern "C" uint64_t ee_screenscpp_cbb_selection(uintptr_t inList) { return (uint64_t)CBB(inList)->GetSelectionIndex(); }
-extern "C" void ee_screenscpp_cbb_copied_no_selection(uintptr_t inList) { CBB(inList)->SetCopiedHasSelection(false); }
 extern "C" void ee_screenscpp_cbb_copy_header(uintptr_t inList) { CBB(inList)->mC148 = CBB(inList)->mC13C; }
 extern "C" void ee_screenscpp_cbb_copy_show_points(uintptr_t inList)
 { CBB(inList)->mCopiedShowPoints = CBB(inList)->mShowPoints; }
@@ -393,9 +326,6 @@ public:
 };
 // a temporary's address for the full expression (the set walker's functor argument)
 template <class T> static T* EECivcTemp(T&& inValue) { return &inValue; }
-extern "C" uintptr_t ee_screenscpp_civc_player(int64_t inIndex) { return (uintptr_t)::gWorld.mPlayers[inIndex]; }
-extern "C" uintptr_t ee_screenscpp_civc_player_saved(uintptr_t inPlayer) { return (uintptr_t)static_cast<EeUnitsPlayerSaved*>(CP(inPlayer)); }
-extern "C" uintptr_t ee_screenscpp_civc_player_fields(uintptr_t inPlayer) { return (uintptr_t)static_cast<EeUnitsPlayerFields*>(CP(inPlayer)); }
 extern "C" void ee_screenscpp_civc_types_clear() { EEScratch<std::vector<long>>(kScratchCivcTypes).clear(); }
 extern "C" void ee_screenscpp_civc_collect(int64_t inSet)
 { gUnitSetManager.ForEach((long)inSet, EECivcTemp(EECivcCollect())); }

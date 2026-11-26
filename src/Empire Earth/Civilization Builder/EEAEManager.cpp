@@ -99,8 +99,6 @@ extern "C" uintptr_t ee_screenscpp_aem_effects_at(uintptr_t inManager, uintptr_t
 // lane round 11)
 #define AES_U(u) ((EEComplexUnit*)(u))
 #define AES_E(e) ((EEAreaEffect*)(e))
-extern "C" uintptr_t ee_screenscpp_aes_unit_complex(uintptr_t inUnit)
-{ return (uintptr_t)(EEComplexUnit*)((EEUnit*)inUnit)->mComplexUnit; }
 extern "C" uintptr_t ee_screenscpp_aes_own_count(uintptr_t inUnit) { return AES_U(inUnit)->mAreaEffects.mItems.size(); }
 extern "C" uintptr_t ee_screenscpp_aes_own_at(uintptr_t inUnit, uintptr_t inIndex)
 { return (uintptr_t)AES_U(inUnit)->mAreaEffects.mItems[inIndex]; }
@@ -108,7 +106,6 @@ extern "C" uintptr_t ee_screenscpp_aes_affecting_count(uintptr_t inUnit)
 { return AES_U(inUnit)->mAffectingAreaEffects.mItems.size(); }
 extern "C" uintptr_t ee_screenscpp_aes_affecting_at(uintptr_t inUnit, uintptr_t inIndex)
 { return (uintptr_t)AES_U(inUnit)->mAffectingAreaEffects.mItems[inIndex]; }
-extern "C" uint64_t ee_screenscpp_aes_unit_id(uintptr_t inUnit) { return (uint64_t)AES_U(inUnit)->GetUnitID(); }
 extern "C" float ee_screenscpp_aes_effect_x(uintptr_t inEffect) { return AES_E(inEffect)->mLocation.mX; }
 extern "C" float ee_screenscpp_aes_effect_y(uintptr_t inEffect) { return AES_E(inEffect)->mLocation.mY; }
 extern "C" void ee_screenscpp_aes_set_x(uintptr_t inEffect, float inV) { AES_E(inEffect)->mLocation.mX = inV; }

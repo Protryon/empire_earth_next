@@ -96,28 +96,12 @@ extern "C" uintptr_t ee_screenscpp_aeh_tech_node(int32_t inPlayer, uintptr_t inT
 { return (uintptr_t)gWorld.mPlayers[inPlayer]->GetTechTree()->Get(AE_T(inT)->GetUnitClass()->mTechnology); }
 extern "C" int64_t ee_screenscpp_aeh_node_kind(uintptr_t inNode)
 { return (int64_t)((EETechTreeNode*)inNode)->mData->mKind; }
-extern "C" uintptr_t ee_screenscpp_aeh_player(int32_t inIndex) { return (uintptr_t)gWorld.mPlayers[inIndex]; }
 extern "C" bool ee_screenscpp_aeh_allied(uintptr_t inPlayer, uintptr_t inOther)
 { return AE_P(inPlayer)->IsAlliedWith(AE_P(inOther)); }
-extern "C" bool ee_screenscpp_aeh_enemy(uintptr_t inPlayer, uintptr_t inOther)
-{ return AE_P(inPlayer)->mEnemies[AE_P(inOther)->mPlayerID] != 0; }
-extern "C" bool ee_screenscpp_aeh_built(uintptr_t inT) { return AE_T(inT)->mIsBuilt; }
 extern "C" bool ee_screenscpp_aeh_repairable(uintptr_t inT) { return AE_T(inT)->IsRepairable(); }
-extern "C" float ee_screenscpp_aeh_position_x(uintptr_t inT)
-{ return AE_T(inT)->mPhysicalModel.GetLocation().GetPosition().GetX(); }
-extern "C" float ee_screenscpp_aeh_position_y(uintptr_t inT)
-{ return AE_T(inT)->mPhysicalModel.GetLocation().GetPosition().GetY(); }
 extern "C" void ee_screenscpp_aeh_tile_x(int32_t inV) { EEScratch<EETileCoordinate>(kScratchAETile).mX = inV; }
 extern "C" void ee_screenscpp_aeh_tile_y(int32_t inV) { EEScratch<EETileCoordinate>(kScratchAETile).mY = inV; }
 extern "C" int32_t ee_screenscpp_aeh_continent() { return gContinentManager.GetContinent(EEScratch<EETileCoordinate>(kScratchAETile), kAIPathNonSpace); }
-extern "C" uintptr_t ee_screenscpp_aeh_carrier(uintptr_t inT)
-{ return (uintptr_t)(EEComplexUnit*)AE_T(inT)->mComplexUnit; }
-extern "C" uint64_t ee_screenscpp_aeh_unit_type(uintptr_t inT)
-{ return (uint64_t)AE_T(inT)->mUnitClass->GetUnitType(); }
-extern "C" int32_t ee_screenscpp_aeh_planet(uintptr_t inCarrier) { return (int)AE_T(inCarrier)->mPlanetID; }
-extern "C" int32_t ee_screenscpp_aeh_hit_points(uintptr_t inT) { return AE_T(inT)->mHitPoints; }
-extern "C" int32_t ee_screenscpp_aeh_max_hit_points(uintptr_t inT) { return AE_T(inT)->mStats->mMaxHitPoints; }
-extern "C" bool ee_screenscpp_aeh_in_cinematic() { return gWorld.mInCinematic; }
 extern "C" void ee_screenscpp_aeh_set_hit_points(uintptr_t inT, int32_t inV) { AE_T(inT)->SetHitPoints(inV); }
 extern "C" void ee_screenscpp_aeh_cloak(uintptr_t inT) { AE_T(inT)->SetCloakableChain(true); }
 extern "C" bool ee_screenscpp_aeh_has_camouflage(uintptr_t inT)
@@ -127,18 +111,11 @@ extern "C" bool ee_screenscpp_aeh_camouflage_set_exists()
 extern "C" bool ee_screenscpp_aeh_camouflage_set_contains(uintptr_t inT)
 { return gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(AE_T(inT)->mUnitClass->mUnitType); }
 extern "C" bool ee_screenscpp_aeh_idle(uintptr_t inT) { return AE_T(inT)->GetCommandType() == kActionIdle; }
-extern "C" uint64_t ee_screenscpp_aeh_camouflage_timer(uintptr_t inT) { return (uint64_t)AE_T(inT)->mCamouflageTimer; }
-extern "C" int64_t ee_screenscpp_aeh_u32c(uintptr_t inT) { return (int64_t)AE_T(inT)->mU32C; }
-extern "C" uintptr_t ee_screenscpp_aeh_current_player() { return (uintptr_t)(gWorld.mPlayers[gWorld.mCurrentPlayer]); }
 extern "C" void ee_screenscpp_aeh_set_cloakable_own(uintptr_t inT)
 { AE_T(inT)->SetCloakableChain(AE_T(inT)->mUnitClass->mIsCloakable); }
 extern "C" void ee_screenscpp_aeh_minimap_hide(uintptr_t inT)
 { gMiniMap->MoveUnit(AE_T(inT), -10000, -10000, AE_T(inT)->mTileX, AE_T(inT)->mTileY); }
 extern "C" uintptr_t ee_screenscpp_aeh_owner(uintptr_t inEffect) { return (uintptr_t)AE_E(inEffect)->mUnit; }
-extern "C" float ee_screenscpp_aeh_owner_scale(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mAreaEffectScale; }
-extern "C" float ee_screenscpp_aeh_leadership(uintptr_t inOwner) { return AE_T(inOwner)->mStats->mLeadership; }
-extern "C" float ee_screenscpp_aeh_garrison_bonus(uintptr_t inOwner)
-{ return AE_T(inOwner)->mUnitClass->mGarrisonBonus; }
 extern "C" void ee_screenscpp_aeh_rect_top(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mTop = inV; }
 extern "C" void ee_screenscpp_aeh_rect_left(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mLeft = inV; }
 extern "C" void ee_screenscpp_aeh_rect_right(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mRight = inV; }
@@ -164,8 +141,6 @@ extern "C" void ee_screenscpp_ae_set_unit(uintptr_t inEffect, uintptr_t inUnit)
 extern "C" void ee_screenscpp_ae_unit_reference(uintptr_t inUnit) { AE_T(inUnit)->Reference(); }
 extern "C" void ee_screenscpp_ae_unit_dereference(uintptr_t inUnit) { AE_T(inUnit)->Dereference(); }
 extern "C" int64_t ee_screenscpp_ae_morale_bonus() { return (int64_t)gWorld.GetGameVariant()->mMoraleBonus; }
-extern "C" int32_t ee_screenscpp_ae_unit_player_id(uintptr_t inUnit)
-{ return (int32_t)AE_T(inUnit)->GetPlayer()->mPlayerID; }
 extern "C" void ee_screenscpp_ae_create_unit_effect(uintptr_t inUnit, uintptr_t inEffect)
 { gEffectManager->CreateUnitEffect((EEUnit*)inUnit, (EEGraphicEffect*)inEffect, NULL, false, 0, 0); }
 extern "C" void ee_screenscpp_aet_set_effect(uintptr_t inT, uintptr_t inEffect)
@@ -239,14 +214,6 @@ extern "C" void ee_screenscpp_ael_list_free(uintptr_t inList) { delete AEL_L(inL
 //         player, location, checksum, strength, radius, scale, immunity, the three modifiers of a probe value, the
 //         morale count, and its Covers of its own unit; each affecting effect as its owner and index; then the active
 //         list the same way and the running state's save bytes (EEAESaveRunningState)
-extern "C" uint64_t ee_screenscpp_aec_num_players() { return (uint64_t)::gWorld.mNumPlayers; }
-extern "C" uintptr_t ee_screenscpp_aec_player(uint64_t inIndex) { return (uintptr_t)::gWorld.mPlayers[inIndex]; }
-extern "C" uintptr_t ee_screenscpp_aec_first_unit(uintptr_t inPlayer)
-{ return (uintptr_t)static_cast<EEUnit*>(((EEPlayer*)inPlayer)->mFirstUnit); }
-extern "C" uintptr_t ee_screenscpp_aec_next_unit(uintptr_t inUnit)
-{ return (uintptr_t)static_cast<EEUnit*>(((EEUnit*)inUnit)->mNext); }
-extern "C" bool ee_screenscpp_aec_cloakable(uintptr_t inUnit) { return ((EEComplexUnit*)inUnit)->mIsCloakable; }
-extern "C" bool ee_screenscpp_aec_cloaked(uintptr_t inUnit) { return ((EEComplexUnit*)inUnit)->mIsCloaked; }
 extern "C" int64_t ee_screenscpp_aec_checksum(uintptr_t inEffect)
 { return (int64_t)((EEAreaEffect*)inEffect)->Checksum(); }
 extern "C" uintptr_t ee_screenscpp_aec_template_count() { return gAEManager.mTemplates.size(); }
