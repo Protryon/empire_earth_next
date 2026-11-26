@@ -122,7 +122,7 @@ fn fill_header(name: P, header: P, list: &[P]) {
         *v.add(1) = minor() as c_ulong;
     }
     h(O::PsHdrNamesClear, header, &[]);
-    let players = h(O::PwNumPlayers, 0, &[]) as c_ulong;
+    let players = super::message::num_players();
     for i in 1..players {
         h(O::PsHdrNamesAppendPlayer, header, &[i as i64]);
         if i + 1 < players {
@@ -152,8 +152,8 @@ pub extern "C" fn ee_gamecpp_ps_trim_auto_saves(
     max: c_ulong,
 ) -> c_long {
     let files = owned(O::PsSpecsNew, O::PsSpecsDelete);
-    let file = owned(O::PsSpecNew, O::PsSpecDelete);
-    let dir = owned(O::PsSpecNew, O::PsSpecDelete);
+    let file = owned(O::FileSpecNew, O::PsSpecDelete);
+    let dir = owned(O::FileSpecNew, O::PsSpecDelete);
     h(O::PsSpecSetDirectory, dir.0, &[directory as i64]);
     let mut r = h(O::PsSpecFirstFile, dir.0, &[pattern as i64, pa(file.0)]);
     while r == PF_OK {
@@ -250,7 +250,7 @@ pub extern "C" fn ee_gamecpp_ps_load_from_directory(
     directory: *const c_void,
     resume: bool,
 ) -> c_long {
-    let file = owned(O::PsSpecNew, O::PsSpecDelete);
+    let file = owned(O::FileSpecNew, O::PsSpecDelete);
     let mut r = open_save_file(file.0, true, name as P, directory as P);
     if r != PF_OK {
         return r as c_long;
@@ -277,7 +277,7 @@ pub extern "C" fn ee_gamecpp_ps_save_game(
     quiet: bool,
     directory: *const c_void,
 ) -> c_long {
-    let file = owned(O::PsSpecNew, O::PsSpecDelete);
+    let file = owned(O::FileSpecNew, O::PsSpecDelete);
     // the original reads the physics CT count into a local it never uses (0x14d080)
     h(O::CommCTsProcessed, 0, &[]);
     let mut r = open_save_file(file.0, false, name as P, directory as P);
@@ -369,7 +369,7 @@ fn load_into_game(file: P, reload: bool, state: P) -> i64 {
 /// or an error reported; the first error.
 fn save_to_file(file: P, time: c_ulong) -> i64 {
     let memory = owned(O::PsMemFileNew, O::PsMemFileDelete);
-    let text_name = owned(O::PsUStrNew, O::PsUStrDelete);
+    let text_name = owned(O::UStrNew, O::UStrFree);
     h(O::PsSaveTextName, file, &[pa(text_name.0), 1]);
     delete_text_twin(file);
     let mut r = write_save(text_name.0, time, memory.0, memory.0);
@@ -408,7 +408,7 @@ fn reload_saved_game(file: P) -> i64 {
         }
         // SAFETY: the game's preloading thread object
         crate::preload::ee_preload_wait_for_queue(unsafe { *std::ptr::addr_of!(super::globals::gDataPreLoading) });
-        h(O::PsWorldClear, 0, &[]);
+        h(O::WorldClear, 0, &[]);
         super::world::ee_gamecpp_world_start_game(hp(O::WorldAddr, 0, &[]) as *mut c_void, st as *mut c_void, true);
         h(O::PsStReset, st, &[]);
     }
@@ -429,8 +429,8 @@ pub extern "C" fn ee_gamecpp_ps_check_saved_options(
     let humans = owned(O::PsWStrsNew, O::PsWStrsDelete);
     let computers = owned(O::PsWStrsNew, O::PsWStrsDelete);
     let lobby = owned(O::PsWStrsNew, O::PsWStrsDelete);
-    let format = owned(O::PsWStrNew, O::PsWStrDelete);
-    let message = owned(O::PsWStrNew, O::PsWStrDelete);
+    let format = owned(O::StrNew, O::StrFree);
+    let message = owned(O::StrNew, O::StrFree);
     let mut open: c_ulong = 0;
     let mut needed: c_ulong = 1;
     h(O::PsWStrsClear, missing, &[]);
@@ -632,7 +632,7 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
     let mut result = false;
     h(O::PsStWriteLock, st, &[]);
     h(O::PsStInit, st, &[]);
-    if h(O::PsInScenarioEditor, 0, &[]) != 0 {
+    if h(O::UiInScenarioEditor, 0, &[]) != 0 {
         tail(st).mInScenarioEditor = true;
     }
     if header_load(header.0, header_file) == PF_OK {

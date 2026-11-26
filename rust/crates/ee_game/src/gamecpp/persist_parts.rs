@@ -764,10 +764,10 @@ pub extern "C" fn ee_gamecpp_pc_load(chunk: *mut c_void, file: *mut c_void) -> c
     if r != PF_OK {
         return r as c_long;
     }
-    let description = Owned::new(O::PsUStrNew, O::PsUStrDelete);
+    let description = Owned::new(O::UStrNew, O::UStrFree);
     let mut i = 0;
     while i < count && r == PF_OK {
-        r = h(O::PcUStrLoad, description.0, &[pa(file.0)]);
+        r = h(O::DvUStrLoad, description.0, &[pa(file.0)]);
         if r != PF_OK {
             i += 1;
             continue;
