@@ -29,7 +29,6 @@ public:
     EeAStarSubSectorRecord* Record() { return this; }
     const EeAStarSubSectorRecord* Record() const { return this; }
     const U2DPoint<long>& GetLocation() const { return reinterpret_cast<const U2DPoint<long>&>(this->location); }
-    void SetLocation(const U2DPoint<long>& inLocation) { reinterpret_cast<U2DPoint<long>&>(this->location) = inLocation; }
 
     U2DSparseArrayPointContainer mTiles;    // +0x10 (0x1c)
 

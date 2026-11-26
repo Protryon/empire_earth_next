@@ -63,7 +63,6 @@ public:
     // 0x1ef12: Reset() of gContinentManager, delete[] the four grids (absolute; Rust: cm_passes.rs)
     static void Shutdown() { ee_astar_cm_shutdown(&gContinentManager.mRecord); }
     // 0x1f503: deletes every area, path sector and sub sector, empties the tables, zeroes the counters (not the grids)
-    void Reset() { ee_astar_cm_reset_all(&this->mRecord); }
     EEAIContinent* GetContinentAt(EEUnit* inUnit)          // 0x22658 (its tile, bounds-checked, then 0x60c7)
         { return (EEAIContinent*)(uintptr_t)ee_astar_cm_unit_continent_at(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
     // 0x21fff: inUnit can reach tile (inX, inY) (EEComplexUnit::IsOnOtherContinent for class flag 1) (provisional name)
