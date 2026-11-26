@@ -130,7 +130,7 @@ pub enum EeGeTexStage {
     TextureAddressingMode,
 }
 
-/// `kStageOpModulate`, `kMipFilterPoint`, `kAddressingClamp` (lle/GERenderState.h).
+/// `kStageOpModulate`, `kMipFilterPoint`, `kAddressingClamp` (rust/render/gestate.h).
 const STAGE_OP_MODULATE: isize = 2;
 const MIP_FILTER_POINT: isize = 1;
 const ADDRESSING_CLAMP: isize = 0;

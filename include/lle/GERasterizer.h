@@ -6,7 +6,7 @@
 
 #include <vector>
 #include <utility>
-#include "lle/GERenderState.h"
+#include "rust/render/gestate.h"
 #include "rust/render/ge.h"
 #include "rust/render/dx7.h"
 

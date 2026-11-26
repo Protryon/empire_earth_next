@@ -28,7 +28,7 @@ const OUT_OF_MEMORY: c_long = 8;
 /// `kErrorFailed`.
 const FAILED: c_long = 9;
 /// `kStageOpTexture`, `kAddressingClamp`, `kMinFilterPoint`, `kMagFilterPoint`, `kMipFilterPoint`
-/// (lle/GERenderState.h).
+/// (rust/render/gestate.h).
 const STAGE_OP_TEXTURE: c_ulong = 1;
 const ADDRESSING_CLAMP: c_ulong = 0;
 const MIN_FILTER_POINT: c_ulong = 0;

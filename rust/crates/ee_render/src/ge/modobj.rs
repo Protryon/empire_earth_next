@@ -33,7 +33,7 @@ use ee_base::math::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector}
 
 /// `kErrorOK`.
 const OK: c_long = 0;
-/// `kMipFilterPoint` (lle/GERenderState.h).
+/// `kMipFilterPoint` (rust/render/gestate.h).
 const MIP_FILTER_POINT: c_ulong = 1;
 /// `SetStage...(mode, -1)`: every stage.
 const EVERY_STAGE: isize = -1;

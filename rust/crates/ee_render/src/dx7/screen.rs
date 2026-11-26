@@ -13,7 +13,7 @@ use core::ffi::c_ulong;
 use crate::dx7::api::*;
 use crate::dx7::vertex::float_to_long;
 
-// kPixelFormat* (GERenderState.h)
+// kPixelFormat* (rust/render/gestate.h)
 const PIXEL_FORMAT_Z32: u32 = 9;
 const PIXEL_FORMAT_Z24: u32 = 10;
 const PIXEL_FORMAT_Z16: u32 = 11;

@@ -110,7 +110,7 @@ pub enum EeGeFbOp {
 pub type EeGeFbHostFn =
     unsafe extern "C" fn(owner: *mut c_void, op: EeGeFbOp, obj: *mut c_void, a: isize, b: isize) -> isize;
 
-/// `kBlendSrcAlpha`, `kBlendInvSrcAlpha` (lle/GERenderState.h).
+/// `kBlendSrcAlpha`, `kBlendInvSrcAlpha` (rust/render/gestate.h).
 const BLEND_SRC_ALPHA: c_ulong = 4;
 const BLEND_INV_SRC_ALPHA: c_ulong = 5;
 /// `kSurfaceTexture`, `kPixelFormatA4R4G4B4`.

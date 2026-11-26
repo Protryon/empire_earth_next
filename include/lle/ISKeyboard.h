@@ -9,8 +9,7 @@
 #include "platform/PlatKeys.h"              // DIK_* scan codes
 #include "lle/ISDeviceInput.h"
 #include "lle/ISEntity.h"
-#include "lle/ISKeyCode.h"
-#include "lle/ISModifierState.h"
+#include "rust/base/lle_enums.h"
 
 class LLE_API ISKeyboard : URustView {
 public:

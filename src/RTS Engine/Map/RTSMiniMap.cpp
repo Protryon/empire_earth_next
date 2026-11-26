@@ -15,7 +15,7 @@
 #include "lle/GEScreen.h"
 
 #include "ee/EEMiniMap.h"
-#include "lle/GERenderState.h"
+#include "rust/render/gestate.h"
 #include "rust/base/math.h"
 #include "rust/game/rts.h"
 

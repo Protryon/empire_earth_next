@@ -15,7 +15,7 @@
 #include <map>
 #include <vector>
 #include <utility>
-#include "lle/GETerrainMeshFlags.h"
+#include "rust/render/gestate.h"
 #include "lle/GERust.h"
 #include "rust/render/ge.h"
 

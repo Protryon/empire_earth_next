@@ -113,7 +113,7 @@ pub const EE_SCREENS_TEXT_CAMPAIGN_LOAD: u32 = 14; // put (a name): its file loa
 pub const EE_SCREENS_TEXT_CAMPAIGN_LOADED: u32 = 15; // the loaded campaign's description
 pub const EE_SCREENS_TEXT_CAMPAIGN_CIV: u32 = 16; // the loaded campaign's required civilization (its first scenario)
 
-// the forms, controls, keys and strings the menus name (ee/EEUIManager.h, lle/ISKeyCode.h, ee/EEStringIDs.h)
+// the forms, controls, keys and strings the menus name (ee/EEUIManager.h, rust/base/lle_enums.h, ee/EEStringIDs.h)
 const FORM_GAME_SETTINGS: u32 = 5;
 const FORM_SINGLE_PLAYER: u32 = 6;
 const FORM_PLAY_CAMPAIGN: u32 = 8;
