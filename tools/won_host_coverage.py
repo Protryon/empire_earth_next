@@ -101,7 +101,7 @@ CHECKS = [
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "hostops.rs", "link_op", True)], allowed={}),
     dict(enum="EeWonRouteLogicOp", header="won_lobby/routelogic.h",
-         hosts=[LOBBY / "RoutingLogic.cpp"],
+         hosts=[LOBBY / "LobbyLogicHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_op"),
                # the server list and game list ops (R6 WON lobby and network round 40)
                (RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_list_op"),
@@ -137,7 +137,7 @@ CHECKS = [
                # the cases whose statements are Rust (R6 WONLobby round 29)
                (RS / "ee_won_lobby" / "src" / "lobbyops.rs", "lobby_op")], allowed={}),
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
-         hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
+         hosts=[LOBBY / "LobbyLogicHost.cpp", LOBBY / "InitLogic.cpp"],
          # the cases whose statements are Rust (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op"),
                # the one-call cases answered in Rust (R6 WON round 39)
@@ -164,7 +164,7 @@ CHECKS = [
          # the multi-statement cases composed in Rust over one-statement cases (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
-         hosts=[LOBBY / "DialogLogic.cpp"],
+         hosts=[LOBBY / "LobbyLogicHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "logicsplit.rs", "dlg_op"),
                # the status op's run (R6 WON lobby and network round 40)
                (RS / "ee_won_lobby" / "src" / "logicshell.rs", "dlg_op")], allowed={}),
