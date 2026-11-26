@@ -70,8 +70,6 @@ pub enum EeWonCfgComp {
     FilterCut,
     /// ImageFilterConfig's named child of the raw image.
     FilterNamed,
-    /// The read of a flag: its text and whether it is on (starting true).
-    ReadFlag,
     /// The read of a scroll area ("Expecting ScrollArea" for another component).
     ReadScrollArea,
     /// The read of WONFrameValueConfig's frame: a stretch image alone, or an image and one border or four.
@@ -234,8 +232,6 @@ pub enum EeWonCfgTabOp {
     FilterToParentS0,
     /// Filter holder `x` deleted.
     FilterFree,
-    /// `s[ns++] = ReadFlag((bool*)x)` (guarded).
-    ReadFlagText,
     /// The config's `ReadComponent()` (guarded).
     ReadComp,
     /// Whether component `x` is a ScrollArea.
@@ -525,11 +521,6 @@ fn run(o: &Ops, which: EeWonCfgComp) -> R<()> {
             r?;
         }
         W::FilterNamed => o.filter_child(None, o.call(O::FrameRaw, 0, 0))?,
-        W::ReadFlag => {
-            let mut on = true;
-            o.op(O::ReadFlagText, &mut on as *mut bool as isize, 0)?;
-            o.call(O::PushInt, on as isize, 0);
-        }
         W::ReadScrollArea => {
             let c = o.op(O::ReadComp, 0, 0)?;
             if o.call(O::IsScrollArea, c, 0) == 0 {

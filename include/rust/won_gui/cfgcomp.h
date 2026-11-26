@@ -144,8 +144,6 @@ enum class EeWonCfgTabOp : int32_t {
   FilterToParentS0,
   /// Filter holder `x` deleted.
   FilterFree,
-  /// `s[ns++] = ReadFlag((bool*)x)` (guarded).
-  ReadFlagText,
   /// The config's `ReadComponent()` (guarded).
   ReadComp,
   /// Whether component `x` is a ScrollArea.
@@ -254,8 +252,6 @@ enum class EeWonCfgComp : int32_t {
   FilterCut,
   /// ImageFilterConfig's named child of the raw image.
   FilterNamed,
-  /// The read of a flag: its text and whether it is on (starting true).
-  ReadFlag,
   /// The read of a scroll area ("Expecting ScrollArea" for another component).
   ReadScrollArea,
   /// The read of WONFrameValueConfig's frame: a stretch image alone, or an image and one border or four.

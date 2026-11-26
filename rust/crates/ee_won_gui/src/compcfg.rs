@@ -2304,6 +2304,69 @@ fn bg_out(cx: &Cx, out: isize, bg: &EeWonCcBackground) {
     cx.call(EeWonCcOp::BgGrab, o, bg.want_grab_bg as isize, 0, 0, 0);
 }
 
+/// The table reader's reads made on the config's own object (cfgtab.rs, R6 WON lobby and network round 39: the
+/// C++ readers ReadChar, ReadFlag, ReadDirection, ReadHorzAlign, ReadVertAlign, ReadStandardCursor, ReadCursor,
+/// ReadSelectionColor and ReadRawImage are gone). An int goes to `push`; a value the C++ frame holds is written at
+/// the address `put(kind, value)` answers (a string slot, the selection colour) or handed to it (the raw image's
+/// reference, the standard cursor). None: a read the C++ host makes.
+pub(crate) fn tab_read(
+    o: *mut c_void,
+    frame: *mut c_void,
+    kind: crate::cfgtab::EeWonCfgRead,
+    push: &mut dyn FnMut(i32),
+    put: &mut dyn FnMut(crate::cfgtab::EeWonCfgRead, isize) -> isize,
+) -> Option<R<()>> {
+    use crate::cfgtab::EeWonCfgRead as K;
+    // SAFETY: the config's own object, alive while the C++ config runs its table
+    let cfg = unsafe { &*(o as *const EeWonCompCfg) };
+    let cx = Cx { host: cfg.host, frame };
+    type Put<'a> = &'a mut dyn FnMut(K, isize) -> isize;
+    let text = |put: Put, k: K, v: R<Vec<u32>>| -> R<()> { v.map(|v| set_text(&cx, put(k, 0), &v)) };
+    let int = |v: R<i32>, push: &mut dyn FnMut(i32)| -> R<()> { v.map(push) };
+    Some(match kind {
+        K::Int => int(cfg.read_int(&cx), push),
+        K::Bool => int(cfg.read_bool().map(i32::from), push),
+        K::Color => int(cfg.read_color(&cx), push),
+        K::Char => int(cfg.read_char(), push),
+        K::VertAlign => int(cfg.read_vert_align(&cx), push),
+        K::HorzAlign => int(cfg.read_horz_align(&cx), push),
+        K::Direction => int(cfg.read_direction(&cx), push),
+        K::StdCursor => int(cfg.read_standard_cursor(&cx), push),
+        K::Str => text(put, K::Str, cfg.read_string(&cx, false)),
+        K::Word => text(put, K::Word, cfg.read_string(&cx, true)),
+        K::Flag => {
+            let mut on = None;
+            let v = cfg.read_flag(&cx, &mut on);
+            text(put, K::Flag, v).map(|()| push(i32::from(on.unwrap_or(true))))
+        }
+        K::Cursor => cfg.read_cursor(&cx).map(|v| {
+            put(K::Cursor, v as isize);
+        }),
+        K::SelColor => cfg.read_selection_color(&cx).map(|x| {
+            let (op, fore) = match x.mode {
+                0 => (EeWonCcOp::SelFore, x.foreground as isize),
+                1 => (EeWonCcOp::SelInvert, 0),
+                _ => (EeWonCcOp::SelOriginal, 0),
+            };
+            cx.call(op, put(K::SelColor, 0) as *mut c_void, x.background as isize, fore, 0, 0);
+        }),
+        K::RawImage => cfg.read_image(&cx, true).map(|p| {
+            put(K::RawImage, p as isize);
+        }),
+        _ => return None,
+    })
+}
+
+/// The table reader's `EnsureComma` and `EndOfString` on the config's own object.
+pub(crate) fn tab_comma(o: *mut c_void) -> R<()> {
+    // SAFETY: as tab_read's
+    unsafe { &*(o as *const EeWonCompCfg) }.ensure_comma()
+}
+pub(crate) fn tab_end(o: *mut c_void) -> bool {
+    // SAFETY: as tab_read's
+    unsafe { &*(o as *const EeWonCompCfg) }.end_of_string()
+}
+
 unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isize, c: isize, d: isize) -> R<()> {
     use EeWonCcCall as C;
     let cfg = || -> &EeWonCompCfg {

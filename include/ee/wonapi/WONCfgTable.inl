@@ -6,11 +6,13 @@
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinobj.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
-// handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
+// handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ComponentConfigHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that
-// throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns.
+// throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns. Since R6 WON lobby and
+// network round 39 the value reads, commas and ends are made in Rust on the config's own object (compcfg.rs): a
+// host op's exception there is kept in mCc.
 struct CfgTabFrame {
-    ComponentConfig* mConfig; std::exception_ptr mError;
+    ComponentConfig* mConfig; std::exception_ptr mError; CcFrame mCc;
     int i[12]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
     Component* c[2]; int nc; SmartPtr<ChildLayoutInstructionBase> lay; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
     SmartPtr<RawImage> raw; std::string rs[2]; int nrs; SmartPtr<ComponentConfig> child;
@@ -105,7 +107,6 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::FilterToParent: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(GUIString(std::string((const char*)x,(size_t)y)),((SmartPtr<ImageFilterConfig>*)z)->get()));
     case O::FilterToParentS0: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(a.s[0],((SmartPtr<ImageFilterConfig>*)z)->get()));
     case O::FilterFree: delete (SmartPtr<ImageFilterConfig>*)x; return 0;
-    case O::ReadFlagText: return CFG_GV(a.s[a.ns++]=a.mConfig->ReadFlag((bool*)x));
     case O::ReadComp: return CFG_G(a.mConfig->ReadComponent());
     case O::IsScrollArea: return dynamic_cast<ScrollArea*>((Component*)x)!=NULL;
     case O::PushScrollArea: a.c[a.nc++]=dynamic_cast<ScrollArea*>((Component*)x); return 0;
@@ -156,19 +157,10 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
     return CfgTabTry(p,[inKind](CfgTabFrame& a) {
         ComponentConfig* cfg=a.mConfig;
         switch(inKind) {
-        case EeWonCfgRead::Int: a.i[a.ni++]=cfg->ReadInt(); break;
-        case EeWonCfgRead::Bool: a.i[a.ni++]=cfg->ReadBool(); break;
-        case EeWonCfgRead::Color: a.i[a.ni++]=cfg->ReadColor(); break;
-        case EeWonCfgRead::Char: a.i[a.ni++]=cfg->ReadChar(); break;
-        case EeWonCfgRead::VertAlign: a.i[a.ni++]=cfg->ReadVertAlign(); break;
-        case EeWonCfgRead::HorzAlign: a.i[a.ni++]=cfg->ReadHorzAlign(); break;
-        case EeWonCfgRead::Str: a.s[a.ns++]=cfg->ReadString(false); break;
-        case EeWonCfgRead::Flag: return ee_won_cfg_comp(CfgTabOp,&a,EeWonCfgComp::ReadFlag);
         case EeWonCfgRead::Font: a.f[a.nf++]=cfg->ReadFont(); break;
         case EeWonCfgRead::Image: a.m[a.nm++]=cfg->ReadImage(false); break;
         case EeWonCfgRead::Sound: a.snd=cfg->ReadSound(); break;
         case EeWonCfgRead::Background: a.bg=cfg->ReadBackground(); break;
-        case EeWonCfgRead::SelColor: a.sel=cfg->ReadSelectionColor(); break;
         case EeWonCfgRead::Comp: a.c[a.nc++]=cfg->ReadComponent(); break;
         case EeWonCfgRead::Container: a.c[a.nc++]=SafeConfigGetComponent<Container*>(cfg->ReadComponent(),"Container"); break;
         case EeWonCfgRead::Button: a.c[a.nc++]=SafeConfigGetComponent<Button*>(cfg->ReadComponent(),"Button"); break;
@@ -176,19 +168,26 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
         case EeWonCfgRead::MultiListArea: a.c[a.nc++]=SafeConfigGetComponent<MultiListArea*>(cfg->ReadComponent(),"MultiListArea"); break;
         case EeWonCfgRead::ScrollArea: return ee_won_cfg_comp(CfgTabOp,&a,EeWonCfgComp::ReadScrollArea);
         case EeWonCfgRead::Frame: return ee_won_cfg_comp(CfgTabOp,&a,EeWonCfgComp::ReadFrame);
-        case EeWonCfgRead::Cursor: a.cur=cfg->ReadCursor(); break;
-        case EeWonCfgRead::Direction: a.i[a.ni++]=cfg->ReadDirection(); break;
-        case EeWonCfgRead::StdCursor: a.i[a.ni++]=cfg->ReadStandardCursor(); break;
         case EeWonCfgRead::LayoutPoint: a.c[a.nc++]=SafeConfigGetComponent<LayoutPoint*>(cfg->ReadComponent(),"LayoutPoint"); break;
-        case EeWonCfgRead::Word: a.s[0]=cfg->ReadString(true); a.ns=1; break;
-        case EeWonCfgRead::RawImage: a.raw=cfg->ReadRawImage(); break;
         case EeWonCfgRead::RawStr: a.rs[a.nrs++]=cfg->ReadRawString(false); break;
+        default: break; // the reads made in Rust (CfgTabPut)
         }
         return true;
     });
 }
-static bool CfgTabComma(void* p) { return CfgTabTry(p,[](CfgTabFrame& a) { a.mConfig->EnsureComma(); return true; }); }
-static bool CfgTabEnd(void* p) { return static_cast<CfgTabFrame*>(p)->mConfig->EndOfString(); }
+// where a read made in Rust goes: a string slot's or the selection colour's address; the raw image's reference adopted,
+// the standard cursor's object
+static intptr_t CfgTabPut(void* p,EeWonCfgRead inKind,intptr_t v)
+{
+    CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
+    switch(inKind) {
+    case EeWonCfgRead::Word: a.ns=1; return (intptr_t)&a.s[0];
+    case EeWonCfgRead::SelColor: return (intptr_t)&a.sel;
+    case EeWonCfgRead::RawImage: a.raw=(RawImage*)CcAdopt((Image*)v).get(); return 0;
+    case EeWonCfgRead::Cursor: a.cur=Cursor::GetStandardCursor((StandardCursor)v); return 0;
+    default: return (intptr_t)&a.s[a.ns++]; // Str, Flag
+    }
+}
 static const void* CfgTabText(void* p,int32_t inSlot,uint16_t* outLen,uint32_t* outUnit)
 {
     const GUIString& s=static_cast<CfgTabFrame*>(p)->s[inSlot];
@@ -403,9 +402,9 @@ static bool CfgTabApply(void* p,int32_t inSetter) { return CfgTabTry(p,[inSetter
 bool ComponentConfig::RunTable(int inTable,const std::string& inKey)
 {
     CfgTabFrame aFrame; aFrame.mConfig=this; aFrame.ni=aFrame.ns=aFrame.nf=aFrame.nm=aFrame.nc=aFrame.nrs=0;
-    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,CfgTabComma,CfgTabEnd,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear,CfgTabPeek,CfgTabArg};
+    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,NULL,NULL,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear,CfgTabPeek,CfgTabArg,this->mCfg,&aFrame.mCc,CfgTabPut};
     int aResult=ee_won_cfg_tab_run(&aHost,inTable,(const uint8_t*)inKey.data(),inKey.size());
-    if(aResult==1) std::rethrow_exception(aFrame.mError);
+    if(aResult==1) std::rethrow_exception(aFrame.mError ? aFrame.mError : aFrame.mCc.mErr);
     return aResult==0;
 }
 // A config's instructions (R6 WONLobby round 26): its kind's tables and its bases' in the original's order

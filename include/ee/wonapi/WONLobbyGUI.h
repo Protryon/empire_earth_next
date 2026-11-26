@@ -892,26 +892,17 @@ class ComponentConfig : public ConfigObject {
 public:
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
     void InitComponents(); // once, then every child config in name order
-    Direction ReadDirection();
-    HorzAlign ReadHorzAlign();
-    VertAlign ReadVertAlign();
     static void SetResourceFolder(const std::string&);
     SmartPtr<Sound> ReadSound();
     void EnsureComma();
-    int ReadChar();
-    GUIString ReadFlag(bool* = NULL);
     GUIString ReadRawString(bool);
     SmartPtr<Font> ReadFont();
     SmartPtr<Image> ReadImage(bool);
-    SelectionColor ReadSelectionColor();
     bool HandleMapComponent();
     bool HandleModify();
     void SetDesiredSizeIfNecessary();
-    SmartPtr<Cursor> ReadCursor();
     static SmartPtr<ResourceConfigTable> mResourceConfigTable; // the table a parse reads (ReadConfig_Unsafe sets it)
-    SmartPtr<RawImage> ReadRawImage();
     SmartPtr<RawImage> GetRawImageFromStr(const std::string&);
-    StandardCursor ReadStandardCursor();
     void AddChildToConfigMap(const GUIString&,ComponentConfig*,bool inAlways=false); // an empty name only inAlways
     Background ReadBackground();
     int ReadInt();
@@ -945,7 +936,7 @@ public:
 // a config or a component of a type for the resource table's allocators (the original's one-line CfgFactory and
 // CompFactory statics, one template each since R6 WONLobby round 25); a config of a kind (round 26)
 template<class C> ComponentConfig* NewConfigOf() { return new C; }
-ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ConfigTableHost.cpp)
+ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ComponentConfigHost.cpp)
 template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K); }
 template<class T> Component* NewComponentOf() { return new T; }
 inline Component* NoComponent() { return NULL; } // the font and image configs make none
