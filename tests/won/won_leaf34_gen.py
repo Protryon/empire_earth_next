@@ -1,6 +1,6 @@
 """Writes tests/won/won_leaf34_new.h: the new classes' declarations (include/ee/wonapi/WONLobbyGUI.h) and their hosts'
-one-statement cases (WONGUI/GuiHost.cpp, TextListItem.cpp), the formatting functions (WONLobbyResource.h), and the paints' hosts and
-methods (Button.cpp, TextListItem.cpp: Graphics and ListArea the
+one-statement cases (WONGUI/GuiHost.cpp, Button.cpp), the formatting functions (WONLobbyResource.h), and the paints' hosts and
+methods (Button.cpp: Graphics and ListArea the
 world's PaintGraphics and PaintList) as they are in the tree, over won_leaf34_world.h, the hosts renamed so the
 driver can put its mutations between them and the Rust.
 
@@ -28,7 +28,7 @@ def main():
         'extern "C" intptr_t ee_won_guicpp_browser_call', "static intptr_t HostBrowser")
     b_ctor = between(b, "BrowserComponent::BrowserComponent()", "\n").replace("ee_won_guicpp_browser_call", "MutBrowser")
     b_dtor = between(b, "BrowserComponent::~BrowserComponent()", "\n")
-    t = (GUI / "TextListItem.cpp").read_text("utf-8")
+    t = (GUI / "Button.cpp").read_text("utf-8")
     t_open = between(t, "static void OpenWith(", "\n")
     t_host = between(t, 'extern "C" intptr_t ee_won_guicpp_tip_call', "\n}\n").replace(
         'extern "C" intptr_t ee_won_guicpp_tip_call', "static intptr_t HostTip")
@@ -37,7 +37,7 @@ def main():
     s_body = ("GUIString WONLocalize(const GUIString& f, const GUIString* a, const GUIString* b, const GUIString* c, int n)\n"
               "{ return (GUIStringData*)ee_won_gui_localize(&f, a, b, c, n); }\n" + s_body[:-len("\n// a new text")])
     ib = (GUI / "Button.cpp").read_text("utf-8")
-    tl = (GUI / "TextListItem.cpp").read_text("utf-8")
+    tl = (GUI / "Button.cpp").read_text("utf-8")
     mb = tl
     paints = "\n".join([
         between(ib, 'extern "C" intptr_t ee_won_guicpp_imgbtn_call', "\n}\n").replace(
@@ -55,11 +55,11 @@ def main():
     ])
     paints = paints.replace("ee_won_guicpp_imgbtn_call", "MutImgBtn").replace(
         "ee_won_guicpp_textitem_call", "MutTextItem").replace("MenuItemCall", "MutMenu")
-    bg = (GUI / "TextListItem.cpp").read_text("utf-8")
+    bg = (GUI / "Button.cpp").read_text("utf-8")
     paints += "\n" + between(bg, 'extern "C" intptr_t ee_won_guicpp_background_call', "\n}\n").replace(
         'extern "C" intptr_t ee_won_guicpp_background_call', "static intptr_t HostBg")
     paints += "\n" + between(bg, "void Background::Paint", "\n}\n").replace("ee_won_guicpp_background_call", "MutBg")
-    ci = (GUI / "TextListItem.cpp").read_text("utf-8")
+    ci = (GUI / "Button.cpp").read_text("utf-8")
     ci_part = "\n".join([
         between(ci, 'extern "C" intptr_t ee_won_guicpp_compitem_call', "\n}\n").replace(
             'extern "C" intptr_t ee_won_guicpp_compitem_call', "static intptr_t HostCompItem"),

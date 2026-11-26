@@ -42,7 +42,7 @@ CHECKS = [
          allowed={}),
     # the generic widget shells' calls out (R6 WONLobby round 20): the C++ host answers what the base classes'
     # Rust objects do not (shell.rs Sh routes the component's, button's and MS button's calls to them in the game)
-    dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiShell.cpp"],
+    dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiHost.cpp"],
          # R6 WON GUI round 37: the references are the game's reference function's (gamewin.rs rf)
          rust=[(RS / "ee_won_gui" / "src" / "shell.rs", "host", True),
                # R6 WON GUI round 38: the message box's window calls on a game window (gamewin.rs)

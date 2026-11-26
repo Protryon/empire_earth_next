@@ -4,10 +4,7 @@
 2ddb70 2e1b5f WONAuth/AuthContext.cpp
 2f04f0 2f0d9a WONDir/DirEntityReplyParser.cpp
 2f3070 2f3962 WONGUI/Button.cpp
-2f3a50 2f4888 WONGUI/ComboBox.cpp
-2f4890 2f4aeb WONGUI/ComponentLifetime.cpp
 2f62b0 2f7903 WONGUI/Container.cpp
-2fa2c0 2fa478 WONGUI/TextListItem.cpp
 329c30 32b519 WONGUI/Window.cpp
 32b660 33531e WONGUI/WindowManager.cpp
 357d70 357e7f WONLobby/LobbyCompletion.cpp
