@@ -298,6 +298,34 @@ fn unit_box() -> GeBoundingBox {
     GeBoundingBox::new(Ge3DPoint::default(), Ge3DPoint::new(1.0, 1.0, 1.0))
 }
 
+/// The model's calls that are one call of a Rust object: the active rasterizer and its screen id (a `GERasterizer`'s
+/// first member is its Rust object) and a texture's stage filters (`cppobj.rs`). Made here rather than through the
+/// C++ host (a test's fake host answers them instead).
+///
+/// # Safety
+/// The operation's objects and arguments are as `EeGeModOp` describes.
+unsafe fn direct_op(op: EeGeModOp, obj: usize, a: isize) -> Option<isize> {
+    if cfg!(test) {
+        return None;
+    }
+    use crate::ge::rastobj::{ee_ge_rast_active, ee_ge_rast_get, EeGeRastVal, EeGeRasterizer};
+    use crate::ge::texobj_tex::{ee_ge_tex_set_stage, EeGeTexStageField as F, EeGeTexture};
+    let field = match op {
+        EeGeModOp::RasterActive => return Some(ee_ge_rast_active() as isize),
+        // SAFETY: a live GERasterizer
+        EeGeModOp::RasterScreenId => {
+            return Some(unsafe { ee_ge_rast_get(cppobj::plain::<EeGeRasterizer>(obj), EeGeRastVal::ScreenId) })
+        }
+        EeGeModOp::TexMinFilter => F::MinFilterMode,
+        EeGeModOp::TexMagFilter => F::MagFilterMode,
+        EeGeModOp::TexMipFilter => F::MipFilterMode,
+        _ => return None,
+    };
+    // SAFETY: a live GETexture
+    unsafe { ee_ge_tex_set_stage(cppobj::counted::<EeGeTexture>(obj), field, a as c_ulong) };
+    Some(0)
+}
+
 impl EeGeModel {
     /// A host call made by model `p`.
     ///
@@ -306,6 +334,10 @@ impl EeGeModel {
     unsafe fn op(p: *mut Self, op: EeGeModOp, obj: usize, a: isize, b: isize, c: isize) -> isize {
         // SAFETY: the caller's contract
         if let Some(r) = unsafe { Self::array_op(op, obj, a, b, c) } {
+            return r;
+        }
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { direct_op(op, obj, a) } {
             return r;
         }
         // SAFETY: the caller's contract (host and owner are copied out before the call)

@@ -109,12 +109,13 @@ pub enum EeGeManOp {
 
 /// The managers' calls that end in Rust, made here rather than through the C++ host (a test's fake host answers them
 /// instead): the lock's (`TSScheduler::CreateCriticalSection`, `DestroyCriticalSection`, `Enter`, `Leave`: one call
-/// each of ee_base's thread system; `LockVerify` checks a creation's result, always kErrorOK), a path's `Reference()`
-/// and a model's or texture's `mReferenceCount` (read in place: `cppobj.rs`).
+/// each of ee_base's thread system; `LockVerify` checks a creation's result, always kErrorOK), a path's `Reference()`,
+/// a model's or texture's `mReferenceCount` (read in place: `cppobj.rs`), the decoded files' frees and a loaded
+/// model's store.
 ///
 /// # Safety
 /// The operation's arguments are as `EeGeManOp` describes.
-pub(crate) unsafe fn direct_op(op: EeGeManOp, obj: usize, a: isize) -> Option<isize> {
+pub(crate) unsafe fn direct_op(op: EeGeManOp, obj: usize, a: isize, b: isize) -> Option<isize> {
     if cfg!(test) {
         return None;
     }
@@ -130,6 +131,17 @@ pub(crate) unsafe fn direct_op(op: EeGeManOp, obj: usize, a: isize) -> Option<is
             EeGeManOp::LockLeave => ee_ts_section_leave(obj as *const EeTsSection),
             EeGeManOp::PathReference => cppobj::reference(obj),
             EeGeManOp::RefCount => return Some(cppobj::reference_count(obj) as isize),
+            EeGeManOp::TexFreeFile => crate::openformats::ffi::ee_of_texture_free(obj as *mut ee_base::png::PngTexture),
+            EeGeManOp::ModelFreeFile => {
+                crate::ge::model_ffi::ee_ge_cem_free(obj as *mut crate::ge::model_store::CemModel)
+            }
+            EeGeManOp::ModelStoreLoaded => {
+                return Some(crate::ge::modobj::ee_ge_mod_store_loaded(
+                    cppobj::counted(obj),
+                    a as *const crate::ge::model_store::CemModel,
+                    b as *const crate::ge::model_ffi::EeGeSharedFrames,
+                ) as isize)
+            }
             _ => return None,
         }
     }
@@ -225,7 +237,7 @@ impl EeGeModelManager {
     /// `p` is live; the operation's arguments are as `EeGeManOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeManOp, obj: usize, a: isize, b: isize, c: isize) -> isize {
         // SAFETY: the caller's contract
-        if let Some(r) = unsafe { direct_op(op, obj, a) } {
+        if let Some(r) = unsafe { direct_op(op, obj, a, b) } {
             return r;
         }
         // SAFETY: the caller's contract (host and owner are copied out before the call)

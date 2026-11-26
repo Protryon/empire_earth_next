@@ -293,6 +293,23 @@ impl EeGeTexture {
                     unsafe { ee_ge_tex_dereference(crate::ge::cppobj::counted::<Self>(obj)) };
                     return 0;
                 }
+                // the decoded file's reads (ee_openformats) and the rasterizer's texture handles (no handle is
+                // needed: CreateTextureHandle is kErrorOK, DestroyTextureHandle does nothing)
+                EeGeTexOp::FileInfo => {
+                    unsafe { crate::openformats::ffi::ee_of_texture_info(obj as *const _, a as *mut EeOfTextureInfo) };
+                    return 0;
+                }
+                EeGeTexOp::FileFrame => {
+                    unsafe {
+                        crate::openformats::ffi::ee_of_texture_frame(
+                            obj as *const _,
+                            a as u32,
+                            b as *mut EeOfTextureFrame,
+                        )
+                    };
+                    return 0;
+                }
+                EeGeTexOp::RasterCreate | EeGeTexOp::RasterDestroy => return 0,
                 _ => {}
             }
         }

@@ -11,7 +11,6 @@
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBoundingBox.h"
 #include "lle/GEFont.h"
 #include "lle/GERhombus.h"
 #include "lle/GEPoint.h"
@@ -20,8 +19,9 @@
 #include "platform/PlatFont.h"
 
 static_assert(sizeof(EeGeRastFog) == 0x20 && sizeof(GEColor) == sizeof(EeGeRastColor), "fog");
-
-static intptr_t GEFloatBits(float inValue) { return UFloatBits(inValue); }
+// a placed model as Rust reads it (ee_ge modobj.rs PlacedModel: the location, the model, the scale, the frame)
+static_assert(offsetof(GEPhysicalModel, mModel) == sizeof(GETransformation) &&
+              offsetof(GEPhysicalModel, mScale) == sizeof(GETransformation) + sizeof(void*), "PlacedModel");
 
 // The calls the Rust rasterizer makes on other objects (EeGeRastOp), in the original's order.
 struct GERasterizerHost {
@@ -36,30 +36,14 @@ struct GERasterizerHost {
         case EeGeRastOp::FontDereference: static_cast<GEFont*>(inObj)->Dereference(); return 0;
         case EeGeRastOp::TextNew: return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a));
         case EeGeRastOp::TextDelete: delete static_cast<GEText*>(inObj); return 0;
-        case EeGeRastOp::TextSetAlignment: static_cast<GEText*>(inObj)->SetAlignment((unsigned long)a); return 0;
-        case EeGeRastOp::TextSetFgColor: static_cast<GEText*>(inObj)->SetFgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
-        case EeGeRastOp::TextSetBgColor: static_cast<GEText*>(inObj)->SetBgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
-        case EeGeRastOp::TextSetFont: static_cast<GEText*>(inObj)->SetFont(reinterpret_cast<GEFont*>(a)); return 0;
-        case EeGeRastOp::TextSetIsTransparent: static_cast<GEText*>(inObj)->SetIsTransparent(a != 0); return 0;
-        case EeGeRastOp::TextSetLocation: static_cast<GEText*>(inObj)->SetLocation(UBitsFloat(a), UBitsFloat(b)); return 0;
         case EeGeRastOp::ActivateRasterizer: return static_cast<GERasterizer*>(inOwner)->ActivateRasterizer();
         case EeGeRastOp::FontBitmapNew:
             new GEFontBitmap(static_cast<GERasterizer*>(inOwner), reinterpret_cast<GEFont*>(a), (unsigned long)b);
             return 0;
         case EeGeRastOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
         case EeGeRastOp::TextureDereference: static_cast<GETexture*>(inObj)->Dereference(); return 0;
-        case EeGeRastOp::ModelCenter: *reinterpret_cast<GE3DPoint*>(a) = static_cast<GEModel*>(inObj)->GetCenterPoint(); return 0;
-        case EeGeRastOp::ModelBoundingRadius: return GEFloatBits(static_cast<GEModel*>(inObj)->GetBoundingRadius((unsigned long)a));
-        case EeGeRastOp::ModelGraphicsRadius: return GEFloatBits(static_cast<GEModel*>(inObj)->GetGraphicsBoundingRadius());
-        case EeGeRastOp::ModelGraphicsBox: *reinterpret_cast<GEBoundingBox*>(a) = static_cast<GEModel*>(inObj)->GetGraphicsBoundingBox(); return 0;
-        case EeGeRastOp::ModelSetClip: static_cast<GEModel*>(inObj)->SetClipToPlane((unsigned long)a, b != 0); return 0;
-        case EeGeRastOp::ModelInternalTransform:
-            *reinterpret_cast<GETransformation*>(b) = static_cast<GEModel*>(inObj)->GetInternalTransform((unsigned long)a);
-            return 0;
-        case EeGeRastOp::PlacedScale: return GEFloatBits(static_cast<const GEPhysicalModel*>(inObj)->GetScale());
-        case EeGeRastOp::PlacedFrame: return (intptr_t)static_cast<const GEPhysicalModel*>(inObj)->GetFrame();
-        case EeGeRastOp::PlacedModel: return (intptr_t)static_cast<const GEPhysicalModel*>(inObj)->GetModel();
-        case EeGeRastOp::PlacedLocation: *reinterpret_cast<GETransformation*>(a) = static_cast<const GEPhysicalModel*>(inObj)->GetLocation(); return 0;
+        // (the debug text's setters, the models' and placed models' reads and SetClipToPlane: Rust's own, ee_ge
+        // rastobj.rs direct_op)
         default: return 0;
         }
     }

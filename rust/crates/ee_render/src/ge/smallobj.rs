@@ -83,6 +83,7 @@ impl Host {
 /// # Safety
 /// The operation's arguments are as `EeGeObjOp` describes.
 // platform/PlatWindow.h (ee_base plat_sdl)
+/// cbindgen:ignore
 #[cfg(not(test))]
 mod plat_window {
     use std::ffi::c_void;

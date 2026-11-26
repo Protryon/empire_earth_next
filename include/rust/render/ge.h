@@ -132,7 +132,7 @@ enum class EeGeFbOp : uint32_t {
   TextLocation,
   /// `&obj->GetFgColor()`.
   TextColor,
-  /// The platform's text functions (`GERustTextOps()`).
+  /// The platform's text functions (`GeTextOps`: `font_ffi::platform_text_ops`).
   TextOps,
   /// `PlatFontGetMetrics(obj->GetOSFont())`'s first and last characters into `*(unsigned long(*)[2])a`.
   FontRange,
@@ -223,7 +223,7 @@ enum class EeGeObjOp : uint32_t {
   PlatFontDestroy,
   /// `PlatFontGetMetrics(obj, ...)`'s `mHeight`.
   PlatFontHeight,
-  /// `GERustTextOps()` -> the platform's text functions (`GeTextOps`).
+  /// The platform's text functions (`GeTextOps`: `font_ffi::platform_text_ops`).
   TextOps,
   /// `PlatWindowDestroy(obj)`.
   PlatWindowDestroy,

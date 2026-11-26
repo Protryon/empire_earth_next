@@ -73,12 +73,7 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
         return ((GESurface*)inObj)->CopyTo((GESurface*)a, ((GERectangle*)b)[0], ((GERectangle*)b)[1], c != 0);
     case EeGeTexOp::ScreenCreateSurface:
         return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
-    case EeGeTexOp::FileInfo:
-        ee_of_texture_info((const EeOfTexture*)inObj, (EeOfTextureInfo*)a);
-        return 0;
-    case EeGeTexOp::FileFrame:
-        ee_of_texture_frame((const EeOfTexture*)inObj, (uint32_t)a, (EeOfTextureFrame*)b);
-        return 0;
+    // (FileInfo, FileFrame, RasterCreate, RasterDestroy: the Rust object's own, ee_ge texobj_tex.rs)
     case EeGeTexOp::SurfPixelFormat: return (intptr_t)((GESurface*)inObj)->GetPixelFormat();
     case EeGeTexOp::SurfPixelDepth: return (intptr_t)((GESurface*)inObj)->GetPixelDepth();
     case EeGeTexOp::SurfVolatility: return (intptr_t)((GESurface*)inObj)->GetSurfaceVolatility();
@@ -93,11 +88,6 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
         return ((GETextureManager*)inObj)->RemoveTexture((GETexture*)a);
     case EeGeTexOp::ManagerPromote:
         return ((GETextureManager*)inObj)->PromoteTexture((GETexture*)a);
-    case EeGeTexOp::RasterCreate:
-        return ((GERasterizer*)a)->CreateTextureHandle(((GETexture*)inObj));
-    case EeGeTexOp::RasterDestroy:
-        ((GERasterizer*)a)->DestroyTextureHandle(((GETexture*)inObj));
-        return 0;
     default:
         return 0;
     }
@@ -115,7 +105,7 @@ static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "G
 intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    // (the lock's calls and the path's Reference: Rust's own, ee_ge manobj.rs direct_op)
+    // (the lock's calls, the path's Reference and TexFreeFile: Rust's own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
@@ -125,9 +115,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     case EeGeManOp::DumpText: fprintf(*(FSFileSpec*)inObj, "%s", (const char*)a); return 0;
     case EeGeManOp::TexFindFile:
         return ee_of_find_texture(&GEOpenFormatsHost, inObj, (const char*)a, (EeOfTexture**)c);
-    case EeGeManOp::TexFreeFile:
-        ee_of_texture_free((EeOfTexture*)inObj);
-        return 0;
     case EeGeManOp::TexNew:
         return (intptr_t)new GETexture(((GETextureManager*)inOwner));
     case EeGeManOp::TexNewFromSurface:

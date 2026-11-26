@@ -38,14 +38,11 @@ static_assert(sizeof(GEModel) == 3 * sizeof(void*), "ee_ge cppobj.rs CppCounted 
 intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeModOp::RasterActive:
-        return (intptr_t)GERasterizer::GetActiveRasterizer();
+    // (the active rasterizer, its screen id and the textures' stage filters: Rust's own, ee_ge modobj.rs direct_op)
     case EeGeModOp::RasterVertexArray:
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
     case EeGeModOp::RasterPolygonArray:
         return (intptr_t)((GERasterizer*)inObj)->CreatePolygonArray((unsigned long)a);
-    case EeGeModOp::RasterScreenId:
-        return (intptr_t)((GERasterizer*)inObj)->GetScreenID();
     case EeGeModOp::RasterTextureManager:
         return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
     // (the arrays' other calls are on their Rust arrays: ee_ge modobj.rs array_op)
@@ -82,15 +79,6 @@ intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t 
         return 0;
     case EeGeModOp::TexLoad:
         return (intptr_t)((GETextureManager*)inObj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b);
-    case EeGeModOp::TexMinFilter:
-        ((GETexture*)inObj)->SetStageMinFilterMode((unsigned long)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::TexMagFilter:
-        ((GETexture*)inObj)->SetStageMagFilterMode((unsigned long)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::TexMipFilter:
-        ((GETexture*)inObj)->SetStageMipFilterMode((unsigned long)a, (unsigned long)b);
-        return 0;
     }
     return 0;
 }
@@ -130,7 +118,8 @@ intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    // (the lock's calls, the path's Reference and a model's reference count: Rust's own, ee_ge manobj.rs direct_op)
+    // (the lock's calls, the path's Reference, a model's reference count, ModelStoreLoaded and ModelFreeFile: Rust's
+    // own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
@@ -146,15 +135,10 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
         return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, (const EeGeSharedFrames*)b, (EeGeCemModel**)c);
     case EeGeManOp::ModelNewEmpty:
         return (intptr_t)new GEModel(((GEModelManager*)inOwner));
-    case EeGeManOp::ModelStoreLoaded:
-        return ee_ge_mod_store_loaded(((GEModel*)inObj)->mRust, (const EeGeCemModel*)a, (const EeGeSharedFrames*)b);
     case EeGeManOp::ModelSizeOf:
         return (intptr_t)((GEModel*)inObj)->SizeOf();
     case EeGeManOp::ModelVerify:
         ((GEModel*)inObj)->Verify();
-        return 0;
-    case EeGeManOp::ModelFreeFile:
-        ee_ge_cem_free((EeGeCemModel*)inObj);
         return 0;
     default:
         return 0;

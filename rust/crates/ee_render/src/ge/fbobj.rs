@@ -304,6 +304,27 @@ impl EeGeFontBitmap {
                 // SAFETY: a live GEText
                 EeGeFbOp::TextSetByte => return unsafe { text_set_byte(obj, a as u8) },
                 EeGeFbOp::TextOps => return crate::ge::font_ffi::platform_text_ops() as isize,
+                // GetScreen(a)'s and GetBlending's screen record (a GERasterizer's first member is its Rust object)
+                EeGeFbOp::RasterScreen | EeGeFbOp::RasterGetBlending => {
+                    use crate::ge::rastobj::{ee_ge_rast_screen, EeGeRasterizer};
+                    let screen = if op == EeGeFbOp::RasterScreen { a } else { b } as c_ulong;
+                    // SAFETY: a live GERasterizer and one of its screens
+                    let record =
+                        unsafe { &*ee_ge_rast_screen(crate::ge::cppobj::plain::<EeGeRasterizer>(obj), screen) };
+                    if op == EeGeFbOp::RasterScreen {
+                        return record.screen as isize;
+                    }
+                    // SAFETY: a holds two unsigned longs
+                    unsafe { *(a as *mut [c_ulong; 2]) = [record.blend_source, record.blend_destination] };
+                    return 0;
+                }
+                EeGeFbOp::TexSurface => {
+                    use crate::ge::texobj_tex::{ee_ge_tex_get, EeGeTexVal, EeGeTexture};
+                    // SAFETY: a live GETexture
+                    return unsafe {
+                        ee_ge_tex_get(crate::ge::cppobj::counted::<EeGeTexture>(obj), EeGeTexVal::Surface)
+                    };
+                }
                 _ => {}
             }
             // SAFETY: the objects are the C++'s live GE objects the operation names

@@ -29,8 +29,6 @@ public:
     unsigned long GetFrameCount() const { return this->Val(EeGeModVal::FrameCount); }
     float GetFractionalFramePosition() const
         { return ee_ge_mod_getf(this->mRust, EeGeModFloat::FractionalFramePosition); }
-    const GEBoundingBox& GetGraphicsBoundingBox() const { return *this->GetGraphicsBoundingBoxPointer(); }
-    float GetGraphicsBoundingRadius() const { return this->GetBoundingRadius(this->GetGraphicsCurrentFrame()); }
     unsigned long GetGraphicsCurrentFrame() const { return this->Val(EeGeModVal::CurrentFrame); }
     unsigned long GetGraphicsNextFrame() const { return this->Val(EeGeModVal::NextFrame); }
     const GETransformation& GetGraphicsPostModelTransform() const
@@ -58,7 +56,6 @@ public:
         { return this->GetFrameTagPoints()[inFrame][inIndex]; }
     unsigned long GetTagPointCount() const { return this->Val(EeGeModVal::TagPointCount); }
     GE3DPoint* GetTagPointList() const { return (GE3DPoint*)this->Ptr(EeGeModPtr::TagPoints); }
-    void SetClipToPlane(unsigned long inPlane, bool inClip) { ee_ge_mod_set_clip(this->mRust, inPlane, inClip); }
     void SetGraphicsPostModelTransform(const GETransformation& inTransform)
         { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Post, 0, (const EeGeTransformation*)&inTransform); }
     void SetGraphicsScale(float inScale) { ee_ge_mod_set_graphics_scale(this->mRust, inScale); }

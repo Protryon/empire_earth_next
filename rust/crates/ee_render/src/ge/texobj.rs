@@ -339,7 +339,7 @@ impl EeGeTextureManager {
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner, direct) = unsafe { ((*p).host, (*p).owner, (*p).direct) };
         // SAFETY: the caller's contract
-        if let Some(r) = unsafe { crate::ge::manobj::direct_op(op, obj, a) } {
+        if let Some(r) = unsafe { crate::ge::manobj::direct_op(op, obj, a, b) } {
             return r;
         }
         if direct {

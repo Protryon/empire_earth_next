@@ -37,18 +37,13 @@ static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
 extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
-    case EeGeBmpOp::RasterActive:
-        return (intptr_t)GERasterizer::GetActiveRasterizer();
-    case EeGeBmpOp::RasterScreenCount:
-        return (intptr_t)((GERasterizer*)inObj)->GetScreenCount();
+    // (the active rasterizer, its screen count, a texture's Reference and dropped MIP levels: Rust's own, ee_ge
+    // bmpobj.rs direct_op)
     case EeGeBmpOp::RasterVertexArray:
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
     // (the vertex arrays' other calls are on their Rust arrays: ee_ge bmpobj.rs vertex_op)
     case EeGeBmpOp::VertexDelete:
         delete ((GEVertexArray*)inObj);
-        return 0;
-    case EeGeBmpOp::TexReference:
-        ((GETexture*)inObj)->Reference();
         return 0;
     case EeGeBmpOp::TexDereference:
         ((GETexture*)inObj)->Dereference();
@@ -61,8 +56,6 @@ extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a,
         return (intptr_t)((GETexture*)inObj)->GetWidth();
     case EeGeBmpOp::TexHeight:
         return (intptr_t)((GETexture*)inObj)->GetHeight();
-    case EeGeBmpOp::TexDropLevels:
-        return (intptr_t)((GETexture*)inObj)->GetNumMipLevelsToDrop();
     }
     return 0;
 }
@@ -74,8 +67,8 @@ extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a,
 static_assert(sizeof(GEMaterial) == 3 * sizeof(void*) && sizeof(GEFont) == 3 * sizeof(void*) &&
               sizeof(GETexture) == 3 * sizeof(void*) &&
               sizeof(GEBitmap) == 3 * sizeof(void*) && sizeof(GEFontBitmap) == 3 * sizeof(void*), "cppobj.rs CppCounted");
-static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void*) && sizeof(GETextureSet) == sizeof(void*),
-              "cppobj.rs plain");
+static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void*) && sizeof(GETextureSet) == sizeof(void*) &&
+              offsetof(GERasterizer, mRust) == 0, "cppobj.rs plain");
 static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWideString) == sizeof(void*) + sizeof(EeUWideString),
               "cppobj.rs CppUString");
 
@@ -135,14 +128,9 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::TextDelete:
         delete ((GEText*)inObj);
         return 0;
-    // (TextSetByte, FontRange and TextOps: the Rust object's own, fbobj.rs)
+    // (TextSetByte, FontRange, TextOps, RasterScreen, RasterGetBlending and TexSurface: the Rust object's own, fbobj.rs)
     case EeGeFbOp::FontSetBitmap:
         ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
-        return 0;
-    case EeGeFbOp::RasterScreen:
-        return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a);
-    case EeGeFbOp::RasterGetBlending:
-        ((GERasterizer*)inObj)->GetBlending(theLongs[0], theLongs[1], (unsigned long)b);
         return 0;
     case EeGeFbOp::RasterSetBlending:
         ((GERasterizer*)inObj)->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
@@ -152,8 +140,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::BmpDereference:
         ((GEBitmap*)inObj)->Dereference();
         return 0;
-    case EeGeFbOp::TexSurface:
-        return (intptr_t)((GETexture*)inObj)->GetSurface();
     case EeGeFbOp::SurfTextUnlock:
         return ((GESurface*)inObj)->TextUnlock();
     case EeGeFbOp::SurfLock:
