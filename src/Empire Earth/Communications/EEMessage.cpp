@@ -220,7 +220,6 @@ static_assert(sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(GE2DPoint) 
 #define CX ((EEComplexUnit*)p)
 #define UC ((EEUnitClass*)p)
 #define GOAL ((EEUnitGoal*)p)
-#define SEL ((EESelectedGroup*)p)
 #define WSTR (*(UWideString*)p)
 #define WSTRA(i) (*(UWideString*)a[i])
 #define SERVER static_cast<EEServer*>(gCommunications)
@@ -236,7 +235,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 #define NC ((EeNetMsgCall*)p)
 #define NM_M ((EEMRecord*)(uintptr_t)NC->message)
 #define NM_P ((EEPlayer*)(uintptr_t)NC->a)
-#define NM_G ((EEGroup*)(uintptr_t)NC->a)
 #define NM_U ((EEComplexUnit*)(uintptr_t)NC->b)   // an EEUnit* when a world lookup gave it
 #define NM_I (NC->i)
 
@@ -330,14 +328,10 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
         break;
-    case O::PlAssignSavedGroup: PL->mGroups[a[0]]->Assign(PL->mActiveGroup);
-        break;
     case O::PlPlayAcknowledgement: PL->PlayAcknowledgement((EEComplexUnit*)a[0]);
         break;
     case O::PlCountQueuedImprovements: return PL->CountQueuedImprovements((unsigned long)a[0], (long)a[1]);
     case O::PlRemoveQueuedImprovement: PL->RemoveQueuedImprovement((long)a[0], (long)a[1], a[2] != 0);
-        break;
-    case O::PlSelectedCopyActive: PL->mSelectedGroup->CopySelection(PL->mActiveGroup);
         break;
     case O::PlSetSelectedViewedUnit: PL->SetSelectedViewedUnit(PL->mViewedUnit);
         break;
@@ -353,17 +347,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::WSetDiplomaticStanceCall: ((EEWorld*)p)->SetDiplomaticStance((unsigned long)a[0], (long)a[1], (long)a[2]);
         break;
     // the groups and formations
-    case O::GroupCount: return ((EEGroup*)p)->GetNumUnits();
-    case O::GroupUnit: return P64(((EEGroup*)p)->GetUnit((unsigned long)a[0]));
     case O::GroupFormationType: return ((EEGroup*)p)->GetFormation()->mType;
-    case O::GroupSetFormation: ((EEGroup*)p)->SetFormation((EEFormation*)a[0]);
-        break;
-    case O::SelGroupSetFormation: SEL->SetFormation((EEFormation*)a[0]);
-        break;
-    case O::SelGroupSavedGroup: return P64(SEL->GetSavedGroup());
-    case O::SelGroupSelectSaved: SEL->SelectSavedGroup((EEGroup*)a[0], a[1] != 0);
-        break;
-    case O::SelGroupFirstUnit: return P64(SEL->GetFirstUnit());
     case O::FormationCreate: return P64(EEFormation::Create((long)a[0]));
     case O::FormationSetB5C: ((EEFormation*)p)->mB5C = a[0] != 0;
         break;
@@ -531,14 +515,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11NmCurrent: return P64(gWorld.GetCurrentPlayer());
     case O::C11NmGroup: return P64(static_cast<EEGroup*>(NM_P->mActiveGroup));
     case O::C11NmSavedGroup: return P64(static_cast<EEGroup*>(NM_P->mGroups[NM_I[0]]));
-    case O::C11NmGroupCount: return NM_G->GetNumUnits();
-    case O::C11NmGroupUnit: return P64(NM_G->GetUnit(NM_I[0]));
-    case O::C11NmGroupFirst: return P64(NM_G->GetFirstUnit());
-    case O::C11NmGroupContains: return NM_G->Contains(NM_U);
-    case O::C11NmGroupAdd: NM_G->Add(NM_U);
-        break;
-    case O::C11NmGroupClear: NM_G->Clear();
-        break;
     case O::C11NmUnit: return P64(gWorld.GetUnit(NM_I[0]));
     case O::C11NmKill: NM_U->Kill(NM_I[0], 0, 0);
         break;

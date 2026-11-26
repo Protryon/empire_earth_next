@@ -27,6 +27,8 @@ use ee_base::math::um::lrintf;
 use ee_base::time::{ee_time_get, ee_time_of_day, EeTimeOfDay};
 use ee_sim::units::physics_save::EeUnitsPhysicsSaved;
 
+use crate::gamecpp::message::{group_len, group_unit, unit_id};
+
 /// The physics' calls (p: the `EEPhysics`, or the object a call names). See EEPhysics.cpp for each exact call.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -187,10 +189,6 @@ pub enum EePhysCpp {
     PlayerRunningGroup,
     PlayerAirTraffic,
     // ---- the groups (p: an EESelectedGroup*, an EEGroup* for the Group ones)
-    SelectedCount,
-    SelectedUnitId,
-    GroupCount,
-    GroupUnitId,
     // ---- a unit (p: an EEComplexUnit*)
     UnitPlayer,
     UnitIsCitizen,
@@ -714,7 +712,7 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
         let group = hp(O::PlayerActiveGroup, player, &[]);
         if group != 0 {
             put(file, "\n");
-            let count = h(O::SelectedCount, group, &[]) as c_ulong;
+            let count = group_len(group);
             put(
                 file,
                 &format!(
@@ -723,7 +721,7 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
                 ),
             );
             for j in 0..count {
-                let id = h(O::SelectedUnitId, group, &[j as i64]) as c_ulong;
+                let id = unit_id(group_unit(group, j as c_long));
                 put(
                     file,
                     &format!("OUT OF SYNCH DUMP: Unit #{} has an id of {}({:08x})\n", j as c_long, id as c_long, id),
@@ -739,13 +737,13 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
         for j in 0..running {
             let group = hp(O::PlayerRunningGroup, player, &[j as i64]);
             put(file, "\n");
-            let count = h(O::GroupCount, group, &[]) as c_ulong;
+            let count = group_len(group);
             put(
                 file,
                 &format!("OUT OF SYNCH DUMP:  Active Group #{} has a unit count of {}\n", j as c_long, count as c_long),
             );
             for m in 0..count {
-                let id = h(O::GroupUnitId, group, &[m as i64]) as c_ulong;
+                let id = unit_id(group_unit(group, m as c_long));
                 put(
                     file,
                     &format!("OUT OF SYNCH DUMP: Unit #{} has an id of {}({:08x})\n", m as c_long, id as c_long, id),
@@ -845,9 +843,9 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
         if flags & 0x200 != 0 {
             let group = hp(O::PlayerActiveGroup, player, &[]);
             if group != 0 {
-                let count = h(O::SelectedCount, group, &[]) as c_ulong;
+                let count = group_len(group);
                 for j in 0..count {
-                    let id = h(O::SelectedUnitId, group, &[j as i64]) as c_ulong;
+                    let id = unit_id(group_unit(group, j as c_long));
                     let player_id = h(O::PlayerId, player, &[]) as c_ulong;
                     sum = sum.wrapping_add(id.wrapping_mul(player_id));
                 }

@@ -342,7 +342,7 @@ fn mute(loading: bool, quiet: bool) -> i64 {
 /// after a host's non-quiet load the main game form opened and the next render waited for.
 fn unmute(loading: bool, quiet: bool) -> i64 {
     if !loading {
-        h(O::PsShowSelectionAreas, 0, &[]);
+        super::message::group_do(hp(O::PlActiveGroup, hp(O::WorldCurrentPlayer, 0, &[]), &[]), 7, 0);
     }
     hf(O::PsSetMasterVolume, 0, &[], &[f32::from_bits(MASTER_VOLUME.load(Ordering::Relaxed))]);
     hf(O::PsSetMusicVolume, 0, &[], &[f32::from_bits(MUSIC_VOLUME.load(Ordering::Relaxed))]);

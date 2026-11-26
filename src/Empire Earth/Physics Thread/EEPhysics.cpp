@@ -329,11 +329,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::PlayerRunningGroups: return PL->GetNumRunningGroups();
     case O::PlayerRunningGroup: return P64(PL->GetRunningGroup((unsigned long)a[0]));
     case O::PlayerAirTraffic: return P64(PL->mAirTraffic[a[0]]);
-    // the groups
-    case O::SelectedCount: return ((EESelectedGroup*)p)->GetNumUnits();
-    case O::SelectedUnitId: return ((EESelectedGroup*)p)->GetUnit((unsigned long)a[0])->mUnitID;
-    case O::GroupCount: return ((EEGroup*)p)->GetNumUnits();
-    case O::GroupUnitId: return ((EEGroup*)p)->GetUnit((unsigned long)a[0])->mUnitID;
     // a unit
     case O::UnitPlayer: return P64(CX->GetPlayer());
     case O::UnitIsCitizen: return CX->mIsCitizen;

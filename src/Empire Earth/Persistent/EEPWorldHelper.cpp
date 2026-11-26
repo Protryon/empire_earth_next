@@ -536,8 +536,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
         break;
-    case O::PsShowSelectionAreas: gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();
-        break;
     case O::PsOpenMainGameForm: gUserInterface->OpenForm(gUIManager->GetMainGameForm());
         break;
     case O::PsWaitRenderNow: gGraphics->mRenderNow->Wait(kTSWaitInfinite);

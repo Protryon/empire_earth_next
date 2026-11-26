@@ -178,18 +178,18 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
         EE_NETMSG_OP_CURRENT => h(O::C11NmCurrent, call, &[]),
         EE_NETMSG_OP_GROUP => h(O::C11NmGroup, call, &[]),
         EE_NETMSG_OP_SAVED_GROUP => h(O::C11NmSavedGroup, call, &[]),
-        EE_NETMSG_OP_GROUP_COUNT => h(O::C11NmGroupCount, call, &[]),
-        EE_NETMSG_OP_GROUP_UNIT => h(O::C11NmGroupUnit, call, &[]),
-        EE_NETMSG_OP_GROUP_FIRST => h(O::C11NmGroupFirst, call, &[]),
-        EE_NETMSG_OP_GROUP_CONTAINS => h(O::C11NmGroupContains, call, &[]),
+        EE_NETMSG_OP_GROUP_COUNT => group_len(a as P) as i64,
+        EE_NETMSG_OP_GROUP_UNIT => group_unit(a as P, i[0] as c_long) as i64,
+        EE_NETMSG_OP_GROUP_FIRST => group_unit(a as P, 0) as i64,
+        EE_NETMSG_OP_GROUP_CONTAINS => group_contains(a as P, b as P) as i64,
         EE_NETMSG_OP_UNIT => h(O::C11NmUnit, call, &[]),
         EE_NETMSG_OP_CLASS_FACT => h(O::C11NmClassFact, call, &[]),
         EE_NETMSG_OP_GROUP_ADD => {
-            h(O::C11NmGroupAdd, call, &[]);
+            group_do(a as P, 0, b as P);
             0
         }
         EE_NETMSG_OP_GROUP_CLEAR => {
-            h(O::C11NmGroupClear, call, &[]);
+            group_do(a as P, 2, 0);
             0
         }
         EE_NETMSG_OP_KILL => {
