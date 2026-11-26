@@ -411,6 +411,8 @@ void EEReportLeakingUnits();
 // ------------------------------------------------------------------------- the start-up's C++ (gamecpp startup.rs)
 
 #include <utility>
+#include "rust/audio/sound.h"
+#include "rust/ui/bgtableobj.h"
 
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
@@ -767,8 +769,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::IsKeyboardSuspend: gISKeyboard->Suspend();
         break;
     // the sound
-    case O::MixerGet: return SEMixer::GetMixer(0, gConductor);
-    case O::MixerUse: return SEMixer::UseMixer(gConductor);
+    case O::MixerGet: return (long)ee_sound_mixer_get((uint32_t)0, reinterpret_cast<EeSoundMixer**>(&gConductor));
+    case O::MixerUse: return (long)ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(gConductor));
     case O::ConductorSetChannelGroups: return gConductor->GetConductor().SetChannelGroupCount((unsigned long)a[0]);
     case O::ConductorSetState: return gConductor->GetConductor().SetConductorState((long)a[0]);
     case O::ConductorSetReverb: gConductor->GetConductor().SetReverb((long)a[0]);
@@ -846,7 +848,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DbLoadCPBehavior: return EECPBehavior::Load(SPEC);
     case O::DbLoadGameVariant: return EEGameVariant::Load(SPEC);
     case O::DbLoadPremadeCivs: return gCivilizationManager.LoadPremadeCivilizations(SPEC);
-    case O::UiInitialize: return UIInitialize();
+    case O::UiInitialize: return ee_ui_initialize();
     case O::GfxEffectsSortMedia: EEGraphicEffect::SortMediaByKind();
         break;
     case O::TileSetUnitListPool: EETile::SetUnitListPoolSize((unsigned long)a[0], (unsigned long)a[1]);

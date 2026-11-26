@@ -19,7 +19,7 @@ public:
     UResourceFile(HINSTANCE inModule) : mModule(inModule), mOwnsModule(false)
     {
         uint16_t theLanguage = ee_util_resource_strings_language();
-        this->mLanguage = theLanguage != 0 ? theLanguage : UGetOSLanguage();
+        this->mLanguage = theLanguage != 0 ? theLanguage : (unsigned short)ee_util_os_language();
     }
     virtual ~UResourceFile() {}
     unsigned short GetLanguage() { return this->mLanguage; }

@@ -19,14 +19,7 @@ class LLE_API SEMixer : URustView {
 public:
     SEConductor& GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(Rust())); }
     static unsigned long GetCount() { return ee_sound_mixer_count(); }
-    // the registered mixer with the given index; kErrorBeyondEnd past the last
-    static long GetMixer(unsigned long inIndex, SEMixer*& outMixer)
-    {
-        return ee_sound_mixer_get((uint32_t)inIndex, reinterpret_cast<EeSoundMixer**>(&outMixer));
-    }
     const UString& GetName() { return SEMixerPlugInName(); }
-    // the given mixer active (NULL: none), the current one's music stopped and the mixer deactivated first
-    static long UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
     EeSoundMixer* Rust() const { return reinterpret_cast<EeSoundMixer*>(const_cast<SEMixer*>(this)); }
 };
 

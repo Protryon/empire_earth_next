@@ -62,6 +62,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
 #include "ee/EEGameState.h"   // gGameState
+#include "rust/ui/lle_table.h"
 
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
 // twice), loads the UI database and finds the main game form
@@ -236,7 +237,7 @@ extern "C" void ee_screenscpp_um_parent_set(float inLeft, float inTop, float inR
 extern "C" void ee_screenscpp_ct_layout_rectangle(uintptr_t inTable, uintptr_t inForm)
 { UMCT(inTable).GetLayout().CalculateRectangle(EEScratch<GERectangle>(kScratchUMParent), EEScratch<GERectangle>(kScratchUMRect), UMF(inForm)->GetUseExclusiveCoords()); }
 extern "C" void ee_screenscpp_ct_strings(uintptr_t inManager, uintptr_t inTable)
-{ UMCT(inTable).SetupStringArray(UMG(inManager), EEScratch<std::vector<UWideString>>(kScratchUMStrings)); }
+{ ee_ui_table_setup_strings(&UMCT(inTable), static_cast<UIManager*>(UMG(inManager)), &(EEScratch<std::vector<UWideString>>(kScratchUMStrings))); }
 extern "C" void ee_screenscpp_um_strings_clear() { EEScratch<std::vector<UWideString>>(kScratchUMStrings).clear(); }
 extern "C" uintptr_t ee_screenscpp_ct_new_mini_map(uintptr_t inTable, uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(new EEUIMiniMap(EEScratch<GERectangle>(kScratchUMRect), UMF(inForm), UMCT(inTable).GetFormIndex(), UMCT(inTable).GetID(), 0)); }

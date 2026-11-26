@@ -105,6 +105,7 @@
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 #include "gx/GX.h"   // GXGameSize
+#include "rust/base/math.h"
 
 // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it): stored in EEGlobals.cpp (ee/EEGlobalStorage.h),
 // constructed here, where its definition was
@@ -1165,7 +1166,7 @@ extern "C" void ee_screenscpp_sc_cam_scroll(float inX, float inY) { gWorld.mCame
 extern "C" void ee_screenscpp_sc_cam_reset_zoom() { gWorld.mCameraControl.ResetZoom(); }
 extern "C" void ee_screenscpp_sc_cam_changed() { gWorld.mCameraControl.SetChanged(); }
 extern "C" void ee_screenscpp_sc_cam_set_zoom(float inZoom) { gWorld.mCameraControl.SetZoom(inZoom); }
-extern "C" float ee_screenscpp_sc_cam_cos(float inAngle) { return UMCos(inAngle); }
+extern "C" float ee_screenscpp_sc_cam_cos(float inAngle) { return ee_ge_um_cos(inAngle); }
 extern "C" uint32_t ee_screenscpp_sc_ds_button_number(uintptr_t inForm, uint32_t inControl)
 { return (uint32_t)atoi(static_cast<UIButton*>(F(inForm)->GetControl(inControl))->GetGEText()->GetText()); }
 extern "C" uint32_t ee_screenscpp_sc_ds_label_number(uintptr_t inForm, uint32_t inControl)

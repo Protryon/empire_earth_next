@@ -63,21 +63,11 @@ public:
     void SetTexturePath(FSPath* inTexturePath) { ee_ge_texman_set_path(this->mRust, inTexturePath); }
     // Sets the MIP filter mode of every cached texture that uses MIP filtering
     void UpdateMIPFilterMode(unsigned long inMode) { ee_ge_texman_update_mip_filter(this->mRust, inMode); }
-    // port: the optional texture pack (docs/DATA_FORMATS.md "Texture packs"). inDirectory (e.g. "textures-4x")
-    // stands in for a texture's "textures" directory and holds files 1 << inScaleShift times the originals' size: a
-    // description with mUseTexturePack loads the pack's file of the same name when the path has one (else the
-    // original), dropping inMipLevelsToDrop more MIP levels (each halves the size; 2x box filtered). Its surfaces
-    // keep the original's size as their logical size (GESurface::GetLogicalShift: inScaleShift - inMipLevelsToDrop)
-    // and get MIP levels. NULL or "" turns the pack off. Every texture manager; textures already cached keep the file
-    // they were loaded from until they are released.
-    static void SetTexturePack(const char* inDirectory, long inScaleShift, long inMipLevelsToDrop)
-        { ee_ge_texpack_set(inDirectory, inScaleShift, inMipLevelsToDrop); }
     // the pack's name of a "textures\..." file ("textures\x" -> "textures-4x\x"; false for a name outside
     // "textures\" or with no pack directory, for a picture read as data and while the pack is off), and the logical
     // shift and extra MIP drop of its files: for pictures loaded around the texture manager (RTSMouse's pointers)
     static bool GetTexturePackName(const UString& inName, UString& outName) { return ee_ge_texpack_name(inName, &outName); }
     static long GetTexturePackLogicalShift() { return ee_ge_texpack_logical_shift(); }
-    static long GetTexturePackMipLevelsToDrop() { return ee_ge_texpack_mip_levels_to_drop(); }
     // Marks the texture as promoted; always succeeds
     long PromoteTexture(GETexture* inTexture) { return ee_ge_texman_promote(this->mRust, inTexture); }
     // the calls the Rust object makes on other objects (GETexture.cpp)

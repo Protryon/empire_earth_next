@@ -117,7 +117,6 @@ inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
 // function, last first, and with inTerminate ends the platform's services and exits (inForced: exit(0), else abort)
 inline long URegisterShutdown(void (*inFunction)(bool)) { return ee_util_register_shutdown(inFunction); }
 inline bool UShutdownInProgress() { return ee_util_shutdown_in_progress(); }
-inline unsigned short UGetOSLanguage() { return ee_util_os_language(); }   // the user's default language id
 
 // ---- Utility math (UM)
 // The FPU control (ee_util fp.rs: 53-bit precision without an x87) and the table trigonometry (ee_render um.rs:
@@ -126,9 +125,6 @@ inline void UMSetFloatingPointPrecision(unsigned long inPrecision) { ee_util_fp_
 inline unsigned long UMGetFloatingPointPrecision() { return ee_util_fp_precision(); }
 inline void UMSetFloatingPointRoundingMode(unsigned long inMode) { ee_util_fp_set_rounding(inMode); }
 inline unsigned long UMGetFloatingPointRoundingMode() { return ee_util_fp_rounding(); }
-inline float UMArcTan2(float inY, float inX) { return ee_ge_um_arctan2(inY, inX); }
-inline float UMCos(float inAngle) { return ee_ge_um_cos(inAngle); }
-inline float UMArcCos(float inValue) { return ee_ge_um_arccos(inValue); }
 // Saved games keep an object's 32-bit id in the pointer field the object will fill: the loader reads the id into
 // the field and a fix-up pass (RepairPointers, Restore, ...) looks the object up. The id held by such a field (its
 // low 32 bits: the loader writes 4 bytes, whatever the pointer size). uint32_t on every data model, so the "none"

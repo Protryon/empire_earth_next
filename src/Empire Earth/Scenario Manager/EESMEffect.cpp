@@ -77,6 +77,7 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 #include "ee/EEUnitBehavior.h"
 
 #include "ee/EEHerd.h"
+#include "rust/base/math.h"
 
 
 // what one effect's run keeps between its world calls (entry.rs makes and frees it: EE_SCENARIO_WORLD_RUN_*) (ee_scenario effect.rs, effect_ai.rs, task.rs): the
@@ -668,7 +669,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_TERRAIN_PITCH: return EESMBits(inRun->mPitch = gWorld.mMap->GetTerrainPitch(inRun->mGround));
     case EE_SCENARIO_WX_TERRAIN_ROLL: return EESMBits(inRun->mRoll = gWorld.mMap->GetTerrainRoll(inRun->mGround));
     case EE_SCENARIO_WX_T_ORIENT_HEADING:
-        inRun->mTransformation.SetOrientationYPR(UMArcTan2(SMEUnit(a[0])->GetComplexUnit()->mPhysicalModel.GetLocation().mMatrix[1][0], SMEUnit(a[0])->GetComplexUnit()->mPhysicalModel.GetLocation().mMatrix[0][0]), inRun->mPitch, inRun->mRoll);
+        inRun->mTransformation.SetOrientationYPR(ee_ge_um_arctan2(SMEUnit(a[0])->GetComplexUnit()->mPhysicalModel.GetLocation().mMatrix[1][0], SMEUnit(a[0])->GetComplexUnit()->mPhysicalModel.GetLocation().mMatrix[0][0]), inRun->mPitch, inRun->mRoll);
         return 0;
     case EE_SCENARIO_WX_CONTAINER_NULL: return SMEUnit(a[0])->GetComplexUnit()->mContainer == NULL;
     case EE_SCENARIO_WX_T_APPLY: SMEUnit(a[0])->GetComplexUnit()->SetTransformation(inRun->mTransformation, true);

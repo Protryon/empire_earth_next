@@ -28,6 +28,8 @@
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIControlsTable.h"
+#include "rust/ui/eventobj.h"
+#include "rust/ui/hotkeyobj.h"
 
 // The Rust manager's calls out (EeUiOp, obj.rs): a is the form, event, bitmap, texture, lock, sound instance or
 // other object the op names; rectangles and points travel in f. The cases of more than one call are Rust's (ee_ui
@@ -121,10 +123,10 @@ extern "C" long ee_uicpp_db_backgrounds(uintptr_t inFile) { return UIBackgroundT
 extern "C" void ee_uicpp_db_create_backgrounds(uintptr_t inM) { ee_ui_bgtable_create_backgrounds(MGR(inM), ee_ui_bg_table_host); }
 extern "C" void ee_uicpp_db_controls(uintptr_t inFile, uintptr_t inM)
 { UIControlsTable::Create(*FILE_SPEC(inFile), MGR(inM)); }
-extern "C" void ee_uicpp_db_control_events(uintptr_t inFile) { UIEvent::CreateControlEvents(*FILE_SPEC(inFile)); }
+extern "C" void ee_uicpp_db_control_events(uintptr_t inFile) { ee_ui_event_create(&(*FILE_SPEC(inFile)), ee_ui_event_host, 0, NULL); }
 extern "C" void ee_uicpp_db_form_events(uintptr_t inFile, uintptr_t inM)
-{ UIEvent::CreateFormEvents(*FILE_SPEC(inFile), MGR(inM)); }
-extern "C" void ee_uicpp_db_hot_keys(uintptr_t inFile) { UIHotKey::CreateHotKeys(*FILE_SPEC(inFile)); }
+{ ee_ui_event_create(&(*FILE_SPEC(inFile)), ee_ui_event_host, 1, MGR(inM)); }
+extern "C" void ee_uicpp_db_hot_keys(uintptr_t inFile) { ee_ui_hotkey_create_all(&(*FILE_SPEC(inFile)), ee_ui_hotkey_host); }
 extern "C" void ee_uicpp_file_delete(uintptr_t inFile) { delete FILE_SPEC(inFile); }
 extern "C" void ee_uicpp_db_remove_controls() { UIControlsTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_backgrounds() { UIBackgroundTable::DeleteAll(); }
@@ -176,7 +178,7 @@ EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
 // the hot keys' pressed poll (the original's UIHotKey::sPressedPoll: 50 ms), polled once per update
 static TMPoll sHotKeyPressedPoll(50, 0, true);
 EE_UI_VOID(mgr_hot_key_poll) { sHotKeyPressedPoll.Poll(); }
-EE_UI_VOID(mgr_hot_keys_delete) { UIHotKey::DeleteHotKeys(); }
+EE_UI_VOID(mgr_hot_keys_delete) { ee_ui_hotkey_delete_all(ee_ui_hotkey_host); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(mgr_set_blending) { static_cast<UIManager*>(inObj)->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, static_cast<UIManager*>(inObj)->GetScreen()); }

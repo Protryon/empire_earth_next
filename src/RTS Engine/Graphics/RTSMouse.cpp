@@ -18,6 +18,7 @@
 #include "lle/Input System.h"
 
 #include "ee/RTSMouse.h"
+#include "rust/render/ge.h"
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
 static_assert(sizeof(GEVideoMode) == sizeof(EeRtsVideoMode) && sizeof(GESurfaceDescription) == sizeof(EeGeSurfaceDescription), "mirrors");
 
@@ -85,7 +86,7 @@ void ee_rtsmcpp_debug_out_long(const char* inFormat, long inValue) { ESDebugOut(
 void ee_rtsmcpp_screen_mode(GEScreen* inScreen, EeRtsVideoMode* outMode) { *reinterpret_cast<GEVideoMode*>(outMode) = inScreen->GetCurrentMode(); }
 long ee_rtsmcpp_screen_create_surface(GEScreen* inScreen, GESurfaceDescription* inDescription, GESurface** ioSurface) { return inScreen->CreateSurface(*inDescription, ioSurface); }
 long ee_rtsmcpp_pack_shift() { return GETextureManager::GetTexturePackLogicalShift(); }
-long ee_rtsmcpp_pack_drop() { return GETextureManager::GetTexturePackMipLevelsToDrop(); }
+long ee_rtsmcpp_pack_drop() { return ee_ge_texpack_mip_levels_to_drop(); }
 UString* ee_rtsmcpp_text_new() { return new UString; }
 void ee_rtsmcpp_text_delete(UString* inText) { delete inText; }
 const char* ee_rtsmcpp_text_chars(UString* inText) { return *inText; }

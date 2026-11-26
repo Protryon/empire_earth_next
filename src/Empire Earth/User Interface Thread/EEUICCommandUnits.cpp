@@ -24,6 +24,7 @@
 #include "ee/EEARust.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEScreensShims.h"
+#include "rust/render/geval.h"
 
 
 // Creates the main game view's right-drag command control, hidden, with its facing arrow: a textured quad model
@@ -51,7 +52,7 @@ extern "C" uint64_t ee_screenscpp_cu_lighting(uint32_t inScreen)
 extern "C" uint64_t ee_screenscpp_cu_zbuffer(uint32_t inScreen) { return (uint64_t)gRasterizer->GetZBuffer(inScreen); }
 extern "C" uint64_t ee_screenscpp_cu_zcompare(uint32_t inScreen)
 { return (uint64_t)gRasterizer->GetZCompare(inScreen); }
-extern "C" void ee_screenscpp_cu_depth_range(float inNear, float inFar) { gU4E8F08.SetDepthRange(inNear, inFar); }
+extern "C" void ee_screenscpp_cu_depth_range(float inNear, float inFar) { ee_ge_viewport_set_depth_range(&gU4E8F08, inNear, inFar); }
 extern "C" void ee_screenscpp_cu_set_viewport_view(uint32_t inScreen) { gRasterizer->SetViewport(gU4E8F08, inScreen); }
 extern "C" void ee_screenscpp_cu_set_zbuffer_test_only(uint32_t inScreen)
 { gRasterizer->SetZBuffer(kZBufferTestOnly, inScreen); }

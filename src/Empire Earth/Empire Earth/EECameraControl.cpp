@@ -23,6 +23,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EECombatGoals.h"
+#include "rust/render/geval.h"
 
 // the GE value classes and their Rust mirrors share their storage (GERustMath.h)
 static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
@@ -90,7 +91,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkSetWorldCamera: gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(CAM->mView));
         break;
-    case O::DkSetFieldOfView: gViewport.SetFieldOfView(f[0]);
+    case O::DkSetFieldOfView: ee_ge_viewport_set_field_of_view(&gViewport, f[0]);
         break;
     case O::DkClearB529066: gB529066 = false;
         break;
@@ -131,9 +132,9 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcScreenLine: gWorld.GetMap()->GetScreenLine(GE2DPoint(f[0], f[1]), *(GE3DLine*)a[0]);
         break;
     case O::EcLocationOnLine: return gWorld.mMap->GetLocationOnLine(*(GE3DLine*)a[0], *(GE3DPoint*)a[1], true) != NULL;
-    case O::EcSetFrontClipping: gViewport.SetFrontClippingDistance(f[0]);
+    case O::EcSetFrontClipping: ee_ge_viewport_set_front(&gViewport, f[0]);
         break;
-    case O::EcSetRearClipping: gViewport.SetRearClippingDistance(f[0]);
+    case O::EcSetRearClipping: ee_ge_viewport_set_rear(&gViewport, f[0]);
         break;
     default: return EECore11OpB(inOp, p, a, f);
     }
