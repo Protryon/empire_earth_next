@@ -1186,6 +1186,13 @@ impl<'t> WorldView<'t> {
         let v: c_long = unsafe { member(self.object, layout().world_population_limit) };
         v as i64
     }
+    /// `mPlayerPopulationLimit` (RTSWorld's `long` right after `mPopulationLimit`: EEPlayer.cpp asserts it)
+    pub fn player_population_limit(&self) -> i64 {
+        // SAFETY: as above
+        let v: c_long =
+            unsafe { member(self.object, layout().world_population_limit + std::mem::size_of::<c_long>() as u64) };
+        v as i64
+    }
     /// `mNumberOfWondersToWin`
     pub fn wonders_to_win(&self) -> u64 {
         // SAFETY: as above

@@ -159,10 +159,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_METALLURGY: return gCivPowersManager.HasPower(thePlayer, kCivPowerMetallurgy);
     case EE_UNITS_PLAYER_ADD: thePlayer->AddResource((long)a[0], (long)a[1]);
         return 0;
-    case EE_UNITS_PLAYER_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
-    case EE_UNITS_PLAYER_HERO_COUNT: return thePlayer->GetHeroCount(a[0] != 0, a[1] != 0);
     case EE_UNITS_PLAYER_SCENARIO: return gWorld.mGameOptions.mIsScenarioGame;
-    case EE_UNITS_PLAYER_CAN_AFFORD: return thePlayer->CanAfford(theNode, (long)a[1], (long)a[2]);
     case EE_UNITS_PLAYER_STATS_LOWER: thePlayer->mSavedGroups.Lower((long)a[0], (long)a[1]);
         return 0;
     case EE_UNITS_PLAYER_UPDATE_JIT: gUserInterface->UpdateJITManufacturing();
@@ -406,11 +403,8 @@ EEAIArea* EEPlayer::GetNearestArea(const EETileCoordinate& inTile, bool inSameCo
     return static_cast<EEAIArea*>(reinterpret_cast<EETown*>(ee_units_player_rest(this, EE_UNITS_PLAYER_REST_NEAREST_AREA, inSameContinent, inTile.GetX(), inTile.GetY())));   // player_rest.rs
 }
 
-// Returns the player's population limit: the game's limit plus the player's bonuses
-long EEPlayer::GetPopulationLimit(long inArg)
-{
-    return this->mPopulationLimitBonus + this->mShareBonus + gWorld.mPlayerPopulationLimit;
-}
+// ee_sim world view.rs player_population_limit reads the limit after mPopulationLimit
+static_assert(offsetof(EEWorld, mPlayerPopulationLimit) == offsetof(EEWorld, mPopulationLimit) + sizeof(long), "view.rs");
 
 // The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation) and of LoadUnit's and SaveUnit's
 // (EEPlayerUnitOperation), made in the call's argument (Self: the address the Rust passes back)

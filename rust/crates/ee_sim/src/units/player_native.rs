@@ -281,7 +281,13 @@ unsafe fn body_tech(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
 ///
 /// # Safety
 /// As [`body`]; `io` the operation's operands.
-pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlayerIo) -> Option<i64> {
+#[cfg_attr(test, allow(unused_variables))]
+pub unsafe fn player(
+    op: i32,
+    p: u64,
+    io: &mut crate::units::player::EeUnitsPlayerIo,
+    host: (crate::units::player::EeUnitsPlayerFn, *const crate::units::player_stats::EeUnitsPlayerStats),
+) -> Option<i64> {
     use crate::units::player_diplomacy::EE_UNITS_PLAYER_RESET_WONDER_TIMERS;
     use crate::units::player_rest::{
         game::ee_units_player_rest, EE_UNITS_PLAYER_REST_CLEAR_FOOTPRINT, EE_UNITS_PLAYER_REST_RESET_WONDER_TIMERS,
@@ -357,6 +363,34 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
             // the virtuals EEComputerPlayer overrides, dispatched here on the player's `mComputerPlayer`
             // (ee/EEComputerPlayer.h): ScaleCost, TakeResource; GetExtraPopulation is 1 and WonderStarted empty for
             // every player
+            // EEPlayer's virtuals that EEComputerPlayer overrides, dispatched on `mComputerPlayer` (player_econ.rs)
+            #[cfg(not(test))]
+            crate::units::player::EE_UNITS_PLAYER_POPULATION_LIMIT
+            | crate::units::player::EE_UNITS_PLAYER_HERO_COUNT
+            | crate::units::player::EE_UNITS_PLAYER_CAN_AFFORD => {
+                let refs = crate::units::player::EeUnitsPlayerRefs {
+                    player: pv,
+                    host: host.0,
+                    saved: saved(p),
+                    fields: fields(p),
+                    stats: host.1,
+                };
+                let (object, a, b) = match op {
+                    crate::units::player::EE_UNITS_PLAYER_POPULATION_LIMIT => (0, 0, 0),
+                    crate::units::player::EE_UNITS_PLAYER_HERO_COUNT => {
+                        (0, i64::from(a0 != 0), i64::from(io.i[1] != 0))
+                    }
+                    _ => (a0, io.i[1] as c_long as i64, io.i[2] as c_long as i64),
+                };
+                return Some(crate::units::player_econ::ee_units_player_virtual(
+                    &refs,
+                    op,
+                    object as usize as *mut c_void,
+                    a,
+                    b,
+                    false,
+                ));
+            }
             crate::units::player::EE_UNITS_PLAYER_SCALE_COST => {
                 let l = layout();
                 return Some(if *slot(p, l.player_computer_player) != 0 {

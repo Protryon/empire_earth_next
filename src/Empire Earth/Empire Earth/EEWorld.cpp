@@ -265,7 +265,7 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
         // New (gameoptions.yaml defeat_without_recovery): the means to train a citizen
         EEPlayer* thePlayer = gWorld.mPlayers[inA];
         EETechTreeNode* theCitizen = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->Get(kTechCitizen) : NULL;
-        return theCitizen == NULL || thePlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
+        return theCitizen == NULL || thePlayer->Dispatch(EE_UNITS_PLAYER_CAN_AFFORD, theCitizen, kUnitTypeCitizen, 1, true) != 0;
     }
     }
     return 0;

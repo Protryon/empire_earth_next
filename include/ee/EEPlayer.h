@@ -460,14 +460,14 @@ public:
     virtual void AddResource(long inIndex, long inAmount) { this->mResourceCaps[inIndex] += inAmount; EEGameLogIncome(this, inIndex, inAmount); }
     virtual void DetachUnitFromAI(EEComplexUnit* inUnit);  // +0x4c 0x16367b (sets the unit's mIsDetachedFromAI)
     // +0x50 (EEComplexUnit::QueueResearch compares GetHeroCount(1, 1) with mHeroLimit: a count) (provisional name)
-    virtual long GetHeroCount(bool inByClass, bool inRequests) { return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_NUM_HEROES, NULL, inByClass, inRequests, 0, 0, 0, 0.0f, NULL); }    // (bools: 0x164223 reads bytes; EEComputerPlayer 0x2e248 stores them as bytes)
+    virtual long GetHeroCount(bool inByClass, bool inRequests) { return (long)this->Dispatch(EE_UNITS_PLAYER_HERO_COUNT, NULL, inByClass, inRequests); }    // (bools: 0x164223 reads bytes; EEComputerPlayer 0x2e248 stores them as bytes)
     // +0x54 0x163a25 (ret 0x18; can the player build inTechnology: EEABuild 0x1760 passes (id, 0x20, 1, 1, 3, 0); +0x14
     // is read as a byte, +0x1c receives the reason through UResourceFile::GetString; provisional names)
     virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_PRODUCE, NULL, inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, 0.0f, outReason) != 0; }
     virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag) {}  // +0x58 0x163d6f (EESMEffect 0x1be94e passes (another player, false); 0x55cee tests a byte; ret 8: EEComputerPlayer 0x2dca6 forwards both)
     virtual void Virtual60() {}               // +0x60
     virtual void UnitCompleted(EEComplexUnit* inUnit) { EEPlayerUnits(this, 3, inUnit); }  // +0x68 0x164003 (ret 4: EEComputerPlayer 0x2e1e9 forwards it)
-    virtual long ScaleCost(long inCost) { return inCost; }  // +0x6c 0xa549a
+    virtual long ScaleCost(long inCost) { return (long)this->Dispatch(EE_UNITS_PLAYER_SCALE_COST, NULL, inCost, 0); }  // +0x6c 0xa549a (its own: the cost)
     // +0x70 0x164bea (ret 0xc): reads inUnit's mStats/mUnitClass and inOther's class, then 0x16542e (provisional name)
     virtual bool CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long inValue) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD_REPAIR, inUnit, (int64_t)reinterpret_cast<uintptr_t>(inOther), inValue, 0, 0, 0, 0.0f, NULL) != 0; }  // (bool: EEUGBuildRepair::EvaluateCondition tests al)
     EEUnit* GetNearestConstructionSite(EEComplexUnit* inUnit) { return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(ee_units_player_body(this, EE_UNITS_PLAYER_DO_NEAREST_SITE, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0, 0.0f))); }  // 0x164820 (the next unit inUnit should build; EEUGBuildRepair::FindNextWork) (provisional name)
@@ -480,10 +480,14 @@ public:
     // result as a byte: `cmp al, bl` for `== false`) (provisional name)
     bool IsAlly(EEPlayer* inPlayer) { return inPlayer == this || this->mEnemies[inPlayer->mPlayerID] == 0; }
     virtual long GetExtraPopulation(long inUnitClass) { return 1; }  // +0x78 0xa54a1 (`push 1; pop eax; ret 4`: a long, not a bool)
-    virtual long GetPopulationLimit(long inArg);  // +0x7c 0x16528b (ret 4: mB24 + mB20 + a global; EECPCombatStrategy 0x771be)
+    // +0x7c 0x16528b (its own: mPopulationLimitBonus + mShareBonus + gWorld.mPlayerPopulationLimit; EECPCombatStrategy 0x771be)
+    virtual long GetPopulationLimit(long inArg) { return (long)this->Dispatch(EE_UNITS_PLAYER_POPULATION_LIMIT, NULL, inArg, 0); }
     // +0x80 (conscription 0xafe5f) (provisional name)
     // (0x16566a: arg 3 is a count, multiplied with each cost: `imul` in CanAffordScaled)
-    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD, inTechnology, inUnitType, inCount, 0, 0, 0, 0.0f, NULL) != 0; }
+    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return this->Dispatch(EE_UNITS_PLAYER_CAN_AFFORD, inTechnology, inUnitType, inCount) != 0; }
+    // GetHeroCount, ScaleCost, GetPopulationLimit, CanAfford: EEComputerPlayer's when mComputerPlayer is set, else (or
+    // with inBase: the qualified EEPlayer:: calls) EEPlayer's own (ee_units player_econ.rs ee_units_player_virtual)
+    int64_t Dispatch(int32_t inOp, void* inObject, int64_t inA, int64_t inB, bool inBase = false) { return ee_units_player_virtual(EEPlayerRefs(this), inOp, inObject, inA, inB, inBase); }
     // +0x84 0x16569c (ret 0xc; EEComputerPlayer's 0x2f16d passes its unit third)
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_DAMAGE, 0, inPlayer, inAmount, 0.0f); }
     virtual void EpochMediaLoaded(long inEpoch) {}  // +0x88 (0x157269 `ret 4`, empty; EETechTreeNode 0x1cf989 passes a node's +0x4c)

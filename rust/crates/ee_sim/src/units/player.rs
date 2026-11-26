@@ -827,6 +827,8 @@ pub struct EeUnitsPlayerRefs {
 pub(crate) struct FnHost {
     player: *mut c_void,
     f: EeUnitsPlayerFn,
+    /// the player's statistics (its refs' `stats`: EEPlayer's virtuals in Rust, player_native.rs)
+    stats: *const EeUnitsPlayerStats,
 }
 
 impl PlayerHost for FnHost {
@@ -838,10 +840,13 @@ impl PlayerHost for FnHost {
         }
         // the player's own Rust bodies and the plain reads (player_native.rs); SAFETY: as above
         #[cfg(not(test))]
-        if let Some(v) = unsafe { crate::units::player_native::player(op, self.player as u64, io) } {
+        if let Some(v) =
+            unsafe { crate::units::player_native::player(op, self.player as u64, io, (self.f, self.stats)) }
+        {
             return v;
         }
-        let (player, f) = (self.player, self.f);
+        #[cfg_attr(test, allow(unused_variables))]
+        let (player, f, stats) = (self.player, self.f, self.stats);
         // the compound operations' statements: the views' answers first, then the C++ (SAFETY: as above, and the
         // C++ callback's contract)
         let mut call = |op: i32, io: &mut EeUnitsPlayerIo| match unsafe {
@@ -849,7 +854,9 @@ impl PlayerHost for FnHost {
         } {
             Some(v) => v,
             #[cfg(not(test))]
-            None if let Some(v) = unsafe { crate::units::player_native::player(op, player as u64, io) } => v,
+            None if let Some(v) = unsafe { crate::units::player_native::player(op, player as u64, io, (f, stats)) } => {
+                v
+            }
             // the containers' operations on the players' lists (player_lists.rs)
             None => crate::units::player_lists::answer_player(player as u64, op, &io.i)
                 .unwrap_or_else(|| unsafe { f(player, op, io) }),
@@ -872,7 +879,7 @@ impl PlayerHost for FnHost {
 pub(crate) unsafe fn with<R>(refs: *const EeUnitsPlayerRefs, body: impl FnOnce(&mut Player<FnHost>) -> R) -> R {
     // SAFETY: the caller's contract
     let r = unsafe { *refs };
-    let mut h = FnHost { player: r.player, f: r.host };
+    let mut h = FnHost { player: r.player, f: r.host, stats: r.stats };
     body(&mut Player { h: &mut h, saved: r.saved, fields: r.fields, stats: r.stats })
 }
 

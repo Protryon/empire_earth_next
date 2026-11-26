@@ -20465,6 +20465,21 @@ int64_t ee_units_player_econ(const EeUnitsPlayerRefs *refs,
                              float f,
                              void *text);
 
+/// EEPlayer's virtuals GetHeroCount, GetPopulationLimit, CanAfford and ScaleCost (`op` the player host's
+/// operation: HERO_COUNT `a`, `b` the two flags; POPULATION_LIMIT `a` the argument; CAN_AFFORD `object` the node,
+/// `a` the unit type, `b` the count; SCALE_COST `a` the cost): EEComputerPlayer's overrides (cp player_game.rs)
+/// when the player is a computer player (`mComputerPlayer` set), else, or with `base` (`EEPlayer::CanAfford`'s
+/// qualified calls), EEPlayer's own.
+///
+/// # Safety
+/// As [`ee_units_player_econ`].
+int64_t ee_units_player_virtual(const EeUnitsPlayerRefs *refs,
+                                int32_t op,
+                                void *object,
+                                int64_t a,
+                                int64_t b,
+                                bool base);
+
 /// The list's alert sounds got and loaded (`load`, the constructor's) or unloaded and the one playing released (the
 /// destructor's) over the C++ host on `list` (player_events_split.rs).
 ///

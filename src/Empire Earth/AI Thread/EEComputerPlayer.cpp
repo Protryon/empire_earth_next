@@ -125,7 +125,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     switch (inOp) {
     case EE_CP_PLAYER_BEHAVIOR_FLOAT: io->f[0] = gCPBehaviors[(long)v[0]].mFloatValue;
         return 0;
-    case EE_CP_PLAYER_BASE_POP_LIMIT: return thePlayer->EEPlayer::GetPopulationLimit(0);
+    case EE_CP_PLAYER_BASE_POP_LIMIT: return thePlayer->Dispatch(EE_UNITS_PLAYER_POPULATION_LIMIT, NULL, 0, 0, true);
     case EE_CP_PLAYER_NUM_TEAMS: return (int64_t)gWorld.GetNumTeams();
     case EE_CP_PLAYER_TEAM_WONDERS: return gWorld.mTeams[(size_t)v[0]].mVictoryCondition->HasEnoughWonders() ? 1 : 0;
     case EE_CP_PLAYER_TEAM_CONTAINS: return gWorld.mTeams[(size_t)v[0]].ContainsPlayer((unsigned long)v[1]) ? 1 : 0;
@@ -211,8 +211,8 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_CLASS_IS_DROP_SITE: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->IsDropSite() ? 1 : 0;
     case EE_CP_PLAYER_CLASS_IS_PRIEST: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->IsPriest() ? 1 : 0;
     case EE_CP_PLAYER_CLASS_FLIES_OVER: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->FliesOver() ? 1 : 0;
-    case EE_CP_PLAYER_BASE_POP_LIMIT_OF: return thePlayer->EEPlayer::GetPopulationLimit((long)v[0]);
-    case EE_CP_PLAYER_BASE_CAN_AFFORD: return thePlayer->EEPlayer::CanAfford(reinterpret_cast<EETechTreeNode*>((uintptr_t)inA), (long)v[0], (long)v[1]) ? 1 : 0;
+    case EE_CP_PLAYER_BASE_POP_LIMIT_OF: return thePlayer->Dispatch(EE_UNITS_PLAYER_POPULATION_LIMIT, NULL, (long)v[0], 0, true);
+    case EE_CP_PLAYER_BASE_CAN_AFFORD: return thePlayer->Dispatch(EE_UNITS_PLAYER_CAN_AFFORD, reinterpret_cast<EETechTreeNode*>((uintptr_t)inA), (long)v[0], (long)v[1], true) != 0 ? 1 : 0;
     case EE_CP_PLAYER_GAME_RESOURCES: return gWorld.mGameOptions.mResources;
     case EE_CP_PLAYER_SCENARIO_GAME: return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
     case EE_CP_PLAYER_LOAD_TYPE: return gGameOptions.mLoadType;
