@@ -10,7 +10,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESMObject.h"
 #include "ee/EESMArea.h"
-#include "ee/EESMTrigger.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"   // (also defines DeleteVectorContents: ee/EEDeleteVectorContents.h)
 #include "ee/EmpireEarth.h"

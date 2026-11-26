@@ -21,7 +21,6 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEEnvironmentManager.h"
-#include "rust/game/gamecpp.h"   // the camera's keys (camera_io.rs)
 
 namespace {
 

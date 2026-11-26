@@ -17,13 +17,11 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEGameOptions.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"                // gWorld.mUsingCarbon
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
-#include "rust/sim/rmap.h"
 
 
 // The world a random map is made in (ee_rmap_cpp's p)
