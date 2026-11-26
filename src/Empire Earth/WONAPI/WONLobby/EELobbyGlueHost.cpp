@@ -838,7 +838,6 @@ void EELobbyInit()
 void EELobbyShutdown() { Glue(GL::Shutdown); }
 unsigned short EELobbyGetFileTransferPort() { return (unsigned short)Glue(GL::FileTransferPort); }
 LobbyRustDialog* EELobbyGetFileDialog() { return reinterpret_cast<LobbyRustDialog*>(Glue(GL::FileDialog)); }
-bool EELobbyRunConnectDialog() { return Glue(GL::RunConnectDialog) != 0; }
 void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected) { Glue(GL::SetSlotConnected, inSlot, inConnected); }
 void EELobbyCancelConnectDialog() { Glue(GL::CancelConnectDialog); }
 void EELobbyPostConnectStatus(bool inConnected) { Glue(GL::PostConnectStatus, inConnected); }
