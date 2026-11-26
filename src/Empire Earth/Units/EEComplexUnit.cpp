@@ -19,6 +19,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEMiniMap.h"
+#include "ee/EEDoppelgangerManager.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitUtilities.h"
@@ -79,9 +80,6 @@ void EEUnitStoreMoved(const void* inModel)
 #include "ee/EESoundObject.h"
 #include "lle/UResourceFile.h"
 // Original cdecl sight-map family, retained as link calls (no helper implementations).
-void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
-void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
-void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer);
 bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before this unit's 0x4c76f0 table; EEUserInterface/EEWorld/EEMap read it; provisional name)
 
 extern char gEmptyString[];
@@ -99,14 +97,6 @@ void EEDumpLeakedUnits(FSFileSpec& inFile) { ee_units_cu_small(EE_UNITS_CU_S_DO_
 // the Rust dump's text into the out-of-sync file
 static void EEDumpWrite(void* inFile, const char* inText, size_t inLength) { fwrite(inText, 1, inLength, static_cast<FILE*>(inFile)); }
 
-// Adjusts a value by the unit's morale: positive morale takes a share off, negative morale adds one (combat.yaml
-// morale: 80% and 60% in the original)
-void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
-{
-    outValue = EECombatMorale(EeCombatMoraleIn{(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
-                                               EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale});
-}
-
 // SightOn's and SightOff's host (ee_units sight.rs, sight_host.rs; EE_UNITS_SIGHT_*): the unit's and players' reads and
 // the sight's world calls, each as the original made it (inOn: SightOn's Add, else SightOff's Remove)
 extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD,
@@ -123,16 +113,14 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     case EE_UNITS_SIGHT_FOUNDATION: return theUnit->IsFoundation();
     case EE_UNITS_SIGHT_CENTER: theUnit->AddCenterOffset(f[0], f[1]); return 0;
     case EE_UNITS_SIGHT_ALLIED: return thePlayer->IsAlliedWith((EEPlayer*)(uintptr_t)inB);
-    case EE_UNITS_SIGHT_CIRCLE: EEAddSightCircle(f[0], f[1], f[2], thePlayer); return 0;
-    case EE_UNITS_SIGHT_CIRCLE_OFF: EERemoveSightCircle(f[0], f[1], f[2], thePlayer); return 0;
-    case EE_UNITS_SIGHT_TILE_SIGHT: ((EEMapTile*)(uintptr_t)inA)->AddSight((EEPlayer*)(uintptr_t)inB); return 0;
-    case EE_UNITS_SIGHT_TILE_SIGHT_OFF: ((EEMapTile*)(uintptr_t)inA)->RemoveSight((EEPlayer*)(uintptr_t)inB); return 0;
-    case EE_UNITS_SIGHT_SHARED: thePlayer->AddSharedSight((EEMapTile*)(uintptr_t)inB, (long)inC, (long)inD); return 0;
-    case EE_UNITS_SIGHT_SHARED_OFF: thePlayer->RemoveSharedSight((EEMapTile*)(uintptr_t)inB); return 0;
     case EE_UNITS_SIGHT_SHOW: gMiniMap->CountCellOn((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_SHOW_TILE: ::gWorld.mMap->mTerrainMesh.ReferenceTile((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_SHOW_OFF: gMiniMap->CountCellOff((long)inC, (long)inD); return 0;
     case EE_UNITS_SIGHT_SHOW_TILE_OFF: ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD); return 0;
+    // the tile sight's (ee_units tile_sight_host.rs; units round 14: was ee_units_tile_sight_host, EESightRings.cpp)
+    case EE_UNITS_TILE_SIGHT_SHOWN: gDoppelgangerManager.TileShown(reinterpret_cast<EETile*>((uintptr_t)inA), (long)inC, (long)inD, (EEPlayer*)(uintptr_t)inB); return 0;
+    case EE_UNITS_TILE_SIGHT_HIDDEN: gDoppelgangerManager.TileHidden(reinterpret_cast<EETile*>((uintptr_t)inA), (EEPlayer*)(uintptr_t)inB); return 0;
+    case EE_UNITS_TILE_SIGHT_FIRST: thePlayer->mSavedGroups.Reset(0x18, 1); return 0;
     case EE_UNITS_SIGHT_WONDER: ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
     case EE_UNITS_SIGHT_WONDER_OFF: ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false); return 0;
     // the cloaking utilities' world calls (ee_units uu_cloak.rs; units round 14: EECloakingUtilities.cpp is gone)
@@ -487,7 +475,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SIGHT_READY: return theUnit->mPlayer != NULL && theUnit->mPlayer->mSaveVisMap == true && theUnit->GetLineOfSight() > 0.0f && gSightUpdatesEnabled;
     case EE_UNITS_CU_SIGHT_ON: theUnit->SightOn((unsigned long)inB, (unsigned long)inC); return 0;
     case EE_UNITS_CU_SIGHT_OFF: theUnit->SightOff((unsigned long)inB, (unsigned long)inC); return 0;
-    case EE_UNITS_CU_MOVE_SIGHT_CIRCLE: EEMoveSightCircle(f[0], f[1], f[2], f[3], theUnit->GetLineOfSight(), theUnit->mPlayer); return 0;
+    case EE_UNITS_CU_MOVE_SIGHT_CIRCLE: ee_units_tile_sight_circle((uintptr_t)&::gWorld, kSightCircleMove, 4, f[0], f[1], f[2], f[3], theUnit->GetLineOfSight(), (uintptr_t)theUnit->mPlayer); return 0;
     case EE_UNITS_CU_GATE_IS_SIDE_PART: return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass())->IsSidePart(theUnit);
     case EE_UNITS_CU_IS_FOUNDATION_NOW: return theUnit->IsFoundation();
     case EE_UNITS_CU_GET_POSITION: theUnit->GetPosition(*reinterpret_cast<GE3DPoint*>(f) = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;

@@ -1209,6 +1209,19 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
             }
             EE_UNITS_EU_MAP_TILE_EXISTS => i64::from(map_tile(b, _c) != 0),
             EE_UNITS_EU_TERRAIN_OF => long(*at::<c_long>(word(o.0, l.unit_tile), l.tile_terrain_type)),
+            // units round 14: EEComplexUnit::ApplyMorale (the formula's CBMO record as the C++ made it)
+            EE_UNITS_EU_APPLY_MORALE => {
+                let cx = u.complex().cx();
+                let rules = &crate::tech::civ::rules().combat;
+                let input = crate::combat::EeCombatMoraleIn {
+                    value: b as i32,
+                    positive: (*cx).mPositiveMorale as i32,
+                    negative: (*cx).mNegativeMorale as i32,
+                    positive_share: rules.positive_morale,
+                    negative_share: rules.negative_morale,
+                };
+                i64::from(crate::combat::captured::ee_combat_morale_captured(&input))
+            }
             EE_UNITS_EU_HIT_FORMULA => {
                 let input = crate::combat::EeCombatHitPointsIn {
                     hit_points: b as i32,
@@ -1359,7 +1372,7 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
     Some(v)
 }
 
-/// The answer of `ee_units_eum_host`'s statement `op` (EEUnit.cpp; eu_more.rs's and eu_describe.rs's statements)
+/// The answer of the unit host's eu_more.rs statement `op` (EEUnit.cpp; eu_more.rs's and eu_describe.rs's statements)
 /// when it is a plain record read or store (None: the game's host answers it).
 ///
 /// # Safety

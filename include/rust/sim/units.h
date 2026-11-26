@@ -5421,10 +5421,10 @@ constexpr static const int32_t EE_UNITS_EU_DEATH_EFFECT = 134;
 /// `mStats->mDeathSound != NULL`
 constexpr static const int32_t EE_UNITS_EU_HAS_DEATH_SOUND = 135;
 
-/// `mUnitClass->GetSoundParameters(this, mStats->mDeathSound, the volume, pan, pitch)` (kept for the next)
+/// `mUnitClass->GetSoundParameters(this, mStats->mDeathSound, the floats a: volume, pan, pitch)`
 constexpr static const int32_t EE_UNITS_EU_DEATH_SOUND_PARAMETERS = 136;
 
-/// `gSoundManager->Play(the death sound's mSampleID, the volume, pan, pitch, its mLooping, NULL)`
+/// `gSoundManager->Play(the death sound's mSampleID, the floats a, its mLooping, NULL)`
 constexpr static const int32_t EE_UNITS_EU_DEATH_SOUND_PLAY = 137;
 
 /// `mResourceAmount = b`
@@ -5593,26 +5593,12 @@ constexpr static const int32_t EE_UNITS_EU_HAS_BLOOD = 9;
 /// `gEffectManager->CreateUnitEffect(this, mUnitClass->mImpactBloodEffect, NULL, false, 0, 0)`
 constexpr static const int32_t EE_UNITS_EU_BLOOD = 10;
 
-/// the modifiers' input `= b` (the original's `theInput`)
-constexpr static const int32_t EE_UNITS_EU_SET_INPUT = 11;
-
-/// the area damage `= b` (`theAreaDamage`)
-constexpr static const int32_t EE_UNITS_EU_SET_AREA_DAMAGE = 12;
-
-/// `mComplexUnit->mAffectingAreaEffects.ApplyModifiers(1, theInput, theAreaDamage, mComplexUnit)`
+/// `mComplexUnit->mAffectingAreaEffects.ApplyModifiers(1, ((long*)a)[0], ((long*)a)[1], mComplexUnit)` (the input,
+/// the area damage: the body's)
 constexpr static const int32_t EE_UNITS_EU_APPLY_MODIFIERS = 13;
 
-/// the area damage
-constexpr static const int32_t EE_UNITS_EU_AREA_DAMAGE = 14;
-
-/// the damage `= b` (`theDamage`)
-constexpr static const int32_t EE_UNITS_EU_SET_DAMAGE = 15;
-
-/// `mComplexUnit->ApplyMorale(theAreaDamage, theDamage)`
+/// the damage: `mComplexUnit->ApplyMorale(b, theDamage)`'s, the morale formula (CBMO; answered in Rust: cu_view.rs)
 constexpr static const int32_t EE_UNITS_EU_APPLY_MORALE = 16;
-
-/// the damage
-constexpr static const int32_t EE_UNITS_EU_DAMAGE = 17;
 
 /// unit `a`'s `mTileNode != NULL`
 constexpr static const int32_t EE_UNITS_EU_ON_MAP = 18;
@@ -9853,17 +9839,8 @@ constexpr static const int32_t EE_UNITS_SIGHT_SHARERS = 8;
 /// player `a`'s `mSightSharers[c]`
 constexpr static const int32_t EE_UNITS_SIGHT_SHARER = 9;
 
-/// `EEAddSightCircle` (`on`) / `EERemoveSightCircle(f[0], f[1], f[2], player a)`
-constexpr static const int32_t EE_UNITS_SIGHT_CIRCLE = 10;
-
 /// `gWorld.mMap->GetTile(c, d)`
 constexpr static const int32_t EE_UNITS_SIGHT_TILE = 11;
-
-/// tile `a`'s `AddSight` (`on`) / `RemoveSight(player b)`
-constexpr static const int32_t EE_UNITS_SIGHT_TILE_SIGHT = 12;
-
-/// player `a`'s `AddSharedSight(tile b, c, d)` (`on`) / `RemoveSharedSight(tile b)`
-constexpr static const int32_t EE_UNITS_SIGHT_SHARED = 13;
 
 /// `gMiniMap->CountCellOn/Off(c, d)`, the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
 constexpr static const int32_t EE_UNITS_SIGHT_SHOW = 14;
@@ -9876,15 +9853,6 @@ constexpr static const int32_t EE_UNITS_SIGHT_NUM_PLAYERS = 16;
 
 /// `gWorld.mPlayers[c]`
 constexpr static const int32_t EE_UNITS_SIGHT_PLAYER = 17;
-
-/// `EERemoveSightCircle(f[0], f[1], f[2], player a)` (`EE_UNITS_SIGHT_CIRCLE` is the add)
-constexpr static const int32_t EE_UNITS_SIGHT_CIRCLE_OFF = 20;
-
-/// tile `a`'s `RemoveSight(player b)` (`EE_UNITS_SIGHT_TILE_SIGHT` is the add)
-constexpr static const int32_t EE_UNITS_SIGHT_TILE_SIGHT_OFF = 21;
-
-/// player `a`'s `RemoveSharedSight(tile b)` (`EE_UNITS_SIGHT_SHARED` is the add)
-constexpr static const int32_t EE_UNITS_SIGHT_SHARED_OFF = 22;
 
 /// the terrain mesh's `ReferenceTile(c, d)` (`EE_UNITS_SIGHT_SHOW` is the minimap's `CountCellOn`)
 constexpr static const int32_t EE_UNITS_SIGHT_SHOW_TILE = 23;
@@ -10095,25 +10063,13 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
 /// `gDoppelgangerManager.TileShown(tile a, x c, y d, player b)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOWN = 1;
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOWN = 14040;
 
 /// `gDoppelgangerManager.TileHidden(tile a, player b)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_HIDDEN = 2;
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_HIDDEN = 14041;
 
 /// player a's `mSavedGroups.Reset(0x18, 1)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_FIRST = 3;
-
-/// `gMiniMap->CountCellOn(c, d)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_CELL_ON = 4000;
-
-/// `gWorld.mMap->mTerrainMesh.ReferenceTile(c, d)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_REFERENCE = 4001;
-
-/// `gMiniMap->CountCellOff(c, d)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_CELL_OFF = 4002;
-
-/// `gWorld.mMap->mTerrainMesh.DereferenceTile(c, d)`
-constexpr static const int32_t EE_UNITS_TILE_SIGHT_DEREFERENCE = 4003;
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_FIRST = 14042;
 
 /// `kErrorBeyondEnd`: an area read short.
 constexpr static const int32_t EE_UNITS_TOWN_BEYOND_END = 10;
@@ -18785,6 +18741,7 @@ float ee_units_eu_nearest_footprint_tile(void *unit,
 /// `unit` is a live `EEUnit`, `text` a live `UWideString`.
 void ee_units_eu_describe(void *unit, void *text, bool long_);
 
+/// (eu_more.rs's statements too: units round 14 merged `ee_units_eum_host` into it)
 extern int64_t ee_units_eu_host(int32_t op, void *unit, uint64_t a, int64_t b, int64_t c);
 
 /// `EEUnit::TakeHit(attacker, damage, player, mode)` on `unit`.
@@ -18796,8 +18753,6 @@ void ee_units_eu_take_hit(void *unit,
                           int64_t damage,
                           uint32_t player,
                           int64_t mode);
-
-extern int64_t ee_units_eum_host(int32_t op, void *unit, uint64_t a, int64_t b, int64_t c);
 
 /// `EEUnit`'s body `what` (`EE_UNITS_EUM_DO_*`) on `unit`; `a` an object, `b`, `c` values.
 ///
@@ -21069,14 +21024,19 @@ float ee_units_step_cloak_fade(float opacity,
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 
-extern int64_t ee_units_tile_sight_host(int32_t op, uint64_t a, uint64_t b, int64_t c, int64_t d);
-
-/// `RTSTile::AddSight(player)` (`on` 1) / `RemoveSight(player)` of tile `tile`
-void ee_units_tile_sight_tile(uint64_t world, uint8_t on, uint64_t tile, uint64_t player);
+/// `RTSTile::AddSight(player)` (`on` 1) / `RemoveSight(player)` of tile `tile`, in the TSGT scope `scope`
+/// (`kSightTileAdd`, `kSightTileRemove`)
+void ee_units_tile_sight_tile(uint64_t world,
+                              uint32_t scope,
+                              uint8_t on,
+                              uint64_t tile,
+                              uint64_t player);
 
 /// EEPlayer's `AddSharedSight(tile, x, y)` (`on` 1, `shared` 1), `RemoveSharedSight(tile)` (0, 1), `AddOwnSight`
-/// (1, 0), `RemoveOwnSight` (0, 0)
+/// (1, 0), `RemoveOwnSight` (0, 0), in the TSGT scope `scope` (a removal names no coordinates: -1 to the capture, 0
+/// to the body, as the original's calls)
 void ee_units_tile_sight_player(uint64_t world,
+                                uint32_t scope,
                                 uint8_t on,
                                 uint8_t shared,
                                 uint64_t player,
@@ -21085,8 +21045,9 @@ void ee_units_tile_sight_player(uint64_t world,
                                 int64_t y);
 
 /// `EEAddSightCircle` (kind 0) / `EERemoveSightCircle` (1) of (x0, y0); `EEAddSightRingStep` (2),
-/// `EERemoveSightRingStep` (3), `EEMoveSightCircle` (4) from (x0, y0) to (x1, y1)
+/// `EERemoveSightRingStep` (3), `EEMoveSightCircle` (4) from (x0, y0) to (x1, y1); in the TSGT scope `scope`
 void ee_units_tile_sight_circle(uint64_t world,
+                                uint32_t scope,
                                 uint32_t kind,
                                 float x0,
                                 float y0,

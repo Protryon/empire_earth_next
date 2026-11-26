@@ -1,29 +1,46 @@
 //! The tile sight's world in the game (tile_sight.rs): the map, tiles and players read through the world views
 //! (ee_sim::world), the visibility words written through each tile's `mVisibility`, and the C++ calls through
-//! `ee_units_tile_sight_host` (EESightRings.cpp). The entry points the C++ forwarders call. Absent from a test binary.
+//! the sight host `ee_units_sight_host` (EEComplexUnit.cpp; units round 14: was `ee_units_tile_sight_host`). The entry
+//! points the C++ forwarders and the sight bodies call, each inside its TSGT capture scope (ee_game sight_capture.rs;
+//! units round 14: were EESightRings.cpp's helpers). Absent from a test binary.
 
 #![cfg(not(test))]
 
+use crate::units::sight_host::{
+    ee_units_sight_host, EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE, EE_UNITS_SIGHT_SHOW_TILE_OFF,
+};
 use crate::units::tile_sight::{self, SightWorld};
+use std::ffi::c_void;
+use std::os::raw::{c_long, c_ulong};
 use crate::world::{MapView, PlayerView, TileView, WorldRead, WorldView};
 
 /// `gDoppelgangerManager.TileShown(tile a, x c, y d, player b)`
-pub const EE_UNITS_TILE_SIGHT_SHOWN: i32 = 1;
+pub const EE_UNITS_TILE_SIGHT_SHOWN: i32 = 14040;
 /// `gDoppelgangerManager.TileHidden(tile a, player b)`
-pub const EE_UNITS_TILE_SIGHT_HIDDEN: i32 = 2;
+pub const EE_UNITS_TILE_SIGHT_HIDDEN: i32 = 14041;
 /// player a's `mSavedGroups.Reset(0x18, 1)`
-pub const EE_UNITS_TILE_SIGHT_FIRST: i32 = 3;
-/// `gMiniMap->CountCellOn(c, d)`
-pub const EE_UNITS_TILE_SIGHT_CELL_ON: i32 = 4000;
-/// `gWorld.mMap->mTerrainMesh.ReferenceTile(c, d)`
-pub const EE_UNITS_TILE_SIGHT_REFERENCE: i32 = 4001;
-/// `gMiniMap->CountCellOff(c, d)`
-pub const EE_UNITS_TILE_SIGHT_CELL_OFF: i32 = 4002;
-/// `gWorld.mMap->mTerrainMesh.DereferenceTile(c, d)`
-pub const EE_UNITS_TILE_SIGHT_DEREFERENCE: i32 = 4003;
+pub const EE_UNITS_TILE_SIGHT_FIRST: i32 = 14042;
+// (the minimap's and the terrain mesh's counts are the sight host's EE_UNITS_SIGHT_SHOW* statements)
 
 extern "C" {
-    fn ee_units_tile_sight_host(op: i32, a: u64, b: u64, c: i64, d: i64) -> i64;
+    // the TSGT scope (ee_game sight_capture.rs, as EESightScope's constructors and destructor; renamed here and left
+    // out of the headers, cbindgen.toml: the game's own declarations are rust/game/sight_capture.h's)
+    #[link_name = "ee_app_sight_open_tile"]
+    fn ee_units_sight_scope_tile(kind: u32, player: *const c_void, tile: *const c_void, x: c_long, y: c_long, value: c_ulong);
+    #[allow(clippy::too_many_arguments)]
+    #[link_name = "ee_app_sight_open_circle"]
+    fn ee_units_sight_scope_circle(
+        kind: u32,
+        player: *const c_void,
+        x0: f32,
+        y0: f32,
+        x1: f32,
+        y1: f32,
+        radius: f32,
+        value: c_ulong,
+    );
+    #[link_name = "ee_app_sight_close"]
+    fn ee_units_sight_scope_close();
 }
 
 struct Game<'t> {
@@ -43,7 +60,7 @@ impl<'t> Game<'t> {
     }
     fn host(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64) {
         // SAFETY: the C++ switch calls the world objects the body names
-        unsafe { ee_units_tile_sight_host(op, a, b, c, d) };
+        unsafe { ee_units_sight_host(op, 0, a, b, c, d, &mut [0.0; 3], std::ptr::null_mut()) };
     }
 }
 
@@ -99,9 +116,9 @@ impl SightWorld for Game<'_> {
     }
     fn show(&mut self, on: bool, x: i64, y: i64) {
         let (count, mesh) = if on {
-            (EE_UNITS_TILE_SIGHT_CELL_ON, EE_UNITS_TILE_SIGHT_REFERENCE)
+            (EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_TILE)
         } else {
-            (EE_UNITS_TILE_SIGHT_CELL_OFF, EE_UNITS_TILE_SIGHT_DEREFERENCE)
+            (EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE_OFF)
         };
         self.host(count, 0, 0, x, y);
         self.host(mesh, 0, 0, x, y);
@@ -120,25 +137,56 @@ fn with_game(world: u64, map: u64, f: impl FnOnce(&mut Game<'_>)) {
     f(&mut game);
 }
 
-/// `RTSTile::AddSight(player)` (`on` 1) / `RemoveSight(player)` of tile `tile`
+/// `RTSTile::AddSight(player)` (`on` 1) / `RemoveSight(player)` of tile `tile`, in the TSGT scope `scope`
+/// (`kSightTileAdd`, `kSightTileRemove`)
 #[no_mangle]
-pub extern "C" fn ee_units_tile_sight_tile(world: u64, on: u8, tile: u64, player: u64) {
+pub extern "C" fn ee_units_tile_sight_tile(world: u64, scope: u32, on: u8, tile: u64, player: u64) {
+    // SAFETY: the scope's records read the live player and tile
+    unsafe { ee_units_sight_scope_tile(scope, player as usize as *const c_void, tile as usize as *const c_void, -1, -1, 0) };
     with_game(world, 0, |g| tile_sight::tile_sight(g, on != 0, tile, player));
+    // SAFETY: the scope opened above
+    unsafe { ee_units_sight_scope_close() };
 }
 
 /// EEPlayer's `AddSharedSight(tile, x, y)` (`on` 1, `shared` 1), `RemoveSharedSight(tile)` (0, 1), `AddOwnSight`
-/// (1, 0), `RemoveOwnSight` (0, 0)
+/// (1, 0), `RemoveOwnSight` (0, 0), in the TSGT scope `scope` (a removal names no coordinates: -1 to the capture, 0
+/// to the body, as the original's calls)
 #[no_mangle]
-pub extern "C" fn ee_units_tile_sight_player(world: u64, on: u8, shared: u8, player: u64, tile: u64, x: i64, y: i64) {
+#[allow(clippy::too_many_arguments)] // the C++ signatures'
+pub extern "C" fn ee_units_tile_sight_player(
+    world: u64,
+    scope: u32,
+    on: u8,
+    shared: u8,
+    player: u64,
+    tile: u64,
+    x: i64,
+    y: i64,
+) {
+    // SAFETY: the scope's records read the live player and tile
+    unsafe {
+        ee_units_sight_scope_tile(
+            scope,
+            player as usize as *const c_void,
+            tile as usize as *const c_void,
+            x as c_long,
+            y as c_long,
+            0,
+        )
+    };
+    let (x, y) = if on != 0 { (x, y) } else { (0, 0) };
     with_game(world, 0, |g| tile_sight::player_sight(g, on != 0, shared != 0, player, tile, x, y));
+    // SAFETY: the scope opened above
+    unsafe { ee_units_sight_scope_close() };
 }
 
 /// `EEAddSightCircle` (kind 0) / `EERemoveSightCircle` (1) of (x0, y0); `EEAddSightRingStep` (2),
-/// `EERemoveSightRingStep` (3), `EEMoveSightCircle` (4) from (x0, y0) to (x1, y1)
+/// `EERemoveSightRingStep` (3), `EEMoveSightCircle` (4) from (x0, y0) to (x1, y1); in the TSGT scope `scope`
 #[no_mangle]
 #[allow(clippy::too_many_arguments)] // the C++ signatures'
 pub extern "C" fn ee_units_tile_sight_circle(
     world: u64,
+    scope: u32,
     kind: u32,
     x0: f32,
     y0: f32,
@@ -147,11 +195,15 @@ pub extern "C" fn ee_units_tile_sight_circle(
     radius: f32,
     player: u64,
 ) {
+    // SAFETY: the scope's records read the live player
+    unsafe { ee_units_sight_scope_circle(scope, player as usize as *const c_void, x0, y0, x1, y1, radius, 0) };
     with_game(world, 0, |g| match kind {
         0 | 1 => tile_sight::circle(g, kind == 0, x0, y0, radius, player),
         2 | 3 => tile_sight::ring_step(g, kind == 2, x0, y0, x1, y1, radius, player),
         _ => tile_sight::move_circle(g, x0, y0, x1, y1, radius, player),
     });
+    // SAFETY: the scope opened above
+    unsafe { ee_units_sight_scope_close() };
 }
 
 /// `RTSMap::FogSeen(player)` (kind 0), `ExploreUnseen(player)` (1), `EEMap::PrepareSave`'s visibility pass (2)

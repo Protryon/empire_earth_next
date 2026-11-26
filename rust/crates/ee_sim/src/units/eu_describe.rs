@@ -1,5 +1,5 @@
 //! `EEUnit::Describe` and `DescribeLong` (the units' lane, round 9; were EEUnit.cpp): the debug texts. Every C++
-//! statement of the originals is one operation of the unit's host ([`EumHost::eum`], `ee_units_eum_host`), in the
+//! statement of the originals is one operation of the unit's host ([`EumHost::eum`], `ee_units_eu_host`), in the
 //! original's order; the text is the host's (`theString`, a `UWideString` the statements fill and append to
 //! `text`).
 

@@ -1,6 +1,6 @@
 //! More of `EEUnit`'s bodies over its C++ statements (the units' lane, round 8; were EEUnit.cpp): `Remove`,
 //! `CopyFrom`, both `Init`s, `ResetEEUnit`, `LoadMedia`, `RegrowForest` and `EEComplexUnit::SetLastAttacker`. Every
-//! C++ statement of the originals is one operation of [`EumHost::eum`] (`ee_units_eum_host`, EEUnit.cpp; from 200),
+//! C++ statement of the originals is one operation of [`EumHost::eum`] (`ee_units_eu_host` since units round 14, EEUnit.cpp; from 200),
 //! asked in the original's order.
 //!
 //! Determinism: `CopyFrom`'s health fraction is the original's `float` expression and `UMFloatToLong` (`lrintf`);
@@ -368,9 +368,6 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-    extern "C" {
-        fn ee_units_eum_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64) -> i64;
-    }
 
     /// the game's host (eu_describe.rs's too)
     pub(crate) struct Game;
@@ -383,7 +380,8 @@ pub(crate) mod game {
                 if let Some(v) = crate::units::cu_view::eum_view(op, unit, a, b) {
                     return v;
                 }
-                ee_units_eum_host(op, unit as usize as *mut c_void, a, b, c)
+                // the unit host (EEUnit.cpp; units round 14: was ee_units_eum_host)
+                crate::units::eu_hit::game::ee_units_eu_host(op, unit as usize as *mut c_void, a, b, c)
             }
         }
     }

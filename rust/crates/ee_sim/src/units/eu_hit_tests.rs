@@ -44,7 +44,7 @@ fn alive() -> Mock {
     Mock::default()
         .answer(EE_UNITS_EU_COMPLEX, 0, 1)
         .answer(EE_UNITS_EU_HIT_POINTS, 0, 100)
-        .answer(EE_UNITS_EU_DAMAGE, 0, 8)
+        .answer(EE_UNITS_EU_APPLY_MORALE, 0, 8)
         .answer(EE_UNITS_EU_HIT_NEW_POINTS, 0, 92)
         .answer(EE_UNITS_EU_NUM_PLAYERS, 0, 4)
         .answer(EE_UNITS_EU_TILE_X, 0, 10)
