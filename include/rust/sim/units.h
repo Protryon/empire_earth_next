@@ -545,61 +545,61 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
 /// `mCommand ? mCommand->mType : 0`
-constexpr static const int32_t EE_UNITS_AI_H_COMMAND_TYPE = 4000;
+constexpr static const int32_t EE_UNITS_AI_H_COMMAND_TYPE = 14200;
 
 /// `mNextTriggerTime`
-constexpr static const int32_t EE_UNITS_AI_H_NEXT_TRIGGER_TIME = 4001;
+constexpr static const int32_t EE_UNITS_AI_H_NEXT_TRIGGER_TIME = 14201;
 
 /// `mGoalState ? mGoalState->mKind : -1`
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_KIND = 4002;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_KIND = 14202;
 
 /// `mCommand` as a handle (0: none)
-constexpr static const int32_t EE_UNITS_AI_H_COMMAND = 4003;
+constexpr static const int32_t EE_UNITS_AI_H_COMMAND = 14203;
 
 /// `mGoalState != NULL`
-constexpr static const int32_t EE_UNITS_AI_H_HAS_GOAL = 4004;
+constexpr static const int32_t EE_UNITS_AI_H_HAS_GOAL = 14204;
 
 /// `theAction = 0` (the gather test's local)
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION_RESET = 4005;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION_RESET = 14205;
 
 /// `mGoalState->IsActive(&theAction)`
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTIVE = 4006;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTIVE = 14206;
 
 /// `theAction`
-constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION = 4007;
+constexpr static const int32_t EE_UNITS_AI_H_GOAL_ACTION = 14207;
 
 /// `mUnitClass->EvaluateCondition(unit, b)`
-constexpr static const int32_t EE_UNITS_AI_H_CONDITION = 4008;
+constexpr static const int32_t EE_UNITS_AI_H_CONDITION = 14208;
 
 /// action `a`'s `mType`
-constexpr static const int32_t EE_UNITS_AI_H_ACTION_TYPE = 4009;
+constexpr static const int32_t EE_UNITS_AI_H_ACTION_TYPE = 14209;
 
 /// `StartAction(b)`
-constexpr static const int32_t EE_UNITS_AI_H_START_ACTION = 4010;
+constexpr static const int32_t EE_UNITS_AI_H_START_ACTION = 14210;
 
 /// `GetUnitClass()->ActionChanged(unit)`
-constexpr static const int32_t EE_UNITS_AI_H_ACTION_CHANGED = 4011;
+constexpr static const int32_t EE_UNITS_AI_H_ACTION_CHANGED = 14211;
 
 /// `DropFinishedGoals(false)`
-constexpr static const int32_t EE_UNITS_AI_H_DROP_FINISHED_GOALS = 4012;
+constexpr static const int32_t EE_UNITS_AI_H_DROP_FINISHED_GOALS = 14212;
 
 /// `UpdateCamouflage(b)`
-constexpr static const int32_t EE_UNITS_AI_H_UPDATE_CAMOUFLAGE = 4013;
+constexpr static const int32_t EE_UNITS_AI_H_UPDATE_CAMOUFLAGE = 14213;
 
 /// `mCommand = (EEUnitAction*)a`
-constexpr static const int32_t EE_UNITS_AI_H_SET_COMMAND = 4014;
+constexpr static const int32_t EE_UNITS_AI_H_SET_COMMAND = 14214;
 
 /// `mNextTriggerTime = b`
-constexpr static const int32_t EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME = 4015;
+constexpr static const int32_t EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME = 14215;
 
 /// `mUnitID`
-constexpr static const int32_t EE_UNITS_AI_H_UNIT_ID = 4016;
+constexpr static const int32_t EE_UNITS_AI_H_UNIT_ID = 14216;
 
 /// `mIsCitizen`
-constexpr static const int32_t EE_UNITS_AI_H_IS_CITIZEN = 4017;
+constexpr static const int32_t EE_UNITS_AI_H_IS_CITIZEN = 14217;
 
 /// `gPhysics->mGameTime`
-constexpr static const int32_t EE_UNITS_AI_H_GAME_TIME = 4018;
+constexpr static const int32_t EE_UNITS_AI_H_GAME_TIME = 14218;
 
 /// the unit's class's `mWeight`
 constexpr static const int32_t EE_UNITS_ATC_WEIGHT = 1;
@@ -9849,31 +9849,31 @@ constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
 constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 
 /// `theName.Copy(the name's `b` bytes at `a`)` (the read's locals are the host's)
-constexpr static const int32_t EE_UNITS_SCRIPT_H_NAME = 4000;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_NAME = 14100;
 
 /// `gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile = NULL)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_FIND = 4001;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_FIND = 14101;
 
 /// `theFile != NULL`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_HAS_FILE = 4002;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_HAS_FILE = 14102;
 
 /// `theFile->Open(kFileAccessRead)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_OPEN = 4003;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_OPEN = 14103;
 
 /// `theFile->GetLength(theLength = 0)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_GET_LENGTH = 4004;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_GET_LENGTH = 14104;
 
 /// `theLength`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_LENGTH = 4005;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_LENGTH = 14105;
 
 /// `theFile->Read((char*)a, b, theCount = 0)`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_READ = 4006;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_READ = 14106;
 
 /// `theFile->Close()`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_CLOSE = 4007;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_CLOSE = 14107;
 
 /// `delete theFile`
-constexpr static const int32_t EE_UNITS_SCRIPT_H_DELETE = 4008;
+constexpr static const int32_t EE_UNITS_SCRIPT_H_DELETE = 14108;
 
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
@@ -18211,8 +18211,6 @@ uint8_t ee_units_ag_reserved(uint64_t group, const float (*point)[3], uint8_t wh
 /// records while it runs, and alone.
 void ee_units_ag_sweep();
 
-extern int64_t ee_units_ai_host(int32_t op, void *unit, uint64_t a, int64_t b);
-
 /// `EEComplexUnit::AIStep()` on `unit` (see [`ai_step_noted`]).
 ///
 /// # Safety
@@ -21068,8 +21066,6 @@ int32_t ee_units_script_action_id(const char *name);
 
 /// The NUL-terminated name of an action id ("" unknown), static.
 const char *ee_units_script_action_name(uint32_t id);
-
-extern int64_t ee_units_script_host(int32_t op, uint64_t a, int64_t b);
 
 /// `EEUnitAction::GetScript(name)`: the script's handle (its file read through the data path).
 ///

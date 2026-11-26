@@ -1012,7 +1012,7 @@ pub extern "C" fn ee_units_cls_landing_condition(class: u64, unit: u64, event: u
 use crate::units::cls_condition::{self as cond, Answer, CombatKind, CondHost, EeUnitsCondIo};
 
 extern "C" {
-    fn ee_units_cls_cond_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsCondIo) -> i64;
+    pub(crate) fn ee_units_cls_cond_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsCondIo) -> i64;
 }
 
 /// The trigger host's plain reads of the unit `a` over the world views (the units' behaviour lane, round 2; they

@@ -28,10 +28,15 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECombatGoals.h"
 #include "lle/GEModel.h"
+#include "lle/FSArchive.h"
+#include "lle/FSPath.h"
+
+#include <string>
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
 extern long gUnitAIWaitScale;
+extern FSPath* gDataPath;
 
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (EEUCLandable.cpp; provisional name)
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRange);
@@ -58,6 +63,9 @@ static GETransformation sCondSunkTransformation(false);
 static GEBoundingBox sCondSunkBox;
 
 static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint) { memcpy(ioIo->p, &inPoint.mX, sizeof(ioIo->p)); }  // (a GE3DPoint is its three floats)
+
+// the script file read's name (ee_units script.rs; its file spec, length and count are the Rust body's)
+static UString sScriptName;
 
 extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsCondIo* ioIo)
 {
@@ -133,6 +141,21 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_UAI_FIND_PASSENGER: return EEObj(theUnit->FindPassenger((unsigned long)inC));
     case EE_UNITS_UAI_WORLD_UNIT: return EEObj(::gWorld.GetUnit((unsigned long)inC));
     case EE_UNITS_UAI_REMOVE_PLANE: ee_units_atc_remove_plane(CondTraffic(theUnit), theUnit, CondUnit(inB)); return 0;
+    // ---- EEComplexUnit::AIStep's calls (ee_units ai.rs; inA the unit; units round 14: EEUnitAction.cpp is gone)
+    case EE_UNITS_AI_H_GOAL_ACTIVE: return theUnit->mGoalState->IsActive((unsigned long*)(uintptr_t)inB);
+    case EE_UNITS_AI_H_CONDITION: return theUnit->mUnitClass->EvaluateCondition(theUnit, (long)inC);
+    case EE_UNITS_AI_H_START_ACTION: theUnit->StartAction((long)inC); return 0;
+    case EE_UNITS_AI_H_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
+    case EE_UNITS_AI_H_DROP_FINISHED_GOALS: theUnit->DropFinishedGoals(false); return 0;
+    case EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: theUnit->UpdateCamouflage((long)inC); return 0;
+    // ---- the unit AI script file's read (ee_units script.rs OpSource; inA the file spec, or the name and inB its length)
+    case EE_UNITS_SCRIPT_H_NAME: sScriptName.Copy((const char*)std::string((const char*)(uintptr_t)inA, (size_t)inB).c_str(), 0, (unsigned long)inB, 0, true); return 0;
+    case EE_UNITS_SCRIPT_H_FIND: return gDataPath->FindFile("Unit AI Scripts\\" + sScriptName + ".tai", *(FSFileSpec**)(uintptr_t)inA);
+    case EE_UNITS_SCRIPT_H_OPEN: return ((FSFileSpec*)(uintptr_t)inA)->Open(kFileAccessRead);
+    case EE_UNITS_SCRIPT_H_GET_LENGTH: ((FSFileSpec*)(uintptr_t)inA)->GetLength(*(unsigned long*)(uintptr_t)inB); return 0;
+    case EE_UNITS_SCRIPT_H_READ: ((FSFileSpec*)(uintptr_t)inA)->Read((char*)(uintptr_t)inB, (unsigned long)inC, *(unsigned long*)(uintptr_t)inD); return 0;
+    case EE_UNITS_SCRIPT_H_CLOSE: ((FSFileSpec*)(uintptr_t)inA)->Close(); return 0;
+    case EE_UNITS_SCRIPT_H_DELETE: delete (FSFileSpec*)(uintptr_t)inA; return 0;
     }
     return 0;
 }

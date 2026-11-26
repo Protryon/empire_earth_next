@@ -1,6 +1,6 @@
 //! A unit's AI step (RUST_PLAN R5b.4 leaf 6, "the updated plan" 2): `EEComplexUnit::AIStep` (0x5ff2e8) and the unit
 //! AI script's decision (`EEUnitAction::Evaluate` 0x62cd8b, `EEUnitTrigger::Evaluate` 0x62b9a0) over the unit store
-//! and the C++ statements of the calls they make (`ee_units_ai_host`, EEUnitAction.cpp).
+//! and the C++ statements of the calls they make (`ee_units_cls_cond_host`'s, EEUnitAI.cpp).
 //!
 //! The script (`Unit AI Scripts\*.tai`) is script.rs's (the twentieth round): an action is a handle, its triggers
 //! are read one at a time as plain views (`EeUnitsTrigger`: the conditions, all of or any of, the true and false
@@ -70,50 +70,50 @@ impl EeUnitsAIState {
     }
 }
 
-/// The C++ statements of `AIStep`'s calls (`ee_units_ai_host`, EEUnitAction.cpp: one statement a case; `a` an
+/// The C++ statements of `AIStep`'s calls (`ee_units_cls_cond_host`'s, EEUnitAI.cpp: one statement a case; `a` an
 /// object, `b` a value), the round 9 replacement of the host table: the operations below.
 pub trait AIOps {
     fn ai(&mut self, op: i32, a: u64, b: i64) -> i64;
 }
 
 /// `mCommand ? mCommand->mType : 0`
-pub const EE_UNITS_AI_H_COMMAND_TYPE: i32 = 4000;
+pub const EE_UNITS_AI_H_COMMAND_TYPE: i32 = 14200;
 /// `mNextTriggerTime`
-pub const EE_UNITS_AI_H_NEXT_TRIGGER_TIME: i32 = 4001;
+pub const EE_UNITS_AI_H_NEXT_TRIGGER_TIME: i32 = 14201;
 /// `mGoalState ? mGoalState->mKind : -1`
-pub const EE_UNITS_AI_H_GOAL_KIND: i32 = 4002;
+pub const EE_UNITS_AI_H_GOAL_KIND: i32 = 14202;
 /// `mCommand` as a handle (0: none)
-pub const EE_UNITS_AI_H_COMMAND: i32 = 4003;
+pub const EE_UNITS_AI_H_COMMAND: i32 = 14203;
 /// `mGoalState != NULL`
-pub const EE_UNITS_AI_H_HAS_GOAL: i32 = 4004;
+pub const EE_UNITS_AI_H_HAS_GOAL: i32 = 14204;
 /// `theAction = 0` (the gather test's local)
-pub const EE_UNITS_AI_H_GOAL_ACTION_RESET: i32 = 4005;
+pub const EE_UNITS_AI_H_GOAL_ACTION_RESET: i32 = 14205;
 /// `mGoalState->IsActive(&theAction)`
-pub const EE_UNITS_AI_H_GOAL_ACTIVE: i32 = 4006;
+pub const EE_UNITS_AI_H_GOAL_ACTIVE: i32 = 14206;
 /// `theAction`
-pub const EE_UNITS_AI_H_GOAL_ACTION: i32 = 4007;
+pub const EE_UNITS_AI_H_GOAL_ACTION: i32 = 14207;
 /// `mUnitClass->EvaluateCondition(unit, b)`
-pub const EE_UNITS_AI_H_CONDITION: i32 = 4008;
+pub const EE_UNITS_AI_H_CONDITION: i32 = 14208;
 /// action `a`'s `mType`
-pub const EE_UNITS_AI_H_ACTION_TYPE: i32 = 4009;
+pub const EE_UNITS_AI_H_ACTION_TYPE: i32 = 14209;
 /// `StartAction(b)`
-pub const EE_UNITS_AI_H_START_ACTION: i32 = 4010;
+pub const EE_UNITS_AI_H_START_ACTION: i32 = 14210;
 /// `GetUnitClass()->ActionChanged(unit)`
-pub const EE_UNITS_AI_H_ACTION_CHANGED: i32 = 4011;
+pub const EE_UNITS_AI_H_ACTION_CHANGED: i32 = 14211;
 /// `DropFinishedGoals(false)`
-pub const EE_UNITS_AI_H_DROP_FINISHED_GOALS: i32 = 4012;
+pub const EE_UNITS_AI_H_DROP_FINISHED_GOALS: i32 = 14212;
 /// `UpdateCamouflage(b)`
-pub const EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: i32 = 4013;
+pub const EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: i32 = 14213;
 /// `mCommand = (EEUnitAction*)a`
-pub const EE_UNITS_AI_H_SET_COMMAND: i32 = 4014;
+pub const EE_UNITS_AI_H_SET_COMMAND: i32 = 14214;
 /// `mNextTriggerTime = b`
-pub const EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME: i32 = 4015;
+pub const EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME: i32 = 14215;
 /// `mUnitID`
-pub const EE_UNITS_AI_H_UNIT_ID: i32 = 4016;
+pub const EE_UNITS_AI_H_UNIT_ID: i32 = 14216;
 /// `mIsCitizen`
-pub const EE_UNITS_AI_H_IS_CITIZEN: i32 = 4017;
+pub const EE_UNITS_AI_H_IS_CITIZEN: i32 = 14217;
 /// `gPhysics->mGameTime`
-pub const EE_UNITS_AI_H_GAME_TIME: i32 = 4018;
+pub const EE_UNITS_AI_H_GAME_TIME: i32 = 14218;
 
 /// `kUnitStateAIStep`, `kUnitStateCondition` (ee/EEUnitStore.h: the USST kinds)
 const STATE_AI_STEP: u32 = 1;
@@ -366,21 +366,34 @@ mod game {
     use super::*;
     use std::ffi::c_void;
 
-    extern "C" {
-        fn ee_units_ai_host(op: i32, unit: *mut c_void, a: u64, b: i64) -> i64;
-    }
+    use crate::units::cls_host::ee_units_cls_cond_host;
 
-    struct Game(*mut c_void);
+    /// The unit stepped and `IsActive`'s action (the gather test's local; units round 14: was EEUnitAction.cpp's
+    /// static)
+    struct Game(*mut c_void, std::os::raw::c_ulong);
 
     impl AIOps for Game {
         fn ai(&mut self, op: i32, a: u64, b: i64) -> i64 {
+            let unit = self.0 as usize as u64;
             // SAFETY: the unit stepped, live for the step (its C++ AIStep's; the plain record reads and stores
-            // first: cu_view.rs)
+            // first: cu_view.rs; the calls are the trigger host's, EEUnitAI.cpp)
             unsafe {
-                if let Some(v) = crate::units::cu_view::ai_view(op, self.0 as usize as u64, a, b) {
+                match op {
+                    EE_UNITS_AI_H_GOAL_ACTION_RESET => {
+                        self.1 = 0;
+                        return 0;
+                    }
+                    EE_UNITS_AI_H_GOAL_ACTION => return self.1 as i64,
+                    EE_UNITS_AI_H_GOAL_ACTIVE => {
+                        let action = &mut self.1 as *mut std::os::raw::c_ulong as usize as u64;
+                        return ee_units_cls_cond_host(op, unit, action, 0, 0, std::ptr::null_mut());
+                    }
+                    _ => {}
+                }
+                if let Some(v) = crate::units::cu_view::ai_view(op, unit, a, b) {
                     return v;
                 }
-                ee_units_ai_host(op, self.0, a, b)
+                ee_units_cls_cond_host(op, unit, a, b, 0, std::ptr::null_mut())
             }
         }
     }
@@ -391,7 +404,7 @@ mod game {
     /// `unit` is a live `EEComplexUnit`, on the simulation thread.
     #[no_mangle]
     pub unsafe extern "C" fn ee_units_cu_ai_step(unit: *mut c_void) {
-        ai_step_noted(&mut Game(unit), unit as usize as u64);
+        ai_step_noted(&mut Game(unit, 0), unit as usize as u64);
     }
 }
 

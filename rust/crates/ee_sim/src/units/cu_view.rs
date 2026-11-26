@@ -1501,7 +1501,7 @@ unsafe fn current_player() -> Option<u64> {
     }
 }
 
-/// The answer of `ee_units_ai_host`'s statement `op` (EEUnitAction.cpp; ai.rs's statements) when it is a plain
+/// The answer of the AI step's statement `op` (ai.rs's statements; the calls: EEUnitAI.cpp) when it is a plain
 /// record read or store (None: the game's host answers it).
 ///
 /// # Safety
