@@ -510,7 +510,7 @@ void LobbyInstallEventHooks()
     if(gLobbyData.get()==NULL)
         return;
     LobbyAddLogicListener(gLobbyData->mLobbyContainer.get());
-    gLobbyData->mTimerEvent=new UserEvent(LobbyTimerCallback,0);
+    gLobbyData->mTimerEvent=NewUserEvent(LobbyTimerCallback,0);
     WONAPI::WindowManager::GetDefaultWindowManager()->AddTimerEvent(gLobbyData->mTimerEvent.get());
 }
 

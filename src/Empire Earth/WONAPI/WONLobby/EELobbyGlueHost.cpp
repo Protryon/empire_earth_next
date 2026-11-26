@@ -476,7 +476,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
     case Op::PostSendConnectStatus:
-        reinterpret_cast<WindowManager*>(a)->PostEvent(new UserEvent(EELobbySendConnectStatus, (int)b), true);
+        reinterpret_cast<WindowManager*>(a)->PostEvent(NewUserEvent(EELobbySendConnectStatus, (int)b), true);
         return 0;
     case Op::SaveOpen: return aSave->mSpec.Open(1) == keseOK ? 1 : 0;
     case Op::SaveClose: aSave->mSpec.Close(); return 0;

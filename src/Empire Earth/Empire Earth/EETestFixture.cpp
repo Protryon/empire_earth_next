@@ -226,7 +226,7 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxLobbyOpen: return EEIsLobbyOpen() ? 1 : 0;
     case EeFixtureOp::FxLobbyManager: return Handle(WONAPI::GetLobbyWindow());
     case EeFixtureOp::FxLobbyRootWindow: return Handle(WONAPI::LobbyGetRootWindow());
-    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(ee_fixture_lobby_work, 0));
+    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(WONAPI::NewUserEvent(ee_fixture_lobby_work, 0));
         return 0;
     case EeFixtureOp::FxWindowRoot: return Handle(As<WONAPI::Window>(c->h)->mRoot.get());
     case EeFixtureOp::FxManagerModal: return Handle(As<WONAPI::WindowManager>(c->h)->GetModalComponent());

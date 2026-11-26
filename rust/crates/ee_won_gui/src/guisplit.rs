@@ -463,6 +463,8 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
                 x if x == C::HandleInputEvent as u32 => handle(window, C::HandleInputEvent, b),
                 crate::wmobj::EE_WON_WM_HANDLER_COMPONENT => crate::gamewin::deliver_component_event(b),
                 crate::wmobj::EE_WON_WM_HANDLER_POPUP => crate::gamewin::deliver_popup(b),
+                // SAFETY: a user event's handler is only in a user event's record (wmobj.rs)
+                crate::wmobj::EE_WON_WM_HANDLER_USER => unsafe { crate::wmobj::deliver_user(b) },
                 _ => None,
             };
             // (a Rust-made event, only the game's, has no C++ Deliver: one whose window went is dropped)
