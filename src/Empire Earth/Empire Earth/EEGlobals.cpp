@@ -2,7 +2,7 @@
 // (gNumPlayers is gWorld.mNumPlayers, ...; it addressed them as globals). The objects' storage, the other
 // references and the save version are Rust's (ee_game gamecpp global_objects.rs: there the offsets come from
 // #[repr(C)] mirrors; these members' LP64 offsets depend on the standard library's containers, so C++ computes them);
-// the plain pointers and scalars and the game's two UI tables gEEGameUI and gEEWonNetUI too (globals.rs). No function and no constructor is named here,
+// the plain pointers and scalars and the game's UI table gEEGameUI too (globals.rs). No function and no constructor is named here,
 // so the unit depends on no other: 197 units named Empire Earth.cpp only for these globals, and that put them all in
 // one dependency cycle (tools/cpp_deps.py).
 #include <windows.h>
@@ -10,10 +10,8 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEGameState.h"
 
 long& gNumPlayers = reinterpret_cast<long&>(gWorld.mNumPlayers);   // +0xcc

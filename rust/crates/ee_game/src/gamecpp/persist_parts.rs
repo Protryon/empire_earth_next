@@ -17,11 +17,15 @@ use ee_base::error::checksum::{
     ee_error_checksum_set_verbose, ee_error_checksum_verbose, EeErrorChecksum,
 };
 use ee_sim::tech::calamity_record::EeCalamityFields;
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_ALLIES};
 use ee_sim::world::player_fields::EeUnitsPlayerSaved;
 use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
 
 use super::persistent::{Pf, PF_FAILED, PF_OK};
 use super::{h, hp, pa, rec, Owned, O, P};
+use crate::physics;
+use ee_net::net::ffi_comms::EeNetCommsField;
+use ee_net::net::ffi_server::{EeNetSvGet, EeNetSvSet};
 
 /// `EEPPlayerHelper`'s members from `mLocalPlayerIndex` (+0x18) to `mLoaded` (+0x21).
 #[repr(C)]
@@ -44,6 +48,11 @@ const PP_NOT_LOADED: i64 = 13;
 fn fields<'a>(helper: P) -> &'a mut EePPlayerHelperFields {
     // SAFETY: the helper's plain members, used before the next C++ call that changes them
     unsafe { &mut *rec(O::PphFields, helper) }
+}
+
+/// `gPhysics`.
+fn physics() -> *mut c_void {
+    super::globals::get!(gPhysics).cast()
 }
 
 fn ver(major: c_ulong, minor: c_ulong) -> [i64; 2] {
@@ -188,7 +197,7 @@ pub extern "C" fn ee_gamecpp_pph_load(
                 && h(O::PphIsAllied, pj, &[pa(pi)]) != 0
                 && unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pj)).mSharedLOS }
             {
-                h(O::PphAddAlly, pj, &[pa(pi)]);
+                player_op(pj as u64, EE_UNITS_LISTS_ALLIES, ListOp::Add(pi as u64));
             }
         }
     }
@@ -567,18 +576,21 @@ pub extern "C" fn ee_gamecpp_pmh_load(major: c_ulong, minor: c_ulong, file: *mut
     let file = Pf(file as P);
     // the message number, the client's CT and PT, the communications' CT and last tick, the server's last CT, CT, PT
     let mut v: [c_ulong; 8] = [0; 8];
-    let mut r = h(O::PmPhysicsLoad, file.0, &ver(major, minor));
+    // SAFETY: the game's physics and the live file (EEPhysics::Load)
+    let mut r =
+        unsafe { physics::ee_physics_load(physics(), file.0 as *mut c_void, major as u32, minor as u32) } as i64;
     for x in v.iter_mut() {
         if r != PF_OK {
             break;
         }
         r = file.read_ulong(x);
     }
-    if r == PF_OK && h(O::PsCommPresent, 0, &[]) != 0 {
-        if h(O::CommIsServer, 0, &[]) != 0 {
-            h(O::PmServerSetPhysicsTick, 0, &[&mut v[7] as *mut c_ulong as usize as i64]);
+    if r == PF_OK && super::net::present() {
+        let comms = super::net::global();
+        if !comms.server.is_null() {
+            comms.sv_set(EeNetSvSet::CurrentPhysicsTick, v[7] as u32);
         } else {
-            h(O::PmClientSetPhysicsTick, 0, &[&mut v[2] as *mut c_ulong as usize as i64]);
+            ee_net::net::ffi_client::ee_net_cl_set_current_physics_tick(comms.client, v[2] as u32);
         }
     }
     r as c_long
@@ -593,18 +605,22 @@ pub extern "C" fn ee_gamecpp_pmh_save(major: c_ulong, minor: c_ulong, file: *mut
         return PF_OK as c_long;
     }
     let mut v: [c_ulong; 8] = [0; 8];
-    v[3] = h(O::PmCommCtsProcessed, 0, &[]) as c_ulong;
-    v[4] = h(O::PmCommLastTick, 0, &[]) as c_ulong;
-    if h(O::CommIsServer, 0, &[]) != 0 {
-        v[5] = h(O::PmServerLastCt, 0, &[]) as c_ulong;
-        v[6] = h(O::PmServerCt, 0, &[]) as c_ulong;
-        v[7] = h(O::PmServerPt, 0, &[]) as c_ulong;
-        v[0] = h(O::PmServerMessageNumber, 0, &[]) as c_ulong;
+    let comms = super::net::global();
+    v[3] = comms.get(EeNetCommsField::CtsProcessed) as c_ulong;
+    // GetLastTickReceived: the field's `long` (-2 before the connection, -1 none) as an unsigned long
+    v[4] = comms.get(EeNetCommsField::LastTickReceived) as i32 as c_long as c_ulong;
+    if !comms.server.is_null() {
+        v[5] = comms.sv_get(EeNetSvGet::LastCtMessageId) as c_ulong;
+        v[6] = comms.current_ct() as c_ulong;
+        v[7] = comms.sv_get(EeNetSvGet::CurrentPhysicsTick) as c_ulong;
+        v[0] = ee_net::net::ffi_server::ee_net_sv_message_manager_current_number(comms.server) as c_ulong;
     } else {
-        v[1] = h(O::PmClientCt, 0, &[]) as c_ulong;
-        v[2] = h(O::PmClientPt, 0, &[]) as c_ulong;
+        v[1] = comms.current_ct() as c_ulong;
+        v[2] = ee_net::net::ffi_client::ee_net_cl_current_physics_tick(comms.client) as c_ulong;
     }
-    let mut r = h(O::PmPhysicsSave, file.0, &ver(major, minor));
+    // SAFETY: as Load's (EEPhysics::Save)
+    let mut r =
+        unsafe { physics::ee_physics_save(physics(), file.0 as *mut c_void, major as u32, minor as u32) } as i64;
     for &x in v.iter() {
         if r != PF_OK {
             return r as c_long;
@@ -662,7 +678,7 @@ pub extern "C" fn ee_gamecpp_pch_repair(helper: *mut c_void) -> c_long {
         }
         let caster_id = cal(calamity).mOriginatingUnitID;
         let caster = hp(O::WorldUnit, 0, &[caster_id as i64]);
-        h(O::PchSetCaster, calamity, &[pa(caster)]);
+        super::calamity_objects::ee_gamecpp_calamity_set_unit(calamity as *mut c_void, caster as *mut c_void, false);
         if caster == 0 {
             if caster_id as u32 == u32::MAX {
                 h(O::KlLoadMedia, class, &[pa(hp(O::WorldPlayer, 0, &[0])), 0]);

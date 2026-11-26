@@ -180,7 +180,11 @@ pub extern "C" fn ee_gamecpp_pwh_load(
         // SAFETY: the context lives for the call; the host answers its operations
         unsafe { ee_units_world_load_live(&mut ctx as *mut PwCtx as *mut c_void, ee_gamecpp_pworld_host) };
     }
-    h(O::PwChatLogLoad, file.0, &[major as i64, minor as i64]);
+    // SAFETY: the live file (the chat log's; the tests have no screens)
+    #[cfg(not(test))]
+    unsafe {
+        crate::screens::chat_log_ffi::ee_screens_chat_log_load(file.0 as *mut c_void)
+    };
     h(O::PwMainFormLoad, file.0, &[major as i64, minor as i64]) as c_long
 }
 
@@ -215,7 +219,11 @@ pub extern "C" fn ee_gamecpp_pwh_save(
         // SAFETY: as Load's
         unsafe { ee_units_world_save_live(&mut ctx as *mut PwCtx as *mut c_void, ee_gamecpp_pworld_host) };
     }
-    h(O::PwChatLogSave, file.0, &[major as i64, minor as i64]);
+    // SAFETY: the live file (the chat log's; the tests have no screens)
+    #[cfg(not(test))]
+    unsafe {
+        crate::screens::chat_log_ffi::ee_screens_chat_log_save(file.0 as *mut c_void)
+    };
     h(O::PwMainFormSave, file.0, &[major as i64, minor as i64]) as c_long
 }
 

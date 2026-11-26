@@ -321,3 +321,13 @@ fn an_editor_script_runs_line_by_line() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_world_constants_are_the_generated_headers() {
+    use super::sim_host::*;
+    use ee_data::world_constants::EEWorldConstant as W;
+    assert_eq!(W::kWorldConversionFaithCost as u32, WORLD_CONVERSION_FAITH_COST);
+    assert_eq!(W::kWorldWonderSightRadius as u32, WORLD_WONDER_SIGHT_RADIUS);
+    assert_eq!(W::kWorldTradeRateStoneIron as u32, WORLD_TRADE_RATE_STONE_IRON);
+    assert_eq!(W::kWorldTradeRateFoodWood as u32, WORLD_TRADE_RATE_FOOD_WOOD);
+}

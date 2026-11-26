@@ -114,6 +114,8 @@ private:
 class RefCount {
 public:
     RefCount() : mRefCount(0) {}
+    RefCount(const RefCount&) = delete; // no counted object is copied (each subclass said so itself before R6 WON round 37)
+    RefCount& operator=(const RefCount&) = delete;
     virtual ~RefCount() {}
     void AddRef() { PlatAtomicIncrement(&mRefCount); }
     const RefCount* CreateRef() const { PlatAtomicIncrement(&mRefCount); return this; } //actual SDK const retain API, same native+4
@@ -308,17 +310,17 @@ struct EeWonNet; // rust/won_lobby/wonnet.h
 // flags of the original's +0x004..+0x189 are wonnet.rs's EeWonNetObjects, read by the host through
 // ee_won_wonnet_objects); this class forwards every method (EEWonNet.cpp). Dead in AoC: gWonNet is never created
 // (the base game's 0x4c55df).
+// R6 WON lobby and network round 37: the screens' calls (ConnectToLobby 0xcd7d2, HostGame 0xce9e1, JoinGame,
+// JoinRoom, RefreshGameList 0xcfc91, UpdateGameList 0xcfa56, UpdateAccount 0xd0001, OpenUpdateAccount, SendChat,
+// UpdateRoomList 0xd1104, the game list's port and the room list's changed flag) are EeWonNetCalls the front end's
+// host makes on the Rust object (ee/EEWonFrontHost.inl), and so are the base game's Initialize 0x4c9e16,
+// GetTitanServerList 0x4c9883 and Login 0x4c91a3; the forwards left are the other units' calls.
 class EEWonNet {
 public:
-    void ConnectToLobby();                 // 0xcd7d2 (the room screen's open; provisional name)
     void FnCFFDD(long inArg);               // 0xcffdd (window message 0x433; provisional name)
     void FnCFFF2();                         // 0xcfff2 (window message 0x434; provisional name)
     // 0xcdd5e: connects to the server the server list's Ok picked
     void SelectServer(const std::wstring& inName, WONAPI::IPAddr inAddress);
-    // 0xce9e1: hosts a game; stores inName in gHostedGameName (0x530790)
-    void HostGame(const char* inName, const char* inPassword);
-    void JoinGame(const char* inName, const char* inPassword);
-    void JoinRoom(const char* inRoom, const char* inPassword);
     void LeaveRoom();                       // 0xcffd8 (jmp 0xcf99b; the game room's Back)
     // (the lobby's Start/Cancel; provisional names, by address)
     void GetGameInfo(EEWonNetGameInfo& outInfo);
@@ -326,17 +328,6 @@ public:
     void ClearGameList();
     bool RejoinRoom(bool inFlag);
     void PlayerJoined();                                // 0xe123d (an empty body, ICF-folded; EEClient 0xb80ef)
-    void RefreshGameList(UIControl* inGamesBox);   // 0xcfc91 (once per request: +0x18b; needs the routing server +0x0c)
-    void UpdateGameList();                  // 0xcfa56 (refills the games box of form 0x20)
-    // 0xd0001: changes the account's password (the update-account form's Submit)
-    void UpdateAccount(const UWideString& inName, const UWideString& inPassword, bool inFlag);
-    void OpenUpdateAccount();
-    void SendChat(const UWideString& inText);
-    // 0xd1104: refills the room list form's rooms box and its two labels (controls 6, 16, 14)
-    void UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel16, UITextLabel* inLabel14);
-    // the data the screens read (the original's members)
-    unsigned short GetGameListPort();       // +0x180 (0xffff: no game list to refresh)
-    bool GetRoomListChanged();              // +0x18c (the room list form refreshes at once when set)
     bool GetIsBehindFirewall();             // +0x186 (EEAJoinOrHostAGame: the connection request's firewall flag)
     std::wstring GetRoomName();             // +0x074 (the game room screen shows it)
 
@@ -344,10 +335,6 @@ public:
     EEWonNet();
     // the main screen deletes gWonNet through vtable slot 0 (0x1e212d): a virtual dtor, no RTTI
     virtual ~EEWonNet();
-    //: dead in AoC (names PROVISIONAL, from the base game)
-    bool Initialize();                      // base 0x4c9e16 (reads SierraCom.cfg into the directory servers)
-    void GetTitanServerList();              // base 0x4c9883
-    void Login(const char* inName, const char* inPassword);       // base 0x4c91a3
 
     EeWonNet* mRust;                        // the front end and its C++ objects (owned)
 };

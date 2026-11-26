@@ -10,7 +10,6 @@
 // ee_screenscpp_sefmx).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
@@ -22,41 +21,29 @@
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/Input System.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
 #include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESMEffect.h"
-#include "lle/USingleton.h"
-#include "ee/EEMedia.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMouse.h"
-#include "ee/EEGraphics.h"
-#include "ee/EEARust.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESMArea.h"
 #include "ee/EEUnit.h"
 #include "ee/EESMObject.h"
-#include "ee/EEMessage.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EESMCondition.h"
@@ -73,17 +60,8 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
-#include "ee/EEUIFSETerrain.h"
-#include "rust/game/screens.h"
 #include "ee/EEUIShell.h"
-#include "rust/sim/scenario.h"
 extern bool gSightUpdatesEnabled;
-
-// TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
-long EESETestSaveTriggersOnly(UIForm* inForm)
-{
-    return ee_screens_sefm_call(static_cast<EEUIFScenarioEditor*>(inForm)->mRust, EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, NULL, NULL);
-}
 
 // Creates the editor form (id 1000, 15 control groups): button texture, edge scroll, mini map, player combo box,
 // labels, tab groups, tool bar, hide-UI check box, camera and trigger save/load and debug hot keys; map tab on

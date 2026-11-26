@@ -7,21 +7,13 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEUnitKind.h"
 
 // port (the units' state lane, round 1): the class is Rust's whole (ee_units atc.rs: the bodies over this host;
 // atc_save.rs: Load and Save; atc_views.rs: the units' plain reads in place). The host is the units' world calls; the

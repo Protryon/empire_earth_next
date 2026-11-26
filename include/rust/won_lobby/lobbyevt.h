@@ -54,6 +54,10 @@ enum class EeWonLobbyEvtKind : uint32_t {
   SetCrossPromotion = 40,
   UpdateAccount = 41,
   QueryServerGroups = 42,
+  /// The EE game's slot changed (`EELobbySyncPlayerEvent`, R6 WON lobby and network round 37: its slot in `Value`).
+  EELobbySyncPlayer = 43,
+  /// The EE game's option changed (`EELobbySyncOptionEvent`: its option in `Value`).
+  EELobbySyncOption = 44,
 };
 
 /// What the event's host does to a referenced object (`RefCount`).

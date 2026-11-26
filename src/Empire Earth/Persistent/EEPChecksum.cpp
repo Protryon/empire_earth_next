@@ -9,7 +9,6 @@
 
 #include "ee/EEPChecksum.h"
 #include "ee/EEPersistentTag.h"
-#include "rust/base/error.h"
 #include "rust/game/gamecpp.h"
 
 

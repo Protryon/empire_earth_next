@@ -235,10 +235,15 @@ pub(crate) fn op<C: Cpp + ?Sized>(
             c.cbh_quote(EeScreensShimText::of(text), EeScreensShimOut::of(&mut out.text));
             0
         }
-        EE_SCREENS_CBW_C_BASE_COST => c.cbh_civ_base_cost(p, a as u32) as i64,
-        EE_SCREENS_CBW_C_EXTRA_COST => c.cbh_civ_extra_cost(p, a as u32) as i64,
-        EE_SCREENS_CBW_C_COMPUTE => c.cbh_civ_compute(p, a as i32, b as i32, cc as i32) as i64,
-        EE_SCREENS_CBW_C_COUNT => c.cbh_civ_count(p, a as u32) as i64,
+        // the civilization's cost members (ee/EECivilization.h: the manager's tables, its purchased upgrades)
+        EE_SCREENS_CBW_C_BASE_COST => ee_sim::tech::civilization::ee_tech_civ_base_cost(a as u32) as i32 as i64,
+        EE_SCREENS_CBW_C_EXTRA_COST => civ::ee_tech_civ_extra_cost(a as u32) as i64,
+        EE_SCREENS_CBW_C_COMPUTE => (a as i32).wrapping_add((b as i32).wrapping_mul(cc as i32)) as i64,
+        EE_SCREENS_CBW_C_COUNT => {
+            let list: Vec<u32> = (0..c.cbh_civ_purchased_count(p)).map(|i| c.cbh_civ_purchased(p, i)).collect();
+            // SAFETY: the copied list
+            unsafe { civ::ee_tech_civ_count_in_category(a as u32, list.as_ptr(), list.len()) as i64 }
+        }
         EE_SCREENS_CBW_C_AVAILABLE => c.cbh_civ_available(p) as i64,
         EE_SCREENS_CBW_C_UNCHANGED => c.cbh_civ_unchanged(p) as i64,
         EE_SCREENS_CBW_C_MAX => c.cbh_civ_max(p) as i64,

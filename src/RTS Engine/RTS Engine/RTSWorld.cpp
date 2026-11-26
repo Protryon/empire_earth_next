@@ -7,14 +7,12 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSUnit.h"
-#include "rust/game/rts.h"
 
 // Sets the camera, deriving its view line, yaw and pitch, and reports the change
 void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
@@ -55,10 +53,6 @@ void ee_rtswcpp_map_checksum(EEMap* inMap, ESChecksum* ioChecksum) { static_cast
 void ee_rtswcpp_checksum_add_world(ESChecksum* ioChecksum, unsigned long inPlayers) { ioChecksum->AddChecksum("RTSWorld", inPlayers); }
 void ee_rtswcpp_update_population_limit(RTSWorld* inWorld, bool inRecount) { inWorld->UpdatePlayerPopulationLimit(inRecount); }
 void ee_rtswcpp_place_queued_units(RTSWorld* inWorld) { inWorld->PlaceQueuedUnits(); }
-size_t ee_rtswcpp_queued_size(RTSWorld* inWorld) { return inWorld->mQueuedPlacements.size(); }
-RTSUnit* ee_rtswcpp_queued_unit(RTSWorld* inWorld, size_t inIndex) { return inWorld->mQueuedPlacements[inIndex].mUnit; }
-void ee_rtswcpp_queued_clear(RTSWorld* inWorld) { inWorld->mQueuedPlacements.clear(); }
-void ee_rtswcpp_queued_push(RTSWorld* inWorld, RTSUnit* inUnit, RTSUnit* inAfter) { inWorld->mQueuedPlacements.push_back(RTSWorldUnitEntry{inUnit, inAfter}); }
 void ee_rtswcpp_unit_reference(RTSUnit* inUnit) { inUnit->Reference(); }
 void ee_rtswcpp_unit_dereference(RTSUnit* inUnit) { inUnit->Dereference(); }
 }

@@ -22,15 +22,7 @@ public:
     ElGamal(const void* inKey, int inLength, bool inPrivate) : mKey(ee_won_elgamal_new()) //3d7740
     { inPrivate ? this->SetPrivateKey(inKey, inLength) : this->SetPublicKey(inKey, inLength); }
     ElGamal(const ElGamal& inOther) : mKey(ee_won_elgamal_clone(inOther.mKey)) {}
-    ElGamal& operator=(const ElGamal& inOther)
-    {
-        if (this != &inOther) {
-            EeWonElGamal* aCopy = ee_won_elgamal_clone(inOther.mKey);
-            ee_won_elgamal_free(this->mKey);
-            this->mKey = aCopy;
-        }
-        return *this;
-    }
+    ElGamal& operator=(const ElGamal& inOther) { ee_won_elgamal_assign(this->mKey, inOther.mKey); return *this; }
     ~ElGamal() { ee_won_elgamal_free(this->mKey); }
     void Invalidate() { ee_won_elgamal_invalidate(this->mKey); } //3d7820: neither key
     bool IsPrivate() const { return ee_won_elgamal_is_private(this->mKey); } //3d7830
@@ -53,11 +45,7 @@ public:
     ByteBufferPtr GetRawPrivateKey() const { return this->Run(EeWonElGamalOp::RawPrivateKey, NULL, 0); }
     ByteBufferPtr GetRawPublicKey() const { return this->Run(EeWonElGamalOp::RawPublicKey, NULL, 0); }
     // takes ownership of a key ee_won made (an auth block's); NULL leaves no key
-    void Adopt(EeWonElGamal* inKey)
-    {
-        ee_won_elgamal_free(this->mKey);
-        this->mKey = inKey != NULL ? inKey : ee_won_elgamal_new();
-    }
+    void Adopt(EeWonElGamal* inKey) { this->mKey = ee_won_elgamal_adopt(this->mKey, inKey); }
     const EeWonElGamal* Raw() const { return this->mKey; } // the Rust key (copied by ee_won_peer_new)
 private:
     bool SetKey(const void* inKey, int inLength, bool inPrivate)

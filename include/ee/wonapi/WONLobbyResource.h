@@ -7,6 +7,8 @@
 #include "rust/won_gui/guistrobj.h"
 #include "rust/won_gui/localize.h"
 #include "rust/won_net/wonfile.h"
+#include "rust/won_lobby/eegame.h"     // LobbyGame's EE game (WONLobbyModelObj.h, included inside the namespace)
+#include "ee/wonapi/WONLobbyGuard.h"    // and its WonRethrow
 #include <stdexcept>
 #include <set>
 #include <map>

@@ -20,6 +20,30 @@ use crate::httpget::{
     EE_WON_HTTPGET_IS_NEW, EE_WON_HTTPGET_LOCAL_PATH, EE_WON_HTTPGET_RANGE_RESUME, EE_WON_HTTPGET_STATUS,
 };
 
+/// The SDK's `HTTPDocType` for the C++ readers (the enumerators keep their C++ names; R6 WON lobby and network
+/// round 37): the numbers of `EE_WON_HTTPDOC_MOTD`, `_TOU` and `_ADV` below.
+/// cbindgen:enum-class=false
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonHttpDocType {
+    HTTPDocType_MOTD = 0,
+    HTTPDocType_TOU = 1,
+    HTTPDocType_ADV = 2,
+    HTTPDocType_Count = 3,
+}
+
+/// The SDK's `HTTPDocOwner`: the WON system's document or the game's (an op's per-owner members' index).
+/// cbindgen:enum-class=false
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonHttpDocOwner {
+    HTTPDocOwner_Sys = 0,
+    HTTPDocOwner_Game = 1,
+    HTTPDocOwner_Count = 2,
+}
+
 /// `HTTPDocType_MOTD`, `_TOU`, `_ADV`
 pub const EE_WON_HTTPDOC_MOTD: i32 = 0;
 pub const EE_WON_HTTPDOC_TOU: i32 = 1;
@@ -344,7 +368,8 @@ pub fn document(doc_type: i32, file: Option<Vec<u8>>) -> Vec<u8> {
 }
 
 /// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
-/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`); a null `dir` is the library's default
+/// file directory (`WONAPICore::GetDefaultFileDirectory()`, what the one C++ maker passed).
 ///
 /// # Safety
 /// The texts hold their lengths' bytes.
@@ -357,7 +382,15 @@ pub unsafe extern "C" fn ee_won_httpdoc_new(
     dir_len: usize,
 ) -> *mut EeWonHostOp {
     // SAFETY: the contract
-    let (p, d) = unsafe { (crate::ffi::bytes(product, product_len), crate::ffi::bytes(dir, dir_len)) };
+    let p = unsafe { crate::ffi::bytes(product, product_len) };
+    let default_dir;
+    let d = if dir.is_null() {
+        default_dir = crate::hostnative::file_directory();
+        &default_dir[..]
+    } else {
+        // SAFETY: the contract
+        unsafe { crate::ffi::bytes(dir, dir_len) }
+    };
     check_host_and_path(doc_type, d);
     EeWonHostOp::boxed(HttpDoc {
         doc_type,
@@ -370,6 +403,17 @@ pub unsafe extern "C" fn ee_won_httpdoc_new(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_sdk_enums_are_the_ops_numbers() {
+        assert_eq!(EeWonHttpDocType::HTTPDocType_MOTD as i32, EE_WON_HTTPDOC_MOTD);
+        assert_eq!(EeWonHttpDocType::HTTPDocType_TOU as i32, EE_WON_HTTPDOC_TOU);
+        assert_eq!(EeWonHttpDocType::HTTPDocType_ADV as i32, EE_WON_HTTPDOC_ADV);
+        assert_eq!(EeWonHttpDocType::HTTPDocType_Count as i32, 3);
+        assert_eq!(EeWonHttpDocOwner::HTTPDocOwner_Sys as i32, 0);
+        assert_eq!(EeWonHttpDocOwner::HTTPDocOwner_Game as i32, 1);
+        assert_eq!(EeWonHttpDocOwner::HTTPDocOwner_Count as usize, [false; 2].len());
+    }
 
     fn op(doc_type: i32) -> H {
         Host::new(HttpDoc {

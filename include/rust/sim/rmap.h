@@ -317,7 +317,6 @@ enum class EeRmapCpp : uint32_t {
   /// `gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\"` into the sink a0
   ScriptDirectory,
   SetUsingCarbon,
-  LoadProgress,
   /// `ESDebugOut("%s", a0)`
   DebugOut,
   FindNew,

@@ -49,7 +49,7 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONAPICore.h"
-#include "ee/EEWonNetUI.h"
+#include "ee/EEUIEWonNetEvent.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEStringIDs.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
@@ -189,27 +189,15 @@ static const bool sWonNetHostSet = (ee_won_wonnet_set_host(WonNetHost), true);
 // 0x4c5924 dtor; nothing creates gWonNet in AoC)
 EEWonNet::EEWonNet() : mRust(ee_won_wonnet_new(this)) { ee_won_wonnet_call(this->mRust, Call::Construct, 0, 0, 0); }
 EEWonNet::~EEWonNet() { ee_won_wonnet_free(this->mRust); }
-void EEWonNet::ConnectToLobby() { ee_won_wonnet_call(this->mRust, Call::ConnectToLobby, 0, 0, 0); }
 void EEWonNet::FnCFFDD(long inArg) { ee_won_wonnet_call(this->mRust, Call::FnCFFDD, inArg, 0, 0); }
 void EEWonNet::FnCFFF2() { ee_won_wonnet_call(this->mRust, Call::FnCFFF2, 0, 0, 0); }
 void EEWonNet::SelectServer(const std::wstring& inName, IPAddr inAddress) { ee_won_wonnet_call(this->mRust, Call::SelectServer, (intptr_t)inName.data(), inName.length(), (intptr_t)&inAddress); }
-void EEWonNet::HostGame(const char* inName, const char* inPassword) { ee_won_wonnet_call(this->mRust, Call::HostGame, (intptr_t)inName, (intptr_t)inPassword, 0); }
-void EEWonNet::JoinGame(const char* inName, const char* inPassword) { ee_won_wonnet_call(this->mRust, Call::JoinGame, (intptr_t)inName, (intptr_t)inPassword, 0); }
-void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword) { ee_won_wonnet_call(this->mRust, Call::JoinRoom, (intptr_t)inRoom, (intptr_t)inPassword, 0); }
 void EEWonNet::LeaveRoom() { ee_won_wonnet_call(this->mRust, Call::LeaveRoom, 0, 0, 0); }
 void EEWonNet::GetGameInfo(EEWonNetGameInfo& outInfo) { ee_won_wonnet_call(this->mRust, Call::GetGameInfo, (intptr_t)&outInfo, 0, 0); }
 void EEWonNet::SetGameInfo(EEWonNetGameInfo& inInfo) { ee_won_wonnet_call(this->mRust, Call::SetGameInfo, (intptr_t)&inInfo, 0, 0); }
 void EEWonNet::ClearGameList() { ee_won_wonnet_call(this->mRust, Call::ClearGameList, 0, 0, 0); }
 bool EEWonNet::RejoinRoom(bool inFlag) { return ee_won_wonnet_call(this->mRust, Call::RejoinRoom, inFlag, 0, 0) != 0; }
 void EEWonNet::PlayerJoined() {}
-void EEWonNet::RefreshGameList(UIControl* inGamesBox) { ee_won_wonnet_call(this->mRust, Call::RefreshGameList, (intptr_t)inGamesBox, 0, 0); }
-void EEWonNet::UpdateGameList() { ee_won_wonnet_call(this->mRust, Call::UpdateGameList, 0, 0, 0); }
-void EEWonNet::UpdateAccount(const UWideString& inName, const UWideString& inPassword, bool inFlag) { ee_won_wonnet_call(this->mRust, Call::UpdateAccount, (intptr_t)(const char*)inName, (intptr_t)(const char*)inPassword, inFlag); }
-void EEWonNet::OpenUpdateAccount() { ee_won_wonnet_call(this->mRust, Call::OpenUpdateAccount, 0, 0, 0); }
-void EEWonNet::SendChat(const UWideString& inText) { ee_won_wonnet_call(this->mRust, Call::SendChat, (intptr_t)(const char*)inText, 0, 0); }
-void EEWonNet::UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel16, UITextLabel* inLabel14) { ee_won_wonnet_call(this->mRust, Call::UpdateRoomList, (intptr_t)inRooms, (intptr_t)inLabel16, (intptr_t)inLabel14); }
-unsigned short EEWonNet::GetGameListPort() { return (unsigned short)ee_won_wonnet_call(this->mRust, Call::GameListPort, 0, 0, 0); }
-bool EEWonNet::GetRoomListChanged() { return ee_won_wonnet_call(this->mRust, Call::RoomListChanged, 0, 0, 0) != 0; }
 bool EEWonNet::GetIsBehindFirewall() { return ee_won_wonnet_call(this->mRust, Call::IsBehindFirewall, 0, 0, 0) != 0; }
 std::wstring EEWonNet::GetRoomName()
 {
@@ -217,9 +205,6 @@ std::wstring EEWonNet::GetRoomName()
     ee_won_wonnet_call(this->mRust, Call::RoomName, (intptr_t)&theName, 0, 0);
     return theName;
 }
-bool EEWonNet::Initialize() { return ee_won_wonnet_call(this->mRust, Call::Initialize, 0, 0, 0) != 0; }
-void EEWonNet::GetTitanServerList() { ee_won_wonnet_call(this->mRust, Call::GetTitanServerList, 0, 0, 0); }
-void EEWonNet::Login(const char* inName, const char* inPassword) { ee_won_wonnet_call(this->mRust, Call::Login, (intptr_t)inName, (intptr_t)inPassword, 0); }
 
 // DEAD-IN-AOC: base exe 0x6a2220, only the dead dtor calls it. Partial: the base body also waits when inFlag is set
 // (0x6a2270).

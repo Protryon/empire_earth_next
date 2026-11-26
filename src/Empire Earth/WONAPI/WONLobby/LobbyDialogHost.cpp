@@ -240,8 +240,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::ScrollAddLine: reinterpret_cast<ScrollingTextComponent*>(a)->AddLine(*reinterpret_cast<const GUIString*>(b), (unsigned long)(uint32_t)c); return 0;
     case Op::DefaultFontStringWidth: return aDialog->GetDefaultFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(a), 0, reinterpret_cast<const GUIString*>(a)->length());
     // EELobbyConnectDialog
-    case Op::GameIsHost: return reinterpret_cast<EELobbyGame*>(a)->GetIsHost() ? 1 : 0;
-    case Op::GameRust: return (intptr_t) reinterpret_cast<EELobbyGame*>(a)->mRust;
+    case Op::GameIsHost: return reinterpret_cast<LobbyGame*>(a)->GetIsHost() ? 1 : 0;
+    case Op::GameRust: return (intptr_t) reinterpret_cast<LobbyGame*>(a)->mEE;
     case Op::DoDialog: return LobbyDoDialog(aDialog);
     case Op::EndDialog: reinterpret_cast<Window*>(a)->EndDialog((int)b, aDialog); return 0;
     case Op::ConnectItemSetImage: static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;

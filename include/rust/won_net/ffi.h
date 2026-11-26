@@ -266,6 +266,22 @@ EeWonElGamal *ee_won_elgamal_clone(const EeWonElGamal *key);
 /// `key` came from this module and is not used afterwards.
 void ee_won_elgamal_free(EeWonElGamal *key);
 
+/// `ElGamal::operator=` (R6 WON lobby and network round 37: the C++ clone-and-swap's): `dst` becomes a copy of
+/// `src`, generator state included; a key assigned to itself is unchanged.
+///
+/// # Safety
+/// Both are live keys.
+void ee_won_elgamal_assign(EeWonElGamal *dst,
+                           const EeWonElGamal *src);
+
+/// `ElGamal::Adopt` (R6 WON lobby and network round 37): `old` freed, the key to hold returned: `adopted`, or a new
+/// empty one for NULL.
+///
+/// # Safety
+/// `old` came from this module and is not used afterwards; `adopted` is NULL or a key from this module.
+EeWonElGamal *ee_won_elgamal_adopt(EeWonElGamal *old,
+                                   EeWonElGamal *adopted);
+
 /// `SetPrivateKey` (`is_private` true) or `SetPublicKey`.
 ///
 /// # Safety

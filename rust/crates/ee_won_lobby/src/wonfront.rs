@@ -119,36 +119,12 @@ pub enum EeWonFrontCall {
     StatRefresh,
     /// EEWonNetAvailableGameFormManager::Get.
     FormManagerGet,
-}
-
-/// The new events the screens make (`EventNew`), one C++ class each.
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeWonFrontEvent {
-    AgActivateForm = 0,
-    AgBack,
-    AgCheckPassword,
-    AgClickGameFilter,
-    AgCloseForm,
-    AgDeactivateForm,
-    AgDoubleclickUser,
-    AgHostOrJoinGame,
-    AgSendChat,
-    AgToggleHostScreen,
-    AgToggleJoinScreen,
-    AgUpdateForm,
-    ArActivateForm,
+    /// EEUIEWNARBack::ProcessEvent (R6 WON lobby and network round 37: the three Pop events).
     ArBack,
-    ArClickUpdateAccount,
-    ArDeactivateForm,
-    ArDoubleClickRoom,
-    ArJoinRoom,
-    ArUpdateForm,
+    /// EEUIEWNMUACancel::ProcessEvent.
     MuaCancel,
-    MuaOpenScreen,
-    MuaSubmit,
+    /// EEUIEWNSSCancel::ProcessEvent.
     SsCancel,
-    SsOk,
 }
 
 /// A list line's number or flag (`GamesLineGet`, `RoomsLineGet`, `StatLineGet`, `StatLineSet`).
@@ -252,12 +228,10 @@ pub enum EeWonFrontOp {
     /// `EEIsValidName(UWideString(a))`.
     IsValidName,
     // ---- events
-    /// `new <the EeWonFrontEvent a's class>`.
+    /// `new EEUIEWonNetEvent((EeWonFrontCall)a)`: the event that runs the call `a` (round 37: the one event class).
     EventNew = 40,
     /// `((UIEvent*)a)->Dereference()`.
     EventDeref,
-    /// `EEUIEWNSetTriggerEvent((UIEvent*)a, (UIControl*)b, c)`.
-    SetTrigger,
     /// `((UIControl*)a)->SetTriggerEvent(b, (UIEvent*)c)`.
     ControlSetTriggerEvent,
     // ---- controls
@@ -497,7 +471,7 @@ pub enum EeWonFrontOp {
     StatAppendLine,
 }
 
-use EeWonFrontEvent as Ev;
+use EeWonFrontCall as Ev;
 use EeWonFrontField as Fd;
 use EeWonFrontOp as Op;
 
@@ -623,7 +597,8 @@ fn message(id: isize) {
 
 fn set_trigger(ev: Ev, control: isize, trigger: isize) {
     let e = h(Op::EventNew, ev as isize, 0, 0);
-    h(Op::SetTrigger, e, control, trigger);
+    h(Op::ControlSetTriggerEvent, control, trigger, e);
+    h(Op::EventDeref, e, 0, 0);
 }
 
 /// `form->SetForm<X>Event(new ev); ev->Dereference()`.
@@ -1431,6 +1406,7 @@ fn call(c: EeWonFrontCall, obj: isize, a: isize) -> isize {
             0
         }
         C::FormManagerGet => manager(),
+        C::ArBack | C::MuaCancel | C::SsCancel => h(Op::FormPop, obj, 0, 0),
     }
 }
 
@@ -1446,39 +1422,6 @@ pub extern "C" fn ee_won_front_reset() {
     set_last(&HOST_OR_JOIN_LAST, 0);
     set_last(&JOIN_ROOM_LAST, 0);
     set_last(&ROOMS_LAST_UPDATE, 0);
-}
-
-/// The front-end call a WON screen event's ProcessEvent makes (`EEWonFrontEvent`'s), or -1 for the three events
-/// that pop the manager's form instead (ArBack, MuaCancel, SsCancel: `EEUIEWNPop`): `FrontNewEvent`'s class.
-#[no_mangle]
-pub extern "C" fn ee_won_front_event_call(event: EeWonFrontEvent) -> i32 {
-    use EeWonFrontCall as C;
-    use EeWonFrontEvent as E;
-    let call = match event {
-        E::ArBack | E::MuaCancel | E::SsCancel => return -1,
-        E::AgActivateForm => C::AgActivateForm,
-        E::AgBack => C::AgBack,
-        E::AgCheckPassword => C::AgCheckPassword,
-        E::AgClickGameFilter => C::AgClickGameFilter,
-        E::AgCloseForm => C::AgCloseForm,
-        E::AgDeactivateForm => C::AgDeactivateForm,
-        E::AgDoubleclickUser => C::AgDoubleclickUser,
-        E::AgHostOrJoinGame => C::AgHostOrJoinGame,
-        E::AgSendChat => C::AgSendChat,
-        E::AgToggleHostScreen => C::AgToggleHostScreen,
-        E::AgToggleJoinScreen => C::AgToggleJoinScreen,
-        E::AgUpdateForm => C::AgUpdateForm,
-        E::ArActivateForm => C::ArActivateForm,
-        E::ArClickUpdateAccount => C::ArClickUpdateAccount,
-        E::ArDeactivateForm => C::ArDeactivateForm,
-        E::ArDoubleClickRoom => C::ArDoubleClickRoom,
-        E::ArJoinRoom => C::ArJoinRoom,
-        E::ArUpdateForm => C::ArUpdateForm,
-        E::MuaOpenScreen => C::MuaOpenScreen,
-        E::MuaSubmit => C::MuaSubmit,
-        E::SsOk => C::SsOk,
-    };
-    call as i32
 }
 
 #[cfg(test)]

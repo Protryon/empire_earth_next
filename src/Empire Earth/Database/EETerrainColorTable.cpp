@@ -9,18 +9,12 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/Graphics Engine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/FSArchive.h"
-#include "lle/FSPath.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/EETerrainColorTable.h"
 #include "rust/game/gamecpp.h"
 

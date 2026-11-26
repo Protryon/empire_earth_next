@@ -12,10 +12,7 @@
 #include "lle/USingleton.h"
 
 #include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EECalamity.h"
-#include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEPCalamityHelper.h"

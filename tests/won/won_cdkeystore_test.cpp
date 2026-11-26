@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "platform/PlatFile.h"
+#include "won_regkey.h" // RegKey (the class over the Rust key; R6 WON lobby and network round 37)
 
 using namespace WONAPI;
 

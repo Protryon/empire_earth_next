@@ -272,6 +272,7 @@
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/stagingobj.h"
 #include "rust/won_lobby/statusstr.h"
+#include "rust/won_lobby/wonaction.h"
 #include "rust/won_lobby/wonfront.h"
 #include "rust/won_lobby/wonnet.h"
 #include "rust/won_net/admin.h"

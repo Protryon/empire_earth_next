@@ -1,6 +1,7 @@
 #ifndef EE_WONAPI_WONAPICORE_H
 #define EE_WONAPI_WONAPICORE_H
-#include "ee/wonapi/WONTimerThread.h"
+#include "ee/wonapi/WONRouting.h"
+#include "rust/won_net/hostop.h"
 #include "rust/won_net/apicore.h"
 #include "rust/won_net/hostnative.h"
 #include "rust/won_net/sockthread.h"

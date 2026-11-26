@@ -31,6 +31,19 @@ EeWonReqOp *ee_won_reqmake_get_multi_dir(uint32_t flags,
                                          int32_t count,
                                          uint32_t wchar);
 
+/// InitLogic's directory query (`GetMultiDirOp` over InitLogic.cpp's `InitDirPaths` until R6 WON lobby and network
+/// round 37): the first `count` (at most four) of the auth, database proxy and firewall services' paths and the
+/// product's patch servers' (`product_dir` + "/Patch"; an empty path without a product directory, as without a
+/// config), each with the op's flags and no data types.
+///
+/// # Safety
+/// `product_dir` is NULL or holds `product_len` characters of `wchar` bytes.
+EeWonReqOp *ee_won_reqmake_init_dirs(uint32_t flags,
+                                     const void *product_dir,
+                                     size_t product_len,
+                                     uint32_t wchar,
+                                     int32_t count);
+
 /// `GetServiceOp(context, path, name, netaddr)` (`Init`'s flags: the services, their display names, data objects,
 /// names and addresses).
 ///

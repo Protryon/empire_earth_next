@@ -13,7 +13,7 @@ use std::ffi::{c_long, c_void};
 use ee_base::math::types::Ge3DPoint;
 use ee_sim::app::capture_record::{self, Record};
 
-use crate::app::camera::{EeAppCameraFields, EeAppCameraKey, EE_APP_CAMERA_UPDATE_DONE, EE_APP_CAMERA_UPDATE_ORTHO};
+use crate::app::camera::{EeAppCameraFields, EE_APP_CAMERA_UPDATE_DONE, EE_APP_CAMERA_UPDATE_ORTHO};
 use crate::app::camera_ffi::{ee_app_camera_set_clipping_distances, ee_app_camera_update, EeAppCameraFn};
 
 use super::{cptr, h, hd, hf, hp, ptr, O, P};
@@ -127,11 +127,9 @@ pub extern "C" fn ee_gamecpp_capture_camera(camera: *mut c_void, phase: u32, ela
     r.i32(c.mMode as i32);
     r.i32(c.mPathIndex as i32);
     r.u32(camera_flags(&c));
-    let keys = h(O::DkKeyCount, cam, &[]);
-    r.u32(keys as u32);
-    for i in 0..keys {
-        let mut k = EeAppCameraKey::default();
-        h(O::DkKeyAt, cam, &[i, ptr(&mut k)]);
+    let keys = super::camera_io::keys().clone();
+    r.u32(keys.len() as u32);
+    for k in keys {
         floats(&mut r, &k.mT00);
         floats(&mut r, &k.mT40);
         floats(&mut r, &k.mOffset);

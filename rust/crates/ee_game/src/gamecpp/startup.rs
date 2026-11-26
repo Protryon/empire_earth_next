@@ -638,7 +638,7 @@ pub extern "C" fn ee_gamecpp_startup_clear_game() {
     h(O::GfxPostReleaseScene, 0, &[]);
     h(O::GfxPostMessage50AAndWait, 0, &[]);
     h(O::PreloadWaitForQueue, 0, &[]);
-    if h(O::CommPresent, 0, &[]) != 0 {
+    if super::net::present() {
         h(O::CommDeleteDetached, 0, &[]);
     }
     let w = hp(O::WorldAddr, 0, &[]);
@@ -1147,7 +1147,7 @@ pub extern "C" fn ee_gamecpp_startup_delete_game_objects() {
     h(O::WorldClear, 0, &[]);
     if crate::gamecpp::globals::have!(gMiniMap) {
         h(O::MiniMapDelete, 0, &[]);
-        h(O::MiniMapSetNull, 0, &[]);
+        super::globals::set!(gMiniMap, core::ptr::null_mut());
     }
     h(O::AeManagerClear, 0, &[]);
     h(O::GameStateClear, 0, &[]);
