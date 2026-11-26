@@ -44,10 +44,6 @@ public:
     {
         return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, false);
     }
-    bool AffectsPlayerReversed(long inPlayer, long inOther)
-    {
-        return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, true);
-    }  // 0x27c233: 1 the others, 2 the enemies, 3 the friends
     // 0x27c334: inPoint lies within inScale * mRadius of inCenter (a square or a circle), and on inCenter's continent
     // unless mUnitSet is 4 (a space dock or turret inUnit carried by a unit also passes on that unit's planet)
     bool IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale, EEComplexUnit* inUnit)

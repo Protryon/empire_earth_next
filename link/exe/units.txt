@@ -130,10 +130,7 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 276631 27a37e Empire Earth/User Interface Thread/EEUserInterface.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
-27bf4b 27c0f3 Empire Earth/Civilization Builder/EEAreaEffect.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
-27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
-2813f4 2830d0 Empire Earth/Civilization Builder/EECivilizationManager.cpp
 283b2e 28befc Empire Earth/Random Map/EERandomMap.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp

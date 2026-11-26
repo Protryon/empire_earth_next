@@ -2921,10 +2921,6 @@ pub enum EeGameCpp {
     DcSwapCheatsEnabled,
     DcPlayerUpgradeCount,
     // EECivilization.cpp (civilization.rs)
-    DvAvailable,
-    DvMaximum,
-    DvNoPointsAdded,
-    DvUnchanged,
     DvListCount,
     DvListAt,
     DvPurchased,

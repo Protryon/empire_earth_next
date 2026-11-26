@@ -48,10 +48,6 @@ public:
     {
         ee_screens_civm_civilizations((uintptr_t)&outCivs, 0, true);
     }
-    void GetCivilizationsOfType(std::vector<EECivilizationEntry>& outCivs, long inType)
-    {
-        ee_screens_civm_civilizations((uintptr_t)&outCivs, (int32_t)inType, false);
-    }
     // Fills a list box with one header per era and a line per premade civilization of that era (civ_manager_calls.rs)
     void FillCivilizationList(EECBUIListBox* inList) { ee_screens_civ_fill_list(inList); }
     unsigned long GetNumCivilizations() { return ee_tech_civ_civilization_count(); }    // actual17a522
@@ -59,8 +55,6 @@ public:
     {
         return *reinterpret_cast<const EECivilizationEntry*>(ee_tech_civ_civilization((uint32_t)inIndex));
     }   // (the original's vector's [])
-    unsigned long GetEraCount() { return ee_tech_civ_era_count(); }            // the distinct era name ids, in order
-    long GetEra(unsigned long inIndex) { return ee_tech_civ_era((uint32_t)inIndex); }
     // an upgrade id is (category << 16) | level (EECivUpgrade); the categories are those of dbcivilization (any
     // number; the original's table had 0x23 entries of 0x258 bytes) plus the special powers category
     long GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }    // 0x281873 (the category entry's +0x74: the upgrade's cost)
@@ -88,17 +82,7 @@ public:
     {
         return ee_screens_civm_category((uint32_t)inCategory, (void**)outEntry);
     }   // 0x281d79 (the record in place)
-    unsigned long GetCategoryCount() { return ee_tech_civ_category_count(); }       // mCategoryCount (+0x522c)
-    unsigned long MakeUpgrade(unsigned long inCategory, unsigned long inIndex)
-    {
-        return (inCategory << kCivUpgradeLevelBits) + (inIndex & kCivUpgradeLevelMask);
-    }   // 0x281d9c (ecx unused)
     unsigned long MakePowerUpgrade(unsigned long inIndex) { return ee_tech_civ_power_upgrade((uint32_t)inIndex); }   // 0x281db1 (the powers' category Load appends; ecx unused)
-    // a category's levels (1 .. this; the record's 60, or as many as dbcivilization.yaml gives)
-    unsigned long GetLevelCount(unsigned long inCategory) const
-    {
-        return ee_tech_civ_level_count((uint32_t)inCategory);
-    }
     // an attribute level's name (civbuilder.yaml name) and whether it applies a civ power; the level of the
     // attribute that applies a power (by power id; the original: the id itself)
     static long LevelNameID(unsigned long inLevel) { return ee_tech_civ_level_name_id((uint32_t)inLevel); }
@@ -111,10 +95,6 @@ public:
         return ee_screens_civm_to_legacy(inUpgrade, &outLegacy);
     }
     // (provisional names)
-    bool MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName, std::vector<EECivUpgrade>& inUpgrades, long* outNameID)
-    {
-        return ee_screens_civm_matches((const char*)inFile, (const char*)inName, (uint32_t)inName.GetLength(), inUpgrades.data(), inUpgrades.size(), outNameID);
-    }   // 0x281bc5 (premade civilization checksum test)
     // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
     bool ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
     {

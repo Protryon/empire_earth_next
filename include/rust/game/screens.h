@@ -15574,9 +15574,6 @@ enum EEWonNetStatsControl : uint32_t {
 /// in the button texture, its control group, whether it is a full view and whether it paints with the brush.
 struct EditorTab;
 
-/// An op's outputs: a text and values.
-struct EeScreensCbOut;
-
 /// The area sub-screen (opaque to C++).
 struct EeScreensSeArea;
 
@@ -16822,12 +16819,6 @@ void ee_screens_ael_tick(void *list, void *unit, float elapsed);
 
 /// `EECivilizationManager::FillCivilizationList(list)` (`list` the `EECBUIListBox*`).
 void ee_screens_civ_fill_list(void *list);
-
-/// An op's text appended (the host's answer).
-void ee_screens_cb_out_text(EeScreensCbOut *out, const uint8_t *text, size_t length);
-
-/// An op's value appended (the host's answer).
-void ee_screens_cb_out_value(EeScreensCbOut *out, int64_t value);
 
 /// `CivBuilderEditCivilization`.
 long ee_screens_cb_edit_civilization();
@@ -18803,6 +18794,12 @@ void ee_screens_civc_load(const char *name,
 
 /// CVAF (`player` the `EEPlayer*`).
 void ee_screens_civc_apply_file(const char *name, size_t player, long result);
+
+/// `EECBUIListBox::~EECBUIListBox`: the list's state dropped.
+void ee_screens_cbb_destroy(size_t list);
+
+/// `EECBUIListBox::GetTabable` (`mIsTabable`).
+bool ee_screens_cbl_tabable(size_t list);
 
 /// `Load` (0), `LoadPremadeCivilizations` (1), `EECivPowersManager::Load` (2) of `file` (an `FSFile*`).
 long ee_screens_civm_load(size_t file,
