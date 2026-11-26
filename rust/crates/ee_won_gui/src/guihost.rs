@@ -978,26 +978,9 @@ pub enum EeWonGuiOp {
     /// `new TreeItem` (unheld).
     NewTreeItemRaw,
     // the window's (winobj.rs ee_won_win_event, ee_won_win_get_font, ee_won_win_create)
-    /// `((InputEvent*)a)->mEventType`.
-    WinEvType = 900,
-    /// `static_cast<KeyEvent*>((InputEvent*)a)->mKeyMod`.
-    WinKeyEvKeyMod,
-    /// `static_cast<KeyEvent*>((InputEvent*)a)->mKey`.
-    WinKeyEvKey,
-    /// `static_cast<MouseEvent*>((InputEvent*)a)->mx`.
-    WinMouseEvX,
-    /// `static_cast<MouseEvent*>((InputEvent*)a)->my`.
-    WinMouseEvY,
-    /// `static_cast<MouseEvent*>((InputEvent*)a)->mKeyMod`.
-    WinMouseEvKeyMod,
-    /// `static_cast<MouseEvent*>((InputEvent*)a)->mButtonOrAmount`.
-    WinMouseEvButton,
-    /// `static_cast<SizeEvent*>((InputEvent*)a)->mWidth`.
-    WinSizeEvWidth,
-    /// `static_cast<SizeEvent*>((InputEvent*)a)->mHeight`.
-    WinSizeEvHeight,
+    // (900..908, the input events' fields, went: the events carry winobj.rs's record, R6 WON GUI round 37)
     /// `sHostFont = PlatformGetFont(*(const FontDescriptor*)a)` (the original's local SmartPtr).
-    WinPlatformFont,
+    WinPlatformFont = 909,
     /// `sHostFont.get()`.
     WinHostFont,
     /// `((Font*)a)->AddRef()`.
@@ -1009,16 +992,9 @@ pub enum EeWonGuiOp {
     /// `mIcon = mManager->mDefaultWindowIcon.get()`.
     WinIconDefault,
     // the window manager's (guisplit.rs wm_op)
-    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx`.
-    WmMouseEvX = 930,
-    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my`.
-    WmMouseEvY,
-    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx = b`.
-    WmMouseEvSetX,
-    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my = b`.
-    WmMouseEvSetY,
+    // (930..933, the mouse event's point, went with the events' fields: WmInputRec)
     /// `((Font*)a)->AddRef()`.
-    WmFontHold,
+    WmFontHold = 934,
     /// `((Font*)a)->Release()`.
     WmFontRelease,
     /// `((RawImage*)a)->AddRef()`.
@@ -1101,25 +1077,13 @@ pub enum EeWonGuiOp {
     WmScreenResGet,
     /// `SetScreenResolutionHook(a, b)` (0 or 1).
     WmScreenResSet,
-    /// `((SizeEvent*)a)->mx`.
-    WmSizeEvX,
-    /// `((SizeEvent*)a)->my`.
-    WmSizeEvY,
-    /// `((SizeEvent*)a)->mWidth`.
-    WmSizeEvW,
-    /// `((SizeEvent*)a)->mHeight`.
-    WmSizeEvH,
-    /// `((SizeEvent*)a)->mx = b`.
-    WmSizeEvSetX,
-    /// `((SizeEvent*)a)->my = b`.
-    WmSizeEvSetY,
-    /// `((SizeEvent*)a)->mWidth = b`.
-    WmSizeEvSetW,
-    /// `((SizeEvent*)a)->mHeight = b`.
-    WmSizeEvSetH,
     // ---- R6 WON GUI round 36, the hosts' share (values 3400..3599)
     /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
     TextAddPart = 3400,
+    // ---- R6 WON GUI round 37, the host side's share (values 3800..3999)
+    /// `&static_cast<InputEvent*>((WindowEventBase*)a)->mEv`: an input event's record (winobj.rs `EeWonWinEvent`),
+    /// which guisplit.rs reads and sets for the manager's `WmEvent` mouse, size, button and key cases.
+    WmInputRec = 3800,
     // ---- R6 WON GUI round 35, the configs' and containers' share (values 3200..3399)
     /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
     TabNewContainer = 3200,

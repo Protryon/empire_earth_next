@@ -11,12 +11,9 @@
 #include "ee/wonapi/EELobbySound.h"
 namespace WONAPI {
 // Creates an empty sound descriptor with no flags (emitted at 0x00729810)
-SoundDescriptor::SoundDescriptor() { this->mSoundFlags=0; }
+SoundDescriptor::SoundDescriptor() : mSoundFlags(0) {}
 // Creates a sound descriptor for a file path with the given flags (emitted at 0x00729830)
-SoundDescriptor::SoundDescriptor(const std::string& path,long flags) :mPath(path)
-{
-    this->mSoundFlags=flags;
-}
+SoundDescriptor::SoundDescriptor(const std::string& path,long flags) : mSoundFlags(flags), mPath(path) {}
 // Sets or clears the given sound flags
 void SoundDescriptor::SetSoundFlags(int flags,bool on)
 {
@@ -24,11 +21,7 @@ void SoundDescriptor::SetSoundFlags(int flags,bool on)
     else this->mSoundFlags&=~flags;
 }
 // Creates a sound from a copy of the descriptor, not looping (emitted at 0x007299c0)
-Sound::Sound(const SoundDescriptor& descriptor)
-    :mDescriptor(descriptor)
-{
-    this->mIsLooping=false;
-}
+Sound::Sound(const SoundDescriptor& descriptor) : mDescriptor(descriptor), mIsLooping(false) {}
 // Plays the sound unless it is muted
 void Sound::Play()
 {
@@ -62,14 +55,18 @@ bool WONAPI::Sound::GetMuted()
 namespace WONAPI {
 
 
-SoundDescriptor::SoundDescriptor(const char *thePath) : mPath(thePath)
-{
-	this->mSoundFlags = 0;
-}
+SoundDescriptor::SoundDescriptor(const char *thePath) : mSoundFlags(0), mPath(thePath) {}
 
 
 void Sound::Rewind()
 {
 	this->RewindHook();
 }
+}
+
+// the sound decoder base (SoundDecoder.cpp until R6 WON GUI round 37): decodes a descriptor through the virtual Decode
+namespace WONAPI {
+SoundDecoder::SoundDecoder() {}
+SoundDecoder::~SoundDecoder() {} // (emitted at 0x00728590)
+SoundPtr SoundDecoder::DecodeDescriptor(const SoundDescriptor& inDescriptor) { return this->Decode(inDescriptor); }
 }

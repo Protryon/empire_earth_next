@@ -3,8 +3,7 @@
 //! and checksum, and per node its availability, obsolescence, costs at three scales, SumCosts and its prerequisite
 //! closure (DependsOn over every id). Reads the world, writes nothing to it. The node's and tree's bytes are ee_sim
 //! tech's (capture_rec.rs); each C++ call is a case of EETechTreeEpoch.cpp's `EECore10OpB7` or of round 9's tech host.
-//! Also the upgrade's and the player's parts of EVAT (EETechCaptureUpgrade, EETechCapturePlayer: EETechCapture.cpp's
-//! `EECore10OpB6` appends them to the C++ record).
+//! Also the tree's, the upgrade's and the player's records of the civilization capture (screens civ_capture.rs).
 
 #![allow(clippy::not_unsafe_ptr_arg_deref, clippy::missing_safety_doc)]
 
@@ -33,7 +32,7 @@ fn tree_bytes(r: &mut TbRecord, tree: P) {
     let mut bytes = [0u8; EE_TECH_CAPTURE_TREE_SIZE as usize];
     // SAFETY: the tree's record and a buffer of the record's size
     let n = unsafe {
-        ee_tech_capture_tree(tree_fields(tree), h(O::TkPlayerIndex, tree, &[]) as c_long, bytes.as_mut_ptr())
+        ee_tech_capture_tree(tree_fields(tree), crate::tech_tree::load::player_index(tree), bytes.as_mut_ptr())
     };
     r.bytes(&bytes[..n as usize]);
 }
@@ -174,51 +173,78 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
     }
 }
 
-/// Appends bytes to a C++ record (EESimCaptureRecord::Bytes).
-fn append(record: P, bytes: &[u8]) {
-    h(O::TcBytes, record, &[bytes.as_ptr() as usize as i64, bytes.len() as i64]);
+/// The player's tree's part of the civilization capture's CVAP (nothing without a tree): the tree's record, then its
+/// node ids (GetNodeIDs) and each node's flags (researched, obsolete, available, allowed, 16 for a node; 0 for none).
+pub(crate) fn tree_nodes_record(player: P) -> Vec<u8> {
+    let mut r = TbRecord::default();
+    let tree = hp(O::TbPlayerTree, player, &[]);
+    if tree == 0 {
+        return r.0;
+    }
+    tree_bytes(&mut r, tree);
+    let list = Longs::new();
+    ee_gamecpp_tech_node_ids(tree as *mut c_void, true, 0, list.0 as *mut c_void);
+    let ids = list.to_vec();
+    r.u32(ids.len() as u32);
+    for id in ids {
+        let node = hp(O::TkGet, tree, &[id as i64]);
+        r.i32(id as i32);
+        if node == 0 {
+            r.u32(0);
+            continue;
+        }
+        // SAFETY: the live node's record
+        let f = unsafe { *node_fields(node) };
+        r.u32(
+            f.mIsResearched as u32
+                | (f.mIsObsolete as u32) << 1
+                | (f.mIsAvailable as u32) << 2
+                | (f.mIsAllowed as u32) << 3
+                | 16,
+        );
+    }
+    r.0
 }
 
-/// EETechCaptureUpgrade: the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
+/// The upgrade's record (EVAT, CVAP): its numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
 /// size first; 0 for no upgrade. mMediaCount and mButtonLoadCount count the presentation's media loads
 /// (EEPlayer::LoadUnitClassMedia, SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the
 /// record carries simulation state only.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_capture_upgrade(record: *mut c_void, upgrade: *mut c_void) {
-    let (record, u) = (record as P, upgrade as P);
+pub(crate) fn upgrade_record(u: P) -> Vec<u8> {
     if u == 0 {
-        append(record, &0u32.to_le_bytes());
-        return;
+        return 0u32.to_le_bytes().to_vec();
     }
-    let first = hp(O::TcUpgradeFirst, u, &[]);
-    let end = hp(O::TcUpgradeEnd, u, &[]);
-    // SAFETY: the upgrade's members from mAreaEffectScale up to mIsInitialized
-    let mut bytes = unsafe { std::slice::from_raw_parts(first as *const u8, end - first) }.to_vec();
-    for field in [hp(O::TcUpgradeMediaCount, u, &[]), hp(O::TcUpgradeButtonCount, u, &[])] {
-        let at = field - first;
+    use std::mem::offset_of;
+    type F = ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
+    let first = u + ee_sim::world::layout::layout().stats_fields as usize;
+    // SAFETY: the upgrade's record from mAreaEffectScale (its first member) up to mIsInitialized
+    let mut bytes = unsafe { std::slice::from_raw_parts(first as *const u8, offset_of!(F, mIsInitialized)) }.to_vec();
+    for at in [offset_of!(F, mMediaCount), offset_of!(F, mButtonLoadCount)] {
         bytes[at..at + std::mem::size_of::<c_long>()].fill(0);
     }
     let mut out = (bytes.len() as u32).to_le_bytes().to_vec();
     out.extend_from_slice(&bytes);
-    append(record, &out);
+    out
 }
 
-/// EETechCapturePlayer: the player's fields the effects change (population bonus, tribute fee, mBB44); -1 for no
+/// The player's record (EVAT, CVAP): the fields the effects change (population bonus, tribute fee, mBB44); -1 for no
 /// player.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_capture_player(record: *mut c_void, player: *mut c_void) {
-    let (record, pl) = (record as P, player as P);
+pub(crate) fn player_record(pl: P) -> Vec<u8> {
     let mut r = TbRecord::default();
     if pl == 0 {
         r.i32(-1);
     } else {
-        r.i32(h(O::TcPlayerId, pl, &[]) as i32);
-        r.i32(h(O::TcPlayerPopulationBonus, pl, &[]) as i32);
-        // SAFETY: the player's mTributeFee
-        r.bytes(&unsafe { *(hp(O::TcPlayerTributeFee, pl, &[]) as *const f32) }.to_le_bytes());
-        r.u32((h(O::TcPlayerBB44, pl, &[]) != 0) as u32);
+        use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsRtsPlayerFields};
+        // SAFETY: the live player's records
+        let (rts, f) = unsafe {
+            (&*super::rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl), &*super::rec::<EeUnitsPlayerFields>(O::PlFields, pl))
+        };
+        r.i32(rts.mPlayerID as i32);
+        r.i32(f.mPopulationLimitBonus as i32);
+        r.bytes(&f.mTributeFee.to_le_bytes());
+        r.u32(f.mBB44 as u32);
     }
-    append(record, &r.0);
+    r.0
 }
 
 #[cfg(test)]

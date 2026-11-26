@@ -12,11 +12,13 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::units::player_body::{
     EE_UNITS_PLAYER_BODY_CLASS_COUNT, EE_UNITS_PLAYER_BODY_CLASS_STATS, EE_UNITS_PLAYER_BODY_IS_HUMAN,
-    EE_UNITS_PLAYER_BODY_IS_LOCAL, EE_UNITS_PLAYER_BODY_NEXT_UNIT, EE_UNITS_PLAYER_BODY_PATROL_AT,
-    EE_UNITS_PLAYER_BODY_PATROL_COUNT, EE_UNITS_PLAYER_BODY_TILE_X, EE_UNITS_PLAYER_BODY_TILE_Y,
-    EE_UNITS_PLAYER_BODY_TOWN_PATROL, EE_UNITS_PLAYER_BODY_TOWN_REFRESH, EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED,
+    EE_UNITS_PLAYER_BODY_IS_LOCAL, EE_UNITS_PLAYER_BODY_NEXT_UNIT, EE_UNITS_PLAYER_BODY_TILE_X,
+    EE_UNITS_PLAYER_BODY_TILE_Y, EE_UNITS_PLAYER_BODY_TOWN_PATROL, EE_UNITS_PLAYER_BODY_TOWN_REFRESH,
 };
-use crate::units::player_lists::EE_UNITS_LISTS_SOUND_CLASSES;
+use crate::units::player_lists::{
+    ListOp, EE_UNITS_LISTS_ALLIES, EE_UNITS_LISTS_HERDS, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_SOUND_CLASSES,
+    EE_UNITS_LISTS_TOWNS, EE_UNITS_LISTS_WONDERS,
+};
 use crate::units::player_save::EeUnitsPlayerSaved;
 
 // ---- the body host's operations (EEPlayer.cpp's `ee_units_player_body_host`; `a` an object, `b`, `c` values)
@@ -48,10 +50,6 @@ pub const EE_UNITS_PLAYER_BODY_HERD_ADD_AREA: i32 = 243;
 pub const EE_UNITS_PLAYER_BODY_GOAL_QUEUES: i32 = 211;
 /// complex unit `a`'s `ClearGoalQueue(b)`
 pub const EE_UNITS_PLAYER_BODY_CLEAR_GOAL_QUEUE: i32 = 212;
-/// `mAllies.erase(mAllies.begin() + b)`
-pub const EE_UNITS_PLAYER_BODY_ALLY_ERASE: i32 = 213;
-/// `mPatrolGroups.erase(mPatrolGroups.begin() + b)`
-pub const EE_UNITS_PLAYER_BODY_PATROL_ERASE: i32 = 214;
 /// unit `a`'s `FinishLoad(b, c)`
 pub const EE_UNITS_PLAYER_BODY_FINISH_LOAD: i32 = 215;
 /// `gUnitClassTable[b]->UnloadClassMedia()`
@@ -71,9 +69,6 @@ pub const EE_UNITS_PLAYER_BODY_BUILD_QUEUE_SIZE: i32 = 223;
 pub const EE_UNITS_PLAYER_BODY_ACTIVE_GROUP: i32 = 224;
 /// group `a`'s `RemoveUnit(b)`
 pub const EE_UNITS_PLAYER_BODY_GROUP_REMOVE: i32 = 225;
-/// `mWonders->mItems.size()`, `mWonders->mItems[b]`
-pub const EE_UNITS_PLAYER_BODY_WONDER_COUNT: i32 = 226;
-pub const EE_UNITS_PLAYER_BODY_WONDER_AT: i32 = 227;
 /// complex unit `a`'s `mCloaked = b`, `mCloaked`
 pub const EE_UNITS_PLAYER_BODY_SET_CLOAKED: i32 = 228;
 pub const EE_UNITS_PLAYER_BODY_CLOAKED: i32 = 230;
@@ -137,13 +132,10 @@ pub const EE_UNITS_PLAYER_BODY_TECH_LOAD: i32 = 285;
 pub const EE_UNITS_PLAYER_BODY_TECH_RESET_RANGE: i32 = 286;
 pub const EE_UNITS_PLAYER_BODY_TECH_APPLY_SAVED: i32 = 287;
 pub const EE_UNITS_PLAYER_BODY_UNLOAD_CLASS_MEDIA: i32 = 288;
-/// `(const char*)gUnitClassTable[b]->mName`; `mMediaWarnings.push_back(UString((const char*)a))`
+/// `(const char*)gUnitClassTable[b]->mName`
 pub const EE_UNITS_PLAYER_BODY_CLASS_NAME: i32 = 289;
-pub const EE_UNITS_PLAYER_BODY_MEDIA_WARNING: i32 = 290;
-/// `mHerds[b]`, `delete` herd `a`, `mHerds.clear()`, `mTowns.clear()` is 258 (the areas' delete: `EEDeletePointers`)
-pub const EE_UNITS_PLAYER_BODY_HERD_AT: i32 = 291;
+/// `delete` herd `a` (the areas' delete: `EEDeletePointers`)
 pub const EE_UNITS_PLAYER_BODY_HERD_DELETE: i32 = 292;
-pub const EE_UNITS_PLAYER_BODY_HERDS_CLEAR: i32 = 293;
 /// herd `a`'s `GetUnits(*(std::vector<EEComplexUnit*>*)b)`; `new`/`delete`/size/entry of such a vector; complex unit
 /// `a`'s `Kill(b, 0, 0)`
 pub const EE_UNITS_PLAYER_BODY_HERD_UNITS: i32 = 294;
@@ -153,14 +145,12 @@ pub const EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE: i32 = 297;
 pub const EE_UNITS_PLAYER_BODY_COMPLEXES_AT: i32 = 298;
 pub const EE_UNITS_PLAYER_BODY_KILL_KILLED: i32 = 299;
 /// `DumpMedia(*(FSFileSpec*)a)`'s: the header line, `mUnitClassUpgrades.size()`, `mUnitClassUpgrades[b]`, upgrade
-/// `b`'s `DumpMediaCount(file a)`, the warnings' title, `mMediaWarnings.size()`, warning `b`'s line
+/// `b`'s `DumpMediaCount(file a)`, the text `b` (a C string)
 pub const EE_UNITS_PLAYER_BODY_DUMP_HEADER: i32 = 300;
 pub const EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS: i32 = 301;
 pub const EE_UNITS_PLAYER_BODY_UPGRADE_AT: i32 = 302;
 pub const EE_UNITS_PLAYER_BODY_DUMP_COUNT: i32 = 303;
-pub const EE_UNITS_PLAYER_BODY_DUMP_TITLE: i32 = 304;
-pub const EE_UNITS_PLAYER_BODY_WARNINGS_SIZE: i32 = 305;
-pub const EE_UNITS_PLAYER_BODY_DUMP_WARNING: i32 = 306;
+pub const EE_UNITS_PLAYER_BODY_DUMP_TEXT: i32 = 304;
 /// the result line's texts: `new UWideString`, `delete (UWideString*)a`, `gResource->GetString(b, *(UWideString*)a)`
 pub const EE_UNITS_PLAYER_BODY_TEXT_NEW: i32 = 307;
 pub const EE_UNITS_PLAYER_BODY_TEXT_DELETE: i32 = 308;
@@ -212,10 +202,25 @@ pub const EE_UNITS_PLAYER_REST_ADD_TO_REPATROL: u32 = 26;
 pub trait RestHost {
     /// one operation of the player's body host on player `p`
     fn body(&mut self, op: i32, p: u64, a: u64, b: i64, c: i64) -> i64;
+    /// the player's lists (player_lists.rs): one operation
+    fn list_op(&mut self, p: u64, list: u32, op: ListOp) -> u64;
+    /// the player's list `list`'s entries
+    fn list_all(&mut self, p: u64, list: u32) -> Vec<u64> {
+        (0..self.list_len(p, list)).map(|i| self.list_at(p, list, i)).collect()
+    }
     /// the player's `mTowns`, `mHerds`, `mAllies` (null entries kept)
-    fn towns(&mut self, p: u64) -> Vec<u64>;
-    fn herds(&mut self, p: u64) -> Vec<u64>;
-    fn allies(&mut self, p: u64) -> Vec<u64>;
+    fn towns(&mut self, p: u64) -> Vec<u64> {
+        self.list_all(p, EE_UNITS_LISTS_TOWNS)
+    }
+    fn herds(&mut self, p: u64) -> Vec<u64> {
+        self.list_all(p, EE_UNITS_LISTS_HERDS)
+    }
+    fn allies(&mut self, p: u64) -> Vec<u64> {
+        self.list_all(p, EE_UNITS_LISTS_ALLIES)
+    }
+    /// the player's media warnings (`mMediaWarnings`): one pushed, all of them
+    fn media_warning(&mut self, p: u64, text: Vec<u8>);
+    fn media_warnings(&mut self, p: u64) -> Vec<std::ffi::CString>;
     /// the player's saved record (`EeUnitsPlayerSaved`, read and written in place)
     fn saved(&mut self, p: u64) -> *mut EeUnitsPlayerSaved;
     /// unit `u` is an `EEComplexUnit` (`EEUnitCast<EEComplexUnit>`), its `mTileNode` is set, its tile, its class's
@@ -224,11 +229,19 @@ pub trait RestHost {
     fn on_tile(&mut self, u: u64) -> bool;
     fn tile(&mut self, u: u64) -> (c_long, c_long);
     fn influence(&mut self, u: u64) -> c_long;
-    /// the player's private list `list` (player_lists.rs): length, entry, push, cleared
-    fn list_len(&mut self, p: u64, list: u32) -> usize;
-    fn list_at(&mut self, p: u64, list: u32, i: usize) -> u64;
-    fn list_add(&mut self, p: u64, list: u32, v: u64);
-    fn list_clear(&mut self, p: u64, list: u32);
+    /// the player's list `list`: length, entry, push, cleared
+    fn list_len(&mut self, p: u64, list: u32) -> usize {
+        self.list_op(p, list, ListOp::Len) as usize
+    }
+    fn list_at(&mut self, p: u64, list: u32, i: usize) -> u64 {
+        self.list_op(p, list, ListOp::At(i))
+    }
+    fn list_add(&mut self, p: u64, list: u32, v: u64) {
+        self.list_op(p, list, ListOp::Add(v));
+    }
+    fn list_clear(&mut self, p: u64, list: u32) {
+        self.list_op(p, list, ListOp::Clear(false));
+    }
     /// patrol group `g` (patrol_group.rs): referenced, dereferenced, a town's patrol, its points
     fn pg_reference(&mut self, g: u64);
     fn pg_dereference(&mut self, g: u64);
@@ -346,16 +359,14 @@ pub fn unit_removed<H: RestHost + ?Sized>(h: &mut H, p: u64, unit: u64) {
 
 /// `RemoveAlly(player)`: its first entry out of `mAllies`.
 pub fn remove_ally<H: RestHost + ?Sized>(h: &mut H, p: u64, other: u64) {
-    if let Some(i) = h.allies(p).iter().position(|&a| a == other) {
-        h.body(EE_UNITS_PLAYER_BODY_ALLY_ERASE, p, 0, i as i64, 0);
-    }
+    h.list_op(p, EE_UNITS_LISTS_ALLIES, ListOp::Remove(other));
 }
 
 /// `RemovePatrolGroup(group)`: out of `mPatrolGroups`, dereferenced.
 pub fn remove_patrol_group<H: RestHost + ?Sized>(h: &mut H, p: u64, group: u64) {
-    let n = h.body(EE_UNITS_PLAYER_BODY_PATROL_COUNT, p, 0, 0, 0);
-    if let Some(i) = (0..n).find(|&i| h.body(EE_UNITS_PLAYER_BODY_PATROL_AT, p, 0, i, 0) as u64 == group) {
-        h.body(EE_UNITS_PLAYER_BODY_PATROL_ERASE, p, 0, i, 0);
+    let n = h.list_len(p, EE_UNITS_LISTS_PATROLS);
+    if let Some(i) = (0..n).find(|&i| h.list_at(p, EE_UNITS_LISTS_PATROLS, i) == group) {
+        h.list_op(p, EE_UNITS_LISTS_PATROLS, ListOp::EraseAt(i));
     }
     h.pg_dereference(group);
 }
@@ -414,15 +425,15 @@ pub fn unit_goal_done<H: RestHost + ?Sized>(h: &mut H, p: u64, unit: u64) {
 pub fn refresh_town_groups<H: RestHost + ?Sized>(h: &mut H, p: u64) {
     let n = h.towns(p).len();
     for i in (0..n).rev() {
-        if h.body(EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED, p, 0, i as i64, 0) != 0 {
-            h.body(EE_UNITS_PLAYER_BODY_TOWN_REFRESH, p, 0, i as i64, 0);
+        let town = h.list_at(p, EE_UNITS_LISTS_TOWNS, i);
+        if town != 0 && h.body(EE_UNITS_PLAYER_BODY_TOWN_PATROL, p, town, 0, 0) == 0 {
+            h.body(EE_UNITS_PLAYER_BODY_TOWN_REFRESH, p, town, 0, 0);
         }
     }
 }
 
 fn wonders<H: RestHost + ?Sized>(h: &mut H, p: u64) -> Vec<u64> {
-    let n = h.body(EE_UNITS_PLAYER_BODY_WONDER_COUNT, p, 0, 0, 0);
-    (0..n).map(|i| h.body(EE_UNITS_PLAYER_BODY_WONDER_AT, p, 0, i, 0) as u64).collect()
+    h.list_all(p, EE_UNITS_LISTS_WONDERS)
 }
 
 /// `ResetWonderTimers(other)`: both players' wonders (the other's first) restart at the game time.
@@ -506,9 +517,9 @@ pub fn announce_result<H: RestHost + ?Sized>(h: &mut H, p: u64, victory: bool) {
 /// `AdoptTownPatrol(town)`: a town patrol no other town holds, with a point on one of the town's hull vertices,
 /// becomes the town's (referenced); whether one was found.
 pub fn adopt_town_patrol<H: RestHost + ?Sized>(h: &mut H, p: u64, town: u64) -> bool {
-    let groups = h.body(EE_UNITS_PLAYER_BODY_PATROL_COUNT, p, 0, 0, 0);
+    let groups = h.list_len(p, EE_UNITS_LISTS_PATROLS);
     for g in 0..groups {
-        let group = h.body(EE_UNITS_PLAYER_BODY_PATROL_AT, p, 0, g, 0) as u64;
+        let group = h.list_at(p, EE_UNITS_LISTS_PATROLS, g);
         if group == 0 || !h.pg_is_town_patrol(group) {
             continue;
         }
@@ -648,7 +659,7 @@ pub fn media_check<H: RestHost + ?Sized>(h: &mut H, p: u64, class: c_long, butto
     let name = h.body(EE_UNITS_PLAYER_BODY_CLASS_NAME, p, 0, class as i64, 0) as u64;
     let name = h.c_string(name);
     let text = media_warning(&name, buttons, h.player_id(p));
-    h.body(EE_UNITS_PLAYER_BODY_MEDIA_WARNING, p, text.as_ptr() as u64, 0, 0);
+    h.media_warning(p, text);
 }
 
 /// The warning's text, NUL-terminated (the original's `sprintf`; the id as `%ld`).
@@ -700,36 +711,6 @@ pub fn set_cloaked_chain<H: CloakHost + ?Sized>(h: &mut H, unit: u64, value: boo
     }
 }
 
-/// The towns' (`towns`) or the herds' `EEDeletePointers`: each area deleted in order, then the list cleared.
-pub fn delete_areas(body: &mut dyn FnMut(i32, u64, i64) -> i64, towns: bool) {
-    use crate::units::player_body::EE_UNITS_PLAYER_BODY_HERD_COUNT;
-    use crate::units::town_split::{
-        EE_UNITS_PLAYER_BODY_TOWNS_CLEAR, EE_UNITS_PLAYER_BODY_TOWN_DELETE, EE_UNITS_PLAYER_BODY_TOWN_SLOT,
-        EE_UNITS_PLAYER_BODY_TOWN_SLOTS,
-    };
-    let (count, at, delete, clear) = if towns {
-        (
-            EE_UNITS_PLAYER_BODY_TOWN_SLOTS,
-            EE_UNITS_PLAYER_BODY_TOWN_SLOT,
-            EE_UNITS_PLAYER_BODY_TOWN_DELETE,
-            EE_UNITS_PLAYER_BODY_TOWNS_CLEAR,
-        )
-    } else {
-        (
-            EE_UNITS_PLAYER_BODY_HERD_COUNT,
-            EE_UNITS_PLAYER_BODY_HERD_AT,
-            EE_UNITS_PLAYER_BODY_HERD_DELETE,
-            EE_UNITS_PLAYER_BODY_HERDS_CLEAR,
-        )
-    };
-    let n = body(count, 0, 0);
-    for i in 0..n {
-        let area = body(at, 0, i) as u64;
-        body(delete, area, 0);
-    }
-    body(clear, 0, 0);
-}
-
 /// `KillHerdUnits(herd, killed)`: the herd's units, the last first, killed.
 pub fn kill_herd_units<H: RestHost + ?Sized>(h: &mut H, p: u64, herd: u64, killed: bool) {
     let units = h.body(EE_UNITS_PLAYER_BODY_COMPLEXES_NEW, p, 0, 0, 0) as u64;
@@ -752,10 +733,12 @@ pub fn dump_media<H: RestHost + ?Sized>(h: &mut H, p: u64, file: u64) {
             h.body(EE_UNITS_PLAYER_BODY_DUMP_COUNT, p, file, up, 0);
         }
     }
-    h.body(EE_UNITS_PLAYER_BODY_DUMP_TITLE, p, file, 0, 0);
-    let n = h.body(EE_UNITS_PLAYER_BODY_WARNINGS_SIZE, p, 0, 0, 0);
-    for j in 0..n {
-        h.body(EE_UNITS_PLAYER_BODY_DUMP_WARNING, p, file, j, 0);
+    let title = c"\n\n\t\tMedia that might not have been loaded correctly:\n";
+    h.body(EE_UNITS_PLAYER_BODY_DUMP_TEXT, p, file, title.as_ptr() as i64, 0);
+    for w in h.media_warnings(p) {
+        let mut line = b"\t\t".to_vec();
+        line.extend_from_slice(w.as_bytes_with_nul());
+        h.body(EE_UNITS_PLAYER_BODY_DUMP_TEXT, p, file, line.as_ptr() as i64, 0);
     }
 }
 
@@ -828,7 +811,7 @@ pub fn run<H: RestHost + ?Sized>(h: &mut H, p: u64, what: u32, a: u64, b: i64, c
         EE_UNITS_PLAYER_REST_RESET_WONDER_TIMERS => reset_wonder_timers(h, p, a),
         EE_UNITS_PLAYER_REST_DELAY_WONDER_TIMERS => delay_wonder_timers(h, p, b as c_long),
         EE_UNITS_PLAYER_REST_WONDER_TIME => {
-            let w = h.body(EE_UNITS_PLAYER_BODY_WONDER_AT, p, 0, b, 0) as u64;
+            let w = h.list_at(p, EE_UNITS_LISTS_WONDERS, b as usize);
             return h.body(EE_UNITS_PLAYER_BODY_CLOAKED, p, w, 0, 0) as c_ulong as c_long as i64;
         }
         EE_UNITS_PLAYER_REST_SET_ALL_RESOURCES => set_all_resources(h, p, b as c_long),
@@ -858,25 +841,11 @@ pub mod game {
         ee_units_pg_dereference, ee_units_pg_is_town_patrol, ee_units_pg_point, ee_units_pg_point_count,
         ee_units_pg_reference, EeUnitsPatrolGroup,
     };
-    use crate::units::player_lists::{
-        ee_units_lists_add, ee_units_lists_at, ee_units_lists_clear, ee_units_lists_len, EeUnitsPlayerLists,
-    };
     use crate::world::layout::layout;
     use crate::world::{PlayerView, UnitView, WorldRead};
     use std::ffi::c_void;
 
     struct Game;
-
-    fn lists(player: u64) -> *mut EeUnitsPlayerLists {
-        // SAFETY: a live player's member, made by its constructor
-        unsafe { *((player as usize + layout().player_lists as usize) as *const *mut EeUnitsPlayerLists) }
-    }
-
-    fn player_list(p: u64, f: impl Fn(&PlayerView) -> Vec<u64>) -> Vec<u64> {
-        // SAFETY: the C++ passes a live player and holds the world for the call
-        let t = unsafe { WorldRead::begin() };
-        unsafe { PlayerView::of(&t, p) }.map_or_else(Vec::new, |v| f(&v))
-    }
 
     fn unit<R>(u: u64, f: impl Fn(&UnitView) -> R, none: R) -> R {
         // SAFETY: the C++ passes a live unit and holds the world for the call
@@ -892,14 +861,17 @@ pub mod game {
         fn body(&mut self, op: i32, p: u64, a: u64, b: i64, c: i64) -> i64 {
             crate::units::player_body::body_host(op, p, a, b, c)
         }
-        fn towns(&mut self, p: u64) -> Vec<u64> {
-            player_list(p, |v| (0..v.towns_len()).map(|i| v.town_handle(i)).collect())
+        fn list_op(&mut self, p: u64, list: u32, op: ListOp) -> u64 {
+            crate::units::player_lists::player_op(p, list, op)
         }
-        fn herds(&mut self, p: u64) -> Vec<u64> {
-            player_list(p, |v| (0..v.herds_len()).map(|i| v.herd_handle(i)).collect())
+        fn media_warning(&mut self, p: u64, text: Vec<u8>) {
+            // SAFETY: the live player's lists
+            let l = unsafe { &mut *crate::units::player_lists::player_lists(p) };
+            l.warnings.push(std::ffi::CString::from_vec_with_nul(text).unwrap_or_default());
         }
-        fn allies(&mut self, p: u64) -> Vec<u64> {
-            player_list(p, |v| (0..v.allies_len()).map(|i| v.ally_handle(i)).collect())
+        fn media_warnings(&mut self, p: u64) -> Vec<std::ffi::CString> {
+            // SAFETY: as above
+            unsafe { &*crate::units::player_lists::player_lists(p) }.warnings.clone()
         }
         fn saved(&mut self, p: u64) -> *mut EeUnitsPlayerSaved {
             (p as usize + layout().player_saved as usize) as *mut EeUnitsPlayerSaved
@@ -915,22 +887,6 @@ pub mod game {
         }
         fn influence(&mut self, u: u64) -> c_long {
             unit(u, |v| v.class().map_or(0, |c| crate::world_field!(c.fields(), mInfluence)), 0)
-        }
-        fn list_len(&mut self, p: u64, list: u32) -> usize {
-            // SAFETY: the live player's lists
-            unsafe { ee_units_lists_len(lists(p), list) }
-        }
-        fn list_at(&mut self, p: u64, list: u32, i: usize) -> u64 {
-            // SAFETY: as above
-            unsafe { ee_units_lists_at(lists(p), list, i) }
-        }
-        fn list_add(&mut self, p: u64, list: u32, v: u64) {
-            // SAFETY: as above
-            unsafe { ee_units_lists_add(lists(p), list, v) };
-        }
-        fn list_clear(&mut self, p: u64, list: u32) {
-            // SAFETY: as above
-            unsafe { ee_units_lists_clear(lists(p), list, false) }
         }
         // SAFETY (the patrol groups'): the player's live patrol group
         fn pg_reference(&mut self, group: u64) {

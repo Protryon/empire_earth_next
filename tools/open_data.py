@@ -357,14 +357,59 @@ def db_tables():
     return spec
 
 
+BUILDING_STALE_S = 30 * 60   # a build folder untouched this long belongs to a builder that died
+
+
+def building_dir(tree):
+    """where a build of tree is made before it replaces tree (its existence: a build in progress)"""
+    tree = pathlib.Path(tree)
+    return tree.with_name(tree.name + '.building')
+
+
+def wait_for_build(tree, timeout=BUILDING_STALE_S):
+    """wait while another process builds tree (its .building folder exists and is fresh) -> True if one ran"""
+    b, waited, t0 = building_dir(tree), False, time.time()
+    while b.exists() and time.time() - b.stat().st_mtime < BUILDING_STALE_S and time.time() - t0 < timeout:
+        if not waited:
+            print(f'data: {tree} is being built by another process: waiting', flush=True)
+        waited = True
+        time.sleep(5)
+    return waited
+
+
 def cmd_build(a, out=None):
+    """Build the tree beside its place (OUT.building), then swap it in: a reader (tools/sim.py's stage, the
+    harness) never sees a half-built tree. Round 14's sim_editor --civbuilder failures were a stage copied from a
+    tree that the harness's rebuild had emptied (no Random Map Scripts yet)."""
     out = outside_repo(out or a.out)
     if out.exists():
         if not a.force:
             sys.exit(f'{out} exists: pass --force to replace it')
         if not (out / 'open_data.json').exists():
             sys.exit(f'{out} exists and was not made by this tool (no open_data.json): refusing to delete it')
-        shutil.rmtree(out)
+    tmp = building_dir(out)
+    if wait_for_build(out):
+        print(f'data: another process built {out}: building it again', flush=True)
+    if tmp.exists():   # a dead builder's
+        shutil.rmtree(tmp)
+    tmp.mkdir(parents=True)
+    _build_into(a, tmp)
+    old = out.with_name(out.name + f'.old-{os.getpid()}')
+    for attempt in range(20):   # (Windows: a scanner or indexer can hold the folder for a moment)
+        try:
+            if out.exists():
+                out.rename(old)
+            tmp.rename(out)
+            break
+        except OSError:
+            if attempt == 19:
+                raise
+            time.sleep(1)
+    shutil.rmtree(old, ignore_errors=True)   # (files a running stage holds stay until it exits)
+    return out
+
+
+def _build_into(a, out):
     t0 = time.time()
     dirs, plcs = places(a.game, a.base)
     if len(dirs) < 2:
@@ -469,7 +514,6 @@ def cmd_build(a, out=None):
     for k, v in report['shadowed'].items():
         print(f'  shadowed: {v} files of {k}', flush=True)
     print(f'tree: {report["files"]} files in {time.time() - t0:.0f} s -> {out}', flush=True)
-    return out
 
 
 def cmd_db_regen(a):

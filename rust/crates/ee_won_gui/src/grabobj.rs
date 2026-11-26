@@ -187,6 +187,11 @@ impl EeWonGrabber {
     }
 
     fn op(&self, w: EeWonGrab, b: isize, c: isize, d: isize) -> isize {
+        if w == EeWonGrab::RawRelease {
+            if let Some(r) = crate::gamewin::rf(c, false) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host was given with this grabber; no borrow of the state is live here
             Some(h) => unsafe { h(self.me, Op::Grab, w as isize, b, c, d) },

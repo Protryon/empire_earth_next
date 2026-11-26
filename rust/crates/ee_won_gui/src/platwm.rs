@@ -369,6 +369,10 @@ impl EeWonPlatWm {
     }
 
     fn call(&self, op: EeWonPlatWmOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+        // a game window's own Rust parts (R6 WON GUI round 37)
+        if let Some(r) = crate::gamewin::plat_wm_op(op, a, b, c) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host's contract
             Some(f) => unsafe { f(self.me, op, a, b, c, d) },

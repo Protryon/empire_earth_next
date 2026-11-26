@@ -19,7 +19,6 @@
 #include "ee/EEMedia.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
-#include "rust/audio/sound.h"
 #include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp music_io.rs)
 
 // The C++ side of the Rust music manager: the members, the conductor, the songs, the world and the preferences

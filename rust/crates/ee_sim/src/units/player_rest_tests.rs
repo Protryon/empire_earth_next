@@ -1,5 +1,9 @@
 use super::*;
 use crate::units::player_body::EE_UNITS_PLAYER_BODY_IS_LOCAL;
+use crate::units::player_lists::{
+    apply_vec, EE_UNITS_LISTS_ALLIES, EE_UNITS_LISTS_HERDS, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_TOWNS,
+    EE_UNITS_LISTS_WONDERS,
+};
 
 /// A player's world: the answers by operation (the last argument-matching rule wins), and the calls made.
 #[derive(Default)]
@@ -7,6 +11,9 @@ struct World {
     towns: Vec<u64>,
     herds: Vec<u64>,
     allies: Vec<u64>,
+    patrols: Vec<u64>,
+    wonders: Vec<u64>,
+    warnings: Vec<std::ffi::CString>,
     saved: Option<Box<EeUnitsPlayerSaved>>,
     answers: Vec<(i32, Option<u64>, Option<i64>, i64)>,
     calls: Vec<(i32, u64, i64, i64)>,
@@ -36,14 +43,22 @@ impl RestHost for World {
             .find(|r| r.0 == op && r.1.is_none_or(|x| x == a) && r.2.is_none_or(|x| x == b))
             .map_or(0, |r| r.3)
     }
-    fn towns(&mut self, _: u64) -> Vec<u64> {
-        self.towns.clone()
+    fn list_op(&mut self, _: u64, list: u32, op: ListOp) -> u64 {
+        let l = match list {
+            EE_UNITS_LISTS_TOWNS => &mut self.towns,
+            EE_UNITS_LISTS_HERDS => &mut self.herds,
+            EE_UNITS_LISTS_ALLIES => &mut self.allies,
+            EE_UNITS_LISTS_PATROLS => &mut self.patrols,
+            EE_UNITS_LISTS_WONDERS => &mut self.wonders,
+            _ => &mut self.list,
+        };
+        apply_vec(l, list, op)
     }
-    fn herds(&mut self, _: u64) -> Vec<u64> {
-        self.herds.clone()
+    fn media_warning(&mut self, _: u64, text: Vec<u8>) {
+        self.warnings.push(std::ffi::CString::from_vec_with_nul(text).unwrap());
     }
-    fn allies(&mut self, _: u64) -> Vec<u64> {
-        self.allies.clone()
+    fn media_warnings(&mut self, _: u64) -> Vec<std::ffi::CString> {
+        self.warnings.clone()
     }
     fn saved(&mut self, _: u64) -> *mut EeUnitsPlayerSaved {
         let s = self.saved.get_or_insert_with(|| Box::new(unsafe { std::mem::zeroed() }));
@@ -60,18 +75,6 @@ impl RestHost for World {
     }
     fn influence(&mut self, _: u64) -> c_long {
         1
-    }
-    fn list_len(&mut self, _: u64, _: u32) -> usize {
-        self.list.len()
-    }
-    fn list_at(&mut self, _: u64, _: u32, i: usize) -> u64 {
-        self.list[i]
-    }
-    fn list_add(&mut self, _: u64, _: u32, v: u64) {
-        self.list.push(v);
-    }
-    fn list_clear(&mut self, _: u64, _: u32) {
-        self.list.clear();
     }
     fn pg_reference(&mut self, g: u64) {
         self.refs.push(('+', g));
@@ -200,15 +203,10 @@ fn herds_of_a_type_and_registering_walk_from_the_end() {
 fn lists_and_groups() {
     let mut w = World { allies: vec![4, 5, 5], ..Default::default() };
     remove_ally(&mut w, 1, 5);
-    assert_eq!(w.calls, vec![(EE_UNITS_PLAYER_BODY_ALLY_ERASE, 0, 1, 0)]);
-    let mut w = World::default().answer(EE_UNITS_PLAYER_BODY_PATROL_COUNT, None, None, 2).answer(
-        EE_UNITS_PLAYER_BODY_PATROL_AT,
-        None,
-        Some(1),
-        77,
-    );
+    assert_eq!(w.allies, vec![4, 5]);
+    let mut w = World { patrols: vec![76, 77, 78], ..Default::default() };
     remove_patrol_group(&mut w, 1, 77);
-    assert!(w.calls.contains(&(EE_UNITS_PLAYER_BODY_PATROL_ERASE, 0, 1, 0)));
+    assert_eq!(w.patrols, vec![76, 78]);
     assert_eq!(w.refs, vec![('-', 77)]);
     let mut w = World { complex: true, ..Default::default() }.answer(EE_UNITS_PLAYER_BODY_GOAL_QUEUES, None, None, 2);
     unit_removed(&mut w, 1, 9);
@@ -239,9 +237,7 @@ fn class_media_load_and_unload() {
 
 #[test]
 fn wonder_timers_and_resources() {
-    let mut w = World::default()
-        .answer(EE_UNITS_PLAYER_BODY_WONDER_COUNT, None, None, 1)
-        .answer(EE_UNITS_PLAYER_BODY_WONDER_AT, None, None, 30)
+    let mut w = World { wonders: vec![30], ..Default::default() }
         .answer(EE_UNITS_PLAYER_BODY_CLOAKED, None, None, 100)
         .answer(EE_UNITS_PLAYER_BODY_GAME_TIME, None, None, 555);
     delay_wonder_timers(&mut w, 1, -10);
@@ -286,10 +282,7 @@ fn a_game_result_is_announced_once_for_another_player() {
 
 #[test]
 fn a_town_adopts_a_free_town_patrol_on_its_hull() {
-    let mut w = World { towns: vec![20, 21], points: vec![60], ..Default::default() }
-        .answer(EE_UNITS_PLAYER_BODY_PATROL_COUNT, None, None, 2)
-        .answer(EE_UNITS_PLAYER_BODY_PATROL_AT, None, Some(0), 50)
-        .answer(EE_UNITS_PLAYER_BODY_PATROL_AT, None, Some(1), 51)
+    let mut w = World { towns: vec![20, 21], patrols: vec![50, 51], points: vec![60], ..Default::default() }
         .answer(EE_UNITS_PLAYER_BODY_TOWN_PATROL, Some(21), None, 50)
         .answer(EE_UNITS_PLAYER_BODY_HULL_COUNT, None, None, 2)
         .answer(EE_UNITS_PLAYER_BODY_HULL_POINT, None, Some(1), pack(3, 4))
@@ -361,7 +354,7 @@ fn the_tech_tree_reloads_through_a_memory_file() {
 fn a_class_not_preloaded_leaves_a_warning() {
     let mut w = World::default().answer(crate::units::player_body::EE_UNITS_PLAYER_BODY_CLASS_STATS, None, None, 0x90);
     media_check(&mut w, 1, 7, true);
-    assert!(w.ops().contains(&EE_UNITS_PLAYER_BODY_MEDIA_WARNING));
+    assert_eq!(w.warnings.len(), 1);
     assert_eq!(
         media_warning(b"Archer", true, 3),
         b"The unit Archer BUTTONS might not have been preloaded for player 3 - have a programmer verify this.\n\0"
@@ -373,7 +366,7 @@ fn a_class_not_preloaded_leaves_a_warning() {
         .answer(crate::units::player_body::EE_UNITS_PLAYER_BODY_CLASS_STATS, None, None, 0x90)
         .answer(EE_UNITS_PLAYER_BODY_STATS_MEDIA_COUNT, None, None, 2);
     media_check(&mut w, 1, 7, false);
-    assert!(!w.ops().contains(&EE_UNITS_PLAYER_BODY_MEDIA_WARNING));
+    assert!(w.warnings.is_empty());
 }
 
 /// Parts 1 -> 2 -> 3 with their flags.
@@ -413,34 +406,6 @@ fn the_cloak_chains_walk_the_parts_until_one_is_so() {
 }
 
 #[test]
-fn areas_are_deleted_in_order_then_cleared() {
-    let mut log = Vec::new();
-    delete_areas(
-        &mut |op, a, b| {
-            log.push((op, a, b));
-            if op == crate::units::player_body::EE_UNITS_PLAYER_BODY_HERD_COUNT {
-                2
-            } else if op == EE_UNITS_PLAYER_BODY_HERD_AT {
-                0x10 + b
-            } else {
-                0
-            }
-        },
-        false,
-    );
-    assert_eq!(
-        log[1..],
-        [
-            (EE_UNITS_PLAYER_BODY_HERD_AT, 0, 0),
-            (EE_UNITS_PLAYER_BODY_HERD_DELETE, 0x10, 0),
-            (EE_UNITS_PLAYER_BODY_HERD_AT, 0, 1),
-            (EE_UNITS_PLAYER_BODY_HERD_DELETE, 0x11, 0),
-            (EE_UNITS_PLAYER_BODY_HERDS_CLEAR, 0, 0)
-        ]
-    );
-}
-
-#[test]
 fn a_herd_dies_from_its_last_unit_and_the_dump_lists_what_is_there() {
     let mut w = World::default()
         .answer(EE_UNITS_PLAYER_BODY_COMPLEXES_NEW, None, None, 0x80)
@@ -451,13 +416,17 @@ fn a_herd_dies_from_its_last_unit_and_the_dump_lists_what_is_there() {
     let kills: Vec<u64> = w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_KILL_KILLED).map(|c| c.1).collect();
     assert_eq!(kills, vec![0x42, 0x41]);
     assert_eq!(w.calls[1], (EE_UNITS_PLAYER_BODY_HERD_UNITS, 0x30, 0x80, 0));
-    let mut w = World::default()
-        .answer(EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS, None, None, 3)
-        .answer(EE_UNITS_PLAYER_BODY_UPGRADE_AT, None, Some(1), 0x90)
-        .answer(EE_UNITS_PLAYER_BODY_WARNINGS_SIZE, None, None, 2);
+    let mut w = World::default().answer(EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS, None, None, 3).answer(
+        EE_UNITS_PLAYER_BODY_UPGRADE_AT,
+        None,
+        Some(1),
+        0x90,
+    );
+    w.warnings = vec![c"one".to_owned(), c"two".to_owned()];
     dump_media(&mut w, 1, 0x500);
     assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_DUMP_COUNT).count(), 1);
-    assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_DUMP_WARNING).count(), 2);
+    // the title, then each warning
+    assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_DUMP_TEXT).count(), 3);
 }
 
 #[test]

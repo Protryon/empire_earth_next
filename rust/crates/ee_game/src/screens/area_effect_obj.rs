@@ -334,7 +334,8 @@ pub(crate) fn manager_tick<C: Cpp + ?Sized>(c: &mut C, manager: usize, elapsed: 
     clear_effects(c, manager);
     c.aem_for_each(EE_SCREENS_AEM_PASS_REBUILD, manager, 0, 0.0, 0.0, 0.0);
     c.aem_for_each(EE_SCREENS_AEM_PASS_UPDATE_AFFECTED, 0, 0, elapsed, 0.0, 0.0);
-    c.aem_capture_tick(elapsed);
+    #[cfg(not(test))]
+    crate::screens::area_effect_ffi::ee_screens_ae_capture_tick(elapsed);
 }
 
 /// `Clear` 0x27b5d1: every template dereferenced, the templates and the active list emptied.
@@ -494,7 +495,7 @@ mod tests {
             "aem_for_each(2, 0, 0, 0.0, 0.0, 0.0)\naem_for_each(0, 0, 0, 0.0, 0.0, 0.0)\n\
              aem_for_each(4, 0, 0, 0.0, 0.0, 0.0)\naem_for_each(5, 0, 0, 2000.0, 0.0, 0.0)\n\
              aem_effects_release(9)\naem_effects_erase(9)\naem_for_each(3, 9, 0, 0.0, 0.0, 0.0)\n\
-             aem_for_each(6, 0, 0, 2000.0, 0.0, 0.0)\naem_capture_tick(2000.0)"
+             aem_for_each(6, 0, 0, 2000.0, 0.0, 0.0)"
         );
     }
 

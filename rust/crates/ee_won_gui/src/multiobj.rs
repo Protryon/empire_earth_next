@@ -32,6 +32,9 @@ const CLIP: i32 = 0x2000;
 const FULL_ROW: isize = 0x10;
 
 fn call_host(host: EeWonGuiHostFn, comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+    if let Some(r) = crate::gamewin::common_op(comp as isize, op, a, b, c) {
+        return r;
+    }
     match host {
         // SAFETY: the host was given with this object's component; no borrow of a state is live here
         Some(h) => unsafe { h(comp, op, a, b, c, d) },

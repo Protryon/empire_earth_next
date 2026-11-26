@@ -21,12 +21,6 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "GEWindow.h"
-#include "rust/base/math.h"   // ee_gfx units.rs (RUST_PLAN R4.4)
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
@@ -47,7 +41,6 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EEROUserInterface.h"
-#include "ee/EEMouse.h"
 #include "rust/game/gamecpp.h"
 #include <utility>
 

@@ -16,13 +16,9 @@
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEDbRecords.h"
-#include "ee/EEMediaUse.h"
-#include "lle/GERenderState.h"
 #include "rust/game/gamecpp.h"
 
 std::vector<EETerrainTable*> EETerrainTable::sTable;
@@ -46,7 +42,6 @@ long gFirstCliffTerrain;
 #include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
 #include "ee/EEUnit.h"
-#include "ee/EEButtonObject.h"
 
 // Loads each terrain's list-box preview texture (its file name with _1) and references the button of its first unit
 // class (the terrain list of EEUIFSETerrain)

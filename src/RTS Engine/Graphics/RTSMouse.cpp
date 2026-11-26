@@ -18,11 +18,6 @@
 #include "lle/Input System.h"
 
 #include "ee/RTSMouse.h"
-#include "lle/GERenderState.h"
-#include "rust/base/math.h"   // ee_gfx mouse.rs (ClampPosition), mouse_frame.rs (the frame)
-#include "rust/render/gfx.h"
-#include "rust/render/ge.h"
-#include "rust/game/rts.h"
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
 static_assert(sizeof(GEVideoMode) == sizeof(EeRtsVideoMode) && sizeof(GESurfaceDescription) == sizeof(EeGeSurfaceDescription), "mirrors");
 

@@ -349,7 +349,7 @@ fn sa(bytes: &[u8]) -> i64 {
 }
 
 /// The physics' saved block. Each use reads or writes one field; none is held across a C++ call.
-fn rec(p: P) -> *mut EeUnitsPhysicsSaved {
+pub(crate) fn rec(p: P) -> *mut EeUnitsPhysicsSaved {
     hp(O::Rec, p, &[]) as *mut EeUnitsPhysicsSaved
 }
 

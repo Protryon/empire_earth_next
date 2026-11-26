@@ -63,6 +63,10 @@ fn shared() -> std::sync::MutexGuard<'static, Shared> {
     SHARED.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// The box selections' ids go to [`lasso`] (the fixture's install with the hooks; was EETestFixture.cpp's LassoHook in
+/// EEMessage.cpp's gEESelectUnitsTestHook).
+pub static LASSO_ON: AtomicBool = AtomicBool::new(false);
+
 /// The box selection message's ids (EEMSelectUnits' ctor, the UI thread, before the lasso posts its action); in
 /// mode 2 the dead unit's selection and deletion are posted here, after the pick.
 pub fn lasso(ids: &[i64]) {

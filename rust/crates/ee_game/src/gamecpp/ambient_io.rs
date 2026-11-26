@@ -10,6 +10,7 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_TOWNS};
 use ee_sim::world::player_fields::{EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
@@ -197,7 +198,7 @@ pub extern "C" fn ee_gamecpp_ambient_count_unit(counts: *mut EeAppAmbientCounts,
     if h(O::EaPlayerEpoch, local, &[]) < EPOCH_ATOMIC_WW1 as i64 {
         return;
     }
-    let towns = h(O::EaTownCount, local, &[]);
+    let towns = player_op(local as u64, EE_UNITS_LISTS_TOWNS, ListOp::Len) as i64;
     for i in (0..towns).rev() {
         if h(O::EaTownHullContains, local, &[i, r.mTileX as i64, r.mTileY as i64]) != 0 {
             c.mNumAirRaiders += 1;

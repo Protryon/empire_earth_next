@@ -11,8 +11,6 @@ class EEStatisticsRecord {
 public:
     EEStatisticsRecord();
     // the copy ctor 0x13d28a and operator= 0x13e451 are implicit (member-wise)
-    // Destroys the end-of-game record
-    ~EEStatisticsRecord() {  }
     void Clear();                           // 0x16dadc (the ctor's last call; provisional name)
 
     EEPlayerStatistics mStatistics;         // +0x000
