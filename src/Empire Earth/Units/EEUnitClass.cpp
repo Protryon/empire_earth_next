@@ -223,6 +223,8 @@ template <class T> static T* EEUcObject(uint64_t inHandle) { return reinterpret_
 // the constructor's effects: the record's ids and the class's members, in the original's order (uc_class.rs)
 // CreateUnitClasses' dbobjects file
 static FSFileSpec* sUcDbFile;
+// the Bundeswehr power (ucp_people.rs: GET_BUNDESWEHR, then POWER_IS_PREREQUISITE)
+static EECivPower sUcpPower;
 
 // The C++ of EEUnitClass's Rust bodies (ee_units uc_body.rs; EE_UNITS_UC_*): one statement of the original bodies
 // each, in their order; inClass the class the body runs on, inUnit its unit, inA an object, inB and inC values, ioF
@@ -607,6 +609,38 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCS_SET_BLINK_COLOR: theOther->SetColor(GEColor(0.9f, 0.0f, 0.2f)); return 0;
     case EE_UNITS_UCS_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
     case EE_UNITS_UCS_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)));
+    // the people's bodies' (ee_units ucp_people.rs, ucp_view.rs; EE_UNITS_UCP_*: EEUnitClassPeople.cpp's host until units round 14; the
+    // effect handle is Rust's cell, its address in inC; the sound factors 0x446fd8 and 0x446fe4 are 4.0f)
+    case EE_UNITS_UCP_RESEARCH: theUnit->mPlayer->mTechnologies->Research((long)inB, theUnit); return 0;
+    case EE_UNITS_UCP_REMOVAL_SOUND: return EEObj(EESoundObject::Get(EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalSound));
+    case EE_UNITS_UCP_REMOVAL_EFFECT_COUNT: return EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalEffects.size();
+    case EE_UNITS_UCP_REMOVAL_EFFECT: gWorld.GetEffectManager()->CreatePlacedEffect(GE3DPoint(f[0], f[1], f[2]), EEGraphicEffect::Get(EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalEffects[(size_t)inB]), EEUcObject<EEEffectHandle>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCP_SOUND_AT: EEComputeSoundParameters(1.0f, GE3DPoint(f[0], f[1], f[2]), f[0], f[1], f[2], 4.0f); return 0;
+    case EE_UNITS_UCP_REMOVAL_PITCH_OFFSET: f[0] = EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalPitchOffset; return 0;
+    case EE_UNITS_UCP_SOUND_PLAY: EEUcObject<EESoundObject>(inA)->Play(f[0], f[1], f[2]); return 0;
+    case EE_UNITS_UCP_THUNDER_EVERY: return EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalThunderEvery;
+    case EE_UNITS_UCP_THUNDER_SOUND: return EEObj(EESoundObject::Get(EEGetRules().Epoch(theUnit->mPlayer->mTechnologies->mCurrentEpoch).mRemovalThunder));
+    case EE_UNITS_UCP_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
+    case EE_UNITS_UCP_RESEARCH_NODE: return EEObj(theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch));
+    case EE_UNITS_UCP_GET_BUNDESWEHR: return gCivPowersManager.GetPower(kCivPowerBundeswehr, sUcpPower);
+    case EE_UNITS_UCP_POWER_IS_PREREQUISITE: return sUcpPower.mTechnology == EEUcObject<EETechTreeNode>(inA)->mData->mPrerequisite1;
+    case EE_UNITS_UCP_CONVERSION_COST: return EEGetConversionCost(theOther);
+    case EE_UNITS_UCP_CONVERSION_TARGET: return EEObj(static_cast<EEComplexUnit*>(EEAttackUnitCast(theUnit->GetGoal())->GetAttackTarget()));
+    case EE_UNITS_UCP_CREATE_INDICATOR: return gWorld.GetEffectManager()->CreateUnitEffect(theOther, EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator), EEUcObject<EEEffectHandle>((uint64_t)inC), 0, 0, 0);
+    case EE_UNITS_UCP_CONVERSION_EVENT: theOther->mPlayer->mEvents.AddPlayerEvent(EETileLocation(theOther->mTileX, theOther->mTileY), EETileLocation(theUnit->mTileX, theUnit->mTileY), 1, theOther->GetPlayer(), -1, false); return 0;
+    case EE_UNITS_UCP_HAS_ADAPTATION: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerAdaptation);
+    case EE_UNITS_UCP_CONVERSION: *EEUcObject<EeCombatConversionOut>((uint64_t)inB) = EECombatConversion(*EEUcObject<EeCombatConversionIn>(inA)); return 0;
+    case EE_UNITS_UCP_PROTECTED_OF: return theOther->GetComplexUnit()->IsProtected();
+    case EE_UNITS_UCP_CONVERT_UNIT: return EEObj(EEConvertUnit(theOther, theUnit->mPlayer->GetPlayerID(), 1));
+    case EE_UNITS_UCP_TILE_SEEN: return ((EEMapTile*)EEUcObject<EEUnit>(inA)->mTile)->IsSeenBy(theUnit->GetPlayer()) == true;
+    case EE_UNITS_UCP_SPEND_FAITH: theUnit->SetPower(theUnit->mPower - EEGetConversionCost(theUnit)); return 0;
+    case EE_UNITS_UCP_PLAY_FULL: gSoundManager->Play(EEUcObject<EESoundObject>(inA)->mSampleID, 1.0f, 0.0f, 1.0f, false, NULL); return 0;
+    case EE_UNITS_UCP_CREATE_EFFECT: return gWorld.GetEffectManager()->CreateUnitEffect(theUnit, EEGraphicEffect::Get((long)inB), EEUcObject<EEEffectHandle>((uint64_t)inC), 0, 0, 0);
+    case EE_UNITS_UCP_TOWER_SOUND_AT: EEComputeSoundParameters(EESoundObject::Get(kSoundPriestTowerConvert)->mVolume, GE3DPoint(f[0], f[1], f[2]), f[0], f[1], f[2], 4.0f); return 0;
+    case EE_UNITS_UCP_PLAY_TOWER_SOUND: gSoundManager->Play(EESoundObject::Get(kSoundPriestTowerConvert)->mSampleID, f[0], f[1], f[2], false, NULL); return 0;
+    case EE_UNITS_UCP_DESTROY_CLOAKED_EFFECT: gWorld.GetEffectManager()->DestroyEffect(EEEffectHandle{(uint32_t)theUnit->mCloaked}); return 0;
+    case EE_UNITS_UCP_DESTROY_GROW_EFFECT: gWorld.GetEffectManager()->DestroyEffect(EEEffectHandle{(uint32_t)theUnit->mGrowTime}); return 0;
+    case EE_UNITS_UCP_CAN_CONVERT_CAPTURE: EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'N'), *EEUcObject<EeCombatCanConvertIn>(inA), *EEUcObject<EeCombatCanConvertOut>((uint64_t)inB)); return 0;
     }
     return 0;
 }

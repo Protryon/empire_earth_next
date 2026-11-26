@@ -21678,14 +21678,6 @@ void ee_units_ucn_fire_shot(uint64_t class_,
 void ee_units_ucn_attacked(uint64_t class_,
                            uint64_t unit);
 
-extern int64_t ee_units_ucp_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
 /// The people's body `what` (`EE_UNITS_UCP_DO_*`) of `class` (or NULL) on `unit`: `a` an object, `b` a value;
 /// the body's answer, or 0.
 ///

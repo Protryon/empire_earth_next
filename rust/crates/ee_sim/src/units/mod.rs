@@ -204,6 +204,7 @@ pub mod uck_kinds;
 #[cfg(not(test))]
 pub mod ucn_noted;
 pub mod ucp_people;
+mod ucp_view;
 pub mod ucs_impact;
 pub mod ucs_shots;
 pub mod ucx_transports;
