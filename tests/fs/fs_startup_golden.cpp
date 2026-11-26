@@ -14,7 +14,6 @@
 #include <string>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/File System.h"
 
 void FSGetVolumeAndDirectory(const UString& inPath, FSFileSpec& outSpec);   // File System.cpp
 

@@ -21,7 +21,10 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/U2DGeometry.h"
+#include "lle/U2DPoint.h"
+#include "lle/U2DRectangle.h"
+#include "lle/U2DPolygon.h"
+#include "lle/U2DSparseArray.h"
 #include "lle/FSFileSpec.h"
 #include "rmap_state.h"
 #include "ee/EERandomMapIDs.h"

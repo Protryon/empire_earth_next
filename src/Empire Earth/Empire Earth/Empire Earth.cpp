@@ -44,7 +44,7 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EECivPowersManager.h"
 #include "lle/UResourceFile.h"
 #include "lle/TMTimer.h"
-#include "lle/FSPersistentList.h"
+#include "lle/FSChunk.h"          // FSPersistentList
 #include "ee/EEMap.h"
 #include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"

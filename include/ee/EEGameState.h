@@ -7,12 +7,11 @@
 // (offsetof probes; the global's next neighbour is 0x52fb80, so 4 bytes at 0x52fb7c are unaccounted for). Member
 // names are provisional. (0x52fa88, once named `gMultiplayer`, is mGameOptions.mIsMultiplayer.)
 // Includes what its members need (TSLockable.h by bare name: ee.EEX_INCLUDE_DIRS); requires lle/LowLevelEngine.h,
-// lle/FSBasicFile.h and lle/TSScheduler.h first.
+// lle/FSFileSpec.h and lle/TSScheduler.h first.
 #ifndef EE_EEGAMESTATE_H
 #define EE_EEGAMESTATE_H
 
 #include <vector>
-#include "lle/ESChecksum.h"
 #include "lle/FSFileSpec.h"
 #include "lle/GE3DPoint.h"
 #include "TSLockable.h"

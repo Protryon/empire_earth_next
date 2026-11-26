@@ -57,8 +57,7 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
     case EeNetClOp::FsFree:
         delete reinterpret_cast<FSFile*>(a);
         return 0;
-    case EeNetClOp::ProcessLocalUserInput:   // (the game's calls: GameHost)
-        return static_cast<NESynchronousClient*>(inClient)->ProcessLocalUserInput(reinterpret_cast<NEMessage*>(a), (unsigned char)b);
+    // (ProcessLocalUserInput: the Rust client's own, ee_net client.rs local_user_input; the game's calls: GameHost)
     }
     return 0;
 }

@@ -158,6 +158,11 @@ pub trait ClientHost: QHost {
     fn handle_connection_timeout_warning(&self, remaining: u32);
     /// the virtual `ProcessLocalUserInput(message, player)` (this class's own unless the game overrides it)
     fn process_local_user_input(&self, m: Msg, player: u8) -> i32;
+    /// The game's client (LLE/UI round 2): `ProcessLocalUserInput` is the C++ base class's own, non-virtual since LLE
+    /// round 13, so the client makes it itself ([`Client::process_user_input`]); the goldens' hosts answer it.
+    fn native(&self) -> bool {
+        false
+    }
 }
 
 /// The queues' host: the client's, except that their callbacks are the client's methods and their threads the
@@ -656,7 +661,7 @@ impl<H: ClientHost> Client<H> {
                     if trys < self.max_num_connection_trys.load(SeqCst) {
                         self.host.msg_reference(m);
                         timeout = 5000;
-                        self.host.process_local_user_input(m, SLOT_NONE);
+                        self.local_user_input(m, SLOT_NONE);
                     } else {
                         self.max_num_connection_trys.store(1, SeqCst);
                         self.num_connection_trys.store(0, SeqCst);
@@ -774,7 +779,7 @@ impl<H: ClientHost> Client<H> {
                                     let slot = self.host.client_slot();
                                     let values = [slot as u32, percent_done, xfer_id, status_id];
                                     let s = self.host.msg_new(MSG_XFER_STATUS, &values);
-                                    self.host.process_local_user_input(s, SLOT_SERVER);
+                                    self.local_user_input(s, SLOT_SERVER);
                                 }
                             }
                             1 => {
@@ -787,7 +792,7 @@ impl<H: ClientHost> Client<H> {
                                     let slot = self.host.client_slot();
                                     let values = [slot as u32, percent_done, xfer_id, status_id];
                                     let s = self.host.msg_new(MSG_XFER_STATUS, &values);
-                                    self.host.process_local_user_input(s, SLOT_SERVER);
+                                    self.local_user_input(s, SLOT_SERVER);
                                 }
                             }
                             2 if file != 0 => {
@@ -841,6 +846,14 @@ impl<H: ClientHost> Client<H> {
     }
 
     // ---- the game's inputs
+
+    /// `ProcessLocalUserInput(m, player)`: the game's client makes it itself (`H::native`), else the host answers.
+    fn local_user_input(&self, m: Msg, player: u8) -> i32 {
+        if self.host.native() {
+            return self.process_user_input(m, player, false);
+        }
+        self.host.process_local_user_input(m, player)
+    }
 
     /// `ProcessGuaranteedLocalUserInput` / `ProcessLocalUserInput` (`guaranteed` false): `ProcessUserInputMessage`.
     /// At most 10 inputs a second that count towards the throttle; an accepted input is sent (or queued for the

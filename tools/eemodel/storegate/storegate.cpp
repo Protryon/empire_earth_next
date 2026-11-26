@@ -16,7 +16,7 @@
 #include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/File System.h"
+LLE_API void FSInitialize(const UString& inPath);   // File System.cpp (lle/LowLevelEngine.h declares it)
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "rust/render/ge.h"

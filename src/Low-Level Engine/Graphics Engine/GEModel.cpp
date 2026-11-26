@@ -118,8 +118,8 @@ intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    // (the lock's calls, the path's Reference, a model's reference count, ModelStoreLoaded and ModelFreeFile: Rust's
-    // own, ee_ge manobj.rs direct_op)
+    // (the lock's calls, the path's Reference, a model's reference count, name, sub-model, size and verification,
+    // ModelStoreLoaded and ModelFreeFile: Rust's own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
@@ -129,17 +129,10 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     case EeGeManOp::DumpText: fprintf(*(FSFileSpec*)inObj, "%s", (const char*)a); return 0;
     case EeGeManOp::ModelNew: return (intptr_t)new GEModel(*(const EeGeModelCreate*)a, UString((const char*)b), (GEModelManager*)inOwner);
     case EeGeManOp::ModelNewSub: return (intptr_t)new GEModel(*(const EeGeModelCreate*)a, *(const UString*)b, (GEModelManager*)inOwner);
-    case EeGeManOp::ModelName: return (intptr_t)&((GEModel*)inObj)->GetName();
-    case EeGeManOp::ModelSetSub: ((GEModel*)inObj)->SetSubModel((GEModel*)a, (unsigned long)b); return 0;
     case EeGeManOp::ModelFindFile:
         return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, (const EeGeSharedFrames*)b, (EeGeCemModel**)c);
     case EeGeManOp::ModelNewEmpty:
         return (intptr_t)new GEModel(((GEModelManager*)inOwner));
-    case EeGeManOp::ModelSizeOf:
-        return (intptr_t)((GEModel*)inObj)->SizeOf();
-    case EeGeManOp::ModelVerify:
-        ((GEModel*)inObj)->Verify();
-        return 0;
     default:
         return 0;
     }

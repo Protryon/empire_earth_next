@@ -75,8 +75,6 @@ public:
     // An explicit logical size for a surface whose pixels are not a power of two times it (the WON lobby's frame:
     // 1024x768 logical at the window's pixels); 0, 0 goes back to the logical shift
     void SetLogicalSize(unsigned long inWidth, unsigned long inHeight) { this->mLogicalWidth = inWidth; this->mLogicalHeight = inHeight; }
-    unsigned long GetLogicalWidthSet() const { return this->mLogicalWidth; }
-    unsigned long GetLogicalHeightSet() const { return this->mLogicalHeight; }
     unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }
     unsigned long GetPixelHeight() const { return this->GetSurfaceDescription().mHeight; }
 

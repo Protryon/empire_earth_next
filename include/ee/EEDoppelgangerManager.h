@@ -4,11 +4,11 @@
 // it). It owns two object pools (the doppelgangers other players see of units they lost sight of) and keeps them on
 // the map's tiles (EETile::mDoppelgangers). Names are provisional. New (units round 11): the bodies are inline
 // here over Rust (ee_sim units dm_body.rs, dm_dop.rs). Requires lle/LowLevelEngine.h; includes
-// lle/UMemoryPool.h.
+// lle/UList.h (UMemoryPool).
 #ifndef EE_EEDOPPELGANGERMANAGER_H
 #define EE_EEDOPPELGANGERMANAGER_H
 
-#include "lle/UMemoryPool.h"
+#include "lle/UList.h"   // UMemoryPool
 #include "rust/sim/units.h"             // the inline bodies' Rust calls (dm_body.rs, dm_dop.rs)
 
 class EEComplexDoppelganger;

@@ -50,6 +50,50 @@ pub enum EeDx7ObjOp {
 /// The host of the screen and surface objects.
 pub type EeDx7ObjHostFn = unsafe extern "C" fn(op: EeDx7ObjOp, obj: *mut c_void, a: isize, b: isize) -> isize;
 
+/// The operations that end in Rust (LLE/UI round 2), made here: a surface's object, reference, allocated size and
+/// logical metrics read in place (a `GESurface` is `cppobj::CppSurface`), a window's platform window (a `GEWindow` is
+/// its Rust object) and the window events' dispatch (ee_base ts). `None`: the host's (every operation under `cargo
+/// test`, whose replays' fake hosts answer them).
+///
+/// # Safety
+/// `obj` is the live C++ object the operation names; `a` as [`EeDx7ObjOp`] says.
+pub(crate) unsafe fn direct_op(op: EeDx7ObjOp, obj: H, a: isize) -> Option<isize> {
+    if cfg!(test) {
+        return None;
+    }
+    use crate::ge::cppobj::{self, CppSurface};
+    let cpp = obj as usize;
+    // SAFETY (each read and call): the caller's contract
+    unsafe {
+        Some(match op {
+            EeDx7ObjOp::SurfaceObject => cppobj::counted::<EeDx7Surface>(cpp) as isize,
+            EeDx7ObjOp::SurfaceReference => {
+                cppobj::reference(cpp);
+                0
+            }
+            EeDx7ObjOp::SurfaceAllocatedSize => EeDx7Surface::allocated_size(cppobj::counted(cpp)) as isize,
+            EeDx7ObjOp::SurfaceMetrics => {
+                let c = &*(cpp as *const CppSurface);
+                let d = (*(c.counted.rust as *const EeDx7Surface)).desc;
+                *(a as *mut LogicalMetrics) = LogicalMetrics {
+                    logical_width: c.logical_width as u32,
+                    logical_height: c.logical_height as u32,
+                    pixel_width: d.mWidth as u32,
+                    pixel_height: d.mHeight as u32,
+                    logical_shift: c.logical_shift as u32,
+                };
+                0
+            }
+            EeDx7ObjOp::WindowOs => crate::ge::smallobj::ee_ge_win_os(cppobj::plain(cpp)) as isize,
+            EeDx7ObjOp::DispatchEvents => {
+                ee_base::ts::ee_ts_dispatch_window_events();
+                0
+            }
+            _ => return None,
+        })
+    }
+}
+
 /// `GEUnpack*`/`GEPackColor` of the bilinear copy: the Graphics Engine's format tables (`ee_ge::pixel`).
 struct FormatOps(c_ulong);
 
@@ -120,6 +164,10 @@ impl EeDx7Surface {
     /// # Safety
     /// `p` is live; the operation's arguments are as [`EeDx7ObjOp`] describes.
     unsafe fn op(p: *mut Self, op: EeDx7ObjOp, obj: H, a: isize, b: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { direct_op(op, obj, a) } {
+            return r;
+        }
         // SAFETY: the caller's contract (the host is copied out before the call)
         let host = unsafe { sf(p).host };
         // SAFETY: the host's contract

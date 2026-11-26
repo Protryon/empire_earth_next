@@ -72,11 +72,12 @@ extern "C" {
     pub fn malloc(size: usize) -> *mut c_void;
     pub fn free(block: *mut c_void);
 
-    /// `ESVerify(__FILE__, line, expression)` (SESoundManager.cpp).
+    /// The golden driver's `ESVerify` and floating-point control (in the game: the functions below).
+    #[cfg(test)]
     pub fn ee_soundcpp_verify(expression: *const c_char, line: u32);
-    /// `UMSetFloatingPointPrecision(kFPPrecision53)`.
+    #[cfg(test)]
     pub fn ee_soundcpp_fp_precision53();
-    /// The scavenger loop's checks: 53-bit precision and round-to-nearest, set again when they differ.
+    #[cfg(test)]
     pub fn ee_soundcpp_fp_check();
     /// `FSPath::Reference` / `Dereference` (the last one deletes the path).
     pub fn ee_soundcpp_path_reference(path: *mut c_void);
@@ -93,6 +94,43 @@ extern "C" {
     /// the mixer plug-in, the one linked sound plug-in (Mixer.cpp).
     pub fn ee_soundcpp_first_module(start: *mut c_void) -> i32;
     pub fn ee_soundcpp_next_module(start: *mut c_void) -> i32;
+}
+
+// The Error System and the floating-point control are ee_base's (a sibling crate of the static library): in the game
+// these call them directly (LLE/UI round 2; they were Sound Engine.cpp's one-statement ee_soundcpp_* trampolines).
+#[cfg(not(test))]
+extern "C" {
+    fn ee_error_verify(file: *const c_char, line: c_ulong, expression: *const c_char);
+    fn ee_util_fp_set_precision(precision: c_ulong);
+    fn ee_util_fp_check();
+}
+
+/// `ESVerify(__FILE__, line, expression)` (Sound Engine.cpp's file name, as the trampoline reported it).
+///
+/// # Safety
+/// `expression` is NULL or NUL-terminated.
+#[cfg(not(test))]
+pub unsafe fn ee_soundcpp_verify(expression: *const c_char, line: u32) {
+    let file = c"C:\\EEX\\Low-Level Engine\\Sound Engine\\Sound Engine.cpp";
+    unsafe { ee_error_verify(file.as_ptr(), line as c_ulong, expression) }
+}
+
+/// `UMSetFloatingPointPrecision(kFPPrecision53)`.
+///
+/// # Safety
+/// None (unsafe as the extern it replaces).
+#[cfg(not(test))]
+pub unsafe fn ee_soundcpp_fp_precision53() {
+    unsafe { ee_util_fp_set_precision(0x10000) }
+}
+
+/// The scavenger loop's checks: 53-bit precision and round-to-nearest, set again when they differ.
+///
+/// # Safety
+/// None (unsafe as the extern it replaces).
+#[cfg(not(test))]
+pub unsafe fn ee_soundcpp_fp_check() {
+    unsafe { ee_util_fp_check() }
 }
 
 /// Calls `ee_soundcpp_verify` when `ok` is false (`ESVERIFY_AT(expression, line)`).

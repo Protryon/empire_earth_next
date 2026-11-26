@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\File System\File System.cpp (name by analogy with Error System.cpp; it sorts before
 // FSArchive.cpp case-insensitively). It is the first unit to include the File System headers, so it emits their
-// inline members (0x4020..0x4789) in include order, then its globals, FSGetVolumeAndDirectory and FSInitialize.
+// inline members (0x4020..0x4789) in include order, then its globals, FSGetVolumeAndDirectory (no caller left: its
+// Rust, ee_fs_volume_and_directory, is FSInitialize's) and FSInitialize.
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
 #include <stddef.h>
@@ -13,8 +14,6 @@
 #include "lle/FSChunk.h"
 #include "lle/FSPath.h"
 #include "lle/FSPersistent.h"
-#include "lle/FSPersistentList.h"
-#include "lle/File System.h"
 
 UString gStartupVolume(256);
 UString gStartupDirectory(256);
@@ -59,13 +58,6 @@ static_assert(sizeof(FSFileSpec) == sizeof(EeFsSpec), "FSFileSpec is an EeFsSpec
 static_assert(offsetof(FSFileSpec, mVolume) == offsetof(EeFsSpec, volume) && offsetof(FSFileSpec, mFileAccess) == offsetof(EeFsSpec, file_access) &&
               offsetof(FSFileSpec, mIsOpen) == offsetof(EeFsSpec, is_open) && offsetof(FSFileSpec, mHandle) == offsetof(EeFsSpec, handle) &&
               offsetof(FSFileSpec, mStream) == offsetof(EeFsSpec, stream), "FSFileSpec's layout");
-
-// Splits a path into its volume (drive or UNC server share) and its directory (with a trailing backslash) into outSpec
-// (rust/crates/ee_base/src/fs spec.rs, LLE lane round 6)
-void FSGetVolumeAndDirectory(const UString& inPath, FSFileSpec& outSpec)
-{
-    ee_fs_volume_and_directory(reinterpret_cast<const EeFsString*>(&inPath), reinterpret_cast<EeFsSpec*>(&outSpec));
-}
 
 // Records the startup volume and directory (upper case) from the path, or from the current directory when the path
 // is empty or not a directory (rust/crates/ee_base/src/fs spec.rs)

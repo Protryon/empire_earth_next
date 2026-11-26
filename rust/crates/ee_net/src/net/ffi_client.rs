@@ -440,6 +440,9 @@ impl ClientHost for ClFfiHost {
     fn process_local_user_input(&self, m: Msg, player: u8) -> i32 {
         self.call(EeNetClOp::ProcessLocalUserInput, m, player as usize, 0, 0) as i32
     }
+    fn native(&self) -> bool {
+        self.tcp.is_some()
+    }
 }
 
 /// The lock-step client (`NESynchronousClient`).

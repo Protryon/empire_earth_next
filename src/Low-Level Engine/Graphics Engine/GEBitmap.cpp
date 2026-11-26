@@ -29,7 +29,7 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST 
 // This section is its shell: the forwarders and the host, which makes each call the original made on another
 // object (the rasterizer, the vertex array, the textures). Floats cross the host as their bits.
 
-// ---- the vertex host: the calls GEBitmap, GELine, GEPoint and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
+// ---- the vertex host: the calls GEBitmap, GELine and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
 
 static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
 
@@ -127,15 +127,13 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::TextDelete:
         delete ((GEText*)inObj);
         return 0;
-    // (TextSetByte, FontRange, TextOps, RasterScreen, RasterGetBlending, TexSurface, FontSetBitmap and the surfaces' and
-    // screen's calls but the logical sizes, RasterSetBlending: the Rust object's own, fbobj.rs)
+    // (TextSetByte, FontRange, TextOps, RasterScreen, RasterGetBlending, TexSurface, FontSetBitmap, the surfaces' and
+    // screen's calls, RasterSetBlending: the Rust object's own, fbobj.rs)
     case EeGeFbOp::BmpNew:
         return (intptr_t)new GEBitmap;
     case EeGeFbOp::BmpDereference:
         ((GEBitmap*)inObj)->Dereference();
         return 0;
-    case EeGeFbOp::SurfWidth: return (intptr_t)((GESurface*)inObj)->GetWidth();
-    case EeGeFbOp::SurfHeight: return (intptr_t)((GESurface*)inObj)->GetHeight();
     case EeGeFbOp::VerifySurface: ESVerify(__FILE__, 228, "theResult == keseOK"); return 0;
     case EeGeFbOp::VerifyTexture: ESVerify(__FILE__, 235, "((GETexture*)inObj) != NULL"); return 0;
     default: return 0;

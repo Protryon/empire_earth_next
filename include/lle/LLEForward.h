@@ -23,7 +23,6 @@ class GEModel;
 class GEModelManager;
 class GEOrientation;
 class GEPhysicalModel;
-class GEPoint;
 class GEPolygonArray;
 class GEQuaternion;
 class GERasterizer;

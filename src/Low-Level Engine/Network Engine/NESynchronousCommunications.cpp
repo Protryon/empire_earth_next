@@ -11,21 +11,12 @@
 #include "lle/NESynchronousCommunications.h"
 
 // The calls out of the lag simulator and the recorder (ee_net lagloss.rs, recplay.rs) that the original units made
-// on the engine and the Rust does not make itself (the clock, the events and the threads are its own: ee_net
-// native.rs): each op is the statement NELagLossSimulator.cpp, NERecordPlayback.cpp or NETimestampedMessage.cpp made
-// (the owner answers Deliver, the callbacks)
+// on the engine and the Rust does not make itself (the clock, the events, the threads, the verifications and the
+// floating-point control are its own: ee_net native.rs): each op is the statement NELagLossSimulator.cpp,
+// NERecordPlayback.cpp or NETimestampedMessage.cpp made (the owner answers Deliver, the callbacks)
 ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
-    static const char* const kUnits[] = {"NELagLossSimulator.cpp", "NERecordPlayback.cpp", "NETimestampedMessage.cpp",
-                                         "NESynchronousClient.cpp", "NESynchronousServer.cpp"};
     switch (inOp) {
-    case EeNetQOp::Verify:
-        ESVerify(kUnits[a < 5 ? a : 0], (unsigned long)b, "(ee_net)");
-        return 0;
-    case EeNetQOp::FpuStart:
-        UMSetFloatingPointPrecision(kFPPrecision53);
-        return 0;
-    case EeNetQOp::FpuCheck: ee_util_fp_check(); return 0;
     case EeNetQOp::MsgReference:
         reinterpret_cast<NEMessage*>(a)->Reference();
         return 0;
@@ -44,7 +35,7 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     }
     case EeNetQOp::MsgFromBytes:
         return (ptrdiff_t)NEMessage::ConvertMemoryToMessage(reinterpret_cast<unsigned char*>(a));
-    default:   // (Time, the events, the threads: ee_net native.rs; Deliver: the owner's)
+    default:   // (Time, the events, the threads, Verify, FpuStart, FpuCheck: ee_net native.rs; Deliver: the owner's)
         return 0;
     case EeNetQOp::FileCreate:
         return reinterpret_cast<FSFileSpec*>(a)->Create();

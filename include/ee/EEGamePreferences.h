@@ -6,7 +6,6 @@
 #define EE_EEGAMEPREFERENCES_H
 
 // Requires ee/EEGameOptions.h (and lle/UString.h, lle/UWideString.h).
-#include "lle/UConfig.h"
 #include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 
@@ -93,9 +92,8 @@ public:
     // 0x13670d (Save's tail)
     long SaveGameOptions() { return ee_gamecpp_prefs_save_options(this); }
 
-    // +0x000 in the original: a URegistry member, not a base (the ctor 0x13281e and dtor 0x132834 store only its vptr);
-    // the settings file (lle/UConfig.h) in its place
-    UConfig mConfig;
+    // (+0x000 in the original: a URegistry member, not a base; the ctor 0x13281e and dtor 0x132834 store only its
+    // vptr. Its port, UConfig, had no data and no caller: the settings file is the Rust's, ee_game app settings.rs.)
     EEGameSettings mSettings;               // +0x004 (was `EEGameOptions mLastGameOptions`: its first member)
 
     // 0x529b90: the default settings, a CLASS STATIC (its init chain's atexit dtor 0x13244b is guarded; owning class

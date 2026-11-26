@@ -16,7 +16,6 @@
 #include "lle/GEText.h"
 #include "lle/GESurface.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/GEPolygonArray.h"
 #include "lle/GEVertexArray.h"
 #include "GEWindow.h"
 
@@ -24,6 +23,23 @@
 // (rust/crates/ee_render/src/ge rastobj.rs; rust/render/ge.h): the plug-in reads and writes the device-side fields
 // through GERasterizer::GetScreenState.
 typedef EeGeRastFog GERFogAttributes;
+
+// C:\EEX\Low-Level Engine\Graphics Engine\GELight.h (RECONSTRUCTION; folded here in LLE/UI round 2). A light
+// whole in Rust (LLE round 9): the class holds the Rust record (rust/crates/ee_render/src/ge light.rs, EeGeLight: the
+// original's members in their order) and forwards; the DX7 rasterizer reads the record directly.
+class LLE_API GELight {                     // sizeof 0x74
+public:
+    GELight() { ee_ge_light_init(&this->mRust); }
+    GELight& operator=(const GELight& inLight) { ee_ge_light_assign(&this->mRust, &inLight.mRust); return *this; }
+    void SetAttenuation0(float inAttenuation) { this->mRust.attenuation0 = inAttenuation; }
+    void SetAttenuation1(float inAttenuation) { this->mRust.attenuation1 = inAttenuation; }
+    void SetAttenuation2(float inAttenuation) { this->mRust.attenuation2 = inAttenuation; }
+    void SetColor(const GEColor& inColor) { ee_ge_light_set_color(&this->mRust, reinterpret_cast<const float(*)[3]>(&inColor)); }
+    void SetDirection(const GEVector& inDirection) { ee_ge_light_set_direction(&this->mRust, reinterpret_cast<const float(*)[3]>(&inDirection)); }
+    void SetIntensity(float inIntensity) { ee_ge_light_set_intensity(&this->mRust, inIntensity); }
+    void SetStyle(unsigned long inStyle) { this->mRust.style = inStyle; }
+    EeGeLight mRust;
+};
 
 struct EeGeRasterizer;                      // rust/ee_ge.h
 
@@ -63,8 +79,6 @@ public:
     // a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
     long Draw(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
         { return ee_dx7r_draw_model(this->mDX7, inScreen, inModel, inOpacity, inOrthographic); }
-    long Draw(GEPoint* inPoint, unsigned long inCount, unsigned long inScreen)       // slot 0x48
-        { return ee_dx7r_draw_points(this->mDX7, inScreen, inPoint, inCount); }
     long Draw(GERhombus* inRhombus, unsigned long inScreen) { return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus); }
     // a text with the platform fonts on the target, aligned; shadow fonts get a black or white shadow 1 pixel down-right
     long Draw(GEText* inText, GESurface* inTarget) { return ee_dx7r_draw_text(inText, NULL, *inTarget); }
@@ -139,7 +153,6 @@ public:
 
     long Activate() { return (long)ee_ge_rast_activate(this->mRust); }
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
-    long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
     const GEColor& GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
     float GetAmbientIntensity() const { return ee_ge_rast_ambient_intensity(this->mRust); }

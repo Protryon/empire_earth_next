@@ -30,7 +30,7 @@
 #include "SESample.h"
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
-#include "lle/SEScore.h"
+#include "lle/SEMixer.h"   // SEScore
 #include <dmusic.h>
 #include "rust/audio/sound.h"
 #include "rust/base/ts.h"
