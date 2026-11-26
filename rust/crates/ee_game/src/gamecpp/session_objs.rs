@@ -395,7 +395,7 @@ pub fn send_ping_stat(server: P, player: i64, ping: f32) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_free_player_slot(server: *mut c_void) -> u8 {
     let max = super::net::net(server).sv_get(ee_net::net::ffi_server::EeNetSvGet::MaxPlayers) as u8;
-    free_player_slot(max, |i| hp(O::SsWorldPlayer, 0, &[i as i64]) != 0)
+    free_player_slot(max, |i| hp(O::WorldPlayer, 0, &[i as i64]) != 0)
 }
 
 /// EEServer::PlayWarningSound: 1 out of sync, 2 resending.

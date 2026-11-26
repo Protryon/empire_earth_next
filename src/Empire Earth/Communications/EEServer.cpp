@@ -338,15 +338,9 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the facts
     case O::SsMultiplayerGame: return EEIsMultiplayerGame(true);
-    case O::SsOptionsMultiplayer: return gWorld.mLobbyOptions.mIsMultiplayer;
-    case O::SsLoadType: return gWorld.mLobbyOptions.mLoadType;
     case O::SsCitizensDefault: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     case O::SsVersionMatch: return !(*(const UWideString*)p != gGameVersion);
-    case O::SsBinaryChecksum: return gBinaryChecksum;
-    case O::SsWorldPlayers: return (long long)gWorld.mNumPlayers;
     case O::SsTime: return (long long)TMGetTime();
-    case O::SsWon: return gWonNet != NULL;
-    case O::SsScreenActive: return gWorld.mGameScreenActive;
     case O::SsFormById: return P64(gUIManager->GetFormByID(a[0]));
     case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
@@ -436,7 +430,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsSprintfName: sprintf(WSTR(0), WSTR(1), (const char*)((EEPlayer*)a[2])->mName);
         break;
-    case O::SsIdsMsgGame: return IDS_MSG_GAME;
     case O::SsChatGameLine: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), WSTR(0), WSTR(1), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
         break;
     case O::SsChatText: gUserInterface->AddChatLogEntry(WSTR(0), (long)a[1]);
@@ -487,16 +480,8 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsLoadSound: EELoadSound(UString(a[0] != 0 ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, *(unsigned long*)a[1], *(unsigned long*)a[2], 1);
         break;
     // the world (p: an EEPlayer* for the Pl ops)
-    case O::SsWorldPlayer: return P64(gWorld.mPlayers[a[0]]);
-    case O::SsWorldPlayerBySlot: return P64(gWorld.GetPlayerBySlot((unsigned char)a[0]));
     case O::SsPlIsHuman: return ((EEPlayer*)p)->IsHuman();
-    case O::SsPlSlot: return ((EEPlayer*)p)->mSlot;
     case O::SsPlHasHuman: return ((EEPlayer*)p)->mHumanPlayer != NULL;
-    case O::SsPlId: return (long long)((EEPlayer*)p)->mPlayerID;
-    case O::SsPlSetSlot: ((EEPlayer*)p)->mSlot = (unsigned char)a[0];
-        break;
-    case O::SsPlSetFirewall: ((EEPlayer*)p)->mBehindFirewall = a[0] != 0;
-        break;
     case O::SsPlNameFromMsg: static_cast<EEHumanPlayer*>((EEPlayer*)p)->SetName(((EEMRecord*)a[0])->mString);
         break;
     case O::SsWorldReconnect: gWorld.GetPlayer((unsigned long)a[0])->mSlot = (unsigned char)a[1];
@@ -565,8 +550,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::ClFileCreateWrite: return FILESPEC->Create() == kErrorOK && FILESPEC->Open(kFileAccessWrite) == kErrorOK;
     case O::ClHeaderChecksum: return (long long)((EEPSaveGameHeader*)a[0])->mChecksum;
-    case O::ClIdsNotResponding: return IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT;
-    case O::ClIdsSeconds: return IDS_SECONDS;
     case O::ClTimeoutFormat: WSTR(0) = WSTR(1) + UWideString("  (%d ") + WSTR(2) + UWideString(")");
         break;
     case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);

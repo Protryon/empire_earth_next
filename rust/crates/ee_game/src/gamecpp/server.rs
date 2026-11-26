@@ -14,6 +14,7 @@ use super::session_objs::{
     ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert, EeGamecppClientTail,
     EeGamecppServerTail,
 };
+use super::message::prts;
 use super::{h, hp, net, ptr, session_objs, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::{EeNetSvGet, EeNetSvSet};
@@ -32,6 +33,17 @@ use crate::app::game_options::EeAppOptionsPlayerFields;
 /// `kSlotServer`, `kSlotNone` (NEMessageID.h).
 pub const SS_SLOT_SERVER: i64 = 0xfe;
 pub const SS_SLOT_NONE: i64 = 0xff;
+/// The strings the session's lines show (ee/EEStringIDs.h; cpp_consts_tests.rs checks them): `IDS_MSG_GAME`,
+/// `IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT`, `IDS_SECONDS`.
+pub const SS_IDS_MSG_GAME: i64 = 31813;
+pub const SS_IDS_HOST_IS_NOT_RESPONDING: i64 = 30621;
+pub const SS_IDS_SECONDS: i64 = 30379;
+
+/// The lobby's game options' plain members (`gWorld.mLobbyOptions`).
+fn lobby_options<'a>() -> &'a crate::app::game_options::EeAppOptionsFields {
+    // SAFETY: the world's lobby options record, read before the next C++ call
+    unsafe { &*super::rec(O::LobbyOptions, 0) }
+}
 
 fn rw_bool(at: &mut bool, set: bool, v: i64) -> i64 {
     if set {
@@ -236,13 +248,13 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
 fn fact(f: P, v: &[i64; 8]) -> i64 {
     let op = match v[0] {
         EE_NETMSG_SESS_FACT_MULTIPLAYER_GAME => O::SsMultiplayerGame,
-        EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER => O::SsOptionsMultiplayer,
-        EE_NETMSG_SESS_FACT_LOAD_TYPE => O::SsLoadType,
+        EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER => return lobby_options().mIsMultiplayer as i64,
+        EE_NETMSG_SESS_FACT_LOAD_TYPE => return lobby_options().mLoadType as i64,
         EE_NETMSG_SESS_FACT_GAME_STATE => return n(f).sv_get(EeNetSvGet::GameState) as u8 as i64,
         EE_NETMSG_SESS_FACT_DEFAULT_COLOR => return super::globals::get!(gDefaultPlayerColors)[v[1] as usize] as i64,
         EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT => O::SsCitizensDefault,
         EE_NETMSG_SESS_FACT_VERSION_MATCH => return h(O::SsVersionMatch, session_objs::frame(f).version, &[]),
-        EE_NETMSG_SESS_FACT_BINARY_CHECKSUM => O::SsBinaryChecksum,
+        EE_NETMSG_SESS_FACT_BINARY_CHECKSUM => return super::globals::get!(gBinaryChecksum) as i64,
         EE_NETMSG_SESS_FACT_CURRENT_CT => return n(f).current_ct() as i64,
         EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS => return net::global().get(EeNetCommsField::CtsProcessed) as i64,
         EE_NETMSG_SESS_FACT_HUMANS => return net::global().get(EeNetCommsField::NumHumanPlayers) as u8 as i64,
@@ -255,10 +267,10 @@ fn fact(f: P, v: &[i64; 8]) -> i64 {
             return ee_net::net::ffi_client::ee_net_cl_my_send_to_slot(n(f).client) as i64;
         }
         EE_NETMSG_SESS_FACT_NUM_PLAYERS => return n(f).sv_get(EeNetSvGet::NumberOfPlayers) as u8 as i64,
-        EE_NETMSG_SESS_FACT_WORLD_PLAYERS => O::SsWorldPlayers,
+        EE_NETMSG_SESS_FACT_WORLD_PLAYERS => return super::message::num_players() as i64,
         EE_NETMSG_SESS_FACT_TIME => O::SsTime,
-        EE_NETMSG_SESS_FACT_WON => O::SsWon,
-        EE_NETMSG_SESS_FACT_SCREEN_ACTIVE => O::SsScreenActive,
+        EE_NETMSG_SESS_FACT_WON => return super::globals::have!(gWonNet) as i64,
+        EE_NETMSG_SESS_FACT_SCREEN_ACTIVE => return *super::message::wm::<bool>(O::WGameScreenActive) as i64,
         EE_NETMSG_SESS_FACT_ENGINE_CHOICES => return crate::cp_engine::ee_cp_engine_choice_count() as c_ulong as i64,
         EE_NETMSG_SESS_FACT_FORM_IS_CURRENT => {
             // the form looked up first (v2 0) or the current form first
@@ -447,8 +459,7 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
             let name = Owned::new(O::SsNewString, O::SsDeleteString);
             h(O::SsGetString, f, &[v[1], format.0 as i64]);
             h(O::SsSprintfName, f, &[text.0 as i64, format.0 as i64, v[2]]);
-            let ids = h(O::SsIdsMsgGame, f, &[]);
-            h(O::SsGetString, f, &[ids, name.0 as i64]);
+            h(O::SsGetString, f, &[SS_IDS_MSG_GAME, name.0 as i64]);
             h(O::SsChatGameLine, f, &[name.0 as i64, text.0 as i64]);
         }
         EE_NETMSG_SESS_UI_CHAT_TEXT => {
@@ -497,7 +508,7 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
             // disconnected
             let text = Owned::new(O::SsNewString, O::SsDeleteString);
             let format = Owned::new(O::SsNewString, O::SsDeleteString);
-            if h(O::SsWon, f, &[]) != 0 {
+            if super::globals::have!(gWonNet) {
                 won_leave(f);
             }
             if v[2] == EE_NETMSG_SESS_LEAVE_BOOT {
@@ -566,14 +577,20 @@ fn sound(f: P, v: &[i64; 8]) {
 fn world(f: P, v: &[i64; 8]) -> i64 {
     let pl = v[1] as P;
     match v[0] {
-        EE_NETMSG_SESS_WORLD_PLAYER => h(O::SsWorldPlayer, f, &[v[1]]),
-        EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT => h(O::SsWorldPlayerBySlot, f, &[v[1]]),
+        EE_NETMSG_SESS_WORLD_PLAYER => h(O::WorldPlayer, 0, &[v[1]]),
+        EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT => super::message::player_by_slot(v[1]) as i64,
         EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::SsPlIsHuman, pl, &[]),
-        EE_NETMSG_SESS_WORLD_SLOT => h(O::SsPlSlot, pl, &[]),
+        EE_NETMSG_SESS_WORLD_SLOT => prts(pl).mSlot as i64,
         EE_NETMSG_SESS_WORLD_HAS_HUMAN => h(O::SsPlHasHuman, pl, &[]),
-        EE_NETMSG_SESS_WORLD_ID => h(O::SsPlId, pl, &[]),
-        EE_NETMSG_SESS_WORLD_SET_SLOT => h(O::SsPlSetSlot, pl, &[v[2]]),
-        EE_NETMSG_SESS_WORLD_SET_FIREWALL => h(O::SsPlSetFirewall, pl, &[v[2]]),
+        EE_NETMSG_SESS_WORLD_ID => prts(pl).mPlayerID as i64,
+        EE_NETMSG_SESS_WORLD_SET_SLOT => {
+            prts(pl).mSlot = v[2] as u8;
+            0
+        }
+        EE_NETMSG_SESS_WORLD_SET_FIREWALL => {
+            super::message::pfields(pl).mBehindFirewall = v[2] != 0;
+            0
+        }
         EE_NETMSG_SESS_WORLD_NAME_FROM_MSG => h(O::SsPlNameFromMsg, pl, &[v[2]]),
         EE_NETMSG_SESS_WORLD_RECONNECT => h(O::SsWorldReconnect, f, &[v[1], v[2]]),
         EE_NETMSG_SESS_WORLD_REMOVE => h(O::SsWorldRemove, f, &[v[1]]),
@@ -740,10 +757,8 @@ pub extern "C" fn ee_gamecpp_client_timeout_warning(remaining: c_ulong) {
     let text = Owned::new(O::SsNewString, O::SsDeleteString);
     let seconds = Owned::new(O::SsNewString, O::SsDeleteString);
     let format = Owned::new(O::SsNewString, O::SsDeleteString);
-    let ids = h(O::ClIdsNotResponding, 0, &[]);
-    h(O::SsGetString, 0, &[ids, text.0 as i64]);
-    let ids = h(O::ClIdsSeconds, 0, &[]);
-    h(O::SsGetString, 0, &[ids, seconds.0 as i64]);
+    h(O::SsGetString, 0, &[SS_IDS_HOST_IS_NOT_RESPONDING, text.0 as i64]);
+    h(O::SsGetString, 0, &[SS_IDS_SECONDS, seconds.0 as i64]);
     h(O::ClTimeoutFormat, 0, &[format.0 as i64, text.0 as i64, seconds.0 as i64]);
     h(O::ClSprintfSeconds, 0, &[text.0 as i64, format.0 as i64, (remaining / 1000) as i64]);
     h(O::SsChatText, 0, &[text.0 as i64, 1]);

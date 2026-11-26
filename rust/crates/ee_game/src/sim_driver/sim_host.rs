@@ -248,7 +248,7 @@ pub fn editor_up() -> bool {
 /// computers stay at war with each other; an observer seat, or its units removed, ends the single-player game at
 /// once).
 pub fn prepare_human(human_out: bool) {
-    let human = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
+    let human = gc::h(gc::O::WorldCurrentPlayer, 0, &[]) as usize;
     h(O::PlayerSetCivilizationChosen, human, &[1]);
     h(O::PlayerSetCivilizationLocked, human, &[1]);
     if !human_out {
@@ -366,7 +366,7 @@ fn first_building(player: c_ulong) -> usize {
 /// --flare: the idle human's flare at the building, told to the human's allies as EEMSendFlare::Execute tells them
 /// (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no computer sends.
 pub fn flare(player: c_ulong) -> EeSimDriverSpot {
-    let human = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
+    let human = gc::h(gc::O::WorldCurrentPlayer, 0, &[]) as usize;
     let spot = first_building(player);
     if human == 0 || spot == 0 {
         return EeSimDriverSpot::default();
@@ -759,7 +759,7 @@ pub fn sight_capture_sweep() {
     let points = [[size * 0.5, size * 0.5], [5.5, 7.5], [size - 3.25, size * 0.3]];
     let n = gc::h(gc::O::MmNumPlayers, 0, &[]) as c_ulong;
     for p in 1..n {
-        let player = gc::h(gc::O::SsWorldPlayer, 0, &[p as i64]) as usize;
+        let player = gc::h(gc::O::WorldPlayer, 0, &[p as i64]) as usize;
         if player == 0 {
             continue;
         }
@@ -771,7 +771,7 @@ pub fn sight_capture_sweep() {
         hf(O::MapRemoveSight, player, &[1], &[points[0][0] + 2.0, points[0][1] - 1.0, radius * 0.5]);
     }
     if n > 1 {
-        let last = gc::h(gc::O::SsWorldPlayer, 0, &[(n - 1) as i64]) as usize;
+        let last = gc::h(gc::O::WorldPlayer, 0, &[(n - 1) as i64]) as usize;
         gc::h(gc::O::DcExplore, last, &[]);
         h(O::MapFogSeen, last, &[]);
     }

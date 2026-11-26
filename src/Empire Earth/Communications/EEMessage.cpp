@@ -249,12 +249,9 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     switch (inOp) {
     // the records
     case O::MsgField: return P64(MSG->Field((uint32_t)a[0], (size_t)a[1]));
-    case O::MsgSender: return P64(gWorld.GetPlayerBySlot(MSG->GetOriginatingSlot()));
     case O::MsgOrigin: return MSG->GetOriginatingSlot();
     case O::MsgString: return P64(&MSG->mString);
     case O::MsgSetOrigin: MSG->SetOriginatingSlot((unsigned char)a[0]);
-        break;
-    case O::MsgStartLoading: EEStartLoading(MSG);
         break;
     case O::MsgLoadSavedGame: return EELoadSavedGameFile(UString(MSG->mString), true, a[0] != 0, UString("data\\Saved Games\\"), 1);
     case O::MsgSaveGame: return SaveGame(UString(MSG->mString), (unsigned long)a[0], a[1] != 0, UString("data\\Saved Games\\"));
@@ -299,7 +296,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     // the players
     case O::PlName: return P64(&PL->mName);
-    case O::PlGetSlot: return PL->GetSlot();
     case O::PlActiveGroup: return P64(PL->mActiveGroup);
     case O::PlSelectedGroup: return P64(PL->mSelectedGroup);
     case O::PlSavedGroupAt: return P64(PL->mGroups[a[0]]);
@@ -371,10 +367,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CxQueueBack: return P64(CX->mGoalQueues[a[0]].mGoals.back());
     case O::CxQueueAddTime: CX->mGoalQueues[a[0]].AddTime((unsigned long)a[1]);
         break;
-    case O::CxBehavior: return P64(CX->mBehavior);
     case O::BehaviorAt: return P64(EEUnitBehavior::sTable[a[0]]);
-    case O::CxSetBehavior: CX->mBehavior = (EEUnitBehavior*)a[0];
-        break;
     case O::CxSetHomeBase: CX->SetHomeBase((EEComplexUnit*)a[0]);
         break;
     case O::CxClearAllGoalQueues: CX->ClearAllGoalQueues();
@@ -510,30 +503,16 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // (EECore11OpC4) the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
     // statement each
     // the net message host (gamecpp msg_host.rs; p the host's call, EeNetMsgCall)
-    case O::C11NmSender: return P64(gWorld.GetPlayerBySlot(NM_M->GetOriginatingSlot()));
-    case O::C11NmPlayer: return P64(gWorld.mPlayers[NM_I[0]]);
-    case O::C11NmCurrent: return P64(gWorld.GetCurrentPlayer());
     case O::C11NmGroup: return P64(static_cast<EEGroup*>(NM_P->mActiveGroup));
     case O::C11NmSavedGroup: return P64(static_cast<EEGroup*>(NM_P->mGroups[NM_I[0]]));
     case O::C11NmUnit: return P64(gWorld.GetUnit(NM_I[0]));
     case O::C11NmKill: NM_U->Kill(NM_I[0], 0, 0);
         break;
-    case O::C11NmClassFact: return NM_I[0] == EE_NETMSG_CLASS_TYPE ? ((EEUnitClass*)(uintptr_t)NC->a)->mUnitType : ((EEUnitClass*)(uintptr_t)NC->a)->mTileSize;
-    case O::C11NmUnitPackedClass: return P64(NM_U->mUnitClass->mPackedClass);
-    case O::C11NmUnitDeathSpawn: return NM_U->mUnitClass->mDeathSpawnClass != NULL;
-    case O::C11NmUnitTileNode: return NM_U->mTileNode != NULL;
-    case O::C11NmUnitOwner: return P64(NM_U->mPlayer);
     case O::C11NmUnitLandBuilding: return NM_U->mUnitClass->IsLandBuilding();
     case O::C11NmUnitCanDelete: return NM_U->CanDelete();
-    case O::C11NmUnitTileX: return NM_U->GetTileX();
-    case O::C11NmUnitTileY: return NM_U->GetTileY();
-    case O::C11NmUnitNext: return P64(NM_U->mNext);
     case O::C11NmUnitAsComplex: return P64(EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(NM_U)));
     case O::C11NmUnitInSet: return gUnitSetManager.GetSet(NM_I[1])->Contains(NM_U->mUnitClass->mUnitType);
-    case O::C11NmPlayerFirstUnit: return P64(NM_P->mFirstUnit);
     case O::C11NmPlayerTradePrice: return EEGetTradePrice(NM_P, (long)NM_I[1], (unsigned char)NM_I[2]);
-    case O::C11NmWorldNumPlayers: return gWorld.mNumPlayers;
-    case O::C11NmWorldCurrentIndex: return gWorld.mCurrentPlayer;
     case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
     case O::C11NmWorldCollisionSphereMode: return gCollisionSphereMode;
     case O::C11NmMapType: gWorld.mLobbyOptions.mMapType = NM_M->mString;
@@ -552,14 +531,11 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11UlongsAt: return (int64_t)(*(std::vector<unsigned long>*)p)[a[0]];
     case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);
         break;
-    case O::C11CurrentPlayerId: return (int64_t)(uint32_t)gWorld.GetCurrentPlayer()->mPlayerID;
     case O::C11MsgListAssign: MSG->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
         break;
     case O::C11MsgListData: return P64(MSG->mList.empty() ? NULL : &MSG->mList[0]);
     case O::C11MsgListSize: return (int64_t)MSG->mList.size();
     case O::C11MsgSetRectangle: MSG->Set<GERectangle>(3, *(const GERectangle*)a[0]);
-        break;
-    case O::C11FarmKey: *(EeGamecppFarmKey*)a[0] = EeGamecppFarmKey{CX->mIsBuilt, CX->mIsPaidFor, CX->mTileX, CX->mTileY};
         break;
     case O::C11LongsAssign: ((std::vector<long>*)p)->assign((const int32_t*)a[0], (const int32_t*)a[0] + a[1]);
         break;

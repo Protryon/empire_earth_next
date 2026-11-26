@@ -9,7 +9,7 @@ use std::ffi::{c_long, c_void};
 use ee_sim::netmsg::ffi::{ee_netmsg_class_of_type, ee_netmsg_compress_units, ee_netmsg_decompress_units};
 use ee_sim::netmsg::records::ee_netmsg_record_class;
 
-use super::{cptr, h, hp, pa, ptr, Owned, O, P};
+use super::{cptr, h, hp, pa, Owned, O, P};
 
 /// The capacity of a selection's decoded ids (the C++'s `int32_t theIDs[0x100]`).
 const SELECT_IDS: usize = 0x100;
@@ -70,7 +70,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     // only the low 32 (24) bits count
     let ids: Vec<u32> =
         (0..h(O::C11UlongsCount, picked.0, &[])).map(|i| h(O::C11UlongsAt, picked.0, &[i]) as u32).collect();
-    let owner = h(O::C11CurrentPlayerId, 0, &[]) as u32;
+    let owner = super::message::prts(hp(O::WorldCurrentPlayer, 0, &[])).mPlayerID as u32;
     let mut buffer = [0u8; 0x100];
     let size = ee_netmsg_compress_units(ids.as_ptr(), ids.len(), owner, buffer.as_mut_ptr());
     // the list's size, 0, 0, the unit type (the C++'s `(unsigned char)`, `(long)`)
@@ -151,14 +151,17 @@ pub unsafe extern "C" fn ee_gamecpp_farm_order(
     second: *mut c_void,
     greater: bool,
 ) -> bool {
-    let mut a = EeGamecppFarmKey::default();
-    let mut b = EeGamecppFarmKey::default();
-    h(O::C11FarmKey, first as P, &[ptr(&mut a)]);
-    h(O::C11FarmKey, second as P, &[ptr(&mut b)]);
+    let (a, b) = (farm_key(first as P), farm_key(second as P));
     ee_gamecpp_farm_key_order(cx, cy, &a, &b, greater)
 }
 
-/// The farm order of two keys (exported so that the header declares the key, which EEMessage.cpp's case fills).
+/// A farm's key: its built and paid-for flags and its tile (its records' members).
+fn farm_key(farm: P) -> EeGamecppFarmKey {
+    let (cx, rts) = (super::message::cf(farm), super::message::rts(farm));
+    EeGamecppFarmKey { built: cx.mIsBuilt, paid: cx.mIsPaidFor, tile_x: rts.mTileX, tile_y: rts.mTileY }
+}
+
+/// The farm order of two keys (exported: the header declares the key).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_farm_key_order(
     cx: c_long,

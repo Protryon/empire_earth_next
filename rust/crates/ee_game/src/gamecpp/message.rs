@@ -140,7 +140,7 @@ pub(crate) fn unit_id(u: P) -> c_ulong {
 
 // ---- the records
 
-fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
+pub(super) fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record, used before the next C++ call
     unsafe { &mut *rec(O::UnRts, u) }
 }
@@ -170,7 +170,7 @@ pub(super) fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
     unsafe { &mut *rec(O::PlSaved, pl) }
 }
 
-fn pfields<'a>(pl: P) -> &'a mut EeUnitsPlayerFields {
+pub(super) fn pfields<'a>(pl: P) -> &'a mut EeUnitsPlayerFields {
     // SAFETY: as prts
     unsafe { &mut *rec(O::PlFields, pl) }
 }
@@ -186,12 +186,12 @@ fn get_bool(m: P, i: i64) -> bool {
     get::<u8>(m, i) != 0
 }
 
-fn world() -> P {
+pub(super) fn world() -> P {
     hp(O::WorldAddr, 0, &[])
 }
 
 /// A plain member of the world (`op` answers its address).
-fn wm<'a, T>(op: O) -> &'a mut T {
+pub(super) fn wm<'a, T>(op: O) -> &'a mut T {
     // SAFETY: the op answers the address of the world's member of type T
     unsafe { &mut *rec(op, world()) }
 }
@@ -205,10 +205,15 @@ fn world_player(i: i64) -> P {
 }
 
 fn sender(m: P) -> P {
-    hp(O::MsgSender, m, &[])
+    player_by_slot(h(O::MsgOrigin, m, &[]))
 }
 
-fn num_players() -> c_ulong {
+/// `gWorld.GetPlayerBySlot(slot)` (gamecpp world.rs, which the inline member calls).
+pub(super) fn player_by_slot(slot: i64) -> P {
+    super::world::ee_gamecpp_world_player_by_slot(world() as *mut c_void, slot as u8) as P
+}
+
+pub(super) fn num_players() -> c_ulong {
     // SAFETY: the world's member
     unsafe { *rec::<c_ulong>(O::WNumPlayers, world()) }
 }
@@ -423,7 +428,7 @@ fn saved_group_select(m: P) {
     let pl = sender(m);
     let main_group = hp(O::MainFormGroup0, 0, &[]);
     let slot = h(O::MsgOrigin, m, &[]);
-    let local_slot = h(O::PlGetSlot, current(), &[]);
+    let local_slot = prts(current()).mSlot as i64;
     group_with(hp(O::PlActiveGroup, pl, &[]), 4, hp(O::PlSavedGroupAt, pl, &[get::<u8>(m, 1) as i64]));
     if slot == local_slot && *wm::<bool>(O::WExecutingLocalSelection) {
         h(O::MouseSetPointer, 0, &[0]);
@@ -543,7 +548,7 @@ pub extern "C" fn ee_gamecpp_msg_body(index: i64, m: *mut c_void) {
         EE_NETMSG_BODY_SET_DIPLOMATIC_STANCE => set_diplomatic_stance(m),
         11 => {
             // EE_NETMSG_BODY_START_LOADING: through EEStartLoading (the harness's breakpoint)
-            h(O::MsgStartLoading, m, &[]);
+            ee_gamecpp_msg_start_loading(m as *mut c_void);
         }
         _ => change_formation(m),
     }
@@ -981,8 +986,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_unit_act(i: *const i64, a: *mut c_void, 
         }
         EE_NETMSG_ACT_BEHAVIOR => {
             let behavior = hp(O::BehaviorAt, 0, &[i[1]]);
-            if hp(O::CxBehavior, u, &[]) != behavior {
-                h(O::CxSetBehavior, u, &[pa(behavior)]);
+            if cf(u).mBehavior as P != behavior {
+                cf(u).mBehavior = behavior as *mut _;
             }
         }
         EE_NETMSG_ACT_REPLANT => {

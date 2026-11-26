@@ -12,19 +12,14 @@ use super::message::*;
 use super::{h, rec, O, P};
 use crate::app::game_options::EeAppOptionsFields;
 use ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
+use ee_sim::world::unit_class_fields::EeUnitsUnitClassLinks;
+use ee_sim::world::view::{PlayerView, UnitView, WorldRead, WorldView};
 
 /// A unit's fact (`EE_NETMSG_UNIT_*`) as its op; None for another.
 fn unit_fact(which: i64) -> Option<O> {
     Some(match which {
-        EE_NETMSG_UNIT_PACKED_CLASS => O::C11NmUnitPackedClass,
-        EE_NETMSG_UNIT_DEATH_SPAWN => O::C11NmUnitDeathSpawn,
-        EE_NETMSG_UNIT_TILE_NODE => O::C11NmUnitTileNode,
-        EE_NETMSG_UNIT_OWNER => O::C11NmUnitOwner,
         EE_NETMSG_UNIT_LAND_BUILDING => O::C11NmUnitLandBuilding,
         EE_NETMSG_UNIT_CAN_DELETE => O::C11NmUnitCanDelete,
-        EE_NETMSG_UNIT_TILE_X => O::C11NmUnitTileX,
-        EE_NETMSG_UNIT_TILE_Y => O::C11NmUnitTileY,
-        EE_NETMSG_UNIT_NEXT => O::C11NmUnitNext,
         EE_NETMSG_UNIT_AS_COMPLEX => O::C11NmUnitAsComplex,
         EE_NETMSG_UNIT_IN_SET => O::C11NmUnitInSet,
         _ => return None,
@@ -34,7 +29,6 @@ fn unit_fact(which: i64) -> Option<O> {
 /// A player's fact (`EE_NETMSG_PLAYER_*`).
 fn player_fact(which: i64) -> Option<O> {
     Some(match which {
-        EE_NETMSG_PLAYER_FIRST_UNIT => O::C11NmPlayerFirstUnit,
         EE_NETMSG_PLAYER_TRADE_PRICE => O::C11NmPlayerTradePrice,
         _ => return None,
     })
@@ -43,8 +37,6 @@ fn player_fact(which: i64) -> Option<O> {
 /// The world's fact (`EE_NETMSG_WORLD_*`).
 fn world_fact(which: i64) -> Option<O> {
     Some(match which {
-        EE_NETMSG_WORLD_NUM_PLAYERS => O::C11NmWorldNumPlayers,
-        EE_NETMSG_WORLD_CURRENT_INDEX => O::C11NmWorldCurrentIndex,
         EE_NETMSG_WORLD_STRING_LENGTH => O::C11NmWorldStringLength,
         EE_NETMSG_WORLD_COLLISION_SPHERE_MODE => O::C11NmWorldCollisionSphereMode,
         _ => return None,
@@ -90,6 +82,12 @@ fn humans(comms: super::net::Net) -> i64 {
     comms.get(ee_net::net::ffi_comms::EeNetCommsField::NumHumanPlayers) as u8 as i64
 }
 
+/// A class's related classes (its `EeUnitsUnitClassLinks` record, at the world layout's offset).
+fn class_links<'a>(uc: P) -> &'a EeUnitsUnitClassLinks {
+    // SAFETY: a live class's record, read before the next C++ call
+    unsafe { &*((uc + ee_sim::world::layout::layout().class_links as usize) as *const EeUnitsUnitClassLinks) }
+}
+
 /// A unit's facts its records hold (the unit, its complex unit's and its class's plain members); None for the
 /// others.
 fn unit_record_fact(which: i64, u: P) -> Option<i64> {
@@ -111,6 +109,22 @@ fn unit_record_fact(which: i64, u: P) -> Option<i64> {
         EE_NETMSG_UNIT_PAID_FOR => cf(u).mIsPaidFor as i64,
         EE_NETMSG_UNIT_BUILT => cf(u).mIsBuilt as i64,
         EE_NETMSG_UNIT_DOMAINS => class().mDomains as i64,
+        EE_NETMSG_UNIT_PACKED_CLASS => class_links(uf(u).mUnitClass as P).mPackedClass as P as i64,
+        EE_NETMSG_UNIT_DEATH_SPAWN => !class_links(uf(u).mUnitClass as P).mDeathSpawnClass.is_null() as i64,
+        EE_NETMSG_UNIT_TILE_X => rts(u).mTileX as i64,
+        EE_NETMSG_UNIT_TILE_Y => rts(u).mTileY as i64,
+        EE_NETMSG_UNIT_TILE_NODE | EE_NETMSG_UNIT_OWNER | EE_NETMSG_UNIT_NEXT => {
+            // the RTSUnit's pointer members (the world layout's: the view's reads)
+            // SAFETY: the host's call holds the world; `u` a live unit
+            let token = unsafe { WorldRead::begin() };
+            // SAFETY: as above
+            let v = unsafe { UnitView::of(&token, u as u64) }?;
+            match which {
+                EE_NETMSG_UNIT_TILE_NODE => v.has_tile_node() as i64,
+                EE_NETMSG_UNIT_OWNER => v.player().map_or(0, |pl| pl.handle() as i64),
+                _ => v.next().map_or(0, |n| n.handle() as i64),
+            }
+        }
         _ => return None,
     })
 }
@@ -127,6 +141,24 @@ fn player_record_fact(which: i64, pl: P, index: i64) -> Option<i64> {
         EE_NETMSG_PLAYER_SENDS_CHAT => psaved(pl).mSendChatMessage[i] as i64,
         EE_NETMSG_PLAYER_ID => prts(pl).mPlayerID as i64,
         EE_NETMSG_PLAYER_RESOURCE => psaved(pl).mResourceCaps[i] as i64,
+        EE_NETMSG_PLAYER_FIRST_UNIT => {
+            // SAFETY: the host's call holds the world; `pl` a live player
+            let token = unsafe { WorldRead::begin() };
+            // SAFETY: as above
+            unsafe { PlayerView::of(&token, pl as u64) }?.first_unit().map_or(0, |u| u.handle() as i64)
+        }
+        _ => return None,
+    })
+}
+
+/// The world's facts its members hold (the world view's reads); None for the others.
+fn world_record_fact(which: i64) -> Option<i64> {
+    // SAFETY: the host's call holds the world
+    let token = unsafe { WorldRead::begin() };
+    let w = WorldView::global(&token)?;
+    Some(match which {
+        EE_NETMSG_WORLD_NUM_PLAYERS => w.num_players() as c_ulong as i64,
+        EE_NETMSG_WORLD_CURRENT_INDEX => w.current_player_index(),
         _ => return None,
     })
 }
@@ -173,9 +205,9 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
     let (m, a, b) = (c.message as *mut c_void, c.a as *mut c_void, c.b as *mut c_void);
     let i = c.i;
     match op {
-        EE_NETMSG_OP_SENDER => h(O::C11NmSender, call, &[]),
-        EE_NETMSG_OP_PLAYER => h(O::C11NmPlayer, call, &[]),
-        EE_NETMSG_OP_CURRENT => h(O::C11NmCurrent, call, &[]),
+        EE_NETMSG_OP_SENDER => player_by_slot(h(O::MsgOrigin, m as P, &[])) as i64,
+        EE_NETMSG_OP_PLAYER => h(O::WorldPlayer, 0, &[i[0]]),
+        EE_NETMSG_OP_CURRENT => h(O::WorldCurrentPlayer, 0, &[]),
         EE_NETMSG_OP_GROUP => h(O::C11NmGroup, call, &[]),
         EE_NETMSG_OP_SAVED_GROUP => h(O::C11NmSavedGroup, call, &[]),
         EE_NETMSG_OP_GROUP_COUNT => group_len(a as P) as i64,
@@ -183,7 +215,14 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
         EE_NETMSG_OP_GROUP_FIRST => group_unit(a as P, 0) as i64,
         EE_NETMSG_OP_GROUP_CONTAINS => group_contains(a as P, b as P) as i64,
         EE_NETMSG_OP_UNIT => h(O::C11NmUnit, call, &[]),
-        EE_NETMSG_OP_CLASS_FACT => h(O::C11NmClassFact, call, &[]),
+        EE_NETMSG_OP_CLASS_FACT => {
+            let class = ucf(a as P);
+            if i[0] == EE_NETMSG_CLASS_TYPE {
+                class.mUnitType as i64
+            } else {
+                class.mTileSize as i64
+            }
+        }
         EE_NETMSG_OP_GROUP_ADD => {
             group_do(a as P, 0, b as P);
             0
@@ -200,7 +239,9 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
         EE_NETMSG_OP_PLAYER_FACT => {
             player_record_fact(i[0], a as P, i[1]).unwrap_or_else(|| fact(player_fact(i[0]), call))
         }
-        EE_NETMSG_OP_WORLD_FACT => net_fact(i[0]).unwrap_or_else(|| fact(world_fact(i[0]), call)),
+        EE_NETMSG_OP_WORLD_FACT => {
+            world_record_fact(i[0]).or_else(|| net_fact(i[0])).unwrap_or_else(|| fact(world_fact(i[0]), call))
+        }
         EE_NETMSG_OP_DECISION => {
             ee_netmsg_capture_decision(i[0] as u32, c.i.as_ptr().add(2), i[1] as u32);
             0
@@ -271,7 +312,7 @@ mod tests {
     fn the_facts_map_to_their_ops() {
         assert_eq!(unit_fact(EE_NETMSG_UNIT_IN_SET), Some(O::C11NmUnitInSet));
         assert_eq!(player_fact(EE_NETMSG_PLAYER_TRADE_PRICE), Some(O::C11NmPlayerTradePrice));
-        assert_eq!(world_fact(EE_NETMSG_WORLD_NUM_PLAYERS), Some(O::C11NmWorldNumPlayers));
+        assert_eq!(world_fact(EE_NETMSG_WORLD_STRING_LENGTH), Some(O::C11NmWorldStringLength));
         assert_eq!(world_fact(EE_NETMSG_WORLD_HUMANS), None);
         assert_eq!(world_fact(EE_NETMSG_WORLD_OPTIONS_LOCK), None);
         assert_eq!(fact(None, 0), 0);

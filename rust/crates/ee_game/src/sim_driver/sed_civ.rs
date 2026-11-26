@@ -390,7 +390,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 "editor",
                 if editor != 0 { h(O::EditorCivilization, editor, &[]) as usize } else { 0 },
             ));
-            let player = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
+            let player = gc::h(gc::O::WorldCurrentPlayer, 0, &[]) as usize;
             out.push(civ_digest(
                 "player",
                 if player != 0 { h(O::PlayerCivilization, player, &[]) as usize } else { 0 },
@@ -467,7 +467,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             gc::h(gc::O::SsDeleteString, name, &[]);
         }
         "apply" => {
-            let player = gc::h(gc::O::SsWorldPlayer, 0, &[number(arg(2)) as i64]) as usize;
+            let player = gc::h(gc::O::WorldPlayer, 0, &[number(arg(2)) as i64]) as usize;
             let name = hs(O::NarrowNew, 0, &word(arg(3))) as usize;
             out.push(format!("  apply -> {}", h(O::CivApply, player, &[name as i64]) as c_long));
             out.push(civ_digest("applied", h(O::PlayerCivilization, player, &[]) as usize));
