@@ -387,7 +387,7 @@ impl EeGeFontBitmap {
                 return r;
             }
             // SAFETY: as above
-            if let Some(r) = unsafe { object_op(op, owner as usize, obj, a, b) } {
+            if let Some(r) = unsafe { object_op(op, owner, obj, a, b) } {
                 return r;
             }
         }

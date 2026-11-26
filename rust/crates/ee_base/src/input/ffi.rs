@@ -1,4 +1,4 @@
-//! The C ABI of the Input System (`include/lle/ISKeyboard.h`, `ISMouse.h`, `ISEntity.h`, `ISDeviceInput.h`): the two
+//! The C ABI of the Input System (`include/lle/ISKeyboard.h`, `ISMouse.h`, `ISEntity.h`; the device buffers): the two
 //! system devices, the window thread's events, and the system keyboard and mouse with their entities, which the
 //! game threads read. Every pointer may be NULL: a NULL keyboard, mouse or entity reads as nothing held.
 //!
