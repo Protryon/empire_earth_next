@@ -670,6 +670,11 @@ impl EeWonModel {
     body!(server_list, ServerList, ServerList);
 
     fn op(&self, op: EeWonModelOp, a: isize, b: isize, c: isize) -> isize {
+        if op == EeWonModelOp::TextOfUnits {
+            if let Some(r) = crate::lobbytext::model_text(a, b) {
+                return r;
+            }
+        }
         // SAFETY: the host's contract
         unsafe { (self.host)(op, a, b, c) }
     }

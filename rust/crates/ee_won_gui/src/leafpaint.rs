@@ -200,7 +200,7 @@ const _: () = assert!(
 );
 
 /// The members of the game's list item `item` (a `ListItem*`).
-pub(crate) fn item_rec(item: isize) -> *mut EeWonListItemRec {
+pub fn item_rec(item: isize) -> *mut EeWonListItemRec {
     (item as usize).wrapping_add(EE_WON_LIST_ITEM_AT) as *mut EeWonListItemRec
 }
 

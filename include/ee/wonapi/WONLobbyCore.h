@@ -2,6 +2,7 @@
 #define EE_WONAPI_WONLOBBYCORE_H
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/won_lobby/lobbytext.h"
 namespace WONAPI {
 class Component;
 int LobbyDoDialog(Component* inDialog);
@@ -35,7 +36,10 @@ AuthContext* GetLobbyAuthContext();
 const std::string& LobbyGetSysTOUPath();
 const std::string& LobbyGetGameTOUPath();
 void LobbyGetTOUTimes(long& outSystemTime, long& outGameTime);
-GUIString GetWONStatusString(WONStatus inStatus);
+// the player-facing text of a WON status (ee_won_lobby lobbytext.rs over statusstr.rs; WONStatusString.cpp until R6 WON
+// GUI round 40): the text adopted from its one reference
+inline GUIString GetWONStatusString(WONStatus inStatus)
+{ GUIStringData* d = (GUIStringData*)ee_won_lobby_status_string((int32_t)inStatus); GUIString s(d); d->Release(); return s; }
 IPAddr LobbyGetPublicAddress();
 bool LobbyOnLoginScreen();
 bool LobbyOnLanScreen();

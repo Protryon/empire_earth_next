@@ -79,16 +79,12 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::BroadcastAccount:
         LobbyBroadcastEvent(QueryAccountResultEvent(R(a)->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL), R(a)->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1) != 0), true);
         return 0;
-    case O::AddUserNamed: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), "", false);
-    case O::AddUserNoPassword: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), GUIString(GetEmptyGUIStringData()), false);
-    case O::AddUserWithPassword: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false);
     case O::UserSetTOUNow: UserSetTOUNow(reinterpret_cast<LobbyUserInfo*>(a)); return 0;
     case O::SaveGlobalPrefsNow: LobbySaveGlobalPrefs(true); return 0;
     case O::SetCurrentUser: LobbySetCurrentUser(reinterpret_cast<LobbyUserInfo*>(a)); return 0;
     case O::BroadcastLoginFields: LobbyBroadcastEvent(SetLoginFieldsEvent(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false), true); return 0;
     case O::RootWindow: return (intptr_t)LobbyGetRootWindow();
     case O::KeyMod: return reinterpret_cast<Window*>(a)->GetKeyMod();
-    case O::FindUserOfEvent: return (intptr_t)LobbyFindUser(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)));
     case O::UserTOUNewer: return LobbyIsTOUNewer(LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 0), LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 1));
     case O::AuthSetUserNameOf: A(a)->SetUserName(LobbyEvtStr<std::wstring>(E(b), EF::UserName)); return 0;
     case O::AuthSetPasswordOf: A(a)->SetPassword(LobbyEvtStr<std::wstring>(E(b), EF::Password)); return 0;

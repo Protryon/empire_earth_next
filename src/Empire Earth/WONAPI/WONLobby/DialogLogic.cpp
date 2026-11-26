@@ -40,10 +40,13 @@ static Component* FindDialog(ComponentConfig* inConfig, bool inStatus)
     return aFound;
 }
 
-// the composed cases' locals (logicsplit.rs): NewWindow's window, StatusSetStatus's text, OkCancelSetText's buttons
+// the composed cases' local (logicsplit.rs): NewWindow's window (the dialogs' texts are lobbytext.rs's since R6 WON GUI
+// round 40, which calls a dialog's Rust object at this offset)
 static SmartPtr<Window> sDlgNewWindow;
-static GUIString sDlgStatusText;
-static const GUIString* sDlgButtons[2];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const bool sDlgAtRegistered = (ee_won_lobbytext_dialog_at(offsetof(LobbyRustDialog, mLobbyDlg)), true);
+#pragma clang diagnostic pop
 
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
@@ -85,15 +88,12 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::WindowShow: aWindow->Show(true); return 0;
     case Op::RunDialog: return aWindow->RunDialog(reinterpret_cast<Component*>(b));
     case Op::LobbySuspended: return LobbyIsSuspended() ? 1 : 0;
-    case Op::StatusSetText:
-        static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetText, b, c, d != 0);
-        return 0;
     case Op::StatusSetStartTick: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetStartTick, (intptr_t)WONTickCount()); return 0;
     case Op::SoundEffects: return LobbyGetLobbySoundEffects() ? 1 : 0;
     case Op::PlayErrorSound: LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_Error_Sound).get()); return 0;
     case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
     // R6 WON lobby and network round 35: the statements of the cases logicsplit.rs composes (WmPopups, Bounds,
-    // NewWindow, SetUpPopup, StatusSetStatus, OkCancelSetText); the locals are the statics above
+    // NewWindow, SetUpPopup); the local is the static above
     case Op::WmDefault: return (intptr_t)WONAPI::WindowManager::GetDefaultWindowManager();
     case Op::WmPopupsOf: return reinterpret_cast<WindowManager*>(a)->GetPopupsInOwnWindow() ? 1 : 0;
     case Op::BoundsX: return aComp->GetBounds().x;
@@ -109,11 +109,6 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::WindowCreatePopup: aWindow->Create(WONRectangle(0, 0, 100, 100)); return 0;
     case Op::WindowListenRoot: LobbyAddLogicListener(aWindow->mRoot.get()); return 0;
     case Op::WindowRootSetScheme: aWindow->mRoot->SetColorScheme(LobbyGetColorScheme()); return 0;
-    case Op::StatusTextOf: sDlgStatusText = GetWONStatusString((WONStatus)a); return 0;
-    case Op::StatusSetHeldText: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetStatus, (intptr_t)&sDlgStatusText, false); return 0;
-    case Op::StatusTextDrop: sDlgStatusText = GUIString(); return 0;
-    case Op::ButtonTextSet: sDlgButtons[a] = &gLobbyResources[b].mString; return 0;
-    case Op::OkCancelSetHeldText: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetText, b, c, (intptr_t)sDlgButtons); return 0;
     case Op::InvalidateRect: {
         const int* aRect = reinterpret_cast<const int*>(b);
         WONRectangle aBounds(aRect[0], aRect[1], aRect[2], aRect[3]);

@@ -238,7 +238,6 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     // EELobbyGetVersion's statements (eesplit.rs composes Version, R6 WON round 35): the text EELobbyToGUIString makes
     case Op::VersionTextNew: return (intptr_t) NewGUIStringData(StringToWString(std::string(gGameVersion), -1));
     case Op::VersionChecksum: return (intptr_t)gBinaryChecksum;
-    case Op::StringsEqual: return EELobbyStr(a) == EELobbyStr(b) ? 1 : 0;
     case Op::TransferNew: return (intptr_t) new EELobbyFileTransfer;
     case Op::TransferSetSavesPath: {
         GUIString thePath = EELobbyFn2988E9();

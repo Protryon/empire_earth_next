@@ -26,7 +26,7 @@ enum class EeWonDirReadOp {
   ServerAddressAdd,
 };
 
-/// The host: `(op, obj, a, b)`.
+/// The host: `(op, obj, a, b)`; NULL in the game, whose statements are the model's own calls ([`game_op`]).
 using EeWonDirReadHost = ptrdiff_t(*)(EeWonDirReadOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
 extern "C" {

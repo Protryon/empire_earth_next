@@ -518,10 +518,11 @@ pub unsafe extern "C" fn ee_won_modelbuf_call(
     b: isize,
     c: isize,
 ) -> isize {
-    let o = |op: Op, a: isize, b: isize, c: isize| match host {
+    let o = |op: Op, a: isize, b: isize, c: isize| match (crate::lobbytext::buf_op(op, a, b), host) {
+        (Some(r), _) => r,
         // SAFETY: the contract
-        Some(f) => unsafe { f(obj, op, a, b, c) },
-        None => 0,
+        (None, Some(f)) => unsafe { f(obj, op, a, b, c) },
+        (None, None) => 0,
     };
     call(which, a, b, c, &o)
 }

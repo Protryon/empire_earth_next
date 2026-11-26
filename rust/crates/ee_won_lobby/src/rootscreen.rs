@@ -221,6 +221,12 @@ struct Screen<'a> {
 
 impl Screen<'_> {
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        // the game's event's control id read in place (R6 WON GUI round 40: lobbytext.rs)
+        if op == Op::EventControlId {
+            if let Some(r) = crate::lobbytext::event_control_id(a) {
+                return r;
+            }
+        }
         (self.host)(op, a, b, c)
     }
     fn on(&self, op: Op) -> isize {
