@@ -445,10 +445,6 @@ shims! {
     fn form_enable_group0(form: usize) = ee_uicpp_form_enable_group0;
     // UIControl.cpp's (lle_control.rs, mouse_ffi.rs)
     fn control_key_fetch(slot: u32, code: u32) = ee_uicpp_control_key_fetch;
-    fn control_left_down(control: usize) -> bool = ee_uicpp_control_left_down;
-    fn control_right_down(control: usize) -> bool = ee_uicpp_control_right_down;
-    fn control_set_left_down(control: usize, down: bool) = ee_uicpp_control_set_left_down;
-    fn control_set_right_down(control: usize, down: bool) = ee_uicpp_control_set_right_down;
     fn control_mouse_left_double(control: usize) -> c_long = ee_uicpp_control_mouse_left_double;
     fn control_mouse_left_up(control: usize) -> c_long = ee_uicpp_control_mouse_left_up;
     fn control_mouse_left_down(control: usize) -> c_long = ee_uicpp_control_mouse_left_down;
@@ -545,6 +541,11 @@ shims! {
     // ui13a: the key predicates (lle_control.rs key_pressed)
     fn entity_long_value(entity: usize) -> c_long = own::entity_long_value;
     fn num_lock_off() -> bool = own::num_lock_off;
+    // the controls' button-down members (their records', lle_hosts.rs fields)
+    fn control_left_down(control: usize) -> bool = crate::lle_hosts::control_left_down;
+    fn control_right_down(control: usize) -> bool = crate::lle_hosts::control_right_down;
+    fn control_set_left_down(control: usize, down: bool) = crate::lle_hosts::control_set_left_down;
+    fn control_set_right_down(control: usize, down: bool) = crate::lle_hosts::control_set_right_down;
     // the manager's UI lock (TSScheduler::CreateCriticalSection: ee_base's section)
     fn lock_create(lock: EeUiShimPtrOut) -> bool = own::lock_create;
 }

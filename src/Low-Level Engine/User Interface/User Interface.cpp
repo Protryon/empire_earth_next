@@ -336,8 +336,6 @@ static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle'
 #define ctl static_cast<UIControl*>(inObj)
 #define theForm ctl->GetForm()
 EE_UI_CASE(ctl_form_control) { return (intptr_t)theForm->GetControl((unsigned long)a); }
-EE_UI_CASE(ctl_slot_left_down) { return theForm->GetControl((unsigned long)a)->mLeftButtonDown; }
-EE_UI_CASE(ctl_slot_right_down) { return theForm->GetControl((unsigned long)a)->mRightButtonDown; }
 EE_UI_CASE(ctl_group_enabled) { return theForm->GetEntityGroupById((unsigned long)a)->GetIsEnabled(); }
 EE_UI_CASE(ctl_current_form) { return (intptr_t)theForm->GetManager()->GetCurrentForm(); }
 EE_UI_CASE(ctl_keyboard_captured) { return (intptr_t)theForm->GetKeyboardCaptured(); }
@@ -372,12 +370,6 @@ EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0],
 #define CTL(x) reinterpret_cast<UIControl*>(x)
 extern "C" void ee_uicpp_control_key_fetch(uint32_t inSlot, uint32_t inCode)
 { gISKeyboard->GetEntity(inCode, UIControl::Key((EeUiKey)inSlot)); }
-extern "C" bool ee_uicpp_control_left_down(uintptr_t inControl) { return CTL(inControl)->mLeftButtonDown; }
-extern "C" bool ee_uicpp_control_right_down(uintptr_t inControl) { return CTL(inControl)->mRightButtonDown; }
-extern "C" void ee_uicpp_control_set_left_down(uintptr_t inControl, bool inDown)
-{ CTL(inControl)->mLeftButtonDown = inDown; }
-extern "C" void ee_uicpp_control_set_right_down(uintptr_t inControl, bool inDown)
-{ CTL(inControl)->mRightButtonDown = inDown; }
 extern "C" long ee_uicpp_control_mouse_left_double(uintptr_t inControl)
 { return CTL(inControl)->MouseLButtonDoublePressed(); }
 extern "C" long ee_uicpp_control_mouse_left_up(uintptr_t inControl) { return CTL(inControl)->MouseLButtonUp(); }
@@ -403,11 +395,7 @@ EE_UI_VOID(obj_mouse_location) { *reinterpret_cast<GE2DPoint*>(f) = ctl->GetMous
 EE_UI_VOID(obj_capture_mouse) { ctl->CaptureMouse(); }
 EE_UI_VOID(obj_release_mouse) { ctl->ReleaseCapturedMouse(); }
 EE_UI_VOID(obj_fire_trigger) { ctl->FireTriggerEvent((unsigned long)a); }
-EE_UI_CASE(obj_border_thickness) { return ctl->mBorderThickness; }
 EE_UI_CASE(obj_width) { return ctl->GetWidth(); }
-EE_UI_CASE(obj_index) { return ctl->mIndex; }
-EE_UI_CASE(obj_border_type) { return ctl->mBorderType; }
-EE_UI_VOID(obj_set_border_type) { ctl->mBorderType = (unsigned long)a; }
 EE_UI_CASE(obj_tab_stop) { return ctl->GetForm()->GetTabStop(); }
 EE_UI_CASE(obj_tabbing_on) { return ctl->GetForm()->GetTabbingOn(); }
 EE_UI_VOID(obj_set_tab_stop) { ctl->GetForm()->SetTabStop((unsigned long)a); }
@@ -420,13 +408,9 @@ EE_UI_CASE(obj_manager_bitmap) { return (intptr_t)ctl->GetForm()->GetManager()->
 EE_UI_VOID(obj_copied_draw_rect) { UIObjHost::PutRect(f, ctl->GetCopiedDrawRectangle()); }
 EE_UI_VOID(obj_base_set_rectangle) { ctl->UIControl::SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_CASE(obj_control_count) { return ctl->GetForm()->GetControlCount(); }
-EE_UI_CASE(obj_always_dirty) { return ctl->GetAlwaysDirty(); }
-EE_UI_VOID(obj_set_always_dirty) { ctl->SetAlwaysDirty(a != 0); }
 EE_UI_VOID(obj_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
 EE_UI_VOID(obj_bg_opacity) { f[0] = ctl->GetBgOpacity(); }
-EE_UI_VOID(obj_border_opacity) { f[0] = ctl->GetBorderOpacity(); }
 EE_UI_VOID(obj_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
-EE_UI_VOID(obj_set_border_opacity) { ctl->SetBorderOpacity(f[0]); }
 #undef ctl
 // The ops on the bitmaps and texts a whole object holds by address (ee_ui obj.rs): a the object, b an argument
 #define ctl static_cast<UIControl*>(inObj)

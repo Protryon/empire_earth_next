@@ -120,8 +120,6 @@ shims! {
     v ee_uicpp_ctl_set_display_mode;
     v ee_uicpp_ctl_set_keyboard_captured;
     v ee_uicpp_ctl_set_mouse_captured;
-    r ee_uicpp_ctl_slot_left_down;
-    r ee_uicpp_ctl_slot_right_down;
     v ee_uicpp_ctl_tab;
     r ee_uicpp_ctl_tab_stop;
     v ee_uicpp_ctl_tabbed_to;
@@ -378,7 +376,6 @@ shims! {
     v ee_uicpp_mgr_texture_release;
     r ee_uicpp_mgr_virt_update_keyboard;
     r ee_uicpp_mgr_virt_update_mouse;
-    r ee_uicpp_obj_always_dirty;
     r ee_uicpp_obj_base_copy_data;
     r ee_uicpp_obj_base_draw_polygons;
     r ee_uicpp_obj_base_draw_text;
@@ -388,9 +385,6 @@ shims! {
     v ee_uicpp_obj_bitmap_reference;
     v ee_uicpp_obj_bitmap_release;
     r ee_uicpp_obj_bitmap_texture_width;
-    v ee_uicpp_obj_border_opacity;
-    r ee_uicpp_obj_border_thickness;
-    r ee_uicpp_obj_border_type;
     v ee_uicpp_obj_capture_keyboard;
     v ee_uicpp_obj_capture_mouse;
     r ee_uicpp_obj_control_count;
@@ -399,7 +393,6 @@ shims! {
     r ee_uicpp_obj_draw_clipped_text;
     v ee_uicpp_obj_fire_trigger;
     r ee_uicpp_obj_has_mouse_capture;
-    r ee_uicpp_obj_index;
     r ee_uicpp_obj_manager_bitmap;
     v ee_uicpp_obj_mouse_location;
     r ee_uicpp_obj_part_copy_data;
@@ -417,10 +410,7 @@ shims! {
     v ee_uicpp_obj_release_keyboard;
     v ee_uicpp_obj_release_mouse;
     r ee_uicpp_obj_right_button_down;
-    v ee_uicpp_obj_set_always_dirty;
     v ee_uicpp_obj_set_bg_opacity;
-    v ee_uicpp_obj_set_border_opacity;
-    v ee_uicpp_obj_set_border_type;
     v ee_uicpp_obj_set_dirty;
     v ee_uicpp_obj_set_display_mode;
     v ee_uicpp_obj_set_tab_stop;

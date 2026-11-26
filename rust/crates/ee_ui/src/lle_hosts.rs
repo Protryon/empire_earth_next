@@ -1224,3 +1224,87 @@ mod own {
         text_set_transparent => |a, b, f| { ge::ee_ge_text_set_transparent(text(a), b != 0); 0 };
     }
 }
+
+/// The ops that read or write a control's own members (LLE/UI round 2): the members are the record
+/// [`EeUiControlFields`](crate::controlobj::EeUiControlFields) (`UIControl`'s base), which [`crate::direct`] finds by
+/// the C++ control, so Rust reads them in place (as the one-statement shims did through the C++ object).
+#[cfg(not(any(test, feature = "no_cpp")))]
+mod fields {
+    use core::ffi::{c_ulong, c_void};
+
+    use crate::controlobj::EeUiControlFields;
+    use crate::direct;
+
+    /// The record of the control `o`, NULL when it has none.
+    fn rec(o: *const c_void) -> *mut EeUiControlFields {
+        direct::fields(o as *mut c_void)
+    }
+
+    /// `get` of the control `o`'s record (0 when it has none).
+    pub(super) fn get(o: *const c_void, get: impl FnOnce(&EeUiControlFields) -> isize) -> isize {
+        // SAFETY: a live record (the registry forgets it in the destructor)
+        unsafe { rec(o).as_ref() }.map_or(0, get)
+    }
+
+    /// `set` on the control `o`'s record.
+    pub(super) fn set(o: *const c_void, set: impl FnOnce(&mut EeUiControlFields)) {
+        // SAFETY: as get
+        if let Some(r) = unsafe { rec(o).as_mut() } {
+            set(r)
+        }
+    }
+
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$o:ident, $a:ident, $f:ident| $e:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract: `o` a live control, `f` its op's floats.
+            #[allow(unused_variables, unused_unsafe)]
+            pub(super) unsafe fn $name($o: *mut c_void, $a: isize, _b: isize, _c: isize, _d: isize, $f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $e }
+            }
+        )*};
+    }
+
+    ops! {
+        border_thickness => |o, a, f| get(o, |r| r.mBorderThickness as isize);
+        index => |o, a, f| get(o, |r| r.mIndex as isize);
+        border_type => |o, a, f| get(o, |r| r.mBorderType as isize);
+        set_border_type => |o, a, f| { set(o, |r| r.mBorderType = a as c_ulong); 0 };
+        always_dirty => |o, a, f| get(o, |r| r.mAlwaysDirty as isize);
+        set_always_dirty => |o, a, f| { set(o, |r| r.mAlwaysDirty = a != 0); 0 };
+        /// `f[0] = GetBorderOpacity()`.
+        border_opacity => |o, a, f| { *f = f32::from_bits(get(o, |r| r.mBorderOpacity.to_bits() as isize) as u32); 0 };
+        /// `SetBorderOpacity(f[0])`.
+        set_border_opacity => |o, a, f| { let v = *f; set(o, |r| r.mBorderOpacity = v); 0 };
+        /// The form's control in slot `a`: its left button down (`GetForm()->GetControl(a)->mLeftButtonDown`).
+        slot_left_down => |o, a, f| slot(o, a, |r| r.mLeftButtonDown as isize);
+        /// The same, its right button.
+        slot_right_down => |o, a, f| slot(o, a, |r| r.mRightButtonDown as isize);
+    }
+
+    /// `get` of the record of the control in the slot `a` of `o`'s form.
+    fn slot(o: *const c_void, a: isize, g: impl FnOnce(&EeUiControlFields) -> isize) -> isize {
+        let form = get(o, |r| r.mForm as isize) as *mut c_void;
+        get(direct::control(form, a as c_ulong), g)
+    }
+
+    /// The control's left button down (`mLeftButtonDown`: the mouse dispatch's).
+    pub(crate) fn left_down(control: usize) -> bool {
+        get(control as *const c_void, |r| r.mLeftButtonDown as isize) != 0
+    }
+    pub(crate) fn right_down(control: usize) -> bool {
+        get(control as *const c_void, |r| r.mRightButtonDown as isize) != 0
+    }
+    pub(crate) fn set_left_down(control: usize, down: bool) {
+        set(control as *const c_void, |r| r.mLeftButtonDown = down)
+    }
+    pub(crate) fn set_right_down(control: usize, down: bool) {
+        set(control as *const c_void, |r| r.mRightButtonDown = down)
+    }
+}
+#[cfg(not(any(test, feature = "no_cpp")))]
+pub(crate) use fields::{left_down as control_left_down, right_down as control_right_down,
+    set_left_down as control_set_left_down, set_right_down as control_set_right_down};
