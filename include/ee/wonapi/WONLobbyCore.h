@@ -89,14 +89,11 @@ void LobbyShowInternetScreen();
 void LobbyRemoveEventHooks(); // 0x759040 (removes the lobby's event and timer hooks)
 bool LobbyUserCanceledLastStatusOp(); // 0x758f50 (the dialog logic's active-state byte)
 bool LobbyLogout(bool);   // 0x761330 (forwards to StagingLogic's Logout)
-GUIString LobbyFormatString3(const GUIString& inFormat, const GUIString& inFirst,
-    const GUIString& inSecond, const GUIString& inThird);
 
 class LobbyServerList;
 class LobbyGroup;
 LobbyServerList* LobbyGetServerList(); // 0x75b6b0: the routing logic's mServerList (0x54)
 LobbyGroup* LobbyGetChatGroup(); // 0x75b6d0: the routing logic's mChatGroup (0x6c)
-GUIString LobbyFormatString2(const GUIString& inFormat, const GUIString& inFirst, const GUIString& inSecond);
 void LobbyResetFirewallTest();
 void LobbySetPublicAddress(const IPAddr& inAddress);
 void LobbySetBehindFirewall(bool inBehindFirewall);

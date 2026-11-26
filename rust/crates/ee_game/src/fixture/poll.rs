@@ -364,7 +364,7 @@ fn execute(dir: &str, form: u64, form_id: u64, count: u64, last: &mut u64) {
             result = "checked";
         }
     } else if op == "zoom" && five && on_form {
-        Call::new(Op::Zoom).f(&[c as f32 / 100.0]).go(); // the camera zoom (100 = the original's farthest)
+        crate::gamecpp::camera_io::set_zoom(c as f32 / 100.0); // the camera zoom (100 = the original's farthest)
         result = "zoomed";
     } else if op == "pointer" && five && on_form && mouse {
         hold_pointer(seq, b as f32, c as f32, if cmd.fields >= 6 && d <= 60000 { d } else { 0 });

@@ -218,21 +218,17 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::UnitSetContains: return gUnitSetManager.Contains((long)a[0], (unsigned long)a[1]);
     case O::ContinentOfUnit: return gContinentManager.GetContinent(UN, kAIPathNonSpace);
-    case O::CameraGetLocation: ::gWorld.mCameraControl.GetLocation(::gWorld.mCameraControl.mFraction, PT(0));
-        break;
-    case O::CameraSetLocation: ::gWorld.mCameraControl.SetLocation(PT(0), a[1] != 0, a[2] != 0);
-        break;
     case O::ViewportInverseApply: gViewport.GetCameraInverse().Apply(PT(0), PT(1));
         break;
     case O::Verify: ESVERIFY_AT(a[0] != 0, a[1]);
         break;
     // the effects and the sounds
-    case O::EffUnit: return gEffectManager->CreateUnitEffect(UN, (EEGraphicEffect*)a[0], HANDLE(1), a[2] != 0, a[3], a[4]);
-    case O::EffBetweenUnits: return gEffectManager->CreateEffectBetweenUnits(UN, (EEUnit*)a[0], (EEGraphicEffect*)a[1], HANDLE(2));
-    case O::EffAt: return gEffectManager->CreateEffect(UN, PT(0), (EEGraphicEffect*)a[1], HANDLE(2), a[3]);
-    case O::EffPlaced: return gEffectManager->CreatePlacedEffect(PT(0), (EEGraphicEffect*)a[1], HANDLE(2));
-    case O::EffBetween: return gEffectManager->CreateEffectBetween(PT(0), PT(1), (EEGraphicEffect*)a[2], HANDLE(3));
-    case O::EffDestroy: return gEffectManager->DestroyEffect(EEEffectHandle{(uint32_t)a[0]});
+    case O::EffUnit: return gWorld.mEffectManager->CreateUnitEffect(UN, (EEGraphicEffect*)a[0], HANDLE(1), a[2] != 0, a[3], a[4]);
+    case O::EffBetweenUnits: return gWorld.mEffectManager->CreateEffectBetweenUnits(UN, (EEUnit*)a[0], (EEGraphicEffect*)a[1], HANDLE(2));
+    case O::EffAt: return gWorld.mEffectManager->CreateEffect(UN, PT(0), (EEGraphicEffect*)a[1], HANDLE(2), a[3]);
+    case O::EffPlaced: return gWorld.mEffectManager->CreatePlacedEffect(PT(0), (EEGraphicEffect*)a[1], HANDLE(2));
+    case O::EffBetween: return gWorld.mEffectManager->CreateEffectBetween(PT(0), PT(1), (EEGraphicEffect*)a[2], HANDLE(3));
+    case O::EffDestroy: return gWorld.mEffectManager->DestroyEffect(EEEffectHandle{(uint32_t)a[0]});
     case O::EffectKind: return ((EEGraphicEffect*)p)->mKind;
     case O::SoPlayNode: return P64(gSoundManager->PlayAndReturnReferencedNode(((EESoundObject*)p)->GetSampleID(), f[0], f[1], f[2], ((EESoundObject*)p)->GetLooping(), NULL));
     case O::SoPlay: return gSoundManager->Play(((EESoundObject*)p)->GetSampleID(), f[0], f[1], f[2], ((EESoundObject*)p)->GetLooping(), NULL);
@@ -370,7 +366,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::UcBattleCryEffect: return P64(UC->mBattleCryEffect);
     case O::UcCreateUnitAt: return P64(UC->CreateUnitAt(TR(0), (long)a[1], 0, NULL));
     case O::UnMaxHitPointsI32: return (int32_t)UN->mStats->mMaxHitPoints;
-    case O::EffGet: return P64(gEffectManager->GetEffect(EEEffectHandle{(uint32_t)a[0]}));
+    case O::EffGet: return P64(gWorld.mEffectManager->GetEffect(EEEffectHandle{(uint32_t)a[0]}));
     case O::EffKindOf: return ((EEEffect*)p)->GetKind();
     case O::EffFinishDamaged: ((EEEffect*)p)->mRecord->damaged.finished = true;   // the damage controller (0x3e, on EEE2DRust)
         break;
@@ -442,9 +438,9 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::KlStop: KL->Stop((EECalamity*)a[0]);
         break;
     case O::KlCanCastAt: return KL->CanCastAt((EEComplexUnit*)a[0], *(GE3DPoint*)a[1], (unsigned long)a[2], (unsigned long)a[3], a[4] != 0, (EEUnit*)a[5]);
-    case O::EffectManagerPresent: return gEffectManager != NULL;
-    case O::EffCount: return (int64_t)gEffectManager->Count();
-    case O::EffDestroyedCount: return (int64_t)gEffectManager->DestroyedCount();
+    case O::EffectManagerPresent: return gWorld.mEffectManager != NULL;
+    case O::EffCount: return (int64_t)gWorld.mEffectManager->Count();
+    case O::EffDestroyedCount: return (int64_t)gWorld.mEffectManager->DestroyedCount();
     case O::HelperUpdate: EEContagionHelperUpdate((EEContagionHelper*)p, f[0]);
         break;
     default: return EEWorldOp(inOp, p, a, f);   // the world bodies' (EEWorld.cpp)

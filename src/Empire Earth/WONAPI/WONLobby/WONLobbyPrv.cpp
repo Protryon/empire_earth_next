@@ -463,9 +463,9 @@ void LobbySendEventTo(ComponentEvent* event,Component* target)
 {
     SmartPtr<ComponentEvent> eventOwner=event;
     if(gLobbyData.get()!=NULL && target!=NULL) {
-        if(event->mComponent==NULL)
+        if(event->mEv.comp==0)
             event->SetComponent(gLobbyData->mLobbyContainer.get());
-        event->mBroadcast=true;
+        event->mEv.broadcast=1;
         target->HandleComponentEvent(event);
     }
 }
@@ -474,7 +474,7 @@ void LobbyDispatchEvent(ComponentEvent* event)
 {
     SmartPtr<ComponentEvent> eventOwner=event;
     if(gLobbyData.get()!=NULL) {
-        if(event->mComponent==NULL)
+        if(event->mEv.comp==0)
             event->SetComponent(gLobbyData->mLobbyContainer.get());
         LobbyLogicEventHook(event);
     }
@@ -700,7 +700,7 @@ static intptr_t LogicMgrHost(EeWonLogicMgrOp inOp, intptr_t a, intptr_t b)
 {
     typedef EeWonLogicMgrOp Op;
     LobbyLogic* aLogic = reinterpret_cast<LobbyLogic*>(a);
-    ListItemClickedEvent* aClick = static_cast<ListItemClickedEvent*>(reinterpret_cast<ComponentEvent*>(a));
+    ComponentEvent* aClick = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
     case Op::AddRef: aLogic->AddRef(); return 0;
     case Op::Release: aLogic->Release(); return 0;
@@ -709,8 +709,8 @@ static intptr_t LogicMgrHost(EeWonLogicMgrOp inOp, intptr_t a, intptr_t b)
     case Op::HandleControlEvent: return WON_GUARDED_V(aLogic->HandleControlEvent((int)b));
     case Op::HandleComponentEvent: return WON_GUARDED_V(aLogic->HandleComponentEvent(reinterpret_cast<ComponentEvent*>(b)));
     case Op::Reset: return WON_GUARDED_V(aLogic->Reset());
-    case Op::ClickItem: return (intptr_t)aClick->mItem.get();
-    case Op::ClickButton: return aClick->mButton;
+    case Op::ClickItem: return aClick->mEv.item;
+    case Op::ClickButton: return aClick->mEv.button;
     case Op::IsMenuItem: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a)) != NULL ? 1 : 0;
     case Op::MenuId: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a))->mMenuId;
     case Op::ControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
@@ -722,5 +722,5 @@ static intptr_t LogicMgrHost(EeWonLogicMgrOp inOp, intptr_t a, intptr_t b)
 LobbyLogicMgr::LobbyLogicMgr() : mRust(ee_won_logicmgr_new(LogicMgrHost)) {}
 LobbyLogicMgr::~LobbyLogicMgr() { ee_won_logicmgr_free(this->mRust); }
 // Turns left clicks on menu items and button presses into control events; passes other events to the logics
-void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
+void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mEv.kind); }
 }

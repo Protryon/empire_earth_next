@@ -89,13 +89,13 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::EntryDereferenceAction: ((EEAction*)p)->Dereference();
         break;
     case O::EntryOpenSavedGame: return EEOpenSaveGameFile(UString((const char*)a[0]), "Saved Games\\", *(FSFileSpec**)a[1]);
-    case O::EntryOptionsWriteLock: gGameOptions.mLock->WriteLock();
+    case O::EntryOptionsWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
         break;
-    case O::EntryOptionsWriteUnlock: gGameOptions.mLock->WriteUnlock();
+    case O::EntryOptionsWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
         break;
-    case O::EntryOptionsLoadType: gGameOptions.mLoadType = (long)a[0];
+    case O::EntryOptionsLoadType: gWorld.mLobbyOptions.mLoadType = (long)a[0];
         break;
-    case O::EntryOptionsMapTypeOf: gGameOptions.mMapType = UWideString((const char*)SPEC->GetFile());
+    case O::EntryOptionsMapTypeOf: gWorld.mLobbyOptions.mMapType = UWideString((const char*)SPEC->GetFile());
         break;
     case O::EntryNotMultiplayer: gGameStateIsMultiplayer = false;
         break;
@@ -112,8 +112,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::EntryServerLoadState: SERVER->mLoadState = (long)a[0];
         break;
     case O::EntryNotInEditor: gUIManager->mInScenarioEditor = false;
-        break;
-    case O::EntryStartLoadingInput: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
         break;
     // "update_saved_games" (gamecpp saved_games.rs)
     case O::UsgWorldWriteLock: gWorld.mLock->WriteLock();
@@ -138,10 +136,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::UsgFirstFile: return SPEC->GetFirstFile((const char*)a[0], *(FSFileSpec*)a[1]);
     case O::UsgFileName: return P64((const char*)SPEC->GetFile());
     case O::UsgLoad: return EELoadSavedGameFile((const char*)a[0], true, false, (const char*)a[1], 0);
-    case O::UsgCameraChanged: gWorld.mCameraControl.SetChanged();
-        break;
-    case O::UsgCameraUpdate: gWorld.mCameraControl.Update(f[0]);
-        break;
     case O::UsgSave: return SaveGame((const char*)a[0], (unsigned long)a[1], false, (const char*)a[2]);
     default: return EERoUnitsOp(inOp, p, a, f);
     }

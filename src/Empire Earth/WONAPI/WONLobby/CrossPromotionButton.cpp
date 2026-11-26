@@ -59,7 +59,7 @@ void CrossPromotionButton::SetDefaultImage(Image* image) {
 }
 // Handles set-cross-promotion broadcasts; passes every other event to the base component
 void CrossPromotionButton::HandleComponentEvent(ComponentEvent* event) {
-    if(event->mType==LobbyEvent_SetCrossPromotion) this->HandleSetCrossPromotion(event);
+    if(event->mEv.kind==LobbyEvent_SetCrossPromotion) this->HandleSetCrossPromotion(event);
     else Component::HandleComponentEvent(event);
 }
 // Reads the DEFAULTIMAGE and DEFAULTBROWSE layout keys; passes other keys to the image button config
@@ -101,7 +101,7 @@ void ImageTextButtonConfig::SetComponent(Component* component) {
 }
 // Creates the cross-promotion button with an empty caption, listening to lobby broadcasts
 CrossPromotionButton::CrossPromotionButton()
-    : ImageTextButton(GUIString(new GUIStringData("")))
+    : ImageTextButton(GUIString(""))
 {
     this->SubscribeToBroadcast(true);
 }

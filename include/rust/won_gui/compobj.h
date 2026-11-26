@@ -342,6 +342,23 @@ enum class EeWonCompExtra : uint32_t {
 /// `AllocExtra`, `Extra` and `SetExtra` with its own.
 struct EeWonCompExtraData;
 
+/// A component event's record (the C++ `ComponentEvent::mEv`, R6 WON GUI round 39): the original's
+/// ComponentEvent members and its GUI subclasses' (ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent,
+/// TextLinkActivatedEvent: one class since then), read and set in place by Rust in the game. `comp` is the
+/// component (held: the original's `mComponentRef` beside the same `mComponent`), `item` the clicked or selected
+/// list item, the opened tree row or the activated link (held); `flag` a click's double click or a combo
+/// selection's active selection.
+struct EeWonCompEventRec {
+  ptrdiff_t comp;
+  int32_t kind;
+  uint8_t broadcast;
+  uint8_t flag;
+  int32_t button;
+  int32_t x;
+  int32_t y;
+  ptrdiff_t item;
+};
+
 extern "C" {
 
 /// `delete mExtraStuff` (Component's destructor): the grabber deleted (~ComponentExtra's body), then the members
@@ -350,6 +367,9 @@ extern "C" {
 /// # Safety
 /// `x` is NULL or a component's extra data, not freed before; the game's host is registered.
 void ee_won_comp_extra_free(EeWonCompExtraData *x);
+
+/// The `ComponentEvent::mEv` offset (`offsetof`, ComponentLifetime.cpp at static initialisation).
+void ee_won_comp_event_register(size_t at);
 
 /// Registers the game's component host: the one C++ host every Rust object's call on a component goes through
 /// (its virtuals, its parent, window, events and extra data).

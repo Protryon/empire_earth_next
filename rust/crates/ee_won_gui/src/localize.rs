@@ -3,26 +3,13 @@
 //! StringLocalize.cpp: each `<sN>` tag replaced by substitution N (a missing one dropped), `<<` a literal `<`, any
 //! other tag dropped up to its `>`; a tag with no `>` keeps the text after its `<`.
 //!
-//! The C++ keeps the three formatting functions (WONGUI/StringLocalizeCalls.cpp), each one call here; the texts cross
-//! as GUIStrings the host reads (`EeWonLocalizeUnitsFn`) and the result is a new GUIStringData the host makes
-//! (`EeWonLocalizeNewFn`). The class StringLocalize and its header are gone.
+//! The C++ keeps the three formatting functions (inline in WONLobbyGUI.h and WONLobbyCore.h), each one call here; the
+//! texts cross as GUIStrings read in place and the result is a new text (guistrobj.rs, R6 WON GUI round 39). The class
+//! StringLocalize, its header and StringLocalize.cpp are gone.
 
 use std::ffi::c_void;
 
 use crate::guistring::find_char;
-
-/// A text's units as the host reads them (`mData->mText`, `length()`).
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeWonLocalizeText {
-    pub units: *const c_void,
-    pub length: usize,
-}
-
-/// Reads the GUIString at `text` into `out`.
-pub type EeWonLocalizeUnitsFn = Option<unsafe extern "C" fn(text: *const c_void, out: *mut EeWonLocalizeText)>;
-/// A new GUIStringData of `length` `wchar_t` units at `units` (a pointer the caller adopts).
-pub type EeWonLocalizeNewFn = Option<unsafe extern "C" fn(units: *const c_void, length: usize) -> *mut c_void>;
 
 /// The unit at `i`, the terminator (0) at and past the end (the original read `mText[i]`, the terminator at the
 /// length).
@@ -72,30 +59,11 @@ pub fn get_str(text: &[u32], subs: &[Option<Vec<u32>>]) -> Vec<u32> {
     out
 }
 
-unsafe fn read(units: EeWonLocalizeUnitsFn, s: *const c_void, wchar_size: u32) -> Vec<u32> {
-    let mut t = EeWonLocalizeText { units: std::ptr::null(), length: 0 };
-    if let Some(f) = units {
-        // SAFETY: the host reads a live GUIString
-        unsafe { f(s, &mut t) };
-    }
-    if t.units.is_null() || t.length == 0 {
-        return Vec::new();
-    }
-    // SAFETY: `length` units of `wchar_size` bytes (the host's contract; unaligned reads)
-    unsafe {
-        if wchar_size == 2 {
-            (0..t.length).map(|i| u32::from((t.units as *const u16).add(i).read_unaligned())).collect()
-        } else {
-            (0..t.length).map(|i| (t.units as *const u32).add(i).read_unaligned()).collect()
-        }
-    }
-}
-
-/// `StringLocalize::GetStr(*text, {first, second, third}, count)`: a new GUIStringData (the host's) of the text with
-/// its tags filled; a NULL substitution (or one past `count`) is dropped.
+/// `StringLocalize::GetStr(*text, {first, second, third}, count)`: a new text (no reference) with the tags filled; a
+/// NULL substitution (or one past `count`) is dropped.
 ///
 /// # Safety
-/// `text` and the non-NULL substitutions are GUIStrings `units` reads; `count` is at most 3.
+/// `text` and the non-NULL substitutions are live `GUIString`s; `count` is at most 3.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_gui_localize(
     text: *const c_void,
@@ -103,29 +71,17 @@ pub unsafe extern "C" fn ee_won_gui_localize(
     second: *const c_void,
     third: *const c_void,
     count: i32,
-    units: EeWonLocalizeUnitsFn,
-    make: EeWonLocalizeNewFn,
-    wchar_size: u32,
-) -> *mut c_void {
+) -> *mut crate::guistrobj::EeWonGstr {
+    use crate::guistrobj::gstring_units;
     // SAFETY: the contract
-    let t = unsafe { read(units, text, wchar_size) };
+    let t = unsafe { gstring_units(text) };
     let n = count.clamp(0, 3) as usize;
     let subs: Vec<Option<Vec<u32>>> = [first, second, third][..n]
         .iter()
         // SAFETY: the contract
-        .map(|&p| if p.is_null() { None } else { Some(unsafe { read(units, p, wchar_size) }) })
+        .map(|&p| if p.is_null() { None } else { Some(unsafe { gstring_units(p) }) })
         .collect();
-    let r = get_str(&t, &subs);
-    let Some(make) = make else { return std::ptr::null_mut() };
-    // SAFETY: the host makes the string from the units, live for the call
-    unsafe {
-        if wchar_size == 2 {
-            let u: Vec<u16> = r.iter().map(|&c| c as u16).collect();
-            make(u.as_ptr() as *const c_void, u.len())
-        } else {
-            make(r.as_ptr() as *const c_void, r.len())
-        }
-    }
+    crate::guistrobj::gstr_from_units(&get_str(&t, &subs))
 }
 
 #[cfg(test)]

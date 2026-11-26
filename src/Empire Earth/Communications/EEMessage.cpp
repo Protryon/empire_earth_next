@@ -262,9 +262,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MsgSaveGame: return SaveGame(UString(MSG->mString), (unsigned long)a[0], a[1] != 0, UString("data\\Saved Games\\"));
     case O::TrimAutoSaves: TrimAutoSaves(UString("AutoSave") + UString("*") + gSavedGameExtension, UString("data\\") + UString("Saved Games\\"), gAutoSaveCount);
         break;
-    case O::NewLoadSaveResponse: return P64(new EEMRecord(kMessageLoadOrSaveGameResponse, {(int32_t)a[0]}));
     case O::NewStartGameRecord: return P64(static_cast<NEMessage*>(new NEMRecord(kNetMessageStartGame, {(unsigned long)a[0]})));
-    case O::NewLoadMainScreenRecord: return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadMainScreen, {0})));
     case O::NewChatAction: return P64(static_cast<EEAction*>(new EEAAddChatMessage(MSG->mString, a[0] != 0)));
     case O::NewTimerExpiredEvent: return P64(static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_TIMER_EXPIRED)));
     case O::VecCivUpgradesOfMsg: return P64(new std::vector<EECivUpgrade>(MSG->GetList<EECivUpgrade>()));
@@ -454,8 +452,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GfxIsPaused: return gGraphics->mIsPaused;
     case O::GfxPostSetFlag5B: gGraphics->PostSetFlag5B(a[0] != 0);
         break;
-    case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
-        break;
     case O::CommSendLoadMainScreenResponse: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadMainScreenResponse, {gWorld.GetCurrentPlayer()->GetSlot(), gWorld.mCurrentPlayer}), kSlotServer);
         break;
     case O::ClientFastLockEnter: CLIENT->mFastSelectionLock->Enter();
@@ -466,10 +462,10 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ServerFastLockLeave: SERVER->mFastSelectionLock->Leave();
         break;
-    case O::LobbyOptPlayer: return P64(&gGameOptions.mPlayers[a[0]]);
-    case O::LobbyReadLock: gGameOptions.mLock->ReadLock();
+    case O::LobbyOptPlayer: return P64(&gWorld.mLobbyOptions.mPlayers[a[0]]);
+    case O::LobbyReadLock: gWorld.mLobbyOptions.mLock->ReadLock();
         break;
-    case O::LobbyReadUnlock: gGameOptions.mLock->ReadUnlock();
+    case O::LobbyReadUnlock: gWorld.mLobbyOptions.mLock->ReadUnlock();
         break;
     // the user interface, the mouse
     case O::UiPostAction: gUserInterface->PostAction((EEAction*)p);
@@ -527,8 +523,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::IsMouseRefresh: gISMouse->Refresh();
         break;
-    case O::CameraSetZoom: gWorld.mCameraControl.SetZoom(f[0]);
-        break;
     // (EECore11OpC4) the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
     // statement each
     // the net message host (gamecpp msg_host.rs; p the host's call, EeNetMsgCall)
@@ -566,7 +560,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11NmWorldCurrentIndex: return gWorld.mCurrentPlayer;
     case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
     case O::C11NmWorldCollisionSphereMode: return gCollisionSphereMode;
-    case O::C11NmMapType: gGameOptions.mMapType = NM_M->mString;
+    case O::C11NmMapType: gWorld.mLobbyOptions.mMapType = NM_M->mString;
         break;
     // the factory (p the received buffer)
     case O::C11MsgBuildVerify: ESVERIFY_AT(p != 0, 841);
@@ -583,7 +577,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);
         break;
     case O::C11CurrentPlayerId: return (int64_t)(uint32_t)gWorld.GetCurrentPlayer()->mPlayerID;
-    case O::C11NewSelectRecord: return P64((new EEMRecord((unsigned char)a[0], {(unsigned char)a[1], 0, 0, (long)a[2]})));
     case O::C11MsgListAssign: MSG->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
         break;
     case O::C11MsgListData: return P64(MSG->mList.empty() ? NULL : &MSG->mList[0]);

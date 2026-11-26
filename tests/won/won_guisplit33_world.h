@@ -89,6 +89,7 @@ static std::string Narrow(const wchar_t* t, size_t n)
 // the Rust's text sink (a stand-in, a better match than the real one: the sink is a number here)
 static void ee_won_gui_sink_units(void* inSink, const wchar_t* inUnits, size_t inLength, size_t inUnit)
 {
+    if (inSink == NULL) return; // (ClipboardTake runs without a sink: R6 WON GUI round 39, the text Rust's)
     Log("sink " + N((intptr_t)inSink) + " '" + Narrow(inUnits, inLength) + "' " + N((long long)inUnit));
 }
 

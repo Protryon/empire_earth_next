@@ -187,7 +187,7 @@ struct Client : Ref {
     bool IsInGameGroup() { return mGameGroupId != 0xffff; }
     void ReadRoutingInfo(const CRec* inInfo)
     {
-        this->mName = GS(new Text(inInfo->mName)); // GUIString(new GUIStringData(inInfo->mName))
+        this->mName = GS(new Text(inInfo->mName)); // GUIString(inInfo->mName)
         mClientFlags = inInfo->mFlags; mClientId = inInfo->mId; mWONUserId = inInfo->mUser; mCDKeyId = inInfo->mKey;
     }
     void UpdateIgnoreStatus() { mIgnored = LobbyIsNameIgnored(mName); mBlocked = LobbyIsCDKeyBlocked(mCDKeyId); }

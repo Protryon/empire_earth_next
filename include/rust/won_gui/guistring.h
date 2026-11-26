@@ -32,53 +32,6 @@ int32_t ee_won_guistring_op(EeWonGuiStringOp op,
                             int32_t start,
                             uint32_t wchar_size);
 
-/// `find(int, start)` (`reverse` false) or `rFind(int, start)`.
-///
-/// # Safety
-/// `a` holds `a_length` units of `wchar_size` bytes.
-int32_t ee_won_guistring_find_char(const void *a,
-                                   uint16_t a_length,
-                                   int32_t ch,
-                                   int32_t start,
-                                   bool reverse,
-                                   uint32_t wchar_size);
-
-/// `compare(const char*, offset)` (`no_case` false) or `CompareNoCase(const char*, offset)`.
-///
-/// # Safety
-/// `a` as `ee_won_guistring_find_char`; `narrow` is NUL-terminated.
-int32_t ee_won_guistring_compare_narrow(const void *a,
-                                        uint16_t a_length,
-                                        int32_t offset,
-                                        const uint8_t *narrow,
-                                        bool no_case,
-                                        uint32_t wchar_size);
-
-/// `ToInt`.
-///
-/// # Safety
-/// `a` as `ee_won_guistring_find_char`.
-int32_t ee_won_guistring_to_int(const void *a,
-                                uint16_t a_length,
-                                uint16_t offset,
-                                uint32_t wchar_size);
-
-/// `toUpper` / `toLowerCase` in place.
-///
-/// # Safety
-/// `a` holds `a_length` writable units of `wchar_size` bytes.
-void ee_won_guistring_change_case(void *a, uint16_t a_length, bool upper, uint32_t wchar_size);
-
-/// `GetString`: the text as UTF-8, given to the sink once.
-///
-/// # Safety
-/// `a` as `ee_won_guistring_find_char`; the sink's contract (`EeWonByteSink`).
-void ee_won_guistring_narrow(const void *a,
-                             uint16_t a_length,
-                             uint32_t wchar_size,
-                             EeWonByteSink sink,
-                             void *context);
-
 /// The narrow constructors' and `AssignStr`'s text: `length` bytes of UTF-8 as `wchar_t` units, given to the sink
 /// once (`count` units of `wchar_size` bytes; none for empty text).
 ///

@@ -143,7 +143,7 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     ChatCommandParser* aParser = reinterpret_cast<ChatCommandParser*>(a);
     switch (inOp) {
     // EvGet's chat link of a WONGUI event (lobbyevt.rs reads the lobby events' members; hostops.rs picks the field)
-    case Op::EvTlaLink: return (intptr_t)dynamic_cast<ChatLink*>(static_cast<TextLinkActivatedEvent*>(reinterpret_cast<ComponentEvent*>(a))->mLink.get());
+    case Op::EvTlaLink: return (intptr_t)dynamic_cast<ChatLink*>(reinterpret_cast<ComponentEvent*>(a)->GetItem<TextSegmentBase>());
     case Op::ChatLinkNew: return HeldRef(new ChatLink(*reinterpret_cast<const EeWonLobbyCtlLink*>(a)));
     case Op::LinkGetKind: return aLink->mKind;
     case Op::LinkGetClient: return (intptr_t)aLink->mClient.get();
@@ -209,12 +209,12 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::AddUser: LobbyAddUser(Txt(a), Txt(b), true); return 0;
     case Op::ComboSetTextFlag: aCombo->SetText(Txt(b), c != 0); return 0;
     case Op::DeliverLogin: inCtl->DeliverEvent(LoginEvent(anInput->GetText(), reinterpret_cast<Button*>(b)->IsChecked(), reinterpret_cast<ComboBox*>(c)->mEdit.mPtr->GetText()), false); return 0;
-    case Op::TextToInt: return Txt(a).mData->ToInt(0);
+    case Op::TextToInt: return Txt(a).ToInt(0);
     case Op::AuthContext: return (intptr_t)GetLobbyAuthContext();
     case Op::InputSetAuthName:
-        anInput->SetText(GUIString(new GUIStringData(reinterpret_cast<AuthContext*>(b)->GetName())), true);
+        anInput->SetText(GUIString(reinterpret_cast<AuthContext*>(b)->GetName()), true);
         return 0;
-    case Op::AuthPassword: return Held(GUIString(new GUIStringData(reinterpret_cast<AuthContext*>(a)->GetPassword())));
+    case Op::AuthPassword: return Held(GUIString(reinterpret_cast<AuthContext*>(a)->GetPassword()));
     case Op::DeliverUpdateAccount: inCtl->DeliverEvent(UpdateAccountEvent(anInput->GetText(), reinterpret_cast<InputBox*>(b)->GetText(), reinterpret_cast<Button*>(c)->IsChecked()), false); return 0;
     case Op::DeliverLostPassword: inCtl->DeliverEvent(GetLostPasswordEvent(aCombo->mEdit->GetText()), false); return 0;
     case Op::DeliverLostUserName: inCtl->DeliverEvent(GetLostUserNameEvent(anInput->GetText()), false); return 0;
@@ -363,7 +363,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxDrawResImage: g->DrawImage(ResImage(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawText: g->DrawString(Txt(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawResText: g->DrawString(ResText(b), Lo(c), Hi(c)); return 0;
-    case Op::GfxTextWidth: return g->mFont->GetStringWidth(Txt(b));
+    case Op::GfxTextWidth: return g->GetFont()->GetStringWidth(Txt(b));
     // the statements of the cases hostops.rs answers (R6 WONLobby round 29: the ping bars, the rows' counts, the
     // summaries, the filter row, the room events, the event items, the numbers, the saved game dialog)
     case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
@@ -392,10 +392,10 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
         return 0;
     case Op::DeliverCreateRoomAny: inCtl->DeliverEvent(CreateRoomEvent(IPAddr()), false);
         return 0;
-    case Op::EvType: return anEvent->mType;
-    case Op::EvComboItem: return (intptr_t) static_cast<ComboSelChangedEvent*>(anEvent)->mItem.get();
-    case Op::EvTreeItem: return (intptr_t) static_cast<TreeItemOpenedEvent*>(anEvent)->mItem.get();
-    case Op::EvListItem: return (intptr_t) static_cast<ListItemClickedEvent*>(anEvent)->mItem.get();
+    case Op::EvType: return anEvent->mEv.kind;
+    case Op::EvComboItem: return anEvent->mEv.item;
+    case Op::EvTreeItem: return anEvent->mEv.item;
+    case Op::EvListItem: return anEvent->mEv.item;
     case Op::LabelSetPercentText: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), Txt(b)));
         return 0;
     case Op::FileDialogGet: return (intptr_t)EELobbyGetFileDialog();
@@ -417,9 +417,9 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::KillPings: LobbyKillPings(1); return 0;
     case Op::DeliverGameAction: inCtl->DeliverEvent(GameActionEvent(7, reinterpret_cast<LobbyGame*>(a)), false); return 0;
     case Op::DeliverJoinGame: inCtl->DeliverEvent(JoinGameEvent(reinterpret_cast<LobbyGame*>(a)), false); return 0;
-    case Op::EventX: return static_cast<ListItemClickedEvent*>(anEvent)->mX;
-    case Op::EventY: return static_cast<ListItemClickedEvent*>(anEvent)->mY;
-    case Op::EventActiveSel: return static_cast<ComboSelChangedEvent*>(anEvent)->mActiveSel ? 1 : 0;
+    case Op::EventX: return anEvent->mEv.x;
+    case Op::EventY: return anEvent->mEv.y;
+    case Op::EventActiveSel: return anEvent->mEv.flag;
     case Op::ButtonSetRes: reinterpret_cast<Button*>(a)->SetText(ResText(b), true); return 0;
     case Op::LabelSetRes: reinterpret_cast<Label*>(a)->SetText(ResText(b), true); return 0;
     case Op::ComboInsertNoFilter:
@@ -453,7 +453,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ItemSetSelected: reinterpret_cast<ListItem*>(a)->mSelected = b != 0; return 0;
     case Op::ItemSetSelectable: reinterpret_cast<ListItem*>(a)->mSelectable = b != 0; return 0;
     case Op::ItemSetColor: aText->mColor = b; return 0;
-    case Op::TextAlloc: return (intptr_t) new GUIStringData(reinterpret_cast<const char*>(a), (unsigned short)b);
+    case Op::TextAlloc: return (intptr_t) NewGUIStringData(GUIString(reinterpret_cast<const char*>(a), (unsigned short)b));
     case Op::BytesOfText: sEELobbyBytes = (std::string)Txt(a); return 0;
     case Op::BytesOfHttpDocSys: sEELobbyBytes = reinterpret_cast<RustServerOp*>(a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Sys); return 0;
     case Op::BytesOfHttpDocGame: sEELobbyBytes = reinterpret_cast<RustServerOp*>(a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Game); return 0;
@@ -463,12 +463,12 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::TextTake: sEELobbyText = GUIString((GUIStringData*)a); return 0;
     case Op::TextStartEmpty: sEELobbyText = GUIString(GetEmptyGUIStringData()); return 0;
     case Op::TextAppendText: sEELobbyText.append(Txt(a)); return 0;
-    case Op::TextAppendRaw: sEELobbyText.append(GUIString(new GUIStringData(reinterpret_cast<const char*>(a), (unsigned short)b))); return 0;
+    case Op::TextAppendRaw: sEELobbyText.append(GUIString(reinterpret_cast<const char*>(a), (unsigned short)b)); return 0;
     case Op::TextAppendParserPrefix: sEELobbyText.append(reinterpret_cast<ChatCommandParser*>(a)->GetPrefix()); return 0;
     case Op::TextAppendParserCommand: sEELobbyText.append(reinterpret_cast<ChatCommandParser*>(a)->GetCommandString((int)b)); return 0;
     case Op::TextAppendQuoteOpen: sEELobbyText.append(GUIString(" \"")); return 0;
     case Op::TextAppendParserTarget: sEELobbyText.append(reinterpret_cast<ChatCommandParser*>(a)->GetTargetName()); return 0;
-    case Op::TextAppendQuoteClose: sEELobbyText.append(GUIString(new GUIStringData("\" "))); return 0;
+    case Op::TextAppendQuoteClose: sEELobbyText.append(GUIString("\" ")); return 0;
     case Op::TextHeldOut: return Held(sEELobbyText);
     case Op::TextDrop: sEELobbyText = GUIString(); return 0;
     case Op::FmtSetString: sEELobbyFmtStrings[a] = Txt(b); return 0;
