@@ -325,7 +325,7 @@ fn an_editor_script_runs_line_by_line() {
 #[test]
 fn the_world_constants_are_the_generated_headers() {
     use super::sim_host::*;
-    let path = format!("{}/../../../include/ee/EEWorldConstants.h", env!("CARGO_MANIFEST_DIR"));
+    let path = format!("{}/../../../include/rust/data/world_constants.h", env!("CARGO_MANIFEST_DIR"));
     let text = std::fs::read_to_string(path).unwrap();
     let id = |name: &str| -> u32 {
         let line = text.lines().find(|l| l.trim_start().starts_with(&format!("{name} ="))).unwrap();

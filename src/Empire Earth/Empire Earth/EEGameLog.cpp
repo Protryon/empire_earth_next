@@ -63,7 +63,6 @@
 #include "ee/EEGameLog.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
-extern bool& gInCinematic;
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
 
 // the members the Rust reads in place (gamecpp music_io.rs EeGamecppMusicMembers)
@@ -279,7 +278,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
     case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
     case O::DwGameTime: return gPhysics->mGameTime;
-    case O::DwInCinematic: return gInCinematic;
+    case O::DwInCinematic: return gWorld.mInCinematic;
     // round 10, lane D: the cheats (cheats.rs) and the civilization (civilization.rs)
     case O::DcStrBytes: return P64((const char*)*(UWideString*)p);
     case O::DcMultiplayer: return gCommunications->GetIsMultiplayerSession();

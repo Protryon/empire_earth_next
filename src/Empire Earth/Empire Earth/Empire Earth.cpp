@@ -776,7 +776,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::GameStateClear: gGameState.Clear();
         break;
-    case O::SetGameScreenActive: gGameScreenActive = a[0] != 0;
+    case O::SetGameScreenActive: gWorld.mGameScreenActive = a[0] != 0;
         break;
     case O::IsMouseResume: gISMouse->Resume();
         break;
@@ -930,7 +930,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the game objects
     case O::RandomMapInitialize: EERandomMap::Initialize(EEStartupDirectorySpec());
         break;
-    case O::LobbyOptionsSetDefaults: gGameOptions.SetDefaults();
+    case O::LobbyOptionsSetDefaults: gWorld.mLobbyOptions.SetDefaults();
         break;
     case O::WorldOptionsSetDefaults: gWorld.mGameOptions.SetDefaults();
         break;

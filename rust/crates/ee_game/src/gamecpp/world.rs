@@ -126,6 +126,16 @@ fn player(w: P, i: c_ulong) -> P {
     hp(O::WPlayer, w, &[i as i64])
 }
 
+/// `SetPlayer(index, player)` (RTSWorld's, rts world.rs; its FFI is absent from a test binary).
+fn set_player(w: P, index: c_long, player: P) {
+    // SAFETY: the live world and player
+    #[cfg(not(test))]
+    unsafe {
+        crate::rts::world::ffi::ee_rts_world_set_player(w as *mut c_void, index, player as *mut c_void)
+    };
+    let _ = (w, index, player);
+}
+
 fn current(w: P) -> c_long {
     *wm::<c_long>(O::WCurrentPlayer, w)
 }
@@ -484,7 +494,7 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
     if !media_loaded(w) && prts(old).mPlayerID > 0 {
         unload_foundations(old);
     }
-    h(O::WSetPlayer, w, &[index as i64, pa(new)]);
+    set_player(w, index as c_long, new);
     let tech = hp(O::PlTechnologies, new, &[]);
     h(O::TechSetPlayer, tech, &[pa(new)]);
     let mut k: i64 = 0;
@@ -659,7 +669,7 @@ pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, _st: *mut c_voi
             break;
         }
         player_rest(pl, pr::EE_UNITS_PLAYER_REST_SET_ALL_RESOURCES, 0, 999999, 0);
-        h(O::WSetPlayer, w, &[i as i64, pa(pl)]);
+        set_player(w, i as c_long, pl);
         if media_loaded(w) || i == 0 {
             i += 1;
             continue;
@@ -894,7 +904,8 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     }
     let load_type = state_options(st).mLoadType;
     if load_type == 0 || load_type == 3 {
-        h(O::ClearFormManager, 0, &[]);
+        #[cfg(not(test))]
+        crate::screens::chat_log_ffi::ee_screens_chat_log_clear();
     }
     ee_gamecpp_world_load_media(w as *mut c_void);
     progress(28);
@@ -953,7 +964,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
     let mut i: i64 = 0;
     while (i as usize) < super::state::players_len() {
         let pl = super::state::player(i as usize);
-        h(O::WSetPlayer, w, &[i, pa(pl)]);
+        set_player(w, i as c_long, pl);
         let tree = hp(O::PlTechTree, pl, &[]);
         h(O::TechSetPlayer, tree, &[pa(pl)]);
         if h(O::TechIsLoaded, tree, &[]) == 0 {

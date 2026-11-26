@@ -123,7 +123,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_RADIO_CHECK: static_cast<UIRadioButton*>(SeplControl(p))->Check(); return 0;
     case EE_SCREENS_SEPL_OP_DIPLOMACY: return (int32_t)EEUIShell::Op(SeplControl(p), EE_SCREENS_SKOP_DIPLOMACY_STATE);
     case EE_SCREENS_SEPL_OP_SET_DIPLOMACY: EEUIShell::Op(SeplControl(p), EE_SCREENS_SKOP_DIPLOMACY_SET, i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_MAX_PLAYERS: return (int32_t)gMaxPlayers;
+    case EE_SCREENS_SEPL_OP_MAX_PLAYERS: return (int32_t)gWorld.mMaxPlayers;
     case EE_SCREENS_SEPL_OP_NAME_TO_EDIT: static_cast<UIEditBox*>(SeplControl(p))->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
     case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT:
         gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(SeplControl(p))->GetText(0));

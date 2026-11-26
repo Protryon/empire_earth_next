@@ -24,8 +24,8 @@
 void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
 {
     ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0,
-                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
-                       : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
+                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gWorld.mLoadingSavedGame ? EE_UNITS_STATS_LOADING
+                       : gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
 }
 
 EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)

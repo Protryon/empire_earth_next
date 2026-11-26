@@ -189,7 +189,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         return 0;
     // the unit bookkeeping and the wonders (ee_units player_units.rs): the units as RTSUnit addresses
     case EE_UNITS_PLAYER_NEXT_COMPLEX: return ee_units_player_body(thePlayer, EE_UNITS_PLAYER_DO_NEXT_COMPLEX, (uint64_t)EEPlayerUnitArg(theUnit), 0, 0, 0.0f);
-    case EE_UNITS_PLAYER_STATE: return (gLoadingSavedGame ? 1 : 0) | (gGameScreenActive ? 2 : 0) | (gWorldClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0) | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
+    case EE_UNITS_PLAYER_STATE: return (gWorld.mLoadingSavedGame ? 1 : 0) | (gWorld.mGameScreenActive ? 2 : 0) | (gWorld.mClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0) | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
     case EE_UNITS_PLAYER_RTS_ADD_UNIT: thePlayer->RTSPlayer::AddUnit(theUnit, a[1] != 0);
         return 0;
     case EE_UNITS_PLAYER_ACTIVATE: gWorld.ActivateUnit(theComplex);

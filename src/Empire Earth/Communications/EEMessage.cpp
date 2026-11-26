@@ -466,10 +466,10 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ServerFastLockLeave: SERVER->mFastSelectionLock->Leave();
         break;
-    case O::LobbyOptPlayer: return P64(&gGameOptions.mPlayers[a[0]]);
-    case O::LobbyReadLock: gGameOptions.mLock->ReadLock();
+    case O::LobbyOptPlayer: return P64(&gWorld.mLobbyOptions.mPlayers[a[0]]);
+    case O::LobbyReadLock: gWorld.mLobbyOptions.mLock->ReadLock();
         break;
-    case O::LobbyReadUnlock: gGameOptions.mLock->ReadUnlock();
+    case O::LobbyReadUnlock: gWorld.mLobbyOptions.mLock->ReadUnlock();
         break;
     // the user interface, the mouse
     case O::UiPostAction: gUserInterface->PostAction((EEAction*)p);
@@ -564,7 +564,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11NmWorldCurrentIndex: return gWorld.mCurrentPlayer;
     case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
     case O::C11NmWorldCollisionSphereMode: return gCollisionSphereMode;
-    case O::C11NmMapType: gGameOptions.mMapType = NM_M->mString;
+    case O::C11NmMapType: gWorld.mLobbyOptions.mMapType = NM_M->mString;
         break;
     // the factory (p the received buffer)
     case O::C11MsgBuildVerify: ESVERIFY_AT(p != 0, 841);

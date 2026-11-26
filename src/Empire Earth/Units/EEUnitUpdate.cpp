@@ -103,7 +103,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_ACT_R_RANDOM:
         return (int64_t)UFloatBits(gPhysics->GetRandom());
     case EE_UNITS_ACT_R_WORLD_CLEARING:
-        return gWorldClearing ? 1 : 0;
+        return gWorld.mClearing ? 1 : 0;
     case EE_UNITS_ACT_R_QUEUED_GOALS:
         return EEUpdateUnit(inContext)->GetQueueGoals(0).size() > 1 ? 1 : 0;
     case EE_UNITS_ACT_R_DEATH_EFFECT:

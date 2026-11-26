@@ -350,9 +350,9 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::AreaEffectsTick: gAEManager.Tick(f[0]);
         break;
-    case O::EffectManagerUpdate: gEffectManager->Update();
+    case O::EffectManagerUpdate: gWorld.mEffectManager->Update();
         break;
-    case O::EffectReplaceUnit: gEffectManager->ReplaceUnit((EEUnit*)a[0], (EEUnit*)a[1]);
+    case O::EffectReplaceUnit: gWorld.mEffectManager->ReplaceUnit((EEUnit*)a[0], (EEUnit*)a[1]);
         break;
     case O::CalamityUpdate: EECalamityManager::GetInstance()->Update(f[0]);
         break;

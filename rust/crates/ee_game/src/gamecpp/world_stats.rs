@@ -89,7 +89,11 @@ fn record_of(w: P, o: &EeAppStatsRecord, history_end_time: c_long) -> StatsRecor
             color,
             result: saved.mGameResult as c_long,
             // SAFETY: the options' slot of the player, its plain members
-            team: if id > 0 { unsafe { (*(gobj::opt_slot(options, id as u32 - 1) as *const EeAppOptionsPlayerFields)).mTeam } } else { 0 },
+            team: if id > 0 {
+                unsafe { (*(gobj::opt_slot(options, id as u32 - 1) as *const EeAppOptionsPlayerFields)).mTeam }
+            } else {
+                0
+            },
             end_time: if statistics_end_time != 0 { statistics_end_time } else { history_end_time as c_ulong },
             resources,
             score: o.score as c_ulong,

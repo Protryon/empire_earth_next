@@ -37,7 +37,6 @@ static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformatio
 UWideString gGameVersion("2002.8.17.v1.00");
 
 extern bool& gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
-extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
 
 // The limits (0x441e48..0x441eb8), the pitch limits, the clipping distances and the move speeds are Rust's (ee_app
 // camera.rs, ee_gfx camera.rs).
@@ -121,7 +120,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcFacesCamera: return ((EEUnit*)p)->mUnitClass->mFacesCamera;
     case O::EcLocation: *(GETransformation*)a[0] = CX->mPhysicalModel.GetLocation();
         break;
-    case O::EcInCinematic: return gInCinematic;
+    case O::EcInCinematic: return gWorld.mInCinematic;
     case O::EcCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::EcIsSeen: return EEIsSeen((EEUnit*)p);
     case O::EcFarRearClipping: return gFarRearClipping;

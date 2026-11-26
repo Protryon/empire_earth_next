@@ -462,7 +462,7 @@ extern "C" int32_t ee_screenscpp_civ_builder_points()
 extern "C" void ee_screenscpp_civ_set_points_and_max(int32_t inPoints) { EEScratch<EECivilization>(kScratchCivilization).SetPointsAndMax(inPoints); }
 extern "C" void ee_screenscpp_open_civ_builder() { gUserInterface->OpenCivilizationBuilder(&EEScratch<EECivilization>(kScratchCivilization), false); }
 extern "C" void ee_screenscpp_lobby_options_write_lock() { gWorld.GetLobbyOptions().mLock->WriteLock(); }
-extern "C" void ee_screenscpp_options_from_last_game() { gGameOptions = gGamePreferences.GetLastGameOptions(); }
+extern "C" void ee_screenscpp_options_from_last_game() { gWorld.mLobbyOptions = gGamePreferences.GetLastGameOptions(); }
 extern "C" uintptr_t ee_screenscpp_screen_event_new(uint32_t inEvent)
 { return (uintptr_t)EECreateScreenEvent(inEvent); }
 extern "C" void ee_screenscpp_post_event(uintptr_t inEvent)
@@ -502,28 +502,28 @@ extern "C" void ee_screenscpp_background_open(uintptr_t inBackground)
 extern "C" void ee_screenscpp_background_load(uintptr_t inBackground)
 { reinterpret_cast<UIBackground*>(inBackground)->LoadBackground(); }
 extern "C" void ee_screenscpp_form_unlock_background(uintptr_t inForm) { F(inForm)->UnlockDrawBackground(); }
-extern "C" void ee_screenscpp_options_write_lock() { gGameOptions.mLock->WriteLock(); }
-extern "C" void ee_screenscpp_options_write_unlock() { gGameOptions.mLock->WriteUnlock(); }
-extern "C" void ee_screenscpp_options_read_lock() { gGameOptions.mLock->ReadLock(); }
-extern "C" void ee_screenscpp_options_read_unlock() { gGameOptions.mLock->ReadUnlock(); }
-extern "C" void ee_screenscpp_options_set_defaults() { gGameOptions.SetDefaults(); }
-extern "C" void ee_screenscpp_options_set_load_type(int32_t inLoadType) { gGameOptions.mLoadType = inLoadType; }
+extern "C" void ee_screenscpp_options_write_lock() { gWorld.mLobbyOptions.mLock->WriteLock(); }
+extern "C" void ee_screenscpp_options_write_unlock() { gWorld.mLobbyOptions.mLock->WriteUnlock(); }
+extern "C" void ee_screenscpp_options_read_lock() { gWorld.mLobbyOptions.mLock->ReadLock(); }
+extern "C" void ee_screenscpp_options_read_unlock() { gWorld.mLobbyOptions.mLock->ReadUnlock(); }
+extern "C" void ee_screenscpp_options_set_defaults() { gWorld.mLobbyOptions.SetDefaults(); }
+extern "C" void ee_screenscpp_options_set_load_type(int32_t inLoadType) { gWorld.mLobbyOptions.mLoadType = inLoadType; }
 extern "C" void ee_screenscpp_options_campaign_difficulty()
-{ gGameOptions.mDifficulty = EECampaignFormManager::Get()->mDifficultyLevel; }
+{ gWorld.mLobbyOptions.mDifficulty = EECampaignFormManager::Get()->mDifficultyLevel; }
 extern "C" void ee_screenscpp_options_campaign_name()
-{ gGameOptions.mCampaignName = EECampaignFormManager::Get()->mCampaignName; }
+{ gWorld.mLobbyOptions.mCampaignName = EECampaignFormManager::Get()->mCampaignName; }
 extern "C" void ee_screenscpp_options_campaign_checksum()
-{ gGameOptions.mCampaignChecksum = EECampaignFormManager::Get()->mChecksum; }
+{ gWorld.mLobbyOptions.mCampaignChecksum = EECampaignFormManager::Get()->mChecksum; }
 extern "C" void ee_screenscpp_options_campaign_scenario()
-{ gGameOptions.mScenarioName = EECampaignFormManager::Get()->mScenarioName; }
+{ gWorld.mLobbyOptions.mScenarioName = EECampaignFormManager::Get()->mScenarioName; }
 extern "C" void ee_screenscpp_options_campaign_first_map()
-{ gGameOptions.mMapName = EECampaignFormManager::Get()->mFirstScenario; }
+{ gWorld.mLobbyOptions.mMapName = EECampaignFormManager::Get()->mFirstScenario; }
 extern "C" void ee_screenscpp_load_scenario_name_from_intro()
 { gLoadScenarioName = EEScreensScenario().GetFile().GetIndexedSubstring(0, EEScreensScenario().GetFile().GetLength() - 5); }
 extern "C" void ee_screenscpp_options_map_type_from_intro()
-{ gGameOptions.SetMapType((const char*)EEScreensScenario().GetFile()); }
+{ gWorld.mLobbyOptions.SetMapType((const char*)EEScreensScenario().GetFile()); }
 extern "C" void ee_screenscpp_options_set_multiplayer(bool inMultiplayer)
-{ gGameOptions.mIsMultiplayer = inMultiplayer; }
+{ gWorld.mLobbyOptions.mIsMultiplayer = inMultiplayer; }
 extern "C" void ee_screenscpp_delete_communications() { delete gCommunications; }
 extern "C" void ee_screenscpp_new_local_server()
 { gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true); }
@@ -545,7 +545,7 @@ extern "C" void ee_screenscpp_campaign_set_difficulty(int32_t inLevel)
 { EECampaignFormManager::Get()->mDifficultyLevel = inLevel; }
 extern "C" void ee_screenscpp_set_difficulty_level(int32_t inLevel) { gDifficultyLevel = inLevel; }
 extern "C" void ee_screenscpp_set_difficulty_level2(int32_t inLevel) { gDifficultyLevel2 = inLevel; }
-extern "C" void ee_screenscpp_options_set_difficulty(int32_t inLevel) { gGameOptions.mDifficulty = inLevel; }
+extern "C" void ee_screenscpp_options_set_difficulty(int32_t inLevel) { gWorld.mLobbyOptions.mDifficulty = inLevel; }
 extern "C" void ee_screenscpp_combo_text_colour(uintptr_t inForm, uint32_t inControl, float inRed, float inGreen, float inBlue)
 { static_cast<UIComboBox*>(F(inForm)->GetControl(inControl))->GetTextLabel()->GetGEText()->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
 extern "C" void ee_screenscpp_label_text_colour(uintptr_t inForm, uint32_t inControl, float inRed, float inGreen, float inBlue)
@@ -576,7 +576,7 @@ extern "C" uint8_t ee_screenscpp_won_info_humans() { return EEScratch<EEWonNetGa
 extern "C" void ee_screenscpp_won_info_store() { gWonNet->SetGameInfo(EEScratch<EEWonNetGameInfo>(kScratchWonInfo)); }
 extern "C" void ee_screenscpp_server_reset_xfer() { static_cast<EEServer*>(gCommunications)->ResetXfer(); }
 extern "C" void ee_screenscpp_send_full_player(uint32_t inIndex)
-{ gCommunications->ProcessGuaranteedLocalUserInput(EENewFullPlayerInformation(gGameOptions.mPlayers[inIndex]), kSlotNone); }
+{ gCommunications->ProcessGuaranteedLocalUserInput(EENewFullPlayerInformation(gWorld.mLobbyOptions.mPlayers[inIndex]), kSlotNone); }
 extern "C" int32_t ee_screenscpp_find_generator(uintptr_t inOptions, unsigned long* inLine)
 { return (int32_t)EERMFindGenerator(GOPT(inOptions)->GetMapType(), *inLine); }
 extern "C" uintptr_t ee_screenscpp_lobby_boot() { return (uintptr_t)EEScratch<EEGameOptionsPlayer*>(kScratchLobbyBoot); }
@@ -916,9 +916,9 @@ extern "C" void ee_screenscpp_combo_select(uintptr_t inForm, uint32_t inControl,
 { static_cast<UIFileComboBox*>(F(inForm)->GetControl(inControl))->SetCurrentSelection(inIndex); }
 extern "C" bool ee_screenscpp_lobby_copy_exists() { return EEScratch<EEGameOptions*>(kScratchLobbyCopy) != NULL; }
 extern "C" void ee_screenscpp_lobby_copy_new() { EEScratch<EEGameOptions*>(kScratchLobbyCopy) = new EEGameOptions; }
-extern "C" void ee_screenscpp_lobby_copy_from_options() { *EEScratch<EEGameOptions*>(kScratchLobbyCopy) = gGameOptions; }
+extern "C" void ee_screenscpp_lobby_copy_from_options() { *EEScratch<EEGameOptions*>(kScratchLobbyCopy) = gWorld.mLobbyOptions; }
 extern "C" void ee_screenscpp_lobby_copy_clear_load_type() { EEScratch<EEGameOptions*>(kScratchLobbyCopy)->mLoadType = 0; }
-extern "C" void ee_screenscpp_options_from_lobby_copy() { gGameOptions = *EEScratch<EEGameOptions*>(kScratchLobbyCopy); }
+extern "C" void ee_screenscpp_options_from_lobby_copy() { gWorld.mLobbyOptions = *EEScratch<EEGameOptions*>(kScratchLobbyCopy); }
 // end shims3
 
 // ---- the lobby's sources, slots, options and saved game checks (lobby_calls.rs; each one statement)
@@ -926,7 +926,7 @@ extern "C" uintptr_t ee_screenscpp_lobby_header() { return (uintptr_t)EEScratch<
 extern "C" uintptr_t ee_screenscpp_lobby_header_options(uintptr_t inHeader)
 { return (uintptr_t)&reinterpret_cast<EEPSaveGameHeader*>(inHeader)->mGameOptions; }
 extern "C" uintptr_t ee_screenscpp_lobby_copy() { return (uintptr_t)EEScratch<EEGameOptions*>(kScratchLobbyCopy); }
-extern "C" uintptr_t ee_screenscpp_game_options_ptr() { return (uintptr_t)&gGameOptions; }
+extern "C" uintptr_t ee_screenscpp_game_options_ptr() { return (uintptr_t)&gWorld.mLobbyOptions; }
 extern "C" uintptr_t ee_screenscpp_options_player(uintptr_t inOptions, uint32_t inIndex)
 { return (uintptr_t)&GOPT(inOptions)->mPlayers[inIndex]; }
 extern "C" void ee_screenscpp_lobby_boot_new() { EEScratch<EEGameOptionsPlayer*>(kScratchLobbyBoot) = new EEGameOptionsPlayer; }
@@ -984,9 +984,9 @@ extern "C" bool ee_screenscpp_lo_lock_speed(uintptr_t inO) { return GOPT(inO)->m
 extern "C" bool ee_screenscpp_lo_cheat_codes(uintptr_t inO) { return GOPT(inO)->mCheatCodes; }
 extern "C" bool ee_screenscpp_lo_victory(uintptr_t inO) { return GOPT(inO)->mVictory; }
 // the lobby options (ee_screens_lobby_set_option, lobby_form_ffi.rs, sets them)
-extern "C" EeAppOptionsFields* ee_screenscpp_lobby_options() { return &gGameOptions; }
+extern "C" EeAppOptionsFields* ee_screenscpp_lobby_options() { return &gWorld.mLobbyOptions; }
 extern "C" void ee_screenscpp_send_full_options()
-{ gCommunications->ProcessGuaranteedLocalUserInput(EENewFullGameOptions(gGameOptions), kSlotNone); }
+{ gCommunications->ProcessGuaranteedLocalUserInput(EENewFullGameOptions(gWorld.mLobbyOptions), kSlotNone); }
 extern "C" void ee_screenscpp_lobby_boot_delete() { delete EEScratch<EEGameOptionsPlayer*>(kScratchLobbyBoot); }
 extern "C" void ee_screenscpp_lobby_boot_clear() { EEScratch<EEGameOptionsPlayer*>(kScratchLobbyBoot) = NULL; }
 extern "C" void ee_screenscpp_world_lobby_single() { gWorld.GetLobbyOptions().mIsMultiplayer = false; }
@@ -1003,8 +1003,8 @@ extern "C" void ee_screenscpp_ll_options_from_header(uintptr_t inHeader)
 { EEScratch<EEGameOptions>(kScratchLLOptions) = reinterpret_cast<EEPSaveGameHeader*>(inHeader)->mGameOptions; }
 extern "C" void ee_screenscpp_ll_missing_clear() { EEScratch<std::vector<UWideString>>(kScratchLLMissing).clear(); }
 extern "C" bool ee_screenscpp_ll_check_start(uintptr_t inHeader)
-{ return EECheckSavedGameOptions(EEScratch<EEGameOptions>(kScratchLLOptions), gGameOptions, true, EEScratch<std::vector<UWideString>>(kScratchLLMissing), reinterpret_cast<EEPSaveGameHeader*>(inHeader)->mNumPlayers - 1); }
-extern "C" void ee_screenscpp_ll_current_from_game() { EEScratch<EEGameOptions>(kScratchLLCurrent) = gGameOptions; }
+{ return EECheckSavedGameOptions(EEScratch<EEGameOptions>(kScratchLLOptions), gWorld.mLobbyOptions, true, EEScratch<std::vector<UWideString>>(kScratchLLMissing), reinterpret_cast<EEPSaveGameHeader*>(inHeader)->mNumPlayers - 1); }
+extern "C" void ee_screenscpp_ll_current_from_game() { EEScratch<EEGameOptions>(kScratchLLCurrent) = gWorld.mLobbyOptions; }
 extern "C" void ee_screenscpp_ll_current_load_type(uint32_t inLoadType) { EEScratch<EEGameOptions>(kScratchLLCurrent).mLoadType = inLoadType; }
 extern "C" bool ee_screenscpp_ll_check_load(uintptr_t inHeader)
 { return EECheckSavedGameOptions(EEScratch<EEGameOptions>(kScratchLLOptions), EEScratch<EEGameOptions>(kScratchLLCurrent), false, EEScratch<std::vector<UWideString>>(kScratchLLMissing), reinterpret_cast<EEPSaveGameHeader*>(inHeader)->mNumPlayers - 1); }
@@ -1078,7 +1078,7 @@ extern "C" bool ee_screenscpp_gv_settings_zoom() { return gGamePreferences.mSett
 extern "C" bool ee_screenscpp_gv_zoom_enabled() { return gZoomEnabled; }
 extern "C" int32_t ee_screenscpp_gv_difficulty() { return (int32_t)gDifficultyLevel; }
 extern "C" bool ee_screenscpp_gv_free_camera() { return gFreeCamera; }
-extern "C" bool ee_screenscpp_gv_screen_active() { return gGameScreenActive; }
+extern "C" bool ee_screenscpp_gv_screen_active() { return gWorld.mGameScreenActive; }
 extern "C" bool ee_screenscpp_gv_saved_main_form() { return gSavedMainGameForm != NULL; }
 extern "C" float ee_screenscpp_gv_max_zoom() { return gCameraMaxZoom; }
 extern "C" int32_t ee_screenscpp_gv_hidden_mode() { return (int32_t)gHiddenUnitsMode; }
@@ -1163,7 +1163,7 @@ extern "C" void ee_screenscpp_gt_map_type(uintptr_t inOptions, void* inOut)
 
 // ---- the post-game summary (post_game_calls.rs; each one statement; the records and series: gamecpp stats_history.rs)
 extern "C" uint32_t ee_screenscpp_pgs_level(uint32_t inIndex)
-{ return (uint32_t)EEGetResourceLevel(gGameResources)->mAmounts[inIndex]; }
+{ return (uint32_t)EEGetResourceLevel(gWorld.mGameOptions.mResources)->mAmounts[inIndex]; }
 extern "C" void ee_screenscpp_pgs_graph_add_series(uintptr_t inForm, uintptr_t inPairs, uint32_t inCount, uint32_t inSeries, uint32_t inRecord)
 { static_cast<UIGraph*>(F(inForm)->GetControl(kPostGameLineGraph))->AddGraphSeries(reinterpret_cast<long*>(inPairs), inCount, inSeries, GEColor(ee_screenscpp_pr_red(inRecord), ee_screenscpp_pr_green(inRecord), ee_screenscpp_pr_blue(inRecord))); }
 extern "C" uint32_t ee_screenscpp_pgs_window_width(uintptr_t inForm)
@@ -1326,7 +1326,7 @@ extern "C" void ee_screenscpp_tp_save_action(EeScreensShimText inName, EeScreens
 { EEScratch<UIForm*>(kScratchSaveObject) = reinterpret_cast<UIForm*>(static_cast<EEAction*>(new EEASaveGame(EEShimString(inName), true, EEShimString(inDescription)))); }
 extern "C" void ee_screenscpp_tp_save_question(uint32_t inPost, EeScreensShimText inText)
 { gUIManager->DisplayQuestion(EEShimText(inText), true, EEScratch<UIForm*>(kScratchSaveObject), EEScreensAnswer(EE_SCREENS_QA_SAVE_YES, inPost), EEScreensDropSave); }
-extern "C" void ee_screenscpp_tp_le_map_type(EeScreensShimText inText) { gGameOptions.mMapType = EEShimText(inText); }
+extern "C" void ee_screenscpp_tp_le_map_type(EeScreensShimText inText) { gWorld.mLobbyOptions.mMapType = EEShimText(inText); }
 extern "C" void ee_screenscpp_tp_le_send_map_type(uint32_t inValue, EeScreensShimText inText)
 { gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageGameOptions, {2, (long)inValue, EEShimText(inText)}), kSlotNone); }
 extern "C" void ee_screenscpp_tp_le_chat(EeScreensShimText inText)
@@ -1461,7 +1461,7 @@ extern "C" void ee_screenscpp_rc_le_ping(uintptr_t inForm, uint32_t inControl, f
 { static_cast<EEUICPing*>(F(inForm)->GetControl(inControl))->SetPing(inPing); }
 extern "C" void ee_screenscpp_rc_le_disconnect()
 { gCommunications->ProcessGuaranteedLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {false}), kSlotNone); }
-extern "C" void ee_screenscpp_rc_le_save_last_options() { gGamePreferences.SetLastGameOptions(gGameOptions); }
+extern "C" void ee_screenscpp_rc_le_save_last_options() { gGamePreferences.SetLastGameOptions(gWorld.mLobbyOptions); }
 extern "C" void ee_screenscpp_rc_le_start_ping() { static_cast<EEServer*>(gCommunications)->StartPing(); }
 extern "C" uint32_t ee_screenscpp_rc_le_rule(uint32_t inWhich, uint32_t inArg)
 { return EEScreensLobbyRule(inWhich, inArg); }

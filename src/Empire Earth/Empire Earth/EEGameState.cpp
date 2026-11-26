@@ -19,6 +19,8 @@
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEGameState.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERulesWorld.h"
@@ -193,11 +195,11 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::RandomSetSeed: ((URandomIntegers*)p)->SetSeed((long)a[0]);
         break;
     case O::RandomGenerate: return ((URandomIntegers*)p)->Generate((long)a[0], (long)a[1]);
-    case O::LobbyWriteLock: gGameOptions.mLock->WriteLock();
+    case O::LobbyWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
         break;
-    case O::LobbyWriteUnlock: gGameOptions.mLock->WriteUnlock();
+    case O::LobbyWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
         break;
-    case O::LobbyMapTypeScenDefault: gGameOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
+    case O::LobbyMapTypeScenDefault: gWorld.mLobbyOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
         break;
     case O::CxSetPoolSize: EEComplexUnit::SetPoolSize((unsigned long)a[0], (unsigned long)a[1]);
         break;

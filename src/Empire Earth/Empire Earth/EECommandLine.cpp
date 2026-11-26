@@ -90,13 +90,13 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::EntryDereferenceAction: ((EEAction*)p)->Dereference();
         break;
     case O::EntryOpenSavedGame: return EEOpenSaveGameFile(UString((const char*)a[0]), "Saved Games\\", *(FSFileSpec**)a[1]);
-    case O::EntryOptionsWriteLock: gGameOptions.mLock->WriteLock();
+    case O::EntryOptionsWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
         break;
-    case O::EntryOptionsWriteUnlock: gGameOptions.mLock->WriteUnlock();
+    case O::EntryOptionsWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
         break;
-    case O::EntryOptionsLoadType: gGameOptions.mLoadType = (long)a[0];
+    case O::EntryOptionsLoadType: gWorld.mLobbyOptions.mLoadType = (long)a[0];
         break;
-    case O::EntryOptionsMapTypeOf: gGameOptions.mMapType = UWideString((const char*)SPEC->GetFile());
+    case O::EntryOptionsMapTypeOf: gWorld.mLobbyOptions.mMapType = UWideString((const char*)SPEC->GetFile());
         break;
     case O::EntryNotMultiplayer: gGameStateIsMultiplayer = false;
         break;

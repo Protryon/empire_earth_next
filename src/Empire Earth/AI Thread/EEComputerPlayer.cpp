@@ -468,7 +468,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_SCENARIO_GAME:
         return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
     case EE_CP_PLAYER_LOAD_TYPE:
-        return gGameOptions.mLoadType;
+        return gWorld.mLobbyOptions.mLoadType;
     case EE_CP_PLAYER_EXPLORE_UNSEEN: gWorld.mMap->ExploreUnseen(thePlayer);
         return 0;
     case EE_CP_PLAYER_ENGINE_NAME: EECPNextAppend((void*)(uintptr_t)inA, EECPEngineName(thePlayer));

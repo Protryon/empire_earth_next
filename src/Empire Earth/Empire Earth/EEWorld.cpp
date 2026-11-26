@@ -363,8 +363,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
-        break;
     case O::WWriteLock: W->mLock->WriteLock();
         break;
     case O::WWriteUnlock: W->mLock->WriteUnlock();
@@ -407,9 +405,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     // the game state
     case O::StOptions: return P64(static_cast<EeAppOptionsFields*>(&ST->mGameOptions));
-    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gGameOptions));
-    case O::LobbyCampaignNameLength: return gGameOptions.mCampaignName.GetLength();
-    case O::LobbyCampaignMapName: return gGameOptions.GetCampaignMapName(*(UWideString*)p);
+    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gWorld.mLobbyOptions));
+    case O::LobbyCampaignNameLength: return gWorld.mLobbyOptions.mCampaignName.GetLength();
+    case O::LobbyCampaignMapName: return gWorld.mLobbyOptions.GetCampaignMapName(*(UWideString*)p);
     case O::StIsLoadedGame: return P64(&ST->mIsLoadedGame);
     case O::StInScenarioEditor: return P64(&ST->mInScenarioEditor);
     case O::StRandomSeed: return P64(&ST->mRandomSeed);
@@ -515,7 +513,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::TechIsLoaded: return ((EETechTree*)p)->mIsLoaded;
     case O::TechResetEpochRange: ((EETechTree*)p)->ResetEpochRange((long)a[0], (long)a[1]);
         break;
-    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gLoadingSavedGame, true);
+    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gWorld.mLoadingSavedGame, true);
         break;
     case O::TechUpdateInterface: ((EETechTree*)p)->UpdateInterface(a[0] != 0);
         break;
@@ -694,8 +692,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CampaignProgressDelete: delete (EECampaignProgress*)p;
         break;
     case O::CampaignRestoreCivilization: ((EECampaignProgress*)p)->RestoreCivilization(UWideString(gDefaultCampaignUser), ((EEGameState*)a[0])->mGameOptions.mCampaignName, ((EEGameState*)a[0])->mGameOptions.mScenarioName, ((EEGameState*)a[0])->mGameOptions.mCampaignChecksum);
-        break;
-    case O::ClearFormManager: ee_screens_chat_log_clear();
         break;
     case O::StrNew: return P64(new UWideString);
     case O::StrFree: delete (UWideString*)p;

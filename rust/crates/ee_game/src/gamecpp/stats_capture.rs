@@ -98,7 +98,11 @@ pub extern "C" fn ee_gamecpp_capture_statistics_sweep() {
         }
         let s = hp(O::EwPlayerStatistics, p, &[]);
         // SAFETY: the player's live series
-        statistics(&mut r, unsafe { &*rec::<EeUnitsPlayerStats>(O::EwStatsSeries, s) }, h(O::EwStatsEndTime, s, &[]) as c_ulong);
+        statistics(
+            &mut r,
+            unsafe { &*rec::<EeUnitsPlayerStats>(O::EwStatsSeries, s) },
+            h(O::EwStatsEndTime, s, &[]) as c_ulong,
+        );
     }
     r.u32(h(O::EwPhysicsSeed, 0, &[]) as c_ulong as u32);
     r.commit();

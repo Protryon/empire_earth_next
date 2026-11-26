@@ -31,7 +31,6 @@
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEScreensShims.h"
 
-extern float& gCameraZoom;                   // 0x5317f0 (the arrow scale less 0.5) (provisional name)
 
 // Creates the main game view's right-drag command control, hidden, with its facing arrow: a textured quad model
 // (CreateModel) and the "Unit Facing Arrow" texture, clamped and alpha-blended (LoadTexture; command_units_calls.rs)
@@ -83,7 +82,7 @@ extern "C" void ee_screenscpp_cu_transform_yaw(float inYaw) { EEScratch<GETransf
 extern "C" void ee_screenscpp_cu_transform_position(float inX, float inY, float inZ)
 { EEScratch<GETransformation>(kScratchCUTransformation).SetPosition(inX, inY, inZ); }
 extern "C" void ee_screenscpp_cu_model_frame(uintptr_t inCtl) { static_cast<GEModel*>(CU(inCtl)->mModel)->SetGraphicsCurrentFrame(0); }
-extern "C" float ee_screenscpp_cu_camera_zoom() { return gCameraZoom; }
+extern "C" float ee_screenscpp_cu_camera_zoom() { return gWorld.mCameraControl.mZoom; }
 extern "C" void ee_screenscpp_cu_model_scale(uintptr_t inCtl, float inV) { static_cast<GEModel*>(CU(inCtl)->mModel)->SetGraphicsScale(inV); }
 extern "C" void ee_screenscpp_cu_model_transform(uintptr_t inCtl)
 { static_cast<GEModel*>(CU(inCtl)->mModel)->SetGraphicsPostModelTransform(EEScratch<GETransformation>(kScratchCUTransformation)); }
