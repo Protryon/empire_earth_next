@@ -4,7 +4,7 @@
 
 #![cfg(not(test))]
 
-use ee_base::math::types::{Ge3DPoint, GeOrientation};
+use ee_base::math::types::{Ge3DPoint, GeOrientation, GeTransformation};
 
 use crate::units::cls_carrier::{self as cr, CarrierHost};
 use crate::units::cls_host::{ClsGame, EeUnitsClsIo, EE_UNITS_CLS_COMMAND_TYPE};
@@ -13,12 +13,10 @@ use crate::units::uu_host::Game;
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::{UnitView, WorldRead};
 
-/// tag list `d`'s point `c` at plane `b`'s frame in the scratch transformation into `io.p`
+/// tag list `d`'s point `c` at plane `b`'s frame in the transformation `io.list` into `io.p`
 pub const EE_UNITS_CLS_CR_TAG: i32 = 73;
 /// unit `a`'s `mOrientation = (io.p[0], io.p[1], io.p[2])`
 pub const EE_UNITS_CLS_CR_SET_ORIENTATION: i32 = 74;
-/// the scratch transformation's `SetPosition(io.p)`
-pub const EE_UNITS_CLS_CR_SET_POSITION: i32 = 75;
 /// unit `a`'s `mPhysicalModel.SetScale(io.f)`
 pub const EE_UNITS_CLS_CR_SET_SCALE: i32 = 76;
 /// class `b`'s `RouteDockWaypoint(unit a)`
@@ -39,12 +37,6 @@ pub const EE_UNITS_CLS_CR_HEIGHT_AT: i32 = 83;
 pub const EE_UNITS_CLS_CR_TAG_LIST: i32 = 215;
 /// tag list `b`'s `mPoints.size()`
 pub const EE_UNITS_CLS_CR_TAG_COUNT: i32 = 216;
-/// the scratch transformation = unit `a`'s location
-pub const EE_UNITS_CLS_CR_SCRATCH_LOCATION: i32 = 217;
-/// `EETagPointList::Scale(the scratch, a->GetStats()->GetScale())`
-pub const EE_UNITS_CLS_CR_SCRATCH_SCALE: i32 = 218;
-/// unit `a`'s `SetTransformation(the scratch, true)`
-pub const EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION: i32 = 219;
 /// unit `a`'s `GetGoal()`
 pub const EE_UNITS_CLS_CR_GOAL: i32 = 220;
 /// `EEGoalHasLocation(goal b)`
@@ -72,6 +64,25 @@ impl ClsGame {
     }
 }
 
+/// Unit `unit`'s `mPhysicalModel.GetLocation()`; `scaled`: `EETagPointList::Scale`d by its stats' scale (the
+/// rotation rows, not the translation).
+fn carrier_location(unit: u64, scaled: bool) -> GeTransformation {
+    // SAFETY: the bodies' caller holds the world; a live unit
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    let u = unsafe { UnitView::of(&t, unit) }.expect("a live unit");
+    let mut m = GeTransformation { m: u.transform() };
+    if scaled {
+        let s = u.stats().expect("a unit's stats").scale();
+        for row in m.m.iter_mut().take(3) {
+            for v in row.iter_mut().take(3) {
+                *v *= s;
+            }
+        }
+    }
+    m
+}
+
 fn point(p: [f32; 3]) -> Ge3DPoint {
     Ge3DPoint { x: p[0], y: p[1], z: p[2] }
 }
@@ -92,10 +103,9 @@ impl CarrierHost for ClsGame {
         if tags == 0 || self.cr0(EE_UNITS_CLS_CR_TAG_COUNT, 0, tags).0 == 0 {
             return None;
         }
-        self.cr0(EE_UNITS_CLS_CR_SCRATCH_LOCATION, carrier, 0);
-        self.cr0(EE_UNITS_CLS_CR_SCRATCH_SCALE, carrier, 0);
-        let io =
-            self.cr(EE_UNITS_CLS_CR_TAG, carrier, plane, i64::from(index), tags as i64, Ge3DPoint::default(), 0.0).1;
+        let mut scratch = carrier_location(carrier, true);
+        let mut io = EeUnitsClsIo { list: (&mut scratch as *mut GeTransformation).cast(), ..Default::default() };
+        self.call(EE_UNITS_CLS_CR_TAG, carrier, plane, i64::from(index), tags as i64, &mut io);
         Some(point(io.p))
     }
     fn set_orientation(&mut self, unit: u64, o: GeOrientation) {
@@ -105,9 +115,24 @@ impl CarrierHost for ClsGame {
         self.cr0(EE_UNITS_CLS_COMMAND_TYPE, unit, 0).0 as i32
     }
     fn set_position(&mut self, unit: u64, p: Ge3DPoint) {
-        self.cr0(EE_UNITS_CLS_CR_SCRATCH_LOCATION, unit, 0);
-        self.cr(EE_UNITS_CLS_CR_SET_POSITION, unit, 0, 0, 0, p, 0.0);
-        self.cr0(EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION, unit, 0);
+        // the location with the position p, then `SetTransformation(it, true)` (u12a_small.rs)
+        let mut scratch = carrier_location(unit, false);
+        scratch.m[0][3] = p.x;
+        scratch.m[1][3] = p.y;
+        scratch.m[2][3] = p.z;
+        // SAFETY: the member's entry point on the live unit, with the transformation and its x and y
+        unsafe {
+            crate::units::u12a_small::game::ee_units_cu_tiny(
+                crate::units::u12a_small::EE_UNITS_CU_T_DO_SET_TRANSFORMATION,
+                unit as usize as *mut std::os::raw::c_void,
+                (&scratch as *const GeTransformation).cast(),
+                1,
+                0,
+                scratch.m[0][3],
+                scratch.m[1][3],
+                0.0,
+            )
+        };
     }
     fn set_scale(&mut self, unit: u64, s: f32) {
         self.cr(EE_UNITS_CLS_CR_SET_SCALE, unit, 0, 0, 0, Ge3DPoint::default(), s);

@@ -26,12 +26,10 @@ pub const EE_UNITS_CLS_ST_CHAIN: i32 = 98;
 /// class `b`'s `UpdateCloakDetection(unit a)`
 pub const EE_UNITS_CLS_ST_CLOAK_DETECTION: i32 = 99;
 
-/// unit `a`'s area effects' `ApplyModifiers(3, the input, the radius, a)`
+/// unit `a`'s area effects' `ApplyModifiers(3, the input, the radius, a)` (`io.list`: the two `long`s)
 pub const EE_UNITS_CLS_ST_AREA_CLOAK: i32 = 102;
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 pub const EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: i32 = 103;
-/// `EEGetRules().mCombat.mPowerRegenerationInterval`
-pub const EE_UNITS_CLS_ST_POWER_INTERVAL: i32 = 227;
 /// `gMiniMap->MoveUnit(a, -10000, -10000, its tile)`
 pub const EE_UNITS_CLS_ST_MINI_MAP_SHOW: i32 = 228;
 /// unit `a`'s `SetCloakedChain(d != 0)`
@@ -40,10 +38,6 @@ pub const EE_UNITS_CLS_ST_CLOAKED_CHAIN: i32 = 229;
 pub const EE_UNITS_CLS_ST_OPACITY_CHAIN: i32 = 230;
 /// unit `a`'s `HasEffect(8)`
 pub const EE_UNITS_CLS_ST_HAS_AREA_CLOAK: i32 = 231;
-/// the modifier's input and radius = 0
-pub const EE_UNITS_CLS_ST_RESET_MODIFIERS: i32 = 232;
-/// the modifier's radius
-pub const EE_UNITS_CLS_ST_MODIFIER_RADIUS: i32 = 233;
 
 impl ClsGame {
     fn st(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, f: f32) -> (i64, EeUnitsClsIo) {
@@ -74,9 +68,11 @@ impl StatusHost for ClsGame {
         if self.st(EE_UNITS_CLS_ST_HAS_AREA_CLOAK, unit, 0, 0, 0, 0.0).0 == 0 {
             return None;
         }
-        self.st(EE_UNITS_CLS_ST_RESET_MODIFIERS, unit, 0, 0, 0, 0.0);
-        self.st(EE_UNITS_CLS_ST_AREA_CLOAK, unit, 0, 0, 0, 0.0);
-        Some(self.st(EE_UNITS_CLS_ST_MODIFIER_RADIUS, unit, 0, 0, 0, 0.0).0)
+        // the modifier's input and radius, both 0, in a local pair (io.list)
+        let mut modifiers: [std::os::raw::c_long; 2] = [0; 2];
+        let mut io = EeUnitsClsIo { list: modifiers.as_mut_ptr().cast(), ..Default::default() };
+        self.call(EE_UNITS_CLS_ST_AREA_CLOAK, unit, 0, 0, 0, &mut io);
+        Some(modifiers[1] as i64)
     }
     fn camouflage_timing(&mut self) -> f32 {
         self.st(EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING, 0, 0, 0, 0, 0.0).1.f
@@ -120,7 +116,8 @@ impl StatusHost for ClsGame {
         self.st(EE_UNITS_CLS_ST_CINEMATIC_INTERVAL, 0, 0, 0, 0, 0.0).0 != 0
     }
     fn power_interval(&mut self) -> i64 {
-        self.st(EE_UNITS_CLS_ST_POWER_INTERVAL, 0, 0, 0, 0, 0.0).0
+        // `EEGetRules().mCombat.mPowerRegenerationInterval` (the C++ rules mirror these)
+        i64::from(crate::tech::civ::rules().combat.power_regeneration_interval)
     }
     fn cloaked_enemy(&mut self, unit: u64) -> bool {
         self.st(EE_UNITS_CLS_ST_CLOAKED_ENEMY, unit, 0, 0, 0, 0.0).0 != 0

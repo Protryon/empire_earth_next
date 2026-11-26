@@ -190,6 +190,7 @@ pub mod uc_media;
 mod uc_mock;
 pub mod uc_produce;
 pub mod uc_rest;
+mod uc_scratch_view;
 pub(crate) mod uc_view;
 pub mod uca_air;
 pub mod ucb_gate;
