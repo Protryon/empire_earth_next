@@ -32,6 +32,7 @@
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
 #include "rust/game/gamecpp.h"
 #include "rust/sim/tech.h"
+#include "rust/sim/units.h"
 
 // ---- EEUCProjectile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The projectile's unit
 // class (EEUCBomb derives from it and shares these slots by ICF): 0x219143..0x219c49 (after EEUCPlanetSpaceship.cpp;
@@ -87,12 +88,12 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     // ---- operations
     case EE_COMBAT_SHOT_SET_ANIMATION: theUnit->SetAnimation(inArg, -1, 0); break;
     case EE_COMBAT_SHOT_SET_ROTTING: theUnit->SetRottingAwayTime(inArg); break;
-    case EE_COMBAT_SHOT_UPDATE_ROTTING: theUnit->UpdateRottingAwayTime(); break;
+    case EE_COMBAT_SHOT_UPDATE_ROTTING: (long)ee_units_ucp_call(EE_UNITS_UCP_DO_ROTTING_TIME, NULL, theUnit, 0, 0); break;
     case EE_COMBAT_SHOT_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
     case EE_COMBAT_SHOT_PHYSICS_ACTION: theUnit->SetCurrentPhysicsAction((unsigned long)inArg); break;
     case EE_COMBAT_SHOT_DROP_PATH: theUnit->DropPath(); break;
-    case EE_COMBAT_SHOT_UNLOAD_CARGO: theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false); break;
-    case EE_COMBAT_SHOT_KILL_CARGO: theUnit->KillCargo(); break;
+    case EE_COMBAT_SHOT_UNLOAD_CARGO: ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, theUnit, (long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false); break;
+    case EE_COMBAT_SHOT_KILL_CARGO: ee_units_cu_body(EE_UNITS_CU_DO_KILL_CARGO, theUnit, 0, 0, 0); break;
     case EE_COMBAT_SHOT_FIRE_SHOT: theClass->FireShot(theUnit); break;
     case EE_COMBAT_SHOT_SIGHT_OFF: theUnit->SightOffHere(); break;
     case EE_COMBAT_SHOT_SET_HIT_POINTS: theUnit->SetHitPoints(inArg); break;
@@ -110,8 +111,8 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_MINIMAP_OFF: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, theUnit->mTileX, theUnit->mTileY, -10000, (long)(-10000)); break;
     case EE_COMBAT_SHOT_STEP_PHYSICS: theClass->mPhysicsModel->Step(theUnit); break;
     case EE_COMBAT_SHOT_ORBITALS: theUnit->UpdateOrbitals(); break;
-    case EE_COMBAT_SHOT_EFFECTS: theClass->UpdateEffects(theUnit); break;
-    case EE_COMBAT_SHOT_REFRESH_SOUND: theClass->RefreshSound(theUnit); break;
+    case EE_COMBAT_SHOT_EFFECTS: ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE_EFFECTS, theClass, theUnit, 0, 0, 0, 0.0f); break;
+    case EE_COMBAT_SHOT_REFRESH_SOUND: ee_units_uc_body(EE_UNITS_UC_DO_REFRESH_SOUND, theClass, theUnit); break;
     case EE_COMBAT_SHOT_SET_OPACITY: theUnit->SetOpacityChain(UBitsFloat(inArg)); break;
     case EE_COMBAT_SHOT_SET_FLIGHT_TIME: theUnit->SetFlightTime(inArg); break;
     case EE_COMBAT_SHOT_SET_CLOAKED: theUnit->mCloaked = (unsigned long)(long)inArg; break;
@@ -139,7 +140,7 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
     case EE_COMBAT_SHOT_X_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(p), p); return 0;
     case EE_COMBAT_SHOT_X_SET_LOCATION_XYZ: theUnit->mPhysicalModel.SetLocationXYZ(p); return 0;
     case EE_COMBAT_SHOT_X_DEATH_SOUND: return (int64_t)(uintptr_t)theUnit->mStats->mDeathSound;
-    case EE_COMBAT_SHOT_X_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, reinterpret_cast<EESoundObject*>(inA), &ioF[0], &ioF[1], &ioF[2]); return 0;
+    case EE_COMBAT_SHOT_X_SOUND_PARAMETERS: ee_units_uck_sound(theClass, static_cast<EEUnit*>(theUnit), reinterpret_cast<EESoundObject*>(inA), &ioF[0], &ioF[1], &ioF[2]); return 0;
     case EE_COMBAT_SHOT_X_PLAY: gSoundManager->Play(reinterpret_cast<EESoundObject*>(inA)->mSampleID, ioF[0], ioF[1], ioF[2], reinterpret_cast<EESoundObject*>(inA)->mLooping, NULL); return 0;
     case EE_COMBAT_SHOT_X_ATTACK_GOAL: return (int64_t)(uintptr_t)EEShotAttack(theUnit);
     case EE_COMBAT_SHOT_X_ATTACK_TARGET: return (int64_t)(uintptr_t)reinterpret_cast<EEUGRust*>(inA)->GetAttackTarget();

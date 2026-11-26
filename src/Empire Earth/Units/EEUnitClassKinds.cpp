@@ -20,6 +20,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"
+#include "rust/sim/units.h"
 
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
 
@@ -38,13 +39,13 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_BODY: return EEClassBody(theClass, (size_t)inB);
     case EE_UNITS_UCK_MISSILE_ACTION_CHANGED: theClass->MissileActionChanged(theUnit); return 0;
     case EE_UNITS_UCK_PROJECTILE_ACTION_CHANGED: theClass->ProjectileActionChanged(theUnit); return 0;
-    case EE_UNITS_UCK_ACTION_CHANGED: EEUnitClassActionChanged((int32_t)inB, theClass, theUnit); return 0;
-    case EE_UNITS_UCK_UPDATE: EEUnitClassUpdate((int32_t)inB, theClass, theUnit); return 0;
+    case EE_UNITS_UCK_ACTION_CHANGED: ee_units_class_action_changed((int32_t)inB, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)theUnit); return 0;
+    case EE_UNITS_UCK_UPDATE: ee_units_class_update((int32_t)inB, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)theUnit); return 0;
     case EE_UNITS_UCK_BOMB_UPDATE: theClass->BombUpdate(theUnit); return 0;
     case EE_UNITS_UCK_PRIEST_UPDATES: return !theUnit->IsFoundation() || theUnit->mHitPoints <= 0 || theUnit->mCurrentPhysicsAction == 2;
     case EE_UNITS_UCK_PRIEST_UPDATE: theClass->PriestVirtualB8(theUnit); return 0;
     case EE_UNITS_UCK_TORPEDO_UPDATE: theClass->TorpedoUpdate(theUnit); return 0;
-    case EE_UNITS_UCK_CITIZEN_UPDATE: theClass->UpdateCitizen(theUnit); return 0;
+    case EE_UNITS_UCK_CITIZEN_UPDATE: ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CITIZEN, theClass, theUnit, 0, 0); return 0;
     case EE_UNITS_UCK_MISSILE_UPDATE: theClass->MissileUpdate(theUnit); return 0;
     case EE_UNITS_UCK_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
     case EE_UNITS_UCK_RIPPLES_DUE:
@@ -82,14 +83,14 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_D_RESOURCE_ADD_TO_TILE: theClass->ResourceAddToTile(EEUckObject<EEUnit>(inA)); return 0;
     case EE_UNITS_UCK_D_SUBMERGED_ADD_TO_TILE: theClass->SubmergedNavalAddToTile(EEUckObject<EEUnit>(inA)); return 0;
     case EE_UNITS_UCK_D_LAND_TRANSPORT_BADLY_HURT: theClass->LandTransportBadlyHurt(EEUckObject<EEUnit>(inA)); return 0;
-    case EE_UNITS_UCK_D_LAND_CALL_PARATROOP_PLANE: theClass->LandCallParatroopPlane(theUnit); return 0;
+    case EE_UNITS_UCK_D_LAND_CALL_PARATROOP_PLANE: ee_units_ucg_call(EE_UNITS_UCG_DO_CALL_PARATROOP_PLANE, theClass, theUnit, 0, 0.0f); return 0;
     case EE_UNITS_UCK_D_POPULATION_SUB: theUnit->mPlayer->mPopulationCount -= EEUckObject<EEComplexUnit>(inA)->mUnitClass->GetPopulationCost(); return 0;
     case EE_UNITS_UCK_D_POPULATION_ADD: theUnit->mPlayer->mPopulationCount += EEUckObject<EEComplexUnit>(inA)->mUnitClass->GetPopulationCost(); return 0;
-    case EE_UNITS_UCK_D_TORPEDO_GROUND_IMPACT: return theClass->TorpedoCheckGroundImpact(theUnit);
-    case EE_UNITS_UCK_D_MISSILE_GROUND_IMPACT: return theClass->MissileCheckGroundImpact(theUnit);
-    case EE_UNITS_UCK_D_PROJECTILE_GROUND_IMPACT: return theClass->ProjectileCheckGroundImpact(theUnit);
-    case EE_UNITS_UCK_D_MISSILE_WATER_IMPACT: return theClass->MissileCheckWaterImpact(theUnit);
-    case EE_UNITS_UCK_D_PROJECTILE_WATER_IMPACT: return theClass->ProjectileCheckWaterImpact(theUnit);
+    case EE_UNITS_UCK_D_TORPEDO_GROUND_IMPACT: return ee_units_ucs_impact(EE_UNITS_UCS_DO_TORPEDO_GROUND, theClass, theUnit);
+    case EE_UNITS_UCK_D_MISSILE_GROUND_IMPACT: return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_GROUND, theClass, theUnit);
+    case EE_UNITS_UCK_D_PROJECTILE_GROUND_IMPACT: return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_GROUND, theClass, theUnit);
+    case EE_UNITS_UCK_D_MISSILE_WATER_IMPACT: return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_WATER, theClass, theUnit);
+    case EE_UNITS_UCK_D_PROJECTILE_WATER_IMPACT: return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_WATER, theClass, theUnit);
     case EE_UNITS_UCK_D_MINING_CREATE_UNIT: return EEObj(theClass->MiningBuildingCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
     case EE_UNITS_UCK_D_NAVAL_CITIZEN_CREATE_UNIT: return EEObj(theClass->NavalCitizenCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
     case EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT: return EEObj(theClass->SpaceBuildingCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
@@ -123,21 +124,21 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_D_AMBIENT_REMOVE: theClass->AmbientRemoveFromTile(EEUckObject<EEUnit>(inA)); return 0;
     case EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED: theClass->ResourceSimpleUnitCreated(EEUckObject<EEUnit>(inA)); return 0;
     case EE_UNITS_UCK_D_BASE_SIMPLE_CREATED: theClass->BaseSimpleUnitCreated(EEUckObject<EEUnit>(inA)); return 0;
-    case EE_UNITS_UCK_D_AIR_ANIMAL_CREATED: theClass->AirAnimalUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_FORTRESS_CREATED: theClass->FortressUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_GATE_CREATED: theClass->GateUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_HELICOPTER_TRANSPORT_CREATED: theClass->HelicopterTransportUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_SPACE_BUILDING_CREATED: theClass->SpaceBuildingUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_SPACE_TRANSPORT_CREATED: theClass->SpaceTransportUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_AIR_ANIMAL_CREATED: ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED, theClass, theUnit, 0, 0, 0, NULL); return 0;
+    case EE_UNITS_UCK_D_FORTRESS_CREATED: ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_CREATED, theClass, theUnit, 0, 0, 0); return 0;
+    case EE_UNITS_UCK_D_GATE_CREATED: ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_UNIT_CREATED, theClass, theUnit, 0, 0, 0, 0.0f); return 0;
+    case EE_UNITS_UCK_D_HELICOPTER_TRANSPORT_CREATED: ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_CREATED, theClass, theUnit, 0, 0, 0); return 0;
+    case EE_UNITS_UCK_D_SPACE_BUILDING_CREATED: ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_UNIT_CREATED, theClass, theUnit, 0, 0, 0, 0.0f); return 0;
+    case EE_UNITS_UCK_D_SPACE_TRANSPORT_CREATED: ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_CREATED, theClass, theUnit, 0, 0, 0); return 0;
     case EE_UNITS_UCK_D_BUILDING_CREATED: theClass->BuildingUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_LAND_CREATED: theClass->LandUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_LANDABLE_CREATED: theClass->LandableUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_LAND_CREATED: ee_units_ucg_call(EE_UNITS_UCG_DO_LAND_CREATED, theClass, theUnit, 0, 0.0f); return 0;
+    case EE_UNITS_UCK_D_LANDABLE_CREATED: ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_CREATED, theClass, theUnit, 0, 0, 0, NULL); return 0;
     case EE_UNITS_UCK_D_MISSILE_CREATED: theClass->MissileUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_NAVAL_CREATED: theClass->NavalUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_NAVAL_CREATED: ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_CREATED, theClass, theUnit, 0, 0.0f); return 0;
     case EE_UNITS_UCK_D_PROJECTILE_CREATED: theClass->ProjectileUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_TRANSPORT_CREATED: theClass->TransportUnitCreated(theUnit); return 0;
-    case EE_UNITS_UCK_D_FORTRESS_UNLOAD_AT: theClass->FortressUnloadAt(theUnit, (long)inB, (long)inC); return 0;
-    case EE_UNITS_UCK_D_TRANSPORT_UNLOAD_AT: theClass->TransportUnloadAt(theUnit, (long)inB, (long)inC); return 0;
+    case EE_UNITS_UCK_D_TRANSPORT_CREATED: ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, theClass, theUnit, 0, 0, 0); return 0;
+    case EE_UNITS_UCK_D_FORTRESS_UNLOAD_AT: ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_UNLOAD_AT, theClass, theUnit, 0, (long)inB, (long)inC); return 0;
+    case EE_UNITS_UCK_D_TRANSPORT_UNLOAD_AT: ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, theClass, theUnit, 0, (long)inB, (long)inC); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }
 }

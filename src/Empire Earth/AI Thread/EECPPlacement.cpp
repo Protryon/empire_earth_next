@@ -44,6 +44,7 @@
 #include "rust/sim/cp.h"
 #include "rust/sim/ai.h"
 #include "rust/sim/astar.h"
+#include "rust/sim/units.h"
 
 // ---------------------------------------------------------------------------------------------------------------
 // The Rust bodies' context and world
@@ -124,7 +125,7 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     case EE_CP_PLACE_UNIT_PATH_AREA:
         return (int64_t)EECPHandle(gContinentManager.GetPathAreaAt(EECPObject<EEUnit>(inA)));
     case EE_CP_PLACE_FACING_QUARTER:
-        return EEGetFacingQuarter((long)v[0], (long)v[1]);
+        return (long)ee_units_ucn_facing(2, (int32_t)((long)v[0]), (int32_t)((long)v[1]));
     case EE_CP_PLACE_SITE_THREAT:
         return ee_ai_next_site_threat(thePlayer, (long)v[0], (long)v[1], false, NULL) != 0 ? 1 : 0;
     case EE_CP_PLACE_RANDOM:

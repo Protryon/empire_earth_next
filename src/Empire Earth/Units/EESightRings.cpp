@@ -20,6 +20,7 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "rust/game/gamecpp.h"
+#include "rust/sim/units.h"
 
 static uint64_t EESightWorld() { return (uint64_t)(uintptr_t)&gWorld; }
 
@@ -51,8 +52,8 @@ static void EESightPlayer(unsigned int inKind, int inOn, int inShared, EEPlayer*
 extern "C" int64_t ee_units_tile_sight_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD)
 {
     switch (inOp) {
-    case EE_UNITS_TILE_SIGHT_SHOWN: gDoppelgangerManager.TileShown(reinterpret_cast<EETile*>((uintptr_t)inA), (long)inC, (long)inD, reinterpret_cast<EEPlayer*>((uintptr_t)inB)); return 0;
-    case EE_UNITS_TILE_SIGHT_HIDDEN: gDoppelgangerManager.TileHidden(reinterpret_cast<EETile*>((uintptr_t)inA), reinterpret_cast<EEPlayer*>((uintptr_t)inB)); return 0;
+    case EE_UNITS_TILE_SIGHT_SHOWN: ee_units_dm_body(EE_UNITS_DM_DO_TILE_SHOWN, reinterpret_cast<EETile*>((uintptr_t)inA), (long)inC, (long)inD, (int64_t)(uintptr_t)(reinterpret_cast<EEPlayer*>((uintptr_t)inB))); return 0;
+    case EE_UNITS_TILE_SIGHT_HIDDEN: ee_units_dm_body(EE_UNITS_DM_DO_TILE_HIDDEN, static_cast<RTSTile*>(reinterpret_cast<EETile*>((uintptr_t)inA)), (int64_t)(uintptr_t)(reinterpret_cast<EEPlayer*>((uintptr_t)inB)), 0, 0); return 0;
     case EE_UNITS_TILE_SIGHT_FIRST: reinterpret_cast<EEPlayer*>((uintptr_t)inA)->mSavedGroups.Reset(0x18, 1); return 0;
     case EE_UNITS_TILE_SIGHT_CELL_ON: ee_gamecpp_minimap_count_cell(gMiniMap, (long)inC, (long)inD, true); return 0;
     case EE_UNITS_TILE_SIGHT_REFERENCE: gWorld.mMap->mTerrainMesh.ReferenceTile((unsigned long)inC, (unsigned long)inD); return 0;

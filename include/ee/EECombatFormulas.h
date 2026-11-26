@@ -29,16 +29,10 @@ template <class In, class Out> inline void EECombatCapture(unsigned int inTag, c
 
 // The formula and its record are one Rust call (ee_sim combat captured.rs). The formulas only Rust calls (the heal
 // step, the ballistic pitch, the arc, the range and reach tests) have no C++ name any more.
-inline float EECombatAttackFactor(const EeCombatAttackFactorIn& in) { return ee_combat_attack_factor_captured(&in); }
-inline float EECombatElevation(const EeCombatElevationIn& in) { return ee_combat_elevation_captured(&in); }
-inline int32_t EECombatMorale(const EeCombatMoraleIn& in) { return ee_combat_morale_captured(&in); }
-inline EeCombatHitPointsOut EECombatHitPoints(const EeCombatHitPointsIn& in) { return ee_combat_hit_points_captured(&in); }
 inline int32_t EECombatDamageEffect(const EeCombatDamageEffectIn& in) { return ee_combat_damage_effect_captured(&in); }
 inline EeCombatRegenerateOut EECombatRegenerate(const EeCombatRegenerateIn& in) { return ee_combat_regenerate_captured(&in); }
-inline EeCombatTimerOut EECombatTimer(const EeCombatTimerIn& in) { return ee_combat_timer_captured(&in); }
 inline EeCombatHealOut EECombatHeal(const EeCombatHealIn& in) { return ee_combat_heal_captured(&in); }
 inline int32_t EECombatConversionCost(const EeCombatConversionCostIn& in) { return ee_combat_conversion_cost_captured(&in); }
-inline EeCombatConversionOut EECombatConversion(const EeCombatConversionIn& in) { return ee_combat_conversion_captured(&in); }
 
 // ---- the weapon point's other users, the flight steps, the screens (round 4)
 

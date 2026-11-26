@@ -248,7 +248,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwUnitSetTile: UNIT->mTile = (EEMapTile*)a[0];
         break;
-    case O::PwRegisterUnit: RTSRegisterUnit(UNIT);
+    case O::PwRegisterUnit: ee_rts_unit_registry(static_cast<RTSUnit*>(UNIT), static_cast<RTSUnit*>(UNIT), true);
         break;
     case O::PwPlayerTechTree: return P64(PL->GetTechTree());
     case O::PwTreeNodeIds: ee_gamecpp_tech_node_ids(((EETechTree*)p), true, 0, (std::vector<long>*)a[0]);

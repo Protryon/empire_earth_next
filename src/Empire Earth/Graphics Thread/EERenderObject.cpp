@@ -328,11 +328,11 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoTriggerSelectUnits: return RO_P64(dynamic_cast<EESEUICTriggerSelectUnits*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS)));
     case O::RoSelectionIsDrawn: return ((EEUICSelectUnits*)p)->GetIsDrawn();
     case O::RoTriggerSelectionIsDrawn: return ((EESEUICTriggerSelectUnits*)p)->GetIsDrawn();
-    case O::RoPickUnits: gUnitPicker.PickUnits(((EEUICSelectUnits*)p)->GetSelectionRectangle(), (EEPlayer*)a[0], 0, gU4E9230);
+    case O::RoPickUnits: ee_gamecpp_pz_box(&gUnitPicker, &(((EEUICSelectUnits*)p)->GetSelectionRectangle()), false, (EEPlayer*)a[0], 0, &gU4E9230);
         break;
-    case O::RoPickUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EEUICSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+    case O::RoPickUnitsInRectangle: ee_gamecpp_pz_box(&gUnitPicker, &(((EEUICSelectUnits*)p)->GetSelectionRectangle()), true, NULL, 0, &gU4E9230);
         break;
-    case O::RoPickTriggerUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+    case O::RoPickTriggerUnitsInRectangle: ee_gamecpp_pz_box(&gUnitPicker, &(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle()), true, NULL, 0, &gU4E9230);
         break;
     case O::RoAmbientCountUnit: ee_gamecpp_ambient_count_unit(&gAmbientSoundManager.mAnalyzer, (EEComplexUnit*)p);
         break;

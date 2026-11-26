@@ -31,8 +31,6 @@ class EEComplexUnit;
 
 // The registry (RTSUnit.cpp over ee_units)
 RTSUnit* RTSResolveUnitID(uint32_t inUnitID);  // NULL for none (0xffffffff) or a freed unit
-void RTSRegisterUnit(RTSUnit* inUnit);         // at RTSPlayer::InsertUnit (its id is final there)
-void RTSUnregisterUnit(RTSUnit* inUnit);       // at RTSUnit::FreeNode (only if the id is still this unit's)
 
 // Typed access for the handle (units round 12: casts here, were RTSUnit.cpp's and EEUnit.cpp's overloads). RTSUnit is
 // the first base of EEUnit and EEComplexUnit, at offset 0 (EEWorldLayoutRegister checks it at start), so a unit's

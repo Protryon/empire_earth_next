@@ -28,6 +28,7 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECombatGoals.h"
 #include "lle/GEModel.h"
+#include "rust/sim/units.h"
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
@@ -77,7 +78,7 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_FRAME_COUNT: return theUnit->GetModel()->mFrameCounts[theUnit->GetAnimation()];
     case EE_UNITS_COND_MAX_VELOCITY: ioIo->f = theUnit->GetMaxVelocity(); return 0;
     // the waypoints' cases: Rust (cls_host.rs over waypoints.rs)
-    case EE_UNITS_COND_CAN_CONVERT: return EECanConvert(theUnit, CondUnit(inB), sCondFlag);
+    case EE_UNITS_COND_CAN_CONVERT: return ee_units_ucp_can_convert(theUnit, CondUnit(inB), &sCondFlag);
     case EE_UNITS_COND_CONVERSION_COST: return EEGetConversionCost(theUnit);
     // the sunk test's statements (cls_condition.rs sunk; sCondSunk*: its locals)
     case EE_UNITS_COND_SUNK_POSITION: theUnit->GetPosition(sCondSunkPosition = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
@@ -105,7 +106,7 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_UAI_ATTACK_OF: ioIo->f = CondSimple(inB)->mStats->mAttack; return 0;
     case EE_UNITS_UAI_CATEGORY: return theUnit->mUnitClass->mCategory;
     case EE_UNITS_UAI_AS_COMPLEX: return EEObj(EEUnitCast<EEComplexUnit>(CondSimple(inB)));
-    case EE_UNITS_UAI_CAN_CONVERT: return EECanConvert(theUnit, CondUnit(inB), sCondFlag);
+    case EE_UNITS_UAI_CAN_CONVERT: return ee_units_ucp_can_convert(theUnit, CondUnit(inB), &sCondFlag);
     case EE_UNITS_UAI_CONVERT_FLAG: return sCondFlag;
     case EE_UNITS_UAI_NEW_ATTACK: return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit(theUnit, CondSimple(inB), false, false)));
     case EE_UNITS_UAI_SET_GOAL: theUnit->SetGoal(CondGoal(inB), inC != 0, 0); return 0;

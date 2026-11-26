@@ -16,6 +16,7 @@
 #include "ee/EEWheel.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
+#include "rust/sim/units.h"
 
 // ---- EEUCAmbient.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The ambient object's
 // unit class: 0x20b9fc..0x20bcf7 (after EEUCAirplane.cpp; EEUCBasicCitizen.cpp follows). Unit flags: the exe's module
@@ -106,7 +107,7 @@ extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCG_MAP_TILE: return EEObj(::gWorld.GetMap()->GetTile((long)inB, (long)inC));
     case EE_UNITS_UCG_CRUISE_ALTITUDE_OF: f[0] = EEUcgObject<EEUnitClass>(inA)->mCruiseAltitude; return 0;
     case EE_UNITS_UCG_CREATE_PLANE: return EEObj(EEUcgObject<EEUnitClass>(inA)->CreateUnitAt(*EEUcgObject<GETransformation>((uint64_t)inB), 0, 0, theUnit)->mComplexUnit);
-    case EE_UNITS_UCG_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, theUnit->mPlayer->mPlayerID); return 0;
+    case EE_UNITS_UCG_CARRIER_AIRCRAFT: ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, theOther, 0, (long)(theUnit->mPlayer->mPlayerID), 0, NULL); return 0;
     case EE_UNITS_UCG_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
     case EE_UNITS_UCG_SET_FLIGHT_TIME_OF: theOther->SetFlightTime((unsigned long)inB); return 0;
     case EE_UNITS_UCG_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcgObject<GETransformation>(inA), true); return 0;
@@ -114,7 +115,7 @@ extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCG_WAYPOINT_COUNT: return theUnit->mWaypoints.size();
     case EE_UNITS_UCG_NEXT_WAYPOINT: theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCG_COLLISION_RADIUS: f[0] = theUnit->mCollisionRadius; return 0;
-    case EE_UNITS_UCG_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
+    case EE_UNITS_UCG_RESOURCES_ROTTING: ee_units_ucp_call(EE_UNITS_UCP_DO_RESOURCES_ROTTING, NULL, theUnit, 0, 0); return 0;
     case EE_UNITS_UCG_WORLD_LINE: memcpy(EEUcgObject<GE3DLine>(inA), &::gWorld.mLine, sizeof(GE3DLine)); return 0;
     case EE_UNITS_UCG_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
     case EE_UNITS_UCG_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;

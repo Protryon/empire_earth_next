@@ -67,6 +67,7 @@
 #include "rust/game/screens.h"
 #include "rust/sim/app.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
@@ -352,7 +353,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::GhostSetTransformation: GH->mTransformation = *(const GETransformation*)a[0];
         break;
-    case O::GhostFillSquare: GH->FillSquare();
+    case O::GhostFillSquare: ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_SQUARE, GH, NULL, NULL);
         break;
     case O::GhostLocationToTile: GH->mUnitClass->LocationToTile(GE3DPoint(f[0], f[1], f[2]), GH->mTileX, GH->mTileY);
         break;

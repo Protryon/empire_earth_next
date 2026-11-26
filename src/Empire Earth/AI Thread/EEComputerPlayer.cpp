@@ -35,6 +35,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECombatGoals.h"
 #include "rust/data/ffi.h"   // ee_data_rules_ai_level
+#include "rust/sim/units.h"
 
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
@@ -79,7 +80,7 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     theItem.mGoals.push_back(theGoal);
     theGoal->SetOwner(theItem.GetUnit());
     this->RefreshGoals();
-    this->RefreshActiveGoal();
+    ee_units_unit_refresh_active_goal((uint64_t)(uintptr_t)this);
 }
 
 void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit) { ee_cp_pl_unit_stranded(EECP_THIS, EECP_UNIT(inUnit)); }
@@ -243,7 +244,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_GOAL_CONDITION: return theGoal->EvaluateCondition(theComplex, (unsigned long)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_LOAD_TILE_X: return theGoal->GetLoadContainerTile().GetX();
     case EE_CP_PLAYER_LOAD_TILE_Y: return theGoal->GetLoadContainerTile().GetY();
-    case EE_CP_PLAYER_UNLOAD_AT: theComplex->UnloadCargoAtTile((long)v[0], (long)v[1], true);
+    case EE_CP_PLAYER_UNLOAD_AT: ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, theComplex, (long)v[0], (long)v[1], true);
         return 0;
     case EE_CP_PLAYER_NEW_UNLOAD: return (int64_t)(uintptr_t)EEUGRust::NewUnloadTransport(theComplex, (long)v[0], (long)v[1], true);
     case EE_CP_PLAYER_CAN_UNLOAD: return theGoal->CanUnloadAtDestination() ? 1 : 0;

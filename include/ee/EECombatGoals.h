@@ -49,11 +49,6 @@ inline EEUnit* EECombatShotTarget(EEComplexUnit* inUnit) { return (EEUnit*)(uint
 // inside another captured read (FacesTarget's FacesPoint, IsInReach's facing) records nothing: only the outer call.
 // (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
 // (the records' words: ee_sim combat capture_units.rs, read through the views)
-inline void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                                    uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0)
-{
-    ee_combat_capture_read_of(0, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, inExtra0, inExtra1, inExtra2);
-}
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
 // EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
@@ -75,11 +70,6 @@ inline bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget)
 // ids (0 without one), the result and what the call left behind (per function below); folded like CBQR
 // (EE_SIM_CAPTURE_CBXR_FULL=1 writes every call). Every call records (none of them calls another).
 // (the function codes: ee_sim combat cg_query.rs, rust/sim/combat.h)
-inline void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                                 uint32_t inExtra0 = 0, uint32_t inExtra1 = 0)
-{
-    ee_combat_capture_read_of(1, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, inExtra0, inExtra1, 0);
-}
 // IsTargetIgnored's and IgnoreTarget's record: the list's size and FNV-1a 32 (each entry's six fields in order)
 inline void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
                                    uint32_t inCheckLocation)

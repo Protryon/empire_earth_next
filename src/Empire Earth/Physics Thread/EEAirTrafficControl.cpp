@@ -13,6 +13,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
+#include "rust/sim/units.h"
 
 // port (the units' state lane, round 1): the class is Rust's whole (ee_units atc.rs: the bodies over this host;
 // atc_save.rs: Load and Save; atc_views.rs: the units' plain reads in place). The host is the units' world calls; the
@@ -29,7 +30,7 @@ static int64_t EEATCHost(void* inContext, int32_t inOp, void* inUnit, void* inOt
     case EE_UNITS_ATC_FIND_PASSENGER: return (int64_t)(intptr_t)theUnit->FindPassenger(io->a);
     case EE_UNITS_ATC_CLEAR_EXITING: theUnit->SetExitingUnitID(-1); return 0;
     case EE_UNITS_ATC_KILL: theUnit->Kill(1, 0, 0); return 0;
-    case EE_UNITS_ATC_SET_HOME_BASE: theUnit->SetHomeBase(theOther); return 0;
+    case EE_UNITS_ATC_SET_HOME_BASE: ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, theUnit, (int64_t)(uintptr_t)theOther, 0, 0); return 0;
     case EE_UNITS_ATC_REQUEST_LANDING: theUnit->StartAction(kActionRequestLanding); return 0;
     case EE_UNITS_ATC_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
     case EE_UNITS_ATC_RESOLVE: return (int64_t)(intptr_t)EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((uint32_t)io->a));

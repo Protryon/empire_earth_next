@@ -30,6 +30,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
@@ -109,7 +110,7 @@ extern "C" int64_t ee_scenariocpp_world_object(EESMHostContext* inContext, uint3
     case EE_SCENARIO_WZ_TILE_TERRAIN: return SMWzOf<EEMapTile>(a[0])->mTerrainType;
     case EE_SCENARIO_WZ_FOOTPRINT_DISTANCE:
         return EESMBits(EEGetFootprintDistance(static_cast<EEComplexUnit*>(SMWzOf<EEUnit>(a[0])), (long)a[1], (long)a[2], SMWzOf<long>(a[3]), SMWzOf<long>(a[4])));
-    case EE_SCENARIO_WZ_NEAREST_TILE: SMWzOf<EEUnit>(a[0])->GetNearestFootprintTile(SMWzOf<EEUnit>(a[1]), SMWzOf<long>(a[2]), SMWzOf<long>(a[3]));
+    case EE_SCENARIO_WZ_NEAREST_TILE: ee_units_eu_nearest_footprint_tile(SMWzOf<EEUnit>(a[0]), SMWzOf<EEUnit>(a[1]), SMWzOf<long>(a[2]), SMWzOf<long>(a[3]));
         return 0;
     case EE_SCENARIO_WZ_CHAT_TEXT: sWZText[0] = inContext->mCondition->mChatText;
         return 0;

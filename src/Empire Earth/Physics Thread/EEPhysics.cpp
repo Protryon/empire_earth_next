@@ -43,7 +43,9 @@
 #include "ee/EEGameLog.h"
 #include "rust/game/game_log.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/rts.h"
 #include "rust/game/screens.h"
+#include "rust/sim/units.h"
 
 
 // chain at 0x551c28 (wrapper)
@@ -171,7 +173,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::FixupDelete: delete (std::function<void()>*)p;
         break;
-    case O::UnitOrderReset: EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
+    case O::UnitOrderReset: ee_units_order_reset_world();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
         break;
     case O::ServerLockEnter: PH->mServerMessageQueueLock->Enter();
         break;
@@ -230,7 +232,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     // the captures (TEST ONLY)
     case O::CaptureExecuted: ee_gamecpp_msgcap_executed(MSG);
         break;
-    case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
+    case O::UnitStoreCheck: (unsigned long)ee_units_us_check((unsigned long)a[0]);
         break;
     case O::TestHookSet: return gEEMessageExecutedTestHook != NULL;
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
@@ -301,7 +303,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::IsScenarioGame: return gWorld.mGameOptions.mIsScenarioGame;
     case O::Resources: return gWorld.mGameOptions.mResources;
     case O::CanBuyCivilization: return gWorld.mGameOptions.CanBuyCivilization();
-    case O::CheckUnitList: RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
+    case O::CheckUnitList: ee_rts_unit_check_list(static_cast<const RTSDummyUnit*>(&gWorld.mUnits), static_cast<const char*>("EEPhysics::FlushWorld (start)"));   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
         break;
     case O::SetGameOverFlag: gB529065 = true;
         break;

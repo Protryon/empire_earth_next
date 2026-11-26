@@ -26,6 +26,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EEUnitBehavior.h"
+#include "rust/sim/units.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -81,9 +82,9 @@ extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_CG_SOUND_FRAME: return (int32_t)EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->mSound1Frames[inB];
     case EE_UNITS_CG_FRAME: return (int32_t)EECgObject<EEComplexUnit>((int64_t)inUnit)->mPhysicalModel.GetFrame();
     case EE_UNITS_CG_FIRE_SHOT: EECgObject<EEComplexUnit>((int64_t)inUnit)->mUnitClass->FireShot(EECgObject<EEComplexUnit>((int64_t)inUnit)); return 0;
-    case EE_UNITS_CG_RELOAD_TIMER: EECgObject<EEComplexUnit>((int64_t)inUnit)->SetRandomReloadTimer((long)inB); return 0;
+    case EE_UNITS_CG_RELOAD_TIMER: ee_units_cu_body(EE_UNITS_CU_DO_SET_RANDOM_RELOAD_TIMER, EECgObject<EEComplexUnit>((int64_t)inUnit), (long)inB, 0, 0); return 0;
     case EE_UNITS_CG_SEARCH_TIMER: EECgObject<EEComplexUnit>((int64_t)inUnit)->SetTargetSearchTimer((long)inB); return 0;
-    case EE_UNITS_CG_PATH_ATTEMPTS: EECgObject<EEUGRust>((int64_t)inA)->SetPathAttempts((long)inB); return 0;
+    case EE_UNITS_CG_PATH_ATTEMPTS: ee_units_goal_set_path_attempts(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, reinterpret_cast<EeUnitsGoalBase*>(EECgObject<EEUGRust>((int64_t)inA)), (long)inB); return 0;
     case EE_UNITS_CG_FIRING_HIGH: return EECgObject<EEComplexUnit>((int64_t)inUnit)->mIsFiringHigh;
     // FacesPoint's turret part inC of the unit's model (ee_sim combat cg_query.rs faces_point)
     case EE_UNITS_CG_TURRET_POSITION: memcpy(EECgObject<float>(inB), &(*(EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->mTurretParts.begin() + inC))->mPosition, 3 * sizeof(float)); return 0;
@@ -198,7 +199,7 @@ void EEQueryAct(void* inContext, int32_t inCode, uint64_t inObject, int32_t inAr
     switch (inCode) {
     case EE_COMBAT_A_FIRING_HIGH: EEQueryComplex(inObject)->mIsFiringHigh = true; break;
     case EE_COMBAT_A_WEAPON_TAG: EEQueryComplex(inObject)->mWeaponTagPoint = (unsigned long)(uint32_t)inArg; break;
-    case EE_COMBAT_A_IGNORE: EEQueryContextOf(inContext)->mUnit->IgnoreTarget(EEQueryComplex(inObject)); break;
+    case EE_COMBAT_A_IGNORE: ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, EEQueryContextOf(inContext)->mUnit, EEQueryComplex(inObject), 0); break;
     }
 }
 
@@ -254,12 +255,12 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_HELP_SET_GOAL: EEQueryComplex(inObject)->SetGoal(EEQueryContextOf(inContext)->mHelpGoal, 1, 0); return 0;
     case EE_COMBAT_W_HELP_START_ACTION: EEQueryComplex(inObject)->StartAction(EEQueryContextOf(inContext)->mHelpGoal->GetStartAction()); return 0;
     case EE_COMBAT_W_ACTION_CHANGED: EEQueryComplex(inObject)->GetUnitClass()->ActionChanged(EEQueryComplex(inObject)); return 0;
-    case EE_COMBAT_W_IGNORE: EEQueryComplex(inObject)->IgnoreTarget(EEQueryComplex(inOther)); return 0;
+    case EE_COMBAT_W_IGNORE: ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, EEQueryComplex(inObject), EEQueryComplex(inOther), 0); return 0;
     case EE_COMBAT_W_HAS_LAST_ATTACKER: return EEQueryComplex(inObject)->mLastAttacker != NULL;
     case EE_COMBAT_W_DEREFERENCE_LAST_ATTACKER: EEQueryComplex(inObject)->mLastAttacker->Dereference(); return 0;
     case EE_COMBAT_W_CLEAR_LAST_ATTACKER: EEQueryComplex(inObject)->mLastAttacker = NULL; return 0;
     case EE_COMBAT_W_LAUNCH_STORED_MISSILE: EEQueryContextOf(inContext)->mClass->LaunchStoredMissile(EEQueryComplex(inObject)); return 0;
-    case EE_COMBAT_W_RELOAD: EEQueryComplex(inObject)->SetRandomReloadTimer((long)(*ioArgs)[0]); return 0;
+    case EE_COMBAT_W_RELOAD: ee_units_cu_body(EE_UNITS_CU_DO_SET_RANDOM_RELOAD_TIMER, EEQueryComplex(inObject), (long)(*ioArgs)[0], 0, 0); return 0;
     case EE_COMBAT_W_FIND_DROP: return EEQueryHandleOf(EECombatFindDropLocation(EEQueryComplex(inObject), NULL, EEQueryContextOf(inContext)->mPoint));
     case EE_COMBAT_W_LINE_BLOCKED_AT: return EEIsLineToUnitBlocked(EEQueryComplex(inObject), EEQueryUnit(inOther), EEObjectOf<EEUnit*>((*ioArgs)[0]), EEObjectOf<long>((*ioArgs)[1]), EEObjectOf<long>((*ioArgs)[2]));
     case EE_COMBAT_W_LAUNCH_SHOT: EEQueryContextOf(inContext)->mClass->LaunchShot(EEQueryComplex(inObject), EEQueryUnit(inOther), EEQueryContextOf(inContext)->mPoint, NULL); return 0;

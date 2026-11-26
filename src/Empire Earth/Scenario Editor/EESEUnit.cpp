@@ -47,6 +47,7 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x21
 #include "ee/EEStringIDs.h"
 #include "ee/EEGraphics.h"
 #include "rust/game/gamecpp.h"
+#include "rust/sim/units.h"
 
 
 
@@ -212,7 +213,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEUNX_PREVIEW_WALL: EEPreviewWall(sSeunxTiles, SeunTab(p[1])->mBuildWall.mTechnology, SeunTab(p[1])->mBuildWall.mPlayer); return 0;
     case EE_SCREENS_SEUNX_FIND_GATE_WALL: return EEFindGateWall(EETileCoordinate((long)i[0], (long)i[1]), *static_cast<long*>(p[2]));
     case EE_SCREENS_SEUNX_CREATE_GATE:
-        EEGhostUnit::CreateGate(0.0f, static_cast<EEUnitClass*>(SeunTab(p[1])->mBuildGate.mUnitClass), gWorld.GetPlayer(SeunTab(p[1])->mBuildGate.mPlayer));
+        ee_units_ghost_create_gate(0.0f, static_cast<EEUnitClass*>(SeunTab(p[1])->mBuildGate.mUnitClass), gWorld.GetPlayer(SeunTab(p[1])->mBuildGate.mPlayer));
         return 0;
     case EE_SCREENS_SEUNX_PREVIEW_GATE: EEGhostUnit::PreviewGate(gMouse->mPosition, *static_cast<long*>(p[2])); return 0;
     case EE_SCREENS_SEUNX_SET_DIRECTION: SeunTab(p[1])->mBuildGate.mDirection = (long)i[0]; return 0;

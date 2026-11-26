@@ -31,6 +31,7 @@
 #include <memory>
 #include <stdint.h>
 #include "ee/EEScreensShims.h"
+#include "rust/sim/units.h"
 
 // The unit functors of the manager's passes (the original's ApplyGeneratedEffectsToOthersFunctor,
 // SetAffectedByAreaEffectFunctor, ClearAreaEffectsFunctor, RebuildAreaEffectRegionListFunctor,
@@ -142,8 +143,8 @@ extern "C" uintptr_t ee_screenscpp_aem_manager() { return (uintptr_t)&gAEManager
 #define AEM_M(m) ((EEAEManager*)(m))
 extern "C" void ee_screenscpp_aem_for_each(uint32_t inPass, uintptr_t inArg, uint64_t inPlayer, float inElapsed, float inX, float inY)
 { EEForEachPlayersUnit(EEAETemp(EEAEPassFunctor(inPass, inArg, inPlayer, inElapsed, inX, inY))); }
-extern "C" void ee_screenscpp_aem_apply_area_effects(uintptr_t inUnit) { AEM_U(inUnit)->ApplyAreaEffects(); }
-extern "C" void ee_screenscpp_aem_remove_affecting(uintptr_t inUnit) { AEM_U(inUnit)->RemoveAffectingAreaEffects(); }
+extern "C" void ee_screenscpp_aem_apply_area_effects(uintptr_t inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_APPLY_AREA_EFFECTS, AEM_U(inUnit), 0, 0, 0); }
+extern "C" void ee_screenscpp_aem_remove_affecting(uintptr_t inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_AFFECTING, AEM_U(inUnit), 0, 0, 0); }
 extern "C" uintptr_t ee_screenscpp_aem_affecting_list(uintptr_t inUnit)
 { return (uintptr_t)&AEM_U(inUnit)->mAffectingAreaEffects; }
 extern "C" void ee_screenscpp_aem_update_area_effects(uintptr_t inUnit, float inElapsed)

@@ -79,10 +79,6 @@ public:
     void Reset() { ee_rts_unit_reset(this); }
     // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
     void Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }
-    // 0x23dbda (the mL08 list)
-    void Unlink() { ee_rts_unit_unlink(this); }
-    // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)
-    void UpdateTile(EEMap* inMap) { ee_rts_unit_update_tile(this, inMap); }
     unsigned long GetUnitID() const { return this->mUnitID; }  // (EEWUnitsOffMapInfo::Save 0x161d22 reads an RTSUnit's id through it)
 
     // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)

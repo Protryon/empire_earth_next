@@ -19,6 +19,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
+#include "rust/sim/units.h"
 
 // ---- EEUCTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The transports' base
 // unit class: 0x21b27a..0x21c9e1 (after EEUCTorpedo.cpp). Unit flags: the exe's module set. Its ctor is out of line in
@@ -90,9 +91,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
 
 // 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way) (provisional name)
 
-// New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
-// (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
-void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0); }  // ucx_transports.rs
 
 // Sets up a new transport helicopter as a transport, then lifts it to its flying height
 // ---- EEUCNavalTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval
@@ -148,7 +146,7 @@ extern "C" int64_t ee_units_ucx_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCX_SET_RESOURCE_TYPE: theSimple->SetResourceType(theClass->mResourceType); return 0;
     case EE_UNITS_UCX_RESOURCE_TYPE: return theSimple->mResourceType;
     case EE_UNITS_UCX_SET_RESOURCE_AMOUNT: theSimple->SetResourceAmount(theClass->mResourceAmount); return 0;
-    case EE_UNITS_UCX_UNLOAD_AT_TILE: theUnit->UnloadCargoAtTile((long)inB, (long)inC, inA != 0); return 0;
+    case EE_UNITS_UCX_UNLOAD_AT_TILE: ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, theUnit, (long)inB, (long)inC, inA != 0); return 0;
     case EE_UNITS_UCX_COMPLEX_FIELD_OF: return (uint64_t)(uintptr_t)theSimple->mComplexUnit;
     case EE_UNITS_UCX_CARGO_COUNT_OF: return theOther->GetNumCargoUnits();
     case EE_UNITS_UCX_CARGO_OF: return (uint64_t)(uintptr_t)theOther->GetCargo((unsigned long)inB);

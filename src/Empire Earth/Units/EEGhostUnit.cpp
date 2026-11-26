@@ -90,7 +90,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SET_FOOTPRINT: theGhost->mFootprint[inB][inC] = inA != 0; return 0;
     case EE_UNITS_GHOST_IS_LAND_TERRAIN: return EEIsLandTerrain((long)inB);
     case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return EEIsSpaceDockSiteOpen(theGhost->mTileX, theGhost->mTileY, theGhost->mPlayer);
-    case EE_UNITS_GHOST_DOCK_FACING: return EEGetDockFacing(theGhost->mTileX, theGhost->mTileY);
+    case EE_UNITS_GHOST_DOCK_FACING: return (long)ee_units_ucn_facing(0, (int32_t)(unsigned long)(theGhost->mTileX), (int32_t)(unsigned long)(theGhost->mTileY));
     case EE_UNITS_GHOST_SPACE_DOCK_YAW: return UFloatBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
     case EE_UNITS_GHOST_SET_CAN_PLACE: theGhost->mCanPlace = inB != 0; return 0;
     case EE_UNITS_GHOST_CAN_PLACE: return theGhost->mCanPlace;
@@ -114,7 +114,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = UBitsFloat((uint32_t)(inC)); return 0;
     case EE_UNITS_GHOST_GET_MODEL: theGhost->GetModel(); return 0;
     case EE_UNITS_GHOST_AIRPORT_TILE_SIZE: return EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(gUnitClassTable[kUnitTypeAirport])->GetTileSize();
-    case EE_UNITS_GHOST_FACING_QUARTER: return EEGetFacingQuarter((long)inB, (long)inC);
+    case EE_UNITS_GHOST_FACING_QUARTER: return (long)ee_units_ucn_facing(2, (int32_t)((long)inB), (int32_t)((long)inC));
     case EE_UNITS_GHOST_SET_FARM_SLOT: EEGhostUnit::SetFarmSlotTile(theGhost, (long)inB); return 0;
     case EE_UNITS_GHOST_IS_LAND_BUILDING: return theGhost->mUnitClass->IsLandBuilding();
     case EE_UNITS_GHOST_IS_COMPLEX: return theGhost->mUnitClass->mIsComplex;
@@ -148,7 +148,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_CLASS_TYPE: return EEGhostObject<EEUnitClass>(inA)->GetUnitType();
     case EE_UNITS_GHOST_FARM_TYPE: return EEGetFarmType(EEGhostObject<EEPlayer>(inA));
     case EE_UNITS_GHOST_CLASS_TILE_SIZE: return EEGhostObject<EEUnitClass>(inA)->GetTileSize();
-    case EE_UNITS_GHOST_WALL_PIECE_PART: return EEGetWallPiecePart((long)inB, &sGhostPieceFlag);
+    case EE_UNITS_GHOST_WALL_PIECE_PART: return (long)ee_units_ucb_wall_piece_part((int32_t)((long)inB), &sGhostPieceFlag);
     case EE_UNITS_GHOST_PIECE_FLAG: return sGhostPieceFlag;
     case EE_UNITS_GHOST_SET_ANIMATION: theGhost->SetAnimation((long)inB); return 0;
     case EE_UNITS_GHOST_CLASS_CATEGORY: return EEGhostObject<EEUnitClass>(inA)->mCategory;

@@ -46,6 +46,7 @@
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
 #include "rust/sim/app.h"
+#include "rust/sim/units.h"
 
 // ------------------------------------------------------------------------------------------------ the classes' parts
 // The editor kinds' C++ (ee/EEARust.h): the load text's post from the load thread (the trigger tab's object
@@ -221,7 +222,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_ON_TILE: return static_cast<EEUnit*>(p)->mTileNode != NULL ? 1 : 0;
     case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_PLAYER: return (intptr_t)static_cast<EEComplexUnit*>(p)->mPlayer;
     case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CARGO_COUNT: return static_cast<EEComplexUnit*>(p)->GetNumCargoUnits();
-    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_KILL_CARGO: static_cast<EEComplexUnit*>(p)->KillCargo(); return 0;
+    case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_KILL_CARGO: ee_units_cu_body(EE_UNITS_CU_DO_KILL_CARGO, static_cast<EEComplexUnit*>(p), 0, 0, 0); return 0;
     case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_NEXT_PART: return (intptr_t)static_cast<EEComplexUnit*>(p)->mNextPart;
     case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CONTAINER: return (intptr_t)(EEComplexUnit*)static_cast<EEComplexUnit*>(p)->mContainer;
     case EE_SCREENS_SEAX_SEU + EE_SCREENS_SEU_CARGO: return (intptr_t)(EEUnit*)static_cast<EEComplexUnit*>(p)->GetCargo((unsigned long)(intptr_t)q);
@@ -399,7 +400,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
         return 0;
     case EE_SCREENS_SEAX_UNIT_SET_TILE_X: static_cast<EEUnit*>(p)->mTileX = sSeaxLong[0]; return 0;
     case EE_SCREENS_SEAX_UNIT_SET_TILE_Y: static_cast<EEUnit*>(p)->mTileY = sSeaxLong[1]; return 0;
-    case EE_SCREENS_SEAX_UNIT_UPDATE_TILE: static_cast<EEUnit*>(p)->UpdateTile(gWorld.mMap); return 0;
+    case EE_SCREENS_SEAX_UNIT_UPDATE_TILE: ee_rts_unit_update_tile(static_cast<EEUnit*>(p), gWorld.mMap); return 0;
     case EE_SCREENS_SEAX_PLAYER_UNLOAD_MEDIA: static_cast<EEPlayer*>(p)->UnloadUnitClassMedia(i[0]); return 0;
     case EE_SCREENS_SEAX_CLASS_LAND_BUILDING: return static_cast<EEUnitClass*>(p)->IsLandBuilding();
     case EE_SCREENS_SEAX_UNIT_SET_BUILT: static_cast<EEUnit*>(p)->GetComplexUnit()->SetBuilt(1, 0, 1); return 0;
@@ -407,7 +408,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_UNIT_POWERED: return static_cast<EEUnit*>(p)->mStats->mPower > 0;
     case EE_SCREENS_SEAX_UNIT_SET_POWER: static_cast<EEUnit*>(p)->GetComplexUnit()->SetPower(static_cast<EEUnit*>(p)->mStats->mPower); return 0;
     case EE_SCREENS_SEAX_PLAYER_ADD_PENDING: static_cast<EEPlayer*>(p)->AddPendingUnits(0, 1); return 0;
-    case EE_SCREENS_SEAX_COMPLEX_LOAD_UNIT: static_cast<EEComplexUnit*>(p)->LoadCargo(static_cast<EEUnit*>(q)->GetComplexUnit(), false, 0); return 0;
+    case EE_SCREENS_SEAX_COMPLEX_LOAD_UNIT: (long)ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, static_cast<EEComplexUnit*>(p), (int64_t)(uintptr_t)(static_cast<EEUnit*>(q)->GetComplexUnit()), false, 0); return 0;
     case EE_SCREENS_SEAX_COMPLEX_EDITOR_SELECTED: return static_cast<EEComplexUnit*>(p)->mIsEditorSelected;
     case EE_SCREENS_SEAX_EDITOR_SELECT_COMPLEX: gUIManager->GetScenarioEditorForm()->SelectUnit(static_cast<EEComplexUnit*>(p)); return 0;
     case EE_SCREENS_SEAX_EDITOR_UPDATE_SELECTION: gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_UPDATE_SELECTION); return 0;
@@ -418,7 +419,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_CLASS_PITCHES: return static_cast<EEUnitClass*>(p)->mPitchesWithTerrain != 0;
     case EE_SCREENS_SEAX_COMPLEX_LOCATION: *reinterpret_cast<GETransformation*>(t) = static_cast<EEComplexUnit*>(p)->mPhysicalModel.GetLocation(); return 0;
     case EE_SCREENS_SEAX_COMPLEX_CLASS: return (intptr_t)static_cast<EEComplexUnit*>(p)->GetUnitClass();
-    case EE_SCREENS_SEAX_COMPLEX_LOAD_COMPLEX: static_cast<EEComplexUnit*>(p)->LoadCargo(static_cast<EEUnit*>(q)->mComplexUnit, false, 0); return 0;
+    case EE_SCREENS_SEAX_COMPLEX_LOAD_COMPLEX: (long)ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, static_cast<EEComplexUnit*>(p), (int64_t)(uintptr_t)(static_cast<EEUnit*>(q)->mComplexUnit), false, 0); return 0;
     case EE_SCREENS_SEAX_COMPLEX_MOVE_TO: static_cast<EEComplexUnit*>(p)->MoveTo(i[0], i[1], true); return 0;
     case EE_SCREENS_SEAX_UNIT_MOVE_TO: static_cast<EEUnit*>(p)->MoveTo(i[0], i[1], true); return 0;
     case EE_SCREENS_SEAX_FACING_QUARTER: return (intptr_t)EEGetUnitFacingQuarter(static_cast<EEComplexUnit*>(p));
@@ -441,7 +442,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
         static_cast<EEComplexUnit*>(p)->UnloadCargoAt((unsigned long)(intptr_t)q, GETransformation(static_cast<EEComplexUnit*>(p)->mPhysicalModel.GetLocation()));
         return 0;
     case EE_SCREENS_SEAX_IDS_CLEAR: sSeaxIDs.clear(); return 0;
-    case EE_SCREENS_SEAX_PICK: gUnitPicker.PickUnitsInRectangle(*static_cast<const GERectangle*>(p), i[0], sSeaxIDs); return 0;
+    case EE_SCREENS_SEAX_PICK: ee_gamecpp_pz_box(&gUnitPicker, &(*static_cast<const GERectangle*>(p)), true, NULL, (long)(i[0]), &sSeaxIDs); return 0;
     case EE_SCREENS_SEAX_IDS_COUNT: return (intptr_t)sSeaxIDs.size();
     case EE_SCREENS_SEAX_ID: return (intptr_t)(uint32_t)sSeaxIDs[i[0]];
     }

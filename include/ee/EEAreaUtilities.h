@@ -23,9 +23,6 @@ EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY);
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 // 0x20d571 (EEUCBasicPriest.cpp): the faith a conversion of inUnit costs (provisional name)
 long EEGetConversionCost(EEComplexUnit* inUnit);
-// 0x20da86 (EEUCBasicPriest.cpp; EEActiveGroup::Plan: whether inUnit can convert inTarget now, outFlag: shielded)
-// (provisional name)
-bool EECanConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget, bool& outFlag);
 bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget);
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 // 0x247772: the cast-calamity goal's in-range test at range 0 (inDistanceSquared from inUnit to inTarget)

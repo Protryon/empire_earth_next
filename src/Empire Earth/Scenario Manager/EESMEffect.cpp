@@ -183,7 +183,7 @@ int64_t SMEUnitValue(int64_t inID, int64_t inField)
     case EE_SCENARIO_UV_CLASS_DELETABLE: return theClass->mIsDeletable;
     case EE_SCENARIO_UV_WALL: return theClass->mIsWall;
     case EE_SCENARIO_UV_HAS_GOAL: return theComplex->GetGoal() != NULL;
-    case EE_SCENARIO_UV_TURNS: return theComplex->GetMaxAngularVelocity() > 0.0f;
+    case EE_SCENARIO_UV_TURNS: return ee_units_pm_unit_rate(theComplex, EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY) > 0.0f;
     case EE_SCENARIO_UV_TREE: return theClass->GetIsTree();
     case EE_SCENARIO_UV_ID: return (int64_t)(uint32_t)theUnit->GetUnitID();
     case EE_SCENARIO_UV_CONTAINER: return SMEID(theComplex->mContainer);
@@ -439,7 +439,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_GROUP_ADD_REJECTED: ee_units_group_do(inRun->mGroup, true ? 13 : 14, inRun->mRejected[(size_t)a[0]]);
         return 0;
-    case EE_SCENARIO_WX_ORDER_REPAIR: SMEComplex(a[0])->OrderRepair(SMEUnit(a[1]));
+    case EE_SCENARIO_WX_ORDER_REPAIR: ee_units_cu_body(EE_UNITS_CU_DO_ORDER_REPAIR, SMEComplex(a[0]), (int64_t)(uintptr_t)(SMEUnit(a[1])), 0, 0);
         return 0;
     case EE_SCENARIO_WX_ACKNOWLEDGE: ee_gamecpp_play_for_local(SMEPlayer(a[0]), inRun->mGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1)); return 0;
     case EE_SCENARIO_WX_FIRST_TILE_X: return inRun->mGroup->GetFirstUnit()->GetTileX();
@@ -633,7 +633,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return SMEUnit(a[0])->GetComplexUnit()->GetPlayer() == gWorld.GetCurrentPlayer() && SMEUnit(a[0])->GetComplexUnit()->GetPlayer()->mActiveGroup->Contains(SMEUnit(a[0])->GetComplexUnit());
     case EE_SCENARIO_WX_POST_424: ee_screens_ui_post_icon_bar_once(gUserInterface);
         return 0;
-    case EE_SCENARIO_WX_TAKE_OFF_MAP: SMEUnit(a[0])->GetComplexUnit()->TakeOffMap();
+    case EE_SCENARIO_WX_TAKE_OFF_MAP: ee_units_cu_body(EE_UNITS_CU_DO_TAKE_OFF_MAP, SMEUnit(a[0])->GetComplexUnit(), 0, 0, 0);
         return 0;
     case EE_SCENARIO_WX_OFF_MAP_INFO: return SMEPtr(SMEUnit(a[0])->GetComplexUnit()->GetPlayer()->GetOffMapInfo(SMEUnit(a[0])->GetComplexUnit()));
     case EE_SCENARIO_WX_OFF_MAP_REASON: return SMEUnit(a[0])->GetComplexUnit()->GetPlayer()->GetOffMapInfo(SMEUnit(a[0])->GetComplexUnit())->mReason = 2;

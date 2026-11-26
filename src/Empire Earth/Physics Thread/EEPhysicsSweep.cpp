@@ -46,7 +46,7 @@ extern "C" int64_t ee_units_sweep_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_SWEEP_OP_FLUSH_PLACEMENTS: gWorld.FlushQueuedPlacements(); return 0;
     case EE_UNITS_SWEEP_OP_SET_BUILT: Of<EEUnit>(inA)->GetComplexUnit()->SetBuilt(1, 0, 1); return 0;
     case EE_UNITS_SWEEP_OP_PLACE_ON_GROUND: gWorld.mMap->PlaceUnitOnGround(Of<EEUnit>(inA)); return 0;
-    case EE_UNITS_SWEEP_OP_PRODUCE_UNIT: return Of<EEComplexUnit>(inA)->mUnitClass->ProduceUnit(Of<EEComplexUnit>(inA), Of<EEUnitClass>(inB), false) ? 1 : 0;
+    case EE_UNITS_SWEEP_OP_PRODUCE_UNIT: return ee_units_uc_produce(Of<EEComplexUnit>(inA)->mUnitClass, Of<EEComplexUnit>(inA), Of<EEUnitClass>(inB), false) ? 1 : 0;
     case EE_UNITS_SWEEP_OP_NEW_ATTACK_ORDER: return (int64_t)(uintptr_t)EEUnitGoal::NewAttackUnit(Of<EEComplexUnit>(inA), Of<EEUnit>(inB), true, false);
     case EE_UNITS_SWEEP_OP_POSITION: Of<EEUnit>(inA)->GetPosition(thePoint); return 0;
     case EE_UNITS_SWEEP_OP_NEW_LOCATION_ORDER: return (int64_t)(uintptr_t)EEUnitGoal::NewLocation(&thePoint, false, true, false, 0.0f, false, 0);

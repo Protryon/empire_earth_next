@@ -62,6 +62,7 @@
 #include "rust/game/gamecpp.h"
 #include "rust/game/preload_media.h"
 #include "rust/game/screens.h"
+#include "rust/sim/combat.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 
@@ -188,7 +189,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     switch (inOp) {
     case EE_UNITS_CLS_MV_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&p, &sMvTile[0], &sMvTile[1]));
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
-    case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
+    case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? ee_units_pm_unit_rate(inUnit, EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY) : inUnit->GetMaxVelocity(); return 0;
     case EE_UNITS_CLS_MV_GOAL: return EEObj(inUnit->mGoalState);
     case EE_UNITS_CLS_MV_ACTIVE_GOAL: return EEObj(inUnit->mActiveGoal);
     case EE_UNITS_CLS_MV_BLOCKING_UNIT: return EEObj(inUnit->mBlockingUnit);
@@ -210,14 +211,14 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_MV_SET_SIDESTEP: theGoal->SetSidestepCount((unsigned long)inC); return 0;
     case EE_UNITS_CLS_MV_SET_GROUP_PATH_STATE: theGoal->SetGroupPathState((unsigned char)inC); return 0;
     case EE_UNITS_CLS_MV_ATTACK_TARGET: return EEObj(theGoal->GetAttackTarget()->GetComplexUnit());
-    case EE_UNITS_CLS_MV_IGNORE_TARGET: inUnit->IgnoreTarget(theOther); return 0;
+    case EE_UNITS_CLS_MV_IGNORE_TARGET: ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, inUnit, theOther, 0); return 0;
     case EE_UNITS_CLS_MV_MELEE_RETARGET: {
         EETileCoordinate theTile = inUnit->GetTile();
         EEFOFindNewTargetInMeleeRange theScreen(inUnit, theOther);
         return EEFindNewTarget(&theScreen, (EEUnitGoal*)(uintptr_t)inC, inUnit, &theTile, 1,
                                theOther != NULL ? theOther->mUnitClass->mIsWall : false, 1);
     }
-    case EE_UNITS_CLS_MV_SET_BLOCKING: inUnit->SetBlockingUnit((RTSUnit*)(uintptr_t)inB); return 0;
+    case EE_UNITS_CLS_MV_SET_BLOCKING: ee_units_cu_body(EE_UNITS_CU_DO_SET_BLOCKING_UNIT, inUnit, (int64_t)(uintptr_t)((RTSUnit*)(uintptr_t)inB), 0, 0); return 0;
     // the waypoints' operations: Rust (cls_host.rs waypoint_op)
     case EE_UNITS_CLS_MV_DISTANCE_3D: io->f = inUnit->DistanceSquared3D(p); return 0;
     case EE_UNITS_CLS_MV_BOUNDED: inUnit->mBoundedPathTiles.clear(); return 0;
@@ -225,7 +226,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_MV_SET_VELOCITY: inUnit->SetVelocity(io->f); return 0;
     case EE_UNITS_CLS_MV_START_ACTION: inUnit->StartAction((long)inC); return 0;
     case EE_UNITS_CLS_MV_ACTION_CHANGED: ((EEUnitClass*)(uintptr_t)inB)->ActionChanged(inUnit); return 0;
-    case EE_UNITS_CLS_MV_UPDATE_WATER_STATE: inUnit->UpdateWaterState(true); return 0;
+    case EE_UNITS_CLS_MV_UPDATE_WATER_STATE: ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_WATER_STATE, inUnit, true, 0, 0); return 0;
     case EE_UNITS_CLS_MV_CONTACT_DIFFERS: return inUnit->mInitialContactLocation != p;
     case EE_UNITS_CLS_MV_INITIAL_CONTACT: inUnit->mInitialContactLocation = p; return 0;
     // PathToGoal's request: Rust (cls_move_host.rs) but the player's virtual
@@ -251,7 +252,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT: p = EELocationGoalPoint(inUnit->GetGoal()); return 0;
     case EE_UNITS_CLS_CR_ATC_SLOTS: return ee_units_atc_slot_count(inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1]);
     case EE_UNITS_CLS_CR_HOME_FIRST_SLOT:
-        inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1], 0)));
+        ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, inUnit, (int64_t)(uintptr_t)(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1], 0))), 0, 0);
         return 0;
     case EE_UNITS_CLS_CR_KILL: inUnit->Kill(true, false, false); return 0;
     case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
@@ -262,7 +263,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_LV_SET_TILE_HEIGHT: ((EEMapTile*)(uintptr_t)inUnit)->mHeight = io->f; return 0;
     case EE_UNITS_CLS_LV_MAP_MESH: return EEObj(&::gWorld.mMap->mTerrainMesh);
     case EE_UNITS_CLS_LV_CREATE_UNIT: return EEObj(((EEUnitClass*)(uintptr_t)inB)->CreateUnit((long)inC, (long)inD, (long)io->a, io->b != 0, inUnit)->mComplexUnit);
-    case EE_UNITS_CLS_LV_LINK_PART: inUnit->LinkPart(theOther); return 0;
+    case EE_UNITS_CLS_LV_LINK_PART: ee_units_cu_body(EE_UNITS_CU_DO_LINK_PART, inUnit, (int64_t)(uintptr_t)theOther, 0, 0); return 0;
     case EE_UNITS_CLS_LV_SET_FACING: inUnit->SetFacing((unsigned long)inC); return 0;
     case EE_UNITS_CLS_LV_CAMERA_OFF: gCameraFollowing = false; return 0;
     // the status ticks' (cls_status.rs)
@@ -502,9 +503,9 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CREATE_AT:
         return (uint64_t)(uintptr_t)EEUcObject<EEUnitClass>(inA)
             ->CreateUnitAt(*EEUcObject<GETransformation>((uint64_t)inB), theUnit->GetPlayer()->GetPlayerID(), false, theUnit)->mComplexUnit;
-    case EE_UNITS_UC_LOAD_CARGO: theUnit->LoadCargo(theOther, true, 0); return 0;
+    case EE_UNITS_UC_LOAD_CARGO: (long)ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, theUnit, (int64_t)(uintptr_t)theOther, true, 0); return 0;
     case EE_UNITS_UC_PARATROOPER_BOMBER: return theOther->GetUnitClass()->mIsParatrooperBomber;
-    case EE_UNITS_UC_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, -1); return 0;
+    case EE_UNITS_UC_CARRIER_AIRCRAFT: ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, theOther, 0, -1, 0, NULL); return 0;
     case EE_UNITS_UC_CLASS_FAMILY: return EEUcObject<EEUnitClass>(inA)->mFamily;
     case EE_UNITS_UC_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
     case EE_UNITS_UC_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
@@ -531,7 +532,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_R_HEIGHT: f[0] = theUnit->mHeight; return 0;
     case EE_UNITS_UC_R_WORLD_FLOAT: f[0] = gWorldTable.GetFloatValue((EEWorldConstant)inB); return 0;
     case EE_UNITS_UC_R_HIGH_GROUND_BONUS: f[0] = theUnit->mPlayer->mHighGroundBonus; return 0;
-    case EE_UNITS_UC_R_ELEVATION: f[0] = EECombatElevation(*EEUcObject<EeCombatElevationIn>(inA)); return 0;
+    case EE_UNITS_UC_R_ELEVATION: f[0] = ee_combat_elevation_captured(&(*EEUcObject<EeCombatElevationIn>(inA))); return 0;
     case EE_UNITS_UC_R_TILE_X_OF: return EEUcObject<EEUnit>(inA)->GetTileX();
     case EE_UNITS_UC_R_TILE_Y_OF: return EEUcObject<EEUnit>(inA)->GetTileY();
     case EE_UNITS_UC_R_TILE_HEIGHT_OF: f[0] = EEUcObject<EEUnit>(inA)->mTile->mHeight; return 0;
@@ -610,7 +611,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_QUEUE_LEN: return theUnit->GetQueueGoals((unsigned long)inB).size();
     case EE_UNITS_UC_QUEUE_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC];
     case EE_UNITS_UC_GOAL_SUITS: return EEUcObject<EEUnitGoal>(inA)->Suits(EEUcObject<EEComplexUnit>((uint64_t)inB));
-    case EE_UNITS_UC_ADD_BUILD_TARGET: theOther->AddBuildTarget(EEBuildRepairGoalCast(EEUcObject<EEUnitGoal>((uint64_t)inB))->GetBuildTarget()); return 0;
+    case EE_UNITS_UC_ADD_BUILD_TARGET: ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, theOther, (int64_t)(uintptr_t)(EEBuildRepairGoalCast(EEUcObject<EEUnitGoal>((uint64_t)inB))->GetBuildTarget()), 0, 0); return 0;
     case EE_UNITS_UC_CAN_GARRISON: return theOther->GetUnitClass()->mCanGarrison;
     case EE_UNITS_UC_GOAL_CLONE: return (uint64_t)(uintptr_t)EEUcObject<EEUnitGoal>(inA)->Clone();
     case EE_UNITS_UC_GOAL_IS_LOAD: return EEUcObject<EEUnitGoal>(inA)->IsLoadGoal();
@@ -651,15 +652,15 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_RESEARCH_MAKES_UNIT: return theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mMakesUnit;
     case EE_UNITS_UC_RESEARCH_CLASS: return (uint64_t)(uintptr_t)gUnitClassTable[theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mUnitClass];
     case EE_UNITS_UC_IS_LAND_BUILDING: return EEUcObject<EEUnitClass>(inA)->IsLandBuilding();
-    case EE_UNITS_UC_PRODUCE_UNIT: return theClass->ProduceUnit(theUnit, EEUcObject<EEUnitClass>(inA), true);
+    case EE_UNITS_UC_PRODUCE_UNIT: return ee_units_uc_produce(theClass, theUnit, EEUcObject<EEUnitClass>(inA), true);
     case EE_UNITS_UC_RESEARCH: theUnit->mPlayer->mTechnologies->Research(theUnit->mCurrentResearch, theUnit); return 0;
-    case EE_UNITS_UC_PLAY_NO_EFFECT: theUnit->PlayEffect(100000); return 0;
+    case EE_UNITS_UC_PLAY_NO_EFFECT: ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, theUnit, 100000, 0, 0); return 0;
     case EE_UNITS_UC_SET_PRODUCTION_TIME: theUnit->SetProductionTime((long)inB); return 0;
     case EE_UNITS_UC_UPDATE_ORBITALS: theUnit->UpdateOrbitals(); return 0;
     case EE_UNITS_UC_UPDATE_CAMOUFLAGE_TIMER: theClass->UpdateCamouflageTimer(theUnit); return 0;
-    case EE_UNITS_UC_UPDATE_EFFECTS: theClass->UpdateEffects(theUnit); return 0;
+    case EE_UNITS_UC_UPDATE_EFFECTS: ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE_EFFECTS, theClass, theUnit, 0, 0, 0, 0.0f); return 0;
     case EE_UNITS_UC_COMMAND_KIND: return theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0;
-    case EE_UNITS_UC_UPDATE_ROTTING: return (long)theUnit->UpdateRottingAwayTime();
+    case EE_UNITS_UC_UPDATE_ROTTING: return (long)(long)ee_units_ucp_call(EE_UNITS_UCP_DO_ROTTING_TIME, NULL, theUnit, 0, 0);
     case EE_UNITS_UC_NEXT_PART: return (uint64_t)(uintptr_t)(inA != 0 ? theOther : theUnit)->mNextPart;
     case EE_UNITS_UC_SET_ROTTING: theOther->SetRottingAwayTime((long)inB); return 0;
     case EE_UNITS_UC_CONTINUE_PRODUCTION: theUnit->ContinueProduction(); return 0;
@@ -669,10 +670,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_HAS_PHYSICS_MODEL: return theClass->mPhysicsModel != NULL;
     case EE_UNITS_UC_TILE_X: return theUnit->GetTileX();
     case EE_UNITS_UC_PHYSICS_STEP: theClass->mPhysicsModel->Step(theUnit); return 0;
-    case EE_UNITS_UC_UPDATE_RELOAD_TIMER: theUnit->UpdateReloadTimer(); return 0;
-    case EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER: theUnit->UpdateTargetSearchTimer(); return 0;
+    case EE_UNITS_UC_UPDATE_RELOAD_TIMER: ee_units_ucp_call(EE_UNITS_UCP_DO_RELOAD_TIMER, NULL, theUnit, 0, 0); return 0;
+    case EE_UNITS_UC_UPDATE_TARGET_SEARCH_TIMER: ee_units_ucp_call(EE_UNITS_UCP_DO_TARGET_SEARCH_TIMER, NULL, theUnit, 0, 0); return 0;
     case EE_UNITS_UC_COMMAND_TYPE: return theUnit->GetCommandType();
-    case EE_UNITS_UC_UPDATE_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
+    case EE_UNITS_UC_UPDATE_RESOURCES_ROTTING: ee_units_ucp_call(EE_UNITS_UCP_DO_RESOURCES_ROTTING, NULL, theUnit, 0, 0); return 0;
     case EE_UNITS_UC_UPDATE_DONE: theClass->UpdateDone(theUnit); return 0;
     // RefreshSound's
     case EE_UNITS_UC_HAS_SOUND: return theUnit->mSound != NULL;
@@ -684,7 +685,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_MODEL_SOUND1: return (uint64_t)(uintptr_t)theUnit->GetModel()->mSounds1[theUnit->GetAnimation()];
     case EE_UNITS_UC_MODEL_SOUND2: return (uint64_t)(uintptr_t)theUnit->GetModel()->mSounds2[theUnit->mAnimation];
     case EE_UNITS_UC_SAMPLE_ID: return EEUcObject<EESoundObject>(inA)->mSampleID;
-    case EE_UNITS_UC_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, EEUcObject<EESoundObject>(inA), &f[0], &f[1], &f[2]); return 0;
+    case EE_UNITS_UC_SOUND_PARAMETERS: ee_units_uck_sound(theClass, theUnit, EEUcObject<EESoundObject>(inA), &f[0], &f[1], &f[2]); return 0;
     case EE_UNITS_UC_SET_SOUND_PARAMETERS: gSoundManager->SetSoundParameters(theUnit->mSound, f[0], f[1], f[2]); return 0;
     // CreateDeathUnit's
     case EE_UNITS_UC_DEATH_SPAWN_CLASS: return (uint64_t)(uintptr_t)theClass->mDeathSpawnClass;
@@ -718,7 +719,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_NUM_GOAL_QUEUES: return theClass->GetNumGoalQueues();
     case EE_UNITS_UC_LEVEL_GROUND: theClass->LevelGround(&EEUcObject<EEMap>(inA)->mTerrainMesh, (unsigned long)inB, (unsigned long)inC, &f[0]); return 0;
     case EE_UNITS_UC_COMPLEX_CREATE: return EEObj(EEComplexUnit::Create(theClass, *EEUcObject<GETransformation>(inA), EEUcObject<EEPlayer>((uint64_t)inB), (unsigned long)inC));
-    case EE_UNITS_UC_UNIT_CREATED: theClass->UnitCreated(theOther); return 0;
+    case EE_UNITS_UC_UNIT_CREATED: ee_units_uck_dispatch(EE_UNITS_BODY_UNIT_CREATED, theClass, theOther, 0, 0, 0, NULL); return 0;
     case EE_UNITS_UC_PENDING_PUSH: EEUcObject<EEPlayer>(inA)->mPendingUnits.push_back(EEUcObject<RTSUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UC_REFERENCE: EEUcObject<RTSUnit>(inA)->Reference(); return 0;
     case EE_UNITS_UC_NUM_UNITS_INC: ++theClass->mNumUnits; return 0;
@@ -727,7 +728,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_PLAYER_AT: return EEObj(::gWorld.mPlayers[inB]);
     case EE_UNITS_UC_FREE_CAMERA: return gFreeCamera;
     case EE_UNITS_UC_CHECK_BUTTONS: ee_units_player_rest(EEUcObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)theClass->mUnitType, 1, 0); return 0;
-    case EE_UNITS_UC_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
+    case EE_UNITS_UC_SET_PLANET: theOther->mPlanetID = (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_LAND_CONTINENT_OF, (uint64_t)(uintptr_t)theOther, 0, 0, 0); return 0;
     case EE_UNITS_UC_SET_ORIENTATION: theOther->mOrientation = GEOrientation(f[0], f[1], f[2]); return 0;
     case EE_UNITS_UC_LOAD_CLASS_MEDIA_OF: ee_units_player_rest(EEUcObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)theClass->mUnitType, 0, 0); return 0;
     case EE_UNITS_UC_UNIT_LOAD_MEDIA: EEUcObject<EEUnit>(inA)->LoadMedia(inB != 0); return 0;
@@ -735,7 +736,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CREATE_RUNWAYS: theClass->CreateRunways(theOther, EEUcObject<EEPlayer>((uint64_t)inB), inC != 0); return 0;
     case EE_UNITS_UC_ATTACHED_EFFECT: return EEObj(theClass->mAttachedEffect);
     case EE_UNITS_UC_ATTACHED_EFFECT_ON: gWorld.mEffectManager->CreateUnitEffect(EEUcObject<EEUnit>(inA), theClass->mAttachedEffect, NULL, inB != 0, 0, 0); return 0;
-    case EE_UNITS_UC_INSERT_UNLISTED: EEUnitStoreInsertUnlisted(EEUcObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UC_INSERT_UNLISTED: ee_units_store_insert_unlisted_object((uint64_t)(uintptr_t)(EEUcObject<EEUnit>(inA))); return 0;
     case EE_UNITS_UC_FARM_TYPE: return EEGetFarmType(EEUcObject<EEPlayer>(inA));
     case EE_UNITS_UC_CLASS_AT: return EEObj(gUnitClassTable[(size_t)inB]);
     case EE_UNITS_UC_CLASS_TILE_SIZE: return EEUcObject<EEUnitClass>(inA)->mTileSize;
@@ -836,11 +837,11 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_YAW_VELOCITY: f[0] = theUnit->mAngularVelocity.GetYaw(); return 0;
     case EE_UNITS_UC_MAX_ANGULAR_VELOCITY: f[0] = theClass->mMaxAngularVelocity; return 0;
     case EE_UNITS_UC_SET_PAUSED: theUnit->SetIsAnimationPaused(inB != 0); return 0;
-    case EE_UNITS_UC_SET_ANIMATION_FRAME: theUnit->SetAnimationFrame((unsigned long)inB); return 0;
+    case EE_UNITS_UC_SET_ANIMATION_FRAME: ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, theUnit, NULL, (int64_t)((unsigned long)inB)); return 0;
     case EE_UNITS_UC_SET_ANIMATION_TIME: theUnit->SetAnimationTime((unsigned long)inB); return 0;
     case EE_UNITS_UC_SOUND_INSTANCE: return EEObj(theUnit->mSound);
     case EE_UNITS_UC_STOP_SOUND: gSoundManager->Stop(EEUcObject<SESMInstanceNode>(inA), !gSoundManager->GetIsLooping(EEUcObject<SESMInstanceNode>(inA))); return 0;
-    case EE_UNITS_UC_RELEASE_SOUND: theUnit->ReleaseSound(); return 0;
+    case EE_UNITS_UC_RELEASE_SOUND: ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_SOUND, theUnit, NULL, 0); return 0;
     case EE_UNITS_UC_RANDOM: f[0] = gPhysics->GetRandom(); return 0;
     case EE_UNITS_UC_IS_HORSE: return theClass->mIsHorse;
     case EE_UNITS_UC_MODEL_TAGS: return EEObj(theUnit->GetModel()->GetTagPoints((unsigned long)inB, (long)inC));
@@ -857,7 +858,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_IS_LOOPING: return gSoundManager->GetIsLooping(EEUcObject<SESMInstanceNode>(inA));
     case EE_UNITS_UC_PLAY_REFERENCED:
         return EEObj(gSoundManager->PlayAndReturnReferencedNode(EEUcObject<EESoundObject>(inA)->GetSampleID(), f[0], f[1], f[2], EEUcObject<EESoundObject>(inA)->GetLooping(), const_cast<char*>((const char*)theClass->mName)));
-    case EE_UNITS_UC_SET_SOUND: theUnit->SetSound(EEUcObject<SESMInstanceNode>(inA)); return 0;
+    case EE_UNITS_UC_SET_SOUND: ee_units_cu_small(EE_UNITS_CU_S_DO_SET_SOUND, theUnit, EEUcObject<SESMInstanceNode>(inA), 0); return 0;
     case EE_UNITS_UC_NODE_DEREFERENCE: EEUcObject<SESMInstanceNode>(inA)->Dereference(); return 0;
     case EE_UNITS_UC_ATTACK_FRAME_SET: return EEGetAttackFrameSet(theUnit);
     case EE_UNITS_UC_FIRE_SHOT: theClass->FireShot(theUnit); return 0;
@@ -889,7 +890,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CARGO_COUNT: return theUnit->GetNumCargoUnits();
     case EE_UNITS_UC_WORLD_IN_CINEMATIC: return ::gWorld.mInCinematic;
     case EE_UNITS_UC_COMBAT_TIMER:
-        sUcTimer = EECombatTimer(EeCombatTimerIn{(int32_t)theUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs, (int32_t)EEGetRules().mCombat.mRegenerationInterval});
+        sUcTimer = ee_combat_timer_captured(&(EeCombatTimerIn{(int32_t)theUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs, (int32_t)EEGetRules().mCombat.mRegenerationInterval}));
         return sUcTimer.due;
     case EE_UNITS_UC_TIMER_VALUE: return sUcTimer.timer;
     case EE_UNITS_UC_GET_HIT_POINTS: return theUnit->GetHitPoints();

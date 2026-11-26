@@ -33,18 +33,7 @@ public:
     bool HasDoppelganger(const EETile* inTile, EEUnit* inUnit) { return ee_units_dm_body(EE_UNITS_DM_DO_HAS, const_cast<EETile*>(inTile), (int64_t)(uintptr_t)inUnit, 0, 0) != 0; }   // 0x202285: for any player (provisional name)
     // 0x2022c4: inUnit's doppelganger for player inPlayer on inTile, 0 if none (provisional name)
     EEDoppelganger* GetDoppelganger(const EETile* inTile, EEUnit* inUnit, long inPlayer) { return reinterpret_cast<EEDoppelganger*>(static_cast<uintptr_t>(ee_units_dm_body(EE_UNITS_DM_DO_GET, const_cast<EETile*>(inTile), (int64_t)(uintptr_t)inUnit, inPlayer, 0))); }
-    // 0x202318: puts inDoppelganger on the tiles of its unit's footprint at (inX, inY) (provisional name)
-    void AddToTiles(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIncludeRunways) { ee_units_dm_body(EE_UNITS_DM_DO_ADD_TO_TILES, inDoppelganger, inX, inY, inIncludeRunways); }
-    // 0x20248b (EEPlayer::RemoveSharedSight; provisional name): as a tile drops out of a player's sight, leaves him
-    // doppelgangers of the resources, ambients, fish and built land buildings there that are wholly out of sight
-    void TileHidden(RTSTile* inTile, EEPlayer* inPlayer) { ee_units_dm_body(EE_UNITS_DM_DO_TILE_HIDDEN, inTile, (int64_t)(uintptr_t)inPlayer, 0, 0); }
-    // remembers a resource, ambient, fish or building its own player cannot see (with a visibility map)
-    void AddForUnseenUnit(EEComplexUnit* inUnit) { ee_units_dm_body(EE_UNITS_DM_DO_ADD_FOR_UNSEEN, inUnit, 0, 0, 0); }
     EEDoppelganger* NewDoppelganger(bool inComplex);   // 0x2028d6: from one of the pools (provisional name)
-    // as a tile comes into a player's sight: his doppelgangers on it off the map and minimap, freed
-    void TileShown(EETile* inTile, long inX, long inY, EEPlayer* inPlayer) { ee_units_dm_body(EE_UNITS_DM_DO_TILE_SHOWN, inTile, inX, inY, (int64_t)(uintptr_t)inPlayer); }
-    // every doppelganger a player sees or owns the unit of, over the whole map, removed and freed
-    void UnregisterPlayer(EEPlayer* inPlayer) { ee_units_dm_body(EE_UNITS_DM_DO_UNREGISTER_PLAYER, inPlayer, 0, 0, 0); }
     // 0x202c70 / 0x202c85: the pools' SetSize(inChunkSize, inMaxChunks, 1) (provisional names)
     bool SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks) { return this->mPool.SetSize(inChunkSize, inMaxChunks, 1); }
     bool SetComplexPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks) { return this->mComplexPool.SetSize(inChunkSize, inMaxChunks, 1); }

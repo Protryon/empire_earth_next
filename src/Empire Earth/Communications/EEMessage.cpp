@@ -355,13 +355,13 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CxNumCargoUnits: return CX->GetNumCargoUnits();
     case O::CxHasCargo: return CX->HasCargo((EEComplexUnit*)a[0]);
     case O::CxUnloadCargoNow: return CX->UnloadCargoNow((EEComplexUnit*)a[0]);
-    case O::CxGoFanatic: CX->GoFanatic();
+    case O::CxGoFanatic: ee_units_cu_body(EE_UNITS_CU_DO_GO_FANATIC, CX, 0, 0, 0);
         break;
-    case O::CxToggleJit: CX->ToggleJITManufacturing();
+    case O::CxToggleJit: ee_units_cu_body(EE_UNITS_CU_DO_TOGGLE_JIT, CX, 0, 0, 0);
         break;
     case O::CxUpdateJit: CX->UpdateJITManufacturing();
         break;
-    case O::CxRemoveResearch: CX->RemoveResearch((long)a[0], 0);
+    case O::CxRemoveResearch: ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_RESEARCH, CX, (long)a[0], 0, 0);
         break;
     case O::CxSetLocked: CX->SetLocked(a[0] != 0);
         break;
@@ -373,9 +373,9 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::BehaviorAt: return P64(EEUnitBehavior::sTable[a[0]]);
     case O::CxSetBehavior: CX->mBehavior = (EEUnitBehavior*)a[0];
         break;
-    case O::CxSetHomeBase: CX->SetHomeBase((EEComplexUnit*)a[0]);
+    case O::CxSetHomeBase: ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, CX, (int64_t)(uintptr_t)((EEComplexUnit*)a[0]), 0, 0);
         break;
-    case O::CxClearAllGoalQueues: CX->ClearAllGoalQueues();
+    case O::CxClearAllGoalQueues: ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES, CX, NULL, 0);
         break;
     case O::CxQueueGoal: CX->QueueGoal((EEUnitGoal*)a[0], (long)a[1]);
         break;
@@ -396,7 +396,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::UnloadGoalTransport: return P64(((EEUGRust*)p)->GetUnloadTransport());
     case O::UnTreeTechnology: return P64(UN->GetPlayer()->GetTechTree()->Get(UN->GetUnitClass()->GetTechnology()));
     case O::UcIsTransport: return UC->IsTransport();
-    case O::UcUnloadFailedText: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(UC)->GetUnloadFailedTextID();
+    case O::UcUnloadFailedText: return (long)ee_units_uck_dispatch(EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID, EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(UC), NULL, 0, 0, 0, NULL);
     case O::UcAsGate: return P64(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UC));
     case O::GateSecondPart: return P64(UC->GetSecondPart((EEComplexUnit*)a[0]));
     case O::GateFourthPart: return P64(UC->GetFourthPart((EEComplexUnit*)a[0]));
@@ -556,7 +556,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::C11UlongsCount: return (int64_t)((std::vector<unsigned long>*)p)->size();
     case O::C11UlongsAt: return (int64_t)(*(std::vector<unsigned long>*)p)[a[0]];
-    case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);
+    case O::C11PickUnits: ee_gamecpp_pz_box(&gUnitPicker, (const GERectangle*)a[0], false, gWorld.GetCurrentPlayer(), (long)a[1], (std::vector<unsigned long>*)p);
         break;
     case O::C11CurrentPlayerId: return (int64_t)(uint32_t)gWorld.GetCurrentPlayer()->mPlayerID;
     case O::C11MsgListAssign: MSG->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);

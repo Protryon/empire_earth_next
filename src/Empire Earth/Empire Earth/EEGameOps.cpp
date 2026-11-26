@@ -91,7 +91,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxSetTransformation: CX->SetTransformation(TR(0), a[1] != 0);
         break;
-    case O::CxClearBuildTargets: CX->ClearBuildTargets();
+    case O::CxClearBuildTargets: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, CX, 0, 0, 0);
         break;
     case O::CxNumGoalQueues: return CX->GetNumGoalQueues();
     case O::CxClearGoalQueue: CX->ClearGoalQueue((unsigned long)a[0]);
@@ -102,13 +102,13 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxStartAction: CX->StartAction((long)a[0]);
         break;
-    case O::CxHalt: CX->Halt();
+    case O::CxHalt: ee_units_cu_body(EE_UNITS_CU_DO_HALT, CX, 0, 0, 0);
         break;
     case O::CxSetBuilt: CX->SetBuilt((long)a[0], (long)a[1], (long)a[2]);
         break;
     case O::CxSetIsTinted: CX->SetIsTinted(a[0] != 0);
         break;
-    case O::CxTakeOffMap: CX->TakeOffMap();
+    case O::CxTakeOffMap: ee_units_cu_body(EE_UNITS_CU_DO_TAKE_OFF_MAP, CX, 0, 0, 0);
         break;
     case O::CxSetHitPoints: CX->SetHitPoints((long)a[0]);
         break;
@@ -116,7 +116,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxGetEffect: return CX->GetEffect((long)a[0], *(EEGraphicEffect**)a[1]);
     case O::CxIsCarried: return CX->IsCarried();
-    case O::CxOutermostCarrier: return P64(CX->GetOutermostCarrier());
+    case O::CxOutermostCarrier: return P64((EEComplexUnit*)ee_units_cu_outermost_carrier(CX));
     case O::CxWaypointCount: return (int64_t)CX->mWaypoints.size();
     case O::CxNextWaypoint: return CX->NextWaypoint();
     case O::CxGetPathStart: return CX->GetPathStart(PT(0), *(float*)a[1]);
@@ -146,9 +146,9 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxSetOrientation: CX->mOrientation = GEOrientation(f[0], f[1], f[2]);
         break;
-    case O::CxPlayEffect: CX->PlayEffect((long)a[0]);
+    case O::CxPlayEffect: ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, CX, (long)a[0], 0, 0);
         break;
-    case O::PlayUnitEffect: EEPlayUnitEffect(CX, (long)a[0]);
+    case O::PlayUnitEffect: ee_units_ucp_call(EE_UNITS_UCP_DO_PLAY_UNIT_EFFECT, NULL, CX, 0, (long)a[0]);
         break;
     case O::CxSightOffHere: CX->SightOffHere();
         break;
@@ -454,7 +454,7 @@ extern "C" double ee_gamecpp_f(EeGameCpp inOp, uintptr_t p, const int64_t* a, co
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::CxEffectHeight: return CX->GetEffectHeight(a[0] != 0);
+    case O::CxEffectHeight: return ee_units_cu_more(EE_UNITS_CUM_DO_EFFECT_HEIGHT, CX, a[0] != 0, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);
     case O::CxMaxVelocity: return CX->GetMaxVelocity();
     case O::UcHeightAt: return UC->GetHeightAt((EEComplexUnit*)a[0], PT(1));
     case O::TileHeight: return ((EEMapTile*)p)->mHeight;

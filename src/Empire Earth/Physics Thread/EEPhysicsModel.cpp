@@ -30,6 +30,7 @@
 #include "ee/EECombatGoals.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnitClassKinds.h"
+#include "rust/sim/units.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -202,7 +203,7 @@ extern "C" void ee_units_pm_host_set_animation(uint64_t inObject, int32_t inA, i
 extern "C" void ee_units_pm_host_set_blocking_unit(uint64_t inObject, uint64_t inBlocker)
 {
     // an EEUnit or EEComplexUnit: RTSUnit is the first base of both
-    PMUnit(inObject)->SetBlockingUnit(reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inBlocker)));
+    ee_units_cu_body(EE_UNITS_CU_DO_SET_BLOCKING_UNIT, PMUnit(inObject), (int64_t)(uintptr_t)(reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inBlocker))), 0, 0);
 }
 
 extern "C" void ee_units_pm_host_clear_goal_queue(uint64_t inObject)

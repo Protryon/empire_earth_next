@@ -85,6 +85,7 @@
 #include "rust/game/screens.h"
 #include "rust/sim/ai.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -528,18 +529,18 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::UnLink: ((RTSUnit*)p)->Link((RTSUnit*)a[0]);
         break;
-    case O::UnUnlink: ((RTSUnit*)p)->Unlink();
+    case O::UnUnlink: ee_rts_unit_unlink(((RTSUnit*)p));
         break;
-    case O::RtsUpdateTile: ((RTSUnit*)p)->UpdateTile((EEMap*)a[0]);
+    case O::RtsUpdateTile: ee_rts_unit_update_tile(((RTSUnit*)p), (EEMap*)a[0]);
         break;
     case O::DummyHead: return P64(RTSDummyHead((RTSUnit*)p));
-    case O::CxClearCollisionState: CX->ClearCollisionState();
+    case O::CxClearCollisionState: ee_units_cu_clear_collision_state(CX);
         break;
-    case O::CxMakeAreaEffects: CX->MakeAreaEffects();
+    case O::CxMakeAreaEffects: ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, CX, 0, 0, 0);
         break;
-    case O::CxClearContacts: CX->ClearContacts();
+    case O::CxClearContacts: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_CONTACTS, CX, 0, 0, 0);
         break;
-    case O::CxFindContacts: CX->FindContacts();
+    case O::CxFindContacts: ee_units_cu_body(EE_UNITS_CU_DO_FIND_CONTACTS, CX, 0, 0, 0);
         break;
     case O::CxPreviousPart: return P64(CX->mPreviousPart);
     case O::CxContainer: return P64(CX->mContainer);

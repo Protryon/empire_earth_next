@@ -17,6 +17,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
+#include "rust/sim/units.h"
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);
@@ -37,7 +38,7 @@ extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int
     case EE_UNITS_CK_IS_EDGE: return gWorld.mMap->IsEdgeTile((long)inC, (long)inD);
     case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
     case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>((*ioF)), (long)inC, (long)inD, 0, 0);
-    case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
+    case EE_UNITS_CK_DOCK_FACING: return (long)ee_units_ucn_facing(0, (int32_t)(unsigned long)((long)inC), (int32_t)(unsigned long)((long)inD));
     case EE_UNITS_CK_COMMAND_TYPE: return CkObj<EEComplexUnit>(inA)->GetCommandType();
     case EE_UNITS_CK_ROT_FRACTION: return (int64_t)UFloatBits((float)CkObj<EEComplexUnit>(inA)->mComplexUnit->mRottingAwayTime / (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime);
     case EE_UNITS_CK_HAS_ROTTING_TIME: return (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime != 0;

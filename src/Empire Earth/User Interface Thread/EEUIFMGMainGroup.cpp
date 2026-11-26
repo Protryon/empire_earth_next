@@ -53,6 +53,7 @@ extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return (lo
 #include "rust/game/physics.h"
 #include "rust/game/screens.h"
 #include "rust/sim/tech.h"
+#include "rust/sim/units.h"
 #define MG(x) reinterpret_cast<EEUIFMGMainGroup*>(x)
 #define MGU(x) reinterpret_cast<EEUnit*>(x)
 #define MGC(x) reinterpret_cast<EEComplexUnit*>(x)
@@ -136,8 +137,8 @@ extern "C" void ee_screenscpp_mg_hot_key_unpressed_event(uintptr_t inKey, uintpt
 extern "C" void ee_screenscpp_mg_button_hot_key_down(uintptr_t inButton) { SBB(inButton)->HotKeyDown(); }
 extern "C" void ee_screenscpp_mg_saved_groups_reset() { gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, 1); }
 extern "C" void ee_screenscpp_mg_remove_cloak(uintptr_t inUnit)
-{ EERemoveCloakEffect(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inUnit))); }
-extern "C" void ee_screenscpp_mg_add_cloak(uintptr_t inUnit) { EEAddCloakEffect(MGU(inUnit)); }
+{ ee_units_ck_body(EE_UNITS_CK_DO_REMOVE_CLOAK_EFFECT, (uint64_t)(uintptr_t)static_cast<EEUnit*>(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inUnit))), 0, 0, 0); }
+extern "C" void ee_screenscpp_mg_add_cloak(uintptr_t inUnit) { ee_units_ck_body(EE_UNITS_CK_DO_ADD_CLOAK_EFFECT, (uint64_t)(uintptr_t)(MGU(inUnit)), 0, 0, 0); }
 extern "C" void ee_screenscpp_mg_box_fill(uintptr_t inGroup, uintptr_t inUnit)
 { MG(inGroup)->mStatusBox->Fill(MGU(inUnit)); }
 extern "C" void ee_screenscpp_mg_box_refresh(uintptr_t inGroup, uintptr_t inUnit)

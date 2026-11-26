@@ -18,6 +18,7 @@
 #include "ee/EEAIContinentManager.h"
 
 #include "ee/EEDebugTrace.h"
+#include "rust/sim/units.h"
 
 // The continent manager's passes, queries and objects are Rust (ee_sim::astar cm_passes.rs, cm_queries.rs,
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
@@ -60,7 +61,7 @@ extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
     if (theUnit->mPlanetID == 0) {
         EEDebugTrace("EEAIContinentManager::GetCanPathToContinent: no planet ID for airplane %d of type %s\n",
                      theUnit->GetUnitID(), theUnit->GetUnitClass()->GetName());
-        theUnit->mPlanetID = EEGetLandContinentOf(theUnit);
+        theUnit->mPlanetID = (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_LAND_CONTINENT_OF, (uint64_t)(uintptr_t)theUnit, 0, 0, 0);
     }
     return theUnit->mPlanetID;
 }

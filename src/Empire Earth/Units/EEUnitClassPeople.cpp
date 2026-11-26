@@ -32,6 +32,8 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
 #include "rust/sim/app.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
 
 // ---- EEUCBasicCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The citizens'
 // unit class: gathering (resource and storage searches), building and repairing. 0x20bcf7..0x20d571 (after
@@ -60,7 +62,6 @@ static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEff
 // (EETechTree::Research for inUnit)
 static const float kUnitEffectSoundFalloff = 4.0f;  // 0x446fd8 (EEComputeSoundParameters's last argument)
 
-void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect) { ee_units_ucp_call(EE_UNITS_UCP_DO_PLAY_UNIT_EFFECT, NULL, inUnit, 0, inEffect); }  // ucp_people.rs
 
 // Runs the work timer (working the gather or repair goal when it expires), then finishes a due unit research
 // (instant build: at once); a kind-3 tech tied to the Bundeswehr power goes through EEPlayUnitEffect
@@ -116,15 +117,6 @@ long EEGetConversionCost(EEComplexUnit* inUnit)
                                                            (int32_t)inUnit->mStats->mPower});
 }
 
-// Works a conversion with enough faith: stops at an ally or own unit, shows the effects and warns the target's owner,
-// then after the minimum time tries once a second (resistance, owner factor, rate) and converts on success
-// Converts the target to the priest's player (with area conversion, also every convertible visible unit nearby),
-// spends the faith and plays the converted unit's creation sound for the two players involved
-// Returns whether a priest can convert a target now (enemy, resistance, faith, priests and buildings rules, the
-// temple's range); outFlag is set when the target is shielded
-// (new: the decision is ee_combat's can_convert over a record of pure reads, gathered here; the damage table is
-// read only for a valid ammo column, the shield and the building priest's distance always: none has side effects)
-bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag) { return ee_units_ucp_can_convert(inPriest, inTarget, &outFlag); }  // ucp_people.rs
 
 // Loads the conversion indicator effect and the class's media
 // Unloads the conversion indicator effect and the class's media
@@ -264,7 +256,7 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_WORK_TIMER: return theUnit->mWorkTimer;
     case EE_UNITS_UCP_SET_WORK_TIMER: theUnit->SetWorkTimer((long)inB); return 0;
     case EE_UNITS_UCP_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
-    case EE_UNITS_UCP_UPDATE_FANATICISM: theUnit->UpdateFanaticismColor(); return 0;
+    case EE_UNITS_UCP_UPDATE_FANATICISM: ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_FANATICISM_COLOR, theUnit, 0, 0, 0); return 0;
     case EE_UNITS_UCP_CURRENT_RESEARCH: return theUnit->mCurrentResearch;
     case EE_UNITS_UCP_RESEARCH_NODE: return EEObj(theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch));
     case EE_UNITS_UCP_NODE_MAKES_UNIT: return EEUcpObject<EETechTreeNode>(inA)->mData->mMakesUnit;
@@ -292,7 +284,7 @@ extern "C" int64_t ee_units_ucp_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCP_TYPE_OF: return theOther->mUnitClass->mUnitType;
     case EE_UNITS_UCP_CONVERSION_RATE: f[0] = theUnit->mStats->mConversionRate; return 0;
     case EE_UNITS_UCP_CONVERSION_FACTOR: f[0] = theOther->mPlayer->mConversionFactor; return 0;
-    case EE_UNITS_UCP_CONVERSION: *EEUcpObject<EeCombatConversionOut>((uint64_t)inB) = EECombatConversion(*EEUcpObject<EeCombatConversionIn>(inA)); return 0;
+    case EE_UNITS_UCP_CONVERSION: *EEUcpObject<EeCombatConversionOut>((uint64_t)inB) = ee_combat_conversion_captured(&(*EEUcpObject<EeCombatConversionIn>(inA))); return 0;
     case EE_UNITS_UCP_RANDOM: f[0] = gPhysics->mRandom.Generate(); return 0;
     case EE_UNITS_UCP_DISABLED_OF: return theOther->GetComplexUnit()->mIsDisabled;
     case EE_UNITS_UCP_PROTECTED_OF: return theOther->GetComplexUnit()->IsProtected();
