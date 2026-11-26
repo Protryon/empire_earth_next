@@ -314,8 +314,6 @@ public:
     static void BuildUnitClassInfo() { gTechTree.Walk(EeTechTreeOp::BuildUnitClassInfo); }   // 0x1cbe4a (gTechTree's events by unit class)
     void UnloadAll() { ee_gamecpp_tech_unload_all(this); }   // every epoch's media
     void GetNodeIDs(std::vector<long>& outIDs) { ee_gamecpp_tech_node_ids(this, true, 0, &outIDs); }   // every epoch's nodes
-    // the researched/obsolete state of every tech and epoch, weighted by position (ee_tech tree_checksum)
-    void GetChecksum(ESChecksum& ioChecksum);
     EEPlayer* GetPlayer() { return (EEPlayer*)ee_gamecpp_tech_tree_player(this); }   // by index when no player pointer is set
     // a loaded tree's state reapplied: editor-obsoleted techs, the epoch range, research, each epoch's counters, then
     // the interface

@@ -59,7 +59,7 @@ pub(super) fn read_records(
 ) -> i64 {
     let mut record = vec![0u8; size];
     let mut count: c_ulong = 0;
-    h(O::TkFileOpenRead, file, &[]);
+    h(O::FileOpenRead, file, &[]);
     let mut result = Pf(file).read_ulong(&mut count);
     if result == DB_OK && begin(count) {
         for i in 0..count {
@@ -72,7 +72,7 @@ pub(super) fn read_records(
             }
         }
     }
-    h(O::TkFileClose, file, &[]);
+    h(O::FileClose, file, &[]);
     result
 }
 

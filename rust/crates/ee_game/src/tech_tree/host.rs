@@ -33,6 +33,8 @@ use ee_sim::tech::tree_objects::EeTechEpochLists;
 
 /// `kErrorOK`.
 const TK_OK: i64 = 0;
+/// SetUnitClassMedia's mask: every media kind.
+const TK_ALL_MEDIA: i64 = 0x7f;
 /// The statistics series OnResearched resets (EEPlayer::mSavedGroups' 0x13).
 const TK_STAT_EPOCHS: i64 = 0x13;
 
@@ -59,11 +61,14 @@ fn media(player: P, what: i32, id: i32, load: bool) {
     let id = id as i64;
     let op = match what {
         EE_TECH_MEDIA_BUTTON => {
+            // EEButtonObject::Get(id)->Acquire() / Release() (ee_game's bodies)
+            let button = hp(O::TbButtonGet, 0, &[id]) as *mut c_void;
             if load {
-                O::TkButtonAcquire
+                crate::gamecpp::db_media::ee_gamecpp_db_button_acquire(button);
             } else {
-                O::TkButtonRelease
+                crate::gamecpp::db_media::ee_gamecpp_db_button_release(button);
             }
+            return;
         }
         EE_TECH_MEDIA_AREA_EFFECT => {
             // (the original's unload called LoadTemplateMedia again)
@@ -74,31 +79,30 @@ fn media(player: P, what: i32, id: i32, load: bool) {
             }
         }
         EE_TECH_MEDIA_ITEM => {
-            if load {
-                O::TkItemLoad
-            } else {
-                O::TkItemUnload
-            }
+            // EEMedia::Get(id)->LoadMedia() / UnloadMedia()
+            let item = hp(O::DanMediaGet, 0, &[id]);
+            h(if load { O::DanMediaLoad } else { O::DanMediaUnload }, item, &[]);
+            return;
         }
         EE_TECH_MEDIA_SOUND => {
             if load {
-                O::TkSoundLoad
+                O::SoundObjectLoad
             } else {
-                O::TkSoundUnload
+                O::SoundObjectUnload
             }
         }
         EE_TECH_MEDIA_CLASS => {
             if load {
-                O::TkClassMedia
-            } else {
-                O::TkUnloadClassMedia
+                h(O::PlSetClassMedia, player, &[id, TK_ALL_MEDIA]);
+                return;
             }
+            O::PlUnloadClassMedia
         }
         EE_TECH_MEDIA_CLASS_BUTTONS => {
             if load {
-                O::TkClassButtonsLoad
+                O::PlLoadButtons
             } else {
-                O::TkClassButtonsUnload
+                O::PlUnloadClassButtons
             }
         }
         EE_TECH_MEDIA_EPOCH => {
@@ -212,7 +216,7 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         EE_TECH_HOST_STATISTIC => {
             if v[0] == 2 {
                 let player = load::player_pointer(tree);
-                h(O::TkStatSet, player, &[v[1] as i64, v[2] as i64]);
+                h(O::PlSavedGroupsSet, player, &[v[1] as i64, v[2] as i64]);
             } else {
                 let player = if v[0] == 0 { load::player_pointer(tree) } else { tree_player(tree) };
                 h(O::TkStatReset, player, &[v[1] as i64]);
@@ -220,7 +224,7 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         }
         EE_TECH_HOST_UNLOAD_UNIT_MEDIA => {
             let player = tree_player(tree);
-            h(O::TkUnloadClassMedia, player, &[v[0] as i64]);
+            h(O::PlUnloadClassMedia, player, &[v[0] as i64]);
         }
         EE_TECH_HOST_EVENTS_ENABLED => {
             h(O::TkEventsEnabled, 0, &[(v[0] != 0) as i64]);
@@ -280,9 +284,9 @@ fn effect(node: P, i: i32) -> ee_sim::scenario::event::EeScenarioEvEffect {
 pub extern "C" fn ee_gamecpp_tech_load_file(tree: *mut c_void, file: *mut c_void) -> c_long {
     let (tree, file) = (tree as P, file as P);
     let mut result = TK_OK;
-    h(O::TkFileOpenRead, file, &[]);
+    h(O::FileOpenRead, file, &[]);
     let mut length: std::ffi::c_ulong = 0;
-    h(O::TkFileLength, file, &[ptr(&mut length)]);
+    h(O::DxLength, file, &[ptr(&mut length)]);
     let mut position: c_long = 0;
     let mut count: i64 = 0;
     ee_tech_clear_node_epochs();
@@ -306,7 +310,7 @@ pub extern "C" fn ee_gamecpp_tech_load_file(tree: *mut c_void, file: *mut c_void
         (*t).mIsLoaded = false;
         (*t).mEndEpoch = (count - 1) as c_long;
     }
-    h(O::TkFileClose, file, &[]);
+    h(O::FileClose, file, &[]);
     result as c_long
 }
 
@@ -417,7 +421,7 @@ pub extern "C" fn ee_gamecpp_tech_node_cost(
         ..EeTechCostInput::default()
     };
     if d.mMakesUnit {
-        let stats = hp(O::TkUpgrade, player, &[d.mUnitClass as i64]);
+        let stats = ee_sim::units::player_upgrades::upgrade(player as u64, d.mUnitClass as i64) as P;
         let epoch = node_fields(node).mEpoch;
         input.wonder_epoch_scaled = d.mKind == 4 && epoch != 0;
         if input.wonder_epoch_scaled {
@@ -598,7 +602,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load_media(epoch: *mut c_void, player: *
     for node in epoch_nodes(epoch) {
         if load::ee_gamecpp_tech_needs_unit_media(node as *mut c_void, true) {
             let unit_class = node_data(node).mUnitClass;
-            h(O::TkClassMedia, player, &[unit_class as i64]);
+            h(O::PlSetClassMedia, player, &[unit_class as i64, TK_ALL_MEDIA]);
             lists(epoch).loaded.push(unit_class);
         }
     }
@@ -611,7 +615,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_unload_media(epoch: *mut c_void, player:
     let (epoch, player) = (epoch as P, player as P);
     let loaded = lists(epoch).loaded.clone();
     for unit_class in loaded {
-        h(O::TkUnloadClassMedia, player, &[unit_class as i64]);
+        h(O::PlUnloadClassMedia, player, &[unit_class as i64]);
     }
     lists(epoch).loaded.clear();
     ob::walk(epoch, EeTechNodeOp::Media, 0, false, player);

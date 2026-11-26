@@ -286,14 +286,18 @@ pub(crate) unsafe fn player_tree_delete(tree: usize) {
     drop(unsafe { Box::from_raw(tree as *mut EeTechTreeFields) });
 }
 
+/// `&gTechTree`, the database's tree (its storage is ee_game's, constructed by the C++ at start; was EETechTree.cpp's
+/// `TbGlobalTree`).
+pub(crate) fn global_tree() -> P {
+    std::ptr::addr_of!(crate::gamecpp::global_objects::gTechTree) as P
+}
+
 /// `*tree = gTechTree`.
 ///
 /// # Safety
 /// `tree` is a live tree.
 pub(crate) unsafe fn player_tree_copy_global(tree: usize) {
-    // gTechTree's storage (constructed by the C++ at start): only its address taken here
-    let global = std::ptr::addr_of!(crate::gamecpp::global_objects::gTechTree) as *const c_void;
-    super::load::ee_gamecpp_tech_tree_assign(tree as *mut c_void, global);
+    super::load::ee_gamecpp_tech_tree_assign(tree as *mut c_void, global_tree() as *const c_void);
 }
 
 /// A saved game's `tree->Load(major, minor, file)` (`load`) or `tree->Save(major, minor, file)`.

@@ -838,7 +838,8 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_TOWN_CLOSEST: return EEPlayerPackPoint(EEPlayerTownAt(inA)->GetClosestPoint(U2DPoint<long>((long)inB, (long)inC)));
     case EE_UNITS_PLAYER_BODY_RTS_CHECKSUM: ee_rts_player_checksum(thePlayer, reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA)));
         return 0;
-    case EE_UNITS_PLAYER_BODY_TECH_CHECKSUM: thePlayer->mTechnologies->GetChecksum(*reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA)));
+    case EE_UNITS_PLAYER_BODY_TECH_CHECKSUM:   // every tech's and epoch's researched/obsolete state, weighted by position (ee_tech tree_checksum)
+        reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA))->AddChecksum("EETechTree", (unsigned long)(uint32_t)thePlayer->mTechnologies->Walk(EeTechTreeOp::Checksum));
         return 0;
     case EE_UNITS_PLAYER_BODY_ADD_CHECKSUM: reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA))->AddChecksum(UString("EEPlayer"), (unsigned long)inB);
         return 0;
@@ -1100,4 +1101,81 @@ void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
     ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0,
                        UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gWorld.mLoadingSavedGame ? EE_UNITS_STATS_LOADING
                        : gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
+}
+
+// ---- the tech tree's C++ calls for Rust (were EETechTree.cpp's; ee_game tech_tree host.rs, load.rs)
+#include "ee/EEEvent.h"
+#include "ee/EEAEManager.h"
+#include "rust/game/gamecpp.h"
+
+static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNodeID == 1000 &&
+              IDS_PREHISTORIC_AGE == 30145, "ee_game tech_tree load.rs");
+
+// Returns the owner's tech tree node of the technology that makes the unit's class
+EETechTreeNode* EEUnit::GetTechTreeNode()
+{
+    return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
+}
+
+#define TK_P64(x) ((int64_t)(intptr_t)(x))
+#define TK_VARIANT EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)
+#define TK_PL ((EEPlayer*)p)
+
+// the cost factors (host.rs; EEPWorldHelper.cpp's default)
+double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGraphics.cpp
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TkEpochCostFactor: return gWorldTable.GetFloatValue(kWorldUnitEpochCostFactor);
+    case O::TkCostSetFactor: return TK_VARIANT->GetCostSetFactor();
+    case O::TkStatsCostScale: return ((EEUnitStats*)p)->GetCostScale();
+    case O::TkJitFactor: return gWorld.mGameOptions.mResources == 4 ? gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactorDeathmatch) : gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactor);
+    default: return EECore10OpAF(inOp, p, a, f);
+    }
+}
+
+// the tech tree's C++ calls and members (gamecpp tech.rs; p the node, the epoch, the tree or the player; EEServer.cpp's
+// EECore11OpC6 default): one statement each
+int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TbButtonGet: return TK_P64(EEButtonObject::Get((unsigned long)a[0]));
+    case O::TbSwapButton: TK_PL->SwapClassButtonMedia((long)a[0], (EEButtonObject*)a[1], (EEButtonObject*)a[2]);
+        break;
+    case O::TkVariant: return TK_P64(static_cast<EeDataGameVariantFields*>(TK_VARIANT));
+    case O::TkInCostSet: return gUnitSetManager.GetSet(TK_VARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TK_VARIANT->mCostSet)->Contains((long)a[0]);
+    case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
+    case O::TkPushId: ((std::vector<long>*)a[0])->push_back((long)a[1]);
+        break;
+    case O::TkPostShowEpochName: gUserInterface->PostShowEpochName();
+        break;
+    case O::TkMainGameForm: return TK_P64(gUIManager->GetMainGameForm());
+    case O::TkRefreshGroup: gUIManager->GetMainGameForm()->mRefreshGroup = true;
+        break;
+    case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
+    case O::TkEpochReached: TK_PL->EpochReached((long)a[0]);
+        break;
+    case O::TkStatReset: TK_PL->mSavedGroups.Reset((long)a[0], 1);
+        break;
+    case O::TkEpochMediaLoaded: TK_PL->EpochMediaLoaded((long)a[0]);
+        break;
+    case O::TkEpochMediaUnloaded: TK_PL->EpochMediaUnloaded((long)a[0]);
+        break;
+    case O::TkEventsEnabled: gEventsEnabled = a[0] != 0;
+        break;
+    case O::TkAssert: ESVERIFY_AT(false, a[0]);
+        break;
+    case O::TkEvent: return TK_P64(EEEvent::Get((long)a[0]));
+    case O::TkEventEffects: return (int64_t)((EEEvent*)p)->GetNumEffects();
+    case O::TkEventEffect: return TK_P64(EEEvent::GetEventEffect(((EEEvent*)p)->GetEffect((long)a[0])));
+    case O::TkAeTemplateLoad: gAEManager.LoadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkAeTemplateUnload: gAEManager.UnloadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkFilePosition: return ((FSFileSpec*)p)->GetPosition(*(long*)a[0]);
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);   // the end of the chain
+    }
+    return 0;
 }

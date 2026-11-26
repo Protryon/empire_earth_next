@@ -140,7 +140,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
     Pf(file).read_ulong(&mut node_count);
     let (record, mut result) = read_record(epoch, file, true);
     let data = data_of(epoch);
-    if tree == hp(O::TbGlobalTree, 0, &[]) {
+    if tree == ob::global_tree() {
         // the epochs' titles (EEEpochTitleID: ee_sim tech tech_ids.rs)
         ee_tech_set_epoch_title(data.mID as i32, fields_of(epoch).mTitleID as i32);
     }
@@ -273,7 +273,7 @@ pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
         if fields_of(n).mIsUnitMediaLoaded {
             let player = tree_player(tree);
             if player != 0 {
-                h(O::TkUnloadClassMedia, player, &[data_of(n).mUnitClass as i64]);
+                h(O::PlUnloadClassMedia, player, &[data_of(n).mUnitClass as i64]);
             }
         }
         if !node_data(n).is_null() {
@@ -362,7 +362,7 @@ pub extern "C" fn ee_gamecpp_tech_needs_unit_media(node: *mut c_void, captured: 
 pub extern "C" fn ee_gamecpp_tech_epoch_build_time(epoch: *mut c_void) -> c_long {
     let e = epoch as P;
     // (TNWK, TEST ONLY: asked once, as the test did)
-    let human = h(O::TbIsHuman, tree_player(ob::tree_of(e)), &[]) as i32;
+    let human = h(O::PlIsHuman, tree_player(ob::tree_of(e)), &[]) as i32;
     let build_time = data_of(e).mBuildTime as i32;
     let result = ee_tech_epoch_build_time(human, build_time);
     ee_tech_capture_walk_begin(); // TNMT (TEST ONLY)

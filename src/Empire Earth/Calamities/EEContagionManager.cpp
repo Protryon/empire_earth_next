@@ -16,6 +16,7 @@
 #include "ee/EEVectorIO.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
@@ -152,6 +153,11 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CgText: fputs((const char*)a[0], (FILE*)p);
         break;
     case O::C11CgUnknown: ESVERIFY_AT(false, 1);
+        break;
+    // a class's run (gamecpp calamity_io.rs class_run): its host made and deleted around it (were EETechTree.cpp's); p the
+    // class, a0 the calamity, a1 and a2 the sounds
+    case O::C11CalHostNew: return (int64_t)(intptr_t)(new EECalamityUpdateHost{(EECalamityClass*)p, (EECalamity*)a[0], {(EESoundObject*)a[1], (EESoundObject*)a[2]}, {}, NULL, {}, {}});
+    case O::C11CalHostDelete: delete (EECalamityUpdateHost*)p;
         break;
     default: return EEPWorldOp(inOp, p, a, f);
     }
