@@ -377,9 +377,9 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
 fn message(f: P, v: &[i64; 8]) -> i64 {
     let m = v[1];
     match v[0] {
-        EE_NETMSG_SESS_MSG_TYPE => h(O::SsMsgType, f, &[m]),
-        EE_NETMSG_SESS_MSG_ORIGIN => h(O::SsMsgOrigin, f, &[m]),
-        EE_NETMSG_SESS_MSG_FOR_SLOT => h(O::SsMsgForSlot, f, &[m]),
+        EE_NETMSG_SESS_MSG_TYPE => h(O::LcMsgType, m as P, &[]),
+        EE_NETMSG_SESS_MSG_ORIGIN => h(O::LcMsgOrigSlot, m as P, &[]),
+        EE_NETMSG_SESS_MSG_FOR_SLOT => h(O::LcMsgForSlot, m as P, &[]),
         EE_NETMSG_SESS_MSG_NE_VALUE => h(O::SsMsgNeValue, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_RECORD => h(O::SsMsgRecord, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_INPUT_COUNT => h(O::SsMsgInputCount, f, &[m]),
@@ -389,7 +389,7 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
             input as i64
         }
         EE_NETMSG_SESS_MSG_REFERENCE => h(O::SsMsgReference, f, &[m]),
-        EE_NETMSG_SESS_MSG_DEREFERENCE => h(O::SsMsgDereference, f, &[m]),
+        EE_NETMSG_SESS_MSG_DEREFERENCE => h(O::LcMsgDereference, m as P, &[]),
         EE_NETMSG_SESS_MSG_EXECUTE => h(O::SsMsgExecute, f, &[m]),
         EE_NETMSG_SESS_MSG_SET_FAST_ID => h(O::SsMsgSetFastId, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_IS_GAME => h(O::SsMsgIsGame, f, &[m]),
@@ -410,7 +410,7 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_MSG_SEND_ALL => {
             h(O::SsMsgSetOriginServer, f, &[m]);
             ee_net::net::ffi_server::ee_net_sv_send_message_to_all(n(f).server, m as P as *mut c_void, false);
-            h(O::SsMsgDereference, f, &[m])
+            h(O::LcMsgDereference, m as P, &[])
         }
         _ => {
             session_objs::take_connection_request(session_objs::frame_server(f), m as P);
@@ -420,15 +420,15 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
 }
 
 /// An action posted to the UI thread, then the poster's reference dropped (EESessionPost).
-fn post(f: P, action: P) {
-    h(O::SsPostAction, f, &[action as i64]);
-    h(O::SsActionDereference, f, &[action as i64]);
+fn post(action: P) {
+    h(O::EntryPostAction, action, &[]);
+    h(O::EntryDereferenceAction, action, &[]);
 }
 
 /// A string resource shown in the UI manager's message box (`cancel`: the cancel-game callback).
 fn display(f: P, text: i64, cancel: bool, flag: bool) {
     let s = Owned::new(O::StrNew, O::StrFree);
-    h(O::SsGetString, f, &[text, s.0 as i64]);
+    h(O::ResString, s.0, &[text]);
     h(O::SsDisplayMessage, f, &[s.0 as i64, cancel as i64, flag as i64]);
 }
 
@@ -443,13 +443,13 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_UI_LOBBY_PLAYER => {
             h(O::SsLobbyUpdatePlayer, f, &[v[1]]);
         }
-        EE_NETMSG_SESS_UI_ACTION_REMOVE => post(f, hp(O::SsNewRemovePlayer, f, &[v[1], v[2]])),
-        EE_NETMSG_SESS_UI_ACTION_BOOT => post(f, hp(O::SsNewBootClient, f, &[v[1]])),
-        EE_NETMSG_SESS_UI_ACTION_MIGRATION => post(f, hp(O::SsNewServerMigration, f, &[])),
+        EE_NETMSG_SESS_UI_ACTION_REMOVE => post(hp(O::SsNewRemovePlayer, f, &[v[1], v[2]])),
+        EE_NETMSG_SESS_UI_ACTION_BOOT => post(hp(O::SsNewBootClient, f, &[v[1]])),
+        EE_NETMSG_SESS_UI_ACTION_MIGRATION => post(hp(O::SsNewServerMigration, f, &[])),
         EE_NETMSG_SESS_UI_PAUSE_EVENT => {
             let event = hp(O::SsNewPauseEvent, f, &[]);
-            h(O::SsPostEvent, f, &[event as i64]);
-            h(O::SsEventDereference, f, &[event as i64]);
+            h(O::UiPostEvent, event, &[]);
+            h(O::EntryDereferenceEvent, event, &[]);
         }
         EE_NETMSG_SESS_UI_DISPLAY => display(f, v[1], v[2] != 0, v[3] != 0),
         EE_NETMSG_SESS_UI_CHAT_PLAYER => {
@@ -457,15 +457,15 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
             let text = Owned::new(O::StrNew, O::StrFree);
             let format = Owned::new(O::StrNew, O::StrFree);
             let name = Owned::new(O::StrNew, O::StrFree);
-            h(O::SsGetString, f, &[v[1], format.0 as i64]);
+            h(O::ResString, format.0, &[v[1]]);
             h(O::SsSprintfName, f, &[text.0 as i64, format.0 as i64, v[2]]);
-            h(O::SsGetString, f, &[SS_IDS_MSG_GAME, name.0 as i64]);
-            h(O::SsChatGameLine, f, &[name.0 as i64, text.0 as i64]);
+            h(O::ResString, name.0, &[SS_IDS_MSG_GAME]);
+            h(O::UiAddChatGameLine, text.0, &[name.0 as i64]);
         }
         EE_NETMSG_SESS_UI_CHAT_TEXT => {
             let text = Owned::new(O::StrNew, O::StrFree);
-            h(O::SsGetString, f, &[v[1], text.0 as i64]);
-            h(O::SsChatText, f, &[text.0 as i64, v[2]]);
+            h(O::ResString, text.0, &[v[1]]);
+            h(O::UiAddChat, text.0, &[v[2]]);
         }
         EE_NETMSG_SESS_UI_CLOSE_FORM => {
             h(O::UiCloseForm, f, &[]);
@@ -499,7 +499,7 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
             // the connecting box with the retries
             let text = Owned::new(O::StrNew, O::StrFree);
             let format = Owned::new(O::StrNew, O::StrFree);
-            h(O::SsGetString, f, &[v[1], format.0 as i64]);
+            h(O::ResString, format.0, &[v[1]]);
             h(O::SsSprintfRetry, comms_of(f), &[text.0 as i64, format.0 as i64]);
             h(O::SsDisplayMessage, f, &[text.0 as i64, 0, 0]);
         }
@@ -512,10 +512,10 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
                 won_leave(f);
             }
             if v[2] == EE_NETMSG_SESS_LEAVE_BOOT {
-                post(f, hp(O::SsNewBootClient, f, &[v[1]]));
+                post(hp(O::SsNewBootClient, f, &[v[1]]));
             } else if v[2] != EE_NETMSG_SESS_LEAVE_QUIET {
                 h(O::UiCloseForm, f, &[]);
-                h(O::SsGetString, f, &[v[1], format.0 as i64]);
+                h(O::ResString, format.0, &[v[1]]);
                 let versions = v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS;
                 if versions {
                     h(O::SsSprintfVersions, f, &[text.0 as i64, format.0 as i64, v[3]]);
@@ -697,7 +697,7 @@ fn start(f: P, v: &[i64; 8]) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_client_slot_update(slot: u8, player: &EeAppOptionsPlayerFields) {
     if player.mSlot == 0 && player.mType == 3 {
-        post(0, hp(O::ClNewBootDefault, 0, &[]));
+        post(hp(O::ClNewBootDefault, 0, &[]));
     } else {
         h(O::SsLobbyUpdatePlayer, 0, &[slot as i64]);
     }
@@ -757,11 +757,11 @@ pub extern "C" fn ee_gamecpp_client_timeout_warning(remaining: c_ulong) {
     let text = Owned::new(O::StrNew, O::StrFree);
     let seconds = Owned::new(O::StrNew, O::StrFree);
     let format = Owned::new(O::StrNew, O::StrFree);
-    h(O::SsGetString, 0, &[SS_IDS_HOST_IS_NOT_RESPONDING, text.0 as i64]);
-    h(O::SsGetString, 0, &[SS_IDS_SECONDS, seconds.0 as i64]);
+    h(O::ResString, text.0, &[SS_IDS_HOST_IS_NOT_RESPONDING]);
+    h(O::ResString, seconds.0, &[SS_IDS_SECONDS]);
     h(O::ClTimeoutFormat, 0, &[format.0 as i64, text.0 as i64, seconds.0 as i64]);
     h(O::ClSprintfSeconds, 0, &[text.0 as i64, format.0 as i64, (remaining / 1000) as i64]);
-    h(O::SsChatText, 0, &[text.0 as i64, 1]);
+    h(O::UiAddChat, text.0, &[1]);
 }
 
 /// The session host (ee_sim `EeNetSessHostFn`; `call` an `EeNetSessCall`: the frame and the values).

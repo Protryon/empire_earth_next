@@ -369,9 +369,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsConnectionCheckResponse: ((NESynchronousCommunications*)p)->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)a[0]}), kSlotNone);
         break;
     // the messages (a0)
-    case O::SsMsgType: return MSG->GetType();
-    case O::SsMsgOrigin: return MSG->GetOriginatingSlot();
-    case O::SsMsgForSlot: return MSG->GetForSpecificSlot();
     case O::SsMsgNeValue: return (long long)static_cast<NEMRecord*>(MSG)->Value((uint32_t)a[1]);
     case O::SsMsgRecord: memcpy((void*)a[1], static_cast<EEMRecord*>(MSG)->mRecord, sizeof(static_cast<EEMRecord*>(MSG)->mRecord));
         break;
@@ -379,8 +376,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsMsgInput: static_cast<NEMRecord*>(MSG)->GetPlayerInput((unsigned long)a[1], *(NEMessage**)a[2]);
         break;
     case O::SsMsgReference: MSG->Reference();
-        break;
-    case O::SsMsgDereference: MSG->Dereference();
         break;
     case O::SsMsgExecute: MSG->Execute();
         break;
@@ -395,24 +390,10 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsNewRemovePlayer: return P64(static_cast<EEAction*>(new EEARemovePlayer((unsigned char)a[0], a[1] != 0)));
     case O::SsNewBootClient: return P64(static_cast<EEAction*>(new EEABootClientFromCanceledGame((long)a[0])));
     case O::SsNewServerMigration: return P64(static_cast<EEAction*>(new EEAServerMigration));
-    case O::SsPostAction: gUserInterface->PostAction((EEAction*)a[0]);
-        break;
-    case O::SsActionDereference: ((EEAction*)a[0])->Dereference();
-        break;
     case O::SsNewPauseEvent: return P64(EECreateScreenEvent(EE_SCREENS_MG_PAUSE));
-    case O::SsPostEvent: gUserInterface->PostEvent((UIEvent*)a[0], NULL);
-        break;
-    case O::SsEventDereference: ((UIEvent*)a[0])->Dereference();
-        break;
-    case O::SsGetString: gResource->GetString((long)a[0], WSTR(1));
-        break;
     case O::SsDisplayMessage: gUIManager->DisplayMessage(WSTR(0), true, NULL, a[1] != 0 ? (EEUIFErrorCallback)CancelGameCallback : NULL, a[2] != 0);
         break;
     case O::SsSprintfName: sprintf(WSTR(0), WSTR(1), (const char*)((EEPlayer*)a[2])->mName);
-        break;
-    case O::SsChatGameLine: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), WSTR(0), WSTR(1), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-        break;
-    case O::SsChatText: gUserInterface->AddChatLogEntry(WSTR(0), (long)a[1]);
         break;
     case O::SsOpenForm: gUserInterface->OpenForm(gUIManager->GetFormByID(a[0]));
         break;

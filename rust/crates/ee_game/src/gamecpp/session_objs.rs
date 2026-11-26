@@ -295,7 +295,7 @@ pub fn take_connection_request(server: P, request: P) {
         r.mIsReady = false;
     }
     h(O::C11RequestFirewall, server, &[pa(request)]);
-    let origin = h(O::SsMsgOrigin, 0, &[pa(request)]);
+    let origin = h(O::LcMsgOrigSlot, request, &[]);
     let version = Owned::new(O::StrNew, O::StrFree);
     h(O::C11RequestString, version.0, &[pa(request), 1]);
     let checksum = h(O::C11RequestChecksum, 0, &[pa(request)]);
@@ -313,7 +313,7 @@ pub fn take_connection_request(server: P, request: P) {
             version.0 as *const c_void,
         );
     }
-    h(O::SsMsgDereference, 0, &[pa(request)]);
+    h(O::LcMsgDereference, request, &[]);
 }
 
 /// The connection response (error, send-to slot, lobby slot) sent to `slot` from the server's, the slot forgotten
@@ -323,7 +323,7 @@ pub fn send_connection_response(server: P, slot: i64, error: i64, send_to: i64, 
     h(O::SsMsgSetOriginServer, 0, &[pa(response)]);
     let engine = super::net::net(server as *const c_void).server;
     ee_net::net::ffi_server::ee_net_sv_send_message_to(engine, slot as u8, response as *mut c_void, true);
-    h(O::SsMsgDereference, 0, &[pa(response)]);
+    h(O::LcMsgDereference, response, &[]);
     if unregister {
         ee_net::net::ffi_server::ee_net_sv_unregister_slot(engine, slot as u8);
     }
