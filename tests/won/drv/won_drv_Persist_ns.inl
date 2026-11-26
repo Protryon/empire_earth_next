@@ -17,3 +17,16 @@ inline void LobbyRemoveLanName() { LobbyPC(LobbyPC_::RemoveLanName); } // the mo
 // the direct-connect addresses and their names, by address
 inline size_t LobbyGetDirectConnectCount() { return (size_t)LobbyPC(LobbyPC_::DirectCount); }
 inline void LobbyResetFilters() { LobbyPC(LobbyPC_::ResetFilters); } // the defaults copied, the user flag set
+inline LobbyUserInfo* LobbyFindUser(const GUIString& inName) { return (LobbyUserInfo*)LobbyPC1(LobbyPC_::FindUser, inName); }
+// records a login as a saved user's most recent use (a new user gets a free id, its stale file deleted); with
+// inExistingOnly NULL for a user never seen before
+inline LobbyUserInfo* LobbyAddUser(const GUIString& inName, const GUIString& inPassword, bool inExistingOnly)
+{ return (LobbyUserInfo*)LobbyPC2(LobbyPC_::AddUser, inName, inPassword, inExistingOnly); }
+inline GUIString LobbyGetUserPassword(const GUIString& inName)
+{ LobbyUserInfo* u = LobbyFindUser(inName); return u != NULL ? LobbyUserText(u, 1) : GUIString(); }
+inline GUIString LobbyGetIgnoredNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::IgnoredAt, (int64_t)inPos); }
+inline void LobbyAddDirectConnect(const IPAddr& inAddr, const GUIString& inName)
+{ LobbyPC1(LobbyPC_::AddDirect, inName, LobbyPersistAddr(inAddr)); }
+inline void LobbyAddFilterValue(const GUIString& inColumn, const GUIString& inValue) { LobbyPC2(LobbyPC_::AddFilterValue, inColumn, inValue); }
+// (an emptied column stays)
+inline void LobbyRemoveFilterValue(const GUIString& inColumn, const GUIString& inValue) { LobbyPC2(LobbyPC_::RemoveFilterValue, inColumn, inValue); }

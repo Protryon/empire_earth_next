@@ -7,6 +7,7 @@
 #include <time.h>
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 namespace WONAPI {
 
 // LobbyFriend: a friend list entry; 0x50 bytes, the destructor is its only virtual function.
@@ -21,15 +22,12 @@ public:
     {
         this->M(LobbyMC::FriendSetLocation, (intptr_t)inAddress.GetValue(), (intptr_t)inLocation.mData.get(), inFlags);
     }
-    void ClearLocation() { this->M(LobbyMC::FriendClearLocation); }
-    void SetStatusFromClient(LobbyClient* inClient) { this->M(LobbyMC::FriendSetStatusFromClient, (intptr_t)inClient); }
-    void StartLocate(unsigned long inTime) { this->M(LobbyMC::FriendStartLocate, (intptr_t)inTime); }
-    void EndLocate(unsigned long inTime) { this->M(LobbyMC::FriendEndLocate, (intptr_t)inTime); }
     unsigned long GetUserId() { return (unsigned long)this->MGet(LobbyMF::FriendUserId); }
     GUIString GetName() const { return this->MText(LobbyMF::FriendName); }
     unsigned char GetFlags() const { return (unsigned char)this->MGet(LobbyMF::FriendFlags); }
     IPAddr GetAddress() const { return this->MAddr(LobbyMF::FriendAddress); }
     GUIString GetLocation() const { return this->MText(LobbyMF::FriendLocation); }
+#include EE_WON_DRV(Model_LobbyFriend) // the drivers' members
 };
 
 // LobbyGroup: a routing group, i.e. a chat room or a game. RTTI: LobbyGroup : RefCount; vtable 0x852c4c; 0x20 bytes.
@@ -39,16 +37,13 @@ public:
     void AddClient(LobbyClient* inClient, unsigned char inFlags) { this->M(LobbyMC::GroupAdd, (intptr_t)inClient, inFlags); }
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId) { return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::GroupRemove, inId)); }
     LobbyClient* SetCaptain(unsigned short inId, LobbyClient** outOld) { return (LobbyClient*)this->M(LobbyMC::GroupSetCaptain, inId, (intptr_t)outOld); }
-    LobbyClient* GetCaptain() { return (LobbyClient*)this->M(LobbyMC::GroupCaptain); }
     LobbyClient* FindClient(unsigned short inId) { return (LobbyClient*)this->M(LobbyMC::GroupFind, inId); }
-    bool IsPasswordProtected() { return (this->M(LobbyMC::GroupKind) & 1) != 0; }
-    bool IsGameGroup() { return (this->M(LobbyMC::GroupKind) & 8) == 0; }
     unsigned short GetId() { return (unsigned short)this->MGet(LobbyMF::GroupId); }
     GUIString GetName() const { return this->MText(LobbyMF::GroupName); }
     unsigned short GetCaptainId() const { return (unsigned short)this->MGet(LobbyMF::GroupCaptainId); }
-    unsigned long GetNumClients() const { return (unsigned long)this->MGet(LobbyMF::GroupNumClients); }
     unsigned long GetFlags() const { return (unsigned long)this->MGet(LobbyMF::GroupFlags); }
     SmartPtr<LobbyClientList> GetClients() const { return SmartPtr<LobbyClientList>((LobbyClientList*)this->MGet(LobbyMF::GroupClients)); }
+#include EE_WON_DRV(Model_LobbyGroup) // the drivers' members
 };
 
 
@@ -58,23 +53,12 @@ public:
     LobbyServer() : LobbyModelObject(EeWonModelKind::Server) {}
     void Disconnect() { this->M(LobbyMC::ServerDisconnect, (intptr_t)time(NULL)); }
     bool HasAddress(const std::string& inName) { return this->M(LobbyMC::ServerHasAddress, (intptr_t)inName.data(), (intptr_t)inName.length()) != 0; }
-    void UpdateFriends() { this->M(LobbyMC::ServerUpdateFriends); }
-    void ClearFriendLocations() { this->M(LobbyMC::ServerClearFriendLocations, (intptr_t)time(NULL)); }
-    void AddClientToGroup(LobbyClient* inClient, unsigned char inFlags, LobbyGroup* inGroup)
-    {
-        this->M(LobbyMC::ServerAddClientToGroup, (intptr_t)inClient, inFlags, (intptr_t)inGroup);
-    }
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId) { return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::ServerRemoveClient, inId)); }
-    SmartPtr<LobbyClient> RemoveClientFromGroup(unsigned short inId, LobbyGroup* inGroup)
-    {
-        return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::ServerRemoveClientFromGroup, inId, (intptr_t)inGroup));
-    }
     // 0x7aa370 (int: EELobbyGame at 0x692c7e zero-extends the id it passes)
     LobbyClient* GetClient(int inId) { return (LobbyClient*)this->M(LobbyMC::ServerGetClient, inId); }
     LobbyClient* FindClientByWONId(unsigned long inId) { return (LobbyClient*)this->M(LobbyMC::ServerFindByWonId, (intptr_t)inId); }
     LobbyClient* GetMyClient() { return (LobbyClient*)this->M(LobbyMC::ServerMyClient); }
     LobbyGroup* GetGroup(int inId) { return (LobbyGroup*)this->M(LobbyMC::ServerGroup, inId); }
-    int GetNumClients() { return (int)this->M(LobbyMC::ServerNumClientsNow); }
     bool IsConnected() { return this->M(LobbyMC::ServerConnected) != 0; }
 
     unsigned short GetMyClientId() const { return (unsigned short)this->MGet(LobbyMF::ServerMyClientId); }
@@ -82,6 +66,7 @@ public:
     IPAddr GetAddress() const { return this->MAddr(LobbyMF::ServerAddress); }
     SmartPtr<LobbyClientList> GetClients() const { return SmartPtr<LobbyClientList>((LobbyClientList*)this->MGet(LobbyMF::ServerClients)); }
     SmartPtr<RoutingConnection> GetConnection() const { return SmartPtr<RoutingConnection>((RoutingConnection*)this->MGet(LobbyMF::ServerConnection)); }
+#include EE_WON_DRV(Model_LobbyServer) // the drivers' members
 };
 
 // the servers, in address order
@@ -118,8 +103,8 @@ public:
     bool HasMore() { return this->M(LobbyMC::GameListHasMore) != 0; }
     LobbyGame* Next() { return (LobbyGame*)this->M(LobbyMC::GameListNext); } // NULL at the end, where the original read past it
     bool IsEmpty() { return this->M(LobbyMC::GameListIsEmpty) != 0; }
-    bool RemoveStaleGames(long inMaxAge) { return this->M(LobbyMC::GameListRemoveStale, inMaxAge, (intptr_t)time(NULL)) != 0; }
     long GetType() const { return (long)this->MGet(LobbyMF::GameListType); }
+#include EE_WON_DRV(Model_LobbyGameList) // the drivers' members
 };
 
 }

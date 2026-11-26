@@ -73,13 +73,7 @@ inline GUIString LobbyPCText(LobbyPC_ c, int64_t a = 0, const GUIString* t = NUL
 }
 inline intptr_t LobbyPersistAddr(const IPAddr& inAddr) { return (intptr_t)inAddr.GetValue(); }
 
-#include EE_WON_DRV(Persist_ns) // the drivers' members
 inline GUIString LobbyGetUserNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::UserNameAt, (int64_t)inPos); }
-inline LobbyUserInfo* LobbyFindUser(const GUIString& inName) { return (LobbyUserInfo*)LobbyPC1(LobbyPC_::FindUser, inName); }
-// records a login as a saved user's most recent use (a new user gets a free id, its stale file deleted); with
-// inExistingOnly NULL for a user never seen before
-inline LobbyUserInfo* LobbyAddUser(const GUIString& inName, const GUIString& inPassword, bool inExistingOnly)
-{ return (LobbyUserInfo*)LobbyPC2(LobbyPC_::AddUser, inName, inPassword, inExistingOnly); }
 // makes the user (NULL: the LAN user) current and loads its preferences
 inline void LobbySetCurrentUser(LobbyUserInfo* inUser) { LobbyPC(LobbyPC_::SetCurrentUser, (int64_t)(intptr_t)inUser); }
 // a record's fields: the id, the terms of use's two times (the original's mValue04 / mValue08), name, password
@@ -87,8 +81,6 @@ inline long LobbyUserTOU(const LobbyUserInfo* inUser, int inWhich) { return (lon
 inline void LobbyUserSetTOU(LobbyUserInfo* inUser, long inSys, long inGame) { ee_won_persist_user_set_tou(inUser, inSys, inGame); }
 inline GUIString LobbyUserText(const LobbyUserInfo* inUser, int inWhich)
 { size_t n = 0; const uint32_t* u = ee_won_persist_user_text(inUser, inWhich, &n); return LobbyPersistString(u, n); }
-inline GUIString LobbyGetUserPassword(const GUIString& inName)
-{ LobbyUserInfo* u = LobbyFindUser(inName); return u != NULL ? LobbyUserText(u, 1) : GUIString(); }
 
 // the options (defaults without lobby data); a setter marks the settings changed only on a change, the sound and
 // music ones set the global dirty flag to whether they differ from the saved state
@@ -133,7 +125,6 @@ inline LobbyFriend* LobbyFindFriend(unsigned long inId) { return (LobbyFriend*)L
 // a new friend unless the id is there (the user flag set); the friend
 inline LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inId)
 { return (LobbyFriend*)LobbyPC1(LobbyPC_::AddFriend, inName, (int64_t)inId); }
-inline GUIString LobbyGetIgnoredNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::IgnoredAt, (int64_t)inPos); }
 inline bool LobbyIsNameIgnored(const GUIString& inName) { return LobbyPC1(LobbyPC_::IsIgnored, inName) != 0; }
 inline void LobbySetNameIgnored(const GUIString& inName, bool inIgnore) { LobbyPC1(LobbyPC_::SetIgnored, inName, inIgnore); }
 // the blocked CD key ids (loaded and saved, never filled by the lobby)
@@ -149,8 +140,6 @@ inline IPAddr LobbyGetDirectConnectAddressAt(size_t inPos)
     return a != NULL ? IPAddr::FromValue(ee_won_ipaddr_clone(a)) : IPAddr();
 }
 inline GUIString LobbyGetDirectConnectNameAt(size_t inPos) { return LobbyPCText(LobbyPC_::DirectNameAt, (int64_t)inPos); }
-inline void LobbyAddDirectConnect(const IPAddr& inAddr, const GUIString& inName)
-{ LobbyPC1(LobbyPC_::AddDirect, inName, LobbyPersistAddr(inAddr)); }
 inline void LobbyRemoveDirectConnect(const IPAddr& inAddr) { LobbyPC(LobbyPC_::RemoveDirect, LobbyPersistAddr(inAddr)); }
 // a server's reconnect id (0 when none); setting one stamps the time and saves the user's file
 inline int LobbyGetReconnectId(const IPAddr& inAddr) { return (int)LobbyPC(LobbyPC_::ReconnectId, LobbyPersistAddr(inAddr)); }
@@ -160,12 +149,10 @@ inline void LobbySetReconnectId(const IPAddr& inAddr, int inId) { LobbyPC(LobbyP
 inline size_t LobbyGetFilterCount(const GUIString& inColumn) { return (size_t)LobbyPC1(LobbyPC_::FilterCount, inColumn); }
 inline GUIString LobbyGetFilterValueAt(const GUIString& inColumn, size_t inPos)
 { return LobbyPCText(LobbyPC_::FilterValueAt, (int64_t)inPos, &inColumn); }
-inline void LobbyAddFilterValue(const GUIString& inColumn, const GUIString& inValue) { LobbyPC2(LobbyPC_::AddFilterValue, inColumn, inValue); }
-// (an emptied column stays)
-inline void LobbyRemoveFilterValue(const GUIString& inColumn, const GUIString& inValue) { LobbyPC2(LobbyPC_::RemoveFilterValue, inColumn, inValue); }
 // comma-separated values into a default filter; a column with values is skipped unless appending
 inline void LobbyAddGameOption(const GUIString& inColumn, const GUIString& inValues, bool inAppend)
 { LobbyPC2(LobbyPC_::AddGameOption, inColumn, inValues, inAppend); }
+#include EE_WON_DRV(Persist_ns) // the drivers' members
 }
 
 #endif
