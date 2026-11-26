@@ -350,33 +350,19 @@ template <class T> static T* GtObj(uint64_t inHandle) { return reinterpret_cast<
 extern "C" int64_t ee_units_gt_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, float (*ioF)[4])
 {
     switch (inOp) {
-    case EE_UNITS_GT_RESOURCE_AMOUNT: return GtObj<EEUnit>(inA)->mResourceAmount;
-    case EE_UNITS_GT_RESOURCE_TYPE: return GtObj<EEUnit>(inA)->mResourceType;
-    case EE_UNITS_GT_CLEAR_RESOURCE_AMOUNT: GtObj<EEUnit>(inA)->mResourceAmount = 0; return 0;
     case EE_UNITS_GT_FREE_SPOT: return ee_units_uu_spot(1, inA, inB, (float(*)[3])&sGtSpot.mX);
     case EE_UNITS_GT_FOREST_ID: return gContinentManager.GetForestIDAt(U2DPoint<long>((long)inC, (long)inD));
     case EE_UNITS_GT_FOREST: return (int64_t)(uintptr_t)gContinentManager.GetForests()[(unsigned short)inC];
     case EE_UNITS_GT_FOREST_TILES: return GtObj<EEAIForest>(inA)->GetNumTiles();
-    case EE_UNITS_GT_TILE_X: return GtObj<EEUnit>(inA)->GetTileX();
-    case EE_UNITS_GT_TILE_Y: return GtObj<EEUnit>(inA)->GetTileY();
-    case EE_UNITS_GT_LINE_OF_SIGHT: return (int64_t)UFloatBits(GtObj<EEComplexUnit>(inA)->GetLineOfSight());
     case EE_UNITS_GT_UNITS_IN_RADIUS: return ee_units_uu_units_in_radius((*ioF)[0], (*ioF)[1], (*ioF)[2], &sGtUnits);
     case EE_UNITS_GT_LIST_UNIT: return (int64_t)(uintptr_t)sGtUnits[(size_t)inC];
-    case EE_UNITS_GT_PLAYER: return (int64_t)(uintptr_t)GtObj<EEUnit>(inA)->GetPlayer();
     case EE_UNITS_GT_IS_DROP_SITE: return GtObj<EEUnit>(inA)->GetUnitClass()->IsDropSite();
-    case EE_UNITS_GT_CAN_TAKE: return GtObj<EEComplexUnit>(inA)->CanTake(GtObj<EEComplexUnit>(inB), 3);
     case EE_UNITS_GT_LINE_CLEAR: sGtTiles.clear(); return 0;
     case EE_UNITS_GT_LINE_TARGET: sGtTarget = U2DPoint<long>((long)inC, (long)inD); return 0;
     case EE_UNITS_GT_LINE_TILES: return (U2DPoint<long>((long)inC, (long)inD).GetLineTiles(sGtTarget, 1.0f, sGtTiles), (int64_t)sGtTiles.size());
     case EE_UNITS_GT_LINE_TILE: return (int64_t)(((uint64_t)(uint32_t)sGtTiles[(size_t)inC].mY << 32) | (uint32_t)sGtTiles[(size_t)inC].mX);
-    case EE_UNITS_GT_MAP_TILE: return (int64_t)(uintptr_t)::gWorld.GetMap()->GetTile((long)inC, (long)inD);
-    case EE_UNITS_GT_FIRST_NODE: return (int64_t)(uintptr_t)GtObj<EEMapTile>(inA)->mUnits;
-    case EE_UNITS_GT_NODE_UNIT: return (int64_t)(uintptr_t)GtObj<RTSTileUnitNode>(inA)->mUnit;
-    case EE_UNITS_GT_NEXT_NODE: return (int64_t)(uintptr_t)GtObj<RTSTileUnitNode>(inA)->mNext;
     case EE_UNITS_GT_CAN_GATHER: return GtObj<EEComplexUnit>(inA)->CanGather(GtObj<EEUnit>(inB), (long)inC, (long)inD, false, false);
     case EE_UNITS_GT_HAS_GATHER_POINT: return EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(GtObj<EEComplexUnit>(inA)->GetUnitClass())->HasGatherPoint(GtObj<EEComplexUnit>(inA), GtObj<EEUnit>(inB));
-    case EE_UNITS_GT_SET_GATHERED: GtObj<EEComplexUnit>(inA)->SetGatheredResource(GtObj<EEUnit>(inB)); return 0;
-    case EE_UNITS_GT_FAMILY: return GtObj<EEUnit>(inA)->GetUnitClass()->mFamily;
     }
     return 0;
 }

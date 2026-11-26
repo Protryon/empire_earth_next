@@ -185,3 +185,53 @@ fn set_hit_points(unit: u64, value: i64) -> i64 {
     unsafe { crate::units::eu_body::game::ee_units_eu_body(w, unit as usize as *mut c_void, value, 0, 0) };
     0
 }
+
+/// `ee_units_gt_host`'s plain statements (the tree gathering's: `a` a unit or a tile node, `b` a unit; EEUGRust.cpp).
+pub(crate) fn gt_view(op: i32, a: u64, b: u64, c: i64, d: i64) -> Option<i64> {
+    use crate::units::uu_gather_tree::*;
+    // SAFETY: the gathering runs inside the C++ caller's hold of the world; the handles are live
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    let u = || unsafe { UnitView::of(&t, a) };
+    Some(match op {
+        EE_UNITS_GT_RESOURCE_AMOUNT => u()?.resource_amount(),
+        EE_UNITS_GT_RESOURCE_TYPE => u()?.resource_type() as i64,
+        EE_UNITS_GT_CLEAR_RESOURCE_AMOUNT => {
+            let f = u()?.fields().ptr() as *mut EeUnitsUnitFields;
+            // SAFETY: the unit's member
+            unsafe { (*f).mResourceAmount = 0 };
+            0
+        }
+        EE_UNITS_GT_TILE_X => u()?.tile_xy().0,
+        EE_UNITS_GT_TILE_Y => u()?.tile_xy().1,
+        EE_UNITS_GT_LINE_OF_SIGHT => {
+            let u = u()?;
+            let sight: f32 = world_field!(u.stats()?.fields(), mLineOfSight);
+            i64::from((sight + u.sight()).to_bits())
+        }
+        EE_UNITS_GT_PLAYER => u()?.player().map_or(0, |q| q.handle() as i64),
+        // `CanTake(b, kResourceWood)` asks the unit's own resource type
+        EE_UNITS_GT_CAN_TAKE => {
+            let kind = u()?.resource_type();
+            i64::from(kind == RESOURCE_ANY || kind == 3)
+        }
+        EE_UNITS_GT_MAP_TILE => {
+            let map = WorldView::global(&t)?.map()?;
+            map.tile(c as c_long as i64, d as c_long as i64).map_or(0, |k| k.handle() as i64)
+        }
+        // SAFETY: a live tile's node list
+        EE_UNITS_GT_FIRST_NODE => unsafe { word(a, layout().tile_units) as i64 },
+        // SAFETY: a live tile node's members
+        EE_UNITS_GT_NODE_UNIT => unsafe { word(a, layout().unit_node_unit) as i64 },
+        // SAFETY: as above
+        EE_UNITS_GT_NEXT_NODE => unsafe { word(a, layout().unit_node_next) as i64 },
+        EE_UNITS_GT_SET_GATHERED => {
+            // SAFETY: the member's call on the live unit
+            done(unsafe {
+                ee_units_cu_body(EE_UNITS_CU_DO_SET_GATHERED_RESOURCE, a as usize as *mut c_void, b as i64, 0, 0)
+            })
+        }
+        EE_UNITS_GT_FAMILY => u()?.class()?.family() as i64,
+        _ => return None,
+    })
+}
