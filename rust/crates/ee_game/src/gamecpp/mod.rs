@@ -472,7 +472,6 @@ pub enum EeGameCpp {
     PlSetStance,
     PlUnloadClassButtons,
     PlUnloadClassMedia,
-    PlUpgradeAt,
     PlUpgradeLoadMedia,
     PlUpgradeUnloadMedia,
     PlayerShareBonus,
@@ -2824,7 +2823,6 @@ pub enum EeGameCpp {
     DcCxKill,
     DcPlayerKillUnit,
     DcClassCount,
-    DcPlayerUpgrade,
     DcCanImprove,
     DcClassMaxLevel,
     DcUpgradeLevel,
@@ -2847,7 +2845,6 @@ pub enum EeGameCpp {
     DcParse,
     DcApply,
     DcSwapCheatsEnabled,
-    DcPlayerUpgradeCount,
     // EECivilization.cpp (civilization.rs)
     DvListCount,
     DvListAt,

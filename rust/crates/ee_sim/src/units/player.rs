@@ -837,6 +837,9 @@ impl PlayerHost for FnHost {
             return v;
         }
         // the player's own Rust bodies and the plain reads (player_native.rs); SAFETY: as above
+        if let Some(v) = crate::units::player_upgrades::player(op, self.player as u64, io) {
+            return v;
+        }
         #[cfg(not(test))]
         if let Some(v) = unsafe { crate::units::player_native::player(op, self.player as u64, io) } {
             return v;
@@ -848,6 +851,7 @@ impl PlayerHost for FnHost {
             crate::units::player_views::answer(player as u64, op, io)
         } {
             Some(v) => v,
+            None if let Some(v) = crate::units::player_upgrades::player(op, player as u64, io) => v,
             #[cfg(not(test))]
             None if let Some(v) = unsafe { crate::units::player_native::player(op, player as u64, io) } => v,
             // the containers' operations on the players' lists (player_lists.rs)

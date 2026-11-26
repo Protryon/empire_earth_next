@@ -140,6 +140,7 @@ pub mod player_split_more;
 pub mod player_stats;
 pub mod player_tick;
 pub mod player_units;
+pub mod player_upgrades;
 pub mod player_views;
 pub mod players;
 pub mod pm;

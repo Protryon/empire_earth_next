@@ -8,7 +8,7 @@
 use std::os::raw::c_long;
 
 use crate::scenario::event::{
-    EE_SCENARIO_EV_IS_LATEST, EE_SCENARIO_EV_NODE_DELAY, EE_SCENARIO_EV_NODE_KIND, EE_SCENARIO_EV_NODE_UNIT_CLASS,
+    EE_SCENARIO_EV_IS_LATEST, EE_SCENARIO_EV_UPGRADE, EE_SCENARIO_EV_NODE_DELAY, EE_SCENARIO_EV_NODE_KIND, EE_SCENARIO_EV_NODE_UNIT_CLASS,
     EE_SCENARIO_EV_RESEARCH_NODE, EE_SCENARIO_EV_TREE_NODE, EE_SCENARIO_EV_TREE_SET_MEDIA,
 };
 use crate::scenario::host::EE_SCENARIO_READ_EPOCH;
@@ -60,6 +60,8 @@ pub fn event(op: u32, a: &[i64; 4]) -> Option<i64> {
     let p = a[0] as usize;
     Some(match op {
         EE_SCENARIO_EV_TREE_NODE => get(player_tree(p), a[1]) as i64,
+        // the player's upgrade of a unit class (player_upgrades.rs: the vector read in place)
+        EE_SCENARIO_EV_UPGRADE => crate::units::player_upgrades::at(p as u64, a[1] as usize) as i64,
         EE_SCENARIO_EV_NODE_UNIT_CLASS => data_of(p).mUnitClass as i64,
         EE_SCENARIO_EV_NODE_KIND => data_of(p).mKind as i64,
         EE_SCENARIO_EV_NODE_DELAY => {

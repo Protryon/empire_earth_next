@@ -1002,7 +1002,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         h(O::TechApplySaved, tree, &[]);
         let mut k: i64 = 0;
         while k < h(O::UnitClassCount, 0, &[]) {
-            let upgrade = hp(O::PlUpgradeAt, pl, &[k]);
+            let upgrade = ee_sim::units::player_upgrades::at(pl as u64, k as usize) as P;
             if upgrade == 0 {
                 k += 1;
                 continue;

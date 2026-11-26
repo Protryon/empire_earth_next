@@ -821,6 +821,8 @@ struct EeWorldLayout {
   uint64_t player_last_unit;
   /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
   uint64_t town_fields;
+  /// `EEPlayer::mUnitClassUpgrades` (a `std::vector<EEUnitClassUpgrade*>`: its begin and end pointers first)
+  uint64_t player_unit_class_upgrades;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of
