@@ -18,7 +18,6 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
-#include "ee/wonapi/WONGUIDraw.h"
 #include "lle/GETextureManager.h"
 #include "rust/won_gui/platcursor.h"
 
@@ -55,8 +54,6 @@ static intptr_t Held(RefCount* inObject)
 intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonImageHost H;
-    DisplayContext* theContext = (DisplayContext*)a;
-    Graphics* theGraphics = (Graphics*)a;
     switch (op) {
         case H::Wrap: {
             EeWonImage* theRust = (EeWonImage*)a;
@@ -68,26 +65,10 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             }
             return (intptr_t)theImage;
         }
-        case H::GfxTrans: ((int*)b)[0] = theGraphics->mTransX; ((int*)b)[1] = theGraphics->mTransY; return 0;
-        case H::GfxContext: return (intptr_t)theGraphics->mDisplayContext.get();
-        case H::GfxRun: {
-            WONDrawSlots theSlots;
-            for (int i = 0; i < 4; i++)
-                theSlots.mImages[i] = ((Image**)d)[i];
-            WONDrawNoCall theNoCall;
-            for (intptr_t i = 0; i < c; i++)
-                WONDrawOne(*theGraphics, ((const EeWonDrawOp*)b)[i], theSlots, theNoCall);
-            return 0;
-        }
-        case H::GfxDrawImage: theGraphics->DrawImage((Image*)b, ((int*)c)[0], ((int*)c)[1]); return 0;
+        // (a Graphics' translation, context, plan and image draw, its making and freeing are gfxrun.rs's: R6 WON GUI
+        // round 39)
         // (the surface is the Rust image's own: no SurfaceBase, R6 WON GUI round 36)
         case H::NewContext: return Held(new DisplayContext((EeWonSurface*)a, *(const float*)b));
-        case H::NewGraphics: {
-            Graphics* theNew = new Graphics;
-            theNew->Attach(theContext);
-            return (intptr_t)theNew;
-        }
-        case H::FreeGraphics: delete theGraphics; return 0;
         case H::CreateImage: return Held(NewOffscreen((int)b, (int)c));
         case H::Decode: {
             SmartPtr<NativeImage> theImage = WindowManager::GetDefaultWindowManager()->DecodeImage((const char*)a);
@@ -95,6 +76,7 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
         }
         case H::PackShift:
             return WindowManager::GetDefaultWindowManager() != NULL ? (intptr_t)GETextureManager::GetTexturePackLogicalShift() : 0;
+        default: break;
     }
     return 0;
 }

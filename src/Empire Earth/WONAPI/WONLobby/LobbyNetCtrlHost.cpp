@@ -363,7 +363,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxDrawResImage: g->DrawImage(ResImage(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawText: g->DrawString(Txt(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawResText: g->DrawString(ResText(b), Lo(c), Hi(c)); return 0;
-    case Op::GfxTextWidth: return g->mFont->GetStringWidth(Txt(b));
+    case Op::GfxTextWidth: return g->GetFont()->GetStringWidth(Txt(b));
     // the statements of the cases hostops.rs answers (R6 WONLobby round 29: the ping bars, the rows' counts, the
     // summaries, the filter row, the room events, the event items, the numbers, the saved game dialog)
     case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
