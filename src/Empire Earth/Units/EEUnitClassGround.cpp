@@ -101,38 +101,25 @@ extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, 
     EEUnit* theSimple = EEUcgObject<EEUnit>(inA);
     float* f = *ioF;
     switch (inOp) {
-    case EE_UNITS_UCG_TILE_X_OF: return theSimple->mTileX;
-    case EE_UNITS_UCG_TILE_Y_OF: return theSimple->mTileY;
     case EE_UNITS_UCG_TILE_ADD: EEUcgObject<EEMapTile>(inA)->mUnits = EEUcgObject<EEMapTile>(inA)->AddUnit(EEUcgObject<EEUnit>((uint64_t)inB), EEUcgObject<EEMapTile>(inA)->mUnits); return 0;
     case EE_UNITS_UCG_TILE_REMOVE: EEUcgObject<EEMapTile>(inA)->RemoveUnit(EEUcgObject<EEUnit>((uint64_t)inB)); return 0;
-    case EE_UNITS_UCG_QUEUED_FOR_DELETE: return theSimple->mIsQueuedForDelete;
     case EE_UNITS_UCG_BASE_SIMPLE_CREATED: theClass->BaseSimpleUnitCreated(theSimple); return 0;
     case EE_UNITS_UCG_SET_RESOURCE_TYPE: theSimple->SetResourceType(theClass->mResourceType); return 0;
-    case EE_UNITS_UCG_RESOURCE_TYPE: return theSimple->mResourceType;
     case EE_UNITS_UCG_SET_RESOURCE_AMOUNT: theSimple->SetResourceAmount(theClass->mResourceAmount); return 0;
-    case EE_UNITS_UCG_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
     case EE_UNITS_UCG_SET_CLASS_POWER: theUnit->SetPower(theUnit->mUnitClass->mPower); return 0;
     case EE_UNITS_UCG_MAP_TILE: return EEObj(::gWorld.GetMap()->GetTile((long)inB, (long)inC));
-    case EE_UNITS_UCG_CRUISE_ALTITUDE_OF: f[0] = EEUcgObject<EEUnitClass>(inA)->mCruiseAltitude; return 0;
     case EE_UNITS_UCG_CREATE_PLANE: return EEObj(EEUcgObject<EEUnitClass>(inA)->CreateUnitAt(*EEUcgObject<GETransformation>((uint64_t)inB), 0, 0, theUnit)->mComplexUnit);
     case EE_UNITS_UCG_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, theUnit->mPlayer->mPlayerID); return 0;
     case EE_UNITS_UCG_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
     case EE_UNITS_UCG_SET_FLIGHT_TIME_OF: theOther->SetFlightTime((unsigned long)inB); return 0;
-    case EE_UNITS_UCG_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcgObject<GETransformation>(inA), true); return 0;
-    case EE_UNITS_UCG_COLLISION_STATE: return theUnit->mCollisionState;
     case EE_UNITS_UCG_WAYPOINT_COUNT: return theUnit->mWaypoints.size();
     case EE_UNITS_UCG_NEXT_WAYPOINT: theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f)); return 0;
-    case EE_UNITS_UCG_COLLISION_RADIUS: f[0] = theUnit->mCollisionRadius; return 0;
-    case EE_UNITS_UCG_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
     case EE_UNITS_UCG_WORLD_LINE: memcpy(EEUcgObject<GE3DLine>(inA), &::gWorld.mLine, sizeof(GE3DLine)); return 0;
     case EE_UNITS_UCG_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
     case EE_UNITS_UCG_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCG_TERRAIN_Z: f[0] = ::gWorld.mMap->mTerrainMesh.GetZ((unsigned long)inB, (unsigned long)inC); return 0;
-    case EE_UNITS_UCG_BASE_CREATE_AT: return EEObj(theClass->BaseCreateUnitAt(*EEUcgObject<GETransformation>(inA), (long)(inB >> 1), (inB & 1) != 0, EEUcgObject<EEUnit>((uint64_t)inC)));
-    case EE_UNITS_UCG_SET_LOCATION_OF: theOther->SetLocation(GE3DPoint(f[0], f[1], f[2]), true); return 0;
     case EE_UNITS_UCG_RANDOM_GENERATE: f[0] = gPhysics->mRandom.Generate(); return 0;
     case EE_UNITS_UCG_RANDOM_RANGE: f[0] = gPhysics->GetRandom(f[0], f[1]); return 0;
-    case EE_UNITS_UCG_WHEEL_COUNT: return theUnit->mNumWheels;
     case EE_UNITS_UCG_WHEEL_UPDATE: theUnit->mWheels[inB]->Update(theUnit); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }

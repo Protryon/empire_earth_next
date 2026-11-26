@@ -174,37 +174,22 @@ extern "C" int64_t ee_units_ucx_host(int32_t inOp, void* inClass, void* inUnit, 
     EEUnit* theSimple = EEUcxObject<EEUnit>(inA);
     float* f = *ioF;
     switch (inOp) {
-    case EE_UNITS_UCX_DOMAINS_OF: return theOther->mUnitClass->mDomains;
-    case EE_UNITS_UCX_MAX_VELOCITY_OF: f[0] = theOther->mStats->mMaxVelocity; return 0;
     case EE_UNITS_UCX_TILES_CLEAR: sUcxTiles.clear(); return 0;
     case EE_UNITS_UCX_TILES_AROUND: ee_units_uu_tiles_around((uint64_t)(uintptr_t)theUnit, inA, 1, 0, 0, &sUcxTiles); return 0;
     case EE_UNITS_UCX_PICK_TILE_NEAR: return ee_units_uu_pick_tile_near(&sUcxTiles, (uint64_t)(uintptr_t)theUnit, inA, 0, EEUcxObject<float[3]>((uint64_t)inB));
-    case EE_UNITS_UCX_TILE_SIZE_OF: return theOther->mUnitClass->mTileSize;
     case EE_UNITS_UCX_SET_POINT: *EEUcxObject<GE3DPoint>((uint64_t)inB) = GE3DPoint(f[0], f[1], f[2]); return 0;
     case EE_UNITS_UCX_SET_RESOURCE_TYPE: theSimple->SetResourceType(theClass->mResourceType); return 0;
-    case EE_UNITS_UCX_RESOURCE_TYPE: return theSimple->mResourceType;
     case EE_UNITS_UCX_SET_RESOURCE_AMOUNT: theSimple->SetResourceAmount(theClass->mResourceAmount); return 0;
-    case EE_UNITS_UCX_UNLOAD_AT_TILE: theUnit->UnloadCargoAtTile((long)inB, (long)inC, inA != 0); return 0;
     case EE_UNITS_UCX_COMPLEX_FIELD_OF: return (uint64_t)(uintptr_t)theSimple->mComplexUnit;
-    case EE_UNITS_UCX_CARGO_COUNT_OF: return theOther->GetNumCargoUnits();
     case EE_UNITS_UCX_CARGO_OF: return (uint64_t)(uintptr_t)theOther->GetCargo((unsigned long)inB);
-    case EE_UNITS_UCX_UNLOAD_NOW_OF: theOther->UnloadCargoNow(EEUcxObject<EEComplexUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UCX_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
-    case EE_UNITS_UCX_SET_TRANSFORMATION: theUnit->SetTransformation(*EEUcxObject<GETransformation>(inA), true); return 0;
-    case EE_UNITS_UCX_TILE_X_OF: return theSimple->mTileX;
-    case EE_UNITS_UCX_TILE_Y_OF: return theSimple->mTileY;
     case EE_UNITS_UCX_TILE_ADD: EEUcxObject<EEMapTile>(inA)->mUnits = EEUcxObject<EEMapTile>(inA)->AddUnit(EEUcxObject<EEUnit>((uint64_t)inB), EEUcxObject<EEMapTile>(inA)->mUnits); return 0;
     case EE_UNITS_UCX_TILE_REMOVE: EEUcxObject<EEMapTile>(inA)->RemoveUnit(EEUcxObject<EEUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UCX_TOTAL_POPULATION: return theUnit->mPlayer->GetTotalPopulation(false, false);
-    case EE_UNITS_UCX_SET_BUILT: theUnit->SetBuilt(0, 1, 1); return 0;
-    case EE_UNITS_UCX_TYPE_OF: return theOther->mUnitClass->mUnitType;
-    case EE_UNITS_UCX_POWER: return theUnit->GetPower();
     case EE_UNITS_UCX_UNLOAD_COST: return gFortressUnloadCost;
     case EE_UNITS_UCX_SET_POWER: theUnit->SetPower((long)inB); return 0;
     case EE_UNITS_UCX_UNLOAD_EVENT: theUnit->mPlayer->mEvents.AddEvent(U2DPoint<long>((long)inB, (long)inC), 2, theUnit->GetPlayer(), 0x274e, false); return 0;
     case EE_UNITS_UCX_DESTINATION: EEUcxObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
-    case EE_UNITS_UCX_CRUISE_ALTITUDE: f[0] = theClass->mCruiseAltitude; return 0;
-    case EE_UNITS_UCX_TRANSPORT_CAPACITY: return theUnit->mUnitClass->mTransportCapacity;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }
 }

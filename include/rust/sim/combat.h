@@ -2523,6 +2523,9 @@ struct EeCombatShotHost {
   void *ctx;
   int32_t (*op)(void *ctx, int32_t op, int32_t arg, int32_t arg1);
   int64_t (*op64)(void *ctx, int32_t op, uint64_t a, int64_t b, float *f);
+  /// the shot (its `EEUnit*`) and its class: the plain statements' (shot_view.rs)
+  uint64_t unit;
+  uint64_t unit_class;
 };
 
 /// What the work does: the goal's new elapsed time (`work`), and the target's new hit points (`heal`).
