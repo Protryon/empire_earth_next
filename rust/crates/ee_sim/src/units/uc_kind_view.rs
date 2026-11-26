@@ -43,10 +43,15 @@ pub(crate) fn kind_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mu
         Kind::Ground => ground(x, op, b, c, f),
         Kind::Kinds => kinds(x, op, b).or_else(|| kinds_call(x, op, b, c, f)),
         Kind::People => people(x, op, f),
-        Kind::Shots => shots(x, op, f),
+        Kind::Shots => shots(x, op, b, c, f),
         Kind::Transports => transports(x, op, f),
     }
 }
+
+/// `kUnitCategoryBomb`, `kUnitTypeCpMissileBase`, `kUnitTypeMissileBase` (rust/sim/unit_ids.h)
+const SHOTS_CATEGORY_BOMB: u64 = 11;
+const SHOTS_TYPE_CP_MISSILE_BASE: u64 = 749;
+const SHOTS_TYPE_MISSILE_BASE: u64 = 67;
 
 /// A goal's `mKind` (an `unsigned char`).
 fn goal_kind(goal: u64) -> Option<i64> {
@@ -386,7 +391,7 @@ fn people(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
     })
 }
 
-fn shots(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
+fn shots(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     let (u, o) = (|| x.u(), || x.o());
     Some(match op {
         EE_UNITS_UCS_GOAL_STATE => u()?.goal_handle() as i64,
@@ -415,6 +420,54 @@ fn shots(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
             // SAFETY: the unit's member
             unsafe { (*complex_mut(&u()?)).mCloaked = 300000 };
             0
+        }
+        // units round 14: the shots' host's other plain statements
+        EE_UNITS_UCS_IS_BOMB => i64::from(x.cls()?.category() == SHOTS_CATEGORY_BOMB),
+        EE_UNITS_UCS_LOCATION => {
+            let at = u()?.location();
+            f[..3].copy_from_slice(&at);
+            0
+        }
+        EE_UNITS_UCS_LAUNCHER_CP_BASE | EE_UNITS_UCS_LAUNCHER_MISSILE_BASE => {
+            // SAFETY: the unit's launcher class (set for every shot)
+            let l = unsafe { crate::world::view::ClassView::of(x.t, u()?.launcher_class_handle()) }?;
+            let ty = if op == EE_UNITS_UCS_LAUNCHER_CP_BASE { SHOTS_TYPE_CP_MISSILE_BASE } else { SHOTS_TYPE_MISSILE_BASE };
+            i64::from(l.unit_type() == ty)
+        }
+        EE_UNITS_UCS_SET_LAUNCH_DELAY => {
+            // SAFETY: as above
+            let l = unsafe { crate::world::view::ClassView::of(x.t, u()?.launcher_class_handle()) }?;
+            let delay: c_long = world_field!(l.fields(), mMissileDelayTime);
+            // SAFETY: the unit's member
+            unsafe { (*complex_mut(&u()?)).mFlightTime = delay };
+            0
+        }
+        EE_UNITS_UCS_SET_FLIGHT_TIME => {
+            // SAFETY: the unit's member (`SetFlightTime((unsigned long)inB)`, a long)
+            unsafe { (*complex_mut(&u()?)).mFlightTime = b as c_ulong as c_long };
+            0
+        }
+        EE_UNITS_UCS_TILE_HEIGHT => {
+            f[0] = u()?.tile()?.height();
+            0
+        }
+        EE_UNITS_UCS_TILE_PRESENT => i64::from(x.world()?.map()?.tile(b as c_long as i64, c as c_long as i64).is_some()),
+        EE_UNITS_UCS_SAME_TILE => {
+            let (tx, ty) = (ee_base::random::float_to_long(f[0]), ee_base::random::float_to_long(f[1]));
+            let tile = x.world()?.map()?.tile(i64::from(tx), i64::from(ty)).map_or(0, |t| t.handle());
+            i64::from(tile == u()?.tile().map_or(0, |t| t.handle()))
+        }
+        EE_UNITS_UCS_SHELL_HOLE => {
+            i64::from(!world_field!(crate::units::uc_view::links(&u()?.class()?), mShellHoleEffect).is_null())
+        }
+        EE_UNITS_UCS_HAS_TRAIL => i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mTrailEffect).is_null()),
+        EE_UNITS_UCS_HAS_RIPPLE => {
+            i64::from(!world_field!(crate::units::uc_view::links(&x.cls()?), mRippleEffect).is_null())
+        }
+        // `EEUnitCast<EEComplexUnit>(a)`
+        EE_UNITS_UCS_COMPLEX_CAST => {
+            // SAFETY: the unit (or 0) the body handed over
+            unsafe { UnitView::of(x.t, x.a) }.filter(|v| v.is_complex()).map_or(0, |v| v.handle() as i64)
         }
         _ => return None,
     })

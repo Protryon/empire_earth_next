@@ -56,6 +56,7 @@
 #include "ee/EEUIFMGMainGroup.h"
 
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
+bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 
 static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
 
@@ -588,6 +589,28 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCK_D_AIR_SOUND: theClass->AirGetSoundParameters(EEUcObject<EEUnit>(inA), EEUcObject<EESoundObject>((uint64_t)inB), EEUcObject<float*>((uint64_t)inC)[0], EEUcObject<float*>((uint64_t)inC)[1], EEUcObject<float*>((uint64_t)inC)[2]); return 0;
     case EE_UNITS_UCK_D_IS_SIDE_PART: return theClass->IsSidePart(theUnit);
     case EE_UNITS_UCK_D_FIRST_PART_COMMAND: return EEGetFirstPart(theUnit)->GetCommandType();
+    // the shots' bodies' (ee_units ucs_shots.rs, ucs_impact.rs; EE_UNITS_UCS_*: EEUnitClassShots.cpp's host until units round 14; BombUpdate's blink colour)
+    case EE_UNITS_UCS_START_Z: f[0] = theUnit->mProjectileStart.GetZ(); return 0;
+    case EE_UNITS_UCS_POSITION: theUnit->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCS_CAPTURE_IMPACT:
+        EECombatCapture(inB != 0 ? EE_COMBAT_TAG('C', 'B', 'W', 'I') : EE_COMBAT_TAG('C', 'B', 'G', 'I'), *EEUcObject<EeCombatImpactIn>(inA), *EEUcObject<EeCombatImpactOut>((uint64_t)inC));
+        return 0;
+    case EE_UNITS_UCS_ATTACK_GROUND: theUnit->SetGoal(EEUGRust::NewAttackGround(GE3DPoint(f[0], f[1], f[2]), false), 0, 0); return 0;
+    case EE_UNITS_UCS_DECAL: EEPlaceImpactDecal(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCS_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCS_ATTACK_TARGET: return EEObj(static_cast<EEUGRust*>(theUnit->mGoalState)->GetAttackTarget());
+    case EE_UNITS_UCS_TARGET_BUILDING: return EEUcObject<EEUnit>(inA)->GetUnitClass()->IsLandBuilding() || EEUcObject<EEUnit>(inA)->GetUnitClass()->mIsWall;
+    case EE_UNITS_UCS_GOAL_LOCATION: theUnit->mGoalState->GetGoalLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCS_ON_TARGET_TILES: return ee_units_ucs_call(EE_UNITS_UCS_DO_ON_TARGET_TILES, NULL, static_cast<EEUnit*>(theUnit), EEObj(static_cast<EEUGRust*>(theUnit->GetGoal())->GetAttackTarget()), NULL) != 0;   // EEIsOnTargetTiles
+    case EE_UNITS_UCS_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit->mOwner, theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType], EEUcObject<GE3DPoint>(inA), EEUcObject<GE3DPoint>((uint64_t)inB), &f[0]);
+    case EE_UNITS_UCS_LAUNCH_SPEED: f[0] = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType]->mLaunchSpeed; return 0;
+    case EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED: f[0] = theUnit->mPlayer->GetUpgrade(theUnit->mLauncherClass->mUnitType)->mLaunchSpeed; return 0;
+    case EE_UNITS_UCS_TRAIL_DETAILED: return theClass->mTrailEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCS_RIPPLE_DETAILED: return theClass->mRippleEffect->mDetailLevel <= gEffectDetail;
+    case EE_UNITS_UCS_SET_TINTED: theOther->SetIsTinted(inB != 0); return 0;
+    case EE_UNITS_UCS_SET_BLINK_COLOR: theOther->SetColor(GEColor(0.9f, 0.0f, 0.2f)); return 0;
+    case EE_UNITS_UCS_PROJECTILE_UPDATE: theClass->ProjectileUpdate(theUnit); return 0;
+    case EE_UNITS_UCS_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)));
     }
     return 0;
 }
