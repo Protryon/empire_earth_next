@@ -13,6 +13,8 @@
 
 use std::ffi::c_void;
 
+use crate::skinobj::EeWonSkinSlot as Sl;
+
 use crate::cfgkind::{v24_steps, EeWonCfgKind};
 use crate::guiconf::*;
 
@@ -140,14 +142,14 @@ pub enum EeWonCfgTabOp {
     RequestFocus,
     /// `SafeConfigGetComponent<WONButton*>(c[0], "WONButton")` (guarded).
     SafeWonButton,
-    /// The skin's radio button slot = the WON button `x`.
-    SkinSetRadio,
+    /// `WONSkinSet((EeWonSkinSlot)x, y, (Component*)z)`: the skin's slot `x` (index `y`) = component `z`.
+    SkinSet,
+    /// `ee_won_skin_set_type(WONSkinGlobal(), x != 0, &s[0], (Component*)y)`: the button type `s[0]` (simple: `x`).
+    SkinSetType,
     /// The WON button `x`'s `SetButtonFlags(8, true)`.
     RadioFlag,
-    /// `SafeConfigGetSkinPart(c[0], "WONTabCtrl")` (guarded).
-    SafeTabCtrl,
-    /// The skin's tab control slot = `x`.
-    SkinSetTabCtrl,
+    /// `SafeConfigGetSkinPart(c[0], (const char*)x)` (guarded; `x` a NUL-terminated name).
+    SafePart,
     /// `WONShell::Op(x, SetSkin, 0)`.
     ShellSetSkin,
     /// The font config's descriptor style.
@@ -423,12 +425,12 @@ fn run(o: &Ops, which: EeWonCfgComp) -> R<()> {
         }
         W::SkinRadio => {
             let radio = o.op(O::SafeWonButton, 0, 0)?;
-            o.call(O::SkinSetRadio, radio, 0);
+            o.op3(O::SkinSet, Sl::RadioButton as isize, 0, radio)?;
             o.call(O::RadioFlag, radio, 0);
         }
         W::SkinTabCtrl => {
-            let tab = o.op(O::SafeTabCtrl, 0, 0)?;
-            o.call(O::SkinSetTabCtrl, tab, 0);
+            let tab = o.op(O::SafePart, b"WONTabCtrl\0".as_ptr() as isize, 0)?;
+            o.op3(O::SkinSet, Sl::TabCtrl as isize, 0, tab)?;
             o.call(O::ShellSetSkin, tab, 0);
         }
         W::FontStyle => {
@@ -651,6 +653,100 @@ fn of_setter(setter: i32) -> Option<EeWonCfgComp> {
     })
 }
 
+/// A skin slot's index as the setter's expression had it: 0, `i[0]`, `i[0]?1:0`.
+#[derive(Clone, Copy)]
+enum Idx {
+    Zero,
+    Int,
+    Bool,
+}
+
+/// The setters made of the frame's ops (R6 WON lobby and network round 39): WONSkinConfig's slots and button types
+/// (`WONSkinSet(slot, index, SafeConfigGetSkinPart(c[0], name))`, a WON button's `SafeConfigGetComponent<WONButton*>`),
+/// ComponentConfig's POS, SIZE and the set-size flags.
+#[derive(Clone, Copy)]
+enum Small {
+    /// The slot, its index, whether the part is a WON button, the part's NUL-terminated name.
+    SkinPart(Sl, Idx, bool, &'static [u8]),
+    /// The button type `s[0]`: simple (a skin part) or a WON button.
+    SkinType(bool),
+    Pos,
+    Size,
+    /// mHasSetWidth, mHasSetHeight set.
+    HasSet(bool, bool),
+}
+
+fn small_of(setter: i32) -> Option<Small> {
+    use crate::cfgtab::*;
+    use Small::*;
+    Some(match (setter >> 8, setter & 0xff) {
+        (EE_WON_CFG_T_SKIN, 3) => SkinPart(Sl::PushButton, Idx::Zero, true, b"WONButton\0"),
+        (EE_WON_CFG_T_SKIN, 4) => SkinPart(Sl::Checkbox, Idx::Zero, true, b"WONButton\0"),
+        (EE_WON_CFG_T_SKIN, 6) => SkinPart(Sl::HeaderButton, Idx::Zero, false, b"WONHeaderButton\0"),
+        (EE_WON_CFG_T_SKIN, 7) => SkinPart(Sl::TabButton, Idx::Zero, true, b"WONButton\0"),
+        (EE_WON_CFG_T_SKIN, 8) => SkinPart(Sl::Arrow0, Idx::Int, false, b"WONSimpleButton\0"),
+        (EE_WON_CFG_T_SKIN, 9) => SkinPart(Sl::ComboButton, Idx::Zero, false, b"WONSimpleButton\0"),
+        (EE_WON_CFG_T_SKIN, 10) => SkinPart(Sl::CloseButton, Idx::Zero, false, b"WONSimpleButton\0"),
+        (EE_WON_CFG_T_SKIN, 11) => SkinPart(Sl::ScrollGutter0, Idx::Bool, false, b"WONSimpleButton\0"),
+        (EE_WON_CFG_T_SKIN, 12) => SkinPart(Sl::ScrollThumb0, Idx::Bool, false, b"WONSimpleButton\0"),
+        (EE_WON_CFG_T_SKIN, 13) => SkinPart(Sl::Scrollbar0, Idx::Bool, false, b"WONScrollbar\0"),
+        (EE_WON_CFG_T_SKIN, 14) => SkinPart(Sl::ScrollContainer, Idx::Zero, false, b"WONScrollContainer\0"),
+        (EE_WON_CFG_T_SKIN, 15) => SkinPart(Sl::ListCtrl, Idx::Zero, false, b"WONListCtrl\0"),
+        (EE_WON_CFG_T_SKIN, 17) => SkinPart(Sl::ComboBox, Idx::Zero, false, b"WONComboBox\0"),
+        (EE_WON_CFG_T_SKIN, 18) => SkinPart(Sl::PopupBack, Idx::Zero, false, b"WONPopupBack\0"),
+        (EE_WON_CFG_T_SKIN, 19) => SkinPart(Sl::DialogBack, Idx::Zero, false, b"WONDialogBack\0"),
+        (EE_WON_CFG_T_SKIN, 1) => SkinType(false),
+        (EE_WON_CFG_T_SKIN, 2) => SkinType(true),
+        (EE_WON_CFG_T_COMPONENT, 7) => Pos,
+        (EE_WON_CFG_T_COMPONENT, 8) => Size,
+        (EE_WON_CFG_T_COMPONENT, 30) => HasSet(true, false),
+        (EE_WON_CFG_T_COMPONENT, 31) => HasSet(false, true),
+        (EE_WON_CFG_T_COMPONENT, 32) => HasSet(true, true),
+        _ => return None,
+    })
+}
+
+fn run_small(o: &Ops, which: Small) -> R<()> {
+    use EeWonCfgTabOp as O;
+    let part = |button: bool, name: &'static [u8]| {
+        if button {
+            o.op(O::SafeWonButton, 0, 0)
+        } else {
+            o.op(O::SafePart, name.as_ptr() as isize, 0)
+        }
+    };
+    match which {
+        Small::SkinPart(slot, idx, button, name) => {
+            let i = match idx {
+                Idx::Zero => 0,
+                Idx::Int => o.int(0) as isize,
+                Idx::Bool => isize::from(o.int(0) != 0),
+            };
+            let c = part(button, name)?;
+            o.op3(O::SkinSet, slot as isize, i, c)?;
+        }
+        Small::SkinType(simple) => {
+            let c = part(!simple, b"WONSimpleButton\0")?;
+            o.op(O::SkinSetType, isize::from(simple), c)?;
+        }
+        Small::Pos => {
+            o.call(O::CompSetPos, o.int(0) as isize, o.int(1) as isize);
+        }
+        Small::Size => {
+            o.call(O::CompSetSize, o.int(0) as isize, o.int(1) as isize);
+        }
+        Small::HasSet(w, h) => {
+            if w {
+                o.call(O::SetHasWidth, 1, 0);
+            }
+            if h {
+                o.call(O::SetHasHeight, 1, 0);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The table setter `setter` when it is a composition: 1 when it ran, 0 when an op threw (the host keeps the
 /// exception), -1 for another setter (the host's own case).
 ///
@@ -658,8 +754,12 @@ fn of_setter(setter: i32) -> Option<EeWonCfgComp> {
 /// As `ee_won_cfg_comp`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_cfg_comp_setter(ops: EeWonCfgTabOpFn, frame: *mut c_void, setter: i32) -> i32 {
-    // SAFETY: the contract
-    of_setter(setter).map_or(-1, |w| i32::from(unsafe { ee_won_cfg_comp(ops, frame, w) }))
+    if let Some(w) = of_setter(setter) {
+        // SAFETY: the contract
+        return i32::from(unsafe { ee_won_cfg_comp(ops, frame, w) });
+    }
+    let (Some(f), Some(small)) = (ops, small_of(setter)) else { return -1 };
+    i32::from(run_small(&Ops { f, frame }, small).is_ok())
 }
 
 /// Appends bytes to the `Vec<u8>` at `v` (the host's way to hand back a string).

@@ -52,14 +52,14 @@ enum class EeWonCfgTabOp : int32_t {
   RequestFocus,
   /// `SafeConfigGetComponent<WONButton*>(c[0], "WONButton")` (guarded).
   SafeWonButton,
-  /// The skin's radio button slot = the WON button `x`.
-  SkinSetRadio,
+  /// `WONSkinSet((EeWonSkinSlot)x, y, (Component*)z)`: the skin's slot `x` (index `y`) = component `z`.
+  SkinSet,
+  /// `ee_won_skin_set_type(WONSkinGlobal(), x != 0, &s[0], (Component*)y)`: the button type `s[0]` (simple: `x`).
+  SkinSetType,
   /// The WON button `x`'s `SetButtonFlags(8, true)`.
   RadioFlag,
-  /// `SafeConfigGetSkinPart(c[0], "WONTabCtrl")` (guarded).
-  SafeTabCtrl,
-  /// The skin's tab control slot = `x`.
-  SkinSetTabCtrl,
+  /// `SafeConfigGetSkinPart(c[0], (const char*)x)` (guarded; `x` a NUL-terminated name).
+  SafePart,
   /// `WONShell::Op(x, SetSkin, 0)`.
   ShellSetSkin,
   /// The font config's descriptor style.
