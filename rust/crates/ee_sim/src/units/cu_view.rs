@@ -348,7 +348,9 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
                 0
             }
             EE_UNITS_CU_SCRATCH_SQUARE_RING | EE_UNITS_CU_SCRATCH_RING_CORNERS => {
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
                 let (x, y) = ((*u.rts()).mTileX as i32, (*u.rts()).mTileY as i32);
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
                 let size = (*u.class()).mTileSize as i32;
                 *(b as usize as *mut Vec<crate::units::uu_tiles::Tile>) = if op == EE_UNITS_CU_SCRATCH_SQUARE_RING {
                     crate::units::uu_ffi::square_ring(x, y, size, size, true)
@@ -1213,6 +1215,7 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
             EE_UNITS_EU_APPLY_MORALE => {
                 let cx = u.complex().cx();
                 let rules = &crate::tech::civ::rules().combat;
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
                 let input = crate::combat::EeCombatMoraleIn {
                     value: b as i32,
                     positive: (*cx).mPositiveMorale as i32,
