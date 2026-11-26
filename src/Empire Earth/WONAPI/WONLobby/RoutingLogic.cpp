@@ -79,7 +79,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return TX(a).mData->mLength;
     // ---- the lobby
     case O::Killed: return L->mKilled;
-    case O::RunOp: L->RunOp(AO(a), NULL, 0); return 0;
     case O::RunWithStatus:
         LobbyRunOpWithStatus(AO(a), gLobbyResources[b].mString, gLobbyResources[c].mString, (int)(d & 0xff),
                              (unsigned long)(d >> 8));
@@ -138,10 +137,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // ---- the routing ops and connection (the ops' and connections' one-call cases are Rust's: netops.rs route_op)
     case O::RSetText: RO(a)->SetText((int)b, TX(c)); return 0;
     case O::ConnNew: { RoutingConnection* aConnection = new RoutingConnection; aConnection->AddRef(); return (intptr_t)aConnection; }
-    case O::ConnSetNotice: RC(a)->SetOpCompletion((int)b, new ShellCompletion(L, EeWonLogicShellDone::RouteNotify, (int)c)); return 0;
-    case O::ConnSetClose: RC(a)->SetCloseCompletion(new ShellCompletion(L, EeWonLogicShellDone::RouteClosed)); return 0;
-    // SubscribeDataObject(0xffff, the game data type "G", false, the notice completion of code 21)
-    case O::ConnSubscribeGames: RoutingRequestValues().N(1).N(0xffff).S(std::string("G")).N(false).Run(RC(a), EE_WON_RTQ_READ_DATA, new ShellCompletion(L, EeWonLogicShellDone::RouteNotify, 21)); return 0;
     case O::BufNew: return (intptr_t) new WriteBuffer(0, true);
     case O::GameWriteSummary: GM(a)->WriteSummary(*reinterpret_cast<WriteBuffer*>(b)); return 0;
     // CreateDataObject(true, c, the game data type "G", gEmptyWideString, the summary, NULL)
@@ -248,12 +243,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // ---- the friends' searches, the server and room lists
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
     case O::StatusOpNew: return HeldOp(new UDPManagerSendRecvOp(ee_won_userstatus_body(), L->Slot<LobbyServerList>(kRoutingServerList)->AddressAt((size_t)a), reinterpret_cast<UDPManager*>(b)));
-    case O::StatusOpRun:
-        L->RunOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteUserStatus), 10000);
-        return 0;
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
-    case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteGroups), 0); return 0;
     case O::RoomDirServers: return Held(SmartPtr<ServerContext>(LobbyGetRoomDirServers()));
     case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), GetLobbyConfig()->mProductDirectory, 0x04000622, kDirTypes, 2));
     case O::DirEntitiesNew: return (intptr_t) new DirList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));

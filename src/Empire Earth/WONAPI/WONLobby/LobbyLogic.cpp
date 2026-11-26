@@ -66,6 +66,17 @@ bool LobbyLogic::RemoveTrackedOp(AsyncOp* inOp)
     return this->mTracker.RemoveOp(inOp);
 }
 
+// The shell's completions and tracker for the Rust that runs the kinds' ops (logicshell.rs EeWonLogicShellCpp)
+static void* ShellCompletionNew(void* inLogic, EeWonLogicShellDone inDone, int32_t inCode, bool inTracked)
+{
+    ShellCompletion* aCompletion = new ShellCompletion(static_cast<RustLogic*>(inLogic), inDone, inCode);
+    aCompletion->mCheckTracker = inTracked;
+    return static_cast<RefCount*>(aCompletion);
+}
+static EeWonOpTracker* ShellTracker(void* inLogic) { return static_cast<RustLogic*>(inLogic)->mTracker.GetTrackerObject(); }
+static const EeWonLogicShellCpp kShellCpp = {ShellCompletionNew, ShellTracker};
+[[maybe_unused]] static const bool sShellBound = (ee_won_logicshell_bind(&kShellCpp), true);
+
 // ---- RustLogic: the shell of the six logics that are Rust objects (logicshell.rs routes its calls)
 
 // a dialog of the kind's InitComponent into its slot (SafeGetDialog throws for a missing one: kept for the entry)

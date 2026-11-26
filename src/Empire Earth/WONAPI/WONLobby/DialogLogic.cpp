@@ -50,7 +50,6 @@ static const GUIString* sDlgButtons[2];
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonDlgLogicOp Op;
-    RustLogic* aLogic = static_cast<RustLogic*>(inLogic);
     Component* aComp = reinterpret_cast<Component*>(a);
     Window* aWindow = reinterpret_cast<Window*>(a);
     AsyncOp* anOp = reinterpret_cast<AsyncOp*>(a);
@@ -66,7 +65,6 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::OpKill: anOp->Kill(true); return 0;
     case Op::OpForceFinishKilled: anOp->ForceFinish(WS_Killed); return 0;
     case Op::OpGetStatus: return (intptr_t)anOp->GetStatus();
-    case Op::RunOp: aLogic->RunOp(anOp, new ShellCompletion(aLogic, EeWonLogicShellDone::DlgStatusOp), (unsigned long)b); return 0;
     case Op::EndDialog: GetLobbyWindow()->EndDialog(-1, NULL, aComp); return 0;
     case Op::LobbyRoot: return (intptr_t)static_cast<Component*>(GetLobbyRoot());
     case Op::RootWindow: return (intptr_t)LobbyGetRootWindow();

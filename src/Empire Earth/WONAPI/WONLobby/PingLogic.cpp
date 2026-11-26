@@ -42,8 +42,6 @@ template <class F> static intptr_t WithReader(intptr_t inState, F inRead)
 }
 
 static LobbyGame* G(intptr_t a) { return reinterpret_cast<LobbyGame*>(a); }
-// a ping op's members (NULL for no op or another op)
-static EeWonPingOp* Rec(AsyncOp* inOp) { return static_cast<EeWonPingOp*>(ee_won_udp_body_of(static_cast<RefCount*>(inOp), EE_WON_UDP_BODY_PING)); }
 // a new op with one reference the Rust gives back (the original's SmartPtr local)
 static intptr_t Held(AsyncOp* inOp)
 {
@@ -54,20 +52,11 @@ static intptr_t Held(AsyncOp* inOp)
 static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonLogicOp O;
-    RustLogic* aLogic = static_cast<RustLogic*>(inObj);
     LobbyConfig* aConfig;
     switch (inOp) {
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
-    case O::SetDefaultRecv:
-        reinterpret_cast<UDPManager*>(a)->SetDefaultCompletion(new ShellCompletion(aLogic, EeWonLogicShellDone::PingRecv));
-        return 0;
     case O::EventGame: return LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Game);
     case O::EventFlag: return LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Flag);
-    case O::RecvMsg: {
-        const ByteBuffer* aBuffer = reinterpret_cast<UDPManagerRecvOp*>(a)->GetMsg();
-        *reinterpret_cast<size_t*>(b) = aBuffer != NULL ? aBuffer->length() : 0;
-        return (intptr_t)(aBuffer != NULL ? aBuffer->data() : NULL);
-    }
     case O::MyGame: return (intptr_t)GetMyLobbyGame();
     case O::GameIsHost: return G(a)->GetIsHost();
     case O::GameType: return (intptr_t)G(a)->GetGameType();
@@ -89,16 +78,10 @@ static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr
         return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
     // (the ping op's request bytes and time are its Rust body's: logics.rs EeWonPingOp, R6 WON round 40)
-    case O::RunTracked:
-        aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::PingDone), (unsigned long)b);
-        return 0;
     case O::ReadSummary: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { return G(a)->ReadSummary(r) ? 1 : 0; });
     case O::ReadDetails: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { G(a)->ReadDetails(r); return 0; });
     case O::BroadcastGameChanged: LobbyBroadcastEvent(GameChangedEvent(G(a), 2), true); return 0;
     case O::NotifyPing: LobbyNotifyPingChange(G(a)); return 0;
-    case O::NumTracked: return aLogic->mTracker.GetNumTrack();
-    case O::TrackedGame: return (intptr_t)ee_won_pingop_call(Rec(aLogic->mTracker.GetTrackedOp((int)a)), EeWonPingOpCall::Field, 5);
-    case O::KillTracked: aLogic->mTracker.KillAll(); return 0;
     case O::NewPingOp: return Held(new UDPManagerSendRecvOp(ee_won_pingop_body(a, PingLogicHost, (unsigned short)b, (unsigned char)c), G(a)->GetAddress(), reinterpret_cast<UDPManager*>(d)));
     default: return 0;
     }

@@ -110,7 +110,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "route_op"),
                (RS / "ee_won_lobby" / "src" / "netops.rs", "route_op"),
                # the cases whose statements are Rust (R6 WON round 32)
-               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "route_op")],
+               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "route_op"),
+               # the completions and runs (R6 WON lobby and network round 40)
+               (RS / "ee_won_lobby" / "src" / "logicshell.rs", "route_op")],
          allowed={}),
     dict(enum="EeWonLobbyDlgOp", header="won_lobby/lobbydlg.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "EELobbyGameHost.cpp", LOBBY / "EELobbyGlueHost.cpp"],
@@ -139,7 +141,9 @@ CHECKS = [
          # the cases whose statements are Rust (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op"),
                # the one-call cases answered in Rust (R6 WON round 39)
-               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "prv_op")],
+               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "prv_op"),
+               # the ping logic's completions, runs, receive and tracker (R6 WON lobby and network round 40)
+               (RS / "ee_won_lobby" / "src" / "logicshell.rs", "logic_op")],
          # R6 WON round 40: a ping op's body answers these itself in the game (logics.rs run_hook, elapsed); the
          # drivers' hosts otherwise
          allowed={v: "the ping op's Rust body answers it on its real op (logics.rs)" for v in ("RequestSend", "Elapsed")}
@@ -161,7 +165,9 @@ CHECKS = [
          rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"],
-         rust=[(RS / "ee_won_lobby" / "src" / "logicsplit.rs", "dlg_op")], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "logicsplit.rs", "dlg_op"),
+               # the status op's run (R6 WON lobby and network round 40)
+               (RS / "ee_won_lobby" / "src" / "logicshell.rs", "dlg_op")], allowed={}),
     # LobbyConfig::PostParse (R6 WON round 32: lobbycfg.rs; LobbyConfig.cpp's host)
     dict(enum="EeWonLobbyCfgOp", header="won_lobby/lobbycfg.h",
          hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
