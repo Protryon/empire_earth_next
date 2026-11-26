@@ -190,7 +190,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   ResGuiInit,
   /// `sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>)`.
   AllocBrowserComponent,
-  /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>)`.
+  /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<EeWonCfgKind::LobbyChat>,NewComponentOf<ChatCtrl>)`.
   AllocChatCtrl,
   /// `sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>)`.
   AllocCreateAccountCtrl,
@@ -198,11 +198,11 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocDirectConnectCtrl,
   /// `sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>)`.
   AllocFriendsListCtrl,
-  /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>)`.
+  /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<EeWonCfgKind::LobbyGameBrowser>,NewComponentOf<GameBrowserCtrl>)`.
   AllocGameBrowserCtrl,
   /// `sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>)`.
   AllocGameStagingCtrl,
-  /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory)`.
+  /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<EeWonCfgKind::LobbyGameUserList>,CtlFactory<Ck::UserList>)`.
   AllocGameUserListCtrl,
   /// `sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>)`.
   AllocInitFailedCtrl,
@@ -232,13 +232,13 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocQuickPlayCtrl,
   /// `sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>)`.
   AllocRoomCtrl,
-  /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>)`.
+  /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<EeWonCfgKind::LobbyRoomLabel>,NewComponentOf<RoomLabelCtrl>)`.
   AllocRoomLabelCtrl,
-  /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>)`.
+  /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<EeWonCfgKind::LobbyServerList>,NewComponentOf<ServerListCtrl>)`.
   AllocServerListCtrl,
   /// `sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>)`.
   AllocUpdateAccountCtrl,
-  /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory)`.
+  /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<EeWonCfgKind::LobbyUserList>,CtlFactory<Ck::Users>)`.
   AllocUserListCtrl,
   /// `sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>)`.
   AllocAddFriendDialog,
@@ -248,7 +248,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocBadUserDialog,
   /// `sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>)`.
   AllocChooseNetworkAdapterDialog,
-  /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
+  /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<EeWonCfgKind::LobbyCredits>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
   AllocCreditsDialog,
   /// `sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>)`.
   AllocCreateGameDialog,
@@ -270,9 +270,9 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocStatusDialog,
   /// `sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>)`.
   AllocTOUDialog,
-  /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>)`.
+  /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<EeWonCfgKind::LobbyCrossPromotion>,NewComponentOf<CrossPromotionButton>)`.
   AllocCrossPromotionButton,
-  /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>)`.
+  /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<EeWonCfgKind::LobbyImageText>,NewComponentOf<ImageTextButton>)`.
   AllocImageTextButton,
   /// `sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>)`.
   AllocMaxSplitterButton,

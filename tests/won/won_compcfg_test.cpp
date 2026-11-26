@@ -288,6 +288,8 @@ static void ClearStatics()
 #include "won_compcfg_run.h"
 // the game's media configs are one class by kind (WONLobbyConfigImages.h); these stand-ins are classes
 template<class T> static bool WONCfgIs(ConfigObject* o, EeWonCfgKind) { return dynamic_cast<T*>(o) != NULL; }
+// no lobby game list kind here (its NUMCOLUMNS is the lobby's reader, LobbyNetCtrlHost.cpp)
+static bool LobbyCfgNamed(ComponentConfig*, const std::string&, int&) { return false; }
 #include "ee/wonapi/WONCompCfg.inl"
 // the readers only the table reader called (R6 WON lobby and network round 39: it reads on the config's compcfg.rs
 // object itself, cfgtab.rs), as the game's forwards were: this golden still drives them through ee_won_cc_call

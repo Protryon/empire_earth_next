@@ -33,23 +33,18 @@ enum class EeWonLobbyCfgRdOp : uint32_t {
   Throw,
   /// `throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b))`.
   ThrowWithText,
-  /// `cc->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  ChatBase,
+  /// The base kind's walk: `CfgKindV24(c, (EeWonCfgKind)b, *(const std::string*)a)` (the classes'
+  /// `ContainerConfig::Virtual24` / `ComponentConfig::Virtual24` calls).
+  Base,
   /// `cc->mChatCtrl->SetField((int)a, b)`.
   ChatSetField,
-  /// `rl->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  RoomBase,
   /// `rl->mRoomLabel->SetField(0, Dat(c->ReadString(false)))`.
   RoomSetPrefixRead,
   /// `rl->mRoomLabel->SetField((int)a, b)`.
   RoomSetField,
   /// `rl->mRoomLabel->SetField((int)a, c->ReadBool())`.
   RoomSetFieldBoolRead,
-  /// `ul->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  UserListBase,
-  /// `sl->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  ServerBase,
-  /// `sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b)`.
+  /// `CfgOwnNamed(c, *(const std::string*)a, *(int*)b)` (the base's `ComponentConfig::GetNamedValue`).
   ServerNamedBase,
   /// `sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b)`.
   ServerCfg,
@@ -77,8 +72,6 @@ enum class EeWonLobbyCfgRdOp : uint32_t {
   ListColumnWidth,
   /// `sl->mHeader->SetColumnItem(sl->mNumColumns - 1, (Component*)a)`.
   ServerHeaderSetColumnItem,
-  /// `gb->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  BrowserBase,
   /// `sCfgRdPath = (std::string)c->ReadString(false)`.
   BrowserPathRead,
   /// `URL(sCfgRdPath).GetType() == URLType_File`.
@@ -87,24 +80,16 @@ enum class EeWonLobbyCfgRdOp : uint32_t {
   BrowserPathResolve,
   /// `gb->mBrowser->SetHomeLocation(sCfgRdPath)`.
   BrowserSetHome,
-  /// `gu->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  GameUserListBase,
-  /// `cp->ComponentConfig::Virtual24(*(const std::string*)a)`.
-  CrossBase,
   /// `cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false))`.
   CrossDefaultImageRead,
   /// `cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false))`.
   CrossDefaultBrowseRead,
-  /// `it->ComponentConfig::Virtual24(*(const std::string*)a)`.
-  ImageTextBase,
   /// `it->mImageTextButton->mFont = c->ReadFont()`.
   ImageTextFontRead,
   /// `it->mImageTextButton->mText = c->ReadString(false)`.
   ImageTextTextRead,
   /// `it->mImageTextButton->mBrowse = c->ReadString(false)`.
   ImageTextBrowseRead,
-  /// `cr->ContainerConfig::Virtual24(*(const std::string*)a)`.
-  CreditsBase,
   /// `CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)` (`LCall(AddLine, &line, ...)`).
   CreditsAddLine,
 };
@@ -124,6 +109,8 @@ enum class EeWonLobbyCfgRdCall : uint32_t {
   CrossPromotion,
   ImageText,
   Credits,
+  /// `Virtual24(key)` of a config of the lobby kind `d` (an `EeWonCfgKind` of `LOBBY_KINDS`).
+  OfKind,
 };
 
 /// The host: `(config, op, a, b, c) -> result`.

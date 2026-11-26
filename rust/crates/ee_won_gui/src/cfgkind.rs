@@ -12,8 +12,11 @@
 //! `ContainerConfig`, which keeps the layout state) with a kind; the typed pointers were all the component itself.
 //!
 //! The classes with members of their own stay C++ classes and have kinds too: FontConfig, ImageConfig and its three
-//! image subclasses, PercentLayoutConfig, ColorSchemeConfig (and the lobby's controls' configs, which derive from a
-//! kind's class).
+//! image subclasses, PercentLayoutConfig, ColorSchemeConfig.
+//!
+//! The lobby's control configs (ChatCtrlConfig .. CreditsDialogConfig) are kinds too since R6 WON lobby/net round 40
+//! ([`LOBBY_KINDS`]): their instructions are ee_won_lobby's reader (lobbycfgrd.rs), which asks its base kind's walk
+//! for the keys it does not hold; `ee_won_cfg_v24` answers 3 for them (the C++ end asks the lobby's reader).
 
 use crate::guiconf::*;
 
@@ -73,7 +76,41 @@ pub enum EeWonCfgKind {
     ImageFilter,
     PercentLayout,
     ColorScheme,
+    /// ChatCtrlConfig (a container's)
+    LobbyChat,
+    /// RoomLabelCtrlConfig (a container's)
+    LobbyRoomLabel,
+    /// UserListCtrlConfig (a container's)
+    LobbyUserList,
+    /// ServerListCtrlConfig (a container's; its header and column count in the config's [`crate::compcfg`] slots)
+    LobbyServerList,
+    /// GameBrowserCtrlConfig (a container's)
+    LobbyGameBrowser,
+    /// GameUserListCtrlConfig (a container's)
+    LobbyGameUserList,
+    /// CrossPromotionButtonConfig (an image button's)
+    LobbyCrossPromotion,
+    /// ImageTextButtonConfig (an image button's)
+    LobbyImageText,
+    /// CreditsDialogConfig (a dialog's)
+    LobbyCredits,
 }
+
+/// The lobby controls' kinds (their reader is ee_won_lobby's lobbycfgrd.rs).
+pub const LOBBY_KINDS: [EeWonCfgKind; 9] = {
+    use EeWonCfgKind::*;
+    [
+        LobbyChat,
+        LobbyRoomLabel,
+        LobbyUserList,
+        LobbyServerList,
+        LobbyGameBrowser,
+        LobbyGameUserList,
+        LobbyCrossPromotion,
+        LobbyImageText,
+        LobbyCredits,
+    ]
+};
 
 /// Every kind, in order (for the drivers and the tests).
 pub const KINDS: [EeWonCfgKind; 52] = {
@@ -177,6 +214,8 @@ pub enum Order {
     BaseThenTable,
     /// its table alone (WONSkinConfig, FontConfig, ImageConfig, PercentLayoutConfig, ColorSchemeConfig)
     TableOnly,
+    /// the lobby's reader (lobbycfgrd.rs), which asks its base's walk itself
+    Lobby,
 }
 
 /// One class: its base, its cfgtab table and how its `Virtual24` used them, and its own predefined children (a
@@ -329,6 +368,16 @@ pub fn class(k: EeWonCfgKind) -> Class {
         K::ImageFilter => c(K::Image, EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION),
         K::PercentLayout => alone(EE_WON_CFG_KEYS_PERCENTLAYOUTCONFIG_VIRTUAL24_INSTRUCTION),
         K::ColorScheme => alone(EE_WON_CFG_KEYS_COLORSCHEMECONFIG_VIRTUAL24_INSTRUCTION),
+        K::LobbyChat
+        | K::LobbyRoomLabel
+        | K::LobbyUserList
+        | K::LobbyServerList
+        | K::LobbyGameBrowser
+        | K::LobbyGameUserList => Class { base: Some(K::Container), table: -1, order: Lobby, predefined: &[] },
+        K::LobbyCrossPromotion | K::LobbyImageText => {
+            Class { base: Some(K::ImageButton), table: -1, order: Lobby, predefined: &[] }
+        }
+        K::LobbyCredits => Class { base: Some(K::Dialog), table: -1, order: Lobby, predefined: &[] },
     }
 }
 
@@ -345,6 +394,7 @@ pub fn v24_steps(k: EeWonCfgKind) -> Vec<i32> {
         Order::TableOnly => vec![c.table],
         Order::TableThenBase => [vec![c.table], base()].concat(),
         Order::BaseThenTable => [base(), vec![c.table]].concat(),
+        Order::Lobby => base(),
     }
 }
 
