@@ -939,7 +939,6 @@ template<class C> ComponentConfig* NewConfigOf() { return new C; }
 ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ComponentConfigHost.cpp)
 template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K); }
 template<class T> Component* NewComponentOf() { return new T; }
-inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
 
 // Exception record (0x1c bytes); the implicit copy and destructor are the original's helpers.
@@ -1708,7 +1707,7 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
-// (WONLobbyConfigImages.h, R6 WON GUI round 36).
+// (ComponentConfigHost.cpp's MediaConfig, R6 WON GUI round 36).
 inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
 // The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
 // original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and

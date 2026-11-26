@@ -126,6 +126,7 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
     case O::SelFore: *(SelectionColor*)c = SelectionColor((DWORD)a, (DWORD)b); return 0;
     case O::SelInvert: *(SelectionColor*)c = SelectionColor((DWORD)a, ForegroundSelectionMode_InvertOriginalColor); return 0;
     case O::SelOriginal: *(SelectionColor*)c = SelectionColor((DWORD)a, ForegroundSelectionMode_UseOriginalColor); return 0;
+    case O::NewShell: return (intptr_t)WONShellNew((EeWonShellKind)a, b, d, e);
     default: return 0;
     }
 }

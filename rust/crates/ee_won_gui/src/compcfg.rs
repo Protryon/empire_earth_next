@@ -210,6 +210,8 @@ pub enum EeWonCcOp {
     SelInvert,
     /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_UseOriginalColor)`.
     SelOriginal,
+    /// `WONShellNew(a, b, d, e)`: a new shell of kind `a` (no reference).
+    NewShell,
 }
 
 /// What a `Ref` op counts.
@@ -1066,20 +1068,32 @@ pub struct EeWonResTable {
 }
 
 static CONTROL_IDS: Mutex<NoCaseMap<i32>> = Mutex::new(NoCaseMap::new());
-static ALLOCATORS: Mutex<NoCaseMap<(usize, usize)>> = Mutex::new(NoCaseMap::new());
+static ALLOCATORS: Mutex<NoCaseMap<(Make, Make)>> = Mutex::new(NoCaseMap::new());
+
+/// What an allocator makes its config or component with: a C++ factory (`AddAllocator`'s function pointers; 0 for
+/// none), or for the GUI's own registrations (guireg.rs, R6 WON lobby and network round 39) a config of a kind, a
+/// shell of a kind with its constructor's arguments, a WON tab control on the game's skin, a copy of a skin template.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Make {
+    Fn(usize),
+    Kind(EeWonCfgKind),
+    Shell(crate::shell::EeWonShellKind, [isize; 3]),
+    SkinTab,
+    Skin(crate::skinobj::EeWonSkinGet),
+}
 
 fn control_ids() -> std::sync::MutexGuard<'static, NoCaseMap<i32>> {
     CONTROL_IDS.lock().unwrap_or_else(|e| e.into_inner())
 }
-fn allocators() -> std::sync::MutexGuard<'static, NoCaseMap<(usize, usize)>> {
+fn allocators() -> std::sync::MutexGuard<'static, NoCaseMap<(Make, Make)>> {
     ALLOCATORS.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// `ResourceConfigTable::AddAllocator`: the name's config and component factories (the first one with a config
 /// factory stays).
-pub(crate) fn add_allocator(name: &[u8], config: usize, component: usize) {
+pub(crate) fn add_allocator(name: &[u8], config: Make, component: Make) {
     let mut m = allocators();
-    if m.get(name).is_none_or(|&(cf, _)| cf == 0) {
+    if m.get(name).is_none_or(|&(cf, _)| cf == Make::Fn(0)) {
         m.set(name, (config, component));
     }
 }
@@ -1132,8 +1146,33 @@ fn allocate(cx: &Cx, ty: &[u8]) -> R<Option<[*mut c_void; 2]>> {
     let a = allocators().get(ty).copied();
     let Some((cf, pf)) = a else { return Ok(None) };
     // the config made first, then the component; the config given back when the component's factory threw
-    let config = cx.op(EeWonCcOp::AllocConfig, std::ptr::null_mut(), cf as isize, 0, 0, 0)? as *mut c_void;
-    match cx.op(EeWonCcOp::AllocComp, std::ptr::null_mut(), pf as isize, 0, 0, 0) {
+    let config = match cf {
+        Make::Kind(k) => {
+            let c = cx.call(EeWonCcOp::NewOfKind, std::ptr::null_mut(), k as isize, 0, 0, 0) as *mut c_void;
+            let o = cx.call(EeWonCcOp::AsObject, c, 0, 0, 0, 0) as *mut c_void;
+            cx.hold(EeWonCcKind::Config, o);
+            o
+        }
+        Make::Fn(f) => cx.op(EeWonCcOp::AllocConfig, std::ptr::null_mut(), f as isize, 0, 0, 0)? as *mut c_void,
+        _ => std::ptr::null_mut(),
+    };
+    // a made component with the reference the factory's SmartPtr gave
+    let made = |p: isize| {
+        cx.hold(EeWonCcKind::Component, p as *mut c_void);
+        Ok(p)
+    };
+    let shell = |k: crate::shell::EeWonShellKind, a: [isize; 3]| {
+        made(cx.call(EeWonCcOp::NewShell, std::ptr::null_mut(), k as isize, a[0], a[1], a[2]))
+    };
+    let component = match pf {
+        Make::Fn(0) | Make::Kind(_) => Ok(0),
+        Make::Fn(f) => cx.op(EeWonCcOp::AllocComp, std::ptr::null_mut(), f as isize, 0, 0, 0),
+        Make::Shell(k, a) => shell(k, a),
+        Make::SkinTab => shell(crate::shell::EeWonShellKind::WonTabCtrl, [crate::skinobj::ee_won_skin_global() as isize, 0, 0]),
+        // SAFETY: the game's skin (or none: no copy)
+        Make::Skin(g) => made(unsafe { crate::skinobj::ee_won_skin_get(crate::skinobj::ee_won_skin_global(), g, 0) } as isize),
+    };
+    match component {
         Ok(component) => Ok(Some([config, component as *mut c_void])),
         Err(e) => {
             cx.release(EeWonCcKind::Config, config);
@@ -2583,7 +2622,7 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
                 }
             }
             C::TableGlue => table().glue_all(cx)?,
-            C::AddAllocator => add_allocator(txt(), a as usize, d as usize),
+            C::AddAllocator => add_allocator(txt(), Make::Fn(a as usize), Make::Fn(d as usize)),
             C::RegisterControlId => register_control_id(txt(), a as i32),
             C::AllocateConfig => match allocate(cx, txt())? {
                 Some(two) => {
