@@ -44,12 +44,7 @@ extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     switch (inOp) {
     case EE_UNITS_CG_MODEL_PARTS: return (int32_t)EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->GetNumParts();
     case EE_UNITS_CG_HUMAN: return EECgObject<EEComplexUnit>((int64_t)inUnit)->mPlayer != NULL && EECgObject<EEComplexUnit>((int64_t)inUnit)->mPlayer->IsHuman();
-    case EE_UNITS_CG_ATTACK_TILE_X: return EECgObject<EEUGRust>((int64_t)inA)->GetAttackTileX();
-    case EE_UNITS_CG_ATTACK_TILE_Y: return EECgObject<EEUGRust>((int64_t)inA)->GetAttackTileY();
-    case EE_UNITS_CG_CONVERT: return EECgObject<EEUGRust>((int64_t)inA)->IsConvertAttack();
     case EE_UNITS_CG_ATTACK_IMPACT: EECgObject<EEComplexUnit>((int64_t)inUnit)->SetGoal(EEUGRust::NewAttackUnit(EECgObject<EEComplexUnit>((int64_t)inUnit), EECgObject<EEUnit>((int64_t)inA), false, false), 0, 0); return 0;
-    case EE_UNITS_CG_HEAL_TARGET: return EEObj(EECgObject<EEUGRust>((int64_t)inA)->GetHealTarget());
-    case EE_UNITS_CG_ATTACK_TARGET: return EEObj(EECgObject<EEUGRust>((int64_t)inA)->GetAttackTarget());
     case EE_UNITS_CG_IN_RANGE_TO_HIT: return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, EECgObject<EEComplexUnit>((int64_t)inUnit), EECgObject<EEUnit>((int64_t)inA)) != 0;
     case EE_UNITS_CG_IN_REACH: return EECgObject<EEComplexUnit>((int64_t)inUnit)->IsInReach(EECgObject<EEUnit>((int64_t)inA));
     case EE_UNITS_CG_SEEN: return EECombatIsSeenBy(EECgObject<EEUnit>((int64_t)inA), EECgObject<EEComplexUnit>((int64_t)inUnit)->mPlayer, inB != 0);
@@ -60,7 +55,6 @@ extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_CG_STILL_REACHABLE: return EECombatIsStillReachable(EECgObject<EEComplexUnit>((int64_t)inUnit), EECgObject<EEUGRust>((int64_t)inA));
     case EE_UNITS_CG_ENEMY_IN_RANGE: return EEIsEnemyWithinRange(EECgObject<EEComplexUnit>((int64_t)inUnit));
     case EE_UNITS_CG_MISSILE_CONDITION: return (uint32_t)EECgObject<EEUnitClass>((int64_t)inA)->MissileEvaluateCondition(EECgObject<EEComplexUnit>((int64_t)inUnit), (unsigned long)inB);
-    case EE_UNITS_CG_GROUND_TARGET: *EECgObject<GE3DPoint>(inB) = EECgObject<EEUGRust>((int64_t)inA)->GetGroundTarget(); return 0;
     case EE_UNITS_CG_CAN_REACH_TILE: return EECgObject<EEComplexUnit>((int64_t)inUnit)->CanReachTile((long)inB, (long)inC);
     case EE_UNITS_CG_FACES_POINT: return EECgObject<EEComplexUnit>((int64_t)inUnit)->GetUnitClass()->FacesPoint(EECgObject<EEComplexUnit>((int64_t)inUnit), EECgObject<EEUGRust>((int64_t)inA)->GetGroundTarget(), true);
     case EE_UNITS_CG_HEAL_IN_RANGE: return EECombatHealInRange(EECgObject<EEComplexUnit>((int64_t)inUnit), EECgObject<EEUnit>((int64_t)inA));
@@ -72,9 +66,6 @@ extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_CG_RETARGET_GATE: EECgObject<EEUGRust>((int64_t)inA)->RetargetGatePart(EECgObject<EEComplexUnit>((int64_t)inUnit)); return 0;
     case EE_UNITS_CG_ATTACK_FRAME_SET: return (int32_t)EEGetAttackFrameSet(EECgObject<EEComplexUnit>((int64_t)inUnit));
     case EE_UNITS_CG_SOUND_FRAME: return (int32_t)EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->mSound1Frames[inB];
-    case EE_UNITS_CG_RELOAD_TIMER: EECgObject<EEComplexUnit>((int64_t)inUnit)->SetRandomReloadTimer((long)inB); return 0;
-    case EE_UNITS_CG_SEARCH_TIMER: EECgObject<EEComplexUnit>((int64_t)inUnit)->SetTargetSearchTimer((long)inB); return 0;
-    case EE_UNITS_CG_PATH_ATTEMPTS: EECgObject<EEUGRust>((int64_t)inA)->SetPathAttempts((long)inB); return 0;
     // FacesPoint's turret part inC of the unit's model (ee_sim combat cg_query.rs faces_point)
     case EE_UNITS_CG_TURRET_POSITION: memcpy(EECgObject<float>(inB), &(*(EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->mTurretParts.begin() + inC))->mPosition, 3 * sizeof(float)); return 0;
     case EE_UNITS_CG_TURRET_TRANSFORMATION: memcpy(EECgObject<float>(inB), EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->GetTurretPartTransformation((long)inC).mMatrix, 16 * sizeof(float)); return 0;
@@ -162,10 +153,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
 uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
     switch (inCode) {
-    case EE_COMBAT_H_TILE_PREV: return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mPrev));
-    case EE_COMBAT_H_TILE_NEXT: return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mNext));
     case EE_COMBAT_H_TARGET: return EEQueryHandleOf(EEQueryContextOf(inContext)->mGoal->GetAttackTarget());
-    case EE_COMBAT_H_ACTIVE_GOAL_TARGET: return EEQueryHandleOf(static_cast<EEUGRust*>(EEQueryComplex(inObject)->mActiveGoal)->GetAttackTarget());
     }
     return 0;
 }
