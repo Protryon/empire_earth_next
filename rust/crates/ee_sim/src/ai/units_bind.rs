@@ -121,6 +121,9 @@ extern "C" {
 /// # Safety
 /// The operation's objects are live; `out` is its record (or null).
 unsafe fn ee_ai_units_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
+    if let Some(r) = tech_ops::op(op, player, a, b) {
+        return r;
+    }
     if let Some(r) = host_ops::op(op, player, a, b, c, out) {
         return r;
     }
@@ -3590,3 +3593,7 @@ mod world_ops;
 // the host's operations whose bodies are Rust (AI Thread cluster round 9; were EECPNextUnits.cpp's)
 #[path = "units_cases.rs"]
 mod case_ops;
+
+// the host's tech tree operations (player/tech lane round 3; were EECPNextUnits.cpp's)
+#[path = "units_tech.rs"]
+pub(crate) mod tech_ops;
