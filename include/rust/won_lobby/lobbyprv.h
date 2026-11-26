@@ -30,6 +30,12 @@ enum class EeWonLobbyPrvField : uint32_t {
   LanProductId,
   /// `mHasSetHashFileList` (+0xa4; the login's file hashes were given, GetLobbyAuthContext's once: R6 WON round 39).
   HashFilesSet,
+  /// `mLobbyStatus` (+0x4c; LobbyRun's result, LobbyExit's status; 0 from the constructor: R6 WON lobby/net 40).
+  LobbyStatus,
+  /// `mRunMode` (+0x50; 1 from the constructor and LobbyRun).
+  RunMode,
+  /// `mSuspended` (+0x54; LobbySuspend's, cleared by LobbyRun, LobbyResume and LobbyStart).
+  Suspended,
 };
 
 /// The host's ops: each one C++ statement.
@@ -120,14 +126,8 @@ enum class EeWonLobbyPrvOp : uint32_t {
   CdKeyLoad,
   /// `p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey)`.
   AuthSetCdKey,
-  /// `p->mSuspended = false`.
-  SuspendedClear,
   /// `p->mCurGameType = (LobbyGameType)0`.
   CurGameTypeClear,
-  /// `p->mLobbyStatus = (LobbyStatus)0`.
-  LobbyStatusClear,
-  /// `p->mRunMode = (LobbyRunMode)1`.
-  RunModeOne,
   /// `p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"`.
   SysTouPath,
   /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.

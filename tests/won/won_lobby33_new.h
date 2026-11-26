@@ -70,10 +70,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
-    case Op::SuspendedClear: p->mSuspended = false; return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
-    case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
-    case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
     case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;

@@ -121,10 +121,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
-    case Op::SuspendedClear: p->mSuspended = false; return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
-    case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
-    case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
     case Op::ConfigNew: p->mConfig = new LobbyConfig; return 0;
@@ -383,11 +380,7 @@ Window* LobbyGetRootWindow() { return gLobbyData.get()!=NULL?gLobbyData->mLobbyC
 // Returns the default window manager
 WindowManager* GetLobbyWindow() { return WindowManager::GetDefaultWindowManager(); }
 // Returns whether the lobby is suspended; false without a lobby
-bool LobbyIsSuspended()
-{
-    if(gLobbyData.get()==NULL) return false;
-    return gLobbyData->mSuspended;
-}
+bool LobbyIsSuspended() { return ee_won_lobbyprv_get(EeWonLobbyPrvField::Suspended) != 0; } // (lobbyprv.rs's)
 
 // ---- LobbyScreenAccess.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Returns the chat command parser, pointed at the user list of the Internet or LAN screen showing
@@ -652,11 +645,6 @@ static intptr_t RunHost(EeWonRunOp inOp, intptr_t a)
     case Op::WindowVisible: return reinterpret_cast<Window*>(a)->PlatformIsVisible() ? 1 : 0;
     case Op::WindowRunFailureDialog: reinterpret_cast<Window*>(a)->RunDialog(gLobbyFailureDialog.get()); return 0;
     case Op::HasData: return gLobbyData.get() != NULL;
-    case Op::SetStatus: gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(a); return 0;
-    case Op::Status: return gLobbyData->mLobbyStatus;
-    case Op::SetRunMode: gLobbyData->mRunMode = static_cast<LobbyRunMode>(a); return 0;
-    case Op::RunMode: return gLobbyData->mRunMode;
-    case Op::SetSuspended: gLobbyData->mSuspended = a != 0; return 0;
     case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
     case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
     case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
