@@ -92,9 +92,6 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::AuthSetPasswordOf: A(a)->SetPassword(LobbyEvtStr<std::wstring>(E(b), EF::Password)); return 0;
     case O::DoCDKeyCheck: return LobbyDoCDKeyCheck();
     case O::CDKeyValid: return LobbyIsCDKeyValid();
-    case O::AuthAddAdmin: A(a)->AddCommunity(std::wstring(L"Admin")); return 0;
-    case O::AuthRemoveAdmin: A(a)->RemoveCommunity(std::wstring(L"Admin")); return 0;
-    case O::AutoRefresh: A(a)->SetDoAutoRefresh(true); return 0;
     case O::EnterInternet: LobbyEnterInternetScreen(a != 0); return 0;
     default: return 0;
     }

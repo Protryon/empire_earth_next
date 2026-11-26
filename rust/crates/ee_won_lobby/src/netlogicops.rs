@@ -85,6 +85,25 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                 }
             }
         }
+        // `((AuthContext*)a)->SetDoAutoRefresh(true)`, `AddCommunity(L"Admin")`, `RemoveCommunity(L"Admin")`
+        Op::AutoRefresh | Op::AuthAddAdmin | Op::AuthRemoveAdmin => {
+            use ee_won_net::authlogin::{
+                ee_won_auth_login_set_wide, EE_WON_AUTH_LOGIN_ADD_COMMUNITY, EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY,
+            };
+            if let Some(c) = ee_won_net::cppcore::auth_ctx_of(p) {
+                let admin: Vec<u16> = "Admin".encode_utf16().collect();
+                let which = if op == Op::AuthAddAdmin { EE_WON_AUTH_LOGIN_ADD_COMMUNITY } else { EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY };
+                // SAFETY: the context's live Rust object; the key's units (UTF-16, two bytes each)
+                unsafe {
+                    if op == Op::AutoRefresh {
+                        ee_won_net::authobj::ee_won_authctx_set_do_auto_refresh(c, true);
+                    } else {
+                        let l = ee_won_net::authobj::ee_won_authctx_login(c);
+                        ee_won_auth_login_set_wide(l, which, admin.as_ptr().cast(), 2, admin.len(), null(), 0, 0);
+                    }
+                }
+            }
+        }
         // `AsyncSocket::HasInternetConnection()`
         Op::HasInternet => return Some(ee_won_net::ffi_net::ee_won_has_internet_connection() as isize),
         // `LobbyGetVersionStatus()` (as int)
