@@ -168,7 +168,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     // CreateDataObject(true, c, the game data type "G", gEmptyWideString, the summary, NULL)
     case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(gEmptyWideString).D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
-    case O::ConnectOpNew: return HeldOp(RustServerOp::MadeOp(ee_won_servconn_connect_op_new(static_cast<RefCount*>(RC(a)), S(b)->GetAddress().GetValue())));
     // ---- the parser, the events, the dialogs
     case O::ParserNum:
         switch (b) {
@@ -189,7 +188,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
-    case O::FriendAddressValid: return F(a)->GetAddress().IsValid();
     case O::FriendServer: { IPAddr anAddress = F(a)->GetAddress(); return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(anAddress); }
     case O::DialogDo:
         switch (a) {
@@ -280,11 +278,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     case O::StatusOpServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(US(a)->GetDestAddr());
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
-    // GetUserIdFromNameOp: a Rust op (ee_won reqops.rs) with the name, its id read back
-    case O::UserIdOpNew: return HeldOp(RustServerOp::NewRequest(ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(a), (size_t)b), reinterpret_cast<ServerContext*>(c)));
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
     case O::ServerListFind: return (intptr_t)reinterpret_cast<LobbyServerList*>(a)->FindServer(RS(b)->GetAddr());
-    case O::GroupQueryNew: return HeldOp(RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29));
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteGroups), 0); return 0;
     case O::RoomDirServers: return Held(SmartPtr<ServerContext>(LobbyGetRoomDirServers()));
     case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), GetLobbyConfig()->mProductDirectory, 0x04000622, kDirTypes, 2));

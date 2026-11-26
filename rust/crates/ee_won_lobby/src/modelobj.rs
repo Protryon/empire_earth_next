@@ -2715,6 +2715,59 @@ pub(crate) fn route_op(
             }
             0
         }
+        // R6 WON lobby and network round 40: RoutingLogic.cpp's cases on a model object's address
+        // `F(a)->GetAddress().IsValid()`
+        O::FriendAddressValid => b(m().friend().address.borrow().valid),
+        // `HeldOp(RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29))`
+        O::GroupQueryNew => {
+            if !ee_won_net::cppnet::bound() {
+                return None;
+            }
+            let six = m().server().address.borrow().six();
+            // SAFETY: a new request op, taken; six bytes
+            let o = unsafe {
+                ee_won_net::reqhost::ee_won_hostop_new_request(
+                    ee_won_net::reqmake::ee_won_reqmake_group_list(0x29),
+                    false,
+                    std::ptr::null_mut(),
+                    six.as_ptr(),
+                    -1,
+                    std::ptr::null_mut(),
+                )
+            };
+            ee_won_net::cppnet::ref_add(o);
+            o as isize
+        }
+        // `HeldOp(RustServerOp::MadeOp(ee_won_servconn_connect_op_new(RC(a), S(b)->GetAddress().GetValue())))`
+        O::ConnectOpNew => {
+            if !ee_won_net::cppnet::bound() {
+                return None;
+            }
+            let addr = must(bb).server().address.borrow().clone();
+            // SAFETY: a live connection; the address copied by the op
+            let o = unsafe { ee_won_net::cppcore::ee_won_servconn_connect_op_new(a as *mut c_void, &addr) };
+            ee_won_net::cppnet::ref_add(o);
+            o as isize
+        }
+        // `HeldOp(RustServerOp::NewRequest(ee_won_reqop_user_id(a, b), (ServerContext*)c))`
+        O::UserIdOpNew => {
+            if !ee_won_net::cppnet::bound() {
+                return None;
+            }
+            // SAFETY: the name's `bb` bytes at `a`; the new request op, taken
+            let o = unsafe {
+                ee_won_net::reqhost::ee_won_hostop_new_request(
+                    ee_won_net::reqops::ee_won_reqop_user_id(a as *const u8, bb as usize),
+                    true,
+                    c as *mut c_void,
+                    std::ptr::null(),
+                    -1,
+                    std::ptr::null_mut(),
+                )
+            };
+            ee_won_net::cppnet::ref_add(o);
+            o as isize
+        }
         _ => return None,
     })
 }
