@@ -20,7 +20,6 @@
 #include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyStaging.h"
-#include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyScreens.h"
@@ -144,7 +143,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::RoutingLogicNew: p->mRoutingLogic = new RustLogic(EeWonLogicShellKind::Routing, RoutingLogicMake); return 0;
     case Op::StagingLogicNew: p->mStagingLogic = new RustLogic(EeWonLogicShellKind::Staging, StagingLogicMake); return 0;
     case Op::LanLogicNew: p->mLanLogic = new RustLogic(EeWonLogicShellKind::Lan, LanLogicMake); return 0;
-    case Op::PingLogicNew: p->mPingLogic = new PingLogic; return 0;
+    case Op::PingLogicNew: p->mPingLogic = new RustLogic(EeWonLogicShellKind::Ping, PingLogicMake); return 0;
     case Op::AddAccountLogic: p->mLogicMgr.AddLogic(p->mAccountLogic.get()); return 0;
     case Op::AddDialogLogic: p->mLogicMgr.AddLogic(p->mDialogLogic.get()); return 0;
     case Op::AddStagingLogic: p->mLogicMgr.AddLogic(p->mStagingLogic.get()); return 0;

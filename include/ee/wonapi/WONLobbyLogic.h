@@ -117,13 +117,14 @@ public:
     void* mRust; // owned; made last: the maker may fill the slots
 };
 typedef RustLogic NetLogic;
-// The six kinds' makers (each in its host's unit)
+// The kinds' makers (each in its host's unit)
 void* AccountLogicMake(RustLogic* inSelf);
 void* DialogLogicMake(RustLogic* inSelf);
 void* InitLogicMake(RustLogic* inSelf);
 void* RoutingLogicMake(RustLogic* inSelf);
 void* StagingLogicMake(RustLogic* inSelf);
 void* LanLogicMake(RustLogic* inSelf);
+void* PingLogicMake(RustLogic* inSelf);
 // A completion of a RustLogic (LogicCompletion<T> with a member of one of the six classes, or RoutingLogic.cpp's
 // RoutingOpCompletion with its code): logicshell.rs runs LogicCompletion's test and the member's call.
 class ShellCompletion : public LogicCompletionBase {

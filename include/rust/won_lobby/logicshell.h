@@ -23,6 +23,8 @@ enum class EeWonLogicShellKind : uint32_t {
   Staging,
   /// LanLogic: an `EeWonLan`.
   Lan,
+  /// PingLogic: an `EeWonLogic` (its own C++ class until R6 WON round 39).
+  Ping,
 };
 
 /// The shell's virtuals: LobbyLogic's five, then NetLogic's fourteen. Arguments: the virtual's own, in order; a
@@ -76,6 +78,10 @@ enum class EeWonLogicShellDone : uint32_t {
   LanAccept,
   LanPeerAuthDone,
   DlgStatusOp,
+  /// PingLogic::HandleUDPRecv (the UDP manager's default completion).
+  PingRecv,
+  /// PingLogic::PingGameDone (a tracked ping's).
+  PingDone,
 };
 
 /// The C++ hook of a dialog lookup: `SafeGetDialog(config, logic->mDialog[slot], kind, name, file, line)` under

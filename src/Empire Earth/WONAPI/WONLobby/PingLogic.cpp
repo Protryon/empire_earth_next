@@ -1,8 +1,9 @@
 // Game pings over the lobby UDP manager: timing a game host's reply (optionally with its summary and
 // details), queueing pings beyond the connection-speed limit, and answering pings for the hosted game.
 // PingLogic and PingGameOp are Rust objects (rust/crates/ee_won_lobby/src/logics.rs, R6 WONLobby round 8): the queue,
-// the request ids, the retries, the request's and reply's bytes and every decision. This unit keeps the shells
-// (the tracker, the completions, the op's game) and the host's ops: each one the original's calls on a C++ object.
+// the request ids, the retries, the request's and reply's bytes and every decision. PingLogic is a RustLogic of the
+// Ping kind since R6 WON round 39 (logicshell.rs routes its virtuals and completions); this unit keeps its maker and
+// the host's ops: each one the original's calls on a C++ object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -17,7 +18,6 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyLogic.h"
-#include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONStatus.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_net/buffer.h"
@@ -25,7 +25,6 @@ using namespace WONAPI;
 
 namespace WONAPI {
 void LobbyNotifyPingChange(LobbyGame*); // update game UI/status
-intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 }
 
 // One ping of a game host, retried by PingLogic: the original's PingGameOp (0x98 bytes) is a UDPManagerSendRecvOp
@@ -54,10 +53,10 @@ static intptr_t Held(AsyncOp* inOp)
     return (intptr_t)inOp;
 }
 
-intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonLogicOp O;
-    PingLogic* aLogic = static_cast<PingLogic*>(inObj);
+    RustLogic* aLogic = static_cast<RustLogic*>(inObj);
     LobbyConfig* aConfig;
     switch (inOp) {
     case O::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
@@ -66,8 +65,7 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
     case O::OpKilled: return reinterpret_cast<AsyncOp*>(a)->IsKilled();
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
     case O::SetDefaultRecv:
-        reinterpret_cast<UDPManager*>(a)->SetDefaultCompletion(
-            new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, aLogic));
+        reinterpret_cast<UDPManager*>(a)->SetDefaultCompletion(new ShellCompletion(aLogic, EeWonLogicShellDone::PingRecv));
         return 0;
     case O::EventGame: return LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Game);
     case O::EventFlag: return LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Flag);
@@ -102,8 +100,7 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
     case O::OpGame: return (intptr_t)ee_won_pingop_call(Rec(reinterpret_cast<AsyncOp*>(a)), EeWonPingOpCall::Field, 5);
     case O::OpRecord: return (intptr_t)Rec(reinterpret_cast<AsyncOp*>(a));
     case O::RunTracked:
-        aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, aLogic),
-                             (unsigned long)b);
+        aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::PingDone), (unsigned long)b);
         return 0;
     case O::ReadSummary: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { return G(a)->ReadSummary(r) ? 1 : 0; });
     case O::ReadDetails: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { G(a)->ReadDetails(r); return 0; });
@@ -117,27 +114,6 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
     }
 }
 
-PingLogic::PingLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Ping, this, PingLogicHost)) {}
-
-PingLogic::~PingLogic() { ee_won_logic_free(this->mRust); }
-
-void PingLogic::InitComponent(ComponentConfig*) { this->Call(EeWonLogicCall::PingInit); }
-
-void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
-{
-    this->Call(EeWonLogicCall::PingEvent, (intptr_t)inEvent, inEvent->mType);
-}
-
-void PingLogic::HandleUDPRecv(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingRecv, (intptr_t)inOp); }
-
-void PingLogic::PingGameDone(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingDone, (intptr_t)inOp); }
-
-int PingLogic::GetNumPingsToDo() { return (int)this->Call(EeWonLogicCall::PingNumToDo); }
-
-void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
-{
-    this->Call(EeWonLogicCall::PingGame, (intptr_t)inGame, inDetails, inForce);
-}
-
-void PingLogic::KillPings(int) { this->Call(EeWonLogicCall::PingKill); }
+// The ping logic's Rust object over the shell
+void* PingLogicMake(RustLogic* inSelf) { return ee_won_logic_new(EeWonLogicKind::Ping, inSelf, PingLogicHost); }
 }

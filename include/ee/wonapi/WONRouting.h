@@ -404,7 +404,8 @@ private:
 
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
-// vtables 0x84c49c / 0x84c4ac; provisional member names)
+// vtables 0x84c49c / 0x84c4ac; provisional member names). The templates LobbyCompletion<T> and LogicCompletion<T>
+// have no game user since R6 WON round 39 (PingLogic's two are the logic shell's: ShellCompletion)
 class LobbyCompletionBase : public CompletionBase<AsyncOpPtr> {
 public:
     LobbyCompletionBase() throw() {}
@@ -412,37 +413,11 @@ public:
     virtual void Run(AsyncOp* inOp) {}      // +0x08
 };
 
-template <class T> class LobbyCompletion : public LobbyCompletionBase {
-public:
-    typedef void (T::*Callback)(AsyncOp* inOp);
-    LobbyCompletion(Callback inCallback, T* inObject) : mCallback(inCallback), mObject(inObject) {}
-    virtual void Run(AsyncOp* inOp) { (this->mObject.mPtr->*mCallback)(inOp); }
-
-    Callback mCallback;                     // +0x08
-    SmartPtr<T> mObject;                    // +0x0c
-};
-
-
 // RTTI LogicCompletionBase4558cc derives LobbyCompletionBase; distinct flag-bearing subclass.
 class LogicCompletionBase : public LobbyCompletionBase {
 public:
     LogicCompletionBase() : mCheckTracker(false) {}
     bool mCheckTracker;                    // +0x08; original3df809 and3e5b6e
-};
-
-template <class T> class LogicCompletion : public LogicCompletionBase {
-public:
-    typedef void (T::*Callback)(AsyncOp* inOp);
-    LogicCompletion(Callback inCallback, T* inObject) : mCallback(inCallback), mObject(inObject) {}
-    // unless the logic was killed or (checked) the op was not its tracked one (opobj.rs decides, R6 WON round 33)
-    virtual void Run(AsyncOp* inOp)
-    {
-        if (ee_won_logic_completion_runs(this->mObject->mKilled, this->mCheckTracker, &Untrack, this->mObject.mPtr, inOp))
-            (this->mObject.mPtr->*mCallback)(inOp);
-    }
-    static bool Untrack(void* inLogic, void* inOp) { return static_cast<T*>(inLogic)->RemoveTrackedOp(static_cast<AsyncOp*>(inOp)); }
-    Callback mCallback;                    // +0x0c
-    SmartPtr<T> mObject;                    // +0x10; original allocation0x14
 };
 
 // A Rust object a C++ reference holds (R6 WON round 34): HTTPConnection (RTTI 44d3a4 > RefCount; ctor 2d2c80, dtor

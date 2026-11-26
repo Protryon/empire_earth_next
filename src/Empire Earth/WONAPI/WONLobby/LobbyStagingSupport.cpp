@@ -18,7 +18,6 @@
 #include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyStaging.h"
-#include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyScreens.h"
