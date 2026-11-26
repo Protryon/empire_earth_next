@@ -28,11 +28,6 @@ use crate::world_field;
 use ee_base::math::transform::RotationOrder;
 use ee_base::math::types::GeTransformation;
 
-extern "C" {
-    // `EEAreaEffect::Covers`'s body (ee_game screens area_effect_ffi.rs)
-    fn ee_screens_ae_covers(effect: usize, player: u64, unit: usize, x: f32, y: f32) -> bool;
-}
-
 thread_local! {
     /// `EECombatTimer`'s, `EECombatHeal`'s and `EECombatRegenerate`'s last outputs (each read right after it)
     static TIMER: Cell<EeCombatTimerOut> = Cell::new(EeCombatTimerOut::default());
@@ -161,14 +156,16 @@ pub(crate) fn scratch_view(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4
             )
         }
         // effect a's `Covers(owner's player id, unit b, the owner's location's x and y)` (its owner `mUnit` from the
-        // C++ host)
+        // C++ host; `EEAreaEffect::Covers` is ee_game's, out of ee_sim's reach)
         EE_UNITS_UC_EFFECT_COVERS => {
             let owner = host(x, EE_UNITS_UC_EFFECT_OWNER, x.a, 0, 0, &mut [0.0; 4]) as u64;
             // SAFETY: the effect's live owner
             let o = unsafe { UnitView::of(x.t, owner) }?;
             let (player, at) = (u64::from(o.player()?.id()), o.location());
-            // SAFETY: the member's call on the live effect and unit
-            i64::from(unsafe { ee_screens_ae_covers(x.a as usize, player, b as usize, at[0], at[1]) })
+            // the C++ statement with the owner's player id in c and its x and y in f
+            f[0] = at[0];
+            f[1] = at[1];
+            host(x, op, x.a, b, player as i64, f)
         }
         // ProduceUnit's ship and flier: *c = unit a's location at the placement *b's yaw (no pitch or roll), set
         EE_UNITS_UC_ALIGN_YAW => {

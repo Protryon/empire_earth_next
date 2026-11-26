@@ -362,6 +362,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_POSITION: EEUcObject<EEUnit>(inA)->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_AREA_EFFECT_AT: return (uint64_t)(uintptr_t)gAEManager.FindEffectAtTile(8, theOther->GetTileX(), theOther->GetTileY(), theOther->GetPlayer()->GetPlayerID());
     case EE_UNITS_UC_EFFECT_OWNER: return (uint64_t)(uintptr_t)EEUcObject<EEAreaEffect>(inA)->mUnit;
+    case EE_UNITS_UC_EFFECT_COVERS: return EEUcObject<EEAreaEffect>(inA)->Covers((unsigned long)inC, EEUcObject<EEComplexUnit>((uint64_t)inB), GE2DPoint(f[0], f[1]));   // (the owner's player id and x, y: Rust's)
     case EE_UNITS_UC_QUEUE_LEN: return theUnit->GetQueueGoals((unsigned long)inB).size();
     case EE_UNITS_UC_QUEUE_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC];
     case EE_UNITS_UC_GOAL_SUITS: return EEUcObject<EEUnitGoal>(inA)->Suits(EEUcObject<EEComplexUnit>((uint64_t)inB));
