@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/statusstr.h"
 namespace WONAPI {
 const char* WONStatusToString(WONStatus);

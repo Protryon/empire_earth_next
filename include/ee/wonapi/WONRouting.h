@@ -5,7 +5,7 @@
 #ifndef EE_WONAPI_WONROUTING_H
 #define EE_WONAPI_WONROUTING_H
 
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONDriver.h"
 #include <time.h>
 #include <stdlib.h>

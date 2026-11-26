@@ -18,7 +18,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyLogic.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_net/buffer.h"
 using namespace WONAPI;

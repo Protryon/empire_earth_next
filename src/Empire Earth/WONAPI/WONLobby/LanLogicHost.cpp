@@ -25,7 +25,7 @@
 #include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyStaging.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/EELobbyGameCode.h" // LobbyMessageBox

@@ -117,6 +117,15 @@ public:
     void* mRust; // owned; made last: the maker may fill the slots
 };
 typedef RustLogic NetLogic;
+// The kinds' slots and dialogs, named (the classes' members, in their order; WONLobbyAccountLogic.h's and
+// WONLobbyRoutingLogic.h's until R6 WON round 39). The Init kind's cross-promotion link is mText (0x44), its
+// firewall test address mAddr (0x5c); the routing kind's game data type was "G".
+enum { kAccountCredits, kAccountTOU }; // mDialog: mCreditsDialog (0x54), mTOUDialog (0x58)
+enum { kInitAdapter }; // mDialog: mNetworkAdapterDialog (0x84)
+enum { kInitSession, kInitAcceptOp, kInitFirewallSocket }; // mSlot: mHTTPSession (0x40), mAcceptOp (0x54), mFirewallSocket (0x58)
+enum { kRoutingServerList, kRoutingGameList }; // mSlot: mServerList (0x54), mGameList (0x58)
+// mDialog: 0x74 (AddFriend) .. 0x88 (Password)
+enum { kRoutingAddFriend, kRoutingAdminAction, kRoutingBadUser, kRoutingCreateRoom, kRoutingRoom, kRoutingPassword };
 // The kinds' makers (each in its host's unit)
 void* AccountLogicMake(RustLogic* inSelf);
 void* DialogLogicMake(RustLogic* inSelf);

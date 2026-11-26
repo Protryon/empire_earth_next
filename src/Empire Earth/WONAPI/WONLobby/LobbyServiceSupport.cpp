@@ -12,10 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONLobbyAccountLogic.h"
-#include "ee/wonapi/WONLobbyDialogLogic.h"
 #include "ee/wonapi/WONLobbyLan.h"
-#include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyStaging.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyLogic.h"
@@ -23,6 +20,9 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "ee/wonapi/WONLobbyDialogs.h"
+#include "ee/wonapi/WONLobbyModel.h"
+#include "ee/wonapi/WONLobbyEvents.h"
 #include "rust/won_lobby/lobbyprv.h"
 namespace WONAPI {
 // (SDK GetDefaultTimeout)

@@ -70,9 +70,6 @@ public:
     // 2b2c20: from a host-order IP and port, forgetting the host name
     void Fn2B2C20(long inHost, unsigned short inPort)
     { ee_won_ipaddr_set_host_order(this->mAddr, static_cast<uint32_t>(inHost), inPort); }
-    // 2b2d50 / 2b2df0: from "host[:port]" (by DNS / dotted only), the default port if none; the validity
-    bool SetWithDefaultPort(const std::string& inText, unsigned short inPort)
-    { return ee_won_ipaddr_set_with_default_port(this->mAddr, Bytes(inText), inText.length(), inPort); }
     #include EE_WON_DRV(IPAddr_IPAddr) // the drivers' members
     // 2b3070: "host:port", as formatted into a 50-byte buffer (a long remembered host name is cut short)
     std::string GetHostAndPortString(bool inUseOriginal = true) const
@@ -80,7 +77,6 @@ public:
     // the remembered host name if asked and known, else the dotted IP
     std::string GetHostString(bool inUseOriginal) const
     { std::string aText; ee_won_ipaddr_host_string(this->mAddr, inUseOriginal, TextSink, &aText); return aText; }
-    unsigned short GetPort() const { return ee_won_ipaddr_port(this->mAddr); } //2b31c0, host byte order
     void SetPort(unsigned short inPort) { ee_won_ipaddr_set_port(this->mAddr, inPort); }
     long GetHost() const { return ee_won_ipaddr_host(this->mAddr); } //2b2fb0, host byte order
     bool IsValid() const { return ee_won_ipaddr_valid(this->mAddr); }
@@ -93,7 +89,6 @@ public:
     // 2b3260: by host-order IP, then by port
     int StringCompare(const IPAddr& inOther) const
     { return ee_won_ipaddr_string_compare_values(this->mAddr, inOther.mAddr); }
-    void FromRaw(const EeWonAddr& inRaw) { ee_won_ipaddr_from_raw(this->mAddr, &inRaw); }
     // the Rust value, for the Rust objects that copy it (a socket's destination, an op's address)
     const EeWonIpAddr* GetValue() const { return this->mAddr; }
     // an address taking a value a Rust object made (owned from then on)
