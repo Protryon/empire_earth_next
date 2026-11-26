@@ -9,7 +9,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/SEScore.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"

@@ -33,7 +33,6 @@
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GEPolygonArray.h"
 #include "rust/render/gestate.h"
 #include "lle/GERasterizer.h"
 

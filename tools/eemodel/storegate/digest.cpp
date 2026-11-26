@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "fakes.h"
-#include "lle/GEBoundingBox.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "rust/render/ge.h"

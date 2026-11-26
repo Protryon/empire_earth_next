@@ -23,7 +23,7 @@ class GETerrainMesh;
 class EEComplexUnit;
 class EEHerd;                               // ee/EEHerd.h (EEComplexUnit+0x200)
 struct EEPUnitSwap;                         // ee/EEPhysics.h (ReplaceUnits)
-template <class T> class UMemoryPool;   // lle/UMemoryPool.h (EEComplexUnit::sMemoryPool)
+template <class T> class UMemoryPool;   // lle/UList.h (EEComplexUnit::sMemoryPool)
 class EEGraphicEffect;
 class SESMInstanceNode;                 // lle/SESMInstanceNode.h (EEComplexUnit::SetSound)
 class EEGraphicObject;                      // ee/EEGraphicObject.h
