@@ -12,8 +12,7 @@
 #ifndef LLE_UICOMBOBOX_H
 #define LLE_UICOMBOBOX_H
 #include "rust/ui/comboobj.h"
-#include "rust/ui/lle_combo.h"
-#include "lle/GERhombus.h"
+#include "lle/UILBString.h"
 
 
 class LLE_API UIComboBox : public UIControl {
