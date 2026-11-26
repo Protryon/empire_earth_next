@@ -25,6 +25,7 @@
 #include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyStaging.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONBuffer.h"
@@ -193,7 +194,7 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanDirectReset: l->mDialog[kLanDirectConnect]->LCall(EeWonLobbyDlgCall::Reset); return 0;
     case EeWonLobbyOp::LanDirectDo: return LobbyDoDialog(l->mDialog[kLanDirectConnect].get());
     // (the configured port moved by the harness slot's offset, as LobbyBindUDPPort's: TEST ONLY)
-    case EeWonLobbyOp::ConfigLobbyPortTest: return static_cast<LobbyConfig*>(inA)->mLobbyPort + LobbyTestPortOffset();
+    case EeWonLobbyOp::ConfigLobbyPortTest: return ee_won_lobbyconf_num(static_cast<EeWonLobbyConf*>(inA), EeWonLobbyConfNum::LobbyPort) + LobbyTestPortOffset();
     case EeWonLobbyOp::LobbyPort: return LobbyGetLobbyPort();
     case EeWonLobbyOp::LanDirectHostTake: Take(inB, std::string(l->mDialog[kLanDirectConnect]->InputText(1))); return 0;
     case EeWonLobbyOp::LanDirectDnsHeld: return Held(NewDnsTestOp(l->mDialog[kLanDirectConnect]->InputText(1)));

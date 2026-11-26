@@ -56,22 +56,16 @@ enum class EeWonLobbyPrvOp : uint32_t {
   ErrorParseHead,
   /// `p->mInitError.append(GUIString(sPrvParser->GetAbortReason()))`.
   ErrorParseReason,
-  /// `p->mConfig->mLobbyPort` (the lobby port: the Rust's member, R6 WON lobby and network round 38).
-  ConfigLobbyPort,
   /// `sPrvComponentConfig = new ContainerConfig`.
   ComponentConfigNew,
   /// `p->mLobbyContainer = new LobbyContainer`.
   LobbyContainerNew,
-  /// `ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory)`.
+  /// `ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + PrvText(a))` (the config's resource
+  /// directory: `a` its bytes and length).
   SetResourceFolder,
-  /// `sPrvDefine = p->mConfig->mDefines.begin()`.
-  DefinesBegin,
-  /// `sPrvDefine == p->mConfig->mDefines.end()`.
-  DefinesAtEnd,
-  /// `sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false)`.
+  /// `sPrvParser->AddDefine(PrvText(a), PrvText(a + 2 words), false)` (a config define: its name's and value's
+  /// bytes and lengths).
   DefineAdd,
-  /// `++sPrvDefine`.
-  DefineNext,
   /// `return WonGuard([&] { return sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser); });`.
   ReadMaster,
   /// `p->mInitError = sPrvComponentConfig->mConfigError`.
@@ -80,18 +74,6 @@ enum class EeWonLobbyPrvOp : uint32_t {
   LogicMgrInit,
   /// `return WonGuard([&] { return PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }); });`.
   InitFuncRun,
-  /// `sPrvCrc = CRC16()`.
-  CrcNew,
-  /// `sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length())`.
-  CrcPutProductName,
-  /// `sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length())`.
-  CrcPutVersion,
-  /// `sPrvCrc.Get()` (a product id).
-  CrcGet,
-  /// `sPrvCrc.Reset()`.
-  CrcReset,
-  /// `sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length())`.
-  CrcPutLanVersion,
   /// `p->mChatCommandParser->InitCommands()`.
   ChatParserInitCommands,
   /// `sPrvTable = NULL`.
@@ -118,9 +100,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   CommunitySet,
   /// `p->mAuthContext->SetCommunity(p->mLoginCommunity)`.
   AuthSetCommunity,
-  /// `p->mConfig->mCDKeyCheck`.
-  CdKeyCheck,
-  /// `p->mCDKey.SetProductString(p->mConfig->mProductName)`.
+  /// `p->mCDKey.SetProductString(PrvText(a))` (the config's product name: `a` its bytes and length).
   CdKeySetProduct,
   /// `p->mCDKey.LoadFromRegistry()`.
   CdKeyLoad,
@@ -132,7 +112,8 @@ enum class EeWonLobbyPrvOp : uint32_t {
   SysTouPath,
   /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
   GameTouPath,
-  /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39).
+  /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39); its
+  /// record (lobbyconf.rs), the lobby's from then on.
   ConfigNew,
   /// `p->mPersistentData = new LobbyPersistentData`.
   PersistentDataNew,
@@ -357,8 +338,7 @@ EeWonIpAddr *ee_won_lobbyprv_public_addr();
 /// LobbyGetMyAddress: the address to give peers, a new value: the public address unless room spec 1, no valid
 /// public address or the config's UseLocalIP (`use_local_ip`), else the local one; on the lobby port. An empty
 /// address without a lobby.
-EeWonIpAddr *ee_won_lobbyprv_my_address(int32_t room_spec,
-                                        bool use_local_ip);
+EeWonIpAddr *ee_won_lobbyprv_my_address(int32_t room_spec);
 
 /// `~WONLobbyPrv`: the lobby `prv` gone, its members with it (a newer lobby's stay).
 void ee_won_lobbyprv_drop(void *prv);

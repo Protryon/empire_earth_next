@@ -31,6 +31,7 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONAuthContext.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_net/httpdoc.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/eeglue.h"
@@ -348,9 +349,9 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxTextWidth: return g->mFont->GetStringWidth(Txt(b));
     // the statements of the cases hostops.rs answers (R6 WONLobby round 29: the ping bars, the rows' counts, the
     // summaries, the filter row, the room events, the event items, the numbers, the saved game dialog)
-    case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
-    case Op::ConfigPingCeiling: return reinterpret_cast<LobbyConfig*>(a)->mPingCeiling;
-    case Op::ConfigPublic: return reinterpret_cast<LobbyConfig*>(a)->mPublic ? 1 : 0;
+    case Op::LobbyConfigGet: return (intptr_t)ee_won_lobbyconf_current();
+    case Op::ConfigPingCeiling: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::PingCeiling);
+    case Op::ConfigPublic: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::Public);
     case Op::ItemTextAppend: aText->mText.append(Txt(b));
         return 0;
     case Op::LabelSetFormatRes: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(ResText(b), Txt(c)), true);

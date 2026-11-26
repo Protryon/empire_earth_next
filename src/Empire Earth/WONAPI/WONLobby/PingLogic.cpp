@@ -55,7 +55,6 @@ static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr
 {
     typedef EeWonLogicOp O;
     RustLogic* aLogic = static_cast<RustLogic*>(inObj);
-    LobbyConfig* aConfig;
     switch (inOp) {
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
     case O::SetDefaultRecv:
@@ -76,8 +75,6 @@ static intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr
     case O::GameQueryingDetails: return G(a)->IsQueryingDetails();
     case O::GameSetPing: G(a)->SetPing((unsigned short)b); return 0;
     case O::GameSetPingReplied: G(a)->SetPingReplied(true); return 0;
-    case O::NoPingInProgress: aConfig = GetLobbyConfig(); return aConfig != NULL && aConfig->mNoPingInProgress;
-    case O::PingCeiling: aConfig = GetLobbyConfig(); return aConfig != NULL ? (intptr_t)aConfig->mPingCeiling : 5000;
     case O::ConnectionSpeed: return LobbyGetConnectionSpeed();
     case O::ReplyNew: return (intptr_t)new WriteBuffer(3, true);
     case O::BufAppend: reinterpret_cast<WriteBuffer*>(a)->AppendBytes(reinterpret_cast<const void*>(b), (unsigned long)c); return 0;

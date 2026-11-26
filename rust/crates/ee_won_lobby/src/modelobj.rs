@@ -2662,7 +2662,12 @@ pub(crate) fn route_op(
             8 => m().server().groups.len() as isize,
             9 => b(m().server().querying.get()),
             10 => m().server().last_ping.get() as isize,
-            4 | 6 => return None,
+            // HasAddress(the config's language)
+            6 => {
+                let language = crate::lobbyconf::current().map(|c| c.language.clone()).unwrap_or_default();
+                call(m(), EeWonModelCall::ServerHasAddress, language.as_ptr() as isize, language.len() as isize, 0)
+            }
+            4 => return None,
             _ => 0,
         },
         O::ServerFindByWonId => call(m(), EeWonModelCall::ServerFindByWonId, bb, 0, 0),

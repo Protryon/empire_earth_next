@@ -86,6 +86,7 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/eecolor.h"
 #include "rust/won_lobby/eeglue.h"
 #include "rust/won_lobby/rows.h"
@@ -462,8 +463,8 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(GlueText((intptr_t)EeWonEeGlueText::MapType, b)); return 0;
     case Op::LobbyClose: EELobbyClose(); return 0;
     case Op::ResourceDestroy: EELobbyResource_Destroy(); return 0;
-    case Op::Config: return (intptr_t)GetLobbyConfig();
-    case Op::ConfigPort: return reinterpret_cast<LobbyConfig*>(a)->mFileTransferPort;
+    case Op::Config: return (intptr_t)ee_won_lobbyconf_current();
+    case Op::ConfigPort: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::FileTransferPort);
     case Op::SetGameInProgress: LobbySetGameInProgress((int)a); return 0;
     case Op::LeaveGame: LobbyLeaveGame(a != 0); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;

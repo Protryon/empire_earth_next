@@ -84,9 +84,9 @@ pub enum EeWonRouteLogicOp {
     ErrorDialog,
     /// `LobbyDoYesNoDialog(LOBBY_STRING(a), LOBBY_STRING(b), true)`.
     YesNo,
-    /// `GetLobbyConfig() != NULL`.
+    /// a config exists (netlogicops.rs answers it from lobbyconf.rs in the game).
     HasConfig,
-    /// `GetLobbyConfig()->mPingCeiling`, or -1 without a config.
+    /// the config's PingCeiling, or -1 without a config (answered as HasConfig).
     ConfigPingCeiling,
     /// `GetLobbyAuthContext()`.
     AuthContext,
@@ -133,7 +133,7 @@ pub enum EeWonRouteLogicOp {
     // ---- the model
     /// a server's (`a`) value: 0 `GetClients().get()`, 1 `GetConnection().get()`, 2 `GetMyClient()`, 3
     /// `GetMyClientId()`, 4 `GetName() == LobbyGetLastServerName()`, 5 `GetNumClients()`, 6
-    /// `HasAddress(GetLobbyConfig()->mLanguage)`, 7 `IsConnected()`, 8 `GetGroupCount()`, 9
+    /// `HasAddress(the config's language)` (modelobj.rs), 7 `IsConnected()`, 8 `GetGroupCount()`, 9
     /// `GetQueryingGroups()`, 10 `GetLastPing()`.
     ServerNum = 50,
     /// `((LobbyServer*)a)->FindClientByWONId(b)`.
@@ -432,7 +432,8 @@ pub enum EeWonRouteLogicOp {
     UserIdOpNew,
     /// the user id op `a`'s id (`ee_won_hostop_num(.., EE_WON_REQOP_USER_ID, 0)` as an `unsigned long`).
     OpUserId,
-    /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"}, 2)`, held.
+    /// `RustServerOp::NewGetDir(context a, std::wstring((const wchar_t*)b, c), 0x04000622, {"_C", "_L"}, 2)` (the
+    /// config's product directory), held.
     DirOpNew,
     /// `new WriteBuffer(0, true)`.
     BufNew,

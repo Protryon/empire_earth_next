@@ -55,6 +55,7 @@
 #include "rust/won_gui/wmobj.h"
 #include "rust/won_gui/guienum.h"
 #include "rust/won_gui/wrapobj.h"
+struct EeWonLobbyConf; // the lobby config's record (rust/won_lobby/lobbyconf.h)
 
 namespace WONAPI {
 
@@ -982,42 +983,18 @@ public:
     int mCurLayoutId;                      // +94
 };
 
+// the lobby's configuration (WONLobby.cfg; the game's EELobbyConfig): its values, LOBBYDEFINE lines and checks are
+// ee_won_lobby lobbyconf.rs's record (R6 WON lobby and network round 40), read there; the class keeps the two
+// ConfigObject hooks it overrides (defined in WONLobbyPrv.cpp)
 class LobbyConfig : public ConfigObject {
 public:
-    LobbyConfig(); // the game's (EELobbyConfig: the file transfer port's key too; R6 WON lobby and network round 39)
+    LobbyConfig();
+    ~LobbyConfig();
     static std::string mDefaultFileName;
     virtual bool HandleValueInstruction(ConfigParser* inParser, const std::string& inKey, StringParser& inValue);
     virtual bool PostParse(ConfigParser* inParser);
-
-    std::list<std::string> mDirServers;     // +0x54; ConfigListValue RTTI, node size 0x18
-    std::list<std::string> mRoomDirServers;  // +0x60
-    std::list<std::string> mAuthServers;    // +0x6c
-    std::string mProductName;               // +0x78
-    const std::string& GetProductName() const { return this->mProductName; }
-    std::wstring mProductDirectory;         // +0x88
-    std::string mVersion;                   // +0x98
-    std::string mLanVersion;                // +0xa8
-    std::string mLanguage;                  // +0xb8
-    std::string mResourceDirectory;         // +0xc8
-    bool mCRCCheck;                         // +0xd8
-    bool mCDKeyCheck;                       // +0xd9
-    bool mPublic;                           // +0xda
-    unsigned short mLanBroadcastPort;      // +0xdc
-    bool mUseLocalIP;                       // +0xde
-    bool GetNoPingInProgress() const { return this->mNoPingInProgress; }
-    bool mNoPingInProgress;                 // +0xdf
-    unsigned short mLobbyPort;             // +0xe0
-    bool mCheckForInternet;                 // +0xe2
-    unsigned short mPingCeiling;           // +0xe4
-    bool mAllowDuplicateNames;              // +0xe6
-    bool mAppendNumberToDefaultLanName;      // +0xe7
-    bool mAllowJoinGameWithoutPing;          // +0xe8
-    std::map<std::string, std::string, StringLessNoCase> mDefines;           // +0xec (node value 0x20; pair dtor 0x296a48)
-    unsigned short mFileTransferPort;       // +0xf8 EELobbyConfig's "EEFileTransferPort" (8889)
+    EeWonLobbyConf* mConf;
 };
-
-// 0x358710: the lobby's configuration object
-LobbyConfig* GetLobbyConfig();
 
 // one item of a list (0x18 bytes: TextListItem's members start at +0x18; vtable 0x84dba4, 14 slots; the inline
 // bodies are the COMDATs EELobbyConnectDialog.cpp keeps, 0x290bb4..0x290bc4)

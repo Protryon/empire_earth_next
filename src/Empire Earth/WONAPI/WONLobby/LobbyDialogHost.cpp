@@ -24,6 +24,7 @@
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "ee/wonapi/WONGUIShell.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/dialogs.h"
 #include "rust/won_lobby/lobbydlg.h"
 #include "rust/won_lobby/lobbypopup.h"
@@ -320,8 +321,8 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::MenuTitleNumber: aMenu->AddItem(GUIString(std::to_string((int)b).c_str()), 0)->mSelectable = false; return 0;
     case Op::MenuAddRes: aMenu->AddItem(gLobbyResources[b].mString, NULL, NULL, (int)c); return 0;
     case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
-    case Op::Config: return (intptr_t)GetLobbyConfig();
-    case Op::ConfigNoPingInProgress: return reinterpret_cast<LobbyConfig*>(a)->GetNoPingInProgress() ? 1 : 0;
+    case Op::Config: return (intptr_t)ee_won_lobbyconf_current();
+    case Op::ConfigNoPingInProgress: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::NoPingInProgress);
     case Op::EventItem: return (intptr_t)anEvent->mItem.get();
     case Op::EventButton: return anEvent->mButton;
     case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;

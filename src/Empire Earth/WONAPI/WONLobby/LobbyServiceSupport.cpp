@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyStaging.h"
@@ -111,7 +112,7 @@ static const std::string& GetEmptyStr() { static const std::string anEmpty; retu
 unsigned short GetLobbyProductId() { return (unsigned short)ee_won_lobbyprv_get(EeWonLobbyPrvField::LanProductId); }
 // (SDK LobbyMisc::DoCDKeyCheck)
 // Returns whether the lobby configuration asks for a CD key check
-bool LobbyDoCDKeyCheck() { return gLobbyData.get()!=NULL?gLobbyData->mConfig->mCDKeyCheck:false; }
+bool LobbyDoCDKeyCheck() { return gLobbyData.get()!=NULL && ee_won_lobbyconf_num(ee_won_lobbyconf_current(), EeWonLobbyConfNum::CdKeyCheck); }
 // (SDK LobbyMisc::IsCDKeyValid)
 // Returns whether the player's CD key is valid
 bool LobbyIsCDKeyValid() { return gLobbyData.get()!=NULL?gLobbyData->mCDKey.IsValid():false; }

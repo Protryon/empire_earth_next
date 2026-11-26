@@ -75,9 +75,9 @@ pub enum EeWonLogicOp {
     GameSetPing,
     /// `((LobbyGame*)a)->SetPingReplied(true)`.
     GameSetPingReplied,
-    /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mNoPingInProgress`.
+    /// the config's NoPingInProgress (false without a config; netlogicops.rs answers it from lobbyconf.rs in the game).
     NoPingInProgress,
-    /// `GetLobbyConfig() != NULL ? GetLobbyConfig()->mPingCeiling : 5000`.
+    /// the config's PingCeiling, 5000 without a config (answered as NoPingInProgress).
     PingCeiling,
     /// `LobbyGetConnectionSpeed()`.
     ConnectionSpeed,
@@ -180,7 +180,7 @@ pub enum EeWonLogicOp {
     // ---- InitLogic
     /// `LobbySetVersionStatus(a)`.
     SetVersionStatus = 100,
-    /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mCheckForInternet`.
+    /// the config's CheckForInternet (false without a config; answered as NoPingInProgress).
     CheckForInternet,
     /// `AsyncSocket::HasInternetConnection()`.
     HasInternet,
@@ -227,7 +227,7 @@ pub enum EeWonLogicOp {
     BroadcastNoPromotion,
     /// the config and the account, auth, firewall and directory server lists all exist.
     DirReady,
-    /// `!GetLobbyConfig()->mAuthServers.empty()`.
+    /// the config names auth servers (answered as NoPingInProgress).
     HasAuthConfig,
     /// the list of target `a` (1 auth, 2 account, 3 firewall, 4 patch), if it exists, adds op `b`'s list `c`.
     AddDirAddresses,
@@ -267,7 +267,7 @@ pub enum EeWonLogicOp {
     HasFirewallSocket,
     /// `mFirewallAddress` = op `a`'s current address; `mAcceptOp` on `mFirewallSocket`, run; the socket dropped.
     StartAccept,
-    /// the config exists and names a directory server.
+    /// the config exists and names a directory server (answered as NoPingInProgress).
     DnsTestReady,
     /// a `DNSTestOp` of the config's first directory server, tracked with `DNSCompletion`.
     RunDnsTest,
@@ -277,7 +277,7 @@ pub enum EeWonLogicOp {
     DirServers,
     /// the multi-directory query of the auth, database, firewall and patch servers on list `a`, tracked.
     RunDirQuery,
-    /// the patch server list and the config exist.
+    /// the patch server list and the config exist (answered as NoPingInProgress).
     VersionReady,
     /// the version check op on the patch servers, tracked with `VersionCompletion`.
     RunVersionCheck,
@@ -389,14 +389,8 @@ pub enum EeWonLogicOp {
     RememberHostAddress,
     /// `LobbyGetDirServers()->RemoveAllAddresses()`.
     DirServersRemoveAll,
-    /// the config's directory servers added to `LobbyGetDirServers()`.
-    AddAllDir,
-    /// the config's room directory servers added to `LobbyGetRoomDirServers()`.
-    AddAllRoomDir,
-    /// the config's auth servers added to `LobbyGetAuthServers()`.
-    AddAllAuth,
     /// the picture at the HTTP get op `a`'s local path decoded, held (NULL: none).
-    PromotionDecode,
+    PromotionDecode = 253,
     /// `LobbyBroadcastEvent(SetCrossPromotionEvent(a, mCrossPromotion), true)`.
     PromotionBroadcast,
     /// `RustServerOp::NewHttpGet(std::string(a, b))`, held.
@@ -425,11 +419,9 @@ pub enum EeWonLogicOp {
     AcceptOpRun,
     /// `mFirewallAddress = firewall op a's current address`.
     SetFirewallAddress,
-    /// `config != NULL`.
-    HasConfig,
     /// `LobbyGetRoomDirServers()`.
-    RoomDirServersGet,
-    /// `new DNSTestOp(config->mDirServers.front())`, held.
+    RoomDirServersGet = 269,
+    /// `new DNSTestOp(std::string((const char*)a, b))` (the config's first directory server), held.
     DnsOpNew,
     /// `RunTrackedOp(a, DNSCompletion, 0)`.
     RunTrackedDns,
@@ -441,18 +433,14 @@ pub enum EeWonLogicOp {
     RunTrackedVersion,
     /// `RunTrackedOp(a, FirewallCompletion, 0)`.
     RunTrackedFirewall,
-    /// `RustServerOp::NewHttpDocument(config->mProductName, a)`, held.
+    /// `RustServerOp::NewHttpDocument(std::string((const char*)b, c), a)` (the config's product), held.
     HttpDocNew,
-    /// `((RustServerOp*)a)->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage)`.
+    /// `((RustServerOp*)a)->SetBytes(EE_WON_HTTPDOC_CONFIG, std::string((const char*)b, c))` (the config's language).
     HttpDocSetConfig,
     /// `((RustServerOp*)a)->Set(EE_WON_HTTPDOC_SESSION, mHTTPSession)`.
     HttpDocSetSession,
-    /// `RustServerOp::NewGetMultiDir(a, 0x04000002, the four paths, b)`, held.
-    DirQueryNew,
-    /// the version check's request (product, config, version) on the patch servers, held.
-    VersionCheckNew,
     /// `new DetectFirewallOp(a)`, held.
-    FirewallOpNew,
+    FirewallOpNew = 281,
     /// `((DetectFirewallOp*)a)->SetListenPort(LobbyGetLobbyPort())`.
     FirewallSetListenPort,
     /// `((DetectFirewallOp*)a)->SetDoListen(b != 0)`.
@@ -471,6 +459,10 @@ pub enum EeWonLogicOp {
     AdapterReset,
     /// `LobbyDoDialog(mNetworkAdapterDialog)`: the result.
     AdapterDo,
+    /// `((ServerContext*)a)->AddAddress(IPAddr(std::string((const char*)b, c)))` (a config server's name).
+    ServerAddAddress,
+    /// `RustServerOp::NewRequest((EeWonReqOp*)b, (ServerContext*)a)`, held.
+    RequestNew,
 }
 
 /// The inward calls (each a method of the logic, `a`..`c` its arguments).
