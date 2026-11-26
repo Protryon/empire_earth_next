@@ -43,16 +43,11 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual long CloseIMECompositionString() { return kErrorFailed; }
     static bool ControlKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Control); }
     virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
-    // Returns whether Down (or keypad 2 with Num Lock off) is held
-    static bool DownKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Down); }
     // Draws the copied background (when it has an opacity) and the border (ee_ui controlobj.rs)
     virtual long DrawPolygons() { return (long)this->Call(EeUiControlCall::DrawPolygons); }
     virtual long DrawTextA() { this->mDrawCount--; return kErrorOK; }
-    // Returns whether End (or keypad 1 with Num Lock off) is held
-    static bool EndKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::End); }
     void FireTriggerEvent(unsigned long inEvent) { this->Call(EeUiControlCall::FireTrigger, inEvent); }
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
-    float GetBorderOpacity() const { return this->mBorderOpacity; }
     unsigned long GetBorderThickness() { return this->mBorderThickness; }
     float GetBgOpacity() const { return UIOut(ee_ui_control_call, const_cast<UIControl*>(this), EeUiControlCall::BgOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
     void GetBgColor(GEColor& outColor) const { this->BgRhombus()->GetColorPerVertex(outColor, outColor, outColor, outColor); }
@@ -84,8 +79,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual unsigned long GetType() const { return this->mControlType; }
     unsigned long GetWidth() const { return UMFloor(this->GetRectangle().GetWidth() + 1.0f); }
     virtual void HideControl() {}
-    // Returns whether Home (or keypad 7 with Num Lock off) is held
-    static bool HomeKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Home); }
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
     // The left button down, then MouseLButtonDown (ee_ui controlobj.rs)
@@ -104,7 +97,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     static void SetBorderColors(const GEColor& inDark, const GEColor& inLight) { ee_ui_set_border_colors(UIF4(inDark), UIF4(inLight)); }
     void SetBorderOpacity(float inOpacity) { this->mBorderOpacity = inOpacity; }
     void SetBorderThickness(unsigned long inThickness) { this->Call(EeUiControlCall::SetBorderThickness, inThickness); }
-    void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
     virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiControlCall::SetLocation, 0, 0, UIF4(inLocation)); }
@@ -121,8 +113,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     // (ee_ui mouse.rs)
     long UpdateMouse(const GE2DPoint& inLocation) { return ee_ui_control_update_mouse(this, &inLocation); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return kErrorOK; }
-    // Returns whether Up (or keypad 8 with Num Lock off) is held
-    static bool UpKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Up); }
     // the shared keys and mouse buttons: a Rust record of ISEntity pointers by EeUiKey (ee_ui lle_control.rs; once
     // the 24 key statics here, UIForm's Tab and Shift and UIManager's mouse buttons and wheel)
     static ISEntity*& Key(EeUiKey inKey) { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(inKey)); }

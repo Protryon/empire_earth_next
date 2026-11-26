@@ -35,7 +35,6 @@ public:
     virtual long CloseIMECompositionString() { return (long)this->Call(EeUiEditCall::ImeClose); }
     void Copy() { this->Call(EeUiEditCall::Copy); }
     virtual long CopyData() { return (long)this->Call(EeUiEditCall::CopyData); }
-    void Cut() { this->Call(EeUiEditCall::Cut); }
     void DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex,
                     unsigned long inEndLine) { this->Call(EeUiEditCall::DeleteRange, inStartIndex, inStartLine, inEndIndex, inEndLine); }
     void DeleteText() { this->Call(EeUiEditCall::Clear); }
@@ -54,7 +53,6 @@ public:
                     unsigned long inStartLine) { this->Call(EeUiEditCall::Select, inCaretIndex, inStartIndex, inCaretLine, inStartLine); }
     void SetCaretLocation(unsigned long inIndex, unsigned long inLine) { this->Call(EeUiEditCall::SetCaretLocation, inIndex, inLine); }
     void SetCursorColor(const GEColor& inColor) { this->CallColor(EeUiEditCall::SetCursorColor, inColor); }
-    void SetIsPasswordBox(bool inPasswordBox) { this->Call(EeUiEditCall::SetIsPasswordBox, inPasswordBox); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->CallPoint(EeUiEditCall::SetLocation, inLocation); }
     void SetSelectedBgColor(const GEColor& inColor) { this->CallColor(EeUiEditCall::SetSelectedBgColor, inColor); }
     void SetText(const UWideString& inString) { this->Call(EeUiEditCall::SetText, (intptr_t)(const char*)inString); }

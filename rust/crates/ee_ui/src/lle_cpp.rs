@@ -363,7 +363,6 @@ macro_rules! shims {
 shims! {
     // UIManager.cpp's (lle_manager.rs); the events file's count is UIHotKey.cpp's
     fn file_read_count(file: usize, count: EeUiShimULongOut) -> c_long = ee_uicpp_file_read_count;
-    fn mgr_screen(m: usize) -> u32 = ee_uicpp_mgr_screen;
     fn mgr_rasterizer_screen(m: usize) = ee_uicpp_mgr_rasterizer_screen;
     fn mgr_window(m: usize) -> usize = ee_uicpp_mgr_window;
     fn window_origin_x(w: usize) -> f32 = ee_uicpp_window_origin_x;
@@ -378,7 +377,6 @@ shims! {
     fn callback_manager(callback: usize, m: usize, id: u32) -> usize = ee_uicpp_callback_manager;
     fn callback_form(callback: usize, form: usize, id: u32) -> usize = ee_uicpp_callback_form;
     fn mgr_texture_manager(m: usize) -> usize = ee_uicpp_mgr_texture_manager;
-    fn mgr_ui_depth(m: usize) -> u32 = ee_uicpp_mgr_ui_depth;
     fn texture_load_ui(manager: usize, name: EeUiShimText, depth: u32, alpha: bool) -> usize = ee_uicpp_texture_load_ui;
     fn texture_reference(t: usize) = ee_uicpp_texture_reference;
     fn texture_stage_alpha(t: usize, mode: u32) = ee_uicpp_texture_stage_alpha;
@@ -399,23 +397,8 @@ shims! {
     fn es_verify(line: u32, expression: EeUiShimText) = ee_uicpp_es_verify;
     fn instance_reference(instance: usize) = ee_uicpp_instance_reference;
     fn instance_dereference(instance: usize) = ee_uicpp_instance_dereference;
-    fn table_get(index: u32) -> usize = ee_uicpp_table_get;
-    fn mgr_form_by_id(m: usize, id: u32) -> usize = ee_uicpp_mgr_form_by_id;
-    fn table_add_event(table: usize, id: u32, kind: u32) = ee_uicpp_table_add_event;
-    fn form_add_event(form: usize, id: u32, kind: u32) = ee_uicpp_form_add_event;
     fn db_find(path: usize, directory: usize, name: EeUiShimText, file: EeUiShimPtrOut) -> c_long = ee_uicpp_db_find;
-    fn db_fonts(file: usize, m: usize) -> c_long = ee_uicpp_db_fonts;
-    fn db_forms(file: usize, m: usize) -> c_long = ee_uicpp_db_forms;
-    fn db_backgrounds(file: usize) -> c_long = ee_uicpp_db_backgrounds;
-    fn db_create_backgrounds(m: usize) = ee_uicpp_db_create_backgrounds;
-    fn db_controls(file: usize, m: usize) = ee_uicpp_db_controls;
-    fn db_control_events(file: usize) = ee_uicpp_db_control_events;
-    fn db_form_events(file: usize, m: usize) = ee_uicpp_db_form_events;
-    fn db_hot_keys(file: usize) = ee_uicpp_db_hot_keys;
     fn file_delete(file: usize) = ee_uicpp_file_delete;
-    fn db_remove_controls() = ee_uicpp_db_remove_controls;
-    fn db_remove_backgrounds() = ee_uicpp_db_remove_backgrounds;
-    fn db_remove_fonts() = ee_uicpp_db_remove_fonts;
     fn mouse_button_fetch(which: u32, button: u32) = ee_uicpp_mouse_button_fetch;
     fn mouse_left_handed() -> bool = ee_ui_mouse_left_handed;
     fn mouse_set_left_handed(left: bool) = ee_ui_mouse_set_left_handed;
@@ -433,16 +416,12 @@ shims! {
     fn form_fetch_shift_key() = ee_uicpp_form_fetch_shift_key;
     fn event_uninitialize(event: usize) = ee_uicpp_event_uninitialize;
     fn event_initialize(event: usize) = ee_uicpp_event_initialize;
-    fn form_screen(form: usize) -> u32 = ee_uicpp_form_screen;
-    fn form_keyboard_captured(form: usize) -> usize = ee_uicpp_form_keyboard_captured;
     fn control_ime_result(control: usize, text: usize) = ee_uicpp_control_ime_result;
     fn control_ime_change(control: usize, text: usize, attributes: usize, cursor: u32) -> c_long = ee_uicpp_control_ime_change;
     fn control_ime_close(control: usize) -> c_long = ee_uicpp_control_ime_close;
     fn control_ime_open(control: usize) -> c_long = ee_uicpp_control_ime_open;
     fn control_translated_key(control: usize, key: usize, repeat: i32) -> c_long = ee_uicpp_control_translated_key;
     fn mgr_create_form(m: usize, data: EeUiShimBytes) -> usize = ee_uicpp_mgr_create_form;
-    fn mgr_add_form(m: usize, form: usize) = ee_uicpp_mgr_add_form;
-    fn form_enable_group0(form: usize) = ee_uicpp_form_enable_group0;
     // UIControl.cpp's (lle_control.rs, mouse_ffi.rs)
     fn control_key_fetch(slot: u32, code: u32) = ee_uicpp_control_key_fetch;
     fn control_mouse_left_double(control: usize) -> c_long = ee_uicpp_control_mouse_left_double;
@@ -452,7 +431,6 @@ shims! {
     fn control_mouse_right_down(control: usize) -> c_long = ee_uicpp_control_mouse_right_down;
     fn control_mouse_move(control: usize, location: usize) -> c_long = ee_uicpp_control_mouse_move;
     // UIControlsTable.cpp's (lle_table.rs)
-    fn form_add_database_control(form: usize, index: u32) = ee_uicpp_form_add_database_control;
     fn string_new() -> usize = ee_uicpp_string_new;
     fn mgr_string(m: usize, id: u32, string: usize) = ee_uicpp_mgr_string;
     fn strings_new() -> usize = ee_uicpp_strings_new;
@@ -460,8 +438,6 @@ shims! {
     fn strings_resize(strings: usize, count: u32) = ee_uicpp_strings_resize;
     fn strings_count(strings: usize) -> u32 = ee_uicpp_strings_count;
     fn mgr_string_at(m: usize, id: i32, strings: usize, index: u32) = ee_uicpp_mgr_string_at;
-    fn table_string_begin(t: usize) -> i32 = ee_uicpp_table_string_begin;
-    fn table_string_end(t: usize) -> i32 = ee_uicpp_table_string_end;
     fn table_bitmap_normal(t: usize, m: usize, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_table_bitmap_normal;
     fn table_bitmap_pressed(t: usize, m: usize, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_table_bitmap_pressed;
     fn table_bitmap_focused(t: usize, m: usize, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_table_bitmap_focused;
@@ -476,10 +452,7 @@ shims! {
     // UIComboBox.cpp's (lle_combo.rs)
     fn combo_part(combo: usize, part: u32) -> usize = ee_uicpp_combo_part;
     fn list_scroll_bar(list: usize) -> usize = ee_uicpp_list_scroll_bar;
-    fn control_rect(control: usize, rect: EeUiShimF32Out) = ee_uicpp_control_rect;
     fn list_selection(list: usize, selection: EeUiShimULongOut) -> c_long = ee_uicpp_list_selection;
-    fn control_mouse_x(control: usize) -> f32 = ee_uicpp_control_mouse_x;
-    fn control_mouse_y(control: usize) -> f32 = ee_uicpp_control_mouse_y;
     fn label_set_text_line(label: usize, list: usize, line: u32) = ee_uicpp_label_set_text_line;
     fn edit_set_text_line(edit: usize, list: usize, line: u32) = ee_uicpp_edit_set_text_line;
     fn label_clear_text(label: usize) = ee_uicpp_label_clear_text;
@@ -493,9 +466,7 @@ shims! {
     fn list_text(list: usize) -> usize = ee_uicpp_list_text;
     fn combo_process_down(combo: usize) = ee_uicpp_combo_process_down;
     fn combo_process_up(combo: usize) = ee_uicpp_combo_process_up;
-    fn form_scaled_manager_bitmap(form: usize, index: u32, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_form_scaled_manager_bitmap;
     fn combo_new_drop(combo: usize, normal: usize, pressed: usize, left: f32, top: f32, right: f32, bottom: f32) -> usize = ee_uicpp_combo_new_drop;
-    fn control_width(control: usize) -> u32 = ee_uicpp_control_width;
     fn combo_new_label(combo: usize, font: usize, left: f32, top: f32, right: f32, bottom: f32, border: c_ulong) -> usize = ee_uicpp_combo_new_label;
     fn combo_new_edit(combo: usize, font: usize, max_chars: c_ulong, left: f32, top: f32, right: f32, bottom: f32, border: c_ulong) -> usize = ee_uicpp_combo_new_edit;
     fn combo_new_list(combo: usize, data: usize, font: usize, left: f32, top: f32, right: f32, bottom: f32, border: c_ulong) -> usize = ee_uicpp_combo_new_list;
@@ -512,8 +483,6 @@ shims! {
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
     fn keyboard_entity(key: u32, out: EeUiShimPtrOut) = ee_uicpp_keyboard_entity;
     fn edit_scroll_bar_new(edit: usize, x: f32, y: f32, length: f32) -> usize = ee_uicpp_edit_scroll_bar_new;
-    fn edit_form_mouse_x(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_x;
-    fn edit_form_mouse_y(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_y;
     fn line_new_black() -> usize = ee_uicpp_line_new_black;
     fn line_new() -> usize = ee_uicpp_line_new;
     rust:
@@ -548,6 +517,38 @@ shims! {
     fn control_set_right_down(control: usize, down: bool) = crate::lle_hosts::control_set_right_down;
     // the manager's UI lock (TSScheduler::CreateCriticalSection: ee_base's section)
     fn lock_create(lock: EeUiShimPtrOut) -> bool = own::lock_create;
+    // the forms', managers' and controls' chains of forwarders (LLE/UI round 2 pass 2: lle_chains.rs)
+    fn mgr_screen(m: usize) -> u32 = crate::lle_hosts::chains::mgr_screen;
+    fn form_screen(form: usize) -> u32 = crate::lle_hosts::chains::form_screen;
+    fn mgr_ui_depth(m: usize) -> u32 = crate::lle_hosts::chains::mgr_ui_depth;
+    fn mgr_form_by_id(m: usize, id: u32) -> usize = crate::lle_hosts::chains::mgr_form_by_id;
+    fn mgr_add_form(m: usize, form: usize) = crate::lle_hosts::chains::mgr_add_form;
+    fn form_add_event(form: usize, id: u32, kind: u32) = crate::lle_hosts::chains::form_add_event;
+    fn form_keyboard_captured(form: usize) -> usize = crate::lle_hosts::chains::form_keyboard_captured;
+    fn form_enable_group0(form: usize) = crate::lle_hosts::chains::form_enable_group0;
+    fn form_add_database_control(form: usize, index: u32) = crate::lle_hosts::chains::form_add_database_control;
+    fn control_rect(control: usize, rect: EeUiShimF32Out) = crate::lle_hosts::chains::control_rect;
+    fn control_mouse_x(control: usize) -> f32 = crate::lle_hosts::chains::control_mouse_x;
+    fn control_mouse_y(control: usize) -> f32 = crate::lle_hosts::chains::control_mouse_y;
+    fn control_width(control: usize) -> u32 = crate::lle_hosts::chains::control_width;
+    fn form_scaled_manager_bitmap(form: usize, index: u32, left: f32, top: f32, right: f32, bottom: f32) -> usize = crate::lle_hosts::chains::form_scaled_manager_bitmap;
+    fn edit_form_mouse_x(edit: usize) -> f32 = crate::lle_hosts::chains::control_mouse_x;
+    fn edit_form_mouse_y(edit: usize) -> f32 = crate::lle_hosts::chains::control_mouse_y;
+    fn table_string_begin(t: usize) -> i32 = crate::lle_hosts::chains::table_string_begin;
+    fn table_string_end(t: usize) -> i32 = crate::lle_hosts::chains::table_string_end;
+    fn table_get(index: u32) -> usize = crate::lle_hosts::chains::table_get;
+    fn table_add_event(table: usize, id: u32, kind: u32) = crate::lle_hosts::chains::table_add_event;
+    fn db_fonts(file: usize, m: usize) -> c_long = crate::lle_hosts::chains::db_fonts;
+    fn db_forms(file: usize, m: usize) -> c_long = crate::lle_hosts::chains::db_forms;
+    fn db_backgrounds(file: usize) -> c_long = crate::lle_hosts::chains::db_backgrounds;
+    fn db_create_backgrounds(m: usize) = crate::lle_hosts::chains::db_create_backgrounds;
+    fn db_controls(file: usize, m: usize) = crate::lle_hosts::chains::db_controls;
+    fn db_control_events(file: usize) = crate::lle_hosts::chains::db_control_events;
+    fn db_form_events(file: usize, m: usize) = crate::lle_hosts::chains::db_form_events;
+    fn db_hot_keys(file: usize) = crate::lle_hosts::chains::db_hot_keys;
+    fn db_remove_controls() = crate::lle_hosts::chains::db_remove_controls;
+    fn db_remove_backgrounds() = crate::lle_hosts::chains::db_remove_backgrounds;
+    fn db_remove_fonts() = crate::lle_hosts::chains::db_remove_fonts;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's

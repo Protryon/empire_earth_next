@@ -89,6 +89,11 @@ macro_rules! shims {
 use sys::*;
 
 include!("lle_hosts_shims.rs");
+
+/// The ops that were C++ chains of non-virtual forwarders, made through [`crate::direct`] (LLE/UI round 2, pass 2).
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[path = "lle_chains.rs"]
+pub(crate) mod chains;
 include!("lle_hosts_tables.rs");
 
 /// `UIObjHost::Base`'s Enter and Space key ops (a: bit 0 Enter, else Space; a < 2 just pressed, else just released).
@@ -172,15 +177,15 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::PartSetLocation as isize => V(ee_uicpp_combo_a_part_set_location),
         x if x == A::PartCopyData as isize => R(ee_uicpp_combo_a_part_copy_data),
         x if x == A::BaseCopyData as isize => R(ee_uicpp_combo_a_base_copy_data),
-        x if x == A::SetPopup as isize => V(ee_uicpp_combo_a_set_popup),
+        x if x == A::SetPopup as isize => X(chains::combo_a_set_popup),
         x if x == A::SetDirty as isize => V(ee_uicpp_combo_a_set_dirty),
         x if x == A::SetRectangle as isize => V(ee_uicpp_combo_a_set_rectangle),
         x if x == A::BaseSetRectangle as isize => V(ee_uicpp_combo_a_base_set_rectangle),
         x if x == A::BaseSetLocation as isize => V(ee_uicpp_combo_a_base_set_location),
-        x if x == A::SetAlwaysDirty as isize => V(ee_uicpp_combo_a_set_always_dirty),
-        x if x == A::Fire as isize => V(ee_uicpp_combo_a_fire),
-        x if x == A::CaptureMouse as isize => V(ee_uicpp_combo_a_capture_mouse),
-        x if x == A::CaptureKeyboard as isize => V(ee_uicpp_combo_a_capture_keyboard),
+        x if x == A::SetAlwaysDirty as isize => X(chains::combo_a_set_always_dirty),
+        x if x == A::Fire as isize => X(chains::combo_a_fire),
+        x if x == A::CaptureMouse as isize => X(chains::combo_a_capture_mouse),
+        x if x == A::CaptureKeyboard as isize => X(chains::combo_a_capture_keyboard),
         x if x == A::ReleaseMouse as isize => V(ee_uicpp_combo_a_release_mouse),
         x if x == A::ReleaseKeyboard as isize => V(ee_uicpp_combo_a_release_keyboard),
         x if x == A::OpenList as isize => V(ee_uicpp_combo_a_open_list),
@@ -207,9 +212,9 @@ fn combo_query_shim(q: isize) -> Option<ComboShim> {
         x if x == Q::ListScrollBarCaptured as isize => R(ee_uicpp_combo_q_list_scroll_bar_captured),
         x if x == Q::WindowHeight as isize => R(ee_uicpp_combo_q_window_height),
         x if x == Q::EditText as isize => R(ee_uicpp_combo_q_edit_text),
-        x if x == Q::TabbingOn as isize => R(ee_uicpp_combo_q_tabbing_on),
-        x if x == Q::TabStop as isize => R(ee_uicpp_combo_q_tab_stop),
-        x if x == Q::HasMouseCapture as isize => R(ee_uicpp_combo_q_has_mouse_capture),
+        x if x == Q::TabbingOn as isize => X(chains::combo_q_tabbing_on),
+        x if x == Q::TabStop as isize => X(chains::combo_q_tab_stop),
+        x if x == Q::HasMouseCapture as isize => X(chains::combo_q_has_mouse_capture),
         _ => None,
     }
 }
@@ -220,6 +225,14 @@ fn combo_query_shim(q: isize) -> Option<ComboShim> {
 enum ComboShim {
     R(unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize),
     V(unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32)),
+    /// A Rust op of [`chains`].
+    X(unsafe fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize),
+}
+
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[allow(non_snake_case)]
+fn X(f: unsafe fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize) -> Option<ComboShim> {
+    Some(ComboShim::X(f))
 }
 
 #[cfg(not(any(test, feature = "no_cpp")))]
@@ -252,6 +265,7 @@ unsafe fn combo_shim(
     unsafe {
         match s {
             Some(ComboShim::R(r)) => r(o, a, b, c, d, f),
+            Some(ComboShim::X(x)) => x(o, a, b, c, d, f),
             Some(ComboShim::V(v)) => {
                 v(o, a, b, c, d, f);
                 0
@@ -279,8 +293,10 @@ unsafe fn mgr_form_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, 
                 1 => ee_uicpp_mgr_form_close,
                 2 => ee_uicpp_mgr_form_activate,
                 3 => ee_uicpp_mgr_form_deactivate,
-                4 => ee_uicpp_mgr_form_clear_clips,
-                5 => ee_uicpp_mgr_form_all_dirty,
+                // SAFETY: the contract
+                4 => return unsafe { chains::mgr_form_clear_clips(o, a, b, c, d, f) },
+                // SAFETY: the contract
+                5 => return unsafe { chains::mgr_form_all_dirty(o, a, b, c, d, f) },
                 _ => ee_uicpp_mgr_form_delete,
             };
             // SAFETY: the contract
@@ -298,15 +314,21 @@ unsafe fn mgr_form_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, 
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
 unsafe fn mgr_form_rect_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
-    let v: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) = match b {
-        0 => ee_uicpp_mgr_form_add_dirty,
-        1 => ee_uicpp_mgr_form_redraw,
-        2 => ee_uicpp_mgr_form_add_clip,
-        3 => ee_uicpp_mgr_form_relayout,
-        _ => ee_uicpp_mgr_form_mouse_location,
+    use crate::formobj::EeUiFormCall as F;
+    // the form a's non-virtual calls (chains.rs), its virtual RelayoutForm a shim
+    let call = match b {
+        0 => F::AddDirtyRectangle,
+        1 => F::RedrawIntersectControls,
+        2 => F::AddClipRectangle,
+        3 => {
+            // SAFETY: the contract
+            unsafe { ee_uicpp_mgr_form_relayout(o, a, b, c, d, f) };
+            return 0;
+        }
+        _ => F::UpdateMouseLocation,
     };
     // SAFETY: the contract
-    unsafe { v(o, a, b, c, d, f) };
+    unsafe { chains::form_floats(a, call, f) };
     0
 }
 
@@ -339,8 +361,8 @@ unsafe fn form_hot_key_temp(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: 
     // SAFETY: the contract
     unsafe {
         let k = ee_uicpp_form_hot_key_new(o, 0, 0, 0, 0, f);
-        ee_uicpp_form_hot_key_set_form(o, k, 0, 0, 0, f);
-        ee_uicpp_form_hot_key_set_key(o, k, a, 0, 0, f);
+        chains::form_hot_key_set_form(o, k, 0, 0, 0, f);
+        chains::form_hot_key_set_key(o, k, a, 0, 0, f);
         k
     }
 }
@@ -1062,7 +1084,7 @@ pub unsafe extern "C" fn ee_ui_table_setup_text(table: *mut c_void, text: *mut c
     // SAFETY: the contract
     unsafe {
         own::text_set_transparent(table, text as isize, 1, 0, 0, f.as_mut_ptr());
-        ee_uicpp_tbl_text_fg(table, text as isize, 0, 0, 0, f.as_mut_ptr());
+        chains::tbl_text_fg(table, text as isize, 0, 0, 0, f.as_mut_ptr());
     }
 }
 

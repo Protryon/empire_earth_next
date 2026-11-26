@@ -62,6 +62,12 @@ pub enum Kind {
     List,
     /// `UIStatusBar`'s [`EeUiStatusBar`].
     StatusBar,
+    /// `UIScrollBar`'s [`EeUiScrollBar`](crate::scrollbarobj::EeUiScrollBar).
+    ScrollBar,
+    /// `UIControlsTable`'s [`EeUiControlsTable`](crate::tableobj::EeUiControlsTable).
+    Table,
+    /// `UIHotKey`'s record ([`EeUiHotKeyFields`](crate::hotkeyobj::EeUiHotKeyFields)).
+    HotKey,
 }
 
 /// The C++ pointer of a toolkit object (`UIForm*`, `UIControl*`, ...).
@@ -186,13 +192,22 @@ fn buf() -> [f32; 4] {
 
 /// One of `UIManager`'s methods on the manager `manager`.
 pub fn manager_call(manager: Cpp, call: EeUiManagerCall, a: isize, b: isize, c: isize) -> isize {
+    manager_call_f(manager, call, a, b, c, &mut buf())
+}
+
+/// One of `UIManager`'s methods on the manager `manager`, with the float buffer `f`.
+pub fn manager_call_f(manager: Cpp, call: EeUiManagerCall, a: isize, b: isize, c: isize, f: &mut [f32; 4]) -> isize {
     let m = find(Kind::Manager, manager) as *const EeUiManager;
     if m.is_null() {
         return 0;
     }
-    let mut f = buf();
     // SAFETY: a live manager (registered between its construction and destruction)
     unsafe { ee_ui_manager_call(m, call, a, b, c, f.as_mut_ptr()) }
+}
+
+/// The C++ object of the Rust object `obj` of `kind` (a background's `UIBackground*` from its record), or NULL.
+pub fn cpp_of(kind: Kind, obj: *const c_void) -> Cpp {
+    registry().by_obj.get(&(obj as usize, kind)).map_or(core::ptr::null_mut(), |&c| c as Cpp)
 }
 
 /// The manager's `GetFormByID(id)`.
@@ -227,11 +242,15 @@ pub fn fields(control: Cpp) -> *mut EeUiControlFields {
 
 /// One of `UIControl`'s base methods on `control`.
 pub fn control_call(control: Cpp, call: EeUiControlCall, a: isize, b: isize) -> isize {
+    control_call_f(control, call, a, b, &mut buf())
+}
+
+/// One of `UIControl`'s base methods on `control`, with the float buffer `f`.
+pub fn control_call_f(control: Cpp, call: EeUiControlCall, a: isize, b: isize, f: &mut [f32; 4]) -> isize {
     let r = fields(control);
     if r.is_null() {
         return 0;
     }
-    let mut f = buf();
     // SAFETY: a live control record
     unsafe { ee_ui_control_call(r, call, a, b, f.as_mut_ptr()) }
 }

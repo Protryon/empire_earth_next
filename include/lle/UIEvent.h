@@ -18,8 +18,6 @@ class LLE_API UIEvent : public UReferenceCounter, public EeUiEventFields {
 public:
     UIEvent() { this->mInitializeCount = 0; }  // body assignment: the store follows the vptr load (exe 0x1aa9ef)
     virtual ~UIEvent() {}
-    static long CreateControlEvents(FSFileSpec& inFile) { return ee_ui_event_create(&inFile, ee_ui_event_host, 0, NULL); }
-    static long CreateFormEvents(FSFileSpec& inFile, UIManager* inManager) { return ee_ui_event_create(&inFile, ee_ui_event_host, 1, inManager); }
     bool GetIsInitialized() const { return this->mInitializeCount != 0; }
     long Initialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Initialize); }
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) = 0;   // slot 0x04

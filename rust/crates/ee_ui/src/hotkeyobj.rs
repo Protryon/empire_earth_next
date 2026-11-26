@@ -353,12 +353,13 @@ impl CreateHost for Create {
     }
 }
 
-/// `UIHotKey()` over its record.
+/// `UIHotKey()` over its record, the C++ hot key `cpp`'s base (recorded for [`crate::direct`]).
 ///
 /// # Safety
 /// `rec` is the C++ hot key's base.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ui_hotkey_init(rec: *mut EeUiHotKeyFields, host: EeUiHostFn) {
+pub unsafe extern "C" fn ee_ui_hotkey_init(rec: *mut EeUiHotKeyFields, host: EeUiHostFn, cpp: *mut c_void) {
+    crate::direct::put(crate::direct::Kind::HotKey, cpp, rec as *const c_void);
     // SAFETY: the contract
     unsafe { Hk::new(rec) }.init(host)
 }
@@ -373,7 +374,9 @@ pub unsafe extern "C" fn ee_ui_hotkey_copy(
     host: EeUiHostFn,
     other: *mut EeUiHotKeyFields,
     form: *mut c_void,
+    cpp: *mut c_void,
 ) {
+    crate::direct::put(crate::direct::Kind::HotKey, cpp, rec as *const c_void);
     // SAFETY: the contract
     unsafe { Hk::new(rec).copy(host, Hk::new(other), form) }
 }
@@ -389,6 +392,9 @@ pub unsafe extern "C" fn ee_ui_hotkey_call(
     a: isize,
     b: isize,
 ) -> isize {
+    if call == EeUiHotKeyCall::Release {
+        crate::direct::forget(crate::direct::Kind::HotKey, rec as *const c_void);
+    }
     // SAFETY: the contract
     unsafe { Hk::new(rec) }.call(call, a, b)
 }

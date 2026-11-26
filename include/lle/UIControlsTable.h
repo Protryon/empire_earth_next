@@ -29,13 +29,6 @@ class LLE_API UIControlsTable {
 public:
     // Destroys the control description, releasing its font
     virtual ~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
-    void AddEvent(unsigned long inEventID, unsigned long inEventType) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEventID, inEventType, NULL); }
-    // Loads every control record from the file and registers each valid one with its form; returns the last read result
-    static long Create(FSFileSpec& inFile, UIManager* inManager)
-    {
-        return (long)ee_ui_controls_tables(EeUiTablesCall::Create, (intptr_t)&inFile, (intptr_t)inManager,
-                                           ee_ui_table_host, NULL);
-    }
     // port: adds a control the database does not have (after Create), described as a copy of the database control
     // inTemplateID (its type, font, colours, sounds and offset types; not its events) with its own id, form index,
     // group, rectangle (fractions of the window: offset type 4), string range and help string; registered with the
@@ -66,9 +59,6 @@ public:
         { return this->CreateBitmap(inManager, inRectangle, this->GetNormalFileName(), this->GetNormalHasAlpha(), this->GetNormalTextureRect()); }
     GEBitmap* CreatePressedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetPressedFileName(), this->GetPressedHasAlpha(), this->GetPressedTextureRect()); }
-    // Deletes every control description and empties the table
-    static void DeleteAll() { ee_ui_controls_tables(EeUiTablesCall::DeleteAll, 0, 0, NULL, NULL); }
-    static UIControlsTable* GetUIControlsTable(unsigned long inIndex) { return reinterpret_cast<UIControlsTable*>(ee_ui_controls_tables(EeUiTablesCall::At, inIndex, 0, NULL, NULL)); }
     GEColor GetBackground() const { return reinterpret_cast<const GEColor&>(this->D().background); }
     GEColor GetTextForeground() const { return reinterpret_cast<const GEColor&>(this->D().text_foreground); }
     UString GetNormalFileName() const { return UString(this->D().names[0]); }

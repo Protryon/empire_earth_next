@@ -13,7 +13,6 @@
 #include <deque>
 
 #include "lle/UILayoutUtility.h"
-#include "platform/PlatWindow.h"   // PlatKeyIsToggled
 #include "rust/ui/formobj.h"
 #include "rust/ui/lle_form.h"
 #include "rust/ui/ids.h"
@@ -91,18 +90,8 @@ public:
     virtual void Open() { this->Call(EeUiFormCall::Open); }
     // The header's members (inline in the original, emitted first by UIBackground.cpp 0x10059559..0x10059795)
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::SetRectangle, 0, 0, inRectangle); } // slot 0x4c
-    // Inserts a background before the first one with an equal or higher draw priority
-    void AddBackground(UIBackground* inBackground) { this->Call(EeUiFormCall::AddBackground, (intptr_t)inBackground); }
-    // Adds a rectangle that text drawing must keep out of
-    void AddClipRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddClipRectangle, 0, 0, inRectangle); }
     // Puts a control into its form slot (when the slot is empty) and adds it to the given group
     void AddControl(UIControl* inControl, unsigned long inGroup) { this->Call(EeUiFormCall::AddControl, (intptr_t)inControl, (intptr_t)inGroup); }
-    void AddDatabaseControl(unsigned long inTableIndex, UIControl* inControl) { this->Call(EeUiFormCall::AddDatabaseControl, (intptr_t)inTableIndex, (intptr_t)inControl); }
-    // port: makes room for a control at inIndex (the controls the table did not have: UIControlsTable::AddControlLike);
-    // grows the control arrays (made with the form, mControlCount long)
-    // port: see the header
-    void ReserveControlIndex(unsigned long inIndex) { this->Call(EeUiFormCall::ReserveControlIndex, (intptr_t)inIndex); }
-    void AddEvent(unsigned long inEventID, unsigned long inEventType) { this->Call(EeUiFormCall::AddEvent, (intptr_t)inEventID, (intptr_t)inEventType); }
     // Copies a hot key into the given group and the form's list, keeping both sorted by key count, always-fire keys last
     void AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup) { this->Call(EeUiFormCall::AddHotKey, (intptr_t)&inHotKey, (intptr_t)inGroup); }
     void AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
@@ -113,9 +102,6 @@ public:
         ee_ui_form_add_hot_key(this->mRust, inKey, inModifier1, inModifier2, inModifier3, inJustPressedEvent,
                                inPressedEvent, inJustUnpressedEvent, inDoublePressedEvent, inGroup, inAlwaysFire);
     }
-    void ClearAllClipRectangles() { this->Call(EeUiFormCall::ClearAllClipRectangles); }
-    // Reads every form record from the UI database file and creates, registers and enables each form with an ID above 0
-    static long Create(FSFileSpec& inFile, UIManager* inManager) { return ee_ui_form_create(&inFile, inManager); }
     // Draws the part of a bitmap's texture under a rectangle at a screen location
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GE2DPoint& inTextureSize) { return (long)this->CallRect(EeUiFormCall::DrawBitmap, (intptr_t)inBitmap, ee_ui_float_pair_bits(inTextureSize.GetX(), inTextureSize.GetY()), inRectangle); }
     // Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
@@ -138,28 +124,21 @@ public:
     UIEntityGroup* GetEntityGroup(unsigned long inIndex) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroup, (intptr_t)inIndex)); }
     // Returns the group holding the control with the given ID; falls back to group 0 when no group holds it
     UIEntityGroup* GetEntityGroupById(unsigned long inId) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId)); }
-    float GetFadeOpacity() { return UIOut(ee_ui_form_call, this->mRust.mObject, EeUiFormCall::FadeOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
     unsigned long GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
     UIFormManager* GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
     UIEvent* GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
     // (UITextLabel derives from UIControl alone: the control's address is the label's)
     UITextLabel* GetHelpTextLabel() const { return reinterpret_cast<UITextLabel*>(this->Call(EeUiFormCall::HelpTextLabel)); }
-    bool GetIsKeyboardCaptured() const { return this->GetKeyboardCaptured() != NULL; }
-    bool GetIsMouseCaptured() const { return this->GetMouseCaptured() != NULL; }
+    bool GetIsKeyboardCaptured() const { return this->Call(EeUiFormCall::KeyboardCaptured) != 0; }
+    bool GetIsMouseCaptured() const { return this->Call(EeUiFormCall::MouseCaptured) != 0; }
     bool GetUseExclusiveCoords() const { return this->Call(EeUiFormCall::UseExclusiveCoords) != 0; }
     UIManager* GetManager() const { return reinterpret_cast<UIManager*>(this->Call(EeUiFormCall::Manager)); }
     const GE2DPoint& GetMouseLocation() const { return *reinterpret_cast<const GE2DPoint*>(this->Call(EeUiFormCall::MouseLocation)); }
     UIControl* GetMouseOverControl() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseOverControl)); }
     UWideString GetMusicFileName() const { return UWideString(reinterpret_cast<const char*>(this->Call(EeUiFormCall::MusicFileName))); }
-    // Num Lock is off (GetKeyState(VK_NUMLOCK) & 1 was the original's test; 0x100596a2)
-    static bool GetNumLockOff() { return PlatKeyIsToggled(VK_NUMLOCK) ? false : true; }
     const GERectangle& GetRectangle() const { return *reinterpret_cast<const GERectangle*>(this->Call(EeUiFormCall::Rectangle)); }
-    bool GetTabbingOn() const { return this->Call(EeUiFormCall::TabbingOn) != 0; }
-    unsigned long GetTabStop() const { return (unsigned long)this->Call(EeUiFormCall::TabStop); }
     bool GetUseGDIForText() const { return this->Call(EeUiFormCall::UseGdiForText) != 0; }
     void LockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 1); }
-    // Marks dirty every visible control of an enabled group that overlaps the rectangle
-    void RedrawIntersectControls(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::RedrawIntersectControls, 0, 0, inRectangle); }
     // Deletes every hot key of one group
     void RemoveAllHotKeysForAGroup(unsigned long inGroup) { this->Call(EeUiFormCall::RemoveAllHotKeysForAGroup, (intptr_t)inGroup); }
     // Removes and deletes a background found by its ID (nothing happens when it is not listed)
@@ -181,38 +160,25 @@ public:
     // one (the event's index in the Rust form: formobj.rs EV_*)
     void SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 0, (intptr_t)inEvent); }
     void SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
-    void SetHelpTextLabel(UITextLabel* inLabel) { this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t)inLabel); }
     void SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
-    // Enables or disables every hot key of a group
-    void SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled) { this->Call(EeUiFormCall::SetHotKeyGroupEnabled, (intptr_t)inGroup, inEnabled); }
     void SetLayout(UILayoutUtility& inLayout) { this->Call(EeUiFormCall::SetLayout, ee_ui_form_pack_types(inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(), inLayout.GetBottomOffsetType()), 0, UIF4(inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset())); }
     void SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
     void SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
     void SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
     void SetMusicFileName(const UWideString& inName) { this->Call(EeUiFormCall::SetMusicFileName, (intptr_t)(const char*)inName); }
-    // Replaces the popup control, hiding the old one and redrawing what it (and a tool-tip shadow) covered
-    void SetPopup(UIControl* inControl) { this->Call(EeUiFormCall::SetPopup, (intptr_t)inControl); }
     // Turns keyboard tabbing on or off; turning it on moves the tab stop to the first tabbable control
     void SetTabbing(bool inTabbing) { this->Call(EeUiFormCall::SetTabbing, inTabbing); }
     // Moves the tab stop to a control if it exists and is tabbable; otherwise keeps the old stop and returns false
     bool SetTabStop(unsigned long inTabStop) { return this->Call(EeUiFormCall::SetTabStop, (intptr_t)inTabStop) != 0; }
     void SetUseToolTips(bool inUseToolTips) { this->Call(EeUiFormCall::SetUseToolTips, inUseToolTips); }
-    // Moves the tab stop on to the next shown, enabled, tabbable control, skipping radio-button runs, wrapping round
-    void Tab() { this->Call(EeUiFormCall::Tab); }
     void UnlockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 0); }
     // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
     void UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
-    void UpdateMouseLocation(const GE2DPoint& inLocation) { this->Call(EeUiFormCall::UpdateMouseLocation, 0, 0, UIF4(inLocation)); }
     bool GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
     void SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
-    UIControl* GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
-    UIControl* GetMouseCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseCaptured)); }
     // the Rust form's calls out that are not Rust's (ee_ui lle_form.rs: ee_ui_form_host comes first)
     // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
     void AddDirtyRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddDirtyRectangle, 0, 0, inRectangle); }
-    // Gives the keyboard to a control and fires the keyboard-captured event
-    void SetKeyboardCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetKeyboardCaptured, (intptr_t)inControl); }
-    void SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
     // the forwarders' one call into the Rust form (with a rectangle)
     intptr_t Call(EeUiFormCall inCall, intptr_t inA = 0, intptr_t inB = 0, float* ioF = NULL) const { return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF); }
     intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const { return this->Call(inCall, inA, inB, UIF4(inRectangle)); }

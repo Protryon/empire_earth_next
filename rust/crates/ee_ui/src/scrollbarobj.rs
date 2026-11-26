@@ -282,7 +282,8 @@ pub unsafe extern "C" fn ee_ui_scroll_bar_new(
     // SAFETY: the contract
     let b = unsafe { read_buf(f) };
     let at = UiPoint { x: b[0], y: b[1] };
-    Box::into_raw(Box::new(EeUiScrollBar::new(Host { obj: bar, f: host }, at, b[2], style, border)))
+    let o = Box::into_raw(Box::new(EeUiScrollBar::new(Host { obj: bar, f: host }, at, b[2], style, border)));
+    crate::direct::made(crate::direct::Kind::ScrollBar, bar, o)
 }
 
 /// The destructor: deletes the parts and frees the object.
@@ -294,6 +295,7 @@ pub unsafe extern "C" fn ee_ui_scroll_bar_free(bar: *mut EeUiScrollBar) {
     if bar.is_null() {
         return;
     }
+    crate::direct::forget(crate::direct::Kind::ScrollBar, bar as *const c_void);
     // SAFETY: the contract
     unsafe { (*bar).release() };
     // SAFETY: the contract
