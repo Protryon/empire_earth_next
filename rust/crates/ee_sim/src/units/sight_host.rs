@@ -174,13 +174,28 @@ impl SightHost for Game {
     }
     fn tile_sight(&mut self, on: bool, tile: u64, player: u64) {
         // tile's `AddSight(player)` / `RemoveSight(player)` (kSightTileAdd, kSightTileRemove)
-        ee_units_tile_sight_tile(world(), if on { SCOPE_TILE_ADD } else { SCOPE_TILE_REMOVE }, u8::from(on), tile, player);
+        ee_units_tile_sight_tile(
+            world(),
+            if on { SCOPE_TILE_ADD } else { SCOPE_TILE_REMOVE },
+            u8::from(on),
+            tile,
+            player,
+        );
     }
     fn shared_sight(&mut self, on: bool, player: u64, tile: u64, x: i32, y: i32) {
         // player's `AddSharedSight(tile, x, y)` / `RemoveSharedSight(tile)` (kSightPlayerAddShared,
         // kSightPlayerRemoveShared; a removal names no coordinates)
         if on {
-            ee_units_tile_sight_player(world(), SCOPE_PLAYER_ADD_SHARED, 1, 1, player, tile, i64::from(x), i64::from(y));
+            ee_units_tile_sight_player(
+                world(),
+                SCOPE_PLAYER_ADD_SHARED,
+                1,
+                1,
+                player,
+                tile,
+                i64::from(x),
+                i64::from(y),
+            );
         } else {
             ee_units_tile_sight_player(world(), SCOPE_PLAYER_REMOVE_SHARED, 0, 1, player, tile, -1, -1);
         }

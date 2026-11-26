@@ -219,9 +219,7 @@ fn step_aside_sends_an_idle_unit_to_a_free_ring_tile() {
 
 #[test]
 fn is_next_to_tile_searches_the_ring_then_the_corners() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_CU_GET_TILE_X, 0, 0, 5)
-        .answer(EE_UNITS_CU_TILE_Y, 0, 0, 5);
+    let mut h = Mock::default().answer(EE_UNITS_CU_GET_TILE_X, 0, 0, 5).answer(EE_UNITS_CU_TILE_Y, 0, 0, 5);
     // (the rings are the view's: the mock's are empty)
     assert!(!is_next_to_tile(&mut h, 1, 4, 4));
     assert_eq!(h.count(EE_UNITS_CU_SCRATCH_SQUARE_RING), 1);

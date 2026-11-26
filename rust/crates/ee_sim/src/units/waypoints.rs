@@ -219,7 +219,9 @@ mod game {
         let mut f = [0.0f32; 4];
         let f = if point.is_null() { &mut f as *mut [f32; 4] } else { point.cast::<[f32; 4]>() };
         // SAFETY: the caller's contract (a live unit; `point` null or the statement's buffer)
-        unsafe { crate::units::cu_body::game::ee_units_cu_host(op, unit as usize as *mut std::ffi::c_void, arg, 0, 0, f) }
+        unsafe {
+            crate::units::cu_body::game::ee_units_cu_host(op, unit as usize as *mut std::ffi::c_void, arg, 0, 0, f)
+        }
     }
 
     fn token() -> WorldRead {

@@ -7,12 +7,13 @@
 #![cfg(not(test))]
 
 use crate::units::sight_host::{
-    ee_units_sight_host, EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE, EE_UNITS_SIGHT_SHOW_TILE_OFF,
+    ee_units_sight_host, EE_UNITS_SIGHT_SHOW, EE_UNITS_SIGHT_SHOW_OFF, EE_UNITS_SIGHT_SHOW_TILE,
+    EE_UNITS_SIGHT_SHOW_TILE_OFF,
 };
 use crate::units::tile_sight::{self, SightWorld};
+use crate::world::{MapView, PlayerView, TileView, WorldRead, WorldView};
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
-use crate::world::{MapView, PlayerView, TileView, WorldRead, WorldView};
 
 /// `gDoppelgangerManager.TileShown(tile a, x c, y d, player b)`
 pub const EE_UNITS_TILE_SIGHT_SHOWN: i32 = 14040;
@@ -26,7 +27,14 @@ extern "C" {
     // the TSGT scope (ee_game sight_capture.rs, as EESightScope's constructors and destructor; renamed here and left
     // out of the headers, cbindgen.toml: the game's own declarations are rust/game/sight_capture.h's)
     #[link_name = "ee_app_sight_open_tile"]
-    fn ee_units_sight_scope_tile(kind: u32, player: *const c_void, tile: *const c_void, x: c_long, y: c_long, value: c_ulong);
+    fn ee_units_sight_scope_tile(
+        kind: u32,
+        player: *const c_void,
+        tile: *const c_void,
+        x: c_long,
+        y: c_long,
+        value: c_ulong,
+    );
     #[allow(clippy::too_many_arguments)]
     #[link_name = "ee_app_sight_open_circle"]
     fn ee_units_sight_scope_circle(
@@ -142,7 +150,9 @@ fn with_game(world: u64, map: u64, f: impl FnOnce(&mut Game<'_>)) {
 #[no_mangle]
 pub extern "C" fn ee_units_tile_sight_tile(world: u64, scope: u32, on: u8, tile: u64, player: u64) {
     // SAFETY: the scope's records read the live player and tile
-    unsafe { ee_units_sight_scope_tile(scope, player as usize as *const c_void, tile as usize as *const c_void, -1, -1, 0) };
+    unsafe {
+        ee_units_sight_scope_tile(scope, player as usize as *const c_void, tile as usize as *const c_void, -1, -1, 0)
+    };
     with_game(world, 0, |g| tile_sight::tile_sight(g, on != 0, tile, player));
     // SAFETY: the scope opened above
     unsafe { ee_units_sight_scope_close() };

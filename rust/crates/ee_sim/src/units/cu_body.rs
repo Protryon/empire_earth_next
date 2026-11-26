@@ -508,7 +508,8 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
         && killed
         && !suppress
         && s(h, EE_UNITS_CU_HAS_INSURANCE, unit) != 0
-        && sb(h, EE_UNITS_CU_GET_INSURANCE, unit, &mut power as *mut crate::tech::civ::EeTechCivPower as usize as i64) != 0
+        && sb(h, EE_UNITS_CU_GET_INSURANCE, unit, &mut power as *mut crate::tech::civ::EeTechCivPower as usize as i64)
+            != 0
         && sb(h, EE_UNITS_CU_INSURANCE_COVERS, unit, i64::from(power.mUnitSet)) != 0
         && (s(h, EE_UNITS_CU_UNIT_TYPE, unit) != UNIT_TYPE_FARM || s(h, EE_UNITS_CU_IS_BUILT, unit) != 0)
     {

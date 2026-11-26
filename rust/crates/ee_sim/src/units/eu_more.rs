@@ -368,7 +368,6 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-
     /// the game's host (eu_describe.rs's too)
     pub(crate) struct Game;
 
