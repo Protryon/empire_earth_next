@@ -152,6 +152,26 @@ pub fn route_set_num(o: *mut c_void, field: i32, value: i64) {
         unsafe { crate::routeop::ee_won_routeop_set_num(r, field, value) };
     }
 }
+/// `((RoutingOp*)o)->mConnection.get()`: the connection the op was made on (its Rust op keeps it).
+pub fn route_connection(o: *mut c_void) -> *mut c_void {
+    let r = cppcore::object_of(o, EeWonCoreObject::RouteOp) as *const crate::routeop::EeWonRouteOp;
+    // SAFETY: the op's live Rust op
+    unsafe { r.as_ref() }.map_or(null_mut(), |r| r.1 as *mut c_void)
+}
+/// `((ServerConnection*)conn)->SetAuth(context, type)`.
+pub fn servconn_set_auth(conn: *mut c_void, context: *mut c_void, auth_type: i32) {
+    let c = cppcore::object_of(conn, EeWonCoreObject::ServerConn) as *const crate::servconn::EeWonServerConn;
+    if !c.is_null() {
+        // SAFETY: the connection's live Rust object
+        unsafe { crate::servconn::ee_won_servconn_set_auth(c, context, auth_type) };
+    }
+}
+/// `((UDPManagerSendRecvOp*)o)->GetDestAddr()` (none for another op).
+pub fn udp_request_address(o: *mut c_void) -> Option<EeWonIpAddr> {
+    let r = cppcore::object_of(o, EeWonCoreObject::UdpSendRecv) as *const crate::udpops::EeWonUdpSendRecvOp;
+    // SAFETY: the op's live Rust object
+    unsafe { r.as_ref() }.map(|r| r.address())
+}
 /// `new RoutingOp(conn, type)` (no reference yet; null without the table).
 pub fn new_route_op(conn: *mut c_void, ty: i32) -> *mut c_void {
     // SAFETY: the table's contract

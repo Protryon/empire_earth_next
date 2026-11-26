@@ -48,7 +48,6 @@ static RoutingOp* RO(intptr_t a) { return reinterpret_cast<RoutingOp*>(a); }
 static RoutingConnection* RC(intptr_t a) { return reinterpret_cast<RoutingConnection*>(a); }
 static AsyncOp* AO(intptr_t a) { return reinterpret_cast<AsyncOp*>(a); }
 static RustServerOp* RS(intptr_t a) { return static_cast<RustServerOp*>(AO(a)); }
-static UDPManagerSendRecvOp* US(intptr_t a) { return static_cast<UDPManagerSendRecvOp*>(AO(a)); }
 static ChatCommandParser* P(intptr_t a) { return reinterpret_cast<ChatCommandParser*>(a); }
 template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
 {
@@ -138,9 +137,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
     // ---- the routing ops and connection (the ops' and connections' one-call cases are Rust's: netops.rs route_op)
     case O::RSetText: RO(a)->SetText((int)b, TX(c)); return 0;
-    case O::RConnection: return (intptr_t)RO(a)->mConnection.get();
     case O::ConnNew: { RoutingConnection* aConnection = new RoutingConnection; aConnection->AddRef(); return (intptr_t)aConnection; }
-    case O::ConnSetAuth: RC(a)->SetAuth(reinterpret_cast<AuthContext*>(b), AUTH_TYPE_PERSISTENT); return 0;
     case O::ConnSetNotice: RC(a)->SetOpCompletion((int)b, new ShellCompletion(L, EeWonLogicShellDone::RouteNotify, (int)c)); return 0;
     case O::ConnSetClose: RC(a)->SetCloseCompletion(new ShellCompletion(L, EeWonLogicShellDone::RouteClosed)); return 0;
     // SubscribeDataObject(0xffff, the game data type "G", false, the notice completion of code 21)
@@ -254,7 +251,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::StatusOpRun:
         L->RunOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteUserStatus), 10000);
         return 0;
-    case O::StatusOpServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(US(a)->GetDestAddr());
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteGroups), 0); return 0;

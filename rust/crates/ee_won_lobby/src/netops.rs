@@ -200,6 +200,12 @@ pub fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize, c:
             0
         }
         R::ConnIsConnected => net::socket_connected(p) as isize,
+        // `RO(a)->mConnection.get()`, `RC(a)->SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`
+        R::RConnection => net::route_connection(p) as isize,
+        R::ConnSetAuth => {
+            net::servconn_set_auth(p, b as *mut c_void, 2);
+            0
+        }
         R::RNew => {
             let o = net::new_route_op(p, b as i32);
             net::ref_add(o);
@@ -341,7 +347,7 @@ mod tests {
         }
         use crate::routelogic::EeWonRouteLogicOp as R;
         for op in [R::AddRef, R::OpStatus, R::RNum, R::AsyncOpNew, R::Now] {
-            assert_eq!(route_op(op, 0x52, 0), None);
+            assert_eq!(route_op(op, 0x52, 0, 0), None);
         }
         use crate::eexfer::EeWonEeXferOp as X;
         for op in [X::Succeeded, X::OpSocket, X::AddRef, X::Kill, X::Listen] {

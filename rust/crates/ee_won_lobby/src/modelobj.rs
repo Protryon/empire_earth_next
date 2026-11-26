@@ -1108,6 +1108,11 @@ pub(crate) fn route_list_op(
             let f = must(a).friend().address.borrow().clone();
             call(servers, C::ServerListFind, &f as *const EeWonIpAddr as isize, 0)
         }
+        // `FindServer(US(a)->GetDestAddr())`: the user status request's server
+        O::StatusOpServer => {
+            let Some(addr) = ee_won_net::cppnet::udp_request_address(a as *mut c_void) else { return None };
+            call(servers, C::ServerListFind, &addr as *const EeWonIpAddr as isize, 0)
+        }
         // `((LobbyServerList*)a)->FindServer(RS(b)->GetAddr())`: the request's first server
         O::ServerListFind => {
             let Some(h) = ee_won_net::cppcore::host_op_of(bb as *mut c_void) else { return None };
