@@ -27,15 +27,9 @@ long EELoadTowns(FSFile& inFile, bool inAreas);
 class EEAIArea;
 void EEWriteAreaBytes(const EEAIArea& inArea, std::vector<unsigned char>& outBytes);
 bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outArea);
-long EESaveContinentRegions(FSFile& outFile);   // EEPWorldHelper::Save
-long EELoadContinentRegions(FSFile& inFile);    // EEPWorldHelper::Load: kept for the load's EEWorld::StartGame
-// whether the save being loaded has the block (EEWorld::StartGame of a loaded game)
-bool EEContinentRegionsPending();
 // StartGame of such a game, in place of BuildRegions: the saved manager (EEAIContinentSave.cpp); false when the block
 // could not be read (the regions are then built as for an older save)
 bool EERestoreContinentRegions();
-// TEST ONLY (EE-SIM's state dumps): a hash of the block a save would write now
-unsigned long EEContinentRegionsDigest();
 // the dead attacker of that id, made from the save as a unit out of the world (EEComplexUnit::RepairPointers); NULL
 // when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
 class EEComplexUnit;

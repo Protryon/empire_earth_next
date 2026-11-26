@@ -47,7 +47,6 @@ public:
     // made by Make (0x23c375: active, idle, kind inKind, the next goal id, stamped with the game time; its own state
     // not made yet: the New functions below make it), deleted by delete (the destructor runs the kind's destroy, the
     // memory is Rust's). The bodies that write no file or text are one ee_units_goal_call each.
-    static EEUnitGoal* Make(unsigned char inKind, bool inArg) { return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new(inKind, inArg)); }
     static void* operator new(size_t) = delete;
     static void operator delete(void* inGoal) { ee_units_goal_dealloc(static_cast<EeUnitsGoalBase*>(inGoal)); }
     ~EEUnitGoal() { this->Call(EE_UNITS_GOAL_DESTROY); }
@@ -67,7 +66,6 @@ public:
     void GetGoalLocation(GE3DPoint& outLocation)               // +0x28
         { ee_units_goal_point(EE_UNITS_GOAL_LOCATION, this->Base(), 0, (float(*)[3])&outLocation.mX, true); }
     long GetStartAction() { return (long)this->Call(EE_UNITS_GOAL_START_ACTION); }            // +0x30
-    long GetStartTime() { return this->mStartTime; }           // +0x34
     unsigned long GetCreationTime() { return this->mCreationTime; }   // +0x38
     void SetOwner(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_SET_OWNER, H(inUnit)); }   // +0x3c
     void Step(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_STEP, H(inUnit)); }            // +0x40
@@ -147,7 +145,6 @@ public:
     // to face, the flags and the group path state
     GE3DPoint GetLocation() const { return PointOf(ee_units_location_goal_point(H(this))); }
     void SetLocation(const GE3DPoint& inLocation) { ee_units_location_goal_set_point(H(this), inLocation.GetX(), inLocation.GetY(), inLocation.GetZ()); }
-    float GetYaw() const { return this->Location().yaw; }
     bool GetIsForcedMove() const { return this->Location().forced_move; }
     bool GetIsAutoWaypoint() const { return this->Location().auto_waypoint; }
     void SetUseGroupMovement(bool inValue) { ee_units_location_goal_set_group(H(this), 0, inValue); }

@@ -44,7 +44,6 @@ public:
     // the ctor 0x267ec8: the owner, the record zeroed, +8 = a new object (ctor 0x26ada8)
     EEUIFMainGame* mOwner;                  // +0x04 the main game form
     EEUIFMGStatusBox* mStatusBox;           // +0x08 (ee/EEUIFMGStatusBox.h)
-    long GetMode() const { return this->mMode; }
 };
 
 #endif

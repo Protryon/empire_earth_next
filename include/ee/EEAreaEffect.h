@@ -30,28 +30,20 @@ class EEAreaEffect : public UReferenceCounter, public EeAreaEffectFields {
 public:
     EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }   // 0x27bf4b (and each kind's ctor)
     virtual ~EEAreaEffect() { ee_screens_ae_destroy((uintptr_t)this); }
-    void AppliedTo(EEComplexUnit* inUnit) { ee_screens_ae_applied_to((uintptr_t)this, (uintptr_t)inUnit); }  // +0x04 (the cloaking 0x27aa51: SetCloakableChain(true))
     // +0x08 0x27bfcd (the cloaking 0x27aa5f, the healing 0x27ad20): whether the effect covers inUnit, for player
     // inPlayer from inPoint (EEUnitClass 0x631f1e)
     bool Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint)
     {
         return ee_screens_ae_covers((uintptr_t)this, inPlayer, (uintptr_t)inUnit, inPoint.mX, inPoint.mY);
     }
-    void ShowOn(EEUnit* inUnit) { ee_screens_ae_show_on((uintptr_t)this, (uintptr_t)inUnit); }            // +0x0c 0x27bff1: the template's graphic effect on inUnit
     void Dump(FILE* inFile);                // +0x10 0x27c014: the out-of-synch dump (4 fprintf)
     // Returns a sync checksum of the location's float bits, the player and the owning unit id
     long Checksum();                        // +0x14 0x27c073 (EEComplexUnit::GetChecksum sums it)
     long GetStrength() { return (long)ee_screens_ae_strength((uintptr_t)this); }                     // +0x18: which of two effects of a kind a unit keeps
     float GetRadius() { return ee_screens_ae_radius((uintptr_t)this); }                      // +0x1c 0x27c0a0: GetScale() * the template's radius
-    bool IsImmunity() { return ee_area_effect_is_immunity(this); }                      // +0x20: the two immunities
-    void SetUnit(EEComplexUnit* inUnit) { ee_screens_ae_set_unit((uintptr_t)this, (uintptr_t)inUnit); }    // +0x24 0x27c0cb (referenced)
     void LoadMedia(bool inIsOnDemand) { this->mTemplate->Load(inIsOnDemand); }   // +0x28 0x27c0dc
     // +0x30 (the morale kinds 0x27b2e3 kind 1, the economy 0x27ac2c kind 2, the cloaking 0x27ab3a kind 3): a
     // modifier of inValue for inKind into outValue (+0x2c and +0x34 were false for every kind: no caller)
-    bool Modify(long inKind, long inValue, long& outValue)
-    {
-        return ee_screens_ae_modify((uintptr_t)this, inKind, (uintptr_t)&inValue, (uintptr_t)&outValue);
-    }
     void RemovedFrom(EEComplexUnit* inUnit) { ee_screens_ae_removed_from((uintptr_t)this, (uintptr_t)inUnit); }   // +0x38 (the cloaking 0x27ab53)
     void MarkDirty() { ee_area_effect_mark_dirty(this); }                       // +0x3c (the morale from buildings 0x27b956)
     void UnloadMedia() { this->mTemplate->Unload(); }   // +0x40 0x27c0eb
@@ -63,7 +55,6 @@ public:
     long GetLevel() { return (long)ee_screens_ae_level((uintptr_t)this); }                        // +0x4c of the morale kinds (0x27b2dc, 0x27b949, 0x27bf22)
 
     // 0x27b480 (EEAEManager::FindEffect): the template's range test of inPoint around mLocation
-    bool IsInRange(const GE2DPoint& inPoint) { return this->mTemplate->IsWithin(inPoint, this->mLocation, this->GetScale(), NULL); }
     float GetScale() { return ee_screens_ae_scale((uintptr_t)this); }                       // 0x27c0b7: the unit's area-effect scale, 1.0 without a unit
 
     // +0x08 (= 0, 0; EEUnitAreaEffectList::MoveAndUpdate assigns it)
@@ -85,11 +76,6 @@ public:
     }
     // Adds an area effect to the unit's list (taking a reference)
     void Add(EEAreaEffect* inEffect) { UReferenceContainer<EEAreaEffect*>::Add(inEffect); }       // 0x27c607 (keeps a reference)
-    // 0x27c623: inEffect, replacing an effect of the same kind (the morale kinds count as one) whose strength is
-    // smaller; nothing when the old one's is at least as large
-    // Adds an area effect unless the unit already has a stronger or equal one of the same kind (all morale kinds
-    // count as one), replacing a weaker one
-    void AddAreaEffect(EEAreaEffect* inEffect) { ee_screens_ael_add(this, inEffect); }
     // Ticks every effect in the list on the unit
     void Tick(EEComplexUnit* inUnit, float inElapsed) { ee_screens_ael_tick(this, inUnit, inElapsed); }       // 0x27c7c9: each effect's Tick
     // Removes the first effect of the given kind; returns whether one was found

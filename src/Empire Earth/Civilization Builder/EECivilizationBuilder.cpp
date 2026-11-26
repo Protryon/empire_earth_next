@@ -80,11 +80,6 @@ long CivBuilderEditCivilization()
     return ee_screens_cb_edit_civilization();
 }
 
-long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
-{
-    return ee_screens_cb_create_civilization(inCivilization, inReload);
-}
-
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 {
     return ee_screens_cb_save_civilization(reinterpret_cast<const uint8_t*>((const char*)inName), strlen(inName),

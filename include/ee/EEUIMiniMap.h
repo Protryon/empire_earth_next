@@ -46,9 +46,6 @@ public:
     // (mini_map_calls.rs)
     static void Update(EEMiniMap* inMiniMap) { ee_screens_mm_update((uintptr_t)inMiniMap); }
     static GERectangle sBounds;
-    // 0x2760ec: centres the camera on the mini-map point under the mouse (EEAMiniMap mode 0) (provisional name)
-    // Centres the camera on the map point under the mouse, clamped to the map
-    void CenterCamera() { ee_screens_mm_center_camera((uintptr_t)this); }
     // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*, EEUIRustControl's the
     // toolkit's)
     virtual long MouseLButtonDown() { return ee_screens_mini_map_left_down(this); }   // +0x34 (CaptureMouse, 0)

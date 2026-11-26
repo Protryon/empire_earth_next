@@ -31,7 +31,4 @@ public:
     UIManager* mUIManager;                  // +0x04 (the ctor stores its argument)
 };
 
-// the current player has a selection (EEROUserInterface::FrameStarting sets it, EEROUnits reads it; provisional name)
-extern bool gUnitPanelActive;
-
 #endif

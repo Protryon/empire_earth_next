@@ -26,8 +26,6 @@ struct EERuleNumber {
     long mWorldRow = -1;                    // a world value: the dbworld row
     int mWorldValue = 0;                    // 0 F, 1 F2, 2 L, 3 L2
 
-    static EERuleNumber Constant(float inValue);
-    static EERuleNumber World(long inRow, int inValue);
 };
 
 // How a hit's damage is formed (EEDamageForm): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
@@ -52,7 +50,6 @@ struct EERuleText {
     const char* mData = "";
     size_t mSize = 0;
 
-    const char* c_str() const { return mData; }
     std::string str() const { return std::string(mData, mSize); }
     operator std::string() const { return str(); }
 };

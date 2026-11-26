@@ -10,8 +10,6 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
 
-
-
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three
 // init chains) and the loads are ee_gfx geffect_table.rs'
 extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEGraphicObject.cpp)
@@ -28,12 +26,6 @@ long EEGraphicEffect::LoadTable(FSFile* inFile)
 void EEGraphicEffect::DumpIDs(FSFileSpec& inFile)
 {
     ee_preload_dump_effect_ids(&inFile);
-}
-
-// Releases every graphic effect in the table and empties it (preload_media.rs)
-void EEGraphicEffect::UnloadTable()
-{
-    ee_preload_unload_effects();
 }
 
 EEGraphicEffect* EEGraphicEffect::Get(unsigned long inIndex)

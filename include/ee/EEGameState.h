@@ -47,7 +47,6 @@ public:
     // the loader unit's (Persistent/EEGameStateLoader.cpp 0x14a9ac..0x14aa24; provisional names)
     // Centres the camera on the middle of the map, if there is one
     // 0x14a9ac: mMapCenter = the map's (height + width) * 0.5 + 0.5 in x and y, z 0
-    void SetDefaultMapCenter() { ee_gamecpp_st_default_map_center(this); }
     void SetEffectManager(EEEffectManager* inManager);   // 0x14a9e8 (deletes the old one)
     void SetMap(EEMap* inMap);              // 0x14aa06 (deletes the old one)
     // empty (ret 8), ICF-folded at 0x163d6f; the loader 0x14a5ba calls it with the save's versions (provisional name)
@@ -55,22 +54,17 @@ public:
     // 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
     // hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
     void FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion) {  }
-    // 0x13181d (Reset and delete the old one; provisional name)
-    void SetCalamityHelper(EEPCalamityHelper* inHelper) { ee_gamecpp_state_set_calamity_helper(this, inHelper); }
     // 0x131854 (deletes the old one; provisional name)
     void SetEnvironmentManager(EEEnvironmentManager* inManager) { ee_gamecpp_state_set_environment(this, inManager); }
     // inline (refused copies 0x13cfde / 0x13cff7 in EEWorld.cpp's template tail, its first user)
     unsigned long GetNumPlayers() const { return this->mPlayers.size(); }
     EEPlayer* GetPlayer(long inIndex) const { return this->mPlayers[inIndex]; }  // inline (EEWorld::CreateMiniMap 0x53a285: the player is loaded into edx and pushed from the register) (provisional name)
     unsigned long GetNumTeams() const;      // inline: defined where EETeam is complete (EEWorld.cpp)
-    // 0x1305bf (EEWorld::StartGame after the camera; provisional name)
-    void RepairRestorables() { ee_gamecpp_state_repair_restorables(this); }
 
     EEGameOptions mGameOptions;             // +0x008
     GE3DPoint mMapCenter;                   // +0x414 (Create: the map's size * 0.5, z 0)
     ESChecksum mChecksum;                   // +0x420
     FSFileSpec mFileSpec;                   // +0x438
-    EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<EEPlayer*> mPlayers;        // +0x480 the players (Create stores new EEHumanPlayer; Clear deletes via slot 0)
     std::vector<EEPlayer*> mLoadedPlayers;  // +0x490 players (EEWorld 0x13a6c8 calls EEPlayer slot +0x20 RepairPointers; loader 0x14a7ab pushes EEPlayer*)
     std::vector<EETeam> mTeams;             // +0x4a0 (_Buy/_Tidy/erase of vector<EETeam>)

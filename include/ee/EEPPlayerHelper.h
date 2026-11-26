@@ -27,15 +27,9 @@ public:
     virtual FSPersistent* CreateDefault() const { return new EEPPlayerHelper; }
     // 0x14b4a3 (13 until loaded)
     long GetLocalPlayerIndex(long& outIndex) { return ee_gamecpp_pph_local_index(this, &outIndex); }
-    // 0x14b4c0 (13 until loaded)
-    long GetPlayers(std::vector<EEPlayer*>& outPlayers) { return ee_gamecpp_pph_players(this, &outPlayers); }
-    // empty (ret 4), ICF-folded at 0x157269; the loader 0x14a98d calls it with its EEGameState (provisional name)
-    void Fn157269(EEGameState* inState) {  }
-    EEPlayer* GetPlayer(unsigned long inIndex) const { return this->mPlayers[inIndex]; }  // (Save: the const operator[])
 
     // class static keys (guard byte 0x531b00, bits 1..8)
 
-    EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<EEPlayer*> mPlayers;        // +0x08
     unsigned long mLocalPlayerIndex;        // +0x18 (EEWorld +0xb84 mCurrentPlayer; Read/Write(unsigned long&))
     unsigned long mMaxPlayers;              // +0x1c (3; EEWorld +0xb8c; Read/Write(unsigned long&))
