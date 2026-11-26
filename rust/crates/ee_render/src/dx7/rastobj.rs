@@ -157,10 +157,37 @@ impl EeDx7Rasterizer {
     /// # Safety
     /// `p` is live; the operation's arguments are as [`EeDx7RastOp`] describes.
     pub(crate) unsafe fn op(p: *mut Self, op: EeDx7RastOp, obj: H, a: isize, b: isize) -> isize {
-        // the drawing lock's calls and the clock end in ee_base: made here (a test's fake host answers them instead)
+        // the drawing lock's calls and the clock end in ee_base, a texture's and a surface's reference count and a
+        // texture's change flag, promotion and stage in their Rust objects (read in place: ge cppobj.rs): made here
+        // (a test's fake host answers them instead)
         if !cfg!(test) {
+            use crate::ge::cppobj;
+            use crate::ge::texobj_tex::{ee_ge_tex_get, ee_ge_tex_promote, ee_ge_tex_set, ee_ge_tex_stage, EeGeTexVal};
             use ee_base::ts::{ee_ts_section_enter, ee_ts_section_leave, EeTsSection};
+            // SAFETY (every use): a texture operation's object is a live GETexture
+            let texture = || unsafe { cppobj::counted::<crate::ge::texobj_tex::EeGeTexture>(obj as usize) };
             match op {
+                EeDx7RastOp::TextureReference | EeDx7RastOp::SurfaceReference => {
+                    // SAFETY: a live GETexture or GESurface (UReferenceCounter's layout)
+                    unsafe { cppobj::reference(obj as usize) };
+                    return 0;
+                }
+                // SAFETY: a live texture
+                EeDx7RastOp::TextureHasChanged => {
+                    return unsafe { ee_ge_tex_get(texture(), EeGeTexVal::HasChanged) != 0 } as isize
+                }
+                EeDx7RastOp::TexturePromote => {
+                    // SAFETY: as above
+                    unsafe { ee_ge_tex_promote(texture()) };
+                    return 0;
+                }
+                // SAFETY: as above
+                EeDx7RastOp::TextureStage => return unsafe { ee_ge_tex_stage(texture()) } as isize,
+                EeDx7RastOp::TextureValidate => {
+                    // SAFETY: as above
+                    unsafe { ee_ge_tex_set(texture(), EeGeTexVal::HasChanged, 0) };
+                    return 0;
+                }
                 EeDx7RastOp::LockEnter => {
                     // SAFETY: the lock is the base's live drawing lock (a TSCriticalSection is its Rust section)
                     unsafe { ee_ts_section_enter(obj as *const EeTsSection) };

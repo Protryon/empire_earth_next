@@ -43,23 +43,18 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
     case EeDx7RastOp::ManagerSetScreen: static_cast<GETextureManager*>(inObj)->SetScreen(reinterpret_cast<GEScreen*>(a)); return 0;
     case EeDx7RastOp::SurfaceAttached: return (intptr_t)static_cast<GESurface*>(inObj)->GetAttachedSurface(0);
     case EeDx7RastOp::SurfaceAttach: return static_cast<GESurface*>(inObj)->AttachSurface(reinterpret_cast<GESurface*>(a));
-    case EeDx7RastOp::SurfaceReference: static_cast<GESurface*>(inObj)->Reference(); return 0;
     case EeDx7RastOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
     case EeDx7RastOp::SurfaceGx: return (intptr_t)(GXSurface*)*static_cast<GESurface*>(inObj);
     case EeDx7RastOp::SurfaceGxChecked: return (intptr_t)(GXSurface*)*static_cast<GESurface*>(inObj);
     case EeDx7RastOp::SurfaceWidth: return (intptr_t)static_cast<GESurface*>(inObj)->GetWidth();
     case EeDx7RastOp::SurfaceHeight: return (intptr_t)static_cast<GESurface*>(inObj)->GetHeight();
     case EeDx7RastOp::SurfaceFlip: return static_cast<GESurface*>(inObj)->Flip(a != 0);
-    case EeDx7RastOp::TextureHasChanged: return static_cast<GETexture*>(inObj)->HasChanged();
-    case EeDx7RastOp::TextureReference: static_cast<GETexture*>(inObj)->Reference(); return 0;
     case EeDx7RastOp::TextureDereference: static_cast<GETexture*>(inObj)->Dereference(); return 0;
-    case EeDx7RastOp::TexturePromote: static_cast<GETexture*>(inObj)->Promote(); return 0;
-    case EeDx7RastOp::TextureStage: return (intptr_t)static_cast<GETexture*>(inObj)->GetStage();
     case EeDx7RastOp::TextureStageSurface:
         return (intptr_t)(GXSurface*)*static_cast<GETexture*>(inObj)->GetStageTexture(0)->GetFrameSurface();
-    case EeDx7RastOp::TextureValidate: static_cast<GETexture*>(inObj)->ValidateChanges(); return 0;
     case EeDx7RastOp::WindowOrigin: *reinterpret_cast<GE2DPoint*>(a) = static_cast<GEWindow*>(inObj)->GetClientOrigin(); return 0;
-    // (the drawing lock's Enter and Leave and the clock: Rust's own, ee_dx7 rastobj.rs)
+    // (the drawing lock's Enter and Leave, the clock, the references, a texture's change flag, promotion and stage:
+    // Rust's own, ee_dx7 rastobj.rs)
     case EeDx7RastOp::Verify: ESVERIFY_AT(a != 0, (unsigned long)b); return 0;
     default: return 0;
     }
