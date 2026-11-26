@@ -140,3 +140,14 @@ e33aa3d74, 68ab393f8, 57e8ec73d.
 | tour, `random-game --box-select --orders --seed 7`, editor | PASS, PASS, PASS |
 | `won_host_coverage.py`, `xbuild.py wontest` | PASS, PASS (183 drivers) |
 | `gates.sh` | GATES PASS: ai-game time-cap units [4, 34, 36], alive_computers [2, 3], classic_lua x 2; lan-game |
+
+### After batch 28 (merged 4a88b155a, fixes cf9303955, origin/rust 6cd0018bc)
+
+The merge conflicted in about 85 files, nearly all include lines: an include-only hunk took batch 28's lines less
+the ones this round dropped; code hunks took batch 28's bodies (or none where a body is inline here). 21 units then
+lacked includes the new bodies need: their includes were restored in batch 28's order and trimmed again.
+port_metrics 8eba20040 -> the tip: cpp_lines 96,416 -> 90,211 (-6,205), files 295 -> 290 (-5), logic -220.
+Regate (reduced set): both builds 0/0 (test 331 inputs), headers current, Rust gate PASS, oracle seeds 2-7
+identical, captures oracle, late, units, scenario PASS, saveload matrix PASS, scenario_check 27/27, sim_editor and
+`--civbuilder` PASS, editor tour PASS, won_host_coverage PASS, wontest PASS (185 drivers), gates.sh GATES PASS
+(ai-game units [4, 36, 38], alive_computers [2, 3], classic_lua x 2; lan-game).
