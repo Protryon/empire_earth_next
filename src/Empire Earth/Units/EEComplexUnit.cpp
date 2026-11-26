@@ -364,10 +364,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_PLAY_AT_VOLUME: EECuObject<EESoundObject>(inA)->Play(EECuObject<EESoundObject>(inA)->GetVolume(), 0.0f, 1.0f); return 0;
     // FindContacts' (inA a class, 0: the unit's; a tile, a node or another unit)
     case EE_UNITS_CU_FLIES_OVER: return theClass->FliesOver();
-    case EE_UNITS_CU_MAP_TILE: return (uint64_t)(uintptr_t)::gWorld.mMap->GetTile((long)inB, (long)inC);
-    case EE_UNITS_CU_TILE_FIRST_NODE: return (uint64_t)(uintptr_t)EECuObject<EEMapTile>(inA)->mUnits;
-    case EE_UNITS_CU_NODE_NEXT: return (uint64_t)(uintptr_t)EECuObject<RTSTileUnitNode>(inA)->mNext;
-    case EE_UNITS_CU_NODE_COMPLEX: return (uint64_t)(uintptr_t)EECuObject<RTSTileUnitNode>(inA)->mUnit->GetComplexUnit();
     case EE_UNITS_CU_OTHER_IS_FOUNDATION: return theOther->IsFoundation();
     // the production queue's (cu_cargo.rs; inA a node or class)
     case EE_UNITS_CU_CURRENT_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
@@ -439,9 +435,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_PART_KEEP_MAP_POSITION: theOther->GetPosition(theOther->mLastMapPosition); return 0;
     case EE_UNITS_CU_PART_SET_AWAY: theOther->SetLocation(GE3DPoint(-10000.0f, -10000.0f, theOther->mPhysicalModel.GetLocation().GetZ()), true); return 0;
     case EE_UNITS_CU_CAST_CALAMITY_TYPE: return EECastCalamityGoalCast(theUnit->GetGoal())->GetCalamityType();
-    case EE_UNITS_CU_TILE_TERRAIN: return EECuObject<RTSTile>(inA)->mTerrainType;
-    case EE_UNITS_CU_TILE_LEVEL: return (char)EECuObject<RTSTile>(inA)->mAIValue;   // (the original's signed compare)
-    case EE_UNITS_CU_UNIT_LOAD_MEDIA: theUnit->EEUnit::LoadMedia(inB != 0); return 0;
     case EE_UNITS_CU_LOAD_BUTTONS: theUnit->GetPlayer()->LoadUnitClassButtons(theUnit->GetUnitClass()->GetUnitType()); return 0;
     case EE_UNITS_CU_PM_SET_FOUNDATION_MODEL: theUnit->mPhysicalModel.SetModel(EEGetPlayerClassGraphic(theUnit->GetPlayer(), theUnit->GetUnitClass())->mModel); return 0;
     case EE_UNITS_CU_PM_SET_ANIMATION_MODEL: theUnit->mPhysicalModel.SetModel(theModel->mModels[theUnit->mAnimation]); return 0;
@@ -692,7 +685,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SCRATCH_POINT_X: return sCuPoints[(size_t)inB].GetX();
     case EE_UNITS_CU_SCRATCH_POINT_Y: return sCuPoints[(size_t)inB].GetY();
     // UpdateFanaticismColor's
-    case EE_UNITS_CU_GAME_TIME: return (int64_t)gPhysics->mGameTime;
     case EE_UNITS_CU_FANATICISM_PERIOD: return EEGraphicEffect::Get(kGraphicEffectFanaticismEffect)->mIntParam1;
     case EE_UNITS_CU_FANATICISM_PARAM: return UFloatBits(EECuFanaticismParam(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect), inB));
     case EE_UNITS_CU_SET_COLOR: theUnit->SetColor(GEColor(f[0], f[1], f[2])); return 0;

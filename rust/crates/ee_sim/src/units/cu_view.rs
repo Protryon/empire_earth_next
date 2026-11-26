@@ -279,6 +279,43 @@ unsafe fn disabled_unprotected(u: U) -> bool {
     }
 }
 
+/// `gWorld.mMap->GetTile(x, y)` (0 off the map or without a map; the arguments as the `unsigned long`s it takes)
+fn map_tile(x: i64, y: i64) -> i64 {
+    // SAFETY: the statements run on the simulation thread inside the C++ caller's hold of the world
+    let t = unsafe { crate::world::view::WorldRead::begin() };
+    let ux = x as c_long as c_ulong as u64 as i64;
+    let uy = y as c_long as c_ulong as u64 as i64;
+    crate::world::view::WorldView::global(&t)
+        .and_then(|w| w.map())
+        .and_then(|m| m.tile(ux, uy))
+        .map_or(0, |tile| tile.handle() as i64)
+}
+
+/// `gWorld.mMap` (0: none)
+fn world_map() -> u64 {
+    // SAFETY: as [`map_tile`]
+    unsafe { world_word(layout().world_map) }
+}
+
+/// `gPhysics->mGameTime` (the physics' `long`)
+///
+/// # Safety
+/// The physics exists.
+unsafe fn game_time() -> i64 {
+    let l = layout();
+    // SAFETY: the caller's contract
+    unsafe {
+        let physics = word(l.physics_pointer, 0);
+        long((*at::<crate::units::physics_save::EeUnitsPhysicsSaved>(physics, l.physics_saved)).mGameTime)
+    }
+}
+
+std::thread_local! {
+    /// TakeHit's hit formula answer (the C++ `sHitOut`)
+    static CU_VIEW_HIT_OUT: std::cell::Cell<crate::combat::EeCombatHitPointsOut> =
+        const { std::cell::Cell::new(crate::combat::EeCombatHitPointsOut { hit_points: 0, badly_hurt: 0 }) };
+}
+
 /// The answer of `ee_units_cu_host`'s statement `op` when it is a plain record read or store (None: the game's
 /// host answers it).
 ///
@@ -851,6 +888,14 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
                     .and_then(|i| crate::world::view::ClassView::by_index(&t, i))
                     .map_or(0, |k| k.handle() as i64)
             }
+            // the map's tiles (the units on one: its node list)
+            EE_UNITS_CU_MAP_TILE => map_tile(b, c),
+            EE_UNITS_CU_TILE_TERRAIN => long(*at::<c_long>(a, l.tile_terrain_type)),
+            EE_UNITS_CU_TILE_LEVEL => i64::from(*at::<i8>(a, l.tile_ai_value)),
+            EE_UNITS_CU_TILE_FIRST_NODE => word(a, l.tile_units) as i64,
+            EE_UNITS_CU_NODE_NEXT => word(a, l.unit_node_next) as i64,
+            EE_UNITS_CU_NODE_COMPLEX => U(word(a, l.unit_node_unit), l).complex().0 as i64,
+            EE_UNITS_CU_GAME_TIME => game_time(),
             // the goal queues (Rust's: goals.rs; past the queues the C++ indexed unchecked)
             EE_UNITS_CU_S_NUM_GOAL_QUEUES | EE_UNITS_CU_GOAL_QUEUE_COUNT => goals::unit_queues(unit).len() as i64,
             EE_UNITS_CU_UNIT_GOAL_QUEUE_COUNT => goals::unit_queues(a).len() as i64,
@@ -1101,7 +1146,7 @@ unsafe fn world_player(index: u64) -> u64 {
 ///
 /// # Safety
 /// As the host's: `unit` a live `EEUnit`, `a` the statement's object (the other unit: the unit itself for 0).
-pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
+pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Option<i64> {
     use crate::units::eu_body::*;
     use crate::units::eu_hit::*;
     let l = layout();
@@ -1111,6 +1156,33 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> 
     let v = unsafe {
         match op {
             EE_UNITS_EU_COMPLEX => u.complex().0 as i64,
+            EE_UNITS_EU_IN_CINEMATIC => i64::from(*at::<u8>(l.world_address, l.world_in_cinematic) != 0),
+            EE_UNITS_EU_REGIONS => {
+                let map = world_map();
+                if map == 0 {
+                    0
+                } else {
+                    word(map, l.map_unit_regions) as i64
+                }
+            }
+            EE_UNITS_EU_SET_TILE => {
+                *at::<usize>(unit, l.unit_tile) = map_tile(b, _c) as usize;
+                0
+            }
+            EE_UNITS_EU_MAP_TILE_EXISTS => i64::from(map_tile(b, _c) != 0),
+            EE_UNITS_EU_TERRAIN_OF => long(*at::<c_long>(word(o.0, l.unit_tile), l.tile_terrain_type)),
+            EE_UNITS_EU_HIT_FORMULA => {
+                let input = crate::combat::EeCombatHitPointsIn {
+                    hit_points: b as i32,
+                    damage: _c as i32,
+                    max_hit_points: (*u.stats()).mMaxHitPoints as i32,
+                };
+                let out = crate::combat::captured::ee_combat_hit_points_captured(&input);
+                CU_VIEW_HIT_OUT.with(|h| h.set(out));
+                0
+            }
+            EE_UNITS_EU_HIT_BADLY_HURT => i64::from(CU_VIEW_HIT_OUT.with(|h| h.get()).badly_hurt),
+            EE_UNITS_EU_HIT_NEW_POINTS => i64::from(CU_VIEW_HIT_OUT.with(|h| h.get()).hit_points),
             EE_UNITS_EU_DISABLED_UNPROTECTED => i64::from(disabled_unprotected(u.complex())),
             EE_UNITS_EU_START_UNDER_ATTACK => {
                 body(EE_UNITS_CU_DO_START_ACTION, u.complex().0, CU_VIEW_ACTION_UNDER_ATTACK, 0, 0)
@@ -1263,6 +1335,14 @@ pub(crate) unsafe fn eum_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64>
     // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            EE_UNITS_EUM_GAME_TIME => game_time(),
+            EE_UNITS_EUM_AS_UNIT => {
+                if a != 0 && *at::<u8>(a, l.unit_object_kind) >= crate::units::kinds::EE_OBJECT_UNIT {
+                    a as i64
+                } else {
+                    0
+                }
+            }
             EE_UNITS_EUM_ZERO_HIT_POINTS => {
                 (*u.uf()).mHitPoints = 0;
                 0
@@ -1347,7 +1427,7 @@ pub(crate) unsafe fn eum_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64>
 ///
 /// # Safety
 /// As the host's: the ids name units of the world, the objects are live, on the simulation thread.
-pub(crate) unsafe fn uh_view(op: i32, a: u64, b: u64, f: &mut [f32; 4]) -> Option<i64> {
+pub(crate) unsafe fn uh_view(op: i32, a: u64, b: u64, _c: i64, _d: i64, f: &mut [f32; 4]) -> Option<i64> {
     use crate::units::goal_spec::resolve;
     use crate::units::uh_body::*;
     let l = layout();
@@ -1357,6 +1437,13 @@ pub(crate) unsafe fn uh_view(op: i32, a: u64, b: u64, f: &mut [f32; 4]) -> Optio
     // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            EE_UNITS_UH_MAP_TILE => map_tile(_c, _d),
+            EE_UNITS_UH_TILE_UNITS => word(b, l.tile_units) as i64,
+            EE_UNITS_UH_NODE_NEXT => word(b, l.unit_node_next) as i64,
+            EE_UNITS_UH_TILE_HEIGHT => {
+                f[0] = *at::<f32>(b, l.tile_height);
+                0
+            }
             EE_UNITS_UH_TILE_X => long((*id().rts()).mTileX),
             EE_UNITS_UH_TILE_Y => long((*id().rts()).mTileY),
             EE_UNITS_UH_OBJECT_ID => i64::from(low32((*o.rts()).mUnitID)),
@@ -1569,4 +1656,642 @@ pub(crate) fn wp_view(op: i32, unit: u64) -> Option<i64> {
         }
         _ => return None,
     })
+}
+
+/// `kUnitCategoryBomb`
+const CU_VIEW_CATEGORY_BOMB: c_ulong = 11;
+
+/// The update context's unit and class (`EEUpdateUnit`, `EEUpdateClass`).
+///
+/// # Safety
+/// `ctx` is a sequence's live `EEUpdateContext`.
+unsafe fn upd_of(ctx: *mut std::ffi::c_void) -> (U, u64) {
+    let l = layout();
+    let ctx = ctx as *mut crate::units::upd_entry::EeUnitsUpdateContext;
+    // SAFETY: the caller's contract
+    unsafe { (U((*ctx).mUnit as u64, l), (*ctx).mClass as u64) }
+}
+
+/// The answer of `EEUpdateRead`'s read `code` (EEUnitUpdate.cpp) when it is a plain record read (None: the game's
+/// host answers it).
+///
+/// # Safety
+/// `ctx` is a sequence's live `EEUpdateContext`, on the simulation thread.
+pub(crate) unsafe fn upd_read_view(ctx: *mut std::ffi::c_void, code: i32) -> Option<i64> {
+    use crate::units::actions::*;
+    use crate::units::update::*;
+    let l = layout();
+    // SAFETY: the caller's contract; each read is a member of live objects, as its C++ did
+    unsafe {
+        let (u, class) = upd_of(ctx);
+        let links = at::<EeUnitsUnitClassLinks>(class, l.class_links);
+        Some(match code {
+            EE_UNITS_UPD_R_FRAME => ulong(*at::<c_ulong>(u.0, l.complex_frame)),
+            EE_UNITS_UPD_R_PHYSICS_MODEL => i64::from(!(*links).mPhysicsModel.is_null()),
+            EE_UNITS_UPD_R_MINE => i64::from(!(*u.cx()).mMine.is_null()),
+            EE_UNITS_UPD_R_MINE_RESOURCE_TYPE => ulong((*U((*u.cx()).mMine as u64, l).uf()).mResourceType),
+            EE_UNITS_ACT_R_QUEUED_GOALS => i64::from(goals::queue_len(u.0, 0)? > 1),
+            EE_UNITS_ACT_R_DEATH_EFFECT => i64::from(!(*links).mDeathEffect.is_null()),
+            EE_UNITS_ACT_R_DEATH_SOUND => i64::from(
+                !(*at::<EeUnitsUnitClassUpgradeLinks>((*u.uf()).mStats as u64, l.stats_links)).mDeathSound.is_null(),
+            ),
+            EE_UNITS_ACT_R_BLOOD_STAIN => i64::from(!(*u.links()).mBloodStainEffect.is_null()),
+            EE_UNITS_ACT_R_HOME_BASE => i64::from(!(*u.cx()).mHomeBase.is_null()),
+            EE_UNITS_ACT_R_BOMBER => {
+                let projectile = (*links).mProjectileClass as u64;
+                i64::from(
+                    projectile != 0
+                        && (*at::<EeUnitsUnitClassFields>(projectile, l.unit_class_fields)).mCategory
+                            == CU_VIEW_CATEGORY_BOMB,
+                )
+            }
+            _ => return None,
+        })
+    }
+}
+
+/// The answer of `EEUpdateAct`'s operation `code` (EEUnitUpdate.cpp) when it is a record read or store or one Rust
+/// call (None: the game's host does it); the C++ statement's answer (0 for a statement).
+///
+/// # Safety
+/// As [`upd_read_view`]; `a` and `b` the operation's arguments (objects and buffers live for the call).
+pub(crate) unsafe fn upd_act_view(ctx: *mut std::ffi::c_void, code: i32, a: i64, b: i64) -> Option<i64> {
+    use crate::units::actions::*;
+    use crate::units::upd_split::*;
+    use crate::units::update::*;
+    let l = layout();
+    // SAFETY: the caller's contract; each statement reads or writes members of live objects, as its C++ did
+    unsafe {
+        let (u, _) = upd_of(ctx);
+        let unit = u.0;
+        Some(match code {
+            EE_UNITS_UPD_RELEASE_CONVERSION_EFFECT | EE_UNITS_ACT_RELEASE_CONVERSION_EFFECT => {
+                body(EE_UNITS_CU_DO_RELEASE_CONVERSION_EFFECT, unit, 0, 0, 0)
+            }
+            EE_UNITS_ACT_RELEASE_HEAL_EFFECT => small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, unit, 0, 0),
+            EE_UNITS_ACT_SET_ANIMATION => {
+                body(EE_UNITS_CU_DO_SET_ANIMATION, unit, a as c_long as i64, -1, i64::from(b != 0))
+            }
+            EE_UNITS_ACT_UPDATE_WATER_STATE => body(EE_UNITS_CU_DO_UPDATE_WATER_STATE, unit, 0, 0, 0),
+            EE_UNITS_ACT_CLEAR_GOALS => body(EE_UNITS_CU_DO_CLEAR_GOALS, unit, a as c_long as i64, 0, 0),
+            EE_UNITS_ACT_FLEE_AFTER_CALAMITY => body(EE_UNITS_CU_DO_FLEE_AFTER_CALAMITY, unit, 0, 0, 0),
+            EE_UNITS_ACT_START_ACTION => body(EE_UNITS_CU_DO_START_ACTION, unit, a as c_ulong as c_long as i64, 0, 0),
+            EE_UNITS_UPD_X_START_ACTION_OF => {
+                body(EE_UNITS_CU_DO_START_ACTION, a as u64, b as c_ulong as c_long as i64, 0, 0)
+            }
+            EE_UNITS_ACT_DROP_PATH => {
+                crate::units::waypoints::ee_units_waypoints_drop(unit);
+                0
+            }
+            EE_UNITS_UPD_GOAL_QUEUES => {
+                goals::ee_units_goal_queues_tick(unit);
+                0
+            }
+            EE_UNITS_UPD_OPACITY_CHAIN | EE_UNITS_ACT_OPAQUE_CHAIN => {
+                let mut value = if code == EE_UNITS_ACT_OPAQUE_CHAIN { 1.0f32 } else { float(a) };
+                crate::units::uca_air::game::ee_units_uca_call(
+                    crate::units::uca_air::EE_UNITS_UCA_DO_OPACITY_CHAIN,
+                    std::ptr::null_mut(),
+                    unit as usize as _,
+                    0,
+                    0,
+                    0,
+                    &mut value,
+                );
+                0
+            }
+            EE_UNITS_UPD_X_OPEN_FRACTION => {
+                let v = float(a);
+                if (*u.cx()).mOpenFraction != v {
+                    (*u.cx()).mOpenFraction = v;
+                }
+                0
+            }
+            EE_UNITS_UPD_X_LOCATION_MATRIX => {
+                std::ptr::copy_nonoverlapping(at::<f32>(unit, l.complex_location), a as usize as *mut f32, 16);
+                0
+            }
+            EE_UNITS_UPD_X_LOCATION => {
+                let out = a as usize as *mut f32;
+                for i in 0..3 {
+                    *out.add(i) = u.location(i);
+                }
+                0
+            }
+            EE_UNITS_UPD_X_SET_CONTACT_LOCATION => {
+                let (to, from) = (at::<[f32; 3]>(unit, l.complex_contact_location), *(a as usize as *const [f32; 3]));
+                let now = *to;
+                if !(now[0] == from[0] && now[1] == from[1] && now[2] == from[2]) {
+                    *to = from;
+                }
+                0
+            }
+            EE_UNITS_UPD_X_CONTACT_LOCATION => {
+                *(a as usize as *mut [f32; 3]) = *at::<[f32; 3]>(unit, l.complex_contact_location);
+                0
+            }
+            EE_UNITS_UPD_X_STORE_CONTACT_LOCATION => {
+                *at::<[f32; 3]>(unit, l.complex_contact_location) = *(a as usize as *const [f32; 3]);
+                0
+            }
+            EE_UNITS_UPD_X_CONTACT_HEADING => bits((*u.cx()).mInitialContactHeading),
+            EE_UNITS_UPD_X_STORE_CONTACT_HEADING => {
+                (*u.cx()).mInitialContactHeading = float(a);
+                0
+            }
+            EE_UNITS_UPD_X_UNIT => unit as i64,
+            EE_UNITS_UPD_X_NEXT_PART_OF => h((*U(a as u64, l).cx()).mNextPart),
+            EE_UNITS_UPD_X_CLEAR_HEALEE => {
+                (*(ctx as *mut crate::units::upd_entry::EeUnitsUpdateContext)).mHealee = std::ptr::null_mut();
+                0
+            }
+            EE_UNITS_UPD_X_DEATH_SOUND => {
+                h((*at::<EeUnitsUnitClassUpgradeLinks>((*u.uf()).mStats as u64, l.stats_links)).mDeathSound)
+            }
+            _ => return None,
+        })
+    }
+}
+
+/// The answer of `ee_units_cls_cond_host`'s statement `op` (EEUnitAI.cpp; the trigger answers' and uai_cond.rs's
+/// statements) when it is a plain record read or store or one Rust call (None: the game's host answers it).
+///
+/// # Safety
+/// As the host's: `a` the trigger's live complex unit, `b` the statement's object.
+pub(crate) unsafe fn cond_host_view(
+    op: i32,
+    a: u64,
+    b: u64,
+    c: i64,
+    io: &mut crate::units::cls_condition::EeUnitsCondIo,
+) -> Option<i64> {
+    use crate::units::cls_condition::*;
+    use crate::units::uai_cond::*;
+    let l = layout();
+    let u = U(a, l);
+    let o = U(b, l);
+    // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
+    unsafe {
+        Some(match op {
+            EE_UNITS_COND_IN_REACH => {
+                let r = crate::units::u12a_small::game::ee_units_cu_tiny(
+                    EE_UNITS_CU_T_DO_IS_IN_REACH,
+                    a as usize as _,
+                    b as usize as _,
+                    0,
+                    0,
+                    0.0,
+                    0.0,
+                    0.0,
+                );
+                i64::from(r != 0)
+            }
+            EE_UNITS_COND_CAN_REACH => {
+                let r = crate::units::cu_small::game::ee_units_cu_small(
+                    EE_UNITS_CU_S_DO_CAN_REACH_UNIT,
+                    a as usize as _,
+                    b as usize as _,
+                    0,
+                );
+                i64::from(r != 0)
+            }
+            EE_UNITS_UAI_GOAL_KIND => i64::from(*at::<u8>(b, l.goal_kind)),
+            EE_UNITS_UAI_GOAL_B1C => i64::from(
+                *(addr_of!((*(b as usize as *const crate::units::goal_obj::EeUnitsGoalBase)).b1c) as *const u8) != 0,
+            ),
+            EE_UNITS_UAI_SEARCH_TIMER => long((*u.cx()).mTargetSearchTimer),
+            EE_UNITS_UAI_CONTACT_HEADING => {
+                io.f = (*u.cx()).mInitialContactHeading;
+                0
+            }
+            EE_UNITS_UAI_CONTACT_LOCATION => {
+                io.p = *at::<[f32; 3]>(a, l.complex_contact_location);
+                0
+            }
+            EE_UNITS_UAI_GOAL_STATE => h((*u.cx()).mGoalState),
+            EE_UNITS_UAI_ACTIVE_GOAL => h((*u.cx()).mActiveGoal),
+            EE_UNITS_UAI_ATTACK_OF => {
+                io.f = (*o.stats()).mAttack;
+                0
+            }
+            EE_UNITS_UAI_CATEGORY => ulong((*u.class()).mCategory),
+            EE_UNITS_UAI_AS_COMPLEX => {
+                if b != 0 && *at::<u8>(b, l.unit_object_kind) == crate::units::kinds::EE_OBJECT_COMPLEX_UNIT {
+                    b as i64
+                } else {
+                    0
+                }
+            }
+            EE_UNITS_UAI_HAS_COMPUTER => i64::from(word(u.player(), l.player_computer_player) != 0),
+            EE_UNITS_UAI_HAS_BLOCKING => i64::from(!(*u.cx()).mBlockingUnit.is_null()),
+            EE_UNITS_UAI_IS_MELEE => i64::from(flag!(u.class(), mIsMelee)),
+            EE_UNITS_UAI_VELOCITY => {
+                io.f = (*u.cx()).mVelocity;
+                0
+            }
+            EE_UNITS_UAI_COLLISION_COUNT => {
+                io.f = (*u.cx()).mCollisionResolutionCount;
+                0
+            }
+            EE_UNITS_UAI_CLEAR_COLLISION_COUNT => {
+                (*u.cx()).mCollisionResolutionCount = 0.0;
+                0
+            }
+            EE_UNITS_UAI_HERD => h((*u.cx()).mHerd),
+            EE_UNITS_UAI_START_ACTION => body(EE_UNITS_CU_DO_START_ACTION, a, c as c_long as i64, 0, 0),
+            EE_UNITS_UAI_ON_MAP => i64::from(word(b, l.unit_tile_node) != 0),
+            EE_UNITS_UAI_DISABLED => i64::from(flag!(o.complex().cx(), mIsDisabled)),
+            EE_UNITS_UAI_PROTECTED => {
+                let cx = o.complex().cx();
+                let reason = (*cx).mDisabledReason;
+                i64::from(flag!(cx, mIsDisabled) && (reason == 0x1a || reason == 0x1c))
+            }
+            EE_UNITS_UAI_SAME_PLAYER => i64::from(o.player() == u.player()),
+            EE_UNITS_UAI_STANCE => ulong(P(u.player(), l).enemy_of(P(o.player(), l))),
+            EE_UNITS_UAI_EXITING_ID => long((*u.cx()).mExitingUnitID),
+            EE_UNITS_UAI_CLEARANCE => i64::from(flag!(o.cx(), mIsClearanceGranted)),
+            EE_UNITS_UAI_SET_EXITING => {
+                (*u.cx()).mExitingUnitID = c as c_long;
+                0
+            }
+            EE_UNITS_UAI_RESTART_SEARCH => {
+                (*u.cx()).mTargetSearchTimer = (*u.class()).mTargetSearchInterval;
+                0
+            }
+            EE_UNITS_UAI_COMPLEX_OF => o.complex().0 as i64,
+            _ => return None,
+        })
+    }
+}
+
+/// `kUnitCategoryResource`
+const CU_VIEW_CATEGORY_RESOURCE: c_ulong = 1;
+
+/// `USavedID(p)`: a saved id held in a pointer member (its low 32 bits)
+fn saved_id<T>(p: *mut T) -> i64 {
+    i64::from(p as usize as u32)
+}
+
+/// The answer of `ee_units_dop_host`'s statement `op` (EEComplexDoppelganger.cpp; dop_repair.rs's, dop_file.rs's,
+/// dop_load.rs's and dop_more.rs's statements) when it is a plain record read or store or one Rust call (None: the
+/// game's host answers it). `fields` asks the host for a doppelganger's record (`EE_UNITS_DOP_FIELDS`).
+///
+/// # Safety
+/// As the host's: `unit` the body's live complex unit or doppelganger, `a` the statement's object.
+pub(crate) unsafe fn dop_view(
+    op: i32,
+    unit: u64,
+    a: u64,
+    b: i64,
+    c: i64,
+    fields: &mut dyn FnMut() -> *mut crate::units::obj_fields::EeUnitsComplexDopFields,
+) -> Option<i64> {
+    use crate::units::dop_file::*;
+    use crate::units::dop_load::*;
+    use crate::units::dop_more::*;
+    use crate::units::dop_repair::*;
+    let l = layout();
+    let u = U(unit, l);
+    let o = U(a, l);
+    let held = |i: i64| at::<usize>(u.vector(l.complex_held_units).0, i as u64 * std::mem::size_of::<usize>() as u64);
+    // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
+    unsafe {
+        Some(match op {
+            // the complex unit's
+            EE_UNITS_DOP_COMMAND_IS_NULL => i64::from((*u.cx()).mCommand.is_null()),
+            EE_UNITS_DOP_HAS_CLASS => i64::from(!(*u.uf()).mUnitClass.is_null()),
+            EE_UNITS_DOP_START_ACTION => body(EE_UNITS_CU_DO_START_ACTION, unit, b as c_long as i64, 0, 0),
+            EE_UNITS_DOP_SET_PATROL_GROUP => {
+                *at::<usize>(unit, l.complex_patrol_group) = a as usize;
+                0
+            }
+            EE_UNITS_DOP_SET_CURRENT_RESEARCH => {
+                (*u.cx()).mCurrentResearch = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_PREVIOUS_PART => {
+                (*u.cx()).mPreviousPart = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_NEXT_PART => {
+                (*u.cx()).mNextPart = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_HOME_BASE => {
+                (*u.cx()).mHomeBase = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_CONTAINER => {
+                (*u.cx()).mContainer = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_GATHERED_FIELD => {
+                (*u.cx()).mGatheredResource = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_LAST_RESOURCE_FIELD => {
+                (*u.cx()).mLastResource = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_LAST_ATTACKER => {
+                (*u.cx()).mLastAttacker = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_OWNER => {
+                (*u.cx()).mOwner = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_MINE => {
+                (*u.cx()).mMine = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_HOLDER => {
+                (*u.cx()).mHolder = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_BEHAVIOR => {
+                (*u.cx()).mBehavior = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_SET_HERD => {
+                (*u.cx()).mHerd = a as usize as _;
+                0
+            }
+            EE_UNITS_DOP_HELD_COUNT => {
+                let (begin, end) = u.vector(l.complex_held_units);
+                ((end - begin) / std::mem::size_of::<usize>() as u64) as i64
+            }
+            EE_UNITS_DOP_SET_HELD => {
+                *held(b) = a as usize;
+                0
+            }
+            EE_UNITS_DOP_HELD_AT => *held(b) as i64,
+            EE_UNITS_DOP_GOAL_QUEUE_COUNT => goals::unit_queues(unit).len() as i64,
+            EE_UNITS_DOP_GOAL_COUNT => goals::queue_len(unit, b as usize)? as i64,
+            EE_UNITS_DOP_GOAL_AT => goal_at(unit, b, c as usize)? as i64,
+            EE_UNITS_DOP_FIRST_QUEUE_BACK => goal_at(unit, 0, goals::queue_len(unit, 0)?.wrapping_sub(1))? as i64,
+            EE_UNITS_DOP_GOAL_KIND => i64::from(*at::<u8>(a, l.goal_kind)),
+            EE_UNITS_DOP_CARGO_COUNT => u.cargo_len() as i64,
+            EE_UNITS_DOP_CARGO_ID => i64::from(u.cargo(b as u64) as u32),
+            EE_UNITS_DOP_COMMAND_TYPE | EE_UNITS_DOP_COMMAND_KIND => u.command_type(),
+            EE_UNITS_DOP_PHYSICS_ACTION => ulong((*u.cx()).mCurrentPhysicsAction),
+            EE_UNITS_DOP_SET_PHYSICS_ACTION => {
+                (*u.cx()).mCurrentPhysicsAction = b as c_long as c_ulong;
+                0
+            }
+            EE_UNITS_DOP_PATROL_IS_UNSET => i64::from(word(unit, l.complex_patrol_group) as usize == usize::MAX),
+            EE_UNITS_DOP_PATROL_GROUP => word(unit, l.complex_patrol_group) as i64,
+            EE_UNITS_DOP_PATROL_REFERENCE => {
+                crate::units::patrol_group::ee_units_pg_reference(word(unit, l.complex_patrol_group) as usize as _);
+                0
+            }
+            EE_UNITS_DOP_PREVIOUS_PART_ID => saved_id((*u.cx()).mPreviousPart),
+            EE_UNITS_DOP_NEXT_PART_ID => saved_id((*u.cx()).mNextPart),
+            EE_UNITS_DOP_HOME_BASE_ID => saved_id((*u.cx()).mHomeBase),
+            EE_UNITS_DOP_CONTAINER_ID => saved_id((*u.cx()).mContainer),
+            EE_UNITS_DOP_LAST_ATTACKER_ID => saved_id((*u.cx()).mLastAttacker),
+            EE_UNITS_DOP_OWNER_ID => saved_id((*u.cx()).mOwner),
+            EE_UNITS_DOP_HOLDER_ID => saved_id((*u.cx()).mHolder),
+            EE_UNITS_DOP_BEHAVIOR_ID => saved_id((*u.cx()).mBehavior),
+            EE_UNITS_DOP_OWNER_IS_UNSET => {
+                let owner = (*u.cx()).mOwner as usize;
+                i64::from(owner == usize::MAX || owner == 0)
+            }
+            EE_UNITS_DOP_MINE_IS_UNSET => i64::from((*u.cx()).mMine as usize == usize::MAX),
+            EE_UNITS_DOP_HOLDER_IS_UNSET => i64::from((*u.cx()).mHolder as usize == usize::MAX),
+            EE_UNITS_DOP_TRANSPORT_CAPACITY => long((*o.class()).mTransportCapacity),
+            EE_UNITS_DOP_CURRENT_RESEARCH => long((*u.cx()).mCurrentResearch),
+            EE_UNITS_DOP_SET_PRODUCTION_TIME => {
+                (*u.cx()).mProductionTime = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_BUILD_QUEUE_COUNT => u.queue_len() as i64,
+            EE_UNITS_DOP_BUILD_QUEUE_TECH => long(*at::<c_long>(u.entry(b as u64), l.build_entry_technology)),
+            EE_UNITS_DOP_NUM_TURRET_ANGLES => long((*u.cx()).mNumTurretAngles),
+            EE_UNITS_DOP_TURRET_ANGLE => bits(*(*u.cx()).mTurretAngles.add(b as usize)),
+            EE_UNITS_DOP_HAS_TURRET_ANGLES => i64::from(!(*u.cx()).mTurretAngles.is_null()),
+            EE_UNITS_DOP_SET_TURRET_ANGLE => {
+                *(*u.cx()).mTurretAngles.add(b as usize) = f32::from_bits(c as u32);
+                0
+            }
+            EE_UNITS_DOP_HIT_POINTS => long((*u.uf()).mHitPoints),
+            EE_UNITS_DOP_IS_BUILT => i64::from(flag!(u.cx(), mIsBuilt)),
+            EE_UNITS_DOP_BEHAVIOR => h((*u.cx()).mBehavior),
+            EE_UNITS_DOP_CLASS_BEHAVIOR => h((*u.links()).mBehavior),
+            EE_UNITS_DOP_HAS_PLAYER => i64::from(u.player() != 0),
+            EE_UNITS_DOP_SET_WEAPON_TAG_POINT => {
+                (*u.cx()).mWeaponTagPoint = b as c_long as c_ulong;
+                0
+            }
+            EE_UNITS_DOP_NUM_AREA_EFFECTS => ulong((*u.cx()).mNumAreaEffects),
+            EE_UNITS_DOP_SET_NUM_AREA_EFFECTS => {
+                (*u.cx()).mNumAreaEffects = b as c_ulong;
+                0
+            }
+            EE_UNITS_DOP_REFRESH_GOALS => {
+                goals::refresh_goals(unit);
+                0
+            }
+            EE_UNITS_DOP_REFRESH_ACTIVE_GOAL => {
+                goals::refresh_active_goal(unit);
+                0
+            }
+            EE_UNITS_DOP_CLASS_ROTTING_TIME => long((*u.class()).mRottingTime),
+            EE_UNITS_DOP_ROTTING_AWAY_TIME => long((*u.cx()).mRottingAwayTime),
+            EE_UNITS_DOP_SET_ROTTING_AWAY_TIME => {
+                (*u.cx()).mRottingAwayTime = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_DELETABLE_FROM_CLASS => {
+                (*u.cx()).mIsDeletable = flag!(u.class(), mIsDeletable);
+                0
+            }
+            EE_UNITS_DOP_CATEGORY => ulong((*u.class()).mCategory),
+            EE_UNITS_DOP_RESOURCE_AMOUNT => long((*u.uf()).mResourceAmount),
+            EE_UNITS_DOP_SET_RESOURCE_AMOUNT => {
+                (*u.uf()).mResourceAmount = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_GATHERED_RESOURCE => body(EE_UNITS_CU_DO_SET_GATHERED_RESOURCE, unit, a as i64, 0, 0),
+            EE_UNITS_DOP_SET_LAST_RESOURCE => body(EE_UNITS_CU_DO_SET_LAST_RESOURCE, unit, a as i64, 0, 0),
+            EE_UNITS_DOP_LINK_USABLE => {
+                i64::from((*o.rts()).mUnitID != 0 || (*o.uf()).mResourceType != CU_VIEW_RESOURCE_NONE)
+            }
+            // dop_load.rs's live state
+            EE_UNITS_DOP_SET_ANIMATION_FRACTION => {
+                (*u.cx()).mAnimationFraction = f32::from_bits(b as u32);
+                0
+            }
+            EE_UNITS_DOP_SET_NEXT_FRAME => {
+                (*u.cx()).mNextFrame = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_COLLISION_RADIUS => {
+                (*u.cx()).mCollisionRadius = f32::from_bits(b as u32);
+                0
+            }
+            EE_UNITS_DOP_SET_PUSH_VELOCITY_X => {
+                (*u.cx()).mPushVelocityX = f32::from_bits(b as u32);
+                0
+            }
+            EE_UNITS_DOP_SET_PUSH_VELOCITY_Y => {
+                (*u.cx()).mPushVelocityY = f32::from_bits(b as u32);
+                0
+            }
+            EE_UNITS_DOP_SET_F24C => {
+                (*u.cx()).mF24C = f32::from_bits(b as u32);
+                0
+            }
+            EE_UNITS_DOP_SET_AI_STATE => {
+                (*u.cx()).mAIState = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_NEXT_TRIGGER_TIME => {
+                (*u.cx()).mNextTriggerTime = b as c_ulong;
+                0
+            }
+            EE_UNITS_DOP_SET_FLIGHT_TIME => {
+                (*u.cx()).mFlightTime = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_LAST_HIT_POINTS => {
+                (*u.cx()).mLastHitPoints = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_GARRISON_COUNT => {
+                (*u.cx()).mGarrisonCount = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_POWER => {
+                (*u.cx()).mPower = b as c_long;
+                0
+            }
+            // the seen unit `a`'s (a doppelganger's Initialize)
+            EE_UNITS_DOP_SEEN_IS_RESOURCE => i64::from((*o.class()).mCategory == CU_VIEW_CATEGORY_RESOURCE),
+            EE_UNITS_DOP_SEEN_COMPLEX => o.complex().0 as i64,
+            EE_UNITS_DOP_SEEN_IS_BUILT => i64::from(flag!(o.cx(), mIsBuilt)),
+            EE_UNITS_DOP_HALF_SIZE => bits((*o.class()).mTileSize as f32 * 0.5),
+            EE_UNITS_DOP_SEEN_TILE => long(if b == 0 { (*o.rts()).mTileX } else { (*o.rts()).mTileY }),
+            // the doppelganger's record
+            EE_UNITS_DOP_PACK_RESOURCE => {
+                (*fields()).mPackedHitPoints = (*o.uf()).mResourceAmount | 0x8000_0000u32 as c_long;
+                0
+            }
+            EE_UNITS_DOP_PACK_HIT_POINTS => {
+                (*fields()).mPackedHitPoints = (*o.uf()).mHitPoints;
+                0
+            }
+            EE_UNITS_DOP_MARK_BUILT => {
+                let f = fields();
+                (*f).mPackedHitPoints |= 0x8000_0000u32 as c_long;
+                0
+            }
+            EE_UNITS_DOP_FRAME_OF => {
+                (*fields()).mFrame = *at::<c_ulong>(a, l.complex_frame);
+                0
+            }
+            EE_UNITS_DOP_ANIMATION_OF => {
+                (*fields()).mAnimation = (*o.cx()).mAnimation;
+                0
+            }
+            EE_UNITS_DOP_SCALE_OF => {
+                (*fields()).mScale = *at::<f32>(a, l.complex_scale);
+                0
+            }
+            EE_UNITS_DOP_SCALE_OF_CLASS => {
+                (*fields()).mScale = (*o.class()).mScale;
+                0
+            }
+            EE_UNITS_DOP_FRAME_ZERO | EE_UNITS_DOPX_ZERO_FRAME => {
+                (*fields()).mFrame = 0;
+                0
+            }
+            EE_UNITS_DOP_ANIMATION_ZERO | EE_UNITS_DOPX_ZERO_ANIMATION => {
+                (*fields()).mAnimation = 0;
+                0
+            }
+            EE_UNITS_DOP_NOT_FOUNDATION | EE_UNITS_DOPX_NOT_FOUNDATION => {
+                (*fields()).mIsFoundation = false;
+                0
+            }
+            EE_UNITS_DOP_SET_TILE_X => {
+                (*fields()).mTileX = b as c_long;
+                0
+            }
+            EE_UNITS_DOP_SET_TILE_Y => {
+                (*fields()).mTileY = b as c_long;
+                0
+            }
+            EE_UNITS_DOPX_TILE_X_OFF => {
+                (*fields()).mTileX = -10000;
+                0
+            }
+            EE_UNITS_DOPX_TILE_Y_OFF => {
+                (*fields()).mTileY = -10000;
+                0
+            }
+            EE_UNITS_DOPX_ZERO_SCALE => {
+                (*fields()).mScale = 0.0;
+                0
+            }
+            EE_UNITS_DOPX_CLEAR_MODEL => {
+                (*fields()).mModel = std::ptr::null_mut();
+                0
+            }
+            EE_UNITS_DOPX_ZERO_HIT_POINTS => {
+                (*fields()).mPackedHitPoints = 0;
+                0
+            }
+            EE_UNITS_DOPX_HAS_MODEL => i64::from(!(*fields()).mModel.is_null()),
+            EE_UNITS_DOPX_SET_MODEL => {
+                (*fields()).mModel = a as usize as _;
+                0
+            }
+            EE_UNITS_DOPX_MODEL_SAVED_ID => saved_id((*fields()).mModel),
+            _ => return None,
+        })
+    }
+}
+
+/// The answer of `EEUnitSaveOperation`'s statement `op` (EEComplexDoppelganger.cpp; dop_save.rs's and dop_load.rs's
+/// statements on the complex unit `unit`) when it is a plain record read or store or one Rust call (None: the game's
+/// callback answers it).
+///
+/// # Safety
+/// `unit` is the live complex unit the save or load is for, on the simulation thread.
+pub(crate) unsafe fn save_view(
+    unit: u64,
+    op: i32,
+    index: u32,
+    io: &mut crate::units::unit_save::EeUnitsUnitSaveIo,
+) -> Option<i32> {
+    use crate::units::dop_load::*;
+    use crate::units::dop_save::*;
+    let l = layout();
+    let u = U(unit, l);
+    // SAFETY: the caller's contract: each statement reads or writes a member of the live unit, as its C++ did
+    unsafe {
+        match op {
+            EE_UNITS_DOPS_TURRET_ANGLE => io.f = *(*u.cx()).mTurretAngles.add(index as usize),
+            EE_UNITS_DOPS_GOAL_QUEUE_COUNT => io.i = goals::unit_queues(unit).len() as i64,
+            EE_UNITS_DOPS_HAS_HERD => io.i = i64::from(!(*u.cx()).mHerd.is_null()),
+            EE_UNITS_DOPS_HAS_CLASS => io.i = i64::from(!(*u.uf()).mUnitClass.is_null()),
+            EE_UNITS_DOPS_CLASS_SCALE => io.f = (*u.class()).mScale,
+            EE_UNITS_DOPS_HAS_LAST_ATTACKER => io.i = i64::from(!(*u.cx()).mLastAttacker.is_null()),
+            EE_UNITS_DOPS_CLEAR_LAST_ATTACKER => (*u.cx()).mLastAttacker = std::ptr::null_mut(),
+            EE_UNITS_DOPS_HAS_OWNER => io.i = i64::from(!(*u.cx()).mOwner.is_null()),
+            EE_UNITS_DOPS_CLEAR_OWNER => (*u.cx()).mOwner = std::ptr::null_mut(),
+            EE_UNITS_DOPS_START_ACTION => {
+                body(EE_UNITS_CU_DO_START_ACTION, unit, io.i as c_ulong as c_long as i64, 0, 0);
+            }
+            EE_UNITS_UNIT_LOAD_GET if index == EE_UNITS_UNIT_LOAD_GET_TURRET_COUNT => {
+                io.i = if (*u.cx()).mTurretAngles.is_null() { 0 } else { long((*u.cx()).mNumTurretAngles) }
+            }
+            EE_UNITS_UNIT_LOAD_GET if index == EE_UNITS_UNIT_LOAD_GET_TURRET_ANGLE => {
+                io.f = *(*u.cx()).mTurretAngles.add(io.i as usize)
+            }
+            _ => return None,
+        }
+    }
+    Some(0)
 }

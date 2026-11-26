@@ -52,28 +52,18 @@ EEUnitClass* EEUpdateClass(void* inContext) { return EEUpdateContextOf(inContext
 int64_t EEUpdateRead(void* inContext, int32_t inCode)
 {
     switch (inCode) {
-    case EE_UNITS_UPD_R_FRAME: return EEUpdateUnit(inContext)->mPhysicalModel.GetFrame();
     case EE_UNITS_UPD_R_ANIMAL_ON_MAP: return EEHerd::IsAnimalOnMap(EEUpdateUnit(inContext)) ? 1 : 0;
-    case EE_UNITS_UPD_R_PHYSICS_MODEL: return EEUpdateClass(inContext)->mPhysicsModel != NULL ? 1 : 0;
     // (the plain member reads are Rust's: ee_units update_views.rs)
     case EE_UNITS_UPD_R_CALAMITY_CAMOUFLAGE: return USingleton<EECalamityManager>::GetInstance()->IsCalamityActive(0x17) ? 1 : 0;
     case EE_UNITS_UPD_R_IS_PRIEST: return EEUpdateClass(inContext)->IsPriest() ? 1 : 0;
     case EE_UNITS_UPD_R_WORK_TIME_FACTOR: return (int64_t)UFloatBits(::gWorld.GetGameVariant()->mWorkTimeFactor);
-    case EE_UNITS_UPD_R_MINE: return EEUpdateUnit(inContext)->mMine != NULL ? 1 : 0;
-    case EE_UNITS_UPD_R_MINE_RESOURCE_TYPE: return (int64_t)EEUpdateUnit(inContext)->mMine->mResourceType;
     // ActionChanged's
     case EE_UNITS_ACT_R_ATTACK_FRAME_SET: return (int64_t)(unsigned long)EEGetAttackFrameSet(EEUpdateUnit(inContext));
     case EE_UNITS_ACT_R_SWIMMING: return EEUpdateUnit(inContext)->IsSwimming() ? 1 : 0;
     case EE_UNITS_ACT_R_RANDOM: return (int64_t)UFloatBits(gPhysics->GetRandom());
     case EE_UNITS_ACT_R_WORLD_CLEARING: return gWorldClearing ? 1 : 0;
-    case EE_UNITS_ACT_R_QUEUED_GOALS: return EEUpdateUnit(inContext)->GetQueueGoals(0).size() > 1 ? 1 : 0;
-    case EE_UNITS_ACT_R_DEATH_EFFECT: return EEUpdateClass(inContext)->mDeathEffect != NULL ? 1 : 0;
-    case EE_UNITS_ACT_R_DEATH_SOUND: return EEUpdateUnit(inContext)->mStats->mDeathSound != NULL ? 1 : 0;
-    case EE_UNITS_ACT_R_BLOOD_STAIN: return EEUpdateUnit(inContext)->mUnitClass->mBloodStainEffect != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_IS_HUMAN: return EEUpdateUnit(inContext)->mPlayer->IsHuman() ? 1 : 0;
     case EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY: return EEUpdateUnit(inContext)->mCitizenBuildQueue.size() == 0 ? 1 : 0;
-    case EE_UNITS_ACT_R_HOME_BASE: return EEUpdateUnit(inContext)->mHomeBase != NULL ? 1 : 0;
-    case EE_UNITS_ACT_R_BOMBER: return EEUpdateClass(inContext)->mProjectileClass != NULL && EEUpdateClass(inContext)->mProjectileClass->mCategory == kUnitCategoryBomb ? 1 : 0;
     default: return 0;
     }
 }
@@ -106,53 +96,31 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_CONTINUE_PRODUCTION: EEUpdateUnit(inContext)->ContinueProduction(); break;
     case EE_UNITS_UPD_UPDATE_CITIZEN: EEUpdateClass(inContext)->UpdateCitizen(EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_UPDATE_CONVERSION: EEUpdateClass(inContext)->BasicPriestUpdateConversion(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_UPD_RELEASE_CONVERSION_EFFECT: EEUpdateUnit(inContext)->ReleaseConversionEffect(); break;
     case EE_UNITS_UPD_HIDE_CONVERSION_EFFECTS: EEUpdateClass(inContext)->BasicPriestHideConversionEffects(EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_RESOURCES_ROTTING: EEUpdateUnit(inContext)->UpdateResourcesRotting(); break;
     case EE_UNITS_UPD_NEXT_FLIGHT_STATE: return (int64_t)EEUpdateClass(inContext)->GetNextFlightState(EEUpdateUnit(inContext));
-    case EE_UNITS_UPD_GOAL_QUEUES:   // the started, non-empty queues' expiry and the goals' refresh (ee_units goals.rs)
-        ee_units_goal_queues_tick(reinterpret_cast<uintptr_t>(EEUpdateUnit(inContext)));
-        break;
-    case EE_UNITS_UPD_OPACITY_CHAIN: EEUpdateUnit(inContext)->SetOpacityChain(UBitsFloat(inA)); break;
     case EE_UNITS_UPD_UPDATE_BUILDING: EEUpdateClass(inContext)->UpdateBuilding(EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_UPDATE_ARMED: EEUpdateClass(inContext)->UpdateArmed(EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_ADD_RESOURCE: EEUpdateUnit(inContext)->mPlayer->AddResource((long)inA, (long)inB); break;
     case EE_UNITS_UPD_SAVED_GROUPS_RESET: EEUpdateUnit(inContext)->mPlayer->mSavedGroups.Reset(7, 1); break;
-    case EE_UNITS_UPD_X_OPEN_FRACTION: EEUpdateUnit(inContext)->SetOpenFraction(UBitsFloat(inA)); break;
     case EE_UNITS_UPD_X_CARRIER_OPEN_FRACTION: EEUpdateClass(inContext)->GetLastLinkedCarrier(EEUpdateUnit(inContext))->SetOpenFraction(UBitsFloat(inA)); break;
     case EE_UNITS_UPD_X_LINKED_OPEN_FRACTION: EEUpdateClass(inContext)->GetLastLinked(EEUpdateUnit(inContext))->SetOpenFraction(UBitsFloat(inA)); break;
     case EE_UNITS_UPD_DEPLETE_MINE: EEUpdateUnit(inContext)->mMine->DepleteResource(1); break;
     // ActionChanged's
-    case EE_UNITS_ACT_RELEASE_HEAL_EFFECT: EEUpdateUnit(inContext)->ReleaseHealEffect(); break;
     case EE_UNITS_ACT_HERD_ATTACK_BACK: EEUpdateUnit(inContext)->mHerd->AttackBack(EEUpdateUnit(inContext), true); break;
     case EE_UNITS_ACT_HERD_UNIT_HIT: EEUpdateUnit(inContext)->mHerd->HandleUnitHit(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_UPD_X_LOCATION_MATRIX: memcpy(EEObjectOf<float>(inA), EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float)); break;
-    case EE_UNITS_UPD_X_SET_CONTACT_LOCATION: EEUpdateUnit(inContext)->SetInitialContactLocation(*EEObjectOf<GE3DPoint>(inA)); break;
-    case EE_UNITS_UPD_X_CONTACT_LOCATION: *EEObjectOf<GE3DPoint>(inA) = EEUpdateUnit(inContext)->mInitialContactLocation; break;
-    case EE_UNITS_UPD_X_STORE_CONTACT_LOCATION: EEUpdateUnit(inContext)->mInitialContactLocation = *EEObjectOf<GE3DPoint>(inA); break;
-    case EE_UNITS_UPD_X_CONTACT_HEADING: return (int64_t)UFloatBits(EEUpdateUnit(inContext)->mInitialContactHeading);
-    case EE_UNITS_UPD_X_STORE_CONTACT_HEADING: EEUpdateUnit(inContext)->mInitialContactHeading = UBitsFloat(inA); break;
     case EE_UNITS_ACT_ATTACKED: EEUpdateClass(inContext)->Attacked(EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_FLEE_ATTACKER: EEUpdateClass(inContext)->FleeAttacker(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_ACT_SET_ANIMATION: EEUpdateUnit(inContext)->SetAnimation((long)inA, -1, inB != 0); break;
     case EE_UNITS_UPD_X_RETURN_TO_CONTACT: EEUpdateUnit(inContext)->SetGoal(EEUGRust::NewLocation(&EEUpdateUnit(inContext)->mInitialContactLocation, false, false, true, EEUpdateUnit(inContext)->mInitialContactHeading, false, false), inA != 0, 0); break;
-    case EE_UNITS_ACT_FLEE_AFTER_CALAMITY: EEUpdateUnit(inContext)->FleeAfterCalamity(0); break;
     case EE_UNITS_ACT_RANDOM_ANIMATION_TIME:
         EEUpdateUnit(inContext)->SetAnimationTime(gPhysics->GetRandom(0L, (long)EEUpdateUnit(inContext)->mStats->mModel->mHoldTimes[EEUpdateUnit(inContext)->GetAnimation()]));
         break;
-    case EE_UNITS_ACT_DROP_PATH: EEUpdateUnit(inContext)->DropPath(); break;
-    case EE_UNITS_ACT_UPDATE_WATER_STATE: EEUpdateUnit(inContext)->UpdateWaterState(false); break;
     case EE_UNITS_ACT_UNIT_GOAL_DONE: EEUpdateUnit(inContext)->mPlayer->UnitGoalDone(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_ACT_CLEAR_GOALS: EEUpdateUnit(inContext)->ClearGoals((long)inA); break;
-    case EE_UNITS_UPD_X_UNIT: return EEObj(EEUpdateUnit(inContext));
-    case EE_UNITS_UPD_X_NEXT_PART_OF: return EEObj(EEObjectOf<EEComplexUnit>(inA)->mNextPart);
-    case EE_UNITS_UPD_X_START_ACTION_OF: EEObjectOf<EEComplexUnit>(inA)->StartAction((unsigned long)inB); break;
     case EE_UNITS_UPD_X_ACTION_CHANGED_OF: EEObjectOf<EEComplexUnit>(inA)->mUnitClass->ActionChanged(EEObjectOf<EEComplexUnit>(inA)); break;
     case EE_UNITS_ACT_UNIT_DIED: EEUpdateClass(inContext)->UnitDied(EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_GOAL_STEP: EEUpdateUnit(inContext)->mGoalState->Step(EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_DESELECT: EEUpdateUnit(inContext)->mPlayer->DeselectUnit(EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_CLOAK_CHAIN: EEUpdateUnit(inContext)->SetCloakedChain(true); break;
-    case EE_UNITS_ACT_OPAQUE_CHAIN: EEUpdateUnit(inContext)->SetOpacityChain(1.0f); break;
     case EE_UNITS_ACT_KILL: EEUpdateUnit(inContext)->Kill(inA != 0, false, false); break;
     case EE_UNITS_UPD_X_KILL_UNIT: EEUpdateUnit(inContext)->mPlayer->KillUnit(EEObjectOf<EEComplexUnit>(inA), false); break;
     case EE_UNITS_ACT_PATH_TO_GOAL: EEUpdateClass(inContext)->PathToGoal(EEUpdateUnit(inContext)); break;
@@ -163,16 +131,13 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_FACE_YAW: return static_cast<EEUGRust*>(EEUpdateUnit(inContext)->mGoalState)->FaceYaw(EEUpdateUnit(inContext)) ? 1 : 0;
     case EE_UNITS_ACT_FIND_PATH: EEUpdateClass(inContext)->FindPath(EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_HEAL: EEUpdateClass(inContext)->Heal(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_UPD_X_CLEAR_HEALEE: EEUpdateContextOf(inContext)->mHealee = NULL; break;
     case EE_UNITS_UPD_X_FIND_HEALEE: return EEUpdateClass(inContext)->FindTargetNear(EEUpdateUnit(inContext), EEUpdateUnit(inContext)->mStats->GetLineOfSight(), &EEUpdateContextOf(inContext)->mHealee);
     case EE_UNITS_UPD_X_SET_HEAL_GOAL: EEUpdateUnit(inContext)->SetGoal(EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(EEUpdateContextOf(inContext)->mHealee), false), inA != 0, 0); break;
     case EE_UNITS_ACT_GOAL_START_TIME: EEUpdateUnit(inContext)->mGoalState->SetStartTime(gPhysics->mGameTime); break;
     case EE_UNITS_ACT_CALL_PARATROOP_PLANE: EEUpdateClass(inContext)->CallParatroopPlane(EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_PLACE_TRACK_DECAL: EEPlaceTrackDecal(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_UPD_X_DEATH_SOUND: return EEObj(EEUpdateUnit(inContext)->mStats->mDeathSound);
     case EE_UNITS_UPD_X_SOUND_PARAMETERS: EEUpdateClass(inContext)->GetSoundParameters(EEUpdateUnit(inContext), EEObjectOf<EESoundObject>(inA), EEObjectOf<float>(inB), EEObjectOf<float>(inB) + 1, EEObjectOf<float>(inB) + 2); break;
     case EE_UNITS_UPD_X_PLAY_SAMPLE: gSoundManager->Play(EEObjectOf<EESoundObject>(inA)->mSampleID, EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2], EEObjectOf<EESoundObject>(inA)->mLooping, NULL); break;
-    case EE_UNITS_ACT_RELEASE_CONVERSION_EFFECT: EEUpdateUnit(inContext)->ReleaseConversionEffect(); break;
     case EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS:
         // (the temple's too: its copy was the basic priest's body)
         EEUpdateClass(inContext)->BasicPriestHideConversionEffects(EEUpdateUnit(inContext));
@@ -188,7 +153,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_RELEASE_UNIT: EEUpdateClass(inContext)->ReleaseUnit(EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_X_GATE_SOUND: return EEObj(EESoundObject::Get(kSoundGate));
     case EE_UNITS_UPD_X_PLAY_SOUND: EEObjectOf<EESoundObject>(inA)->Play(EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2]); break;
-    case EE_UNITS_UPD_X_LOCATION: *EEObjectOf<GE3DPoint>(inA) = GE3DPoint(EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().GetX(), EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().GetY(), EEUpdateUnit(inContext)->mPhysicalModel.GetLocation().GetZ()); break;
     case EE_UNITS_UPD_X_NEXT_WAYPOINT_POINT: return EEUpdateUnit(inContext)->GetNextWaypointPoint(*EEObjectOf<GE3DPoint>(inA));
     case EE_UNITS_UPD_X_SET_HEIGHT_AT: EEUpdateUnit(inContext)->SetHeight(EEUpdateClass(inContext)->GetHeightAt(EEUpdateUnit(inContext), *EEObjectOf<GE3DPoint>(inA))); break;
     case EE_UNITS_ACT_RETURN_TO_AIRPORT: EEUpdateClass(inContext)->AirAnimalReturnToAirport(EEUpdateUnit(inContext)); break;
@@ -202,7 +166,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_X_AIRPLANE_HOLDING: EEAirplaneHoldingPattern(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_UPD_X_SPACESHIP_HOLDING: EEPlanetSpaceshipHoldingPattern(EEUpdateClass(inContext), EEUpdateUnit(inContext)); break;
     case EE_UNITS_ACT_FLY_OFF_MAP: EEUpdateClass(inContext)->FlyOffMap(EEUpdateUnit(inContext)); break;
-    case EE_UNITS_ACT_START_ACTION: EEUpdateUnit(inContext)->StartAction((unsigned long)inA); break;
     case EE_UNITS_ACT_CLASS_ACTION_CHANGED: EEUpdateClass(inContext)->ActionChanged(EEUpdateUnit(inContext)); break;
     default: break;
     }

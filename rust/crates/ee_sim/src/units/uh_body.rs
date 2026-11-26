@@ -638,7 +638,7 @@ pub(crate) mod game {
             // SAFETY: one statement over the world's live objects (the decision runs on the simulation thread; the
             // plain record reads and stores first: cu_view.rs)
             unsafe {
-                if let Some(v) = crate::units::cu_view::uh_view(op, a, b, f) {
+                if let Some(v) = crate::units::cu_view::uh_view(op, a, b, c, d, f) {
                     return v;
                 }
                 ee_units_uh_host(op, a, b, c, d, f.as_mut_ptr())

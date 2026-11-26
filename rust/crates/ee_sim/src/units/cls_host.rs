@@ -1147,8 +1147,14 @@ fn cond_goal(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
 
 impl crate::units::uai_cond::UaiHost for ClsGame {
     fn uai(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
-        // SAFETY: the C++ statement reads live objects the bodies hand it
-        unsafe { ee_units_cls_cond_host(op, a, b, c, d, io) }
+        // SAFETY: the C++ statement reads live objects the bodies hand it (the plain record reads and stores
+        // first: cu_view.rs)
+        unsafe {
+            if let Some(v) = crate::units::cu_view::cond_host_view(op, a, b, c, io) {
+                return v;
+            }
+            ee_units_cls_cond_host(op, a, b, c, d, io)
+        }
     }
     fn uai_location(&mut self, unit: u64) -> [f32; 3] {
         CondHost::location(self, unit)
@@ -1185,8 +1191,14 @@ impl CondHost for ClsGame {
         if let Some(v) = crate::units::uai_cond::compound(self, op, a, b, c, io) {
             return v;
         }
-        // SAFETY: the C++ switch reads live objects the bodies hand it
-        unsafe { ee_units_cls_cond_host(op, a, b, c, d, io) }
+        // SAFETY: the C++ switch reads live objects the bodies hand it (the plain record reads and stores first:
+        // cu_view.rs)
+        unsafe {
+            if let Some(v) = crate::units::cu_view::cond_host_view(op, a, b, c, io) {
+                return v;
+            }
+            ee_units_cls_cond_host(op, a, b, c, d, io)
+        }
     }
     fn landing(&mut self, class: u64, unit: u64, event: u32, animal: bool) -> Option<i32> {
         if animal {

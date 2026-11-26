@@ -119,12 +119,30 @@ pub trait SaveHost {
 pub(crate) struct CallbackHost {
     pub(crate) ctx: *mut c_void,
     pub(crate) f: EeUnitsUnitSaveFn,
+    /// the complex unit's handle when the layout is registered (its plain statements are cu_view.rs's), else 0
+    pub(crate) unit: u64,
 }
 
 impl SaveHost for CallbackHost {
     fn op(&mut self, op: i32, index: u32, io: &mut EeUnitsUnitSaveIo) -> i32 {
+        #[cfg(not(test))]
+        if self.unit != 0 {
+            // SAFETY: the live unit the save or load is for
+            if let Some(r) = unsafe { crate::units::cu_view::save_view(self.unit, op, index, io) } {
+                return r;
+            }
+        }
         // SAFETY: the C++ caller's callback and context
         unsafe { (self.f)(self.ctx, op, index, io) }
+    }
+}
+
+/// The complex unit's handle of a save's or load's records (its `RTSUnit*`: the record's address less the record's
+/// base; 0 without the layout or for a unit that is not complex).
+pub(crate) fn complex_handle(rts: *const EeUnitsRtsUnitFields, complex: *const EeUnitsComplexUnitFields) -> u64 {
+    match crate::world::layout::get() {
+        Some(l) if !rts.is_null() && !complex.is_null() => (rts as usize as u64).wrapping_sub(l.rts_unit_fields),
+        _ => 0,
     }
 }
 
@@ -582,7 +600,7 @@ pub unsafe extern "C" fn ee_units_unit_save(
     complex: *const EeUnitsComplexUnitFields,
     inp: *const EeUnitsUnitSaveIn,
 ) -> i32 {
-    let mut c_host = CallbackHost { ctx, f };
+    let mut c_host = CallbackHost { ctx, f, unit: complex_handle(rts, complex) };
     // the C++ loops' parts in Rust over the callback's statements (dop_save.rs)
     let mut callback = crate::units::dop_save::DopSaveHost { inner: &mut c_host };
     // the views answer the plain reads once the layout is registered (unit_save_views.rs); the unit's handle is its
