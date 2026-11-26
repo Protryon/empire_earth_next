@@ -6,29 +6,16 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEAIKindIDs.h"
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);
@@ -52,34 +39,15 @@ extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int
     case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
     case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>((*ioF)), (long)inC, (long)inD, 0, 0);
     case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
-    case EE_UNITS_CK_COMMAND_TYPE: return CkObj<EEComplexUnit>(inA)->GetCommandType();
-    case EE_UNITS_CK_ROT_FRACTION: return (int64_t)UFloatBits((float)CkObj<EEComplexUnit>(inA)->mComplexUnit->mRottingAwayTime / (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime);
-    case EE_UNITS_CK_HAS_ROTTING_TIME: return (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime != 0;
-    case EE_UNITS_CK_IS_CLOAKABLE: return CkObj<EEComplexUnit>(inA)->mIsCloakable;
-    case EE_UNITS_CK_IS_CLOAKED: return CkObj<EEComplexUnit>(inA)->mIsCloaked;
     case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_CK_OPACITY: return (int64_t)UFloatBits(CkObj<EEComplexUnit>(inA)->mOpacity);
-    case EE_UNITS_CK_CURRENT_PLAYER: return (int64_t)(uintptr_t)gWorld.GetCurrentPlayer();
-    case EE_UNITS_CK_PLAYER: return (int64_t)(uintptr_t)CkObj<EEUnit>(inA)->mPlayer;
-    case EE_UNITS_CK_ENEMY_OF_VIEWER: return CkObj<EEUnit>(inA)->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID];
-    case EE_UNITS_CK_OBSERVER: return gWorld.GetCurrentPlayer()->mObserverMode;
-    case EE_UNITS_CK_SET_FLOAT: *CkObj<float>(inA) = (*ioF)[0]; return 0;
     case EE_UNITS_CK_CREATE_CLOAK:
         return gWorld.GetEffectManager()->CreateUnitEffect(CkObj<EEUnit>(inA), EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
     case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = sCkHandle.mValue; return 0;
-    case EE_UNITS_CK_CLOAKED: return (long)EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked;
     case EE_UNITS_CK_DESTROY_EFFECT: gWorld.GetEffectManager()->DestroyEffect((sCkHandle.mValue = (decltype(sCkHandle.mValue))inC, sCkHandle)); return 0;
-    case EE_UNITS_CK_CLEAR_CLOAKED: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = 0; return 0;
     case EE_UNITS_CK_SPACE_MAP: return gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    case EE_UNITS_CK_TILE_X: return CkObj<EEComplexUnit>(inA)->mTileX;
-    case EE_UNITS_CK_TILE_Y: return CkObj<EEComplexUnit>(inA)->mTileY;
     case EE_UNITS_CK_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     case EE_UNITS_CK_FIRST_UNIT: return (int64_t)(uintptr_t)gWorld.mUnits.mFirst;
     case EE_UNITS_CK_NEXT_UNIT: return (int64_t)(uintptr_t)CkObj<RTSUnit>(inA)->mTileNode->mNext;
-    case EE_UNITS_CK_COMPLEX_OF: return (int64_t)(uintptr_t)static_cast<EEUnit*>(CkObj<RTSUnit>(inA))->mComplexUnit;
-    case EE_UNITS_CK_DOMAINS: return CkObj<EEComplexUnit>(inA)->mUnitClass->mDomains;
-    case EE_UNITS_CK_UNIT_TYPE: return CkObj<EEComplexUnit>(inA)->mUnitClass->mUnitType;
-    case EE_UNITS_CK_SET_PLANET: CkObj<EEComplexUnit>(inA)->mPlanetID = (unsigned short)inC; return 0;
     }
     return 0;
 }
