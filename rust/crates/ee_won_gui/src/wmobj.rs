@@ -92,8 +92,8 @@ pub enum EeWonWmComp {
 /// `ComponentEvent_EndPopup` (WONEventTypes.h).
 const COMPONENT_EVENT_END_POPUP: isize = 30;
 
-/// A component call the game's manager makes itself (R6 WON GUI round 37): the members' block, Component's calls
-/// and the container's; None for the virtuals, the references and the event the C++ answers.
+/// A component call the game's manager makes itself (R6 WON GUI round 37): the members' block, Component's calls,
+/// the container's, the references and (round 40) the two virtuals through the component host.
 fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize> {
     use crate::compobj::{ee_won_comp_call, host, EeWonCompCall as K};
     use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T};
@@ -134,7 +134,15 @@ fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize
         W::FireEndPopup => kc(K::FireEvent, COMPONENT_EVENT_END_POPUP, 0),
         // SAFETY: as `kc`; `comp` is a container (the call's contract)
         W::ClickChildAt => unsafe { ee_won_ct_call(m.ct as *const EeWonContainer, T::FindChildAt, c, d, 0) },
-        W::MouseWheel | W::HandleComponentEvent => return None,
+        // the two virtuals through the component host (R6 WON GUI round 40)
+        W::MouseWheel => {
+            crate::compobj::comp().v_mouse_wheel(comp, c);
+            0
+        }
+        W::HandleComponentEvent => {
+            crate::compobj::comp().v_handle_event(comp, c);
+            0
+        }
     })
 }
 

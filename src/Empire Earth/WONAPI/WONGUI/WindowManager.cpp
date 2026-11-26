@@ -54,22 +54,12 @@ static SmartPtr<RawImage> sHostRaw;
 static ImageAttributes sHostAttr;
 static SmartPtr<Font> sHostFont; // WmDefaultWindowFont's local
 
-static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
-{
-    // (the members, Component's and the container's calls are wmobj.rs's own: game_comp, R6 WON GUI rounds 37, 40)
-    switch ((EeWonWmComp)call) {
-    case EeWonWmComp::MouseWheel: t->MouseWheel((int)c); return 0;
-    case EeWonWmComp::HandleComponentEvent: t->HandleComponentEvent((ComponentEvent*)c); return 0;
-    default: return 0;
-    }
-}
-
 extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WindowManager* t = (WindowManager*)inWm;
     switch (op) {
     case Op::WmTick: return (intptr_t)(uint32_t)WONTickCount();
-    case Op::WmComp: return WmCompCall((Component*)b, a, c, d);
+    // (a component's calls, its two virtuals among them, are wmobj.rs game_comp's: R6 WON GUI rounds 37, 40)
     case Op::WmScreenRect: t->GetScreenRect(*(WONRectangle*)a); return 0;
     case Op::WmInputRec: return (intptr_t)&((WindowEventBase*)a)->mRec;
     case Op::WmDecodeKeep: sHostImage = t->mImageDecoder.Decode((DisplayContext*)a, std::string((const char*)b, (size_t)c).c_str()); return 0;

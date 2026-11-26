@@ -335,6 +335,8 @@ pub enum EeWonComp {
     GNew,
     /// `delete (BackgroundGrabber*)b`.
     GDelete,
+    /// `MouseWheel(c)` (the manager's wheel to the topmost popup, R6 WON GUI round 40).
+    VMouseWheel,
 }
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -669,6 +671,14 @@ impl Comp {
     /// `GetDesiredSize(w, h)`.
     pub fn v_desired_size(&self, c: isize) -> (i32, i32) {
         self.desired(c)
+    }
+    /// `HandleComponentEvent(ev)`.
+    pub fn v_handle_event(&self, c: isize, ev: isize) {
+        self.h(K::VHandleEvent, c, ev, 0);
+    }
+    /// `MouseWheel(amount)` (its answer dropped, as the manager's call did).
+    pub fn v_mouse_wheel(&self, c: isize, amount: isize) {
+        self.h(K::VMouseWheel, c, amount, 0);
     }
     /// `GetMouseChild()`.
     pub fn v_mouse_child(&self, c: isize) -> isize {
