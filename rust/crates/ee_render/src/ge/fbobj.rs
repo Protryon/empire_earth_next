@@ -359,6 +359,10 @@ impl EeGeFontBitmap {
                 // SAFETY: a live GEText
                 EeGeFbOp::TextSetByte => return unsafe { text_set_byte(obj, a as u8) },
                 EeGeFbOp::TextOps => return crate::ge::font_ffi::platform_text_ops() as isize,
+                // SAFETY: a live GESurface
+                EeGeFbOp::SurfWidth | EeGeFbOp::SurfHeight => {
+                    return unsafe { crate::ge::cppobj::surface_logical_size(obj, op == EeGeFbOp::SurfHeight) } as isize
+                }
                 // GetScreen(a)'s and GetBlending's screen record (a GERasterizer's first member is its Rust object)
                 EeGeFbOp::RasterScreen | EeGeFbOp::RasterGetBlending => {
                     use crate::ge::rastobj::{ee_ge_rast_screen, EeGeRasterizer};

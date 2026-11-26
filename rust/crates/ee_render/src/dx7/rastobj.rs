@@ -173,6 +173,8 @@ unsafe fn object_op(op: EeDx7RastOp, obj: H, a: isize, b: isize) -> Option<isize
     // SAFETY (each call): the caller's contract
     unsafe {
         Some(match op {
+            EeDx7RastOp::SurfaceWidth => cppobj::surface_logical_size(obj as usize, false) as isize,
+            EeDx7RastOp::SurfaceHeight => cppobj::surface_logical_size(obj as usize, true) as isize,
             EeDx7RastOp::ScreenDirectDraw => ee_dx7sc_direct_draw(screen()) as isize,
             EeDx7RastOp::ScreenIsFullScreen => ee_dx7sc_flag(screen(), 1) as isize,
             EeDx7RastOp::ScreenCurrentMode => {
