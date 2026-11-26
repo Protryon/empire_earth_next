@@ -1586,12 +1586,12 @@ pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, f: &mut [f32; 4]) -> Optio
     Some(v)
 }
 
-/// The answer of `ee_units_us_host`'s statement `op` (EEUnitStore.cpp; us_check.rs's and us_fill.rs's statements)
-/// when it is a plain record read (None: the game's host answers it).
+/// The answer of the store host's statement `op` (us_check.rs's and us_fill.rs's statements; units round 14: every
+/// statement, the C++ host EEUnitStore.cpp deleted; None: an unknown op, 0).
 ///
 /// # Safety
 /// As the host's: `a` the statement's live unit or player.
-pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64) -> Option<i64> {
+pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64, c: u64, out: *mut std::ffi::c_void) -> Option<i64> {
     use crate::units::us_check::*;
     use crate::units::us_fill::*;
     let l = layout();
@@ -1599,6 +1599,44 @@ pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64) -> Option<i64> {
     // SAFETY: the host's contract: each statement reads a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            EE_UNITS_US_FILL => {
+                crate::units::us_fill::game::ee_units_store_fill(out.cast(), a, b as u32, c);
+                0
+            }
+            EE_UNITS_US_CHAIN_FIRST => world_word(l.world_units_first) as i64,
+            // `mTileNode->mNext` (an `RTSUnitLink`: `mNext`, then `mPrev`)
+            EE_UNITS_US_CHAIN_NEXT => word(word(a, l.unit_tile_node), 0) as i64,
+            EE_UNITS_US_CHECKSUM => {
+                // the virtual `GetChecksum`: `EEUnit`'s returns 0, `EEComplexUnit`'s is the cu body's
+                if *at::<u8>(a, l.unit_object_kind) >= crate::units::kinds::EE_OBJECT_COMPLEX_UNIT {
+                    i64::from(
+                        crate::units::cu_body::game::ee_units_cu_body(EE_UNITS_CU_DO_GET_CHECKSUM, a as usize as _, b, 0, 0)
+                            as c_long as u32,
+                    )
+                } else {
+                    0
+                }
+            }
+            EE_UNITS_US_ORDER_COUNT => crate::app::active_ffi::ee_app_active_list(0, std::ptr::null_mut(), 0) as i64,
+            EE_UNITS_US_ORDER_ID => i64::from(crate::app::active_ffi::ee_app_active_at(0, b as usize)),
+            EE_UNITS_US_TICK => {
+                let physics = word(l.physics_pointer, 0);
+                if physics == 0 {
+                    0
+                } else {
+                    ulong((*at::<crate::units::physics_save::EeUnitsPhysicsSaved>(physics, l.physics_saved)).mNumTicksDone)
+                }
+            }
+            EE_UNITS_US_EXIT => std::process::exit(3),
+            EE_UNITS_US_F_ON_MAP => {
+                let node = word(a, l.unit_tile_node);
+                i64::from(node != 0 && word(node, std::mem::size_of::<usize>() as u64) != 0)
+            }
+            EE_UNITS_US_B_IN_STORE => i64::from(*at::<u8>(a, l.unit_in_store) != 0),
+            EE_UNITS_US_B_SET_IN_STORE => {
+                *at::<bool>(a, l.unit_in_store) = b != 0;
+                0
+            }
             EE_UNITS_US_PLAYER => world_player(u64::try_from(b).ok().filter(|&i| i < 17)?) as i64,
             EE_UNITS_US_PLAYER_ID => ulong((*P(a, l).rts()).mPlayerID),
             EE_UNITS_US_PLAYER_RTS => a as i64,

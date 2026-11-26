@@ -21962,8 +21962,6 @@ uint64_t ee_units_upgrade_media(const EeUnitsUpgradeMedia *media,
                                 long arg,
                                 void *value);
 
-extern int64_t ee_units_us_host(int32_t op, uint64_t a, int64_t b, uint64_t c, void *out);
-
 /// TEST ONLY: `EEUnitStoreCheck(where)`.
 uint64_t ee_units_us_check(uint64_t at);
 

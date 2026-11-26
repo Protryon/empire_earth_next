@@ -235,6 +235,10 @@ pub struct EeWorldLayout {
     pub player_last_unit: u64,
     /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
     pub town_fields: u64,
+    // ---- units round 14: the world's unit chain and the store flag (cu_view.rs us_view, ck_view)
+    /// `RTSWorld::mUnits.mFirst` (the chain's first unit; a unit's next is its `mTileNode->mNext`), `RTSUnit::mInUnitStore`
+    pub world_units_first: u64,
+    pub unit_in_store: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

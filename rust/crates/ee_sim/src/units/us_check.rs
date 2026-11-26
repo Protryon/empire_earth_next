@@ -1,13 +1,13 @@
 //! TEST ONLY: the unit store's consistency check (the units' lane, round 8; was EEUnitStore.cpp `EEUnitStoreCheck`):
 //! the players' listed units, the unlisted units, the world's unit chain with the checksum's flags 1 and 2, the players'
 //! diplomacy tables and the stepped units' order against the store, the USCK record, and the stop on a difference.
-//! The world's objects are read by [`UsHost`] (the game's: `ee_units_us_host`, EEUnitStore.cpp, one statement each);
+//! The world's objects are read by [`UsHost`] (the game's: cu_view.rs `us_view`, one statement each; units round 14: was C++);
 //! the store's checks are the Rust store's.
 
 use crate::app::capture_record::{flush, Record};
 use crate::units::store::{EeUnitRecord, EeUnitStoreCheck};
 
-// ---- the statements (`ee_units_us_host`'s `op`; `a` an object, `b`, `c` values)
+// ---- the statements (`us_view`'s `op`; `a` an object, `b`, `c` values)
 /// `gWorld.mPlayers[b]`
 pub const EE_UNITS_US_PLAYER: i32 = 1;
 /// player `a`'s `mPlayerID`
@@ -220,10 +220,6 @@ pub(crate) mod game {
     use crate::units::players::ee_units_player_check;
     use std::ffi::c_void;
 
-    extern "C" {
-        fn ee_units_us_host(op: i32, a: u64, b: i64, c: u64, out: *mut c_void) -> i64;
-    }
-
     /// the game's host (us_fill.rs's too)
     pub(crate) struct Game;
 
@@ -239,12 +235,7 @@ pub(crate) mod game {
         fn us(&mut self, op: i32, a: u64, b: i64, c: u64, out: *mut c_void) -> i64 {
             // SAFETY: the C++ statement over the world's live objects (the check runs on the simulation thread; the
             // plain record reads first: cu_view.rs)
-            unsafe {
-                if let Some(v) = crate::units::cu_view::us_view(op, a, b) {
-                    return v;
-                }
-                ee_units_us_host(op, a, b, c, out)
-            }
+            unsafe { crate::units::cu_view::us_view(op, a, b, c, out).unwrap_or(0) }
         }
         fn store_check(&mut self, objects: &[EeUnitRecord]) -> EeUnitStoreCheck {
             let mut check = EeUnitStoreCheck::default();

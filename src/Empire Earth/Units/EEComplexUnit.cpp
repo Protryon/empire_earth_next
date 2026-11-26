@@ -60,6 +60,21 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 //   object bound as ?sMemoryPool@EEComplexUnit@@2V?$UMemoryPool@VEEComplexUnit@@@@A
 UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 
+// EEUnitStoreModel's location was written (ee/EEUnitStore.h; was EEUnitStore.cpp): the unit from the member's offset
+// (the unit classes derive singly), its record's x, y, z
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#endif
+void EEUnitStoreMoved(const void* inModel)
+{
+    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(const_cast<char*>(static_cast<const char*>(inModel)) - offsetof(EEComplexUnit, mPhysicalModel));
+    if (theUnit->mInUnitStore) {
+        const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
+        ee_units_store_set_location(static_cast<uint32_t>(theUnit->mUnitID), reinterpret_cast<uintptr_t>(theUnit),
+                                    UFloatBits(theLocation.GetX()), UFloatBits(theLocation.GetY()), UFloatBits(theLocation.GetZ()));
+    }
+}
+
 #include "ee/EEStringIDs.h"
 #include "ee/EESoundObject.h"
 #include "lle/UResourceFile.h"
