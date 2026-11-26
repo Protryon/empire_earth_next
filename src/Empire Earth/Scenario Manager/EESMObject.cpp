@@ -29,6 +29,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
+#include "rust/sim/scenario.h"
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
@@ -60,12 +61,12 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
     case EE_SCENARIO_READ_UNIT_COMMAND: return SMUnit(inA)->mComplexUnit->GetCommandType();
     case EE_SCENARIO_READ_UNIT_ATTRIBUTE: return inContext->mObject->GetUnitAttribute((unsigned long)inB, inC != 0, SMUnit(inA), 0, 0);
     case EE_SCENARIO_READ_UNIT_SEEN_BY: return EECombatIsSeenBy(SMUnit(inA), gWorld.mPlayers[inB], false);
-    case EE_SCENARIO_READ_MAP_SIZE: return EESMPack((long)gWorld.mMap->mL195610, (long)gWorld.mMap->mL195614);
+    case EE_SCENARIO_READ_MAP_SIZE: return ee_scenario_pack_xy((long)gWorld.mMap->mL195610, (long)gWorld.mMap->mL195614);
     case EE_SCENARIO_READ_AREA_CONTAINS_TILE: return gWorld.mScenarioManager->GetArea((unsigned long)inA)->ContainsTile(U2DPoint<long>(inB, inC));
     case EE_SCENARIO_READ_OBJECT_UNIT_COUNT: return (int64_t)gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mUnits.size();
     case EE_SCENARIO_READ_OBJECT_UNIT_AT: return (int64_t)(uint32_t)gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mUnits[(size_t)inB];
     case EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mSelectedByCheck;
-    case EE_SCENARIO_READ_UNIT_TILE_OF: return EESMPack(SMUnit(inA)->mTileX, SMUnit(inA)->mTileY);
+    case EE_SCENARIO_READ_UNIT_TILE_OF: return ee_scenario_pack_xy(SMUnit(inA)->mTileX, SMUnit(inA)->mTileY);
     case EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT: return EESMBits(SMUnit(inA)->mComplexUnit->GetLineOfSight());
     case EE_SCENARIO_READ_UNIT_RANGE: return EESMBits(SMUnit(inA)->mStats->mRange);
     case EE_SCENARIO_READ_UNIT_TILE_SIZE: return SMUnit(inA)->mUnitClass->mTileSize;
@@ -103,7 +104,7 @@ extern "C" int64_t ee_scenariocpp_world_object(EESMHostContext* inContext, uint3
         return 0;
     case EE_SCENARIO_WZ_CHAIN_UNIT: return SMChainUnit(SMWzOf<EEUnit>(a[0]));
     case EE_SCENARIO_WZ_AREA: return SMWzPtr(gWorld.mScenarioManager->GetArea((unsigned long)a[0]));
-    case EE_SCENARIO_WZ_AREA_CONTAINS_UNIT: return SMWzOf<EESMArea>(a[0])->ContainsUnit(SMWzOf<EEUnit>(a[1]));
+    case EE_SCENARIO_WZ_AREA_CONTAINS_UNIT: return ee_scenario_en_area_contains_unit(SMWzOf<EESMArea>(a[0]), SMWzOf<EEUnit>(a[1]));
     case EE_SCENARIO_WZ_TILE: return SMWzPtr(gWorld.mMap->GetTile((long)a[0], (long)a[1]));
     case EE_SCENARIO_WZ_TILE_TERRAIN: return SMWzOf<EEMapTile>(a[0])->mTerrainType;
     case EE_SCENARIO_WZ_FOOTPRINT_DISTANCE:

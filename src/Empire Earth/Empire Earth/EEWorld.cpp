@@ -80,6 +80,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
 #include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp world.rs)
+#include "rust/sim/scenario.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -626,11 +627,11 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::SimNoHumanDefeat: return gPlatSimNoHumanDefeat;
     case O::SimNoHumanDefeatHit: gPlatSimNoHumanDefeatHits++;
         break;
-    case O::ScenarioEndCinematic: gWorld.mScenarioManager->EndCinematic();
+    case O::ScenarioEndCinematic: ee_scenario_en_round(gWorld.mScenarioManager, EE_SCENARIO_MN_END_CINEMATIC, NULL, 0, 0);
         break;
     case O::ScenarioPrepare: gWorld.mScenarioManager->Prepare();
         break;
-    case O::ScenarioApplyPendingEffects: gWorld.mScenarioManager->ApplyPendingEffects();
+    case O::ScenarioApplyPendingEffects: ee_scenario_en_round(gWorld.mScenarioManager, EE_SCENARIO_MN_APPLY_PENDING, NULL, 0, 0);
         break;
     case O::CommNumHumanPlayers: return gCommunications->GetNumHumanPlayers();
     case O::CommSetPlayerNumber: gCommunications->SetPlayerNumber((unsigned long)a[0]);

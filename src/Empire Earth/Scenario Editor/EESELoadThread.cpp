@@ -28,6 +28,7 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESEARust.h"
 #include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)
@@ -171,8 +172,8 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
     case EE_SCREENS_SELTX_RESUME_GROUP: gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
         return 0;
     case EE_SCREENS_SELTX_WRITE_HEADER: return (int64_t)(unsigned long)fprintf((FILE*)*S(p), "{Version_%ld}\n\n", (long)a[0]);
-    case EE_SCREENS_SELTX_EXPORT_TEXT: return gWorld.mScenarioManager->ExportText(*S(p));
-    case EE_SCREENS_SELTX_IMPORT_TEXT: return gWorld.mScenarioManager->ImportTriggerText(*S(p), (unsigned long)a[0], a[1] != 0);
+    case EE_SCREENS_SELTX_EXPORT_TEXT: return ee_scenario_en_text(gWorld.mScenarioManager, &(*S(p)), true, 0, false);
+    case EE_SCREENS_SELTX_IMPORT_TEXT: return ee_scenario_en_text(gWorld.mScenarioManager, &(*S(p)), false, (unsigned long)a[0], a[1] != 0);
     case EE_SCREENS_SELTX_ERROR_COUNT: return (int64_t)gWorld.mScenarioManager->mImportErrors.size();
     case EE_SCREENS_SELTX_ERROR: return Write(gWorld.mScenarioManager->mImportErrors[(size_t)a[0]], p, a);
     case EE_SCREENS_SELTX_NAME_CHANGED: return UWideString(S(p)->GetFile()) != gWorld.mScenarioManager->mExportFileName;

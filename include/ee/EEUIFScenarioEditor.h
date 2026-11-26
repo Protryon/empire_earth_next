@@ -48,7 +48,6 @@ inline int32_t EESEWrite(void* outBuffer, int32_t inCapacity, const char* inText
     return (int32_t)theLength;
 }
 inline int32_t EESEWrite(void* outBuffer, int32_t inCapacity, const UWideString& inText) { return EESEWrite(outBuffer, inCapacity, (const char*)inText); }
-void EESETriggerJump(unsigned long inKind, unsigned long inSelection);
 extern bool gB4C3220;
 
 class EEUIFScenarioEditor : public UIForm {

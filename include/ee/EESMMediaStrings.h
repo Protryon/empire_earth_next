@@ -14,14 +14,6 @@ public:
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_scenario_en_media_io(this, &inFile, false); }
     // Writes the seven media strings to the saved file; returns the first error
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_scenario_en_media_io(this, &outFile, true); }
-    // 0x1c5783 (`ret 0x10`; EECampaign::ListScenarioMedia 0x28cc2e: the scenario file, the media file list, the
-    // error text, a flag; returns bool; provisional name)
-    // Appends the scenario's sound and map picture files (lower case; the movie is not listed) to the list and each
-    // missing file's error text to outError; returns false if one is missing
-    // (ee_scenario entry.rs: the search of each, GetMediaFile 0x1c5828, in the data path: the movie in Movies, the sound
-    // in Sounds as .wav then .mp3, the map picture in Scenarios, with the campaign prefix on request; the error text
-    // built as a string, where the original's sprintf into outError's buffer overran it for long names)
-    bool ListMediaFiles(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError, bool inFlag) { return ee_scenario_en_media_files(this, (void*)&inFile, &ioFiles, &outError, inFlag); }
     // the trigger text file's sections by their tag's number (ee_scenario text.rs, with Export 0x1c5d2e, Import
     // 0x1c5dfe and Validate 0x1c5f20): 0 the hints, 1 the aftermath, 2 the history, 3 the instructions
     UWideString& GetSection(unsigned long inSlot)

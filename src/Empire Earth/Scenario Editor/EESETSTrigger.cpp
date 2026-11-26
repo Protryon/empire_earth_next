@@ -22,12 +22,8 @@
 #include "ee/EESMCondition.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EEScreenEvent.h"
+#include "rust/sim/scenario.h"
 
-// Opens the trigger screen's tab of the entry right-clicked in a combo box (this one and the effects' scenario combo
-// boxes, EESETSEScenarioComboBox): which tab and entry is ee_screens editor_trigger.rs' (the condition list's first
-// object condition sends the object conditions to the object tab); the tab is checked without its event (the
-// sequence: editor_trigx.rs trigger_jump)
-void EESETriggerJump(unsigned long inKind, unsigned long inSelection) { ee_screens_trgx_trigger_jump(inKind, inSelection); }
 
 // The trigger screen whole in Rust (ee_screens editor_trigger.rs): the constructor (0x59393b), the destructor
 // (0x595fde), Sort, MoveDown, MoveUp, Delete, UpdateSecondConditionRow, UpdateSecondEffectRow, Duplicate, Activate,
@@ -59,7 +55,7 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
     void** theOut = static_cast<void**>(p[2]);
     EESMTrigger* t = static_cast<EESMTrigger*>(p[0]);
     switch (inOp) {
-    case EE_SCREENS_SETR_OP_GET_NAMES: gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0])); return 0;
+    case EE_SCREENS_SETR_OP_GET_NAMES: ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_NAMES, (unsigned long)(EE_SCENARIO_NAMES_TRIGGERS), 0, 0, &(*static_cast<std::vector<UWideString>*>(p[0]))); return 0;
     case EE_SCREENS_SETR_OP_NEW_EVENT: *static_cast<UIEvent**>(p[0]) = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR); return 0;
     case EE_SCREENS_SETR_OP_RELEASE_EVENT: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
     case EE_SCREENS_SETRX_SET_NAME: t->SetName(SetrBytes(p[1], i[0])); return 0;
@@ -74,10 +70,10 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETRX_EFFECT_DELAY: return (int32_t) static_cast<EESMTEffectWrapper*>(p[0])->mDelay;
     case EE_SCREENS_SETRX_EFFECT_INDEX: return (int32_t) static_cast<EESMTEffectWrapper*>(p[0])->mEffectIndex;
     case EE_SCREENS_SETRX_EFFECT_OPERATOR: return (int32_t) static_cast<EESMTEffectWrapper*>(p[0])->mOperator;
-    case EE_SCREENS_SETRX_SET_CONDITION_OPERATOR: t->SetConditionOperator((unsigned long)i[0], (long)i[1]); return 0;
+    case EE_SCREENS_SETRX_SET_CONDITION_OPERATOR: ee_scenario_trigger_member(t, EE_SCENARIO_TRM_SET_OPERATOR, 0, (int64_t)((unsigned long)i[0]), (long)i[1], 0); return 0;
     case EE_SCREENS_SETRX_SET_EFFECT_OPERATOR: t->SetEffectOperator((unsigned long)i[0], (long)i[1]); return 0;
-    case EE_SCREENS_SETRX_DELETE_CONDITION: t->DeleteCondition((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SETRX_DELETE_EFFECT: t->DeleteEffect((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SETRX_DELETE_CONDITION: ee_scenario_trigger_member(t, EE_SCENARIO_TRM_DELETE, 0, (int64_t)((unsigned long)i[0]), 0, 0); return 0;
+    case EE_SCREENS_SETRX_DELETE_EFFECT: ee_scenario_trigger_member(t, EE_SCENARIO_TRM_DELETE, 1, (int64_t)((unsigned long)i[0]), 0, 0); return 0;
     case EE_SCREENS_SETRX_FORMAT_REMOVE:
         sprintf(sSetrText, "%s %s", (const char*)SetrBytes(p[1], i[0]), (const char*)static_cast<UITextLabel*>(p[0])->GetText(0));
         return 0;
@@ -98,8 +94,8 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_DURATION: t->SetConditionDuration((unsigned long)(long)i[0]); return 0;
     case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_LOOPING: t->SetIsLooping(i[0] != 0); return 0;
     case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_CINEMATIC: t->SetIsInCinematic(i[0] != 0); return 0;
-    case EE_SCREENS_SETRX_SET_CONDITION: t->SetCondition((unsigned long)i[0], i[1] != 0, (unsigned long)i[2]); return 0;
-    case EE_SCREENS_SETRX_SET_EFFECT: t->SetEffect((unsigned long)i[0], (long)i[1], (unsigned long)i[2]); return 0;
+    case EE_SCREENS_SETRX_SET_CONDITION: ee_scenario_trigger_member(t, EE_SCENARIO_TRM_SET, 0, (int64_t)((unsigned long)i[0]), i[1] != 0, (int64_t)((unsigned long)i[2])); return 0;
+    case EE_SCREENS_SETRX_SET_EFFECT: ee_scenario_trigger_member(t, EE_SCENARIO_TRM_SET, 1, (int64_t)((unsigned long)i[0]), (int64_t)(unsigned long)((long)i[1]), (int64_t)((unsigned long)i[2])); return 0;
     }
     return 0;
 }

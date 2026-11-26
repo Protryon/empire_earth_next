@@ -182,7 +182,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     // the game's
     case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->TriggerSubSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
-    case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
+    case EE_SCREENS_SH_TRIGGER_JUMP: ee_screens_trgx_trigger_jump((unsigned long)a, (unsigned long)b); break;
     case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION: EEShellTriggers()->TriggerSubOp(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SEOB_UPDATE_SELECTION); break;
     case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SETS_SCREEN_STORE); break;
     case EE_SCREENS_SH_COPY_FIRST_TO_ALL: static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL); break;

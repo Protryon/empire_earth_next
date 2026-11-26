@@ -44,10 +44,6 @@ public:
     // optionally as a percentage of the class or upgrade value; 0 for a NULL unit
     // 0x1c7749; last two slots unused/provisional
     long GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEUnit* inUnit, long inArg4, long inArg5) { return ee_scenario_en_unit_attribute(inAttribute, inPercent, inUnit); }
-    // Picks the unit type to create for the object: the parent's first unit's type, the object's class, or a random
-    // class matching its epoch/family/AI kind/unit set filter; -1 if none
-    // 0x1c6b14: chooses a matching unit class (provisional name)
-    long PickUnitType() { return ee_scenario_en_object_pick_unit_type(this); }
     // Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
     // near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
     // (ee_scenario objeval.rs over the object's list and the world: EESMObjectRead / EESMObjectWrite below; entry.rs adds

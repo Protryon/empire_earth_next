@@ -66,6 +66,7 @@
 #include "rust/game/sim_driver.h"   // EeSimDriverSed
 #include "rust/game/screens.h"
 #include "rust/sim/app.h"
+#include "rust/sim/scenario.h"
 
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
@@ -381,7 +382,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::SmShowDebugIds: return SM->mShowDebugIDs;
     case O::SmSetShowDebugIds: SM->mShowDebugIDs = a[0] != 0;
         break;
-    case O::SmGetNames: SM->GetNames((unsigned long)a[0], *(std::vector<UWideString>*)a[1]);
+    case O::SmGetNames: ee_scenario_en_list(SM, EE_SCENARIO_LS_NAMES, (unsigned long)a[0], 0, 0, (std::vector<UWideString>*)a[1]);
         break;
     case O::NamesNew: return P64(new std::vector<UWideString>());
     case O::NamesCount: return NM->size();
@@ -390,24 +391,24 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::SmFindCondition: return P64(SM->FindConditionByID((long)a[0]));
     case O::SmFindEffect: return P64(SM->FindEffectByID((long)a[0]));
     case O::SmFindObject: return P64(SM->FindObjectByID((long)a[0]));
-    case O::SmObjectIndex: return SM->GetObjectIndex((EESMObject*)a[0]);
+    case O::SmObjectIndex: return (long)ee_scenario_en_list(SM, EE_SCENARIO_LS_INDEX_OF, EE_SCENARIO_LIST_OBJECTS, 0, 0, (EESMObject*)a[0]);
     case O::SmGetTrigger: return P64(SM->GetTrigger((unsigned long)a[0]));
     case O::SmGetObject: return P64(SM->GetScenarioObject((unsigned long)a[0]));
     case O::SmGetArea: return P64(SM->GetArea((unsigned long)a[0]));
-    case O::SmExportText: return SM->ExportText(*(FSFileSpec*)a[0]);
-    case O::SmImportText: return SM->ImportTriggerText(*(FSFileSpec*)a[0], (unsigned long)a[1], a[2] != 0);
+    case O::SmExportText: return ee_scenario_en_text(SM, (FSFileSpec*)a[0], true, 0, false);
+    case O::SmImportText: return ee_scenario_en_text(SM, (FSFileSpec*)a[0], false, (unsigned long)a[1], a[2] != 0);
     case O::SmClearImportErrors: SM->mImportErrors.clear();
         break;
     case O::SmImportErrorCount: return SM->mImportErrors.size();
     case O::SmAddTimedEffect: SM->AddTimedEffect((long)a[0], (unsigned long)a[1], false);
         break;
-    case O::SmAddPendingCopy: SM->AddV134Effect(*(EESMEffect*)a[0]);
+    case O::SmAddPendingCopy: ee_scenario_en_round(SM, EE_SCENARIO_MN_ADD_PENDING, (EESMEffect*)a[0], 0, 0);
         break;
     case O::SmNewEntry: SM->NewEntry((unsigned long)a[0]);
         break;
-    case O::SmSortList: SM->SortList((unsigned long)a[0]);
+    case O::SmSortList: ee_scenario_en_list(SM, EE_SCENARIO_LS_SORT, (unsigned long)a[0], 0, 0, NULL);
         break;
-    case O::SmMoveEntry: SM->MoveEntry((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
+    case O::SmMoveEntry: ee_scenario_en_list(SM, EE_SCENARIO_LS_MOVE, (unsigned long)a[0], (unsigned long)a[1], a[2] != 0, NULL);
         break;
     case O::SmDeleteEntry: return SM->DeleteEntry((unsigned long)a[0], (unsigned long)a[1]);
     case O::SmDuplicateEntry: SM->DuplicateEntry((unsigned long)a[0], (unsigned long)a[1]);

@@ -32,10 +32,6 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_scenario_en_trigger_io(this, &outFile, true); }
     // Copies a trigger: texts, entries, the flags, the condition duration and the id
     void Copy(const EESMTrigger& inTrigger) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_COPY, 0, (int64_t)(intptr_t)&inTrigger, 0, 0); }
-    // Deletes a condition entry; the new last one ends the chain
-    void DeleteCondition(unsigned long inIndex) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 0, (int64_t)inIndex, 0, 0); }
-    // Deletes an effect entry; the new last one ends the chain
-    void DeleteEffect(unsigned long inIndex) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 1, (int64_t)inIndex, 0, 0); }
     // Returns condition entry inIndex, or NULL past the end
     // 0x1c9d0e (0 past the end)
     EESMTConditionWrapper* GetCondition(unsigned long inIndex) { return (EESMTConditionWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 0, (int64_t)inIndex, 0, 0); }
@@ -48,11 +44,6 @@ public:
     // (trigger.rs evaluate over the entries, trigger_members.rs; entry.rs adds the simulation capture's SMTE record)
     // 0x1c9ab5 (runs the effects when the conditions hold; provisional name)
     void Evaluate(float inTime) { ee_scenario_en_trigger_evaluate(this, inTime); }
-    void SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 0, (int64_t)inIndex, inNot, (int64_t)inCondition); }
-    // Sets condition entry inIndex's operator (appending an entry after the last when it gets one)
-    // 0x1ca2c3 (appends a wrapper after the last)
-    void SetConditionOperator(unsigned long inIndex, long inOperator) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 0, (int64_t)inIndex, inOperator, 0); }
-    void SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 1, (int64_t)inIndex, (int64_t)(unsigned long)inDelay, (int64_t)inEffect); }
     // Sets effect entry inIndex's operator (appending an entry after the last when it gets one)
     // 0x1ca3c1 (appends a wrapper after the last)
     void SetEffectOperator(unsigned long inIndex, long inType) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 1, (int64_t)inIndex, inType, 0); }

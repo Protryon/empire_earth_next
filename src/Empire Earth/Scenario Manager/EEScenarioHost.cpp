@@ -30,6 +30,7 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "rust/sim/app.h"
+#include "rust/sim/scenario.h"
 
 namespace {
 
@@ -65,7 +66,7 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
     case EE_SCENARIO_READ_OBJECT_EXISTS: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA) != NULL;
     case EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->GetIsSelectOnMap();
-    case EE_SCENARIO_READ_OBJECT_PICK: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
+    case EE_SCENARIO_READ_OBJECT_PICK: return ee_scenario_en_object_pick_unit_type(gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA));
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
     }
     return EESMObjectRead(theContext, inOp, inA, inB, inC, inD);   // the objects' and units' reads
