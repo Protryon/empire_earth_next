@@ -35,23 +35,23 @@ pub(crate) fn game_logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out:
         return None;
     }
     // the compositions' calls out reach the private state's ops here too
-    let out = |o: Op, a: isize, b: isize, c: isize, d: isize| prv_op(o, a, b).unwrap_or_else(|| out(o, a, b, c, d));
-    prv_op(op, a, b).or_else(|| logic_op(op, a, b, c, d, &out))
+    let out = |o: Op, a: isize, b: isize, c: isize, d: isize| prv_op(o, a, b, c).unwrap_or_else(|| out(o, a, b, c, d));
+    prv_op(op, a, b, c).or_else(|| logic_op(op, a, b, c, d, &out))
 }
 
 /// [`prv_op`] in the game only (as [`game_logic_op`]).
-pub(crate) fn game_prv_op(op: Op, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn game_prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     if !ee_won_net::cppnet::bound() {
         return None;
     }
-    prv_op(op, a, b)
+    prv_op(op, a, b, c)
 }
 
 /// The ops whose C++ cases were one call answered in Rust (R6 WON round 39; those cases are gone): InitLogic's on the
 /// lobby's private state (LobbySetVersionStatus, LobbyResetFirewallTest, LobbySetBehindFirewall, LobbySetTOUTimes and
 /// LobbyGetTOUTimes, the first four gone too: lobbyprv.rs), and the Account, Init and Ping hosts' references and op
 /// reads over the network objects (cppnet.rs: the classes' table the game binds).
-pub(crate) fn prv_op(op: Op, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::lobbyprv::{self as prv, EeWonLobbyPrvField as F};
     use ee_won_net::cppnet;
     let p = a as *mut std::ffi::c_void;
@@ -60,6 +60,14 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize) -> Option<isize> {
         Op::Release => cppnet::ref_release(p),
         Op::OpStatus => return Some(cppnet::op_status(p) as isize),
         Op::OpKilled => return Some(cppnet::op_killed(p) as isize),
+        // `((RustServerOp*)a)->GetNum(b, c)`
+        Op::OpNum => {
+            let n = ee_won_net::cppcore::host_op_of(p).map_or(0, |h| {
+                // SAFETY: the op's live Rust op
+                unsafe { ee_won_net::hostop::ee_won_hostop_num(h, b as i32, c as i64) }
+            });
+            return Some(n as isize);
+        }
         Op::SetVersionStatus => prv::ee_won_lobbyprv_set(F::VersionStatus, a as i32 as i64),
         Op::ResetFirewallTest => prv::ee_won_lobbyprv_reset_firewall(),
         Op::SetBehindFirewall => prv::ee_won_lobbyprv_set(F::BehindFirewall, (a != 0) as i64),

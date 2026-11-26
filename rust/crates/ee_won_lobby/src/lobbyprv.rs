@@ -877,17 +877,17 @@ mod tests {
         let mut x = 0u8;
         let me = &mut x as *mut u8 as *mut core::ffi::c_void;
         call(me as usize, EeWonLobbyPrvCall::Construct, 0, 0, &|_, _| 0);
-        assert_eq!(prv_op(LOp::SetVersionStatus, 100002, 0), Some(0));
+        assert_eq!(prv_op(LOp::SetVersionStatus, 100002, 0, 0), Some(0));
         assert_eq!(ee_won_lobbyprv_get(F::VersionStatus), 100002);
-        prv_op(LOp::SetBehindFirewall, 2, 0);
+        prv_op(LOp::SetBehindFirewall, 2, 0, 0);
         assert_eq!((ee_won_lobbyprv_get(F::BehindFirewall), ee_won_lobbyprv_get(F::FirewallTestDone)), (1, 1));
-        prv_op(LOp::ResetFirewallTest, 0, 0);
+        prv_op(LOp::ResetFirewallTest, 0, 0, 0);
         assert_eq!(ee_won_lobbyprv_get(F::FirewallTestDone), 0);
-        prv_op(LOp::SetTOUTimes, 5, 9);
+        prv_op(LOp::SetTOUTimes, 5, 9, 0);
         let (mut s, mut g) = (0i32, 0i32);
-        prv_op(LOp::TOUTimes, &mut s as *mut i32 as isize, &mut g as *mut i32 as isize);
+        prv_op(LOp::TOUTimes, &mut s as *mut i32 as isize, &mut g as *mut i32 as isize, 0);
         assert_eq!((s, g), (5, 9));
-        assert_eq!(prv_op(LOp::Exit, 0, 0), None);
+        assert_eq!(prv_op(LOp::Exit, 0, 0, 0), None);
         // InitAuth's list: cleared, read; the flag cleared
         ee_won_lobbyprv_set(F::HashFilesSet, 1);
         let (_, log) = run(EeWonLobbyPrvCall::InitAuth, 7, c"a.dat, b.dat".as_ptr() as isize, &|_| 0);

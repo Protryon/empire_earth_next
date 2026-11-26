@@ -120,7 +120,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::HttpGetSetCache: ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL, ee_won_http_cache_global(B(WONAPICore::GetDefaultFileDirectory()), WONAPICore::GetDefaultFileDirectory().size())); return 0;
     case O::HttpGetSetPromotionCompletion: R(a)->SetCompletion(new ShellCompletion(aLogic, EeWonLogicShellDone::InitPromotionImage)); return 0;
     case O::SessionAddOp: HttpSessionAddOp(aLogic->Slot<HTTPSession>(kInitSession), R(a)); return 0;
-    case O::OpNum: return (intptr_t)R(a)->GetNum((int)b, c);
     case O::SaveTOU: return InitSaveTOU(b == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath(), R(a)->GetBytes(EE_WON_HTTPDOC_DOCUMENT, b));
     case O::BroadcastDocument: LobbyBroadcastEvent(GotHTTPDocumentEvent(R(a)), true); return 0;
     case O::DocBytes: {
