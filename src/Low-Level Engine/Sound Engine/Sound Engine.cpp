@@ -16,11 +16,9 @@
 // made for every valid sound plug-in of the plug-in table, kErrorNotFound when none loads: ee_audio sound mixers.rs)
 long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow) { return ee_sound_initialize(&inDirectory, inWindow); }
 
-// ---- the C++ the Rust objects reach (rust/crates/ee_audio/src/sound sys.rs)
+// ---- the C++ the Rust objects reach (rust/crates/ee_audio/src/sound sys.rs: ESVerify and the floating-point control
+// are ee_base's, called there)
 extern "C" {
-void ee_soundcpp_verify(const char* inExpression, uint32_t inLine) { ESVerify(__FILE__, inLine, inExpression); }
-void ee_soundcpp_fp_precision53() { UMSetFloatingPointPrecision(kFPPrecision53); }
-void ee_soundcpp_fp_check() { ee_util_fp_check(); }
 void ee_soundcpp_path_reference(void* inPath) { static_cast<FSPath*>(inPath)->Reference(); }
 void ee_soundcpp_path_dereference(void* inPath) { static_cast<FSPath*>(inPath)->Dereference(); }
 // FindFile on the path (NULL: not found; a spec the path returned with an error leaks, as before)
