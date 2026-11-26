@@ -111,6 +111,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEComputerPlayer.h"
+#include "ee/EEMiniMap.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EESaveLoad.h"
 #include "ee/RTSMousePointer.h"
