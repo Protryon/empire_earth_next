@@ -61,7 +61,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
-    case H::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     case H::WrapSetText: static_cast<MSButtonBase*>(t)->mText->SetText(*(const GUIString*)a); return 0;
     case H::WrapWidth: return static_cast<MSButtonBase*>(t)->mText->GetWidth();
     case H::WrapWidthOf: return static_cast<MSButtonBase*>((Component*)a)->mText->GetWidth();
@@ -122,18 +121,11 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         if (f) f->AddRef();
         return (intptr_t)f;
     }
-    // MSMessageBox::Msg's statements (shell_msgbox.rs ee_won_msgbox_run)
+    // MSMessageBox::Msg's making of the box and its window and its kind op (shell_msgbox.rs ee_won_msgbox_run; the
+    // window's calls and the focus are gamewin.rs msgbox_op's since R6 WON GUI round 38)
     case H::MsgBoxNew: return (intptr_t)WONShellNew(EeWonShellKind::MsMessageBox, a);
     case H::MsgWinNew: return (intptr_t)CreateNativeWindow();
-    case H::MsgWinParent: ((Window*)a)->SetParent((Window*)b); return 0;
-    case H::MsgWinTitle: ((Window*)a)->SetTitle(*(const GUIString*)b); return 0;
-    case H::MsgWinStyle: ((Window*)a)->SetStyle((int)b); return 0;
-    case H::MsgWinCreate: ((Window*)a)->Create(WONRectangle(0, 0, (int)b, (int)c)); return 0;
-    case H::MsgWinAdd: ((Window*)a)->AddComponent((Component*)b); return 0;
     case H::MsgShellOp: return WONShell::Op((Component*)a, (EeWonShellOp)b);
-    case H::MsgFocus: ((Component*)a)->RequestFocus(); return 0;
-    case H::MsgRunDialog: return ((Window*)a)->RunDialog((Component*)b);
-    case H::MsgWinClose: ((Window*)a)->Close(); return 0;
     default: return 0; // the component's, button's and other widgets' calls: their Rust objects (shell.rs Sh)
     }
 }
