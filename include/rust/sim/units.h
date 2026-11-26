@@ -21018,36 +21018,6 @@ int64_t ee_units_rust_goal(int32_t op,
                            EeUnitsGoalIo *io,
                            const EeUnitsGoalHost *host);
 
-extern long ee_units_file_read_u32(void *file, uint32_t *v);
-
-extern long ee_units_file_read_i32(void *file, int32_t *v);
-
-extern long ee_units_file_read_f32(void *file, float *v);
-
-extern long ee_units_file_read_bool(void *file, uint8_t *v);
-
-extern long ee_units_file_read_u16(void *file, uint16_t *v);
-
-extern long ee_units_file_read_bytes(void *file,
-                                     uint8_t *data,
-                                     unsigned long len,
-                                     unsigned long *read);
-
-extern long ee_units_file_write_u32(void *file, uint32_t v);
-
-extern long ee_units_file_write_i32(void *file, int32_t v);
-
-extern long ee_units_file_write_f32(void *file, float v);
-
-extern long ee_units_file_write_bool(void *file, uint8_t v);
-
-extern long ee_units_file_write_u16(void *file, uint16_t v);
-
-extern long ee_units_file_write_bytes(void *file,
-                                      const uint8_t *data,
-                                      unsigned long len,
-                                      unsigned long *written);
-
 /// `EESavePrimitive(*file, op, io)` (ee/EEPlayer.h): -1 for another operation.
 ///
 /// # Safety

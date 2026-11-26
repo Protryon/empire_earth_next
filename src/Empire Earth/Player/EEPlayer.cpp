@@ -458,27 +458,6 @@ int32_t EESavePrimitive(FSFile& theFile, int32_t inOp, EeUnitsPlayerSaveIo* io)
     return ee_units_save_primitive(&theFile, inOp, io);   // ee_units save_prim.rs
 }
 
-// the FSFile overloads the Rust primitives call (ee_units save_prim.rs)
-static FSFile* EEPlayerFile(void* inFile) { return static_cast<FSFile*>(inFile); }
-extern "C" long ee_units_file_read_u32(void* inFile, uint32_t* ioValue) { return EEPlayerFile(inFile)->Read(*ioValue); }
-extern "C" long ee_units_file_read_i32(void* inFile, int32_t* ioValue) { return EEPlayerFile(inFile)->Read(*ioValue); }
-extern "C" long ee_units_file_read_f32(void* inFile, float* ioValue) { return EEPlayerFile(inFile)->Read(*ioValue); }
-extern "C" long ee_units_file_read_bool(void* inFile, uint8_t* ioValue) { return EEPlayerFile(inFile)->Read(*reinterpret_cast<bool*>(ioValue)); }
-extern "C" long ee_units_file_read_u16(void* inFile, unsigned short* ioValue) { return EEPlayerFile(inFile)->Read(*ioValue); }
-extern "C" long ee_units_file_read_bytes(void* inFile, uint8_t* outData, unsigned long inLength, unsigned long* outRead)
-{
-    return EEPlayerFile(inFile)->Read(reinterpret_cast<char*>(outData), inLength, *outRead);
-}
-extern "C" long ee_units_file_write_u32(void* inFile, uint32_t inValue) { return EEPlayerFile(inFile)->Write(inValue); }
-extern "C" long ee_units_file_write_i32(void* inFile, int32_t inValue) { return EEPlayerFile(inFile)->Write(inValue); }
-extern "C" long ee_units_file_write_f32(void* inFile, float inValue) { return EEPlayerFile(inFile)->Write(inValue); }
-extern "C" long ee_units_file_write_bool(void* inFile, uint8_t inValue) { return EEPlayerFile(inFile)->Write(inValue != 0); }
-extern "C" long ee_units_file_write_u16(void* inFile, unsigned short inValue) { return EEPlayerFile(inFile)->Write(inValue); }
-extern "C" long ee_units_file_write_bytes(void* inFile, const uint8_t* inData, unsigned long inLength, unsigned long* outWritten)
-{
-    return EEPlayerFile(inFile)->Write(reinterpret_cast<const char*>(inData), inLength, *outWritten);
-}
-
 int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
     return EESavePrimitive(*static_cast<FSFile*>(inFile), inOp, io);
