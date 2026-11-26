@@ -41869,3 +41869,44 @@ this is the lead's part and the round's.
 - Fix: `EE_SCREENS_TEXT_LABEL_LINES` writes nothing when the form's control is NULL (game_texts.rs, with a test).
 - Lesson: an event posted by a form's own handlers can outlive the form's open; a handler reached through a C++
   shim must tolerate the form's closed state like the Rust toolkit calls do.
+
+## R6 WON lobby and network, round 38: EELobbyPlayer folded into LobbyPlayer, WONLobbyPrv's plain members Rust's, 18 small lobby units and four net units merged, StringParser's list helpers and ConfigParser's driver-only methods the drivers', 138 driver-only members out of the game's headers (ee_won_lobby lobbyprv.rs, modelbuf.rs; tests/won/drv, WONDriver.h; branch rust-wonnet38, 2026-11-25)
+
+Written in round 39: the round 38 docs commit (26237943f) appended the WON GUI round 38 section here by mistake instead
+of this one. The round started from 7472becd5 (round 37 with batch 26); the first lead stopped on a usage limit, the
+resumed lead relaunched both forks (wn38a the lobby list, wn38b the network list) and merged them (b, then a: one
+conflict, LobbyNetworkAdapter.cpp's fold against fork A's merge into WONLobbyPrv.cpp, fork A's kept), then batch 27
+(9e8714175; EEAWonNet ours, EEGlobals theirs, gEEWonNetUI gone from globals.rs).
+
+### What moved
+- EELobbyPlayer folded into LobbyPlayer (2b89300fd): the model kind EePlayer; the slot byte read and written in modelbuf.rs.
+- WONLobbyPrv's plain members lobbyprv.rs's (d45961fe4); 18 small lobby units merged into WONLobbyPrv.cpp (8bff4ce1c,
+  4ce1d83c3: the error screen, run state and logic manager hosts).
+- StringParser's list reads and writes and ConfigParser's driver-only methods move to tests/won (f82290446, 799d14496).
+- LobbyGame's no-op net hooks, CanJoin and LobbyIsValidEmail's declaration gone (e42fcffe9).
+- Four near-empty network units folded (MiscUtil, DirEntityReplyParser, ServerOp, AuthContext: 8cc980851);
+  LobbyUDPManager.cpp and LobbyCompletion.cpp folded into LobbyNetworkAdapter.cpp (d08463b9b), itself merged into
+  WONLobbyPrv.cpp by the forks' merge.
+- A socket op's and a UDP wait's address an IPAddr's value (30ea7056f); the SDK's never-set flags gone (62eee0a33).
+- 138 members only the drivers use leave the game's headers (d00edb5f2: `EE_WON_DRV`, WONDriver.h); WONPing.h gone,
+  WONGameSpySupport.h won_gamespy_test's (f97e89714); WONRouting.h's history comments one index paragraph (135102200).
+
+`port_metrics.py` 7472becd5 -> 7203432d2 (the forks' merge): C++ lines 106,513 -> 105,549 (**-964**: lobby -483, net
+-512 with an overlap), files 337 -> 316 (**-21**), logic 15,304 -> 15,087 (**-217**), classes -3; about two thirds
+cleanup. Over batch 27 (9e8714175 -> bbad0149f, carrying rounds 37 and 38): C++ lines -1,962, files -22, logic -770.
+
+### Problems met
+- The forks' merge: fork B folded LobbyUDPManager.cpp and LobbyCompletion.cpp into LobbyNetworkAdapter.cpp while fork
+  A merged LobbyNetworkAdapter.cpp into WONLobbyPrv.cpp; fork A's merge kept, B's folded text placed in it.
+- globals.rs's symbol count test counted the dead gEEWonNetUI (9d0f6d848: 95).
+
+### Gates (bbad0149f / 9d0f6d848; logs build/w38)
+The builds 0/0, rust gate 6,784 tests after the symbol count fix, won_host_coverage, wontest 185 programs, oracle 2-7,
+oracle and late captures, the saveload matrix, scenario_check 27/27, LAN game and lan_capture_compare identical but two
+text carets, gates.sh GATES PASS.
+
+### Left
+The config object model (taken in round 39), EELobbyConfig; TransferSetSavesPath, SendFileOp and its completion,
+FilterListItem, GlueText, EELobbyColorButton/Chooser, WONLobbyCore.h's declarations, WONLobbyEvents.h's makers,
+WONLobbyPrv's run state; InitLogic's and PingLogic's multi-statement host cases, SetHashFileList's join, WONRouting.h's
+structural rest, LobbyNetworkState; NetworkAdapterListItem and WONLobbyPlatform.h.
