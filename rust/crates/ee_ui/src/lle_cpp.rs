@@ -396,7 +396,6 @@ shims! {
     fn bitmap_set_opacity(b: usize, opacity: f32) = ee_uicpp_bitmap_set_opacity;
     fn bitmap_uvs(b: usize, uvs: EeUiShimF32Out) = ee_uicpp_bitmap_uvs;
     fn bitmap_set_uvs(b: usize, u0: f32, v0: f32, u1: f32, v1: f32, u2: f32, v2: f32, u3: f32, v3: f32) = ee_uicpp_bitmap_set_uvs;
-    fn lock_create(lock: EeUiShimPtrOut) -> bool = ee_uicpp_lock_create;
     fn es_verify(line: u32, expression: EeUiShimText) = ee_uicpp_es_verify;
     fn instance_reference(instance: usize) = ee_uicpp_instance_reference;
     fn instance_dereference(instance: usize) = ee_uicpp_instance_dereference;
@@ -546,6 +545,8 @@ shims! {
     // ui13a: the key predicates (lle_control.rs key_pressed)
     fn entity_long_value(entity: usize) -> c_long = own::entity_long_value;
     fn num_lock_off() -> bool = own::num_lock_off;
+    // the manager's UI lock (TSScheduler::CreateCriticalSection: ee_base's section)
+    fn lock_create(lock: EeUiShimPtrOut) -> bool = own::lock_create;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's
@@ -620,6 +621,16 @@ mod own {
     }
     pub(super) fn key_enter_value() -> bool {
         entity_value(key(EeUiKey::Enter)) != 0
+    }
+
+    /// `TSScheduler::CreateCriticalSection(*lock)`: a new section (always made).
+    ///
+    /// # Safety
+    /// `lock` is a live out pointer.
+    pub(super) unsafe fn lock_create(lock: super::EeUiShimPtrOut) -> bool {
+        // SAFETY: the contract
+        unsafe { *lock.0 = ee_base::ts::ee_ts_section_new() as usize };
+        true
     }
 
     /// A C++ `GEText*`'s text (the class's one member).

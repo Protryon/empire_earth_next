@@ -438,13 +438,9 @@ EE_UI_CASE(obj_bitmap_texture_width) { return theBitmap->GetTexture(ctl->GetScre
 EE_UI_CASE(obj_string_length) { return reinterpret_cast<const UWideString*>(a)->GetLength(); }
 EE_UI_CASE(obj_text_create) { return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); }
 EE_UI_VOID(obj_text_delete) { delete theText; }
-EE_UI_VOID(obj_text_set_font) { theText->SetFont(reinterpret_cast<GEFont*>(b)); }
 EE_UI_CASE(obj_text_length) { return theText->GetText().GetLength(); }
 EE_UI_VOID(obj_text_extent) { *reinterpret_cast<GERectangle*>(f) = theText->GetTextExtent(); }
-EE_UI_VOID(obj_text_copy) { *theText = *reinterpret_cast<GEText*>(b); }
 EE_UI_VOID(obj_text_set_text) { theText->SetText(*reinterpret_cast<const UWideString*>(b)); }
-EE_UI_VOID(obj_text_set_location) { theText->SetLocation(GE2DPoint(f[0], f[1])); }
-EE_UI_VOID(obj_text_set_fg_color) { theText->SetFgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_CASE(obj_draw_clipped_text) { return ctl->GetForm()->DrawClippedText(UIObjHost::Rect(f), theText, ctl); }
 #undef theText
 #undef theBitmap
@@ -643,7 +639,6 @@ EE_UI_CASE(tbl_text_label) { return (intptr_t)static_cast<UITextLabel*>(SC)->Get
 EE_UI_CASE(tbl_text_status) { return (intptr_t)static_cast<UIStatusBar*>(SC)->GetGEText(); }
 #undef SC
 // SetupGEText's two calls (lle_table.rs ee_ui_table_setup_text) on the text a
-EE_UI_VOID(tbl_text_transparent) { reinterpret_cast<GEText*>(a)->SetIsTransparent(true); }
 EE_UI_VOID(tbl_text_fg) { reinterpret_cast<GEText*>(a)->SetFgColor(static_cast<UIControlsTable*>(inObj)->GetTextForeground()); }
 
 // C:\EEX\Low-Level Engine\User Interface\UIEditBox.cpp
@@ -671,7 +666,6 @@ EE_UI_VOID(edit_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b);
 EE_UI_CASE(edit_bar_max) { return theBar->GetSlider()->GetMaxRange(); }
 EE_UI_VOID(edit_virt_set_rectangle) { e->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(edit_virt_process_enter_key) { e->ProcessEnterKey(); }
-EE_UI_VOID(edit_clipboard_set) { PlatClipboardSetText(reinterpret_cast<const char*>(a)); }
 EE_UI_VOID(edit_translated_key) { e->GetForm()->GetManager()->UpdateTranslatedKey(reinterpret_cast<const char*>(a), 1); }
 EE_UI_VOID(edit_text_input_cancel) { PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation()); }
 EE_UI_VOID(edit_base_release_keyboard) { e->UIControl::ReleaseCapturedKeyboard(); }
@@ -679,8 +673,6 @@ EE_UI_CASE(edit_base_mouse_double_pressed) { return e->UIControl::MouseLButtonDo
 EE_UI_VOID(edit_line_delete) { delete theLine; }
 EE_UI_CASE(edit_rhombus_create) { return (intptr_t) new GERhombus(); }
 EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
-EE_UI_VOID(edit_text_set_bg_color) { theText->SetBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(edit_text_set_transparent) { theText->SetIsTransparent(b != 0); }
 #undef theText
 #undef theRhombus
 #undef theLine
@@ -931,14 +923,8 @@ EE_UI_VOID(form_hot_key_set_modifier) { theKey->SetModifier((unsigned long)b, (u
 EE_UI_VOID(form_hot_key_set_always) { theKey->mAlwaysFire = b != 0; }
 // an input entity by key or button a into the slot b (lle_hosts.rs form_entity)
 EE_UI_VOID(form_key_entity_get) { gISKeyboard->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
-EE_UI_CASE(form_keys_ready) { return UIControl::Key(EeUiKey::Tab) != NULL; }
-EE_UI_CASE(form_tab_just_pressed) { return UIControl::Key(EeUiKey::Tab)->JustPressed(); }
-EE_UI_CASE(form_shift_value) { return UIControl::Key(EeUiKey::Shift)->GetValue(); }
 EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
 EE_UI_CASE(form_wheel_event_new) { return (intptr_t) new UIEMouseWheelScroll; }
-EE_UI_CASE(form_mouse_wheel) { return UIManager::GetMouseWheel() != NULL; }
-// the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
-EE_UI_CASE(form_wheel_amount) { return ee_ui_manager_wheel_scroll_amount(UIControl::Key(EeUiKey::MouseWheel)->GetNormalizedValue()); }
 EE_UI_VOID(form_mouse_entity_get) { gISMouse->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_table) { return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a); }
 EE_UI_CASE(form_table_form_index) { return theTable->GetFormIndex(); }
@@ -958,10 +944,6 @@ EE_UI_VOID(form_music_stop) { theForm->GetManager()->StopMusic(); }
 EE_UI_VOID(form_music_start) { theForm->GetManager()->StartMusic(UWideString((const char*)a)); }
 EE_UI_CASE(form_create_form_event) { return (intptr_t)theForm->GetManager()->CreateFormEvent((unsigned long)a); }
 EE_UI_VOID(form_manager_delete) { delete reinterpret_cast<UIFormManager*>(a); }
-EE_UI_CASE(form_now) { return TMGetTime(); }
-EE_UI_VOID(form_lock_delete) { TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); }
-EE_UI_VOID(form_lock_enter) { reinterpret_cast<TSCriticalSection*>(a)->Enter(); }
-EE_UI_VOID(form_lock_leave) { reinterpret_cast<TSCriticalSection*>(a)->Leave(); }
 EE_UI_VOID(form_virt_help_location) { theForm->SetHelpTextPopupLocation(); }
 EE_UI_CASE(form_virt_draw_background) { return theForm->DrawBackground(UIFormRect(f)); }
 EE_UI_CASE(form_rhombus_create) { return (intptr_t) new GERhombus; }
@@ -1146,8 +1128,6 @@ extern "C" void ee_uicpp_bitmap_uvs(uintptr_t inB, float* inUvs)
 { BMP(inB)->GetTextureCoordinatesPerVertex(UVS(inUvs)[0], UVS(inUvs)[1], UVS(inUvs)[2], UVS(inUvs)[3]); }
 extern "C" void ee_uicpp_bitmap_set_uvs(uintptr_t inB, float inU0, float inV0, float inU1, float inV1, float inU2, float inV2, float inU3, float inV3)
 { BMP(inB)->SetTextureCoordinates(GETextureCoordinate(inU0, inV0), GETextureCoordinate(inU1, inV1), GETextureCoordinate(inU2, inV2), GETextureCoordinate(inU3, inV3)); }
-extern "C" bool ee_uicpp_lock_create(uintptr_t* inLock)
-{ return TSScheduler::CreateCriticalSection(*reinterpret_cast<TSCriticalSection**>(inLock)) == keseOK; }
 extern "C" void ee_uicpp_es_verify(uint32_t inLine, EeUiShimText inExpression)
 { ESVerify(__FILE__, inLine, UIShimStd(inExpression).c_str()); }
 extern "C" void ee_uicpp_instance_reference(uintptr_t inInstance)
@@ -1229,9 +1209,6 @@ EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->Updat
 EE_UI_VOID(mgr_set_blending) { static_cast<UIManager*>(inObj)->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, static_cast<UIManager*>(inObj)->GetScreen()); }
 EE_UI_VOID(mgr_texture_release) { reinterpret_cast<GETexture*>(a)->Dereference(); }
 EE_UI_VOID(mgr_bitmap_release) { reinterpret_cast<GEBitmap*>(a)->Dereference(); }
-EE_UI_VOID(mgr_lock_delete) { TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); }
-EE_UI_VOID(mgr_form_lock_enter) { reinterpret_cast<TSCriticalSection*>(a)->Enter(); }
-EE_UI_VOID(mgr_form_lock_leave) { reinterpret_cast<TSCriticalSection*>(a)->Leave(); }
 EE_UI_VOID(mgr_sound_stop) { SOUNDS->Stop(INSTANCE, false); }
 EE_UI_VOID(mgr_sound_unload) { SOUNDS->Unload((long)a); }
 EE_UI_CASE(mgr_sound_load) { return SOUNDS->Load(reinterpret_cast<const char*>(a), 0, 1); }
