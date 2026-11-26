@@ -47,7 +47,8 @@ fn game_op(op: EeWonDirReadOp, obj: *mut c_void, a: isize, b: isize) -> isize {
         return 0;
     }
     // SAFETY: a live LobbyModelObject: its model at its first member
-    let m = unsafe { *((obj as usize + 2 * std::mem::size_of::<usize>()) as *const *const crate::modelobj::EeWonModel) };
+    let m =
+        unsafe { *((obj as usize + 2 * std::mem::size_of::<usize>()) as *const *const crate::modelobj::EeWonModel) };
     let empty = ee_won_gui::guistrobj::ee_won_gstr_empty() as isize;
     // SAFETY: the shell's live model (the calls' contracts as the C++ made them)
     unsafe {

@@ -307,7 +307,9 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             use crate::chatobj::EeWonChatParserText as T;
             let mut n = 0usize;
             // SAFETY: as above
-            let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(a), if b == 0 { T::TargetName } else { T::Text }, &mut n) };
+            let u = unsafe {
+                crate::chatobj::ee_won_chatparser_text(parser(a), if b == 0 { T::TargetName } else { T::Text }, &mut n)
+            };
             held_units(unit_slice(u, n))
         }
         Op::ParserHelp => {
@@ -322,7 +324,11 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             let input = t(b);
             // SAFETY: as above; the input's units
             let r = unsafe {
-                crate::chatobj::ee_won_chatparser_handle_input_list(parser(a).cast_mut(), (*input).buf.text, (*input).buf.length as usize)
+                crate::chatobj::ee_won_chatparser_handle_input_list(
+                    parser(a).cast_mut(),
+                    (*input).buf.text,
+                    (*input).buf.length as usize,
+                )
             };
             isize::from(r)
         }
@@ -330,7 +336,13 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
         Op::FormatTarget => {
             let mut n = 0usize;
             // SAFETY: as above
-            let u = unsafe { crate::chatobj::ee_won_chatparser_text(parser(b), crate::chatobj::EeWonChatParserText::TargetName, &mut n) };
+            let u = unsafe {
+                crate::chatobj::ee_won_chatparser_text(
+                    parser(b),
+                    crate::chatobj::EeWonChatParserText::TargetName,
+                    &mut n,
+                )
+            };
             let target = held_units(unit_slice(u, n));
             let r = format(res(a), target);
             release(target);
@@ -354,7 +366,11 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                     append(&mut s, c);
                 } else {
                     let mut n = 0usize;
-                    let u = crate::chatobj::ee_won_chatparser_text(p, crate::chatobj::EeWonChatParserText::TargetName, &mut n);
+                    let u = crate::chatobj::ee_won_chatparser_text(
+                        p,
+                        crate::chatobj::EeWonChatParserText::TargetName,
+                        &mut n,
+                    );
                     let target = held_units(if n != 0 { std::slice::from_raw_parts(u, n) } else { &[] });
                     append(&mut s, target);
                     release(target);
@@ -403,12 +419,16 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             0
         }
         // SAFETY: two live text rows' texts
-        Op::ItemTextCompare => read(GRead::CompareNoCase, unsafe { *item_text(a) } as isize, unsafe { *item_text(b) } as isize, 0, 0),
+        Op::ItemTextCompare => {
+            read(GRead::CompareNoCase, unsafe { *item_text(a) } as isize, unsafe { *item_text(b) } as isize, 0, 0)
+        }
         // SAFETY: a live text row's text
         Op::TextItemIs => isize::from(read(GRead::Compare, unsafe { *item_text(a) } as isize, b, 0, 0) == 0),
         // SAFETY: a live text row's colour
         // SAFETY: a live text row's colour
-        Op::ItemGetColor => (unsafe { *((a as usize + EE_WON_TEXT_ITEM_COLOR_AT) as *const std::ffi::c_long) }) as isize,
+        Op::ItemGetColor => {
+            (unsafe { *((a as usize + EE_WON_TEXT_ITEM_COLOR_AT) as *const std::ffi::c_long) }) as isize
+        }
         Op::ItemSetColor => {
             // SAFETY: as above
             unsafe { *((a as usize + EE_WON_TEXT_ITEM_COLOR_AT) as *mut std::ffi::c_long) = b as std::ffi::c_long };
@@ -640,7 +660,13 @@ fn dlg_call(d: isize, call: crate::lobbydlg::EeWonLobbyDlgCall, a: isize, b: isi
 
 /// DialogLogic's dialog texts (dlglogic.rs, in the game): the status dialog's texts and status, the OK/Cancel
 /// dialog's texts and buttons.
-pub(crate) fn dlglogic_op(op: crate::dlglogic::EeWonDlgLogicOp, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
+pub(crate) fn dlglogic_op(
+    op: crate::dlglogic::EeWonDlgLogicOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> Option<isize> {
     use crate::dlglogic::EeWonDlgLogicOp as L;
     use crate::lobbydlg::EeWonLobbyDlgCall as C;
     use crate::resource::EeWonLobbyRes as Res;

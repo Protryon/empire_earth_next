@@ -1438,11 +1438,19 @@ pub(crate) fn game_text_call(call: EeWonPersistCall, t1: &[u8], t2: &[u8], a: i6
 /// A text argument as the call's text (`LobbyPersistIn(Txt(t))`; NULL: the empty text).
 fn text_in(t: isize) -> EeWonPersistText {
     if t == 0 {
-        return EeWonPersistText { text: std::ptr::null(), count: 0, unit_size: ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR as u32 };
+        return EeWonPersistText {
+            text: std::ptr::null(),
+            count: 0,
+            unit_size: ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR as u32,
+        };
     }
     // SAFETY: a live text
     let b = unsafe { &(*(t as *const ee_won_gui::guistrobj::EeWonGstr)).buf };
-    EeWonPersistText { text: b.text, count: b.length as usize, unit_size: ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR as u32 }
+    EeWonPersistText {
+        text: b.text,
+        count: b.length as usize,
+        unit_size: ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR as u32,
+    }
 }
 
 /// `LobbyPC2(c, Txt(t1), Txt(t2), a)` (`out` the text answer's count, or NULL).
