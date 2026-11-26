@@ -62,14 +62,6 @@ pub enum EeWonNetOp {
     Lock8Enter,
     /// `mLock8->Leave()`
     Lock8Leave,
-    /// `mLobbyWindow->Close(true)`
-    LobbyWindowClose,
-    /// `mLobbyWindow->mClosed`
-    LobbyWindowClosed,
-    /// `delete mLobbyWindow`
-    LobbyWindowDelete,
-    /// `mLobbyWindow->Virtual18()`
-    LobbyWindowVirtual18,
     /// `delete mLobby`
     LobbyDelete,
     /// `mLobby->Pump((unsigned long)a, 0)`
@@ -349,7 +341,6 @@ pub struct EeWonNetObjects {
     pub dir_servers: *mut c_void,
     pub auth_servers: *mut c_void,
     pub lobby: *mut c_void,
-    pub lobby_window: *mut c_void,
     pub user: *mut c_void,
     pub servers: *mut c_void,
     pub motd_op: *mut c_void,
@@ -370,7 +361,6 @@ impl Default for EeWonNetObjects {
             dir_servers: n,
             auth_servers: n,
             lobby: n,
-            lobby_window: n,
             user: n,
             servers: n,
             motd_op: n,
@@ -1035,10 +1025,6 @@ impl EeWonNet {
         // SAFETY: the object's slot
         !unsafe { self.slot(s).read() }.is_null()
     }
-    fn lobby_window(&self) -> bool {
-        // SAFETY: the object's slot
-        !unsafe { (*self.objects()).lobby_window }.is_null()
-    }
     fn lobby(&self) -> bool {
         // SAFETY: the object's slot
         !unsafe { (*self.objects()).lobby }.is_null()
@@ -1225,11 +1211,7 @@ impl EeWonNet {
     /// The destructor's body.
     fn destruct(&self) {
         self.ignore_close.set(true);
-        if self.lobby_window() {
-            self.op0(Op::LobbyWindowClose);
-            while self.op0(Op::LobbyWindowClosed) == 0 {}
-            self.op0(Op::LobbyWindowDelete);
-        }
+        // The original closed and deleted its lobby window (+0x24) here; the game never makes one (R6 WON round 40).
         self.op0(Op::LobbyDelete);
         self.games.borrow_mut().clear();
         self.rooms.borrow_mut().clear();
@@ -2293,10 +2275,7 @@ impl EeWonNet {
                 }
             }
             Call::FnCFFF2 => {
-                // Fix (kept): test the window that is called (this used to test mLobby).
-                if self.lobby_window() {
-                    self.op0(Op::LobbyWindowVirtual18);
-                }
+                // The original called its lobby window's Virtual18; the game never makes the window (R6 WON round 40).
             }
             Call::SelectServer => {
                 let units: Vec<u32> = (0..b as usize).map(|i| *(a as *const WChar).add(i) as u32).collect();

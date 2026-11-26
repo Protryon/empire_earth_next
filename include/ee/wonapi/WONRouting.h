@@ -681,18 +681,6 @@ inline void HttpSessionKillAll(HTTPSession* inSession) { ee_won_http_session_kil
 inline RustServerOp* NewDnsTestOp(const std::string& inHost) { return new RustServerOp(ee_won_dnstest_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size())); }
 
 
-// The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
-class WONLobbyWindow {
-public:
-    virtual void Virtual04();
-    virtual void Virtual08();
-    virtual ~WONLobbyWindow();              // +0x14
-    virtual void Virtual18();
-    void Close(bool inFlag);                // base exe 0x6a2220
-
-    bool mClosed;                           // +0x04 (the base dtor waits for it after Close)
-};
-
 // A Rust object since net round 16 (rust/crates/ee_won_net/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
 // +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
