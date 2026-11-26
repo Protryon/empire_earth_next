@@ -75,30 +75,10 @@ long EESetCivBuilderButtonBlinking(bool inBlinking)
     return ee_screens_cb_set_blinking(inBlinking);
 }
 
-long CivBuilderEditCivilization()
-{
-    return ee_screens_cb_edit_civilization();
-}
-
-long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
-{
-    return ee_screens_cb_create_civilization(inCivilization, inReload);
-}
-
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 {
     return ee_screens_cb_save_civilization(reinterpret_cast<const uint8_t*>((const char*)inName), strlen(inName),
                                            inOverwrite);
-}
-
-void CivBuilderEditCurrentCivilization()
-{
-    ee_screens_cb_edit_current();
-}
-
-void CivBuilderFreeCivilization()
-{
-    ee_screens_cb_free_civilization();
 }
 
 // the questions' Yes (DisplayQuestion's callbacks): the file written over, the selected file deleted, the changes
