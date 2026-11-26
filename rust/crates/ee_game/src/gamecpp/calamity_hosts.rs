@@ -57,7 +57,7 @@ pub extern "C" fn ee_gamecpp_contagion_near(unit: u64, radius: f32, list: *mut c
     let cx = unit as P;
     let mut at = Ge3DPoint::default();
     h(O::UnPosition, cx, &[ptr(&mut at)]);
-    if hp(O::CxContainer, cx, &[]) != 0 {
+    if hp(O::EcContainer, cx, &[]) != 0 {
         return 0;
     }
     let area = near_area(at, radius);

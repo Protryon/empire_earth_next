@@ -70,7 +70,7 @@ fn major() -> i64 {
 }
 
 fn minor() -> i64 {
-    h(O::SaveMinorVersion, 0, &[])
+    h(O::FwSaveMinor, 0, &[])
 }
 
 /// EEPSaveGameHeader::Load: the header read from a file (the versions are the header's own).
@@ -152,8 +152,8 @@ pub extern "C" fn ee_gamecpp_ps_trim_auto_saves(
     max: c_ulong,
 ) -> c_long {
     let files = owned(O::EntrySpecVecNew, O::PsSpecsDelete);
-    let file = owned(O::FileSpecNew, O::PsSpecDelete);
-    let dir = owned(O::FileSpecNew, O::PsSpecDelete);
+    let file = owned(O::FileSpecNew, O::DxDelete);
+    let dir = owned(O::FileSpecNew, O::DxDelete);
     h(O::PsSpecSetDirectory, dir.0, &[directory as i64]);
     let mut r = h(O::EntrySpecFirstFile, dir.0, &[pattern as i64, pa(file.0)]);
     while r == PF_OK {
@@ -250,7 +250,7 @@ pub extern "C" fn ee_gamecpp_ps_load_from_directory(
     directory: *const c_void,
     resume: bool,
 ) -> c_long {
-    let file = owned(O::FileSpecNew, O::PsSpecDelete);
+    let file = owned(O::FileSpecNew, O::DxDelete);
     let mut r = open_save_file(file.0, true, name as P, directory as P);
     if r != PF_OK {
         return r as c_long;
@@ -277,7 +277,7 @@ pub extern "C" fn ee_gamecpp_ps_save_game(
     quiet: bool,
     directory: *const c_void,
 ) -> c_long {
-    let file = owned(O::FileSpecNew, O::PsSpecDelete);
+    let file = owned(O::FileSpecNew, O::DxDelete);
     // the original reads the physics CT count into a local it never uses (0x14d080)
     h(O::CommCTsProcessed, 0, &[]);
     let mut r = open_save_file(file.0, false, name as P, directory as P);
@@ -294,13 +294,13 @@ pub extern "C" fn ee_gamecpp_ps_save_game(
 /// first for a save); the load/save error message set on failure.
 fn open_save_file(file: P, loading: bool, name: P, directory: P) -> i64 {
     let mut r = PF_OK;
-    h(O::PsSpecSetStartupVolume, file, &[]);
+    h(O::FileSpecSetVolumeStartup, file, &[]);
     h(O::PsSpecSetStartupDirectory, file, &[pa(directory)]);
     h(O::PsSpecSetFile, file, &[pa(name)]);
     let access = if loading { PS_READ } else { PS_WRITE };
     if access == PS_WRITE {
         h(O::UsgDelete, file, &[]);
-        r = h(O::PsSpecCreate, file, &[]);
+        r = h(O::FileSpecCreate, file, &[]);
         if r != PF_OK {
             if r == PF_FAILED {
                 h(O::PsMessageString, 0, &[PS_IDS_INVALID_FILE_NAME]);
@@ -495,7 +495,7 @@ pub extern "C" fn ee_gamecpp_ps_check_saved_options(
 
 fn slot<'a>(options: P, i: i64) -> &'a EeAppOptionsPlayerFields {
     // SAFETY: an options' player slot's plain members
-    unsafe { &*rec(O::OptPlayerFields, hp(O::OptPlayer, options, &[i])) }
+    unsafe { &*rec(O::C11PlayerFields, hp(O::OptPlayer, options, &[i])) }
 }
 
 /// `EEValidateSaveGameFile`: whether a file holds a save this build can load; on failure the error message set (the
@@ -632,7 +632,7 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
     let mut result = false;
     h(O::PsStWriteLock, st, &[]);
     h(O::PsStInit, st, &[]);
-    if h(O::UiInScenarioEditor, 0, &[]) != 0 {
+    if h(O::EoInScenarioEditor, 0, &[]) != 0 {
         tail(st).mInScenarioEditor = true;
     }
     if header_load(header.0, header_file) == PF_OK {
@@ -837,7 +837,7 @@ fn restore_players(st: P, helper: P) -> i64 {
                     // SAFETY: the slot's plain members (the original copies the slot, sets the type, copies it back)
                     unsafe {
                         (*rec::<EeAppOptionsPlayerFields>(
-                            O::OptPlayerFields,
+                            O::C11PlayerFields,
                             hp(O::OptPlayer, options, &[i as i64 - 1]),
                         ))
                         .mType = 4
@@ -899,7 +899,7 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
             }
             ee_base::ustring::ee_ustring_set_legacy_text_load(false);
         }
-        h(O::PsSpecDelete, found, &[]);
+        h(O::DxDelete, found, &[]);
     }
     r as c_long
 }

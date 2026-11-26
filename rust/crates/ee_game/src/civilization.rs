@@ -368,7 +368,7 @@ pub extern "C" fn ee_gamecpp_wonder_countdown(team: usize, out: *mut c_ulong) ->
 /// `EETeam::GetVictoryState` (`EEVCWonder`'s): 1 (won) when the team's countdown has run out, outside cinematics.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_wonder_state(team: usize) -> c_long {
-    if h(O::DwInCinematic, 0, &[]) != 0 {
+    if h(O::RrCinematic, 0, &[]) != 0 {
         return 0;
     }
     let mut value: c_ulong = 0;

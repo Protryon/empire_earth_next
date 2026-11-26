@@ -194,7 +194,7 @@ pub extern "C" fn ee_gamecpp_pph_load(
             let pj = hp(O::PsPphPlayerAt, helper, &[j]);
             // SAFETY: the player's record
             if j != i
-                && h(O::PphIsAllied, pj, &[pa(pi)]) != 0
+                && h(O::MpPlAlliedWith, pj, &[pa(pi)]) != 0
                 && unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pj)).mSharedLOS }
             {
                 player_op(pj as u64, EE_UNITS_LISTS_ALLIES, ListOp::Add(pi as u64));
@@ -223,7 +223,7 @@ fn load_player(helper: P, file: Pf, major: c_ulong, minor: c_ulong, v: [i64; 2])
     };
     // an unknown player type (a corrupt save) makes no player: the load fails instead of calling through NULL
     r = if pl == 0 { PF_FAILED } else { h(O::PphPlayerLoad, pl, &[v[0], v[1], pa(file.0)]) };
-    let cp = if pl != 0 { hp(O::PlComputerPlayer, pl, &[]) } else { 0 };
+    let cp = if pl != 0 { hp(O::EgComputer, pl, &[]) } else { 0 };
     // port: a computer player's engine from 0.251, from 0.253 the next engine's AI id after it; an AI the manifest
     // no longer lists fails the load; a seat saved with the deleted C++ classic plays the manifest's "classic"
     if r == PF_OK && kind == 1 && cp != 0 && (major > 0 || minor >= 251) {
@@ -339,7 +339,7 @@ pub extern "C" fn ee_gamecpp_pph_save(
         if r == PF_OK {
             r = h(O::PphPlayerSave, pl, &[major as i64, minor as i64, pa(file.0)]);
         }
-        let cp = hp(O::PlComputerPlayer, pl, &[]);
+        let cp = hp(O::EgComputer, pl, &[]);
         if r == PF_OK && kind == 1 {
             // port: the computer player's engine (Load: from 0.251)
             r = file.write_u8(h(O::PphCpEngine, cp, &[]) as u8);
@@ -378,8 +378,8 @@ pub extern "C" fn ee_gamecpp_pph_save(
 
 /// GetPlayerType: 0 human, 1 computer, 3 both (asserts when neither).
 fn player_type(pl: P) -> c_long {
-    let computer = hp(O::PlComputerPlayer, pl, &[]) != 0;
-    let human = h(O::PphHasHuman, pl, &[]) != 0;
+    let computer = hp(O::EgComputer, pl, &[]) != 0;
+    let human = h(O::SsPlHasHuman, pl, &[]) != 0;
     h(O::PphVerifyPlayerType, 0, &[(computer || human) as i64]);
     if computer && human {
         return 3;
@@ -721,7 +721,7 @@ pub extern "C" fn ee_gamecpp_pch_save(major: c_ulong, minor: c_ulong, file: *mut
     let n = h(O::VecCalamitiesCount, active, &[]);
     file.write_long(n as c_long);
     for i in 0..n {
-        let calamity = hp(O::VecCalamitiesAt, active, &[i]);
+        let calamity = hp(O::VecCalamityAt, active, &[i]);
         let mut offset: c_long = 0;
         if h(O::PchClassIndex, calamity, &[&mut offset as *mut c_long as usize as i64]) == 0 {
             h(O::PchVerifyClassIndex, 0, &[]);

@@ -126,7 +126,7 @@ pub extern "C" fn ee_gamecpp_ambient_load(manager: *mut c_void, file: *mut c_voi
     let mut record = [0u8; RECORD_SIZE];
     h(O::EaFileOpen, f, &[]);
     h(O::EaSeed, m, &[]);
-    let mut result = h(O::EaFileReadCount, f, &[ptr(&mut count)]);
+    let mut result = h(O::MpFileReadUlong, f, &[ptr(&mut count)]);
     if result == 0 {
         h(O::EaResize, m, &[count as i64]);
         for _ in 0..count {
@@ -195,7 +195,7 @@ pub extern "C" fn ee_gamecpp_ambient_count_unit(counts: *mut EeAppAmbientCounts,
     }
     // SAFETY: the unit's record, copied
     let r = unsafe { *rec::<EeUnitsRtsUnitFields>(O::UnRts, u) };
-    if h(O::EaPlayerEpoch, local, &[]) < EPOCH_ATOMIC_WW1 as i64 {
+    if h(O::FxPlCurrentEpoch, local, &[]) < EPOCH_ATOMIC_WW1 as i64 {
         return;
     }
     let towns = player_op(local as u64, EE_UNITS_LISTS_TOWNS, ListOp::Len) as i64;

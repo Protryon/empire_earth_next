@@ -235,10 +235,10 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             set_unit(io.slot, io.id);
         }
         EE_APP_CAMERA_OP_REFERENCE => {
-            h(O::EcReference, unit, &[]);
+            h(O::CgUnitReference, unit, &[]);
         }
         EE_APP_CAMERA_OP_DEREFERENCE => {
-            h(O::EcDereference, unit, &[]);
+            h(O::CgUnitDereference, unit, &[]);
         }
         EE_APP_CAMERA_OP_UNIT_STATE => {
             io.id = if unit == 0 {
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             } else {
                 unit_state(
                     true,
-                    h(O::EcHitPoints, unit, &[]) as c_long,
+                    h(O::RoUnitHitPointsValue, unit, &[]) as c_long,
                     h(O::EcTileXRaw, unit, &[]) as c_long,
                     h(O::DkTileY, unit, &[]) as c_long,
                 )
@@ -267,14 +267,14 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             }
         }
         EE_APP_CAMERA_OP_FOLLOW_RATE => {
-            io.flag = complex != 0 && !on(O::EcInCinematic);
+            io.flag = complex != 0 && !on(O::RrCinematic);
             if io.flag {
-                io.x = hd(O::EcVelocity, complex, &[], &[]) * hd(O::EcGameSpeed, 0, &[], &[]);
+                io.x = hd(O::EcVelocity, complex, &[], &[]) * hd(O::FwWorldSpeed, 0, &[], &[]);
             }
         }
         EE_APP_CAMERA_OP_HIDDEN => {
             io.flag = unit != 0
-                && hp(O::UnPlayer, unit, &[]) != hp(O::EcCurrentPlayer, 0, &[])
+                && hp(O::UnPlayer, unit, &[]) != hp(O::TkCurrentPlayer, 0, &[])
                 && h(O::EcIsSeen, unit, &[]) == 0;
         }
         EE_APP_CAMERA_OP_KEY_COUNT => io.id = keys().len() as u32,
@@ -288,8 +288,8 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             io.id = switches(
                 crate::gamecpp::globals::get!(gFreeCamera),
                 on(O::EcFarRearClipping),
-                on(O::EcInCinematic),
-                on(O::EcOrthographic),
+                on(O::RrCinematic),
+                on(O::RoOrthographic),
                 on(O::EcHasMap),
             );
         }
@@ -313,8 +313,8 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             io.flag = h(O::EcLocationOnLine, 0, &[cptr(&io.line), ptr(&mut io.point)]) != 0;
         }
         EE_APP_CAMERA_OP_VIEWPORT => {
-            io.x = hd(O::EcViewportXCenter, 0, &[], &[]);
-            io.y = hd(O::EcViewportYCenter, 0, &[], &[]);
+            io.x = hd(O::MpViewXCenter, 0, &[], &[]);
+            io.y = hd(O::MpViewYCenter, 0, &[], &[]);
             io.z = hd(O::EcViewportHalfHeight, 0, &[], &[]);
         }
         EE_APP_CAMERA_OP_VIEWPORT_CAMERA => {
@@ -322,7 +322,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             io.point.y = hd(O::EcViewportCameraY, 0, &[], &[]);
             io.point.z = hd(O::EcViewportCameraZ, 0, &[], &[]);
         }
-        EE_APP_CAMERA_OP_FRONT_CLIPPING => io.x = hd(O::DkFrontClipping, 0, &[], &[]),
+        EE_APP_CAMERA_OP_FRONT_CLIPPING => io.x = hd(O::MpViewFrontClip, 0, &[], &[]),
         EE_APP_CAMERA_OP_SET_CLIPPING => {
             hf(O::EcSetFrontClipping, 0, &[], &[io.x]);
             hf(O::EcSetRearClipping, 0, &[], &[io.y]);

@@ -346,8 +346,8 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         // the class table's size; the world's unit i0; a unit referenced, released (the game's shared cases)
         _ if key == EE_SCREENS_GA_OP_CLASS_COUNT => ClassView::count(&token) as i64,
         _ if key == EE_SCREENS_GA_OP_WORLD_UNIT => h(O::WorldUnit, 0, &[i[0] as c_ulong as i64]),
-        _ if key == EE_SCREENS_GA_OP_UNIT_REFERENCE => h(O::PwUnitReference, p, &[]),
-        _ if key == EE_SCREENS_GA_OP_UNIT_RELEASE => h(O::PwUnitDereference, p, &[]),
+        _ if key == EE_SCREENS_GA_OP_UNIT_REFERENCE => h(O::CgUnitReference, p, &[]),
+        _ if key == EE_SCREENS_GA_OP_UNIT_RELEASE => h(O::CgUnitDereference, p, &[]),
         // the network's and the editor's statements the game's cases already make word for word
         _ if key == EE_SCREENS_GAH_N_WON_CLEAR => h(O::WonNetClearGameList, 0, &[]),
         _ if key == EE_SCREENS_GAH_N_WON_REJOIN => h(O::SsWonRejoinRoom, 0, &[]),
@@ -361,11 +361,11 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_SAVE_ERROR) => h(O::UiShowLoadSaveError, 0, &[]),
         (EE_SCREENS_GA_OP_EDITOR, EE_SCREENS_GA_E_DELETE_FILE) => h(O::PsMemFileDelete, p, &[]),
         _ if key == EE_SCREENS_GAH_E_NEW_SPEC => h(O::FileSpecNew, 0, &[]),
-        _ if key == EE_SCREENS_GAH_E_DELETE_SPEC => h(O::PsSpecDelete, p, &[]),
+        _ if key == EE_SCREENS_GAH_E_DELETE_SPEC => h(O::DxDelete, p, &[]),
         _ if key == EE_SCREENS_GAH_E_NEW_MEMORY => h(O::PsMemFileNew, 0, &[]),
-        _ if key == EE_SCREENS_GAH_E_SPEC_VOLUME => h(O::PsSpecSetStartupVolume, p, &[]),
+        _ if key == EE_SCREENS_GAH_E_SPEC_VOLUME => h(O::FileSpecSetVolumeStartup, p, &[]),
         _ if key == EE_SCREENS_GAH_E_CREATE => {
-            h(O::PsSpecCreate, p, &[]);
+            h(O::FileSpecCreate, p, &[]);
             0
         }
         _ if key == EE_SCREENS_GAH_E_MASTER => {

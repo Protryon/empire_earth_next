@@ -289,7 +289,7 @@ fn load_unit_media(pl: P, button_player_of_unit: bool) {
         let class = unit_class(u);
         if h(O::UcIsLandBuilding, class, &[]) != 0 && cf(complex(u)).mIsBuilt == true {
             let owner = if button_player_of_unit { hp(O::UnPlayer, u, &[]) } else { pl };
-            h(O::PlLoadButtons, owner, &[ucf(unit_class(u)).mUnitType as i64]);
+            h(O::TkClassButtonsLoad, owner, &[ucf(unit_class(u)).mUnitType as i64]);
         }
         u = next_unit(u);
     }
@@ -403,7 +403,7 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     let n = num_players(w);
     for i in 1..n {
         let pi = player(w, i);
-        if pi == 0 || !((pfields(pi).mHackUnitClass as u64) < h(O::UnitClassCount, 0, &[]) as u64) {
+        if pi == 0 || !((pfields(pi).mHackUnitClass as u64) < h(O::DcClassCount, 0, &[]) as u64) {
             continue;
         }
         for j in 1..n {
@@ -501,7 +501,7 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
         unload_foundations(old);
     }
     set_player(w, index as c_long, new);
-    let tech = hp(O::PlTechnologies, new, &[]);
+    let tech = hp(O::EmTechnologies, new, &[]);
     h(O::TechSetPlayer, tech, &[pa(new)]);
     let mut k: i64 = 0;
     while k < h(O::PlNumPending, new, &[]) {
@@ -857,7 +857,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     h(O::PathReset, 0, &[]);
     progress(25);
     if hp(O::WEnvironment, w, &[]) != 0 {
-        let enabled = h(O::DisplayWeatherEffects, 0, &[]) != 0 && h(O::CommIsMultiplayer, 0, &[]) == 0;
+        let enabled = h(O::DisplayWeatherEffects, 0, &[]) != 0 && h(O::DcMultiplayer, 0, &[]) == 0;
         h(O::EnvSetEnabled, hp(O::WEnvironment, w, &[]), &[enabled as i64]);
     }
     if hp(O::WEnvironment, w, &[]) != 0 {
@@ -887,7 +887,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
         if pl == 0 {
             continue;
         }
-        let cp = hp(O::PlComputerPlayer, pl, &[]);
+        let cp = hp(O::EgComputer, pl, &[]);
         if cp != 0 {
             h(O::CpRefreshResourceCenters, cp, &[]);
         } else {
@@ -915,13 +915,13 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     }
     ee_gamecpp_world_load_media(w as *mut c_void);
     progress(28);
-    if h(O::UiInScenarioEditor, 0, &[]) == 0 {
+    if h(O::EoInScenarioEditor, 0, &[]) == 0 {
         h(O::ScenarioPrepare, 0, &[]);
     }
     h(O::ScenarioApplyPendingEffects, 0, &[]);
     progress(29);
     ee_gamecpp_world_rebuild_active(w as *mut c_void);
-    if h(O::UiInScenarioEditor, 0, &[]) == 1 && *wm::<bool>(O::WGameScreenActive, w) == true {
+    if h(O::EoInScenarioEditor, 0, &[]) == 1 && *wm::<bool>(O::WGameScreenActive, w) == true {
         ee_gamecpp_world_set_count(
             w as *mut std::ffi::c_void,
             false,
@@ -971,7 +971,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
     while (i as usize) < super::state::players_len() {
         let pl = super::state::player(i as usize);
         set_player(w, i as c_long, pl);
-        let tree = hp(O::PlTechTree, pl, &[]);
+        let tree = hp(O::TbPlayerTree, pl, &[]);
         h(O::TechSetPlayer, tree, &[pa(pl)]);
         if h(O::TechIsLoaded, tree, &[]) == 0 {
             let o = state_options(st);
@@ -1001,8 +1001,8 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         }
         h(O::TechApplySaved, tree, &[]);
         let mut k: i64 = 0;
-        while k < h(O::UnitClassCount, 0, &[]) {
-            let upgrade = hp(O::PlUpgradeAt, pl, &[k]);
+        while k < h(O::DcClassCount, 0, &[]) {
+            let upgrade = hp(O::DcPlayerUpgrade, pl, &[k]);
             if upgrade == 0 {
                 k += 1;
                 continue;
@@ -1026,7 +1026,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         let mut defer = h(O::SaveHasTowns, 0, &[major, minor]) != 0;
         let mut i: i64 = 0;
         while (i as usize) < super::state::players_len() && defer {
-            let cp = hp(O::PlComputerPlayer, super::state::player(i as usize), &[]);
+            let cp = hp(O::EgComputer, super::state::player(i as usize), &[]);
             defer = cp == 0 || h(O::CpReplaceOnLoad, cp, &[]) == 0;
             i += 1;
         }
@@ -1035,7 +1035,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         while (i as usize) < super::state::players_len() {
             let pl = super::state::player(i as usize);
             h(O::PlRepairPointers, pl, &[major, minor]);
-            let cp = hp(O::PlComputerPlayer, pl, &[]);
+            let cp = hp(O::EgComputer, pl, &[]);
             if cp != 0 && h(O::CpReplaceOnLoad, cp, &[]) == 1 {
                 ee_gamecpp_world_replace_player(
                     w as *mut c_void,
@@ -1107,7 +1107,7 @@ pub extern "C" fn ee_gamecpp_world_unload_media(w: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_world_pause(pause: bool) -> c_long {
     let running =
-        h(O::CommIsServer, 0, &[]) != 0 && h(O::CommCTsProcessed, 0, &[]) > 0 && h(O::CommIsMultiplayer, 0, &[]) == 0;
+        h(O::CommIsServer, 0, &[]) != 0 && h(O::CommCTsProcessed, 0, &[]) > 0 && h(O::DcMultiplayer, 0, &[]) == 0;
     if !running {
         return 0;
     }
@@ -1134,7 +1134,7 @@ pub extern "C" fn ee_gamecpp_world_activate(cx: *mut c_void) {
         return;
     }
     if ee_sim::app::active_ffi::ee_app_active_activate(rts(cx).mUnitID as u32) {
-        h(O::RefUnitReference, cx, &[]);
+        h(O::CgUnitReference, cx, &[]);
     }
 }
 
@@ -1146,7 +1146,7 @@ static UNBORN: std::sync::Mutex<Vec<P>> = std::sync::Mutex::new(Vec::new());
 fn active_refs(id: u32, delta: i32) {
     let cx = hp(O::PwComplexOfSavedId, 0, &[i64::from(id)]);
     for _ in 0..delta.max(0) {
-        h(O::RefUnitReference, cx, &[]);
+        h(O::CgUnitReference, cx, &[]);
     }
     for _ in delta.min(0)..0 {
         h(O::RefUnitDereference, cx, &[]);
@@ -1184,11 +1184,11 @@ pub extern "C" fn ee_gamecpp_world_deactivate(cx: *mut c_void) {
     }
     if rts(cx).mUnitID as u32 == u32::MAX {
         unborn.push(cx);
-        h(O::RefUnitReference, cx, &[]);
+        h(O::CgUnitReference, cx, &[]);
         return;
     }
     if ee_sim::app::active_ffi::ee_app_active_deactivate(rts(cx).mUnitID as u32) {
-        h(O::RefUnitReference, cx, &[]);
+        h(O::CgUnitReference, cx, &[]);
     }
 }
 
@@ -1222,8 +1222,8 @@ pub extern "C" fn ee_gamecpp_world_rebuild_active(w: *mut c_void) {
             || (ucf(unit_class(u)).mIsInactive && !(uf(cx).mHitPoints <= 0));
         if !skip {
             ee_sim::app::active_ffi::ee_app_active_start(rts(cx).mUnitID as u32);
-            h(O::RefUnitReference, cx, &[]);
-            h(O::RefUnitReference, cx, &[]);
+            h(O::CgUnitReference, cx, &[]);
+            h(O::CgUnitReference, cx, &[]);
         }
         u = tile_next(u);
     }
@@ -1404,7 +1404,7 @@ pub extern "C" fn ee_gamecpp_world_place_queued(w: *mut c_void) {
         if hp(O::UnTileNode, u, &[]) == 0 {
             continue;
         }
-        if hp(O::UnTile, u, &[]) != 0 {
+        if hp(O::FxUnitTile, u, &[]) != 0 {
             h(O::UcAddToRegion, unit_class(u), &[pa(u)]);
             if ucf(unit_class(u)).mInfluence != 0 {
                 let (tx, ty) = (rts(u).mTileX, rts(u).mTileY);
@@ -1459,18 +1459,18 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
     }
     let pl = player(world, index);
     let own_slot = prts(pl).mSlot;
-    if h(O::PlIsHuman, pl, &[]) != 0 {
+    if h(O::TbIsHuman, pl, &[]) != 0 {
         h(O::HumanGetName, pl, &[pa(old_name)]);
     }
     prts(pl).mSlot = new_slot;
-    if h(O::PlIsHuman, pl, &[]) != 0 {
+    if h(O::TbIsHuman, pl, &[]) != 0 {
         h(O::HumanSetName, pl, &[name as i64]);
     }
     if prts(pl).mSlot == prts(hp(O::WCurrentPlayerPtr, world, &[])).mSlot {
         let mut u = hp(O::PlFirstUnit, player(world, index), &[]);
         while u != 0 && ucf(unit_class(u)).mUnitType != UNIT_TYPE_TOWN_CENTER {
             let cx = complex(u);
-            if hp(O::UnTile, u, &[]) != 0 || (cx != 0 && hp(O::CxContainer, cx, &[]) != 0) {
+            if hp(O::FxUnitTile, u, &[]) != 0 || (cx != 0 && hp(O::EcContainer, cx, &[]) != 0) {
                 selected = u;
             }
             u = next_unit(u);
@@ -1481,7 +1481,7 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
         super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
         super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
         player_body(pl, pb::EE_UNITS_PLAYER_DO_REFRESH_TERRAIN);
-        h(O::TechUpdateInterface, hp(O::PlTechTree, pl, &[]), &[1]);
+        h(O::TechUpdateInterface, hp(O::TbPlayerTree, pl, &[]), &[1]);
         h(O::UiPostUpdateBackground, 0, &[]);
         h(O::SetCameraFollowing, 0, &[0]);
     }
@@ -1492,7 +1492,7 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
     } else {
         h(O::ClientFastSelect, 0, &[id]);
     }
-    if h(O::PlIsHuman, old, &[]) != 0 {
+    if h(O::TbIsHuman, old, &[]) != 0 {
         h(O::HumanSetName, old, &[pa(old_name)]);
     }
     h(O::StrFree, old_name, &[]);
@@ -1529,12 +1529,12 @@ pub extern "C" fn ee_gamecpp_world_player_by_slot(w: *mut c_void, slot: u8) -> *
 /// `point` is two floats, `out` three.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_world_screen_to_world(point: *const [f32; 2], out: *mut [f32; 3]) {
-    let scale = 1.0f32 / hd(O::ViewportHalfWidth, 0, &[], &[]);
+    let scale = 1.0f32 / hd(O::MpViewHalfWidth, 0, &[], &[]);
     let size = hd(O::ViewportOrthoWidth, 0, &[], &[]) * 0.5;
     // SAFETY: the caller's contract
     let (px, py) = unsafe { ((*point)[0], (*point)[1]) };
-    let x = (px - hd(O::ViewportXCenter, 0, &[], &[])) * scale;
-    let y = (py - hd(O::ViewportYCenter, 0, &[], &[])) * scale;
+    let x = (px - hd(O::MpViewXCenter, 0, &[], &[])) * scale;
+    let y = (py - hd(O::MpViewYCenter, 0, &[], &[])) * scale;
     // SAFETY: as above
     unsafe { *out = [x * size, 0.0, -(y * size)] };
 }

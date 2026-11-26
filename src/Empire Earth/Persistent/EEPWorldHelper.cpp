@@ -165,14 +165,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwChainHead: return P64(reinterpret_cast<RTSUnit*>(&gWorld.mUnits));
     case O::PwTileNodeNext: return P64(RTS->mTileNode->mNext);
     case O::PwNodePrev: return P64(((RTSUnitLink*)p)->mPrev);
-    case O::PwLink: RTS->Link((RTSUnit*)a[0]);
-        break;
     case O::PwComplexOfSavedId: return P64((EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0]));
     case O::PwHandleId: return EEUnitHandleID(CX);
-    case O::PwUnitReference: UNIT->Reference();
-        break;
-    case O::PwUnitDereference: UNIT->Dereference();
-        break;
     case O::PwComplexOfId: return P64(dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)a[0]))));
     case O::PwForestCount: return (int64_t)gContinentManager.GetForests().size();
     case O::PwForestAt: return P64(gContinentManager.GetForests()[a[0]]);
@@ -197,9 +191,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwUnitSetNext: RTS->mNext = (RTSUnit*)a[0];
         break;
-    case O::PwDynComplex: return P64(dynamic_cast<EEComplexUnit*>(UNIT));
     case O::PwCxGoalQueueCount: return (int64_t)CX->mGoalQueues.size();
-    case O::PwCxGoalAt: return P64(CX->mGoalQueues[a[0]].mGoals[a[1]]);
     case O::PwGatherGoalCast: return P64(EEGatherGoalCast((EEUnitGoal*)p));
     case O::PwGatherResource: return P64(((EEUGRust*)p)->GetGatherResource());
     case O::PwGatherStorage: return P64(((EEUGRust*)p)->GetGatherStorage());
@@ -217,7 +209,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwTreeNodeIds: ((EETechTree*)p)->GetNodeIDs(*(std::vector<long>*)a[0]);
         break;
-    case O::PwTreeGet: return P64(((EETechTree*)p)->Get((long)a[0]));
     case O::PwNodeAllowed: return ((EETechTreeNode*)p)->mIsAllowed;
     case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
         break;
@@ -237,7 +228,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PphPlayerLoad: return PL->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
     case O::PphPlayerSave: return PL->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PphHasHuman: return PL->mHumanPlayer != NULL;
     case O::PphVerifyPlayerType: ESVERIFY_AT(a[0] != 0, 274);
         break;
     case O::PphCpSetEngineNext: CP->mEngine = kEECPEngineNext;
@@ -247,7 +237,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
         break;
-    case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
     case O::PphStrNew: return P64(new std::string);
     case O::PphStrDelete: delete &STR;
         break;
@@ -319,7 +308,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PchVerifyActive: ESVERIFY_AT(a[0] != 0, 334);
         break;
     case O::VecCalamitiesCount: return (int64_t)CALAMITIES.size();
-    case O::VecCalamitiesAt: return P64(CALAMITIES[a[0]]);
     case O::PchClassIndex: return USingleton<EECalamityManager>::GetInstance()->GetCalamityClassIndex(CL->mClass, *(long*)a[0]);
     case O::PchVerifyClassIndex: ESVerify(__FILE__, 349, "EECalamityManager::Instance()->GetCalamityClassOffsetToSave(theCurrentCalamityClass, theCurrentClassOffset)");   // the original assert text
         break;
@@ -413,8 +401,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsHdrOptionsFromWorld: HDR->mGameOptions = gWorld.mGameOptions;
         break;
     case O::PsMaxPlayers: return gWorld.mMaxPlayers;
-    case O::PsSpecDelete: delete SPEC;
-        break;
     case O::PsSpecSetDirectory: SPEC->SetDirectory(*(const UString*)a[0]);
         break;
     case O::PsSpecsDelete: delete &SPECS;
@@ -427,13 +413,10 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSpecsEraseFirst: SPECS.erase(SPECS.begin());
         break;
-    case O::PsSpecSetStartupVolume: SPEC->SetVolume(gStartupVolume);
-        break;
     case O::PsSpecSetStartupDirectory: SPEC->SetDirectory(gStartupDirectory + *(const UString*)a[0]);
         break;
     case O::PsSpecSetFile: SPEC->SetFile(*(const UString*)a[0]);
         break;
-    case O::PsSpecCreate: return SPEC->Create();
     case O::PsSpecOpen: return SPEC->Open((unsigned long)a[0]);
     case O::PsSpecOpenAny: return FILE_.Open((unsigned long)a[0]);
     case O::PsFileIsOpen: return FILE_.GetIsOpen();

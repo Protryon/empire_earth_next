@@ -583,7 +583,7 @@ pub extern "C" fn ee_gamecpp_fx_confirm_goal(ask: *mut c_void, queue: u32, tx: i
         return if h(O::FxGoalForcedMove, goal, &[]) != 0 { EeGfxConfirmGoal::Forced } else { EeGfxConfirmGoal::Move };
     }
     let active = hp(O::FxCxActiveGoal, cx, &[]);
-    if active != 0 && h(O::GoalKind, active, &[]) == FX_GOAL_UNLOAD_TRANSPORT {
+    if active != 0 && h(O::EaGoalKind, active, &[]) == FX_GOAL_UNLOAD_TRANSPORT {
         EeGfxConfirmGoal::Unloading
     } else {
         EeGfxConfirmGoal::Other
@@ -734,7 +734,7 @@ pub extern "C" fn ee_gamecpp_fx_goal_facts(_: *mut c_void, unit: u32) -> EeGfxGo
         unit_type: class.mUnitType as u32,
         air_traffic_type: class.mAirTrafficType as i32,
         on_tile: hp(O::FxUnitTile, cx, &[]) != 0,
-        held: hp(O::CxContainer, cx, &[]) != 0,
+        held: hp(O::EcContainer, cx, &[]) != 0,
         queue_count: h(O::CxNumGoalQueues, cx, &[]) as u32,
     }
 }
@@ -749,7 +749,7 @@ pub extern "C" fn ee_gamecpp_fx_goal_count(_: *mut c_void, unit: u32, queue: u32
 pub extern "C" fn ee_gamecpp_fx_goal_step(_: *mut c_void, unit: u32, queue: u32, goal: u32) -> EeGfxGoalStep {
     let g = hp(O::FxQueueGoalAt, goal_unit(unit), &[queue as i64, goal as i64]);
     let mut step = EeGfxGoalStep::default();
-    let kind = h(O::GoalKind, g, &[]);
+    let kind = h(O::EaGoalKind, g, &[]);
     step.kind = kind as u32;
     if kind == FX_GOAL_LOCATION {
         step.auto_waypoint = h(O::FxGoalAutoWaypoint, g, &[]) != 0;
@@ -800,7 +800,7 @@ pub extern "C" fn ee_gamecpp_fx_goal_location(
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_fx_goal_unit_location(_: *mut c_void, unit: u32, on_tile: bool) -> Ge3DPoint {
     let cx = goal_unit(unit);
-    let at = if on_tile { cx } else { hp(O::CxContainer, cx, &[]) };
+    let at = if on_tile { cx } else { hp(O::EcContainer, cx, &[]) };
     position(&cx_location(at))
 }
 

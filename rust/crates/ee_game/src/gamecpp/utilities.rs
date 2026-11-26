@@ -76,12 +76,12 @@ pub extern "C" fn ee_gamecpp_report_load_failure(message: *const c_char, lock: b
     let expected = checksum as P;
     if expected != 0 {
         if lock {
-            h(O::DuWorldReadLock, 0, &[]);
+            h(O::WorldReadLock, 0, &[]);
         }
         let state = hp(O::DuNewChecksum, expected, &[]);
         h(O::DuWorldChecksum, state, &[]);
         if lock {
-            h(O::DuWorldReadUnlock, 0, &[]);
+            h(O::WorldReadUnlock, 0, &[]);
         }
         let total = h(O::DuChecksumTotal, state, &[]) as c_ulong;
         text.extend_from_slice(format!(" Game state checksum: {total} ").as_bytes());
@@ -184,7 +184,7 @@ fn parameters(sound: P, location: P) -> [f32; 3] {
     let mut out = [0f32; 3];
     let volume = hd(O::SoVolume, sound, &[], &[]);
     // the falloff: the graphic sounds' 4 (was EEGameUtilities.cpp's kGraphicSoundFalloff)
-    hf(O::DuSoundParameters, 0, &[pa(location), ptr(&mut out[0]), ptr(&mut out[1]), ptr(&mut out[2])], &[volume, 4.0]);
+    hf(O::FxComputeSound, 0, &[pa(location), ptr(&mut out[0]), ptr(&mut out[1]), ptr(&mut out[2])], &[volume, 4.0]);
     out
 }
 
@@ -202,7 +202,7 @@ pub extern "C" fn ee_gamecpp_play_animation_sound(
     let (loc, go, node) = (location as P, graphic as P, node as P);
     let mut result = node;
     if node != 0 {
-        h(O::DuNodeReference, node, &[]);
+        h(O::NodeReference, node, &[]);
     }
     let anim = animation as i64;
     if start {
@@ -316,11 +316,11 @@ pub extern "C" fn ee_gamecpp_make_click_effect(location: *const c_void, unit: *m
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_first_selected_unit(out: *mut *mut c_void) -> bool {
     let group = hp(O::DuSelectedGroup, 0, &[]);
-    if h(O::DuGroupCount, group, &[]) == 0 {
+    if h(O::FxGroupNumUnits, group, &[]) == 0 {
         return false;
     }
     // SAFETY: the caller's out pointer
-    unsafe { *out = hp(O::DuGroupUnit, group, &[0]) as *mut c_void };
+    unsafe { *out = hp(O::FxGroupUnit, group, &[0]) as *mut c_void };
     true
 }
 
@@ -391,8 +391,8 @@ pub extern "C" fn ee_gamecpp_exit_game() {
         let state = h(O::DuServerState, 0, &[]);
         if state == SERVER_OPEN || state == SERVER_RUNNING || state == SERVER_PAUSED {
             let action = hp(O::DuNewRemoveAll, 0, &[]);
-            h(O::DuPostAction, action, &[]);
-            h(O::DuActionDereference, action, &[]);
+            h(O::EntryPostAction, action, &[]);
+            h(O::EntryDereferenceAction, action, &[]);
         }
     }
 }

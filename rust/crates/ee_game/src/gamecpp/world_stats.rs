@@ -30,7 +30,7 @@ pub fn world_stats_suffix(suffix: c_long) -> String {
 
 // the statistics' C++ calls (statistics.rs's host): the physics random draw, a player's statistics Set and resources
 unsafe extern "C" fn random(_: *mut c_void, low: f32, high: f32) -> f32 {
-    hd(O::WsRandom, 0, &[], &[low, high])
+    hd(O::PhysRandomRange, 0, &[], &[low, high])
 }
 
 unsafe extern "C" fn set(_: *mut c_void, slot: u32, series: c_long, value: c_long) {
@@ -52,7 +52,7 @@ fn record_flags(w: P) -> u32 {
         EE_UNITS_STATS_SHUTDOWN
     } else if unsafe { *rec::<bool>(O::WLoadingSavedGame, w) } {
         EE_UNITS_STATS_LOADING
-    } else if h(O::UiInScenarioEditor, 0, &[]) != 0 && !unsafe { *rec::<bool>(O::WGameScreenActive, w) } {
+    } else if h(O::EoInScenarioEditor, 0, &[]) != 0 && !unsafe { *rec::<bool>(O::WGameScreenActive, w) } {
         EE_UNITS_STATS_EDITOR
     } else {
         0

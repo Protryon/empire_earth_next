@@ -219,7 +219,7 @@ fn random() -> f32 {
 }
 
 fn generate() -> f32 {
-    hd(O::PhysGenerate, 0, &[], &[])
+    hd(O::C11CgRandom, 0, &[], &[])
 }
 
 fn mesh_valid(x: i64, y: i64) -> bool {
@@ -342,7 +342,7 @@ fn find_placement(kl: P, cx: P, x: c_ulong, y: c_ulong) -> Option<GeTransformati
 
 fn host_tiles(host: P) -> *mut c_void {
     let v = hp(O::HostTiles, host, &[]);
-    h(O::VecTilesClear, v, &[]);
+    h(O::MpTileVecClear, v, &[]);
     v as *mut c_void
 }
 
@@ -443,7 +443,7 @@ fn create_storm(kl: P, c: P) -> bool {
     let mut t = GeTransformation::IDENTITY;
     let at = target_location(c);
     let index = klass(kl).mUnitClassIndex as i64;
-    let half = ucf(hp(O::UcAt, 0, &[index])).mTileSize as f32 * 0.5;
+    let half = ucf(hp(O::TkClassAt, 0, &[index])).mTileSize as f32 * 0.5;
     set_position(&mut t, at.x - half, at.y - half, cal(c).mHeight);
     let u = super::calamity_objects::ee_gamecpp_calamity_create_unit(
         c as *mut c_void,
@@ -680,7 +680,7 @@ fn create_volcano(host: P, kl: P, c: P) {
     let mut t = GeTransformation::IDENTITY;
     let at = target_location(c);
     let index = klass(kl).mUnitClassIndex as i64;
-    let uc = hp(O::UcAt, 0, &[index]);
+    let uc = hp(O::TkClassAt, 0, &[index]);
     let half = ucf(uc).mTileSize as f32 * 0.5;
     set_position(&mut t, at.x - half, at.y - half, cal(c).mHeight - 0.9);
     let u = super::calamity_objects::ee_gamecpp_calamity_create_unit(
@@ -900,7 +900,7 @@ fn launch_meteor(kl: P, c: P) {
     let at = target_location(c);
     let offset_x = (0.5 - random()) * klass(kl).mRadius;
     let offset_y = (0.5 - random()) * klass(kl).mRadius;
-    let class = hp(O::UcAt, 0, &[klass(kl).mUnitClassIndex as i64]);
+    let class = hp(O::TkClassAt, 0, &[klass(kl).mUnitClassIndex as i64]);
     let start = Ge3DPoint::new(at.x + offset_x, offset_y + (at.y + 7.0), at.z + 7.0);
     let goal_at = Ge3DPoint::new(start.x, at.y + offset_y, at.z);
     let gaia = hp(O::WorldPlayer, 0, &[0]);
@@ -936,8 +936,8 @@ fn launch_meteor(kl: P, c: P) {
 /// EECCCloaking::CloakUnit 0xafd37: a living capitol that is not already casting casts cloaking on itself, its power
 /// topped up to the cost first.
 fn cloak_unit(c: P, cx: P) {
-    let goal = hp(O::CxGoalState, cx, &[]);
-    if !(uf(cx).mHitPoints > 0) || (goal != 0 && h(O::GoalKind, goal, &[]) == k::CAL_C_GOAL_CAST_CALAMITY) {
+    let goal = hp(O::EaGoalState, cx, &[]);
+    if !(uf(cx).mHitPoints > 0) || (goal != 0 && h(O::EaGoalKind, goal, &[]) == k::CAL_C_GOAL_CAST_CALAMITY) {
         return;
     }
     let cost = h(O::KlCost, hp(O::CalClass, c, &[]), &[]) as c_long;
@@ -1117,7 +1117,7 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         let dropper = complex(caster_unit);
         let mut at = Ge3DPoint::default();
         let drop_target = hp(O::CombatFindDrop, dropper, &[pa(target_unit), ptr(&mut at)]);
-        let class = hp(O::UcAt, 0, &[klass(kl).mUnitClassIndex as i64]);
+        let class = hp(O::TkClassAt, 0, &[klass(kl).mUnitClassIndex as i64]);
         let player = player_id(unit_player(dropper));
         let u = hp(O::UcCreateUnit, class, &[floor(at.x) as i64, floor(at.y) as i64, player as i64, 0, pa(dropper)]);
         h(O::CxSetLauncherClass, complex(u), &[pa(class)]);

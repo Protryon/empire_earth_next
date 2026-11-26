@@ -108,10 +108,7 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     // the options and their slots
     case O::OptFields: return P64(static_cast<EeAppOptionsFields*>(OPT));
     case O::OptPlayer: return P64(&OPT->mPlayers[a[0]]);
-    case O::OptPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(SLOT));
     case O::OptPlayerAssign: *SLOT = *(EEGameOptionsPlayer*)a[0];
-        break;
-    case O::OptPlayerCopyName: SLOT->mName = ((EEGameOptionsPlayer*)a[0])->mName;
         break;
     case O::OptMapType: return P64(&OPT->mMapType);
     case O::OptCampaignNameLength: return OPT->mCampaignName.GetLength();
@@ -146,15 +143,12 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::UiRandomSeed: return gUserInterface->mRandomSeed;
     case O::FileSpecNew: return P64(new FSFileSpec);
-    case O::FileSpecDelete: delete (FSFileSpec*)p;
-        break;
     case O::FileSpecSetVolumeStartup: ((FSFileSpec*)p)->SetVolume(gStartupVolume);
         break;
     case O::FileSpecSetStartupData: ((FSFileSpec*)p)->SetDirectory(gStartupDirectory + "data\\" + (a[0] ? "Saved Games\\" : "Scenarios\\"));
         break;
     case O::FileSpecSetFileW: ((FSFileSpec*)p)->SetFile((const char*)WSTR(0));
         break;
-    case O::FileOpenReadSpec: return ((FSFileSpec*)p)->Open(kFileAccessRead);
     case O::CampaignNew: return P64(new EECampaign);
     case O::CampaignDelete: delete (EECampaign*)p;
         break;
@@ -180,8 +174,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::PlSetCivilizationPoints: PL->SetCivilizationPoints((long)a[0]);
         break;
     case O::ResourceLevelAmount: return EEGetResourceLevel((long)a[0])->mAmounts[a[1]];
-    case O::RulesSpeedCount: return (int64_t)EEGetRules().mGameOptions.mSpeeds.size();
-    case O::RulesSpeedDefault: return EEGetRules().mGameOptions.mSpeedDefault;
     case O::VecPlayersNew: return P64(new std::vector<EEPlayer*>);
     case O::VecPlayersDelete: delete (std::vector<EEPlayer*>*)p;
         break;
@@ -195,10 +187,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::RandomSetSeed: ((URandomIntegers*)p)->SetSeed((long)a[0]);
         break;
     case O::RandomGenerate: return ((URandomIntegers*)p)->Generate((long)a[0], (long)a[1]);
-    case O::LobbyWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
-        break;
-    case O::LobbyWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
-        break;
     case O::LobbyMapTypeScenDefault: gWorld.mLobbyOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
         break;
     case O::CxSetPoolSize: EEComplexUnit::SetPoolSize((unsigned long)a[0], (unsigned long)a[1]);

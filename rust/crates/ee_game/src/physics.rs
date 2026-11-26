@@ -726,7 +726,7 @@ fn end_game(p: P, victory: bool) {
 /// One line of the out-of-synch dump.
 fn put(file: P, line: &str) {
     let text = cstr(line);
-    gc::h(gc::O::FilePuts, file, &[sa(&text)]);
+    gc::h(gc::O::C11CgText, file, &[sa(&text)]);
 }
 
 /// `GetOutOfSynchChecksum`'s dump to "OOS <date>.log".

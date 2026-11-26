@@ -191,7 +191,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::EaSeed: B_AM->mRandom.SetSeed(TMGetTime());
         break;
-    case O::EaFileReadCount: return B_FILE->Read(*(unsigned long*)a[0]);
     case O::EaResize: B_AM->mSounds.resize((size_t)a[0]);
         break;
     case O::EaFileReadBytes: return B_FILE->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
@@ -199,7 +198,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::EaGoalState: return P64(B_CX->mGoalState);
     case O::EaGoalKind: return ((EEUnitGoal*)p)->mKind;
-    case O::EaPlayerEpoch: return B_PL->mTechnologies->mCurrentEpoch;
     case O::EaTownHullContains: return B_PL->GetTown((unsigned long)a[0])->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
     case O::EaForestAt: return P64(gContinentManager.GetForestAt((EEUnit*)a[0]));
     case O::EaForestKind: return ((EEAIForest*)p)->GetResourceKind();
@@ -210,10 +208,8 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EmTechnologies: return P64(B_PL->mTechnologies);
     case O::EmCurrentEpoch: return ((EETechTree*)p)->mCurrentEpoch;
     // the game log (game_log.rs)
-    case O::EgIsHuman: return B_PL->IsHuman();
     case O::EgComputer: return P64(B_PL->mComputerPlayer);
     case O::EgColorIndex: return EEColorTable::FindIndex(B_PL->mColor);
-    case O::EgName: return P64(&B_PL->mName);
     case O::EgCivilizationName: B_TEXT((const char*)B_PL->mCivilization.GetName());
         break;
     case O::EgPersonality: B_TEXT(std::string(EECPPersonality(B_AI).mID).c_str());
@@ -274,7 +270,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
     case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
     case O::DwGameTime: return gPhysics->mGameTime;
-    case O::DwInCinematic: return gWorld.mInCinematic;
     // round 10, lane D: the cheats (cheats.rs) and the civilization (civilization.rs)
     case O::DcStrBytes: return P64((const char*)*(UWideString*)p);
     case O::DcMultiplayer: return gCommunications->GetIsMultiplayerSession();
@@ -307,14 +302,11 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcEraseQueued: B_PL->EraseQueuedImprovements((long)a[0]);
         break;
-    case O::DcCurrentEpoch: return B_PL->mTechnologies->mCurrentEpoch;
     case O::DcSetEpoch: B_PL->SetEpoch((long)a[0]);
         break;
     case O::DcSetHitPoints: B_UN->SetHitPoints((long)a[0]);
         break;
     case O::DcEndGame: gPhysics->EndGame(a[0] != 0);
-        break;
-    case O::DcAddResource: B_PL->AddResource((long)a[0], (long)a[1]);
         break;
     // the app profile's cheat sweep (TEST ONLY)
     case O::DcParse: gCheatCodes->ParseCheatCode(UWideString((const char*)a[0]), *(long*)a[1], *(long*)a[2]);

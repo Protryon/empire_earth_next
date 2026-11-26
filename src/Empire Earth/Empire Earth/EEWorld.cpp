@@ -444,14 +444,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlRepairPointers: PL->RepairPointers((unsigned long)a[0], (unsigned long)a[1]);
         break;
-    case O::PlTechnologies: return P64(PL->mTechnologies);
-    case O::PlTechTree: return P64(PL->GetTechTree());
-    case O::PlUpgradeAt: return P64(PL->mUnitClassUpgrades[a[0]]);
     case O::PlUpgradeLoadMedia: PL->mUnitClassUpgrades[a[0]]->LoadMedia(PL, (long)a[1]);
         break;
     case O::PlUpgradeUnloadMedia: PL->mUnitClassUpgrades[a[0]]->UnloadMedia(PL);
-        break;
-    case O::PlLoadButtons: PL->LoadUnitClassButtons((long)a[0]);
         break;
     case O::PlUnloadClassMedia: PL->UnloadUnitClassMedia((unsigned long)a[0]);
         break;
@@ -472,7 +467,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlCivSetName: PL->mCivilization.SetName(*(UWideString*)a[0]);
         break;
-    case O::PlComputerPlayer: return P64(PL->mComputerPlayer);
     case O::PlRefreshTownGroups: PL->RefreshTownGroups();
         break;
     case O::PlAddOwnSight: PL->AddOwnSight((EEMapTile*)a[0], (long)a[1], (long)a[2]);
@@ -481,7 +475,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlRestartTowns: PL->RestartTowns();
         break;
-    case O::PlIsHuman: return PL->IsHuman();
     case O::HumanGetName: *(UWideString*)a[0] = static_cast<EEHumanPlayer*>(PL)->GetName();
         break;
     case O::HumanSetName: static_cast<EEHumanPlayer*>(PL)->SetName(*(UWideString*)a[0]);
@@ -519,7 +512,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::UnNext: return P64(static_cast<EEUnit*>(UN->mNext));
     case O::UnTileNext: return P64(static_cast<EEUnit*>(UN->mTileNode->mNext));
     case O::UnTilePrev: return P64(static_cast<EEUnit*>(UN->mTileNode->mPrev));
-    case O::UnTile: return P64(UN->mTile);
     case O::UnIsFoundation: return UN->IsFoundation();
     case O::UnLoadMedia: UN->LoadMedia(a[0] != 0);
         break;
@@ -543,16 +535,12 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CxFindContacts: CX->FindContacts();
         break;
     case O::CxPreviousPart: return P64(CX->mPreviousPart);
-    case O::CxContainer: return P64(CX->mContainer);
-    case O::RefUnitReference: UN->Reference();
-        break;
     case O::RefUnitDereference: ((RTSUnit*)p)->Dereference();
         break;
     case O::UcAddToTile: UC->AddToTile((EEUnit*)a[0]);
         break;
     case O::UcAddToRegion: UC->AddToRegion((EEUnit*)a[0]);
         break;
-    case O::UnitClassCount: return EEUnitClassCount();
     case O::LogSkipRemoved: fprintf(stderr, "EE-UNITLIST: placement skips a removed unit (id %08lx, %s, tile %ld,%ld)\n", UN->mUnitID, (const char*)UN->mUnitClass->mName, UN->mTileX, UN->mTileY);
         break;
     case O::LogAfterGone: fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n", ((RTSUnit*)p)->mUnitID);
@@ -585,7 +573,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::UiEditorForm: return P64(gUIManager->GetScenarioEditorForm());
     case O::UiEditorClearSelection: gUIManager->GetScenarioEditorForm()->ClearSelection();
         break;
-    case O::UiInScenarioEditor: return gUIManager->mInScenarioEditor;
     case O::UserInterfacePresent: return gUserInterface != NULL;
     case O::UiPostUpdateBackground: gUserInterface->PostUpdateBackgroundMedia();
         break;
@@ -643,7 +630,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::CommIsServer: return gCommunications->IsServer();
     case O::CommCTsProcessed: return gCommunications->GetNumberOfCTsProcessedInPhysics();
-    case O::CommIsMultiplayer: return gCommunications->GetIsMultiplayerSession();
     case O::CommServer: return P64(dynamic_cast<EEServer*>(gCommunications));
     case O::ServerIsPaused: return ((EEServer*)p)->GetIsGamePaused();
     case O::ServerPause: ((EEServer*)p)->PauseGame();
@@ -745,11 +731,7 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     typedef EeGameCpp O;
     switch (inOp) {
     case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
-    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
     case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
-    case O::ViewportXCenter: return gViewport.GetXCenter();
-    case O::ViewportYCenter: return gViewport.GetYCenter();
-    case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
     default: return EEGameStateOpF(inOp, p, a, f);
     }
     return 0.0;

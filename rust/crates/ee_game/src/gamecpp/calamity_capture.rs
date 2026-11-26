@@ -318,7 +318,7 @@ fn file_bytes(r: &mut Record, file: P) {
     h(O::MemFilePosition, file, &[ptr(&mut length)]);
     r.u32(length as u32);
     if length > 0 {
-        let data = hp(O::MemFileData, file, &[]) as *const u8;
+        let data = hp(O::FxMemoryData, file, &[]) as *const u8;
         // SAFETY: the memory file's buffer holds at least its position's bytes
         r.0.extend_from_slice(unsafe { std::slice::from_raw_parts(data, length as usize) });
     }
@@ -383,7 +383,7 @@ pub extern "C" fn ee_gamecpp_capture_calamity_save(k: *mut c_void, index: c_ulon
     if !active() {
         return;
     }
-    let minor = h(O::SaveMinorVersion, 0, &[]);
+    let minor = h(O::FwSaveMinor, 0, &[]);
     let mut r = Record::default();
     r.u32(0);
     r.u32(index as u32);
@@ -410,7 +410,7 @@ pub extern "C" fn ee_gamecpp_capture_contagion_save() {
     if !active() {
         return;
     }
-    let minor = h(O::SaveMinorVersion, 0, &[]) as c_ulong;
+    let minor = h(O::FwSaveMinor, 0, &[]) as c_ulong;
     let m = hp(O::ContagionRust, 0, &[]) as *mut ee_sim::tech::contagion_store::EeContagionManager;
     let mut r = Record::default();
     // SAFETY: the world's live contagion manager, our copy and memory files

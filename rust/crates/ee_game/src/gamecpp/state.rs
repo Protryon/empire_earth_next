@@ -139,7 +139,7 @@ fn opts<'a>(opt: P) -> &'a mut EeAppOptionsFields {
 
 fn slot_fields<'a>(slot: P) -> &'a mut EeAppOptionsPlayerFields {
     // SAFETY: an EEGameOptionsPlayer's plain members
-    unsafe { &mut *rec(O::OptPlayerFields, slot) }
+    unsafe { &mut *rec(O::C11PlayerFields, slot) }
 }
 
 fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
@@ -313,7 +313,7 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
         h(O::FileSpecSetStartupData, *file, &[1]);
         h(O::FileSpecSetFileW, *file, &[pa(hp(O::OptMapType, opt, &[]))]);
     } else if opts(opt).mLoadType == 4 {
-        h(O::FileSpecDelete, *file, &[]);
+        h(O::FxFileSpecDelete, *file, &[]);
         *file = 0;
         let error = h(O::DataPathFindFile, 0, &[pa(hp(O::OptMapType, opt, &[])), ptr(file)]) as c_long;
         if error != 0 {
@@ -323,8 +323,8 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
                 let error = h(O::DataPathFindFile, 0, &[pa(l.campaign_file.0), ptr(&mut archive_file)]) as c_long;
                 if error == 0 {
                     add_archive(l.archive.0, archive_file);
-                    h(O::FileSpecDelete, archive_file, &[]);
-                    h(O::FileSpecDelete, *file, &[]);
+                    h(O::FxFileSpecDelete, archive_file, &[]);
+                    h(O::FxFileSpecDelete, *file, &[]);
                     *file = 0;
                     h(O::DataPathFindFile, 0, &[pa(hp(O::OptMapType, opt, &[])), ptr(file)]);
                 } else {
@@ -339,7 +339,7 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
         h(O::FileSpecSetFileW, *file, &[pa(hp(O::OptMapType, opt, &[]))]);
     }
     let mut result = false;
-    let error = if *file != 0 { h(O::FileOpenReadSpec, *file, &[]) as c_long } else { 9 };
+    let error = if *file != 0 { h(O::DxOpen, *file, &[]) as c_long } else { 9 };
     if error == 0 {
         if h(O::ValidateSaveGameFile, *file, &[pa(err)]) != 0 {
             if h(O::LoaderLoad, l.loader.0, &[pa(*file)]) != 0 {
@@ -359,7 +359,7 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
         if h(O::OptCampaignNameLength, mine, &[]) > 0 && opts(mine).mCampaignChecksum > 0 {
             h(O::CampaignFileName, l.campaign_file.0, &[pa(mine)]);
             if h(O::CampaignLoad, l.campaign.0, &[pa(l.campaign_file.0), pa(err)]) != 0 {
-                h(O::FileSpecDelete, *file, &[]);
+                h(O::FxFileSpecDelete, *file, &[]);
                 *file = 0;
                 if h(O::DataPathFindFile, 0, &[pa(l.campaign_file.0), ptr(file)]) == 0 {
                     add_archive(l.archive.0, *file);
@@ -397,15 +397,15 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
             }
             player_index = k + 1;
             let pl = player_at(st, player_index);
-            if h(O::PlIsHuman, pl, &[]) != 0 {
+            if h(O::TbIsHuman, pl, &[]) != 0 {
                 h(O::PlSetNameFromSlot, pl, &[pa(l.slot.0)]);
             } else {
                 h(O::PlSetNameFromSlot, pl, &[pa(l.slot.0)]);
-                h(O::CpSetReplaceOnLoad, hp(O::PlComputerPlayer, pl, &[]), &[1]);
+                h(O::CpSetReplaceOnLoad, hp(O::EgComputer, pl, &[]), &[1]);
             }
             copy_slot(l.other.0, opt_slot(mine, i));
             slot_fields(l.other.0).mType = slot_fields(l.slot.0).mType;
-            h(O::OptPlayerCopyName, l.other.0, &[pa(l.slot.0)]);
+            h(O::C11PlayerNameCopy, l.other.0, &[pa(l.slot.0)]);
             copy_slot(opt_slot(mine, i), l.other.0);
             player_index += 1;
         }
@@ -518,7 +518,7 @@ fn create_new(st: P, opt: P, l: &Locals) {
         let pl = player_at(st, i);
         psaved(pl).mChatType = 0;
         for ally in player_list(pl as u64, EE_UNITS_LISTS_ALLIES) {
-            if h(O::PlIsHuman, ally as P, &[]) != 0 {
+            if h(O::TbIsHuman, ally as P, &[]) != 0 {
                 psaved(pl).mChatType = 1;
                 break;
             }
@@ -526,9 +526,9 @@ fn create_new(st: P, opt: P, l: &Locals) {
         i += 1;
     }
     // the speed option's factor (gameoptions.yaml speeds; an unknown option: the default speed's)
-    let speeds = h(O::RulesSpeedCount, 0, &[]) as c_ulong;
+    let speeds = h(O::EoSpeeds, 0, &[]) as c_ulong;
     let speed =
-        if opts(opt).mGameSpeed < speeds { opts(opt).mGameSpeed } else { h(O::RulesSpeedDefault, 0, &[]) as c_ulong };
+        if opts(opt).mGameSpeed < speeds { opts(opt).mGameSpeed } else { h(O::EoSpeedDefault, 0, &[]) as c_ulong };
     tail(st).mGameSpeed = hd(O::RulesSpeedFactor, 0, &[speed as i64], &[]);
     let (mut width, mut height): (c_long, c_long) = (0, 0);
     h(O::OptGetMapDimensions, opt, &[ptr(&mut width), ptr(&mut height)]);
@@ -589,14 +589,14 @@ fn create_new(st: P, opt: P, l: &Locals) {
     if opts(opt).mRevealMap {
         tail(st).mRevealMap = true;
     }
-    h(O::LobbyWriteLock, 0, &[]);
+    h(O::EntryOptionsWriteLock, 0, &[]);
     if opts(opt).mLoadType == 3 {
         // SAFETY: the lobby's options
         let lobby = unsafe { &mut *rec::<EeAppOptionsFields>(O::LobbyOptions, 0) };
         lobby.mLoadType = 1;
         h(O::LobbyMapTypeScenDefault, 0, &[]);
     }
-    h(O::LobbyWriteUnlock, 0, &[]);
+    h(O::EntryOptionsWriteUnlock, 0, &[]);
 }
 
 /// Create's C++ locals (made before the first call, as the C++'s were).
@@ -643,7 +643,7 @@ pub extern "C" fn ee_gamecpp_state_create(st: *mut c_void, opt: *mut c_void, err
     } else {
         create_new(st, opt, &l);
     }
-    h(O::FileSpecDelete, file, &[]);
+    h(O::FxFileSpecDelete, file, &[]);
     drop(l);
     result
 }

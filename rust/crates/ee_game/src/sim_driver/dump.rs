@@ -272,7 +272,7 @@ fn dump_players(o: &mut Out) {
                     s.push_str(&format!(
                         "{}@{},{} ",
                         lu(gc::h(gc::O::RoUnitId, point, &[])),
-                        ld(gc::h(gc::O::DkTileX, point, &[])),
+                        ld(gc::h(gc::O::PkUnitTileX, point, &[])),
                         ld(gc::h(gc::O::DkTileY, point, &[]))
                     ));
                 }
@@ -325,7 +325,7 @@ fn dump_unit(o: &mut Out, u: usize) {
         ld(h(O::DmUnitTypeRaw, u, &[])),
         ld(player),
         f(O::DmUnitHp, u, &[]),
-        ld(gc::h(gc::O::DkTileX, u, &[])),
+        ld(gc::h(gc::O::PkUnitTileX, u, &[])),
         ld(gc::h(gc::O::DkTileY, u, &[]))
     );
     let c = gc::h(gc::O::FxDynComplex, u, &[]) as usize;

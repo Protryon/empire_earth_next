@@ -99,7 +99,7 @@ fn kill(pl: P, all: bool) {
 fn research_all(pl: P) {
     let classes = h(O::DcClassCount, 0, &[]) as c_long;
     for i in 0..classes {
-        let class = hp(O::UcAt, 0, &[i as i64]);
+        let class = hp(O::TkClassAt, 0, &[i as i64]);
         if class == 0 {
             continue;
         }
@@ -142,7 +142,7 @@ fn action(action: CheatAction, player: c_ulong) {
         CheatAction::AdvanceEpoch(epoch) => {
             if epoch < ee_sim::tech::tech_ids::ee_tech_epoch_count() as c_long
                 && epoch > EPOCH_PREHISTORIC
-                && epoch > h(O::DcCurrentEpoch, pl, &[]) as c_long
+                && epoch > h(O::FxPlCurrentEpoch, pl, &[]) as c_long
             {
                 h(O::DcSetEpoch, pl, &[epoch as i64]);
             }
@@ -187,7 +187,7 @@ fn action(action: CheatAction, player: c_ulong) {
             h(O::DcEndGame, 0, &[(if win { local } else { !local }) as i64]);
         }
         CheatAction::AddResource(resource, amount) => {
-            h(O::DcAddResource, pl, &[resource as i64, amount as i64]);
+            h(O::PlAddResource, pl, &[resource as i64, amount as i64]);
         }
         CheatAction::ClearResource(resource) => {
             // SAFETY: the player's record

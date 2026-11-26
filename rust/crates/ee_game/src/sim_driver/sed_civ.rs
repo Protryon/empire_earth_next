@@ -410,15 +410,15 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let spec = user_spec(arg(2));
             let mut line = format!("  file {}", arg(2));
             let mut size: c_ulong = 0;
-            if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0
-                || gc::h(gc::O::EntrySpecLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
+            if gc::h(gc::O::DxOpen, spec, &[]) != 0
+                || gc::h(gc::O::DxLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
             {
                 line += " missing";
             } else {
                 let mut bytes = vec![0u8; size as usize + 1];
                 let mut read: c_ulong = 0;
                 gc::h(
-                    gc::O::FileReadBytes,
+                    gc::O::DtFileReadRecord,
                     spec,
                     &[bytes.as_mut_ptr() as i64, size as i64, &mut read as *mut c_ulong as i64],
                 );

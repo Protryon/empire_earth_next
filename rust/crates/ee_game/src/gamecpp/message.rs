@@ -405,7 +405,7 @@ fn load_or_save_game(m: P) {
     let text = new_str();
     let format = new_str();
     let result;
-    if get::<u8>(m, 1) != 0 && h(O::CommIsServer, 0, &[]) != 0 && h(O::CommIsMultiplayer, 0, &[]) == 0 {
+    if get::<u8>(m, 1) != 0 && h(O::CommIsServer, 0, &[]) != 0 && h(O::DcMultiplayer, 0, &[]) == 0 {
         res(&format, IDS_LOADING);
         h(O::StrFormatS, text.0, &[pa(format.0), pa(hp(O::MsgString, m, &[]))]);
         chat(text.0, 0);
@@ -440,7 +440,7 @@ fn load_unit_data(m: P) {
         let preload = |op: O, pl: P| {
             for i in 1..num_players() {
                 let hack = pfields(pl).mHackUnitClass;
-                if (hack as i64) < h(O::UnitClassCount, 0, &[]) && hp(O::UcAt, 0, &[hack as i64]) != 0 {
+                if (hack as i64) < h(O::DcClassCount, 0, &[]) && hp(O::TkClassAt, 0, &[hack as i64]) != 0 {
                     h(op, 0, &[prts(world_player(i as i64)).mPlayerID as i64, hack as i64]);
                 }
             }
@@ -714,9 +714,9 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         }
         EE_NETMSG_WACT_OPTIONS_LOCK => {
             if i[1] != 0 {
-                h(O::LobbyWriteLock, 0, &[]);
+                h(O::EntryOptionsWriteLock, 0, &[]);
             } else {
-                h(O::LobbyWriteUnlock, 0, &[]);
+                h(O::EntryOptionsWriteUnlock, 0, &[]);
                 h(O::UiPostLobbyUpdateGameOptions, 0, &[]);
             }
         }
@@ -724,11 +724,11 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             // lobby slot i1's field i2 (6 a computer's engine) set to i3, the ping f0
             let slot = Owned::new(O::OptionsPlayerNew, O::OptionsPlayerDelete);
             let value = i[3] as u32;
-            h(O::LobbyWriteLock, 0, &[]);
+            h(O::EntryOptionsWriteLock, 0, &[]);
             h(O::OptPlayerAssign, slot.0, &[pa(hp(O::LobbyOptPlayer, 0, &[i[1]]))]);
             // SAFETY: the slot's plain members
             let s =
-                unsafe { &mut *rec::<crate::app::game_options::EeAppOptionsPlayerFields>(O::OptPlayerFields, slot.0) };
+                unsafe { &mut *rec::<crate::app::game_options::EeAppOptionsPlayerFields>(O::C11PlayerFields, slot.0) };
             match i[2] {
                 6 => {
                     s.mEngine = if (value as i64) < crate::cp_engine::ee_cp_engine_choice_count() as c_ulong as i64 {
@@ -746,7 +746,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
                 _ => {}
             }
             h(O::OptPlayerAssign, hp(O::LobbyOptPlayer, 0, &[i[1]]), &[pa(slot.0)]);
-            h(O::LobbyWriteUnlock, 0, &[]);
+            h(O::EntryOptionsWriteUnlock, 0, &[]);
             h(O::UiPostLobbyUpdatePlayer, 0, &[i[1], i[2]]);
         }
         EE_NETMSG_WACT_POST_CHAT => {
@@ -1035,7 +1035,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_unit_act(i: *const i64, a: *mut c_void, 
             }
         }
         EE_NETMSG_ACT_RALLY_TIME => {
-            if h(O::CxQueueSize, u, &[i[1]]) > 0 {
+            if h(O::FxQueueGoalCount, u, &[i[1]]) > 0 {
                 h(O::CxQueueAddTime, u, &[i[1], 60000]);
             }
         }
@@ -1138,8 +1138,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         EE_NETMSG_PACT_CHAT_TYPE => psaved(pl).mChatType = i[1] as c_ulong,
         EE_NETMSG_PACT_SEND_CHAT => psaved(pl).mSendChatMessage[i[1] as usize] = i[2] != 0,
         EE_NETMSG_PACT_REPORT => {
-            h(O::PlSavedGroupsSet, pl, &[0x14, i[1]]);
-            h(O::PlSavedGroupsSet, pl, &[0x15, i[2]]);
+            h(O::TkStatSet, pl, &[0x14, i[1]]);
+            h(O::TkStatSet, pl, &[0x15, i[2]]);
         }
         EE_NETMSG_PACT_CLEAR_SAVED => {
             // SAFETY: the live player (EEPlayer::ClearSavedGroup)
@@ -1309,7 +1309,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
         h(O::EffSetLocalTo, e, &[player_id as i64]);
     };
     let last_goal = |u: P, q: c_ulong| -> P {
-        if (q as i64) < h(O::CxNumGoalQueues, u, &[]) && h(O::CxQueueSize, u, &[q as i64]) != 0 {
+        if (q as i64) < h(O::CxNumGoalQueues, u, &[]) && h(O::FxQueueGoalCount, u, &[q as i64]) != 0 {
             hp(O::CxQueueBack, u, &[q as i64])
         } else {
             0
@@ -1333,7 +1333,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
         {
             let mut j: c_ulong = 0;
             while (j as i64) < h(O::CxNumGoalQueues, unit, &[]) {
-                if h(O::CxQueueSize, unit, &[j as i64]) == 0 {
+                if h(O::FxQueueGoalCount, unit, &[j as i64]) == 0 {
                     j += 1;
                     continue;
                 }
@@ -1381,7 +1381,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
         }
         if command == 0xbb {
             h(O::GoalLocation, goal, &[ptr(&mut ground)]);
-            if h(O::GoalKind, goal, &[]) == MSG_GOAL_UNLOAD_TRANSPORT {
+            if h(O::EaGoalKind, goal, &[]) == MSG_GOAL_UNLOAD_TRANSPORT {
                 let unload = hp(O::GoalAsUnload, goal, &[]);
                 if unload != 0 {
                     let transport = hp(O::UnloadGoalTransport, unload, &[]);
@@ -1428,7 +1428,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
             continue;
         }
         let goal =
-            if h(O::CxQueueSize, unit, &[index as i64]) > 0 { hp(O::CxQueueBack, unit, &[index as i64]) } else { 0 };
+            if h(O::FxQueueGoalCount, unit, &[index as i64]) > 0 { hp(O::CxQueueBack, unit, &[index as i64]) } else { 0 };
         if goal == 0
             || command == 0xb8
             || ((command != 0xb9 || h(O::GoalHasLocation, goal, &[]) == 0)

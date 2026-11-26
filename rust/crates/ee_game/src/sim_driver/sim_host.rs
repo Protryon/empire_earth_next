@@ -353,7 +353,7 @@ fn first_building(player: c_ulong) -> usize {
     let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
         if gc::h(gc::O::UnComplex, u, &[]) != 0
-            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::RoUnitHitPointsValue, u, &[]) as c_long > 0
             && h(O::UnitIsBuilding, u, &[]) != 0
         {
             return u;
@@ -371,7 +371,7 @@ pub fn flare(player: c_ulong) -> EeSimDriverSpot {
     if human == 0 || spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let (x, y) = (gc::h(gc::O::DkTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
+    let (x, y) = (gc::h(gc::O::PkUnitTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
         ee_sim::units::player_lists::player_list(human as u64, ee_sim::units::player_lists::EE_UNITS_LISTS_ALLIES)
             .into_iter()
@@ -389,7 +389,7 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
     if spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let x = gc::h(gc::O::DkTileX, spot, &[]) as c_long + 6;
+    let x = gc::h(gc::O::PkUnitTileX, spot, &[]) as c_long + 6;
     let y = gc::h(gc::O::DkTileY, spot, &[]) as c_long + 6;
     let manager = gc::hp(gc::O::CalamityManager, 0, &[]);
     let cast =
@@ -504,8 +504,8 @@ pub fn engine_ids() -> Vec<String> {
 
 /// A unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource.
 pub fn unit_value(player: u64, technology: c_long, unit_type: c_ulong) -> c_long {
-    let tree = gc::h(gc::O::PlTechnologies, player as usize, &[]) as usize;
-    let node = if tree != 0 { gc::h(gc::O::PwTreeGet, tree, &[technology as i64]) as usize } else { 0 };
+    let tree = gc::h(gc::O::EmTechnologies, player as usize, &[]) as usize;
+    let node = if tree != 0 { gc::h(gc::O::TkGet, tree, &[technology as i64]) as usize } else { 0 };
     let mut value: c_long = 0;
     if node != 0 && h(O::NodeData, node, &[]) != 0 {
         for r in 2..=6 {
@@ -576,10 +576,10 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
     while u != 0 {
         let c = gc::h(gc::O::UnComplex, u, &[]) as usize;
         if c != 0
-            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::RoUnitHitPointsValue, u, &[]) as c_long > 0
             && !unsafe { (*unit_fields(u)).mStats }.is_null()
             && h(O::ComplexOnMap, c, &[]) != 0
-            && gc::h(gc::O::DkTileX, c, &[]) as c_long != -10000
+            && gc::h(gc::O::PkUnitTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
             && (priests || h(O::ComplexIsPriest, c, &[]) == 0)
             && (missiles || ![missile, torpedo].contains(&category_of(c)))
@@ -609,10 +609,10 @@ fn list_search_sweep() {
         let first = all.len().saturating_sub(64);
         for &a in &all[first..] {
             let ignored = h(O::IgnoredSave, a, &[]) as usize;
-            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::PkUnitTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x, y], &[1.0]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
-            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::PkUnitTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x + 2, y - 2], &[1.5]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
             h(O::IgnoredFree, ignored, &[]);
@@ -637,7 +637,7 @@ fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
     cap::ee_app_capture_exclusive(true);
     let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
-    let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| gc::h(gc::O::UcAt, 0, &[k]) as usize).collect();
+    let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| gc::h(gc::O::TkClassAt, 0, &[k]) as usize).collect();
     let mut classes = Vec::new();
     let mut launchers = Vec::new();
     for &class in &table {
@@ -667,8 +667,8 @@ fn missile_sweep() {
         let first = units.len().saturating_sub(4);
         for (i, &a) in units.iter().enumerate().skip(first) {
             for (k, &class) in classes.iter().enumerate() {
-                if gc::h(gc::O::EcHitPoints, target, &[]) as c_long <= 0
-                    || gc::h(gc::O::DkTileX, target, &[]) as c_long == -10000
+                if gc::h(gc::O::RoUnitHitPointsValue, target, &[]) as c_long <= 0
+                    || gc::h(gc::O::PkUnitTileX, target, &[]) as c_long == -10000
                 {
                     break;
                 }
@@ -677,7 +677,7 @@ fn missile_sweep() {
                     O::ClassCreateUnit,
                     class,
                     &[
-                        gc::h(gc::O::DkTileX, a, &[]),
+                        gc::h(gc::O::PkUnitTileX, a, &[]),
                         gc::h(gc::O::DkTileY, a, &[]),
                         gc::h(gc::O::RoPlayerId, owner, &[]),
                         a as i64,
@@ -723,7 +723,7 @@ fn missile_sweep() {
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120
-                    && gc::h(gc::O::DkTileX, m, &[]) as c_long != -10000
+                    && gc::h(gc::O::PkUnitTileX, m, &[]) as c_long != -10000
                     && !unsafe { (*cx_fields(m)).mGoalState }.is_null()
                 {
                     h(O::ClassStep, class, &[m as i64]);

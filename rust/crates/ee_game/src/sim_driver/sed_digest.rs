@@ -113,7 +113,7 @@ pub fn save_digest(out: &mut Vec<String>) {
 /// the save's list).
 pub fn file_digest(name: &str, out: &mut Vec<String>) {
     let spec = x::scenario_spec(name);
-    if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0 {
+    if gc::h(gc::O::DxOpen, spec, &[]) != 0 {
         out.push("  missing".into());
         gc::h(gc::O::DxDelete, spec, &[]);
         return;
@@ -833,7 +833,7 @@ pub fn players_digest(out: &mut Vec<String>) {
             out.push(format!("  player {p} none"));
             continue;
         }
-        let t = gc::h(gc::O::PlTechTree, q, &[]) as usize;
+        let t = gc::h(gc::O::TbPlayerTree, q, &[]) as usize;
         let caps: Vec<String> = (2..7).map(|i| (h(O::PlayerResourceCap, q, &[i]) as c_long).to_string()).collect();
         let enemies: String = (0..n).map(|j| (h(O::PlayerEnemy, q, &[j as i64]) as c_long).to_string()).collect();
         let mut line = format!(
@@ -856,7 +856,7 @@ pub fn players_digest(out: &mut Vec<String>) {
                 h(O::OptionsPlayerB36, 0, &[p as i64 - 1])
             );
         }
-        let c = gc::h(gc::O::PlComputerPlayer, q, &[]) as usize;
+        let c = gc::h(gc::O::EgComputer, q, &[]) as usize;
         if c != 0 {
             const FLAGS: [O; 8] = [
                 O::ComputerActive,

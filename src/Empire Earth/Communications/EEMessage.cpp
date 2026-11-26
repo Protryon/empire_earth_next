@@ -314,8 +314,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PlIncrementEpic: PL->IncrementEpic();
         break;
-    case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
-        break;
     case O::PlCountQueuedImprovements: return PL->CountQueuedImprovements((unsigned long)a[0], (long)a[1]);
     case O::PlRemoveQueuedImprovement: PL->RemoveQueuedImprovement((long)a[0], (long)a[1], a[2] != 0);
         break;
@@ -336,7 +334,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::FormationDereference: ((EEFormation*)p)->Dereference();
         break;
     // the units, their classes and goals
-    case O::CxQueueSize: return (int64_t)CX->mGoalQueues[a[0]].mGoals.size();
     case O::CxQueueBack: return P64(CX->mGoalQueues[a[0]].mGoals.back());
     case O::CxQueueAddTime: CX->mGoalQueues[a[0]].AddTime((unsigned long)a[1]);
         break;
