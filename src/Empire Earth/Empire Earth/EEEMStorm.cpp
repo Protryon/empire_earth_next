@@ -10,7 +10,6 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 
@@ -25,14 +24,10 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEPathManager.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEStormType.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEEffectManager.h"
-#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp weather.rs)
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)
@@ -44,44 +39,6 @@ UString EEEMStorm::sEnvironmentData("Environment-Data");
 GEColor gStormColor;                        // (read by Step: the environment manager's colour when a rain storm ends)
 
 // (the storms' route planners and shaper, EEStormModifiers.h before: ee_sim::astar modifier_obj.rs)
-
-// Returns the name of a storm type ("Rain", "Snow", "Hurricane", ...), or "Type Not defined" (ee_app storm.rs)
-UWideString EEEMStorm::GetTypeName(long inType)
-{
-    return UWideString(ee_app_storm_type_name(inType));
-}
-
-// Creates a storm of a type for the environment manager at full intensity; any known type starts at once (its
-// members and Begin: ee_game gamecpp weather.rs)
-EEEMStorm::EEEMStorm(long inType, EEEnvironmentManager* inManager)
-    : mManager(inManager)
-{
-    ee_gamecpp_storm_init(this, inType);
-}
-
-// Destroys the storm, cancelling its route request and ending its weather effect
-EEEMStorm::~EEEMStorm()
-{
-    ee_gamecpp_storm_release(this);
-}
-
-// Loads the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
-long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_storm_load(this, &inFile);
-}
-
-// Reconnects the loaded storm to its weather effect and renames it; returns 9 when the effect is missing
-long EEEMStorm::Restore()
-{
-    return ee_gamecpp_storm_restore(this);
-}
-
-// Writes the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
-long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_storm_save(this, &outFile);
-}
 
 // ------------------------------------------------------------------------- round 10, lane D: the storm
 

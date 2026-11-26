@@ -19,8 +19,6 @@ public:
     void Delete(T* inObject) { ee_util_pool_delete(this->mRust, inObject); }
     void DumpStats(bool inToDebugger) { ee_util_pool_dump_stats(this->mRust, typeid(T).name(), inToDebugger); }
     bool Release() { return ee_util_pool_release(this->mRust); }
-    long CountUsed() { return ee_util_pool_count_used(this->mRust); }
-    bool AddChunk() { return ee_util_pool_add_chunk(this->mRust); }
     void GetUsed(std::vector<T*>& outObjects) { ee_util_pool_get_used(this->mRust, &outObjects, &Push); }
     EeUtilPool* Rust() const { return this->mRust; }
 

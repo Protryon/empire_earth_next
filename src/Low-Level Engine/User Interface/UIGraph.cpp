@@ -6,36 +6,13 @@
 // ee_ui_graph_host (UIControl's members, the texts, a line).
 #include <windows.h>
 
-#include "rust/ui/graphobj.h"
-#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
-#include "lle/GELine.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/UIEntity.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIControl.h"
-#include "lle/UIFormManager.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIGraph.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 #define g static_cast<UIGraph*>(inObj)
 #define theText reinterpret_cast<GEText*>(a)

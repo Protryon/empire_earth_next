@@ -36,66 +36,43 @@ public:
     virtual ~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
     void ComputeShorelines(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 7, 0); }
-    void ComputeVertexNormal(unsigned long inX, unsigned long inY)
-        { ee_ge_tm_point_edit(this->mRust, inX, inY, 4, 0, 0.0f); }
+    void ComputeVertexNormal(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 4, 0, 0.0f); }
     void CreateFlatMesh(long inWidth, long inHeight) { ee_ge_tm_create_flat_mesh(this->mRust, inWidth, inHeight); }
     void DereferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 1, 0); }
-    const GE3DPlane& GetBackPlane() const
-        { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 1)); }
-    void GetClosestTile(const GE3DLine& inLine, long& outX, long& outY) const
-        { ee_ge_tm_closest_tile_line(this->mRust, GERust(inLine), &outX, &outY); }
-    void GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const
-        { ee_ge_tm_closest_tile_point(this->mRust, GERust(inPoint), &outX, &outY); }
-    unsigned char GetColorTableIndex(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_point(this->mRust, inX, inY)->color_table_index; }
-    const GE3DPlane& GetFrontPlane() const
-        { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 0)); }
+    const GE3DPlane& GetBackPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 1)); }
+    void GetClosestTile(const GE3DLine& inLine, long& outX, long& outY) const { ee_ge_tm_closest_tile_line(this->mRust, GERust(inLine), &outX, &outY); }
+    void GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const { ee_ge_tm_closest_tile_point(this->mRust, GERust(inPoint), &outX, &outY); }
+    const GE3DPlane& GetFrontPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 0)); }
     unsigned long GetGlobalWaterSetID() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::GlobalWaterSetId); }
-    bool GetIsValidPoint(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_is_valid(this->mRust, inX, inY, false); }
-    bool GetIsValidTile(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_is_valid(this->mRust, inX, inY, true); }
-    bool GetIsWaterTile(unsigned long inX, unsigned long inY) const
-        { return (ee_ge_tm_tile(this->mRust, inX, inY)->water_info & kWaterInfoWaterMask) != 0; }
+    bool GetIsValidPoint(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_valid(this->mRust, inX, inY, false); }
+    bool GetIsValidTile(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_valid(this->mRust, inX, inY, true); }
+    bool GetIsWaterTile(unsigned long inX, unsigned long inY) const { return (ee_ge_tm_tile(this->mRust, inX, inY)->water_info & kWaterInfoWaterMask) != 0; }
     bool GetIsSpaceMap() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceTileCount) > 0; }
-    bool GetIsSpaceTile(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_is_space_tile(this->mRust, inX, inY); }
-    const GE3DPlane& GetLeftPlane() const
-        { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 2)); }
+    bool GetIsSpaceTile(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_space_tile(this->mRust, inX, inY); }
+    const GE3DPlane& GetLeftPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 2)); }
     float GetMeshZ(float inX, float inY) const { return ee_ge_tm_mesh_z(this->mRust, inX, inY); }
     unsigned long GetNumVisibleTiles() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::NumVisibleTiles); }
     unsigned long GetNumVisibleTileRows() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileRows); }
-    GETextureSet* GetRegisteredTextureSet(unsigned long inID) const
-        { return (GETextureSet*)ee_ge_tm_texture_set(this->mRust, inID); }
-    const GE3DPlane& GetRightPlane() const
-        { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 3)); }
+    GETextureSet* GetRegisteredTextureSet(unsigned long inID) const { return (GETextureSet*)ee_ge_tm_texture_set(this->mRust, inID); }
+    const GE3DPlane& GetRightPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 3)); }
     void GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const
         { ee_ge_tm_get_pair(this->mRust, EeGeTmVal::BottomLeftX, EeGeTmVal::BottomLeftY, &outX, &outY); }
     void GetTerrainVisibleTileDimensions(unsigned long& outWidth, unsigned long& outHeight) const
         { ee_ge_tm_get_pair(this->mRust, EeGeTmVal::VisibleTileWidth, EeGeTmVal::VisibleTileHeight, &outWidth, &outHeight); }
-    unsigned long GetTextureSetID(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_tile(this->mRust, inX, inY)->texture_set_id; }
+    unsigned long GetTextureSetID(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->texture_set_id; }
     const GEColor& GetVertexColor(unsigned long inX, unsigned long inY) const
         { return *reinterpret_cast<const GEColor*>(ee_ge_tm_vertex_color(this->mRust, inX, inY)); }
-    GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const
-        { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
-    void GetVisibleTileRow(unsigned long inIndex, long& outY, long& outStartX, long& outEndX) const
-        { ee_ge_tm_visible_row_parts(this->mRust, inIndex, &outY, &outStartX, &outEndX); }
-    float GetVisibleSpaceTilePercentage() const
-        { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
-    float GetVisibleWaterTilePercentage() const
-        { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
-    unsigned char GetWaterInfo(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_tile(this->mRust, inX, inY)->water_info; }
+    GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
+    float GetVisibleSpaceTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
+    float GetVisibleWaterTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
+    unsigned char GetWaterInfo(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->water_info; }
     float GetZ(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->z; }
-    bool Intersects(const GE3DLine& inLine, float& outDistance) const
-        { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
+    bool Intersects(const GE3DLine& inLine, float& outDistance) const { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_ge_tm_load(this->mRust, &inFile); }
     void ReferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 0, 0); }
     long RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
         { return ee_ge_tm_register_color_set_out(this->mRust, inColorSet.data(), inColorSet.size(), &outID); }
-    long RegisterTextureSet(GETextureSet* inTextureSet, unsigned long& outID)
-        { return ee_ge_tm_register_texture_set_out(this->mRust, inTextureSet, &outID); }
+    long RegisterTextureSet(GETextureSet* inTextureSet, unsigned long& outID) { return ee_ge_tm_register_texture_set_out(this->mRust, inTextureSet, &outID); }
     long Save(FSFile& inFile) const { return ee_ge_tm_save(this->mRust, &inFile); }
     void SetColorFromColorTableIndex(unsigned long inX, unsigned long inY, unsigned char inIndex)
         { ee_ge_tm_point_edit(this->mRust, inX, inY, 1, inIndex, 0.0f); }
@@ -104,21 +81,14 @@ public:
     void SetGlobalWaterState(unsigned long inWaterSetID, unsigned long inColorSetID, unsigned long inAnimationPeriod,
                              float inTextureScale)
         { ee_ge_tm_set_global_water_state(this->mRust, inWaterSetID, inColorSetID, inAnimationPeriod, inTextureScale); }
-    void SetIsSpace(unsigned long inX, unsigned long inY, bool inIsSpace)
-        { ee_ge_tm_tile_edit(this->mRust, inX, inY, 6, inIsSpace); }
-    void SetIsWater(unsigned long inX, unsigned long inY, bool inIsWater)
-        { ee_ge_tm_tile_edit(this->mRust, inX, inY, 5, inIsWater); }
-    unsigned int NumSpaceCliffTextures() { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceCliffTextureCount); }
+    void SetIsSpace(unsigned long inX, unsigned long inY, bool inIsSpace) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 6, inIsSpace); }
+    void SetIsWater(unsigned long inX, unsigned long inY, bool inIsWater) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 5, inIsWater); }
     void SetSpaceCliffTextures(std::vector<GETexture*>& inTextures)
         { ee_ge_tm_set_space_cliff_textures(this->mRust, (void* const*)inTextures.data(), inTextures.size()); }
-    void SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID)
-        { ee_ge_tm_tile_edit(this->mRust, inX, inY, 3, inTextureSetID); }
-    void SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount)
-        { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }
-    void SetWaterColorSet(unsigned long inX, unsigned long inY)
-        { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }
-    void SetZ(unsigned long inX, unsigned long inY, float inZ)
-        { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
+    void SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 3, inTextureSetID); }
+    void SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }
+    void SetWaterColorSet(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }
+    void SetZ(unsigned long inX, unsigned long inY, float inZ) { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
     void UpdateFogOfWar(bool inVisible) { ee_ge_tm_update_fog_of_war(this->mRust, inVisible); }
     void UpdateVisibleTerrain(const GETransformation& inCamera, GEViewport& inViewport, unsigned long inWidth,
                               unsigned long inHeight, unsigned long inScreen, bool inOrthographic)

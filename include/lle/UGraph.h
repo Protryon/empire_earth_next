@@ -31,8 +31,7 @@ public:
     long GetMaxY() const { return ee_util_series_range(this->mSeries)->max_y; }
     long GetMinX() const { return ee_util_series_range(this->mSeries)->min_x; }
     long GetMinY() const { return ee_util_series_range(this->mSeries)->min_y; }
-    void SetColor(const GEColor& inColor)
-        { ee_util_series_set_color(this->mSeries, reinterpret_cast<const EeUtilColor*>(&inColor)); }
+    void SetColor(const GEColor& inColor) { ee_util_series_set_color(this->mSeries, reinterpret_cast<const EeUtilColor*>(&inColor)); }
     void SetIsEnabled(bool inIsEnabled) { ee_util_series_set_enabled(this->mSeries, inIsEnabled); }
 
     EeUtilSeries* mSeries;
@@ -50,19 +49,16 @@ public:
     void AddSeries(const UGraphSeries& inSeries) { ee_util_graph_add_series(this->mGraph, inSeries.mSeries); }
     void ClearAllSeries() { ee_util_graph_clear(this->mGraph); }
     // adds to outGraph, per series index of both, the sum of their values at every x either has
-    void CombineGraph(const UGraph& inGraph, UGraph& outGraph)
-        { ee_util_graph_combine(this->mGraph, inGraph.mGraph, outGraph.mGraph); }
+    void CombineGraph(const UGraph& inGraph, UGraph& outGraph) { ee_util_graph_combine(this->mGraph, inGraph.mGraph, outGraph.mGraph); }
     long GetMaxX() const { return ee_util_graph_range(this->mGraph)->max_x; }
     long GetMaxY() const { return ee_util_graph_range(this->mGraph)->max_y; }
     long GetMinX() const { return ee_util_graph_range(this->mGraph)->min_x; }
     long GetMinY() const { return ee_util_graph_range(this->mGraph)->min_y; }
-    const UGraphSeries& GetSeries(unsigned long inIndex) const
-        { return *reinterpret_cast<const UGraphSeries*>(ee_util_graph_series(this->mGraph, inIndex)); }
+    const UGraphSeries& GetSeries(unsigned long inIndex) const { return *reinterpret_cast<const UGraphSeries*>(ee_util_graph_series(this->mGraph, inIndex)); }
     const unsigned long GetSeriesCount() const { return ee_util_graph_count(this->mGraph); }
     // reduces every series to one point per x, keeping the highest y
     void PruneGraph() { ee_util_graph_prune(this->mGraph); }
-    void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled)
-        { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
+    void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled) { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
 
     EeUtilGraph* mGraph;                    // the series and min/max
 };

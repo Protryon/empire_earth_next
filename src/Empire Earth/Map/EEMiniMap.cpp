@@ -10,18 +10,10 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GEViewport.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/GESurface.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEMap.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEMiniMap.h"
-#include "rust/game/gamecpp.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
@@ -44,13 +36,6 @@ EEMiniMap::EEMiniMap(GEScreen* inScreen, EEMap* inMap, EEPlayer* inPlayer)
     : RTSMiniMap(inPlayer, inScreen)
 {
     ee_gamecpp_minimap_construct(this, inMap);
-}
-
-// Redraws the camera's view outline when a map is attached
-void EEMiniMap::RefreshView()
-{
-    if (this->mL12174)
-        this->Refresh();
 }
 
 // ------------------------------------------------------------------------- round 9, lane B: the mini map's bodies' C++ (their

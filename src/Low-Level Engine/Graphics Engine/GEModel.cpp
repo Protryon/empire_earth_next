@@ -15,12 +15,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngineCore.h"
-#include "lle/UString.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
 #include "lle/TSScheduler.h"
@@ -30,36 +27,20 @@
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEPolygonArray.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "GERustMath.h"
-#include "lle/FSMemoryFile.h"
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
 #include "rust/render/openformats.h"
 #include <stdio.h>
 #include <map>
-#include "lle/UWideString.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "GEOpenFormats.h"   // the data path's host for ee_of_find_model (a model's .glb/.gltf)
 #include "lle/GEPhysicalModel.h"
 #include <stddef.h>
-#include "lle/URandom.h"       // U2DFractal.h
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DFractal.h"
 #include "lle/GETextureSet.h"
-#include "lle/GETerrainMesh.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -199,8 +180,7 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     case EeGeManOp::ModelFreeFile:
         ee_ge_cem_free((EeGeCemModel*)inObj);
         return 0;
-    default:
-        return 0;
+    default: return 0;
     }
 }
 

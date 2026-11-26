@@ -7,7 +7,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
 #include "lle/SESoundManager.h"
-#include "lle/UIForm.h"
 #include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
 #include "lle/UResourceFile.h"

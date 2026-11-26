@@ -61,14 +61,15 @@ struct EERuleText {
 // EEAICheat): Rust's (ee_data generated/rules_gen.rs, from tools/eedata/rules_schema.json), emitted back by cbindgen.
 // Rust writes every value in place (EERules::Refresh); the lists and texts point into the Rust rules' storage.
 #include "rust/data/generated.h"
+#include "rust/data/ffi.h"
 
 // ------------------------------------------------------------------------------------------------ all of them
 
 // the members (EERulesData): mCombat, mGameOptions, mCivBuilder, mCivPowers, mAIPersonalities, mEpochs (by epoch
 // position, the original's 15 by default), mEpochMusicFromText (the songs came from epochs.yaml, else dbmusic's flags)
 struct EERules : EERulesData {
-    EERules();
-    ~EERules();
+    EERules() : mRust(ee_data_rules_new()) { this->Refresh(); }
+    ~EERules() { ee_data_rules_free(this->mRust); }
     EERules(const EERules&) = delete;
     EERules& operator=(const EERules&) = delete;
 
@@ -79,7 +80,8 @@ struct EERules : EERulesData {
     const EEEpochMedia& Epoch(long inEpoch) const;
     // the Rust rules the C++ structs snapshot (ee_tech's civilization manager reads them in place)
     const EeDataRules* RustRules() const { return mRust; }
-    void Refresh();                         // the C++ structs written by the Rust rules (EELoadRules: db_text.rs)
+    // the C++ structs written by the Rust rules (EELoadRules: db_text.rs)
+    void Refresh() { ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this)); }
 
 private:
     EeDataRules* mRust;                     // the rules' owner (rust/crates/ee_data)

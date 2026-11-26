@@ -8,10 +8,8 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 
 #include "ee/EmpireEarth.h"
@@ -24,7 +22,6 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEROWater.h"
 #include "ee/EEUnitPicker.h"
-#include "rust/game/gamecpp.h"
 
 // The picker's decisions are ee_gfx pick.rs (RUST_PLAN R4.4): the ray, the tolerances, the pick scales and the large
 // test, the hits' ranking, GetUnitPickPriority, AddUnit's admission, the frustum's sphere and vertex tests (its named
@@ -68,27 +65,6 @@ void EEROWater::FrameDone()
 
 // (GetUnitPickPriority 0x118xxx: its only caller was the picker's walk; ee_gfx pick.rs priority answers it there)
 
-// Creates a unit picker with room for the given number of units and its lock
-EEUnitPicker::EEUnitPicker(unsigned long inCapacity)
-{
-    ee_gamecpp_pz_construct(this, inCapacity);   // (its lock's ESVERIFY: EEPickOps::Op, line 340)
-}
-
-// Destroys the picker, releasing its units and entries and its lock
-EEUnitPicker::~EEUnitPicker()
-{
-    ee_gamecpp_pz_destroy(this);
-}
-
-// The picker's bodies: gamecpp picker.rs (EEPickOps::Op's cases below)
-bool EEUnitPicker::Contains(EEUnit* inUnit) { return ee_gamecpp_picker_contains(this, inUnit); }
-EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, true); }
-// port (R5a.3): PickUnit with no reference taken (FillRenderLists, under the world's lock)
-EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, false); }
-void EEUnitPicker::Clear() { ee_gamecpp_picker_clear(this); }
-void EEUnitPicker::Reset() { ee_gamecpp_picker_reset(this); }
-void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize) { ee_gamecpp_picker_add_unit(this, inUnit, reinterpret_cast<const float*>(&inTransformation), inPixelSize); }
-
 // port (R5a.3): an entry's unit by its id; NULL once the unit has left the world (the original's reference kept it)
 EEUnit* EEUnitPicker::GetEntryUnit(unsigned long inIndex)
 {
@@ -104,22 +80,6 @@ struct EEPickOps {
     static int64_t Op(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
     static double OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 };
-
-// Returns the ids of the pickable units of a type (citizens of either sex for the citizen types) inside
-// a screen rectangle, a part's carrier instead
-void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inType,
-                                        std::vector<unsigned long>& outUnitIDs)
-{
-    ee_gamecpp_pz_box(this, &inRectangle, true, NULL, inType, &outUnitIDs);
-}
-
-// Returns the ids of a player's units of a type inside a screen rectangle (male and female citizens for
-// either citizen type)
-void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
-                             std::vector<unsigned long>& outUnitIDs)
-{
-    ee_gamecpp_pz_box(this, &inRectangle, false, inPlayer, inType, &outUnitIDs);
-}
 
 // (ReferenceCarriers 0x519faa: gone with the references, R5a.3)
 
@@ -230,7 +190,6 @@ double EEPickOps::OpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
 }
 
 // ------------------------------------------------------------------------- round 11, lane A: the Graphics Thread and the Map
-
 
 // the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 11 lane A section) are cases of
 // this unit's EEPickOps::Op, EEEffectHost.cpp's EECore9OpB, EEMap.cpp's EECore9OpB2 and EEROUnits.cpp's EERoUnitsOp
