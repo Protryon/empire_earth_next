@@ -135,6 +135,18 @@ pub(crate) unsafe fn direct_op(op: EeGeManOp, obj: usize, a: isize, b: isize) ->
             EeGeManOp::ModelFreeFile => {
                 crate::ge::model_ffi::ee_ge_cem_free(obj as *mut crate::ge::model_store::CemModel)
             }
+            // a model's own Rust calls (GEModel's one-statement members: GetName, SetSubModel, SizeOf, Verify)
+            EeGeManOp::ModelName => {
+                let model = cppobj::counted(obj);
+                return Some(crate::ge::modobj::ee_ge_mod_ptr(model, crate::ge::modobj::EeGeModPtr::Name) as isize);
+            }
+            EeGeManOp::ModelSetSub => {
+                crate::ge::modobj::ee_ge_mod_set_sub_model(cppobj::counted(obj), a as *mut c_void, b as c_ulong)
+            }
+            EeGeManOp::ModelSizeOf => return Some(crate::ge::modobj::ee_ge_mod_size_of(cppobj::counted(obj)) as isize),
+            EeGeManOp::ModelVerify => {
+                crate::ge::modobj::ee_ge_mod_verify(cppobj::counted(obj));
+            }
             EeGeManOp::ModelStoreLoaded => {
                 return Some(crate::ge::modobj::ee_ge_mod_store_loaded(
                     cppobj::counted(obj),
