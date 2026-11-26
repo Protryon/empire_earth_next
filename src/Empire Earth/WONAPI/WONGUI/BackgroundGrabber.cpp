@@ -21,34 +21,20 @@
 using namespace WONAPI;
 
 typedef EeWonGrab Gb;
+static_assert(offsetof(BackgroundGrabber, mBGImage) == 0 && sizeof(SmartPtr<NativeImage>) == sizeof(void*), "grabobj.rs reads the image");
 static_assert(ComponentFlag_DebugBG == EE_WON_GRAB_FLAG_DEBUG_BG && ComponentFlag_Translucent == EE_WON_GRAB_FLAG_TRANSLUCENT,
               "grabobj.rs flags");
 
-// a reference the Rust grabber holds over its calls (the raw image of the tint)
-static intptr_t Held(RefCount* inObject)
-{
-    inObject->AddRef();
-    return (intptr_t)inObject;
-}
-
-// the grabber's calls out, each one of the original's statements (R6 WON round 34: their runs are grabobj.rs's)
+// the grabber's calls out, each one of the original's statements (R6 WON round 34: their runs are grabobj.rs's; the
+// component's and the background image's are grabobj.rs's own in the game, R6 WON GUI round 39)
 extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     BackgroundGrabber* t = (BackgroundGrabber*)inMe;
     Component* comp = (Component*)b;
-    Graphics* g = (Graphics*)b;
-    RawImage32* raw = (RawImage32*)c;
     if (op != EeWonGuiOp::Grab)
         return 0;
     switch ((Gb)a) {
-    case Gb::LocalToRoot: comp->LocalToRoot(((int*)c)[0], ((int*)c)[1]); return 0;
-    case Gb::DrawImage: g->DrawImage(t->mBGImage.get(), (int)c, (int)d); return 0;
-    case Gb::CompSize: ((int*)c)[0] = comp->Width(); ((int*)c)[1] = comp->Height(); return 0;
-    case Gb::HasImage: return t->mBGImage.get() != NULL ? 1 : 0;
-    case Gb::ImageWidth: return t->mBGImage->GetWidth();
-    case Gb::ImageHeight: return t->mBGImage->GetHeight();
     case Gb::NewImage: t->mBGImage = comp->GetRoot()->CreateImage((int)c, (int)d); return 0;
-    case Gb::FlagSet: return comp->ComponentFlagSet((int)c) ? 1 : 0;
     case Gb::DebugExists: return t->mDebugWindow.get() != NULL ? 1 : 0;
     case Gb::DebugNew: t->mDebugWindow = CreateNativeWindow(); return 0;
     case Gb::DebugParent: t->mDebugWindow->SetParent(comp->GetRoot()); return 0;
@@ -60,12 +46,6 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     case Gb::DebugPos: t->mDebugWindow->SetPosSize((int)c, (int)d, -1, -1); return 0;
     case Gb::DebugInvalidate: t->mDebugWindow->mRoot.get()->Invalidate(); return 0;
     case Gb::Offscreen: return (intptr_t)comp->GetRoot()->GetOffscreenImage();
-    case Gb::RootToChild: comp->RootToChild(((int*)c)[0], ((int*)c)[1]); return 0;
-    case Gb::CaptureDraw: t->mBGImage->GetGraphics().DrawImage((NativeImage*)c, ((const int*)d)[0], ((const int*)d)[1]); return 0;
-    case Gb::RawNew: return Held(t->mBGImage->GetRaw().get());
-    case Gb::RawPixels: return (intptr_t)raw->GetImageData();
-    case Gb::RawWidth: return raw->GetWidth();
-    case Gb::RawHeight: return raw->GetHeight();
     default: return 0;
     }
 }
