@@ -866,7 +866,8 @@ pub(crate) fn ctl_op(op: LOp, a: isize, b: isize, c: isize) -> Option<isize> {
         // `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)`: an empty text with the
         // combo's font, not adding, at position 0, the column named
         LOp::ComboInsertFilterRow => {
-            let s = Filter { is_add: Cell::new(false), sel_pos: Cell::new(0), text: Cell::new(0), column: Cell::new(0) };
+            let s =
+                Filter { is_add: Cell::new(false), sel_pos: Cell::new(0), text: Cell::new(0), column: Cell::new(0) };
             assign(&s.column, b);
             let item = make(&FILTER, s, true).0;
             h(Op::ItemSetFont, item, c, 0);
