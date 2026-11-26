@@ -12,8 +12,6 @@
 #include <deque>
 #include <initializer_list>
 #include <stdint.h>
-#include "lle/U2DPoint.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEAIListView.h"      // EEAIClearList
 #include "rust/sim/astar.h"         // the manager (pm.rs)
 #include <stdio.h>                      // FILE

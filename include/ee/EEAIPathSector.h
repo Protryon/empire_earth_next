@@ -9,7 +9,6 @@
 #include <map>
 #include <stdint.h>
 #include <vector>
-#include "ee/EEAIListView.h"
 #include "rust/sim/astar.h"         // EeAStarSectorRecord
 
 class EEAIPathArea;

@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include "rust/sim/ai.h"   // ee_ai_units_load (units_save.rs)
 
 class EEComputerPlayer;
 class EEUnit;
