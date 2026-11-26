@@ -21,35 +21,20 @@
 #include "rust/won_net/adminop.h"
 #include "rust/won_lobby/staging.h"
 
-// ---- LobbyLogic.cpp: the base (runs network ops, tracked so they can be killed) and RustLogic, the shell
+// ---- LobbyLogic.cpp: RustLogic, the shell (and the base: runs network ops, tracked so they can be killed)
 
 namespace WONAPI {
 // Defined in another unit; returns void
 void LobbyRunOp(AsyncOp* inOp, unsigned long inTimeout);
 
-// Creates the logic object, not killed, with an empty operation tracker
-LobbyLogic::LobbyLogic() { this->mKilled = false; }
-
-// Destroys the logic object (members only)
-LobbyLogic::~LobbyLogic() {}
-
-void LobbyLogic::KillHook() {}
-void LobbyLogic::InitComponent(ComponentConfig*) {}
-void LobbyLogic::Reset() {}
-void LobbyLogic::HandleControlEvent(int) {}
-void LobbyLogic::HandleComponentEvent(ComponentEvent*) {}
-
-// Marks the logic killed, kills every tracked operation and runs the subclass kill hook
-void LobbyLogic::Kill()
+void RustLogic::Kill()
 {
     this->mKilled = true;
     this->mTracker.KillAll();
     this->KillHook();
 }
 
-// Runs a network operation with its completion, tracking it so Kill can cancel it
-void LobbyLogic::RunTrackedOp(AsyncOp* inOp, ShellCompletion* inCompletion,
-                             unsigned long inTimeout)
+void RustLogic::RunTrackedOp(AsyncOp* inOp, ShellCompletion* inCompletion, unsigned long inTimeout)
 {
     inOp->SetCompletion(inCompletion);
     if (inCompletion != NULL)
@@ -57,19 +42,10 @@ void LobbyLogic::RunTrackedOp(AsyncOp* inOp, ShellCompletion* inCompletion,
     this->mTracker.AddOp(inOp, 0);
     LobbyRunOp(inOp, inTimeout);
 }
-
-// Runs a network operation with its completion, untracked
-void LobbyLogic::RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion,
-                      unsigned long inTimeout)
+void RustLogic::RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion, unsigned long inTimeout)
 {
     inOp->SetCompletion(inCompletion);
     LobbyRunOp(inOp, inTimeout);
-}
-
-// Stops tracking an operation; returns whether it was tracked
-bool LobbyLogic::RemoveTrackedOp(AsyncOp* inOp)
-{
-    return this->mTracker.RemoveOp(inOp);
 }
 
 // The shell's completions and tracker for the Rust that runs the kinds' ops (logicshell.rs EeWonLogicShellCpp)
@@ -91,7 +67,7 @@ static intptr_t ShellFindDialog(void* inLogic, void* inConfig, int32_t inSlot, E
 {
     return WON_GUARDED_V(SafeGetDialog(static_cast<ComponentConfig*>(inConfig), static_cast<RustLogic*>(inLogic)->mDialog[inSlot], inKind, inName, inFile, inLine));
 }
-RustLogic::RustLogic(EeWonLogicShellKind inKind, Maker inMake) : mKind(inKind), mRust(inMake(this)) {}
+RustLogic::RustLogic(EeWonLogicShellKind inKind, Maker inMake) : mKilled(false), mKind(inKind), mRust(inMake(this)) {}
 // Frees the Rust object first (it gives back what it holds), then the slots
 RustLogic::~RustLogic() { ee_won_logicshell_free(this->mKind, this->mRust); }
 void RustLogic::HandleComponentEvent(ComponentEvent* inEvent) { this->V(EeWonLogicShellV::HandleComponentEvent, (intptr_t)inEvent, inEvent->mType); }
