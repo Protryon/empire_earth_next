@@ -478,6 +478,26 @@ mod game {
                 unsafe { sys::ee_scenariocpp_world_read(std::ptr::null_mut(), EE_SCENARIO_RX_TRIGGER, args.as_ptr()) };
             en_ptr(EE_SCENARIO_EN_TRIGGER_FIELDS, t as usize as *mut c_void, 0) as *const EeScenarioTriggerFields
         }
+        fn change_unit(
+            &self,
+            attribute: c_ulong,
+            percent: bool,
+            unit: u64,
+            minimum: c_long,
+            maximum: c_ulong,
+            random: bool,
+            mode: c_long,
+        ) {
+            ee_scenario_en_change_unit(
+                attribute,
+                percent,
+                unit as usize as *mut c_void,
+                minimum,
+                maximum,
+                random,
+                mode,
+            );
+        }
         fn area_center(&self, index: i64) -> i64 {
             let mut tile: [c_long; 2] = [0; 2];
             // SAFETY: the manager's area `index` (the operation's), its centre into `tile`

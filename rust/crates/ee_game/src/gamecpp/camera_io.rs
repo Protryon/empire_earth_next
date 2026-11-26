@@ -40,6 +40,28 @@ pub unsafe extern "C" fn ee_gamecpp_camera_new(camera: *mut c_void, rec: *mut Ee
     FIELDS.store(rec as usize, Ordering::Relaxed);
     set_unit(EE_APP_CAMERA_UNIT_A, EE_APP_CAMERA_NO_UNIT);
     set_unit(EE_APP_CAMERA_UNIT_B, EE_APP_CAMERA_NO_UNIT);
+    ee_sim::scenario::world_views::register_camera(scenario_camera);
+}
+
+/// The scenario's camera statements (ee_sim scenario world_views.rs `EE_SCENARIO_CAMERA_*`), on the world's camera.
+fn scenario_camera(op: u32, a: i64) -> i64 {
+    use ee_sim::scenario::world_views::*;
+    match op {
+        EE_SCENARIO_CAMERA_RESET_PATH => reset_path(),
+        EE_SCENARIO_CAMERA_CLEAR_A => clear_unit_a(),
+        EE_SCENARIO_CAMERA_CLEAR_B => clear_unit_b(),
+        // SAFETY: the world's camera's record
+        EE_SCENARIO_CAMERA_TURN_RESET => unsafe { (*fields()).mTurnYaw = 0.0 },
+        EE_SCENARIO_CAMERA_SET_MODE => set_mode(a as c_long),
+        EE_SCENARIO_CAMERA_SET_CHANGED => set_changed(),
+        EE_SCENARIO_CAMERA_UPDATE => update(0.0),
+        // SAFETY: as above
+        EE_SCENARIO_CAMERA_MODE => return unsafe { (*fields()).mMode } as i64,
+        EE_SCENARIO_CAMERA_ZOOM => return zoom().to_bits() as i64,
+        EE_SCENARIO_CAMERA_SET_ZOOM => set_zoom(f32::from_bits(a as u32)),
+        _ => {}
+    }
+    0
 }
 
 /// The world's camera's record.

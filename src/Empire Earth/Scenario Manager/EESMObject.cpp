@@ -129,17 +129,7 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     }
 }
 
-
-// Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
-// rot time, built state, variables) by a fixed, random or percentage amount
-// Original cdecl helper; random range and the percentage flag are independent of add/subtract/assign mode.
-// (the draws, the clamps and which value changes are ee_scenario unit_change.rs's, the unit's reads and writes
-// EESMEffect.cpp's EE_SCENARIO_WORLD_CU_*; entry.rs adds the simulation capture's SMCU record)
-void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
-                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
-{
-    ee_scenario_en_change_unit(inAttribute, inPercentage, inUnit, inMinimum, inMaximum, inRandom, inMode);
-}
+// (EEChangeUnit, the effects' unit change, is ee_scenario entry.rs ee_scenario_en_change_unit, called by path)
 
 // ---- the trigger's members (ee_scenario trigger_members.rs: each a forward; the vectors and strings stay here, reached
 // by ee_scenariocpp_trigger's single statements)

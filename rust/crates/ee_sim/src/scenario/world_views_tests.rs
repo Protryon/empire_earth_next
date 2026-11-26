@@ -38,6 +38,7 @@ impl Lookups for Look<'_> {
     fn trigger(&self, _: i64) -> *const crate::scenario::fields::EeScenarioTriggerFields {
         std::ptr::null()
     }
+    fn change_unit(&self, _: c_ulong, _: bool, _: u64, _: c_long, _: c_ulong, _: bool, _: c_long) {}
 }
 
 /// `answer(op, a)` over the fixture (the world registered), on a context whose unit is `unit`.
@@ -140,6 +141,18 @@ fn the_unit_change_reads_the_context_s_unit() {
     );
     assert_eq!(cu(soldier, EE_SCENARIO_CU_POWER), Some(-2));
     assert_eq!(cu(soldier, EE_SCENARIO_CU_CATEGORY), Some(6));
+}
+
+#[test]
+fn the_camera_statements_of_the_rounds_and_the_effects() {
+    use crate::scenario::cinematic::*;
+    use crate::scenario::manager_compose::EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD;
+    assert_eq!(camera_op(EE_SCENARIO_ROUND_CAMERA_SET_MODE, 2, true), Some((EE_SCENARIO_CAMERA_SET_MODE, 2)));
+    assert_eq!(camera_op(EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD, 0, true), Some((EE_SCENARIO_CAMERA_ZOOM, 0)));
+    assert_eq!(camera_op(EE_SCENARIO_WORLD_CAMERA_MODE, 0, false), Some((EE_SCENARIO_CAMERA_SET_MODE, 3)));
+    assert_eq!(camera_op(EE_SCENARIO_WX_CAMERA_SET_ZOOM, 7, false), Some((EE_SCENARIO_CAMERA_SET_ZOOM, 7)));
+    assert_eq!(camera_op(EE_SCENARIO_ROUND_NUM_PLAYERS, 0, true), None);
+    assert_eq!(camera_op(EE_SCENARIO_WX_DETACH, 0, false), None);
 }
 
 #[test]

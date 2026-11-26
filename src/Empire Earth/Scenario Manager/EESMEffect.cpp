@@ -61,8 +61,6 @@ extern "C" int64_t ee_scenariocpp_effect(uint32_t inOp, void* a, const void* b, 
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 
-void EEChangeUnit(unsigned long, bool, EEUnit*, long, unsigned long, bool, long);
-
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEMiniMap.h"
@@ -252,9 +250,6 @@ extern "C" int64_t ee_scenariocpp_world_create(EESMEffectRun* inRun, uint32_t in
     case EE_SCENARIO_WC_FLUSH: gWorld.FlushQueuedPlacements();
         return 0;
     case EE_SCENARIO_WC_PLACE_ON_GROUND: gWorld.mMap->PlaceUnitOnGround(SMEUnitOf(a[0]));
-        return 0;
-    case EE_SCENARIO_WC_CHANGE_UNIT:
-        EEChangeUnit(inRun->mObject->mAttribute, inRun->mObject->mIsAttributePercent, SMEUnitOf(a[0]), inRun->mObject->mAttributeMin, inRun->mObject->mAttributeMax, inRun->mObject->mHasAttributeCheck == 2, EE_SCENARIO_SM_ATTRIBUTE_MODE_EXACTLY);
         return 0;
     case EE_SCENARIO_WC_SOUND: return SMEUnitOf(a[0])->GetStats()->mCreationSound != NULL;
     case EE_SCENARIO_WC_PUSH_CREATED: inRun->mCreatedUnits.push_back(SMEUnitOf(a[0])->GetUnitID());
@@ -478,8 +473,6 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_AI_FAVORITE_SEA: static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))->SetFavoriteSeaType((unsigned long)a[1]);
         return 0;
-    case EE_SCENARIO_WX_CAMERA_SET_ZOOM: gWorld.mCameraControl.SetZoom(EESMFloat(a[0]));
-        return 0;
     case EE_SCENARIO_WX_START_ACTION: SMEComplex(a[0])->StartAction((long)a[1]);
         return 0;
     case EE_SCENARIO_WX_ACTION_CHANGED: SMEComplex(a[0])->GetUnitClass()->ActionChanged(SMEComplex(a[0]));
@@ -663,7 +656,6 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_CONVERT: EEConvertUnit(static_cast<EEComplexUnit*>(SMEUnit(a[0])), (long)a[1], 0); return 0;
     case EE_SCENARIO_WORLD_RENAME_UNIT: SMEUnit(a[0])->GetStats()->SetName(inRun->mEffect->GetNewName()); return 0;
     case EE_SCENARIO_WORLD_RENAME_CLASS: SMEPlayer(a[0])->GetUpgrade(gUnitClassTable[a[1]]->GetUnitType())->SetName(inRun->mEffect->GetNewName()); return 0;
-    case EE_SCENARIO_WORLD_CHANGE_UNIT: EEChangeUnit((unsigned long)a[1], a[2] != 0, SMEUnitOrNull(a[0]), (long)a[3], 0, false, (long)a[4]); return 0;
 
     case EE_SCENARIO_WORLD_COMPUTER_SET_ACTIVE: SMEPlayer(a[0])->mComputerPlayer->SetActive(a[1] != 0); return 0;
     case EE_SCENARIO_WORLD_SET_STANCE: gWorld.SetDiplomaticStance((long)a[0], (long)a[1], (unsigned long)a[2]); return 0;
@@ -692,10 +684,7 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_TIMED_NOT_RUN: ee_scenario_en_round(gWorld.mScenarioManager, EE_SCENARIO_MN_SET_TIMED_HAS_RUN, inRun->mEffect, 0, 0); return 0;
 
 
-    case EE_SCENARIO_WORLD_CAMERA_RESET: gWorld.mCameraControl.ResetPath(); return 0;
-    case EE_SCENARIO_WORLD_CAMERA_TURN_RESET: gWorld.mCameraControl.mTurnYaw = 0.0f; return 0;
     case EE_SCENARIO_WORLD_CAMERA_START: gWorld.mCameraControl.StartPath(); return 0;
-    case EE_SCENARIO_WORLD_CAMERA_MODE: gWorld.mCameraControl.SetMode(3); return 0;
     case EE_SCENARIO_WORLD_CAMERA_MOVE:
         gWorld.mCameraControl.MoveTo(SMEUnitOrNull(a[0]), SMEGe<GE3DPoint>(inRun->mEnd), (a[2] & 1) != 0, (float)(long)a[3], SMEUnitOrNull(a[1]),
                          SMEGe<GE3DPoint>(inRun->mStart), (a[2] & 2) != 0, EESMFloat(a[4]), 0.0f, 0.0f);

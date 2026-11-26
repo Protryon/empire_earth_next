@@ -33,6 +33,7 @@ use crate::scenario::fields::{
 use crate::scenario::player::*;
 
 use crate::scenario::host::*;
+use crate::scenario::manager_compose::EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD;
 use crate::scenario::object_reads::*;
 use crate::scenario::objeval::*;
 use crate::scenario::placement::*;
@@ -79,6 +80,18 @@ pub trait Lookups {
     fn object(&self, index: i64) -> *const EeScenarioObjectFields;
     /// `GetTrigger(index)`'s record (null: none).
     fn trigger(&self, index: i64) -> *const EeScenarioTriggerFields;
+    /// `EEChangeUnit(attribute, percent, unit, minimum, maximum, random, mode)` (entry.rs's).
+    #[allow(clippy::too_many_arguments)]
+    fn change_unit(
+        &self,
+        attribute: c_ulong,
+        percent: bool,
+        unit: u64,
+        minimum: c_long,
+        maximum: c_ulong,
+        random: bool,
+        mode: c_long,
+    );
 }
 
 /// `EEEpochCount()`.
@@ -274,6 +287,11 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
         }
         return Some(0);
     }
+    if let Some((c, x)) = camera_op(op, a[0], false) {
+        // the camera's statements (gamecpp camera_io.rs)
+        camera(c, x)?;
+        return Some(0);
+    }
     if crate::scenario::run_state::is_op(op) {
         // the effect run's own values (run_state.rs), its record right after the host context (EESMEffect.cpp
         // asserts it)
@@ -359,6 +377,30 @@ pub unsafe fn answer(ctx: *mut c_void, op: u32, a: &[i64; 6], look: &dyn Lookups
                     .as_ref()
             };
             Some(o?.mHasAttributeCheck as i64)
+        }
+        EE_SCENARIO_WORLD_CHANGE_UNIT => {
+            let u = if a[0] < 0 { 0 } else { look.unit(a[0]) };
+            look.change_unit(a[1] as c_ulong, a[2] != 0, u, a[3] as c_long, 0, false, a[4] as c_long);
+            Some(0)
+        }
+        EE_SCENARIO_WC_CHANGE_UNIT => {
+            // SAFETY: the run's object, live
+            let o = unsafe {
+                (record(EE_SCENARIO_EN_OBJECT_FIELDS, context().object as i64) as *const EeScenarioObjectFields)
+                    .as_ref()
+            }?;
+            let random = o.mHasAttributeCheck == 2;
+            let exactly = crate::scenario::ids::EE_SCENARIO_SM_ATTRIBUTE_MODE_EXACTLY as c_long;
+            look.change_unit(
+                o.mAttribute,
+                o.mIsAttributePercent,
+                a[0] as u64,
+                o.mAttributeMin as c_long,
+                o.mAttributeMax,
+                random,
+                exactly,
+            );
+            Some(0)
         }
         EE_SCENARIO_WK_EFFECT_FIELDS => Some(look.effect(a[0] as usize as *mut c_void) as i64),
         EE_SCENARIO_WY_EFFECT_FIELDS => Some(look.effect(context().effect) as i64),
@@ -774,6 +816,14 @@ pub unsafe fn capture(op: u32, p: u64, a: i64, record: &dyn Fn(u32, u64) -> u64)
         EE_SCENARIO_CAP_PLAYER_TRIBUTE => pl().map_or(0, |p| at(&get!(p.saved(), mTributes))),
         EE_SCENARIO_CAP_PLAYER_MINING_LIMIT => pl().map_or(0, |p| get!(p.fields(), mMiningLimit) as i64),
         EE_SCENARIO_CAP_PLAYER_ID => pl().map_or(0, |p| p.id() as i64),
+        EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS => {
+            pl().map_or(0, |p| p.list(crate::units::player_lists::EE_UNITS_LISTS_PATROLS).len() as i64)
+        }
+        EE_SCENARIO_CAP_TIME_OF_DAY_RUNS => w.physics().is_some_and(|r| get!(r, mTimeOfDayRuns)) as i64,
+        // the unit's `mTileNode`, the complex unit's location's matrix (by the layout's offsets)
+        // SAFETY: the operation's live unit
+        EE_SCENARIO_CAP_UNIT_TILE_NODE => unsafe { member_at(p, crate::world::layout::layout().unit_tile_node) },
+        EE_SCENARIO_CAP_LOCATION => (p + crate::world::layout::layout().complex_location) as i64,
         EE_SCENARIO_CAP_UNIT_PLAYER => u().and_then(|u| u.player()).map_or(0, |p| p.handle() as i64),
         EE_SCENARIO_CAP_UNIT_HIT_POINTS => u().map_or(0, |u| u.hit_points()),
         EE_SCENARIO_CAP_UNIT_TILE_X => u().map_or(0, |u| u.tile_xy().0),
@@ -818,6 +868,15 @@ pub unsafe fn capture(op: u32, p: u64, a: i64, record: &dyn Fn(u32, u64) -> u64)
     })
 }
 
+/// The pointer member of the object `object` at `offset`.
+///
+/// # Safety
+/// `object` is live and has a pointer member there.
+unsafe fn member_at(object: u64, offset: u64) -> i64 {
+    // SAFETY: the caller's contract
+    unsafe { *((object + offset) as usize as *const usize) as i64 }
+}
+
 /// The scenario capture's float read `op` (`ee_scenariocpp_capture_f`'s) the views and records answer, or None.
 ///
 /// # Safety
@@ -842,12 +901,77 @@ pub unsafe fn capture_f(op: u32, p: u64, record: &dyn Fn(u32, u64) -> u64) -> Op
     })
 }
 
+// ---- the camera's statements (`EECameraControl`'s: gamecpp camera_io.rs, which registers them at start-up)
+/// `ResetPath()`.
+pub const EE_SCENARIO_CAMERA_RESET_PATH: u32 = 0;
+/// `ClearUnitA()`.
+pub const EE_SCENARIO_CAMERA_CLEAR_A: u32 = 1;
+/// `ClearUnitB()`.
+pub const EE_SCENARIO_CAMERA_CLEAR_B: u32 = 2;
+/// `mTurnYaw = 0.0f`.
+pub const EE_SCENARIO_CAMERA_TURN_RESET: u32 = 3;
+/// `SetMode(a)`.
+pub const EE_SCENARIO_CAMERA_SET_MODE: u32 = 4;
+/// `SetChanged()`.
+pub const EE_SCENARIO_CAMERA_SET_CHANGED: u32 = 5;
+/// `Update(0.0f)`.
+pub const EE_SCENARIO_CAMERA_UPDATE: u32 = 6;
+/// `mMode`.
+pub const EE_SCENARIO_CAMERA_MODE: u32 = 7;
+/// `GetZoom()` (`mZoom`), its bits.
+pub const EE_SCENARIO_CAMERA_ZOOM: u32 = 8;
+/// `SetZoom(a's float)`.
+pub const EE_SCENARIO_CAMERA_SET_ZOOM: u32 = 9;
+
+/// The world's camera's statement `op` (`EE_SCENARIO_CAMERA_*`) with the argument `a`.
+pub type EeScenarioCameraFn = fn(op: u32, a: i64) -> i64;
+static CAMERA: std::sync::OnceLock<EeScenarioCameraFn> = std::sync::OnceLock::new();
+
+/// ee_game's camera (its first registration stands: one world, one camera).
+pub fn register_camera(f: EeScenarioCameraFn) {
+    let _ = CAMERA.set(f);
+}
+
+/// The camera's statement `op` (None before ee_game registered the camera).
+fn camera(op: u32, a: i64) -> Option<i64> {
+    CAMERA.get().map(|f| f(op, a))
+}
+
+/// The camera statement a round's or an effect's operation `op` is (`(statement, argument)`), if it is one.
+fn camera_op(op: u32, a: i64, round: bool) -> Option<(u32, i64)> {
+    Some(if round {
+        match op {
+            EE_SCENARIO_ROUND_CAMERA_RESET_PATH => (EE_SCENARIO_CAMERA_RESET_PATH, 0),
+            EE_SCENARIO_ROUND_CAMERA_CLEAR_B => (EE_SCENARIO_CAMERA_CLEAR_B, 0),
+            EE_SCENARIO_ROUND_CAMERA_CLEAR_A => (EE_SCENARIO_CAMERA_CLEAR_A, 0),
+            EE_SCENARIO_ROUND_CAMERA_TURN_RESET => (EE_SCENARIO_CAMERA_TURN_RESET, 0),
+            EE_SCENARIO_ROUND_CAMERA_SET_MODE => (EE_SCENARIO_CAMERA_SET_MODE, a as c_long as i64),
+            EE_SCENARIO_ROUND_CAMERA_SET_CHANGED => (EE_SCENARIO_CAMERA_SET_CHANGED, 0),
+            EE_SCENARIO_ROUND_CAMERA_UPDATE => (EE_SCENARIO_CAMERA_UPDATE, 0),
+            EE_SCENARIO_ROUND_CAMERA_MODE => (EE_SCENARIO_CAMERA_MODE, 0),
+            EE_SCENARIO_ROUND_CAMERA_ZOOM | EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD => (EE_SCENARIO_CAMERA_ZOOM, 0),
+            _ => return None,
+        }
+    } else {
+        match op {
+            EE_SCENARIO_WORLD_CAMERA_RESET => (EE_SCENARIO_CAMERA_RESET_PATH, 0),
+            EE_SCENARIO_WORLD_CAMERA_TURN_RESET => (EE_SCENARIO_CAMERA_TURN_RESET, 0),
+            EE_SCENARIO_WORLD_CAMERA_MODE => (EE_SCENARIO_CAMERA_SET_MODE, 3),
+            EE_SCENARIO_WX_CAMERA_SET_ZOOM => (EE_SCENARIO_CAMERA_SET_ZOOM, a),
+            _ => return None,
+        }
+    })
+}
+
 /// The answer to the round's operation `op` (`EE_SCENARIO_ROUND_*`, round.rs) that reads the world
 /// (EEScenarioManager.cpp's cases), or None for the C++ host's.
 ///
 /// # Safety
 /// As [`answer`].
 pub unsafe fn round(op: u32, a: i64) -> Option<i64> {
+    if let Some((c, x)) = camera_op(op, a, true) {
+        return camera(c, x);
+    }
     // SAFETY: the caller's contract
     let t = unsafe { WorldRead::begin() };
     let w = WorldView::global(&t)?;

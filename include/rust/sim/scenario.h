@@ -4350,6 +4350,36 @@ constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_CREATED = 3003;
 /// `inRun->mObject->SetUnits(inRun->mCreatedUnits)`.
 constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_SET_UNITS = 3004;
 
+/// `ResetPath()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_RESET_PATH = 0;
+
+/// `ClearUnitA()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_CLEAR_A = 1;
+
+/// `ClearUnitB()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_CLEAR_B = 2;
+
+/// `mTurnYaw = 0.0f`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_TURN_RESET = 3;
+
+/// `SetMode(a)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_MODE = 4;
+
+/// `SetChanged()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_CHANGED = 5;
+
+/// `Update(0.0f)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_UPDATE = 6;
+
+/// `mMode`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_MODE = 7;
+
+/// `GetZoom()` (`mZoom`), its bits.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_ZOOM = 8;
+
+/// `SetZoom(a's float)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_ZOOM = 9;
+
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
 struct EeScenarioTiles;
 
