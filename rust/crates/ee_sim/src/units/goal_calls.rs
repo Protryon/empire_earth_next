@@ -1,4 +1,4 @@
-//! The goal objects' C++ accessors' bodies (ee/EEUnitGoal.h, EEUGRust.cpp, EEUGRustCombat.cpp): a new goal of a
+//! The goal objects' C++ accessors' bodies (ee/EEUnitGoal.h, EEUGRust.cpp): a new goal of a
 //! kind made by its body's operation with integer arguments, one operation with integer arguments, one field of a
 //! body's answer block, the location, attack and heal records by value and their one-field setters, the cast
 //! calamity's and the unload goal's out-parameter reads, the path attempts' store. Each C++ accessor is one call.

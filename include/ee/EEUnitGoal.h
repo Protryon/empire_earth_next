@@ -197,7 +197,7 @@ public:
     void SetUnloadTransport(EEComplexUnit* inTransport) { this->Call(EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT, H(inTransport)); }
     bool CanUnloadAtDestination() { return this->Call(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD) != 0; }
 
-    // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRustCombat.cpp): an attack on the
+    // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRust.cpp's GoalOp): an attack on the
     // ground at inTarget (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's at 0, 0, 0) and its point
     static EEUnitGoal* NewAttackGround(const GE3DPoint& inTarget, bool inArg)
     {

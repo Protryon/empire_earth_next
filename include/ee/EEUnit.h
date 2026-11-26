@@ -29,7 +29,6 @@ class SESMInstanceNode;                 // lle/SESMInstanceNode.h (EEComplexUnit
 class EEGraphicObject;                      // ee/EEGraphicObject.h
 typedef EEGraphicObject EEModel;            // (see below: WriteDetailsHook's)
 class EEActiveGroup;
-struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h (EEUnitClass::GetTerrainFlags)
 class EETechTreeNode;
 class EEUnit;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
@@ -408,7 +407,7 @@ public:
         return (EEUnitGoal*)(uintptr_t)ee_units_unit_queued_goal((uint64_t)(uintptr_t)this, (uint32_t)inIndex);
     }
     EEGoalDeque& GetQueueGoals(unsigned long inIndex) { return this->mGoalQueues[inIndex].mGoals; }  // 0x1fa1cd (EEUICUnitIconBar 0x25ad01) (provisional name)
-    // EEUGHealUnit's callees (now ee_combat goal_heal.rs's host operations, EEUGRustCombat.cpp) (provisional names; types inferred)
+    // EEUGHealUnit's callees (now ee_combat goal_heal.rs's host operations, EEUGRust.cpp's GoalOp) (provisional names; types inferred)
     void ReleaseHealEffect() { ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, this, NULL, 0); }               // 0x1f709c (the healee is let go)
     void SetAnimationFrame(unsigned long inFrame) { ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, this, NULL, (int64_t)inFrame); }  // 0x1f414d (ret 4): the state's model at frame inFrame (EEComplexDoppelganger.cpp's range) (provisional name)
     void FleeAfterCalamity(long inArg) { ee_units_cu_body(EE_UNITS_CU_DO_FLEE_AFTER_CALAMITY, this, inArg, 0, 0); }     // 0x1fbfdd (EEUnitClass::ActionChanged action 0x7ed passes 0) (provisional name)
