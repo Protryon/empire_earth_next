@@ -24,8 +24,6 @@ class EESoundObject;
 class UString;
 
 #include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/preload_media.h"

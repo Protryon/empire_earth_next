@@ -23,23 +23,18 @@
 
 // ---- Geometry engine (GE) basic types
 // the engine's per-class headers (GE2DPoint.cpp block 0x1000c129: UMFastMath (its empty square root table went in
-// LLE/UI round 2), GE2DPoint, GEVector, GE3DPoint, GE3DLine; then GE3DPlane)
+// LLE/UI round 2), GE2DPoint, GEVector, GE3DPoint, GE3DLine; then GE3DPlane, in GE3DLine.h)
 #include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
 
 #include "lle/GERectangle.h"
 
-#include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
 
-// ---- Threading / scheduling (TS): the engine's per-class headers
+// ---- Threading / scheduling (TS): the critical section's header and the Thread System's (TSScheduler.h: the
+// events, the read-write lock, the threads, the scheduler)
 #include "lle/TSCriticalSection.h"
-#include "lle/TSEvent.h"
-#include "lle/TSReadWriteLock.h"
-#include "lle/TSThread.h"
 #include "lle/TSScheduler.h"
 
 // ---- Reference counting

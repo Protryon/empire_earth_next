@@ -1,13 +1,31 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\GETransformation.h (RECONSTRUCTION). Requires GE2DPoint.h, GEVector.h,
-// GE3DPoint.h, GEOrientation.h. The matrix algorithms are Rust (ee_base transform.rs, ee_render geval values.rs;
-// lle/GERust.h): the simulation copies transformations everywhere, as the sixteen floats as they are (bit for bit),
-// and compares them as IEEE does (a NaN never equals).
+// C:\EEX\Low-Level Engine\Graphics Engine\GETransformation.h (RECONSTRUCTION). Requires GE2DPoint.h, GE3DPoint.h
+// (GEVector). GEOrientation (GEOrientation.h in the original) is here too (LLE/UI round 2). The matrix algorithms
+// are Rust (ee_base transform.rs, ee_render geval values.rs; lle/GERust.h): the simulation copies transformations
+// everywhere, as the sixteen floats as they are (bit for bit), and compares them as IEEE does (a NaN never equals).
 #ifndef LLE_GETRANSFORMATION_H
 #define LLE_GETRANSFORMATION_H
 
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+
+// C:\EEX\Low-Level Engine\Graphics Engine\GEOrientation.h (RECONSTRUCTION, minimal: what GETransformation's
+// orientation overloads read). Yaw/pitch/roll order from GETransformation::Rotate(const GEOrientation&) 0xd828.
+class GEOrientation : public EeGeOrientation {   // the Rust record (mYaw, mPitch, mRoll; rust/base/math.h)
+public:
+    GEOrientation() : EeGeOrientation{0.0f, 0.0f, 0.0f} {}
+    GEOrientation(float inYaw, float inPitch, float inRoll) : EeGeOrientation{inYaw, inPitch, inRoll} {}
+    float GetYaw() const { return this->mYaw; }  // exported 0x10011ec0 (ICF `fld [ecx]; ret`)
+    float GetPitch() const { return this->mPitch; }
+    float GetRoll() const { return this->mRoll; }
+    // yaw, pitch and roll from (to) an open file; kErrorNotOpen when it is not open
+    template <class F> long Load(F& inFile) { return ee_ge_orientation_load(GERust(*this), GERustFile(inFile)); }
+    void Normalize() { ee_ge_orientation_normalize(GERust(*this)); }   // each angle into -pi..pi
+    template <class F> long Save(F& inFile) { return ee_ge_orientation_save(GERust(*this), GERustFile(inFile)); }
+    void SetPitch(float inPitch) { this->mPitch = inPitch; }
+    void SetRoll(float inRoll) { this->mRoll = inRoll; }
+    void SetYaw(float inYaw) { this->mYaw = inYaw; }
+};
 
 class GETransformation : public EeGeTransformation {   // the Rust record (mMatrix: row-major 4x4, the translation in
 public:                                                // column 3; rust/base/math.h)

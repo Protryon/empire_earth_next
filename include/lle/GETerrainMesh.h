@@ -3,7 +3,7 @@
 // out-of-line members; the inline members of the original header were emitted first by GEBoundingBox.cpp
 // (0x100125b7..0x10012ae4, in declaration order). The mesh is a whole Rust object now (rust/crates/ee_render/src/ge tmobj.rs,
 // R4.3 eleventh part): every member below forwards to it, and its only member is the object. Requires
-// lle/LowLevelEngine.h, GE3DPoint.h, GEVector.h, GEColor.h, GETextureCoordinate.h, GE3DPlane.h.
+// lle/LowLevelEngine.h, GE3DPoint.h (GEVector), GEColor.h, GETextureCoordinate.h, GE3DLine.h (GE3DPlane).
 #ifndef LLE_GETERRAINMESH_H
 #define LLE_GETERRAINMESH_H
 
