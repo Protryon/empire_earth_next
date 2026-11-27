@@ -6,7 +6,6 @@
 #define EE_EEVOTING_H
 
 #include "rust/sim/records.h"
-#include "rust/sim/app.h"
 
 class EEVoting : public EeAppVoting {
 public:

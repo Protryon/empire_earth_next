@@ -9,6 +9,7 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 #include "platform/PlatSim.h"      // gPlatSimMode (the POSIX main)
+#include "rust/game/sim_driver.h"
 // TEST ONLY: the UI fixture (EETestFixture.cpp registers its configure step here, at static initialization: this unit
 // names no symbol of the test drivers, so they stay out of its dependencies) and the headless simulation's driver
 // (ee_game fixture and sim_driver, called directly)

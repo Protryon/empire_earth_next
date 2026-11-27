@@ -7,6 +7,7 @@
 #include "gx/GX.h"
 
 #include <vector>
+#include "rust/game/gamecpp.h"
 
 // (gx/GX.h: out of line, for EEScreens.cpp and Empire Earth.cpp, which declare it without the header)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight)

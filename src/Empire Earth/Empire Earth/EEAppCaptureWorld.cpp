@@ -18,6 +18,7 @@
 #include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
 #include "rust/sim/app.h"
+#include "rust/game/gamecpp.h"
 
 // MAPS, MAPC: Rust (ee_game app map_capture.rs)
 static void EEAppCaptureSightImpl(unsigned int inKind, EEPlayer* inPlayer, float inX, float inY, float inRadius,

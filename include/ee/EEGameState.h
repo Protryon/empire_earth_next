@@ -14,6 +14,7 @@
 #include <vector>
 #include "TSLockable.h"
 #include "ee/EEGameOptions.h"
+#include "rust/game/gamecpp.h"
 
 class UWideString;
 class EEMap;

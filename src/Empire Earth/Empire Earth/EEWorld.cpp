@@ -745,3 +745,30 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     }
     return 0.0;
 }
+
+// out of line from ee/EEWorld.h (its Rust function headers stay out of it)
+void EEWorld::Clear() { ee_gamecpp_world_clear(this); }
+void EEWorld::Reset() { ee_gamecpp_world_reset(this); }
+void EEWorld::SetNumPlayers(unsigned long inNumPlayers) { ee_gamecpp_world_set_count(this, false, inNumPlayers); }
+void EEWorld::SetPopulationLimit(unsigned long inLimit) { ee_gamecpp_world_set_count(this, true, inLimit); }
+void EEWorld::PlaceQueuedUnits() { ee_gamecpp_world_place_queued(this); }
+void EEWorld::ReleaseResourceUser(EEUnit* inUnit) { ee_gamecpp_world_resource_users(this, inUnit, -1); }
+void EEWorld::AddResourceUser(EEUnit* inUnit) { ee_gamecpp_world_resource_users(this, inUnit, 1); }
+
+void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
+{ ee_gamecpp_world_screen_to_world((const float(*)[2])&inPoint.mX, (float(*)[3])&outPoint.mX); }
+
+EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
+{ return (EEPlayer*)ee_gamecpp_world_player_by_slot(this, inSlot); }
+
+void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance)
+{ ee_gamecpp_world_set_stance(this, inPlayerID, inOther, inStance); }
+
+long EEWorld::PauseGame() { return ee_gamecpp_world_pause(true); }
+void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer) { ee_gamecpp_world_remove_disconnected(this, inPlayer); }
+long EEWorld::UnpauseGame() { return ee_gamecpp_world_pause(false); }
+void EEWorld::StartGame(EEGameState* inState, bool inLocked) { ee_gamecpp_world_start_game(this, inState, inLocked); }
+EEGhostUnit* EEWorld::GetGhostUnit(size_t inIndex) { return (EEGhostUnit*)ee_app_ghost_at(inIndex); }
+void EEWorld::ActivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_activate(inUnit); }
+void EEWorld::DeactivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_deactivate(inUnit); }
+unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit) { return ee_gamecpp_world_resource_users(this, inUnit, 0); }
