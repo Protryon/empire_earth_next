@@ -926,9 +926,6 @@ void ee_data_to_hit_load(size_t index,
 /// The size of a dbstartingresources record.
 size_t ee_data_starting_resources_record_size();
 
-/// The size of a dbupgrade record.
-size_t ee_data_upgrade_record_size();
-
 /// `EEColorTable`'s colour `which` (0 the main, 1 the second, 2 the dark shade, 3 the fourth) of player colour
 /// `index` into `out[3]`; white (`GEColor()`, the class's `sColor`) past the table or for a row not loaded.
 ///
@@ -963,12 +960,6 @@ void ee_data_ai_targeting_unload();
 /// # Safety
 /// `out` has room for 30 values.
 bool ee_data_ai_targeting_table(int32_t *out);
-
-/// The size of a dbterraintype record.
-size_t ee_data_terrain_type_record_size();
-
-/// The size of a dbgamevariant record.
-size_t ee_data_game_variant_record_size();
 
 /// The size of a dbterrain record (after its lead string).
 size_t ee_data_terrain_record_size();
