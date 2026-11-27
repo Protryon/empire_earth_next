@@ -48,8 +48,6 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST 
 
 // ---- the vertex host: the calls GEBitmap, GELine and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
 
-static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
-
 // (C linkage: ee_ge game_hosts.rs names it)
 extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
@@ -65,14 +63,7 @@ extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a,
     case EeGeBmpOp::TexDereference:
         ((GETexture*)inObj)->Dereference();
         return 0;
-    case EeGeBmpOp::TexFrameWidth:
-        return GEBitmapFloatBits(((GETexture*)inObj)->GetFrameWidth());
-    case EeGeBmpOp::TexFrameHeight:
-        return GEBitmapFloatBits(((GETexture*)inObj)->GetFrameHeight());
-    case EeGeBmpOp::TexWidth:
-        return (intptr_t)((GETexture*)inObj)->GetWidth();
-    case EeGeBmpOp::TexHeight:
-        return (intptr_t)((GETexture*)inObj)->GetHeight();
+    // (a texture's sizes and its frame's: Rust's own, read through the texture's surfaces, bmpobj.rs direct_op)
     }
     return 0;
 }
@@ -180,13 +171,12 @@ static_assert(sizeof(GEModel) == 3 * sizeof(void*), "ee_ge cppobj.rs CppCounted 
 intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    // (the active rasterizer, its screen id and the textures' stage filters: Rust's own, ee_ge modobj.rs direct_op)
+    // (the active rasterizer, its screen id and texture manager, the textures' stage filters: Rust's own, ee_ge
+    // modobj.rs direct_op)
     case EeGeModOp::RasterVertexArray:
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
     case EeGeModOp::RasterPolygonArray:
         return (intptr_t)((GERasterizer*)inObj)->CreatePolygonArray((unsigned long)a);
-    case EeGeModOp::RasterTextureManager:
-        return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
     // (the arrays' other calls are on their Rust arrays: ee_ge modobj.rs array_op)
     case EeGeModOp::VertexDelete:
         delete ((GEVertexArray*)inObj);
@@ -448,9 +438,8 @@ static_assert(offsetof(EeGeTexCoord, v) == offsetof(GETextureCoordinate, mV), "G
 intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeTexOp::SurfReference:
-        ((GESurface*)inObj)->Reference();
-        return 0;
+    // (a surface's Reference and logical shift, its C++ members: Rust's own, ee_ge texobj_tex.rs; the calls of a
+    // surface's Rust object stay here, since the model store gate links its own surfaces as the ee_dx7sf_* functions)
     case EeGeTexOp::SurfDereference:
         ((GESurface*)inObj)->Dereference();
         return 0;
@@ -458,11 +447,6 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
         return (intptr_t)((GESurface*)inObj)->GetParentScreen();
     case EeGeTexOp::SurfAllocatedSize:
         return (intptr_t)((GESurface*)inObj)->GetAllocatedSize();
-    case EeGeTexOp::SurfLogicalShift:
-        return (intptr_t)((GESurface*)inObj)->GetLogicalShift();
-    case EeGeTexOp::SurfSetLogicalShift:
-        ((GESurface*)inObj)->SetLogicalShift((unsigned long)a);
-        return 0;
     case EeGeTexOp::SurfLock:
         return ((GESurface*)inObj)->Lock();
     case EeGeTexOp::SurfUnlock:
