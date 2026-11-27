@@ -123,4 +123,3 @@ pub unsafe extern "C" fn ee_ge_terrain_intersects(
 }
 
 // ---- GEPhysicalModel's per-triangle tests ----
-

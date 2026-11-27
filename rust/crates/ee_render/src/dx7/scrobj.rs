@@ -583,7 +583,6 @@ mod ffi {
         let mut calls = PlatWindowCalls { title, new_window, error };
         unsafe { create_window(&mut calls, sim, x, y, width, height, style, &mut *out_window) }
     }
-
 }
 
 #[cfg(test)]

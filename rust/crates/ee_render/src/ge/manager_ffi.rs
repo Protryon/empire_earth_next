@@ -64,4 +64,3 @@ pub extern "C" fn ee_ge_texpack_logical_shift() -> c_long {
 pub extern "C" fn ee_ge_texpack_mip_levels_to_drop() -> c_long {
     with_pack(|p| p.mip_levels_to_drop)
 }
-
