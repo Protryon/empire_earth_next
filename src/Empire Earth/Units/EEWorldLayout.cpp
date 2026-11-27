@@ -182,6 +182,7 @@ void EEWorldLayoutRegister()
     theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
     theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
     theLayout.player_unit_class_upgrades = offsetof(EEPlayer, mUnitClassUpgrades);   // player/tech round 4 (player_upgrades.rs)
+    theLayout.player_civilization = offsetof(EEPlayer, mCivilization);   // player/tech round 4 (civ_direct.rs)
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

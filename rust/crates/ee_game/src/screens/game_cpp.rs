@@ -2396,8 +2396,8 @@ shims! {
     fn cbh_civ_available(civ: usize) -> i32 = civ_direct::cbh_civ_available;
     fn cbh_civ_unchanged(civ: usize) -> i32 = civ_direct::cbh_civ_unchanged;
     fn cbh_civ_max(civ: usize) -> i32 = civ_direct::cbh_civ_max;
-    fn cbh_civ_purchased_count(civ: usize) -> u32 = ee_screenscpp_cbh_civ_purchased_count;
-    fn cbh_civ_purchased(civ: usize, index: u32) -> u32 = ee_screenscpp_cbh_civ_purchased;
+    fn cbh_civ_purchased_count(civ: usize) -> u32 = civ_direct::cbh_civ_purchased_count;
+    fn cbh_civ_purchased(civ: usize, index: u32) -> u32 = civ_direct::cbh_civ_purchased;
     fn cbh_civ_name(civ: usize, out: EeScreensShimOut) = ee_screenscpp_cbh_civ_name;
     fn cbh_upgrades_clear() = ee_screenscpp_cbh_upgrades_clear;
     fn cbh_upgrades_push(upgrade: u32) = ee_screenscpp_cbh_upgrades_push;
@@ -2409,16 +2409,16 @@ shims! {
     fn cbh_message_execute(message: usize) = ee_screenscpp_cbh_message_execute;
     fn cbh_message_release(message: usize) = ee_screenscpp_cbh_message_release;
     fn cbh_game_result() -> i32 = civ_direct::cbh_game_result;
-    fn cbh_pause() -> i32 = ee_screenscpp_cbh_pause;
-    fn cbh_unpause() -> i32 = ee_screenscpp_cbh_unpause;
+    fn cbh_pause() -> i32 = civ_direct::cbh_pause;
+    fn cbh_unpause() -> i32 = civ_direct::cbh_unpause;
     fn cbh_current_player() -> usize = civ_direct::cbh_current_player;
-    fn cbh_player_civ(player: usize) -> usize = ee_screenscpp_cbh_player_civ;
+    fn cbh_player_civ(player: usize) -> usize = civ_direct::cbh_player_civ;
     fn cbh_player_id() -> u8 = civ_direct::cbh_player_id;
     fn cbh_civ_chosen() -> bool = civ_direct::cbh_civ_chosen;
     fn cbh_civ_locked() -> bool = civ_direct::cbh_civ_locked;
     fn cbh_set_civ_chosen(value: bool) = civ_direct::cbh_set_civ_chosen;
     fn cbh_set_civ_locked(value: bool) = civ_direct::cbh_set_civ_locked;
-    fn cbh_free_camera() -> bool = ee_screenscpp_cbh_free_camera;
+    fn cbh_free_camera() -> bool = civ_direct::cbh_free_camera;
     fn cbh_can_buy() -> bool = civ_direct::cbh_can_buy;
     fn cbh_campaign_name() -> bool = ee_screenscpp_cbh_campaign_name;
     fn cbh_custom_civs() -> bool = civ_direct::cbh_custom_civs;
@@ -2501,7 +2501,7 @@ shims! {
     fn civh_class_count() -> i64 = civ_direct::civh_class_count;
     fn civh_set_contains(set: i64, kind: i64) -> bool = civ_direct::civh_set_contains;
     fn civh_class_listed(kind: i64) -> bool = civ_direct::civh_class_listed;
-    fn civh_upgrade(player: i32, kind: i64) -> usize = ee_screenscpp_civh_upgrade;
+    fn civh_upgrade(player: i32, kind: i64) -> usize = civ_direct::civh_upgrade;
     fn civh_upgrade_class(up: usize) -> usize = civ_direct::civh_upgrade_class;
     fn civh_upgrade_fields(up: usize) -> usize = civ_direct::civh_upgrade_fields;
     fn civh_class_fields(k: usize) -> usize = civ_direct::civh_class_fields;
@@ -2517,20 +2517,20 @@ shims! {
     fn civh_population_limit(player: i32) -> i64 = ee_screenscpp_civh_population_limit;
     fn civh_recompute_area_effects(player: i32) = ee_screenscpp_civh_recompute_area_effects;
     fn civh_show_selection_areas(player: i32) = ee_screenscpp_civh_show_selection_areas;
-    fn civh_research(player: i32, kind: i64) = ee_screenscpp_civh_research;
-    fn civh_node(player: i32, kind: i64) -> usize = ee_screenscpp_civh_node;
+    fn civh_research(player: i32, kind: i64) = civ_direct::civh_research;
+    fn civh_node(player: i32, kind: i64) -> usize = civ_direct::civh_node;
     fn civh_node_researched(node: usize) -> bool = civ_direct::civh_node_researched;
-    fn civh_node_research(node: usize) = ee_screenscpp_civh_node_research;
+    fn civh_node_research(node: usize) = civ_direct::civh_node_research;
     fn civh_node_set_allowed(node: usize, v: bool) = civ_direct::civh_node_set_allowed;
-    fn civh_node_set_obsolete(node: usize) = ee_screenscpp_civh_node_set_obsolete;
+    fn civh_node_set_obsolete(node: usize) = civ_direct::civh_node_set_obsolete;
     fn civh_sound(kind: i64) -> usize = ee_screenscpp_civh_sound;
     fn civh_sound_load(sound: usize) = ee_screenscpp_civh_sound_load;
     fn civh_add_sound(player: i32, sound: usize) = ee_screenscpp_civh_add_sound;
     fn civh_effect(kind: i64) -> usize = ee_screenscpp_civh_effect;
     fn civh_effect_load(effect: usize) = ee_screenscpp_civh_effect_load;
     fn civh_add_effect(player: i32, effect: usize) = ee_screenscpp_civh_add_effect;
-    fn civh_pulse_sight(player: i32, radius: f32, kind: i64) = ee_screenscpp_civh_pulse_sight;
-    fn civh_camouflage(player: i32) = ee_screenscpp_civh_camouflage;
+    fn civh_pulse_sight(player: i32, radius: f32, kind: i64) = civ_direct::civh_pulse_sight;
+    fn civh_camouflage(player: i32) = civ_direct::civh_camouflage;
     fn cbl_tabable(list: usize) -> bool = civ_direct::cbl_tabable;
     // EEUICPortrait.cpp's (portrait_calls.rs)
     fn pt_has_unit(p: usize) -> bool = ee_screenscpp_pt_has_unit;
@@ -2698,7 +2698,7 @@ shims! {
     fn civf_text_clear() = ee_screenscpp_civf_text_clear;
     // EEAreaEffect.cpp's host (area_effect_host.rs)
     fn aeh_set_contains(t: usize, set: i32) -> bool = civ_direct::aeh_set_contains;
-    fn aeh_tech_node(player: i32, t: usize) -> usize = ee_screenscpp_aeh_tech_node;
+    fn aeh_tech_node(player: i32, t: usize) -> usize = civ_direct::aeh_tech_node;
     fn aeh_node_kind(node: usize) -> i64 = civ_direct::aeh_node_kind;
     fn aeh_player(index: i32) -> usize = civ_direct::aeh_player;
     fn aeh_allied(player: usize, other: usize) -> bool = ee_screenscpp_aeh_allied;
@@ -2954,7 +2954,7 @@ shims! {
     fn civc_collect(set: i64) = civ_direct::civc_collect;
     fn civc_types_count() -> usize = civ_direct::civc_types_count;
     fn civc_type_at(index: usize) -> i64 = civ_direct::civc_type_at;
-    fn civc_class_upgrade(player: usize, kind: i64) -> usize = ee_screenscpp_civc_class_upgrade;
+    fn civc_class_upgrade(player: usize, kind: i64) -> usize = civ_direct::civc_class_upgrade;
     fn civc_media_count(player: usize) -> u64 = civ_direct::civc_media_count;
     fn civc_civ_load(file: EeScreensShimText) -> i64 = ee_screenscpp_civc_civ_load;
     fn civc_loaded_clear() = ee_screenscpp_civc_loaded_clear;
@@ -2964,11 +2964,11 @@ shims! {
     fn civc_loaded_count() -> usize = ee_screenscpp_civc_loaded_count;
     fn civc_loaded_at(index: usize) -> u32 = ee_screenscpp_civc_loaded_at;
     fn civc_is_user_directory(directory: EeScreensShimText) -> bool = ee_screenscpp_civc_is_user_directory;
-    fn civc_civ(player: usize) -> usize = ee_screenscpp_civc_civ;
-    fn civc_civ_purchased_count(civ: usize) -> usize = ee_screenscpp_civc_civ_purchased_count;
-    fn civc_civ_purchased_at(civ: usize, index: usize) -> u32 = ee_screenscpp_civc_civ_purchased_at;
-    fn civc_civ_deferred_count(civ: usize) -> usize = ee_screenscpp_civc_civ_deferred_count;
-    fn civc_civ_deferred_at(civ: usize, index: usize) -> u32 = ee_screenscpp_civc_civ_deferred_at;
+    fn civc_civ(player: usize) -> usize = civ_direct::civc_civ;
+    fn civc_civ_purchased_count(civ: usize) -> usize = civ_direct::civc_civ_purchased_count;
+    fn civc_civ_purchased_at(civ: usize, index: usize) -> u32 = civ_direct::civc_civ_purchased_at;
+    fn civc_civ_deferred_count(civ: usize) -> usize = civ_direct::civc_civ_deferred_count;
+    fn civc_civ_deferred_at(civ: usize, index: usize) -> u32 = civ_direct::civc_civ_deferred_at;
     fn civc_civ_name(civ: usize, out: EeScreensShimOut) = ee_screenscpp_civc_civ_name;
     fn civc_civ_available(civ: usize) -> u32 = civ_direct::civc_civ_available;
     fn civc_civ_max(civ: usize) -> u32 = civ_direct::civc_civ_max;
@@ -3068,8 +3068,8 @@ shims! {
     fn civm_powers_cost() -> i64 = ee_screenscpp_civm_powers_cost;
     fn civm_civs_clear(list: usize) = ee_screenscpp_civm_civs_clear;
     fn civm_civs_push(list: usize, entry: usize) = ee_screenscpp_civm_civs_push;
-    fn civm_purchased_count(player: usize) -> usize = ee_screenscpp_civm_purchased_count;
-    fn civm_purchased_data(player: usize) -> usize = ee_screenscpp_civm_purchased_data;
+    fn civm_purchased_count(player: usize) -> usize = civ_direct::civm_purchased_count;
+    fn civm_purchased_data(player: usize) -> usize = civ_direct::civm_purchased_data;
     // the civilization file load (civ_load.rs, UI lane round 12)
     fn civl_string(string: usize, out: EeScreensShimOut) = ee_screenscpp_civl_string;
     fn civl_global_close() = ee_screenscpp_civl_global_close;

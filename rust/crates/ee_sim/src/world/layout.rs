@@ -238,6 +238,8 @@ pub struct EeWorldLayout {
     // ---- the player/tech lane, round 4
     /// `EEPlayer::mUnitClassUpgrades` (a `std::vector<EEUnitClassUpgrade*>`: its begin and end pointers first)
     pub player_unit_class_upgrades: u64,
+    /// `EEPlayer::mCivilization` (an `EECivilization`: `EeGameCivFields`, then its two `std::vector<EECivUpgrade>`)
+    pub player_civilization: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

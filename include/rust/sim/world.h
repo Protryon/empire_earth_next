@@ -823,6 +823,8 @@ struct EeWorldLayout {
   uint64_t town_fields;
   /// `EEPlayer::mUnitClassUpgrades` (a `std::vector<EEUnitClassUpgrade*>`: its begin and end pointers first)
   uint64_t player_unit_class_upgrades;
+  /// `EEPlayer::mCivilization` (an `EECivilization`: `EeGameCivFields`, then its two `std::vector<EECivUpgrade>`)
+  uint64_t player_civilization;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

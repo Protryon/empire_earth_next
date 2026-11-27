@@ -979,3 +979,169 @@ pub(crate) fn civc_civ_no_points(c: usize) -> bool {
 pub(crate) fn civc_civ_unchanged(c: usize) -> bool {
     civ(c).mUnchanged
 }
+
+// ---- player/tech lane, round 4: the class upgrades, the tech trees, the player's powers and the civilization's
+// upgrade lists (the C++'s one-statement shims of EECivilizationBuilder.cpp and EEAEManager.cpp)
+
+/// `player->mUnitClassUpgrades[kind]` (unchecked, as the C++'s `operator[]`).
+fn class_upgrade(player: usize, kind: i64) -> usize {
+    ee_sim::units::player_upgrades::at(player as u64, kind as c_long as usize) as usize
+}
+
+/// `gWorld.mPlayers[player]->mUnitClassUpgrades[kind]`.
+pub(crate) fn civh_upgrade(player: i32, kind: i64) -> usize {
+    class_upgrade(player_handle(player as i64), kind)
+}
+
+/// `player->mUnitClassUpgrades[kind]` (the civilization capture's).
+pub(crate) fn civc_class_upgrade(player: usize, kind: i64) -> usize {
+    class_upgrade(player, kind)
+}
+
+/// `gWorld.mPlayers[player]->GetTechTree()`.
+fn player_tree(player: i32) -> usize {
+    // SAFETY: a live player of the world's table
+    unsafe { ee_sim::tech::tree_objects::player_tree(player_handle(player as i64)) }
+}
+
+/// `gWorld.mPlayers[player]->GetTechTree()->Research(kind, NULL)`.
+pub(crate) fn civh_research(player: i32, kind: i64) {
+    use ee_sim::tech::nodes::EeTechTreeOp;
+    // SAFETY: the player's live tree
+    unsafe { ee_sim::tech::tree_objects::walk_tree(player_tree(player), EeTechTreeOp::Research, kind as c_long as i32, 0, 0) };
+}
+
+/// `tree->Get(id)`.
+fn tree_get(tree: usize, id: i64) -> usize {
+    // SAFETY: a live tree
+    unsafe { ee_sim::tech::tree_objects::tree_get(tree as *mut _, id as c_long) as usize }
+}
+
+/// `gWorld.mPlayers[player]->GetTechTree()->Get(kind)`.
+pub(crate) fn civh_node(player: i32, kind: i64) -> usize {
+    tree_get(player_tree(player), kind)
+}
+
+/// `node->ResearchNode(NULL)`.
+pub(crate) fn civh_node_research(node: usize) {
+    use ee_sim::tech::nodes::EeTechNodeOp;
+    // SAFETY: a live node of a live tree
+    unsafe { ee_sim::tech::tree_objects::walk_node(node, EeTechNodeOp::Research, 0, false, 0) };
+}
+
+/// `node->SetObsolete(true, false)`.
+pub(crate) fn civh_node_set_obsolete(node: usize) {
+    use ee_sim::tech::nodes::EeTechNodeOp;
+    // SAFETY: as above
+    unsafe { ee_sim::tech::tree_objects::walk_node(node, EeTechNodeOp::SetObsolete, 1, false, 0) };
+}
+
+/// `gWorld.mPlayers[player]->GetTechTree()->Get(t->GetUnitClass()->mTechnology)`.
+pub(crate) fn aeh_tech_node(player: i32, t: usize) -> usize {
+    let technology = with_unit(t, 0, |u| u.class().map_or(0, |c| c.technology()));
+    civh_node(player, technology)
+}
+
+/// `gWorld.mPlayers[player]->...` through the player body (ee_sim player_body.rs `EE_UNITS_PLAYER_DO_*`).
+fn player_do(player: i32, what: u32, a: u64, b: i64, f: f32) {
+    // SAFETY: a live player of the world's table
+    unsafe { ee_sim::units::player_body::game::ee_units_player_body(player_handle(player as i64) as *mut c_void, what, a, b, 0, f) };
+}
+
+/// `gWorld.mPlayers[player]->PulseSight(false, radius, kind)`.
+pub(crate) fn civh_pulse_sight(player: i32, radius: f32, kind: i64) {
+    player_do(player, ee_sim::units::player_body::EE_UNITS_PLAYER_DO_PULSE_SIGHT, kind as c_long as i64 as u64, 0, radius);
+}
+
+/// `gWorld.mPlayers[player]->EnableCamouflagePower()`.
+pub(crate) fn civh_camouflage(player: i32) {
+    player_do(player, ee_sim::units::player_body::EE_UNITS_PLAYER_DO_CAMOUFLAGE, 0, 1, 0.0);
+}
+
+/// `gWorld.PauseGame()`.
+pub(crate) fn cbh_pause() -> i32 {
+    crate::gamecpp::world::ee_gamecpp_world_pause(true) as i32
+}
+
+/// `gWorld.UnpauseGame()`.
+pub(crate) fn cbh_unpause() -> i32 {
+    crate::gamecpp::world::ee_gamecpp_world_pause(false) as i32
+}
+
+/// `gFreeCamera`.
+pub(crate) fn cbh_free_camera() -> bool {
+    crate::gamecpp::globals::get!(gFreeCamera)
+}
+
+/// `&player->mCivilization`.
+pub(crate) fn cbh_player_civ(player: usize) -> usize {
+    if player == 0 {
+        return 0;
+    }
+    player + layout().player_civilization as usize
+}
+
+/// `&player->mCivilization` (the civilization capture's).
+pub(crate) fn civc_civ(player: usize) -> usize {
+    cbh_player_civ(player)
+}
+
+/// The civilization's `std::vector<EECivUpgrade>` `which` (0 `mPurchasedUpgrades`, 1 `mDeferredUpgrades`, after
+/// its base `EeGameCivFields`): its begin and end.
+fn civ_list(c: usize, which: usize) -> (usize, usize) {
+    let word = core::mem::size_of::<usize>();
+    let at = c + core::mem::size_of::<EeGameCivFields>().next_multiple_of(word) + which * 3 * word;
+    // SAFETY: a live civilization's vector: its begin and end pointers are its first two words (MSVC, libstdc++,
+    // libc++)
+    unsafe { (*(at as *const usize), *((at + word) as *const usize)) }
+}
+
+fn civ_list_len(c: usize, which: usize) -> usize {
+    let (begin, end) = civ_list(c, which);
+    (end - begin) / core::mem::size_of::<u32>()
+}
+
+fn civ_list_at(c: usize, which: usize, i: usize) -> u32 {
+    // SAFETY: the vector's element i (the caller's index is in range, as the C++'s was)
+    unsafe { *((civ_list(c, which).0 + i * core::mem::size_of::<u32>()) as *const u32) }
+}
+
+/// `civ->GetPurchasedUpgrades().size()`.
+pub(crate) fn cbh_civ_purchased_count(c: usize) -> u32 {
+    civ_list_len(c, 0) as u32
+}
+
+/// `civ->GetPurchasedUpgrades()[i]`.
+pub(crate) fn cbh_civ_purchased(c: usize, i: u32) -> u32 {
+    civ_list_at(c, 0, i as usize)
+}
+
+/// `civ->mPurchasedUpgrades.size()`.
+pub(crate) fn civc_civ_purchased_count(c: usize) -> usize {
+    civ_list_len(c, 0)
+}
+
+/// `civ->mPurchasedUpgrades[i]`.
+pub(crate) fn civc_civ_purchased_at(c: usize, i: usize) -> u32 {
+    civ_list_at(c, 0, i)
+}
+
+/// `civ->mDeferredUpgrades.size()`.
+pub(crate) fn civc_civ_deferred_count(c: usize) -> usize {
+    civ_list_len(c, 1)
+}
+
+/// `civ->mDeferredUpgrades[i]`.
+pub(crate) fn civc_civ_deferred_at(c: usize, i: usize) -> u32 {
+    civ_list_at(c, 1, i)
+}
+
+/// `player->mCivilization.GetPurchasedUpgrades().size()`.
+pub(crate) fn civm_purchased_count(player: usize) -> usize {
+    civ_list_len(cbh_player_civ(player), 0)
+}
+
+/// `player->mCivilization.GetPurchasedUpgrades().data()`.
+pub(crate) fn civm_purchased_data(player: usize) -> usize {
+    civ_list(cbh_player_civ(player), 0).0
+}
