@@ -29,6 +29,23 @@ fn slot(p: u64, offset: u64) -> *mut u64 {
     (p as usize + offset as usize) as *mut u64
 }
 
+/// Herd `h`'s record (an `EEHerd*`).
+fn herd(h: u64) -> *mut crate::cp::herd::EeHerdFields {
+    (h as usize + layout().herd_fields as usize) as *mut _
+}
+
+/// The world table's row `row`: `GetLongValue` (`unsigned long`), `GetLongValue2`, `GetFloatValue`.
+fn world_long(row: i64) -> i64 {
+    ee_data::tables::ee_data_world_entry(row as u32).mLongValue as c_ulong as i64
+}
+fn world_long2(row: i64) -> c_ulong {
+    ee_data::tables::ee_data_world_entry(row as u32).mLongValue2 as c_ulong
+}
+fn world_float(row: i64) -> f32 {
+    ee_data::tables::ee_data_world_entry(row as u32).mFloatValue
+}
+use ee_data::world_constants::EEWorldConstant as W;
+
 /// Player `p`'s records.
 fn saved(p: u64) -> *mut EeUnitsPlayerSaved {
     (p as usize + layout().player_saved as usize) as *mut EeUnitsPlayerSaved
@@ -217,6 +234,33 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                         i64::from(w.current_player().is_some_and(|c| c.handle() == p))
                     }
                     _ => crate::world::ClassView::count(&t) as i64,
+                });
+            }
+            // a herd's animal, a town's patrol group, the world table, the teams, a patrol group's nearest point
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_HERD_ANIMAL => return Some((*herd(a)).mAnimalID as i64),
+            EE_UNITS_PLAYER_BODY_TOWN_PATROL => return Some(*slot(a, l.town_patrol_group) as i64),
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_TOWN_SET_PATROL => *slot(a, l.town_patrol_group) = b as u64,
+            EE_UNITS_PLAYER_BODY_WORLD_LONG => return Some(world_long(b)),
+            EE_UNITS_PLAYER_BODY_TEAM_COUNT => {
+                return Some(crate::app::teams_ffi::ee_app_teams_get(usize::MAX, std::ptr::null_mut(), 0) as i64)
+            }
+            EE_UNITS_PLAYER_BODY_TEAM_HAS => {
+                return Some(i64::from(crate::app::teams_ffi::ee_app_teams_contains(b as usize, c as u32)))
+            }
+            EE_UNITS_PLAYER_BODY_PATROL_NEAREST => {
+                return Some(crate::units::patrol_group::ee_units_pg_nearest(a as usize as *mut _, b as i32, c as i32)
+                    as usize as i64)
+            }
+            // an upgrade's (EEUnitStats') terrain mask, button loads, class's unit type
+            EE_UNITS_PLAYER_BODY_TERRAIN_MASK
+            | EE_UNITS_PLAYER_BODY_BUTTON_LOADS
+            | crate::units::player_rest::EE_UNITS_PLAYER_BODY_STATS_TYPE => {
+                let t = crate::world::WorldRead::begin();
+                let s = crate::world::StatsView::of(&t, a)?;
+                return Some(match op {
+                    EE_UNITS_PLAYER_BODY_TERRAIN_MASK => (*s.fields().ptr()).mTerrainMask as i64,
+                    EE_UNITS_PLAYER_BODY_BUTTON_LOADS => (*s.fields().ptr()).mButtonLoadCount as i64,
+                    _ => s.class()?.unit_type() as i64,
                 });
             }
             EE_UNITS_PLAYER_BODY_IS_SELF | EE_UNITS_PLAYER_BODY_ENEMY_OF => {
@@ -429,6 +473,19 @@ pub unsafe fn player(
                 return Some(UnitView::of(&t, a0 as u64)?.holder_handle() as i64);
             }
             EE_UNITS_PLAYER_X_WONDER_STARTED => return Some(0),
+            // a town's patrol group; the world table's rows
+            EE_UNITS_PLAYER_X_TOWN_PATROL_OF => return Some(*slot(a0 as u64, layout().town_patrol_group) as i64),
+            EE_UNITS_PLAYER_X_POINTS_MAX => return Some(world_long(W::kWorldUnitImprovementPointsMax as i64)),
+            EE_UNITS_PLAYER_X_WONDER_HIT_POINT_BONUS => {
+                io.f[0] = world_float(W::kWorldWonderHitPointBonus as i64);
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 | EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2 => {
+                // `(long)` of GetLongValue(2)(EEWorldImprovementTime(a[0]))
+                let row = W::kWorldImprovementTimeAreaEffect as i64 + a0 as c_long as i64;
+                let v = if op == EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 { world_long(row) as c_ulong } else { world_long2(row) };
+                return Some(v as c_long as i64);
+            }
             _ => {}
         }
     }
@@ -540,7 +597,7 @@ unsafe fn tech(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlayerIo) 
 ///
 /// # Safety
 /// As [`body`]; `io` the operation's operands (`io.i` a unit of the player, 0 for none).
-pub unsafe fn tick(op: i32, p: u64, io: &mut crate::units::player_save::EeUnitsPlayerSaveIo) -> Option<i32> {
+pub unsafe fn tick(op: i32, p: u64, index: u32, io: &mut crate::units::player_save::EeUnitsPlayerSaveIo) -> Option<i32> {
     use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_UPDATE_AIR_TRAFFIC};
     use crate::units::player_tick::*;
     use crate::world::{PlayerView, UnitView, WorldRead};
@@ -557,6 +614,26 @@ pub unsafe fn tick(op: i32, p: u64, io: &mut crate::units::player_save::EeUnitsP
             EE_UNITS_PLAYER_TICK_X_AIR => {
                 ee_units_player_rest(pv, EE_UNITS_PLAYER_REST_UPDATE_AIR_TRAFFIC, 0, 0, 0);
             }
+            // herd `index`'s due time and activity, its update, its state
+            EE_UNITS_PLAYER_TICK_HERD_DUE | EE_UNITS_PLAYER_TICK_HERD_UPDATE | EE_UNITS_PLAYER_TICK_HERD_STATE => {
+                let lists = crate::units::player_lists::player_lists(p);
+                let h = crate::units::player_lists::ee_units_lists_at(lists, crate::units::player_lists::EE_UNITS_LISTS_HERDS, index as usize);
+                let f = herd(h);
+                match op {
+                    EE_UNITS_PLAYER_TICK_HERD_DUE => {
+                        io.i = (*f).mNextUpdateTime as i64;
+                        io.b = u8::from((*f).mIsActive);
+                    }
+                    EE_UNITS_PLAYER_TICK_HERD_UPDATE => {
+                        crate::cp::herd_game::ee_cp_herd_update(h as usize as *mut c_void, f, io.i as c_ulong)
+                    }
+                    _ => return Some((*f).mState as i32),
+                }
+            }
+            // the wonders' heal (the world table)
+            EE_UNITS_PLAYER_TICK_X_HEAL_AMOUNT => io.i = world_long(W::kWorldWonderHealAmount as i64),
+            EE_UNITS_PLAYER_TICK_X_HEAL_STEP => io.i = world_long(W::kWorldWonderHealEpochStep as i64),
+            EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR => io.f = world_float(W::kWorldWonderHealEpochFactor as i64),
             EE_UNITS_PLAYER_TICK_GAME_TIME | EE_UNITS_PLAYER_TICK_TICK_MS => {
                 let t = WorldRead::begin();
                 let w = crate::world::WorldView::global(&t)?;
