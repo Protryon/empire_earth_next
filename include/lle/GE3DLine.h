@@ -43,7 +43,6 @@ public:
     void Define(const GE3DPoint& inPoint1, const GE3DPoint& inPoint2, const GE3DPoint& inPoint3)
         { ee_ge_plane_define(GERust(inPoint1), GERust(inPoint2), GERust(inPoint3), GERust(*this)); }
     void Define(const GE3DPoint& inPoint, const GEVector& inNormal) { *this = GE3DPlane(inPoint, inNormal); }
-    const GEVector& GetNormal() const { return GECpp(this->mNormal); }
     const GE3DPoint& GetPoint() const { return GECpp(this->mPoint); }
     // the line where the planes meet; false when they are parallel (degenerate normals: the C++ read an
     // uninitialized parameter, Rust takes 0)
