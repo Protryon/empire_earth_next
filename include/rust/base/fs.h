@@ -644,17 +644,6 @@ void ee_fs_archive_list(const EeFsArchive *archive,
                         EeFsTextSink sink,
                         void *context);
 
-/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
-/// [`ee_fs_archive_list`]; always `kErrorOK`.
-///
-/// # Safety
-/// As [`ee_fs_archive_list`]; `sink` takes a null text.
-int32_t ee_fs_archive_list_files(const EeFsArchive *archive,
-                                 const char *pattern,
-                                 bool clear,
-                                 EeFsTextSink sink,
-                                 void *context);
-
 /// Visits the FAT in order (the `Create` check loop, `ExtractAll`).
 ///
 /// # Safety
