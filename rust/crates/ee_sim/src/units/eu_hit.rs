@@ -25,20 +25,11 @@ pub const EE_UNITS_EU_SPARKS: i32 = 8;
 pub const EE_UNITS_EU_HAS_BLOOD: i32 = 9;
 /// `gEffectManager->CreateUnitEffect(this, mUnitClass->mImpactBloodEffect, NULL, false, 0, 0)`
 pub const EE_UNITS_EU_BLOOD: i32 = 10;
-/// the modifiers' input `= b` (the original's `theInput`)
-pub const EE_UNITS_EU_SET_INPUT: i32 = 11;
-/// the area damage `= b` (`theAreaDamage`)
-pub const EE_UNITS_EU_SET_AREA_DAMAGE: i32 = 12;
-/// `mComplexUnit->mAffectingAreaEffects.ApplyModifiers(1, theInput, theAreaDamage, mComplexUnit)`
+/// `mComplexUnit->mAffectingAreaEffects.ApplyModifiers(1, ((long*)a)[0], ((long*)a)[1], mComplexUnit)` (the input,
+/// the area damage: the body's)
 pub const EE_UNITS_EU_APPLY_MODIFIERS: i32 = 13;
-/// the area damage
-pub const EE_UNITS_EU_AREA_DAMAGE: i32 = 14;
-/// the damage `= b` (`theDamage`)
-pub const EE_UNITS_EU_SET_DAMAGE: i32 = 15;
-/// `mComplexUnit->ApplyMorale(theAreaDamage, theDamage)`
+/// the damage: `mComplexUnit->ApplyMorale(b, theDamage)`'s, the morale formula (CBMO; answered in Rust: cu_view.rs)
 pub const EE_UNITS_EU_APPLY_MORALE: i32 = 16;
-/// the damage
-pub const EE_UNITS_EU_DAMAGE: i32 = 17;
 /// unit `a`'s `mTileNode != NULL`
 pub const EE_UNITS_EU_ON_MAP: i32 = 18;
 /// unit `a`'s player is not this unit's and is its enemy (`mPlayer->mEnemies[a->mPlayer->mPlayerID] != 0`)
@@ -217,12 +208,10 @@ pub fn take_hit<H: EuHost + ?Sized>(h: &mut H, unit: u64, attacker: u64, damage_
     let mut suppress = false;
     if complex != 0 {
         if mode != 2 {
-            s.qb(EE_UNITS_EU_SET_INPUT, damage_in);
-            s.qb(EE_UNITS_EU_SET_AREA_DAMAGE, damage_in);
-            s.q(EE_UNITS_EU_APPLY_MODIFIERS);
-            s.qb(EE_UNITS_EU_SET_DAMAGE, damage);
-            s.q(EE_UNITS_EU_APPLY_MORALE);
-            damage = s.q(EE_UNITS_EU_DAMAGE);
+            // the modifiers' input and the area damage (units round 14: the body's, were C++ scratch statics)
+            let mut v: [std::os::raw::c_long; 2] = [damage_in as std::os::raw::c_long; 2];
+            s.qa(EE_UNITS_EU_APPLY_MODIFIERS, v.as_mut_ptr() as usize as u64);
+            damage = s.qb(EE_UNITS_EU_APPLY_MORALE, i64::from(v[1]));
         }
         if attacker != 0 && s.qa(EE_UNITS_EU_ON_MAP, attacker) != 0 && s.qa(EE_UNITS_EU_IS_ENEMY, attacker) != 0 {
             let mut target = 0u64;
@@ -355,7 +344,8 @@ pub(crate) mod game {
     use std::os::raw::c_void;
 
     extern "C" {
-        fn ee_units_eu_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64) -> i64;
+        /// (eu_more.rs's statements too: units round 14 merged `ee_units_eum_host` into it)
+        pub(crate) fn ee_units_eu_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64) -> i64;
     }
 
     /// the game's host (eu_body.rs's extern functions use it too)

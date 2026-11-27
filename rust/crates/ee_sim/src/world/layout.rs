@@ -160,6 +160,11 @@ pub struct EeWorldLayout {
     /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
     pub physics_pointer: u64,
     pub physics_saved: u64,
+    /// `EEPhysics::mRandom` (an `EeURandom`; units round 14: the class hosts' draws), `&gEffectDetail` (an
+    /// `unsigned long`) and `EeDataGraphicEffectFields` in `EEGraphicEffect` (the ripple and trail detail tests)
+    pub physics_random: u64,
+    pub effect_detail: u64,
+    pub graphic_effect_fields: u64,
     // ---- the units' saves (the units' state lane, round 1: unit_save_views.rs)
     /// `EEComplexUnit`'s pointer members `mLauncherClass` (an `EEUnitClass*`), `mPatrolGroup` (an
     /// `EEPPatrolGroup*`), `mHomeBase`, `mGatheredResource`, `mLastAttacker`, `mOwner`, `mMine`, `mHolder`,
@@ -235,6 +240,12 @@ pub struct EeWorldLayout {
     pub player_last_unit: u64,
     /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
     pub town_fields: u64,
+    // ---- units round 14: the world's unit chain and the store flag (cu_view.rs us_view, ck_view)
+    /// `RTSWorld::mUnits.mFirst` (the chain's first unit; a unit's next is its `mTileNode->mNext`), `RTSUnit::mInUnitStore`
+    pub world_units_first: u64,
+    pub unit_in_store: u64,
+    /// `EEFormation::mOrientation`: where the formation's `EeFormationFields` start (formations/units.rs; units round 14)
+    pub formation_fields: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

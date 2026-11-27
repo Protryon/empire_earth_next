@@ -26,7 +26,6 @@ bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUni
 long EETurnGatePart(GETransformation&, long, long);
 void EEGetWallGateTiles(const U2DPoint<long>&, long, std::vector<U2DPoint<long> >&);
 bool EEIsLandTerrain(long);
-bool EEIsSpaceDockSiteOpen(long, long, EEPlayer*);
 extern GEViewport gViewport;
 
 // ghost_view.rs reads and stores the ghost's record one pointer past the ghost (after the vtable pointer)
@@ -49,19 +48,9 @@ void EEPreviewPlacement(const GE2DPoint& inLocation) { ee_units_ghost_body(EE_UN
 
 // ghost_body.rs's scratch values: the fills' position (their thePosition), the preview's position and tile, the gate
 // preview's cursor tile, tiles and turned transformation (the originals' locals)
-static GE3DPoint sGhostFillPosition;
-static GE3DPoint sGhostPosition;
-static EETile* sGhostTile;
-static long sGhostXY[2];
 static std::vector<U2DPoint<long> > sGhostPoints;
 static GETransformation sGhostTransform(false);
-static bool sGhostPieceFlag;
-static FSFile* sGhostFile;
-static unsigned long sGhostValue;
 static UString sGhostText;
-
-// a GE3DPoint's x, y or z (0, 1, 2)
-static float& EEGhostPart(GE3DPoint& inPoint, int64_t inIndex) { return inIndex == 0 ? inPoint.mX : inIndex == 1 ? inPoint.mY : inPoint.mZ; }
 
 // The C++ of EEGhostUnit's Rust bodies (ee_units ghost_body.rs; EE_UNITS_GHOST_*): one statement of the originals
 // each, in their order; inGhost the ghost acted on, inA an object or a value, inB and inC values (floats as bits)
@@ -74,14 +63,14 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     const GE2DPoint* theLocation = EEGhostObject<const GE2DPoint>(inA);
     switch (inOp) {
     case EE_UNITS_GHOST_UM_CEIL: return UFloatBits(UMCeil(UBitsFloat((uint32_t)(inB))));
-    case EE_UNITS_GHOST_POSITION_FROM_TRANSFORM: sGhostFillPosition = GE3DPoint(theGhost->mTransformation); return 0;
-    case EE_UNITS_GHOST_CAN_PLACE_AT: return EECanPlace(theGhost->mPlayer, theGhost->mUnitClass->GetUnitType(), &sGhostFillPosition, (long)inB, (long)inC, 0, 0);
+    case EE_UNITS_GHOST_POSITION_FROM_TRANSFORM: *EEGhostObject<GE3DPoint>(inA) = GE3DPoint(theGhost->mTransformation); return 0;
+    case EE_UNITS_GHOST_CAN_PLACE_AT: return EECanPlace(theGhost->mPlayer, theGhost->mUnitClass->GetUnitType(), EEGhostObject<GE3DPoint>(inA), (long)inB, (long)inC, 0, 0);
     case EE_UNITS_GHOST_TILE_TERRAIN: return theMap->GetTile((long)inB, (long)inC)->mTerrainType;
     case EE_UNITS_GHOST_TERRAIN_Z: return UFloatBits(theMap->mTerrainMesh.GetZ((long)inB, (long)inC));
     case EE_UNITS_GHOST_IS_LAND_TERRAIN: return EEIsLandTerrain((long)inB);
-    case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return EEIsSpaceDockSiteOpen(theGhost->mTileX, theGhost->mTileY, theGhost->mPlayer);
+    case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)theGhost->mPlayer, 0, theGhost->mTileX, theGhost->mTileY) != 0;
     case EE_UNITS_GHOST_DOCK_FACING: return EEGetDockFacing(theGhost->mTileX, theGhost->mTileY);
-    case EE_UNITS_GHOST_SPACE_DOCK_YAW: return UFloatBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
+    case EE_UNITS_GHOST_SPACE_DOCK_YAW: return (uint32_t)ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, theGhost->mTileX, theGhost->mTileY);
     case EE_UNITS_GHOST_SET_YAW: theGhost->mTransformation.SetOrientationYPR(UBitsFloat((uint32_t)(inB)), 0.0f, 0.0f); return 0;
     case EE_UNITS_GHOST_NODE_IN_SET: return theNode->mUnit != NULL && gUnitSetManager.Contains(theNode->mUnit->mUnitClass->GetUnitType(), theGhost->mUnitSet);
     case EE_UNITS_GHOST_TILE_UNBLOCKED:
@@ -95,19 +84,16 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_NUM_GHOSTS: return (int64_t)gWorld.GetNumGhostUnits();
     case EE_UNITS_GHOST_SET_CHANGED: gGhostUnitsChanged = inB != 0; return 0;
     case EE_UNITS_GHOST_GHOST_AT: return (uint64_t)(uintptr_t)gWorld.GetGhostUnit((size_t)inB);
-    case EE_UNITS_GHOST_POINT_UNIT_OR_TILE: return EEPointUnitOrTile(*theLocation, sGhostTile, sGhostPosition, true);
-    case EE_UNITS_GHOST_POSITION: return UFloatBits(EEGhostPart(sGhostPosition, inB));
-    case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = UBitsFloat((uint32_t)(inC)); return 0;
+    case EE_UNITS_GHOST_POINT_UNIT_OR_TILE: return EEPointUnitOrTile(*theLocation, *EEGhostObject<EETile*>((uint64_t)inB), *EEGhostObject<GE3DPoint>((uint64_t)inC), true);
     case EE_UNITS_GHOST_GET_MODEL: theGhost->GetModel(); return 0;
     case EE_UNITS_GHOST_AIRPORT_TILE_SIZE: return EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(gUnitClassTable[kUnitTypeAirport])->GetTileSize();
     case EE_UNITS_GHOST_FACING_QUARTER: return EEGetFacingQuarter((long)inB, (long)inC);
     case EE_UNITS_GHOST_SET_FARM_SLOT: EEGhostUnit::SetFarmSlotTile(theGhost, (long)inB); return 0;
     case EE_UNITS_GHOST_IS_LAND_BUILDING: return theGhost->mUnitClass->IsLandBuilding();
-    case EE_UNITS_GHOST_SET_POSITION: theGhost->mTransformation.SetPosition(sGhostPosition); return 0;
-    case EE_UNITS_GHOST_LOCATION_TO_TILE: theGhost->mUnitClass->LocationToTile(sGhostPosition, theGhost->mTileX, theGhost->mTileY); return 0;
+    case EE_UNITS_GHOST_SET_POSITION: theGhost->mTransformation.SetPosition(*EEGhostObject<GE3DPoint>(inA)); return 0;
+    case EE_UNITS_GHOST_LOCATION_TO_TILE: theGhost->mUnitClass->LocationToTile(*EEGhostObject<GE3DPoint>(inA), theGhost->mTileX, theGhost->mTileY); return 0;
     case EE_UNITS_GHOST_PICK_UNIT: return (uint64_t)(uintptr_t)gUnitPicker.PickUnit(*theLocation, 0);
-    case EE_UNITS_GHOST_POINT_TILE_XY: EEPointUnitOrTileXY(*theLocation, sGhostTile, sGhostXY[0], sGhostXY[1], true); return 0;
-    case EE_UNITS_GHOST_SCRATCH_XY: return sGhostXY[inB];
+    case EE_UNITS_GHOST_POINT_TILE_XY: EEPointUnitOrTileXY(*theLocation, *EEGhostObject<EETile*>((uint64_t)inB), EEGhostObject<long>((uint64_t)inC)[0], EEGhostObject<long>((uint64_t)inC)[1], true); return 0;
     case EE_UNITS_GHOST_UNIT_DEREFERENCE: theUnit->Dereference(); return 0;
     case EE_UNITS_GHOST_SCRATCH_POINTS_CLEAR: sGhostPoints.clear(); return 0;
     case EE_UNITS_GHOST_GATE_TILES: EEGetWallGateTiles(U2DPoint<long>((long)inB, (long)inC), (long)inA, sGhostPoints); return 0;
@@ -117,14 +103,12 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SCRATCH_TRANSFORM_SET: theGhost->mTransformation = sGhostTransform; return 0;
     case EE_UNITS_GHOST_MESH_Z: return UFloatBits(theMap->mTerrainMesh.GetMeshZ(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC))));
     case EE_UNITS_GHOST_SET_POSITION_XYZ: theGhost->mTransformation.SetPosition(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC)), UBitsFloat((uint32_t)((int64_t)inA))); return 0;
-    case EE_UNITS_GHOST_POSITION_RESET: sGhostPosition = GE3DPoint(); return 0;
     // ghost_make.rs's
     case EE_UNITS_GHOST_CLEAR_GHOSTS: gWorld.ClearGhostUnits(); return 0;
     case EE_UNITS_GHOST_NEW: return (uint64_t)(uintptr_t)new EEGhostUnit(EEGhostObject<EEUnitClass>(inA)->GetUnitType(), EEGhostObject<EEPlayer>((uint64_t)inB), inC != 0);
     case EE_UNITS_GHOST_ADD: gWorld.AddGhostUnit(theGhost); return 0;
     case EE_UNITS_GHOST_FARM_TYPE: return EEGetFarmType(EEGhostObject<EEPlayer>(inA));
-    case EE_UNITS_GHOST_WALL_PIECE_PART: return EEGetWallPiecePart((long)inB, &sGhostPieceFlag);
-    case EE_UNITS_GHOST_PIECE_FLAG: return sGhostPieceFlag;
+    case EE_UNITS_GHOST_WALL_PIECE_PART: return EEGetWallPiecePart((long)inB, EEGhostObject<bool>(inA));
     case EE_UNITS_GHOST_SET_ANIMATION: theGhost->SetAnimation((long)inB); return 0;
     case EE_UNITS_GHOST_GATE_CLASS: return (uint64_t)(uintptr_t)EEUnitClassOfKind<EE_CLASS_KIND_GATE>(EEGhostObject<EEUnitClass>(inA));
     case EE_UNITS_GHOST_TECH_CLASS: return (uint64_t)(uintptr_t)gUnitClassTable[EEGhostObject<EEPlayer>(inA)->mTechnologies->Get((long)inB)->mData->mUnitClass];
@@ -144,11 +128,9 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_M_SHUTTING_DOWN: return UShutdownInProgress() == true;
     case EE_UNITS_GHOST_M_POST_UNLOAD: gDataPreLoading->PostUnloadUnitClass(theGhost->mPlayer->mPlayerID, theGhost->mUnitClass->GetUnitType()); return 0;
     case EE_UNITS_GHOST_M_UNLOAD_CLASS_MEDIA: theGhost->mPlayer->UnloadUnitClassMedia(theGhost->mUnitClass->GetUnitType()); return 0;
-    case EE_UNITS_GHOST_M_SET_FILE: sGhostFile = EEGhostObject<FSFile>(inA); return 0;
-    case EE_UNITS_GHOST_M_READ_ULONG: return sGhostFile->Read(sGhostValue);
-    case EE_UNITS_GHOST_M_VALUE: return sGhostValue;
-    case EE_UNITS_GHOST_M_WRITE_ULONG: return sGhostFile->Write((unsigned long)inB);
-    case EE_UNITS_GHOST_M_WRITE_PLAYER_ID: return sGhostFile->Write(theGhost->mPlayer->GetPlayerID());
+    case EE_UNITS_GHOST_M_READ_ULONG: return EEGhostObject<FSFile>(inA)->Read(*EEGhostObject<unsigned long>((uint64_t)inB));
+    case EE_UNITS_GHOST_M_WRITE_ULONG: return EEGhostObject<FSFile>(inA)->Write((unsigned long)inB);
+    case EE_UNITS_GHOST_M_WRITE_PLAYER_ID: return EEGhostObject<FSFile>(inA)->Write(theGhost->mPlayer->GetPlayerID());
     case EE_UNITS_GHOST_M_START_FRAME: return theGhost->GetModel()->mStartFrames[inB];
     case EE_UNITS_GHOST_M_CHECKSUM_PLAYER_TEXT: sprintf(sGhostText, "The Ghost Unit Player Number was: %ld", theGhost->mPlayer->mPlayerID); return 0;
     case EE_UNITS_GHOST_M_CHECKSUM_CLASS_TEXT: sprintf(sGhostText, "The Object Type was %s", (const char*)theGhost->mUnitClass->mName); return 0;

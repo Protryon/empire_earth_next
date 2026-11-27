@@ -750,6 +750,11 @@ struct EeWorldLayout {
   /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
   uint64_t physics_pointer;
   uint64_t physics_saved;
+  /// `EEPhysics::mRandom` (an `EeURandom`; units round 14: the class hosts' draws), `&gEffectDetail` (an
+  /// `unsigned long`) and `EeDataGraphicEffectFields` in `EEGraphicEffect` (the ripple and trail detail tests)
+  uint64_t physics_random;
+  uint64_t effect_detail;
+  uint64_t graphic_effect_fields;
   /// `EEComplexUnit`'s pointer members `mLauncherClass` (an `EEUnitClass*`), `mPatrolGroup` (an
   /// `EEPPatrolGroup*`), `mHomeBase`, `mGatheredResource`, `mLastAttacker`, `mOwner`, `mMine`, `mHolder`,
   /// `mBehavior` (an `EEUnitBehavior*`), `mLastResource` (units: `RTSUnit*` addresses)
@@ -821,6 +826,11 @@ struct EeWorldLayout {
   uint64_t player_last_unit;
   /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
   uint64_t town_fields;
+  /// `RTSWorld::mUnits.mFirst` (the chain's first unit; a unit's next is its `mTileNode->mNext`), `RTSUnit::mInUnitStore`
+  uint64_t world_units_first;
+  uint64_t unit_in_store;
+  /// `EEFormation::mOrientation`: where the formation's `EeFormationFields` start (formations/units.rs; units round 14)
+  uint64_t formation_fields;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

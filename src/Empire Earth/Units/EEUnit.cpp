@@ -53,44 +53,33 @@ long EEUnit::FinishLoad(long, long)
     return 0;
 }
 
-// TakeHit's locals (the modifiers' input, the area damage, the damage) and the hit formula's answer
-static long sHitInput;
-static long sHitAreaDamage;
-static long sHitDamage;
-// Kill's death sound parameters (its locals)
-static float sDeathSound[3];   // volume, pan, pitch
-// Describe's and DescribeLong's text (their theString)
+// Describe's and DescribeLong's text (their theString; TakeHit's and Kill's locals are the Rust bodies')
 static UWideString sEuText;
 
 template <class T> static T* EEEuObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
-// The C++ of EEUnit::TakeHit's Rust body (ee_units eu_hit.rs; EE_UNITS_EU_*): one statement of the original each, in
-// its order; inA an object, inB and inC values
+// The C++ of EEUnit's Rust bodies (ee_units eu_hit.rs, eu_body.rs: EE_UNITS_EU_*; eu_more.rs, eu_describe.rs:
+// EE_UNITS_EUM_*, from 200): one statement of the originals each, in their order; inA an object, inB and inC values.
+// No preamble reads through the unit: Init and ResetEEUnit run on a unit whose members are not set yet
 extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC)
 {
     EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
     EEUnit* theOther = inA != 0 ? EEEuObject<EEUnit>(inA) : theUnit;
     EEComplexUnit* theComplex = theUnit->mComplexUnit;
-    EEPlayer* thePlayer = dynamic_cast<EEPlayer*>(theUnit->mPlayer);
     const int64_t* theArgs = EEEuObject<const int64_t>((uint64_t)inB);
     switch (inOp) {
     case EE_UNITS_EU_PART_TAKE_HIT: EEEuObject<EEComplexUnit>(inA)->TakeHit(EEEuObject<EEUnit>((uint64_t)theArgs[0]), (long)theArgs[1], (unsigned long)theArgs[2], (long)theArgs[3]); return 0;
     case EE_UNITS_EU_SPARKS: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactSparksEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_BLOOD: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
-    case EE_UNITS_EU_SET_INPUT: sHitInput = (long)inB; return 0;
-    case EE_UNITS_EU_SET_AREA_DAMAGE: sHitAreaDamage = (long)inB; return 0;
-    case EE_UNITS_EU_APPLY_MODIFIERS: theComplex->mAffectingAreaEffects.ApplyModifiers(1, sHitInput, sHitAreaDamage, theComplex); return 0;
-    case EE_UNITS_EU_SET_DAMAGE: sHitDamage = (long)inB; return 0;
-    case EE_UNITS_EU_APPLY_MORALE: theComplex->ApplyMorale(sHitAreaDamage, sHitDamage); return 0;
-    case EE_UNITS_EU_DAMAGE: return sHitDamage;
+    case EE_UNITS_EU_APPLY_MODIFIERS: theComplex->mAffectingAreaEffects.ApplyModifiers(1, EEEuObject<long>(inA)[0], EEEuObject<long>(inA)[1], theComplex); return 0;
     case EE_UNITS_EU_HAS_UNDER_ATTACK: return theComplex->mUnitClass->FindAction(kActionUnderAttack) != NULL;
     case EE_UNITS_EU_ACTION_CHANGED: theComplex->mUnitClass->ActionChanged(theComplex); return 0;
     case EE_UNITS_EU_SHOOTS_TRACERS: return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
     case EE_UNITS_EU_BADLY_HURT: theUnit->mUnitClass->BadlyHurt(theUnit); return 0;
-    case EE_UNITS_EU_DAMAGE_TAKEN: thePlayer->DamageTaken((unsigned long)inB, (long)inC, theUnit); return 0;
+    case EE_UNITS_EU_DAMAGE_TAKEN: dynamic_cast<EEPlayer*>(theUnit->mPlayer)->DamageTaken((unsigned long)inB, (long)inC, theUnit); return 0;
     case EE_UNITS_EU_HAS_UNITS_STATE: return gWorld.mPlayers[inB] != NULL && gWorld.mPlayers[inB]->mComputerPlayer != NULL && gWorld.mPlayers[inB]->mComputerPlayer->mUnitsState != NULL;
     case EE_UNITS_EU_ON_DEALT: EECPUnitsOnDealt(gWorld.mPlayers[inB]->mComputerPlayer, (long)inC, theUnit); return 0;
-    case EE_UNITS_EU_ADD_ATTACK_EVENT: thePlayer->mEvents.AddPlayerEvent(EETileLocation(theUnit->mTileX, theUnit->mTileY), EETileLocation((long)inB, (long)inC), 1, thePlayer, -1, false); return 0;
+    case EE_UNITS_EU_ADD_ATTACK_EVENT: dynamic_cast<EEPlayer*>(theUnit->mPlayer)->mEvents.AddPlayerEvent(EETileLocation(theUnit->mTileX, theUnit->mTileY), EETileLocation((long)inB, (long)inC), 1, dynamic_cast<EEPlayer*>(theUnit->mPlayer), -1, false); return 0;
     case EE_UNITS_EU_DAMAGE_EFFECT_FORMULA: return EECombatDamageEffect(EeCombatDamageEffectIn{(int32_t)theUnit->mHitPoints, (int32_t)inB, (int32_t)theUnit->mStats->mMaxHitPoints, EEEuObject<EEGraphicEffect>(inA)->GetParam2()});
     case EE_UNITS_EU_EFFECT_ON_SELF: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEEuObject<EEGraphicEffect>(inA), NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_GATE_EFFECT_LINKED: gWorld.mEffectManager->CreateUnitEffect(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass)->GetLastLinked(theUnit->mComplexUnit), theUnit->mUnitClass->mDamageEffect, NULL, false, 0, 0); return 0;
@@ -120,10 +109,8 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_HAS_DOPPELGANGER: return gDoppelgangerManager.GetDoppelganger(EEEuObject<EETile>(inA), theUnit, theUnit->mPlayer->mPlayerID) != NULL;
     case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN: gDoppelgangerManager.TileShown(EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, theUnit->mPlayer); return 0;
     case EE_UNITS_EU_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
-    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]); return 0;
-    case EE_UNITS_EU_DEATH_SOUND_PLAY:
-        gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, sDeathSound[0], sDeathSound[1], sDeathSound[2], theUnit->mStats->mDeathSound->mLooping, NULL);
-        return 0;
+    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &EEEuObject<float>(inA)[0], &EEEuObject<float>(inA)[1], &EEEuObject<float>(inA)[2]); return 0;
+    case EE_UNITS_EU_DEATH_SOUND_PLAY: gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, EEEuObject<float>(inA)[0], EEEuObject<float>(inA)[1], EEEuObject<float>(inA)[2], theUnit->mStats->mDeathSound->mLooping, NULL); return 0;
     case EE_UNITS_EU_SIGHT_ON_HERE: theUnit->SightOn(theUnit->mTileX, theUnit->mTileY); return 0;
     case EE_UNITS_EU_CAMERA_UNIT_IS_THIS: return EEUnitHandleResolved<EEUnit>(ee_app_camera_unit((uint32_t)inB)) == theUnit;
     case EE_UNITS_EU_CLEAR_CAMERA_UNIT: gWorld.mCameraControl.ClearUnitA(); return 0;
@@ -137,16 +124,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_CONTINENT_BY_ID: return (uint64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)inB);
     case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return UFloatBits(theUnit->GetTileDistanceSquared(theOther));
     case EE_UNITS_EU_KILL_UNIT: theUnit->mPlayer->KillUnit(theUnit, false); return 0;
-    default: return 0;
-    }
-}
-
-// The statements of eu_more.rs's bodies (EE_UNITS_EUM_*; no preamble: Init and ResetEEUnit run on a unit whose
-// members are not set yet)
-extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC)
-{
-    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
-    switch (inOp) {
+    // eu_more.rs's
     case EE_UNITS_EUM_UNIT_REMOVED: theUnit->mUnitClass->UnitRemoved(); return 0;
     case EE_UNITS_EUM_SHUTDOWN: return UShutdownInProgress();
     case EE_UNITS_EUM_CLEARING: return gWorld.mClearing;

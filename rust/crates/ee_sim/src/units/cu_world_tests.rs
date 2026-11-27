@@ -169,7 +169,7 @@ fn the_reach_of_a_ranged_unit_is_its_range_on_its_continent() {
         .answer(EE_UNITS_CU_CLASS_CATEGORY_OF, 80, 0, CATEGORY_BOMB)
         .answer(EE_UNITS_CU_BALLISTIC_PITCH, 0, 0, 1);
     assert!(can_reach_tile(&mut h, U, 4, 4));
-    assert!(h.asked(EE_UNITS_CU_LINE_BLOCKED, 0, 4));
+    assert!(h.log.iter().any(|e| e.0 == EE_UNITS_CU_LINE_BLOCKED && e.1 != 0 && e.2 == 4));
 }
 
 #[test]

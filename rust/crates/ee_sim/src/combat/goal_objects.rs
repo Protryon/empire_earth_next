@@ -74,7 +74,7 @@ impl Default for EeCombatGoalIo {
 }
 
 /// ee_units' `EeUnitsGoalHost`: the C++ host of every Rust goal (EEUGRust.cpp's `GoalOp`; the combat goals'
-/// operations are its default case, EEUGRustCombat.cpp's `EECombatGoalHostOp`).
+/// operations are its default case, EEUGRust.cpp's `GoalOp`).
 #[repr(C)]
 pub struct EeCombatGoalTable {
     pub context: *mut c_void,
@@ -101,7 +101,7 @@ impl TableHost<'_> {
 }
 
 /// The plain reads of the combat goals' operations, over the world views (the units' lane, round 2: they were
-/// `EECombatGoalHostOp`'s one-line cases); None for another operation (or no unit), which the C++ answers.
+/// the combat goals' host's (`GoalOp`) one-line cases); None for another operation (or no unit), which the C++ answers.
 #[cfg(not(test))]
 fn view_read(code: i32, unit: u64) -> Option<i64> {
     use crate::combat::goal_attack::{
@@ -155,7 +155,7 @@ fn view_read(_code: i32, _unit: u64) -> Option<i64> {
 }
 
 /// The plain reads and stores with arguments over the world views (the units behaviour lane, round 1: they were
-/// `EECombatGoalHostOp`'s cases): the location, the tiles, the attackers' count, the players' reads and attack count,
+/// the combat goals' host's (`GoalOp`) cases): the location, the tiles, the attackers' count, the players' reads and attack count,
 /// the class's flare flag, the heal's clock, the save's version flags. None for another operation.
 #[cfg(not(test))]
 fn view_op(code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
@@ -282,7 +282,7 @@ fn view_op(code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
 }
 
 /// The goal host's projectile test and its TEST ONLY records (the units' behaviour lane, round 2; they were
-/// EEUGRustCombat.cpp `EECombatGoalHostOp`'s cases): the class's projectile class set, the CBGO record of a goal
+/// EEUGRust.cpp `GoalOp`'s cases): the class's projectile class set, the CBGO record of a goal
 /// call (`EECombatCaptureGoal`) and the CBSO record of a heal's work (`EECombatCaptureHealWork`), folded by
 /// capture_fold.rs.
 #[cfg(not(test))]
@@ -348,6 +348,44 @@ fn view_op(_code: i32, _unit: u64, _args: &mut EeCombatGoalArgs) -> Option<i64> 
 const SAVE_GOAL_GHOSTS: u32 = 275;
 
 impl TableHost<'_> {
+    /// the combat goals' host's (`GoalOp`) last compound and record cases (the units' lane, round 14): `TELL_GROUP` (the unit's
+    /// active group told the point `a[0..3]`'s bits; 0 without a group, else 1) and `PATH_ATTEMPTS` (the goal's
+    /// `mPathAttempts`). None for another operation.
+    #[cfg(not(test))]
+    fn group_op(&mut self, code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
+        match code {
+            EE_COMBAT_G_TELL_GROUP => {
+                let grouped = {
+                    // SAFETY: a goal's operation runs inside the C++ call that holds the world; its units are live
+                    let t = unsafe { crate::world::WorldRead::begin() };
+                    // SAFETY: as above
+                    let u = unsafe { crate::world::UnitView::of(&t, unit) }?;
+                    u.active_group_handle() != 0
+                };
+                if !grouped {
+                    return Some(0);
+                }
+                let mut io = EeCombatGoalIo::default();
+                for (f, v) in io.f.iter_mut().zip(a.iter()).take(3) {
+                    *f = f32::from_bits(*v as u32);
+                }
+                self.call(crate::units::goal_split::EE_UNITS_GOAL_HOST_X_TELL_GROUP, unit, 0, &mut io);
+                Some(1)
+            }
+            crate::combat::goal_dispatch::EE_COMBAT_G_PATH_ATTEMPTS => {
+                // SAFETY: the operation's handle is a live goal (an `EEUnitGoal`, ee_units' `EeUnitsGoalBase`)
+                let base = unsafe { &*(unit as usize as *const crate::units::goal_obj::EeUnitsGoalBase) };
+                Some(base.path_attempts as i64)
+            }
+            _ => None,
+        }
+    }
+
+    #[cfg(test)]
+    fn group_op(&mut self, _code: i32, _unit: u64, _a: &mut EeCombatGoalArgs) -> Option<i64> {
+        None
+    }
+
     /// The operations the goals' common host answers (the units' `GoalOp`): the typed file calls, the references,
     /// the action started, the unit and ghost found, the hit points set. None for another.
     fn common_op(&mut self, code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
@@ -387,7 +425,7 @@ impl TableHost<'_> {
         }
         match code {
             // EECombatAttackPosition(firing a[1], unit, target a[0], the point of a[2..5]'s bits): the point's bits
-            // back in a[0..3] (was EECombatGoalHostOp's case)
+            // back in a[0..3] (was the combat goals' host's case)
             #[cfg(not(test))]
             crate::combat::goal_attack::EE_COMBAT_G_POSITION => {
                 let mut p = [f32::from_bits(a[2] as u32), f32::from_bits(a[3] as u32), f32::from_bits(a[4] as u32)];
@@ -441,6 +479,9 @@ impl GoalHost for TableHost<'_> {
             return r;
         }
         if let Some(r) = self.common_op(code, unit, args) {
+            return r;
+        }
+        if let Some(r) = self.group_op(code, unit, args) {
             return r;
         }
         let mut io = EeCombatGoalIo { i: *args, ..Default::default() };

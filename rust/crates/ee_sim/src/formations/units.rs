@@ -4,6 +4,7 @@
 //! `EEFormationSlot`s.
 
 use std::ffi::c_void;
+use std::os::raw::c_long;
 
 use ee_base::math::transform::RotationOrder;
 use ee_base::math::types::GeTransformation;
@@ -96,7 +97,7 @@ fn outer_radius(token: &WorldRead, unit: u64) -> f32 {
 /// Places `units` and writes one `EEFormationSlot` per unit into `out`.
 ///
 /// # Safety
-/// As [`ee_formation_place_units`].
+/// As [`formation_place`]; `out` holds one slot per unit.
 unsafe fn place_into(
     kind: i32,
     min_radius: f32,
@@ -120,57 +121,65 @@ unsafe fn place_into(
     }
 }
 
-/// `EEFormation::Place`: the formation's slots for `count` units (`EEComplexUnit*`s), one written per unit into
-/// `out` (the caller sized its vector: a circle appends, the other types replace), and the capture's record of
-/// the call. An empty circle writes and records nothing.
-///
-/// # Safety
-/// `orientation` (`mOrientation.mMatrix`) and `center` are the formation's members; `units` is valid for `count` reads of live complex
-/// units and `out` for `count` writes when `count` is not 0; the caller holds the world.
-#[no_mangle]
-pub unsafe extern "C" fn ee_formation_place_units(
-    kind: i32,
-    min_radius: f32,
-    orientation: *const [[f32; 4]; 4],
-    center: *const Vec3,
-    heading: f32,
-    units: *const *mut c_void,
-    count: usize,
-    out: *mut EeFormationUnitSlot,
-) {
-    // SAFETY: the caller's contract
-    let frame = unsafe { frame_of(&GeTransformation { m: *orientation }, *center, heading) };
-    // SAFETY: the caller's contract
-    let units: Vec<u64> = (0..count).map(|i| unsafe { *units.add(i) } as u64).collect();
-    // SAFETY: the caller's contract
-    unsafe { place_into(kind, min_radius, &frame, &units, out) };
+/// `EEFormation`'s members from `mOrientation` on (ee/EEFormation.h; the units' lane, round 14: the groups' and the
+/// herds' formation statements read and write them here). EEWorldLayout.cpp registers where they start in the
+/// object (`formation_fields`); EEGroup.cpp checks each member's place.
+#[repr(C)]
+#[allow(non_snake_case)]
+pub struct EeFormationFields {
+    /// `mOrientation` (a `GETransformation`: its `mMatrix`)
+    pub mOrientation: [[f32; 4]; 4],
+    pub mCenter: Vec3,
+    pub mHeading: f32,
+    /// 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge; 6-7 inward, outward circle
+    pub mType: c_long,
+    pub mB5C: bool,
+    /// a circle's lower bound of the radius
+    pub mMinRadius: f32,
 }
 
-/// `EEFormation::Arrange`: `Place` over the group's units, in the group's order.
+/// The fields of the formation `formation` (an `EEFormation*`).
 ///
 /// # Safety
-/// As [`ee_formation_place_units`]; `group` is a live `EEGroup` and `out` valid for one write per unit of it.
-#[no_mangle]
-pub unsafe extern "C" fn ee_formation_arrange_group(
-    kind: i32,
-    min_radius: f32,
-    orientation: *const [[f32; 4]; 4],
-    center: *const Vec3,
-    heading: f32,
-    group: *const c_void,
-    out: *mut EeFormationUnitSlot,
-) {
+/// `formation` is a live formation, and nothing else holds its fields for the reference's life.
+pub unsafe fn formation_fields<'a>(formation: u64) -> &'a mut EeFormationFields {
+    let at = crate::world::layout::layout().formation_fields;
+    // SAFETY: the caller's contract; the layout's offset of `mOrientation`
+    unsafe { &mut *((formation as usize + at as usize) as *mut EeFormationFields) }
+}
+
+/// `EEFormation::Place(units, slots)` into a fresh slot list (one slot per unit; a circle's appending is the
+/// same into an empty list), and the capture's record of the call. An empty circle places and records nothing.
+///
+/// # Safety
+/// `formation` is a live formation, `units` live complex units; the caller holds the world.
+// (`c_long` is 32 bits on Windows and 64 elsewhere: the cast is needed there)
+#[allow(clippy::unnecessary_cast)]
+pub unsafe fn formation_place(formation: u64, units: &[u64]) -> Vec<EeFormationUnitSlot> {
     // SAFETY: the caller's contract
-    let frame = unsafe { frame_of(&GeTransformation { m: *orientation }, *center, heading) };
+    let f = unsafe { formation_fields(formation) };
+    let frame = frame_of(&GeTransformation { m: f.mOrientation }, f.mCenter, f.mHeading);
+    let mut out =
+        vec![EeFormationUnitSlot { position: [0.0; 3], unit: std::ptr::null_mut(), heading: 0.0 }; units.len()];
+    // SAFETY: the caller's contract; `out` holds one slot per unit
+    unsafe { place_into(f.mType as i32, f.mMinRadius, &frame, units, out.as_mut_ptr()) };
+    out
+}
+
+/// `EEFormation::Arrange(group, slots)`: `Place` over the group's units, in the group's order.
+///
+/// # Safety
+/// As [`formation_place`]; `group` is a live `EEGroup`.
+pub unsafe fn formation_arrange(formation: u64, group: u64) -> Vec<EeFormationUnitSlot> {
     let units: Vec<u64> = {
         // SAFETY: the caller holds the world
         let token = unsafe { WorldRead::begin() };
         // SAFETY: a live group
-        let view = unsafe { GroupView::of(&token, group as u64) };
+        let view = unsafe { GroupView::of(&token, group) };
         view.map_or(Vec::new(), |g| (0..g.len()).map(|i| g.unit_handle(i)).collect())
     };
     // SAFETY: the caller's contract
-    unsafe { place_into(kind, min_radius, &frame, &units, out) };
+    unsafe { formation_place(formation, &units) }
 }
 
 /// `EEGetHeadingBetween` as the C++ sweep called it: the export, which keeps the leaf's note.

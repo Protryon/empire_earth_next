@@ -120,9 +120,6 @@ extern RTSRenderObject* gU565358;
 extern RTSRenderObject* gU56535C;
 extern RTSRenderObject* gU565360;
 extern RTSRenderObject* gU56534C;           // 0x56534c (the user interface's)
-// 0x23cee2 (cdecl): a complex unit's own translucency (ioOpacity) (provisional name; EERenderObject::GetUnitOpacity)
-class EEComplexUnit;
-bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
 
 
 #endif

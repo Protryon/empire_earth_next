@@ -138,9 +138,9 @@ pub const EE_UNITS_CU_IS_COLLIDABLE: i32 = 757;
 pub const EE_UNITS_CU_MOVE_TO_UPDATE: i32 = 758;
 /// `mWaypoints.size()`
 pub const EE_UNITS_CU_WAYPOINT_COUNT: i32 = 759;
-/// `GetNextWaypointPoint(the scratch point = GE3DPoint(0.0f, 0.0f, 0.0f))`
+/// `GetNextWaypointPoint(the point f = GE3DPoint(0.0f, 0.0f, 0.0f))`
 pub const EE_UNITS_CU_NEXT_WAYPOINT_POINT: i32 = 760;
-/// `SetHeight(GetUnitClass()->GetHeightAt(this, the scratch point))`
+/// `SetHeight(GetUnitClass()->GetHeightAt(this, the point f))`
 pub const EE_UNITS_CU_SET_HEIGHT_AT_POINT: i32 = 761;
 /// `HasSwimAnimation()`
 pub const EE_UNITS_CU_HAS_SWIM_ANIMATION: i32 = 762;
@@ -174,7 +174,7 @@ pub const EE_UNITS_CU_QUEUE_GOAL: i32 = 775;
 pub const EE_UNITS_CU_AREA_EFFECTS_SIZE: i32 = 776;
 /// `mAreaEffects.mItems[b]->GetRadius()` (its bits)
 pub const EE_UNITS_CU_AREA_EFFECT_RADIUS: i32 = 777;
-/// `gAEManager.CollectEffects(the float of the bits b, the location's x and y, c, &mAreaEffects, this)`
+/// `gAEManager.CollectEffects(the float of the bits b, the location's x and y (in f), c, &mAreaEffects, this)`
 pub const EE_UNITS_CU_COLLECT_EFFECTS: i32 = 778;
 /// `mPlayer->mPlayerID`
 pub const EE_UNITS_CU_PLAYER_ID: i32 = 779;
@@ -234,7 +234,7 @@ pub const EE_UNITS_CU_CONTACTS_REMOVE: i32 = 805;
 pub const EE_UNITS_CU_AFFECTING_REMOVED_FROM: i32 = 806;
 /// `UIsNone32(mConversionEffect.mValue)`
 pub const EE_UNITS_CU_CONVERSION_IS_NONE: i32 = 807;
-/// `gEffectManager->DestroyEffect(the scratch handle = mConversionEffect)`
+/// `gEffectManager->DestroyEffect(mConversionEffect)`
 pub const EE_UNITS_CU_DESTROY_CONVERSION_EFFECT: i32 = 808;
 /// `mHolder = a`
 pub const EE_UNITS_CU_SET_HOLDER_FIELD: i32 = 809;
@@ -325,6 +325,22 @@ const OFF_MAP: i64 = -10000;
 const ANIMATION_WALK: i64 = 2;
 const ANIMATION_SWIM: i64 = 0xd;
 
+/// `EEIsLineBlocked`'s and `EEIsLineToUnitBlocked`'s outputs (the blocker and its tile; unread: the C++ statics until
+/// units round 14)
+#[repr(C)]
+#[derive(Default)]
+struct Blocker {
+    unit: usize,
+    x: std::os::raw::c_long,
+    y: std::os::raw::c_long,
+}
+
+impl Blocker {
+    fn out(b: &mut Blocker) -> u64 {
+        b as *mut Blocker as usize as u64
+    }
+}
+
 struct S<'h, H: CuHost + ?Sized> {
     h: &'h mut H,
     unit: u64,
@@ -348,6 +364,9 @@ impl<H: CuHost + ?Sized> S<'_, H> {
     }
     fn qabc(&mut self, op: i32, a: u64, b: i64, c: i64) -> i64 {
         self.h.cu(op, self.unit, a, b, c, &mut [0.0; 4])
+    }
+    fn qf(&mut self, op: i32, a: u64, f: &mut [f32; 4]) -> i64 {
+        self.h.cu(op, self.unit, a, 0, 0, f)
     }
     fn yes(&mut self, op: i32) -> bool {
         self.q(op) != 0
@@ -382,7 +401,7 @@ pub fn condition_target<H: CuHost + ?Sized>(h: &mut H, unit: u64) -> u64 {
             && s.qa(EE_UNITS_CU_IN_REACH_OF, last) != 0
             && (s.yes(EE_UNITS_CU_SHOOTS_HIGH)
                 || s.yes(EE_UNITS_CU_FIRES_OVER_WALLS)
-                || s.qa(EE_UNITS_CU_LINE_FROM_BLOCKED, last) == 0)
+                || s.qab(EE_UNITS_CU_LINE_FROM_BLOCKED, last, Blocker::out(&mut Blocker::default()) as i64) == 0)
         {
             return last;
         }
@@ -588,20 +607,24 @@ pub fn can_reach_tile<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: i64, y: i64) 
     if projectile != 0 {
         let category = h.cu(EE_UNITS_CU_CLASS_CATEGORY_OF, unit, projectile, 0, 0, &mut [0.0; 4]);
         if category == CATEGORY_PROJECTILE || category == CATEGORY_BOMB {
-            h.cu(EE_UNITS_CU_SET_DESTINATION, unit, 0, x, y, &mut [0.0; 4]);
+            // the destination and the position (the C++ statics until units round 14; the pitch is f[0])
+            let mut to = [0.0f32; 4];
+            h.cu(EE_UNITS_CU_SET_DESTINATION, unit, 0, x, y, &mut to);
             if is_on_other_continent(h, unit, x, y) {
                 return false;
             }
             let s = &mut S { h, unit };
             s.q(EE_UNITS_CU_APPROACH_ATTACH);
-            s.q(EE_UNITS_CU_GET_POSITION);
-            if !s.yes(EE_UNITS_CU_BALLISTIC_PITCH) {
+            let mut from = [0.0f32; 4];
+            s.h.cu(EE_UNITS_CU_GET_POSITION, unit, 0, 0, 0, &mut from);
+            let points: [[f32; 3]; 2] = [[from[0], from[1], from[2]], [to[0], to[1], to[2]]];
+            if s.h.cu(EE_UNITS_CU_BALLISTIC_PITCH, unit, 0, 0, points.as_ptr() as usize as i64, &mut [0.0; 4]) == 0 {
                 return false;
             }
             if s.yes(EE_UNITS_CU_FIRES_OVER_WALLS) {
                 return true;
             }
-            return s.qbc(EE_UNITS_CU_LINE_BLOCKED, x, y) == 0;
+            return s.qabc(EE_UNITS_CU_LINE_BLOCKED, Blocker::out(&mut Blocker::default()), x, y) == 0;
         }
     }
     let range = f32::from_bits(h.cu(EE_UNITS_CU_STATS_RANGE, unit, 0, 0, 0, &mut [0.0; 4]) as u32);
@@ -695,8 +718,10 @@ pub fn move_to_location<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: f32, y: f32
         && (s.q(EE_UNITS_CU_CLASS_DOMAINS) & MOVEMENT_AIR != 0
             || s.q(EE_UNITS_CU_UNIT_TYPE) == UNIT_TYPE_SP15_SPACE_FIGHTER)
     {
-        s.q(EE_UNITS_CU_NEXT_WAYPOINT_POINT);
-        s.q(EE_UNITS_CU_SET_HEIGHT_AT_POINT);
+        // the original's local point (units round 14: the body's floats, was a C++ scratch static)
+        let mut point = [0.0f32; 4];
+        s.qf(EE_UNITS_CU_NEXT_WAYPOINT_POINT, 0, &mut point);
+        s.qf(EE_UNITS_CU_SET_HEIGHT_AT_POINT, 0, &mut point);
     }
     if !s.yes(EE_UNITS_CU_HAS_SWIM_ANIMATION) {
         return;

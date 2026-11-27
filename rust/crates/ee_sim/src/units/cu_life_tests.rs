@@ -117,18 +117,17 @@ fn reset_draws_the_heading_and_clears_every_field() {
 #[test]
 fn init_offsets_a_large_units_placement() {
     let mut h = Mock::default()
-        .sequence(EE_UNITS_CU_PLACEMENT_X, 0, 0, &[bits(10.25), bits(10.25)])
-        .sequence(EE_UNITS_CU_PLACEMENT_Y, 0, 0, &[bits(20.75), bits(20.75)])
         .answer(EE_UNITS_CU_TILE_SIZE, 0, 0, 3)
         .answer(EE_UNITS_CU_CLASS_TILE_SIZE_OF, 50, 0, 3)
         .answer(EE_UNITS_CU_CLASS_CATEGORY_OF, 50, 0, CATEGORY_LAND_CITIZEN)
         .answer(EE_UNITS_CU_UPGRADE_AREA_TEMPLATE, 60, 2, 12)
         .answer(EE_UNITS_CU_CREATE_AREA_EFFECT, 0, 12, 70);
     init(&mut h, 1, 50, 55, 60, 4);
-    assert!(h.asked(EE_UNITS_CU_PLACEMENT_SET_X, 0, bits(11.25)));
-    assert!(h.asked(EE_UNITS_CU_PLACEMENT_SET_Y, 0, bits(21.75)));
-    assert!(h.at(EE_UNITS_CU_PLACEMENT_COPY) < h.at(EE_UNITS_CU_UNIT_INIT));
-    assert!(h.at(EE_UNITS_CU_PLACEMENT_SET_Y) < h.at(EE_UNITS_CU_PM_SET_PLACEMENT));
+    // the placement is copied into the body's own (the host's statement; the mock leaves it zero), offset by
+    // half the footprint less half a tile and set
+    assert!(h.at(EE_UNITS_CU_TRANSFORMATION_COPY) < h.at(EE_UNITS_CU_UNIT_INIT));
+    let set = h.log.iter().find(|e| e.0 == crate::units::u12a_small::EE_UNITS_CU_T_PM_SET_LOCATION).unwrap();
+    assert_ne!(set.1, 0);
     assert!(h.asked(EE_UNITS_CU_SET_IS_CITIZEN, 0, 1));
     assert!(h.asked(EE_UNITS_CU_AREA_EFFECTS_ADD, 70, 0));
     assert!(h.asked(EE_UNITS_CU_EFFECT_DEREFERENCE, 70, 0));
@@ -198,17 +197,15 @@ fn step_aside_sends_an_idle_unit_to_a_free_ring_tile() {
         .answer(EE_UNITS_CU_STATS_MAX_VELOCITY, 0, 0, bits(2.0))
         .answer(EE_UNITS_CU_PLAYER_IS_FRIEND, 9, 0, 1)
         .answer(EE_UNITS_CU_CLASS_TILE_SIZE_OF, 50, 0, 1)
-        .sequence(EE_UNITS_CU_SCRATCH_TILES_SIZE, 0, 0, &[16, 15])
-        .sequence(EE_UNITS_CU_SCRATCH_TILES_BACK_X, 0, 0, &[3, 4])
-        .sequence(EE_UNITS_CU_SCRATCH_TILES_BACK_Y, 0, 0, &[5, 6])
         .answer(EE_UNITS_CU_NEW_LOCATION_GOAL, 0, 0, 77);
-    h.answers.insert((EE_UNITS_CU_CAN_STAND_ON, 0, 4), 1);
+    // the tiles are tried from the back (the mock's shuffle leaves them): x 12 taken, (11, 12) free
+    h.answers.insert((EE_UNITS_CU_CAN_STAND_ON, 0, 12), 0);
+    h.answers.insert((EE_UNITS_CU_CAN_STAND_ON, 0, 11), 1);
     assert!(step_aside(&mut h, 1, 9, 50, 10, 10, false));
-    // the ring of a 1-tile footprint: 4 x 4 = 16 tiles
-    assert_eq!(h.count(EE_UNITS_CU_SCRATCH_TILES_PUSH), 16);
-    assert!(h.at(EE_UNITS_CU_SCRATCH_TILES_SHUFFLE) > h.at(EE_UNITS_CU_SCRATCH_TILES_PUSH));
+    // the ring of a 1-tile footprint: 5 x 5 less the inner 3 x 3 = 16 tiles, shuffled
+    assert!(h.log.iter().any(|e| e.0 == EE_UNITS_CU_SCRATCH_TILES_SHUFFLE && e.2 == 16));
     let goal = h.log.iter().find(|e| e.0 == EE_UNITS_CU_NEW_LOCATION_GOAL).unwrap();
-    assert_eq!((goal.4[0], goal.4[1]), (4.5, 6.5));
+    assert_eq!((goal.4[0], goal.4[1]), (11.5, 12.5));
     assert!(h.asked(EE_UNITS_CU_SET_GOAL, 77, 0));
     assert!(h.asked(EE_UNITS_CU_START_ACTION, 0, ACTION_PREPARE_TO_MOVE));
     // an enemy's footprint does not move it
@@ -217,18 +214,15 @@ fn step_aside_sends_an_idle_unit_to_a_free_ring_tile() {
         .answer(EE_UNITS_CU_COMMAND_KIND, 0, 0, ACTION_IDLE)
         .answer(EE_UNITS_CU_STATS_MAX_VELOCITY, 0, 0, bits(2.0));
     assert!(!step_aside(&mut h, 1, 9, 50, 10, 10, false));
-    assert_eq!(h.count(EE_UNITS_CU_SCRATCH_TILES_PUSH), 0);
+    assert_eq!(h.count(EE_UNITS_CU_SCRATCH_TILES_SHUFFLE), 0);
 }
 
 #[test]
 fn is_next_to_tile_searches_the_ring_then_the_corners() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_CU_GET_TILE_X, 0, 0, 5)
-        .answer(EE_UNITS_CU_TILE_Y, 0, 0, 5)
-        .sequence(EE_UNITS_CU_SCRATCH_POINTS_SIZE, 0, 0, &[1, 1, 1, 1])
-        .sequence(EE_UNITS_CU_SCRATCH_POINT_X, 0, 0, &[6, 4])
-        .sequence(EE_UNITS_CU_SCRATCH_POINT_Y, 0, 0, &[4]);
-    assert!(is_next_to_tile(&mut h, 1, 4, 4));
+    let mut h = Mock::default().answer(EE_UNITS_CU_GET_TILE_X, 0, 0, 5).answer(EE_UNITS_CU_TILE_Y, 0, 0, 5);
+    // (the rings are the view's: the mock's are empty)
+    assert!(!is_next_to_tile(&mut h, 1, 4, 4));
+    assert_eq!(h.count(EE_UNITS_CU_SCRATCH_SQUARE_RING), 1);
     assert_eq!(h.count(EE_UNITS_CU_SCRATCH_RING_CORNERS), 1);
     let mut h = Mock::default().answer(EE_UNITS_CU_GET_TILE_X, 0, 0, 5).answer(EE_UNITS_CU_TILE_Y, 0, 0, 5);
     assert!(is_next_to_tile(&mut h, 1, 5, 5));

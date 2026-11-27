@@ -65,6 +65,30 @@ pub(crate) fn links_mut(c: &ClassView<'_>) -> *mut EeUnitsUnitClassLinks {
     links(c).ptr() as *mut EeUnitsUnitClassLinks
 }
 
+/// `gPhysics->mRandom.Generate()` (units round 14: the generator's registered place in the physics).
+pub(crate) fn physics_generate() -> f32 {
+    let l = layout();
+    // SAFETY: the registered address of the `gPhysics` pointer variable; the live physics' generator
+    unsafe {
+        let physics = word(l.physics_pointer, 0);
+        let random = (physics as usize + l.physics_random as usize) as *mut ee_base::random::EeURandom;
+        ee_base::random::ee_urandom_generate(random)
+    }
+}
+
+/// `effect->mDetailLevel <= gEffectDetail` (a `long` with an `unsigned long`: unsigned) for a live effect.
+pub(crate) fn effect_detailed(effect: u64) -> bool {
+    let l = layout();
+    let at = effect as usize
+        + l.graphic_effect_fields as usize
+        + std::mem::offset_of!(ee_data::tables::EeDataGraphicEffectFields, mDetailLevel);
+    // SAFETY: a live effect's record member; the registered preference
+    unsafe {
+        let level = std::ptr::read(at as *const c_long);
+        level as c_ulong <= std::ptr::read(l.effect_detail as usize as *const c_ulong)
+    }
+}
+
 pub(crate) fn long(v: c_long) -> i64 {
     v as i64
 }
@@ -164,6 +188,9 @@ pub(crate) fn uc_view(
         }
     }
     if let Some(v) = crate::units::uc_fwd_view::fwd_view(kind, &x, op, b, c, f) {
+        return Some(v);
+    }
+    if let Some(v) = crate::units::uc_scratch_view::scratch_view(&x, op, b, c, f) {
         return Some(v);
     }
     base(&x, op, b, c, f)

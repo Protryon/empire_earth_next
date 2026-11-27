@@ -2,8 +2,8 @@
 //! EECloakingUtilities.cpp): `Fn23CEE2` (a unit's translucency and opacity), `EEGetSpaceDockYaw`,
 //! `EEIsSpaceDockSiteOpen`, `EECountTilesAround`, `EEAddCloakEffect`, `EERemoveCloakEffect`, `EEGetLandContinentOf`,
 //! `EEUpdateLandContinents`. Every C++ statement of the originals is one operation of [`CkHost::ck`] (the game's:
-//! `ee_units_ck_host`, EECloakingUtilities.cpp), asked in the original's order; the loops, choices and arithmetic are
-//! here.
+//! cu_view.rs `ck_view`, the world calls `ee_units_sight_host`'s, EEComplexUnit.cpp; units round 14: the C++ host
+//! EECloakingUtilities.cpp is gone), asked in the original's order; the loops, choices and arithmetic are here.
 
 // the original's float literals and its clamp chain are kept as written
 #![allow(clippy::unnecessary_cast, clippy::excessive_precision, clippy::approx_constant, clippy::manual_clamp)]
@@ -12,70 +12,70 @@ use std::os::raw::c_long;
 
 // ---- the statements (`op`; `a` an object, `c`, `d` values, `f` floats; the answer)
 /// the terrain type of `gWorld.mMap->GetTile(c, d)` (-1: no tile)
-pub const EE_UNITS_CK_TERRAIN: i32 = 1;
+pub const EE_UNITS_CK_TERRAIN: i32 = 14001;
 /// `gWorld.mMap->IsEdgeTile(c, d)`
-pub const EE_UNITS_CK_IS_EDGE: i32 = 2;
+pub const EE_UNITS_CK_IS_EDGE: i32 = 14002;
 /// `EEIsLandTerrain(c)`
-pub const EE_UNITS_CK_IS_LAND: i32 = 3;
+pub const EE_UNITS_CK_IS_LAND: i32 = 14003;
 /// `EECanPlace(player a, kUnitTypeSpaceDock, &the point f, c, d, 0, 0)`
-pub const EE_UNITS_CK_CAN_PLACE_DOCK: i32 = 4;
+pub const EE_UNITS_CK_CAN_PLACE_DOCK: i32 = 14004;
 /// `EEGetDockFacing(c, d)`
-pub const EE_UNITS_CK_DOCK_FACING: i32 = 5;
+pub const EE_UNITS_CK_DOCK_FACING: i32 = 14005;
 /// unit `a`'s `GetCommandType()`
-pub const EE_UNITS_CK_COMMAND_TYPE: i32 = 6;
+pub const EE_UNITS_CK_COMMAND_TYPE: i32 = 14006;
 /// the bits of `(float)` unit `a`'s complex unit's `mRottingAwayTime / ` its class's `mRottingTime` (0: no rotting
 /// time... asked only when it is not 0)
-pub const EE_UNITS_CK_ROT_FRACTION: i32 = 7;
+pub const EE_UNITS_CK_ROT_FRACTION: i32 = 14007;
 /// unit `a`'s class's `mRottingTime != 0`
-pub const EE_UNITS_CK_HAS_ROTTING_TIME: i32 = 8;
+pub const EE_UNITS_CK_HAS_ROTTING_TIME: i32 = 14008;
 /// unit `a`'s `mIsCloakable`
-pub const EE_UNITS_CK_IS_CLOAKABLE: i32 = 9;
+pub const EE_UNITS_CK_IS_CLOAKABLE: i32 = 14009;
 /// unit `a`'s `mIsCloaked`
-pub const EE_UNITS_CK_IS_CLOAKED: i32 = 10;
+pub const EE_UNITS_CK_IS_CLOAKED: i32 = 14010;
 /// `gFreeCamera`
-pub const EE_UNITS_CK_FREE_CAMERA: i32 = 11;
+pub const EE_UNITS_CK_FREE_CAMERA: i32 = 14011;
 /// the bits of unit `a`'s `mOpacity`
-pub const EE_UNITS_CK_OPACITY: i32 = 12;
+pub const EE_UNITS_CK_OPACITY: i32 = 14012;
 /// `gWorld.GetCurrentPlayer()`
-pub const EE_UNITS_CK_CURRENT_PLAYER: i32 = 13;
+pub const EE_UNITS_CK_CURRENT_PLAYER: i32 = 14013;
 /// unit `a`'s `mPlayer`
-pub const EE_UNITS_CK_PLAYER: i32 = 14;
+pub const EE_UNITS_CK_PLAYER: i32 = 14014;
 /// unit `a`'s `mPlayer->mEnemies[the current player's mPlayerID]`
-pub const EE_UNITS_CK_ENEMY_OF_VIEWER: i32 = 15;
+pub const EE_UNITS_CK_ENEMY_OF_VIEWER: i32 = 14015;
 /// `gWorld.GetCurrentPlayer()->mObserverMode`
-pub const EE_UNITS_CK_OBSERVER: i32 = 16;
+pub const EE_UNITS_CK_OBSERVER: i32 = 14016;
 /// `*(float*)a = f[0]`
-pub const EE_UNITS_CK_SET_FLOAT: i32 = 17;
+pub const EE_UNITS_CK_SET_FLOAT: i32 = 14017;
 /// the cloak effect created on unit `a` (`kGraphicEffectMarketTicketTape`, the handle kept); the result
-pub const EE_UNITS_CK_CREATE_CLOAK: i32 = 18;
+pub const EE_UNITS_CK_CREATE_CLOAK: i32 = 14018;
 /// unit `a`'s complex unit's `mCloaked = the kept handle's mValue`
-pub const EE_UNITS_CK_KEEP_CLOAK: i32 = 19;
+pub const EE_UNITS_CK_KEEP_CLOAK: i32 = 14019;
 /// unit `a`'s complex unit's `(long)mCloaked`
-pub const EE_UNITS_CK_CLOAKED: i32 = 20;
+pub const EE_UNITS_CK_CLOAKED: i32 = 14020;
 /// the effect handle `c` destroyed
-pub const EE_UNITS_CK_DESTROY_EFFECT: i32 = 21;
+pub const EE_UNITS_CK_DESTROY_EFFECT: i32 = 14021;
 /// unit `a`'s complex unit's `mCloaked = 0`
-pub const EE_UNITS_CK_CLEAR_CLOAKED: i32 = 22;
+pub const EE_UNITS_CK_CLEAR_CLOAKED: i32 = 14022;
 /// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
-pub const EE_UNITS_CK_SPACE_MAP: i32 = 23;
+pub const EE_UNITS_CK_SPACE_MAP: i32 = 14023;
 /// complex unit `a`'s `mTileX`
-pub const EE_UNITS_CK_TILE_X: i32 = 24;
+pub const EE_UNITS_CK_TILE_X: i32 = 14024;
 /// complex unit `a`'s `mTileY`
-pub const EE_UNITS_CK_TILE_Y: i32 = 25;
+pub const EE_UNITS_CK_TILE_Y: i32 = 14025;
 /// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
-pub const EE_UNITS_CK_CONTINENT: i32 = 26;
+pub const EE_UNITS_CK_CONTINENT: i32 = 14026;
 /// `gWorld.mUnits.mFirst`
-pub const EE_UNITS_CK_FIRST_UNIT: i32 = 27;
+pub const EE_UNITS_CK_FIRST_UNIT: i32 = 14027;
 /// unit `a`'s `mTileNode->mNext`
-pub const EE_UNITS_CK_NEXT_UNIT: i32 = 28;
+pub const EE_UNITS_CK_NEXT_UNIT: i32 = 14028;
 /// unit `a`'s `mComplexUnit`
-pub const EE_UNITS_CK_COMPLEX_OF: i32 = 29;
+pub const EE_UNITS_CK_COMPLEX_OF: i32 = 14029;
 /// complex unit `a`'s class's `mDomains`
-pub const EE_UNITS_CK_DOMAINS: i32 = 30;
+pub const EE_UNITS_CK_DOMAINS: i32 = 14030;
 /// complex unit `a`'s class's `mUnitType`
-pub const EE_UNITS_CK_UNIT_TYPE: i32 = 31;
+pub const EE_UNITS_CK_UNIT_TYPE: i32 = 14031;
 /// complex unit `a`'s `mPlanetID = c`
-pub const EE_UNITS_CK_SET_PLANET: i32 = 32;
+pub const EE_UNITS_CK_SET_PLANET: i32 = 14032;
 
 // ---- the bodies (`ee_units_ck_body`'s `what`)
 pub const EE_UNITS_CK_DO_TRANSLUCENT: i32 = 1;
@@ -459,22 +459,47 @@ pub fn run<H: CkHost + ?Sized>(h: &mut H, what: i32, a: u64, b: u64, c: i64, d: 
 #[cfg(not(test))]
 mod game {
     use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
-    extern "C" {
-        fn ee_units_ck_host(op: i32, a: u64, c: i64, d: i64, f: *mut [f32; 4]) -> i64;
-    }
+    use crate::units::sight_host::ee_units_sight_host;
+
+    /// the kept effect handle's `mValue` (the C++ `sCkHandle`: `EEAddCloakEffect`'s new effect, the destroyed one)
+    static CK_HANDLE: AtomicU32 = AtomicU32::new(0);
 
     struct Game;
 
     impl CkHost for Game {
         fn ck(&mut self, op: i32, a: u64, c: i64, d: i64, f: &mut [f32; 4]) -> i64 {
             // SAFETY: the body runs inside the C++ function that handed over its live objects (the plain record
-            // reads and stores first: cu_view.rs)
+            // reads and stores first: cu_view.rs; the world calls are the sight host's, EEComplexUnit.cpp)
             unsafe {
-                if let Some(v) = crate::units::cu_view::ck_view(op, a, c, f) {
+                match op {
+                    EE_UNITS_CK_CREATE_CLOAK => {
+                        // the handle the effect manager writes is the kept one (in f[0]'s bytes)
+                        let at = f.as_mut_ptr().cast::<u32>();
+                        *at = CK_HANDLE.load(Ordering::Relaxed);
+                        let v = ee_units_sight_host(op, 0, a, 0, c, d, f.as_mut_ptr().cast(), std::ptr::null_mut());
+                        CK_HANDLE.store(*at, Ordering::Relaxed);
+                        return v;
+                    }
+                    // the store of the kept handle (cu_view.rs)
+                    EE_UNITS_CK_KEEP_CLOAK => {
+                        return crate::units::cu_view::ck_view(
+                            op,
+                            a,
+                            i64::from(CK_HANDLE.load(Ordering::Relaxed)),
+                            d,
+                            f,
+                        )
+                        .unwrap_or(0)
+                    }
+                    EE_UNITS_CK_DESTROY_EFFECT => CK_HANDLE.store(c as u32, Ordering::Relaxed),
+                    _ => {}
+                }
+                if let Some(v) = crate::units::cu_view::ck_view(op, a, c, d, f) {
                     return v;
                 }
-                ee_units_ck_host(op, a, c, d, f)
+                ee_units_sight_host(op, 0, a, 0, c, d, f.as_mut_ptr().cast(), std::ptr::null_mut())
             }
         }
     }

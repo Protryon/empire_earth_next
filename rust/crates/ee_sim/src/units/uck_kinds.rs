@@ -2,7 +2,7 @@
 //! EEUnitClassKinds.cpp): `ActionChanged`, `Update`, `UpdateEffects`, `EvaluateCondition`, `HasArrived`, `HasRoom`,
 //! `SelectUnitToRelease`, `FindBoardingLocation`, `GetSurroundingTiles` (the UCBD notes of the last five stay in the
 //! C++ members). The class's kind bits and dispatch rows (kinds.rs, cls_dispatch.rs) choose; each body the choice
-//! runs is one `EE_UNITS_UCK_*` case of `ee_units_uck_host` (EEUnitClassKinds.cpp; the class host's statements pass
+//! runs is one `EE_UNITS_UCK_*` case of `ee_units_uc_host` (EEUnitClassKinds.cpp; the class host's statements pass
 //! through to EEUnitClass.cpp's).
 
 use crate::units::actions::*;
@@ -355,17 +355,7 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-    extern "C" {
-        fn ee_units_uck_host(
-            op: i32,
-            class: *mut c_void,
-            unit: *mut c_void,
-            a: u64,
-            b: i64,
-            c: i64,
-            f: *mut [f32; 4],
-        ) -> i64;
-    }
+    use crate::units::uc_body::game::ee_units_uc_host;
 
     pub(crate) struct GameK;
 
@@ -378,7 +368,7 @@ pub(crate) mod game {
                 return v;
             }
             // SAFETY: the dispatcher runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_uck_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

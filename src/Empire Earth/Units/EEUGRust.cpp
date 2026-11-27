@@ -23,6 +23,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEUGRust.h"
+#include "ee/EECombatGoals.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEMedia.h"
@@ -107,7 +109,6 @@ static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "a tile is two longs (
 U2DPoint<long>* TilesAt(EeUnitsGoalIo* ioArgs) { return reinterpret_cast<U2DPoint<long>*>(const_cast<uint8_t*>(ioArgs->text)); }
 
 // the statements' shared locals (goal_more.rs: each cleared or set where the original declared its local)
-static GE3DPoint sGoalPoint;
 static GE3DPoint sGoalCastLocation;
 static std::vector<EEUnit*> sGoalUnits;
 static std::vector<EEComplexUnit*> sGoalComplexes;
@@ -214,9 +215,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_TRANSPORT_CAN_LOAD:
         return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->CanLoad(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB));
     // goal_more.rs's (BOARDING, the rendezvous units, SURROUNDING_TILES, NEXT_RESOURCE, RESOURCE_OF_KIND, MINING_BEAM)
-    case EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT: sGoalPoint = thePoint; return 0;
-    case EE_UNITS_GOAL_HOST_X_GOAL_POINT_OUT: PointOut(ioArgs, sGoalPoint); return 0;
-    case EE_UNITS_GOAL_HOST_X_BOARDING_FIND: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inB)->GetUnitClass())->FindBoardingLocation(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB), thePoint, sGoalPoint); return 0;
+    case EE_UNITS_GOAL_HOST_X_BOARDING_FIND: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inB)->GetUnitClass())->FindBoardingLocation(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB), thePoint, *reinterpret_cast<GE3DPoint*>(&ioArgs->f[3])); return 0;
     case EE_UNITS_GOAL_HOST_X_UNITS_CLEAR: sGoalUnits.clear(); return 0;
     case EE_UNITS_GOAL_HOST_X_UNITS_PUSH: sGoalUnits.push_back(ObjectOf<EEUnit>(inB)); return 0;
     case EE_UNITS_GOAL_HOST_X_COMPLEXES_CLEAR: sGoalComplexes.clear(); return 0;
@@ -228,7 +227,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_TILES_COUNT: return (int64_t)sGoalTiles.size();
     case EE_UNITS_GOAL_HOST_X_TILE_X: return sGoalTiles[(size_t)ioArgs->i[0]].GetX();
     case EE_UNITS_GOAL_HOST_X_TILE_Y: return sGoalTiles[(size_t)ioArgs->i[0]].GetY();
-    case EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT: ::gWorld.GetEffectManager()->CreateEffect(ObjectOf<EEComplexUnit>(inA), sGoalPoint, EEGraphicEffect::Get(kGraphicEffectSpaceCitizenMiningBeam), &sGoalEffect, 0); return 0;
+    case EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT: ::gWorld.GetEffectManager()->CreateEffect(ObjectOf<EEComplexUnit>(inA), thePoint, EEGraphicEffect::Get(kGraphicEffectSpaceCitizenMiningBeam), &sGoalEffect, 0); return 0;
     case EE_UNITS_GOAL_HOST_X_SET_FIRE_EFFECT: ObjectOf<EEComplexUnit>(inA)->mFireEffect = sGoalEffect; return 0;
     case EE_UNITS_GOAL_HOST_X_RESET_EFFECT: sGoalEffect = EEEffectHandle(); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_RENDEZVOUS: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindRendezvousTiles(&sGoalComplexes, ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1]); return 0;
@@ -288,8 +287,17 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS: return EEGetRules().Epoch(ObjectOf<EEComplexUnit>(inA)->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;
     // the location goal's
     // the world searches' queries (world.rs): unit lists into the sink, tiles as ee_units_goal_push_tile
-    default:   // the combat goals' operations (EEUGRustCombat.cpp)
-        return EECombatGoalHostOp(inOp, inA, inB, ioArgs);
+    // the combat goals' operations (ee_combat EE_COMBAT_G_*, from 1000; TELL_GROUP, PATH_ATTEMPTS and the plain reads:
+    // goal_objects.rs), each the original's statement
+    case EE_COMBAT_G_CAN_REACH_TILE: return ObjectOf<EEComplexUnit>(inA)->CanReachTile((long)ioArgs->i[0], (long)ioArgs->i[1]);
+    case EE_COMBAT_G_VERIFY_TARGET:
+        ESVERIFY_AT(ee_units_uu_targetable(inA, (uint64_t)(uintptr_t)ObjectOf<EEUnit>((uint64_t)ioArgs->i[0])->GetClass(), 0) != 0, 729);
+        ESVERIFY_AT(ObjectOf<EEUnit>((uint64_t)ioArgs->i[0])->GetClass()->GetWeapon() >= 0 && ObjectOf<EEUnit>((uint64_t)ioArgs->i[0])->GetClass()->GetWeapon() < keeucwTotal, 730);
+        return 0;
+    case EE_COMBAT_G_STEP: EECombatStep((int32_t)ioArgs->i[0], ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnitGoal>((uint64_t)ioArgs->i[2]), ObjectOf<EEUnit>((uint64_t)ioArgs->i[1])); return 0;
+    case EE_COMBAT_G_CLASS_NAME: return ObjectOf<EEComplexUnit>(inA)->mUnitClass != NULL ? (int64_t)(uintptr_t)(const char*)ObjectOf<EEComplexUnit>(inA)->mUnitClass->mName : 0;
+    case EE_COMBAT_G_RELEASE_HEAL_EFFECT: ObjectOf<EEComplexUnit>(inA)->ReleaseHealEffect(); return 0;
+    case EE_COMBAT_G_CAN_HEAL: return EECanHeal(ObjectOf<EEUnit>(inA), ObjectOf<EEComplexUnit>((uint64_t)ioArgs->i[0]));
     }
     return 0;
 }

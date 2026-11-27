@@ -1,7 +1,6 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 to 22; R5b.2 for the attack and heal goals): EEUGRust, the class
 // every goal class moved into, is since round 22 the goal class itself (ee/EEUnitGoal.h: no base class and no
-// vtable left); the name stays for its callers. Here: the kind casts and the helpers of EEUGRust.cpp and
-// EEUGRustCombat.cpp.
+// vtable left); the name stays for its callers. Here: the kind casts and the helpers of EEUGRust.cpp.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -12,9 +11,6 @@
 struct EeUnitsGoalIo;
 
 typedef EEUnitGoal EEUGRust;
-
-// the combat goals' host operations (EE_COMBAT_G_*, from 1000; EEUGRustCombat.cpp), the host's other cases
-int64_t EECombatGoalHostOp(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs);
 
 // the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, <EEUGCastCalamity>, <EEUGExplore>,
 // <EEUGUnloadTransport>), NULL for another or none

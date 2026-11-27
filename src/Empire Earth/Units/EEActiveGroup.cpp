@@ -48,20 +48,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     // (the goals' kinds, the gather and patrol goals' units, a unit's sphere and the regions' size: ag_host.rs)
     case EE_UNITS_AG_SEND: EESendGroupCommand(theGroup, (EEUnit*)(uintptr_t)inB, theGroup->GetPlayer()->GetPlayerID(), (long)inC, 0);
         return 0;
-    case EE_UNITS_AG_FORMATION_CENTER: theGroup->GetFormation()->mCenter = *reinterpret_cast<GE3DPoint*>(io->p);
-        return 0;
-    case EE_UNITS_AG_FORMATION_HEADING: theGroup->GetFormation()->mHeading = io->f;
-        return 0;
-    case EE_UNITS_AG_FORMATION_ORIENT: theGroup->GetFormation()->mOrientation.SetOrientationYPR(io->f, 0.0f, 0.0f);
-        return 0;
-    case EE_UNITS_AG_ARRANGE: {
-        std::vector<EEFormationSlot> theSlots;
-        theGroup->GetFormation()->Arrange(theGroup, theSlots);
-        for (size_t i = 0; i < theSlots.size(); i++)
-            ee_units_ag_push((EeUnitsAgListHandle*)io->list, EEObj(theSlots[i].mUnit),
-                             (const float(*)[3])&theSlots[i].mPosition.mX, theSlots[i].mHeading);
-        return 0;
-    }
     case EE_UNITS_AG_CAP_FACTOR: io->f = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
         return 0;
     // (EE_UNITS_AG_UNIT's reads, the group's record and members, the units' formation places and special attack,

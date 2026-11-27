@@ -377,30 +377,30 @@ pub fn delete_all() {
 
 // ---- the C++ seam
 
-/// The C++ statements of the script file's read (`ee_units_script_host`, EEUnitAction.cpp: one statement a case;
+/// The C++ statements of the script file's read (`ee_units_cls_cond_host`'s, EEUnitAI.cpp: one statement a case;
 /// `a` a pointer, `b` a length), the round 9 replacement of the reader callback: the operations below.
 pub trait ScriptOps {
     fn script(&mut self, op: i32, a: u64, b: i64) -> i64;
 }
 
 /// `theName.Copy(the name's `b` bytes at `a`)` (the read's locals are the host's)
-pub const EE_UNITS_SCRIPT_H_NAME: i32 = 4000;
+pub const EE_UNITS_SCRIPT_H_NAME: i32 = 14100;
 /// `gDataPath->FindFile("Unit AI Scripts\\" + theName + ".tai", theFile = NULL)`
-pub const EE_UNITS_SCRIPT_H_FIND: i32 = 4001;
+pub const EE_UNITS_SCRIPT_H_FIND: i32 = 14101;
 /// `theFile != NULL`
-pub const EE_UNITS_SCRIPT_H_HAS_FILE: i32 = 4002;
+pub const EE_UNITS_SCRIPT_H_HAS_FILE: i32 = 14102;
 /// `theFile->Open(kFileAccessRead)`
-pub const EE_UNITS_SCRIPT_H_OPEN: i32 = 4003;
+pub const EE_UNITS_SCRIPT_H_OPEN: i32 = 14103;
 /// `theFile->GetLength(theLength = 0)`
-pub const EE_UNITS_SCRIPT_H_GET_LENGTH: i32 = 4004;
+pub const EE_UNITS_SCRIPT_H_GET_LENGTH: i32 = 14104;
 /// `theLength`
-pub const EE_UNITS_SCRIPT_H_LENGTH: i32 = 4005;
+pub const EE_UNITS_SCRIPT_H_LENGTH: i32 = 14105;
 /// `theFile->Read((char*)a, b, theCount = 0)`
-pub const EE_UNITS_SCRIPT_H_READ: i32 = 4006;
+pub const EE_UNITS_SCRIPT_H_READ: i32 = 14106;
 /// `theFile->Close()`
-pub const EE_UNITS_SCRIPT_H_CLOSE: i32 = 4007;
+pub const EE_UNITS_SCRIPT_H_CLOSE: i32 = 14107;
 /// `delete theFile`
-pub const EE_UNITS_SCRIPT_H_DELETE: i32 = 4008;
+pub const EE_UNITS_SCRIPT_H_DELETE: i32 = 14108;
 
 /// The script file's read over the host's statements (was EEUnitAction.cpp's EEReadScript): `Unit AI
 /// Scripts\<name>.tai` through the data path; `None` when it is missing or does not open.
@@ -434,16 +434,41 @@ impl<O: ScriptOps + ?Sized> ScriptSource for OpSource<'_, O> {
 mod game {
     use super::*;
 
-    extern "C" {
-        fn ee_units_script_host(op: i32, a: u64, b: i64) -> i64;
-    }
+    use crate::units::cls_host::ee_units_cls_cond_host;
 
-    struct Game;
+    /// The read's locals the C++ statements write (units round 14: were EEUnitAction.cpp's statics): the file spec
+    /// (`FSFileSpec*`), its length
+    #[derive(Default)]
+    struct Game {
+        file: u64,
+        length: std::os::raw::c_ulong,
+    }
 
     impl ScriptOps for Game {
         fn script(&mut self, op: i32, a: u64, b: i64) -> i64 {
-            // SAFETY: the read's statements over the data path and the buffers `OpSource` hands in
-            unsafe { ee_units_script_host(op, a, b) }
+            let host = |op: i32, a: u64, b: u64, c: i64, d: i64| {
+                // SAFETY: the read's statements over the data path, the file spec it found and the buffers
+                // `OpSource` hands in
+                unsafe { ee_units_cls_cond_host(op, a, b, c, d, std::ptr::null_mut()) }
+            };
+            match op {
+                EE_UNITS_SCRIPT_H_FIND => {
+                    self.file = 0;
+                    host(op, &mut self.file as *mut u64 as usize as u64, 0, 0, 0)
+                }
+                EE_UNITS_SCRIPT_H_HAS_FILE => i64::from(self.file != 0),
+                EE_UNITS_SCRIPT_H_GET_LENGTH => {
+                    self.length = 0;
+                    host(op, self.file, &mut self.length as *mut _ as usize as u64, 0, 0)
+                }
+                EE_UNITS_SCRIPT_H_LENGTH => self.length as i64,
+                EE_UNITS_SCRIPT_H_READ => {
+                    let mut count: std::os::raw::c_ulong = 0;
+                    host(op, self.file, a, b, &mut count as *mut std::os::raw::c_ulong as usize as i64)
+                }
+                EE_UNITS_SCRIPT_H_NAME => host(op, a, b as u64, 0, 0),
+                _ => host(op, self.file, 0, 0, 0),
+            }
         }
     }
 
@@ -455,7 +480,7 @@ mod game {
     pub unsafe extern "C" fn ee_units_script_get(name: *const u8, len: usize) -> u64 {
         // SAFETY: the caller's contract
         let name = unsafe { std::slice::from_raw_parts(name, len) };
-        get_script(name, &mut OpSource(&mut Game))
+        get_script(name, &mut OpSource(&mut Game::default()))
     }
 }
 

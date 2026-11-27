@@ -18,6 +18,7 @@ use crate::units::goals;
 use crate::units::u12a_small::*;
 use crate::units::uc_is::{EE_UNITS_UC_IS_AIR_BASE, EE_UNITS_UC_IS_TRANSPORT};
 use crate::world::layout::{layout, EeWorldLayout};
+use crate::world::map_fields::EeUnitsRtsMapFields;
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use crate::world::stats_fields::{EeUnitsUnitClassUpgradeFields, EeUnitsUnitClassUpgradeLinks};
 use crate::world::unit_class_fields::{EeUnitsUnitClassFields, EeUnitsUnitClassLinks};
@@ -25,6 +26,8 @@ use crate::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, 
 use std::os::raw::{c_long, c_ulong};
 use std::ptr::addr_of;
 
+/// `kCivPowerInsurance`
+const KCIV_POWER_INSURANCE: i32 = 45;
 /// `kGoalBuildRepair` (an `EEUnitGoal`'s `mKind`)
 const CU_VIEW_GOAL_BUILD_REPAIR: u8 = 4;
 /// `kUnitCategoryAirplane`, `kUnitCategoryPlanetSpaceship`
@@ -338,6 +341,43 @@ pub(crate) unsafe fn cu_view(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut
     // SAFETY: the host's contract: each statement reads or writes a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            // units round 14: the bodies' own copies of a transformation (Init's placement), IsNextToTile's rings
+            // into the body's tiles, Kill's insurance power record (were C++ scratch statics)
+            EE_UNITS_CU_TRANSFORMATION_COPY => {
+                *(b as usize as *mut [[f32; 4]; 4]) = *(a as usize as *const [[f32; 4]; 4]);
+                0
+            }
+            EE_UNITS_CU_SCRATCH_SQUARE_RING | EE_UNITS_CU_SCRATCH_RING_CORNERS => {
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
+                let (x, y) = ((*u.rts()).mTileX as i32, (*u.rts()).mTileY as i32);
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
+                let size = (*u.class()).mTileSize as i32;
+                *(b as usize as *mut Vec<crate::units::uu_tiles::Tile>) = if op == EE_UNITS_CU_SCRATCH_SQUARE_RING {
+                    crate::units::uu_ffi::square_ring(x, y, size, size, true)
+                } else {
+                    crate::units::uu_ffi::ring_corners(0, x, y, size, size, true)
+                };
+                0
+            }
+            EE_UNITS_CU_GET_INSURANCE => {
+                i64::from(crate::tech::civ::ee_tech_civ_power(KCIV_POWER_INSURANCE, b as usize as *mut _))
+            }
+            // units round 14: CanReachTile's destination (the tile's corner and height, into f) and
+            // attach point (unused: the C++ statics until then)
+            EE_UNITS_CU_SET_DESTINATION => {
+                let tile = map_tile(b, c);
+                if tile == 0 {
+                    return None;
+                }
+                f[0] = b as c_long as f32;
+                f[1] = c as c_long as f32;
+                f[2] = *at::<f32>(tile as u64, l.tile_height);
+                0
+            }
+            EE_UNITS_CU_APPROACH_ATTACH => {
+                crate::units::uu_fill::game::ee_units_lf_attach_point(unit, &mut [0.0; 3]);
+                0
+            }
             // the unit's own members
             EE_UNITS_CU_T_WEAPON_TAG => i64::from(low32((*u.cx()).mWeaponTagPoint)),
             EE_UNITS_CU_T_SET_OWNER_FIELD => {
@@ -1171,6 +1211,20 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
             }
             EE_UNITS_EU_MAP_TILE_EXISTS => i64::from(map_tile(b, _c) != 0),
             EE_UNITS_EU_TERRAIN_OF => long(*at::<c_long>(word(o.0, l.unit_tile), l.tile_terrain_type)),
+            // units round 14: EEComplexUnit::ApplyMorale (the formula's CBMO record as the C++ made it)
+            EE_UNITS_EU_APPLY_MORALE => {
+                let cx = u.complex().cx();
+                let rules = &crate::tech::civ::rules().combat;
+                #[allow(clippy::unnecessary_cast)] // `c_long` is 64 bits off Windows
+                let input = crate::combat::EeCombatMoraleIn {
+                    value: b as i32,
+                    positive: (*cx).mPositiveMorale as i32,
+                    negative: (*cx).mNegativeMorale as i32,
+                    positive_share: rules.positive_morale,
+                    negative_share: rules.negative_morale,
+                };
+                i64::from(crate::combat::captured::ee_combat_morale_captured(&input))
+            }
             EE_UNITS_EU_HIT_FORMULA => {
                 let input = crate::combat::EeCombatHitPointsIn {
                     hit_points: b as i32,
@@ -1321,7 +1375,7 @@ pub(crate) unsafe fn eu_view(op: i32, unit: u64, a: u64, b: i64, _c: i64) -> Opt
     Some(v)
 }
 
-/// The answer of `ee_units_eum_host`'s statement `op` (EEUnit.cpp; eu_more.rs's and eu_describe.rs's statements)
+/// The answer of the unit host's eu_more.rs statement `op` (EEUnit.cpp; eu_more.rs's and eu_describe.rs's statements)
 /// when it is a plain record read or store (None: the game's host answers it).
 ///
 /// # Safety
@@ -1500,7 +1554,7 @@ unsafe fn current_player() -> Option<u64> {
     }
 }
 
-/// The answer of `ee_units_ai_host`'s statement `op` (EEUnitAction.cpp; ai.rs's statements) when it is a plain
+/// The answer of the AI step's statement `op` (ai.rs's statements; the calls: EEUnitAI.cpp) when it is a plain
 /// record read or store (None: the game's host answers it).
 ///
 /// # Safety
@@ -1538,12 +1592,12 @@ pub(crate) unsafe fn ai_view(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> 
     Some(v)
 }
 
-/// The answer of `ee_units_ck_host`'s statement `op` (EECloakingUtilities.cpp; uu_cloak.rs's statements) when it is
-/// a plain record read or store (None: the game's host answers it).
+/// The answer of the cloaking utilities' statement `op` (uu_cloak.rs's statements) when it is a plain record read or
+/// store (None: a world call, the sight host's: EEComplexUnit.cpp). Units round 14: EECloakingUtilities.cpp is gone.
 ///
 /// # Safety
 /// As the host's: `a` the statement's live object.
-pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
+pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, d: i64, f: &mut [f32; 4]) -> Option<i64> {
     use crate::units::uu_cloak::*;
     let l = layout();
     let o = U(a, l);
@@ -1571,6 +1625,28 @@ pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, f: &mut [f32; 4]) -> Optio
                 (*o.cx()).mCloaked = 0;
                 0
             }
+            EE_UNITS_CK_KEEP_CLOAK => {
+                (*o.cx()).mCloaked = c as u32 as c_ulong;
+                0
+            }
+            EE_UNITS_CK_TERRAIN => match map_tile(c, d) {
+                0 => -1,
+                tile => long(*at::<c_long>(tile as u64, l.tile_terrain_type)),
+            },
+            EE_UNITS_CK_IS_EDGE => {
+                let map = world_map();
+                let r = at::<EeUnitsRtsMapFields>(map, l.rts_map_fields);
+                let (x, y) = (c as c_long, d as c_long);
+                i64::from(
+                    x.wrapping_add(y) == (*r).mL195608
+                        || y.wrapping_sub(x) == (*r).mL195610
+                        || x.wrapping_add(y) == (*r).mL19560C
+                        || x.wrapping_sub(y) == (*r).mL195610,
+                )
+            }
+            EE_UNITS_CK_IS_LAND => i64::from(crate::astar::continent_grid::is_land(c as i32)),
+            EE_UNITS_CK_FIRST_UNIT => world_word(l.world_units_first) as i64,
+            EE_UNITS_CK_NEXT_UNIT => word(word(a, l.unit_tile_node), 0) as i64,
             EE_UNITS_CK_TILE_X => long((*o.rts()).mTileX),
             EE_UNITS_CK_TILE_Y => long((*o.rts()).mTileY),
             EE_UNITS_CK_COMPLEX_OF => o.complex().0 as i64,
@@ -1586,12 +1662,12 @@ pub(crate) unsafe fn ck_view(op: i32, a: u64, c: i64, f: &mut [f32; 4]) -> Optio
     Some(v)
 }
 
-/// The answer of `ee_units_us_host`'s statement `op` (EEUnitStore.cpp; us_check.rs's and us_fill.rs's statements)
-/// when it is a plain record read (None: the game's host answers it).
+/// The answer of the store host's statement `op` (us_check.rs's and us_fill.rs's statements; units round 14: every
+/// statement, the C++ host EEUnitStore.cpp deleted; None: an unknown op, 0).
 ///
 /// # Safety
 /// As the host's: `a` the statement's live unit or player.
-pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64) -> Option<i64> {
+pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64, c: u64, out: *mut std::ffi::c_void) -> Option<i64> {
     use crate::units::us_check::*;
     use crate::units::us_fill::*;
     let l = layout();
@@ -1599,6 +1675,50 @@ pub(crate) unsafe fn us_view(op: i32, a: u64, b: i64) -> Option<i64> {
     // SAFETY: the host's contract: each statement reads a member of live objects, as its C++ did
     let v = unsafe {
         match op {
+            EE_UNITS_US_FILL => {
+                crate::units::us_fill::game::ee_units_store_fill(out.cast(), a, b as u32, c);
+                0
+            }
+            EE_UNITS_US_CHAIN_FIRST => world_word(l.world_units_first) as i64,
+            // `mTileNode->mNext` (an `RTSUnitLink`: `mNext`, then `mPrev`)
+            EE_UNITS_US_CHAIN_NEXT => word(word(a, l.unit_tile_node), 0) as i64,
+            EE_UNITS_US_CHECKSUM => {
+                // the virtual `GetChecksum`: `EEUnit`'s returns 0, `EEComplexUnit`'s is the cu body's
+                if *at::<u8>(a, l.unit_object_kind) >= crate::units::kinds::EE_OBJECT_COMPLEX_UNIT {
+                    i64::from(crate::units::cu_body::game::ee_units_cu_body(
+                        EE_UNITS_CU_DO_GET_CHECKSUM,
+                        a as usize as _,
+                        b,
+                        0,
+                        0,
+                    ) as c_long as u32)
+                } else {
+                    0
+                }
+            }
+            EE_UNITS_US_ORDER_COUNT => crate::app::active_ffi::ee_app_active_list(0, std::ptr::null_mut(), 0) as i64,
+            EE_UNITS_US_ORDER_ID => i64::from(crate::app::active_ffi::ee_app_active_at(0, b as usize)),
+            EE_UNITS_US_TICK => {
+                let physics = word(l.physics_pointer, 0);
+                if physics == 0 {
+                    0
+                } else {
+                    ulong(
+                        (*at::<crate::units::physics_save::EeUnitsPhysicsSaved>(physics, l.physics_saved))
+                            .mNumTicksDone,
+                    )
+                }
+            }
+            EE_UNITS_US_EXIT => std::process::exit(3),
+            EE_UNITS_US_F_ON_MAP => {
+                let node = word(a, l.unit_tile_node);
+                i64::from(node != 0 && word(node, std::mem::size_of::<usize>() as u64) != 0)
+            }
+            EE_UNITS_US_B_IN_STORE => i64::from(*at::<u8>(a, l.unit_in_store) != 0),
+            EE_UNITS_US_B_SET_IN_STORE => {
+                *at::<bool>(a, l.unit_in_store) = b != 0;
+                0
+            }
             EE_UNITS_US_PLAYER => world_player(u64::try_from(b).ok().filter(|&i| i < 17)?) as i64,
             EE_UNITS_US_PLAYER_ID => ulong((*P(a, l).rts()).mPlayerID),
             EE_UNITS_US_PLAYER_RTS => a as i64,

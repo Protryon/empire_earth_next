@@ -145,8 +145,6 @@ pub const EE_UNITS_CU_UNIT_DOMAINS: i32 = 263;
 pub const EE_UNITS_CU_UNIT_SET_PLANET: i32 = 264;
 /// complex unit `a`'s `mUnitClass->GetCruiseAltitude()` (its bits)
 pub const EE_UNITS_CU_UNIT_CRUISE_ALTITUDE: i32 = 265;
-/// complex unit `a`'s `SetTransformation(a copy of the transformation at b with Z the float of the bits c, true)`
-pub const EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z: i32 = 266;
 /// complex unit `a`'s `GetTileX()`
 pub const EE_UNITS_CU_UNIT_TILE_X: i32 = 267;
 /// `gWorld.ActivateUnit(complex unit a)`
@@ -197,6 +195,8 @@ pub const EE_UNITS_CU_BUILD_QUEUE_PUSH_FRONT: i32 = 289;
 pub const EE_UNITS_CU_BUILD_QUEUE_PUSH_BACK: i32 = 290;
 /// the index of unit `a` in `mCitizenBuildQueue` (`std::find`; -1: none)
 pub const EE_UNITS_CU_BUILD_QUEUE_FIND: i32 = 291;
+/// `mCitizenBuildQueue[b]` (units round 14: the find is Rust's, cu_body.rs)
+pub const EE_UNITS_CU_CITIZEN_AT: i32 = 14301;
 /// `mCitizenBuildQueue.erase(mCitizenBuildQueue.begin() + b)` (the single-iterator erase)
 pub const EE_UNITS_CU_BUILD_QUEUE_ERASE_AT: i32 = 292;
 /// `DropFinishedGoals(0)`
@@ -684,17 +684,11 @@ pub fn unload_cargo_at<H: CuHost + ?Sized>(h: &mut H, unit: u64, index: i64, loc
         if sa(h, EE_UNITS_CU_UNIT_DOMAINS, unit, cargo) & MOVEMENT_AIR != 0 {
             sa(h, EE_UNITS_CU_UNIT_SET_PLANET, unit, cargo);
             if s(h, EE_UNITS_CU_IS_AIR_BASE, unit) == 0 {
+                // a copy of the location at cruise altitude (units round 14: was EECuSetTransformationAtZ)
                 // SAFETY: the C++ member's live transformation argument (16 floats, the translation in column 3)
-                let z = unsafe { (*(location as usize as *const [[f32; 4]; 4]))[2][3] };
-                let z = z + float(sa(h, EE_UNITS_CU_UNIT_CRUISE_ALTITUDE, unit, cargo));
-                h.cu(
-                    EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z,
-                    unit,
-                    cargo,
-                    location as i64,
-                    i64::from(z.to_bits()),
-                    &mut [0.0; 4],
-                );
+                let mut t = unsafe { *(location as usize as *const [[f32; 4]; 4]) };
+                t[2][3] += float(sa(h, EE_UNITS_CU_UNIT_CRUISE_ALTITUDE, unit, cargo));
+                sab(h, EE_UNITS_CU_UNIT_SET_TRANSFORMATION, unit, cargo, t.as_ptr() as usize as i64);
             }
         }
         if sa(h, EE_UNITS_CU_UNIT_PREVIOUS_PART, unit, cargo) == 0 {

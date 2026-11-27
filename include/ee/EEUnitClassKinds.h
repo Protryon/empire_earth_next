@@ -21,7 +21,6 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
 long EEGetDockFacing(unsigned long inX, unsigned long inY);  // 0x20ea89 (the side with the most water: a dock's facing)
 long EEGetFacingQuarter(long inX, long inY);  // 0x20ebda (the map quarter 0..3 the tile faces)
 long EEGetUnitFacingQuarter(EEComplexUnit* inUnit); // 0x20ed11 (EEGetFacingQuarter at the unit's tile)
-float EEGetSpaceDockYaw(long inX, long inY, long inSize);  // 0x23d008 (a yaw for the footprint at (inX, inY))
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (100)
 // 0x531d58: the value EEUCLandPriest's ctor passes on (provisional name; EEUCNavalPriest's is 0x531d68)
 extern EEPhysicsModel* gPhysicsModels[12];     // 0x531d58 (EEPMLand.cpp: pointers to the EEPM* singletons; [0] is the land one)

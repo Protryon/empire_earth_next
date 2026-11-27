@@ -1467,7 +1467,7 @@ fn c_bool(v: i64) -> bool {
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
 
     extern "C" {

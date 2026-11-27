@@ -13,15 +13,9 @@ use std::os::raw::{c_long, c_ulong};
 /// unit `a`'s `mWaypoints.size()`; `mStats->mModel` (its `EEMedia`)
 pub const EE_CP_HERD_UNIT_WAYPOINTS: i32 = 64;
 pub const EE_CP_HERD_UNIT_MODEL: i32 = 65;
-/// `EEFormation::Create(6)`; the formation `b`'s `mCenter = (f0, f1, f2)`, `SetCenter(..)`, `SetMinRadius(f0)`,
-/// `mMinRadius = f0`, `Place` of the `input` units (the units after it into `list2`, the slots into `list`),
-/// `Dereference()`
+/// `EEFormation::Create(6)`; the formation `b`'s `Dereference()` (67..71, its members and Place: the formation's
+/// Rust record, formations/units.rs, units round 14)
 pub const EE_CP_HERD_FORM_NEW: i32 = 66;
-pub const EE_CP_HERD_FORM_CENTER: i32 = 67;
-pub const EE_CP_HERD_FORM_SET_CENTER: i32 = 68;
-pub const EE_CP_HERD_FORM_SET_MIN_RADIUS: i32 = 69;
-pub const EE_CP_HERD_FORM_MIN_RADIUS: i32 = 70;
-pub const EE_CP_HERD_FORM_PLACE: i32 = 71;
 pub const EE_CP_HERD_FORM_DEREF: i32 = 72;
 /// the tile unit `b`'s `IsPassableBy(a)`; unit `a`'s class `CanMoveOnTerrain(a, v0)`; `GetTileAtLocation((v0, v1))`
 pub const EE_CP_HERD_PASSABLE_BY: i32 = 73;
@@ -305,23 +299,40 @@ mod game {
             q.f[0]
         };
         let (input, input_len, list, list2) = (io.input, io.input_len, io.list, io.list2);
+        // the formation's members are its Rust record (formations/units.rs; units round 14)
+        // SAFETY: the new formation, live until its DEREF
+        let fields = || unsafe { crate::formations::units::formation_fields(f) };
         let place = || {
-            let mut q = EeHerdIo { input, input_len, list, list2, ..Default::default() };
-            cpp(herd, EE_CP_HERD_FORM_PLACE, 0, f, &mut q);
+            // the input units placed: the units (Place leaves them as they came) into list2, the slots into list
+            // SAFETY: the operation's input units
+            let units: Vec<u64> = if input_len == 0 {
+                Vec::new()
+            } else {
+                unsafe { std::slice::from_raw_parts(input, input_len) }.to_vec()
+            };
+            // SAFETY: the live formation and units
+            let slots = unsafe { crate::formations::units::formation_place(f, &units) };
+            for &u in &units {
+                herd::ee_cp_herd_push(list2, u as i64, 0, 0, 0);
+            }
+            for s in &slots {
+                let b = |v: f32| i64::from(v.to_bits());
+                herd::ee_cp_herd_push(list, b(s.position[0]), b(s.position[1]), b(s.position[2]), b(s.heading));
+            }
         };
         match io.v[0] {
             0 => {
                 // Chase (the original never released this formation)
-                set(EE_CP_HERD_FORM_CENTER, &center);
+                fields().mCenter = center;
                 let r = random_radius();
-                set(EE_CP_HERD_FORM_SET_MIN_RADIUS, &[r]);
+                fields().mMinRadius = r;
                 place();
             }
             1 => {
                 // MoveTo
                 if io.v[1] != 0 {
-                    set(EE_CP_HERD_FORM_CENTER, &center);
-                    set(EE_CP_HERD_FORM_MIN_RADIUS, &[io.f[3]]);
+                    fields().mCenter = center;
+                    fields().mMinRadius = io.f[3];
                     place();
                 } else {
                     // nothing placed: the units as they came, no slots
@@ -334,9 +345,9 @@ mod game {
             }
             _ => {
                 // Surround
-                set(EE_CP_HERD_FORM_SET_CENTER, &center);
+                fields().mCenter = center;
                 let r = random_radius();
-                set(EE_CP_HERD_FORM_SET_MIN_RADIUS, &[r]);
+                fields().mMinRadius = r;
                 place();
                 set(EE_CP_HERD_FORM_DEREF, &[]);
             }
