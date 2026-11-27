@@ -419,8 +419,6 @@ pub(crate) mod civ_capture;
 mod civ_capture_ffi;
 #[cfg(not(test))]
 pub(crate) mod civ_direct;
-#[cfg(not(test))]
-pub(crate) mod scr_direct;
 pub(crate) mod civ_file_calls;
 pub(crate) mod civ_host;
 pub mod civ_list_state;
@@ -437,6 +435,8 @@ pub(crate) mod lobby_calls;
 pub(crate) mod portrait_calls;
 pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
+#[cfg(not(test))]
+pub(crate) mod scr_direct;
 pub(crate) mod screens_calls;
 pub(crate) mod screens_more_calls;
 pub(crate) mod select_units_ops;

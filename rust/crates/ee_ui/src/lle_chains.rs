@@ -668,8 +668,15 @@ pub(crate) unsafe fn control_ime_change(c: usize, text: usize, attributes: usize
     unsafe {
         let (t, a) = (cpp_string_text(text), cpp_string_text(attributes));
         let mut f = [0.0f32; 4];
-        crate::editobj::ee_ui_edit_call(e, crate::editobj::EeUiEditCall::ImeChange, t, cursor as c_ulong as isize, a, 0, f.as_mut_ptr())
-            as core::ffi::c_long
+        crate::editobj::ee_ui_edit_call(
+            e,
+            crate::editobj::EeUiEditCall::ImeChange,
+            t,
+            cursor as c_ulong as isize,
+            a,
+            0,
+            f.as_mut_ptr(),
+        ) as core::ffi::c_long
     }
 }
 /// `c->SetBgOpacity(opacity)`.

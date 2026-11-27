@@ -169,7 +169,11 @@ impl EeUiFileList {
 /// A new Rust file list for the C++ list box or combo box `obj` (`full_names`: the combo box's).
 #[no_mangle]
 pub extern "C" fn ee_ui_file_list_new(obj: *mut c_void, host: EeUiHostFn, full_names: bool) -> *mut EeUiFileList {
-    crate::direct::made(crate::direct::Kind::FileList, obj, Box::into_raw(Box::new(EeUiFileList::new(Host { obj, f: host }, full_names))))
+    crate::direct::made(
+        crate::direct::Kind::FileList,
+        obj,
+        Box::into_raw(Box::new(EeUiFileList::new(Host { obj, f: host }, full_names))),
+    )
 }
 
 /// The destructor: the path released, the object freed.

@@ -504,7 +504,12 @@ pub(crate) fn cbb_base_copy_data(list: usize) -> i64 {
 /// `static_cast<UIFileComboBox*>(form->GetControl(control))->InsertLine(text, index)` (UIComboBox's).
 pub(crate) fn combo_insert_line(form: usize, control: u32, t: EeScreensShimText, index: u32) {
     let line = direct::c_text(text(t));
-    direct::combo_call(ctl(ui(form), control), EeUiComboCall::InsertLine, line.as_ptr() as isize, index as c_ulong as isize);
+    direct::combo_call(
+        ctl(ui(form), control),
+        EeUiComboCall::InsertLine,
+        line.as_ptr() as isize,
+        index as c_ulong as isize,
+    );
 }
 
 /// `static_cast<UIFileComboBox*>(form->GetControl(control))->SetCurrentSelection(index)` (UIComboBox's).
