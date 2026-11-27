@@ -102,6 +102,17 @@ unsafe fn context_rec<'a>(ctx: isize) -> Option<&'a EeWonDisplayContextRec> {
     }
 }
 
+/// A display context's members to set (`ctx` a live game DisplayContext or 0).
+///
+/// # Safety
+/// As [`context_rec`]; no other reference to the members is live.
+pub(crate) unsafe fn context_rec_mut<'a>(ctx: isize) -> Option<&'a mut EeWonDisplayContextRec> {
+    // SAFETY: the contract
+    unsafe {
+        ((ctx as usize).wrapping_add(EE_WON_CONTEXT_AT) as *mut EeWonDisplayContextRec).as_mut().filter(|_| ctx != 0)
+    }
+}
+
 /// The host: one C++ function for every op.
 pub type EeWonImageHostFn = extern "C" fn(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -> isize;
 
@@ -326,7 +337,8 @@ impl EeWonImage {
     }
 
     fn h(&self, op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -> isize {
-        (self.host)(op, a, b, c, d)
+        // (the Graphics' ops are gfxrun.rs's in the game: R6 WON GUI round 39)
+        crate::gfxrun::image_host_op(op, a, b, c, d).unwrap_or_else(|| (self.host)(op, a, b, c, d))
     }
 
     /// `held = p` (the SmartPtr assignment: the new reference first).
@@ -1042,7 +1054,9 @@ impl Drop for EeWonImage {
             }
             Kind::Native { surf, context, graphics, mask, .. } => {
                 // ~PlatNativeImage: the Graphics, the surface; ~NativeImage: the mask, the context
-                if graphics.get() != 0 {
+                if graphics.get() != 0
+                    && crate::gfxrun::image_host_op(EeWonImageHost::FreeGraphics, graphics.get(), 0, 0, 0).is_none()
+                {
                     host(EeWonImageHost::FreeGraphics, graphics.get(), 0, 0, 0);
                 }
                 // SAFETY: the image's own surface, made by new_native, freed once

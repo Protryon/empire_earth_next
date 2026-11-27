@@ -204,6 +204,16 @@ pub(crate) fn item_rec(item: isize) -> *mut EeWonListItemRec {
     (item as usize).wrapping_add(EE_WON_LIST_ITEM_AT) as *mut EeWonListItemRec
 }
 
+/// The offset of `ImageButton::mImages` (five `SmartPtr<Image>`, each the image's pointer, then `mStretch`) in the
+/// C++ object (Button.cpp registers it; 0 in a driver's world).
+static IMGBTN_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// `offsetof(ImageButton, mImages)` (Button.cpp at static initialisation; R6 WON GUI round 39).
+#[no_mangle]
+pub extern "C" fn ee_won_leaf_imgbtn_register(at: usize) {
+    IMGBTN_AT.store(at, std::sync::atomic::Ordering::Release);
+}
+
 pub type EeWonLeafHostFn = Option<unsafe extern "C" fn(me: *mut c_void, op: EeWonLeafOp, a: isize, b: isize) -> isize>;
 
 /// One C++ object and its host.
@@ -218,6 +228,9 @@ impl EeWonLeaf {
     }
     fn op(&self, o: EeWonLeafOp, a: isize, b: isize) -> isize {
         if let Some(r) = self.game_op(o) {
+            return r;
+        }
+        if let Some(r) = self.image_button_op(o, a, b) {
             return r;
         }
         match self.host {
@@ -265,6 +278,68 @@ impl EeWonLeaf {
             ItemHeightAt => (unsafe { std::ptr::addr_of_mut!((*item).height) }) as isize,
             // SAFETY: as above
             _ => isize::from(unsafe { (*item).selected } != 0),
+        })
+    }
+    /// An image button's images (its `mImages`, read in place: R6 WON GUI round 39): whether it has the image `a`, its
+    /// width and height, the stretch flag, the image sized to the button, the image `b` drawn on the Graphics `a` at
+    /// the origin. None in a driver's world.
+    fn image_button_op(&self, o: EeWonLeafOp, a: isize, b: isize) -> Option<isize> {
+        use EeWonLeafOp::*;
+        let at = IMGBTN_AT.load(std::sync::atomic::Ordering::Acquire);
+        if at == 0
+            || !matches!(o, BtnHasImage | BtnImageWidth | BtnImageHeight | BtnStretch | BtnImageFit | BtnDrawImage)
+            || !crate::compobj::is_game()
+        {
+            return None;
+        }
+        let me = self.me as usize;
+        // SAFETY: the game's live image button (the Btn ops' `t`): five image pointers at its registered offset, the
+        // stretch flag after them
+        let image = |i: isize| unsafe { *((me + at) as *const isize).add(i as usize) };
+        // SAFETY: the button's live image (its SmartPtr holds it)
+        let img = |i: isize| unsafe { crate::imgobj::image_of(image(i)) };
+        Some(match o {
+            BtnHasImage => isize::from(image(a) != 0),
+            BtnImageWidth => img(a).map_or(0, |i| i.width() as u16 as isize),
+            BtnImageHeight => img(a).map_or(0, |i| i.height() as u16 as isize),
+            // SAFETY: as above
+            BtnStretch => isize::from(unsafe { *((me + at + 5 * std::mem::size_of::<usize>()) as *const u8) } != 0),
+            BtnImageFit => {
+                let r = crate::compmem::bounds(me as isize);
+                if let Some(i) = img(a) {
+                    // SAFETY: a live image
+                    unsafe {
+                        crate::imgobj::ee_won_image_call(
+                            i,
+                            crate::imgobj::EeWonImageCall::SetSize,
+                            r.width as isize,
+                            r.height as isize,
+                            0,
+                            0,
+                        )
+                    };
+                }
+                0
+            }
+            _ => {
+                let g = a as *mut crate::gfxrun::EeWonGraphics;
+                // SAFETY: the game's live Graphics and the button's image
+                unsafe {
+                    crate::gfxrun::ee_won_graphics_call(
+                        g,
+                        crate::gfxobj::EeWonGfxCall::DrawImage,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        image(b) as *const c_void,
+                    )
+                };
+                0
+            }
         })
     }
     #[cfg(test)]

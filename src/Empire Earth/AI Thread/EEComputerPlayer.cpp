@@ -122,28 +122,17 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     switch (inOp) {
     case EE_CP_PLAYER_BEHAVIOR_FLOAT: io->f[0] = gCPBehaviors[(long)v[0]].mFloatValue;
         return 0;
-    case EE_CP_PLAYER_BASE_POP_LIMIT:
-        return thePlayer->EEPlayer::GetPopulationLimit(0);
-    case EE_CP_PLAYER_TEAM_WONDERS:
-        return ee_gamecpp_wonder_enough((size_t)v[0]) ? 1 : 0;
-    case EE_CP_PLAYER_NUM_PLAYERS:
-        return (int64_t)gWorld.mNumPlayers;
-    case EE_CP_PLAYER_HUMAN:
-        return gWorld.mPlayers[(size_t)v[0]] == NULL ? -1 : gWorld.mPlayers[(size_t)v[0]]->IsHuman() ? 1 : 0;
-    case EE_CP_PLAYER_POPULATION:
-        return gWorld.mPlayers[(size_t)v[0]]->GetTotalPopulation(true, true);
-    case EE_CP_PLAYER_HANDLE:
-        return (int64_t)(uintptr_t)gWorld.GetPlayer((unsigned long)v[0]);
-    case EE_CP_PLAYER_UNIT_CONTINENT_AT:
-        return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
-    case EE_CP_PLAYER_IS_EPOCH:
-        return EEIsEpochID((long)v[0]) ? 1 : 0;
-    case EE_CP_PLAYER_UNIT_IS_BUILDING:
-        return theComplex->mUnitClass->IsBuilding() ? 1 : 0;
-    case EE_CP_PLAYER_UNIT_OBSOLETE:
-        return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
-    case EE_CP_PLAYER_SEEN_BY:
-        return EECombatIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
+    case EE_CP_PLAYER_BASE_POP_LIMIT: return thePlayer->EEPlayer::GetPopulationLimit(0);
+    case EE_CP_PLAYER_TEAM_WONDERS: return ee_gamecpp_wonder_enough((size_t)v[0]) ? 1 : 0;
+    case EE_CP_PLAYER_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
+    case EE_CP_PLAYER_HUMAN: return gWorld.mPlayers[(size_t)v[0]] == NULL ? -1 : gWorld.mPlayers[(size_t)v[0]]->IsHuman() ? 1 : 0;
+    case EE_CP_PLAYER_POPULATION: return gWorld.mPlayers[(size_t)v[0]]->GetTotalPopulation(true, true);
+    case EE_CP_PLAYER_HANDLE: return (int64_t)(uintptr_t)gWorld.GetPlayer((unsigned long)v[0]);
+    case EE_CP_PLAYER_UNIT_CONTINENT_AT: return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
+    case EE_CP_PLAYER_IS_EPOCH: return EEIsEpochID((long)v[0]) ? 1 : 0;
+    case EE_CP_PLAYER_UNIT_IS_BUILDING: return theComplex->mUnitClass->IsBuilding() ? 1 : 0;
+    case EE_CP_PLAYER_UNIT_OBSOLETE: return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
+    case EE_CP_PLAYER_SEEN_BY: return EECombatIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
     case EE_CP_PLAYER_KILL: theComplex->Kill(true, false, false);
         return 0;
     case EE_CP_PLAYER_IS_TRANSPORT: return theUnit->mUnitClass->IsTransport() ? 1 : 0;

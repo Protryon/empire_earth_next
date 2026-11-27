@@ -35,7 +35,6 @@
 #include "rust/won_net/reqdir.h"
 #include "rust/won_net/reqops.h"
 #include "rust/won_net/routeop.h"
-extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 
 namespace WONAPI {
 static GUIString* T(intptr_t a) { return reinterpret_cast<GUIString*>(a); }
@@ -174,8 +173,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     case O::BufNew: return (intptr_t) new WriteBuffer(0, true);
     case O::GameWriteSummary: GM(a)->WriteSummary(*reinterpret_cast<WriteBuffer*>(b)); return 0;
-    // CreateDataObject(true, c, the game data type "G", gEmptyWideString, the summary, NULL)
-    case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(gEmptyWideString).D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
+    // CreateDataObject(true, c, the game data type "G", L"", the summary, NULL)
+    case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(L"").D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
     case O::ConnectOpNew: return HeldOp(new ServerConnectionConnectOp(RC(a), S(b)->GetAddress()));
     // ---- the parser, the events, the dialogs
@@ -193,8 +192,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::IterNew: return (intptr_t) new LobbyClientIterator(reinterpret_cast<LobbyClientList*>(a));
     case O::IterHasMore: return reinterpret_cast<LobbyClientIterator*>(a)->HasMore();
     case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();
-    case O::EventComponent: return (intptr_t)E(a)->mComponent;
-    case O::EventType: return E(a)->mType;
+    case O::EventComponent: return E(a)->mEv.comp;
+    case O::EventType: return E(a)->mEv.kind;
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
@@ -255,19 +254,19 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::EvGameChanged: Broadcast(GameChangedEvent(GM(a), (int)b)); return 0;
     case O::EvInvitationRecv:
         Broadcast(GroupInvitationEvent(4, GM(a)->GetName(), GM(a)->GetGroupId(), C(b), c != 0,
-                                           GUIString(new GUIStringData(RO(d)->Text(EE_WON_RTT_COMMENT))), false));
+                                           GUIString(RO(d)->Text(EE_WON_RTT_COMMENT)), false));
         return 0;
     case O::EvInvitationSent:
         Broadcast(GroupInvitationEvent(4, G(a)->GetName(), G(a)->GetId(), C(b), c != 0, TX(d), true));
         return 0;
     case O::EvJoinAttempt:
-        Broadcast(GroupJoinAttemptEvent(6, C(a), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_COMMENT)))));
+        Broadcast(GroupJoinAttemptEvent(6, C(a), GUIString(RO(b)->Text(EE_WON_RTT_COMMENT))));
         return 0;
     case O::EvRecvChat:
         Broadcast(RecvChatEvent((unsigned int)a, (unsigned short)b, C(c), GUIString(RO(d)->Text(EE_WON_RTT_TEXT)), C(e)));
         return 0;
-    case O::EvAlertTimed: Broadcast(AlertEvent(4, (int)a, (unsigned long)RO(b)->Num(EE_WON_RTF_TIME), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
-    case O::EvAlertPlain: Broadcast(AlertEvent(4, (int)a, 0, GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
+    case O::EvAlertTimed: Broadcast(AlertEvent(4, (int)a, (unsigned long)RO(b)->Num(EE_WON_RTF_TIME), GUIString(RO(b)->Text(EE_WON_RTT_TEXT)))); return 0;
+    case O::EvAlertPlain: Broadcast(AlertEvent(4, (int)a, 0, GUIString(RO(b)->Text(EE_WON_RTT_TEXT)))); return 0;
     case O::EvModeratedGroup: Broadcast(ClientModeratedEvent(C(a), (int)b, G(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
     case O::EvModeratedServer: Broadcast(ClientModeratedEvent(C(a), (int)b, S(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
     case O::EvLeftRoom: Broadcast(LeftRoomEvent((int)a, b != 0, c != 0)); return 0;

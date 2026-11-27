@@ -104,13 +104,6 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 // Creates a unit of the class at a tile for a player (yaw pi) and adds it to the world (an airport gets its runways)
 // Plants the player's farms on the free plots of the 3x3 grid around the unit, each with one hit point
 // Builds the airport's three runway pieces in its facing direction on levelled ground and links them to it
-// Plays the class's creation effect on the unit
-void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
-{
-    if (this->mCreationEffect != NULL)
-        ::gWorld.mEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0);
-}
-
 void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation)
 {
     ee_units_lv_create_runways(EEObj(this), EEObj(inUnit), inPlayer->GetPlayerID(), inIsFoundation);   // cls_level.rs
@@ -125,6 +118,13 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
 // (FacesPoint and its CBQR record: ucn_noted.rs, inline in ee/EEUnit.h)
+
+// Plays the class's creation effect on the unit
+void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
+{
+    if (this->mCreationEffect != NULL)
+        gWorld.mEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0);
+}
 
 // Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point (new:
 // the launch transform, its tile and the special attack's choices are ee_combat's launch_shot)

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/ffi.h"
 
 /// The edit `ee_won_gstr` runs (each the original's method; `a`, `b`, `c` its arguments, `other` its other string
 /// or its units).
@@ -40,6 +41,30 @@ enum class EeWonGstrOp {
   SetAt,
   /// The destructor: the buffer freed.
   Free,
+  /// `toUpper()`: units below 256 through the CRT's `toupper`.
+  Upper,
+  /// `toLowerCase()`.
+  Lower,
+};
+
+/// A read of a text (`GUIString`'s searches and comparisons).
+enum class EeWonGstrRead {
+  /// `Compare(other)` (`other` a text).
+  Compare,
+  CompareNoCase,
+  /// `find(other, a)`.
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
+  /// `find(a, b)`: the character `a` from `b`.
+  FindChar,
+  RFindChar,
+  /// `compare(other, a)`: `other` NUL-terminated UTF-8, from the offset `a`.
+  CompareNarrow,
+  CompareNarrowNoCase,
+  /// `ToInt(a)`.
+  ToInt,
 };
 
 /// The C++ `GUIStringData`'s members as one block (`mText`, `mLength`, `mCapacity`, in that order).
@@ -50,22 +75,69 @@ struct EeWonGuiStrBuf {
   uint16_t capacity;
 };
 
+/// A lobby text, the C++ `GUIStringData`: a C++ `RefCount` without a vtable (NULL: `RefCount::Release` gives the
+/// last reference's text to [`ee_won_gstr_free`]), its reference count (atomic; a new text has none, the first
+/// `SmartPtr` adds one) and its block.
+struct EeWonGstr {
+  const void *vtable;
+  int32_t refs;
+  EeWonGuiStrBuf buf;
+};
+
 extern "C" {
 
-/// One of GUIStringData's edits on `b` (the C++ object's members); `other` is the other string's members
-/// (`NewCopy`, `NewSub`, `Assign`, `Append`, `Insert`), `wchar_t` units (`AssignUnits`) or UTF-8 bytes
-/// (`AssignNarrow`); answers `SetAt`'s character, else 0.
+/// A new text with no reference: `NewCapacity` (`a` units of room), `NewCopy` (`other` a text), `NewSub` (`b`
+/// units of the text `other` from `a`), `AssignUnits` (`a` `wchar_t` units at `other`) or `AssignNarrow` (`a` bytes
+/// of UTF-8 at `other`).
 ///
 /// # Safety
-/// `b` is a live block whose `text` is NULL or this module's (for the `New*` ops: writable room, unread);
-/// `other` as the op needs it, live for the call (it may be `b` itself for `Assign`, `Append` and `Insert`).
-int32_t ee_won_gstr(EeWonGstrOp op,
-                    EeWonGuiStrBuf *b,
-                    const void *other,
-                    int32_t a,
-                    int32_t bb,
-                    int32_t c,
-                    uint32_t wchar_size);
+/// `other` as the op needs it.
+EeWonGstr *ee_won_gstr_new(EeWonGstrOp op,
+                           const void *other,
+                           int32_t a,
+                           int32_t b);
+
+/// A text without references freed (the original's destructor and `delete`).
+///
+/// # Safety
+/// `p` is a text `ee_won_gstr_new` or `gstr_from_units` made, no longer referenced.
+void ee_won_gstr_free(EeWonGstr *p);
+
+/// The shared empty text (GetEmptyGUIStringData 0x328450: made on first use from the empty wide string, held for
+/// the program).
+EeWonGstr *ee_won_gstr_empty();
+
+/// One of `GUIString`'s edits on the text `*slot` holds: copied first when it is shared (`CopyOnWrite`; not for
+/// `Reserve`, which the original made in the shared text); `other` points to the other `GUIString`'s text for
+/// `Assign`, `Append` and `Insert` (read after the copy, as the original did, so it may be `slot`), else it is the
+/// op's units or bytes. Answers `SetAt`'s character, else 0.
+///
+/// # Safety
+/// `*slot` is a live text holding the slot's reference; `other` as the op needs it.
+int32_t ee_won_gstr_edit(EeWonGstrOp op,
+                         EeWonGstr **slot,
+                         const void *other,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c);
+
+/// One of `GUIString`'s reads of `t`.
+///
+/// # Safety
+/// `t` is a live text; `other` as the read needs it.
+int32_t ee_won_gstr_read(EeWonGstrRead op,
+                         const EeWonGstr *t,
+                         const void *other,
+                         int32_t a,
+                         int32_t b);
+
+/// `GetString`: the text as the game's narrow text (UTF-8), given to the sink once (not for an empty text).
+///
+/// # Safety
+/// `t` is a live text; the sink's contract.
+void ee_won_gstr_narrow(const EeWonGstr *t,
+                        EeWonByteSink sink,
+                        void *context);
 
 }  // extern "C"
 

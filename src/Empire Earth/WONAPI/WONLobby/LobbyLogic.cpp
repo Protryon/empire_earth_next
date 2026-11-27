@@ -77,7 +77,7 @@ static intptr_t ShellFindDialog(void* inLogic, void* inConfig, int32_t inSlot, E
 RustLogic::RustLogic(EeWonLogicShellKind inKind, Maker inMake) : mKind(inKind), mRust(inMake(this)) {}
 // Frees the Rust object first (it gives back what it holds), then the slots
 RustLogic::~RustLogic() { ee_won_logicshell_free(this->mKind, this->mRust); }
-void RustLogic::HandleComponentEvent(ComponentEvent* inEvent) { this->V(EeWonLogicShellV::HandleComponentEvent, (intptr_t)inEvent, inEvent->mType); }
+void RustLogic::HandleComponentEvent(ComponentEvent* inEvent) { this->V(EeWonLogicShellV::HandleComponentEvent, (intptr_t)inEvent, inEvent->mEv.kind); }
 // LanLogic's Resume left the current game when the lobby resumes (the others' are their Rust objects')
 void RustLogic::Resume() { if (this->V(EeWonLogicShellV::Resume) != 0) LobbyLeaveGame(0); }
 intptr_t RustLogic::V(EeWonLogicShellV inVirtual, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
