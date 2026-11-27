@@ -46,6 +46,36 @@ fn world_float(row: i64) -> f32 {
 }
 use ee_data::world_constants::EEWorldConstant as W;
 
+/// Area `x`'s (a town, herd: `herd`) continent manager operation (EEAIContinentManager.h, `gContinentManager`'s
+/// record): 0 `SetSerial(NewSerial())`, 1 `AddArea`, 2 `RemoveArea`.
+///
+/// # Safety
+/// `x` a live town or herd; the manager's record registered.
+unsafe fn area_op(x: u64, herd: bool, what: u8) {
+    let l = layout();
+    let area = x as usize + if herd { l.herd_area } else { l.town_area } as usize;
+    let r = crate::astar::world_view::cm_ptr();
+    // SAFETY: the caller's contract; an EEAIArea is its record (it has no vtable)
+    unsafe {
+        match what {
+            0 => {
+                (*r).last_serial += 1;
+                (*(area as *mut crate::astar::area::EeAStarAreaRecord)).serial = (*r).last_serial;
+            }
+            1 => crate::astar::cm_queries::ee_astar_cm_add_object_area(r, area as u64),
+            _ => {
+                crate::astar::cm_queries::ee_astar_cm_remove_object_area(r, area as u64);
+            }
+        }
+    }
+}
+
+/// Town `t`'s three addresses as ee_cp's town bodies take them (EETown.h: the object, its `EEAIArea`, its record).
+fn town_parts(t: u64) -> (*mut c_void, *mut c_void, *mut crate::cp::town::EeTownFields) {
+    let area = (t as usize + layout().town_area as usize) as *mut c_void;
+    (t as usize as *mut c_void, area, town(t))
+}
+
 /// Player `p`'s records.
 fn saved(p: u64) -> *mut EeUnitsPlayerSaved {
     (p as usize + layout().player_saved as usize) as *mut EeUnitsPlayerSaved
@@ -263,6 +293,33 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                     _ => s.class()?.unit_type() as i64,
                 });
             }
+            // the continent manager's: a town's or herd's serial and area, the continent of tile (b, c)
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_TOWN_SERIAL => area_op(a, false, 0),
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_TOWN_ADD_AREA => area_op(a, false, 1),
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_HERD_SERIAL => area_op(a, true, 0),
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_HERD_ADD_AREA => area_op(a, true, 1),
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_CONTINENT_ID => {
+                let r = crate::astar::world_view::cm_ptr();
+                return Some(i64::from(crate::astar::cm_inline::ee_astar_cm_continent_id_at(r, b as c_long, c as c_long)));
+            }
+            // town `a`'s RefreshPatrolGroup, herd `a`'s RepairPointers(b, c) (ee_cp's bodies)
+            EE_UNITS_PLAYER_BODY_TOWN_REFRESH => {
+                let (t, area, f) = town_parts(a);
+                crate::cp::town_game::ee_cp_town_refresh_patrol_group(t, area, f);
+            }
+            EE_UNITS_PLAYER_BODY_HERD_REPAIR => {
+                crate::cp::herd_game::ee_cp_herd_repair_pointers(a as usize as *mut c_void, herd(a), b as u32, c as u32);
+            }
+            // the map's waterless flag, its tile (b, c) (`GetTile`: none off the map)
+            EE_UNITS_PLAYER_BODY_WATERLESS | EE_UNITS_PLAYER_BODY_TILE_PRESENT => {
+                let t = crate::world::WorldRead::begin();
+                let map = crate::world::WorldView::global(&t)?.map()?;
+                return Some(if op == EE_UNITS_PLAYER_BODY_WATERLESS {
+                    i64::from((*map.fields().ptr()).mMapCharacteristics & 2 == 2)
+                } else {
+                    i64::from(map.tile(b as c_ulong as i64, c as c_ulong as i64).is_some())
+                });
+            }
             EE_UNITS_PLAYER_BODY_IS_SELF | EE_UNITS_PLAYER_BODY_ENEMY_OF => {
                 let t = crate::world::WorldRead::begin();
                 let other = crate::world::WorldView::global(&t)?.player(b as usize);
@@ -473,6 +530,71 @@ pub unsafe fn player(
                 return Some(UnitView::of(&t, a0 as u64)?.holder_handle() as i64);
             }
             EE_UNITS_PLAYER_X_WONDER_STARTED => return Some(0),
+            // the towns' and herds' bodies (ee_cp town_game.rs, herd_game.rs; EETown.h, EEHerd.h): a[0] 0 a town, 1 a
+            // herd (the list), the area, the unit
+            crate::units::player_areas::EE_UNITS_PLAYER_AREA_CAN_TAKE | crate::units::player_areas::EE_UNITS_PLAYER_AREA_ADD => {
+                let (area, unit) = (io.i[1] as u64, io.i[2] as u64);
+                let add = op == crate::units::player_areas::EE_UNITS_PLAYER_AREA_ADD;
+                let h = area as usize as *mut c_void;
+                return Some(i64::from(match (a0 == 0, add) {
+                    (true, false) => {
+                        let (t, ar, f) = town_parts(area);
+                        crate::cp::town_game::ee_cp_town_can_take(t, ar, f, unit)
+                    }
+                    (true, true) => {
+                        let (t, ar, f) = town_parts(area);
+                        crate::cp::town_game::ee_cp_town_add_unit(t, ar, f, unit)
+                    }
+                    (false, false) => crate::cp::herd_game::ee_cp_herd_can_take(h, herd(area), unit, true),
+                    (false, true) => crate::cp::herd_game::ee_cp_herd_add_unit(h, herd(area), unit),
+                }));
+            }
+            crate::units::player_areas::EE_UNITS_PLAYER_HERD_HAS => {
+                let h = a0 as u64;
+                return Some(i64::from(crate::cp::herd_game::ee_cp_herd_has_unit(
+                    h as usize as *mut c_void,
+                    herd(h),
+                    io.i[1] as u64,
+                )));
+            }
+            EE_UNITS_PLAYER_X_TOWN_SERIAL
+            | EE_UNITS_PLAYER_X_TOWN_ADD_AREA
+            | EE_UNITS_PLAYER_X_TOWN_REMOVE_AREA
+            | EE_UNITS_PLAYER_X_HERD_SERIAL
+            | EE_UNITS_PLAYER_X_HERD_ADD_AREA
+            | EE_UNITS_PLAYER_X_HERD_REMOVE_AREA => {
+                let (herd, what) = match op {
+                    EE_UNITS_PLAYER_X_TOWN_SERIAL => (false, 0),
+                    EE_UNITS_PLAYER_X_TOWN_ADD_AREA => (false, 1),
+                    EE_UNITS_PLAYER_X_TOWN_REMOVE_AREA => (false, 2),
+                    EE_UNITS_PLAYER_X_HERD_SERIAL => (true, 0),
+                    EE_UNITS_PLAYER_X_HERD_ADD_AREA => (true, 1),
+                    _ => (true, 2),
+                };
+                area_op(a0 as u64, herd, what);
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_TOWN_REMOVE_UNIT => {
+                let (t, ar, f) = town_parts(a0 as u64);
+                crate::cp::town_game::ee_cp_town_remove_unit(t, ar, f, io.i[1] as u64);
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_HERD_REMOVE_UNIT => {
+                let h = a0 as u64;
+                crate::cp::herd_game::ee_cp_herd_remove_unit(h as usize as *mut c_void, herd(h), io.i[1] as u64);
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_TOWN_MERGE => {
+                let (t, ar, f) = town_parts(a0 as u64);
+                let other = io.i[1] as u64;
+                crate::cp::town_game::ee_cp_town_merge(t, ar, f, other, town(other));
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_TOWN_REFRESH_PATROL => {
+                let (t, ar, f) = town_parts(a0 as u64);
+                crate::cp::town_game::ee_cp_town_refresh_patrol_group(t, ar, f);
+                return Some(0);
+            }
             // a town's patrol group; the world table's rows
             EE_UNITS_PLAYER_X_TOWN_PATROL_OF => return Some(*slot(a0 as u64, layout().town_patrol_group) as i64),
             EE_UNITS_PLAYER_X_POINTS_MAX => return Some(world_long(W::kWorldUnitImprovementPointsMax as i64)),

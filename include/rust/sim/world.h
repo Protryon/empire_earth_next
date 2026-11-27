@@ -829,6 +829,9 @@ struct EeWorldLayout {
   /// `EEPlayer::mName`'s and `mCivilization.mName`'s records (`EeUWideString`: player_rest.rs's result line)
   uint64_t player_name_text;
   uint64_t player_civ_name_text;
+  /// `EEAIArea` in `EETown` (ee_cp's town bodies take it: player_native.rs) and in `EEHerd`
+  uint64_t town_area;
+  uint64_t herd_area;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

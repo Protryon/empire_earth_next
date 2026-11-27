@@ -356,6 +356,11 @@ fn ffi_call(op: i32, value: u64) -> u64 {
         match op {
             EE_UNITS_LISTS_HOST_PG_REFERENCE => ee_units_pg_reference(g),
             EE_UNITS_LISTS_HOST_PG_DEREFERENCE => ee_units_pg_dereference(g),
+            // the unit's `GetUnitID()` (its record's `mUnitID`)
+            EE_UNITS_LISTS_HOST_UNIT_ID => {
+                let at = value as usize + crate::world::layout::layout().rts_unit_fields as usize;
+                return (*(at as *const crate::world::unit_fields::EeUnitsRtsUnitFields)).mUnitID as u64;
+            }
             _ => return ee_units_lists_host(op, value),
         }
     }

@@ -51,10 +51,20 @@ fn class_count() -> usize {
 /// The body host's statement `op` of player `p` (EEPlayer.cpp `ee_units_player_body_host`).
 pub fn body(op: i32, p: u64, b: i64) -> Option<i64> {
     crate::world::layout::get()?;
+    use crate::units::player_body::EE_UNITS_PLAYER_BODY_CLASS_STATS;
     use crate::units::player_rest::{EE_UNITS_PLAYER_BODY_UPGRADE_AT, EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS};
     Some(match op {
         EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS => slots(p) as i64,
         EE_UNITS_PLAYER_BODY_UPGRADE_AT => at(p, b as usize) as i64,
+        // the class's upgrade, none past the classes (EEPlayer.cpp's EEPlayerClassStats)
+        EE_UNITS_PLAYER_BODY_CLASS_STATS => {
+            let class = b as std::os::raw::c_ulong as usize;
+            if class < class_count() {
+                at(p, class) as i64
+            } else {
+                0
+            }
+        }
         _ => return None,
     })
 }
