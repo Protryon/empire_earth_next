@@ -30,8 +30,6 @@ public:
 class EEComplexUnit;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>& outCorners, EEMap* inMap);
-void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer,
-                    EEMap* inMap);
 
 // the random map generator list (EERandomMap::sRandomMapGenerators; exe-view free functions, ee/EERandomMapGenerators.h)
 #include "ee/EERandomMapGenerators.h"

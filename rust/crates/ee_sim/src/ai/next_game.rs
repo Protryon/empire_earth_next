@@ -162,7 +162,8 @@ pub(crate) unsafe fn string_append(out: *mut c_void, bytes: &[u8]) {
 fn host(op: i32, me: *mut c_void, a: i64, b: i64, c: i64) -> i64 {
     // SAFETY: the C++ switch over the live game (the simulation thread, inside a call from it); the Rust bodies first
     unsafe {
-        next_host::op(op, me, a, b, c, std::ptr::null_mut())
+        crate::ai::units_bind::tech_ops::next(op, a, b)
+            .or_else(|| next_host::op(op, me, a, b, c, std::ptr::null_mut()))
             .unwrap_or_else(|| ee_ai_next_host(op, me, a, b, c, std::ptr::null_mut()))
     }
 }
@@ -170,7 +171,11 @@ fn host(op: i32, me: *mut c_void, a: i64, b: i64, c: i64) -> i64 {
 fn host_out<T>(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: &mut T) -> i64 {
     let out = out as *mut T as *mut c_void;
     // SAFETY: as above; `out` is the op's record
-    unsafe { next_host::op(op, me, a, b, c, out).unwrap_or_else(|| ee_ai_next_host(op, me, a, b, c, out)) }
+    unsafe {
+        crate::ai::units_bind::tech_ops::next(op, a, b)
+            .or_else(|| next_host::op(op, me, a, b, c, out))
+            .unwrap_or_else(|| ee_ai_next_host(op, me, a, b, c, out))
+    }
 }
 
 // the host's operations whose bodies are Rust (AI Thread cluster round 7; were EECPNext.cpp's)

@@ -719,7 +719,8 @@ pub extern "C" fn ee_gamecpp_fx_goal_player(_: *mut c_void, player: u32) -> EeGf
     // SAFETY: the player's record
     let shift_mode = unsafe { (*rec::<EeUnitsPlayerFields>(O::PlFields, pl)).mShiftMode };
     EeGfxGoalPlayer {
-        late_epoch: h(O::FxPlCurrentEpoch, pl, &[]) >= FX_EPOCH_ATOMIC_WW2,
+        late_epoch: crate::tech_tree::objects::current_epoch(crate::tech_tree::objects::player_tree(pl))
+            >= FX_EPOCH_ATOMIC_WW2,
         shift_mode,
         unit_count: h(O::FxGroupNumUnits, group, &[]) as u32,
     }

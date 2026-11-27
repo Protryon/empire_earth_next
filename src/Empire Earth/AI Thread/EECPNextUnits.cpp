@@ -212,14 +212,8 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return ((EEUnitClass*)(uintptr_t)a)->IsLandBuilding() ? 1 : 0;
     case EE_AI_UNITS_HOST_BEHAVIOR_OK:
         return a >= 0 && (unsigned long)a < EEUnitBehavior::sTable.size() && EEUnitBehavior::sTable[(unsigned long)a] != NULL;
-    case EE_AI_UNITS_HOST_HAS_NODE:
-        return me->mTechnologies->Get((long)a) != NULL ? 1 : 0;
     case EE_AI_UNITS_HOST_SEES_ALL:
         return EECPEngineSeesAll(me) ? 1 : 0;
-    case EE_AI_UNITS_HOST_HAS_TREE:
-        return me->mTechnologies != NULL ? 1 : 0;
-    case EE_AI_UNITS_HOST_NODE_OF:
-        return (int64_t)(uintptr_t)me->mTechnologies->Get((long)a);
     case EE_AI_UNITS_HOST_CAN_AFFORD:
         return me->CanAfford((EETechTreeNode*)(uintptr_t)a, 0x20, 1) ? 1 : 0;
     case EE_AI_UNITS_HOST_FLIES_OVER:
@@ -236,20 +230,8 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return me->ScaleCost(((EETechTreeNode*)(uintptr_t)a)->GetCost((long)b, (long)c, 1.0f));
     case EE_AI_UNITS_HOST_SCALE_COST:
         return me->ScaleCost((long)a);
-    case EE_AI_UNITS_HOST_NODE_AVAILABLE:
-        return ((EETechTreeNode*)(uintptr_t)a)->GetIsAvailable() ? 1 : 0;
-    case EE_AI_UNITS_HOST_NODE_OBSOLETE:
-        return ((EETechTreeNode*)(uintptr_t)a)->GetIsObsolete() ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_PRODUCE_AS:
         return me->CanProduce((long)a, (long)b, 1, c != 0, 3, NULL) ? 1 : 0;
-    case EE_AI_UNITS_HOST_IS_EPOCH_ID:
-        return EEIsEpochID((long)a) ? 1 : 0;
-    case EE_AI_UNITS_HOST_EPOCH_COUNT:
-        return EEEpochCount();
-    case EE_AI_UNITS_HOST_NODE_HAS_DATA:
-        return ((EETechTreeNode*)(uintptr_t)a)->mData != NULL ? 1 : 0;
-    case EE_AI_UNITS_HOST_NODE_COST_AT:
-        return ((EETechTreeNode*)(uintptr_t)a)->mData->mCosts[kResourceFood + (long)b];
     case EE_AI_UNITS_HOST_CLASS_IMPROVEMENTS:
         return (int64_t)(uintptr_t)gUnitClassTable[(long)a]->mImprovements;
     case EE_AI_UNITS_HOST_IMPROVE_MAX:
@@ -299,8 +281,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return (int64_t)(uintptr_t)gCPBehaviors;
     case EE_AI_UNITS_HOST_TILES_LEVEL:
         return EEAreTilesLevel(sLevelTiles = std::vector<U2DPoint<long> >((const U2DPoint<long>*)((EeAiUnitsTiles*)outRecord)->xy, (const U2DPoint<long>*)((EeAiUnitsTiles*)outRecord)->xy + ((EeAiUnitsTiles*)outRecord)->len)) ? 1 : 0;
-    case EE_AI_UNITS_HOST_NODE_EVENT:
-        return ((EETechTreeNode*)(uintptr_t)a)->mData->mResearchedEvent;
     case EE_AI_UNITS_HOST_EVENT_EFFECTS:
         return EEEvent::Get((long)a) != NULL ? (int64_t)EEEvent::Get((long)a)->GetNumEffects() : -1;
     case EE_AI_UNITS_HOST_EVENT_EFFECT:

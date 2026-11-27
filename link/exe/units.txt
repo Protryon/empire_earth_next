@@ -41,7 +41,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 121c78 1240b3 RTS Engine/Map/RTSMap.cpp
 1240b3 1245bb RTS Engine/Map/RTSMiniMap.cpp
 1245bb 1248f6 RTS Engine/Map/RTSTile.cpp
-1248f6 124a88 RTS Engine/Map/RTSVisibleMap.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
 
@@ -129,10 +128,7 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 276631 27a37e Empire Earth/User Interface Thread/EEUserInterface.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
-27bf4b 27c0f3 Empire Earth/Civilization Builder/EEAreaEffect.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
-27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
-2813f4 2830d0 Empire Earth/Civilization Builder/EECivilizationManager.cpp
 283b2e 28befc Empire Earth/Random Map/EERandomMap.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp

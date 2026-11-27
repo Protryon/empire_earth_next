@@ -42154,3 +42154,120 @@ builds, the rust gate, won_host_coverage, wontest and a LAN game PASS on their t
   CfgTabText/StrUnits/StrLen, FmtAddText, ViewAddText: each a driver world's case.
 - Graphics' BlendSupported, SetPixel, DrawDottedRect, FillEllipse and DrawArc have no game caller but drivers use them.
 - CfgTabRead and the config object model with the lobby lane.
+
+## The game headers lane, round 3: the string ids as Rust's, dead declarations, header includes trimmed (ee_base string_ids.rs; branch rust-headers3, 2026-11-26)
+
+Numbers: docs/progress/headers.md "Round 3". port_metrics 47e9ad712 (batch 29) -> the tip: cpp_lines -4,991, all
+removals (no line joins), compiled files -1, logic -87, 12 headers gone.
+
+- **A generated table header is mostly unused by C++**: EEStringIDs.h had 3,765 ids, of which C++ names 164. The
+  table belongs to Rust (`ee_base::string_ids`: consts, `ALL`, `by_name`); the header keeps the C++'s, and one Rust
+  test checks they agree. Count a table's C++ users over src, include and tests (the net and WON drivers include
+  game headers) before moving it. Tests that read a header's text for a value need the new home: a `NAME = value,`
+  line inside a macro invocation parses like an enumerator, so the multi-header parsers only needed the path.
+- **A header include trim needs a self-containment check**: a trial that only compiles the header's users passes
+  whenever the users include the dropped header first, which leaves the header depending on its users' include
+  order. htrim.py also compiles a stub (the units' prelude: the first user's `<...>` includes and
+  lle/LowLevelEngine.h, then the header) and keeps a removal only if the stub still compiles. Comparing error sets
+  for headers that already fail alone does not work: the first error (an unknown base class) hides the rest. Those
+  headers (73 of 198) are skipped.
+- **Wrapper headers empty after the trim**: the ids headers that only included a Rust header (EEAIKindIDs.h,
+  EEUnitClassIDs.h, ...) lose that include when all their users already get the Rust header; then the wrapper and
+  its includes go. The cpp_consts tests listed EEUnitClassIDs.h by path: drop it from their lists (and the array
+  length).
+- **Object scans find dead inline code** (fork a): an inline member that no object of an `-O0` build of both profiles
+  emits is never called from C++; an out-of-line function no relocation (llvm-objdump -r) names is unreferenced. A
+  member template's mangled name pairs it with its template argument, not its class
+  (`??$Table@VEEAIContinent@@@EEAIContinentManager@@`), so skip member templates.
+- **Killing a trim run**: stop only the trim's own python (by its command line), restore the headers from git, and
+  never run it during a build of the same worktree (it edits include/ in place; include/ is not staged).
+- **Behaviour changes**: none intended.
+- **Gates** (on e16793be3, batch 29 in; the reduced lane set): both builds 0/0, headers current, the Rust gate PASS;
+  the oracle seeds 2-7 identical; captures oracle, late, units, scenario, calamity, effects, groups PASS; the saveload
+  matrix PASS; scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS; the editor
+  tour and `random-game --box-select --orders --seed 7` PASS; won_host_coverage PASS, wontest exit 0 (185 drivers);
+  `gates.sh` GATES PASS (ai-game units [4, 36, 37], alive_computers [2, 3], classic_lua x 2; lan-game). Not run: the
+  space, missile, app, placement and transport captures, plain saveload, POSIX builds.
+
+## The units' lane, round 13: the unit hosts' plain cases answered in Rust before the C++ (ee_sim units cu_view.rs, uc_view.rs, uc_kind_view.rs, uc_fwd_view.rs, cls_mv_view.rs, goal_view.rs, ghost_view.rs, dm_group_view.rs; combat shot_view.rs, cg_view.rs; branch rust-units13, 2026-11-26)
+
+Numbers: docs/progress/units.md ("Round 13"). port_metrics 47e9ad712 (origin/rust, batch 29) -> e7f818c6e: cpp_lines
+**-2,089**, logic -7 (12,147 -> 12,140), compiled files 269 -> 269, classes 724 -> 724, extern_c and rust_hdrs unchanged, unsafe
++274. The C++ line target (-2,000) is met; the logic target (-400) is not.
+
+- **One-statement host cases are shim, not logic.** The round answered about 1,460 host cases in Rust (a
+  `*_view.rs` per host returns `Some(answer)` for the plain reads, stores and one-call members, `None` falls through
+  to the C++ host) and deleted their C++ cases. logic_lines.py counts a one-statement case as shim, so the round's
+  -2,089 C++ lines are -1,584 shim and only -7 logic. A round whose aim is logic lines has to move whole bodies or the
+  C++ callees the remaining cases call (actions, the path manager, sounds, effects, the calamity classes, the tech
+  tree, the C++ containers); deleting plain cases moves only the line count.
+- **A case-deletion script took a case ending in a comment for a multi-line case.** Fork A's script decided a case
+  was multi-line when its line did not end in `return ...;` or `break;`; `case EE_UNITS_CU_TILE_LEVEL: ... // ...`
+  ended in a comment, so the script deleted up to the next case's end, and `EE_UNITS_CU_UNIT_LOAD_MEDIA` went with
+  it. EEUnit::LoadMedia was never run and every sim crashed (1cda1fde6
+  restored it). Strip comments before judging a case's end, and after any scripted deletion check every deleted
+  `case EE_X:` against the Rust match arms that now answer it (scratchpad u13_casecheck.py: the deleted cases not
+  re-added that no Rust `=>` arm names). On the merged tip it lists 10, all deliberate: the sight host's eight unit
+  reads (the sight body reads the unit's record itself and never asks), `EE_UNITS_EU_AREA_DAMAGE` (no caller) and two
+  class-host arms written over several lines (the check reads one line at a time).
+- **Merging a header-trimming batch into a lane that deleted the same lines.** Batch 29 (game headers 2) joined
+  wrapped lines and deleted declarations in nine of the lane's files that the forks had already cut. A three-way
+  merge gave conflict hunks in all of them; a resolver (scratchpad u13_resolve.py) took ours as the skeleton, applied
+  theirs' deletions and line joins wherever ours still kept every joined line, and inserted theirs' plain additions
+  at their anchor. The merge built 0/0 and the oracle stayed identical. port_metrics' segments then add up to more
+  than the round's total (-2,305 against -2,089): both sides had deleted some of the same lines.
+- **An include pruner that compiles each removal.** scratchpad u13_incprune.py drops an `#include` when every
+  module's compile job of the unit still passes `-fsyntax-only` without it (the jobs from tools/units.py, compiled
+  through clang_build.compile_to). It removed 45 lines from the class family, EESightRings, EEUGRustCombat and
+  EEWorldLayout; a removal that only compiled because another header pulled the same include transitively stays
+  legal until that header is trimmed (game headers lanes), so prune after their merges, not before.
+- **A Rust view over a C++ object's tail needs a start-up check.** ghost_view.rs reads `EeUnitsGhostFields` one
+  pointer past the `EEGhostUnit` (after its vtable pointer); EEGhostUnit.cpp now checks that offset at start-up, as
+  EEWorldLayoutRegister does for the other records.
+- **Line endings.** Fork B's first leg-2 commit wrote two new Rust files as CRLF; its second returned them to LF.
+  Files that were CRLF before (combat/reads.rs) stay CRLF.
+- **Edits outside the lane**: none in C++; include/rust/sim/combat.h regenerated. Rust call sites that now ask the
+  views first are all in ee_sim units and combat.
+- **Behaviour changes**: none observed (oracle seeds 2-7 identical after each merge; the captures, the saveload
+  matrix and the gates as listed in units.md).
+
+## The player/tech lane, round 3: the civilization builder's shims answered in Rust, the tech tree's nodes, epochs and epoch list as Rust records, the computer player's virtuals dispatched in Rust (ee_game screens civ_direct.rs, civ_list_state.rs; ee_sim tech nodes.rs, tree_objects.rs, tech_native.rs; ee_sim units player_native.rs, save_prim.rs; branch rust-playertech3, 2026-11-26)
+
+The round's measure was total C++ lines (tools/port_metrics.py), target -1,500: -767 against origin/rust (fork A -410,
+fork B -320, the lead -37), compiled files -3, classes -3, logic -25, with no behaviour change (the oracle's six
+seeds identical after every step; the capture profiles, the saveload matrix, scenario_check). Two forks in parallel
+worktrees and the lead; batch 29 landed mid-round and was merged into the lead.
+
+- **A Rust path in a shim table** (fork A): game_cpp.rs's `shims!` takes `= module::name` in place of a C++ symbol:
+  the FFI implementation calls the Rust function, while the trait and the test fake stay as they were. The host
+  calls on objects that are already Rust's (the toolkit's forms, edit boxes, list boxes through ee_ui::direct; the
+  world's players, units, classes and stats through ee_sim's views) need no C++ at all. Keep the macros' FFI halves
+  under the FFI build's cfg, or the tests warn of an unused macro.
+- **A dead export has no caller on either side**: grep C++ and Rust both before dropping an `ee_*` export; a cbindgen
+  type only those exports named must then be exported by name in rust/cbindgen.toml (EeAreaEffectData,
+  EeAreaEffectTemplateFields) while C++ still uses it.
+- **A class with no vtable and no members of its own is its record** (fork B): EETechTreeNode, EETechTreeEpoch and
+  EETechTree hold only their Rust record, so the object pointer is the record pointer (layout node_fields and
+  tech_tree_fields compute to 0). New record fields go at the end so no earlier offset moves, and code that reads a
+  record through the layout offset (fork A's civ_direct.rs `node_fields`) stays right when the offset becomes 0.
+  The epoch's virtuals dispatch in Rust on a field (`mLists != 0`), which also replaces the one `dynamic_cast`.
+- **Route every Rust caller through the new layer** (fork B): the AI hosts (units_cases.rs, units_host.rs,
+  units_world.rs `cpp()`, next_host.rs) also called the C++ host directly; deleting the C++ cases made those calls
+  silently answer 0 (classic_lua stopped buying improvements), and only the oracle caught it. Grep the Rust callers
+  of a host before deleting its cases.
+- **An ee_sim `extern "C"` declaration of an ee_game export** makes cbindgen declare it twice: keep that case in C++
+  (NODE_COST stays).
+- **`new` of a C++ class whose record gained a Rust field** leaves the field uninitialized: the Rust init must set
+  every field of the record.
+- **Merging over a reformatting batch**: batch 29 put each `case` on one line; fork B deleted cases from the
+  multi-line form. Resolving each conflict by keeping our (one-line) cases whose label survives on fork B's side
+  (a script over the conflict blocks, the dropped labels printed) kept both sides' intent.
+- **A subclass override equal to the base's is dead**: four of EEComputerPlayer's overrides (NoticeTargetPlayer,
+  Virtual60, GetExtraPopulation, WonderStarted) did what EEPlayer's did; the others (ScaleCost, TakeResource)
+  dispatch in player_native.rs on the player's mComputerPlayer, so the virtual's host case is answered in Rust.
+- Windows Python `open(p, 'w')` writes CRLF: use `newline=''` on LF sources.
+- Edits outside the lane's files (fork B, the deleted one-statement cases now answered in Rust): EEWorld.cpp,
+  EEGameOps.cpp, EEGameLog.cpp, EESim.cpp, EESimEditor.cpp, Empire Earth.cpp, EEPWorldHelper.cpp,
+  EEDataPreLoading.cpp, EEEffectHost.cpp, EEEvent.cpp, EEScenarioHost.cpp, EESMEffect.cpp, EECPNextUnits.cpp,
+  EECPNext.cpp, EEComputerPlayer.cpp, EEUIFMGStatusButton.cpp, EEDataTextFile.cpp; Rust in ee_game gamecpp,
+  preload.rs, sim_driver and ee_sim scenario and ai.

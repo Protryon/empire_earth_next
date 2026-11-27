@@ -8,8 +8,6 @@
 // fields and the upgrade's stats as records; from round 28 those are read and written in place (the class's and the
 // upgrade's Rust records, SetRange and SetMaxVelocity with them); here the step factors, the names, Load and Save.
 #include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"

@@ -56,12 +56,6 @@ extern unsigned long& gTexturePixelDepth;
 extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gTrilinearFilter;
 
-// Deletes every entry of the media table and empties it (ee_game preload_media.rs)
-void EEDeleteMediaTable()
-{
-    ee_preload_delete_media_table();
-}
-
 // Writes to the file each graphic object that is still loaded, with its file name and use count (preload_media.rs)
 void EEDumpGraphicObjectTable(FSFileSpec& inFile)
 {

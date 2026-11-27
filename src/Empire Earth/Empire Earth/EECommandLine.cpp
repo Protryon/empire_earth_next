@@ -42,14 +42,6 @@ long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, 
 
 // (EEConvertGameFile and EEUpdateSavedGames, "update_saved_games": ee_game gamecpp saved_games.rs over EECommandLineOp)
 
-// Runs the command-line commands after startup; without one, starts a client and opens the main menu. Returns
-// false when the game should quit (update_saved_games) (ee_game gamecpp entry.rs; the original's four file statics
-// "-", "/t", "\"", "Text-" were its tokenizer's)
-bool EEParseCommandLine(const char* inCommandLine)
-{
-    return ee_gamecpp_entry_parse_command_line(inCommandLine);
-}
-
 // ------------------------------------------------------------------------- the command line's C++ (gamecpp entry.rs)
 
 #define P64(x) ((int64_t)(intptr_t)(x))

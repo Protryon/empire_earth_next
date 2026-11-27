@@ -40,11 +40,8 @@ public:
     void RefreshPatrolGroup() { ee_cp_town_refresh_patrol_group(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this)); }
     static bool IsTownUnit(EEUnit* inUnit) { return ee_cp_town_is_town_unit((uint64_t)(uintptr_t)inUnit); }
 
-    EEPlayer* GetPlayer() const { return this->mPlayer; }
     EEPlayer* mPlayer;                      // +0x68 (ctor argument 1)
-    EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
     EEPPatrolGroup* mPatrolGroup;           // +0x6c (AddUnit makes one and registers it with mPlayer; Reset releases it)
-    unsigned short GetContinent() const { return this->mContinent; }
 };
 
 #endif

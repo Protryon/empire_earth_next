@@ -316,9 +316,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::PlayerResourceCap: return PL->mResourceCaps[a[0]];
     case O::PlayerEnemy: return (long)PL->mEnemies[a[0]];
     case O::PlayerPurchasedUpgrades: return PL->mCivilization.mPurchasedUpgrades.size();
-    case O::TreeCurrentEpoch: return (long)((EETechTree*)p)->mCurrentEpoch;
-    case O::TreeStartEpoch: return (long)((EETechTree*)p)->mStartEpoch;
-    case O::TreeEndEpoch: return (long)((EETechTree*)p)->mEndEpoch;
     case O::ComputerActive: return CP->mActive;
     case O::ComputerIsCheating: return CP->mIsCheating;
     case O::ComputerCanAttack: return CP->mCanAttack;
@@ -504,17 +501,11 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::UiPop: gUIManager->Pop();
         break;
     case O::IsCivList: return dynamic_cast<EECBUIListBox*>(CTL) != NULL;
-    case O::CivListUpgradesOnly: return CL->mSelectUpgradesOnly;
-    case O::CivListShowPoints: return CL->mShowPoints;
-    case O::CivListSortLines: return CL->mSortLines;
-    case O::CivListHeaderColor: return P64(&CL->mC13C);
     case O::CivListReset: CL->ResetSelection();
         break;
     case O::CivListTabbedTo: CL->TabbedTo();
         break;
     case O::CivListCopyData: return CL->CopyData();
-    case O::CivListCopiedShowPoints: return CL->mCopiedShowPoints;
-    case O::CivListCopiedColor: return P64(&CL->mC148);
     case O::ControlTabable: return CTL->GetTabable();
     case O::ListAutoSelect: return CivListAccess::Auto(LBS);
     case O::ListHasSelection: return LBS->GetHasSelection();

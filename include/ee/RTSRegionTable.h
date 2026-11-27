@@ -7,14 +7,12 @@
 #ifndef EE_RTSREGIONTABLE_H
 #define EE_RTSREGIONTABLE_H
 
-
 // one region's values (thiscall Remove 0x239ee2: find + erase; COMDAT after its first user EEUnitClass::Virtual94)
 template <class T>
 class RTSRegion : public std::vector<T> {
 public:
     // inline: the region loops read through them, so size and operator[] sit one level deeper and are refused where
     // the original calls them out of line (EEGetUnitsInRectangle 0xa509a) (provisional names)
-    long GetCount() const { return this->size(); }
     void Remove(const T& inValue)
     {
         for (iterator it = begin(); it != end(); ++it)
@@ -35,29 +33,6 @@ public:
         : mRegions(new RTSRegion<T>[inCount * inCount]), mRegionSize(inRegionSize), mRegionArea(inRegionSize * inRegionSize),
           mRegionsX(inCount), mRegionsY(inCount) {}
     virtual ~RTSRegionTable() { delete[] this->mRegions; }  // +0x00
-
-    // inline (expanded everywhere in EEInfluenceTable.cpp; out-of-line copy 0x10ae9 takes a U2DPoint<long>): 0 off the grid
-    RTSRegion<T>* GetRegion(unsigned long inX, unsigned long inY)
-        { return inX < this->mRegionsX && inY < this->mRegionsY ? &this->mRegions[inX * this->mRegionsY + inY] : NULL; }
-    // never expanded (COMDAT 0x10ae9, in the AI A* range: its first user's)
-    RTSRegion<T>* GetRegion(const U2DPoint<long>& inTile)
-    {
-        return (unsigned long)inTile.mX < this->mRegionsX && (unsigned long)inTile.mY < this->mRegionsY ?
-            &this->mRegions[inTile.mX * this->mRegionsY + inTile.mY] : NULL;
-    }
-    // inline (COMDAT 0xe06f, EEAIArea.cpp's range; EEHerd.cpp's unit collector too): inTiles' edges in regions
-    // (provisional name)
-    U2DRectangle<long> GetRegions(const U2DRectangle<long>& inTiles)
-    {
-        return U2DRectangle<long>(inTiles.mLeft / this->mRegionSize, inTiles.mTop / this->mRegionSize,
-                                  inTiles.mRight / this->mRegionSize, inTiles.mBottom / this->mRegionSize);
-    }
-    void Add(unsigned long inX, unsigned long inY, const T& inValue)
-    {
-        RTSRegion<T>* theRegion = this->GetRegion(inX, inY);
-        if (theRegion != NULL)
-            theRegion->push_back(inValue);
-    }
 
     RTSRegion<T>* mRegions;                 // +0x04 (new[] of mRegionsX * mRegionsY vectors)
     long mRegionSize;                       // +0x08 tiles per region side (the callers divide tile coordinates by it)

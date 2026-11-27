@@ -281,8 +281,33 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
                 ee_units_player_rest(pv, EE_UNITS_PLAYER_REST_CLEAR_FOOTPRINT, a0 as u64, 0, 0);
                 return Some(0);
             }
+            // the virtuals EEComputerPlayer overrides, dispatched here on the player's `mComputerPlayer`
+            // (ee/EEComputerPlayer.h): ScaleCost, TakeResource; GetExtraPopulation is 1 and WonderStarted empty for
+            // every player
+            crate::units::player::EE_UNITS_PLAYER_SCALE_COST => {
+                let l = layout();
+                return Some(if *slot(p, l.player_computer_player) != 0 {
+                    crate::cp::ffi::ee_cp_scale_cost((p as usize + l.cp_fields as usize) as *const _, a0 as c_long)
+                        as i64
+                } else {
+                    a0
+                });
+            }
+            crate::units::player::EE_UNITS_PLAYER_TAKE => {
+                if *slot(p, layout().player_computer_player) != 0 {
+                    crate::cp::player_game::ee_cp_pl_take_resource(p, a0 as c_long, io.i[1] as c_long);
+                } else {
+                    (*saved(p)).mResourceCaps[a0 as usize] -= io.i[1] as c_long;
+                }
+                return Some(0);
+            }
+            crate::units::player::EE_UNITS_PLAYER_EXTRA_POPULATION => return Some(1),
+            EE_UNITS_PLAYER_X_WONDER_STARTED => return Some(0),
             _ => {}
         }
+    }
+    if let Some(v) = unsafe { tech(op, p, io) } {
+        return Some(v);
     }
     // SAFETY: as above
     let t = unsafe { WorldRead::begin() };
@@ -329,6 +354,59 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
         }
         _ => return None,
     })
+}
+
+/// The player host's tech tree operations (player/tech lane, round 3): the tree, its nodes and their walks are Rust's
+/// (ee_sim tech tree_objects.rs) behind the player's `mTechnologies`.
+///
+/// # Safety
+/// As [`player`].
+unsafe fn tech(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlayerIo) -> Option<i64> {
+    use crate::tech::nodes::{EeTechNodeOp, EeTechTreeOp};
+    use crate::tech::tree_objects as to;
+    use crate::units::player::{EE_UNITS_PLAYER_NODE, EE_UNITS_PLAYER_NODE_AVAILABLE, EE_UNITS_PLAYER_NODE_UNIT_CLASS};
+    use crate::units::player_split::EE_UNITS_PLAYER_X_NODE;
+    use crate::units::player_units::{
+        EE_UNITS_PLAYER_CITIZEN_CONTAINS, EE_UNITS_PLAYER_RESEARCH, EE_UNITS_PLAYER_SET_NODE_AVAILABLE,
+        EE_UNITS_PLAYER_TECH_OBSOLETE, EE_UNITS_PLAYER_UNIT_NODE,
+    };
+    let l = crate::world::layout::get()?;
+    let a = io.i;
+    // SAFETY (every block): the caller's contract; the player's tree is live (the C++ host dereferenced it)
+    unsafe {
+        let tree = *slot(p, l.player_technologies) as usize;
+        let get = |id: i64| to::tree_get(tree as *mut _, id as c_long) as usize;
+        Some(match op {
+            EE_UNITS_PLAYER_NODE | EE_UNITS_PLAYER_X_NODE => get(a[0]) as i64,
+            EE_UNITS_PLAYER_NODE_AVAILABLE => {
+                to::walk_node(a[0] as usize, EeTechNodeOp::IsAvailable, 0, false, 0) as i64
+            }
+            EE_UNITS_PLAYER_NODE_UNIT_CLASS => to::unit_class(a[0] as usize, a[1] as usize) as i64,
+            EE_UNITS_PLAYER_SET_NODE_AVAILABLE => {
+                to::walk_tree(tree, EeTechTreeOp::SetNodeAvailable, a[0] as i32, i32::from(a[1] != 0), 0);
+                0
+            }
+            EE_UNITS_PLAYER_RESEARCH => {
+                to::walk_tree(tree, EeTechTreeOp::Research, a[0] as i32, 0, 0);
+                0
+            }
+            EE_UNITS_PLAYER_CITIZEN_CONTAINS => {
+                let d = (*to::node(get(crate::tech_tree_ids::EETechTreeTechID::kTechCitizen as i64))).mData;
+                i64::from(crate::tech::nodes::ee_tech_node_classes_contains(d, a[0] as c_long))
+            }
+            EE_UNITS_PLAYER_TECH_OBSOLETE => {
+                let n = get(a[0]);
+                i64::from(n != 0 && to::is_obsolete(n))
+            }
+            EE_UNITS_PLAYER_UNIT_NODE => {
+                let t = crate::world::WorldRead::begin();
+                let u = crate::world::UnitView::of(&t, a[0] as u64)?;
+                let owner = *slot(u.player()?.handle(), l.player_technologies) as usize;
+                to::tree_get(owner as *mut _, u.class()?.technology() as c_long) as i64
+            }
+            _ => return None,
+        })
+    }
 }
 
 /// The answer of tick operation `op` (`EEPlayerTickOperation`'s) of player `p` that is a call of another Rust body
@@ -431,6 +509,15 @@ pub unsafe fn save(
         match op {
             EE_UNITS_PLAYER_SAVE_STORE_PLAYER_TABLE => crate::units::us_fill::game::ee_units_store_player_table(p),
             EE_UNITS_PLAYER_SAVE_X_TECH_NULL => *slot(p, l.player_technologies) = 0,
+            EE_UNITS_PLAYER_SAVE_X_TECH_INDEX | EE_UNITS_PLAYER_SAVE_X_TECH_PLAYER => {
+                // SetPlayerIndex(mPlayerID), SetPlayer(this) (its index too)
+                let t = *slot(p, l.player_technologies) as *mut crate::tech::nodes::EeTechTreeFields;
+                if op == EE_UNITS_PLAYER_SAVE_X_TECH_PLAYER {
+                    (*t).mPlayer = p as usize as *mut _;
+                }
+                let w = WorldRead::begin();
+                (*t).mPlayerIndex = crate::world::PlayerView::of(&w, p)?.id() as c_long;
+            }
             EE_UNITS_PLAYER_SAVE_TECH_PRESENT => return Some(i32::from(*slot(p, l.player_technologies) != 0)),
             EE_UNITS_PLAYER_SAVE_X_PATROL_NEW => io.i = crate::units::patrol_group::ee_units_pg_new() as i64,
             EE_UNITS_PLAYER_SAVE_X_PATROL_RELEASE => {

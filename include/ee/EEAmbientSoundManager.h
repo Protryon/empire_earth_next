@@ -29,8 +29,6 @@ public:
     void CountTree(EEUnit* inUnit) { ee_gamecpp_ambient_count_tree(this, inUnit); }
     // 0x124d63 (ret 4; EERenderObject 0x10d47c): counts the unit into +0x04..+0x1c
     void CountUnit(EEComplexUnit* inUnit) { ee_gamecpp_ambient_count_unit(this, inUnit); }
-    // 0x124e99 (ret 4; CountTree's callee): +0x08, then the forest's +0x68
-    void AddTree(EEUnit* inUnit) { ee_gamecpp_ambient_add_tree(this, inUnit); }
 };
 // The manager's plain members are EeAppAmbientFields (ee_app ambient.rs: mState 1..4, mFrameCount, mNextUpdateFrame,
 // mUpdateInterval (10), mIsEnabled, mIsPaused), the base; every decision is Rust over EEAmbientSoundManager.cpp's host.

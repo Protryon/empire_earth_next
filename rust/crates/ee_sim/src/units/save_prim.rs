@@ -97,65 +97,67 @@ pub mod game {
     use super::*;
     use std::ffi::c_void;
 
-    // EEPlayer.cpp: one statement each over the FSFile
-    extern "C" {
-        fn ee_units_file_read_u32(file: *mut c_void, v: *mut u32) -> c_long;
-        fn ee_units_file_read_i32(file: *mut c_void, v: *mut i32) -> c_long;
-        fn ee_units_file_read_f32(file: *mut c_void, v: *mut f32) -> c_long;
-        fn ee_units_file_read_bool(file: *mut c_void, v: *mut u8) -> c_long;
-        fn ee_units_file_read_u16(file: *mut c_void, v: *mut u16) -> c_long;
-        fn ee_units_file_read_bytes(file: *mut c_void, data: *mut u8, len: c_ulong, read: *mut c_ulong) -> c_long;
-        fn ee_units_file_write_u32(file: *mut c_void, v: u32) -> c_long;
-        fn ee_units_file_write_i32(file: *mut c_void, v: i32) -> c_long;
-        fn ee_units_file_write_f32(file: *mut c_void, v: f32) -> c_long;
-        fn ee_units_file_write_bool(file: *mut c_void, v: u8) -> c_long;
-        fn ee_units_file_write_u16(file: *mut c_void, v: u16) -> c_long;
-        fn ee_units_file_write_bytes(file: *mut c_void, data: *const u8, len: c_ulong, written: *mut c_ulong)
-            -> c_long;
-    }
+    use ee_base::fs::CppFile;
+    use ee_base::fs::{FsFile, FsWrite}; // read_u32, write_u32
 
-    /// An `FSFile*` the C++ hands in.
+    /// An `FSFile*` the C++ hands in, read and written through ee_base's C++ file calls (cppfile.rs).
     pub struct GameFile(pub *mut c_void);
 
-    // SAFETY (each): the live file the caller passed; the values are this call's locals (the bytes' pointers the
-    // callers' buffers of `len` bytes)
+    impl GameFile {
+        fn file(&self) -> CppFile {
+            CppFile(self.0)
+        }
+    }
+
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     impl FilePrims for GameFile {
         fn read_u32(&mut self, v: &mut u32) -> c_long {
-            unsafe { ee_units_file_read_u32(self.0, v) }
+            self.file().read_u32(v) as c_long
         }
         fn read_i32(&mut self, v: &mut i32) -> c_long {
-            unsafe { ee_units_file_read_i32(self.0, v) }
+            self.file().read_i32(v) as c_long
         }
         fn read_f32(&mut self, v: &mut f32) -> c_long {
-            unsafe { ee_units_file_read_f32(self.0, v) }
+            self.file().read_f32(v) as c_long
         }
         fn read_bool(&mut self, v: &mut u8) -> c_long {
-            unsafe { ee_units_file_read_bool(self.0, v) }
+            let mut b = *v != 0;
+            let r = self.file().read_bool(&mut b);
+            *v = u8::from(b);
+            r as c_long
         }
         fn read_u16(&mut self, v: &mut u16) -> c_long {
-            unsafe { ee_units_file_read_u16(self.0, v) }
+            self.file().read_u16(v) as c_long
         }
         fn read_bytes(&mut self, data: *mut u8, len: c_ulong, read: &mut c_ulong) -> c_long {
-            unsafe { ee_units_file_read_bytes(self.0, data, len, read) }
+            // (the `char*` overload, as the C++ called); SAFETY: the caller's buffer of `len` bytes
+            let out =
+                if len == 0 { &mut [][..] } else { unsafe { std::slice::from_raw_parts_mut(data, len as usize) } };
+            let (r, n) = self.file().read_text(out);
+            *read = n;
+            r as c_long
         }
         fn write_u32(&mut self, v: u32) -> c_long {
-            unsafe { ee_units_file_write_u32(self.0, v) }
+            self.file().write_u32(v) as c_long
         }
         fn write_i32(&mut self, v: i32) -> c_long {
-            unsafe { ee_units_file_write_i32(self.0, v) }
+            self.file().write_i32(v) as c_long
         }
         fn write_f32(&mut self, v: f32) -> c_long {
-            unsafe { ee_units_file_write_f32(self.0, v) }
+            self.file().write_f32(v) as c_long
         }
         fn write_bool(&mut self, v: bool) -> c_long {
-            unsafe { ee_units_file_write_bool(self.0, u8::from(v)) }
+            self.file().write_bool(v) as c_long
         }
         fn write_u16(&mut self, v: u16) -> c_long {
-            unsafe { ee_units_file_write_u16(self.0, v) }
+            self.file().write_u16(v) as c_long
         }
         fn write_bytes(&mut self, data: *const u8, len: c_ulong, written: &mut c_ulong) -> c_long {
-            unsafe { ee_units_file_write_bytes(self.0, data, len, written) }
+            // SAFETY: the caller's buffer of `len` bytes
+            let bytes = if len == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(data, len as usize) } };
+            let (r, n) = self.file().write_text(bytes);
+            *written = n;
+            r as c_long
         }
     }
 

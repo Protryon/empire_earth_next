@@ -10,7 +10,6 @@
 #include <vector>
 #include "ee/EECivUpgrade.h"
 #include "ee/EETileCoordinate.h"
-#include "lle/LowLevelEngineCore.h"     // UFloatBits
 #include "lle/U2DRectangle.h"
 #include "rust/sim/units.h"
 
