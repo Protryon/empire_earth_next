@@ -188,6 +188,22 @@ font and string, the rhombi: fork A's), the string table and the C++ strings (`U
 system's calls (`FSFileSpec`, `FSPath`, the file lists' searches), the sound manager's, `gISKeyboard`/`gISMouse` and
 the list box's members over its C++ line views (`mData`, `mCopyLineArray`, `mText`).
 
+### The lead: the game's UI units (branch `rust-lleui2`, 2026-11-26)
+
+The game's UI layer gets pass 1's toolkit treatment: with the controls' logic in Rust, its units are host shims under
+long include lists (676 include lines in the UI thread's 20 units), and one unit needs one list.
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| 645e4e7bc | the UI thread's 18 original units (0x254911..0x27aa0b) and the port's two hosts (EEUIRustControl.cpp, EEUIShell.cpp) one, `EEUserInterface.cpp`: each a section under its comment, one include list of 115 headers (each dropped only when the unit compiled without it and without a warning: build/lleui2 inc_trim.py); two identical file-static `C()` helpers one; EEFOFindNewTargetNearOldTarget.cpp (the units lane's) stays its own unit | -378 (-19 files) |
+| 617ecd086 | the UI events' two original units (EEUIEScenarioIntroEvents.cpp, EEUIEWonNetArenaGameEvents.cpp) sections of `EEScreens.cpp`; `ee/EEWonFrontHost.inl` stays below the arena section's statics it reads; EEScreenEvent.cpp stays a leaf | -74 (-2 files) |
+
+The round (fork A, fork B, the two pass-2 forks and the lead), against origin/rust 47e9ad712 (batch 29, merged into the
+round): **-2,337 C++ lines, -39 compiled files** (88,934 / 269 -> 86,597 / 230); logic -41, shim -1,007; classes -9.
+Merged with batch 30 (126ab1513, whose changes to five UI thread units went into their sections; the unit keeps
+EEMiniMap.h, which batch 30 had dropped from EEUserInterface.cpp alone): -2,336 and -39 against it (87,771 / 253 ->
+85,435 / 214).
+
 ## Round 16 (branches `rust-ui16a` toolkit then civilization builder and UI thread, `rust-ui16b` game UI then HUD, two passes each, merged on `rust-ui16`, 2026-11-23)
 
 The collapse phase: classes deleted, not only bodies moved. Lane classes 115 -> 96 (+2 outside the lane).
