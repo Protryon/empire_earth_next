@@ -24,7 +24,7 @@
 
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECPBehavior.h"
-#include "ee/EETechTreeRecord.h"
+#include "rust/sim/tech.h"
 #include "ee/EERules.h"
 
 #include "EEDataTextSpecs.h"
@@ -54,7 +54,7 @@
 // against their sources' static_asserts)
 static_assert(sizeof(EEWorldTableEntry) == kEEDTSize_EEWorldTableEntry, "dbworld record layout");
 static_assert(sizeof(EECPBehavior) == kEEDTSize_EECPBehavior, "dbcpbehavior record layout");
-static_assert(sizeof(EETechTreeRecord) == kEEDTSize_EETechTreeRecord, "dbtechtree record layout");
+static_assert(sizeof(EeTechTreeRecord) == kEEDTSize_EETechTreeRecord, "dbtechtree record layout");
 static_assert(sizeof(EEUnitClassRecord) == kEEDTSize_EEUnitClassRecord, "dbobjects record layout");
 
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)

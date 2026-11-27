@@ -209,9 +209,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwTreeNodeIds: ((EETechTree*)p)->GetNodeIDs(*(std::vector<long>*)a[0]);
         break;
-    case O::PwNodeAllowed: return ((EETechTreeNode*)p)->mIsAllowed;
-    case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
-        break;
     // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
     // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
     case O::PphFields: return P64(&PPH->mLocalPlayerIndex);

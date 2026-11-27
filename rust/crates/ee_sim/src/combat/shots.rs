@@ -174,11 +174,18 @@ pub struct EeCombatShotHost {
     pub ctx: *mut c_void,
     pub op: unsafe extern "C" fn(ctx: *mut c_void, op: i32, arg: i32, arg1: i32) -> i32,
     pub op64: unsafe extern "C" fn(ctx: *mut c_void, op: i32, a: u64, b: i64, f: *mut f32) -> i64,
+    /// the shot (its `EEUnit*`) and its class: the plain statements' (shot_view.rs)
+    pub unit: u64,
+    pub unit_class: u64,
 }
 
 impl ShotHost for EeCombatShotHost {
     fn op(&mut self, op: i32, arg: i32, arg1: i32) -> i32 {
         if let Some(answer) = compose(self, op) {
+            return answer;
+        }
+        #[cfg(not(test))]
+        if let Some(answer) = crate::combat::shot_view::shot_op(self.unit, self.unit_class, op, arg) {
             return answer;
         }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
@@ -188,6 +195,10 @@ impl ShotHost for EeCombatShotHost {
 
 impl ShotStatements for EeCombatShotHost {
     fn x(&mut self, op: i32, a: u64, b: i64, f: &mut [f32; 4]) -> i64 {
+        #[cfg(not(test))]
+        if let Some(answer) = crate::combat::shot_view::shot_x(self.unit, op, a, f) {
+            return answer;
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.op64)(self.ctx, op, a, b, f.as_mut_ptr()) }
     }

@@ -40,6 +40,5 @@
 #define EE_EESCENARIOCAPTURE_H
 
 #include "ee/EESimCapture.h"
-#include "rust/sim/scenario.h"   // the records' states before (ee_sim scenario sm_capture.rs)
 
 #endif

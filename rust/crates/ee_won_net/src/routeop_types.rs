@@ -1,6 +1,6 @@
 //! The routing op type ids, by the names the C++ uses (`RoutingOp_JoinGroup`, ...): the C++ `RoutingOpType` (a
-//! `long`) values, read through `rust/won_net/routeop_types.h` (`include/ee/wonapi/WONRoutingOpTypes.h` includes it;
-//! until R6 WONLobby round 30 they were that header's enum). The names are RoutingOpTypeToString's (0x4cd4f9), each
+//! `long`) values, read through `rust/won_net/routeop_types.h` (until R6 WONLobby round 30 they were
+//! WONRoutingOpTypes.h's enum; the header went in R6 WON round 39). The names are RoutingOpTypeToString's (0x4cd4f9), each
 //! the type its op class's GetType returned, numbered from 0 in that order.
 
 #![allow(non_upper_case_globals)]

@@ -64,6 +64,7 @@ pub mod nodes;
 pub mod nodes_capture;
 pub mod tech_ids;
 pub mod tree;
+pub mod tree_objects;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the
 /// conversion's "indefinite" value `i32::MIN` for NaN or a value out of range (`as i32` would saturate).

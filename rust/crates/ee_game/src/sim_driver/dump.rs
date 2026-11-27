@@ -217,7 +217,7 @@ pub fn dump_state(path: &str) {
 fn dump_players(o: &mut Out) {
     let n = lu(h(O::NumPlayers, 0, &[]));
     for i in 0..n {
-        let p = gc::h(gc::O::TbWorldPlayer, 0, &[i64::from(i)]) as usize;
+        let p = crate::tech_tree::objects::world_player(i64::from(i));
         if p == 0 {
             continue;
         }
@@ -225,7 +225,14 @@ fn dump_players(o: &mut Out) {
             "P {i} pop={} eog={} epoch={} res=",
             ld(h(O::DmPlPop, p, &[])),
             ld(h(O::DmPlEog, p, &[])),
-            ld(h(O::DmPlEpoch, p, &[]))
+            ld({
+                let t = crate::tech_tree::objects::player_tree(p as usize);
+                if t != 0 {
+                    crate::tech_tree::objects::current_epoch(t)
+                } else {
+                    -1
+                }
+            })
         );
         for r in 0..5 {
             if r != 0 {

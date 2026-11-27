@@ -17,11 +17,13 @@ use ee_sim::tech::capture_rec::{
 use ee_sim::tech::tech_ids::ee_tech_epoch_count;
 
 use super::persistent::Longs;
-use super::{h, hf, hp, O, P};
+use super::P;
 use crate::tech_tree::host::ee_gamecpp_tech_node_ids;
 use crate::tech_tree::load::{
     data_of, ee_gamecpp_tech_sum_costs_captured, node_data, node_fields, tree_fields, TbRecord,
 };
+use crate::tech_tree::objects as ob;
+use ee_sim::tech::nodes::{EeTechNodeOp, EeTechTreeOp};
 
 /// `kTechEpochPrehistoric`, `kTechNone` (static_assert'd in EETechTreeEpoch.cpp): SumCosts walks the ids between.
 const TC_FIRST_ID: c_long = 0;
@@ -40,7 +42,7 @@ fn tree_bytes(r: &mut TbRecord, tree: P) {
 /// The node's bytes (EETechCaptureNode): its state and its tree's epochs.
 fn node_bytes(r: &mut TbRecord, node: P) {
     let mut bytes = [0u8; EE_TECH_CAPTURE_NODE_SIZE as usize];
-    let tree = hp(O::TkNodeTree, node, &[]);
+    let tree = ob::tree_of(node);
     // SAFETY: the node's, its data's and its tree's records (NULL ones allowed) and a buffer of the record's size
     let n = unsafe {
         ee_tech_capture_node(
@@ -57,8 +59,8 @@ fn node_bytes(r: &mut TbRecord, node: P) {
 /// Whether GetCost and SumCosts index gUnitClassTable and the upgrades in range for the node (the sweep calls them on
 /// every node; the game only on the ones it offers).
 fn node_indexes_safe(node: P) -> bool {
-    let count = h(O::TkClassCount, 0, &[]) as c_ulong;
-    if h(O::TkNodeUnitClass0, node, &[]) as c_ulong >= count {
+    let count = ob::class_count() as c_ulong;
+    if ob::unit_class(node, 0) as i64 as c_ulong >= count {
         return false;
     }
     let d = data_of(node);
@@ -70,7 +72,7 @@ fn sum_costs_safe(tree: P, id: c_long, visiting: &mut BTreeSet<c_long>) -> bool 
     if !(TC_FIRST_ID..TC_NONE).contains(&id) {
         return true;
     }
-    let node = hp(O::TkGet, tree, &[id as i64]);
+    let node = ob::get(tree, id as c_long);
     if node == 0 {
         return false;
     }
@@ -86,9 +88,9 @@ fn sum_costs_safe(tree: P, id: c_long, visiting: &mut BTreeSet<c_long>) -> bool 
         && sum_costs_safe(tree, d.mPrerequisite2, visiting)
         && sum_costs_safe(tree, d.mPrerequisite3, visiting)
         && sum_costs_safe(tree, d.mPrerequisite4, visiting);
-    let class_index = h(O::TkNodeUnitClass0, node, &[]);
-    if safe && hp(O::TkClassAt, 0, &[class_index]) != 0 {
-        safe = sum_costs_safe(tree, h(O::TkClassTechnology, 0, &[class_index]) as c_long, visiting);
+    let class_index = ob::unit_class(node, 0) as i64;
+    if safe && ob::class_at(class_index) != 0 {
+        safe = sum_costs_safe(tree, ob::class_technology(class_index) as c_long, visiting);
     }
     visiting.remove(&id);
     safe
@@ -97,19 +99,19 @@ fn sum_costs_safe(tree: P, id: c_long, visiting: &mut BTreeSet<c_long>) -> bool 
 /// TSWP (EETechCaptureSweep): per player (1 on) its tree's head record, then one record per node and epoch.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
-    let players = h(O::TbWorldPlayers, 0, &[]) as c_ulong;
+    let players = ob::world_players() as c_ulong;
     for p in 1..players {
-        let player = hp(O::TbWorldPlayer, 0, &[p as i64]);
-        if player == 0 || hp(O::TbPlayerTree, player, &[]) == 0 {
+        let player = ob::world_player(p as i64);
+        if player == 0 || ob::player_tree(player) == 0 {
             continue;
         }
-        let tree = hp(O::TbPlayerTree, player, &[]);
+        let tree = ob::player_tree(player);
         let ids = {
             let list = Longs::new();
             ee_gamecpp_tech_node_ids(tree as *mut c_void, true, 0, list.0 as *mut c_void);
             let mut ids = list.to_vec();
-            for e in 0..h(O::TkEpochCount, tree, &[]) {
-                ids.push(data_of(hp(O::TkEpochAt, tree, &[e])).mID);
+            for e in 0..ob::epoch_count(tree) {
+                ids.push(data_of(ob::epoch_at(tree, e)).mID);
             }
             ids
         };
@@ -118,11 +120,11 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
         tree_bytes(&mut head, tree);
         head.u32(ids.len() as u32);
         let mut checksum = EeErrorChecksum::new(true);
-        checksum.add(b"EETechTree", h(O::TbTreeChecksum, tree, &[]) as u32);
+        checksum.add(b"EETechTree", ob::tree_walk(tree, EeTechTreeOp::Checksum, 0, 0) as u32);
         head.u32(checksum.total());
         head.commit(b"TSWP");
         for &id in ids.iter() {
-            let node = hp(O::TkGet, tree, &[id as i64]);
+            let node = ob::get(tree, id as c_long);
             if node == 0 {
                 continue;
             }
@@ -130,16 +132,21 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
             r.u32(1);
             r.i32(p as i32);
             node_bytes(&mut r, node);
-            r.u32((h(O::TkNodeIsAvailable, node, &[]) != 0) as u32);
-            r.u32((h(O::TbNodeIsObsolete, node, &[]) != 0) as u32);
-            let class = h(O::TkNodeUnitClass0, node, &[]);
+            r.u32(ob::is_available(node) as u32);
+            r.u32(ob::ee_gamecpp_tech_obj_obsolete(node as *mut c_void) as u32);
+            let class = ob::unit_class(node, 0) as i64;
             r.i32(class as i32);
             let safe = node_indexes_safe(node);
             r.u32(safe as u32);
             if safe {
                 for resource in 0..7i64 {
                     for scale in [1.0f32, 0.75, 1.5] {
-                        r.i32(hf(O::TbNodeGetCost, node, &[resource, class], &[scale]) as i32);
+                        r.i32(ob::ee_gamecpp_tech_obj_cost(
+                            node as *mut c_void,
+                            resource as c_long,
+                            class as c_long,
+                            scale,
+                        ) as i32);
                     }
                 }
             }
@@ -160,7 +167,7 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
             // the prerequisite closure, one bit per id of the list
             let mut bits: u32 = 0;
             for (j, &other) in ids.iter().enumerate() {
-                if h(O::TbNodeDependsOn, node, &[other as i64]) != 0 {
+                if ob::walk(node, EeTechNodeOp::DependsOn, other as i32, false, 0) != 0 {
                     bits |= 1u32 << (j % 32);
                 }
                 if j % 32 == 31 || j + 1 == ids.len() {
@@ -177,7 +184,7 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
 /// node ids (GetNodeIDs) and each node's flags (researched, obsolete, available, allowed, 16 for a node; 0 for none).
 pub(crate) fn tree_nodes_record(player: P) -> Vec<u8> {
     let mut r = TbRecord::default();
-    let tree = hp(O::TbPlayerTree, player, &[]);
+    let tree = ob::player_tree(player);
     if tree == 0 {
         return r.0;
     }
@@ -187,7 +194,7 @@ pub(crate) fn tree_nodes_record(player: P) -> Vec<u8> {
     let ids = list.to_vec();
     r.u32(ids.len() as u32);
     for id in ids {
-        let node = hp(O::TkGet, tree, &[id as i64]);
+        let node = ob::get(tree, id as c_long);
         r.i32(id as i32);
         if node == 0 {
             r.u32(0);
@@ -260,11 +267,5 @@ mod tests {
         let mut c = EeErrorChecksum::new(true);
         c.add(b"EETechTree", 0xdead_beef);
         assert_eq!(c.total(), 0xdead_beef);
-    }
-
-    #[test]
-    #[should_panic(expected = "no C++")]
-    fn a_node_check_asks_the_classes() {
-        node_indexes_safe(1);
     }
 }

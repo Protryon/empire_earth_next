@@ -98,7 +98,7 @@ fn kill(pl: P, all: bool) {
 fn research_all(pl: P) {
     let classes = h(O::DcClassCount, 0, &[]) as c_long;
     for i in 0..classes {
-        let class = hp(O::TkClassAt, 0, &[i as i64]);
+        let class = crate::tech_tree::objects::class_at(i as i64);
         if class == 0 {
             continue;
         }
@@ -141,7 +141,8 @@ fn action(action: CheatAction, player: c_ulong) {
         CheatAction::AdvanceEpoch(epoch) => {
             if epoch < ee_sim::tech::tech_ids::ee_tech_epoch_count() as c_long
                 && epoch > EPOCH_PREHISTORIC
-                && epoch > h(O::FxPlCurrentEpoch, pl, &[]) as c_long
+                && epoch
+                    > crate::tech_tree::objects::current_epoch(crate::tech_tree::objects::player_tree(pl)) as c_long
             {
                 h(O::DcSetEpoch, pl, &[epoch as i64]);
             }

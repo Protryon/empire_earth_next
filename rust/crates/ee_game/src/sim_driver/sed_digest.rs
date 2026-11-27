@@ -343,7 +343,7 @@ pub fn text_elements(out: &mut Vec<String>) {
     }
     let mut s = "  players".to_string();
     for p in 0..gc::map::num_players() {
-        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
+        let player = crate::tech_tree::objects::world_player(p);
         s += &format!(" |{}", if player != 0 { ht(O::PlayerName, player, 0) } else { "-".into() });
     }
     out.push(s);
@@ -828,12 +828,13 @@ pub fn form_digest(first: c_ulong, last: c_ulong, group: c_long, out: &mut Vec<S
 pub fn players_digest(out: &mut Vec<String>) {
     let n = super::sim_ops::h(super::sim_ops::EeSimDriverSim::NumPlayers, 0, &[]) as c_ulong;
     for p in 0..n {
-        let q = gc::h(gc::O::TbWorldPlayer, 0, &[p as i64]) as usize;
+        let q = crate::tech_tree::objects::world_player(p as i64);
         if q == 0 {
             out.push(format!("  player {p} none"));
             continue;
         }
-        let t = gc::h(gc::O::TbPlayerTree, q, &[]) as usize;
+        // SAFETY: the player's tree's record
+        let t = unsafe { &*crate::tech_tree::objects::tree_fields(crate::tech_tree::objects::player_tree(q)) };
         let caps: Vec<String> = (2..7).map(|i| (h(O::PlayerResourceCap, q, &[i]) as c_long).to_string()).collect();
         let enemies: String = (0..n).map(|j| (h(O::PlayerEnemy, q, &[j as i64]) as c_long).to_string()).collect();
         let mut line = format!(
@@ -841,9 +842,9 @@ pub fn players_digest(out: &mut Vec<String>) {
             ht(O::PlayerName, q, 0),
             colour(x::color(h(O::PlayerColor, q, &[]) as usize)),
             ht(O::PlayerCivilizationFile, q, 0),
-            h(O::TreeCurrentEpoch, t, &[]) as c_long,
-            h(O::TreeStartEpoch, t, &[]) as c_long,
-            h(O::TreeEndEpoch, t, &[]) as c_long,
+            t.mCurrentEpoch,
+            t.mStartEpoch,
+            t.mEndEpoch,
             caps.join(","),
             (gc::map::shared_los(q) as i64),
             h(O::PlayerPurchasedUpgrades, q, &[]) as u64,

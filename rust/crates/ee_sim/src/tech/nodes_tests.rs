@@ -547,6 +547,7 @@ fn assignment_copies_each_kinds_fields() {
         mCurrentSOL: 1,
         mNextEpoch: 4,
         mTitleID: 77,
+        ..Default::default()
     };
     let base = EeTechNodeFields { mIsAllowed: true, mIsCountingSOL: true, mTitleID: 5, ..Default::default() };
     let mut node = base;

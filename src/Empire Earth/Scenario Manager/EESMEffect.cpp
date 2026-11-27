@@ -412,8 +412,6 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_TECH_REPLACE_QUEUED:
         EEReplaceQueuedTechnology(SMEPlayer(a[0]), gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass], 100000);
         return 0;
-    case EE_SCENARIO_WX_TECH_OBSOLETE: SMEPlayer(a[0])->GetTechTree()->MakeObsolete(inRun->mEffect->mTechnology);
-        return 0;
     case EE_SCENARIO_WX_MINIMAP_REDRAW: gMiniMap->Redraw();
         return 0;
     case EE_SCENARIO_WX_CIV_ADD: SMEPlayer(a[0])->mCivilization.AddPoints((long)a[1]);
@@ -513,21 +511,10 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_T_SET_LOCATION: SMEUnit(a[0])->GetComplexUnit()->mPhysicalModel.SetLocation(SMEGe<GETransformation>(inRun->mTransformation));
         return 0;
-    case EE_SCENARIO_WX_TREE_RESET_RANGE:
-        SMEPlayer(a[0])->GetTechTree()->ResetEpochRange(SMEPlayer(a[0])->GetTechTree()->mStartEpoch, inRun->mEffect->mTechnology);
-        return 0;
-    case EE_SCENARIO_WX_TECH_MAKE_AVAILABLE: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->MakeAvailable();
-        return 0;
-    case EE_SCENARIO_WX_TECH_SCEN_OBSOLETED: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->SetScenEditorObsoleted(false, false);
-        return 0;
-    case EE_SCENARIO_WX_TECH_SET_OBSOLETE: SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->SetObsolete(false, false);
-        return 0;
     case EE_SCENARIO_WX_TECH_NEEDS_MEDIA:
         return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->NeedsUnitMedia() == true && !SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mIsUnitMediaLoaded;
     case EE_SCENARIO_WX_TECH_LOAD_MEDIA:
         SMEPlayer(a[0])->SetUnitClassMedia(SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass, 0x7f);
-        return 0;
-    case EE_SCENARIO_WX_TECH_RESEARCH: SMEPlayer(a[0])->GetTechTree()->Research(inRun->mEffect->mTechnology, NULL);
         return 0;
     case EE_SCENARIO_WX_CLASS_FLIES_OVER: return gUnitClassTable[a[0]]->FliesOver();
     }

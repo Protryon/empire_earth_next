@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include "rust/sim/ai.h"   // ee_ai_units_load (units_save.rs)
 
 class EEComputerPlayer;
 class EEUnit;
@@ -28,10 +27,6 @@ void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool i
 // the save (EEPPlayerHelper, from version 0.254): the held set, the pending events, the forwarding map, the reflex
 // switches, the enemy memory; empty: none
 void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes);
-inline bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
-{
-    return ee_ai_units_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
-}
 void EECPUnitsDelete(EEComputerPlayer* inPlayer);
 
 #endif

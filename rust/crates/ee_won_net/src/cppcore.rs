@@ -243,6 +243,12 @@ pub fn host_op_of<'a>(o: *mut c_void) -> Option<&'a crate::hostop::EeWonHostOp> 
     unsafe { (object_of(o, EeWonCoreObject::HostOp) as *const crate::hostop::EeWonHostOp).as_ref() }
 }
 
+/// The Rust context of a C++ `AuthContext` (its `RefCount*`; none for NULL or another class).
+pub fn auth_ctx_of(o: *mut c_void) -> Option<*const crate::authobj::EeWonAuthCtx> {
+    let c = object_of(o, EeWonCoreObject::AuthCtx) as *const crate::authobj::EeWonAuthCtx;
+    (!c.is_null()).then_some(c)
+}
+
 pub(crate) fn op<'a>(o: *mut c_void) -> Option<&'a EeWonAsyncOp> {
     // SAFETY: an op's Rust object lives as long as the op, which the caller holds
     unsafe { (object_of(o, EeWonCoreObject::Op) as *const EeWonAsyncOp).as_ref() }

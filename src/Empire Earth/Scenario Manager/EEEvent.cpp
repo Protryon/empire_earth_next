@@ -82,7 +82,6 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_NODE_SET_BUTTON:
         P(EETechTreeNode, 0)->SetButton(a[1]);
         return 0;
-    case EE_SCENARIO_EV_RESEARCH_NODE: return (int64_t)P(EETechnology, 0)->ResearchNode(NULL);
     case EE_SCENARIO_EV_BUTTON: return R(EEButtonObject::Get((unsigned long)a[0]));
     case EE_SCENARIO_EV_SET_CLASS_BUTTON: P(EEPlayer, 0)->SetClassButton((unsigned long)a[1], P(EEButtonObject, 2)); return 0;
     case EE_SCENARIO_EV_GROUP_FIRST: return R(P(EEPlayer, 0)->mGroups[a[1]]->GetFirstUnit());
@@ -93,7 +92,6 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_POST_BACKGROUND:
         gUserInterface->PostUpdateBackgroundMedia();
         return 0;
-    case EE_SCENARIO_EV_IS_LATEST: return EETechTree::IsLatestEffect(P(EEPlayer, 0)->GetTechTree(), a[1], a[2], a[3]);
     case EE_SCENARIO_EV_MEDIA: return R(static_cast<EEGraphicObject*>(EEMedia::Get(a[0])));
     case EE_SCENARIO_EV_UPGRADE_MODEL: return R(P(EEUnitClassUpgrade, 0)->mModel);
     case EE_SCENARIO_EV_SET_CLASS_MODEL: P(EEPlayer, 0)->SetClassModel((unsigned long)a[1], P(EEGraphicObject, 2)); return 0;

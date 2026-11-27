@@ -26,9 +26,6 @@ public:
     // 0x28fb05: loads inUser's progress in inCampaign (keseOK when found); the CSSE passes "default", the campaign
     // name and EECampaignFormManager::mChecksum (argument names are provisional)
     long Load(const UWideString& inUser, const UWideString& inCampaign, unsigned long inChecksum, bool inExtract) { return ee_campaign_progress_load(this->mRust, (const char*)inUser, (const char*)inCampaign, inChecksum, inExtract); }
-    // 0x28ffed (`ret 0x10`; EEPhysics::EndGame after a successful Load: user, campaign, scenario, checksum; provisional
-    // name)
-    long SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign, const UWideString& inScenario, unsigned long inChecksum) { return ee_campaign_progress_save(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
 
     EeCampaignProgress* mRust;              // (was +0x00 mCompletedScenarios, +0x10 mCivilizationKeys,
                                             // +0x20 mCivPointsAvailable, +0x30 mNumScenariosCompleted)

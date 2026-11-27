@@ -127,18 +127,20 @@ fn form_digest(form: usize, out: &mut Vec<String>) {
         );
         let b01 = |op: O| if h(op, c, &[]) != 0 { "1" } else { "0" };
         if h(O::IsCivList, c, &[]) != 0 {
+            let state = crate::screens::civ_list_state::get(c);
+            let b01s = |v: bool| if v { "1" } else { "0" };
             let selection = sel(O::ListSelection, c);
             let n = x::line_count(c);
             line += &format!(
                 " upgradesonly={} points={} sort={} tab={} auto={} has={} ix={} hc={} n={n} sel={}",
-                b01(O::CivListUpgradesOnly),
-                b01(O::CivListShowPoints),
-                b01(O::CivListSortLines),
+                b01s(state.upgrades_only),
+                b01s(state.show_points),
+                b01s(state.sort),
                 b01(O::ControlTabable),
                 b01(O::ListAutoSelect),
                 b01(O::ListHasSelection),
                 h(O::ListSelectionIndex, c, &[]) as c_ulong,
-                colour(x::color(h(O::CivListHeaderColor, c, &[]) as usize)),
+                colour(state.header),
                 selection.map_or_else(|| "none".to_string(), |v| v.to_string())
             );
             out.push(line);
@@ -341,8 +343,8 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 let result = h(O::CivListCopyData, l, &[]) as c_long;
                 out.push(format!(
                     "  copy -> {result} points={} hc={} has={} drawn={}",
-                    h(O::CivListCopiedShowPoints, l, &[]),
-                    colour(x::color(h(O::CivListCopiedColor, l, &[]) as usize)),
+                    crate::screens::civ_list_state::get(l).copied_points as i64,
+                    colour(crate::screens::civ_list_state::get(l).copied_header),
                     h(O::ListCopiedHasSelection, l, &[]),
                     h(O::ListDrawCount, l, &[]) as c_ulong
                 ));

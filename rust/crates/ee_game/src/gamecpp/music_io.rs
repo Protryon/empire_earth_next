@@ -192,8 +192,8 @@ pub unsafe extern "C" fn ee_musiccpp_set(manager: *mut c_void, field: u32, value
 /// The local player's current epoch (false with no player or tech tree).
 #[no_mangle]
 pub unsafe extern "C" fn ee_musiccpp_current_epoch(epoch: *mut i32) -> bool {
-    let player = hp(O::TkCurrentPlayer, 0, &[]);
-    let tree = if player != 0 { hp(O::EmTechnologies, player, &[]) } else { 0 };
+    let player = hp(O::WorldCurrentPlayer, 0, &[]);
+    let tree = if player != 0 { crate::tech_tree::objects::player_tree(player) } else { 0 };
     if tree == 0 {
         return false;
     }

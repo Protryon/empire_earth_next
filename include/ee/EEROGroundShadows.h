@@ -23,11 +23,6 @@ public:
     // +0x0c (empty, ICF-shared 0xe123d)
     virtual void FrameDone() {  }
 
-    // Creates the shared shadow quad model (StaticShadow): a unit square in the ground plane (ee_gfx shadows.rs)
-    // 0x111df8: the static "StaticShadow" quad (0x529098) (provisional name)
-    static void CreateShadowModel() { ee_gfx_ground_shadows_create(ee_gamecpp_ro_raster()); }
-    // Releases the shared shadow quad model (ee_gfx shadows.rs)
-    static void ReleaseShadowModel() { ee_gfx_ground_shadows_release(ee_gamecpp_ro_raster()); }
     // DrawShadows (0x1121c8), DrawUnitShadows (0x1122bb) and the space-tile test (0x11246b): ee_gfx shadows.rs
 };
 

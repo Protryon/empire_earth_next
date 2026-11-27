@@ -54,13 +54,6 @@ bool EEGameStateLoader::Load(FSFile& inFile)
     return ee_gamecpp_loader_load(this->mState, &inFile);
 }
 
-// Restores the game state from a saved header and its chunks; on failure reports "Load game file is corrupt."
-// and clears the state; returns whether it worked
-bool EEGameStateLoader::LoadGame(FSFile& inHeaderFile, FSFile& inFile)
-{
-    return ee_gamecpp_loader_load_game(this->mState, &inHeaderFile, &inFile);
-}
-
 // Reads one chunk (by tag) out of a saved game file without loading the rest; returns the read error
 long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPersistent)
 {
@@ -87,7 +80,4 @@ void EEGameState::SetScenarioManager(EEScenarioManager* inManager)
 
 // ------------------------------------------------------------------------- the loader's C++ (gamecpp persist_save.rs)
 
-
 // ------------------------------------------------------------------------- round 11, lane C: the loader's C++
-
-

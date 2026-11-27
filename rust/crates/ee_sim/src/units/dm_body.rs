@@ -558,6 +558,9 @@ pub(crate) mod game {
 
     impl DmHost for Game {
         fn dm(&mut self, op: i32, a: u64, b: i64, c: i64) -> i64 {
+            if let Some(v) = crate::units::dm_group_view::dm_plain(op, a, b, c) {
+                return v;
+            }
             // SAFETY: the manager's objects, live for the body (the C++ member's caller holds them)
             unsafe { ee_units_dm_host(op, a, b, c) }
         }

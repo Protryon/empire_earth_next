@@ -429,6 +429,15 @@ mod game {
     /// A world call: the C++ host world_route.rs names for `op` (the C++ dispatcher's range tests, in its order).
     unsafe extern "C" fn world(ctx: *mut c_void, op: u32, args: *const i64) -> i64 {
         use crate::scenario::world_route::{route, EeScenarioWorldRoute as R};
+        // SAFETY: the host table's contract: six arguments
+        let a = unsafe { std::slice::from_raw_parts(args, 6) };
+        // the tech tree's statements are Rust's (tech_native.rs); the effect's technology is the run's (the world
+        // views answer it: this function again)
+        // SAFETY: the same host context, six arguments
+        let tech = &mut || unsafe { world(ctx, crate::scenario::world_compose::EE_SCENARIO_WX_EFFECT_TECH, [0i64; 6].as_ptr()) };
+        if let Some(v) = crate::scenario::tech_native::world(op, a, tech) {
+            return v;
+        }
         // the reads the world views answer (world_views.rs)
         // SAFETY: the host table's contract: six arguments, `ctx` the operation's live context
         if let Some(value) =
@@ -530,11 +539,20 @@ mod game {
         }
     }
 
+    /// A host read: the tech tree's are Rust's (tech_native.rs), the rest the C++'s.
+    unsafe extern "C" fn read(ctx: *mut c_void, op: u32, a: i32, b: i32, c: i32, d: i32) -> i64 {
+        if let Some(v) = crate::scenario::tech_native::read(op, a) {
+            return v;
+        }
+        // SAFETY: the host table's contract
+        unsafe { sys::ee_scenariocpp_host_read(ctx, op, a, b, c, d) }
+    }
+
     /// The host table over the context `ctx` (it must outlive the calls).
     fn table(ctx: *mut c_void) -> EeScenarioHost {
         EeScenarioHost {
             ctx,
-            read: sys::ee_scenariocpp_host_read,
+            read,
             players: sys::ee_scenariocpp_host_players,
             write: sys::ee_scenariocpp_host_write,
             tiles: sys::ee_scenariocpp_host_tiles,

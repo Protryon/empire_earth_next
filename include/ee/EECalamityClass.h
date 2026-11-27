@@ -9,7 +9,6 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
-#include "rust/sim/tech.h"   // EeCalamityClassFields, EeCalamityClassMedia (ee_tech calamity_class.rs)
 #include "rust/game/gamecpp.h"
 
 class EECalamity;
@@ -85,8 +84,6 @@ public:
     // (inVolume -1: the computed volume, else inVolume clamped to 0..1; inFalloff: EEComputeSoundParameters's)
     virtual void UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff, bool inPrimary) { ee_gamecpp_calamity_class_update_sound(inCalamity, inSound, inVolume, inFalloff, inPrimary); }
 
-    // New (port): what the Rust tables read of the class's effects and sounds (EeCalamityClassMedia)
-    void GetMedia(EeCalamityClassMedia& outMedia) { ee_gamecpp_calamity_class_get_media(this, &outMedia); }
     // a location class's (+0x4c): the shared rule over the class's radius, water flag, map area, space terrain and
     // placed unit class
     bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY) { return ee_gamecpp_calamity_class_valid_location(this, inUnit, inX, inY); }

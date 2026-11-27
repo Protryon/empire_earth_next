@@ -12,3 +12,8 @@ DWORD RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
 bool IsAsync() const { return this->GetMode()==1; }
 //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
 bool Succeeded() { return this->GetStatus()==0 && !this->IsKilled(); }
+// (R6 WON round 39)
+// an idle op as a pure timer firing after the timeout (29f610)
+void RunAsTimer(unsigned long inTimeout) { ee_won_asyncop_run_as_timer(this->mOp,static_cast<uint32_t>(inTimeout)); }
+// whether an async run starts at once instead of being queued (0x29f1d0)
+void SetRunAsyncImmediately(bool inFlag) { ee_won_asyncop_set_run_async_immediately(this->mOp,inFlag); }

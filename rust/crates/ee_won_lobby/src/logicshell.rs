@@ -13,6 +13,9 @@
 //!   call it made, after `LogicCompletion`'s test (the logic not killed, a tracked op its tracked one);
 //!   `RoutingOpCompletion` made none (routelogic.rs tests the logic and the op itself).
 //!
+//! PingLogic (logics.rs's Ping kind) joined the shell in R6 WON round 39: its class, its two forwarding virtuals and
+//! its two `LogicCompletion<PingLogic>`s are the Ping kind's routes.
+//!
 //! The shell holds no Rust state: a call is routed from its arguments alone, and the kind's object is entered through
 //! its own entry point, so a re-entering call is what it was.
 //!
@@ -52,6 +55,8 @@ pub enum EeWonLogicShellKind {
     Staging,
     /// LanLogic: an `EeWonLan`.
     Lan,
+    /// PingLogic: an `EeWonLogic` (its own C++ class until R6 WON round 39).
+    Ping,
 }
 
 /// The shell's virtuals: LobbyLogic's five, then NetLogic's fourteen. Arguments: the virtual's own, in order; a
@@ -109,6 +114,10 @@ pub enum EeWonLogicShellDone {
     LanAccept,
     LanPeerAuthDone,
     DlgStatusOp,
+    /// PingLogic::HandleUDPRecv (the UDP manager's default completion).
+    PingRecv,
+    /// PingLogic::PingGameDone (a tracked ping's).
+    PingDone,
 }
 
 /// The call a virtual or completion is on the kind's Rust object.
@@ -203,6 +212,8 @@ pub fn route(kind: EeWonLogicShellKind, v: EeWonLogicShellV, a: isize, b: isize,
         (K::Lan, V::LeaveGame) => Route::Lan(Nc::LeaveGame, 0, 0, 0, 0),
         (K::Lan, V::Resume) => Route::Answer(1),
         (K::Lan, V::Logout) => Route::Lan(Nc::Logout, 0, 0, 0, 0),
+        (K::Ping, V::InitComponent) => Route::Logic(Lc::PingInit, 0, 0),
+        (K::Ping, V::HandleComponentEvent) => Route::Logic(Lc::PingEvent, a, b),
         _ => Route::Answer(0),
     }
 }
@@ -237,6 +248,8 @@ pub fn done_route(
         (K::Lan, D::LanAccept) => Route::Lan(Nc::Accept, op, 0, 0, 0),
         (K::Lan, D::LanPeerAuthDone) => Route::Lan(Nc::PeerAuthDone, op, 0, 0, 0),
         (K::Dialog, D::DlgStatusOp) => Route::Dlg(Dc::StatusOpComplete, op),
+        (K::Ping, D::PingRecv) => Route::Logic(Lc::PingRecv, op, 0),
+        (K::Ping, D::PingDone) => Route::Logic(Lc::PingDone, op, 0),
         _ => return None,
     };
     Some((r, true))
@@ -290,7 +303,7 @@ pub fn dialogs(kind: EeWonLogicShellKind) -> &'static [DialogRow] {
         EeWonLogicShellKind::Routing => &ROUTING_DIALOGS,
         EeWonLogicShellKind::Staging => &STAGING_DIALOGS,
         EeWonLogicShellKind::Lan => &LAN_DIALOGS,
-        EeWonLogicShellKind::Dialog => &[],
+        EeWonLogicShellKind::Dialog | EeWonLogicShellKind::Ping => &[],
     }
 }
 
@@ -405,7 +418,7 @@ pub unsafe extern "C" fn ee_won_logicshell_done(
 pub unsafe extern "C" fn ee_won_logicshell_free(kind: EeWonLogicShellKind, rust: *mut c_void) {
     // SAFETY (each arm): the contract
     match kind {
-        EeWonLogicShellKind::Account | EeWonLogicShellKind::Init => unsafe {
+        EeWonLogicShellKind::Account | EeWonLogicShellKind::Init | EeWonLogicShellKind::Ping => unsafe {
             ee_won_logic_free(rust as *mut EeWonLogic)
         },
         EeWonLogicShellKind::Dialog => unsafe { ee_won_dlglogic_free(rust as *mut EeWonDlgLogic) },

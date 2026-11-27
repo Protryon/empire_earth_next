@@ -440,7 +440,7 @@ fn load_unit_data(m: P) {
         let preload = |op: O, pl: P| {
             for i in 1..num_players() {
                 let hack = pfields(pl).mHackUnitClass;
-                if (hack as i64) < h(O::DcClassCount, 0, &[]) && hp(O::TkClassAt, 0, &[hack as i64]) != 0 {
+                if (hack as i64) < h(O::DcClassCount, 0, &[]) && crate::tech_tree::objects::class_at(hack as i64) != 0 {
                     h(op, 0, &[prts(world_player(i as i64)).mPlayerID as i64, hack as i64]);
                 }
             }
@@ -976,7 +976,8 @@ pub extern "C" fn ee_gamecpp_msg_disband(pl: *mut c_void, u: *mut c_void, factor
     let (pl, u) = (pl as P, u as P);
     let class = ucf(unit_class(u));
     let (technology, unit_type) = (class.mTechnology, class.mUnitType);
-    let tech = hp(O::PlTechnology, pl, &[technology as i64]);
+    let tech =
+        crate::tech_tree::objects::get(crate::tech_tree::objects::player_tree(pl), technology as std::ffi::c_long);
     hf(O::PlRefundTechnology, pl, &[pa(tech), unit_type as i64], &[factor]);
     let effect = hp(O::GfxEffectGet, 0, &[EFFECT_DISBAND]);
     h(O::EffUnit, u, &[pa(effect), 0, 1, 0, 0]);

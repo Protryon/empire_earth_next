@@ -25,25 +25,38 @@ const CIV_LEVEL_MASK: u32 = 0xffff;
 const OK: i64 = 0;
 const CIV_FAILED: c_long = 0xd;
 
-fn member<'a, T>(op: O, cv: P) -> &'a mut T {
-    // SAFETY: the op answers the address of the civilization's member of type T
-    unsafe { &mut *rec(op, cv) }
+/// `EECivilization`'s plain members, its base (at the object's start: the class has no other base and no virtual).
+#[repr(C)]
+#[allow(non_snake_case)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGameCivFields {
+    /// the points left to spend (`unsigned long`: they wrap as the C++'s did)
+    pub mAvailablePoints: c_ulong,
+    pub mMaxPoints: c_ulong,
+    pub mNoPointsAdded: bool,
+    pub mUnchanged: bool,
+}
+
+/// The civilization `cv`'s plain members (the callers' live `EECivilization*`).
+pub fn fields<'a>(cv: P) -> &'a mut EeGameCivFields {
+    // SAFETY: the record is the civilization's base, at its address
+    unsafe { &mut *(cv as *mut EeGameCivFields) }
 }
 
 fn available<'a>(cv: P) -> &'a mut c_ulong {
-    member(O::DvAvailable, cv)
+    &mut fields(cv).mAvailablePoints
 }
 
 fn maximum<'a>(cv: P) -> &'a mut c_ulong {
-    member(O::DvMaximum, cv)
+    &mut fields(cv).mMaxPoints
 }
 
 fn no_points_added<'a>(cv: P) -> &'a mut bool {
-    member(O::DvNoPointsAdded, cv)
+    &mut fields(cv).mNoPointsAdded
 }
 
 fn unchanged<'a>(cv: P) -> &'a mut bool {
-    member(O::DvUnchanged, cv)
+    &mut fields(cv).mUnchanged
 }
 
 /// A C++ `std::vector<EECivUpgrade>`'s upgrades, copied.

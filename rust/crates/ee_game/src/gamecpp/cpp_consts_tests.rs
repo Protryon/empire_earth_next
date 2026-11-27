@@ -6,8 +6,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 /// The headers the C++ names come from.
-const HEADERS: [&str; 9] = [
-    "include/ee/EEUnitClassIDs.h",
+const HEADERS: [&str; 8] = [
     "include/rust/sim/unit_ids.h",
     "include/rust/sim/game_ids.h",
     "include/rust/sim/tech_consts.h",

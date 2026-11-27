@@ -47,7 +47,6 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
     return EECombatAttackFactor(theIn);
 }
 
-
 // gDamageTable[inRow][inColumn] (ee_combat's checked accessor: 0 off the table)
 float EEDamageFactor(long inRow, long inColumn)
 {

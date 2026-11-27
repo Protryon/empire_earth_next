@@ -138,7 +138,7 @@ pub enum EeWonEeGlueOp {
     ResourceDestroy,
     /// `GetLobbyConfig()`.
     Config,
-    /// `((EELobbyConfig*)a)->mFileTransferPort`.
+    /// `((LobbyConfig*)a)->mFileTransferPort`.
     ConfigPort,
     /// `LobbySetGameInProgress(a)`.
     SetGameInProgress,
@@ -514,8 +514,6 @@ pub enum EeWonEeGlueOp {
     FactoryGame,
     /// `LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer)`.
     FactoryPlayer,
-    /// `LobbyConfig::SetAllocator(EELobbyNewConfig)`.
-    FactoryConfig,
     /// `sEELobbyResources = EELobbyResource_Init(NULL)`.
     ResInit,
     /// `sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl)`.

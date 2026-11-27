@@ -4,7 +4,6 @@
 #ifndef EE_EEMOUSE_H
 #define EE_EEMOUSE_H
 
-#include "lle/GERectangle.h"           // RTSMouse::mBounds
 
 class GEScreen;
 class GESurface;
@@ -13,7 +12,6 @@ class UReferenceCounter;
 
 #include "ee/RTSMouse.h"            // RTSMouse, RTSMouseSaveUnder (the RTS layer's header since R5a.6)
 #include "rust/game/gamecpp.h"
-#include "rust/render/gfx.h"
 
 class EEMouse : public RTSMouse {
 public:

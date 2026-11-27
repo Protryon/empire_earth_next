@@ -9,7 +9,6 @@
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEPlayer.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -20,7 +19,6 @@
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);
-unsigned short EECountTilesAround(long inX, long inY, bool inAny);  // 0x23d4ba (below; provisional name)
 
 // (the cloaked opacity range and the wall pieces' yaws, kWallRotations: ee_units uu_cloak.rs)
 
@@ -39,33 +37,14 @@ extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int
     case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
     case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>((*ioF)), (long)inC, (long)inD, 0, 0);
     case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
-    case EE_UNITS_CK_COMMAND_TYPE: return CkObj<EEComplexUnit>(inA)->GetCommandType();
-    case EE_UNITS_CK_ROT_FRACTION: return (int64_t)UFloatBits((float)CkObj<EEComplexUnit>(inA)->mComplexUnit->mRottingAwayTime / (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime);
-    case EE_UNITS_CK_HAS_ROTTING_TIME: return (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime != 0;
-    case EE_UNITS_CK_IS_CLOAKABLE: return CkObj<EEComplexUnit>(inA)->mIsCloakable;
-    case EE_UNITS_CK_IS_CLOAKED: return CkObj<EEComplexUnit>(inA)->mIsCloaked;
     case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_CK_OPACITY: return (int64_t)UFloatBits(CkObj<EEComplexUnit>(inA)->mOpacity);
-    case EE_UNITS_CK_CURRENT_PLAYER: return (int64_t)(uintptr_t)gWorld.GetCurrentPlayer();
-    case EE_UNITS_CK_PLAYER: return (int64_t)(uintptr_t)CkObj<EEUnit>(inA)->mPlayer;
-    case EE_UNITS_CK_ENEMY_OF_VIEWER: return CkObj<EEUnit>(inA)->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID];
-    case EE_UNITS_CK_OBSERVER: return gWorld.GetCurrentPlayer()->mObserverMode;
-    case EE_UNITS_CK_SET_FLOAT: *CkObj<float>(inA) = (*ioF)[0]; return 0;
     case EE_UNITS_CK_CREATE_CLOAK: return gWorld.GetEffectManager()->CreateUnitEffect(CkObj<EEUnit>(inA), EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
     case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = sCkHandle.mValue; return 0;
-    case EE_UNITS_CK_CLOAKED: return (long)EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked;
     case EE_UNITS_CK_DESTROY_EFFECT: gWorld.GetEffectManager()->DestroyEffect((sCkHandle.mValue = (decltype(sCkHandle.mValue))inC, sCkHandle)); return 0;
-    case EE_UNITS_CK_CLEAR_CLOAKED: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = 0; return 0;
     case EE_UNITS_CK_SPACE_MAP: return gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    case EE_UNITS_CK_TILE_X: return CkObj<EEComplexUnit>(inA)->mTileX;
-    case EE_UNITS_CK_TILE_Y: return CkObj<EEComplexUnit>(inA)->mTileY;
     case EE_UNITS_CK_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     case EE_UNITS_CK_FIRST_UNIT: return (int64_t)(uintptr_t)gWorld.mUnits.mFirst;
     case EE_UNITS_CK_NEXT_UNIT: return (int64_t)(uintptr_t)CkObj<RTSUnit>(inA)->mTileNode->mNext;
-    case EE_UNITS_CK_COMPLEX_OF: return (int64_t)(uintptr_t)static_cast<EEUnit*>(CkObj<RTSUnit>(inA))->mComplexUnit;
-    case EE_UNITS_CK_DOMAINS: return CkObj<EEComplexUnit>(inA)->mUnitClass->mDomains;
-    case EE_UNITS_CK_UNIT_TYPE: return CkObj<EEComplexUnit>(inA)->mUnitClass->mUnitType;
-    case EE_UNITS_CK_SET_PLANET: CkObj<EEComplexUnit>(inA)->mPlanetID = (unsigned short)inC; return 0;
     }
     return 0;
 }
@@ -84,9 +63,6 @@ float EEGetSpaceDockYaw(long inX, long inY, long inSize) { return UBitsFloat(ee_
 // Returns whether a space dock (unit type 0x2d8) fits at (inX, inY): its inner 2 x 2 tiles placeable, its border on the
 // map with at least two land tiles, and its inner land/space mix fitting a dock
 bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer) { return ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_SITE_OPEN, (uint64_t)(uintptr_t)inPlayer, 0, inX, inY) != 0; }  // uu_cloak.rs
-
-// Counts the 3 x 3 tiles around (inX, inY) that are land (inAny) or space (otherwise); 0 when the centre is off the map
-unsigned short EECountTilesAround(long inX, long inY, bool inAny) { return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_COUNT_TILES_AROUND, inAny, 0, inX, inY); }  // uu_cloak.rs
 
 // Sets the planet of every complex air unit, space dock, space turret and orbital space station on the map
 // (cdecl; called by EEWorld.cpp and EEUserInterface.cpp)

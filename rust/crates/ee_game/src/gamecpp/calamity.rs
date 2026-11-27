@@ -442,7 +442,7 @@ fn create_storm(kl: P, c: P) -> bool {
     let mut t = GeTransformation::IDENTITY;
     let at = target_location(c);
     let index = klass(kl).mUnitClassIndex as i64;
-    let half = ucf(hp(O::TkClassAt, 0, &[index])).mTileSize as f32 * 0.5;
+    let half = ucf(crate::tech_tree::objects::class_at(index)).mTileSize as f32 * 0.5;
     set_position(&mut t, at.x - half, at.y - half, cal(c).mHeight);
     let u = super::calamity_objects::ee_gamecpp_calamity_create_unit(
         c as *mut c_void,
@@ -679,7 +679,7 @@ fn create_volcano(host: P, kl: P, c: P) {
     let mut t = GeTransformation::IDENTITY;
     let at = target_location(c);
     let index = klass(kl).mUnitClassIndex as i64;
-    let uc = hp(O::TkClassAt, 0, &[index]);
+    let uc = crate::tech_tree::objects::class_at(index);
     let half = ucf(uc).mTileSize as f32 * 0.5;
     set_position(&mut t, at.x - half, at.y - half, cal(c).mHeight - 0.9);
     let u = super::calamity_objects::ee_gamecpp_calamity_create_unit(
@@ -879,7 +879,7 @@ fn bomb_disable(kl: P, c: P) {
     }
     set_disabled(cx, true, 0x1c);
     let node = hp(O::UnTechNode, cx, &[]);
-    if node != 0 && h(O::NodeDataKind, node, &[]) == 4 {
+    if node != 0 && crate::tech_tree::objects::data_kind(node) == 4 {
         h(O::PlRemoveWonder, unit_player(cx), &[pa(cx)]);
     }
     if ucf(unit_class(target_unit)).mCategory as u64 != k::CAL_C_UNIT_CATEGORY_GATE {
@@ -899,7 +899,7 @@ fn launch_meteor(kl: P, c: P) {
     let at = target_location(c);
     let offset_x = (0.5 - random()) * klass(kl).mRadius;
     let offset_y = (0.5 - random()) * klass(kl).mRadius;
-    let class = hp(O::TkClassAt, 0, &[klass(kl).mUnitClassIndex as i64]);
+    let class = crate::tech_tree::objects::class_at(klass(kl).mUnitClassIndex as i64);
     let start = Ge3DPoint::new(at.x + offset_x, offset_y + (at.y + 7.0), at.z + 7.0);
     let goal_at = Ge3DPoint::new(start.x, at.y + offset_y, at.z);
     let gaia = hp(O::WorldPlayer, 0, &[0]);
@@ -1086,13 +1086,19 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         set_disabled(complex(caster_unit), false, 0);
     } else if is(kind::CAL_K_CONSCRIPTION, 1) {
         let player = unit_player(caster_unit);
-        let tech = hp(O::PlTechnology, player, &[k::CAL_C_TECH_CONSCRIPTION_SPELL]);
+        let tech = crate::tech_tree::objects::get(
+            crate::tech_tree::objects::player_tree(player),
+            k::CAL_C_TECH_CONSCRIPTION_SPELL as std::ffi::c_long,
+        );
         let unit_type = ucf(unit_class(caster_unit)).mUnitType as i64;
         out.ok = h(O::PlCanAfford, player, &[pa(tech), unit_type, 1]) != 0;
     } else if is(kind::CAL_K_CONSCRIPTION, 2) {
         let target_cx = complex(target_unit);
         let player = unit_player(caster_unit);
-        let tech = hp(O::PlTechnology, player, &[k::CAL_C_TECH_CONSCRIPTION_SPELL]);
+        let tech = crate::tech_tree::objects::get(
+            crate::tech_tree::objects::player_tree(player),
+            k::CAL_C_TECH_CONSCRIPTION_SPELL as std::ffi::c_long,
+        );
         let unit_type = ucf(unit_class(caster_unit)).mUnitType as i64;
         hf(O::PlPay, player, &[pa(tech), unit_type], &[1.0]);
         h(O::CxPlayEffect, target_cx, &[0x138d]);
@@ -1108,7 +1114,7 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         set_disabled(complex(target_unit), false, 0);
         h(O::UcActionChanged, unit_class(target_unit), &[pa(complex(target_unit))]);
         let node = hp(O::UnTechNode, target_unit, &[]);
-        out.value = if node != 0 { h(O::NodeDataKind, node, &[]) as i32 } else { -1 };
+        out.value = if node != 0 { crate::tech_tree::objects::data_kind(node) as i32 } else { -1 };
     } else if is(kind::CAL_K_LOGIC_BOMB, 3) {
         h(O::PlAddWonder, unit_player(target_unit), &[pa(complex(target_unit)), 0]);
     } else if is(kind::CAL_K_DROP_OBJECT, 1) {
@@ -1116,7 +1122,7 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         let dropper = complex(caster_unit);
         let mut at = Ge3DPoint::default();
         let drop_target = hp(O::CombatFindDrop, dropper, &[pa(target_unit), ptr(&mut at)]);
-        let class = hp(O::TkClassAt, 0, &[klass(kl).mUnitClassIndex as i64]);
+        let class = crate::tech_tree::objects::class_at(klass(kl).mUnitClassIndex as i64);
         let player = player_id(unit_player(dropper));
         let u = hp(O::UcCreateUnit, class, &[floor(at.x) as i64, floor(at.y) as i64, player as i64, 0, pa(dropper)]);
         h(O::CxSetLauncherClass, complex(u), &[pa(class)]);

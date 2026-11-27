@@ -1200,8 +1200,12 @@ impl EvHost for EeScenarioEvGame {
         #[cfg(not(test))]
         {
             // SAFETY: the C++ host's contract (EEEvent.cpp): the arguments its op names
-            // (the world's reads answered by the views: world_views.rs event)
+            // (the tech tree's statements are Rust's: tech_native.rs; the world's reads answered by the views:
+            // world_views.rs event)
             ev_compose(op, a, &mut |op, a| unsafe {
+                if let Some(v) = crate::scenario::tech_native::event(op, &a) {
+                    return v;
+                }
                 let mut read = |file: i64, value: &mut c_ulong| {
                     ee_base::fs::cppfile::ee_fs_read_ulong(file as usize as *mut std::ffi::c_void, value) as i64
                 };

@@ -767,7 +767,7 @@ pub extern "C" fn ee_gamecpp_calamity_create_unit(
     if player != -1 {
         number = player;
     }
-    let class = hp(O::TkClassAt, 0, &[unit_class_index as i64]);
+    let class = crate::tech_tree::objects::class_at(unit_class_index as i64);
     if class == 0 {
         return std::ptr::null_mut();
     }
@@ -1180,7 +1180,7 @@ pub extern "C" fn ee_gamecpp_calamity_class_place(kl: *mut c_void, u: *mut c_voi
     if klass(kl).mClassEnum != CAL_O_VOLCANO {
         return;
     }
-    let class = hp(O::TkClassAt, 0, &[klass(kl).mUnitClassIndex as i64]);
+    let class = crate::tech_tree::objects::class_at(klass(kl).mUnitClassIndex as i64);
     ee_sim::units::uu_ffi::ee_units_uu_step_aside(
         0,
         class as u64,
@@ -1530,7 +1530,7 @@ unsafe extern "C" fn cast_call(
         C::CasterContinent => r.value = h(O::ContinentOfUnit, unit, &[]) as i32,
         C::TileContinent => r.value = h(O::ContinentOfTile, 0, &[x as i64, y as i64]) as i32,
         C::TileBlocked => r.ok = h(O::WorldTileBlocked, 0, &[x as i64, y as i64]) != 0,
-        C::InnerSphere => r.x = hd(O::UcInnerSphere, hp(O::TkClassAt, 0, &[host.unit_class_index as i64]), &[], &[]),
+        C::InnerSphere => r.x = hd(O::UcInnerSphere, crate::tech_tree::objects::class_at(host.unit_class_index as i64), &[], &[]),
         C::UnitsNear => {
             let at = [c.x, c.y, c.z];
             // SAFETY: the run's C++ unit vector
@@ -1543,7 +1543,7 @@ unsafe extern "C" fn cast_call(
             let t = ucf(unit_class(near)).mUnitType;
             r.ok = uf(near).mHitPoints > 0 && (t == UNIT_TYPE_HURRICANE || t == UNIT_TYPE_ANTI_MATTER_STORM);
         }
-        C::TileSize => r.value = ucf(hp(O::TkClassAt, 0, &[host.unit_class_index as i64])).mTileSize as i32,
+        C::TileSize => r.value = ucf(crate::tech_tree::objects::class_at(host.unit_class_index as i64)).mTileSize as i32,
         C::EdgeTile => r.ok = h(O::MapIsEdgeTile, 0, &[c.index as i64, c.index2 as i64]) != 0,
         C::TileUnblocked => {
             let player = if unit != 0 { unit_player(unit) } else { hp(O::WorldPlayer, 0, &[0]) };

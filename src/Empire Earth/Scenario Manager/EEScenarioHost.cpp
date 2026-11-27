@@ -128,7 +128,6 @@ int64_t SMReadPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
 extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
-    case EE_SCENARIO_RX_NODE_AVAILABLE: return SMReadOf<EETechTreeNode>(a[0])->GetIsAvailable();
     case EE_SCENARIO_RX_OBJECT: return SMReadPtr(gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]));
     case EE_SCENARIO_RX_FIND_OBJECT: return SMReadPtr(gWorld.mScenarioManager->FindObjectByID((long)a[0]));
     case EE_SCENARIO_RX_OBJECT_EVALUATE: return SMReadOf<EESMObject>(a[0])->Evaluate(0);

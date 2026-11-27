@@ -23,7 +23,7 @@ use crate::screens::editor_unit::*;
 
 /// The headers the C++ names come from.
 const EE_SCREENS_SECC_HEADERS: [&str; 5] = [
-    "include/ee/EEStringIDs.h",
+    "rust/crates/ee_base/src/string_ids.rs",
     "include/rust/render/gestate.h",
     "include/lle/UIControl.h",
     "include/rust/ui/ids.h",

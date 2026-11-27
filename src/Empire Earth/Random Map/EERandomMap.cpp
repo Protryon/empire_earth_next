@@ -23,7 +23,6 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
 
-
 // The world a random map is made in (ee_rmap_cpp's p)
 struct EERMWorld {
     EEMap* mMap;

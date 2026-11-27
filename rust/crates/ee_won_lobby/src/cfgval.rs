@@ -525,14 +525,17 @@ pub unsafe extern "C" fn ee_won_cfgval_int_list_list(
     EeWonCfgVal::new(Kind::IntListList(target, initial, wide, additive))
 }
 
-/// `StringParser(text).ReadValue(*(std::list<std::string>*)target)`: the items read onto the list (WONLobbyPrv's hash
-/// file list).
-///
-/// # Safety
-/// `text` is a NUL-terminated narrow text; `target` a live list.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_cfgval_read_strings(text: *const u8, target: *mut c_void) -> bool {
-    read_strings(&mut default_parser(text as *const c_void, false), target)
+/// `StringParser(text).ReadValue(list)` into a Rust list (ReadStrings: an item, then another after each ','), the
+/// lobby's hash file list (lobbyprv.rs). `text` is a NUL-terminated narrow text.
+pub(crate) fn read_string_list(text: *const u8) -> Vec<Vec<u8>> {
+    let mut sp = default_parser(text as *const c_void, false);
+    let mut list = Vec::new();
+    loop {
+        list.push(read_text(&mut sp));
+        if !next_char(&mut sp, b',') {
+            return list;
+        }
+    }
 }
 
 /// A call on a value (`v`: one made above).

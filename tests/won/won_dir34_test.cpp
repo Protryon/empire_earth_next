@@ -27,7 +27,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_net/dir.h"
 #include "rust/won_net/dirlist.h"
 #include "rust/won_net/ffi_parse.h"

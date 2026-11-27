@@ -121,7 +121,6 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
     case EE_UNITS_GROUP_OP_POST_SELECTION: gUserInterface->PostMessage424Once();
         return 0;
-    case EE_UNITS_GROUP_OP_PLAYER_GROUP: return inC >= 0 && inC < 20 ? (int64_t)(uintptr_t)thePlayer->mGroups[inC] : 0;
     // the selection's (selection.rs)
     case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
     case EE_UNITS_GROUP_OP_SELECTABLE: return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
@@ -133,19 +132,13 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB));
         return 0;
     // RefreshUpgrades' (selection.rs)
-    case EE_UNITS_GROUP_OP_CLASS_COUNT: return (int64_t)EEUnitClassCount();
     case EE_UNITS_GROUP_OP_UPGRADE: return (int64_t)(uintptr_t)thePlayer->GetUpgrade((long)inC);
     case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init();
-        return 0;
-    case EE_UNITS_GROUP_OP_SET_HIT_POINTS: reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inA))->SetHitPoints((long)inC);
-        return 0;
-    case EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: theUnit->SetFlightTime((long)inC);
         return 0;
     case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects();
         return 0;
     case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
         return 0;
-    case EE_UNITS_GROUP_OP_PLAYER_SELECTION: return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
     case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC();
         return 0;
     case EE_UNITS_GROUP_OP_AREA_OUTLINES: {

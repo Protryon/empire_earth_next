@@ -296,7 +296,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
         }
         EE_APP_CAMERA_OP_HIDDEN => {
             io.flag = unit != 0
-                && hp(O::UnPlayer, unit, &[]) != hp(O::TkCurrentPlayer, 0, &[])
+                && hp(O::UnPlayer, unit, &[]) != hp(O::WorldCurrentPlayer, 0, &[])
                 && h(O::EcIsSeen, unit, &[]) == 0;
         }
         EE_APP_CAMERA_OP_KEY_COUNT => io.id = keys().len() as u32,
