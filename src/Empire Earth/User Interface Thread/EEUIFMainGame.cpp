@@ -326,8 +326,6 @@ extern "C" uintptr_t ee_screenscpp_mf_control(uintptr_t inRec, uint32_t inContro
 extern "C" uint32_t ee_screenscpp_mf_info_unit_type(uintptr_t inRec) { return (uint32_t)static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mUnitType; }
 extern "C" uint32_t ee_screenscpp_unit_class_count() { return (uint32_t)EEUnitClassCount(); }
 extern "C" bool ee_screenscpp_unit_class_exists(uint32_t inKind) { return gUnitClassTable[inKind] != NULL; }
-extern "C" bool ee_screenscpp_player_class_has_button(uint32_t inKind)
-{ return gWorld.GetCurrentPlayer()->mUnitClassUpgrades[inKind]->mButton != NULL; }
 extern "C" void ee_screenscpp_mf_info_set_face(uintptr_t inRec, uintptr_t inBitmap, uintptr_t inPortrait)
 { gWorld.GetCurrentPlayer()->mUnitClassUpgrades[static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mUnitType]->mButton->SetFaceBitmap(reinterpret_cast<GEBitmap*>(inBitmap), C(inPortrait)->GetRectangle(), C(inPortrait)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_ui_bitmap_set_bitmap(uintptr_t inControl, uintptr_t inBitmap)
@@ -517,7 +515,6 @@ extern "C" bool ee_screenscpp_mf_user_paused() { return gWorld.mUserPaused; }
 extern "C" void ee_screenscpp_mf_master_volume() { gSoundManager->SetMasterVolume(gMasterVolume); }
 extern "C" void ee_screenscpp_mf_mouse_position(float inX, float inY) { gMouse->SetPosition(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_mf_fill_hack(uintptr_t inRec) { static_cast<EEUIFMGUnitHack*>(MF(inRec)->mUnitHack)->FillComboBox(); }
-extern "C" bool ee_screenscpp_mf_has_techs() { return gWorld.GetCurrentPlayer()->mTechnologies != NULL; }
 extern "C" void ee_screenscpp_mf_text_epoch_title(uintptr_t inRec)
 { gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch), R(inRec)->mText); }
 extern "C" void ee_screenscpp_mf_unit_info_background(uintptr_t inRec)
@@ -525,8 +522,6 @@ extern "C" void ee_screenscpp_mf_unit_info_background(uintptr_t inRec)
 extern "C" void ee_screenscpp_mf_media_old_load(uintptr_t inRec)
 { R(inRec)->mOldMedia = EEMedia::Get(MF(inRec)->mMediaID); }
 extern "C" bool ee_screenscpp_mf_has_media_old(uintptr_t inRec) { return static_cast<EEMedia*>(R(inRec)->mOldMedia) != NULL; }
-extern "C" int64_t ee_screenscpp_mf_player_media_id()
-{ return (int64_t)gWorld.GetCurrentPlayer()->mTechnologies->mMediaID; }
 extern "C" bool ee_screenscpp_mf_using_carbon() { return gWorld.mUsingCarbon; }
 extern "C" void ee_screenscpp_mf_media_get(uintptr_t inRec, int64_t inMedia)
 { R(inRec)->mMedia = EEMedia::Get((long)inMedia); }

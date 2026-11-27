@@ -43,8 +43,6 @@ extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentP
 extern "C" int32_t ee_screenscpp_group_conversions_max() { return gWorldTable.GetLongValue(kWorldConversionsStatisticMax); }
 extern "C" int32_t ee_screenscpp_group_wonders_to_win() { return gWorld.mNumberOfWondersToWin; }
 extern "C" bool ee_screenscpp_group_has_player() { return gWorld.GetCurrentPlayer() != NULL; }
-extern "C" int32_t ee_screenscpp_group_start_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mStartEpoch; }
-extern "C" int32_t ee_screenscpp_group_end_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mEndEpoch; }
 extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return EEEpochTitleID(inEpoch); }
 
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
@@ -106,8 +104,6 @@ extern "C" bool ee_screenscpp_mg_player_fanaticism(uintptr_t inPlayer)
 extern "C" bool ee_screenscpp_mg_player_jit(uintptr_t inPlayer)
 { return gCivPowersManager.HasPower(MGP(inPlayer), kCivPowerJustInTimeManufacturing); }
 extern "C" bool ee_screenscpp_mg_player_jit_on(uintptr_t inPlayer) { return MGP(inPlayer)->mJITManufacturing; }
-extern "C" uintptr_t ee_screenscpp_mg_player_node(uintptr_t inPlayer, int64_t inTechnology)
-{ return (uintptr_t)MGP(inPlayer)->GetTechTree()->Get(inTechnology); }
 extern "C" uintptr_t ee_screenscpp_mg_button_object(uint32_t inIndex)
 { return (uintptr_t)EEButtonObject::Get(inIndex); }
 extern "C" int64_t ee_screenscpp_mg_object_position(uintptr_t inObject)

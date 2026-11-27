@@ -222,6 +222,8 @@ macro_rules! shim_call {
 
 #[cfg(not(test))]
 use crate::screens::civ_direct;
+#[cfg(not(test))]
+use crate::screens::tech_direct;
 
 macro_rules! shims {
     ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $($sym:ident)::+ ; )*) => {
@@ -781,7 +783,7 @@ shims! {
     fn mf_info_unit_type(rec: usize) -> u32 = ee_screenscpp_mf_info_unit_type;
     fn unit_class_count() -> u32 = ee_screenscpp_unit_class_count;
     fn unit_class_exists(kind: u32) -> bool = ee_screenscpp_unit_class_exists;
-    fn player_class_has_button(kind: u32) -> bool = ee_screenscpp_player_class_has_button;
+    fn player_class_has_button(kind: u32) -> bool = tech_direct::player_class_has_button;
     fn mf_info_set_face(rec: usize, bitmap: usize, portrait: usize) = ee_screenscpp_mf_info_set_face;
     fn ui_bitmap_set_bitmap(control: usize, bitmap: usize) = ee_screenscpp_ui_bitmap_set_bitmap;
     fn control_refresh_opacity(control: usize) = ee_screenscpp_control_refresh_opacity;
@@ -1188,7 +1190,7 @@ shims! {
     fn mg_player_fanaticism(player: usize) -> bool = ee_screenscpp_mg_player_fanaticism;
     fn mg_player_jit(player: usize) -> bool = ee_screenscpp_mg_player_jit;
     fn mg_player_jit_on(player: usize) -> bool = ee_screenscpp_mg_player_jit_on;
-    fn mg_player_node(player: usize, technology: i64) -> usize = ee_screenscpp_mg_player_node;
+    fn mg_player_node(player: usize, technology: i64) -> usize = tech_direct::mg_player_node;
     fn mg_button_object(index: u32) -> usize = ee_screenscpp_mg_button_object;
     fn mg_object_position(object: usize) -> i64 = ee_screenscpp_mg_object_position;
     fn mg_object_id(object: usize) -> i64 = ee_screenscpp_mg_object_id;
@@ -1990,12 +1992,12 @@ shims! {
     fn mf_master_volume() = ee_screenscpp_mf_master_volume;
     fn mf_mouse_position(x: f32, y: f32) = ee_screenscpp_mf_mouse_position;
     fn mf_fill_hack(rec: usize) = ee_screenscpp_mf_fill_hack;
-    fn mf_has_techs() -> bool = ee_screenscpp_mf_has_techs;
+    fn mf_has_techs() -> bool = tech_direct::mf_has_techs;
     fn mf_text_epoch_title(rec: usize) = ee_screenscpp_mf_text_epoch_title;
     fn mf_unit_info_background(rec: usize) = ee_screenscpp_mf_unit_info_background;
     fn mf_media_old_load(rec: usize) = ee_screenscpp_mf_media_old_load;
     fn mf_has_media_old(rec: usize) -> bool = ee_screenscpp_mf_has_media_old;
-    fn mf_player_media_id() -> i64 = ee_screenscpp_mf_player_media_id;
+    fn mf_player_media_id() -> i64 = tech_direct::mf_player_media_id;
     fn mf_using_carbon() -> bool = ee_screenscpp_mf_using_carbon;
     fn mf_media_get(rec: usize, media: i64) = ee_screenscpp_mf_media_get;
     fn mf_has_media(rec: usize) -> bool = ee_screenscpp_mf_has_media;
@@ -2064,10 +2066,10 @@ shims! {
     fn sh_is_radio(control: usize) -> bool = ee_screenscpp_sh_is_radio;
     fn sh_radio_checked(control: usize) -> bool = ee_screenscpp_sh_radio_checked;
     fn sh_check_checked(control: usize) -> bool = ee_screenscpp_sh_check_checked;
-    fn sh_tech_name_id(technology: i64) -> i64 = ee_screenscpp_sh_tech_name_id;
-    fn sh_tech_class_name_id(technology: i64) -> i64 = ee_screenscpp_sh_tech_class_name_id;
-    fn sh_player_tree(selection: u32) -> usize = ee_screenscpp_sh_player_tree;
-    fn sh_tree_data_id(tree: usize, technology: i64) -> i64 = ee_screenscpp_sh_tree_data_id;
+    fn sh_tech_name_id(technology: i64) -> i64 = tech_direct::sh_tech_name_id;
+    fn sh_tech_class_name_id(technology: i64) -> i64 = tech_direct::sh_tech_class_name_id;
+    fn sh_player_tree(selection: u32) -> usize = tech_direct::sh_player_tree;
+    fn sh_tree_data_id(tree: usize, technology: i64) -> i64 = tech_direct::sh_tree_data_id;
     fn sh_tree_depends(tree: usize, technology: i64, on: i64) -> i64 = ee_screenscpp_sh_tree_depends;
     fn sh_tree_set_obsoleted(tree: usize, technology: i64, obsoleted: bool) = ee_screenscpp_sh_tree_set_obsoleted;
     fn sh_tree_epoch_reached(tree: usize, technology: i64) -> bool = ee_screenscpp_sh_tree_epoch_reached;
@@ -2167,7 +2169,7 @@ shims! {
     fn up_unit_type(unit: usize) -> i64 = ee_screenscpp_up_unit_type;
     fn up_class_exists(unit_type: i64) -> bool = ee_screenscpp_up_class_exists;
     fn up_class_technology(unit_type: i64) -> i64 = ee_screenscpp_up_class_technology;
-    fn up_node(technology: i64) -> usize = ee_screenscpp_up_node;
+    fn up_node(technology: i64) -> usize = tech_direct::up_node;
     fn up_text_cost(call: usize, node: usize, unit: usize, factor: f32) = ee_screenscpp_up_text_cost;
     fn up_sound(which: u32) = ee_screenscpp_up_sound;
     fn up_help_label(call: usize) -> usize = ee_screenscpp_up_help_label;
@@ -2551,7 +2553,7 @@ shims! {
     fn pt_set_show_level(p: usize, v: bool) = ee_screenscpp_pt_set_show_level;
     fn pt_unit_complex(p: usize) -> usize = ee_screenscpp_pt_unit_complex;
     fn pt_researched(unit: usize) -> i64 = ee_screenscpp_pt_researched;
-    fn pt_node(id: i64) -> usize = ee_screenscpp_pt_node;
+    fn pt_node(id: i64) -> usize = tech_direct::pt_node;
     fn pt_node_makes_unit(node: usize) -> bool = ee_screenscpp_pt_node_makes_unit;
     fn pt_node_upgrade(p: usize, node: usize) -> usize = ee_screenscpp_pt_node_upgrade;
     fn pt_upgrade_build_scale(up: usize) -> f32 = ee_screenscpp_pt_upgrade_build_scale;

@@ -420,6 +420,8 @@ pub(crate) mod civ_capture;
 mod civ_capture_ffi;
 #[cfg(not(test))]
 pub(crate) mod civ_direct;
+#[cfg(not(test))]
+pub(crate) mod tech_direct;
 pub(crate) mod civ_file_calls;
 pub(crate) mod civ_host;
 pub mod civ_list_state;

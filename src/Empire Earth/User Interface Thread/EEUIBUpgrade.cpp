@@ -98,8 +98,6 @@ extern "C" int64_t ee_screenscpp_up_unit_type(uintptr_t inUnit)
 extern "C" bool ee_screenscpp_up_class_exists(int64_t inUnitType) { return gUnitClassTable[(long)inUnitType] != NULL; }
 extern "C" int64_t ee_screenscpp_up_class_technology(int64_t inUnitType)
 { return (int64_t)gUnitClassTable[(long)inUnitType]->GetTechnology(); }
-extern "C" uintptr_t ee_screenscpp_up_node(int64_t inTechnology)
-{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inTechnology); }
 extern "C" void ee_screenscpp_up_text_cost(uintptr_t inCall, uintptr_t inNode, uintptr_t inUnit, float inFactor)
 { reinterpret_cast<EETechTreeNode*>(inNode)->GetCostString(UPC(inCall).mText, reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(), inFactor); }
 extern "C" void ee_screenscpp_up_sound(uint32_t inWhich)

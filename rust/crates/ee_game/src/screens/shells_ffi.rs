@@ -31,6 +31,15 @@ impl ShellHost for CppHost {
             // (`c_ulong` is `u32` on Windows, `u64` on LP64)
             #[allow(clippy::unnecessary_cast)]
             EE_SCREENS_SH_ID => ee_ui::direct::with_fields(ctl, |r| i64::from(r.mId as u32)).unwrap_or(0),
+            // the tech lists' epoch of an id and gTechTree.Get(a)->mData->mID (the trees are Rust's)
+            crate::screens::shells_tech::EE_SCREENS_SH_TECH_EPOCH => {
+                i64::from(ee_sim::tech::tech_ids::epoch_of(a as core::ffi::c_long as i32))
+            }
+            crate::screens::shells_tech::EE_SCREENS_SH_TECH_DATA_ID => {
+                use crate::tech_tree::objects::{get, global_tree, node_data};
+                // SAFETY: the database tree's live node and its data
+                unsafe { (*node_data(get(global_tree(), a as core::ffi::c_long))).mID as i64 }
+            }
             // SAFETY: the shell's form
             EE_SCREENS_SH_MAP_KIND => unsafe {
                 crate::screens::editor_map_ffi::ee_screens_semp_kind(form(), a as u32);
