@@ -30,6 +30,10 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
 
+// the effect generations' save key (FSLoadVector's; was EECalamity.cpp's EECalamity::mEffectGenerationStringID, the
+// one of the original's 21 keys 0xacb75..0xad0f4 ever read)
+static const UString sEffectGenerationStringID("EffectGenerationStringID");
+
 
 // Destroys the functor, releasing the fire's burning effect
 EEContagionFunctor::~EEContagionFunctor()
@@ -129,8 +133,8 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CalTargetSave: return CAL->mTargetLocation.Save(FSF);
     case O::C11CalShakeLoad: return CAL->mShakeLocation.Load(FSF);
     case O::C11CalShakeSave: return CAL->mShakeLocation.Save(FSF);
-    case O::C11CalGenerationLoad: return FSLoadVector(FSF, CAL->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-    case O::C11CalGenerationSave: return FSSaveVector(FSF, CAL->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+    case O::C11CalGenerationLoad: return FSLoadVector(FSF, CAL->mEffectGeneration, sEffectGenerationStringID);
+    case O::C11CalGenerationSave: return FSSaveVector(FSF, CAL->mEffectGeneration, sEffectGenerationStringID);
     case O::C11CalTargetId: return CAL->mTargetUnit != NULL ? CAL->mTargetUnit->GetUnitID() : -1;
     case O::C11CalCasterId: return CAL->mCasterUnit != NULL ? CAL->mCasterUnit->GetUnitID() : -1;
     case O::C11CalHandleRead: return FSF.Read(CAL->mEffectHandle.mValue);

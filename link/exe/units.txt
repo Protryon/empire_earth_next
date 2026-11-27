@@ -7,8 +7,6 @@
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
-acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
-adf97 aebb7 Empire Earth/Calamities/EECalamityManager.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp

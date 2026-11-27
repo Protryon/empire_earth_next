@@ -327,7 +327,6 @@ pub enum EeGameCpp {
     CalEffectHandle,
     CalSound,
     CalSecondary,
-    CalCreateUnit,
     KlFields,
     KlEffect1,
     KlEffect2,

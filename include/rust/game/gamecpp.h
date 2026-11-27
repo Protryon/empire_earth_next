@@ -245,7 +245,6 @@ enum class EeGameCpp : uint32_t {
   CalEffectHandle,
   CalSound,
   CalSecondary,
-  CalCreateUnit,
   KlFields,
   KlEffect1,
   KlEffect2,
@@ -3357,13 +3356,6 @@ void ee_gamecpp_calamity_destroy_classes(void *m);
 /// ones that report 7 (done) stopped (CALT) and deleted.
 void ee_gamecpp_calamity_update_all(void *m,
                                     float elapsed);
-
-/// `EECreateCalamityUnit`: a unit of the class at the transformation for the player (-1: the calamity's); NULL if
-/// the class does not exist.
-void *ee_gamecpp_calamity_create_unit(void *c,
-                                      long unit_class_index,
-                                      void *t,
-                                      long player);
 
 /// `GetDefaultTarget`: a unit class's: the id of the unit under the mouse, -1 if none; -1 for the others.
 long ee_gamecpp_calamity_class_default_target(void *kl);

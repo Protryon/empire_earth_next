@@ -83,10 +83,6 @@ public:
     SESMInstanceNode* mSound;               // +0x50 (SetSound/StopSound)
     SESMInstanceNode* mSecondarySound;      // +0x54 (EECalamityClass +0x48 picks one of the two by its bool)
     EEEffectHandle mEffectHandle;           // +0x74 (EEEffectManager handle; reset to kNoEffectHandle)
-
-    // the effect generations' save key (FSLoadVector's; the other twenty keys of the original's init chains
-    // 0xacb75..0xad0f4 were never read)
-    static const UString mEffectGenerationStringID;
 };
 
 #endif

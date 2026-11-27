@@ -247,7 +247,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CalEffectHandle: return P64(&CL->mEffectHandle.mValue);
     case O::CalSound: return P64(CL->mSound);
     case O::CalSecondary: return P64(CL->mSecondarySound);
-    case O::CalCreateUnit: return P64(EECreateCalamityUnit(CL, (long)a[0], TR(1), (long)a[2]));
     case O::KlFields: return P64(static_cast<EeCalamityClassFields*>(KL));
     case O::KlEffect1: return P64(KL->mGraphicEffect1);
     case O::KlEffect2: return P64(KL->mGraphicEffect2);
