@@ -59,7 +59,7 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     Window* me = (Window*)inMe;
     typedef EeWonPlatWinOp Op;
     switch (inOp) {
-    case Op::WindowCreate: me->BaseCreate((int)c, (int)d); return 0;
+    case Op::WindowCreate: ee_won_win_create(me->mWinObj.p, (int)c, (int)d); return 0; // the default icon, the parent, the root's size, the manager
     case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
     // (the offscreen image and its paints are gamewin.rs's: R6 WON GUI round 40)
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;

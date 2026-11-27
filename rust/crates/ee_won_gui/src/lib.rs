@@ -24,6 +24,7 @@ pub mod ctobj;
 pub mod cursorobj;
 pub mod dialogobj;
 pub mod fontmap;
+pub mod gamefwd;
 pub mod gamewin;
 pub mod gfxobj;
 pub mod gfxplat;

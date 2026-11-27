@@ -139,11 +139,9 @@ public:
             default: return 0;
         }
     }
-    void SetButtonState(int s,Image* i,int c,Font* f,bool checked=false) { ee_won_wonbtn_set_state(this->mWb,s,i,c,f,checked); }
     int GetRightTextPad() { return (int)this->WCall(EeWonWbCall::Get,(intptr_t)EeWonWbField::RightTextPad); }
     void SetHorzTextPad(int l,int r) { this->WSet(EeWonWbField::LeftTextPad,l); this->WSet(EeWonWbField::RightTextPad,r); }
     void SetFont(Font* f) { this->WCall(EeWonWbCall::SetFont,(intptr_t)f); }
-    void CopyAttributes(WONButton* from) { ee_won_wonbtn_copy(this->mWb,from->mWb,from); } // the text and images
     EeWonWonButton* mWb; // owned
 private:
     intptr_t WCall(EeWonWbCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0,intptr_t e=0) { return ee_won_wonbtn_call(this->mWb,c,a,b,d,e); }

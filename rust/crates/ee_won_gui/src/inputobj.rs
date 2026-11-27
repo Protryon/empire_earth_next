@@ -921,6 +921,18 @@ pub unsafe extern "C" fn ee_won_input_members_register(at: *const EeWonInputAt) 
     }
 }
 
+/// The game's input box `me`'s `SetFont(font)` (its font member in place; the shells' MSButton font). None in a
+/// driver's world.
+pub(crate) fn game_set_font(me: isize, font: isize) -> Option<isize> {
+    if !crate::compobj::is_game() || me == 0 {
+        return None;
+    }
+    let at = (*INPUT_AT.lock().ok()?)?;
+    // SAFETY: the game's live input box, its font member at the registered offset
+    unsafe { crate::gamefwd::set_font((me as usize + at.font) as *mut isize, font) };
+    Some(0)
+}
+
 /// The game's input box `me`'s host ops over its own members, read and written in place (R6 WON GUI round 41: the
 /// C++ host's font measures, text stores, colours, icon and constructor cases went). None in a driver's world and
 /// for the other ops.
