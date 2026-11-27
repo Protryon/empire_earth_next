@@ -28,7 +28,6 @@ public:
     // inline (InterpolateTo 0xdae4 expands it); its exported copy is ICF-folded into GEVector's 0x1000c29f
     bool operator!=(const GE3DPoint& inPoint) const { return mX != inPoint.mX || mY != inPoint.mY || mZ != inPoint.mZ; }
     void Clear() { *this = GE3DPoint(); }
-    float DistanceToSquared(const GE3DPoint& inPoint) const { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
     void GetChecksum(ESChecksum& ioChecksum) const {}
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
