@@ -18873,8 +18873,6 @@ bool ee_screens_sci_has_media(size_t m);
 /// `EEUISCIFormManager::SetBlinking`.
 void ee_screens_sci_set_blinking(bool blinking);
 
-extern ptrdiff_t ee_screenscpp_rec_offset(uint32_t kind);
-
 /// `EEUIFMGStatusBar`'s constructor's body (`rect` the `GERectangle*`, `form` the `UIForm*`).
 void ee_screens_sba_construct(size_t bar, size_t rect, size_t form, bool editor, bool large_icon);
 
@@ -19076,6 +19074,8 @@ void ee_screens_ui_post_icon_bar_once(EeScreensUserInterfaceFields *rec);
 /// several humans also `EEMLoadPercent(mLocalPlayer, percent)` at every new 20 percent step.
 void ee_screens_ui_set_load_progress(const EeScreensUserInterfaceFields *rec,
                                      float fraction);
+
+extern ptrdiff_t ee_screenscpp_rec_offset(uint32_t kind);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,
