@@ -63,12 +63,8 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(EECPObject<EEPlayer>(inContext->player));
     const int64_t* v = io->v;
     switch (inOp) {
-    case EE_CP_PLACE_EPOCH:
-        return thePlayer->mTechnologies->mCurrentEpoch;
     case EE_CP_PLACE_PASSABILITY:
         return thePlayer->GetCitizenPassability();
-    case EE_CP_PLACE_RANGE: io->f[0] = thePlayer->mUnitClassUpgrades[(long)v[0]]->mRange;
-        return 0;
     case EE_CP_PLACE_TOWN_FIELDS:
         return (int64_t)EECPHandle(static_cast<EeTownFields*>(EECPObject<EETown>(inA)));
     case EE_CP_PLACE_HAS_PATHFINDING:

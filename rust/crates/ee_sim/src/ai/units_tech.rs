@@ -54,6 +54,11 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64) -> Option<i64>
     unsafe {
         Some(match op {
             EE_AI_UNITS_HOST_HAS_NODE => i64::from(node_of(me, a) != 0),
+            // player a's mUnitClassUpgrades: its size, its element b (player_upgrades.rs: the vector read in place)
+            super::case_ops::EE_AI_UNITS_HOST_UPGRADE_COUNT => crate::units::player_upgrades::slots(a as u64) as i64,
+            super::case_ops::EE_AI_UNITS_HOST_UPGRADE_AT => {
+                crate::units::player_upgrades::at(a as u64, b as usize) as i64
+            }
             EE_AI_UNITS_HOST_HAS_TREE => i64::from(to::player_tree(me as usize) != 0),
             EE_AI_UNITS_HOST_NODE_OF => node_of(me, a) as i64,
             EE_AI_UNITS_HOST_NODE_AVAILABLE => test(n, false),

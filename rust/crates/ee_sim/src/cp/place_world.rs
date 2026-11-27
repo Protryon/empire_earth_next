@@ -97,6 +97,18 @@ mod game {
         let player = unsafe { (*ctx).player };
         let (v0, v1) = (io.v[0], io.v[1]);
         Some(match op {
+            // the player's mTechnologies->mCurrentEpoch
+            pg::EE_CP_PLACE_EPOCH => {
+                let t = WorldRead::begin();
+                PlayerView::of(&t, player).and_then(|p| p.tech_tree()).map_or(0, |tr| tr.current_epoch())
+            }
+            // f0 = the player's mUnitClassUpgrades[v0]->mRange (player_upgrades.rs)
+            pg::EE_CP_PLACE_RANGE => {
+                let t = WorldRead::begin();
+                let upgrade = crate::units::player_upgrades::at(player, v0 as c_long as usize);
+                io.f[0] = crate::world::StatsView::of(&t, upgrade).map_or(0.0, |s| s.range());
+                0
+            }
             pg::EE_CP_PLACE_TECH_KIND => {
                 let t = WorldRead::begin();
                 let kind = PlayerView::of(&t, player).and_then(|p| p.tech_tree()).and_then(|tr| tr.node(v0)).map(|n| {
