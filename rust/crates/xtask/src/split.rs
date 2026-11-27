@@ -389,7 +389,7 @@ pub fn record_roots(
 
 /// The Rust names of the records a `records.rs` text lists or defines.
 fn records_listed(text: &str) -> BTreeSet<String> {
-    let code: String = text.lines().map(|l| code_part(l)).collect::<Vec<_>>().join("\n");
+    let code: String = text.lines().map(code_part).collect::<Vec<_>>().join("\n");
     let mut out = BTreeSet::new();
     for line in code.lines() {
         if let Some(name) = defined_name(line) {
