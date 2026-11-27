@@ -182,6 +182,12 @@ void EEWorldLayoutRegister()
     theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
     theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
     theLayout.player_unit_class_upgrades = offsetof(EEPlayer, mUnitClassUpgrades);   // player/tech round 4 (player_upgrades.rs)
+    theLayout.herd_fields = BaseOffset<EEHerd, EeHerdFields>();
+    theLayout.town_patrol_group = offsetof(EETown, mPatrolGroup);
+    theLayout.town_area = BaseOffset<EETown, EEAIArea>();
+    theLayout.herd_area = BaseOffset<EEHerd, EEAIArea>();
+    theLayout.player_name_text = offsetof(EEPlayer, mName) + offsetof(UWideString, mState);
+    theLayout.player_civ_name_text = offsetof(EEPlayer, mCivilization) + offsetof(EECivilization, mName) + offsetof(UWideString, mState);
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }
