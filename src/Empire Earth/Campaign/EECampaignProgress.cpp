@@ -194,7 +194,11 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
         break;
     case O::HeaderNew: return (int64_t)(intptr_t)new EEPSaveGameHeader;
     case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->LoadFromFile(*(FSFileSpec*)a[0]);
-    case O::HeaderListMedia: return ee_scenario_en_media_files(&EESMMediaStrings(((EEPSaveGameHeader*)p)->mMediaStrings), (void*)&(UWideString((const char*)a[0])), (std::vector<UWideString>*)a[1], (UWideString*)a[2], a[3] != 0);
+    case O::HeaderListMedia: {
+        EESMMediaStrings theStrings(((EEPSaveGameHeader*)p)->mMediaStrings);
+        UWideString theDirectory((const char*)a[0]);
+        return ee_scenario_en_media_files(&theStrings, (void*)&theDirectory, (std::vector<UWideString>*)a[1], (UWideString*)a[2], a[3] != 0);
+    }
     case O::HeaderDelete: delete (EEPSaveGameHeader*)p;
         break;
     case O::PersistentLoad: return EELoadPersistent(UString((const char*)a[0]), 6, *(FSPersistent**)a[1]);

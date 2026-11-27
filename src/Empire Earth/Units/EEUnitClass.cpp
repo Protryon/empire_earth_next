@@ -847,7 +847,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_MODEL_TAGS: return EEObj(theUnit->GetModel()->GetTagPoints((unsigned long)inB, (long)inC));
     case EE_UNITS_UC_TIME_OF_DAY: f[0] = gWorld.mTimeOfDay; return 0;
     case EE_UNITS_UC_TILE_TERRAIN: return EEUcObject<RTSTile>(inA)->mTerrainType;
-    case EE_UNITS_UC_IN_STORM: return ee_gamecpp_env_is_in_storm(gWorld.mEnvironmentManager, &(U2DPoint<long>(theUnit->GetTileX(), theUnit->GetTileY())), false, true);
+    case EE_UNITS_UC_IN_STORM: { const U2DPoint<long> theTile(theUnit->GetTileX(), theUnit->GetTileY()); return ee_gamecpp_env_is_in_storm(gWorld.mEnvironmentManager, &theTile, false, true); }
     case EE_UNITS_UC_IS_SEEN: return EEIsSeen(theUnit);
     case EE_UNITS_UC_HORSE_BREATH: gWorld.mEffectManager->CreateEffectBetweenUnits(theUnit, theUnit, EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits), NULL); return 0;
     case EE_UNITS_UC_MODEL_SOUNDS1_AT: return EEObj(theUnit->GetModel()->mSounds1[inB]);
@@ -890,7 +890,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CARGO_COUNT: return theUnit->GetNumCargoUnits();
     case EE_UNITS_UC_WORLD_IN_CINEMATIC: return ::gWorld.mInCinematic;
     case EE_UNITS_UC_COMBAT_TIMER:
-        sUcTimer = ee_combat_timer_captured(&(EeCombatTimerIn{(int32_t)theUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs, (int32_t)EEGetRules().mCombat.mRegenerationInterval}));
+        { const EeCombatTimerIn theIn{(int32_t)theUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs, (int32_t)EEGetRules().mCombat.mRegenerationInterval}; sUcTimer = ee_combat_timer_captured(&theIn); }
         return sUcTimer.due;
     case EE_UNITS_UC_TIMER_VALUE: return sUcTimer.timer;
     case EE_UNITS_UC_GET_HIT_POINTS: return theUnit->GetHitPoints();

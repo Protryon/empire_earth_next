@@ -112,7 +112,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_ACTION_CHANGED: theComplex->mUnitClass->ActionChanged(theComplex); return 0;
     case EE_UNITS_EU_SHOOTS_TRACERS: return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
     case EE_UNITS_EU_HIT_FORMULA:
-        sHitOut = ee_combat_hit_points_captured(&(EeCombatHitPointsIn{(int32_t)inB, (int32_t)inC, (int32_t)theUnit->mStats->mMaxHitPoints}));
+        { const EeCombatHitPointsIn theIn{(int32_t)inB, (int32_t)inC, (int32_t)theUnit->mStats->mMaxHitPoints}; sHitOut = ee_combat_hit_points_captured(&theIn); }
         return 0;
     case EE_UNITS_EU_HIT_BADLY_HURT: return sHitOut.badly_hurt;
     case EE_UNITS_EU_HIT_NEW_POINTS: return sHitOut.hit_points;

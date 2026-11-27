@@ -41,7 +41,7 @@ extern "C" void ee_screenscpp_su_lasso_type(uintptr_t inBox, uintptr_t inUnit, i
 { ee_screens_ga_select_units(static_cast<EEALasso*>(SUC(inBox)->mLasso), &(gU4E8F08.GetViewRectangle()), (int32_t)((long)inMode), (uint32_t)(reinterpret_cast<EEUnit*>(inUnit)->GetUnitClass()->mUnitType), (int32_t)(reinterpret_cast<EEUnit*>(inUnit)->mUnitID)); }
 extern "C" void ee_screenscpp_su_unit_release(uintptr_t inUnit) { reinterpret_cast<EEUnit*>(inUnit)->Dereference(); }
 extern "C" void ee_screenscpp_su_lasso_box(uintptr_t inBox, float inA, float inB, float inC, float inD, int64_t inMode)
-{ ee_screens_ga_select_units(static_cast<EEALasso*>(SUC(inBox)->mLasso), &(GERectangle(inA, inB, inC, inD)), (int32_t)((long)inMode), (uint32_t)kAnyUnitType, (int32_t)0); }
+{ const GERectangle theRect(inA, inB, inC, inD); ee_screens_ga_select_units(static_cast<EEALasso*>(SUC(inBox)->mLasso), &theRect, (int32_t)((long)inMode), (uint32_t)kAnyUnitType, (int32_t)0); }
 extern "C" void ee_screenscpp_su_click(uintptr_t inBox, uint32_t inMode) { ee_screens_ga_select_at_mouse(static_cast<EEARust*>(static_cast<EEAMouseClick*>(SUC(inBox)->mClick)), (uint32_t)((unsigned long)inMode)); }
 // the trigger tab's (EESEUICTriggerSelectUnits): the point under the mouse into the unit hack's scratch point
 extern "C" void ee_screenscpp_su_point_at(uintptr_t inBox)

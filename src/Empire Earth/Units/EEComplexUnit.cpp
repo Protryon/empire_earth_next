@@ -111,8 +111,9 @@ static void EEDumpWrite(void* inFile, const char* inText, size_t inLength) { fwr
 // morale: 80% and 60% in the original)
 void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 {
-    outValue = ee_combat_morale_captured(&(EeCombatMoraleIn{(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
-                                               EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale}));
+    const EeCombatMoraleIn theIn{(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
+                                               EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale};
+    outValue = ee_combat_morale_captured(&theIn);
 }
 
 // SightOn's and SightOff's host (ee_units sight.rs, sight_host.rs; EE_UNITS_SIGHT_*): the unit's and players' reads and

@@ -237,7 +237,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_A_SCREEN_TO_WORLD: gWorld.ScreenToWorld(GE2DPoint(f[0], f[1]), *reinterpret_cast<GE3DPoint*>(f + 3)); return 0;
     case EE_SCREENS_GAH_A_TRANSFORM: GETransformation(gWorld.mTransformation).Apply(*reinterpret_cast<GE3DPoint*>(f + 3), GA_F3); return 0;
     case GA_K(CALAMITY, A_DEFAULT_TARGET): return static_cast<EECalamityClass*>(p)->GetDefaultTarget(GA_F3, i[1], i[2], i[3] != 0);
-    case GA_K(CALAMITY, A_ORDER_AT_CURSOR): ee_gamecpp_order_at_cursor(&(GE2DPoint(f[0], f[1])), reinterpret_cast<EEUnit*>(i[1])); return 0;
+    case GA_K(CALAMITY, A_ORDER_AT_CURSOR): { const GE2DPoint thePoint(f[0], f[1]); ee_gamecpp_order_at_cursor(&thePoint, reinterpret_cast<EEUnit*>(i[1])); } return 0;
     case GA_K(CALAMITY, A_CAN_CAST):
         return static_cast<EECalamityClass*>(p)->CanCastAt(reinterpret_cast<EEComplexUnit*>(i[1]), GA_F3, i[2], i[3], i[4] != 0, reinterpret_cast<EEUnit*>(i[5]));
     // the camera

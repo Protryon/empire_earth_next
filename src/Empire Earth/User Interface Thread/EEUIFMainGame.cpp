@@ -573,11 +573,11 @@ extern "C" void ee_screenscpp_md_send_convert(uintptr_t inRec, bool inShielded)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackUnit, {static_cast<EEUnit*>(R(inRec)->mPicked)->mComplexUnit->mUnitID, inShielded, true}), kSlotNone); }
 extern "C" void ee_screenscpp_md_send_rally(uintptr_t inRec, float inX, float inY, int64_t inKind, int64_t inFlag)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(inX, inY), (long)inKind, static_cast<EEComplexUnit*>(R(inRec)->mFirst)->mComplexUnit->GetUnitID(), (unsigned char)inFlag}), kSlotNone); }
-extern "C" void ee_screenscpp_md_order_at_none(float inX, float inY) { ee_gamecpp_order_at_cursor(&(GE2DPoint(inX, inY)), NULL); }
+extern "C" void ee_screenscpp_md_order_at_none(float inX, float inY) { const GE2DPoint thePoint(inX, inY); ee_gamecpp_order_at_cursor(&thePoint, NULL); }
 extern "C" void ee_screenscpp_md_order_at_picked(uintptr_t inRec, float inX, float inY)
-{ ee_gamecpp_order_at_cursor(&(GE2DPoint(inX, inY)), static_cast<EEUnit*>(R(inRec)->mPicked)); }
+{ const GE2DPoint thePoint(inX, inY); ee_gamecpp_order_at_cursor(&thePoint, static_cast<EEUnit*>(R(inRec)->mPicked)); }
 extern "C" void ee_screenscpp_md_order_at_complex(uintptr_t inRec, float inX, float inY)
-{ ee_gamecpp_order_at_cursor(&(GE2DPoint(inX, inY)), static_cast<EEUnit*>(static_cast<EEUnit*>(R(inRec)->mPicked)->mComplexUnit)); }
+{ const GE2DPoint thePoint(inX, inY); ee_gamecpp_order_at_cursor(&thePoint, static_cast<EEUnit*>(static_cast<EEUnit*>(R(inRec)->mPicked)->mComplexUnit)); }
 extern "C" void ee_screenscpp_md_calamity_effect(uintptr_t inRec, float inX, float inY, float inZ)
 { EEMakeCalamityEffect(GE3DPoint(inX, inY, inZ), static_cast<EEUnit*>(R(inRec)->mPicked)); }
 extern "C" void ee_screenscpp_md_preview(uintptr_t inRec) { EEPreviewPlacement(MF(inRec)->GetMouseLocation()); }

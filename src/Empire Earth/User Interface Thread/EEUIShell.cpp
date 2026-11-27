@@ -75,7 +75,7 @@ extern "C" void ee_screenscpp_ib_button_release(uintptr_t inButton) { ((EEButton
 extern "C" void ee_screenscpp_ib_icon_texture(uintptr_t inP, uintptr_t inButton)
 { static_cast<GEBitmap*>(IB(inP)->mSlots[0])->SetTexture(((EEButtonObject*)inButton)->GetTexture(), IB(inP)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_ib_icon_face(uintptr_t inP, uintptr_t inButton, float inLeft, float inTop, float inRight, float inBottom)
-{ ee_gamecpp_db_button_bitmap(((EEButtonObject*)inButton), true, static_cast<GEBitmap*>(IB(inP)->mSlots[0]), &(GERectangle(inLeft, inTop, inRight, inBottom)), gScreenIndex); }
+{ const GERectangle theRect(inLeft, inTop, inRight, inBottom); ee_gamecpp_db_button_bitmap(((EEButtonObject*)inButton), true, static_cast<GEBitmap*>(IB(inP)->mSlots[0]), &theRect, gScreenIndex); }
 extern "C" void ee_screenscpp_ib_slot_location(uintptr_t inP, uint32_t inSlot, float inX, float inY)
 { static_cast<GEBitmap*>(IB(inP)->mSlots[inSlot])->SetLocation(GE2DPoint(inX, inY)); }
 extern "C" int64_t ee_screenscpp_ib_slot_draw(uintptr_t inP, uint32_t inSlot)
