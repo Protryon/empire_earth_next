@@ -8,7 +8,6 @@
 
 #include "ee/EEUnitStore.h"   // the members the unit store mirrors (EEUnitStoreField)
 #include "rust/sim/records.h"
-#include "rust/game/rts.h"
 
 class EEPlayer;
 class EEMap;
@@ -52,34 +51,34 @@ public:
 
     virtual ~RTSUnit();                     // +0x00 (??_G 0x23d8ed; dtor 0x23d909: asserts !mIsValid)
     // +0x04 0x23d93f (asserts mIsValid; unlinks; mIsValid = false)
-    virtual void Invalidate() { ee_rts_unit_invalidate(this); }
+    virtual void Invalidate();
     // +0x08 (the shared empty `ret 4` 0x157269): copies from inUnit (EEUnit::CopyFrom 0x228ef5 calls it last with
     // its argument; provisional name)
     virtual void CopyFrom(RTSUnit*) {}
     virtual void SightOnHere() = 0;         // +0x0c
-    virtual void Describe(UWideString& ioString) { ioString += ee_rts_unit_describe(this, false); }  // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
-    virtual void DescribeLong(UWideString& ioString) { ioString += ee_rts_unit_describe(this, true); }  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
+    virtual void Describe(UWideString& ioString);  // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
+    virtual void DescribeLong(UWideString& ioString);  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return EEUnitFile(true, this, 0, inMajorVersion, inMinorVersion, inFile); }  // +0x1c 0x23db4f
     // +0x20 0x23dd46 (Reset, mIsValid = false)
-    virtual void Clear() { ee_rts_unit_clear(this); }
+    virtual void Clear();
     virtual void SightOffHere() = 0;        // +0x24
     // +0x28
     virtual long RepairPointers(unsigned long, unsigned long) { return 0; }
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return EEUnitFile(false, this, 0, inMajorVersion, inMinorVersion, outFile); }  // +0x2c 0x23dc3a
     // +0x30 0x23d977 (asserts !mIsValid; deletes the link)
-    virtual void FreeNode() { ee_rts_unit_free_node(this); }
+    virtual void FreeNode();
     // +0x34 0x23db49 (RTSUnit::Dereference calls it at the last reference)
     virtual void LastDereference() { UReferenceCounter::Dereference(); }
 
     // 0x23d8cc (out of line): the count = 1 (UReferenceCounter's inline ctor), the vptr, Reset(), then +0x2b = 0,
     // +0x2a = 1
-    RTSUnit() { ee_rts_unit_construct(this); }
+    RTSUnit();
     // 0x23da54: Reset, mIsValid, a new RTSUnitLink unless inLinked == 0
-    void Initialize(long inLinked) { ee_rts_unit_initialize(this, inLinked); }
+    void Initialize(long inLinked);
     // 0x23da8e: +0x24 = -1, +0x1c/+0x20 = -10000, the rest 0 (provisional name)
-    void Reset() { ee_rts_unit_reset(this); }
+    void Reset();
     // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
-    void Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }
+    void Link(RTSUnit* inUnit);
     unsigned long GetUnitID() const { return this->mUnitID; }  // (EEWUnitsOffMapInfo::Save 0x161d22 reads an RTSUnit's id through it)
 
     // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)
