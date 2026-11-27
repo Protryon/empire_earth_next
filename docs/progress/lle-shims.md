@@ -482,3 +482,14 @@ Round 9's numbers are the fixed script's (`case EeX::Y:` one-statement cases cou
 - The Network Engine: no virtual has one implementation (ExecuteRemovePlayer has two and is called through
   `gCommunications`); the message ops (MsgType, MsgSlot, the slot setters) cannot be answered in Rust from the
   header's fields, since tests/net hands the Rust client and server stand-in messages by world id.
+
+## LLE/UI round 3, fork A pass 1 (branch `rust-lleui3-a`, 2026-11-26)
+
+-97 C++ lines, -8 compiled files against 416ec808d: the dead Rust behind round 2's deleted C++ (ee_uconfig_*, the
+GEPoint paths, 60 LLE exports nothing names: -887 Rust lines, extern_c -66, fc16d67b6); TMTimer.h gone, the game timer
+an `EeTimeTimer*` (53cd4e6bc, -22); URandom.h folded into LowLevelEngine.h, its one includer, tests/net keeping a copy
+in tests/net/orig_q/lle (f4aaf0fe8, -17); one unit per engine directory: File System.cpp (+FSPath), Sound Engine.cpp
+(+Mixer), Network Engine.cpp (the three NESynchronous* units; NEMessage.cpp stays apart: tests/net links it alone),
+Graphics Engine.cpp (GEBitmap, GEModel, GERasterizer, GETexture and DX7Rasterizer) (6e869634e, -35, -8 files); GELight
+gone, EERenderObject.cpp holding an `EeGeLight` (ab5ac8710, the game core lane's file, one commit, -19). The round's
+totals are in PORT_LEARNINGS.md "The LLE and UI lane, round 3" and ui-cluster.md "Round 16".

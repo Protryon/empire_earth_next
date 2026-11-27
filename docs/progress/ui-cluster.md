@@ -243,3 +243,32 @@ group's constructors; the WON glue prototypes (EEIsLobbyOpen, EESetQuitFlag, EEL
   scenario_check, sim_editor and `--civbuilder`, the tours (`--exercise tour`, `editor` with its campaign editor
   step, `random-game --box-select --orders --seed 7`) with their captures against the base build's, `bash
   tools/gates.sh`. The LLE toolkit's moves are exercised by every tour (the menus are its forms).
+
+## Round 16 (LLE/UI round 3: branch `rust-lleui3`, forks `rust-lleui3-a` (the LLE), `rust-lleui3-b` (the toolkit and the screens), 2026-11-26)
+
+The measure is total C++ lines (`tools/port_metrics.py`). The round: **-537 C++ lines, -8 compiled files** (79,339 /
+249 at origin/rust 38bb1e104 with round 2's -2,336 included -> 76,469 / 202 is -2,870 / -47; the round's own share
+is fork A -97 / -8 files and fork B -173 in pass 1, then fork A -23, fork B -187 and the lead -57 after the batch 31
+merge, 79d919d95 -> c0892ac68: -267). Classes 682 (unchanged after the merge), extern_c -72, rust_hdrs 367 unchanged.
+The LLE's half is in lle-shims.md ("LLE/UI round 3"). Behaviour: none intended (oracle seeds 2-7 identical).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| f1cc139f1 (B) | the toolkit's input calls straight to ee_base (key slots, the forms' and hot keys' entities, modifier states, the manager's update polls); ee_base `system_keyboard()`/`system_mouse()` | -28 |
+| c9faade3d (B) | a census of every toolkit virtual's overrides (src, include, tests): virtuals with one body made Rust ops in lle_chains.rs (SetDisplayMode, ReleaseCapturedMouse, DrawBorder, RelayoutBackground, FireEvents, the label's scroll checks, the list's Home/End, the combo's Open/CloseListBox, the bitmap and tiled backgrounds' draws) | -50 |
+| 241a4fef9 (B) | UIControl virtuals only toolkit classes override dispatched in Rust by the control's kind (`direct::is`): HideControl, the IME members, ChangeFont, MouseWheelTurned gone from the base and every override | -44 |
+| 8d5727b4a (B) | the GERhombus, GELine and GEText a toolkit object owns made and freed in Rust (lle_hosts.rs `ge`) | -34 |
+| 0e834c92f (B) | UIMultiByte.h, UIEntity.h, UITextureBackground.h folded into their includers | -17 |
+| 44c1ca811 (B2) | 80 toolkit-chain shims of EEScreens.cpp and EECivilizationBuilder.cpp answered in Rust (screens scr_direct.rs; `Kind::FileList` in direct.rs) | -145 |
+| ae3fcc667, f7eac150a (B2) | UIForm's four IME virtuals gone, UIManager's IME/UpdateUI non-virtual or gone, UIControl's two IME members dispatched by kind; forwarders no C++ calls any more | -42 |
+| c0892ac68 (lead) | EEUserInterface.cpp: 22 chain shims made through ee_ui::direct, 36 shims of the game classes' Rust records read in place at the offset `ee_screenscpp_rec_offset` gives (screens uit_direct.rs) | -57 |
+
+Lessons: a game class's Rust record is its second base, at an offset only C++ knows; one C++ table of
+`static_cast` offsets (`ee_screenscpp_rec_offset`) lets Rust read every member of nine classes in place, instead of
+one shim per member. A virtual is a Rust op once a census shows no override outside the toolkit; overrides inside it
+are dispatched by the control's kind (`direct::is`, which writes no check line).
+
+What is left: the shims that reach a game override or a game class's state that is not Rust's (ChangeSelectionIndex,
+the backgrounds' Open/Load, EEUIFMainGame's and the civ builder's list fields), `dynamic_cast` checks the kinds cannot
+tell apart (list vs combo), UIBitmap (no registry kind), shims making a C++ UWideString/UString in place, `new
+GEBitmap` into a record's pointer, and the game-state shims (gWorld, players, units) that are not toolkit chains.
