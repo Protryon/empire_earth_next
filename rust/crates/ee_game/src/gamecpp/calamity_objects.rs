@@ -1530,7 +1530,9 @@ unsafe extern "C" fn cast_call(
         C::CasterContinent => r.value = h(O::ContinentOfUnit, unit, &[]) as i32,
         C::TileContinent => r.value = h(O::ContinentOfTile, 0, &[x as i64, y as i64]) as i32,
         C::TileBlocked => r.ok = h(O::WorldTileBlocked, 0, &[x as i64, y as i64]) != 0,
-        C::InnerSphere => r.x = hd(O::UcInnerSphere, crate::tech_tree::objects::class_at(host.unit_class_index as i64), &[], &[]),
+        C::InnerSphere => {
+            r.x = hd(O::UcInnerSphere, crate::tech_tree::objects::class_at(host.unit_class_index as i64), &[], &[])
+        }
         C::UnitsNear => {
             let at = [c.x, c.y, c.z];
             // SAFETY: the run's C++ unit vector
@@ -1543,7 +1545,9 @@ unsafe extern "C" fn cast_call(
             let t = ucf(unit_class(near)).mUnitType;
             r.ok = uf(near).mHitPoints > 0 && (t == UNIT_TYPE_HURRICANE || t == UNIT_TYPE_ANTI_MATTER_STORM);
         }
-        C::TileSize => r.value = ucf(crate::tech_tree::objects::class_at(host.unit_class_index as i64)).mTileSize as i32,
+        C::TileSize => {
+            r.value = ucf(crate::tech_tree::objects::class_at(host.unit_class_index as i64)).mTileSize as i32
+        }
         C::EdgeTile => r.ok = h(O::MapIsEdgeTile, 0, &[c.index as i64, c.index2 as i64]) != 0,
         C::TileUnblocked => {
             let player = if unit != 0 { unit_player(unit) } else { hp(O::WorldPlayer, 0, &[0]) };

@@ -644,7 +644,8 @@ fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
     cap::ee_app_capture_exclusive(true);
     let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
-    let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| crate::tech_tree::objects::class_at(k) as usize).collect();
+    let table: Vec<usize> =
+        (0..h(O::ClassCount, 0, &[])).map(|k| crate::tech_tree::objects::class_at(k) as usize).collect();
     let mut classes = Vec::new();
     let mut launchers = Vec::new();
     for &class in &table {

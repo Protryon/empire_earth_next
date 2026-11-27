@@ -434,7 +434,9 @@ mod game {
         // the tech tree's statements are Rust's (tech_native.rs); the effect's technology is the run's (the world
         // views answer it: this function again)
         // SAFETY: the same host context, six arguments
-        let tech = &mut || unsafe { world(ctx, crate::scenario::world_compose::EE_SCENARIO_WX_EFFECT_TECH, [0i64; 6].as_ptr()) };
+        let tech = &mut || unsafe {
+            world(ctx, crate::scenario::world_compose::EE_SCENARIO_WX_EFFECT_TECH, [0i64; 6].as_ptr())
+        };
         if let Some(v) = crate::scenario::tech_native::world(op, a, tech) {
             return v;
         }
