@@ -5,14 +5,9 @@
 #define EE_EECAMERACONTROL_H
 
 #include <vector>
-#include "lle/GETransformation.h"
-#include "lle/GE3DPoint.h"
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
-#include "rust/base/math.h"
-#include "rust/render/gfx.h"
 
 class GE3DPoint;
 class EEUnit;
@@ -87,13 +82,9 @@ public:
     EECameraControl();
     // 0x1277e5: appends a key unless locked (5)
     long AddKey(const EECameraKey& inKey) { return ee_gamecpp_camera_add_key(this, &inKey); }
-    // 0x1279f0: the viewport's clipping distances
-    void SetClippingDistances() { ee_app_camera_set_clipping_distances(EE_CAMERA_HOST); }
-    void GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint) { ee_app_camera_ground_point(EE_CAMERA_HOST, EECameraRust<EeGe3DLine>(inLine), EECameraRust<EeGe3DPoint>(outPoint)); }
     // 0x12844f: the point to look at on a unit
     void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint) { ee_gamecpp_camera_unit_point(inUnit, &outPoint); }
     void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation) { ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation)); }
-    static float GetPitch(float inZoom, long inMode);   // 0x1285ec (cdecl): the pitch for a zoom
     // 0x1286fa: plays the key list
     void StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
 

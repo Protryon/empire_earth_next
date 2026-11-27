@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "ee/EEUnit.h"
-#include "ee/EEUnitClassIDs.h"
-#include "ee/EEUnitKind.h"
 
 class EEComplexUnit;
 class EEUnit;

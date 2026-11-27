@@ -8,7 +8,6 @@
 
 #include <vector>
 
-#include "rust/data/tables.h"
 #include "rust/game/gamecpp.h"
 
 class EEMedia;
@@ -20,7 +19,6 @@ public:
     EEAnimal() : EeDataAnimalFields() {  }
     // +0x00 0xd49f6 (??_G 0xd49da)
     virtual ~EEAnimal() { ee_gamecpp_db_animal_free(this, true); }
-    void ClearSounds() { ee_gamecpp_db_animal_free(this, false); }
     static long Load(FSFileSpec* inFile) { return ee_gamecpp_db_animal_load(inFile); }
     static void Unload() { ee_gamecpp_db_animal_unload(); }
     EEUnitClass* GetUnitClass();
@@ -30,30 +28,9 @@ public:
 
     std::vector<long> mL04;                 // +0x04 (record +0x88..+0x94, the positive ones)
     std::vector<EEMedia*> mSounds;          // +0x14 (record +0xe8..+0xf0; LoadMedia'd)
-    EEMedia* GetMedia() const { return this->mMedia; }
     EEMedia* mMedia = nullptr;              // +0x24 (record +0xe4)
-    float GetGrowthStep() const { return this->mGrowthStep; }  // inline (EEHerd 0x4a31fd) (provisional name)
     // inline (EEHerd's GetRandom(min, max) calls load both before pushing: 0x4a475f) (provisional names)
-    long GetMinHerdSize() const { return this->mMinHerdSize; }
-    long GetMaxHerdSize() const { return this->mMaxHerdSize; }
-    long GetMinBirthInterval() const { return this->mMinBirthInterval; }
-    long GetMaxBirthInterval() const { return this->mMaxBirthInterval; }
-    long GetMinHuntInterval() const { return this->mMinHuntInterval; }
-    long GetMaxHuntInterval() const { return this->mMaxHuntInterval; }
-    long GetMinGrazeTime() const { return this->mMinGrazeTime; }
-    long GetMaxGrazeTime() const { return this->mMaxGrazeTime; }
-    long GetMinRestInterval() const { return this->mMinRestInterval; }
-    long GetMaxRestInterval() const { return this->mMaxRestInterval; }
-    long GetMinFollowInterval() const { return this->mMinFollowInterval; }
-    long GetMaxFollowInterval() const { return this->mMaxFollowInterval; }
     float GetNewbornGrowth() const { return this->mNewbornGrowth; }
-    long GetAnimalID() const { return this->mAnimalID; }
-    long GetMinTerritoryMargin() const { return this->mMinTerritoryMargin; }
-    long GetMaxTerritoryMargin() const { return this->mMaxTerritoryMargin; }
-    long GetHerdRadius() const { return this->mHerdRadius; }
-    long GetGrowInterval() const { return this->mGrowInterval; }
-    bool GetIsPredator() const { return this->mIsPredator; }
-    bool GetHasLeader() const { return this->mHasLeader; }
 
     static std::vector<EEAnimal*> sTable;   // 0x8e60d0 (guard byte 0x8e60c8 bit 1)
 };

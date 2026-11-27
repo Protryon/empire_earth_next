@@ -64,9 +64,6 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AuthIs: return (p->mAuthContext.get() != NULL) ? 1 : 0;
     case Op::AuthKill: p->mAuthContext->Kill(); return 0;
     case Op::AuthClear: p->mAuthContext = NULL; return 0;
-    case Op::HashSetClear: p->mHasSetHashFileList = false; return 0;
-    case Op::HashListClear: p->mHashFileList.clear(); return 0;
-    case Op::HashListRead: StringParser(reinterpret_cast<const char*>(a)).ReadValue(p->mHashFileList); return 0;
     case Op::CommunitySet: p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a); return 0;
     case Op::AuthSetCommunity: p->mAuthContext->SetCommunity(p->mLoginCommunity); return 0;
     case Op::CdKeyCheck: return (p->mConfig->mCDKeyCheck) ? 1 : 0;

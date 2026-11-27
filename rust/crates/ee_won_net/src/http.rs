@@ -893,6 +893,15 @@ pub unsafe extern "C" fn ee_won_url_obj_new(text: *const u8, len: usize) -> *mut
     Box::into_raw(Box::new(EeWonUrlObj(u)))
 }
 
+/// `URL(text).GetType()`: the kind a parse of the text gives (0 none, 1 file, 2 http, 3 ftp), no object kept.
+///
+/// # Safety
+/// `text` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_url_kind(text: *const u8, len: usize) -> i32 {
+    Url::parse(unsafe { slice(text, len) }, KINDS).kind
+}
+
 /// A copy (the C++ copy constructor).
 ///
 /// # Safety

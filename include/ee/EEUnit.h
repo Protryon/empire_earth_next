@@ -15,7 +15,6 @@
 #include "lle/UList.h"                  // EEComplexUnit+0xc4
 #include "lle/U2DPoint.h"               // EEComplexUnit+0x1a4
 #include "lle/GEColor.h"                // EEComplexUnit+0x1ac
-#include "ee/EEUnitClassIDs.h"
 #include "ee/EEResourceType.h"         // kResourceAny (CanTake)
 class GETerrainMesh;
 #include "lle/GEPhysicalModel.h"        // EEComplexUnit+0x130 (it uses GE3DLine/GEViewport by reference)
@@ -37,7 +36,6 @@ class EETown;
 class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit+0x208, EEUnitClass+0x118)
 #include "ee/EEUnitVectorItem.h"        // the element of EEComplexUnit::mGoalQueues (inline GetQueueGoals, the destructor)
 class GEModel;
-#include "ee/EETileCoordinate.h"     // RTSUnit::GetTile returns one
 class EEPlayer;
 class EEUnitClass;
 class EEUnitGoal;
@@ -48,9 +46,7 @@ class EESoundObject;
 #include "ee/EEUnitClassImprovement.h"
 #include "ee/EEUnitKind.h"               // EEClassBody (EEUnitClass::IsBuilding, Virtual70)
 #include "ee/EEUnitUpdate.h"             // EEUnitClassActionChanged (EEUnitClass::HandleActionChanged)
-#include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 #include "rust/sim/cp.h"                 // ee_cp_distance_squared_to_unit (DistanceSquaredToUnit)
-#include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
 #include "rust/sim/combat.h"             // EE_COMBAT_SHOT_* (the shots' steps)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
@@ -124,11 +120,9 @@ public:
     UWideString mName;                      // +0x4c (= "" in the ctor)
     // +0x60 mUnitClass, +0x64 mButton .. +0x7c mSelectionSounds[1]: the Rust record EeUnitsUnitClassUpgradeLinks (a base)
     // +0x84 mAreaEffectScale .. +0x168 mIsInitialized: the record EeUnitsUnitClassUpgradeFields (the base above)
-    float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEActiveGroup::ComputeValues 0x5ed692 copies it through fld/fstp)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
-    bool GetIsInitialized() const { return this->mIsInitialized; }
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)
     volatile bool mIsLoadingButtons;        // +0x16a (ctor: false; 0x23bc29 sets it while loading the media and the
                                             //  other loaders poll it with Sleep(1): `mov byte ptr`, re-read each pass)
@@ -306,11 +300,6 @@ public:
         GEPhysicalModel::SetLocation(inLocation);
         EEUnitStoreMoved(this);
     }
-    void SetLocationAndScale(const GETransformation& inLocation, float inScale)
-    {
-        GEPhysicalModel::SetLocationAndScale(inLocation, inScale);
-        EEUnitStoreMoved(this);
-    }
     void SetLocationXY(float inX, float inY)
     {
         GEPhysicalModel::SetLocationXY(inX, inY);
@@ -457,10 +446,6 @@ public:
     // 0x15463e / 0x15465b / 0x154c95 / 0x154e7b / 0x154f39 (EEPMLand.cpp, ecx = the unit): the group's stat when
     // mActiveGroup is set (EEActiveGroup::GetMaxAngularVelocity ..), else mStats->mFB4 .. (provisional names)
     float GetMaxAngularVelocity() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY); }
-    float GetAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ANGULAR_ACCELERATION); }
-    float GetAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ACCELERATION); }
-    float GetInverseAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ACCELERATION); }
-    float GetInverseAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ANGULAR_ACCELERATION); }
     // 0x1fe76e (the meteor storm passes the meteor's start point, true) (provisional name)
     void SetLocation(const GE3DPoint& inLocation, bool inUpdateTiles) { ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_LOCATION, this, NULL, inUpdateTiles, 0, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ()); }   // the unit moved, then its model's 3D location (u12a_small.rs)
     void SetFlightTime(long inValue) { if (this->mFlightTime != inValue) this->mFlightTime = inValue; }  // inline (meteor storm 0xb29ac)
@@ -688,13 +673,10 @@ public:
     // mCollisionTile (+0x1a4) and the effect handles mConversionEffect (+0x2c0), mHealEffect (+0x2c4) and mFireEffect
     // (+0x310): the record's (units round 12)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
-    EEUnitAction* GetCommand() const { return this->mCommand; }
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     bool GetIsDisabled() const { return this->mIsDisabled; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsBuilt() const { return this->mIsBuilt; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    float GetRoll() const { return this->mRoll; }
     // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
     // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
     // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.
@@ -992,13 +974,10 @@ public:
     std::vector<long> mResearchTechnologies;  // +0x02c 4-byte elements: the ctor's `_Buy(0)`
     // +0x060 mAIScript .. +0x118 mBehavior (the effects, media, related classes, physics model, improvements,
     // behaviour): the Rust record EeUnitsUnitClassLinks (the third base above)
-    EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     // inline (EEE3DDamageVent::SetUp 0xeabb5 loads it as a value before the effect's height)
     // (provisional name)
     float GetScale() const { return this->mScale; }
     float GetMaxVelocity() const { return this->mMaxVelocity; }  // inline (read as a value)
-    float GetRange() const { return this->mRange; }  // inline (EESMObject 0x5c8871)
-    float GetLineOfSight() const { return this->mLineOfSight; }
     bool GetIsTree() const { return this->mIsTree; }  // inline (EESMEffect 0x5c2b3e)
     bool GetCanSetRallyPoint() const { return this->mCanSetRallyPoint; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsTower() const { return this->mIsTower; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
@@ -1010,8 +989,6 @@ public:
     bool GetIsProjectile() const { return this->mIsProjectile; }
     unsigned char GetDomains() const { return this->mDomains; }
     float GetAcceleration() const { return this->mAcceleration; }  // inline (read as a value)
-    float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (read as a value)
-    float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
     // inline (the heal goal's Virtual64 0x22569f loads it as an FP value after the ratio; provisional name)
     float GetHealThreshold() const { return this->mHealThreshold; }
     bool GetIsWall() const { return this->mIsWall; }

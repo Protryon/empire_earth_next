@@ -47,13 +47,6 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
     return EECombatAttackFactor(theIn);
 }
 
-
-// The number of unit families: the rows of dbfamily (the original refused a file of more than 60)
-unsigned long EEFamilyCount()
-{
-    return ee_combat_damage_table_rows();
-}
-
 // gDamageTable[inRow][inColumn] (ee_combat's checked accessor: 0 off the table)
 float EEDamageFactor(long inRow, long inColumn)
 {

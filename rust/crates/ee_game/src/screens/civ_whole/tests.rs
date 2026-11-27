@@ -479,15 +479,10 @@ fn names(lines: &[Vec<u8>]) -> Vec<String> {
     lines.iter().map(|l| text_of(l)).collect()
 }
 
-/// The language's string ids these modules use, against include/ee/EEStringIDs.h.
+/// The language's string ids these modules use, against the language table (`ee_base::string_ids`).
 #[test]
 fn string_ids_match_the_header() {
-    let header = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EEStringIDs.h"))
-        .expect("EEStringIDs.h");
-    let id = |name: &str| -> i64 {
-        let line = header.lines().find(|l| l.split_whitespace().nth(1) == Some(name)).expect(name);
-        line.split_whitespace().nth(2).unwrap().parse().unwrap()
-    };
+    let id = |name: &str| -> i64 { i64::from(ee_base::string_ids::by_name(name).expect(name)) };
     assert_eq!(IDS_CIVILIZATION_NAME, id("IDS_CIVILIZATION_NAME"));
     assert_eq!(IDS_ERROR_DELETING_FILE, id("IDS_ERROR_DELETING_FILE"));
     assert_eq!(IDS_ERROR_CREATING_FILE, id("IDS_ERROR_CREATING_FILE"));

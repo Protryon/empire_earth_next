@@ -54,7 +54,7 @@ mod k {
 
 fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
     // SAFETY: the C++ switch over the live game, on the simulation thread
-    unsafe { ee_ai_units_host_cpp(op, me, a, b, c, out) }
+    unsafe { super::tech_ops::op(op, me, a, b).unwrap_or_else(|| ee_ai_units_host_cpp(op, me, a, b, c, out)) }
 }
 
 /// The computer player's id (`me` its `EEPlayer*`; 0: none).

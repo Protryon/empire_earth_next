@@ -7,10 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// EETechTreeEpoch's containers (its `mLists`; were its std::map `mNodes` and std::vector `mLoadedUnitClasses`): its
-/// nodes by id (an `EETechTreeNode*` each, in the map's order) and the unit classes whose media LoadMedia loaded.
-struct EeTechEpochLists;
-
 extern "C" {
 
 /// EETechTree::UpdateInterface: for the local player's tree, the new epoch's name shown and the main game form's
@@ -81,18 +77,6 @@ void *ee_gamecpp_tech_tree_player(void *tree);
 
 /// EETechTreeNode::GetHotKey: the node's hot key (its data's mHotKey), or NULL.
 void *ee_gamecpp_tech_node_hot_key(void *node);
-
-/// A new epoch's empty lists (EETechTreeEpoch's constructor).
-EeTechEpochLists *ee_gamecpp_tech_epoch_lists_new();
-
-/// The epoch's node of an id, or NULL (EETechTreeEpoch::Get's lookup).
-///
-/// # Safety
-/// `lists` is an epoch's live lists.
-void *ee_gamecpp_tech_epoch_find(const EeTechEpochLists *lists, long id);
-
-/// EETechTreeEpoch's destructor: its nodes deleted, then its lists freed.
-void ee_gamecpp_tech_epoch_free(void *epoch);
 
 /// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
 long ee_gamecpp_tech_epoch_delete_nodes(void *epoch,
@@ -172,6 +156,30 @@ void ee_gamecpp_tech_sum_costs_captured(void *tree,
                                         long id,
                                         long unit_class,
                                         long *costs);
+
+/// The virtual `GetIsObsolete`: an epoch's flag, a node's walk.
+bool ee_gamecpp_tech_obj_obsolete(void *node);
+
+/// The virtual `GetCost`: an epoch's or a node's.
+long ee_gamecpp_tech_obj_cost(void *node, long resource, long unit_class, float scale);
+
+/// The virtual `GetBuildTime`: an epoch's (half for a computer player), a node's data's.
+long ee_gamecpp_tech_obj_build_time(void *node);
+
+/// The virtual `LoadMedia` (`load`) and `UnloadMedia`: an epoch's (its buildings' unit classes, then its own), a
+/// node's walk.
+void ee_gamecpp_tech_obj_media(void *node,
+                               void *player,
+                               bool load);
+
+/// `GetUnitClass(i)` for the C++.
+long ee_gamecpp_tech_obj_unit_class(void *node, unsigned long i);
+
+/// `EETechTree::Get` for the C++ (an `EETechTreeNode*`, or NULL).
+void *ee_gamecpp_tech_obj_get(void *tree, long id);
+
+/// `~EETechTree`: the saved game's lists, then the epochs in order.
+void ee_gamecpp_tech_tree_free(void *tree);
 
 }  // extern "C"
 

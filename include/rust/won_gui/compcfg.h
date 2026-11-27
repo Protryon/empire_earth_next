@@ -180,6 +180,8 @@ enum class EeWonCcOp : int32_t {
   SelInvert,
   /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_UseOriginalColor)`.
   SelOriginal,
+  /// `WONShellNew(a, b, d, e)`: a new shell of kind `a` (no reference).
+  NewShell,
 };
 
 /// What `ee_won_cc_call` answers; `o` is the Rust object named, the arguments `a`..`d` as each says.

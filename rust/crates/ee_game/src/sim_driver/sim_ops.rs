@@ -38,8 +38,6 @@ pub enum EeSimDriverSim {
     PlayerSetStance,
 
     PlayerAddPendingUnits,
-    NodeData,
-    NodeCost,
     SendToAllAndWait,
     DerefMessage,
     // the platform switches
@@ -94,7 +92,6 @@ pub enum EeSimDriverSim {
     DmActiveUnitId,
     DmPlPop,
     DmPlEog,
-    DmPlEpoch,
     DmTownId,
     DmTownUnits,
     DmTownPatrol,

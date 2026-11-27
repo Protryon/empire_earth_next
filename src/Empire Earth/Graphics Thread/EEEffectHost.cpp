@@ -100,9 +100,6 @@ namespace {
 const bool kRegistered = (EEGfxObjectLayoutRegister(), true);
 }
 
-// the effects' file, the manager's Load, Save and entry points, an effect's local flag: gamecpp fx_world.rs
-EeGfxEffectFile EEEffectFile(FSFile& inFile) { return ee_gamecpp_fw_file(&inFile); }
-
 // the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm
 // recentred on the terrain there; the tiles' bounds (gamecpp ro_views.rs over ee_gfx effect_storm.rs)
 void EEEffect::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
@@ -120,23 +117,6 @@ U2DPoint<long> EEEffect::GetCenterPoint() const
 // effect_batch.rs's, the shared plane models (0x4e8df4, 0x4e8df8) too. The GE value classes pass as their mirrors.
 static GEVertexArray* sEffectVertices[2];
 static GEPolygonArray* sEffectPolygons;
-
-// Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
-// (provisional name)
-void CreateEffectBatchBuffers()
-{
-    ee_gamecpp_fx_batch_create();
-}
-
-// Deletes the quad batches' polygon array and vertex arrays (provisional name)
-void DeleteEffectBatchBuffers()
-{
-    ee_gamecpp_fx_batch_delete();
-}
-
-// Creates and releases the two shared quad models (provisional names)
-void CreatePlaneModels() { ee_gfx_effect_planes_create(ee_gamecpp_ro_raster()); }
-void ReleasePlaneModels() { ee_gfx_effect_planes_release(ee_gamecpp_ro_raster()); }
 
 // Places up to N shell-hole decals of the unit's class around a point (ambient effects on; ee_gfx
 // effect_placement.rs over the manager's list); the first one renews a decal already on that spot instead, unless
@@ -248,7 +228,6 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FxTileSeenBy: return ((EEMapTile*)p)->IsSeenBy((EEPlayer*)a[0]);
     case O::FxPlIsAlly: return ((EEPlayer*)p)->IsAlly((EEPlayer*)a[0]);
     case O::FxPlSelectedGroup: return P64(((EEPlayer*)p)->mSelectedGroup);
-    case O::FxPlCurrentEpoch: return ((EEPlayer*)p)->mTechnologies->mCurrentEpoch;
     case O::FxGroupHasType: return ((EESelectedGroup*)p)->HasUnitType((unsigned long)a[0]);
     case O::FxGroupUnit: return P64(((EESelectedGroup*)p)->GetUnit((unsigned long)a[0]));
     case O::FxGroupNumUnits: return ((EESelectedGroup*)p)->GetNumUnits();

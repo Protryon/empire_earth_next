@@ -53,7 +53,7 @@ public:
 
 class LobbyPersistentData;
 class LobbyContainer;
-class RustLogic; class PingLogic; class WindowEventBase;
+class RustLogic; class WindowEventBase;
 class ChatCommandParser;
 enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); LobbyGameType: WONLobbyGUI.h
 // the lobby's private state (0x118 bytes; constructor 0x7628c0, destructor 0x7630a0; created by 0x761fb0).
@@ -77,7 +77,7 @@ public:
     SmartPtr<RustLogic> mRoutingLogic; // 0x24
     SmartPtr<RustLogic> mStagingLogic; // 0x28
     SmartPtr<RustLogic> mLanLogic; // 0x2c
-    SmartPtr<PingLogic> mPingLogic; // 0x30
+    SmartPtr<RustLogic> mPingLogic; // 0x30 (a RustLogic of the Ping kind since R6 WON round 39)
     LobbyLogicMgr mLogicMgr; // 0x34..0x40
     SmartPtr<UDPManager> mUDPManager; // 0x40
     SmartPtr<WindowEventBase> mTimerEvent; // 0x44
@@ -93,9 +93,7 @@ public:
     SmartPtr<AuthContext> mAuthContext; // 0x74
     CDKey mCDKey; // 0x78..0x94 (0x1c bytes)
     std::wstring mLoginCommunity; // 0x94..0xa4
-    bool mHasSetHashFileList; // 0xa4
-    typedef std::list<std::string> HashFileList;
-    HashFileList mHashFileList; // 0xa8..0xb4
+    // (mHasSetHashFileList +0xa4 and mHashFileList +0xa8 are lobbyprv.rs's since R6 WON round 39)
     std::string mSysTOUPath,mGameTOUPath; // 0xc8, 0xd8
     SmartPtr<ChatCommandParser> mChatCommandParser; // 0x110
     LobbyGameType mCurGameType; // 0x114..0x118

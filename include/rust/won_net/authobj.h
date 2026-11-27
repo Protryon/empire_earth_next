@@ -42,6 +42,14 @@ const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
 /// `c` a live context.
 EeWonAuthObj *ee_won_authctx_peer_data(const EeWonAuthCtx *c);
 
+/// `GetPeerData()->...`: a number of the context's peer data (`EE_WON_AUTHOBJ_*`, as `ee_won_authobj_num`), 0 without
+/// peer data (the lobby's LAN peer authentication reads the first community: `GetFirstCommunity()`).
+///
+/// # Safety
+/// `c` a live context.
+int64_t ee_won_authctx_peer_num(const EeWonAuthCtx *c,
+                                int32_t which);
+
 /// `SetPeerData(data)` (NULL, or anything but peer data: none).
 ///
 /// # Safety

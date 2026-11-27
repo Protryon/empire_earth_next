@@ -17,7 +17,7 @@ use ee_sim::tech::capture_rec::ee_tech_capture_walk_begin;
 use ee_sim::tech::ffi::{ee_tech_class_costs, ee_tech_epoch_build_time, ee_tech_needs_unit_media};
 use ee_sim::tech::nodes::{
     ee_tech_fill_from_record, ee_tech_node_assign, ee_tech_walk_tree, EeTechHostIo, EeTechNodeDataFields,
-    EeTechNodeFields, EeTechTreeFields, EeTechTreeOp, EeTechTreeRecord, EE_TECH_HOST_READ_BOOL, EE_TECH_HOST_READ_LONG,
+    EeTechNodeFields, EeTechTreeOp, EeTechTreeRecord, EE_TECH_HOST_READ_BOOL, EE_TECH_HOST_READ_LONG,
     EE_TECH_HOST_WRITE_BOOL, EE_TECH_HOST_WRITE_LONG,
 };
 use ee_sim::tech::nodes_capture::ee_tech_capture_node_walk;
@@ -27,8 +27,9 @@ use super::host::{
     ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs, epoch_insert, epoch_nodes,
     tree_player,
 };
+use super::objects as ob;
 use crate::gamecpp::persistent::Pf;
-use crate::gamecpp::{h, hp, rec, O, P};
+use crate::gamecpp::{h, hp, O, P};
 
 /// `kErrorOK`.
 const TB_OK: i64 = 0;
@@ -36,11 +37,6 @@ const TB_OK: i64 = 0;
 const TB_FIRST_NODE_ID: c_long = 1000;
 /// `IDS_PREHISTORIC_AGE`: a new tree's epoch title.
 const TB_PREHISTORIC_AGE: c_long = 30145;
-
-pub(crate) fn tree_fields(tree: P) -> *mut EeTechTreeFields {
-    // SAFETY: the tree's record (EETechTree's second base; NULL for a NULL tree)
-    unsafe { rec::<EeTechTreeFields>(O::TkTreeFields, tree) }
-}
 
 /// The tree's player index (`mPlayerIndex`).
 pub(crate) fn player_index(tree: P) -> c_long {
@@ -54,15 +50,7 @@ pub(crate) fn player_pointer(tree: P) -> P {
     unsafe { (*tree_fields(tree)).mPlayer as P }
 }
 
-pub(crate) fn node_fields(node: P) -> *mut EeTechNodeFields {
-    // SAFETY: the node's record (RTSTechTreeNode's base)
-    unsafe { rec::<EeTechNodeFields>(O::TkNodeFields, node) }
-}
-
-pub(crate) fn node_data(node: P) -> *mut EeTechNodeDataFields {
-    // SAFETY: the node's data record (RTSTechTreeNodeData's base; NULL without data)
-    unsafe { rec::<EeTechNodeDataFields>(O::TkNodeData, node) }
-}
+pub(crate) use super::objects::{node_data, node_fields, tree_fields};
 
 pub(crate) fn data_of(node: P) -> EeTechNodeDataFields {
     // SAFETY: a node with data: its record, copied out
@@ -112,8 +100,8 @@ fn read_record(node: P, file: P, epoch: bool) -> (EeTechTreeRecord, i64) {
 pub extern "C" fn ee_gamecpp_tech_node_load(node: *mut c_void, file: *mut c_void, tree: *mut c_void) -> c_long {
     let node = node as P;
     let file = file as P;
-    hp(O::TbNewData, node, &[]);
-    h(O::TbSetTree, node, &[tree as i64]);
+    ob::data_new(node);
+    ob::set_tree(node, tree as P);
     let (record, result) = read_record(node, file, false);
     let data = data_of(node);
     let classes = unit_classes(node);
@@ -135,7 +123,7 @@ pub extern "C" fn ee_gamecpp_tech_node_load(node: *mut c_void, file: *mut c_void
     let epoch = ee_tech_epoch_of(data.mID as i32) as c_long;
     // SAFETY: the node's record
     unsafe { (*node_fields(node)).mEpoch = epoch };
-    h(O::TbSetButton, node, &[record.mButton as i64]);
+    ob::set_button_id(node, record.mButton as c_long);
     result as c_long
 }
 
@@ -146,8 +134,8 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
     let epoch = epoch as P;
     let file = file as P;
     let tree = tree as P;
-    h(O::TbSetTree, epoch, &[tree as i64]);
-    hp(O::TbNewData, epoch, &[]);
+    ob::set_tree(epoch, tree);
+    ob::data_new(epoch);
     let mut node_count: c_ulong = 0;
     Pf(file).read_ulong(&mut node_count);
     let (record, mut result) = read_record(epoch, file, true);
@@ -156,18 +144,16 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
         // the epochs' titles (EEEpochTitleID: ee_sim tech tech_ids.rs)
         ee_tech_set_epoch_title(data.mID as i32, fields_of(epoch).mTitleID as i32);
     }
-    h(O::TbSetButton, epoch, &[record.mButton as i64]);
+    ob::set_button_id(epoch, record.mButton as c_long);
     if result == TB_OK {
         for _ in 0..node_count {
             if result != TB_OK {
                 break;
             }
-            let node = hp(O::TbNewNode, 0, &[]);
-            result = ee_gamecpp_tech_node_load(
-                node as *mut c_void,
-                file as *mut c_void,
-                hp(O::TkNodeTree, epoch, &[]) as *mut c_void,
-            ) as i64;
+            let node = ob::node_new();
+            result =
+                ee_gamecpp_tech_node_load(node as *mut c_void, file as *mut c_void, ob::tree_of(epoch) as *mut c_void)
+                    as i64;
             let id = data_of(node).mID;
             if result == TB_OK && id >= TB_FIRST_NODE_ID {
                 // the node belongs to the epoch whose block holds it (the original: id / 1000 - 1)
@@ -176,8 +162,8 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
                 ee_tech_register_node(id as i32, data.mID as i32);
                 epoch_insert(epoch, node);
             } else {
-                h(O::TkNodeUnload, node, &[]);
-                h(O::TkNodeDelete, node, &[]);
+                ee_gamecpp_tech_node_unload(node as *mut c_void);
+                ob::node_delete(node);
             }
         }
     }
@@ -191,10 +177,9 @@ pub extern "C" fn ee_gamecpp_tech_node_assign(node: *mut c_void, other: *const c
     if n != o {
         // the record's fields: ee_tech nodes.rs assign (the original's copy of mData->mMakesUnit onto the same
         // shared data was a self-assignment, dropped); the shared block already holds the class cost tables
-        h(O::TbShareData, n, &[o as i64]);
+        ob::share(n, o);
         // SAFETY: two distinct live nodes' records
         unsafe { ee_tech_node_assign(node_fields(n), node_fields(o), false) };
-        h(O::TbCopyButton, n, &[o as i64]);
     }
     node
 }
@@ -204,15 +189,14 @@ pub extern "C" fn ee_gamecpp_tech_node_assign(node: *mut c_void, other: *const c
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_epoch_assign(epoch: *mut c_void, other: *const c_void) -> *mut c_void {
     let (e, o) = (epoch as P, other as P);
-    h(O::TbShareData, e, &[o as i64]);
-    h(O::TbCopyButton, e, &[o as i64]);
+    ob::share(e, o);
     // SAFETY: the two epochs' records (the record's fields, counting off: ee_tech nodes.rs assign)
     unsafe { ee_tech_node_assign(node_fields(e), node_fields(o), true) };
     ee_gamecpp_tech_epoch_delete_nodes(epoch, false);
     for node in epoch_nodes(o) {
-        let copy = hp(O::TbNewNode, 0, &[]);
+        let copy = ob::node_new();
         ee_gamecpp_tech_node_assign(copy as *mut c_void, node as *const c_void);
-        h(O::TbSetTree, copy, &[h(O::TkNodeTree, e, &[])]);
+        ob::set_tree(copy, ob::tree_of(e));
         epoch_insert(e, copy);
     }
     epoch
@@ -235,8 +219,9 @@ pub extern "C" fn ee_gamecpp_tech_tree_init(tree: *mut c_void) {
         (*t).mEpochsBeforeWonders = 1;
         (*t).mPlayerIndex = 0;
         (*t).mPlayer = std::ptr::null_mut();
+        (*t).mEpochs = 0;
     }
-    h(O::TkEpochsResize, tree, &[ee_tech_epoch_count() as i64]);
+    ob::epochs_resize(tree, ee_tech_epoch_count() as i64);
 }
 
 /// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
@@ -255,12 +240,12 @@ pub extern "C" fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c
         (*tf).mPlayerIndex = (*of).mPlayerIndex;
         (*tf).mPlayer = (*of).mPlayer;
     }
-    let count = h(O::TkEpochCount, o, &[]);
-    h(O::TkEpochsResize, t, &[count]);
+    let count = ob::epoch_count(o);
+    ob::epochs_resize(t, count);
     for i in 0..count {
-        let epoch = hp(O::TkEpochAt, t, &[i]);
-        h(O::TbSetTree, epoch, &[t as i64]);
-        ee_gamecpp_tech_epoch_assign(epoch as *mut c_void, hp(O::TkEpochAt, o, &[i]) as *const c_void);
+        let epoch = ob::epoch_at(t, i);
+        ob::set_tree(epoch, t);
+        ee_gamecpp_tech_epoch_assign(epoch as *mut c_void, ob::epoch_at(o, i) as *const c_void);
     }
     // SAFETY: the tree's record
     unsafe { (*tf).mIsLoaded = false };
@@ -274,7 +259,7 @@ pub extern "C" fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_v
     // SAFETY: the tree's record
     unsafe { (*t).mPlayer = player.cast() };
     if !player.is_null() {
-        let index = h(O::TkPlId, player as P, &[]) as c_long;
+        let index = ob::player_id(player as P) as c_long;
         // SAFETY: as above
         unsafe { (*t).mPlayerIndex = index };
     }
@@ -286,7 +271,7 @@ pub extern "C" fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_v
 pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
     let n = node as P;
     if destroy {
-        let tree = hp(O::TkNodeTree, n, &[]);
+        let tree = ob::tree_of(n);
         if fields_of(n).mIsUnitMediaLoaded {
             let player = tree_player(tree);
             if player != 0 {
@@ -297,7 +282,7 @@ pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
             for class in unit_classes(n) {
                 let player = tree_player(tree);
                 if player != 0 {
-                    h(O::TbSwapButton, player, &[class as i64, h(O::TbButton, n, &[]), 0]);
+                    h(O::TbSwapButton, player, &[class as i64, ob::button(n) as i64, 0]);
                 }
             }
         }
@@ -313,7 +298,7 @@ pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_node_unload(node: *mut c_void) -> c_long {
     if !node_data(node as P).is_null() {
-        h(O::TbDeleteData, node as P, &[]);
+        ob::data_delete(node as P);
     }
     0
 }
@@ -323,11 +308,11 @@ pub extern "C" fn ee_gamecpp_tech_node_unload(node: *mut c_void) -> c_long {
 pub extern "C" fn ee_gamecpp_tech_node_set_button(node: *mut c_void, button: c_ulong) {
     let n = node as P;
     for class in unit_classes(n) {
-        let player = tree_player(hp(O::TkNodeTree, n, &[]));
+        let player = tree_player(ob::tree_of(n));
         let new = hp(O::TbButtonGet, 0, &[button as i64]);
-        h(O::TbSwapButton, player, &[class as i64, h(O::TbButton, n, &[]), new as i64]);
+        h(O::TbSwapButton, player, &[class as i64, ob::button(n) as i64, new as i64]);
     }
-    h(O::TbSetButton, n, &[button as i64]);
+    ob::set_button_id(n, button as c_long);
 }
 
 /// EETechTreeNode::NeedsUnitMedia (`captured`: TNMT records the answer) and NeedsUnitMediaUncaptured: whether the
@@ -338,12 +323,12 @@ pub extern "C" fn ee_gamecpp_tech_needs_unit_media(node: *mut c_void, captured: 
     // the node's class (none for an id 0 or less or an empty table entry) and its family
     let class_family = || {
         let unit_class = data_of(n).mUnitClass;
-        let class = if unit_class > 0 { hp(O::TkClassAt, 0, &[unit_class as i64]) } else { 0 };
-        (unit_class, if class != 0 { Some(h(O::TbClassFamily, class, &[]) as i32) } else { None })
+        let class = if unit_class > 0 { ob::class_at(unit_class as i64) } else { 0 };
+        (unit_class, if class != 0 { Some(ob::class_family(class) as i32) } else { None })
     };
     let (_, family) = class_family();
     let f = fields_of(n);
-    let tree = hp(O::TkNodeTree, n, &[]);
+    let tree = ob::tree_of(n);
     // SAFETY: the node's tree's record
     let start = unsafe { (*tree_fields(tree)).mStartEpoch };
     let result = ee_tech_needs_unit_media(
@@ -379,7 +364,7 @@ pub extern "C" fn ee_gamecpp_tech_needs_unit_media(node: *mut c_void, captured: 
 pub extern "C" fn ee_gamecpp_tech_epoch_build_time(epoch: *mut c_void) -> c_long {
     let e = epoch as P;
     // (TNWK, TEST ONLY: asked once, as the test did)
-    let human = h(O::TbIsHuman, tree_player(hp(O::TkNodeTree, e, &[])), &[]) as i32;
+    let human = h(O::TbIsHuman, tree_player(ob::tree_of(e)), &[]) as i32;
     let build_time = data_of(e).mBuildTime as i32;
     let result = ee_tech_epoch_build_time(human, build_time);
     ee_tech_capture_walk_begin(); // TNMT (TEST ONLY)

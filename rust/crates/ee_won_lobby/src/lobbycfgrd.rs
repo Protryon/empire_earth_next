@@ -133,15 +133,6 @@ pub enum EeWonLobbyCfgRdOp {
     CreditsBase,
     /// `CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)` (`LCall(AddLine, &line, ...)`).
     CreditsAddLine,
-    // ---- the configs' SetComponent statements (R6 WON round 35)
-    /// `static_cast<ContainerConfig*>(c)->ContainerConfig::SetComponent((Component*)a)` (guarded).
-    BaseSetComponent = 200,
-    /// `rl->mRoomLabel = static_cast<RoomLabelCtrl*>((Component*)a)`.
-    RoomSetLabel,
-    /// `cc_->mChatCtrl = static_cast<ChatCtrl*>((Component*)a)`.
-    ChatSetCtrl,
-    /// `sl->mServerList = static_cast<ServerListCtrl*>((Component*)a)`.
-    ServerSetList,
 }
 
 /// The calls in: `(key's bytes, its length, the key as a `const std::string*`, d)`.
@@ -161,11 +152,6 @@ pub enum EeWonLobbyCfgRdCall {
     CrossPromotion,
     ImageText,
     Credits,
-    /// The configs' `SetComponent((Component*)d)` (no key): the room label's member then the base's; the chat's
-    /// and the game list's the base's then the member.
-    RoomLabelSetComponent,
-    ChatSetComponent,
-    ServerListSetComponent,
 }
 
 use EeWonLobbyCfgRdOp as Op;
@@ -372,16 +358,6 @@ fn read(which: EeWonLobbyCfgRdCall, key_bytes: isize, len: isize, k: isize, d: i
     type C = EeWonLobbyCfgRdCall;
     let base = |op: Op| -> R<isize> { Ok((ok(o(op, k, 0, 0))? != 0) as isize) };
     Ok(match which {
-        C::RoomLabelSetComponent => {
-            ok(o(Op::RoomSetLabel, d, 0, 0))?;
-            ok(o(Op::BaseSetComponent, d, 0, 0))?;
-            0
-        }
-        C::ChatSetComponent | C::ServerListSetComponent => {
-            ok(o(Op::BaseSetComponent, d, 0, 0))?;
-            ok(o(if which == C::ChatSetComponent { Op::ChatSetCtrl } else { Op::ServerSetList }, d, 0, 0))?;
-            0
-        }
         C::ChatCtrl => {
             chat(o, key_index(gc::EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY, key_bytes, len), k)? as isize
         }

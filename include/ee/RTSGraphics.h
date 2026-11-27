@@ -79,9 +79,6 @@ public:
     void PostResume() { ee_rts_graphics_post_resume(this); }
     // 0x11aae4: mU34, and mU38 the last attached surface before type 3
     void SetSurface(GESurface* inSurface) { ee_rts_graphics_set_surface(this, inSurface); }
-    // port: the frame while the WON lobby is shown (Main, instead of Render): the lobby's composited frame copied to
-    // the back buffer and shown (the original showed the lobby in its own GDI window)
-    void RenderLobby() { ee_rts_graphics_render_lobby(this); }
 
     TSThread* mThread;                      // +0x04 (named by the ctor's asserts)
     GERasterizer* mRasterizer;              // +0x08

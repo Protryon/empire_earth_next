@@ -29,7 +29,6 @@ public:
     void Start() { this->mStart->Set(); }
     // 0x1321b1: mStop->Set() (the settings turn the music off)
     void Stop() { this->mStop->Set(); }
-    void Update(unsigned long inElapsedTime) { ee_music_update(this, (uint32_t)inElapsedTime); }
 
     URandom mRandom;                        // +0x04 (seeded with TMGetTime())
     SEConductor* mConductor;                // +0x14

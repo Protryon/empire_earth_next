@@ -87,13 +87,6 @@ long SaveGame(const UString& inFileName, unsigned long inTime, bool inFlag, UStr
     return ee_gamecpp_ps_save_game(&inFileName, inTime, inFlag, &inDescription);
 }
 
-// Writes the game into memory and then to the file (deleting the old text twin first) and reports "Game saved." or
-// an error message; returns the first error (0x14d34b)
-long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime)
-{
-    return ee_gamecpp_ps_save_to_file(&inFile, inTime);
-}
-
 // Checks a save's players against the lobby (scenario slots for a multiplayer scenario, else every lobby player must
 // be a saved one and all saved humans present); lists the problems, returns whether there are none
 bool EECheckSavedGameOptions(EEGameOptions& inSaved, EEGameOptions& inCurrent, bool inFlag,
@@ -111,7 +104,6 @@ bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
 
 // ------------------------------------------------------------------------- round 9, lane C: this file's bodies' C++
 
-
 static_assert(IDS_FILE_COULDNT_BE_OPENED == 7152 && IDS_SAVE_GAME_INCOMPATIBLE_WITH_THIS_VERSION == 7154 && IDS_SAVE_GAME_CONTAINS_INVALID_DATA == 7156 && IDS_SAVE_GAME_IS_MISSING_DATA_AND_CANNOT == 7157 && IDS_THERE_ARE_TOO_MANY_PLAYERS_IN_LOBBY == 10034 && IDS_PLAYER_DOES_NOT_EXIST_IN_SAVED == 10037 && IDS_THIS_SAVED_GAME_REQUIRES_PLAYERS == 10038 && IDS_THERE_ARE_TOO_MANY_PLAYERS_TO_PLAY == 10039 && IDS_THIS_IS_NOT_VALID_MULTIPLAYER_SCENARIO == 10040 && IDS_ERROR_CREATING_FILE == 10049 && IDS_ERROR_SAVING_FILE == 10050 && IDS_INVALID_FILE_NAME == 10068 && kPersistentChecksum == 1 && kPersistentSeed == 2 && kPersistentCamera == 3 && kPersistentMap == 4 && kPersistentPlayers == 5 && kPersistentScenario == 6 && kPersistentWorld == 7 && kPersistentEffects == 10 && kPersistentMultiplayer == 8 && kPersistentEnvironment == 12 && kPersistentCalamities == 11, "gamecpp persist_save.rs");
 
 #define P64(x) ((int64_t)(intptr_t)(x))
@@ -127,4 +119,3 @@ static_assert(IDS_FILE_COULDNT_BE_OPENED == 7152 && IDS_SAVE_GAME_INCOMPATIBLE_W
 #define ST ((EEGameState*)p)
 #define MEM ((FSMemoryFile*)p)
 #define PERSISTENT ((FSPersistent*)p)
-

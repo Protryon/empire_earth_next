@@ -171,9 +171,8 @@ fn lists_replace_or_add() {
     let repl = unsafe { ee_won_cfgval_string_list(t, std::ptr::null(), false, false) };
     assert!(read(repl, b"x, y").0);
     assert_eq!(f.list, vec![b"x".to_vec(), b"y".to_vec()]);
-    // the lobby's hash file list
-    assert!(unsafe { ee_won_cfgval_read_strings(c"h1,h2".as_ptr() as *const u8, t) });
-    assert_eq!(f.list.len(), 4);
+    // the lobby's hash file list (a Rust list since R6 WON round 39)
+    assert_eq!(crate::cfgval::read_string_list(c"h1, h2".as_ptr() as *const u8), vec![b"h1".to_vec(), b"h2".to_vec()]);
 
     let ll = unsafe { ee_won_cfgval_int_list_list(t, c"(1, 2)".as_ptr() as *const c_void, false, false) };
     call(ll, EeWonCfgValCall::Init, 0);

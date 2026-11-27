@@ -893,6 +893,9 @@ fn lists_answer(
     let at = |list: u32| player_op(p, list, ListOp::At(index as usize));
     let len = |list: u32| player_op(p, list, ListOp::Len) as i64;
     match op {
+        crate::units::player_save_split::EE_UNITS_PLAYER_SAVE_X_LOADED_ID => {
+            player_op(p, crate::units::player_lists::EE_UNITS_LISTS_LOADED_IDS, ListOp::Add(unit_id(io.i as u64)));
+        }
         EE_UNITS_PLAYER_SAVE_PATROL_CLEAR => {
             player_op(p, EE_UNITS_LISTS_PATROLS, ListOp::Clear(false));
         }
@@ -1089,19 +1092,21 @@ pub unsafe extern "C" fn ee_units_player_save(
     save(&mut FfiHost { ctx, f, queued, player: player_of(rec) }, Rec::new(rec), major, minor)
 }
 
-/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
+/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
+/// `ctx` (the loaded unit's id into the player's loaded ids is Rust's: `lists_answer`).
 ///
 /// # Safety
-/// `f` is valid with `ctx` for the call.
+/// `f` is valid with `ctx` for the call; `player` is the live `EEPlayer`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_player_unit(
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
+    player: *mut c_void,
     save_it: bool,
     major: u32,
     minor: u32,
 ) -> i32 {
-    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut(), player: 0 };
+    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut(), player: player as u64 };
     if save_it {
         save_unit(&mut h, major, minor)
     } else {

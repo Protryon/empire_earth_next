@@ -155,10 +155,9 @@ public:
     virtual ~WriteBuffer() { ee_won_writer_free(this->mBuffer); }
     WriteBuffer(const WriteBuffer&) = delete;
     WriteBuffer& operator=(const WriteBuffer&) = delete;
-    // the data's start (NULL before the first growth): capacity() bytes may be written there until the next growth
+    // the data's start (NULL before the first growth)
     char* data() { return reinterpret_cast<char*>(ee_won_writer_data(this->mBuffer)); }
     unsigned long length() const { return ee_won_writer_length(this->mBuffer); }
-    unsigned long capacity() const { return ee_won_writer_capacity(this->mBuffer); }
     void Reset() { ee_won_writer_reset(this->mBuffer); }
     // empties the buffer (the original forgot an allocation another owner had taken; ToByteBuffer hands it over now)
     void Release() { ee_won_writer_reset(this->mBuffer); }
@@ -171,11 +170,6 @@ public:
     void AppendBool(bool inValue) { unsigned char aByte=inValue?1:0; this->AppendBytes(&aByte,1); }
     void AppendShort(short inValue) { this->AppendBytes(&inValue,2); }
     void AppendLong(int32_t inValue) { this->AppendBytes(&inValue,4); } // 32-bit on every OS
-    void AppendString(const std::string& inText, unsigned char inSize = 2)
-    {
-        ee_won_writer_append_field(this->mBuffer,reinterpret_cast<const uint8_t*>(inText.data()),
-                                   static_cast<unsigned long>(inText.length()),inSize);
-    }
     // a unit count field, then the UTF-16 little-endian units
     void AppendWString(const std::wstring& inText, int inLengthSize)
     {

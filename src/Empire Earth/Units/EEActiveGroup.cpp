@@ -35,20 +35,7 @@ float EEComplexUnit::GetMaxVelocity() { return this->mActiveGroup ? this->mActiv
 // acceleration and their inverses)
 float EEActiveGroup::GetMaxVelocity(EEComplexUnit* inUnit) { return this->mFields.mMovesTogether ? this->mFields.mSpeed : inUnit->mStats->GetMaxVelocity(); }
 
-float EEActiveGroup::GetAcceleration(EEComplexUnit* inUnit) { return this->mFields.mMovesTogether ? this->mFields.mAcceleration : inUnit->mStats->GetAcceleration(); }
-
-float EEActiveGroup::GetMaxAngularVelocity(EEComplexUnit* inUnit) { return this->mFields.mMovesTogether ? this->mFields.mTurnSpeed : inUnit->mStats->GetMaxAngularVelocity(); }
-
-float EEActiveGroup::GetAngularAcceleration(EEComplexUnit* inUnit) { return this->mFields.mMovesTogether ? this->mFields.mTurnAcceleration : inUnit->mStats->mAngularAcceleration; }
-
 float EEActiveGroup::GetInverseMaxVelocity(EEComplexUnit* inUnit) { return this->mFields.mMovesTogether ? this->mFields.mInverseSpeed : inUnit->mStats->mInverseMaxVelocity; }
-
-float EEActiveGroup::GetInverseAcceleration(EEComplexUnit* inUnit) { return this->mFields.mMovesTogether ? this->mFields.mInverseAcceleration : inUnit->mStats->mInverseAcceleration; }
-
-float EEActiveGroup::GetInverseAngularAcceleration(EEComplexUnit* inUnit)
-{
-    return this->mFields.mMovesTogether ? this->mFields.mInverseTurnAcceleration : inUnit->mStats->mInverseAngularAcceleration;
-}
 
 // The active group bodies' host (ee_units ag_host.rs; EE_UNITS_AG_*): the group's and its units' reads, the goals'
 // constructors and accessors, and every statement with a world effect, each as the original made it

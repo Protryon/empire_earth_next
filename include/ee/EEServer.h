@@ -76,8 +76,6 @@ public:
     unsigned short mNoVotes;                // +0x330
     unsigned short mLagMask;                // +0x332
     unsigned char mNumVotes;                // +0x334 (CastVote: the votes so far)
-    void SetNumLoadResponses(unsigned char inValue) { this->mNumLoadResponses = inValue; }
-    void SetLoadState(unsigned char inValue) { this->mLoadState = inValue; }
     unsigned char mNumLoadResponses;        // +0x335 the lobby's Start clears it; the load responses so far (EEMStartLoadingResponse)
     unsigned char mLoadState;               // +0x336 the lobby's Start sets it; 2 when all have loaded, 0 at the start (EEMessage)
     unsigned char mNumDroppedLoaders;       // +0x337 (BootPlayer counts the dropped loaders)

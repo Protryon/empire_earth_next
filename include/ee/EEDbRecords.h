@@ -7,7 +7,6 @@
 
 #include <vector>
 
-#include "lle/UString.h"
 #include "rust/data/tables.h"
 
 // Opens the file, reads the count, calls inBegin(count) (false: no records are read), then for every record
