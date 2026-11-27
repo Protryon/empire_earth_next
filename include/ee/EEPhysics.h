@@ -64,19 +64,10 @@ public:
     float GetRandom(float inMinimum, float inMaximum) { return this->mRandom.Generate() * (inMaximum - inMinimum) + inMinimum; }
     // 0x1612d3: an integer in [inMinimum, inMaximum] from the same draw (the group messages pick a unit)
     long GetRandom(long inMinimum, long inMaximum) { return ee_rts_physics_random_range(this, inMinimum, inMaximum); }
-    // 0x82d66 (ret 4): a random index into inValues, GetRandom(0, size - 1). A member template: each TU emits its own
-    // COMDAT (the kept copy is EECPIntelligence's 0x82d66, ICF-folding the EEComplexUnit*/long/EEPlayer*
-    // instantiations; callers EECPCivilizationManager 0x711ac, EECPDefenseCommander 0x78148, EEHerd) (provisional name)
-    template <class T> long GetRandomElementIndex(std::vector<T>& inValues) { return this->GetRandom(0L, (long)inValues.size() - 1); }
-    // template COMDAT 0xa52eb (EEHerd.cpp's range, ret 4): GetRandom(0, size - 1) of a vector of EEFormationSlot
-    // (GetRandomElementIndex's twin for 0x14-byte elements) (provisional name)
-    template <class V> long GetRandomIndex(V& inValues) { return this->GetRandom(0L, (long)inValues.size() - 1); }
     // 0x161774 (EEMRecordFrames passes mF50; provisional name)
     void SetSpeed(float inSpeed) { ee_rts_physics_set_speed(this, inSpeed); }
     // inline: EEMRecordFrames stores +0x69 after it has pushed mF50 from the same `this` (provisional name)
     void SetSlowPlayback(bool inValue) { this->mSlowPlayback = inValue; this->SetSpeed(this->mSpeed); }
-    // 0x16140c (the thread; named by the ctor's CreateThread assert)
-    static unsigned long Main(void* inPointer) { return ee_rts_physics_main(inPointer); }
 
     // +0x04 (EEPhysics::QueueServerMessage pushes, ClearServerMessages pops and dereferences; push_back 0xa96fd, pop_back 0xa96d4, back()
     // through the out-of-line iterator operator* 0x3f7cc with the 1024-element blocks: a deque, whose _Mysize is the
@@ -119,14 +110,10 @@ public:
     virtual void Unlock();                  // +0x28 0x153c4d
     // 0x151e4d (EEDataPreLoading::LoadGame, under gWorld's lock; provisional name)
     void ClearServerMessages() { ee_physics_clear_server_messages(this); }
-    // 0x151d1f (Virtual18's message 0x50a: an EEMLoadOrSaveGame of "AutoSave <date>"; provisional name)
-    void AutoSave() { ee_physics_auto_save(this); }
     // 0x151f3a: the game is over (every player's result, the campaign progress, the main game form's blinking
     // button, the teams); the cheat codes 0x12bb7b/0x12bbad and Virtual20 call it (provisional name)
     void EndGame(bool inIsVictory) { ee_physics_end_game(this, inIsVictory); }
 
-    // 0x151e9f (after EEMReplantFarms; provisional name)
-    void FlushWorld() { ee_physics_flush_world(this); }
     // (provisional names)
     // 0x151efe (runs Virtual20 while mUB8 is set; DrainInput first)
     void RunOwedTicks() { ee_physics_run_owed_ticks(this); }
@@ -134,21 +121,11 @@ public:
     void GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime) { ee_physics_minutes_and_seconds(this, outMinutes, outSeconds, inTime); }
     // 0x152909 (the ctor and message 0x509: the counters, the queues)
     void Init() { ee_physics_init(this); }
-    // 0x153403 (under mSaveGameLock; referenced)
-    void QueueMessage(NEMessage* inMessage) { ee_physics_queue_message(this, inMessage); }
     // 0x153c23 (both referenced; processed by 0x1534d1)
     void QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew) { ee_physics_queue_unit_swap(this, inOld, inNew); }
-    // 0x153c59 (mF9C += mF98; every 2000: gAEManager)
-    void UpdateAreaEffectsClock() { ee_physics_update_area_effects_clock(this); }
-    void DrainInput() { ee_physics_drain_input(this); }
-    // 0x153f47 (Virtual20's; provisional name)
-    void CheckShiftMode() { ee_physics_check_shift_mode(this); }
     // 0x153836 (Virtual20's; provisional name)
     void ReportStatistics();                // 0x153836 (out of line: the test profile's harness hook)
-    // 0x1534d1 (the queued unit swaps: every player's Virtual9C, then each swap)
-    void ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
     // the thread messages (provisional names)
-    long PostAutoSave() { return ee_physics_post(this, 0x50a); }
     long PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
     long PostInit() { return ee_physics_post(this, 0x509); }
     // inline (COMDAT 0x761b5, first emitted by EECPCombatManager.cpp): the queued unit swaps (mSound2Index7.size())
@@ -161,10 +138,6 @@ public:
     // count of gWorld's +0xadc deque); 0x1540fb the day/night and wind
     unsigned long GetOutOfSynchChecksum(bool inDump, unsigned long inFlags) { return ee_physics_out_of_synch_checksum(this, inDump, inFlags); }
     UWideString GetTimeString();
-    void SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
-    void UpdateCivTimer() { ee_physics_update_civ_timer(this); }
-    void ServeLoadSaveRequests() { ee_physics_serve_load_save_requests(this); }
-    void UpdateWeather() { ee_physics_update_weather(this); }
 
     std::vector<NEMessage*> mLoadSaveRequests;  // +0x06c (queued under mSaveGameLock, referenced; Init dereferences them)
     TSCriticalSection* mSaveGameLock;       // +0x07c

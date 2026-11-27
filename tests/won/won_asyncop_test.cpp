@@ -18,7 +18,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "won_tracker_orig.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "won_net37_orig.h" // the pieces only the drivers use
 #include "won_thread_orig.h" // the C++ thread shims as they were (the game's socket thread is Rust's)

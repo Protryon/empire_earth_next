@@ -12,13 +12,10 @@
 #define EE_EEUSERINTERFACE_H
 
 #include "rust/game/screens.h"   // EeScreensUserInterfaceFields, the posts, the actions
-#include "rust/data/tables.h"    // ee_data_world_entry (AddChatLogEntry's display time)
 #include "ee/EEWorldConstants.h"
-#include "ee/EEUIEChatLogEvents.h"
 #include "ee/EESMDialogMessage.h"
 #include "ee/EEGraphics.h"
 #include "platform/PlatWindow.h"
-#include "platform/PlatTime.h"
 #include "lle/UIEvent.h"
 
 class EEAction;
@@ -62,7 +59,6 @@ public:
     void UpdateJITManufacturing() { this->Post(0x416); }
     long PostEnterScenarioEditor(bool inFlag) { return this->Post(0x411, (void*)inFlag); }
     void PostPauseInformation(bool inFlag) { this->Post(0x427, (void*)inFlag); }
-    void PostStartLoading() { ee_screens_ui_post_start_loading(this); }   // 0x407, 0x413 from the editor
     void PostUpdateBackgroundMedia() { this->Post(0x403); }
     void PostShowEpochName() { this->Post(0x404); }
     void PostSelectEditorTab(long inX, long inY) { this->Post(0x421, (void*)(intptr_t)inX, (void*)(intptr_t)inY); }
@@ -78,7 +74,6 @@ public:
     void PostRefreshSavedGroup(long inX) { this->Post(0x435, (void*)(intptr_t)inX); }
     void PostLoginDone() { this->Post(0x441); }   // DEAD-IN-AOC (base exe 0x661aef; only EEWonNet's MOTD callback)
     // the load percentage (0x40a; in multiplayer also EEMLoadPercent at every 20 percent step)
-    void SetLoadProgress(float inFraction) { ee_screens_ui_set_load_progress(this, inFraction); }
     void SetLoadingText(long inX) { this->Post(0x40b, (void*)(intptr_t)inX); }
     // 0x424 once until it is handled (nothing on a NULL object)
     void PostMessage424Once() { ee_screens_ui_post_icon_bar_once(this); }

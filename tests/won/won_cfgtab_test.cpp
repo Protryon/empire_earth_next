@@ -62,9 +62,20 @@ static const EeWonCfgTabHost* H(void* c) { return (const EeWonCfgTabHost*)c; }
 static std::string sEv;
 static long sRuns[3]; // the reader's answers: not its key, handled, threw
 static void Ev(const std::string& e) { if (sPrint) sEv += " " + e; }
-static bool LRead(void* c, EeWonCfgRead k) { bool r = H(c)->read(H(c)->ctx, k); Ev("r" + P((long long)(int)k) + "=" + P(r)); return r; }
-static bool LComma(void* c) { bool r = H(c)->comma(H(c)->ctx); Ev("c=" + P(r)); return r; }
-static bool LEnd(void* c) { bool r = H(c)->end(H(c)->ctx); Ev("e=" + P(r)); return r; }
+// The reads the game makes in Rust on the config's own object (cfgtab.rs over compcfg.rs, R6 WON lobby and network
+// round 39) are the world's here, as the game's host made them before: the world's config has no Rust object (the
+// host's cc is NULL), so the reader asks the host for every read, comma and end.
+struct CfgTabFrame;
+static bool WorldRead(void* p, EeWonCfgRead k);
+static bool WorldComma(void* p);
+static bool WorldEnd(void* p);
+static bool LRead(void* c, EeWonCfgRead k)
+{
+    bool r = WorldRead(H(c)->ctx, k);
+    Ev("r" + P((long long)(int)k) + "=" + P(r)); return r;
+}
+static bool LComma(void* c) { bool r = WorldComma(H(c)->ctx); Ev("c=" + P(r)); return r; }
+static bool LEnd(void* c) { bool r = WorldEnd(H(c)->ctx); Ev("e=" + P(r)); return r; }
 static const void* LText(void* c, int32_t s, uint16_t* len, uint32_t* unit)
 {
     const void* p = H(c)->text(H(c)->ctx, s, len, unit);
@@ -89,6 +100,33 @@ static int32_t LoggedRun(const EeWonCfgTabHost* h, int32_t t, const uint8_t* k, 
 #define ee_won_cfg_tab_run LoggedRun
 #include "ee/wonapi/WONCfgTable.inl"
 #undef ee_won_cfg_tab_run
+// the game's host's read (CfgTabRead) for the kinds it still makes, the world's reads for the rest (above)
+static bool WorldRead(void* p, EeWonCfgRead k)
+{
+    return CfgTabTry(p, [k, p](CfgTabFrame& a) {
+        ComponentConfig* cfg = a.mConfig;
+        switch (k) {
+        case EeWonCfgRead::Int: a.i[a.ni++] = cfg->ReadInt(); break;
+        case EeWonCfgRead::Bool: a.i[a.ni++] = cfg->ReadBool(); break;
+        case EeWonCfgRead::Color: a.i[a.ni++] = cfg->ReadColor(); break;
+        case EeWonCfgRead::Char: a.i[a.ni++] = cfg->ReadChar(); break;
+        case EeWonCfgRead::VertAlign: a.i[a.ni++] = cfg->ReadVertAlign(); break;
+        case EeWonCfgRead::HorzAlign: a.i[a.ni++] = cfg->ReadHorzAlign(); break;
+        case EeWonCfgRead::Str: a.s[a.ns++] = cfg->ReadString(false); break;
+        case EeWonCfgRead::Flag: { bool on = true; a.s[a.ns++] = cfg->ReadFlag(&on); a.i[a.ni++] = on; break; }
+        case EeWonCfgRead::SelColor: a.sel = cfg->ReadSelectionColor(); break;
+        case EeWonCfgRead::Cursor: a.cur = cfg->ReadCursor(); break;
+        case EeWonCfgRead::Direction: a.i[a.ni++] = cfg->ReadDirection(); break;
+        case EeWonCfgRead::StdCursor: a.i[a.ni++] = cfg->ReadStandardCursor(); break;
+        case EeWonCfgRead::Word: a.s[0] = cfg->ReadString(true); a.ns = 1; break;
+        case EeWonCfgRead::RawImage: a.raw = cfg->ReadRawImage(); break;
+        default: return CfgTabRead(p, k);
+        }
+        return true;
+    });
+}
+static bool WorldComma(void* p) { return CfgTabTry(p, [](CfgTabFrame& a) { a.mConfig->EnsureComma(); return true; }); }
+static bool WorldEnd(void* p) { return static_cast<CfgTabFrame*>(p)->mConfig->EndOfString(); }
 // The setters cfgset.rs makes (R6 WONLobby round 27), described by its trace hook: traced as the world traces the
 // method the original statement called (a shell kind's own method through the world's WONShell::Op, from the call),
 // and the reader's apply event as LApply logged it. (won_cfgset_test checks the calls against the game's forwards.)

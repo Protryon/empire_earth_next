@@ -14,7 +14,7 @@ namespace WONAPI {
 // Real non-polymorphic scanner used by the original command/configuration parsers.
 // Character accessors 0x2a48c0/0x2a4910 and EOF 0x2a4940 prove this representation. Every scan is ee_won's parser
 // (ffi_parse.rs) over the text, its unit size and the cursor; the class is header-only since net round 27. The list
-// reads and writes have no game caller (the hash file list is cfgval.rs's ee_won_cfgval_read_strings): R6 WON lobby
+// reads and writes have no game caller (the hash file list is lobbyprv.rs's): R6 WON lobby
 // and network round 38 moved them to tests/won/won_parser_lists.inl.
 class StringParser {
 public:

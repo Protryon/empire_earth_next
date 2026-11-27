@@ -483,7 +483,7 @@ pub unsafe fn run<H: UcHost + UcgSeaRust + ?Sized>(
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 

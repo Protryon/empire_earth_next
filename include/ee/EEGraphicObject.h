@@ -10,9 +10,7 @@ struct EeGfxGraphicTags;
 
 #include <vector>
 #include "ee/EEMedia.h"
-#include "rust/data/tables.h"
 #include "rust/data/media.h"
-#include "lle/GE3DPoint.h"          // mDefaultPoint, mTopPoint
 
 class GETexture;
 class GETransformation;
@@ -23,11 +21,8 @@ class EEWheel;
 class EESoundObject;
 class UString;
 
-#include "lle/GE2DPoint.h"
-#include "lle/GETransformation.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/preload_media.h"
-#include "rust/render/gfx.h"
 
 // Actual0x50 turret part from ctorD9AB4, allocationD76A1 and two class readers.
 // No vptr; nominal name provisional. Position0, transform0xc, model0x4c.
@@ -57,7 +52,6 @@ public:
     // Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
     // orbital_ccw_ counterclockwise)
     void Init(GEModel* inModel) { ee_gamecpp_ov_orbital_init(this, inModel); }
-    float GetAngle() const { return this->mAngle; }  // inline: `mov eax,[x+0xc]` into a temp before the array's op[] (EEE3DIcon::Queue 0x4f21e5)
     void Update();                          // 0x208e28: mAngle += frame time * mSpeed, wrapped to [-pi, pi]
 
     GEModel* mModel;                        // +0x04 (EEE3DDisease::DrawPass5 sets its pre-model transform)
@@ -140,7 +134,6 @@ public:
     // unit's template block (provisional name)
     // 0x200292 (out-of-line COMDAT, defined in EEComplexUnit.cpp): mWheels.size() (provisional name)
     unsigned long GetWheelCount() const { return this->mWheels.size(); }
-    GETexture* GetTexture(unsigned long inIndex) const { return this->mTextures[inIndex]; }  // inline: the effects' Queue tail (0x4ebfd0)
     // inline; out of line after their first user EEUnitClass::TurretsFacePoint (0x23a59b / 0x23a5ad, in this order)
     // (provisional names)
     const GETransformation& GetTurretPartTransformation(unsigned long inIndex) const { return this->mTurretParts[inIndex]->mTransformation; }

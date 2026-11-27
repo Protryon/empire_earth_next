@@ -38,9 +38,6 @@ public:
     // 0x20248b (EEPlayer::RemoveSharedSight; provisional name): as a tile drops out of a player's sight, leaves him
     // doppelgangers of the resources, ambients, fish and built land buildings there that are wholly out of sight
     void TileHidden(RTSTile* inTile, EEPlayer* inPlayer) { ee_units_dm_body(EE_UNITS_DM_DO_TILE_HIDDEN, inTile, (int64_t)(uintptr_t)inPlayer, 0, 0); }
-    // whether every tile under the unit (all parts of a complex one) is out of the player's sight; false for a
-    // cloaked unit or one whose tech tree node is of kind 4
-    static bool IsOutOfSight(EEUnit* inUnit, EEPlayer* inPlayer) { return ee_units_dm_body(EE_UNITS_DM_DO_IS_OUT_OF_SIGHT, inUnit, (int64_t)(uintptr_t)inPlayer, 0, 0) != 0; }
     // remembers a resource, ambient, fish or building its own player cannot see (with a visibility map)
     void AddForUnseenUnit(EEComplexUnit* inUnit) { ee_units_dm_body(EE_UNITS_DM_DO_ADD_FOR_UNSEEN, inUnit, 0, 0, 0); }
     EEDoppelganger* NewDoppelganger(bool inComplex);   // 0x2028d6: from one of the pools (provisional name)
@@ -48,8 +45,6 @@ public:
     void TileShown(EETile* inTile, long inX, long inY, EEPlayer* inPlayer) { ee_units_dm_body(EE_UNITS_DM_DO_TILE_SHOWN, inTile, inX, inY, (int64_t)(uintptr_t)inPlayer); }
     // every doppelganger a player sees or owns the unit of, over the whole map, removed and freed
     void UnregisterPlayer(EEPlayer* inPlayer) { ee_units_dm_body(EE_UNITS_DM_DO_UNREGISTER_PLAYER, inPlayer, 0, 0, 0); }
-    // 0x202afd: takes inDoppelganger off the tiles of its footprint at (inX, inY) (provisional name)
-    void RemoveFromTiles(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIncludeRunways) { ee_units_dm_body(EE_UNITS_DM_DO_REMOVE_FROM_TILES, inDoppelganger, inX, inY, inIncludeRunways); }
     // 0x202c70 / 0x202c85: the pools' SetSize(inChunkSize, inMaxChunks, 1) (provisional names)
     bool SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks) { return this->mPool.SetSize(inChunkSize, inMaxChunks, 1); }
     bool SetComplexPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks) { return this->mComplexPool.SetSize(inChunkSize, inMaxChunks, 1); }

@@ -19,7 +19,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "rust/won_lobby/logics.h"
 #include "won_blocking.h"

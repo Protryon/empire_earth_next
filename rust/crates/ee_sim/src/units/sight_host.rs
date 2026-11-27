@@ -4,7 +4,8 @@
 #![cfg(not(test))]
 
 use crate::units::sight::{sight, EeUnitsSightUnit, SightHost};
-use crate::world::view::{PlayerView, WorldRead, WorldView};
+use crate::world::view::{PlayerView, UnitView, WorldRead, WorldView};
+use std::os::raw::c_long;
 
 /// unit `a`'s `GetLineOfSight()` into `f[0]` (the reads of [`EeUnitsSightUnit`], one statement each)
 pub const EE_UNITS_SIGHT_U_LINE_OF_SIGHT: i32 = 4000;
@@ -114,17 +115,25 @@ impl Game {
 
 impl SightHost for Game {
     fn unit(&mut self, u: u64) -> EeUnitsSightUnit {
-        let mut f = [0.0f32; 3];
-        self.op(EE_UNITS_SIGHT_U_LINE_OF_SIGHT, false, u, 0, 0, 0, &mut f);
+        // the records' members read here; the class's land building test and the tech node's kind are the host's
+        // SAFETY: as with_world's; the body hands in a live complex unit
+        let t = unsafe { WorldRead::begin() };
+        // SAFETY: as above
+        let view = unsafe { UnitView::of(&t, u) }.expect("ee_units::sight: a unit");
+        let class = view.class().expect("ee_units::sight: the unit's class");
+        let stats: f32 = view.stats().map_or(0.0, |s| crate::world_field!(s.fields(), mLineOfSight));
+        let player = view.player();
+        let hit_points: c_long = crate::world_field!(view.fields(), mHitPoints);
+        let wonder_bonus: c_long = crate::world_field!(class.fields(), mWonderBonus);
         EeUnitsSightUnit {
-            line_of_sight: f[0],
-            player: self.q(EE_UNITS_SIGHT_U_PLAYER, u, 0, 0, 0) as u64,
-            save_vis_map: self.q(EE_UNITS_SIGHT_U_SAVE_VIS_MAP, u, 0, 0, 0) as u8,
-            hit_points: self.q(EE_UNITS_SIGHT_U_HIT_POINTS, u, 0, 0, 0) as i32,
-            is_built: self.q(EE_UNITS_SIGHT_U_IS_BUILT, u, 0, 0, 0) as u8,
+            line_of_sight: stats + view.sight(),
+            player: player.map_or(0, |p| p.handle()),
+            save_vis_map: u8::from(player.is_some_and(|p| p.save_vis_map())),
+            hit_points: hit_points as i32,
+            is_built: u8::from(view.is_built()),
             land_building: self.q(EE_UNITS_SIGHT_U_LAND_BUILDING, u, 0, 0, 0) as u8,
-            tile_size: self.q(EE_UNITS_SIGHT_U_TILE_SIZE, u, 0, 0, 0) as i32,
-            wonder_bonus: self.q(EE_UNITS_SIGHT_U_WONDER_BONUS, u, 0, 0, 0) as i32,
+            tile_size: class.tile_size() as i32,
+            wonder_bonus: wonder_bonus as i32,
             node_kind: self.q(EE_UNITS_SIGHT_U_NODE_KIND, u, 0, 0, 0) as i32,
         }
     }

@@ -12,17 +12,10 @@
 class EEAIRectangleArea : public EEAIArea, private EeAStarRectRecord {
 public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
-    static EEAIRectangleArea* New() { return (EEAIRectangleArea*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::RectangleAreas); }
-    static void Delete(EEAIRectangleArea* inObject) { ee_astar_object_delete(EeAStarCmTable::RectangleAreas, (uint64_t)(uintptr_t)inObject); }
     // +0x20 0x2c939: EEAIArea's random point; when its tile is off the map, a random one of the tiles on the map
     U2DPoint<long> GetRandomPoint() { return EEAIArea::PointOf(ee_astar_rect_random_point((uint64_t)(uintptr_t)this)); }
     EeAStarRectRecord* Record() { return this; }
     const EeAStarRectRecord* Record() const { return this; }
-    const U2DRectangle<long>& GetRect() const { return reinterpret_cast<const U2DRectangle<long>&>(this->rect); }
-    void SetRect(const U2DRectangle<long>& inRect) { reinterpret_cast<U2DRectangle<long>&>(this->rect) = inRect; }
-    unsigned short GetContinentID() const { return this->continent_id; }
-    unsigned short GetID() const { return this->id; }
-    void SetID(unsigned short inID) { this->id = inID; }
 
 private:
     EEAIRectangleArea();

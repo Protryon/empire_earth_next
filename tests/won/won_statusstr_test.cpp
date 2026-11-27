@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/resource.h"
 #include "rust/won_lobby/statusstr.h"
 

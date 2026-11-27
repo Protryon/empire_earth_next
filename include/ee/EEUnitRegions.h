@@ -7,7 +7,5 @@
 #include <stdint.h>
 #include <vector>
 
-#include "lle/U2DRectangle.h"
-#include "rust/sim/combat.h"
 
 #endif

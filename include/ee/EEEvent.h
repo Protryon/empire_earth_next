@@ -53,11 +53,6 @@ public:
         return (inID >= 0 && (unsigned long)inID < EEEvent::sEvents.size()) ? EEEvent::sEvents[inID].get() : NULL;
     }
     static std::vector<std::unique_ptr<EEEvent>> sEvents;
-    // 0x1ca63b (cdecl, 0x141937): every effect record of inEffects, then every event of inEvents (its 100-byte name,
-    // +0x0c, count and indices) to the end of the file (both opened first; provisional names)
-    // Loads every event effect and every event with its effect list (as many as the files hold: the original read
-    // exactly 2000 effects and 1500 events); returns the last read's result (ee_sim scenario event.rs)
-    static long LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects) { return ee_scenario_ev_load(&inEvents, &inEffects); }
 private:
     // the statements of the effects' Rust (ee_sim scenario event.rs; RunEffect 0x1ca7cf and its handlers) read them
     friend int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a);

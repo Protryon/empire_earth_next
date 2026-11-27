@@ -33,15 +33,6 @@ public:
         { ee_cp_influence_unit(this->mTable, true, (uint64_t)(uintptr_t)inUnit, (int32_t)inX, (int32_t)inY); }
     void RemoveUnit(EEUnit* inUnit, long inX, long inY)
         { ee_cp_influence_unit(this->mTable, false, (uint64_t)(uintptr_t)inUnit, (int32_t)inX, (int32_t)inY); }
-    // 0xa598d: over a rectangle of regions, its start corner clipped at 0
-    long SumEnemyValue(unsigned long inPlayer, const U2DRectangle<long>& inRect, bool inWithFirst)
-        { return ee_cp_influence_enemies(this->mTable, (uint64_t)(uintptr_t)&gWorld, (uint32_t)inPlayer, Rect(inRect), inWithFirst, true); }
-    // inPlayer's value in region (inX, inY): 0 off the grid and for a player past the entries (the route planner
-    // passes -1 for a task without a player)
-    long GetValue(unsigned long inPlayer, unsigned long inX, unsigned long inY)
-        { return ee_cp_influence_value(this->mTable, 0, (uint32_t)inPlayer, (uint32_t)inX, (uint32_t)inY); }
-    long GetValue(unsigned long inPlayer, const U2DPoint<long>& inRegion)
-        { return this->GetValue(inPlayer, (unsigned long)inRegion.mX, (unsigned long)inRegion.mY); }
     // inline (COMDAT 0xe06f, the original RTSRegionTable's): inTiles' edges in regions
     U2DRectangle<long> GetRegions(const U2DRectangle<long>& inTiles)
     {

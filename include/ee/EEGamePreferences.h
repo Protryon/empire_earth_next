@@ -85,12 +85,6 @@ public:
                                             // returns its result)
     // (provisional names)
     long Load();                            // 0x1328dd: reads the settings from config.yaml (defaults where missing)
-    // Reads the last game options from config.yaml's game_options block, writing defaults for missing values; returns 0
-    // 0x13505e: the game_options block (Load's tail)
-    long LoadGameOptions() { return ee_gamecpp_prefs_load_options(this); }
-    // Writes the last game options to config.yaml's game_options block; returns the first failure, else 0
-    // 0x13670d (Save's tail)
-    long SaveGameOptions() { return ee_gamecpp_prefs_save_options(this); }
 
     // (+0x000 in the original: a URegistry member, not a base; the ctor 0x13281e and dtor 0x132834 store only its
     // vptr. Its port, UConfig, had no data and no caller: the settings file is the Rust's, ee_game app settings.rs.)
@@ -103,7 +97,5 @@ public:
 };
 
 extern EEGamePreferences gGamePreferences;
-// 0x13286a: the resource defaults of gDefaultSettings' names (Empire Earth.cpp calls it before Load; provisional name)
-void EEInitializeDefaultSettings();
 
 #endif

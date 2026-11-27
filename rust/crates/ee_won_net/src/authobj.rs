@@ -386,6 +386,16 @@ pub unsafe extern "C" fn ee_won_authctx_peer_data(c: *const EeWonAuthCtx) -> *mu
     unsafe { ctx(c) }.peer_data().map_or(std::ptr::null_mut(), peerobj::peer_ref)
 }
 
+/// `GetPeerData()->...`: a number of the context's peer data (`EE_WON_AUTHOBJ_*`, as `ee_won_authobj_num`), 0 without
+/// peer data (the lobby's LAN peer authentication reads the first community: `GetFirstCommunity()`).
+///
+/// # Safety
+/// `c` a live context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_authctx_peer_num(c: *const EeWonAuthCtx, which: i32) -> i64 {
+    unsafe { ctx(c) }.peer_data().map_or(0, |p| peerobj::peer_num(&p, which, 0, peerobj::unix_now()))
+}
+
 /// `SetPeerData(data)` (NULL, or anything but peer data: none).
 ///
 /// # Safety

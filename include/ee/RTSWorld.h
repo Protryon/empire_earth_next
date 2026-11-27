@@ -7,8 +7,6 @@
 #define EE_RTSWORLD_H
 
 #include <vector>
-#include "lle/GETransformation.h"
-#include "lle/GE3DLine.h"
 #include "ee/RTSDummyHeader.h"
 #include "rust/game/rts.h"
 
@@ -24,7 +22,6 @@ public:
     RTSWorld() { ee_rts_world_construct(this); }
     // RTSWorld.cpp's non-virtual members (provisional names unless stated)
     // 0x148024: index in mPlayers[0..mNumPlayers), -1 if none
-    long GetPlayerIndex(EEPlayer* inPlayer) { return ee_rts_world_player_index(this, inPlayer); }
     unsigned long GetNumPlayers() const { return this->mNumPlayers; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
     EEPlayer* GetPlayer(unsigned long inIndex) const { return this->mPlayers[inIndex]; }  // (likewise)
     // 0x14804f: the top byte of the id is the player
@@ -73,7 +70,6 @@ public:
     EEMap* mMap;                            // +0xbc (deleted through its vtable slot +0x10 by the dtor)
     float mGameSpeed;                       // +0xc0 (= 1.0; EEPWorldHelper's "TheGameSpeed")
     float mCameraYaw;                       // +0xc4 (= 0)
-    float GetCameraYaw() const { return this->mCameraYaw; }  // inline (camera yaw read as a value before the arithmetic: EEE3DCommandConfirmation 0x4ea201) (provisional name)
     float mCameraPitch;                     // +0xc8 (= 0)
     float GetCameraPitch() const { return this->mCameraPitch; }  // inline (with GetCameraYaw) (provisional name)
     unsigned long mNumPlayers;              // +0xcc (= 0)

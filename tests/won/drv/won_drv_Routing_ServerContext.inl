@@ -10,3 +10,5 @@ bool AtomicClearAndAddAddressesFromDir(const DirList& inDir, const wchar_t* inNa
 void SetShuffleAddresses(bool inShuffle) { ee_won_ctx_set_shuffle(this->mList, inShuffle); }
 static IPAddr FromRaw(const EeWonAddr* inRaw) { IPAddr a; a.FromRaw(*inRaw); return a; }
 static void ToList(void* inList, const EeWonAddr* inRaw) { static_cast<AddrList*>(inList)->push_back(FromRaw(inRaw)); }
+// (R6 WON round 39)
+bool RemoveAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 2, inAddress.GetValue()); }

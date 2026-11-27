@@ -706,6 +706,10 @@ impl WorldHost for EeCombatWorldHost {
         ) {
             return r;
         }
+        #[cfg(not(test))]
+        if let Some(r) = crate::combat::cg_view::world_plain(code, object, other, args) {
+            return r;
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.op)(self.query.ctx, code, object, other, args) }
     }

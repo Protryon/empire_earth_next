@@ -52,7 +52,6 @@ public:
     void GetUnits(std::vector<EEComplexUnit*>& outUnits);   // mUnits, in order
 
     EEAnimal* GetAnimal() const { return reinterpret_cast<EEAnimal*>((uintptr_t)this->mAnimal); }
-    EEPlayer* GetPlayer() const { return reinterpret_cast<EEPlayer*>((uintptr_t)this->mPlayer); }
 };
 
 #endif

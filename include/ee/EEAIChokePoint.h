@@ -12,14 +12,8 @@
 class EEAIChokePoint : public EEAIArea, private EeAStarChokeRecord {
 public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
-    static EEAIChokePoint* New() { return (EEAIChokePoint*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::ChokePoints); }
-    static void Delete(EEAIChokePoint* inObject) { ee_astar_object_delete(EeAStarCmTable::ChokePoints, (uint64_t)(uintptr_t)inObject); }
     EeAStarChokeRecord* Record() { return this; }
     const EeAStarChokeRecord* Record() const { return this; }
-    long GetIndex() const { return this->index; }
-    void SetIndex(long inIndex) { this->index = inIndex; }
-    unsigned short GetContinentID() const { return this->continent_id; }
-    void SetContinentID(unsigned short inID) { this->continent_id = inID; }
 
 private:
     EEAIChokePoint();

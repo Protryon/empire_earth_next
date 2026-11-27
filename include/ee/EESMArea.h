@@ -11,8 +11,6 @@
 #define EE_EESMAREA_H
 
 #include <vector>
-#include "lle/UWideString.h"
-#include "lle/U2DPoint.h"
 #include "ee/EEAreaUtilities.h"
 #include "rust/sim/scenario.h"
 

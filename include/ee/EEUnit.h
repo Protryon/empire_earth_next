@@ -15,7 +15,6 @@
 #include "lle/UList.h"                  // EEComplexUnit+0xc4
 #include "lle/U2DPoint.h"               // EEComplexUnit+0x1a4
 #include "lle/GEColor.h"                // EEComplexUnit+0x1ac
-#include "ee/EEUnitClassIDs.h"
 #include "ee/EEResourceType.h"         // kResourceAny (CanTake)
 class GETerrainMesh;
 #include "lle/GEPhysicalModel.h"        // EEComplexUnit+0x130 (it uses GE3DLine/GEViewport by reference)
@@ -29,7 +28,6 @@ class SESMInstanceNode;                 // lle/SESMInstanceNode.h (EEComplexUnit
 class EEGraphicObject;                      // ee/EEGraphicObject.h
 typedef EEGraphicObject EEModel;            // (see below: WriteDetailsHook's)
 class EEActiveGroup;
-struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h (EEUnitClass::GetTerrainFlags)
 class EETechTreeNode;
 class EEUnit;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
@@ -38,7 +36,6 @@ class EETown;
 class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit+0x208, EEUnitClass+0x118)
 #include "ee/EEUnitVectorItem.h"        // the element of EEComplexUnit::mGoalQueues (inline GetQueueGoals, the destructor)
 class GEModel;
-#include "ee/EETileCoordinate.h"     // RTSUnit::GetTile returns one
 class EEPlayer;
 class EEUnitClass;
 class EEUnitGoal;
@@ -49,9 +46,7 @@ class EESoundObject;
 #include "ee/EEUnitClassImprovement.h"
 #include "ee/EEUnitKind.h"               // EEClassBody (EEUnitClass::IsBuilding, Virtual70)
 #include "ee/EEUnitUpdate.h"             // EEUnitClassActionChanged (EEUnitClass::HandleActionChanged)
-#include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 #include "rust/sim/cp.h"                 // ee_cp_distance_squared_to_unit (DistanceSquaredToUnit)
-#include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
 #include "rust/sim/combat.h"             // EE_COMBAT_SHOT_* (the shots' steps)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
@@ -114,7 +109,6 @@ public:
     float GetScale() const { return this->mScale; }  // inline (EESGUnitSorter::Compare loads both operands)
     float GetAttack() const { return this->mAttack; }  // inline (likewise)
     long GetMaxHitPoints() const { return this->mMaxHitPoints; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    float GetAreaEffect() const { return this->mAreaEffect; }  // inline (0x66cbe1)
     // inline (EEWheel::Update 0x23c957 loads them as values) (provisional names)
     float GetMaxVelocity() const { return this->mMaxVelocity; }
     float GetInverseMaxAngularVelocity() const { return this->mInverseMaxAngularVelocity; }
@@ -126,11 +120,9 @@ public:
     UWideString mName;                      // +0x4c (= "" in the ctor)
     // +0x60 mUnitClass, +0x64 mButton .. +0x7c mSelectionSounds[1]: the Rust record EeUnitsUnitClassUpgradeLinks (a base)
     // +0x84 mAreaEffectScale .. +0x168 mIsInitialized: the record EeUnitsUnitClassUpgradeFields (the base above)
-    float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEActiveGroup::ComputeValues 0x5ed692 copies it through fld/fstp)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
-    bool GetIsInitialized() const { return this->mIsInitialized; }
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)
     volatile bool mIsLoadingButtons;        // +0x16a (ctor: false; 0x23bc29 sets it while loading the media and the
                                             //  other loaders poll it with Sleep(1): `mov byte ptr`, re-read each pass)
@@ -309,11 +301,6 @@ public:
         GEPhysicalModel::SetLocation(inLocation);
         EEUnitStoreMoved(this);
     }
-    void SetLocationAndScale(const GETransformation& inLocation, float inScale)
-    {
-        GEPhysicalModel::SetLocationAndScale(inLocation, inScale);
-        EEUnitStoreMoved(this);
-    }
     void SetLocationXY(float inX, float inY)
     {
         GEPhysicalModel::SetLocationXY(inX, inY);
@@ -409,9 +396,6 @@ public:
         return (EEUnitGoal*)(uintptr_t)ee_units_unit_queued_goal((uint64_t)(uintptr_t)this, (uint32_t)inIndex);
     }
     EEGoalDeque& GetQueueGoals(unsigned long inIndex) { return this->mGoalQueues[inIndex].mGoals; }  // 0x1fa1cd (EEUICUnitIconBar 0x25ad01) (provisional name)
-    // 0x1ebdcc (defined in EEActiveGroup.cpp after Virtual48, out of line): mActiveGroup = inGroup, referenced
-    // (provisional name)
-    void SetActiveGroup(EEActiveGroup* inGroup);
     // EEUGHealUnit's callees (now ee_combat goal_heal.rs's host operations, EEUGRustCombat.cpp) (provisional names; types inferred)
     void ReleaseHealEffect() { ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, this, NULL, 0); }               // 0x1f709c (the healee is let go)
     void SetAnimationFrame(unsigned long inFrame) { ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, this, NULL, (int64_t)inFrame); }  // 0x1f414d (ret 4): the state's model at frame inFrame (EEComplexDoppelganger.cpp's range) (provisional name)
@@ -469,10 +453,6 @@ public:
     // 0x15463e / 0x15465b / 0x154c95 / 0x154e7b / 0x154f39 (EEPMLand.cpp, ecx = the unit): the group's stat when
     // mActiveGroup is set (EEActiveGroup::GetMaxAngularVelocity ..), else mStats->mFB4 .. (provisional names)
     float GetMaxAngularVelocity() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY); }
-    float GetAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ANGULAR_ACCELERATION); }
-    float GetAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ACCELERATION); }
-    float GetInverseAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ACCELERATION); }
-    float GetInverseAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ANGULAR_ACCELERATION); }
     // 0x1fe76e (the meteor storm passes the meteor's start point, true) (provisional name)
     void SetLocation(const GE3DPoint& inLocation, bool inUpdateTiles) { ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_LOCATION, this, NULL, inUpdateTiles, 0, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ()); }   // the unit moved, then its model's 3D location (u12a_small.rs)
     void SetFlightTime(long inValue) { if (this->mFlightTime != inValue) this->mFlightTime = inValue; }  // inline (meteor storm 0xb29ac)
@@ -521,7 +501,6 @@ public:
     void ClearGoalQueue(unsigned long inIndex) { ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, this, inIndex, 0, 0); }  // 0x1f6fbc (for each mGoalQueues item)
     void UnloadCargoAtTile(long inX, long inY, bool inArg) { ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, this, inX, inY, inArg); }  // 0x1fcc91 (ret 0xc; EECPResourceManager::TransportIdle: the load goal's container tile) (provisional name)
     // 0x1fa661: +0x347 set and +0x358 is 0x1a or 0x1c (the logic bomb refuses such targets) (provisional name)
-    void PayInsurance(float inFraction) { ee_units_cu_body(EE_UNITS_CU_DO_PAY_INSURANCE, this, UFloatBits(inFraction), 0, 0); } // original602B callee, actual class technology update
     bool IsProtected() { return this->mIsDisabled && (this->mDisabledReason == 0x1a || this->mDisabledReason == 0x1c); }
     void AIStep() { ee_units_cu_ai_step(this); }                          // 0x1ff2e8 (Step; provisional name)
     void Step();                            // inline below EEUnitClass (COMDAT 0x1540dc after its first user EEPhysics::UpdateUnits)
@@ -574,7 +553,6 @@ public:
     // 0x21ba6f: the squared distance from the position (+0x13c/+0x14c/+0x15c) to inPoint (the attack-ground test;
     // provisional name)
     float DistanceSquared3D(const GE3DPoint& inPoint) { return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_DISTANCE_3D, NULL, this, 0, inPoint.mX, inPoint.mY, inPoint.mZ); }  
-    void ClearTint() { this->SetIsTinted(false); }
     void UpdateFanaticismColor() { ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_FANATICISM_COLOR, this, 0, 0, 0); }                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
     // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
     EEUnitGoal* RefreshGoals() { return (EEUnitGoal*)(uintptr_t)ee_units_unit_refresh_goals((uint64_t)(uintptr_t)this); }
@@ -588,19 +566,14 @@ public:
     bool GetIsCloaked() const { return this->mIsCloakable ? this->mIsCloaked : false; }
     bool AddGarrison(long inAmount, long inGarrisonPopulation) { return ee_units_cu_body(EE_UNITS_CU_DO_ADD_GARRISON, this, inAmount, inGarrisonPopulation, 0) != 0; }  // 0x1f5f55: mL288 += inAmount within the class's mL250 (provisional name)
     EEComplexUnit* FindPassenger(unsigned long inUnitID) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_FIND_PASSENGER, this, inUnitID, 0, 0))); }  // 0x1f9f85: the cargo unit with that id (provisional name)
-    void SetGroupPathGoals(std::vector<GE3DPoint>& inPath)   // ee_sim::units waypoints.rs
-        { ee_units_waypoints_group_path_goals((uint64_t)(uintptr_t)this, inPath.empty() ? NULL : &inPath[0].mX, inPath.size()); }  // 0x1fc0a8, actual12-byte point vector; constness inferred
     void ReleaseCargo(EEComplexUnit* inCargo) { ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CARGO, this, (int64_t)(uintptr_t)inCargo, 0, 0); }  // 0x1fcb8c, actual cargo removal member/ret4
     EEComplexUnit* GetConditionTarget() { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_CONDITION_TARGET, this, 0, 0, 0))); }    // 0x1ff58b: actual referenced complex attacker or null
-    bool ShouldMoveToNextAutoWaypoint() { return ee_units_waypoints_next_auto((uint64_t)(uintptr_t)this); }   // 0x1feb61: actual path/goal predicate, no args/AL
     EEComplexUnit* UnloadCargoAt(unsigned long inIndex, const GETransformation& inLocation) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>( ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT, this, inIndex, (int64_t)(uintptr_t)&inLocation, 0))); }
     EEComplexUnit* UnloadCargoByID(unsigned long inUnitID, const GETransformation& inLocation) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_BY_ID, this, inUnitID, (int64_t)(uintptr_t)&inLocation, 0))); }  // 0x1fd2ba: UnloadCargoAt on the cargo unit with that id (provisional name)
-    void MoveToLocation(float inX, float inY, bool inUpdateTiles) { ee_units_cu_body(EE_UNITS_CU_DO_MOVE_TO_LOCATION, this, UFloatBits(inX), UFloatBits(inY), inUpdateTiles); }  // 0x1fe611 (before the unit moves to (inX, inY)) (provisional name)
     void SetLocationXY(float inX, float inY, bool inUpdateTiles) { ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_LOCATION_XY, this, NULL, inUpdateTiles, 0, inX, inY, 0.0f); }  // 0x1fe73b: MoveToLocation, then the 2D location (provisional name)
     // the referenced links (`if (m) m->Dereference(); m = in; in->Reference()` shapes; provisional names)
     // inline (ReleaseHeldUnits 0x1f6d6a reaches the link through a reference: lea edi, [eax + 0x1e4]) (provisional
     // name)
-    void ClearHolder() { ee_units_cu_tiny(EE_UNITS_CU_T_DO_CLEAR_HOLDER, this, NULL, 0, 0, 0.0f, 0.0f, 0.0f); }   // u12a_small.rs
     void SetHolder(EEComplexUnit* inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_SET_HOLDER, this, (int64_t)(uintptr_t)inUnit, 0, 0); }  // 0x1f5ca2: mRegeneration
     void SetBlockingUnit(RTSUnit* inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_SET_BLOCKING_UNIT, this, (int64_t)(uintptr_t)inUnit, 0, 0); }  // 0x1fe202: mL20C
     void SetLastResource(RTSUnit* inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_SET_LAST_RESOURCE, this, (int64_t)(uintptr_t)inUnit, 0, 0); }  // 0x1fe5e3: mLastResource
@@ -632,7 +605,6 @@ public:
     void DropUnsuitedGoals(unsigned long inIndex) { ee_units_unit_drop_unsuited_goals((uint64_t)(uintptr_t)this, (uint32_t)inIndex); }
     void ReplaceResearch(long inTechnology, long inNewTechnology) { ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_RESEARCH, this, inTechnology, inNewTechnology, 0); }  // 0x1ffbc2 (0x244deb: each live unit of a technology's classes) (provisional name)
     bool ReleaseHeld(EEComplexUnit* inUnit) { return ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_HELD, this, (int64_t)(uintptr_t)inUnit, 0, 0) != 0; }  // 0x1fca95: removes inUnit from mHeldUnits
-    void CancelQueuedProduction() { ee_units_cu_body(EE_UNITS_CU_DO_CANCEL_QUEUED_PRODUCTION, this, 0, 0, 0); }          // 0x1fce47: refunds the queued research (mBuildQueue)
     void RefreshActiveGoal() { ee_units_unit_refresh_active_goal((uint64_t)(uintptr_t)this); }
     // inGoal for each of the (3, or 4 with civilization power 0x34) goal queues: the first as is, copies for the rest
     void QueueSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal) { ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_SQUADRON_GOALS, this, (int64_t)(uintptr_t)inGoal, inCloneGoal, 0); }  // 0x1fca21 (queued behind a goal already there) (provisional name)
@@ -713,15 +685,11 @@ public:
     // mCollisionTile (+0x1a4) and the effect handles mConversionEffect (+0x2c0), mHealEffect (+0x2c4) and mFireEffect
     // (+0x310): the record's (units round 12)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
-    void SetLastAttacker(EEComplexUnit* inUnit) { ee_units_eu_more(EE_UNITS_EUM_DO_SET_LAST_ATTACKER, static_cast<EEUnit*>(this), inUnit, 0, 0); }  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
-    EEUnitAction* GetCommand() const { return this->mCommand; }
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
     bool GetIsDisabled() const { return this->mIsDisabled; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsBuilt() const { return this->mIsBuilt; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    float GetRoll() const { return this->mRoll; }
     // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
     // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
     // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.
@@ -821,8 +789,6 @@ public:
     // inline (COMDAT 0x216d77 right after EEUCLandPriest.cpp's ctor, with +0x68/+0x6c: the place of inline in-class
     // virtuals; every unit class's vtable points there) inferred body
     float GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucn_height_at(H(this), H(inUnit), inLocation.mX, inLocation.mY, inLocation.mZ); }
-    // +0x28: the flags of inUnit (EEGroup::GetFlags 0x2062cb Ands them) (provisional name)
-    void GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags);
     // +0x2c: the volume/pan/pitch of inSound at inUnit (EEUGUnloadTransport::Unload 0x228c29)
     void GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uck_sound(this, inUnit, inSound, outVolume, outPan, outPitch); }
     // +0x30: a new unit of this class at (inX, inY) for player inPlayer (the drop-object calamity) (provisional name)
@@ -856,7 +822,6 @@ public:
     bool FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance) { return ee_units_ucn_faces_point(H(this), H(inUnit), inLocation.mX, inLocation.mY, inUseTolerance); }  // 0x233a72 (EEUGAttackGround::EvaluateCondition)
     // the building classes' VirtualB8 helpers (EEUCSpaceBuilding 0x21a1cb; provisional names)
     void RefreshSound(EEComplexUnit* inUnit) { ee_units_uc_body(EE_UNITS_UC_DO_REFRESH_SOUND, this, inUnit); }
-    void UpdateCloakDetection(EEComplexUnit* inUnit) { ee_units_st_cloak_detection(H(this), H(inUnit)); }  // original void thiscall, ret4
     void Regenerate(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_REGENERATE, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x239d8a (units whose stats +0x15c is positive)
     bool IsDropSite() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_DROP_SITE); }                      // 0x4249 (inline in the real header: an out-of-line COMDAT; EEUGBuildRepair::FindNextWork) (provisional name)
     bool IsCrusader() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_CRUSADER); }                      // 0x5b96d (ICF-shared with EECPAttackSubGroup::Fn5B96D): mUnitType 0x2e6..0x2e9 (0x24722d) (provisional name)
@@ -897,7 +862,6 @@ public:
     // 0x23094b: the terrain height for a new unit of this class at tile (inX, inY): the footprint's average (types
     // 0x2ba/0x34) or its levelled minimum (the mesh and the map tiles set to it) (provisional name)
     void LevelGround(GETerrainMesh* inMesh, unsigned long inX, unsigned long inY, float* outZ) { ee_units_lv_level_ground(H(this), H(inMesh), inX, inY, outZ); }
-    void UpdateTrail(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_TRAIL, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x2393a9 (the unit's +0x284 timer; the EEUC* VirtualB8s) (provisional name)
     void MoveToTileCentre(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_MOVE_TO_TILE_CENTRE, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x23658b (to its tile centre, or a step forward; 0x22db0f) (provisional name)
     void CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation);  // 0x232e4a (CreateUnitAt for unit type 0x42; bool: CreateUnitAt passes its bool through) (provisional name)
     void ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_REPLANT_FARM, this, inUnit, H(inPlayer), 0, 0, NULL, NULL); }  // 0x232c9f (EEMReplantFarms, farm classes)
@@ -905,7 +869,6 @@ public:
     void HandleActionChanged(EEComplexUnit* inUnit) { EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit); }  // 0x22db0f (the default +0x74 command handling)
     EEUnit* FindImpactUnit(EEComplexUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_ucn_impact_unit(H(inUnit)); }  // 0x233410 (a target for inUnit, or 0)
     void CreateRemainsUnit(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_CREATE_REMAINS_UNIT, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x237e79 (the class's +0x108 unit where inUnit ends)
-    void UpdateRipples(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_RIPPLES, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x2393ff (like UpdateTrail, the +0x80 media)
     void UpdateAnimal(EEComplexUnit* inUnit) { ee_units_uc_body(EE_UNITS_UC_DO_UPDATE_ANIMAL, this, inUnit); }  // 0x239644 (EEUCLand::Update for a herd animal of a player) (provisional name)
     void UpdateCamouflageTimer(EEComplexUnit* inUnit) { ee_units_st_camouflage(H(this), H(inUnit)); }  // 0x23978b (EEUCSpaceship::Update)
     void TurnTurrets(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_TURN_TURRETS, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x238948 (EEComplexUnit::UpdateTurrets: a unit whose model has parts) (provisional name)
@@ -918,8 +881,6 @@ public:
     void FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFrame) { ee_units_uc_call(EE_UNITS_UC_DO_FIRE_ON_ATTACK_FRAME, this, inUnit, 0, inArg, inFrame, NULL, NULL); }  // 0x2386cf (the spaceship's attack commands)
     void UpdateDone(EEComplexUnit*) {}   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
     // +0x78..+0xdc: arguments by `ret N` (inferred types)
-    void UnitCreated(EEComplexUnit* inUnit) { ee_units_uck_dispatch(EE_UNITS_BODY_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL); }  // +0x78 (EEUCMissile: the unit's launch)
-    void SimpleUnitCreated(EEUnit* inUnit) { ee_units_uck_dispatch(EE_UNITS_BODY_SIMPLE_UNIT_CREATED, this, NULL, H(inUnit), 0, 0, NULL); }  // +0x7c 0x2351ba (the unit's hit points to its maximum)
     void AddToRegion(EEUnit* inUnit) { ee_units_uck_dispatch(EE_UNITS_BODY_ADD_TO_REGION, this, NULL, H(inUnit), 0, 0, NULL); }  // +0x80 0x2351cf (adds the unit to its map region)
     void AddToTile(EEUnit* inUnit) { ee_units_uck_dispatch(EE_UNITS_BODY_ADD_TO_TILE, this, NULL, H(inUnit), 0, 0, NULL); }  // +0x84 0x23523c (reads the unit's tile; EEUCResource adds it to its tiles)
     bool HasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucn_has_arrived(H(this), H(inUnit), inValue); }  // +0x88
@@ -962,12 +923,8 @@ public:
     void UnloadAt(EEComplexUnit* inTransport, long inX, long inY) { ee_units_uck_dispatch(EE_UNITS_BODY_UNLOAD_AT, this, inTransport, 0, inX, inY, NULL); }  // (EEUCTransport)
     // The kinds' bodies (the EEUC* classes' members until R5b.4 round 32: EEUnitClassAir, -Buildings,
     // -Transports, -Shots, -People and -Ground.cpp); the overrides' run behind the dispatchers
-    void AirAnimalUnitCreated(EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED, this, inUnit, 0, 0, 0, NULL); }
     bool AirAnimalReturnToAirport(EEComplexUnit* inUnit) { return ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_RETURN, this, inUnit, 0, 0, 0, NULL) != 0; }
     void FlyOffMap(EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_FLY_OFF_MAP, this, inUnit, 0, 0, 0, NULL); }
-    void AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
-    void AmbientAddToTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_ADD, this, NULL, H(inUnit), 0.0f); }
-    void AmbientRemoveFromTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_REMOVE, this, NULL, H(inUnit), 0.0f); }
     void UpdateCitizen(EEComplexUnit* inUnit) { ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CITIZEN, this, inUnit, 0, 0); }
     EEUnit* FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind, std::vector<EEUnit*>* ioUnits) { return (EEUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_NEXT_RESOURCE, this, inUnit, H(inResource), (int64_t)inKind, (int64_t)H(ioUnits), NULL); }
     EEUnit* FindStorage(EEComplexUnit* inUnit, bool inAnyStorage) { return (EEUnit*)(uintptr_t)ee_units_ucn_find_storage(H(this), H(inUnit), inAnyStorage); }
@@ -975,107 +932,36 @@ public:
     EEUnit* FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange, unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms) { return (EEUnit*)(uintptr_t)ee_units_ucn_resource_of_kind(H(this), (uint32_t)this->mCategory, H(inUnit), H(inCenter), H(inResource), (int32_t)inRange, (uint32_t)inKind, H(ioUnits), inFarms); }
     void BasicPriestUpdateConversion(EEComplexUnit* inUnit) { ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CONVERSION, this, inUnit, 0, 0); }
     void BasicPriestHideConversionEffects(EEComplexUnit* inUnit) { ee_units_ucp_call(EE_UNITS_UCP_DO_HIDE_CONVERSION, this, inUnit, 0, 0); }
-    bool BombLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_LAUNCH, this, inUnit, 0, NULL) != 0; }
-    void BombUpdate(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_UPDATE, this, inUnit, 0, NULL); }
     EEUnit* FindNearestTargetBuilding(EEUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_ucn_nearest_target_building(H(this), H(inUnit)); }
-    void BuildingGroundLocation(GE3DPoint& ioLocation) { ee_units_ucg_sea(EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX); }
-    EEUnit* BuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
-    void BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_ucb_call(EE_UNITS_UCB_DO_SURROUNDING_TILES, this, inUnit, H(&outTiles), inCorners, inAppend, NULL); }
-    void BuildingUnitCreated(EEComplexUnit* inUnit) { ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL); }
-    bool BuildingSelectUnitToRelease(EEComplexUnit* inUnit) { return ee_units_ucb_call(EE_UNITS_UCB_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0; }
     bool EruptVolcano(EEComplexUnit* inUnit) { return ee_units_uc_rest(EE_UNITS_UC_DO_R_ERUPT_VOLCANO, this, inUnit, 0, 0, 0, NULL) != 0; }
     void ReleaseUnit(EEComplexUnit* inUnit) { ee_units_ucb_call(EE_UNITS_UCB_DO_RELEASE_UNIT, this, inUnit, 0, 0, 0, NULL); }
     void UpdateArmed(EEComplexUnit* inUnit) { ee_units_ucb_call(EE_UNITS_UCB_DO_UPDATE_ARMED, this, inUnit, 0, 0, 0, NULL); }
-    void PriestVirtualB8(EEComplexUnit* inUnit) { ee_units_ucb_call(EE_UNITS_UCB_DO_PRIEST_UPDATE, this, inUnit, 0, 0, 0, NULL); }
-    void FortressUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_CREATED, this, inUnit, 0, 0, 0); }
-    bool FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo) { return ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_HAS_ROOM, this, inUnit, H(inCargo), 0, 0) != 0; }
-    void FortressUnloadAt(EEComplexUnit* inTransport, long inX, long inY) { ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_UNLOAD_AT, this, inTransport, 0, inX, inY); }
     EEComplexUnit* GetSecondPart(EEComplexUnit* inGate) { return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_SECOND_PART, this, NULL, H(inGate), 0, 0, NULL); }
     EEComplexUnit* GetFourthPart(EEComplexUnit* inGate) { return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FOURTH_PART, this, NULL, H(inGate), 0, 0, NULL); }
-    void GateGateReplaced(EEUnit* inGate, EEUnit* inUnit) { ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_REPLACED, this, inUnit, H(inGate), 0, 0, 0.0f); }
-    void GateGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_SURROUNDING, this, inUnit, H(&outTiles), inCorners, inAppend, 0.0f); }
-    void GateUnitCreated(EEComplexUnit* inUnit) { ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f); }
     EEComplexUnit* GetPart(EEComplexUnit* inGate, long inIndex) { return (EEComplexUnit*)(uintptr_t)ee_units_ucn_gate_part(H(this), H(inGate), inIndex); }
     bool AreEnemiesNear(EEComplexUnit* inUnit) { return ee_units_ucn_gate_near(H(this), H(inUnit), false); }
     bool IsPasserNear(EEComplexUnit* inUnit) { return ee_units_ucn_gate_near(H(this), H(inUnit), true); }
-    void HelicopterTransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_CREATED, this, inUnit, 0, 0, 0); }
-    void LandUnitCreated(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_LAND_CREATED, this, inUnit, 0, 0.0f); }
-    void LandCallParatroopPlane(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_CALL_PARATROOP_PLANE, this, inUnit, 0, 0.0f); }
-    void LandTransportBadlyHurt(EEUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_BADLY_HURT, this, NULL, H(inUnit), 0, 0); }
-    void LandableUnitCreated(EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_CREATED, this, inUnit, 0, 0, 0, NULL); }
     unsigned long GetNextFlightState(EEComplexUnit* inUnit) { return ee_units_ucn_next_flight_state(H(this), H(inUnit)); }
-    bool LandableReturnToAirport(EEComplexUnit* inUnit) { return ee_units_ucn_return_to_airport(H(this), H(inUnit)); }
     bool IsBombOnTarget(EEComplexUnit* inUnit) { return ee_units_ucn_bomb_on_target(H(this), H(inUnit)); }
-    void ApproachCarrier(EEComplexUnit* inUnit, bool inSteep) { ee_units_ucn_approach_carrier(H(this), H(inUnit), inSteep); }
-    void TakeOffFromCarrier(EEComplexUnit* inUnit) { ee_units_ucn_take_off_from_carrier(H(this), H(inUnit)); }
-    void ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY) { ee_units_ucn_approach_runway(H(this), H(inUnit), (int32_t)inDX, (int32_t)inDY); }
-    void TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY) { ee_units_ucn_take_off_from_runway(H(this), H(inUnit), (int32_t)inDX, (int32_t)inDY); }
     bool IsAwayFromGoal(EEComplexUnit* inUnit) { return ee_units_ucn_away_from_goal(H(this), H(inUnit)); }
-    EEUnit* MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
     void MissileActionChanged(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_MISSILE, false, EE_COMBAT_SO_MISSILE_ACTION, this, inUnit); }
-    void MissileUnitCreated(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_CREATED, this, inUnit, 0, NULL); }
     long MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    bool MissileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_LAUNCH, this, inUnit, 0, NULL) != 0; }
     void MissileUpdate(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_MISSILE, true, EE_COMBAT_SO_MISSILE_UPDATE, this, inUnit); }
-    bool MissileCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_GROUND, this, inUnit); }
-    bool MissileCheckWaterImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_WATER, this, inUnit); }
-    void NavalUnitCreated(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_CREATED, this, inUnit, 0, 0.0f); }
-    bool NavalHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_ARRIVED, this, inUnit, 0, inValue) != 0; }
     void UpdateResourceUnit(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT, this, inUnit, 0, 0.0f); }
-    bool NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit) { return ee_units_ucb_call(EE_UNITS_UCB_DO_NAVAL_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0; }
-    void NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
-    EEUnit* NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT, this, NULL, H(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]); }
     void ProjectileActionChanged(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, false, EE_COMBAT_SO_PROJECTILE_ACTION, this, inUnit); }
-    void ProjectileUnitCreated(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_CREATED, this, inUnit, 0, NULL); }
-    bool ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_LAUNCH, this, inUnit, 0, (const float(*)[3])&inLocation.mX) != 0; }
     void ProjectileUpdate(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, true, EE_COMBAT_SO_PROJECTILE_UPDATE, this, inUnit); }
-    void ProjectileUpdateEffects(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_EFFECTS, this, inUnit, 0, NULL); }
-    bool ProjectileCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_GROUND, this, inUnit); }
-    bool ProjectileCheckWaterImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_WATER, this, inUnit); }
-    void ResourceSimpleUnitCreated(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_CREATED, this, NULL, H(inUnit), 0.0f); }
-    void ResourceAddToTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_ADD, this, NULL, H(inUnit), 0.0f); }
-    void SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
-    EEUnit* SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
-    void SpaceBuildingUnitCreated(EEComplexUnit* inUnit) { ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f); }
-    bool SpaceBuildingHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_ARRIVED, this, inUnit, 0, 0, 0, inValue) != 0; }
-    void SpaceTransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_CREATED, this, inUnit, 0, 0, 0); }
-    void SpaceTransportAddToTile(EEUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_ADD, this, NULL, H(inUnit), 0, 0); }
-    void SpaceTransportRemoveFromTile(EEUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_REMOVE, this, NULL, H(inUnit), 0, 0); }
     void AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
-    void SubmergedNavalGroundLocation(GE3DPoint& ioLocation) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX); }
-    void SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
-    EEUnit* SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT, this, NULL, H(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]); }
-    void SubmergedNavalAddToTile(EEUnit* inUnit) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE, this, NULL, H(inUnit), 0, 0, NULL); }
-    bool SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED, this, inUnit, 0, 0, 0, &inValue) != 0; }
     void TorpedoUpdate(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_TORPEDO, true, EE_COMBAT_SO_TORPEDO_UPDATE, this, inUnit); }
-    bool TorpedoCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_TORPEDO_GROUND, this, inUnit); }
-    void TransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, this, inUnit, 0, 0, 0); }
     bool CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit) { return ee_units_ucn_can_load(H(this), H(inTransport), H(inUnit)); }
-    bool TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo, GE3DPoint& inLocation, GE3DPoint& outLocation) { return ee_units_ucx_boarding(this, inTransport, inCargo, (const float(*)[3])&inLocation.mX, (float(*)[3])&outLocation.mX); }
-    void TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY) { ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, this, inTransport, 0, inX, inY); }
     bool CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo, U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile, U2DPoint<long>* inDestination) { return ee_units_ucn_can_unload_near(H(this), H(inTransport), H(inCargo), (const long(*)[2])ioUnloadTile, (const long(*)[2])ioFirstCargoTile, (const long(*)[2])inDestination); }
     bool IsSidePart(EEComplexUnit* inGate) { return inGate->mNextPart == NULL && inGate->mPreviousPart != NULL || this->IsMiddlePart(inGate); }    // the gate's (EEAIAStarBoundedPathGoalModifiers.cpp)
     bool IsMiddlePart(EEComplexUnit* inGate) { return inGate->mNextPart != NULL && inGate->mNextPart->mNextPart == NULL && inGate->mPreviousPart != NULL; }   // second to last with a part before it
     // the base bodies of the dispatched virtuals
-    void BaseAddToRegion(EEUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_ADD_TO_REGION, this, NULL, H(inUnit), 0, 0, NULL, NULL); }
-    EEUnit* BaseCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL, NULL); }
-    EEUnit* BaseCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, NULL, &inTransformation.mMatrix); }
     void BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_BASE, this, inUnit, inSound, outVolume, outPan, outPitch); }
-    void BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, this, inUnit, H(&outTiles), inCorners, inAppend, NULL); }
-    bool BaseHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_mv_has_arrived(H(this), H(inUnit), inValue) != 0; }
-    void BaseLoadMedia(EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_BASE_LOAD_MEDIA, this, NULL, H(inPlayer), 0, 0, NULL, NULL); }
-    void BaseRemoveFromRegion(EEUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_REMOVE_FROM_REGION, this, NULL, H(inUnit), 0, 0, NULL, NULL); }
     void BaseSimpleUnitCreated(EEUnit* inUnit) { inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints); }
-    void BaseUnloadMedia(EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNLOAD_MEDIA, this, NULL, H(inPlayer), 0, 0, NULL, NULL); }
 
     // inline (EEContagionFunctor::CanInfect 0xb66ff loads both before the virtual call)
     unsigned long GetCategory() const { return this->mCategory; }
-    bool IsAirCategory() const { return this->mCategory == kUnitCategorySubmergedNaval || this->mCategory == kUnitCategorySeaAnimal; }  // inline (0x5f6817) (provisional name)
     long GetUnitType() const { return this->mUnitType; }  // inline (conscription 0xafed3: loaded before GetUnitSet())
     long GetTileSize() const { return this->mTileSize; }  // inline (the teleport loads it before the other pushes) (provisional name)
     float GetCruiseAltitude() const { return this->mCruiseAltitude; }  // inline (the airplanes' scale by height loads it as a value: fld; fdivp; EEPMAirplane 0x55726c) (provisional name)
@@ -1093,7 +979,6 @@ public:
     EEComplexUnit* GetLastLinkedCarrier(EEComplexUnit* inUnit) { return this->GetLastLinked(inUnit)->mPreviousPart; }
     // the 29 graphic effects (+0x64..+0xd4, mAttachedEffect to mBloodStainEffect) as one array, in member order: the
     // dtor's, LoadClassMedia's and UnloadClassMedia's walks (EEUnitClass.cpp checks the layout)
-    EEGraphicEffect** GetEffects() { return &this->mAttachedEffect; }
 
     // Layout (no gaps; sizeof 0x32c: every subclass EEUC* is 0x32c): the ctor 0x22f317
     // (EEUnitClass(bool, record, ...): it copies a database record field by field) and the dtor 0x2305ee. Types by
@@ -1103,14 +988,10 @@ public:
     std::vector<long> mResearchTechnologies;  // +0x02c 4-byte elements: the ctor's `_Buy(0)`
     // +0x060 mAIScript .. +0x118 mBehavior (the effects, media, related classes, physics model, improvements,
     // behaviour): the Rust record EeUnitsUnitClassLinks (the third base above)
-    EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     // inline (EEE3DDamageVent::SetUp 0xeabb5 loads it as a value before the effect's height)
     // (provisional name)
     float GetScale() const { return this->mScale; }
     float GetMaxVelocity() const { return this->mMaxVelocity; }  // inline (read as a value)
-    float GetRange() const { return this->mRange; }  // inline (EESMObject 0x5c8871)
-    float GetAreaEffect() const { return this->mAreaEffect; }  // inline (0x66cbe1)
-    float GetLineOfSight() const { return this->mLineOfSight; }
     bool GetIsTree() const { return this->mIsTree; }  // inline (EESMEffect 0x5c2b3e)
     bool GetCanSetRallyPoint() const { return this->mCanSetRallyPoint; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsTower() const { return this->mIsTower; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
@@ -1122,8 +1003,6 @@ public:
     bool GetIsProjectile() const { return this->mIsProjectile; }
     unsigned char GetDomains() const { return this->mDomains; }
     float GetAcceleration() const { return this->mAcceleration; }  // inline (read as a value)
-    float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (read as a value)
-    float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
     // inline (the heal goal's Virtual64 0x22569f loads it as an FP value after the ratio; provisional name)
     float GetHealThreshold() const { return this->mHealThreshold; }
     bool GetIsWall() const { return this->mIsWall; }

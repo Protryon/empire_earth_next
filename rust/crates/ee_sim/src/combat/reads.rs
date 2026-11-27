@@ -816,12 +816,24 @@ impl QueryHost for EeCombatQueryHost {
         if let Some(v) = crate::combat::query_views::query_read(&t, code, object) {
             return v;
         }
+        #[cfg(not(test))]
+        if let Some(v) = crate::combat::cg_view::query_plain_read(&t, code, object) {
+            return v;
+        }
         unsafe { (self.read)(self.ctx, code, object, arg) }
     }
     fn handle(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> EeCombatHandle {
+        #[cfg(not(test))]
+        if let Some(v) = crate::combat::cg_view::query_plain_handle(code, object) {
+            return v;
+        }
         unsafe { (self.handle)(self.ctx, code, object, arg) }
     }
     fn act(&mut self, code: i32, object: EeCombatHandle, arg: i32) {
+        #[cfg(not(test))]
+        if crate::combat::cg_view::query_plain_act(code, object, arg).is_some() {
+            return;
+        }
         unsafe { (self.act)(self.ctx, code, object, arg) }
     }
     fn location(&mut self, object: EeCombatHandle) -> GeTransformation {

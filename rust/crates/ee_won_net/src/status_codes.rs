@@ -1,6 +1,6 @@
 //! The WON SDK's status codes, by the names the C++ uses (`WS_Success`, ...): the C++ `WONStatus` (a `long`)
-//! values, read through `rust/won_net/status_codes.h` (`include/ee/wonapi/WONStatus.h` includes it; until R6 WONLobby
-//! round 30 they were that header's enum). The names are WONStatusToString's (0x69deb0): status.rs's `NAMES` table,
+//! values, read through `rust/won_net/status_codes.h` (until R6 WONLobby round 30 they were
+//! WONStatus.h's enum; the header went in R6 WON round 39). The names are WONStatusToString's (0x69deb0): status.rs's `NAMES` table,
 //! printed by the C++ over every code (`golden_status.tsv`), names each of these values by its constant's name.
 
 #![allow(non_upper_case_globals)]

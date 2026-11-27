@@ -407,7 +407,7 @@ pub extern "C" fn ee_gamecpp_db_terrain_previews(load: bool) {
         if h(O::DtTerrainClassCount, t, &[]) <= 0 {
             continue;
         }
-        let class = hp(O::TkClassAt, 0, &[h(O::DtTerrainClass0, t, &[])]);
+        let class = crate::tech_tree::objects::class_at(h(O::DtTerrainClass0, t, &[]));
         if class != 0 {
             let button = hp(O::DtClassButton, class, &[]);
             if load {

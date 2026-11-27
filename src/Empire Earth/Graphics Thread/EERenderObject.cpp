@@ -87,11 +87,7 @@ static EeGfxSceneFade sSceneFade = {1.0f, 1.0f, 0, 0.0f, 0.0f, 1, 1.0f, 0.0f, 0.
 // gB529068 (declared in ee/EEGraphics.h, ee/EmpireEarth.h): gamecpp globals.rs
 
 // The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
-void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }
-void SetLightingOff() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Off); }
-void SetTerrainLighting() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Terrain); }
 void EEPostGraphicsAll() { ee_gamecpp_ro_post_render_objects(true); }
-void EEResetGraphicsValues() { ee_gamecpp_ro_post_render_objects(false); }
 
 // Returns the ghost unit's model through its player's upgrade of its unit class
 // (inline in the real header)

@@ -99,6 +99,7 @@ struct WONShell {
 // the game's skin (skinobj.rs) a WON skin config's PreParse makes
 static intptr_t ee_won_guicpp_shell_call = 0;
 static void ee_won_skin_ensure(intptr_t) { tr("skin ensure"); }
+static Component* WONShellNew(EeWonShellKind, intptr_t, intptr_t, intptr_t) { return NULL; } // (the GUI's registrations' shells: not this golden's)
 
 struct Background {
     SmartPtr<Image> mImage; int mColor, mBorderColor; bool mUseOffsets, mStretchImage, mWantGrabBG; SmartPtr<Component> mComponent;

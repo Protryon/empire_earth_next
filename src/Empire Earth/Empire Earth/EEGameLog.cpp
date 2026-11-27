@@ -199,7 +199,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::EaGoalState: return P64(B_CX->mGoalState);
     case O::EaGoalKind: return ((EEUnitGoal*)p)->mKind;
-    case O::EaPlayerEpoch: return B_PL->mTechnologies->mCurrentEpoch;
     case O::EaTownHullContains: return B_PL->GetTown((unsigned long)a[0])->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
     case O::EaForestAt: return P64(gContinentManager.GetForestAt((EEUnit*)a[0]));
     case O::EaForestKind: return ((EEAIForest*)p)->GetResourceKind();
@@ -207,7 +206,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EmMembers: return P64(&B_MUS->mRandom);
     case O::EmConductorIntensity: B_MUS->mConductor->SetIntensity((unsigned long)a[0], true);
         break;
-    case O::EmTechnologies: return P64(B_PL->mTechnologies);
     case O::EmCurrentEpoch: return ((EETechTree*)p)->mCurrentEpoch;
     // the game log (game_log.rs)
     case O::EgIsHuman: return B_PL->IsHuman();
@@ -307,7 +305,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcEraseQueued: B_PL->EraseQueuedImprovements((long)a[0]);
         break;
-    case O::DcCurrentEpoch: return B_PL->mTechnologies->mCurrentEpoch;
     case O::DcSetEpoch: B_PL->SetEpoch((long)a[0]);
         break;
     case O::DcSetHitPoints: B_UN->SetHitPoints((long)a[0]);
@@ -322,10 +319,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DcApply: gCheatCodes->ApplyCheatCode((long)a[0], (long)a[1], (long)a[2]);
         break;
     case O::DcSwapCheatsEnabled: return std::exchange(gWorld.mCheatsEnabled, a[0] != 0);
-    case O::DvAvailable: return P64(&B_CV->mAvailablePoints);
-    case O::DvMaximum: return P64(&B_CV->mMaxPoints);
-    case O::DvNoPointsAdded: return P64(&B_CV->mNoPointsAdded);
-    case O::DvUnchanged: return P64(&B_CV->mUnchanged);
     case O::DvPurchased: return P64(&B_CV->mPurchasedUpgrades);
     case O::DvDeferred: return P64(&B_CV->mDeferredUpgrades);
     case O::DvListCount: return (int64_t)B_LIST->size();

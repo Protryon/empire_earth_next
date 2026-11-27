@@ -8,7 +8,6 @@
 #ifndef EE_EEGAMEOPTIONS_H
 #define EE_EEGAMEOPTIONS_H
 
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 
 class FSFile;
@@ -32,7 +31,6 @@ public:
         this->mName = inOther.mName;
         return *this;
     }
-    void FnE123D() {}                       // empty (ICF-folded into 0xe123d; EEGameOptions::Fn130272 calls it on each slot) (provisional name)
 
     UWideString mName;                      // +0x08 in the original
 };
@@ -63,8 +61,6 @@ public:
     // Returns whether civilizations may be bought: not in the scenario editor and not in a scenario game
     // 0x12fc0c: !gUIManager+0x13c && !mIsScenarioGame (EEMCivUpgradesPurchased; provisional name)
     bool CanBuyCivilization() { return ee_gamecpp_options_can_buy_civilization(this); }
-    // 0x130272 (EEMStartLoading, under the read lock): each slot's empty member (provisional name)
-    void Fn130272() {}
     // Returns the map's width and height in tiles for the map size setting (0 x 0 for an unknown size)
     // (gameoptions.yaml map_sizes: 42, 58, 75, 105, 160, 220 in the original)
     // 0x12fb70 (by mMapSize; EERandomMap::CreateRandomMap)
@@ -102,7 +98,6 @@ public:
 
     // inline (the lobby reads one slot through it: the original never CSEs &gGameOptions between a GetPlayer site
     // and a plain mPlayers[] site) (provisional name)
-    EEGameOptionsPlayer& GetPlayer(long inIndex) { return this->mPlayers[inIndex]; }
     EEGameOptionsPlayer mPlayers[16];       // +0x000
     UWideString mCampaignName;              // +0x380
     UWideString mScenarioName;              // +0x394
