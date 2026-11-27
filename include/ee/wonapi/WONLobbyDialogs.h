@@ -84,8 +84,6 @@ class CreditsDialogConfig : public ContainerConfig {
 public:
     CreditsDialogConfig() : ContainerConfig(EeWonCfgKind::Dialog) {}
     virtual bool Virtual24(const std::string& inInstruction); // 0x7f7780; handles the ADDLINE instruction
-    virtual void SetComponent(Component* inComponent);
-    LobbyRustDialog* mCredits; // 0x9c, not owned (the Credits kind)
 };
 
 }

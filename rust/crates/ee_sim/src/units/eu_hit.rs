@@ -363,8 +363,14 @@ pub(crate) mod game {
 
     impl EuHost for Game {
         fn eu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64) -> i64 {
-            // SAFETY: the body runs inside the C++ member that handed over its live unit
-            unsafe { ee_units_eu_host(op, unit as usize as *mut c_void, a, b, c) }
+            // SAFETY: the body runs inside the C++ member that handed over its live unit (the plain record reads
+            // and stores first: cu_view.rs)
+            unsafe {
+                if let Some(v) = crate::units::cu_view::eu_view(op, unit, a, b, c) {
+                    return v;
+                }
+                ee_units_eu_host(op, unit as usize as *mut c_void, a, b, c)
+            }
         }
     }
 

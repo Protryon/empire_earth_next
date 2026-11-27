@@ -24,7 +24,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "won_peerauth_msg.h"
 #include "rust/won_net/blowfish.h"
 #include "rust/won_net/peerauth.h"

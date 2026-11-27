@@ -12,10 +12,6 @@
 
 class RTSRenderObject;
 
-void SetTerrainLighting();                  // 0x10f833: the effects' lighting set-up (EEE3DEarthquake::DrawPass2)
-void SetLightingOff();                      // 0x10f6de: lighting set-up (EEROWater::RenderScene)
-void SetSceneFog();                         // 0x10f60f: lighting set-up (EEROWater::RenderScene)
-
 // the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by the fog factor, gamecpp picker.rs)
 // (provisional name)
 extern long& gHiddenUnitsMode;
@@ -35,11 +31,8 @@ public:
     void Fn10C036() { ee_gamecpp_ro_fn10c036(this); }
     // 0x10eabe (EEROGroundShadows::FrameStarting; provisional name)
     void FillRenderLists() { ee_gamecpp_ro_fill_render_lists(this); }
-    // 0x10e8d1 (EEROTerrain::FrameStarting; provisional name)
-    void Fn10E8D1() { ee_gamecpp_ro_fn10e8d1(this); }
     // FillRenderLists' per-unit helpers (IsUnitDrawn 0x10b3b3, DrawGroundCircle 0x10bba4, FillGhostRecords 0x10c952,
     // FillObject, FillUnit, the doppelgangers' fills, GetUnitOpacity 0x10f412): gamecpp render_object.rs
 };
 
 #endif
-

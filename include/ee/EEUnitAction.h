@@ -13,7 +13,6 @@ class UString;
 
 class EEUnitAction {
 public:
-    unsigned long GetType() const { return this->mType; }
     uint32_t mType;                         // the action id (5000 is the idle action)
 
     // 0x22c75a ("" for an unknown id)

@@ -7,7 +7,6 @@
 #define EE_RTSUNIT_H
 
 #include "ee/EEUnitStore.h"   // the members the unit store mirrors (EEUnitStoreField)
-#include "rust/sim/units.h"    // EeUnitsRtsUnitFields (RTSUnit's plain members)
 #include "rust/game/rts.h"
 
 class EEPlayer;
@@ -78,8 +77,6 @@ public:
     void Initialize(long inLinked) { ee_rts_unit_initialize(this, inLinked); }
     // 0x23da8e: +0x24 = -1, +0x1c/+0x20 = -10000, the rest 0 (provisional name)
     void Reset() { ee_rts_unit_reset(this); }
-    // 0x23dabb (the mNext/mL10 list)
-    void InsertAfter(RTSUnit* inUnit) { ee_rts_unit_insert_after(this, inUnit); }
     // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
     void Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }
     // 0x23dbda (the mL08 list)
@@ -90,14 +87,12 @@ public:
 
     // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)
     RTSUnitLink* mTileNode;                 // +0x08 (0: not a valid target; the unit calamities' Virtual4C)
-    RTSUnit* GetNext() const { return this->mNext; }
     RTSUnit* mNext;                         // +0x0c the owner's next unit (EEPlayer::mFirstUnit)
     RTSUnit* mPrevious;                     // +0x10 the previous unit of that list (0x23dabb)
     RTSTile* mTile;                         // +0x14 its tile (0x23dcf3; 0: not selectable by the hot keys; provisional name)
     EEPlayer* mPlayer;                      // +0x18 (its owner)
     // +0x1c mTileX, +0x20 mTileY (= -10000), +0x24 mUnitID (-1 for none), +0x28 mIsQueuedForDelete (saved), +0x29
     // mIsEditorSelected (saved as false), +0x2a mIsNodeFreed, +0x2b mIsValid: EeUnitsRtsUnitFields
-    bool GetIsValid() const { return this->mIsValid; }
     RTSUnitObjectKind mObjectKind;          // New (port): RTSUnit 0, EEUnit 1, EEComplexUnit 2 (EEUnitCast<T>)
     bool mInUnitStore = false;              // New (port): its record is in the unit store (ee/EEUnitStore.h)
 };

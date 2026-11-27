@@ -22,7 +22,6 @@ public:
 
     // 0x116a97 (0x13fccb calls it; asserts) (provisional name)
     static void LoadMedia() { ee_gamecpp_ru_load_media(); }
-    static void ReleaseMedia() { ee_gamecpp_ru_release_media(); }
 
 };
 

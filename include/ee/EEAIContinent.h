@@ -21,11 +21,6 @@ public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
     static EEAIContinent* New() { return (EEAIContinent*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::Continents); }
     static void Delete(EEAIContinent* inObject) { ee_astar_object_delete(EeAStarCmTable::Continents, (uint64_t)(uintptr_t)inObject); }
-    // +0x1c 0x1da61: the EEAIArea slot (closest points)
-    // (Rust: ee_sim::astar area_continent.rs, with its AREA 2 record)
-    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
-        { return ee_astar_area_closest_points_of((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther,
-                                                 reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther)); }
     // +0x2c 0x1dc54 (ret 8): reserves outTiles to mShoreTiles's size, then walks mShoreTiles (inID 0: every tile)
     void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles)
         { ee_astar_continent_shore_next_to((uint64_t)(uintptr_t)this, inID, &outTiles, EEAIPushPoint); }
@@ -38,28 +33,9 @@ public:
     void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles, long inKind)
         { ee_astar_continent_shore_in_regions_into((uint64_t)(uintptr_t)this, inIDs.data(), inIDs.size(), inKind, &outTiles, EEAIClearList<std::vector<U2DPoint<long> > >, EEAIPushPoint); }
 
-    // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac) (Rust: ee_astar continent.rs, as the rest)
-    void AddPathAreaID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::PathAreas, inID); }
-    // 0x1dbf4: as EEAIPathSector's (Rust: cm_query.rs)
-    EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint)
-        { return (EEAIPathArea*)(uintptr_t)ee_astar_object_path_area_at((uint64_t)(uintptr_t)this, false, inPoint.mX, inPoint.mY); }
-    // 0x1e4a1: lower_bound + erase when equal
-    void RemovePathAreaID(unsigned short inID) { ee_astar_continent_remove_id(this, EeAStarContinentList::PathAreas, inID); }
-    // the graph machine's view (EEAIAStarGraphMachine<.., EEAIContinent>): out-of-line COMDAT 0x275eb
-    // (`jbe`: unsigned) and the hull's center as the node tile (0x28aa7 reads +0x44/+0x48) (provisional names)
-    unsigned long GetNumNeighbors() const { return (unsigned long)this->GetNeighbors().size(); }
-
-    EEAIListView<unsigned short> GetIDs(EeAStarContinentList inList) const
-        { return EEAIListView<unsigned short>(ee_astar_continent_ids, static_cast<const EeAStarContinentRecord*>(this), inList); }
-    EEAIListView<unsigned short> GetPathAreaIDs() const { return this->GetIDs(EeAStarContinentList::PathAreas); }
-    EEAIHandleView<EEAIContinent> GetNeighbors() const
-        { return EEAIHandleView<EEAIContinent>(ee_astar_continent_neighbors, static_cast<const EeAStarContinentRecord*>(this)); }
-    void AddNeighbor(EEAIContinent* inContinent) { ee_astar_continent_add_neighbor(this, (uint64_t)(uintptr_t)inContinent); }
-    unsigned short GetCount(long inKind) const { return this->counts[inKind]; }
     unsigned char GetCategory() const { return this->category; }  // inline (GetRandomContinent 0x422dc8) (provisional name)
     unsigned short GetID() const { return this->id; }
     EeAStarContinentRecord* Record() { return this; }   // the record (ee_sim::astar cm_io.rs's layout)
-    void SetID(unsigned short inID) { this->id = inID; }
 
 private:
     EEAIContinent();

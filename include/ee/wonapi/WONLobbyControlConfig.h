@@ -12,18 +12,19 @@ class ImageTextButton;
 class CrossPromotionButton;
 class MultiListHeader;
 
+// R6 WON lobby and network round 39: each config's borrowed typed copy of its component (ChatCtrlConfig's mChatCtrl
+// at 0x98 and its SetComponent 0x7c8380, RoomLabelCtrlConfig's mRoomLabel, ServerListCtrlConfig's mServerList,
+// GameBrowserCtrlConfig's mBrowser, the two buttons' configs' and CreditsDialogConfig's) is its component's
+// static_cast where used (LobbyCfgComp); the SetComponent overrides that wrote them are gone.
+template<class T> T* LobbyCfgComp(ComponentConfig* inConfig) { return static_cast<T*>(inConfig->mComponent.get()); }
 class ChatCtrlConfig : public ContainerConfig {
 public:
     virtual bool Virtual24(const std::string&); //3b9e10
-    virtual void SetComponent(Component*); // at 0x007c8380
-    ChatCtrl* mChatCtrl; // offset 0x98, borrowed (written at 0x007c838e)
 };
 
 class RoomLabelCtrlConfig : public ContainerConfig {
 public:
     virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*);
-    RoomLabelCtrl* mRoomLabel; // offset 0x98, borrowed; 0x0079afb0 writes it before calling ContainerConfig
 };
 
 class ServerListCtrlConfig : public ContainerConfig {
@@ -31,9 +32,7 @@ public:
     ServerListCtrlConfig(); // at 0x007c8360 (defined out of line)
     virtual bool Virtual24(const std::string&);
     virtual bool GetNamedValue(const std::string&,int&);
-    virtual void SetComponent(Component*);
     void HandleAddColumn();
-    ServerListCtrl* mServerList; //98 borrowed
     MultiListHeader* mHeader; //9c borrowed
     int mNumColumns; //a0
 };
@@ -42,23 +41,17 @@ class ImageTextButtonConfig : public ComponentConfig {
 public:
     ImageTextButtonConfig() : ComponentConfig(EeWonCfgKind::ImageButton) {}
     virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*);
-    ImageTextButton* mImageTextButton; // offset 0x7c, borrowed (RTTI 0x00851d64)
 };
 
 class CrossPromotionButtonConfig : public ComponentConfig {
 public:
     CrossPromotionButtonConfig() : ComponentConfig(EeWonCfgKind::ImageButton) {}
     virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*);
-    CrossPromotionButton* mCrossPromotionButton; //7c borrowed
 };
 
 class GameBrowserCtrlConfig : public ContainerConfig {
 public:
     virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007bc450
-    virtual void SetComponent(Component* component) { ContainerConfig::SetComponent(component); this->mBrowser=static_cast<GameBrowserCtrl*>(component); } // inline
-    GameBrowserCtrl* mBrowser; //98, borrowed
 };
 
 class GameUserListCtrlConfig : public ContainerConfig {

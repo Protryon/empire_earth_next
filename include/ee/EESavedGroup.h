@@ -9,10 +9,6 @@
 
 class EESavedGroup : public EEGroup {
 public:
-    static EESavedGroup* New(EEPlayer* inPlayer, long inIndex)
-        { return static_cast<EESavedGroup*>(static_cast<EEGroup*>(ee_units_group_new(0, inPlayer, inIndex))); }
-    // takes the selection's units (sorted first) and becomes its saved group
-    void Assign(EESelectedGroup* inGroup) { ee_units_group_with(this, 3, inGroup); }
 };
 
 #endif

@@ -5,7 +5,6 @@
 #ifndef EE_EETILECOORDINATE_H
 #define EE_EETILECOORDINATE_H
 
-#include "lle/U2DPoint.h"   // exe view: no key statics, no includes (safe in a widely included header)
 typedef U2DPoint<long> EETileCoordinate;
 
 #endif

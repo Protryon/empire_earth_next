@@ -259,7 +259,7 @@ public:
     EeWonCfgKind mKind;
     EeWonCompCfg* mCfg;
 };
-// the game's (ConfigTableHost.cpp: a ContainerConfig for a container kind, whose own members these steps never read)
+// the game's (ComponentConfigHost.cpp: a ContainerConfig for a container kind, whose own members these steps never read)
 ComponentConfig* CfgNewOfKind(EeWonCfgKind k) { return new ComponentConfig(k); }
 template<EeWonCfgKind K> ComponentConfig* KindConfig() { return CfgNewOfKind(K); }
 #define CC_KIND_FACTORY(C, K) KindConfig<EeWonCfgKind::K>
@@ -289,6 +289,17 @@ static void ClearStatics()
 // the game's media configs are one class by kind (WONLobbyConfigImages.h); these stand-ins are classes
 template<class T> static bool WONCfgIs(ConfigObject* o, EeWonCfgKind) { return dynamic_cast<T*>(o) != NULL; }
 #include "ee/wonapi/WONCompCfg.inl"
+// the readers only the table reader called (R6 WON lobby and network round 39: it reads on the config's compcfg.rs
+// object itself, cfgtab.rs), as the game's forwards were: this golden still drives them through ee_won_cc_call
+int ComponentConfig::ReadChar() { return CcGet<int32_t>(this->mCfg, CcK::ReadChar); }
+GUIString ComponentConfig::ReadFlag(bool* outOn) { return CcGet<GUIString>(this->mCfg, CcK::ReadFlag, (intptr_t)outOn); }
+Direction ComponentConfig::ReadDirection() { return (Direction)CcGet<int32_t>(this->mCfg, CcK::ReadDirection); }
+HorzAlign ComponentConfig::ReadHorzAlign() { return (HorzAlign)CcGet<int32_t>(this->mCfg, CcK::ReadHorzAlign); }
+VertAlign ComponentConfig::ReadVertAlign() { return (VertAlign)CcGet<int32_t>(this->mCfg, CcK::ReadVertAlign); }
+SmartPtr<RawImage> ComponentConfig::ReadRawImage() { return (RawImage*)this->ReadImage(true).get(); }
+StandardCursor ComponentConfig::ReadStandardCursor() { return (StandardCursor)CcGet<int32_t>(this->mCfg, CcK::ReadStandardCursor); }
+SmartPtr<Cursor> ComponentConfig::ReadCursor() { return Cursor::GetStandardCursor((StandardCursor)CcGet<int32_t>(this->mCfg, CcK::ReadCursor)); }
+SelectionColor ComponentConfig::ReadSelectionColor() { return CcGet<SelectionColor>(this->mCfg, CcK::ReadSelectionColor); }
 }
 
 // ---- the generator (a fixed LCG)

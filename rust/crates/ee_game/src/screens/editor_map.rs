@@ -552,15 +552,7 @@ mod tests {
 
     #[test]
     fn the_strings_match_the_language_header() {
-        let header = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EEStringIDs.h"))
-            .expect("EEStringIDs.h");
-        let value = |name: &str| -> u32 {
-            let line = header
-                .lines()
-                .find(|l| l.split_whitespace().nth(1) == Some(name) && l.starts_with("#define"))
-                .unwrap_or_else(|| panic!("{name}"));
-            line.split_whitespace().nth(2).unwrap().parse().unwrap()
-        };
+        let value = |name: &str| -> u32 { ee_base::string_ids::by_name(name).unwrap_or_else(|| panic!("{name}")) };
         for (name, v) in [
             ("IDS_MAP_WIDTH", IDS_MAP_WIDTH),
             ("IDS_SE_MAP_MAP_HEIGHT", IDS_SE_MAP_MAP_HEIGHT),

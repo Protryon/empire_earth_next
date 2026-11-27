@@ -31,7 +31,7 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
     switch (inOp) {
     case Op::CreditsBase: return WON_GUARDED(cr->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
+    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(static_cast<LobbyRustDialog*>(c->mComponent.get()), GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }
@@ -39,12 +39,6 @@ static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const 
 
 // Reads an ADDLINE layout key (text, optional colour) into the credits; passes other keys to the dialog config
 bool CreditsDialogConfig::Virtual24(const std::string& inInstruction) { return CfgRd(this, EeWonLobbyCfgRdCall::Credits, inInstruction) != 0; }
-
-void CreditsDialogConfig::SetComponent(Component* inComponent)
-{
-    ContainerConfig::SetComponent(inComponent);
-    this->mCredits=static_cast<LobbyRustDialog*>(inComponent);
-}
 
 // ---- ScrollingTextComponent: the shell and its host (each op the original's statements on the component or the
 // paint's Graphics)

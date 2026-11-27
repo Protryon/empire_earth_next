@@ -123,7 +123,6 @@ pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
             o(Op::FactoryGame, 0, 0);
             o(Op::FactoryPlayer, 0, 0);
             crate::rows::ee_won_lobby_rows_ee_details(); // the game list's rows paint the EE game's details
-            o(Op::FactoryConfig, 0, 0);
             0
         }
         // `gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder)` (R6 WON GUI round 41: eesound.rs's)

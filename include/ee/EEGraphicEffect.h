@@ -25,7 +25,6 @@ public:
     static unsigned long IndexOf(const EEGraphicEffect* inEffect);
     EEGraphicEffect* GetLinkedEffect1() const { return this->mLinkedEffect1; }  // inline: 0x50225c
     EEGraphicEffect* GetLinkedEffect2() const { return this->mLinkedEffect2; }  // inline: 0x50225c
-    long GetKind() const { return this->mKind; }  // inline: EEEffect2D::CreateParts 0x504623 (the kind loaded into edx after the animation's ?:)
     float GetSize() const { return this->mSize; }  // inline (the hurricane copies it through the FP stack)
     // inline: the 3D effects load the parameters as values (provisional name)
     float GetParam2() const { return this->mParam2; }
@@ -37,7 +36,6 @@ public:
     virtual long UnloadMedia();             // EEMedia +0x08 0xd72b6
     static long LoadTable(FSFile* inFile);  // 0xd6e9e (db\dbgfxeffects.dat)
     static void DumpIDs(FSFileSpec& inFile);    // 0xd6fe6 (fprintf to the spec's stream; EEWorld::DumpMedia)
-    static void UnloadTable();
     EEMedia* GetMedia();                    // 0xd7074 (the graphic object, or a random one of this effect's kind)
     static void SortMediaByKind();
     void Load(bool inIsOnDemand);           // 0xd7100 (counts a use at +0x80) (provisional name)

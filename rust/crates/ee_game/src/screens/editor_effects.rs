@@ -1057,24 +1057,17 @@ mod tests {
         assert_eq!(first_word(b""), b"");
     }
 
-    /// The private string ids equal `ee/EEStringIDs.h`'s.
+    /// The private string ids equal the language table's (`ee_base::string_ids`).
     #[test]
     fn string_ids_match_the_header() {
-        let header = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EEStringIDs.h"))
-            .expect("include/ee/EEStringIDs.h");
         let ids = include_str!("editor_effects_ids.rs");
         let mut checked = 0;
         for line in ids.lines() {
             let Some(rest) = line.strip_prefix("pub(crate) const ") else { continue };
             let (name, value) = rest.split_once(": u32 = ").unwrap();
             let value = value.trim_end_matches(';');
-            let want = header
-                .lines()
-                .find_map(|l| {
-                    let mut w = l.split_whitespace();
-                    (w.next() == Some("#define") && w.next() == Some(name)).then(|| w.next().unwrap().to_string())
-                })
-                .unwrap_or_else(|| panic!("{name} not in the header"));
+            let want =
+                ee_base::string_ids::by_name(name).unwrap_or_else(|| panic!("{name} not in the table")).to_string();
             assert_eq!(want, value, "{name}");
             checked += 1;
         }

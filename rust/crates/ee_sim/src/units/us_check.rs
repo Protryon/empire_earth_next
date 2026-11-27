@@ -237,8 +237,14 @@ pub(crate) mod game {
 
     impl UsHost for Game {
         fn us(&mut self, op: i32, a: u64, b: i64, c: u64, out: *mut c_void) -> i64 {
-            // SAFETY: the C++ statement over the world's live objects (the check runs on the simulation thread)
-            unsafe { ee_units_us_host(op, a, b, c, out) }
+            // SAFETY: the C++ statement over the world's live objects (the check runs on the simulation thread; the
+            // plain record reads first: cu_view.rs)
+            unsafe {
+                if let Some(v) = crate::units::cu_view::us_view(op, a, b) {
+                    return v;
+                }
+                ee_units_us_host(op, a, b, c, out)
+            }
         }
         fn store_check(&mut self, objects: &[EeUnitRecord]) -> EeUnitStoreCheck {
             let mut check = EeUnitStoreCheck::default();

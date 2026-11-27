@@ -9,8 +9,6 @@
 #include <algorithm>
 #include <stdint.h>
 #include "lle/U2DRectangle.h"
-#include "rust/sim/combat.h"             // the map's unit regions (ee_combat regions.rs)
-#include "rust/sim/units.h"              // the collector (ee_sim units uu_ffi.rs)
 
 // (Units by id, the collector's sort-and-unique (0x23dd96 / 0x23ddab, 0xe0b9 / 0xe104) and the walk of the map's unit
 // regions: ee_sim units uu_reads.rs units_in_rectangle)

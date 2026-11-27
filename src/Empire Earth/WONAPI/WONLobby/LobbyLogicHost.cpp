@@ -18,7 +18,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/lobbyhost.h"
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/stagingobj.h"

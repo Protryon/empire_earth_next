@@ -54,7 +54,6 @@ namespace {
 
 template <class T> size_t OffsetOf(const T* inObject, const void* inMember) { return (size_t)((const char*)inMember - (const char*)inObject); }
 
-
 int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
 {
     switch (inOp) {
@@ -132,13 +131,4 @@ bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outAre
     return ee_astar_cm_read_area((uint64_t)(uintptr_t)&outArea, inBytes.empty() ? NULL : &inBytes[0], inBytes.size());
 }
 
-// the block's file part and the block a load keeps are Rust's (ee_sim::astar cm_file.rs)
-long EESaveContinentRegions(FSFile& outFile) { return ee_astar_cm_save_regions(&gContinentManager.mRecord, &outFile); }
-
-long EELoadContinentRegions(FSFile& inFile) { return ee_astar_cm_load_regions(&inFile); }
-
-bool EEContinentRegionsPending() { return ee_astar_cm_regions_pending(); }
-
 bool EERestoreContinentRegions() { return ee_astar_cm_restore_loaded(&gContinentManager.mRecord); }
-
-unsigned long EEContinentRegionsDigest() { return ee_astar_cm_regions_digest(&gContinentManager.mRecord); }

@@ -26,7 +26,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAreaEffectKindIDs.h"
 #include "rust/sim/cp.h"
 
 static uint64_t EECPRCHandle(const void* inObject)

@@ -18,8 +18,9 @@ ROOT = HERE.parent.parent
 SCHEMA = HERE / 'rules_schema.json'
 INC = ROOT / 'include' / 'ee'
 RUST_OUT = ROOT / 'rust' / 'crates' / 'ee_data' / 'src' / 'generated' / 'rules_gen.rs'
-HEADERS = [('../rust/sim/unit_ids.h', 'kUnitCategory'), ('../rust/sim/unit_ids.h', 'kUnitType'), ('EEStringIDs.h', 'IDS_'),
-           ('../rust/sim/tech_tree_ids.h', 'kTech'), ('../rust/sim/tech_consts.h', 'kCivPower')]
+HEADERS = [('../rust/sim/unit_ids.h', 'kUnitCategory'), ('../rust/sim/unit_ids.h', 'kUnitType'),
+           ('../../rust/crates/ee_base/src/string_ids.rs', 'IDS_'), ('../rust/sim/tech_tree_ids.h', 'kTech'),
+           ('../rust/sim/tech_consts.h', 'kCivPower')]
 
 
 def load():

@@ -188,22 +188,6 @@ unsafe fn bytes<'a>(text: *const u8, length: usize) -> &'a [u8] {
     }
 }
 
-/// An op's text appended (the host's answer).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_cb_out_text(out: *mut EeScreensCbOut, text: *const u8, length: usize) {
-    if let Some(out) = unsafe { out.as_mut() } {
-        out.text.extend_from_slice(unsafe { bytes(text, length) });
-    }
-}
-
-/// An op's value appended (the host's answer).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_cb_out_value(out: *mut EeScreensCbOut, value: i64) {
-    if let Some(out) = unsafe { out.as_mut() } {
-        out.values.push(value);
-    }
-}
-
 // ---- the builder's entry points
 
 /// `CivBuilderEditCivilization`.

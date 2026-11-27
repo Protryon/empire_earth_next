@@ -197,7 +197,6 @@ static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
 [[maybe_unused]] static const bool sEELobbySoundHost = (ee_won_eesound_register(EELobbySoundHost), true);
 
 // Creates the lobby config with the EEFileTransferPort key (default 8889)
-EELobbyConfig::EELobbyConfig() { this->KeyAdd("EEFileTransferPort", this->mFileTransferPort, 8889); }
 
 // the game form's open event once a game is done (vtable 0x84c6e8; ??_G ICF-folded 0x5e60e7)
 class EELobbyGameDoneEvent : public UIEvent {
@@ -229,7 +228,6 @@ static ComponentConfig* EELobbyNewDialogConfig() { return CfgNewOfKind(EeWonCfgK
 static Component* EELobbyNewGameOptionsCtrl() { return new LobbyRustCtrl(EeWonLobbyCtlKind::GameOptions); }
 static Component* EELobbyNewPlayerOptionsCtrl() { return new LobbyRustCtrl(EeWonLobbyCtlKind::PlayerOptions); }
 static Component* EELobbyNewColorButton() { return new EELobbyColorButton; }
-static LobbyConfig* EELobbyNewConfig() { return new EELobbyConfig; }
 static void EELobbyGetComponents(ComponentConfig* inConfig) { Glue(GL::GetComponents, (intptr_t)inConfig); }
 static void EELobbySendConnectStatus(int inConnected) { Glue(GL::SendConnectStatus, inConnected); }
 
@@ -435,7 +433,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::LobbyClose: EELobbyClose(); return 0;
     case Op::ResourceDestroy: EELobbyResource_Destroy(); return 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
-    case Op::ConfigPort: return static_cast<EELobbyConfig*>(reinterpret_cast<LobbyConfig*>(a))->mFileTransferPort;
+    case Op::ConfigPort: return reinterpret_cast<LobbyConfig*>(a)->mFileTransferPort;
     case Op::SetGameInProgress: LobbySetGameInProgress((int)a); return 0;
     case Op::LeaveGame: LobbyLeaveGame(a != 0); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
@@ -705,7 +703,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::GfxTextWidthHeld: return g->GetFont()->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
     case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
     case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
-    case Op::FactoryConfig: LobbyConfig::SetAllocator(EELobbyNewConfig); return 0;
     case Op::ResInit: sEELobbyResources = EELobbyResource_Init(NULL); return 0;
     case Op::ResAllocGameOptions: sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl); return 0;
     case Op::ResAllocPlayerOptions: sEELobbyResources->AddAllocator("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl); return 0;

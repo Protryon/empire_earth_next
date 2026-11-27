@@ -8,7 +8,6 @@
 #ifndef EE_EETILELOCATION_H
 #define EE_EETILELOCATION_H
 
-#include "lle/U2DPoint.h"
 
 typedef U2DPoint<long> EETileLocation;
 

@@ -40,7 +40,6 @@ public:
     void PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType, std::vector<unsigned long>& outUnitIDs) { ee_gamecpp_pz_box(this, &inRectangle, false, inPlayer, inType, &outUnitIDs); }
     // 0x119d63: the ids of the units inside inRectangle (the editor's lasso) (provisional name)
     void PickUnitsInRectangle(const GERectangle& inRectangle, long inType, std::vector<unsigned long>& outUnitIDs) { ee_gamecpp_pz_box(this, &inRectangle, true, NULL, inType, &outUnitIDs); }
-    void Clear() { ee_gamecpp_picker_clear(this); }  // 0x119f08: drops the entries (provisional name)
     void Reset() { ee_gamecpp_picker_reset(this); }  // 0x119f7c: Clear, the main viewport, the camera mode (provisional name)
     // 0x119ffb: one drawn unit (EEROUnits) (provisional name)
     void AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize) { ee_gamecpp_picker_add_unit(this, inUnit, reinterpret_cast<const float*>(&inTransformation), inPixelSize); }

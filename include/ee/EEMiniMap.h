@@ -5,9 +5,6 @@
 
 #include <list>
 #include <vector>
-#include "lle/UList.h"
-#include "rust/base/math.h"
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
 
@@ -146,13 +143,6 @@ struct MMMapUnit {
     // Recolours every player's dots after a colour change (units in player colour, buildings in shade)
     // 0x11fa55 (the dots take the players' current colours)
     void Recolor() { ee_gamecpp_minimap_recolor(this); }
-    // New (port): locks the unit layer and hands its pixels to the Rust half
-    // New (port): mUnitSurface locked, its pixels to the Rust half
-    void LockUnitLayer() { ee_gamecpp_minimap_lock_unit_layer(this); }
-    // Recomputes the terrain colour of each pixel in a texture rectangle (the lit average of the map vertices under it:
-    // ee_app minimap.rs)
-    // 0x1202f2 (the terrain texture's pixels)
-    void RedrawPixels(long inLeft, long inRight, long inBottom, long inTop) { ee_gamecpp_minimap_redraw_pixels(this, inLeft, inRight, inBottom, inTop); }
 
     // port: the original's dots per 0x40 x 0x40 cell (UList<MMPlayerUnit>[0x1000] at +0x0015c, UList<MMMapUnit>
     // [0x1000] at +0x0815c) and the cells' sight counts (+0x1015c) are the Rust half's (ee_app minimap.rs; the dots

@@ -17,8 +17,6 @@ public:
     EEGameStateLoader(EEGameState* inState);
     // the bodies (0x14a0a4 RestorePersistents, 0x14a765 ReadPersistent, RestorePlayers: ee_game gamecpp persist_save.rs)
     bool Load(FSFile& inFile);                                                  // 0x14a3eb (copies inFile to memory first)
-    // 0x14a4ef: the header from inHeaderFile, then the persistents from inFile; false (and the state cleared) on failure
-    bool LoadGame(FSFile& inHeaderFile, FSFile& inFile);
 
     EEGameState* mState;                    // +0x00
 };

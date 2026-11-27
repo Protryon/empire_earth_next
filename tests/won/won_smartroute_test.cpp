@@ -22,7 +22,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "won_routehelpers.h" // the request helpers WONRouting.h had
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"

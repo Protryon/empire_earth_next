@@ -11,22 +11,6 @@
 
 #include "EEDataText.h"   // the ee_data C API
 
-EERuleNumber EERuleNumber::Constant(float inValue)
-{
-    EERuleNumber n;
-    n.mFloat = inValue;
-    n.mLong = (long)inValue;
-    return n;
-}
-
-EERuleNumber EERuleNumber::World(long inRow, int inValue)
-{
-    EERuleNumber n;
-    n.mWorldRow = inRow;
-    n.mWorldValue = inValue;
-    return n;
-}
-
 const EEEpochMedia& EERules::Epoch(long inEpoch) const
 {
     static const EEEpochMedia kNone = [] { EEEpochMedia theNone; ee_data_rules_epoch_none(&theNone); return theNone; }();

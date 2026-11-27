@@ -12,18 +12,10 @@
 class EEAIPathArea : public EEAIArea, private EeAStarPathAreaRecord {
 public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
-    static EEAIPathArea* New() { return (EEAIPathArea*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::PathAreas); }
-    static void Delete(EEAIPathArea* inObject) { ee_astar_object_delete(EeAStarCmTable::PathAreas, (uint64_t)(uintptr_t)inObject); }
 
     EeAStarPathAreaRecord* Record() { return this; }
     const EeAStarPathAreaRecord* Record() const { return this; }
-    unsigned short GetContinentID() const { return this->continent_id; }
-    void SetContinentID(unsigned short inID) { this->continent_id = inID; }
     unsigned short GetID() const { return this->id; }
-    void SetID(unsigned short inID) { this->id = inID; }
-    long GetKind() const { return this->kind; }
-    void SetKind(long inKind) { this->kind = inKind; }
-    long GetUnitID() const { return this->unit_id; }
 
 private:
     EEAIPathArea();

@@ -5,16 +5,16 @@
 #ifndef EE_EECIVILIZATIONBUILDER_H
 #define EE_EECIVILIZATIONBUILDER_H
 #include "ee/EECivUpgrade.h"
+#include "rust/game/screens.h"   // the builder (civ_whole.rs)
 
 class EECivilization;
 class UString;
 
 
-long CivBuilderEditCivilization();          // 0x280faf (pauses, then opens the builder for the current player)
-long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload);
+inline long CivBuilderEditCivilization() { return ee_screens_cb_edit_civilization(); }   // 0x280faf (pauses, then opens the builder for the current player)
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite);  // 0x28015d (the edited civilization as inName)
-void CivBuilderEditCurrentCivilization();   // 0x280bb1 (the current player's civilization edited)
-void CivBuilderFreeCivilization();          // the edited civilization deleted (delete gEditableCivilization)
+inline void CivBuilderEditCurrentCivilization() { ee_screens_cb_edit_current(); }   // 0x280bb1 (the current player's civilization edited)
+inline void CivBuilderFreeCivilization() { ee_screens_cb_free_civilization(); }   // the edited civilization deleted (delete gEditableCivilization)
 // EEProcessTimerExpired: ee/EEUserInterface.h; EESetCivBuilderButtonBlinking: ee/EmpireEarth.h
 
 #endif

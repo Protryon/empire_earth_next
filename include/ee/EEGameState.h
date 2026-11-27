@@ -12,12 +12,8 @@
 #define EE_EEGAMESTATE_H
 
 #include <vector>
-#include "lle/ESChecksum.h"
-#include "lle/FSFileSpec.h"
-#include "lle/GE3DPoint.h"
 #include "TSLockable.h"
 #include "ee/EEGameOptions.h"
-#include "rust/game/gamecpp.h"
 
 class UWideString;
 class EEMap;
@@ -44,7 +40,6 @@ public:
     // the loader unit's (Persistent/EEGameStateLoader.cpp 0x14a9ac..0x14aa24; provisional names)
     // Centres the camera on the middle of the map, if there is one
     // 0x14a9ac: mMapCenter = the map's (height + width) * 0.5 + 0.5 in x and y, z 0
-    void SetDefaultMapCenter() { ee_gamecpp_st_default_map_center(this); }
     void SetEffectManager(EEEffectManager* inManager);   // 0x14a9e8 (deletes the old one)
     void SetMap(EEMap* inMap);              // 0x14aa06 (deletes the old one)
     // empty (ret 8), ICF-folded at 0x163d6f; the loader 0x14a5ba calls it with the save's versions (provisional name)
@@ -52,8 +47,6 @@ public:
     // 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
     // hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
     void FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion) {  }
-    // 0x13181d (Reset and delete the old one; provisional name)
-    void SetCalamityHelper(EEPCalamityHelper* inHelper) { ee_gamecpp_state_set_calamity_helper(this, inHelper); }
     // 0x131854 (deletes the old one; provisional name)
     void SetEnvironmentManager(EEEnvironmentManager* inManager) { ee_gamecpp_state_set_environment(this, inManager); }
     // 0x1305bf (EEWorld::StartGame after the camera; provisional name)

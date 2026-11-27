@@ -12,8 +12,12 @@ use super::object_reads::{TERRAIN_DEEP_WATER, TERRAIN_SHALLOW_WATER};
 use super::text::ERROR_FORMATS;
 
 /// The headers the C++ names come from.
-const EE_SCENARIO_CPPC_HEADERS: [&str; 4] =
-    ["include/ee/EEStringIDs.h", "include/rust/sim/game_ids.h", "include/rust/sim/unit_ids.h", "include/ee/EEMap.h"];
+const EE_SCENARIO_CPPC_HEADERS: [&str; 4] = [
+    "rust/crates/ee_base/src/string_ids.rs",
+    "include/rust/sim/game_ids.h",
+    "include/rust/sim/unit_ids.h",
+    "include/ee/EEMap.h",
+];
 
 /// A C++ constant's value: `#define NAME value` or an enumerator `NAME = value,` of the headers.
 fn c(name: &str) -> i64 {

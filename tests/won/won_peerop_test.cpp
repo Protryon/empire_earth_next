@@ -27,7 +27,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "won_auth_orig.h"
 #include "rust/won_net/authflow.h"
 #include "rust/won_net/ffi.h"

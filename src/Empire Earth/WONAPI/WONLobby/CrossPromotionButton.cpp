@@ -73,31 +73,22 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     ImageTextButtonConfig* it = static_cast<ImageTextButtonConfig*>(c);
     switch (inOp) {
     case Op::CrossBase: return WON_GUARDED(cp->ComponentConfig::Virtual24(*(const std::string*)a));
-    case Op::CrossDefaultImageRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)));
-    case Op::CrossDefaultBrowseRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)));
+    case Op::CrossDefaultImageRead: return WON_GUARDED_V(LobbyCfgComp<CrossPromotionButton>(c)->SetDefaultImage(c->ReadImage(false)));
+    case Op::CrossDefaultBrowseRead: return WON_GUARDED_V(LobbyCfgComp<CrossPromotionButton>(c)->SetDefaultBrowse(c->ReadString(false)));
     case Op::ImageTextBase: return WON_GUARDED(it->ComponentConfig::Virtual24(*(const std::string*)a));
-    case Op::ImageTextFontRead: return WON_GUARDED_V(it->mImageTextButton->mFont = c->ReadFont());
-    case Op::ImageTextTextRead: return WON_GUARDED_V(it->mImageTextButton->mText = c->ReadString(false));
-    case Op::ImageTextBrowseRead: return WON_GUARDED_V(it->mImageTextButton->mBrowse = c->ReadString(false));
+    case Op::ImageTextFontRead: return WON_GUARDED_V(LobbyCfgComp<ImageTextButton>(c)->mFont = c->ReadFont());
+    case Op::ImageTextTextRead: return WON_GUARDED_V(LobbyCfgComp<ImageTextButton>(c)->mText = c->ReadString(false));
+    case Op::ImageTextBrowseRead: return WON_GUARDED_V(LobbyCfgComp<ImageTextButton>(c)->mBrowse = c->ReadString(false));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }
 static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
 
 bool CrossPromotionButtonConfig::Virtual24(const std::string& key) { return CfgRd(this, EeWonLobbyCfgRdCall::CrossPromotion, key) != 0; }
-// Attaches the config to the cross-promotion button it configures
-void CrossPromotionButtonConfig::SetComponent(Component* component) {
-    ComponentConfig::SetComponent(component);
-    this->mCrossPromotionButton=static_cast<CrossPromotionButton*>(component);
-}
 
 // Reads the FONT, TEXT and BROWSELOCATION layout keys; passes other keys to the image button config
 bool ImageTextButtonConfig::Virtual24(const std::string& key) { return CfgRd(this, EeWonLobbyCfgRdCall::ImageText, key) != 0; }
 
-void ImageTextButtonConfig::SetComponent(Component* component) {
-    ComponentConfig::SetComponent(component);
-    this->mImageTextButton=static_cast<ImageTextButton*>(component);
-}
 // Creates the cross-promotion button with an empty caption, listening to lobby broadcasts
 CrossPromotionButton::CrossPromotionButton()
     : ImageTextButton(GUIString(""))

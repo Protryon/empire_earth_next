@@ -6,13 +6,11 @@
 namespace WONAPI {
 class Component;
 int LobbyDoDialog(Component* inDialog);
-WONStatus LobbyGetVersionStatus(); // 0x75b520 (status 70, or 100004 without a lobby)
 int LobbyDoYesNoDialog(const GUIString& inTitle, const GUIString& inText, bool inPlaySound); // 0x758ef0 (callers pass true)
 void LobbyExit(int inScreen);
 void LobbyShowCreateAccount();
 void LobbyShowLostPassword();
 void LobbyShowLostUsername();
-void LobbySetVersionStatus(WONStatus inStatus);
 ServerContext* LobbyGetAccountServers();
 ServerContext* LobbyGetAuthServers();
 ServerContext* LobbyGetFirewallDetectServers();
@@ -86,7 +84,6 @@ Component* LobbyGetCurrentScreen();
 void LobbySetNetworkAdapter(long inAddress); // 0x75b9c0 (a numeric IPv4 address)
 ServerContext* LobbyGetDirServers(); // 0x75b2b0 (not owned; the private state's 0x60)
 ServerContext* LobbyGetRoomDirServers(); // 0x75b310 (not owned; the private state's 0x64)
-void LobbySetTOUTimes(long inSysTime, long inGameTime); // 0x75b5d0 (stores the private state's 0xbc / 0xc0)
 void LobbyBindUDPPort(); // sets up the UDP port from the config
 void LobbySetLobbyPort(unsigned short inPort); // 0x761420 (stores the private state's 0xb8; nothing without a lobby)
 void LobbyShowInternetScreen();
@@ -98,8 +95,6 @@ class LobbyServerList;
 class LobbyGroup;
 LobbyServerList* LobbyGetServerList(); // 0x75b6b0: the routing logic's mServerList (0x54)
 LobbyGroup* LobbyGetChatGroup(); // 0x75b6d0: the routing logic's mChatGroup (0x6c)
-void LobbyResetFirewallTest();
 void LobbySetPublicAddress(const IPAddr& inAddress);
-void LobbySetBehindFirewall(bool inBehindFirewall);
 }
 #endif

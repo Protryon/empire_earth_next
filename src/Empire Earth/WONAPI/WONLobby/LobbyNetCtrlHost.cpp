@@ -43,17 +43,6 @@
 #include "rust/won_lobby/lobbytext.h"
 using namespace WONAPI;
 
-// The filter combo's add/remove row (RTTI .?AVFilterListItem@@): a TextListItem with no new virtuals
-class FilterListItem : public TextListItem {
-public:
-    FilterListItem(const GUIString& inColumn, Font* inFont)
-        : TextListItem(gEmptyGUIString, inFont), mIsAdd(false), mSelPos(0), mColumnName(inColumn) {}
-    bool mIsAdd; // 0x28: true when the row adds the text, false when it removes it
-    int mSelPos; // 0x2c: position of the typed text in the combo list
-    GUIString mFilterText; // 0x30: the typed filter text
-    GUIString mColumnName; // 0x34: the column the combo filters
-};
-
 namespace WONAPI {
 
 // ---- the host
@@ -254,19 +243,20 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     RoomLabelCtrlConfig* rl = static_cast<RoomLabelCtrlConfig*>(c);
     UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
     ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
+    ServerListCtrl* aList = LobbyCfgComp<ServerListCtrl>(c);
     switch (inOp) {
     case Op::ChatBase: return WON_GUARDED(cc_->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::ChatSetField: cc_->mChatCtrl->SetField((int)a, b); return 0;
+    case Op::ChatSetField: LobbyCfgComp<ChatCtrl>(c)->SetField((int)a, b); return 0;
     case Op::RoomBase: return WON_GUARDED(rl->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::RoomSetPrefixRead: return WON_GUARDED_V(rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))));
-    case Op::RoomSetField: rl->mRoomLabel->SetField((int)a, b); return 0;
-    case Op::RoomSetFieldBoolRead: return WON_GUARDED_V(rl->mRoomLabel->SetField((int)a, c->ReadBool()));
+    case Op::RoomSetPrefixRead: return WON_GUARDED_V(LobbyCfgComp<RoomLabelCtrl>(c)->SetField(0, Dat(c->ReadString(false))));
+    case Op::RoomSetField: LobbyCfgComp<RoomLabelCtrl>(c)->SetField((int)a, b); return 0;
+    case Op::RoomSetFieldBoolRead: return WON_GUARDED_V(LobbyCfgComp<RoomLabelCtrl>(c)->SetField((int)a, c->ReadBool()));
     case Op::UserListBase: return WON_GUARDED(ul->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::ServerBase: return WON_GUARDED(sl->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::ServerNamedBase: return WON_GUARDED(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b));
-    case Op::ServerCfg: return (intptr_t)(sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b));
-    case Op::ServerPushColumn: return (intptr_t)(sl->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
-    case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(sl->mServerList, (std::string)Txt(a)));
+    case Op::ServerCfg: return (intptr_t)(aList->Cfg((EeWonLobbyCtlCfg)a, b));
+    case Op::ServerPushColumn: return (intptr_t)(aList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
+    case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(aList, (std::string)Txt(a)));
     case Op::ServerAddGameOption: LobbyAddGameOption(Txt(a), Txt(b), false); return 0;
     case Op::AsMultiList: return (intptr_t)(dynamic_cast<MultiListArea*>((Component*)a));
     case Op::ServerHeaderFrom: return (intptr_t)(sl->mHeader = dynamic_cast<MultiListHeader*>((Component*)a));
@@ -276,10 +266,6 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     case Op::ServerNumColumns: return (intptr_t)(sl->mNumColumns);
     case Op::ListDynamicColumn: ((MultiListArea*)a)->SetDynamicSizeColumn((int)b); return 0;
     case Op::ListColumnWidth: ((MultiListArea*)a)->SetColumnWidth((int)b, (int)cc, false); return 0;
-    case Op::BaseSetComponent: return WON_GUARDED_V(static_cast<ContainerConfig*>(c)->ContainerConfig::SetComponent(reinterpret_cast<Component*>(a)));
-    case Op::RoomSetLabel: rl->mRoomLabel = static_cast<RoomLabelCtrl*>(reinterpret_cast<Component*>(a)); return 0;
-    case Op::ChatSetCtrl: cc_->mChatCtrl = static_cast<ChatCtrl*>(reinterpret_cast<Component*>(a)); return 0;
-    case Op::ServerSetList: sl->mServerList = static_cast<ServerListCtrl*>(reinterpret_cast<Component*>(a)); return 0;
     case Op::ServerHeaderSetColumnItem: sl->mHeader->SetColumnItem(sl->mNumColumns - 1, (Component*)a); return 0;
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
@@ -288,16 +274,12 @@ static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const 
 
 // Reads the PREFIX, GROUPTYPE (CHAT or GAME), SHOWUSERCOUNT and SHOWSERVER layout keys
 bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey) { return CfgRd(this, EeWonLobbyCfgRdCall::RoomLabel, inKey) != 0; }
-// SetComponent has no address of its own: the linker folded it with the identical body at 0x79afb0
-void RoomLabelCtrlConfig::SetComponent(Component* inComponent) { CfgRd(this, EeWonLobbyCfgRdCall::RoomLabelSetComponent, std::string(), (intptr_t)inComponent); }
 // Accepts (and ignores) the GROUPTYPE and CTRLLINKID layout keys; passes other keys to the container's reader
 bool UserListCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::UserList, instruction) != 0; }
 
 // ChatCtrlConfig (WONLobbyControlConfig.h): GROUPTYPE (CHAT, GAME or TEAM) and the text colours, stored in the panel's
 // Rust object
 bool ChatCtrlConfig::Virtual24(const std::string& inKey) { return CfgRd(this, EeWonLobbyCfgRdCall::ChatCtrl, inKey) != 0; }
-// Remembers the configured component as the chat panel (the original's body is at 0x7c8380; no marker)
-void ChatCtrlConfig::SetComponent(Component* inComponent) { CfgRd(this, EeWonLobbyCfgRdCall::ChatSetComponent, std::string(), (intptr_t)inComponent); }
 
 
 intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -307,7 +289,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     ListArea* aList = reinterpret_cast<ListArea*>(a);
     Graphics* g = reinterpret_cast<Graphics*>(a);
     ComboBox* aCombo = reinterpret_cast<ComboBox*>(a);
-    FilterListItem* aFilter = reinterpret_cast<FilterListItem*>(a);
     TextListItem* aText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a));
     ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
@@ -353,14 +334,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
     case Op::ConfigPingCeiling: return reinterpret_cast<LobbyConfig*>(a)->mPingCeiling;
     case Op::ConfigPublic: return reinterpret_cast<LobbyConfig*>(a)->mPublic ? 1 : 0;
-    case Op::FilterSetSelPos: aFilter->mSelPos = (int)b;
-        return 0;
-    case Op::FilterSetIsAdd: aFilter->mIsAdd = b != 0;
-        return 0;
-    case Op::FilterSetText: aFilter->mFilterText = Txt(b);
-        return 0;
-    case Op::FilterClearText: aFilter->mFilterText = GUIString("");
-        return 0;
     case Op::LabelSetFormatRes: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(ResText(b), Txt(c)), true);
         return 0;
     case Op::LabelSetFormat2Res: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString2(ResText(b), Txt(reinterpret_cast<const intptr_t*>(c)[0]), Txt(reinterpret_cast<const intptr_t*>(c)[1])), true);
@@ -392,7 +365,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ComboInsertNoFilter:
         aCombo->InsertItem(new TextListItem(LOBBY_STRING(ServerListCtrl_NoFilter_String), reinterpret_cast<Font*>(b)), -1);
         return 0;
-    case Op::ComboInsertFilterRow: aCombo->InsertItem(new FilterListItem(Txt(b), reinterpret_cast<Font*>(c)), -1); return 0;
     case Op::ComboItem: return (intptr_t)aCombo->mListArea->GetItem((int)b);
     case Op::ComboCount: return aCombo->mListArea->GetNumItems();
     case Op::ComboItemPos: return aCombo->mListArea->GetItemPos(reinterpret_cast<ListItem*>(b));
@@ -400,10 +372,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ComboSetText: aCombo->SetText(Txt(b), true); return 0;
     case Op::ComboAddString: return (intptr_t)aCombo->AddString(Txt(b), -1);
     case Op::ComboSelectEnd: aCombo->mEdit->SelectRange(-1, 0); return 0;
-    case Op::FilterIsAdd: return aFilter->mIsAdd ? 1 : 0;
-    case Op::FilterSelPos: return aFilter->mSelPos;
-    case Op::FilterText: return Dat(aFilter->mFilterText);
-    case Op::FilterColumn: return Dat(aFilter->mColumnName);
     // the statements of the compound cases hostops.rs composes in the game (R6 WON round 35)
     case Op::BytesOfHttpDocSys: sEELobbyBytes = reinterpret_cast<RustServerOp*>(a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Sys); return 0;
     case Op::BytesOfHttpDocGame: sEELobbyBytes = reinterpret_cast<RustServerOp*>(a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Game); return 0;
@@ -428,7 +396,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
 // ---- the game list's config reader (ServerListCtrl.cpp's)
 
 // (its statements are CfgRdHost's BaseSetComponent and ServerSetList: lobbycfgrd.rs, R6 WON round 35)
-void ServerListCtrlConfig::SetComponent(Component* inComponent) { CfgRd(this, EeWonLobbyCfgRdCall::ServerListSetComponent, std::string(), (intptr_t)inComponent); }
 // Answers NUMCOLUMNS with the list's column count, else asks the base config
 bool ServerListCtrlConfig::GetNamedValue(const std::string& inName, int& outValue) { return CfgRd(this, EeWonLobbyCfgRdCall::ServerListNamed, inName, (intptr_t)&outValue) != 0; }
 // Handles the LISTID, ADDCOLUMN, DEFAULTFILTER, NUMCOLUMNS and SETCOLUMNFILTERTYPE layout instructions

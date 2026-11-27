@@ -68,7 +68,7 @@ enum class EeWonEeGlueOp : uint32_t {
   ResourceDestroy,
   /// `GetLobbyConfig()`.
   Config,
-  /// `((EELobbyConfig*)a)->mFileTransferPort`.
+  /// `((LobbyConfig*)a)->mFileTransferPort`.
   ConfigPort,
   /// `LobbySetGameInProgress(a)`.
   SetGameInProgress,
@@ -439,8 +439,6 @@ enum class EeWonEeGlueOp : uint32_t {
   FactoryGame,
   /// `LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer)`.
   FactoryPlayer,
-  /// `LobbyConfig::SetAllocator(EELobbyNewConfig)`.
-  FactoryConfig,
   /// `sEELobbyResources = EELobbyResource_Init(NULL)`.
   ResInit,
   /// `sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl)`.

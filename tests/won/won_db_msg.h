@@ -9,7 +9,7 @@
 #include <list>
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_net/db.h"
 #include "rust/won_net/dirops.h"
 

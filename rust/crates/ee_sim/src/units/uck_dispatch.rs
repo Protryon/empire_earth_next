@@ -403,7 +403,7 @@ pub unsafe fn sound<H: UcHost + ?Sized>(h: &mut H, class: u64, unit: u64, sound:
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 

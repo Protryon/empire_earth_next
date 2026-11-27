@@ -171,6 +171,13 @@ void ee_won_url_entire(const EeWonUrl *url, EeWonByteSink sink, void *context);
 /// `text` is NULL or holds `len` bytes.
 EeWonUrlObj *ee_won_url_obj_new(const uint8_t *text, size_t len);
 
+/// `URL(text).GetType()`: the kind a parse of the text gives (0 none, 1 file, 2 http, 3 ftp), no object kept.
+///
+/// # Safety
+/// `text` holds `len` bytes.
+int32_t ee_won_url_kind(const uint8_t *text,
+                        size_t len);
+
 /// A copy (the C++ copy constructor).
 ///
 /// # Safety

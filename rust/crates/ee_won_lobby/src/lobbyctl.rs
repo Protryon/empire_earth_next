@@ -795,7 +795,7 @@ pub enum EeWonLobbyCtlOp {
     BaseTimer,
     /// `((ComboBox*)a)->InsertItem(new TextListItem(NoFilter, (Font*)b), -1)`.
     ComboInsertNoFilter,
-    /// `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)`.
+    /// `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)` (a Rust row in the game: rows.rs `Filter`).
     ComboInsertFilterRow,
     /// `LobbyGetFilterValues(GUIString(b))`'s values, each `((ComboBox*)a)->AddString(value, -1)`.
     ComboAddFilterValues,
@@ -817,7 +817,7 @@ pub enum EeWonLobbyCtlOp {
     ComboDeleteItem,
     /// `((ComboBox*)a)->mEdit->SelectRange(-1, 0)`.
     ComboSelectEnd,
-    /// `((FilterListItem*)a)->mIsAdd` (0 or 1).
+    /// `((FilterListItem*)a)->mIsAdd` (0 or 1; the game's rows answer these in rows.rs, the drivers' worlds theirs).
     FilterIsAdd,
     /// `((FilterListItem*)a)->mSelPos`.
     FilterSelPos,
