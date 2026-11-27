@@ -153,6 +153,8 @@ pub unsafe fn formation_fields<'a>(formation: u64) -> &'a mut EeFormationFields 
 ///
 /// # Safety
 /// `formation` is a live formation, `units` live complex units; the caller holds the world.
+// (`c_long` is 32 bits on Windows and 64 elsewhere: the cast is needed there)
+#[allow(clippy::unnecessary_cast)]
 pub unsafe fn formation_place(formation: u64, units: &[u64]) -> Vec<EeFormationUnitSlot> {
     // SAFETY: the caller's contract
     let f = unsafe { formation_fields(formation) };
