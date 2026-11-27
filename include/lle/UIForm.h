@@ -36,7 +36,7 @@
 // UIControl, UIHotKey, UIEntityGroup and UITextLabel give UIForm). The game's forms derive from it and override its
 // virtuals; the Rust form calls the two it calls itself (SetHelpTextPopupLocation, DrawBackground) through the C++
 // object. GetRectangle and GetMouseLocation answer the address of the Rust object's members (GERectangle's and
-// GE2DPoint's layouts); GetMusicFileName answers a copy. The IME passes to the control holding the keyboard are the
+// GE2DPoint's layouts). The IME passes to the control holding the keyboard are the
 // Rust form's (ee_ui lle_form.rs ee_ui_form_pass_to_keyboard), called by the Rust manager.
 class LLE_API UIForm {
 public:
@@ -127,14 +127,10 @@ public:
     UIManager* GetManager() const { return reinterpret_cast<UIManager*>(this->Call(EeUiFormCall::Manager)); }
     const GE2DPoint& GetMouseLocation() const { return *reinterpret_cast<const GE2DPoint*>(this->Call(EeUiFormCall::MouseLocation)); }
     UIControl* GetMouseOverControl() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseOverControl)); }
-    UWideString GetMusicFileName() const { return UWideString(reinterpret_cast<const char*>(this->Call(EeUiFormCall::MusicFileName))); }
     const GERectangle& GetRectangle() const { return *reinterpret_cast<const GERectangle*>(this->Call(EeUiFormCall::Rectangle)); }
     bool GetUseGDIForText() const { return this->Call(EeUiFormCall::UseGdiForText) != 0; }
-    void LockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 1); }
     // Deletes every hot key of one group
     void RemoveAllHotKeysForAGroup(unsigned long inGroup) { this->Call(EeUiFormCall::RemoveAllHotKeysForAGroup, (intptr_t)inGroup); }
-    // Removes and deletes a background found by its ID (nothing happens when it is not listed)
-    void RemoveBackground(UIBackground* inBackground) { this->Call(EeUiFormCall::RemoveBackground, (intptr_t)inBackground); }
     // (exported 0x100596d9) Empties the control's form slot and takes it out of the group
     void RemoveControl(UIControl* inControl, unsigned long inGroup) { this->Call(EeUiFormCall::RemoveControl, (intptr_t)inControl, (intptr_t)inGroup); }
     // Deletes the first hot key of a group that matches the key and the three modifiers
@@ -163,7 +159,6 @@ public:
     // Moves the tab stop to a control if it exists and is tabbable; otherwise keeps the old stop and returns false
     bool SetTabStop(unsigned long inTabStop) { return this->Call(EeUiFormCall::SetTabStop, (intptr_t)inTabStop) != 0; }
     void SetUseToolTips(bool inUseToolTips) { this->Call(EeUiFormCall::SetUseToolTips, inUseToolTips); }
-    void UnlockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 0); }
     // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
     void UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
     bool GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }

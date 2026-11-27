@@ -105,7 +105,6 @@ public:
         ee_ui_list_insert(this->mRust, &inLine, inIndex, const_cast<P*>(&inSort), UILineOps<T>::template Less<P>);
     }
     bool ScrollBarExists() { return this->Call(UIListBoxCall::ScrollBar) != 0; }
-    void SetAutoSelect(bool inAutoSelect) { this->Call(UIListBoxCall::SetAutoSelect, inAutoSelect); }
     void SetFocusedRectColor(const GEColor& inColor)
     {
         this->CallF(UIListBoxCall::SetFocusedRectColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
