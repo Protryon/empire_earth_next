@@ -601,7 +601,7 @@ static SEMixer* PickMixer()
         return NULL;
     SEMixer* theMixer = NULL;
     gPick = (int)R(theCount);
-    (long)ee_sound_mixer_get((uint32_t)gPick, reinterpret_cast<EeSoundMixer**>(&theMixer));
+    ee_sound_mixer_get((uint32_t)gPick, reinterpret_cast<EeSoundMixer**>(&theMixer));
     return theMixer;
 }
 static void Seen(unsigned long inID)
@@ -978,14 +978,14 @@ static void Sequence(uint64_t inSeed)
     End("%ld %lu", r, SEMixer::GetCount());
     if (SEMixer::GetCount() > 0 && R(3) != 0) {
         SEMixer* theMixer = NULL;
-        (long)ee_sound_mixer_get((uint32_t)0, reinterpret_cast<EeSoundMixer**>(&theMixer));
+        ee_sound_mixer_get((uint32_t)0, reinterpret_cast<EeSoundMixer**>(&theMixer));
         Begin("use0");
         End("%ld", (long)ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(theMixer)));
     }
     if (R(4) != 0) {
         SEMixer* theMixer = NULL;
         if (SEMixer::GetCount() > 0)
-            (long)ee_sound_mixer_get((uint32_t)0, reinterpret_cast<EeSoundMixer**>(&theMixer));
+            ee_sound_mixer_get((uint32_t)0, reinterpret_cast<EeSoundMixer**>(&theMixer));
         if (theMixer) {
             Begin("cfolder0");
             End("%ld", theMixer->GetConductor().SetMusicFolder(UWideString(gMusicFolder.c_str())));
