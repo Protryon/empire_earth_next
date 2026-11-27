@@ -322,9 +322,10 @@ fn a_dead_unit_counts_by_its_class() {
 fn a_footprint_is_cleared_onto_waypoints_or_the_free_ring() {
     // the building 0x40 at (3, 4), size 2: units 0x40 (itself), 0x66 (not movable), 0x70 (a waypoint outside), 0x71
     // (no path: every free tile but x 9)
-    let mut w = World { rect_units: vec![0x40, 0x66, 0x70, 0x71], ring: vec![[9, 4], [5, 5], [5, 4]], ..Default::default() }
-        .answer(EE_UNITS_PLAYER_BODY_WAYPOINTS, Some(0x70), None, 1)
-        .answer(EE_UNITS_PLAYER_BODY_TILE_EMPTY, None, None, 1);
+    let mut w =
+        World { rect_units: vec![0x40, 0x66, 0x70, 0x71], ring: vec![[9, 4], [5, 5], [5, 4]], ..Default::default() }
+            .answer(EE_UNITS_PLAYER_BODY_WAYPOINTS, Some(0x70), None, 1)
+            .answer(EE_UNITS_PLAYER_BODY_TILE_EMPTY, None, None, 1);
     // the building's tile is (3, 4) (World::tile)
     clear_footprint(&mut w, 1, 0x40);
     assert_eq!(w.refs[0], ('r', 4), "the rectangle's right: 3 + 2 - 1");

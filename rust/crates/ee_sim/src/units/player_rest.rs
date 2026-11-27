@@ -914,7 +914,8 @@ pub mod game {
         }
         fn herd_units(&mut self, herd: u64) -> Vec<u64> {
             // SAFETY: the player's live herd and its lists
-            let f = unsafe { &*((herd as usize + layout().herd_fields as usize) as *const crate::cp::herd::EeHerdFields) };
+            let f =
+                unsafe { &*((herd as usize + layout().herd_fields as usize) as *const crate::cp::herd::EeHerdFields) };
             let handles = unsafe { &(*f.mLists).units };
             handles.iter().map(|&id| crate::units::goal_spec::resolve(id)).collect()
         }

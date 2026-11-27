@@ -334,7 +334,11 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
             crate::units::player_rest::EE_UNITS_PLAYER_BODY_HERD_ADD_AREA => area_op(a, true, 1),
             crate::units::player_rest::EE_UNITS_PLAYER_BODY_CONTINENT_ID => {
                 let r = crate::astar::world_view::cm_ptr();
-                return Some(i64::from(crate::astar::cm_inline::ee_astar_cm_continent_id_at(r, b as c_long, c as c_long)));
+                return Some(i64::from(crate::astar::cm_inline::ee_astar_cm_continent_id_at(
+                    r,
+                    b as c_long,
+                    c as c_long,
+                )));
             }
             // town `a`'s RefreshPatrolGroup, herd `a`'s RepairPointers(b, c) (ee_cp's bodies)
             EE_UNITS_PLAYER_BODY_TOWN_REFRESH => {
@@ -342,7 +346,12 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                 crate::cp::town_game::ee_cp_town_refresh_patrol_group(t, area, f);
             }
             EE_UNITS_PLAYER_BODY_HERD_REPAIR => {
-                crate::cp::herd_game::ee_cp_herd_repair_pointers(a as usize as *mut c_void, herd(a), b as u32, c as u32);
+                crate::cp::herd_game::ee_cp_herd_repair_pointers(
+                    a as usize as *mut c_void,
+                    herd(a),
+                    b as u32,
+                    c as u32,
+                );
             }
             // the map's waterless flag, its tile (b, c) (`GetTile`: none off the map)
             EE_UNITS_PLAYER_BODY_WATERLESS | EE_UNITS_PLAYER_BODY_TILE_PRESENT => {
@@ -577,7 +586,11 @@ pub unsafe fn player(
                 ));
             }
             crate::units::player_units::EE_UNITS_PLAYER_HEALED_SET => {
-                let set = if io.i[1] != 0 { crate::app::unit_sets::ee_unit_sets_get(a0 as c_ulong as usize) } else { std::ptr::null() };
+                let set = if io.i[1] != 0 {
+                    crate::app::unit_sets::ee_unit_sets_get(a0 as c_ulong as usize)
+                } else {
+                    std::ptr::null()
+                };
                 *slot(p, layout().player_healed_unit_set) = set as usize as u64;
                 return Some(0);
             }
@@ -606,7 +619,8 @@ pub unsafe fn player(
             }
             // the towns' and herds' bodies (ee_cp town_game.rs, herd_game.rs; EETown.h, EEHerd.h): a[0] 0 a town, 1 a
             // herd (the list), the area, the unit
-            crate::units::player_areas::EE_UNITS_PLAYER_AREA_CAN_TAKE | crate::units::player_areas::EE_UNITS_PLAYER_AREA_ADD => {
+            crate::units::player_areas::EE_UNITS_PLAYER_AREA_CAN_TAKE
+            | crate::units::player_areas::EE_UNITS_PLAYER_AREA_ADD => {
                 let (area, unit) = (io.i[1] as u64, io.i[2] as u64);
                 let add = op == crate::units::player_areas::EE_UNITS_PLAYER_AREA_ADD;
                 let h = area as usize as *mut c_void;
@@ -679,7 +693,11 @@ pub unsafe fn player(
             EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 | EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2 => {
                 // `(long)` of GetLongValue(2)(EEWorldImprovementTime(a[0]))
                 let row = W::kWorldImprovementTimeAreaEffect as i64 + a0 as c_long as i64;
-                let v = if op == EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 { world_long(row) as c_ulong } else { world_long2(row) };
+                let v = if op == EE_UNITS_PLAYER_X_IMPROVEMENT_TIME1 {
+                    world_long(row) as c_ulong
+                } else {
+                    world_long2(row)
+                };
                 return Some(v as c_long as i64);
             }
             _ => {}
@@ -793,7 +811,12 @@ unsafe fn tech(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlayerIo) 
 ///
 /// # Safety
 /// As [`body`]; `io` the operation's operands (`io.i` a unit of the player, 0 for none).
-pub unsafe fn tick(op: i32, p: u64, index: u32, io: &mut crate::units::player_save::EeUnitsPlayerSaveIo) -> Option<i32> {
+pub unsafe fn tick(
+    op: i32,
+    p: u64,
+    index: u32,
+    io: &mut crate::units::player_save::EeUnitsPlayerSaveIo,
+) -> Option<i32> {
     use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_UPDATE_AIR_TRAFFIC};
     use crate::units::player_tick::*;
     use crate::world::{PlayerView, UnitView, WorldRead};
@@ -813,7 +836,11 @@ pub unsafe fn tick(op: i32, p: u64, index: u32, io: &mut crate::units::player_sa
             // herd `index`'s due time and activity, its update, its state
             EE_UNITS_PLAYER_TICK_HERD_DUE | EE_UNITS_PLAYER_TICK_HERD_UPDATE | EE_UNITS_PLAYER_TICK_HERD_STATE => {
                 let lists = crate::units::player_lists::player_lists(p);
-                let h = crate::units::player_lists::ee_units_lists_at(lists, crate::units::player_lists::EE_UNITS_LISTS_HERDS, index as usize);
+                let h = crate::units::player_lists::ee_units_lists_at(
+                    lists,
+                    crate::units::player_lists::EE_UNITS_LISTS_HERDS,
+                    index as usize,
+                );
                 let f = herd(h);
                 match op {
                     EE_UNITS_PLAYER_TICK_HERD_DUE => {
