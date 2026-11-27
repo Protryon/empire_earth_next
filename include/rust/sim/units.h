@@ -16611,9 +16611,6 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_TECH_ALLOWED = 10;
 /// `EELoadTileTypes` / `EESaveTileTypes` (every map tile's terrain type, from 0.283)
 constexpr static const int64_t EE_UNITS_WORLD_PART_TILE_TYPES = 11;
 
-/// The list a host operation fills.
-struct EeUnitsAgListHandle;
-
 /// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
 struct EeUnitsAtc;
 
@@ -16758,7 +16755,7 @@ struct EeUnitsAgIo {
   float q[3];
   EeUnitsAgUnit unit;
   EeUnitsAgGroup group;
-  /// the list the operation pushes onto (`ee_units_ag_push`), or the values it reads
+  /// the values the operation reads
   void *list;
 };
 
@@ -17114,8 +17111,6 @@ struct EeUnitsGroupIo {
   size_t len;
   /// a second list it reads
   const void *list2;
-  /// the list it fills (`ee_units_group_push`)
-  void *out;
 };
 
 /// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
@@ -17964,12 +17959,6 @@ extern int64_t ee_units_ag_host(int32_t op,
                                 int64_t c,
                                 int64_t d,
                                 EeUnitsAgIo *io);
-
-/// Pushes an item onto a host operation's list.
-///
-/// # Safety
-/// `list` is the `EeUnitsAgIo::list` of a running operation that pushes; `p` is three floats.
-void ee_units_ag_push(EeUnitsAgListHandle *list, uint64_t obj, const float (*p)[3], float w);
 
 /// `EEActiveGroup::Plan`.
 void ee_units_ag_plan(uint64_t group);
@@ -19396,12 +19385,6 @@ void ee_units_unit_drop_unsuited_goals(uint64_t unit, uint32_t index);
 
 /// `DropFinishedGoals(inStartAll)`.
 void ee_units_unit_drop_finished_goals(uint64_t unit, bool start_all);
-
-/// Pushes an item onto an operation's list.
-///
-/// # Safety
-/// `list` is the `out` of a running operation; `p` is three floats.
-void ee_units_group_push(void *list, int64_t a, int64_t b, const float (*p)[3]);
 
 extern int64_t ee_units_group_host(int32_t op,
                                    uint64_t a,

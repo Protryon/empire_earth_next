@@ -28,7 +28,7 @@ pub struct EeUnitsAgIo {
     pub q: [f32; 3],
     pub unit: EeUnitsAgUnit,
     pub group: EeUnitsAgGroup,
-    /// the list the operation pushes onto (`ee_units_ag_push`), or the values it reads
+    /// the values the operation reads
     pub list: *mut c_void,
 }
 
@@ -47,12 +47,6 @@ impl Default for EeUnitsAgIo {
             list: std::ptr::null_mut(),
         }
     }
-}
-
-/// The list a host operation fills.
-#[derive(Default)]
-pub struct EeUnitsAgListHandle {
-    items: Vec<(u64, [f32; 3], f32)>,
 }
 
 // ---- the host operations (`ee_units_ag_host`'s `op`; `a`, `b` objects, `c`, `d` values)
@@ -159,16 +153,6 @@ extern "C" {
 }
 use crate::combat::cg_query::rust_calls::ee_units_eu_nearest_footprint_tile;
 
-/// Pushes an item onto a host operation's list.
-///
-/// # Safety
-/// `list` is the `EeUnitsAgIo::list` of a running operation that pushes; `p` is three floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_ag_push(list: *mut EeUnitsAgListHandle, obj: u64, p: *const [f32; 3], w: f32) {
-    // SAFETY: the caller's contract
-    unsafe { (*list).items.push((obj, *p, w)) }
-}
-
 /// The game's world for the active group bodies.
 pub struct AgGame;
 
@@ -183,12 +167,6 @@ impl AgGame {
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64) -> i64 {
         let mut io = EeUnitsAgIo::default();
         self.io(op, a, b, c, d, &mut io)
-    }
-    fn list(&mut self, op: i32, a: u64, c: i64, d: i64, io: &mut EeUnitsAgIo) -> Vec<(u64, [f32; 3], f32)> {
-        let mut handle = EeUnitsAgListHandle::default();
-        io.list = std::ptr::addr_of_mut!(handle).cast();
-        self.io(op, a, 0, c, d, io);
-        handle.items
     }
 }
 

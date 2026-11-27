@@ -41,8 +41,6 @@ pub struct EeUnitsGroupIo {
     pub len: usize,
     /// a second list it reads
     pub list2: *const c_void,
-    /// the list it fills (`ee_units_group_push`)
-    pub out: *mut c_void,
 }
 
 impl Default for EeUnitsGroupIo {
@@ -58,25 +56,8 @@ impl Default for EeUnitsGroupIo {
             list: std::ptr::null(),
             len: 0,
             list2: std::ptr::null(),
-            out: std::ptr::null_mut(),
         }
     }
-}
-
-/// The list an operation fills.
-#[derive(Default)]
-pub struct EeUnitsGroupList {
-    items: Vec<(i64, i64, [f32; 3])>,
-}
-
-/// Pushes an item onto an operation's list.
-///
-/// # Safety
-/// `list` is the `out` of a running operation; `p` is three floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_push(list: *mut c_void, a: i64, b: i64, p: *const [f32; 3]) {
-    // SAFETY: the caller's contract
-    unsafe { (*(list as *mut EeUnitsGroupList)).items.push((a, b, if p.is_null() { [0.0; 3] } else { *p })) }
 }
 
 // ---- the operations (`ee_units_group_host`'s `op`; `a`, `b` objects, `c`, `d` values)
@@ -190,12 +171,6 @@ impl GameGroups {
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64) -> i64 {
         let mut io = EeUnitsGroupIo::default();
         self.io(op, a, b, c, d, &mut io)
-    }
-    fn fill(&mut self, op: i32, a: u64, c: i64, io: &mut EeUnitsGroupIo) -> Vec<(i64, i64, [f32; 3])> {
-        let mut list = EeUnitsGroupList::default();
-        io.out = std::ptr::addr_of_mut!(list).cast();
-        self.io(op, a, 0, c, 0, io);
-        list.items
     }
 }
 
