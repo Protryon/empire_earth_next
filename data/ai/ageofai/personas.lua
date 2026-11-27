@@ -134,6 +134,9 @@ local function persona_add(id, p)
     if type(p.character) == "string" and p.character ~= "" then
         e.character = p.character      -- for voice.lua (upstream voice/prompt: who this is, in a few words)
     end
+    if type(p.color) == "table" and #p.color == 3 then
+        e.color = {p.color[1], p.color[2], p.color[3]}   -- applied through ai.name/ai.color at game start
+    end
     if type(p.traits) == "table" then
         for i = 1, #M.TRAIT_KEYS do
             local v = p.traits[M.TRAIT_KEYS[i]]
@@ -261,6 +264,16 @@ function M.step(memory, view)
         memory.persona.logged = true
         local me = (ai ~= nil and ai.me ~= nil) and (ai.me() or 0) or 0
         print(string.format("persona p%d %s (%s)", me, id, M.get(id).name or id))
+    end
+    if not memory.persona.applied then
+        memory.persona.applied = true
+        local e = M.get(id)
+        if ai ~= nil and ai.name ~= nil and e.name ~= nil then
+            ai.name(e.name)
+        end
+        if ai ~= nil and ai.color ~= nil and e.color ~= nil then
+            ai.color(e.color[1] / 255.0, e.color[2] / 255.0, e.color[3] / 255.0)
+        end
     end
     memory.persona = memory.persona or {}
     memory.persona.trait = M.traits(memory, view)

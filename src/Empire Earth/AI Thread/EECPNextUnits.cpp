@@ -4664,6 +4664,28 @@ static int LuaChat(lua_State* L) {
     return 1;
 }
 
+// ai.name: rename the computer player (the game's chat/UI name)
+static int LuaName(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL || !lua_isstring(L, 1)) { lua_pushboolean(L, 0); return 1; }
+    me->mName = UWideString(lua_tostring(L, 1));
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// ai.color: set the computer player's colour (r, g, b; 0..1 or 0..255)
+static int LuaColor(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL) { lua_pushboolean(L, 0); return 1; }
+    float r = (float)lua_tonumber(L, 1), g = (float)lua_tonumber(L, 2), b = (float)lua_tonumber(L, 3);
+    if (r > 1.0f || g > 1.0f || b > 1.0f) { r /= 255.0f; g /= 255.0f; b /= 255.0f; }
+    me->SetColor(GEColor(r, g, b));
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 // ai.llm: no argument = the last answer (nil while none or still busy); a table = configure; a string = ask
 static int LuaLlm(lua_State* L) {
     EECPUnitsCharge(L, kCostCall);
@@ -4735,7 +4757,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
-        {"llm", LuaLlm}, {"say", LuaSay}, {"chat", LuaChat},
+        {"llm", LuaLlm}, {"say", LuaSay}, {"chat", LuaChat}, {"name", LuaName}, {"color", LuaColor},
         {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {

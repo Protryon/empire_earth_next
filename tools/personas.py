@@ -73,6 +73,18 @@ LEANINGS = (
     ("spread", "spread"),
 )
 
+# the retail mod's preferred colours for a personality (the game's player colour is fixed by the lobby; this is
+# the chat/UI colour the port applies at runtime through ai.color)
+COLORS = {
+    "orange": (230, 120, 40), "grey": (130, 130, 130), "gray": (130, 130, 130),
+    "blue": (60, 100, 200), "red": (200, 60, 60), "green": (60, 180, 60),
+    "yellow": (200, 200, 60), "purple": (140, 60, 180), "brown": (140, 90, 50),
+    "black": (40, 40, 40), "white": (220, 220, 220), "cyan": (60, 180, 180),
+    "pink": (200, 100, 150), "gold": (200, 170, 60), "silver": (180, 180, 190),
+    "darkred": (160, 40, 40), "magenta": (200, 80, 160), "lightyellow": (220, 220, 120),
+    "lime": (120, 220, 60), "lightblue": (120, 160, 220),
+}
+
 # the port's situations (voice.lua's M.say callers) and the .eeai situations that answer them, best first. The
 # port says a line when an alliance is offered, when peace is made, when it capitulates (offers) and when its army
 # sets out, so `alliance_offer`, `peace_accept`, `capitulate` and `attack` come first; the other names are the
@@ -450,6 +462,11 @@ def parse_file(path):
         if value is not None:
             leanings[port] = value
 
+    color = None
+    cm = re.search(r'\[\s*"([A-Za-z]+)"', fields.get("color", ""))
+    if cm is not None:
+        color = COLORS.get(cm.group(1).lower())
+
     lines = {}
     block = find_record(text, "lines")
     if block is not None:
@@ -468,6 +485,7 @@ def parse_file(path):
         "traits": traits,
         "leanings": leanings,
         "character": first_text(fields.get("character", "")) or "",
+        "color": color,
         "lines": lines,
     }
 
@@ -535,6 +553,8 @@ def render(personalities):
         leanings = ", ".join("%s = %d" % (k, p["leanings"][k]) for _, k in LEANINGS if k in p["leanings"])
         out.append("            leanings = {%s}," % leanings)
         out.append("            character = %s," % lua_string(p["character"]))
+        if p.get("color") is not None:
+            out.append("            color = {%d, %d, %d}," % (p["color"][0], p["color"][1], p["color"][2]))
         if p["lines"]:
             out.append("            lines = {")
             for situation, _ in SITUATIONS:
