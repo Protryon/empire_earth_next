@@ -372,10 +372,10 @@ unsafe fn form_hot_key_temp(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: 
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn form_key_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+unsafe fn form_key_entity(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
     let mut e: *mut c_void = core::ptr::null_mut();
-    // SAFETY: the contract; the slot is live for the call
-    unsafe { ee_uicpp_form_key_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    // SAFETY: the slot is live for the call
+    unsafe { input::keyboard_entity(a as core::ffi::c_ulong, &mut e) };
     e as isize
 }
 
@@ -384,10 +384,10 @@ unsafe fn form_key_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: is
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn form_mouse_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+unsafe fn form_mouse_entity(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
     let mut e: *mut c_void = core::ptr::null_mut();
-    // SAFETY: the contract; the slot is live for the call
-    unsafe { ee_uicpp_form_mouse_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    // SAFETY: the slot is live for the call
+    unsafe { input::mouse_entity(a as core::ffi::c_ulong, &mut e) };
     e as isize
 }
 
@@ -806,11 +806,71 @@ unsafe fn hotkey_event_call(_o: *mut c_void, a: isize, b: isize, _c: isize, _d: 
 /// `entity` a live pointer.
 #[cfg(not(any(test, feature = "no_cpp")))]
 unsafe fn hotkey_get_entity(key: isize, entity: *mut *mut c_void) -> isize {
-    extern "C" {
-        fn ee_uicpp_hk_get_entity(key: isize, entity: *mut *mut c_void) -> isize;
-    }
     // SAFETY: the contract
-    unsafe { ee_uicpp_hk_get_entity(key, entity) }
+    unsafe { input::keyboard_entity(key as core::ffi::c_ulong, entity) as isize }
+}
+
+/// The input system's devices and entities (ee_base's: `gISKeyboard`, `gISMouse`, `ISEntity`), which the toolkit's
+/// C++ shims called (LLE/UI round 3).
+#[cfg(not(any(test, feature = "no_cpp")))]
+pub(crate) mod input {
+    use core::ffi::{c_long, c_ulong, c_void};
+
+    use ee_base::input::ffi::{self as i, EeInputEntity};
+    use ee_base::input::system::{system_keyboard, system_mouse};
+
+    /// `gISKeyboard->GetEntity(key, *out)`.
+    ///
+    /// # Safety
+    /// `out` a live pointer.
+    pub(crate) unsafe fn keyboard_entity(key: c_ulong, out: *mut *mut c_void) -> c_long {
+        // SAFETY: the contract
+        unsafe { i::ee_input_keyboard_entity(system_keyboard(), key, out.cast()) }
+    }
+    /// `gISMouse->GetEntity(button, *out)`.
+    ///
+    /// # Safety
+    /// `out` a live pointer.
+    pub(crate) unsafe fn mouse_entity(button: c_ulong, out: *mut *mut c_void) -> c_long {
+        // SAFETY: the contract
+        unsafe { i::ee_input_mouse_entity(system_mouse(), button, out.cast()) }
+    }
+    fn e(a: isize) -> *const EeInputEntity {
+        a as *const EeInputEntity
+    }
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$a:ident| $x:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract (`a` a live entity where the op names one).
+            #[allow(unused_unsafe, unused_variables)]
+            pub(crate) unsafe fn $name(_o: *mut c_void, $a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $x }
+            }
+        )*};
+    }
+    ops! {
+        /// `a->GetValue()`.
+        entity_value => |a| i::ee_input_entity_value(e(a)) as isize;
+        /// `a->JustDoublePressed()`.
+        entity_double_pressed => |a| i::ee_input_entity_just_double_pressed(e(a)) as isize;
+        /// `a->JustPressed()`.
+        entity_just_pressed => |a| i::ee_input_entity_just_pressed(e(a)) as isize;
+        /// `a->JustUnpressed()`.
+        entity_just_unpressed => |a| i::ee_input_entity_just_unpressed(e(a)) as isize;
+        /// `a->GetIndex()`.
+        entity_index => |a| i::ee_input_entity_index(e(a)) as isize;
+        /// `gISKeyboard->GetModifierState()`.
+        keyboard_modifiers => |a| i::ee_input_keyboard_modifiers(system_keyboard()) as isize;
+        /// `ISKeyboard::ComputeModifierState(a)`.
+        modifier_of => |a| i::ee_input_modifier_state(a as c_ulong) as isize;
+        /// `gISKeyboard->GetShouldUpdate()`.
+        keyboard_should_update => |a| i::ee_input_keyboard_should_update(system_keyboard()) as isize;
+        /// `gISMouse->GetShouldUpdate()`.
+        mouse_should_update => |a| i::ee_input_mouse_should_update(system_mouse()) as isize;
+    }
 }
 
 /// UIHotKey's host (its object the record).

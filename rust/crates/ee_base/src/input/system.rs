@@ -41,6 +41,20 @@ static MOUSE_WINDOW: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 static KEYBOARD_GLOBAL: AtomicPtr<*const EeInputKeyboard> = AtomicPtr::new(ptr::null_mut());
 static MOUSE_GLOBAL: AtomicPtr<*const EeInputMouse> = AtomicPtr::new(ptr::null_mut());
 
+/// `gISKeyboard`'s value (NULL outside ISInitialize..ISShutdown), for the toolkit's Rust.
+pub fn system_keyboard() -> *const EeInputKeyboard {
+    let g = KEYBOARD_GLOBAL.load(Ordering::Acquire);
+    // SAFETY: the global's address lives for the process (ee_input_initialize's contract)
+    if g.is_null() { ptr::null() } else { unsafe { *g } }
+}
+
+/// `gISMouse`'s value (NULL outside ISInitialize..ISShutdown), for the toolkit's Rust.
+pub fn system_mouse() -> *const EeInputMouse {
+    let g = MOUSE_GLOBAL.load(Ordering::Acquire);
+    // SAFETY: as system_keyboard's
+    if g.is_null() { ptr::null() } else { unsafe { *g } }
+}
+
 fn set_relative(relative: c_int) {
     let window = MOUSE_WINDOW.load(Ordering::Acquire);
     if !window.is_null() {

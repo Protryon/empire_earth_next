@@ -19,8 +19,8 @@ size_t ee_ui_hotkey_name(const char *m0,
                          uint8_t *out,
                          size_t capacity);
 
-/// `UIHotKey::GetHotKeyName`: the record's modifiers' and key's entity names (UIHotKey.cpp's
-/// `ee_uicpp_entity_name`) as the display name, e.g. "Ctrl + Shift + A"; valid until the next call on this thread.
+/// `UIHotKey::GetHotKeyName`: the record's modifiers' and key's entity names (ee_base's
+/// `ee_input_entity_name`) as the display name, e.g. "Ctrl + Shift + A"; valid until the next call on this thread.
 ///
 /// # Safety
 /// `rec` a live hot key record whose key is set.

@@ -33,7 +33,6 @@
 #include "lle/UIBFull.h"
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/Input System.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/UIBlinkingButton.h"
@@ -323,8 +322,6 @@ EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0],
 
 // The first control's key lookup (lle_control.rs): the statics in its order, the one-statement shims
 #define CTL(x) reinterpret_cast<UIControl*>(x)
-extern "C" void ee_uicpp_control_key_fetch(uint32_t inSlot, uint32_t inCode)
-{ gISKeyboard->GetEntity(inCode, UIControl::Key((EeUiKey)inSlot)); }
 extern "C" long ee_uicpp_control_mouse_left_double(uintptr_t inControl)
 { return CTL(inControl)->MouseLButtonDoublePressed(); }
 extern "C" long ee_uicpp_control_mouse_left_up(uintptr_t inControl) { return CTL(inControl)->MouseLButtonUp(); }
@@ -529,8 +526,6 @@ EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
 // lle_bg_edit.rs, UI lane round 12) before the host above
 #define UIEB(e) static_cast<UIEditBox*>(reinterpret_cast<UIControl*>(e))
-extern "C" void ee_uicpp_keyboard_entity(uint32_t inKey, uintptr_t* inOut)
-{ gISKeyboard->GetEntity(inKey, *reinterpret_cast<ISEntity**>(inOut)); }
 extern "C" uintptr_t ee_uicpp_edit_scroll_bar_new(uintptr_t inEdit, float inX, float inY, float inLength)
 { return (uintptr_t) new UIScrollBar(UIEB(inEdit)->GetId(), GE2DPoint(inX, inY), inLength, 1, UIEB(inEdit)->GetForm(), UIEB(inEdit)->GetIndex(), UIEB(inEdit)->GetBorderThickness()); }
 extern "C" uintptr_t ee_uicpp_line_new_black()
@@ -652,8 +647,6 @@ extern "C" void ee_uicpp_hot_key_set_just_unpressed(uintptr_t inKey, uintptr_t i
 { HOTKEY(inKey)->SetJustUnpressedEvent(EVENT(inEvent)); }
 extern "C" void ee_uicpp_hot_key_set_double_pressed(uintptr_t inKey, uintptr_t inEvent)
 { HOTKEY(inKey)->SetDoublePressedEvent(EVENT(inEvent)); }
-extern "C" void ee_uicpp_form_fetch_tab_key() { gISKeyboard->GetEntity(kKeyTab, UIControl::Key(EeUiKey::Tab)); }
-extern "C" void ee_uicpp_form_fetch_shift_key() { gISKeyboard->GetEntity(kKeyShift, UIControl::Key(EeUiKey::Shift)); }
 extern "C" void ee_uicpp_event_uninitialize(uintptr_t inEvent) { EVENT(inEvent)->Uninitialize(); }
 extern "C" void ee_uicpp_event_initialize(uintptr_t inEvent) { EVENT(inEvent)->Initialize(); }
 extern "C" void ee_uicpp_control_ime_result(uintptr_t inControl, uintptr_t inText)
@@ -717,11 +710,8 @@ EE_UI_VOID(form_hot_key_delete) { delete theKey; }
 EE_UI_CASE(form_hot_key_fire) { return theKey->FireEvents(); }
 // the temporary hot key AddHotKey builds (lle_hosts.rs form_hot_key_temp): made, on this form, its key b
 EE_UI_CASE(form_hot_key_new) { return (intptr_t) new UIHotKey; }
-// an input entity by key or button a into the slot b (lle_hosts.rs form_entity)
-EE_UI_VOID(form_key_entity_get) { gISKeyboard->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
 EE_UI_CASE(form_wheel_event_new) { return (intptr_t) new UIEMouseWheelScroll; }
-EE_UI_VOID(form_mouse_entity_get) { gISMouse->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_window_width) { return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth(); }
 EE_UI_CASE(form_window_height) { return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight(); }
 EE_UI_VOID(form_music_start) { theForm->GetManager()->StartMusic(UWideString((const char*)a)); }
@@ -777,25 +767,12 @@ extern "C" void ee_uicpp_file_close(void* inFile) { static_cast<FSFileSpec*>(inF
 
 // The Rust hot keys' calls out (EeUiOp 570..581): the object is the record (NULL for the table's own calls)
 #define r static_cast<EeUiHotKeyFields*>(inObj)
-#define theEntity reinterpret_cast<ISEntity*>(a)
 #define theEvent reinterpret_cast<UIEvent*>(a)
-EE_UI_CASE(hk_value) { return theEntity->GetValue(); }
-EE_UI_CASE(hk_double_pressed) { return theEntity->JustDoublePressed(); }
-EE_UI_CASE(hk_just_pressed) { return theEntity->JustPressed(); }
-EE_UI_CASE(hk_just_unpressed) { return theEntity->JustUnpressed(); }
-EE_UI_CASE(hk_keyboard_state) { return gISKeyboard->GetModifierState(); }
-EE_UI_CASE(hk_modifier_state) { return ISKeyboard::ComputeModifierState((unsigned long)a); }
-EE_UI_CASE(hk_key_index) { return theEntity->GetIndex(); }
 EE_UI_VOID(hk_process) { theEvent->ProcessEvent(static_cast<UIForm*>(r->mForm), static_cast<UIHotKey*>(r)); }
 EE_UI_CASE(hk_new) { return (intptr_t) static_cast<EeUiHotKeyFields*>(new UIHotKey); }
 EE_UI_VOID(hk_delete) { delete static_cast<UIHotKey*>(reinterpret_cast<EeUiHotKeyFields*>(a)); }
-extern "C" intptr_t ee_uicpp_hk_get_entity(intptr_t inKey, ISEntity** ioEntity) { return gISKeyboard->GetEntity((unsigned long)inKey, *ioEntity); }
 #undef theEvent
-#undef theEntity
 #undef r
-
-// the entities' names (ee_ui hotkey_ffi.rs: the hot key's display name)
-extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast<ISEntity*>(inEntity)->GetName(); }
 
 // C:\EEX\Low-Level Engine\User Interface\UILBString.cpp
 // 0x10078251..0x100785cd: the U2D key init chains, then DrawTextA and UpdateTranslatedKey (both Rust's: ee_ui
@@ -900,9 +877,6 @@ extern "C" void ee_uicpp_instance_dereference(uintptr_t inInstance)
 extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, EeUiShimText inName, uintptr_t* inFile)
 { return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + UIShimString(inName), *reinterpret_cast<FSFileSpec**>(inFile)); }
 extern "C" void ee_uicpp_file_delete(uintptr_t inFile) { delete FILE_SPEC(inFile); }
-// the shared mouse button inButton into the key slot inWhich after the left button's (lle_manager.rs)
-extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich, uint32_t inButton)
-{ gISMouse->GetEntity(inButton, UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
 #define FORM reinterpret_cast<UIForm*>(a)
@@ -928,8 +902,6 @@ EE_UI_CASE(mgr_form_ime_open) { return FORM->OpenIMECompositionString(); }
 #undef COMPOSITION
 EE_UI_CASE(mgr_ctl_ime) { return reinterpret_cast<UIControl*>(a)->GetIMEEnabled(); }
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
-EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
-EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(mgr_set_blending) { static_cast<UIManager*>(inObj)->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, static_cast<UIManager*>(inObj)->GetScreen()); }

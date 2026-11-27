@@ -71,8 +71,8 @@ pub(crate) fn fetch_keys<C: Cpp + ?Sized>(c: &mut C) {
 
 /// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
 /// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The
-/// first 24 are [`CONTROL_KEYS`]' order (`ee_uicpp_control_key_fetch`'s slot); the mouse three are
-/// `ee_uicpp_mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
+/// first 24 are [`CONTROL_KEYS`]' order (`control_key_fetch`'s slot); the mouse three are
+/// `mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeUiKey {
@@ -117,6 +117,11 @@ static KEYS: [AtomicUsize; KEY_COUNT] = [NO_KEY; KEY_COUNT];
 #[no_mangle]
 pub extern "C" fn ee_ui_key_slot(key: EeUiKey) -> *mut *mut c_void {
     KEYS[key as usize].as_ptr().cast()
+}
+
+/// The slot of the key numbered `i` in [`EeUiKey`]'s order ([`ee_ui_key_slot`]'s; none past the last: the first).
+pub(crate) fn key_slot_at(i: u32) -> *mut *mut c_void {
+    KEYS.get(i as usize).unwrap_or(&KEYS[0]).as_ptr().cast()
 }
 
 /// `key`'s entity (0 until looked up).

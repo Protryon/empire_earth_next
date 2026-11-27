@@ -144,9 +144,7 @@ shims! {
     v ee_uicpp_form_hot_key_delete;
     r ee_uicpp_form_hot_key_fire;
     r ee_uicpp_form_hot_key_new;
-    v ee_uicpp_form_key_entity_get;
     v ee_uicpp_form_manager_delete;
-    v ee_uicpp_form_mouse_entity_get;
     v ee_uicpp_form_music_start;
     r ee_uicpp_form_part_copy_data;
     r ee_uicpp_form_part_draw_polygons;
@@ -168,15 +166,8 @@ shims! {
     r ee_uicpp_group_is_button;
     v ee_uicpp_group_set_dirty;
     v ee_uicpp_hk_delete;
-    r ee_uicpp_hk_double_pressed;
-    r ee_uicpp_hk_just_pressed;
-    r ee_uicpp_hk_just_unpressed;
-    r ee_uicpp_hk_key_index;
-    r ee_uicpp_hk_keyboard_state;
-    r ee_uicpp_hk_modifier_state;
     r ee_uicpp_hk_new;
     v ee_uicpp_hk_process;
-    r ee_uicpp_hk_value;
     r ee_uicpp_label_create_scroll_bar;
     v ee_uicpp_label_string_assign;
     v ee_uicpp_label_string_delete;
@@ -213,8 +204,6 @@ shims! {
     v ee_uicpp_mgr_form_relayout;
     r ee_uicpp_mgr_form_update_keyboard;
     r ee_uicpp_mgr_form_update_mouse;
-    r ee_uicpp_mgr_keyboard_should_update;
-    r ee_uicpp_mgr_mouse_should_update;
     v ee_uicpp_mgr_set_blending;
     r ee_uicpp_mgr_sound_load;
     v ee_uicpp_mgr_sound_parameters;
