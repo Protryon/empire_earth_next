@@ -18,7 +18,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "won_little_endian.h"
 #include "won_miscops_glue.h"
 #include "won_version_msg.h"

@@ -894,6 +894,59 @@ enum class EeCalamityCastMode : int32_t {
   SpecialAttack,
 };
 
+/// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
+/// the others to the upgrade of every unit class the effect names.
+enum class EeTechAttributeOp : uint32_t {
+  /// an attribute no case names: the result 9
+  Unknown = 0,
+  /// 22, 24, 25, 34, 35: nothing
+  Nothing,
+  /// 23: the population limit bonus ([`population_bonus`])
+  PopulationBonus,
+  /// 38: the tribute fee, set to the factor
+  TributeFee,
+  /// 39: the player's flag `mBB44`
+  PlayerFlag,
+  /// 1: attack (float; the class's integer attack as the base value)
+  Attack,
+  /// 2: reload time (integer)
+  ReloadTime,
+  /// 3: range (float, through `SetRange`)
+  Range,
+  /// 4: line of sight (float), the player's units of the type off the sight grid and back
+  LineOfSight,
+  /// 5: area effect (float)
+  AreaEffect,
+  /// 6: maximum hit points ([`max_hit_points`]), the living built units rescaled
+  MaxHitPoints,
+  /// 9: maximum velocity (float, through `SetMaxVelocity`)
+  MaxVelocity,
+  /// 10: flight time (integer), the flying units rescaled
+  FlightTime,
+  /// 11: leadership (float; the class's integer leadership as the base value)
+  Leadership,
+  /// 16..21: one armour (float; the class's integer armour as the base); `index` is the armour's slot
+  Armor,
+  /// 26..29, 31..33: one gather time ([`gather_time`]); `index` is the resource's slot
+  GatherTime,
+  /// 36: converts priests
+  ConvertsPriests,
+  /// 37: converts buildings
+  ConvertsBuildings,
+  /// 40: the area effect template, the living units' area effects rebuilt
+  AreaEffectTemplate,
+  /// 41: power regeneration (integer)
+  PowerRegeneration,
+  /// 42: a terrain type allowed or forbidden ([`terrain_mask`])
+  Terrain,
+  /// 43: regeneration (integer)
+  Regeneration,
+  /// 44: power (integer)
+  Power,
+  /// 45: the upgrade's name, the string `lrintf(value)`
+  Name,
+};
+
 /// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
 enum class EeTechUnitWalk : uint32_t {
   /// The player's units, for the hit point rescale (built ones only).
@@ -1358,32 +1411,6 @@ struct EeCalamityFields {
   bool mHasTargetUnit;
 };
 
-/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
-struct EeTechNodeFields {
-  bool mIsResearched;
-  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
-  bool mIsObsolete;
-  bool mIsAvailable;
-  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
-  uint8_t mPrerequisiteFlags;
-  bool mIsAllowed;
-  bool mScenEditorObsoleted;
-  bool mIsUnitMediaLoaded;
-  /// an epoch's: off between a saved game's load and its applied state
-  bool mIsCountingSOL;
-  /// the epoch it belongs to
-  long mEpoch;
-  long mObsoleteEpoch;
-  /// `ResearchNode` counts it down
-  long mResearchDelay;
-  long mRequiredSOL;
-  long mFirstNodeID;
-  long mCurrentSOL;
-  long mNextEpoch;
-  /// the title string (epochs.yaml; 0: 30145 + the epoch)
-  long mTitleID;
-};
-
 /// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
 struct EeTechNodeDataFields {
   /// the costs by resource (`Load` zeroes all seven, then copies five)
@@ -1420,6 +1447,41 @@ struct EeTechNodeDataFields {
   size_t mClassTable;
 };
 
+/// A node's and an epoch's members (ee/EEPlayer.h: `EETechTreeNode` derives from it and adds none; the nodes and
+/// epochs are made and freed by Rust: tree_objects.rs).
+struct EeTechNodeFields {
+  bool mIsResearched;
+  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
+  bool mIsObsolete;
+  bool mIsAvailable;
+  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
+  uint8_t mPrerequisiteFlags;
+  bool mIsAllowed;
+  bool mScenEditorObsoleted;
+  bool mIsUnitMediaLoaded;
+  /// an epoch's: off between a saved game's load and its applied state
+  bool mIsCountingSOL;
+  /// the epoch it belongs to
+  long mEpoch;
+  long mObsoleteEpoch;
+  /// `ResearchNode` counts it down
+  long mResearchDelay;
+  long mRequiredSOL;
+  long mFirstNodeID;
+  long mCurrentSOL;
+  long mNextEpoch;
+  /// the title string (epochs.yaml; 0: 30145 + the epoch)
+  long mTitleID;
+  /// the node data (shared by a tree's copies; made by the load, freed by `Unload`)
+  EeTechNodeDataFields *mData;
+  /// the tree it belongs to
+  class EETechTree *mTree;
+  /// `EEButtonObject::Get` of the record's button
+  class EEButtonObject *mButton;
+  /// an epoch's nodes and loaded unit classes (an [`crate::tech::tree_objects::EeTechEpochLists`]); 0: a node
+  size_t mLists;
+};
+
 /// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
 struct EeTechTreeFields {
   long mCurrentEpoch;
@@ -1436,6 +1498,8 @@ struct EeTechTreeFields {
   long mPlayerIndex;
   /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
   class EEPlayer *mPlayer;
+  /// the epochs, one per epoch of the tech tree file (a `Vec` of nodes: tree_objects.rs; 0 before the first)
+  size_t mEpochs;
 };
 
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
@@ -1590,6 +1654,19 @@ struct EeContagionHelperFields {
   float mTimeSinceLastUpdate;
 };
 
+/// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
+struct EeTechEffectValues {
+  float value;
+  float offset;
+  float factor;
+};
+
+/// An attribute's operation and slot (the armour or gather time index; 0 otherwise).
+struct EeTechAttribute {
+  EeTechAttributeOp op;
+  int32_t index;
+};
+
 /// The inputs of `EETechTreeNode::GetCost`. The C++ reads the world's factors only where the C++ read them (the
 /// unit-making fields only for a node that makes a unit).
 struct EeTechCostInput {
@@ -1636,6 +1713,13 @@ struct EeTechSumCostsCallbacks {
   int32_t (*class_technology)(void *ctx, int32_t unit_class);
 };
 
+/// `EECalamityClass::UpdateTimeAlive`'s arithmetic: the new age and whether the lifetime is over (the update's 7).
+struct EeCalamityAge {
+  float time_alive;
+  bool done;
+  uint8_t pad[3];
+};
+
 /// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++
 /// objects, reading and writing the calamity through `state` (the C++ copies it in and out around its step).
 struct EeCalamityHostFfi {
@@ -1662,6 +1746,19 @@ struct EeTechUnitView {
   int32_t flight_time;
   /// `EE_TECH_UNIT_*` bits.
   uint32_t flags;
+};
+
+/// `ConvertEventUnits`' decisions around its walk.
+struct EeTechConversion {
+  /// Only the given unit (in the effect's set, by a unit tech): else every unit of the class, after the upgrade
+  /// levels and the queued technology are carried over.
+  bool single;
+  /// The new class's tech node gets a research delay (one unit converted, the new class exists).
+  bool delay_new_class;
+  /// The queued improvements move to the new class.
+  bool move_queued;
+  /// The new units take their class's behaviour (tech 0x413 or 0x138d).
+  bool set_behavior;
 };
 
 /// `EECalamity::GetDiscreteUpdates`: the whole periods of `discrete` in the elapsed time (`UMFloatToLong`, stored
@@ -2547,8 +2644,41 @@ long ee_contagion_helper_load_probe(uint64_t file,
 /// As the module's.
 void ee_contagion_manager_delete_helpers(EeContagionManager *m);
 
+/// `ApplyEventGatherRate`'s new gather time.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_gather_time(int32_t current, int32_t class_time, const EeTechEffectValues *effect);
+
+/// Attribute 6's new maximum hit points.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_max_hit_points(int32_t class_hit_points,
+                               float variant_factor,
+                               uint32_t old_maximum,
+                               const EeTechEffectValues *effect);
+
 /// A unit's hit points or flight time in proportion to a new maximum (before the caller's cast).
 float ee_tech_rescale(int32_t value, uint32_t old_maximum, int32_t new_maximum);
+
+/// Attribute 23's new population limit bonus.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_population_bonus(int32_t bonus, const EeTechEffectValues *effect);
+
+/// Attribute 42: the terrain type is one a mask has.
+bool ee_tech_terrain_type_valid(int32_t terrain);
+
+/// Attribute 42 and the pathfinding functor: a terrain type allowed or forbidden.
+uint32_t ee_tech_terrain_mask(uint32_t mask, int32_t terrain, bool allowed);
+
+/// What an attribute effect changes.
+EeTechAttribute ee_tech_attribute(int32_t attribute);
+
+/// Whether an attribute's operation applies to the player.
+bool ee_tech_attribute_is_player(int32_t attribute);
 
 /// `EETechTreeNode::GetCost`.
 ///
@@ -2579,6 +2709,9 @@ void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
                        int32_t id,
                        int32_t unit_class,
                        int32_t *costs);
+
+/// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
+EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
 
 /// A calamity class's `Update(calamity, elapsed)` (`calamity_update::update`); `state` in and out.
 ///
@@ -2633,11 +2766,41 @@ EeTechUnitStep ee_tech_unit_step(EeTechUnitWalk walk,
                                  uint32_t old_maximum,
                                  int32_t new_maximum);
 
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_sight_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+bool ee_tech_area_effect_applies(const EeTechUnitView *unit, int32_t class_type);
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, int32_t id);
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
+
 /// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
 EeCalamityDiscrete ee_calamity_discrete_updates(float elapsed, float discrete);
 
+/// A functor's damage per update (`contagion::tick_damage`).
+int32_t ee_contagion_tick_damage(int32_t damage, uint32_t updates);
+
 /// The fire's burn on infection (`contagion::fire_burn`).
 int32_t ee_contagion_fire_burn(int32_t burn, int32_t max_hit_points);
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hit_points);
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
 
 /// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
 bool ee_tech_needs_unit_media(bool has_class,

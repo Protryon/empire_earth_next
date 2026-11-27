@@ -52,14 +52,14 @@ enum class EeWonCfgTabOp : int32_t {
   RequestFocus,
   /// `SafeConfigGetComponent<WONButton*>(c[0], "WONButton")` (guarded).
   SafeWonButton,
-  /// The skin's radio button slot = the WON button `x`.
-  SkinSetRadio,
+  /// `WONSkinSet((EeWonSkinSlot)x, y, (Component*)z)`: the skin's slot `x` (index `y`) = component `z`.
+  SkinSet,
+  /// `ee_won_skin_set_type(WONSkinGlobal(), x != 0, &s[0], (Component*)y)`: the button type `s[0]` (simple: `x`).
+  SkinSetType,
   /// The WON button `x`'s `SetButtonFlags(8, true)`.
   RadioFlag,
-  /// `SafeConfigGetSkinPart(c[0], "WONTabCtrl")` (guarded).
-  SafeTabCtrl,
-  /// The skin's tab control slot = `x`.
-  SkinSetTabCtrl,
+  /// `SafeConfigGetSkinPart(c[0], (const char*)x)` (guarded; `x` a NUL-terminated name).
+  SafePart,
   /// `WONShell::Op(x, SetSkin, 0)`.
   ShellSetSkin,
   /// The font config's descriptor style.
@@ -144,8 +144,6 @@ enum class EeWonCfgTabOp : int32_t {
   FilterToParentS0,
   /// Filter holder `x` deleted.
   FilterFree,
-  /// `s[ns++] = ReadFlag((bool*)x)` (guarded).
-  ReadFlagText,
   /// The config's `ReadComponent()` (guarded).
   ReadComp,
   /// Whether component `x` is a ScrollArea.
@@ -254,8 +252,6 @@ enum class EeWonCfgComp : int32_t {
   FilterCut,
   /// ImageFilterConfig's named child of the raw image.
   FilterNamed,
-  /// The read of a flag: its text and whether it is on (starting true).
-  ReadFlag,
   /// The read of a scroll area ("Expecting ScrollArea" for another component).
   ReadScrollArea,
   /// The read of WONFrameValueConfig's frame: a stretch image alone, or an image and one border or four.
@@ -316,6 +312,15 @@ extern "C" {
 bool ee_won_cfg_comp(EeWonCfgTabOpFn ops,
                      void *frame,
                      EeWonCfgComp which);
+
+/// The table setter `setter` when it is a composition: 1 when it ran, 0 when an op threw (the host keeps the
+/// exception), -1 for another setter (the host's own case).
+///
+/// # Safety
+/// As `ee_won_cfg_comp`.
+int32_t ee_won_cfg_comp_setter(EeWonCfgTabOpFn ops,
+                               void *frame,
+                               int32_t setter);
 
 /// Appends bytes to the `Vec<u8>` at `v` (the host's way to hand back a string).
 ///

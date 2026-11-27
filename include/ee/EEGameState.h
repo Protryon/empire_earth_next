@@ -49,6 +49,8 @@ public:
     void FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion) {  }
     // 0x131854 (deletes the old one; provisional name)
     void SetEnvironmentManager(EEEnvironmentManager* inManager) { ee_gamecpp_state_set_environment(this, inManager); }
+    // 0x1305bf (EEWorld::StartGame after the camera; provisional name)
+    void RepairRestorables() { ee_gamecpp_state_repair_restorables(this); }
 
     EEGameOptions mGameOptions;             // +0x008
     GE3DPoint mMapCenter;                   // +0x414 (Create: the map's size * 0.5, z 0)

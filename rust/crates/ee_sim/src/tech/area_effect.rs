@@ -17,7 +17,7 @@
 use crate::tech::ftol;
 use ee_base::math::types::Ge2DPoint;
 use ee_base::math::um::lrintf;
-use std::os::raw::{c_char, c_long, c_void};
+use std::os::raw::{c_char, c_long};
 
 /// `kAreaEffectHealing` (ee/EEAreaEffectKindIDs.h).
 pub const EE_AREA_EFFECT_HEALING: c_long = 1;
@@ -667,15 +667,6 @@ pub fn tick<H: AreaEffectHost>(h: &mut H, e: &EeAreaEffectFields, t: &EeAreaEffe
 pub fn checksum(e: &EeAreaEffectFields, location: Ge2DPoint, unit_id: c_long) -> c_long {
     let sum = (location.x.to_bits() as i32 as c_long).wrapping_add(location.y.to_bits() as i32 as c_long);
     e.mPlayer.wrapping_add(unit_id).wrapping_add(sum)
-}
-
-/// The C++ host of an area effect's calls (`EEAreaEffect.cpp`): `call` answers one [`EeAreaEffectCall`] on the C++
-/// objects (the effect and the unit it was given).
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeAreaEffectHostFfi {
-    pub ctx: *mut c_void,
-    pub call: unsafe extern "C" fn(ctx: *mut c_void, call: *const EeAreaEffectCall, reply: *mut EeAreaEffectReply),
 }
 
 /// [`mark_dirty`].

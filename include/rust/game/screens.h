@@ -18514,6 +18514,12 @@ void ee_screens_civc_load(const char *name,
 /// CVAF (`player` the `EEPlayer*`).
 void ee_screens_civc_apply_file(const char *name, size_t player, long result);
 
+/// `EECBUIListBox::~EECBUIListBox`: the list's state dropped.
+void ee_screens_cbb_destroy(size_t list);
+
+/// `EECBUIListBox::GetTabable` (`mIsTabable`).
+bool ee_screens_cbl_tabable(size_t list);
+
 /// `Load` (0), `LoadPremadeCivilizations` (1), `EECivPowersManager::Load` (2) of `file` (an `FSFile*`).
 long ee_screens_civm_load(size_t file,
                           uint32_t which);

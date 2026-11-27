@@ -3,14 +3,6 @@
 // handed back as opaque handles. Every call runs on the thread that called the decision (the physics thread, under
 // the world's write lock). TEST ONLY: the dry host (ee_sim units/dry.rs) answers the same calls without acting.
 #include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <vector>
-#include <algorithm>
-#include <map>
-#include <initializer_list>
-#include <string.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GETerrainMesh.h"
@@ -43,7 +35,6 @@
 #include "ee/EEGameSound.h"
 #include "ee/EECombatGoals.h"
 #include "rust/game/gamecpp.h"
-#include "rust/sim/units.h"
 
 static EEUnit* UnitOf(uint32_t inID) { return EEUnitHandleResolved<EEUnit>(inID); }
 static EEComplexUnit* ComplexOf(uint32_t inID) { return EEUnitHandleResolved<EEComplexUnit>(inID); }
@@ -65,7 +56,7 @@ extern "C" void ee_units_host_play_acknowledgement(void* inPlayer, void* inGroup
 
 extern "C" void ee_units_host_send_group_command(void* inGroup, uint32_t inTarget, void* inPlayer, int32_t inCommand, int32_t inQueue)
 {
-    ee_gamecpp_msg_group_command(static_cast<EEGroup*>(inGroup), inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL, static_cast<EEPlayer*>(inPlayer)->mPlayerID, inCommand, inQueue);
+    ee_gamecpp_msg_group_command(static_cast<EEGroup*>(inGroup), inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL, static_cast<EEPlayer*>(inPlayer)->mPlayerID, (long)(inCommand), (long)(inQueue));
 }
 
 extern "C" void ee_units_host_acknowledge_unit(void* inPlayer, uint32_t inUnit)
@@ -100,17 +91,17 @@ extern "C" uint8_t ee_units_host_can_produce(void* inPlayer, int32_t inTechnolog
 
 extern "C" void ee_units_host_unit_add_farm_target(uint32_t inUnit, uint32_t inTarget)
 {
-    ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, ComplexOf(inUnit), (int64_t)(uintptr_t)(UnitOf(inTarget)), 0, 0);
+    ComplexOf(inUnit)->AddBuildTarget(UnitOf(inTarget));
 }
 
 extern "C" void ee_units_host_unit_order_build(uint32_t inUnit, uint32_t inTarget)
 {
-    ee_units_cu_body(EE_UNITS_CU_DO_ORDER_REPAIR, ComplexOf(inUnit), (int64_t)(uintptr_t)(UnitOf(inTarget)), 0, 0);
+    ComplexOf(inUnit)->OrderRepair(UnitOf(inTarget));
 }
 
 extern "C" void ee_units_host_unit_drop_gathered(uint32_t inUnit)
 {
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_GATHERED_RESOURCE, ComplexOf(inUnit), (int64_t)(uintptr_t)NULL, 0, 0);
+    ComplexOf(inUnit)->SetGatheredResource(NULL);
 }
 
 extern "C" void ee_units_host_work_farm(uint32_t inFarm, uint32_t inUnit)
@@ -160,7 +151,7 @@ extern "C" void ee_units_host_unit_clear_goal_queue(uint32_t inUnit, int64_t inQ
 
 extern "C" void ee_units_host_unit_clear_all_goal_queues(uint32_t inUnit)
 {
-    ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES, ComplexOf(inUnit), NULL, 0);
+    ComplexOf(inUnit)->ClearAllGoalQueues();
 }
 
 extern "C" void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int64_t inQueue)
@@ -170,7 +161,7 @@ extern "C" void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int
 
 extern "C" void ee_units_host_unit_clear_build_targets(uint32_t inUnit)
 {
-    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, ComplexOf(inUnit), 0, 0, 0);
+    ComplexOf(inUnit)->ClearBuildTargets();
 }
 
 extern "C" void ee_units_host_unit_action_changed(uint32_t inUnit)
@@ -180,7 +171,7 @@ extern "C" void ee_units_host_unit_action_changed(uint32_t inUnit)
 
 extern "C" void ee_units_host_unit_halt(uint32_t inUnit)
 {
-    ee_units_cu_body(EE_UNITS_CU_DO_HALT, ComplexOf(inUnit), 0, 0, 0);
+    ComplexOf(inUnit)->Halt();
 }
 
 extern "C" void ee_units_host_player_event(void* inPlayer, int64_t inX, int64_t inY, int32_t inCode)
@@ -195,7 +186,7 @@ extern "C" uint8_t ee_units_host_scenario_game()
 
 extern "C" void ee_units_host_unit_queue_research(uint32_t inUnit, int32_t inTechnology, uint8_t inFront)
 {
-    ee_units_cu_more(EE_UNITS_CUM_DO_QUEUE_RESEARCH, ComplexOf(inUnit), (long)(inTechnology), inFront != 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);
+    ComplexOf(inUnit)->QueueResearch(inTechnology, inFront != 0);
 }
 
 extern "C" float ee_units_host_player_class_scale(int64_t inPlayerID, int32_t inUnitType)
@@ -230,36 +221,26 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_MAP_HEIGHT: f[0] = gWorld.GetMap()->GetHeight(GE3DPoint(f[0], f[1], 0.0f)); return 0;
     case EE_UNITS_UH_NEAREST_TOWN: return EEObj(ComplexOf(UhID(inA))->FindNearestTown());
     case EE_UNITS_UH_TOWN_PATROL_GROUP: return EEObj(UhObject<EETown>(inB)->mPatrolGroup);
-    case EE_UNITS_UH_TILE_X: return ComplexOf(UhID(inA))->GetTileX();
-    case EE_UNITS_UH_TILE_Y: return ComplexOf(UhID(inA))->GetTileY();
-    case EE_UNITS_UH_OBJECT_ID: return (uint32_t)UhObject<RTSUnit>(inB)->mUnitID;
-    case EE_UNITS_UH_ADD_BUILD_TARGET: ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, UnitOf(UhID(inA))->mComplexUnit, (int64_t)(uintptr_t)(UnitOf(UhID(inB))), 0, 0); return 0;
-    case EE_UNITS_UH_SET_SHIFT_QUEUED: UnitOf(UhID(inA))->mComplexUnit->mHasShiftQueuedBuild = true; return 0;
-    case EE_UNITS_UH_ORDER_REPAIR: ee_units_cu_body(EE_UNITS_CU_DO_ORDER_REPAIR, UnitOf(UhID(inA))->mComplexUnit, (int64_t)(uintptr_t)(UnitOf(UhID(inB))), 0, 0); return 0;
+    case EE_UNITS_UH_ADD_BUILD_TARGET: UnitOf(UhID(inA))->mComplexUnit->AddBuildTarget(UnitOf(UhID(inB))); return 0;
+    case EE_UNITS_UH_ORDER_REPAIR: UnitOf(UhID(inA))->mComplexUnit->OrderRepair(UnitOf(UhID(inB))); return 0;
     case EE_UNITS_UH_START_ACTION: UnitOf(UhID(inA))->mComplexUnit->StartAction((long)inC); return 0;
     case EE_UNITS_UH_ACTION_CHANGED: UnitOf(UhID(inA))->mComplexUnit->mUnitClass->ActionChanged(UnitOf(UhID(inA))->mComplexUnit); return 0;
     case EE_UNITS_UH_C_START_ACTION: ComplexOf(UhID(inA))->StartAction((long)inC); return 0;
     case EE_UNITS_UH_C_ACTION_CHANGED: ComplexOf(UhID(inA))->mUnitClass->ActionChanged(ComplexOf(UhID(inA))); return 0;
     case EE_UNITS_UH_ADD_PATROL_GROUP: UhObject<EEPlayer>(inA)->AddPatrolGroup(UhObject<EEPPatrolGroup>(inB)); return 0;
-    case EE_UNITS_UH_PLAYER_ID: return UhObject<EEPlayer>(inA)->mPlayerID;
     case EE_UNITS_UH_PATROL_GOAL: return EEObj(static_cast<EEUnitGoal*>(EEPatrolGoalCast(ComplexOf(UhID(inA))->GetGoal())));
     case EE_UNITS_UH_GOAL_PATROL_GROUP: return EEObj(UhGoal(inB)->GetPatrolGroup());
-    case EE_UNITS_UH_MAP_TILE: return EEObj(gWorld.GetMap()->GetTile((long)inC, (long)inD));
     case EE_UNITS_UH_CLOSEST_TILE: return EEObj(gWorld.GetMap()->GetClosestTile(&(sUhPoint = GE3DPoint(f[0], f[1], 0.0f)), &(sUhXY[0] = (long)inC), &(sUhXY[1] = (long)inD)));
     case EE_UNITS_UH_X: return sUhXY[0];
     case EE_UNITS_UH_Y: return sUhXY[1];
-    case EE_UNITS_UH_TILE_UNITS: return EEObj(UhObject<EETile>(inB)->mUnits);
-    case EE_UNITS_UH_NODE_NEXT: return EEObj(UhNode(inB)->mNext);
     case EE_UNITS_UH_NODE_BLOCKS: return UhNode(inB)->mUnit->mUnitClass->mTileSize > 1 && !UhNode(inB)->mUnit->IsPassableBy(ComplexOf(UhID(inA))->GetComplexUnit());
-    case EE_UNITS_UH_NEAREST_FOOTPRINT: ee_units_eu_nearest_footprint_tile(static_cast<EEUnit*>(ComplexOf(UhID(inA))), UhNode(inB)->mUnit, &(sUhXY[0] = (long)inC), &(sUhXY[1] = (long)inD)); return 0;
-    case EE_UNITS_UH_TILE_HEIGHT: f[0] = UhObject<EETile>(inB)->mHeight; return 0;
+    case EE_UNITS_UH_NEAREST_FOOTPRINT: ComplexOf(UhID(inA))->GetNearestFootprintTile(UhNode(inB)->mUnit, &(sUhXY[0] = (long)inC), &(sUhXY[1] = (long)inD)); return 0;
     case EE_UNITS_UH_NEW_PIECES: return EEObj(new std::vector<EEUnit*>());
     case EE_UNITS_UH_TECH_CLASS: return EEObj(gUnitClassTable[UhObject<EEPlayer>(inA)->mTechnologies->Get((long)inC)->mData->mUnitClass]);
     case EE_UNITS_UH_PIECES_SIZE: return (int64_t)UhObject<std::vector<EEUnit*> >(inB)->size();
     case EE_UNITS_UH_PIECE_ID: return (uint32_t)(*UhObject<std::vector<EEUnit*> >(inB))[(size_t)inC]->mUnitID;
     case EE_UNITS_UH_DELETE_PIECES: delete UhObject<std::vector<EEUnit*> >(inB); return 0;
     case EE_UNITS_UH_MAKE_BUILDING: return EEObj(EEMakeBuilding(UhObject<EEPlayer>(inA), (long)(int64_t)inB, (long)inC, (long)inD));
-    case EE_UNITS_UH_COMPLEX: return EEObj(ComplexOf(UhID(inA)));
     case EE_UNITS_UH_RESET_RING: sUhRing = 1; return 0;
     case EE_UNITS_UH_FIND_FREE_FARM: return EEObj(EEFindFreeFarm(UhObject<EEComplexUnit>(inB), 1, &sUhRing));
     case EE_UNITS_UH_UNITS_CLEAR: sUhUnits.clear(); return 0;
@@ -269,8 +250,6 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_SORT_FARMS: EESortFarms(sUhUnits, (long)inC, (long)inD, inB != 0); return 0;
     case EE_UNITS_UH_LOAD_GATHER_GOAL: return EEObj(static_cast<EEUnitGoal*>(EEGatherGoalCast(ComplexOf(UhID(inA))->GetLoadGoal())));
     case EE_UNITS_UH_GATHER_RESOURCE: return EEObj(UhGoal(inB)->GetGatherResource());
-    case EE_UNITS_UH_UNIT_TYPE_OF: return UhObject<EEUnit>(inB)->mUnitClass->mUnitType;
-    case EE_UNITS_UH_COMPLEX_OF_UNIT: return EEObj(UhObject<EEUnit>(inB)->mComplexUnit);
     case EE_UNITS_UH_CAN_TAKE: return ComplexOf(UhID(inA))->CanTake(ComplexOf(UhID(inB)), ComplexOf(UhID(inB))->mResourceType);
     case EE_UNITS_UH_TECH_NODE: return EEObj(NodeOf(UhObject<void>(inA), (int32_t)inC));
     case EE_UNITS_UH_NODE_CALAMITY_CLASS: return EEObj(EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)UhObject<EETechTreeNode>(inB)->mData->mCalamity));
@@ -279,21 +258,16 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_CAN_CAST_AT: return (int64_t)UhObject<EECalamityClass>(inB)->CanCastAt(ComplexOf(UhID(inA)), sUhPoint, (unsigned long)(int32_t)inC, (unsigned long)(int32_t)(inC >> 32), true, (uint32_t)inD != 0xffffffffu ? UnitOf((uint32_t)inD) : NULL);
     case EE_UNITS_UH_RESET_POINT: sUhPoint = GE3DPoint(); return 0;
     case EE_UNITS_UH_SPLIT_CASTERS: ActiveOf(UhObject<void>(inA))->SplitCalamityCasters(UhObject<EECalamityClass>(inB), UhObject<EETechTreeNode>((uint64_t)inC), (uint32_t)inD != 0xffffffffu ? UnitOf((uint32_t)inD) : NULL); return 0;
-    case EE_UNITS_UH_UNIT_TILE: return EEObj(UnitOf(UhID(inA)) != NULL ? static_cast<EETile*>(UnitOf(UhID(inA))->mTile) : NULL);
     case EE_UNITS_UH_TILE_DOPPELGANGERS: return (int64_t)UhObject<EETile>(inB)->GetNumDoppelgangers();
     case EE_UNITS_UH_TILE_DOPPELGANGER_UNIT: return EEObj(UhObject<EETile>(inB)->mDoppelgangers[(size_t)inC]->mUnit);
-    case EE_UNITS_UH_UNIT_OF: return EEObj(UnitOf(UhID(inA)));
     case EE_UNITS_UH_ATTACKABLE: return UnitOf(UhID(inA))->mUnitClass->CanBeAttacked() && EEDamageFactor(UnitOf(UhID(inA))->mUnitClass->mFamily, (long)inC) > 0.0f;
     case EE_UNITS_UH_CLEAR_AIR_TRAFFIC: ee_units_atc_clear_airport_queue(ComplexOf(UhID(inA))->GetPlayer()->mAirTraffic[ComplexOf(UhID(inA))->GetUnitClass()->mAirTrafficType - 1], ComplexOf(UhID(inA)), 0); return 0;
     case EE_UNITS_UH_NEW_GARRISON_LOAD: return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewLoad(kGoalLoadGarrison, ComplexOf(UhID(inA)), sUhUnits, true)));
     case EE_UNITS_UH_LOAD_VALID: return UhGoal(inB)->IsLoadGarrisonValid();
     case EE_UNITS_UH_DELETE_GOAL: delete UhGoal(inB); return 0;
     case EE_UNITS_UH_SET_GOAL: ComplexOf(UhID(inA))->SetGoal(UhGoal(inB), 0, 0); return 0;
-    case EE_UNITS_UH_MAX_VELOCITY: f[0] = ComplexOf(UhID(inA))->mStats->mMaxVelocity; return 0;
     case EE_UNITS_UH_GOAL_CLONE: return EEObj(static_cast<EEUnitGoal*>(UhGoal(inB)->Clone()));
-    case EE_UNITS_UH_GOAL_STATE: return EEObj(ComplexOf(UhID(inA))->mGoalState);
     case EE_UNITS_UH_LOAD_GOAL: return EEObj(ComplexOf(UhID(inA))->GetLoadGoal());
-    case EE_UNITS_UH_GOAL_KIND: return UhObject<EEUnitGoal>(inB)->mKind;
     case EE_UNITS_UH_ADD_LOAD_UNITS: UhGoal(inB)->AddLoadUnits(sUhUnits); return 0;
     case EE_UNITS_UH_NEW_LOAD: return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewLoad((unsigned char)inC, ComplexOf(UhID(inA)), sUhUnits, inD != 0)));
     case EE_UNITS_UH_LOAD_UNIT_TILE: sUhTile = UhGoal(inB)->GetLoadUnitTile(); return 0;
@@ -314,16 +288,12 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_FACE_PI: sUhTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f); return 0;
     case EE_UNITS_UH_POSITION_AT_GROUND: sUhTransformation.SetPosition(sUhGround.GetX(), sUhGround.GetY(), sUhGround.GetZ()); return 0;
     case EE_UNITS_UH_CREATE_AT: return EEObj(gUnitClassTable[inC]->CreateUnitAt(sUhTransformation, (long)inD, false, NULL));
-    case EE_UNITS_UH_HAS_TILE_NODE: return UhObject<EEUnit>(inB)->mTileNode != NULL;
     case EE_UNITS_UH_CLEAR_RELOAD: UhObject<EEUnit>(inB)->mComplexUnit->SetReloadTimer(0); return 0;
     case EE_UNITS_UH_FULL_POWER: UhObject<EEUnit>(inB)->mComplexUnit->SetPower(UhObject<EEUnit>(inB)->mComplexUnit->mStats->mPower); return 0;
     case EE_UNITS_UH_UPGRADE_CREATION_SOUND: return EEObj(gWorld.mPlayers[inD]->mUnitClassUpgrades[gUnitClassTable[inC]->mUnitType]->mCreationSound);
-    case EE_UNITS_UH_CURRENT_PLAYER_ID: return gWorld.GetCurrentPlayer()->mPlayerID;
     case EE_UNITS_UH_PLAY_SOUND: gSoundManager->Play(UhObject<EESoundObject>(inB)->mSampleID, UhObject<EESoundObject>(inB)->mVolume, 0.0f, 1.0f, false, NULL); return 0;
     case EE_UNITS_UH_CREATE_BUILDING: return EEObj(gUnitClassTable[(long)inA]->CreateUnit((long)inC, (long)inD, (long)(int64_t)inB, false, NULL));
     case EE_UNITS_UH_SET_BUILT: UhObject<EEUnit>(inB)->mComplexUnit->SetBuilt(1, 0, 1); return 0;
-    case EE_UNITS_UH_STATS_CREATION_SOUND: return EEObj(UhObject<EEUnit>(inB)->mStats->mCreationSound);
-    case EE_UNITS_UH_CAN_GARRISON: return ComplexOf(UhID(inA))->mUnitClass->mCanGarrison;
     case EE_UNITS_UH_IS_TRANSPORT: return ComplexOf(UhID(inA))->mUnitClass->IsTransport();
     default: return 0;
     }

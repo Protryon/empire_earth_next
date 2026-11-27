@@ -177,9 +177,9 @@ struct EeWonCfgTabHost {
   void *ctx;
   /// A read into the frame.
   bool (*read)(void *ctx, EeWonCfgRead kind);
-  /// `EnsureComma()`.
+  /// `EnsureComma()` (a host without `cc`).
   bool (*comma)(void *ctx);
-  /// `EndOfString()` (it skips whitespace).
+  /// `EndOfString()` (it skips whitespace; a host without `cc`).
   bool (*end)(void *ctx);
   /// The frame's string `slot`: its units (`mText`), their count and size.
   const void *(*text)(void *ctx, int32_t slot, uint16_t *len, uint32_t *unit);
@@ -195,6 +195,16 @@ struct EeWonCfgTabHost {
   int32_t (*peek)(void *ctx, int32_t slot);
   /// A value of the frame for the setters made in Rust (cfgset.rs): an int, a count or an object's address.
   ptrdiff_t (*arg)(void *ctx, EeWonCfgArg what, int32_t slot);
+  /// The config's own Rust object (compcfg.rs `EeWonCompCfg`): the value reads, commas and ends are made on it here
+  /// (R6 WON lobby and network round 39). NULL: the host makes every read (the drivers' worlds).
+  void *cc;
+  /// The frame compcfg.rs's host ops keep a thrown exception in (the C++ rethrows it when the run fails without a
+  /// message of its own).
+  void *cc_frame;
+  /// Where a read made here goes in the C++ frame: for a string (`Str`, `Flag`: the next slot; `Word`: the first,
+  /// alone) and the selection colour the address to write; the raw image's reference and the standard cursor are
+  /// handed over as `value`.
+  ptrdiff_t (*put)(void *ctx, EeWonCfgRead kind, ptrdiff_t value);
 };
 
 extern "C" {

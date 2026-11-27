@@ -23,15 +23,11 @@ enum class EePreloadCpp : uint32_t {
   Player,
   /// `gUnitClassTable[a0]`
   Class,
-  /// `mTechnologies->Get(a0)` of the player p
-  Technology,
   ClassUnitType,
   SetUnitClassMedia,
   LoadUnitClassButtons,
   UnloadUnitClassMedia,
   UnloadUnitClassButtons,
-  TechLoadMedia,
-  TechUnloadMedia,
   NewOptions,
   DeleteOptions,
   NewError,

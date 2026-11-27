@@ -87,10 +87,10 @@ pub struct EeWonCfgTabHost {
     pub ctx: *mut c_void,
     /// A read into the frame.
     pub read: extern "C" fn(ctx: *mut c_void, kind: EeWonCfgRead) -> bool,
-    /// `EnsureComma()`.
-    pub comma: extern "C" fn(ctx: *mut c_void) -> bool,
-    /// `EndOfString()` (it skips whitespace).
-    pub end: extern "C" fn(ctx: *mut c_void) -> bool,
+    /// `EnsureComma()` (a host without `cc`).
+    pub comma: Option<extern "C" fn(ctx: *mut c_void) -> bool>,
+    /// `EndOfString()` (it skips whitespace; a host without `cc`).
+    pub end: Option<extern "C" fn(ctx: *mut c_void) -> bool>,
     /// The frame's string `slot`: its units (`mText`), their count and size.
     pub text: extern "C" fn(ctx: *mut c_void, slot: i32, len: *mut u16, unit: *mut u32) -> *const c_void,
     /// A value into the frame's ints.
@@ -105,6 +105,16 @@ pub struct EeWonCfgTabHost {
     pub peek: extern "C" fn(ctx: *mut c_void, slot: i32) -> i32,
     /// A value of the frame for the setters made in Rust (cfgset.rs): an int, a count or an object's address.
     pub arg: extern "C" fn(ctx: *mut c_void, what: crate::cfgset::EeWonCfgArg, slot: i32) -> isize,
+    /// The config's own Rust object (compcfg.rs `EeWonCompCfg`): the value reads, commas and ends are made on it here
+    /// (R6 WON lobby and network round 39). NULL: the host makes every read (the drivers' worlds).
+    pub cc: *mut c_void,
+    /// The frame compcfg.rs's host ops keep a thrown exception in (the C++ rethrows it when the run fails without a
+    /// message of its own).
+    pub cc_frame: *mut c_void,
+    /// Where a read made here goes in the C++ frame: for a string (`Str`, `Flag`: the next slot; `Word`: the first,
+    /// alone) and the selection colour the address to write; the raw image's reference and the standard cursor are
+    /// handed over as `value`.
+    pub put: Option<extern "C" fn(ctx: *mut c_void, kind: EeWonCfgRead, value: isize) -> isize>,
 }
 
 /// What a name read does with a name its table does not hold.
@@ -681,15 +691,44 @@ impl Ffi<'_> {
     }
 }
 
+impl Ffi<'_> {
+    /// A read's, a comma's failure: its message the host's exception; a host op's exception is in `cc_frame`.
+    fn done(&mut self, r: Result<(), crate::compcfg::CcErr>) -> bool {
+        match r {
+            Ok(()) => true,
+            Err(crate::compcfg::CcErr::Msg(m)) => {
+                self.fail(&m, -1);
+                false
+            }
+            Err(crate::compcfg::CcErr::Host) => false,
+        }
+    }
+}
+
 impl CfgHost for Ffi<'_> {
     fn read(&mut self, kind: EeWonCfgRead) -> bool {
-        (self.0.read)(self.0.ctx, kind)
+        let h = self.0;
+        if let (false, Some(put)) = (h.cc.is_null(), h.put) {
+            let mut push = |v: i32| (h.push)(h.ctx, v);
+            let mut put = |k: EeWonCfgRead, v: isize| put(h.ctx, k, v);
+            if let Some(r) = crate::compcfg::tab_read(h.cc, h.cc_frame, kind, &mut push, &mut put) {
+                return self.done(r);
+            }
+        }
+        (h.read)(h.ctx, kind)
     }
     fn comma(&mut self) -> bool {
-        (self.0.comma)(self.0.ctx)
+        if !self.0.cc.is_null() {
+            let r = crate::compcfg::tab_comma(self.0.cc);
+            return self.done(r);
+        }
+        self.0.comma.is_some_and(|f| f(self.0.ctx))
     }
     fn end(&mut self) -> bool {
-        (self.0.end)(self.0.ctx)
+        if !self.0.cc.is_null() {
+            return crate::compcfg::tab_end(self.0.cc);
+        }
+        self.0.end.is_some_and(|f| f(self.0.ctx))
     }
     fn name(&mut self, t: i32, slot: i32) -> i32 {
         let (p, len, unit) = self.units(slot);

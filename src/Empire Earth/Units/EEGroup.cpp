@@ -36,7 +36,6 @@
 #include "ee/EEMapDimensions.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
-#include "rust/sim/units.h"
 
 static_assert(sizeof(GERectangle) == 4 * sizeof(float) && offsetof(U2DRectangle<long>, mBottom) == 0 && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "GetBounds hands Rust the rectangle's four floats; AREA_OUTLINES reads rectangles as bottom, left, right, top");
 
@@ -56,6 +55,11 @@ EECPASGFlags EEGroup::GetFlags()
     ee_units_group_flags(this, reinterpret_cast<uint8_t(*)[17]>(theResult.mFlags));
     return theResult;
 }
+
+// The active groups in a saved game (save 0.279, EESaveHasActiveGroups; ee_units group_obj.rs save_all, load_all)
+void EESaveActiveGroups(FSFile& outFile) { ee_units_groups_save_active(&outFile, &EESaveFilePrimitive); }
+
+long EELoadActiveGroups(FSFile& inFile) { return ee_units_groups_load_active(&inFile, &EESaveFilePrimitive); }
 
 // The groups' host (ee_units group_host.rs; EE_UNITS_GROUP_OP_*): each operation one C++ statement of the original
 // bodies
@@ -114,12 +118,11 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     // the path requests (their request, cancel, references, fields, save, load and the loaded ones' waits) and
     // the terrain flags: Rust (group_host.rs over ee_sim::astar request.rs)
     // (SetGroupPathGoals: group_host.rs over waypoints.rs)
-    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, theUnit, 0, 0, 0);
+    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets();
         return 0;
     case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
     case EE_UNITS_GROUP_OP_POST_SELECTION: ee_screens_ui_post_icon_bar_once(gUserInterface);
         return 0;
-    case EE_UNITS_GROUP_OP_PLAYER_GROUP: return inC >= 0 && inC < 20 ? (int64_t)(uintptr_t)thePlayer->mGroups[inC] : 0;
     // the selection's (selection.rs)
     case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
     case EE_UNITS_GROUP_OP_SELECTABLE: return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
@@ -131,19 +134,13 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB));
         return 0;
     // RefreshUpgrades' (selection.rs)
-    case EE_UNITS_GROUP_OP_CLASS_COUNT: return (int64_t)EEUnitClassCount();
     case EE_UNITS_GROUP_OP_UPGRADE: return (int64_t)(uintptr_t)thePlayer->GetUpgrade((long)inC);
     case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init();
         return 0;
-    case EE_UNITS_GROUP_OP_SET_HIT_POINTS: reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inA))->SetHitPoints((long)inC);
-        return 0;
-    case EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: theUnit->SetFlightTime((long)inC);
-        return 0;
-    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, theUnit, 0, 0, 0);
+    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects();
         return 0;
     case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
         return 0;
-    case EE_UNITS_GROUP_OP_PLAYER_SELECTION: return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
     case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC();
         return 0;
     case EE_UNITS_GROUP_OP_AREA_OUTLINES: {

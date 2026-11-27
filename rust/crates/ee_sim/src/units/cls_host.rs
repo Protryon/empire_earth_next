@@ -170,9 +170,12 @@ pub const EE_UNITS_CLS_REQUEST_QUEUED: i32 = 38;
 /// The class bodies' host's plain reads over the world views (the units' behaviour lane, round 2; they were
 /// EEUnitClassTransports.cpp `ee_units_cls_host`'s cases): the unit `a`'s cargo, container, command, home base and
 /// stats' turn speeds, the class `b`'s projectile's category, the map's size; None for the C++ host's.
-fn cls_view(op: i32, a: u64, b: u64, c: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
+fn cls_view(op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
     use crate::world::view::{ClassView, UnitView, WorldRead, WorldView};
     if let Some(v) = waypoint_op(op, a, c, io) {
+        return Some(v);
+    }
+    if let Some(v) = crate::units::cls_mv_view::cls_mv_view(op, a, b, c, d, io) {
         return Some(v);
     }
     if !matches!(
@@ -303,7 +306,7 @@ pub(crate) fn has_sunk(unit: u64) -> bool {
 
 impl ClsGame {
     pub(crate) fn call(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> i64 {
-        if let Some(v) = cls_view(op, a, b, c, io) {
+        if let Some(v) = cls_view(op, a, b, c, d, io) {
             return v;
         }
         // SAFETY: the C++ switch reads live objects the bodies hand it
@@ -1093,8 +1096,14 @@ fn cond_goal(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
 
 impl crate::units::uai_cond::UaiHost for ClsGame {
     fn uai(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
-        // SAFETY: the C++ statement reads live objects the bodies hand it
-        unsafe { ee_units_cls_cond_host(op, a, b, c, d, io) }
+        // SAFETY: the C++ statement reads live objects the bodies hand it (the plain record reads and stores
+        // first: cu_view.rs)
+        unsafe {
+            if let Some(v) = crate::units::cu_view::cond_host_view(op, a, b, c, io) {
+                return v;
+            }
+            ee_units_cls_cond_host(op, a, b, c, d, io)
+        }
     }
     fn uai_location(&mut self, unit: u64) -> [f32; 3] {
         CondHost::location(self, unit)
@@ -1131,8 +1140,14 @@ impl CondHost for ClsGame {
         if let Some(v) = crate::units::uai_cond::compound(self, op, a, b, c, io) {
             return v;
         }
-        // SAFETY: the C++ switch reads live objects the bodies hand it
-        unsafe { ee_units_cls_cond_host(op, a, b, c, d, io) }
+        // SAFETY: the C++ switch reads live objects the bodies hand it (the plain record reads and stores first:
+        // cu_view.rs)
+        unsafe {
+            if let Some(v) = crate::units::cu_view::cond_host_view(op, a, b, c, io) {
+                return v;
+            }
+            ee_units_cls_cond_host(op, a, b, c, d, io)
+        }
     }
     fn landing(&mut self, class: u64, unit: u64, event: u32, animal: bool) -> Option<i32> {
         if animal {

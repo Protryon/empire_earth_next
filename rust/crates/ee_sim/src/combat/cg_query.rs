@@ -500,8 +500,7 @@ mod facing {
         }
         fn stats_scale(&mut self, unit: u64) -> f32 {
             let mut f = [0.0; 4];
-            // SAFETY: as above
-            unsafe { ee_units_cg_host(EE_UNITS_CG_STATS_SCALE, unit, 0, 0, 0, &mut f) };
+            crate::combat::cg_view::cg_plain(EE_UNITS_CG_STATS_SCALE, unit, 0, 0, 0, &mut f);
             f[0]
         }
         fn turret(&mut self, unit: u64, index: i32) -> crate::combat::reads::EeCombatTurret {
@@ -520,8 +519,8 @@ mod facing {
                     index,
                     &mut f,
                 );
-                ee_units_cg_host(EE_UNITS_CG_TURRET_ANGLE, unit, 0, 0, index, &mut f);
             }
+            crate::combat::cg_view::cg_plain(EE_UNITS_CG_TURRET_ANGLE, unit, 0, 0, index, &mut f);
             out.angle = f[0];
             out
         }

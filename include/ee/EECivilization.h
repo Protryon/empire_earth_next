@@ -11,7 +11,9 @@
 
 class UString;
 
-class EECivilization {
+// the plain members (mAvailablePoints, mMaxPoints, mNoPointsAdded, mUnchanged) are the Rust base's
+// (ee_game civilization.rs EeGameCivFields)
+class EECivilization : public EeGameCivFields {
 public:
     // an unnamed civilization with no points or upgrades, marked unchanged
     EECivilization() { ee_gamecpp_civ_init(this); }
@@ -56,10 +58,6 @@ public:
     std::vector<EECivUpgrade> mPurchasedUpgrades;  // +0x00 (clear() is 0x2987d, an ICF-shared COMDAT)
     std::vector<EECivUpgrade> mDeferredUpgrades;  // +0x10
     UWideString mName;                      // +0x20
-    unsigned long mAvailablePoints;         // +0x34 (Load/Save: FSFile Read/Write unsigned long, slots +0x5c/+0x94)
-    unsigned long mMaxPoints;               // +0x38
-    bool mNoPointsAdded;                    // +0x3c
-    bool mUnchanged;                        // +0x3d
 };
 
 #endif

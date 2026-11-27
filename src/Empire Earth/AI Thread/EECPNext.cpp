@@ -177,10 +177,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return (int64_t)(uintptr_t)static_cast<RTSUnit*>(gWorld.GetUnit((unsigned long)a));
     case EE_AI_NEXT_HOST_NODE_COST:
         return me->ScaleCost(((EETechTreeNode*)(uintptr_t)a)->GetCost((long)b, (long)c, 1.0f));
-    case EE_AI_NEXT_HOST_NODE_TEST:
-        return (b != 0 ? ((EETechTreeNode*)(uintptr_t)a)->GetIsObsolete() : ((EETechTreeNode*)(uintptr_t)a)->GetIsAvailable()) ? 1 : 0;
-    case EE_AI_NEXT_HOST_EPOCH_COUNT:
-        return EEEpochCount();
     case EE_AI_NEXT_HOST_EPOCH_END:
         return gWorld.mGameOptions.mEpochEnd;
     case EE_AI_NEXT_HOST_LAST_ATTACKER:

@@ -135,9 +135,10 @@ pub unsafe extern "C" fn ee_tech_node_classes_contains(d: *const EeTechNodeDataF
     (*d).unit_classes().contains(&(class as c_ulong))
 }
 
-/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
+/// A node's and an epoch's members (ee/EEPlayer.h: `EETechTreeNode` derives from it and adds none; the nodes and
+/// epochs are made and freed by Rust: tree_objects.rs).
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EeTechNodeFields {
     pub mIsResearched: bool,
     /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
@@ -162,6 +163,26 @@ pub struct EeTechNodeFields {
     pub mNextEpoch: c_long,
     /// the title string (epochs.yaml; 0: 30145 + the epoch)
     pub mTitleID: c_long,
+    /// the node data (shared by a tree's copies; made by the load, freed by `Unload`)
+    pub mData: *mut EeTechNodeDataFields,
+    /// the tree it belongs to
+    pub mTree: *mut EeCxxTechTree,
+    /// `EEButtonObject::Get` of the record's button
+    pub mButton: *mut crate::world::unit_class_fields::EeCxxButtonObject,
+    /// an epoch's nodes and loaded unit classes (an [`crate::tech::tree_objects::EeTechEpochLists`]); 0: a node
+    pub mLists: usize,
+}
+
+impl Default for EeTechNodeFields {
+    fn default() -> Self {
+        // SAFETY: plain integers, bools and null pointers
+        unsafe { std::mem::zeroed() }
+    }
+}
+
+/// `class EETechTree` (opaque: the tree's record is [`EeTechTreeFields`], at the object's start).
+pub struct EeCxxTechTree {
+    _opaque: [u8; 0],
 }
 
 /// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
@@ -193,6 +214,8 @@ pub struct EeTechTreeFields {
     pub mPlayerIndex: c_long,
     /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
     pub mPlayer: *mut crate::units::obj_fields::EeCxxPlayer,
+    /// the epochs, one per epoch of the tech tree file (a `Vec` of nodes: tree_objects.rs; 0 before the first)
+    pub mEpochs: usize,
 }
 
 impl Default for EeTechTreeFields {
@@ -208,6 +231,7 @@ impl Default for EeTechTreeFields {
             mSaved: ptr::null_mut(),
             mPlayerIndex: 0,
             mPlayer: ptr::null_mut(),
+            mEpochs: 0,
         }
     }
 }

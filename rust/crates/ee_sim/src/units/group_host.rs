@@ -200,6 +200,9 @@ pub struct GameGroups;
 
 impl GameGroups {
     fn io(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsGroupIo) -> i64 {
+        if let Some(v) = crate::units::dm_group_view::group_plain(op, a, c) {
+            return v;
+        }
         // SAFETY: the C++ switch reads live objects the bodies hand it
         unsafe { ee_units_group_host(op, a, b, c, d, io) }
     }

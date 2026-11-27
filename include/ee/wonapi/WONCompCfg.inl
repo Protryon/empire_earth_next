@@ -2,7 +2,8 @@
 #include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinobj.h"
-// The C++ end of ee_won_gui's compcfg.rs (R6 WONLobby round 25): ComponentConfig's readers, look-ups, config map and
+// The C++ end of ee_won_gui's compcfg.rs (R6 WONLobby round 25): ComponentConfig's readers (the table reader's own
+// reads are made in Rust since R6 WON lobby and network round 39: cfgtab.rs, compcfg.rs tab_read), look-ups, config map and
 // instructions, ResourceConfig and ResourceConfigTable are Rust objects; these are the classes' forwards and the host
 // of what the Rust asks of the C++ objects (the hooks, the components, the decoders, references). Included inside a
 // namespace by ComponentConfigHost.cpp (WONAPI) and by tests/won/won_compcfg_test.cpp (over its stand-ins), so both
@@ -125,6 +126,7 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
     case O::SelFore: *(SelectionColor*)c = SelectionColor((DWORD)a, (DWORD)b); return 0;
     case O::SelInvert: *(SelectionColor*)c = SelectionColor((DWORD)a, ForegroundSelectionMode_InvertOriginalColor); return 0;
     case O::SelOriginal: *(SelectionColor*)c = SelectionColor((DWORD)a, ForegroundSelectionMode_UseOriginalColor); return 0;
+    case O::NewShell: return (intptr_t)WONShellNew((EeWonShellKind)a, b, d, e);
     default: return 0;
     }
 }
@@ -160,23 +162,14 @@ bool ComponentConfig::EndOfString() { return CC_GET(bool, CcK::EndOfString); }
 void ComponentConfig::EnsureComma() { CC(EnsureComma, 0); }
 int ComponentConfig::ReadInt() { return CC_GET(int32_t, CcK::ReadInt); }
 bool ComponentConfig::ReadBool() { return CC_GET(bool, CcK::ReadBool); }
-int ComponentConfig::ReadChar() { return CC_GET(int32_t, CcK::ReadChar); }
-GUIString ComponentConfig::ReadFlag(bool* outOn) { return CC_GET(GUIString, CcK::ReadFlag, (intptr_t)outOn); }
 GUIString ComponentConfig::ReadRawString(bool inStop) { return CC_GET(GUIString, CcK::ReadRawString, inStop); }
 GUIString ComponentConfig::ReadString(bool inStop) { return CC_GET(GUIString, CcK::ReadString, inStop); }
-Direction ComponentConfig::ReadDirection() { return (Direction)CC_GET(int32_t, CcK::ReadDirection); }
-HorzAlign ComponentConfig::ReadHorzAlign() { return (HorzAlign)CC_GET(int32_t, CcK::ReadHorzAlign); }
-VertAlign ComponentConfig::ReadVertAlign() { return (VertAlign)CC_GET(int32_t, CcK::ReadVertAlign); }
 int ComponentConfig::ReadColor() { return CC_GET(int32_t, CcK::ReadColor); }
 SmartPtr<Sound> ComponentConfig::ReadSound() { return CcAdopt(CC_GET(Sound*, CcK::ReadSound)); }
 Background ComponentConfig::ReadBackground() { return CC_GET(Background, CcK::ReadBackground); }
 SmartPtr<Font> ComponentConfig::ReadFont() { return CcAdopt(CC_GET(Font*, CcK::ReadFont)); }
 SmartPtr<Image> ComponentConfig::ReadImage(bool inRaw) { return CcAdopt(CC_GET(Image*, CcK::ReadImage, inRaw)); }
 SmartPtr<RawImage> ComponentConfig::GetRawImageFromStr(const std::string& s) { return (RawImage*)CcAdopt(CC_GET(Image*, CcK::ImageFromStr, CC_P(s), 1)).get(); }
-SmartPtr<RawImage> ComponentConfig::ReadRawImage() { return (RawImage*)this->ReadImage(true).get(); }
-StandardCursor ComponentConfig::ReadStandardCursor() { return (StandardCursor)CC_GET(int32_t, CcK::ReadStandardCursor); }
-SmartPtr<Cursor> ComponentConfig::ReadCursor() { return Cursor::GetStandardCursor((StandardCursor)CC_GET(int32_t, CcK::ReadCursor)); }
-SelectionColor ComponentConfig::ReadSelectionColor() { return CC_GET(SelectionColor, CcK::ReadSelectionColor); }
 // the kind's own named values (the WON frame's paddings: cfgkind.rs), else the component's edges (compcfg.rs)
 bool ComponentConfig::GetNamedValue(const std::string& k, int& v) { return CC_GET(bool, CcK::GetNamedValue, CC_P(k), (intptr_t)&v); }
 // the kind's predefined children (cfgkind.rs): a new config of the child's kind and the part

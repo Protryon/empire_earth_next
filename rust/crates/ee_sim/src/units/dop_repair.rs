@@ -716,8 +716,23 @@ pub(crate) mod game {
 
     impl DopHost for Game {
         fn dop(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64) -> i64 {
-            // SAFETY: the body runs inside the C++ member that handed over its live unit
-            unsafe { ee_units_dop_host(op, unit as usize as *mut c_void, a, b, c) }
+            // SAFETY: the body runs inside the C++ member that handed over its live unit (the plain record reads
+            // and stores first: cu_view.rs; a doppelganger's record from the host)
+            unsafe {
+                let mut fields = || {
+                    ee_units_dop_host(
+                        crate::units::dop_file::EE_UNITS_DOP_FIELDS,
+                        unit as usize as *mut c_void,
+                        0,
+                        0,
+                        0,
+                    ) as usize as *mut crate::units::obj_fields::EeUnitsComplexDopFields
+                };
+                if let Some(v) = crate::units::cu_view::dop_view(op, unit, a, b, c, &mut fields) {
+                    return v;
+                }
+                ee_units_dop_host(op, unit as usize as *mut c_void, a, b, c)
+            }
         }
     }
 

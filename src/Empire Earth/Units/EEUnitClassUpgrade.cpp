@@ -6,9 +6,6 @@
 // LoadButtons/LoadMedia (media load), Save, the media setters, SetMaxVelocity (speed), SetRange (range), UnloadButtons/UnloadMedia
 // (media unload).
 #include <windows.h>
-#include <stdio.h>
-#include <math.h>
-#include <stddef.h>
 
 #include "lle/LowLevelEngine.h"
 
@@ -91,8 +88,6 @@ extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObj
     return 0;
 }
 
-// Raises another copy's improvements by this copy's levels above 1, moving its stats
-
 // Writes the class name and media count to the dump file when the copy's media is still loaded
 void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 {
@@ -100,39 +95,10 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
         fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)this->mUnitClass->mName, this->mMediaCount);
 }
 
-// Returns acknowledge sound inIndex; -1 alternates between the two (one turn shared by every class)
-// Returns the copy's improvement levels
-// Returns selection sound inIndex; -1 alternates between the two (one turn shared by every class)
-// Builds the upgrade button's " + n" help text for an improvement's next level
-
-// Returns an improvement's display name for this unit class
-
-// Raises or lowers an improvement by inDelta levels, moving this copy's stats
-
-// Returns the unit class this copy belongs to (the original folded it with EEComplexDoppelganger::GetTileX, the same
-// `mov eax,[ecx+0x60]`; written out so the member is read at this build's offset)
-// Resets the copy to its unit class: media, button, stats and inverse speeds, area-effect templates and terrain mask
-// (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
-// Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error
-
-// Loads the class's buttons on the first request; later requests are counted and wait while the first one loads
-// On the first request loads the sounds and model chosen by inMediaFlags (dropping sounds that fail), the button,
-// the area-effect templates and the class's media; later requests are counted and wait while the first one loads
-// Writes the copy's name and improvement levels to the saved game; returns the first write error
-
-// Replaces acknowledge sound inIndex; while media is loaded, unloads the old sound and loads the new one
-// Replaces the creation sound; while media is loaded, unloads the old sound and loads the new one
-// Replaces the death sound; while media is loaded, unloads the old sound and loads the new one
-// Replaces the model; while media is loaded, unloads the old model and loads the new one
 // Sets the top speed and scales acceleration and turn rates (turret too) by its ratio to the class's; updates the
 // inverses
 void EEUnitClassUpgrade::SetMaxVelocity(float inValue) { ee_units_upgrade_set_max_velocity(this, this->mUnitClass, inValue); }  // New (R5b.4, round 28): ee_units stats.rs
 
-// Replaces the button; while media is loaded, releases the old button and acquires the new one
 // Sets the range and the projectile's launch speed to reach it at 45 degrees (a bomb: its top speed; a Roman
 // Legionnaire aims for its heal range; no projectile: 0)
 void EEUnitClassUpgrade::SetRange(float inValue) { ee_units_upgrade_set_range(this, this->mUnitClass, this->mUnitClass->mProjectileClass, inValue); }  // New (R5b.4, round 28): ee_units improve.rs
-
-// Replaces selection sound inIndex; while media is loaded, unloads the old sound and loads the new one
-// Drops one button request; the last one unloads the class's buttons
-// Drops one media request; the last one unloads the sounds, model, button, area-effect templates and class media

@@ -2,23 +2,85 @@
 //! fill the views in `ee/EETechRust.h`). Plain data in and out; the two tree walks ask the C++ tree through callbacks
 //! and hold no reference into C++ memory across them (the costs are copied in and out).
 
+use crate::tech::calamity::{self, EeCalamityAge};
 use crate::tech::calamity_cast::{self, EeCalamityCast};
 use crate::tech::calamity_start;
 use crate::tech::calamity_update::{
     self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState,
 };
 use crate::tech::contagion::{self, EeCalamityDiscrete};
-use crate::tech::effects::{self, EeTechUnitStep, EeTechUnitView, EeTechUnitWalk};
+use crate::tech::effects::{
+    self, EeTechAttribute, EeTechConversion, EeTechEffectValues, EeTechUnitStep, EeTechUnitView, EeTechUnitWalk,
+};
 use crate::tech::tree::{self, EeTechCostInput, SumCostsNode, SumCostsView};
 use std::ffi::c_void;
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
 // and writes, as the C++ adapters do from their own locals.
 
+/// `ApplyEventGatherRate`'s new gather time.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_gather_time(current: i32, class_time: i32, effect: *const EeTechEffectValues) -> i32 {
+    // SAFETY: the caller's contract
+    effects::gather_time(current, class_time, unsafe { &*effect })
+}
+
+/// Attribute 6's new maximum hit points.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_max_hit_points(
+    class_hit_points: i32,
+    variant_factor: f32,
+    old_maximum: u32,
+    effect: *const EeTechEffectValues,
+) -> i32 {
+    // SAFETY: the caller's contract
+    effects::max_hit_points(class_hit_points, variant_factor, old_maximum, unsafe { &*effect })
+}
+
 /// A unit's hit points or flight time in proportion to a new maximum (before the caller's cast).
 #[no_mangle]
 pub extern "C" fn ee_tech_rescale(value: i32, old_maximum: u32, new_maximum: i32) -> f32 {
     effects::rescale(value, old_maximum, new_maximum)
+}
+
+/// Attribute 23's new population limit bonus.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_population_bonus(bonus: i32, effect: *const EeTechEffectValues) -> i32 {
+    // SAFETY: the caller's contract
+    effects::population_bonus(bonus, unsafe { &*effect })
+}
+
+/// Attribute 42: the terrain type is one a mask has.
+#[no_mangle]
+pub extern "C" fn ee_tech_terrain_type_valid(terrain: i32) -> bool {
+    effects::terrain_type_valid(terrain)
+}
+
+/// Attribute 42 and the pathfinding functor: a terrain type allowed or forbidden.
+#[no_mangle]
+pub extern "C" fn ee_tech_terrain_mask(mask: u32, terrain: i32, allowed: bool) -> u32 {
+    effects::terrain_mask(mask, terrain, allowed)
+}
+
+/// What an attribute effect changes.
+#[no_mangle]
+pub extern "C" fn ee_tech_attribute(attribute: i32) -> EeTechAttribute {
+    effects::attribute(attribute)
+}
+
+/// Whether an attribute's operation applies to the player.
+#[no_mangle]
+pub extern "C" fn ee_tech_attribute_is_player(attribute: i32) -> bool {
+    effects::attribute_is_player(effects::attribute(attribute).op)
 }
 
 /// `EETechTreeNode::GetCost`.
@@ -122,6 +184,12 @@ pub unsafe extern "C" fn ee_tech_sum_costs(
         tree::sum_costs(&mut view, id, unit_class, &mut local);
         std::ptr::copy_nonoverlapping(local.as_ptr(), costs, 7);
     }
+}
+
+/// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
+#[no_mangle]
+pub extern "C" fn ee_calamity_update_time_alive(time_alive: f32, elapsed: f32, lifetime: f32) -> EeCalamityAge {
+    calamity::update_time_alive(time_alive, elapsed, lifetime)
 }
 
 /// The C++ host of a calamity's update (`ee/EECalamityUpdate.h`): `call` answers one [`EeCalamityCall`] on the C++
@@ -270,6 +338,42 @@ pub unsafe extern "C" fn ee_tech_unit_step(
     effects::unit_step(walk, unsafe { &*unit }, class_type, old_maximum, new_maximum)
 }
 
+/// The line of sight walk's test (`effects::sight_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_sight_applies(unit: *const EeTechUnitView, class_type: i32) -> bool {
+    // SAFETY: the caller's contract
+    effects::sight_applies(unsafe { &*unit }, class_type)
+}
+
+/// `SetEventAreaEffect`'s walk test (`effects::area_effect_applies`).
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_area_effect_applies(unit: *const EeTechUnitView, class_type: i32) -> bool {
+    // SAFETY: the caller's contract
+    effects::area_effect_applies(unsafe { &*unit }, class_type)
+}
+
+/// `ConvertEventUnits`' decisions (`effects::conversion`).
+#[no_mangle]
+pub extern "C" fn ee_tech_conversion(has_unit: bool, in_set: bool, has_class: bool, id: i32) -> EeTechConversion {
+    effects::conversion(has_unit, in_set, has_class, id)
+}
+
+/// A unit of `ConvertEventUnits`' walk (`effects::conversion_unit`): 0 skipped, 1 kept, 2 replaced.
+///
+/// # Safety
+/// `unit` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_conversion_unit(unit: *const EeTechUnitView) -> u32 {
+    // SAFETY: the caller's contract
+    effects::conversion_unit(unsafe { &*unit })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -338,10 +442,28 @@ pub extern "C" fn ee_calamity_discrete_updates(elapsed: f32, discrete: f32) -> E
     contagion::discrete_updates(elapsed, discrete)
 }
 
+/// A functor's damage per update (`contagion::tick_damage`).
+#[no_mangle]
+pub extern "C" fn ee_contagion_tick_damage(damage: i32, updates: u32) -> i32 {
+    contagion::tick_damage(damage, updates)
+}
+
 /// The fire's burn on infection (`contagion::fire_burn`).
 #[no_mangle]
 pub extern "C" fn ee_contagion_fire_burn(burn: i32, max_hit_points: i32) -> i32 {
     contagion::fire_burn(burn, max_hit_points)
+}
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+#[no_mangle]
+pub extern "C" fn ee_contagion_leprosy_damage(damage: i32, updates: u32, hit_points: i32) -> i32 {
+    contagion::leprosy_damage(damage, updates, hit_points)
+}
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+#[no_mangle]
+pub extern "C" fn ee_contagion_area_damage(damage: i32, updates: u32, attack: f32) -> i32 {
+    contagion::area_damage(damage, updates, attack)
 }
 
 /// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).

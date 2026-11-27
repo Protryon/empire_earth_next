@@ -215,6 +215,15 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 #include <typeinfo>
 #include "ee/EEUnit.h"
 
+// Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
+// Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
+// original game's loose data (tools/open_data.py). The original searched four places: this install's Data\data.ssa
+// and Data\, then the original Empire Earth's (its install path from the registry); the original game is no longer
+// needed. A Data\data.ssa is still mounted when present (an install copy), behind the folder as before.
+void EEShowSinglePlayerScreen()
+{
+    ee_gamecpp_startup_data_paths();
+}
 
 // Creates the game state, empty
 EEGameState::EEGameState()
@@ -238,6 +247,11 @@ void EESetGameViewRectangle(const GERectangle& inRectangle)
     ee_gamecpp_startup_game_view(reinterpret_cast<const EeGeRectangle*>(&inRectangle));
 }
 
+// Points the texture, model and sound managers at the data search path
+void EESetDataPaths()
+{
+    ee_gamecpp_startup_set_data_paths();
+}
 
 #ifdef _WIN32
 static HANDLE sInstanceMutex;
@@ -403,7 +417,6 @@ void EEReportLeakingUnits();
 #include "rust/game/preload.h"
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
-#include "rust/game/tech_tree.h"
 #include "rust/ui/bgtableobj.h"
 
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
@@ -891,8 +904,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::WorldTableClear: gWorldTable.Clear();
         break;
-    case O::TechTreeUnloadAll: ee_gamecpp_tech_unload_all(&gTechTree);
-        break;
     case O::CalamityManagerDestroy: USingleton<EECalamityManager>::DestroyInstance();
         break;
     case O::DeleteResource: delete gResource;
@@ -926,8 +937,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MouseSetSensitivityPref: gMouse->SetSensitivity(SETTINGS.mMouseSensitivity);
         break;
     case O::CreateUnitClasses: EEUnitClass::CreateUnitClasses();
-        break;
-    case O::TechBuildUnitClassInfo: EETechTree::BuildUnitClassInfo();
         break;
     case O::NewUIManager: gUIManager = gEEGameUI.mNewManager(gRasterizer, SETTINGS.GetScreenMode() + 1, SCREEN_ID, "db\\");
         break;

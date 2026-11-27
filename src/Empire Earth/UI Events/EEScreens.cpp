@@ -842,14 +842,6 @@ extern "C" void ee_screenscpp_background_set_visible(uintptr_t inBackground, boo
 { reinterpret_cast<UIBackground*>(inBackground)->SetVisibility(inVisible); }
 extern "C" void ee_screenscpp_cb_list_set_auto_select(uintptr_t inList, bool inValue)
 { static_cast<EECBUIListBox*>(C(inList))->SetAutoSelect(inValue); }
-extern "C" void ee_screenscpp_cb_list_set_show_points(uintptr_t inList, bool inValue)
-{ static_cast<EECBUIListBox*>(C(inList))->mShowPoints = inValue; }
-extern "C" void ee_screenscpp_cb_list_set_select_upgrades_only(uintptr_t inList, bool inValue)
-{ static_cast<EECBUIListBox*>(C(inList))->mSelectUpgradesOnly = inValue; }
-extern "C" void ee_screenscpp_cb_list_set_sort(uintptr_t inList, bool inValue)
-{ static_cast<EECBUIListBox*>(C(inList))->SetSortLines(inValue); }
-extern "C" void ee_screenscpp_cb_list_set_colour(uintptr_t inList, float inRed, float inGreen, float inBlue)
-{ static_cast<EECBUIListBox*>(C(inList))->mC13C = GEColor(inRed, inGreen, inBlue); }
 extern "C" void ee_screenscpp_pdcs_civs_clear() { EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs).clear(); }
 extern "C" void ee_screenscpp_pdcs_civs_get() { ee_screens_civm_civilizations((uintptr_t)&(EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs)), 0, true); }
 extern "C" uint32_t ee_screenscpp_pdcs_civs_count() { return (uint32_t)EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs).size(); }

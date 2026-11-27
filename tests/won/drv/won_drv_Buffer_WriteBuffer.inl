@@ -12,3 +12,10 @@ void AppendBuffer(const ByteBuffer* inBuffer, unsigned char inLengthFieldSize = 
     ee_won_writer_append_field(this->mBuffer,inBuffer!=NULL ? reinterpret_cast<const uint8_t*>(inBuffer->data()) : NULL,
                                inBuffer!=NULL ? inBuffer->length() : 0,inLengthFieldSize);
 }
+// (R6 WON round 39)
+unsigned long capacity() const { return ee_won_writer_capacity(this->mBuffer); }
+void AppendString(const std::string& inText, unsigned char inSize = 2)
+{
+    ee_won_writer_append_field(this->mBuffer,reinterpret_cast<const uint8_t*>(inText.data()),
+                               static_cast<unsigned long>(inText.length()),inSize);
+}

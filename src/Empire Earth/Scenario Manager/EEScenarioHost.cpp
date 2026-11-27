@@ -54,7 +54,6 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_COMPUTER_DIFFICULTY: return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
     case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
-    case EE_SCENARIO_READ_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
     case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;
@@ -139,11 +138,6 @@ int64_t SMReadPtr(const void* inObject) { return (int64_t)(intptr_t)inObject; }
 extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
-    case EE_SCENARIO_RX_TECH_NODE: return SMReadPtr(Player((int32_t)a[0])->GetTechTree()->Get((long)a[1]));
-    case EE_SCENARIO_RX_NODE_MAKES_UNIT: return SMReadOf<EETechTreeNode>(a[0])->mData->mMakesUnit;
-    case EE_SCENARIO_RX_NODE_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched;
-    case EE_SCENARIO_RX_NODE_SET_RESEARCHED: return SMReadOf<EETechTreeNode>(a[0])->mIsResearched = a[1] != 0;
-    case EE_SCENARIO_RX_NODE_AVAILABLE: return SMReadOf<EETechTreeNode>(a[0])->GetIsAvailable();
     case EE_SCENARIO_RX_OBJECT: return SMReadPtr(gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]));
     case EE_SCENARIO_RX_FIND_OBJECT: return SMReadPtr(gWorld.mScenarioManager->FindObjectByID((long)a[0]));
     case EE_SCENARIO_RX_OBJECT_EVALUATE: return SMReadOf<EESMObject>(a[0])->Evaluate(0);

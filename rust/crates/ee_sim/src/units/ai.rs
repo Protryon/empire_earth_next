@@ -374,8 +374,14 @@ mod game {
 
     impl AIOps for Game {
         fn ai(&mut self, op: i32, a: u64, b: i64) -> i64 {
-            // SAFETY: the unit stepped, live for the step (its C++ AIStep's)
-            unsafe { ee_units_ai_host(op, self.0, a, b) }
+            // SAFETY: the unit stepped, live for the step (its C++ AIStep's; the plain record reads and stores
+            // first: cu_view.rs)
+            unsafe {
+                if let Some(v) = crate::units::cu_view::ai_view(op, self.0 as usize as u64, a, b) {
+                    return v;
+                }
+                ee_units_ai_host(op, self.0, a, b)
+            }
         }
     }
 

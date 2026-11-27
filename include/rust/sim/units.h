@@ -20187,12 +20187,14 @@ int32_t ee_units_player_save(void *ctx,
                              uint32_t major,
                              uint32_t minor);
 
-/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
+/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
+/// `ctx` (the loaded unit's id into the player's loaded ids is Rust's: `lists_answer`).
 ///
 /// # Safety
-/// `f` is valid with `ctx` for the call.
+/// `f` is valid with `ctx` for the call; `player` is the live `EEPlayer`.
 int32_t ee_units_player_unit(void *ctx,
                              EeUnitsPlayerSaveFn f,
+                             void *player,
                              bool save_it,
                              uint32_t major,
                              uint32_t minor);
@@ -20526,36 +20528,6 @@ int64_t ee_units_rust_goal(int32_t op,
                            uint64_t b,
                            EeUnitsGoalIo *io,
                            const EeUnitsGoalHost *host);
-
-extern long ee_units_file_read_u32(void *file, uint32_t *v);
-
-extern long ee_units_file_read_i32(void *file, int32_t *v);
-
-extern long ee_units_file_read_f32(void *file, float *v);
-
-extern long ee_units_file_read_bool(void *file, uint8_t *v);
-
-extern long ee_units_file_read_u16(void *file, uint16_t *v);
-
-extern long ee_units_file_read_bytes(void *file,
-                                     uint8_t *data,
-                                     unsigned long len,
-                                     unsigned long *read);
-
-extern long ee_units_file_write_u32(void *file, uint32_t v);
-
-extern long ee_units_file_write_i32(void *file, int32_t v);
-
-extern long ee_units_file_write_f32(void *file, float v);
-
-extern long ee_units_file_write_bool(void *file, uint8_t v);
-
-extern long ee_units_file_write_u16(void *file, uint16_t v);
-
-extern long ee_units_file_write_bytes(void *file,
-                                      const uint8_t *data,
-                                      unsigned long len,
-                                      unsigned long *written);
 
 /// `EESavePrimitive(*file, op, io)` (ee/EEPlayer.h): -1 for another operation.
 ///

@@ -15,12 +15,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONLobbyAccountLogic.h"
-#include "ee/wonapi/WONLobbyDialogLogic.h"
 #include "ee/wonapi/WONLobbyLan.h"
-#include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyStaging.h"
-#include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyScreens.h"
@@ -30,7 +26,7 @@
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
 #include "ee/wonapi/WONGUIShell.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONLobbyGuard.h"
 #include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/cfgval.h"
@@ -40,6 +36,7 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "platform/PlatThread.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONLobbyModel.h"
 #include "rust/won_lobby/errscreen.h"
 #include "rust/won_lobby/lobbyrun.h"
 using namespace WONAPI;
@@ -114,9 +111,6 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AuthIs: return (p->mAuthContext.get() != NULL) ? 1 : 0;
     case Op::AuthKill: p->mAuthContext->Kill(); return 0;
     case Op::AuthClear: p->mAuthContext = NULL; return 0;
-    case Op::HashSetClear: p->mHasSetHashFileList = false; return 0;
-    case Op::HashListClear: p->mHashFileList.clear(); return 0;
-    case Op::HashListRead: ee_won_cfgval_read_strings(reinterpret_cast<const uint8_t*>(a), &p->mHashFileList); return 0;
     case Op::CommunitySet: p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a); return 0;
     case Op::AuthSetCommunity: p->mAuthContext->SetCommunity(p->mLoginCommunity); return 0;
     case Op::CdKeyCheck: return (p->mConfig->mCDKeyCheck) ? 1 : 0;
@@ -129,7 +123,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
-    case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;
+    case Op::ConfigNew: p->mConfig = new LobbyConfig; return 0;
     case Op::PersistentDataNew: p->mPersistentData = new LobbyPersistentData; return 0;
     case Op::ChatParserNew: p->mChatCommandParser = new ChatCommandParser; return 0;
     case Op::UdpNew: p->mUDPManager = new UDPManager; return 0;
@@ -147,7 +141,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::RoutingLogicNew: p->mRoutingLogic = new RustLogic(EeWonLogicShellKind::Routing, RoutingLogicMake); return 0;
     case Op::StagingLogicNew: p->mStagingLogic = new RustLogic(EeWonLogicShellKind::Staging, StagingLogicMake); return 0;
     case Op::LanLogicNew: p->mLanLogic = new RustLogic(EeWonLogicShellKind::Lan, LanLogicMake); return 0;
-    case Op::PingLogicNew: p->mPingLogic = new PingLogic; return 0;
+    case Op::PingLogicNew: p->mPingLogic = new RustLogic(EeWonLogicShellKind::Ping, PingLogicMake); return 0;
     case Op::AddAccountLogic: p->mLogicMgr.AddLogic(p->mAccountLogic.get()); return 0;
     case Op::AddDialogLogic: p->mLogicMgr.AddLogic(p->mDialogLogic.get()); return 0;
     case Op::AddStagingLogic: p->mLogicMgr.AddLogic(p->mStagingLogic.get()); return 0;
@@ -289,13 +283,8 @@ ServerContext* LobbyGetPatchServers() { return gLobbyData.get()!=NULL?gLobbyData
 // Makes the room listing use the main directory servers again
 void LobbyResetRoomDirServers() { if(gLobbyData.get()!=NULL) gLobbyData->mRoomDirServers=gLobbyData->mDirServers; }
 // the plain members are lobbyprv.rs's since R6 WON lobby and network round 38 (each answers as without a lobby when
-// there is none: the version status 100004, the rest 0 and false; a set then does nothing)
-// Records the result of the game version check
-void LobbySetVersionStatus(WONStatus status) { ee_won_lobbyprv_set(PF::VersionStatus, status); }
-// Returns the result of the game version check
-WONStatus LobbyGetVersionStatus() { return (WONStatus)ee_won_lobbyprv_get(PF::VersionStatus); }
-// Records the times of the system and game terms of use
-void LobbySetTOUTimes(long systemTime,long gameTime) { ee_won_lobbyprv_set_tou(systemTime, gameTime); }
+// there is none: the version status 100004, the rest 0 and false; a set then does nothing). InitLogic's setters of
+// them (the version status, the terms' times, the firewall test's) are its Rust's since round 39 (netlogicops.rs prv_op)
 // Returns whether the recorded system or game terms of use are newer than the given times
 bool LobbyIsTOUNewer(long systemTime,long gameTime) { return ee_won_lobbyprv_tou_newer(systemTime, gameTime); }
 // Returns the lobby's network port
@@ -303,12 +292,8 @@ unsigned short LobbyGetLobbyPort() { return (unsigned short)ee_won_lobbyprv_get(
 
 // ---- LobbyNetworkState.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Lobby address state: firewall test result, the public address seen from outside, and the address to give peers
-// Forgets the firewall test result and the public address
-void LobbyResetFirewallTest() { ee_won_lobbyprv_reset_firewall(); }
 // Records the public address seen from outside
 void LobbySetPublicAddress(const IPAddr& address) { ee_won_lobbyprv_set_public_addr(address.GetValue()); }
-// Records whether the player is behind a firewall and marks the test done
-void LobbySetBehindFirewall(bool behindFirewall) { ee_won_lobbyprv_set(PF::BehindFirewall, behindFirewall); }
 // Returns the address to give peers on the lobby port: public unless room spec 1 or UseLocalIP, else local
 IPAddr LobbyGetMyAddress(int roomSpec)
 { return IPAddr::FromValue(ee_won_lobbyprv_my_address(roomSpec, gLobbyData.get()!=NULL && gLobbyData->mConfig->mUseLocalIP)); }

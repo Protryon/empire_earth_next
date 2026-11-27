@@ -468,8 +468,14 @@ mod game {
 
     impl CkHost for Game {
         fn ck(&mut self, op: i32, a: u64, c: i64, d: i64, f: &mut [f32; 4]) -> i64 {
-            // SAFETY: the body runs inside the C++ function that handed over its live objects
-            unsafe { ee_units_ck_host(op, a, c, d, f) }
+            // SAFETY: the body runs inside the C++ function that handed over its live objects (the plain record
+            // reads and stores first: cu_view.rs)
+            unsafe {
+                if let Some(v) = crate::units::cu_view::ck_view(op, a, c, f) {
+                    return v;
+                }
+                ee_units_ck_host(op, a, c, d, f)
+            }
         }
     }
 

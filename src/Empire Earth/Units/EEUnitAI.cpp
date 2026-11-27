@@ -28,7 +28,6 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECombatGoals.h"
 #include "lle/GEModel.h"
-#include "rust/sim/units.h"
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
@@ -68,8 +67,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     // to a unit, the initial contact, the tile, the crusader test and the mine's depletion: ee_units cls_host.rs)
     case EE_UNITS_COND_MOVE_FREELY: return theUnit->mBehavior->CanMoveFreely(theUnit);
     case EE_UNITS_COND_CONDITION_TARGET: return EEObj(static_cast<EEUnit*>(theUnit->GetConditionTarget()));
-    case EE_UNITS_COND_CAN_REACH: return theUnit->CanReachUnit(CondSimple(inB));
-    case EE_UNITS_COND_IN_REACH: return theUnit->IsInReach(CondSimple(inB));
     case EE_UNITS_COND_CAN_BE_ATTACKED: return ((EEUnitClass*)(uintptr_t)inB)->CanBeAttacked();
     case EE_UNITS_COND_DAMAGE_FACTOR: ioIo->f = EEDamageFactor((long)inC, (long)inD); return 0;
     case EE_UNITS_COND_HIT_DISTANCE: ioIo->f = EECombatHitDistanceSquared(theUnit, CondSimple(inB), -10000.0f, -10000.0f); return 0;
@@ -78,7 +75,7 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_FRAME_COUNT: return theUnit->GetModel()->mFrameCounts[theUnit->GetAnimation()];
     case EE_UNITS_COND_MAX_VELOCITY: ioIo->f = theUnit->GetMaxVelocity(); return 0;
     // the waypoints' cases: Rust (cls_host.rs over waypoints.rs)
-    case EE_UNITS_COND_CAN_CONVERT: return ee_units_ucp_can_convert(theUnit, CondUnit(inB), &sCondFlag);
+    case EE_UNITS_COND_CAN_CONVERT: return EECanConvert(theUnit, CondUnit(inB), sCondFlag);
     case EE_UNITS_COND_CONVERSION_COST: return EEGetConversionCost(theUnit);
     // the sunk test's statements (cls_condition.rs sunk; sCondSunk*: its locals)
     case EE_UNITS_COND_SUNK_POSITION: theUnit->GetPosition(sCondSunkPosition = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
@@ -92,48 +89,30 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_SUNK_BOX: theUnit->mPhysicalModel.GetModel()->GetBoundingBox(theUnit->mPhysicalModel.GetFrame()).Transform(sCondSunkTransformation, sCondSunkBox); return 0;
     case EE_UNITS_COND_SUNK_TOP_Z: ioIo->f = sCondSunkBox.GetTopRightBack().GetZ(); return 0;
     // ---- uai_cond.rs's statements (the compound answers and AttackNearby)
-    case EE_UNITS_UAI_GOAL_KIND: return CondGoal(inB)->mKind;
     case EE_UNITS_UAI_GOAL_FORCED_MOVE: return static_cast<EEUGRust*>(CondGoal(inB))->GetIsForcedMove();
-    case EE_UNITS_UAI_GOAL_B1C: return CondGoal(inB)->mB1C;
-    case EE_UNITS_UAI_SEARCH_TIMER: return theUnit->mTargetSearchTimer;
-    case EE_UNITS_UAI_CONTACT_HEADING: ioIo->f = theUnit->mInitialContactHeading; return 0;
     case EE_UNITS_UAI_RETURNS_TO_CONTACT: return theUnit->mBehavior->mReturnsToInitialContactLocation;
-    case EE_UNITS_UAI_CONTACT_LOCATION: CondPoint(ioIo, theUnit->mInitialContactLocation); return 0;
     case EE_UNITS_UAI_FIND_TARGET_NEAR: return EEObj(EEFindTargetNear(theUnit, (long)inC, (long)inD, ioIo->f));
     case EE_UNITS_UAI_FIND_NEARBY_TARGET: return EEObj(EEFindNearbyTarget(theUnit));
-    case EE_UNITS_UAI_GOAL_STATE: return EEObj(theUnit->mGoalState);
     case EE_UNITS_UAI_IS_LAND_BUILDING: return CondSimple(inB)->mUnitClass->IsLandBuilding();
-    case EE_UNITS_UAI_ATTACK_OF: ioIo->f = CondSimple(inB)->mStats->mAttack; return 0;
-    case EE_UNITS_UAI_CATEGORY: return theUnit->mUnitClass->mCategory;
-    case EE_UNITS_UAI_AS_COMPLEX: return EEObj(EEUnitCast<EEComplexUnit>(CondSimple(inB)));
-    case EE_UNITS_UAI_CAN_CONVERT: return ee_units_ucp_can_convert(theUnit, CondUnit(inB), &sCondFlag);
+    case EE_UNITS_UAI_CAN_CONVERT: return EECanConvert(theUnit, CondUnit(inB), sCondFlag);
     case EE_UNITS_UAI_CONVERT_FLAG: return sCondFlag;
     case EE_UNITS_UAI_NEW_ATTACK: return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit(theUnit, CondSimple(inB), false, false)));
     case EE_UNITS_UAI_SET_GOAL: theUnit->SetGoal(CondGoal(inB), inC != 0, 0); return 0;
     case EE_UNITS_UAI_NOTICE_FOREIGN: theUnit->mPlayer->NoticeForeignUnit(CondSimple(inB)); return 0;
-    case EE_UNITS_UAI_RESTART_SEARCH: theUnit->SetTargetSearchTimer(theUnit->mUnitClass->mTargetSearchInterval); return 0;
     case EE_UNITS_UAI_CAN_TARGET_ENEMIES: return theUnit->mBehavior->mCanTargetEnemies;
     case EE_UNITS_UAI_CAN_FLEE: return theUnit->mBehavior->mCanFlee;
     case EE_UNITS_UAI_CAN_PURSUE: return theUnit->mBehavior->mCanPursuePastInitialContactLOS;
     case EE_UNITS_UAI_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, sCondPoint));
     case EE_UNITS_UAI_POINT: CondPoint(ioIo, sCondPoint); return 0;
     case EE_UNITS_UAI_CLEAR_POINT: sCondPoint = GE3DPoint(0.0f, 0.0f, 0.0f); return 0;
-    case EE_UNITS_UAI_HAS_COMPUTER: return theUnit->mPlayer->mComputerPlayer != NULL;
     case EE_UNITS_UAI_CP_RESPONSE_RANGE: ioIo->f = theUnit->mPlayer->mComputerPlayer->mMaxAttackResponseRange; return 0;
     case EE_UNITS_UAI_DEFAULT_RESPONSE_RANGE: ioIo->f = gCPBehaviors[kCPBehaviorMaximumAttackResponseRange].mFloatValue; return 0;
     case EE_UNITS_UAI_HAS_HUMAN: return theUnit->mPlayer->mHumanPlayer != NULL;
     case EE_UNITS_UAI_VALID_TILE: return ::gWorld.mMap->mTerrainMesh.GetIsValidTile((unsigned long)inC, (unsigned long)inD);
     case EE_UNITS_UAI_SPACE_TILE: return ::gWorld.mMap->GetTile((unsigned long)inC, (unsigned long)inD) != NULL && ::gWorld.mMap->GetTile((unsigned long)inC, (unsigned long)inD)->mTerrainType == kTerrainSpace;
     case EE_UNITS_UAI_STRAY: return theUnit->mPhysicalModel.GetLocation().DistanceTo(GE3DPoint((float)theUnit->mTileX + 0.5f, (float)theUnit->mTileY + 0.5f, theUnit->mHeight)) > gWorldTable.GetFloatValue(kWorldTileStrayDistance);
-    case EE_UNITS_UAI_HAS_BLOCKING: return theUnit->mBlockingUnit != NULL;
     case EE_UNITS_UAI_RANDOM: ioIo->f = gPhysics->GetRandom(ioIo->p[0], ioIo->p[1]); return 0;
     case EE_UNITS_UAI_WAIT_SCALE: return gUnitAIWaitScale;
-    case EE_UNITS_UAI_ACTIVE_GOAL: return EEObj(theUnit->mActiveGoal);
-    case EE_UNITS_UAI_IS_MELEE: return theUnit->mUnitClass->mIsMelee;
-    case EE_UNITS_UAI_VELOCITY: ioIo->f = theUnit->mVelocity; return 0;
-    case EE_UNITS_UAI_COLLISION_COUNT: ioIo->f = theUnit->GetCollisionResolutionCount(); return 0;
-    case EE_UNITS_UAI_CLEAR_COLLISION_COUNT: theUnit->mCollisionResolutionCount = 0.0f; return 0;
-    case EE_UNITS_UAI_HERD: return EEObj(theUnit->mHerd);
     case EE_UNITS_UAI_HERD_GROUP_ATTACK: return ((EEHerd*)(uintptr_t)inB)->GetAnimal()->mHasGroupAttack;
     case EE_UNITS_UAI_HERD_PARENTAL: return ((EEHerd*)(uintptr_t)inB)->GetAnimal()->mHasParentalVengeance;
     case EE_UNITS_UAI_HERD_GROUP_FLEE: return ((EEHerd*)(uintptr_t)inB)->GetAnimal()->mHasGroupFlee;
@@ -142,14 +121,8 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_UAI_CITIZEN_QUEUE_SIZE: return (int64_t)theUnit->mCitizenBuildQueue.size();
     case EE_UNITS_UAI_POP_BUILD_TARGET: return EEObj(theUnit->PopBuildTarget());
     case EE_UNITS_UAI_NEW_BUILD_REPAIR: return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewBuildRepair(theUnit->GetPlayer(), CondSimple(inB), true)));
-    case EE_UNITS_UAI_START_ACTION: theUnit->StartAction((long)inC); return 0;
     case EE_UNITS_UAI_ATTACK_GOAL: return EEObj(static_cast<EEUnitGoal*>(EEAttackUnitCast(theUnit->GetGoal())));
     case EE_UNITS_UAI_ATTACK_TARGET: return EEObj(static_cast<EEUGRust*>(CondGoal(inB))->GetAttackTarget());
-    case EE_UNITS_UAI_ON_MAP: return CondSimple(inB)->mTileNode != NULL;
-    case EE_UNITS_UAI_DISABLED: return CondSimple(inB)->GetComplexUnit()->mIsDisabled;
-    case EE_UNITS_UAI_PROTECTED: return CondSimple(inB)->GetComplexUnit()->IsProtected();
-    case EE_UNITS_UAI_SAME_PLAYER: return CondSimple(inB)->GetPlayer() == theUnit->GetPlayer();
-    case EE_UNITS_UAI_STANCE: return theUnit->GetPlayer()->mEnemies[CondSimple(inB)->GetPlayer()->GetPlayerID()];
     case EE_UNITS_UAI_CONVERT_ATTACK: return static_cast<EEUGRust*>(CondGoal(inB))->IsConvertAttack();
     case EE_UNITS_UAI_SELECT_TO_RELEASE: return ((EEUnitClass*)(uintptr_t)inB)->SelectUnitToRelease(theUnit);
     case EE_UNITS_UAI_ERUPT_VOLCANO: return ((EEUnitClass*)(uintptr_t)inB)->EruptVolcano(theUnit);
@@ -157,12 +130,8 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_UAI_ENEMIES_NEAR: return ((EEUnitClass*)(uintptr_t)inB)->AreEnemiesNear(theUnit);
     case EE_UNITS_UAI_PASSER_NEAR: return ((EEUnitClass*)(uintptr_t)inB)->IsPasserNear(theUnit);
     case EE_UNITS_UAI_TRAFFIC_QUEUE_LENGTH: return ee_units_atc_queue_length(CondTraffic(theUnit), theUnit);
-    case EE_UNITS_UAI_EXITING_ID: return theUnit->mExitingUnitID;
     case EE_UNITS_UAI_FIND_PASSENGER: return EEObj(theUnit->FindPassenger((unsigned long)inC));
-    case EE_UNITS_UAI_CLEARANCE: return CondUnit(inB)->mIsClearanceGranted;
-    case EE_UNITS_UAI_SET_EXITING: theUnit->SetExitingUnitID((long)inC); return 0;
     case EE_UNITS_UAI_WORLD_UNIT: return EEObj(::gWorld.GetUnit((unsigned long)inC));
-    case EE_UNITS_UAI_COMPLEX_OF: return EEObj(CondSimple(inB)->mComplexUnit);
     case EE_UNITS_UAI_REMOVE_PLANE: ee_units_atc_remove_plane(CondTraffic(theUnit), theUnit, CondUnit(inB)); return 0;
     }
     return 0;

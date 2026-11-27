@@ -7,8 +7,6 @@
 // goals' host (EEUGRust.cpp's GoalOp's default case), each the original's statement, the CBGO records (TEST ONLY,
 // recorded from the original bodies first), and the accessors the callers use.
 #include <windows.h>
-#include <stdint.h>
-#include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
 

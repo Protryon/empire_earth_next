@@ -876,26 +876,17 @@ class ComponentConfig : public ConfigObject {
 public:
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
     void InitComponents(); // once, then every child config in name order
-    Direction ReadDirection();
-    HorzAlign ReadHorzAlign();
-    VertAlign ReadVertAlign();
     static void SetResourceFolder(const std::string&);
     SmartPtr<Sound> ReadSound();
     void EnsureComma();
-    int ReadChar();
-    GUIString ReadFlag(bool* = NULL);
     GUIString ReadRawString(bool);
     SmartPtr<Font> ReadFont();
     SmartPtr<Image> ReadImage(bool);
-    SelectionColor ReadSelectionColor();
     bool HandleMapComponent();
     bool HandleModify();
     void SetDesiredSizeIfNecessary();
-    SmartPtr<Cursor> ReadCursor();
     static SmartPtr<ResourceConfigTable> mResourceConfigTable; // the table a parse reads (ReadConfig_Unsafe sets it)
-    SmartPtr<RawImage> ReadRawImage();
     SmartPtr<RawImage> GetRawImageFromStr(const std::string&);
-    StandardCursor ReadStandardCursor();
     void AddChildToConfigMap(const GUIString&,ComponentConfig*,bool inAlways=false); // an empty name only inAlways
     Background ReadBackground();
     int ReadInt();
@@ -929,10 +920,9 @@ public:
 // a config or a component of a type for the resource table's allocators (the original's one-line CfgFactory and
 // CompFactory statics, one template each since R6 WONLobby round 25); a config of a kind (round 26)
 template<class C> ComponentConfig* NewConfigOf() { return new C; }
-ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ConfigTableHost.cpp)
+ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ComponentConfigHost.cpp)
 template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K); }
 template<class T> Component* NewComponentOf() { return new T; }
-inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
 
 // Exception record (0x1c bytes); the implicit copy and destructor are the original's helpers.
@@ -993,12 +983,8 @@ public:
 
 class LobbyConfig : public ConfigObject {
 public:
-    LobbyConfig();
-    typedef LobbyConfig* (*ConfigAllocator)();
-    static ConfigAllocator mAllocator; // class static at 0x4d954c
-    static LobbyConfig* DefaultAllocator();
+    LobbyConfig(); // the game's (EELobbyConfig: the file transfer port's key too; R6 WON lobby and network round 39)
     static std::string mDefaultFileName;
-    static void SetAllocator(ConfigAllocator allocator) { LobbyConfig::mAllocator=allocator; } // inline setter
     virtual bool HandleValueInstruction(ConfigParser* inParser, const std::string& inKey, StringParser& inValue);
     virtual bool PostParse(ConfigParser* inParser);
 
@@ -1026,9 +1012,10 @@ public:
     bool mAppendNumberToDefaultLanName;      // +0xe7
     bool mAllowJoinGameWithoutPing;          // +0xe8
     std::map<std::string, std::string, StringLessNoCase> mDefines;           // +0xec (node value 0x20; pair dtor 0x296a48)
+    unsigned short mFileTransferPort;       // +0xf8 EELobbyConfig's "EEFileTransferPort" (8889)
 };
 
-// 0x358710: the lobby's configuration object (an EELobbyConfig: EELobbyInit.cpp's factory)
+// 0x358710: the lobby's configuration object
 LobbyConfig* GetLobbyConfig();
 
 // one item of a list (0x18 bytes: TextListItem's members start at +0x18; vtable 0x84dba4, 14 slots; the inline
@@ -1640,7 +1627,7 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
-// (WONLobbyConfigImages.h, R6 WON GUI round 36).
+// (ComponentConfigHost.cpp's MediaConfig, R6 WON GUI round 36).
 inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
 // The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
 // original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and
