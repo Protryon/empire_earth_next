@@ -261,8 +261,6 @@ extern "C" int64_t ee_units_ucs_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCS_UNIT_TYPE: return theUnit->mUnitClass->mUnitType;
     case EE_UNITS_UCS_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit->mOwner, theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType], EEUcsObject<GE3DPoint>(inA), EEUcsObject<GE3DPoint>((uint64_t)inB), &f[0]);
     case EE_UNITS_UCS_SET_FLIGHT_TIME: theUnit->SetFlightTime((unsigned long)inB); return 0;
-    case EE_UNITS_UCS_LAUNCH_SPEED: f[0] = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mLauncherClass->mUnitType]->mLaunchSpeed; return 0;
-    case EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED: f[0] = theUnit->mPlayer->GetUpgrade(theUnit->mLauncherClass->mUnitType)->mLaunchSpeed; return 0;
     case EE_UNITS_UCS_LAUNCH_PITCH: f[0] = theUnit->mLauncherClass->mLaunchPitch; return 0;
     case EE_UNITS_UCS_HAS_TRAIL: return theClass->mTrailEffect != NULL;
     case EE_UNITS_UCS_TRAIL_DETAILED: return theClass->mTrailEffect->mDetailLevel <= gEffectDetail;

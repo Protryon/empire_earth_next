@@ -91,3 +91,58 @@ pub fn save(op: i32, p: u64, index: u32, io: &mut EeUnitsPlayerSaveIo) -> Option
         _ => return None,
     })
 }
+
+/// The pointer member at `object + offset`.
+fn ptr_at(object: usize, offset: u64) -> usize {
+    // SAFETY: a live object's pointer member (the C++ statement dereferenced it)
+    unsafe { *((object + offset as usize) as *const usize) }
+}
+
+/// Unit `u`'s player's upgrade of its class (`u->GetPlayer()->mUnitClassUpgrades[u->GetUnitClass()->mUnitType]`).
+fn unit_upgrade(u: usize) -> Option<u64> {
+    let l = crate::world::layout::get()?;
+    let class = ptr_at(u, l.unit_class) + l.unit_class_fields as usize;
+    // SAFETY: the unit's live class's record
+    let ty = unsafe { (*(class as *const crate::world::unit_class_fields::EeUnitsUnitClassFields)).mUnitType };
+    Some(at(ptr_at(u, l.unit_player) as u64, ty as usize))
+}
+
+/// The unit host's statement `op` on unit `unit` (`a` the other unit) (EEUnit.cpp `ee_units_eum_host`): the
+/// upgrade's maximum hit points, the unit's stats set to its upgrade.
+pub fn eum(op: i32, unit: u64, a: u64) -> Option<i64> {
+    use crate::units::eu_more::{EE_UNITS_EUM_SET_STATS, EE_UNITS_EUM_UPGRADE_MAX_HIT_POINTS};
+    match op {
+        EE_UNITS_EUM_UPGRADE_MAX_HIT_POINTS => {
+            let upgrade = unit_upgrade(a as usize)?;
+            let at = upgrade as usize + crate::world::layout::get()?.stats_fields as usize;
+            // SAFETY: the player's live upgrade's record (the C++ statement dereferenced it)
+            Some(unsafe { (*(at as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeFields)).mMaxHitPoints } as i64)
+        }
+        EE_UNITS_EUM_SET_STATS => {
+            let upgrade = unit_upgrade(unit as usize)?;
+            let at = unit as usize + crate::world::layout::get()?.unit_stats as usize;
+            // SAFETY: the live unit's mStats
+            unsafe { *(at as *mut usize) = upgrade as usize };
+            Some(0)
+        }
+        _ => None,
+    }
+}
+
+/// The shots' host statement `op` on complex unit `unit` (EEUnitClassShots.cpp `ee_units_ucs_host`): f0 = its
+/// player's upgrade of its launcher class's `mLaunchSpeed`.
+pub fn ucs(op: i32, unit: u64, f: &mut [f32; 4]) -> Option<i64> {
+    use crate::units::ucs_shots::{EE_UNITS_UCS_LAUNCH_SPEED, EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED};
+    if op != EE_UNITS_UCS_LAUNCH_SPEED && op != EE_UNITS_UCS_UPGRADE_LAUNCH_SPEED {
+        return None;
+    }
+    let l = crate::world::layout::get()?;
+    let u = unit as usize;
+    let class = ptr_at(u, l.complex_launcher_class) + l.unit_class_fields as usize;
+    // SAFETY: the unit's live launcher class's record (the C++ statement dereferenced it)
+    let ty = unsafe { (*(class as *const crate::world::unit_class_fields::EeUnitsUnitClassFields)).mUnitType };
+    let upgrade = at(ptr_at(u, l.unit_player) as u64, ty as usize) as usize + l.stats_fields as usize;
+    // SAFETY: the player's live upgrade's record (as above)
+    f[0] = unsafe { (*(upgrade as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeFields)).mLaunchSpeed };
+    Some(0)
+}

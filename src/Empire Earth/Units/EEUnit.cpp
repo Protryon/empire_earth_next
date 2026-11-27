@@ -237,7 +237,6 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_RTS_INVALIDATE: theUnit->RTSUnit::Invalidate(); return 0;
     case EE_UNITS_EUM_AS_UNIT: return EEObj(dynamic_cast<EEUnit*>(EEEuObject<RTSUnit>(inA)));
     case EE_UNITS_EUM_COPY_RESOURCE_TYPE: theUnit->mResourceType = EEEuObject<EEUnit>(inA)->mResourceType; return 0;
-    case EE_UNITS_EUM_UPGRADE_MAX_HIT_POINTS: return EEEuObject<EEUnit>(inA)->GetPlayer()->mUnitClassUpgrades[EEEuObject<EEUnit>(inA)->GetUnitClass()->mUnitType]->mMaxHitPoints;
     case EE_UNITS_EUM_HIT_POINTS_OF: return EEEuObject<EEUnit>(inA)->GetHitPoints();
     case EE_UNITS_EUM_SET_HIT_POINTS_FIELD: theUnit->mHitPoints = (long)inB; return 0;
     case EE_UNITS_EUM_COPY_RESOURCE_AMOUNT: theUnit->mResourceAmount = EEEuObject<EEUnit>(inA)->mResourceAmount; return 0;
@@ -247,7 +246,6 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_REFERENCE_ONE: theUnit->mReferenceCount = 1; return 0;
     case EE_UNITS_EUM_SET_PLAYER: theUnit->mPlayer = EEEuObject<EEPlayer>(inA); return 0;
     case EE_UNITS_EUM_SET_CLASS: theUnit->mUnitClass = EEEuObject<EEUnitClass>(inA); return 0;
-    case EE_UNITS_EUM_SET_STATS: theUnit->mStats = theUnit->mPlayer->mUnitClassUpgrades[theUnit->mUnitClass->mUnitType]; return 0;
     case EE_UNITS_EUM_MOVE_TO_TILE: theUnit->MoveTo((long)inB, (long)inC, 0); return 0;
     case EE_UNITS_EUM_SET_COMPLEX_SELF: theUnit->mComplexUnit = static_cast<EEComplexUnit*>(theUnit); return 0;
     case EE_UNITS_EUM_ZERO_RESOURCE_AMOUNT: theUnit->mResourceAmount = 0; return 0;

@@ -445,7 +445,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_QUEUE_FRONT_FLAG: return theUnit->mBuildQueue.front().mFlag;
     case EE_UNITS_CU_CAN_PRODUCE: return theUnit->GetPlayer()->CanProduce((long)inB, theUnit->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
     case EE_UNITS_CU_CLASS_TABLE: return (uint64_t)(uintptr_t)gUnitClassTable[(long)inB];
-    case EE_UNITS_CU_BUILD_TIME_SCALE: return UFloatBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
     case EE_UNITS_CU_CLASS_IS_AIRCRAFT: return theClass->IsAircraft();
     case EE_UNITS_CU_CLASS_WEIGHT: return theClass->mWeight;
     case EE_UNITS_CU_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], (int32_t)inB);
@@ -910,7 +909,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_NUM_WHEELS: return (int64_t)theOther->mNumWheels;
     case EE_UNITS_CU_COPY_WHEEL_ANGLE: theUnit->mWheels[inB]->mAngle = theOther->mWheels[inB]->mAngle; return 0;
     case EE_UNITS_CU_COPY_SOUND: theUnit->SetSound(theOther->mSound); return 0;
-    case EE_UNITS_CU_UNIT_UPGRADE: return (uint64_t)(uintptr_t)theOther->GetPlayer()->GetUpgrade(theOther->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_UPGRADE_MAX_HIT_POINTS: return EECuObject<EEUnitClassUpgrade>(inA)->mMaxHitPoints;
     case EE_UNITS_CU_UPGRADE_POWER: return EECuObject<EEUnitClassUpgrade>(inA)->mPower;
     case EE_UNITS_CU_UPGRADE_FLIGHT_TIME: return EECuObject<EEUnitClassUpgrade>(inA)->mFlightTime;
@@ -1089,7 +1087,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_INIT_COLLISION_RADIUS: theUnit->mCollisionRadius = theClass->GetInnerCollisionSphere(); return 0;
     case EE_UNITS_CU_SET_IS_CITIZEN: theUnit->mIsCitizen = inB != 0; return 0;
     case EE_UNITS_CU_INIT_DELETABLE: theUnit->mIsDeletable = theClass->mIsDeletable; return 0;
-    case EE_UNITS_CU_UPGRADE_AREA_TEMPLATE: return thePlayer->GetUpgrade(theUnit->GetUnitClass()->GetUnitType())->mAreaEffectTemplates[inB];
     case EE_UNITS_CU_CREATE_AREA_EFFECT: return (uint64_t)(uintptr_t)gAEManager.CreateAreaEffect((long)inB, theUnit);
     case EE_UNITS_CU_AREA_EFFECTS_ADD: theUnit->mAreaEffects.Add(EECuObject<EEAreaEffect>(inA)); return 0;
     case EE_UNITS_CU_EFFECT_DEREFERENCE: EECuObject<EEAreaEffect>(inA)->Dereference(); return 0;

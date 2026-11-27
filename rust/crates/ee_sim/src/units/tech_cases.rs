@@ -188,8 +188,31 @@ pub(crate) fn cu(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
         }
         EE_UNITS_CU_NODE_ALLOWED => i64::from(node(a as usize).mIsAllowed),
         EE_UNITS_CU_NODE_KIND => data(a as usize).mKind as i64,
+        // unit a's GetPlayer()->GetUpgrade(its class's unit type) (player_upgrades.rs)
+        crate::units::cu_life::EE_UNITS_CU_UNIT_UPGRADE => {
+            let ty = class_unit_type(unit_class(a)?)?;
+            crate::units::player_upgrades::at(unit_player(a)? as u64, ty as c_long as usize) as i64
+        }
+        // the unit's GetPlayer()->GetUpgrade(b)->mBuildTimeScale (its bits)
+        crate::units::cu_body::EE_UNITS_CU_BUILD_TIME_SCALE => {
+            let upgrade = crate::units::player_upgrades::at(unit_player(unit)? as u64, b as c_long as usize);
+            i64::from(upgrade_fields(upgrade as usize)?.mBuildTimeScale.to_bits())
+        }
+        // player a's GetUpgrade(the unit's class's unit type)->mAreaEffectTemplates[b]
+        crate::units::cu_life::EE_UNITS_CU_UPGRADE_AREA_TEMPLATE => {
+            let ty = class_unit_type(unit_class(unit)?)?;
+            let upgrade = crate::units::player_upgrades::at(a, ty as c_long as usize);
+            upgrade_fields(upgrade as usize)?.mAreaEffectTemplates[b as usize] as i64
+        }
         _ => return None,
     })
+}
+
+/// An upgrade's record (`EeUnitsUnitClassUpgradeFields`).
+fn upgrade_fields<'a>(upgrade: usize) -> Option<&'a crate::world::stats_fields::EeUnitsUnitClassUpgradeFields> {
+    let at = upgrade + l()?.stats_fields as usize;
+    // SAFETY: a player's live upgrade (the C++ statement dereferenced it)
+    Some(unsafe { &*(at as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeFields) })
 }
 
 /// The class host's statement `op` (EEUnitClass.cpp `ee_units_uc_host`; every class kind's host passes these on to
@@ -363,6 +386,13 @@ pub(crate) fn ub(op: i32, a: u64, c: i64) -> Option<i64> {
         EE_UNITS_UB_TECH_AVAILABLE => i64::from(available(node_of(a as usize, c))),
         EE_UNITS_UB_TECHNOLOGY => node_of(a as usize, c) as i64,
         EE_UNITS_UB_UNIT_TECHNOLOGY => node_of(unit_player(a)?, c) as i64,
+        // player a's mUnitClassUpgrades[c]->mModel (player_upgrades.rs; the upgrade's links record)
+        crate::units::uu_body::EE_UNITS_UB_UPGRADE_MODEL => {
+            let upgrade = crate::units::player_upgrades::at(a, c as usize) as usize;
+            let links = upgrade + l()?.stats_links as usize;
+            // SAFETY: the player's live upgrade's links (the C++ statement dereferenced it)
+            unsafe { (*(links as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeLinks)).mModel as usize as i64 }
+        }
         _ => return None,
     })
 }
