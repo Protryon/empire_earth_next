@@ -157,7 +157,7 @@ pub fn xfer_op(op: crate::eexfer::EeWonEeXferOp, a: isize) -> Option<isize> {
 
 /// RoutingLogic's host ops on the network objects, the clock and the time (RoutingLogic.cpp's), or none for the
 /// host's.
-pub fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize) -> Option<isize> {
+pub fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::routelogic::EeWonRouteLogicOp as R;
     if !net::bound() {
         return None;
@@ -193,6 +193,68 @@ pub fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize) ->
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as isize)
         }
         R::Tick => ee_won_net::ops::tick() as isize,
+        // R6 WON lobby and network round 40: the routing ops' and connections' one-call cases
+        // `RO(a)->SetNum(b, c)`, `RC(a)->IsConnected()`, `HeldOp(new RoutingOp(RC(a), b))`
+        R::RSetNum => {
+            net::route_set_num(p, b as i32, c as i64);
+            0
+        }
+        R::ConnIsConnected => net::socket_connected(p) as isize,
+        // `RO(a)->mConnection.get()`, `RC(a)->SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`
+        R::RConnection => net::route_connection(p) as isize,
+        R::ConnSetAuth => {
+            net::servconn_set_auth(p, b as *mut c_void, 2);
+            0
+        }
+        R::RNew => {
+            let o = net::new_route_op(p, b as i32);
+            net::ref_add(o);
+            o as isize
+        }
+        // `SendData(b, 0, c, NULL)`: the buffer (none: no data), no flags, the one recipient
+        R::ConnSendData => {
+            use ee_won_net::routecpp::{request, Value, EE_WON_RTQ_DATA};
+            let data = net::buffer_bytes(b as *mut c_void)
+                .map_or(Value { num: 0, bytes: Vec::new() }, |d| Value { num: 1, bytes: d.to_vec() });
+            let ids = Value { num: 0, bytes: (c as u16).to_le_bytes().to_vec() };
+            request(p, EE_WON_RTQ_DATA, &[data, Value { num: 0, bytes: Vec::new() }, ids], null_mut());
+            0
+        }
+        // `((AuthContext*)a)->SetDoAutoRefresh(false)`
+        R::AuthStopRefresh => {
+            if let Some(x) = ee_won_net::cppcore::auth_ctx_of(p) {
+                // SAFETY: the context's live Rust object
+                unsafe { ee_won_net::authobj::ee_won_authctx_set_do_auto_refresh(x, false) };
+            }
+            0
+        }
+        // `(unsigned long)ee_won_hostop_num(RS(a)->GetRustOp(), EE_WON_REQOP_USER_ID, 0)`
+        R::OpUserId => ee_won_net::cppcore::host_op_of(p).map_or(0, |h| {
+            // SAFETY: the op's live Rust op
+            unsafe {
+                ee_won_net::hostop::ee_won_hostop_num(h, ee_won_net::reqops::EE_WON_REQOP_USER_ID, 0) as u32 as isize
+            }
+        }),
+        // `UserStatusOf(AO(a))`, `ee_won_userstatus_add(UserStatusOf(AO(a)), (unsigned long)b)`
+        R::StatusOpRust | R::StatusOpAddId => {
+            use ee_won_net::udpops::{ee_won_udp_body_of, EE_WON_UDP_BODY_USER_STATUS};
+            // SAFETY: a live op (its `RefCount*`) or null
+            let s = unsafe { ee_won_udp_body_of(p, EE_WON_UDP_BODY_USER_STATUS) };
+            if op == R::StatusOpRust {
+                s as isize
+            } else {
+                if !s.is_null() {
+                    // SAFETY: the op's live map
+                    unsafe { ee_won_net::userstatus::ee_won_userstatus_add(s.cast(), u64::from(b as u32)) };
+                }
+                0
+            }
+        }
+        // `((ServerContext*)a)->NotifyFailed(RS(b)->GetCurAddr())`
+        R::DirNotifyFailed => {
+            net::context_notify_failed(p, b as *mut c_void);
+            0
+        }
         _ => return None,
     };
     Some(r)
@@ -240,9 +302,10 @@ pub unsafe extern "C" fn ee_won_netops_route(
     op: crate::routelogic::EeWonRouteLogicOp,
     a: isize,
     b: isize,
+    c: isize,
     handled: *mut bool,
 ) -> isize {
-    out(route_op(op, a, b), handled)
+    out(route_op(op, a, b, c), handled)
 }
 
 /// A take op's sink for a driver (the `Vec<u8>` the logics pass): a new one, its bytes (copied to `out` when it
@@ -286,7 +349,7 @@ mod tests {
         }
         use crate::routelogic::EeWonRouteLogicOp as R;
         for op in [R::AddRef, R::OpStatus, R::RNum, R::AsyncOpNew, R::Now] {
-            assert_eq!(route_op(op, 0x52, 0), None);
+            assert_eq!(route_op(op, 0x52, 0, 0), None);
         }
         use crate::eexfer::EeWonEeXferOp as X;
         for op in [X::Succeeded, X::OpSocket, X::AddRef, X::Kill, X::Listen] {

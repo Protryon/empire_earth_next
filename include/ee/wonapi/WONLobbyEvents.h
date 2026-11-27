@@ -10,7 +10,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #endif
-#include <string>
 #include "rust/won_lobby/lobbyevt.h"
 namespace WONAPI {
 class LobbyFriend;

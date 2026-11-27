@@ -3,7 +3,8 @@
 //   Disp  LobbyStagingSupport.cpp's network dispatch (netdisp.rs): every entry point, Logout, LeaveGame,
 //         RemoveGameAdvertisement, KickClient and Resume among them;
 //   Run   LobbyRunState.cpp (lobbyrun.rs): LobbyRun, LobbyExit, LobbySuspend, LobbyResume, LobbyStart;
-//   Cfg   LobbyConfig::PostParse (lobbycfg.rs): its four error branches and the defaults;
+//   Cfg   LobbyConfig::PostParse (lobbyconf.rs's record since R6 WON lobby/net round 40): its four error branches and
+//         the defaults;
 //   Root  RootScreen (rootscreen.rs): random call sequences on the Internet and LAN screens, SWAT layouts among them;
 //   Glue  the EE glue's cases gluesplit.rs composes in the game (TextWidth, SaveNew, SaveLength, SaveLoadHeader,
 //         AddressesGet, DeleteCommunications, and round 33's StringUnits), through ee_won_eeglue_split_op.
@@ -23,7 +24,9 @@
 #include "ee/wonapi/WONEventTypes.h"
 #include "rust/won_lobby/netdisp.h"
 #include "rust/won_lobby/lobbyrun.h"
-#include "rust/won_lobby/lobbycfg.h"
+#include "rust/won_lobby/lobbyprv.h"
+#include "rust/won_lobby/lobbyconf.h"
+#include "rust/won_net/cfgparser.h"
 #include "rust/won_lobby/rootscreen.h"
 #include "rust/won_lobby/eeglue.h"
 
@@ -450,6 +453,8 @@ struct WindowManager {
     {
         Log("MessageLoop");
         if (gLobbyData.get() != NULL) gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(sLoopStatus);
+        // the new side's run state is lobbyprv.rs's (R6 WON lobby/net round 40)
+        if (gLobbyData.get() != NULL) ee_won_lobbyprv_set(EeWonLobbyPrvField::LobbyStatus, sLoopStatus);
         if (sLoopEndsData) gLobbyData = NULL;
     }
     void ExitMessageLoop() { Log("ExitMessageLoop"); }
@@ -538,11 +543,6 @@ static intptr_t RunHostCases(EeWonRunOp inOp, intptr_t a)
     case Op::WindowVisible: return reinterpret_cast<Window*>(a)->PlatformIsVisible() ? 1 : 0;
     case Op::WindowRunFailureDialog: reinterpret_cast<Window*>(a)->RunDialog(gLobbyFailureDialog.get()); return 0;
     case Op::HasData: return gLobbyData.get() != NULL;
-    case Op::SetStatus: gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(a); return 0;
-    case Op::Status: return gLobbyData->mLobbyStatus;
-    case Op::SetRunMode: gLobbyData->mRunMode = static_cast<LobbyRunMode>(a); return 0;
-    case Op::RunMode: return gLobbyData->mRunMode;
-    case Op::SetSuspended: gLobbyData->mSuspended = a != 0; return 0;
     case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
     case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
     case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
@@ -561,8 +561,7 @@ static intptr_t RunHostCases(EeWonRunOp inOp, intptr_t a)
 }
 static const Mutation kMutations[] = {
     {(int)EeWonRunOp::InitFailedWithDialog, MUT_FALSE}, {(int)EeWonRunOp::WindowVisible, MUT_FLIP},
-    {(int)EeWonRunOp::WindowRunFailureDialog, MUT_SKIP}, {(int)EeWonRunOp::SetSuspended, MUT_SKIP},
-    {(int)EeWonRunOp::SetStatus, MUT_SKIP}, {(int)EeWonRunOp::Status, MUT_INC}, {(int)EeWonRunOp::RunMode, MUT_FLIP},
+    {(int)EeWonRunOp::WindowRunFailureDialog, MUT_SKIP},
     {(int)EeWonRunOp::MusicOn, MUT_FLIP}, {(int)EeWonRunOp::MusicResume, MUT_SKIP}, {(int)EeWonRunOp::NetResume, MUT_SKIP},
     {(int)EeWonRunOp::PingsToDo, MUT_INC}, {(int)EeWonRunOp::KillPings, MUT_SKIP}, {(int)EeWonRunOp::InitLogicInit, MUT_SKIP},
 };
@@ -603,7 +602,24 @@ static void Run()
                 Make(k);
                 intptr_t aStatus = (intptr_t)(k % 7) - 1;
                 intptr_t r = 0;
-                if (aSide == 1) r = ee_won_lobbyrun_call(RunHost, c, c == RC::Exit ? aStatus : 0);
+                if (aSide == 1) {
+                    // the run state in lobbyprv.rs's lobby while the world has one (R6 WON lobby/net round 40)
+                    typedef EeWonLobbyPrvField PF;
+                    bool aHad = gLobbyData.get() != NULL;
+                    if (aHad) {
+                        ee_won_lobbyprv_call(&sData, NULL, EeWonLobbyPrvCall::Construct, 0, 0);
+                        ee_won_lobbyprv_set(PF::LobbyStatus, sData.mLobbyStatus);
+                        ee_won_lobbyprv_set(PF::RunMode, sData.mRunMode);
+                        ee_won_lobbyprv_set(PF::Suspended, sData.mSuspended);
+                    }
+                    r = ee_won_lobbyrun_call(RunHost, c, c == RC::Exit ? aStatus : 0);
+                    if (aHad) {
+                        sData.mLobbyStatus = static_cast<LobbyStatus>(ee_won_lobbyprv_get(PF::LobbyStatus));
+                        sData.mRunMode = static_cast<LobbyRunMode>(ee_won_lobbyprv_get(PF::RunMode));
+                        sData.mSuspended = ee_won_lobbyprv_get(PF::Suspended) != 0;
+                        ee_won_lobbyprv_drop(&sData);
+                    }
+                }
                 else if (c == RC::Run) r = Orig::LobbyRun();
                 else if (c == RC::Exit) Orig::LobbyExit((int)aStatus);
                 else if (c == RC::Suspend) Orig::LobbySuspend();
@@ -665,40 +681,47 @@ struct LobbyConfig {
         return true;
     }
 };
-// LobbyConfig.cpp's CfgHost, as it is
-static intptr_t CfgHostCases(void* inConfig, void* inParser, EeWonLobbyCfgOp inOp)
+// the Rust record's PostParse (lobbyconf.rs) over the same values, its error read back from a Rust parser
+static void Take(void* c, const uint8_t* b, size_t n) { static_cast<std::string*>(c)->append((const char*)b, n); }
+static void TakeW(void* c, const void* u, size_t n) { static_cast<std::wstring*>(c)->assign((const wchar_t*)u, n); }
+static bool RustPostParse(LobbyConfig& c)
 {
-    typedef EeWonLobbyCfgOp Op;
-    LobbyConfig* c = static_cast<LobbyConfig*>(inConfig);
-    ConfigParser* parser = static_cast<ConfigParser*>(inParser);
-    switch (inOp) {
-    case Op::DirServersEmpty: return c->mDirServers.empty();
-    case Op::ProductNameEmpty: return c->mProductName.empty();
-    case Op::VersionEmpty: return c->mVersion.empty();
-    case Op::LanguageEmpty: return c->mLanguage.empty();
-    case Op::ErrorNoDirServers: parser->SetError("No Directory Servers specified.", false); return 0;
-    case Op::ErrorNoProductName: parser->SetError("No product name specified.", false); return 0;
-    case Op::ErrorNoVersion: parser->SetError("No version specified.", false); return 0;
-    case Op::ErrorNoLanguage: parser->SetError("No language specified.", false); return 0;
-    case Op::LanVersionEmpty: return c->mLanVersion.empty();
-    case Op::LanVersionFromVersion: c->mLanVersion = c->mVersion; return 0;
-    case Op::ResourceDirEmpty: return c->mResourceDirectory.empty();
-    case Op::ResourceDirDefault: c->mResourceDirectory = ".\\" + c->mProductName; return 0;
-    case Op::ProductDirEmpty: return c->mProductDirectory.empty();
-    case Op::ProductDirDefault: c->mProductDirectory = std::wstring(L"/") + StringToWString(c->mProductName); return 0;
-    case Op::DefineProduct: c->mDefines["Product"] = c->GetProductName(); return 0;
+    EeWonLobbyConf* r = ee_won_lobbyconf_new(NULL);
+    typedef EeWonLobbyConfText T;
+    for (const std::string& d : c.mDirServers) ee_won_lobbyconf_list_push(r, EeWonLobbyConfList::DirServers, (const uint8_t*)d.data(), d.size());
+    std::string* t[] = {&c.mProductName, &c.mVersion, &c.mLanVersion, &c.mLanguage, &c.mResourceDirectory};
+    T k[] = {T::ProductName, T::Version, T::LanVersion, T::Language, T::ResourceDirectory};
+    for (int i = 0; i < 5; i++) ee_won_lobbyconf_set_text(r, k[i], (const uint8_t*)t[i]->data(), t[i]->size());
+    ee_won_lobbyconf_set_product_dir(r, c.mProductDirectory.data(), c.mProductDirectory.size());
+    for (const auto& d : c.mDefines)
+        ee_won_lobbyconf_set_define(r, (const uint8_t*)d.first.data(), d.first.size(), (const uint8_t*)d.second.data(), d.second.size());
+    EeWonCfgParser* aParser = ee_won_cfgp_new();
+    bool ok = ee_won_lobbyconf_post_parse(r, aParser);
+    std::string anError;
+    ee_won_cfgp_text(aParser, EeWonCfgpText::Abort, Take, &anError);
+    // the parser's error is the text given plus its location (" (file:line)", every SetError's): the text logged
+    size_t aAt = anError.rfind(" (");
+    if (aAt != std::string::npos) anError.erase(aAt);
+    if (!anError.empty()) Log("SetError " + anError + " 0");
+    ee_won_cfgp_free(aParser);
+    for (int i = 0; i < 5; i++) {
+        t[i]->clear();
+        ee_won_lobbyconf_text(r, k[i], Take, t[i]);
     }
-    return 0;
-}
-static intptr_t CfgHost(void* inConfig, void* inParser, EeWonLobbyCfgOp inOp)
-{
-    if (Mutated(3, (int)inOp)) {
-        // the checks flipped, the statements skipped
-        int o = (int)inOp;
-        bool aCheck = o <= 4 || o == 9 || o == 11 || o == 13;
-        return aCheck ? Mutate(MUT_FLIP, CfgHostCases(inConfig, inParser, inOp)) : 0;
+    ee_won_lobbyconf_product_dir(r, TakeW, &c.mProductDirectory);
+    c.mDefines.clear();
+    for (size_t i = 0;; i++) {
+        std::string kv[2];
+        struct S { std::string* kv; int n; } s = {kv, 0};
+        if (!ee_won_lobbyconf_define_at(r, i, [](void* x, const uint8_t* b, size_t n) {
+                S* s = (S*)x;
+                s->kv[s->n++].assign((const char*)b, n);
+            }, &s))
+            break;
+        c.mDefines[kv[0]] = kv[1];
     }
-    return CfgHostCases(inConfig, inParser, inOp);
+    ee_won_lobbyconf_free(r);
+    return ok;
 }
 static void Run()
 {
@@ -716,7 +739,7 @@ static void Run()
             if (k >> 5 & 1) c.mResourceDirectory = "res";
             if (k >> 6 & 1) c.mProductDirectory = L"/EE";
             if (k >> 7 & 1) c.mDefines["Product"] = "old";
-            bool r = aSide == 0 ? c.PostParse(&p) : ee_won_lobbycfg_post_parse(&c, &p, CfgHost);
+            bool r = aSide == 0 ? c.PostParse(&p) : RustPostParse(c);
             Log("result " + N(r) + " lan " + c.mLanVersion + " res " + c.mResourceDirectory + " dir " + W(c.mProductDirectory));
             for (const auto& d : c.mDefines) Log("define " + d.first + "=" + d.second);
             t[aSide].swap(sTrace);
@@ -1476,7 +1499,7 @@ int main()
     std::vector<int> aKeys;
     for (const Mutation& m : Disp::kMutations) aKeys.push_back(1000 + m.mKey);
     for (const Mutation& m : RunPh::kMutations) aKeys.push_back(2000 + m.mKey);
-    for (int o = 1; o <= (int)EeWonLobbyCfgOp::DefineProduct; o++) aKeys.push_back(3000 + o);
+    // (phase 3, PostParse: the Rust record's since R6 WON lobby/net round 40, no host to mutate)
     for (const Mutation& m : Root::kMutations) aKeys.push_back(4000 + m.mKey);
     for (const Mutation& m : Glue::kMutations) aKeys.push_back(5000 + m.mKey);
     int aMissed = 0;

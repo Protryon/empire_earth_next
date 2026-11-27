@@ -16,9 +16,10 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyModel.h"
-#include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "ee/wonapi/WONLobbyConfig.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "ee/wonapi/WONAuthContext.h"
 
 namespace WONAPI {
@@ -49,8 +50,8 @@ static intptr_t PersistHost(void*, EeWonPersistOp inOp, intptr_t a, intptr_t b, 
     // the click sound is used without a null check, as the original did
     case EeWonPersistOp::MuteClick: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
     case EeWonPersistOp::AppendLanNumber: {
-        LobbyConfig* aConfig = GetLobbyConfig();
-        return aConfig == NULL || aConfig->mAppendNumberToDefaultLanName;
+        EeWonLobbyConf* aConfig = ee_won_lobbyconf_current();
+        return aConfig == NULL || ee_won_lobbyconf_num(aConfig, EeWonLobbyConfNum::AppendNumberToDefaultLanName);
     }
     case EeWonPersistOp::Now: return (intptr_t)(long)time(NULL);
     }

@@ -148,6 +148,31 @@ enum Kind {
     StrList(*mut c_void, *const c_void, bool, bool),
     /// `ConfigListValue<std::list<std::list<int> > >`: as the string list.
     IntListList(*mut c_void, *const c_void, bool, bool),
+    /// A Rust-owned `std::string` (a record's member, e.g. lobbyconf.rs's): the default text (NUL-terminated, NULL
+    /// for none).
+    RStr(*mut Vec<u8>, *const u8),
+    /// A Rust-owned `std::wstring`: the default text (NUL-terminated `wchar_t`, NULL for none).
+    RWStr(*mut Vec<WChar>, *const WChar),
+    /// A Rust-owned `std::list<std::string>`: the default text (narrow, NULL for none), whether a read adds to it.
+    RStrList(*mut Vec<Vec<u8>>, *const u8, bool),
+}
+
+/// A NUL-terminated text's units (the default texts).
+///
+/// # Safety
+/// `p` is NULL or NUL-terminated.
+unsafe fn c_units<T: Copy + Default + PartialEq>(p: *const T) -> Vec<T> {
+    let mut out = Vec::new();
+    if p.is_null() {
+        return out;
+    }
+    let mut i = 0;
+    // SAFETY: the contract
+    while unsafe { *p.add(i) } != T::default() {
+        out.push(unsafe { *p.add(i) });
+        i += 1;
+    }
+    out
 }
 
 /// One value (the C++ `ConfigValueBase*` the groups hold).
@@ -218,9 +243,14 @@ fn read_int(sp: &mut EeWonCfgStringParser) -> Option<i32> {
 /// `StringParser::ReadValue(std::list<std::string>&)` (ReadStrings): an item read, then another after each ',';
 /// never fails.
 fn read_strings(sp: &mut EeWonCfgStringParser, t: *mut c_void) -> bool {
-    loop {
-        let item = read_text(sp);
+    read_strings_to(sp, &mut |item| {
         h(EeWonCfgValOp::ListPush, t, item.as_ptr() as isize, item.len() as isize, 0);
+    })
+}
+
+fn read_strings_to(sp: &mut EeWonCfgStringParser, push: &mut dyn FnMut(Vec<u8>)) -> bool {
+    loop {
+        push(read_text(sp));
         if !next_char(sp, b',') {
             return true;
         }
@@ -306,6 +336,16 @@ impl EeWonCfgVal {
                     read_int_list_list(&mut default_parser(d, wide), t);
                 }
             }
+            // SAFETY (the Rust targets): the contract
+            Kind::RStr(t, d) => unsafe { *t = c_units(d) },
+            Kind::RWStr(t, d) => unsafe { *t = c_units(d) },
+            Kind::RStrList(t, d, _) => {
+                let l = unsafe { &mut *t };
+                l.clear();
+                if !d.is_null() {
+                    read_strings_to(&mut default_parser(d as *const c_void, false), &mut |i| l.push(i));
+                }
+            }
         }
     }
 
@@ -365,6 +405,29 @@ impl EeWonCfgVal {
                 }
                 read_int_list_list(sp, t)
             }
+            Kind::RStr(t, _) => {
+                // SAFETY: the contract
+                unsafe { *t = read_text(sp) };
+                true
+            }
+            Kind::RWStr(t, _) => {
+                let mut text: Vec<WChar> = Vec::new();
+                let u = unit(sp);
+                // SAFETY: as `read_text`
+                unsafe {
+                    ee_won_parser_read_wstring(sp.text, u, &mut sp.pos, false, sink_wide, ctx(&mut text) as *mut c_void)
+                };
+                unsafe { *t = text };
+                true
+            }
+            Kind::RStrList(t, _, additive) => {
+                // SAFETY: the contract
+                let l = unsafe { &mut *t };
+                if !additive {
+                    l.clear();
+                }
+                read_strings_to(sp, &mut |i| l.push(i))
+            }
         }
     }
 
@@ -419,6 +482,10 @@ impl EeWonCfgVal {
                     }
                 }
             }
+            // SAFETY (the Rust targets): the contract
+            Kind::RStr(t, _) => out.extend_from_slice(unsafe { &*t }),
+            Kind::RWStr(t, _) => out.extend_from_slice(&ee_won_net::titleobj::narrow(unsafe { &*t })),
+            Kind::RStrList(t, ..) => out.extend_from_slice(&unsafe { &*t }.join(&b", "[..])),
         }
     }
 
@@ -445,6 +512,10 @@ impl EeWonCfgVal {
             (Kind::IntListList(a, ..), Kind::IntListList(b, ..)) => {
                 h(O::LlCopy, a, b as isize, 0, 0);
             }
+            // SAFETY (the Rust targets): the contract (a copy of the source first: the two may be one)
+            (Kind::RStr(a, _), Kind::RStr(b, _)) => unsafe { *a = (*b).clone() },
+            (Kind::RWStr(a, _), Kind::RWStr(b, _)) => unsafe { *a = (*b).clone() },
+            (Kind::RStrList(a, ..), Kind::RStrList(b, ..)) => unsafe { *a = (*b).clone() },
             _ => return false,
         }
         true
@@ -523,6 +594,30 @@ pub unsafe extern "C" fn ee_won_cfgval_int_list_list(
     additive: bool,
 ) -> *mut EeWonCfgVal {
     EeWonCfgVal::new(Kind::IntListList(target, initial, wide, additive))
+}
+
+/// `ConfigStringValue<char>` over a Rust-owned text (a record's member; `initial` NUL-terminated, NULL for none).
+///
+/// # Safety
+/// `target` and `initial` outlive the value.
+pub unsafe fn rust_string(target: *mut Vec<u8>, initial: *const u8) -> *mut EeWonCfgVal {
+    EeWonCfgVal::new(Kind::RStr(target, initial))
+}
+
+/// `ConfigStringValue<wchar_t>` over a Rust-owned wide text.
+///
+/// # Safety
+/// As `rust_string`.
+pub unsafe fn rust_wstring(target: *mut Vec<WChar>, initial: *const WChar) -> *mut EeWonCfgVal {
+    EeWonCfgVal::new(Kind::RWStr(target, initial))
+}
+
+/// `ConfigListValue<std::list<std::string> >` over a Rust-owned list (narrow default text, NULL for none).
+///
+/// # Safety
+/// As `rust_string`.
+pub unsafe fn rust_string_list(target: *mut Vec<Vec<u8>>, initial: *const u8, additive: bool) -> *mut EeWonCfgVal {
+    EeWonCfgVal::new(Kind::RStrList(target, initial, additive))
 }
 
 /// `StringParser(text).ReadValue(list)` into a Rust list (ReadStrings: an item, then another after each ','), the

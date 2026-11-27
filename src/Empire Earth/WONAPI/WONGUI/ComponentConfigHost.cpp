@@ -20,7 +20,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyBackground.h"
-#include "ee/wonapi/WONLobbyControlConfig.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyImageButton.h"

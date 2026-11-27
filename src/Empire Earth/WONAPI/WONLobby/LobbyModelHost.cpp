@@ -6,24 +6,12 @@
 // and records: the directory's entries handed to the Rust as values, the summaries, the join request and reply, a
 // player's bytes, the status texts. The routing server's records are read in Rust (R6 WONLobby round 12).
 #include <windows.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <string.h>
-#include <time.h>
-#include <string>
-#include <list>
-#include <vector>
-#include <map>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyParser.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/model.h"
-#include "rust/won_lobby/modelobj.h"
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/lobbyhost.h"
@@ -171,8 +159,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::Ping: return (intptr_t)(g->GetPing());
     case Op::JoinRequestHook: g->GetJoinGameRequestHook(*wb); return 0;
     case Op::IsFull: return (g->IsFull()) ? 1 : 0;
-    case Op::ConfigGet: return (intptr_t)(GetLobbyConfig());
-    case Op::ConfigAllowDuplicates: return (reinterpret_cast<LobbyConfig*>(a)->mAllowDuplicateNames) ? 1 : 0;
+    case Op::ConfigGet: return (intptr_t)ee_won_lobbyconf_current();
+    case Op::ConfigAllowDuplicates: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::AllowDuplicateNames);
     case Op::ClientsGet: return (intptr_t)(Held(g->GetClients().get()));
     case Op::ListCount: return (intptr_t)(reinterpret_cast<LobbyClientList*>(a)->GetCount());
     case Op::ListAt: return (intptr_t)(reinterpret_cast<LobbyClientList*>(a)->ClientAt((size_t)b));

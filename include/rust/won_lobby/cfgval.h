@@ -78,6 +78,9 @@ enum class EeWonCfgValCall : uint32_t {
 /// One value (the C++ `ConfigValueBase*` the groups hold).
 struct EeWonCfgVal;
 
+/// Receives a wide string's `wchar_t` units; valid only during the call.
+using EeWonCfgValUnits = void(*)(void *context, const void *units, size_t count);
+
 /// The host: `(op, t, a, b, c) -> result`.
 using EeWonCfgValHostFn = ptrdiff_t(*)(EeWonCfgValOp op,
                                        void *t,

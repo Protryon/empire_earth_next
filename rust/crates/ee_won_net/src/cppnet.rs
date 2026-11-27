@@ -140,11 +140,111 @@ pub fn queue_close(socket: *mut c_void, timeout: c_long) {
 pub fn socket_listen(socket: *mut c_void, backlog: i32) -> i32 {
     cppcore::socket(socket).map_or(crate::status::WS_ASYNC_SOCKET_INVALID_SOCKET, |s| s.listen(backlog)) as i32
 }
+/// `socket->IsConnected()` (false for none).
+pub fn socket_connected(socket: *mut c_void) -> bool {
+    cppcore::socket(socket).is_some_and(|s| s.is_connected())
+}
+/// `((RoutingOp*)o)->SetNum(field, value)`.
+pub fn route_set_num(o: *mut c_void, field: i32, value: i64) {
+    let r = cppcore::object_of(o, EeWonCoreObject::RouteOp) as *mut crate::routeop::EeWonRouteOp;
+    if !r.is_null() {
+        // SAFETY: the op's live Rust op
+        unsafe { crate::routeop::ee_won_routeop_set_num(r, field, value) };
+    }
+}
+/// `((RoutingOp*)o)->mConnection.get()`: the connection the op was made on (its Rust op keeps it).
+pub fn route_connection(o: *mut c_void) -> *mut c_void {
+    let r = cppcore::object_of(o, EeWonCoreObject::RouteOp) as *const crate::routeop::EeWonRouteOp;
+    // SAFETY: the op's live Rust op
+    unsafe { r.as_ref() }.map_or(null_mut(), |r| r.1 as *mut c_void)
+}
+/// `((ServerConnection*)conn)->SetAuth(context, type)`.
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the pointers reach only the C++ table, as the host's case passed them
+pub fn servconn_set_auth(conn: *mut c_void, context: *mut c_void, auth_type: i32) {
+    let c = cppcore::object_of(conn, EeWonCoreObject::ServerConn) as *const crate::servconn::EeWonServerConn;
+    if !c.is_null() {
+        // SAFETY: the connection's live Rust object
+        unsafe { crate::servconn::ee_won_servconn_set_auth(c, context, auth_type) };
+    }
+}
+/// `((UDPManagerSendRecvOp*)o)->GetDestAddr()` (none for another op).
+pub fn udp_request_address(o: *mut c_void) -> Option<EeWonIpAddr> {
+    let r = cppcore::object_of(o, EeWonCoreObject::UdpSendRecv) as *const crate::udpops::EeWonUdpSendRecvOp;
+    // SAFETY: the op's live Rust object
+    unsafe { r.as_ref() }.map(|r| r.address())
+}
+/// `new RoutingOp(conn, type)` (no reference yet; null without the table).
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the pointers reach only the C++ table, as the host's case passed them
+pub fn new_route_op(conn: *mut c_void, ty: i32) -> *mut c_void {
+    // SAFETY: the table's contract
+    cppcore::core().and_then(|c| c.new_route_op).map_or(null_mut(), |h| unsafe { h(conn, ty) })
+}
+/// `((ServerContext*)context)->NotifyFailed(((RustServerOp*)op)->GetCurAddr())`: the request's current server to
+/// the end of the list.
+pub fn context_notify_failed(context: *mut c_void, op: *mut c_void) {
+    let list = cppcore::object_of(context, EeWonCoreObject::Context) as *const crate::servctx::ServerList;
+    let Some(h) = cppcore::host_op_of(op) else { return };
+    if list.is_null() {
+        return;
+    }
+    // SAFETY: the op's live Rust op; the new address is freed below; the context's live list
+    unsafe {
+        let a = crate::hostop::ee_won_hostop_addr(h, crate::reqhost::EE_WON_REQHOST_CUR_ADDR);
+        crate::ipobj::ee_won_ctx_ip(list, 1, a);
+        crate::ipobj::ee_won_ipaddr_free(a);
+    }
+}
+
 /// `socket->Kill()`.
 pub fn socket_kill(socket: *mut c_void) {
     if let Some(s) = cppcore::socket(socket) {
         s.kill()
     }
+}
+
+// ---- the lobby logics' completions and runs (R6 WON lobby and network round 40: logicshell.rs)
+
+/// `op->SetCompletion(completion)` (a reference taken on a new one, the old one's given back).
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the completion reaches only the C++ table, as the host's case passed it
+pub fn op_set_completion(o: *mut c_void, completion: *mut c_void) {
+    if let Some(op) = cppcore::op(o) {
+        // SAFETY: the caller's live completion or null
+        unsafe { op.set_completion(completion) }
+    }
+}
+/// `op->RunAsync(timeout)`.
+pub fn op_run_async(o: *mut c_void, timeout: u32) {
+    if let Some(op) = cppcore::op(o) {
+        op.run(1, timeout);
+    }
+}
+/// `((RoutingConnection*)conn)->SetOpCompletion(type, completion)`.
+pub fn routeconn_set_completion(conn: *mut c_void, ty: i32, completion: *mut c_void) {
+    let r = cppcore::object_of(conn, EeWonCoreObject::RouteConn) as *const crate::routeconn::EeWonRouteConn;
+    // SAFETY: the connection's live Rust object
+    if let Some(r) = unsafe { r.as_ref() } {
+        r.set_completion(ty, completion)
+    }
+}
+/// `((QueueSocket*)socket)->SetCloseCompletion(completion)`.
+pub fn queue_set_close_completion(socket: *mut c_void, completion: *mut c_void) {
+    if let Some(q) = cppcore::queue(socket) {
+        q.set_close_completion(completion)
+    }
+}
+/// `((UDPManager*)manager)->SetDefaultCompletion(completion)`.
+pub fn udp_set_default_completion(manager: *mut c_void, completion: *mut c_void) {
+    let m = cppcore::object_of(manager, EeWonCoreObject::UdpManager) as *const crate::udpmgr::EeWonUdpManager;
+    // SAFETY: the manager's live Rust object
+    if let Some(m) = unsafe { m.as_ref() } {
+        m.set_default_completion(completion as usize)
+    }
+}
+/// `((UDPManagerRecvOp*)o)->GetMsg()` (null for none or another op).
+pub fn udp_recv_msg(o: *mut c_void) -> *mut c_void {
+    let r = cppcore::object_of(o, EeWonCoreObject::UdpRecv) as *const crate::udpops::EeWonUdpRecvOp;
+    // SAFETY: the op's live Rust object
+    unsafe { r.as_ref() }.map_or(null_mut(), |r| r.msg() as *mut c_void)
 }
 
 #[cfg(test)]

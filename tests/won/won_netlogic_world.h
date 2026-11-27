@@ -148,11 +148,11 @@ struct ServerContext : RefCount {
     }
     void NotifyFailed(const IPAddr& a) { Log(Id(this) + " NotifyFailed " + N(a.mValue)); }
 };
+// one server name added to a list (R6 WON lobby/net round 40: the Rust adds the config's names one by one)
+static void InitAddOne(ServerContext* inList, const std::string& inName) { Log("AddAddress " + Id(inList) + " " + inName); }
 static void InitAddAll(ServerContext* inList, const std::list<std::string>& inNames)
 {
-    std::string s;
-    for (const std::string& n : inNames) s += n + ",";
-    Log("InitAddAll " + Id(inList) + " " + s);
+    for (const std::string& n : inNames) InitAddOne(inList, n);
 }
 // a Rust request's description (the op it makes, described and freed)
 static std::string ReqText(EeWonReqOp* inOp)

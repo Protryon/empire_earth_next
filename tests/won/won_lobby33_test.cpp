@@ -17,7 +17,7 @@
 #include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/chatlink.h"
-#include "rust/won_lobby/lobbyconf.h"
+#include "rust/won_lobby/lobbyconf.h" // the config's record (R6 WON lobby/net round 40: won_lobbyconf_test runs the class)
 #include "rust/won_lobby/lobbycfgrd.h"
 #include "won_lobby33_orig.h"
 #include "won_lobby33_new.h"
@@ -27,9 +27,28 @@ using namespace L33World;
 // R6 WON lobby and network round 38: WONLobbyPrv's plain members are lobbyprv.rs's. The new side starts from the
 // world's values (a lobby made with no host, then each member set) and its values are copied back for the dump.
 typedef EeWonLobbyPrvField PF;
+// the world's config as the Rust's record (lobbyconf.rs; R6 WON lobby/net round 40), the lobby's
+static EeWonLobbyConf* sRustConf;
+static void ConfToRust(LobbyConfig* c)
+{
+    ee_won_lobbyconf_free(sRustConf);
+    sRustConf = NULL;
+    if (c == NULL) return;
+    sRustConf = ee_won_lobbyconf_new(NULL);
+    typedef EeWonLobbyConfText T;
+    const std::string* t[] = {&c->mProductName, &c->mVersion, &c->mLanVersion, &c->mLanguage, &c->mResourceDirectory};
+    T k[] = {T::ProductName, T::Version, T::LanVersion, T::Language, T::ResourceDirectory};
+    for (int i = 0; i < 5; i++) ee_won_lobbyconf_set_text(sRustConf, k[i], (const uint8_t*)t[i]->data(), t[i]->size());
+    ee_won_lobbyconf_set_num(sRustConf, EeWonLobbyConfNum::LobbyPort, c->mLobbyPort);
+    ee_won_lobbyconf_set_num(sRustConf, EeWonLobbyConfNum::CdKeyCheck, c->mCDKeyCheck);
+    for (const auto& d : c->mDefines)
+        ee_won_lobbyconf_set_define(sRustConf, (const uint8_t*)d.first.data(), d.first.size(), (const uint8_t*)d.second.data(), d.second.size());
+    ee_won_lobbyconf_set_current(sRustConf);
+}
 static void PrvToRust(WONLobbyPrv& p)
 {
     ee_won_lobbyprv_call(&p, NULL, EeWonLobbyPrvCall::Construct, 0, 0);
+    ConfToRust(p.mConfig.get());
     ee_won_lobbyprv_set(PF::VersionStatus, p.mVersionStatus);
     ee_won_lobbyprv_set(PF::ProductId, p.mProductId);
     ee_won_lobbyprv_set(PF::LanProductId, p.mLanProductId);
@@ -43,6 +62,10 @@ static void PrvToRust(WONLobbyPrv& p)
     std::string aFiles;
     for (const std::string& f : p.mHashFileList) aFiles.append(f.c_str(), f.size() + 1);
     ee_won_lobbyprv_set_hash_files(reinterpret_cast<const uint8_t*>(aFiles.data()), aFiles.size());
+    // R6 WON lobby/net round 40: the run state
+    ee_won_lobbyprv_set(PF::LobbyStatus, p.mLobbyStatus);
+    ee_won_lobbyprv_set(PF::RunMode, p.mRunMode);
+    ee_won_lobbyprv_set(PF::Suspended, p.mSuspended);
 }
 static void HashFilesSink(void* inList, const uint8_t* inBytes, size_t inLength)
 {
@@ -63,6 +86,9 @@ static void PrvFromRust(WONLobbyPrv& p)
     p.mFirewallTestDone = ee_won_lobbyprv_get(PF::FirewallTestDone) != 0;
     p.mHasSetHashFileList = ee_won_lobbyprv_get(PF::HashFilesSet) != 0;
     ee_won_lobbyprv_hash_files(HashFilesSink, &p.mHashFileList);
+    p.mLobbyStatus = (LobbyStatus)ee_won_lobbyprv_get(PF::LobbyStatus);
+    p.mRunMode = (LobbyRunMode)ee_won_lobbyprv_get(PF::RunMode);
+    p.mSuspended = ee_won_lobbyprv_get(PF::Suspended) != 0;
     ee_won_lobbyprv_drop(&p);
 }
 
@@ -151,15 +177,6 @@ void ServerListCtrlConfig::HandleAddColumn()
 {
     if (sSide == 0) L33Orig::ServerList_HandleAddColumn(this);
     else NewCfgRd(this, EeWonLobbyCfgRdCall::ServerListAddColumn, std::string());
-}
-static std::map<int, int> sConfHits;
-static intptr_t MutConf(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t c)
-{
-    sConfHits[(int)inOp]++;
-    if (sMutate == 17 && inOp == EeWonLobbyConfOp::KeyPingCeiling) return 0;
-    if (sMutate == 18 && inOp == EeWonLobbyConfOp::DefineLocalsClear) return 0;
-    if (sMutate == 19 && inOp == EeWonLobbyConfOp::RegistryValue) return 0;
-    return L33New::ConfHost(inConfig, inOp, a, b, c);
 }
 static intptr_t NewBuf(void* inObj, EeWonModelBufCall inCall, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -525,58 +542,6 @@ static void LinkCases()
         }
 }
 
-// ---- LobbyConfig: the constructor over the registry's answers, HandleValueInstruction over its lines
-
-static void ConfCases()
-{
-    for (int k = 0; k < 4; k++) {
-        std::vector<std::string> aTraces[2];
-        for (int aSide = 0; aSide < 2; aSide++) {
-            sObjects.clear();
-            sTrace.clear();
-            sRegistry = k < 2 ? 0 : 2;
-            sRegistryValue = (k & 1) ? 5 : 0;
-            gLobbyUseLocalIP = true;
-            LobbyConfig* c = new LobbyConfig;
-            if (aSide == 0) L33Orig::ConfConstruct(c);
-            else ee_won_lobbyconf_call(c, MutConf, EeWonLobbyConfCall::Construct, 0, 0, 0);
-            Log("useLocalIP " + N(c->mUseLocalIP) + " global " + N(gLobbyUseLocalIP));
-            aTraces[aSide].swap(sTrace);
-        }
-        Compare("ConfConstruct", aTraces);
-    }
-    static const char* kKeys[3] = {"LOBBYDEFINE", "LobbyDefine", "DirServer"};
-    static const char* kLines[3] = {"Product EmpireEarth Gold", "", "  lan"};
-    for (int k = 0; k < 27; k++) {
-        std::vector<std::string> aTraces[2];
-        for (int aSide = 0; aSide < 2; aSide++) {
-            sObjects.clear();
-            sTrace.clear();
-            ConfigParser::sNext = 0;
-            sBaseValue = k / 9;
-            LobbyConfig* c = new LobbyConfig;
-            c->mDefines["old"] = "1";
-            ConfigParser aParser;
-            std::string aKey(kKeys[k % 3]);
-            StringParser aValues(kLines[(k / 3) % 3]);
-            sTrace.clear();
-            try {
-                bool r;
-                if (aSide == 0) r = L33Orig::ConfHandleValue(c, &aParser, aKey, aValues);
-                else r = WonRethrow(ee_won_lobbyconf_call(c, MutConf, EeWonLobbyConfCall::HandleValue, (intptr_t)&aParser, (intptr_t)&aKey, (intptr_t)&aValues)) != 0;
-                Log("result " + N(r));
-            } catch (WorldThrow& e) {
-                Log("threw " + N(e.mWhich));
-            }
-            std::string d;
-            for (const auto& e : c->mDefines) d += e.first + "=" + e.second + ";";
-            Log("defines " + d);
-            aTraces[aSide].swap(sTrace);
-        }
-        Compare("ConfHandleValue", aTraces);
-    }
-}
-
 // ---- the config readers: each reader's keys (and one it does not know) over random tokens, named components and
 // base answers
 
@@ -764,7 +729,6 @@ int main()
     sMutate = m != NULL ? atoi(m) : 0;
     PrvCases();
     LinkCases();
-    ConfCases();
     int aPrvChecks = sChecks;
     for (int aCall = 0; aCall < 10; aCall++)
         for (unsigned seed = 1; seed <= 3000; seed++) BufCase(aCall, seed * 7919u + (unsigned)aCall);
@@ -791,19 +755,14 @@ int main()
             printf("  reader op %d not reached\n", i);
             aMissed++;
         }
-    for (int i = 1; i <= (int)EeWonLobbyConfOp::BaseHandleValue; i++)
-        if (sConfHits.count(i) == 0) {
-            printf("  conf op %d not reached\n", i);
-            aMissed++;
-        }
     for (int i = 1; i <= (int)EeWonChatLinkOp::ClearPrevious; i++)
         if (sLinkHits.count(i) == 0) {
             printf("  link op %d not reached\n", i);
             aMissed++;
         }
-    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size() + sConfHits.size() + sCfgRdHits.size()),
+    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size() + sCfgRdHits.size()),
            (int)EeWonLobbyPrvOp::AllocPlayerOptionsCtrl + (int)EeWonModelBufOp::PlayerWriteData +
-               (int)EeWonChatLinkOp::ClearPrevious + (int)EeWonLobbyConfOp::BaseHandleValue + (int)EeWonLobbyCfgRdOp::CreditsAddLine);
+               (int)EeWonChatLinkOp::ClearPrevious + (int)EeWonLobbyCfgRdOp::CreditsAddLine);
     if (sMutate == 0) sFailures += aMissed;
     if (sMutate != 0) {
         printf("mutation %d: %s\n", sMutate, sFailures > 0 ? "caught" : "MISSED");

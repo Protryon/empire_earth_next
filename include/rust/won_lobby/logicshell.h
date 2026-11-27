@@ -94,6 +94,14 @@ using EeWonLogicShellFindFn = ptrdiff_t(*)(void *logic,
                                            const char *file,
                                            int32_t line);
 
+/// The shell's C++ (LobbyLogic.cpp binds it at start-up, R6 WON lobby and network round 40): `new
+/// ShellCompletion(logic, done, code)` (its `mCheckTracker` set for a tracked run; no reference taken yet; a
+/// `LobbyCompletionBase`, run on the window thread) and the logic's op tracker (`logic->mTracker`'s Rust object).
+struct EeWonLogicShellCpp {
+  void *(*completion)(void *logic, EeWonLogicShellDone done, int32_t code, bool tracked);
+  EeWonOpTracker *(*tracker)(void *logic);
+};
+
 /// A route as numbers, for the golden driver (won_shell36_test): the target (0 none, 1 logic, 2 dialog, 3 routing,
 /// 4 staging, 5 LAN), the call's number, its arguments, the answer of a call-less route, and a completion's
 /// `checked`.
@@ -137,6 +145,9 @@ void ee_won_logicshell_done(EeWonLogicShellKind kind,
                             bool check_tracker,
                             EeWonRemoveTrackedFn remove,
                             void *logic);
+
+/// Binds the shell's C++ (a static table; null leaves the binding as it is).
+void ee_won_logicshell_bind(const EeWonLogicShellCpp *cpp);
 
 /// Frees the kind's Rust object (the shell's destructor).
 ///

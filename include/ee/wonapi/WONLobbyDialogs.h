@@ -80,12 +80,5 @@ public:
 // a new popup of kind k, its Init(a, b, c) and LobbyOpenPopup as a standard popup
 void LobbyOpenRustPopup(EeWonLobbyPopupKind k, intptr_t a, intptr_t b = 0, intptr_t c = 0);
 
-// CreditsDialogConfig: reads the credits dialog's resource configuration; 14 vtable slots (partial declaration).
-class CreditsDialogConfig : public ContainerConfig {
-public:
-    CreditsDialogConfig() : ContainerConfig(EeWonCfgKind::Dialog) {}
-    virtual bool Virtual24(const std::string& inInstruction); // 0x7f7780; handles the ADDLINE instruction
-};
-
 }
 #endif

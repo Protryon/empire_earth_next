@@ -3,18 +3,8 @@
 // order, EeWonLobbyRes their names); the original's named globals are one slot per row (LOBBY_STRING(name) etc.).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <string>
-#include <list>
-#include <map>
-#include <set>
-#include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyResourceGlobals.h"
-#include "rust/won_lobby/resource.h"
-#include "rust/won_lobby/lobbyids.h"
 using namespace WONAPI;
 
 // the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row
@@ -34,12 +24,6 @@ ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
     return aTable;
 }
 
-// The string and background getters fold to one body, the pointer and value getters to another.
-// Returns the lobby string resource with the given id
-const GUIString& LobbyResource_GetString(LobbyResourceId id) { return gLobbyResources[id].mString; }
-// Returns the lobby image resource with the given id (the original's served sounds, fonts, colours and ints too)
-Image* LobbyResource_GetImage(LobbyResourceId id) { return gLobbyResources[id].mImage.get(); }
-Sound* LobbyResource_GetSound(LobbyResourceId id) { return gLobbyResources[id].mSound.get(); }
 
 // Loads every lobby string, image and sound from its section of the resource table (ee_won's rows in order: a
 // section is looked up again where it changes, as the original's statements did)

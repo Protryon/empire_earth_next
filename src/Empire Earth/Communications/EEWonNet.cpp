@@ -205,13 +205,3 @@ std::wstring EEWonNet::GetRoomName()
     ee_won_wonnet_call(this->mRust, Call::RoomName, (intptr_t)&theName, 0, 0);
     return theName;
 }
-
-// DEAD-IN-AOC: base exe 0x6a2220, only the dead dtor calls it. Partial: the base body also waits when inFlag is set
-// (0x6a2270).
-void WONLobbyWindow::Close(bool inFlag)
-{
-    if (!this->mClosed) {
-        this->mClosed = true;
-        this->Virtual18();
-    }
-}

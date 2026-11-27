@@ -5,6 +5,11 @@
 //! one-statement C++ ops (each unit's `CfgRdHost`, the reads LobbyNetCtrlHost.cpp's `LobbyCfgReadHost`), in the
 //! original's order. The instruction keys and names are ee_won_gui's guiconf tables.
 //!
+//! Since R6 WON lobby/net round 40 the nine classes are config kinds (ee_won_gui cfgkind.rs `LOBBY_KINDS`): the
+//! config's `Virtual24` asks this reader for its kind ([`EeWonLobbyCfgRdCall::OfKind`]) and the reader's base call is
+//! the walk of the base kind ([`EeWonLobbyCfgRdOp::Base`]); the game list's header and column count are the config's
+//! two slots (compcfg.rs). One host answers every op (LobbyNetCtrlHost.cpp).
+//!
 //! A C++ exception never unwinds through this code: every read (and the base classes' readers) runs under
 //! WONLobbyGuard.h's `WonGuard`, and the original's `throw ConfigObjectException(...)` is an op that makes the
 //! exception and keeps it; the reader then answers `EE_WON_LOBBY_THROWN` (its texts released, as the unwinding
@@ -50,14 +55,13 @@ pub enum EeWonLobbyCfgRdOp {
     Throw,
     /// `throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b))`.
     ThrowWithText,
+    /// The base kind's walk: `CfgKindV24(c, (EeWonCfgKind)b, *(const std::string*)a)` (the classes'
+    /// `ContainerConfig::Virtual24` / `ComponentConfig::Virtual24` calls).
+    Base,
     // ---- ChatCtrlConfig
-    /// `cc->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    ChatBase,
     /// `cc->mChatCtrl->SetField((int)a, b)`.
     ChatSetField,
     // ---- RoomLabelCtrlConfig
-    /// `rl->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    RoomBase,
     /// `rl->mRoomLabel->SetField(0, Dat(c->ReadString(false)))`.
     RoomSetPrefixRead,
     /// `rl->mRoomLabel->SetField((int)a, b)`.
@@ -65,12 +69,8 @@ pub enum EeWonLobbyCfgRdOp {
     /// `rl->mRoomLabel->SetField((int)a, c->ReadBool())`.
     RoomSetFieldBoolRead,
     // ---- UserListCtrlConfig
-    /// `ul->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    UserListBase,
     // ---- ServerListCtrlConfig
-    /// `sl->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    ServerBase,
-    /// `sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b)`.
+    /// `CfgOwnNamed(c, *(const std::string*)a, *(int*)b)` (the base's `ComponentConfig::GetNamedValue`).
     ServerNamedBase,
     /// `sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b)`.
     ServerCfg,
@@ -99,8 +99,6 @@ pub enum EeWonLobbyCfgRdOp {
     /// `sl->mHeader->SetColumnItem(sl->mNumColumns - 1, (Component*)a)`.
     ServerHeaderSetColumnItem,
     // ---- GameBrowserCtrlConfig
-    /// `gb->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    BrowserBase,
     /// `sCfgRdPath = (std::string)c->ReadString(false)`.
     BrowserPathRead,
     /// `URL(sCfgRdPath).GetType() == URLType_File`.
@@ -110,18 +108,12 @@ pub enum EeWonLobbyCfgRdOp {
     /// `gb->mBrowser->SetHomeLocation(sCfgRdPath)`.
     BrowserSetHome,
     // ---- GameUserListCtrlConfig
-    /// `gu->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    GameUserListBase,
     // ---- CrossPromotionButtonConfig
-    /// `cp->ComponentConfig::Virtual24(*(const std::string*)a)`.
-    CrossBase,
     /// `cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false))`.
     CrossDefaultImageRead,
     /// `cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false))`.
     CrossDefaultBrowseRead,
     // ---- ImageTextButtonConfig
-    /// `it->ComponentConfig::Virtual24(*(const std::string*)a)`.
-    ImageTextBase,
     /// `it->mImageTextButton->mFont = c->ReadFont()`.
     ImageTextFontRead,
     /// `it->mImageTextButton->mText = c->ReadString(false)`.
@@ -129,8 +121,6 @@ pub enum EeWonLobbyCfgRdOp {
     /// `it->mImageTextButton->mBrowse = c->ReadString(false)`.
     ImageTextBrowseRead,
     // ---- CreditsDialogConfig
-    /// `cr->ContainerConfig::Virtual24(*(const std::string*)a)`.
-    CreditsBase,
     /// `CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)` (`LCall(AddLine, &line, ...)`).
     CreditsAddLine,
 }
@@ -152,6 +142,42 @@ pub enum EeWonLobbyCfgRdCall {
     CrossPromotion,
     ImageText,
     Credits,
+    /// `Virtual24(key)` of a config of the lobby kind `d` (an `EeWonCfgKind` of `LOBBY_KINDS`).
+    OfKind,
+}
+
+use ee_won_gui::cfgkind::EeWonCfgKind as Kind;
+
+/// The reader of a lobby kind's `Virtual24` (None for another kind).
+fn call_of(kind: isize) -> Option<EeWonLobbyCfgRdCall> {
+    type C = EeWonLobbyCfgRdCall;
+    let k = ee_won_gui::cfgkind::LOBBY_KINDS.into_iter().find(|&k| k as isize == kind)?;
+    Some(match k {
+        Kind::LobbyChat => C::ChatCtrl,
+        Kind::LobbyRoomLabel => C::RoomLabel,
+        Kind::LobbyUserList => C::UserList,
+        Kind::LobbyServerList => C::ServerList,
+        Kind::LobbyGameBrowser => C::GameBrowser,
+        Kind::LobbyGameUserList => C::GameUserList,
+        Kind::LobbyCrossPromotion => C::CrossPromotion,
+        Kind::LobbyImageText => C::ImageText,
+        _ => C::Credits,
+    })
+}
+
+/// The kind whose walk a reader's base call is (the class the original's reader derived from).
+fn base_of(which: EeWonLobbyCfgRdCall) -> Kind {
+    type C = EeWonLobbyCfgRdCall;
+    match which {
+        C::CrossPromotion | C::ImageText => Kind::ImageButton,
+        C::Credits => Kind::Dialog,
+        _ => Kind::Container,
+    }
+}
+
+/// The base kind's walk of the key `k` (a `const std::string*`) for the reader `which`.
+fn base_v24(o: Out, which: EeWonLobbyCfgRdCall, k: isize) -> R<isize> {
+    ok(o(Op::Base, k, base_of(which) as isize, 0))
 }
 
 use EeWonLobbyCfgRdOp as Op;
@@ -209,7 +235,7 @@ fn key_index(table: i32, key: isize, len: isize) -> i32 {
 const CHAT_COLORS: [isize; 11] = [0, 5, 6, 1, 3, 2, 4, 7, 8, 9, 10];
 
 fn chat(o: Out, key: i32, k: isize) -> R<bool> {
-    if ok(o(Op::ChatBase, k, 0, 0))? != 0 {
+    if base_v24(o, EeWonLobbyCfgRdCall::ChatCtrl, k)? != 0 {
         return Ok(true);
     }
     match key {
@@ -250,7 +276,7 @@ fn room_label(o: Out, key: i32, k: isize) -> R<bool> {
         2 | 3 => {
             ok(o(Op::RoomSetFieldBoolRead, key as isize, 0, 0))?;
         }
-        _ => return Ok(ok(o(Op::RoomBase, k, 0, 0))? != 0),
+        _ => return Ok(base_v24(o, EeWonLobbyCfgRdCall::RoomLabel, k)? != 0),
     }
     Ok(true)
 }
@@ -259,7 +285,7 @@ fn room_label(o: Out, key: i32, k: isize) -> R<bool> {
 use crate::srvlistctl::EeWonLobbyCtlCfg as Cfg;
 
 fn server_list(o: Out, key: i32, k: isize) -> R<bool> {
-    if ok(o(Op::ServerBase, k, 0, 0))? != 0 {
+    if base_v24(o, EeWonLobbyCfgRdCall::ServerList, k)? != 0 {
         return Ok(true);
     }
     let type_name =
@@ -356,7 +382,7 @@ fn add_column(o: Out) -> R<()> {
 
 fn read(which: EeWonLobbyCfgRdCall, key_bytes: isize, len: isize, k: isize, d: isize, o: Out) -> R<isize> {
     type C = EeWonLobbyCfgRdCall;
-    let base = |op: Op| -> R<isize> { Ok((ok(o(op, k, 0, 0))? != 0) as isize) };
+    let base = || -> R<isize> { Ok((base_v24(o, which, k)? != 0) as isize) };
     Ok(match which {
         C::ChatCtrl => {
             chat(o, key_index(gc::EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY, key_bytes, len), k)? as isize
@@ -367,7 +393,7 @@ fn read(which: EeWonLobbyCfgRdCall, key_bytes: isize, len: isize, k: isize, d: i
         }
         C::UserList => match key_index(gc::EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION, key_bytes, len) {
             0 | 1 => 1,
-            _ => base(Op::UserListBase)?,
+            _ => base()?,
         },
         C::ServerList => server_list(
             o,
@@ -389,7 +415,7 @@ fn read(which: EeWonLobbyCfgRdCall, key_bytes: isize, len: isize, k: isize, d: i
             0
         }
         C::GameBrowser => {
-            if ok(o(Op::BrowserBase, k, 0, 0))? != 0 {
+            if base_v24(o, which, k)? != 0 {
                 return Ok(1);
             }
             if key_index(gc::EE_WON_CFG_KEYS_GAMEBROWSERCTRLCONFIG_VIRTUAL24_INSTRUCTION, key_bytes, len) != 0 {
@@ -405,25 +431,29 @@ fn read(which: EeWonLobbyCfgRdCall, key_bytes: isize, len: isize, k: isize, d: i
         C::GameUserList => {
             match key_index(gc::EE_WON_CFG_KEYS_GAMEUSERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION, key_bytes, len) {
                 0 => 1,
-                _ => base(Op::GameUserListBase)?,
+                _ => base()?,
             }
         }
         C::CrossPromotion => {
             match key_index(gc::EE_WON_CFG_KEYS_CROSSPROMOTIONBUTTONCONFIG_VIRTUAL24_KEY, key_bytes, len) {
                 0 => op0(o, Op::CrossDefaultImageRead).map(|_| 1)?,
                 1 => op0(o, Op::CrossDefaultBrowseRead).map(|_| 1)?,
-                _ => base(Op::CrossBase)?,
+                _ => base()?,
             }
         }
         C::ImageText => match key_index(gc::EE_WON_CFG_KEYS_IMAGETEXTBUTTONCONFIG_VIRTUAL24_KEY, key_bytes, len) {
             0 => op0(o, Op::ImageTextFontRead).map(|_| 1)?,
             1 => op0(o, Op::ImageTextTextRead).map(|_| 1)?,
             2 => op0(o, Op::ImageTextBrowseRead).map(|_| 1)?,
-            _ => base(Op::ImageTextBase)?,
+            _ => base()?,
+        },
+        C::OfKind => match call_of(d) {
+            Some(c) => return read(c, key_bytes, len, k, 0, o),
+            None => 0,
         },
         C::Credits => {
             if key_index(gc::EE_WON_CFG_KEYS_CREDITSDIALOGCONFIG_VIRTUAL24_ININSTRUCTION, key_bytes, len) != 0 {
-                return base(Op::CreditsBase);
+                return base();
             }
             let line = read_string(o)?;
             let mut color: u32 = u32::MAX;
@@ -486,12 +516,12 @@ mod tests {
         });
         assert_eq!(
             (r, log.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-            (THROWN, vec!["ChatBase", "ReadString", "TextNameIndex", "ThrowWithText", "TextRelease"])
+            (THROWN, vec!["Base", "ReadString", "TextNameIndex", "ThrowWithText", "TextRelease"])
         );
         let (r, log) = run(EeWonLobbyCfgRdCall::ChatCtrl, "COLOR_USER", &|_| 0);
         assert_eq!(
             (r, log.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-            (1, vec!["ChatBase", "ReadColor", "ChatSetField"])
+            (1, vec!["Base", "ReadColor", "ChatSetField"])
         );
         let (r, _) = run(EeWonLobbyCfgRdCall::ChatCtrl, "NOPE", &|_| 0);
         assert_eq!(r, 0);
