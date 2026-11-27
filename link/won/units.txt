@@ -1,7 +1,6 @@
 29ef80 29f729 WONCommon/AsyncOp.cpp
 2f3070 2f3962 WONGUI/Button.cpp
 2f62b0 2f7903 WONGUI/Container.cpp
-329c30 32b519 WONGUI/Window.cpp
 32b660 33531e WONGUI/WindowManager.cpp
 357f30 358de2 WONLobby/LobbyConfig.cpp
 358e50 35b9be WONLobby/LobbyServiceSupport.cpp
