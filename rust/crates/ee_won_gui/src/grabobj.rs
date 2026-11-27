@@ -209,7 +209,8 @@ impl EeWonGrabber {
     /// The game's answers (R6 WON GUI round 39): the component's members and calls, and the background image (the C++
     /// grabber's `mBGImage`, its first member: an image handle) read in place: its presence and size, its draw on
     /// the Graphics `b` at (c, d), a capture `c` drawn into it at the two ints at `d`, its raw copy (one reference)
-    /// and that copy's pixels and size. None for the others (the debug window, the new image, the root's rectangle).
+    /// and that copy's pixels and size; the new image (the root window's CreateImage) and the root window's offscreen
+    /// image (R6 WON GUI round 40). None for the others (the debug window, the root's rectangle).
     fn game_op(&self, w: EeWonGrab, b: isize, c: isize, d: isize) -> Option<isize> {
         use crate::compobj::EeWonCompCall as K;
         use crate::imgobj::{ee_won_image_call, ee_won_image_get, image_of, EeWonImageCall as I, EeWonImageField as F};
@@ -270,6 +271,14 @@ impl EeWonGrabber {
                 G::RawPixels => ee_won_image_get(image_of(c)?, F::Pixels),
                 G::RawWidth => image_of(c)?.width() as u16 as isize,
                 G::RawHeight => image_of(c)?.height() as u16 as isize,
+                G::NewImage => {
+                    let old = std::mem::replace(&mut *(self.me as *mut isize), crate::gamewin::new_image(c, d));
+                    if old != 0 {
+                        crate::gamewin::rf(old, false);
+                    }
+                    0
+                }
+                G::Offscreen => crate::gamewin::offscreen(kc(K::Root, 0, 0)),
                 _ => return None,
             })
         }

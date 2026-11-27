@@ -45,6 +45,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/won_gui/gamewin.h" // ee_won_win_queue_input
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/EEUnit.h"
 #include "lle/USingleton.h"
@@ -216,13 +217,13 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxLobbyOpen: return EEIsLobbyOpen() ? 1 : 0;
     case EeFixtureOp::FxLobbyManager: return Handle(WONAPI::GetLobbyWindow());
     case EeFixtureOp::FxLobbyRootWindow: return Handle(WONAPI::LobbyGetRootWindow());
-    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(ee_fixture_lobby_work, 0));
+    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(WONAPI::NewUserEvent(ee_fixture_lobby_work, 0));
         return 0;
     case EeFixtureOp::FxWindowRoot: return Handle(As<WONAPI::Window>(c->h)->mRoot.get());
     case EeFixtureOp::FxManagerModal: return Handle(As<WONAPI::WindowManager>(c->h)->GetModalComponent());
-    case EeFixtureOp::FxWindowMouse: As<WONAPI::Window>(c->h)->QueueEvent(new WONAPI::MouseEvent(i[0] == 0 ? WONAPI::InputEvent_MouseMove : i[0] == 1 ? WONAPI::InputEvent_MouseDown : WONAPI::InputEvent_MouseUp, (int)i[1], (int)i[2], 0, 0));
+    case EeFixtureOp::FxWindowMouse: { EeWonWinEvent e = {i[0] == 0 ? WONAPI::InputEvent_MouseMove : i[0] == 1 ? WONAPI::InputEvent_MouseDown : WONAPI::InputEvent_MouseUp, (int)i[1], (int)i[2], 0, 0, 0, 0, 0}; ee_won_win_queue_input(As<WONAPI::Window>(c->h), EeWonWinCall::HandleMouseEvent, &e); }
         return 0;
-    case EeFixtureOp::FxWindowKeyChar: As<WONAPI::Window>(c->h)->QueueEvent(new WONAPI::KeyEvent(WONAPI::InputEvent_KeyChar, (int)i[0], 0));
+    case EeFixtureOp::FxWindowKeyChar: { EeWonWinEvent e = {WONAPI::InputEvent_KeyChar, 0, 0, 0, 0, (int)i[0], 0, 0}; ee_won_win_queue_input(As<WONAPI::Window>(c->h), EeWonWinCall::HandleKeyEvent, &e); }
         return 0;
     case EeFixtureOp::FxCompVisible: return As<WONAPI::Component>(c->h)->IsVisible() ? 1 : 0;
     case EeFixtureOp::FxCompControlId: return As<WONAPI::Component>(c->h)->mControlId;

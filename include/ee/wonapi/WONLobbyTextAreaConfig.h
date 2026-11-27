@@ -9,12 +9,11 @@ class TextArea;
 // A segment the lobby makes: data the Rust TextArea holds a reference to and asks for its measures, colour and link
 // state (a TextSegment's text, colour and font; a TextLink's parameter and pressed colour; the chat's ChatLink over
 // it). The line breaks, alignments and wrapped pieces are the Rust area's own.
+// R6 WON GUI round 40: in the game the Rust area reads and sets a segment's members in place (gamewin.rs
+// text_host_op, the offsets GuiHost.cpp registers): a link's Pressed and Released are its statements there.
 class TextSegmentBase : public RefCount {
 public:
     virtual bool IsLink() { return false; }
-    virtual void Pressed() {}
-    virtual bool Released() { return false; }
-    virtual const GUIString& GetLinkParam() { return gEmptyGUIString; }
 protected:
     TextSegmentBase() {} // every segment is a TextSegment
 };
@@ -27,16 +26,13 @@ public:
     bool mLineBreak;
 };
 // TextLink: TextSegment plus its parameter and pressed state (vtable 0x00850354 in the original).
+// (its parameter was never set: gone with the area's, R6 WON GUI round 40)
 class TextLink : public TextSegment {
 public:
-    TextLink();
-    virtual bool IsLink();
-    virtual void Pressed();
-    virtual bool Released();
-    virtual const GUIString& GetLinkParam();
-    GUIString mLinkParam;
+    TextLink() : mPressed(false), mDownColor(0xff0000) {} // unpressed, red while pressed (0x007114f0)
+    virtual bool IsLink() { return true; }
     bool mPressed;
-    unsigned long mDownColor,mNormalColor;
+    int mDownColor,mNormalColor;
 };
 inline ComponentEvent* TextLinkActivatedEvent(Component* c, TextSegmentBase* link) { return new ComponentEvent(c, ComponentEvent_TextLinkActivated, link); }
 enum TextFlags {
@@ -79,8 +75,7 @@ public:
     SmartPtr<Font> mFont,mLinkFont; // retained
     int mTextColor,mLinkColor;
     SelectionColor mSelColor;
-    GUIString mLinkParam; // the last activated link's parameter
-    GUIString mSelText; // the text a copy gathers (the host's SelText ops)
+    // (the link parameter, never read, and the text a copy gathers are gone: gamewin.rs, R6 WON GUI round 40)
     EeWonText* mRust;
 private:
     intptr_t Call(EeWonTextCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_text_call(this->mRust,c,a,b,cc); }

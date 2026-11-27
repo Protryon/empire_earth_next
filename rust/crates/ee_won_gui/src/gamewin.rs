@@ -19,7 +19,7 @@ use crate::platwin::{ee_won_plat_win, EeWonPlatWin, EeWonPlatWinCall as P, EeWon
 use crate::platwm::EeWonPlatWm;
 use crate::platwm::EeWonPlatWmOp;
 use crate::rootobj::EeWonRoot;
-use crate::winobj::{EeWonWinCall as C, EeWonWinField as F, EeWonWinPlat, EeWonWindow};
+use crate::winobj::{EeWonWinCall, EeWonWinCall as C, EeWonWinField as F, EeWonWinPlat, EeWonWindow};
 use crate::wmobj::{EeWonWm, EeWonWmCall, EeWonWmField, EeWonWmWin};
 
 /// A game window's Rust parts.
@@ -33,8 +33,9 @@ pub struct Parts {
     pub root_obj: *const EeWonRoot,
 }
 
-// (the addresses as integers: the map is shared, the objects are the GUI thread's)
-static WINDOWS: Mutex<BTreeMap<isize, [isize; 4]>> = Mutex::new(BTreeMap::new());
+// (the addresses as integers: the map is shared, the objects are the GUI thread's); the fifth is the window's
+// offscreen image (one reference to its handle: the C++ member `mOffscreenImage` until R6 WON GUI round 40)
+static WINDOWS: Mutex<BTreeMap<isize, [isize; 5]>> = Mutex::new(BTreeMap::new());
 
 /// The parts of the game window `window` (a `Window*`), None for a driver's.
 pub fn parts(window: isize) -> Option<Parts> {
@@ -55,8 +56,143 @@ pub unsafe extern "C" fn ee_won_win_bind(
     root_obj: *const EeWonRoot,
 ) {
     if let Ok(mut m) = WINDOWS.lock() {
-        m.insert(window as isize, [win as isize, plat as isize, root as isize, root_obj as isize]);
+        let offscreen = m.get(&(window as isize)).map_or(0, |w| w[4]);
+        m.insert(window as isize, [win as isize, plat as isize, root as isize, root_obj as isize, offscreen]);
     }
+}
+
+/// The game window `window`'s offscreen image (its handle, borrowed; 0 for none).
+pub(crate) fn offscreen(window: isize) -> isize {
+    WINDOWS.lock().ok().and_then(|m| m.get(&window).map(|w| w[4])).unwrap_or(0)
+}
+/// The offscreen image replaced by `image` (its reference given to the window), the old one's given back.
+fn set_offscreen(window: isize, image: isize) {
+    let old = WINDOWS.lock().ok().and_then(|mut m| m.get_mut(&window).map(|w| std::mem::replace(&mut w[4], image)));
+    if let Some(o) = old.filter(|&o| o != 0) {
+        rf(o, false);
+    }
+}
+/// The image's Graphics (`GetGraphics()`; 0 without an image).
+fn graphics_of(image: isize) -> isize {
+    // SAFETY: a game image handle or 0
+    unsafe { crate::imgobj::image_of(image) }.map_or(0, |i| i.graphics())
+}
+/// `CreateImage(w, h)`: a new offscreen image of that size (a handle with one reference; 0 without the image host).
+pub(crate) fn new_image(w: isize, h: isize) -> isize {
+    let f = IMAGE_HOST.load(std::sync::atomic::Ordering::Acquire);
+    if f == 0 {
+        return 0;
+    }
+    // SAFETY: a value ee_won_wm_bind stored from the game's image host
+    let f = unsafe { std::mem::transmute::<usize, crate::imgobj::EeWonImageHostFn>(f) };
+    f(crate::imgobj::EeWonImageHost::CreateImage, 0, w, h, 0)
+}
+/// The test fixture's input event `ev` for the game window `window` and the handler (its `new MouseEvent` and
+/// `new KeyEvent`); nothing for a window no game binds.
+///
+/// # Safety
+/// `ev` points at a record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_win_queue_input(
+    window: *mut c_void,
+    handler: EeWonWinCall,
+    ev: *const crate::winobj::EeWonWinEvent,
+) {
+    if parts(window as isize).is_some() {
+        // SAFETY: the contract
+        queue_input(window as isize, handler, unsafe { *ev });
+    }
+}
+/// `QueueEvent(new <input event>(..))` on the game window `window` (R6 WON GUI round 40: the event is Rust's,
+/// wmobj.rs; Window::QueueEvent's window set, posted to the manager).
+fn queue_input(window: isize, handler: C, ev: crate::winobj::EeWonWinEvent) -> Option<isize> {
+    queue(window, crate::wmobj::new_input_event(window, handler, ev))
+}
+/// The Rust-made event `e` queued on the game window `window`.
+fn queue(window: isize, e: isize) -> Option<isize> {
+    // SAFETY: the new event (no one else holds it)
+    unsafe { (*(e as *mut crate::wmobj::EeWonRustEvent)).rec.window = window };
+    if wm(EeWonWmCall::PostEvent, e, 1).is_none() {
+        // SAFETY: the event no one holds
+        unsafe { crate::wmobj::free_rust_event(e as *mut c_void) };
+        return None;
+    }
+    Some(0)
+}
+/// An input event's record: its type, place, modifiers, button, key and size (InputEvent's constructor).
+#[allow(clippy::too_many_arguments)]
+fn input(
+    kind: i32,
+    x: i32,
+    y: i32,
+    key_mod: i32,
+    button: i32,
+    key: i32,
+    width: i32,
+    height: i32,
+) -> crate::winobj::EeWonWinEvent {
+    crate::winobj::EeWonWinEvent { kind, x, y, key_mod, button, key, width, height }
+}
+/// DoPopupEvent's `Deliver`: `GetWindow()->OpenPopup(mParams)` (the parameters' parent the event's window, then the
+/// manager's DoPopup).
+pub(crate) fn deliver_popup(e: isize) -> Option<isize> {
+    // SAFETY: a live Rust-made popup event (its handler's contract)
+    let mut p = unsafe { (*(e as *const crate::wmobj::EeWonRustEvent)).popup };
+    // SAFETY: as above
+    p.parent = unsafe { (*(e as *const crate::wmobj::EeWonRustEvent)).rec.window };
+    wm(EeWonWmCall::DoPopup, &p as *const crate::wmobj::EeWonWmPopup as isize, 0).map(z)
+}
+/// `c->GetRoot()->OpenPopup(p)` in the game (R6 WON GUI round 41): the parameters' parent the component's window,
+/// then the manager's DoPopup.
+pub(crate) fn open_popup(c: isize, mut p: crate::wmobj::EeWonWmPopup) -> Option<isize> {
+    // SAFETY: the game's live component; the call re-enters through Component's entry
+    p.parent = unsafe {
+        crate::compobj::ee_won_comp_call(
+            c as *mut c_void,
+            crate::compobj::host(),
+            crate::compobj::EeWonCompCall::Root,
+            0,
+            0,
+            0,
+        )
+    };
+    wm(EeWonWmCall::DoPopup, &p as *const crate::wmobj::EeWonWmPopup as isize, 0).map(z)
+}
+/// `GetRoot()->ClosePopup(c)` in the game: the manager's EndPopup (every window's manager is the default one).
+pub(crate) fn end_popup(c: isize) -> Option<isize> {
+    wm(EeWonWmCall::EndPopup, c, 0).map(z)
+}
+// QueueSubMenu's popup parameters (the list host's PopupParams local until R6 WON GUI round 40)
+static SUBMENU: Mutex<crate::wmobj::EeWonWmPopup> = Mutex::new(crate::wmobj::EeWonWmPopup {
+    parent: 0,
+    popup: 0,
+    input: 0,
+    owner: 0,
+    flags: 0,
+    x: 0,
+    y: 0,
+    avoid: crate::guictl::EeWonRect4 { x: 0, y: 0, w: 0, h: 0 },
+});
+
+/// `InputEvent_SizeChange`, `InputEvent_MouseUp`, `InputEvent_MouseExit`, `InputEvent_WindowClose` (WONEventTypes.h).
+const SIZE_CHANGE: i32 = 1;
+const MOUSE_UP: i32 = 6;
+const MOUSE_EXIT: i32 = 13;
+const WINDOW_CLOSE: i32 = 14;
+
+/// WinNewOffscreen: a new offscreen image of `w` x `h` with the old one drawn into it at 0, 0.
+fn copy_offscreen(window: isize, w: isize, h: isize) -> isize {
+    let image = new_image(w, h);
+    let g = graphics_of(image) as *mut crate::gfxrun::EeWonGraphics;
+    if !g.is_null() {
+        let old = offscreen(window) as *const c_void;
+        // SAFETY: the new image's live Graphics; the old image a live handle or NULL
+        unsafe {
+            crate::gfxrun::ee_won_graphics_call(g, crate::gfxobj::EeWonGfxCall::DrawImage, 0, 0, 0, 0, 0, 0, 0, old)
+        };
+    }
+    set_offscreen(window, image);
+    0
 }
 
 // the game's reference count calls (RefCount::AddRef / Release on any of its objects, ComponentLifetime.cpp)
@@ -99,16 +235,25 @@ pub(crate) fn wm_ref_op(manager: isize, op: Op, a: isize, b: isize, c: isize) ->
 
 // the game's window manager (the default one): its C++ object, its Rust manager and its platform manager
 static MANAGER: Mutex<[isize; 3]> = Mutex::new([0; 3]);
+// the game's image host (WONImageHost), which makes the windows' offscreen images
+static IMAGE_HOST: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
+/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone) and the
+/// game's image host.
 ///
 /// # Safety
 /// The parts are the manager's live objects until it binds them again.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_wm_bind(manager: *mut c_void, wm: *const EeWonWm, plat: *const EeWonPlatWm) {
+pub unsafe extern "C" fn ee_won_wm_bind(
+    manager: *mut c_void,
+    wm: *const EeWonWm,
+    plat: *const EeWonPlatWm,
+    images: crate::imgobj::EeWonImageHostFn,
+) {
     if let Ok(mut m) = MANAGER.lock() {
         *m = [manager as isize, wm as isize, plat as isize];
     }
+    IMAGE_HOST.store(images as usize, std::sync::atomic::Ordering::Release);
 }
 
 /// The manager's entry gone (its Rust manager freed).
@@ -128,7 +273,7 @@ pub(crate) fn plat_manager_of(window: isize) -> Option<*const EeWonPlatWm> {
     parts(window)?;
     Some(manager().map_or(std::ptr::null(), |m| m.1))
 }
-fn wm(c: EeWonWmCall, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn wm(c: EeWonWmCall, a: isize, b: isize) -> Option<isize> {
     let (w, _) = manager()?;
     // SAFETY: the manager's live Rust manager (the bind's contract)
     Some(unsafe { crate::wmobj::ee_won_wm_call(w, c, a, b, 0, 0) })
@@ -139,8 +284,9 @@ fn wm_field(f: EeWonWmField) -> Option<isize> {
 
 /// The window's entry gone (its Rust window freed).
 pub(crate) fn unbind(window: isize) {
-    if let Ok(mut m) = WINDOWS.lock() {
-        m.remove(&window);
+    let old = WINDOWS.lock().ok().and_then(|mut m| m.remove(&window));
+    if let Some(o) = old.map(|w| w[4]).filter(|&o| o != 0) {
+        rf(o, false);
     }
 }
 
@@ -155,7 +301,7 @@ fn win(p: &Parts, c: C, a: isize, b: isize) -> isize {
     // SAFETY: the window's live Rust window (the bind's contract)
     unsafe { (*p.win).call(c, a, b) }
 }
-fn field(p: &Parts, f: F) -> isize {
+pub(crate) fn field(p: &Parts, f: F) -> isize {
     win(p, C::GetField, f as isize, 0)
 }
 /// a void call's answer (the C++ case's `return 0`)
@@ -185,6 +331,11 @@ pub(crate) fn win_op(window: isize, op: Op, a: isize, b: isize, c: isize, d: isi
         Op::WinHasIcon | Op::WinIconDefault => return parts(window).map(|_| 0),
         Op::WinFontHold => return rf(a, true),
         Op::WinChildSet => return parts(a).map(|p| z(win(&p, C::ChildSet, window, b))),
+        Op::WinNewOffscreen => return parts(window).map(|_| copy_offscreen(window, a, b)),
+        Op::WinQueueClose => {
+            parts(window)?;
+            return queue_input(window, C::HandleInputEvent, input(WINDOW_CLOSE, 0, 0, 0, 0, 0, 0, 0));
+        }
         _ => {}
     }
     if !matches!(op, Op::WinPlat | Op::WinSetPosSize | Op::WinGetRect | Op::WinIsVisible | Op::WinCanClose) {
@@ -214,7 +365,7 @@ pub(crate) fn win_op(window: isize, op: Op, a: isize, b: isize, c: isize, d: isi
 }
 
 /// The platform window's op on its window `window` (platwin.rs's calls out) when the game binds it.
-pub(crate) fn plat_win_op(window: isize, op: EeWonPlatWinOp, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn plat_win_op(window: isize, op: EeWonPlatWinOp, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
     use crate::compobj::EeWonCompCall as K;
     use EeWonPlatWinOp as O;
     if parts(window).is_some() {
@@ -230,6 +381,34 @@ pub(crate) fn plat_win_op(window: isize, op: EeWonPlatWinOp, a: isize, b: isize)
             }
             O::PopupWindow => return wm(EeWonWmCall::PopupWindow, 0, 0),
             O::PopupFlags => return wm_field(EeWonWmField::PopupFlags),
+            // the input events are Rust's (R6 WON GUI round 40)
+            O::QueueSize => {
+                let (x, y, w, h) = (a as i32, b as i32, c as i32, d as i32);
+                return queue_input(window, C::HandleInputEvent, input(SIZE_CHANGE, x, y, 0, 0, 0, w, h));
+            }
+            O::QueueExit => return queue_input(window, C::HandleInputEvent, input(MOUSE_EXIT, 0, 0, 0, 0, 0, 0, 0)),
+            O::QueueMouse => {
+                // SAFETY: `a` the five ints (the op's contract)
+                let p = unsafe { *(a as *const [i32; 5]) };
+                return queue_input(window, C::HandleMouseEvent, input(p[0], p[1], p[2], p[3], p[4], 0, 0, 0));
+            }
+            // the offscreen image is Rust's (R6 WON GUI round 40)
+            O::OffscreenOfRoot | O::Offscreen | O::CopyOffscreen | O::Paint | O::RootPaint => {
+                let me = parts(window)?;
+                let image = offscreen(window);
+                return Some(match op {
+                    O::OffscreenOfRoot => {
+                        let r = crate::compmem::bounds(me.root);
+                        set_offscreen(window, new_image(r.width as isize, r.height as isize));
+                        0
+                    }
+                    // SAFETY: the window's live image handle or 0
+                    O::Offscreen => unsafe { crate::imgobj::image_of(image) }.map_or(0, |i| i as *const _ as isize),
+                    O::CopyOffscreen => copy_offscreen(window, a, b),
+                    O::Paint => z(comp(&me, K::PrePaint, graphics_of(image), 0)),
+                    _ => z(comp(&me, K::Paint, graphics_of(image), 0)),
+                });
+            }
             _ => {}
         }
     }
@@ -329,12 +508,26 @@ pub(crate) fn wm_win_op(call: EeWonWmWin, window: isize, c: isize, d: isize) -> 
 }
 
 /// The platform manager's op on the window `window` (platwm.rs's calls out) when the game binds it.
-pub(crate) fn plat_wm_op(op: EeWonPlatWmOp, window: isize, b: isize, c: isize) -> Option<isize> {
+pub(crate) fn plat_wm_op(op: EeWonPlatWmOp, window: isize, b: isize, c: isize, d: isize) -> Option<isize> {
     use EeWonPlatWmOp as O;
     match op {
         O::NotModal => return parts(window).and_then(|_| wm(EeWonWmCall::NotModalWindow, window, 0)),
         O::Hold => return rf(window, true),
         O::Release => return rf(window, false),
+        // the input and key events (R6 WON GUI round 40: Rust's)
+        O::QueueInput | O::QueueKey => {
+            parts(window)?;
+            let (t, k, m) = (b as i32, c as i32, d as i32);
+            return if op == O::QueueKey {
+                queue_input(window, C::HandleKeyEvent, input(t, 0, 0, m, 0, k, 0, 0))
+            } else {
+                queue_input(window, C::HandleInputEvent, input(t, 0, 0, 0, 0, 0, 0, 0))
+            };
+        }
+        O::Offscreen => {
+            // SAFETY: the window's live image handle or 0
+            return parts(window).map(|_| unsafe { crate::imgobj::image_of(offscreen(window)) }.map_or(0, surface_of));
+        }
         _ => {}
     }
     if !matches!(
@@ -414,6 +607,16 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
             })
         }
         K::DefaultWindow => wm_field(EeWonWmField::DefaultWindow),
+        // `w->QueueEvent(e)`: the event's window set in its record, posted (R6 WON GUI round 40)
+        K::WQueue => {
+            parts(b)?;
+            // SAFETY: the game's live event `c`: its record at WindowEventBase's offset
+            unsafe {
+                (*((c as usize + crate::wmobj::EE_WON_WM_EVENT_REC_AT) as *mut crate::wmobj::EeWonWmEventRec)).window =
+                    b
+            };
+            wm(EeWonWmCall::PostEvent, c, 1).map(z)
+        }
         // `w->mManager->BroadcastEvent(e)`: the one manager's
         K::WBroadcast => {
             parts(b)?;
@@ -498,6 +701,10 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             return Some(0);
         }
         _ => {}
+    }
+    // the hosts' one-statement forwards to the widgets' Rust objects (R6 WON GUI round 41)
+    if let Some(r) = crate::gamefwd::fwd_op(comp, op, a, b, c) {
+        return Some(r);
     }
     if !matches!(
         op,
@@ -678,7 +885,7 @@ fn event_op(comp: isize, op: Op, a: isize) -> Option<isize> {
 /// The list area's and text area's hosts' statements that are ScrollArea's and Component's non-virtual methods
 /// (guisplit.rs's game hosts for the lists, menus, multi-column lists, trees and text areas; R6 WON GUI round 38):
 /// the scroll area's Rust pane and Component's calls, directly, and the references. None for the others.
-pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
     if !crate::compobj::is_game() {
         return None;
     }
@@ -713,6 +920,30 @@ pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize) -> Option<is
         Op::ListContains => Some(on(kc(list, K::Contains, a, b))),
         Op::ListLocalToRoot => Some(z(kc(list, K::LocalToRoot, a, at(a)))),
         Op::LocalToRoot => Some(z(kc(list, K::LocalToRoot, a, b))),
+        // a submenu's popup: its parameters (the menu `a`, the flags `b`, this list the owner, at (c, d)), the rectangle
+        // it avoids (at `a`), and its event queued on the list's window (R6 WON GUI round 40: Rust's)
+        Op::ParamsMake => {
+            let (popup, flags, x, y) = (a, b as i32, c as i32, d as i32);
+            let avoid = crate::guictl::EeWonRect4::default();
+            *SUBMENU.lock().ok()? =
+                crate::wmobj::EeWonWmPopup { popup, owner: list, flags, x, y, avoid, ..Default::default() };
+            Some(0)
+        }
+        Op::ParamsAvoid => {
+            // SAFETY: `a` the rectangle (the op's contract)
+            SUBMENU.lock().ok()?.avoid = unsafe { *(a as *const crate::guictl::EeWonRect4) };
+            Some(0)
+        }
+        Op::QueueDoPopup => {
+            let w = kc(list, K::Root, 0, 0);
+            parts(w)?;
+            queue(w, crate::wmobj::new_popup_event(*SUBMENU.lock().ok()?))
+        }
+        // a mouse up of the button `d` at (b, c) on the window `a` with its modifiers (R6 WON GUI round 40: Rust's)
+        Op::WinQueueMouseUp => {
+            let m = field(&parts(a)?, F::KeyMod) as i32;
+            queue_input(a, C::HandleMouseEvent, input(MOUSE_UP, b as i32, c as i32, m, d as i32, 0, 0, 0))
+        }
         _ => None,
     }
 }
@@ -720,7 +951,7 @@ pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize) -> Option<is
 /// A WONButton's references and images' reads (`WbText`, `WbImage`, `WbFont`; wonbtnobj.rs) in the game (R6 WON GUI
 /// round 38): the game's reference function, the image handles' Rust images, the manager's default font. None in a
 /// driver's world and for the others.
-pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::guihost::{EeWonWbFont as Wf, EeWonWbImage as Wi, EeWonWbText as Wt};
     if !crate::compobj::is_game() {
         return None;
@@ -728,6 +959,12 @@ pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
     match op {
         Op::WbText if a == Wt::Hold as isize => rf(b, true),
         Op::WbText if a == Wt::Release as isize => rf(b, false),
+        // the wrapped text's methods (wrapobj.rs, R6 WON GUI round 40)
+        Op::WbText => {
+            // SAFETY: `a` an EeWonWbText (the op's contract)
+            let which = unsafe { std::mem::transmute::<u32, Wt>(a as u32) };
+            crate::wrapobj::game_wrap_op(b, which, c)
+        }
         Op::WbFont if a == Wf::Hold as isize => rf(b, true),
         Op::WbFont if a == Wf::Release as isize => rf(b, false),
         Op::WbFont if a == Wf::Default as isize => wm(EeWonWmCall::GetDefaultFont, 0, 0),
@@ -897,6 +1134,7 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
             | Op::RootGrabberClear
             | Op::RootGrabberDrop
             | Op::RootImageSize
+            | Op::RootCursorComponent
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -917,6 +1155,20 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
         // a queued grabber's state, clear and drop, a background image's size (R6 WON GUI round 39)
         Op::RootGrabberRead | Op::RootGrabberClear | Op::RootGrabberDrop => {
             return Some(crate::grabobj::root_grabber_op(op, a, b))
+        }
+        // the cursor's component and hot spot (R6 WON GUI round 40); no cursor: no component (the original's
+        // MouseMove read through a NULL current cursor)
+        Op::RootCursorComponent => {
+            // SAFETY: `a` 0 or the game's live cursor handle (its Rust cursor at EE_WON_CURSOR_RUST_AT); `b`, `c` ints
+            unsafe {
+                if a == 0 {
+                    (*(b as *mut i32), *(c as *mut i32)) = (0, 0);
+                    return Some(0);
+                }
+                let r = *((a as usize + crate::cursorobj::EE_WON_CURSOR_RUST_AT)
+                    as *const *const crate::cursorobj::EeWonCursor);
+                return Some(crate::cursorobj::ee_won_cursor_component(r, b as *mut i32, c as *mut i32));
+            }
         }
         Op::RootImageSize => {
             // SAFETY: the game's live image handle; `b` and `c` the two ints (the op's contract)
@@ -1004,8 +1256,221 @@ pub(crate) fn msgbox_op(op: crate::shell::EeWonShellHostOp, window: isize, b: is
         _ => z(win_call(&me, C::Close, 0)),
     })
 }
+fn surface_of(i: &crate::imgobj::EeWonImage) -> isize {
+    // SAFETY: a live image
+    unsafe { crate::imgobj::ee_won_image_get(i, crate::imgobj::EeWonImageField::Surface) }
+}
 fn win_call(p: &Parts, c: C, a: isize) -> isize {
     win(p, c, a, 0)
+}
+
+/// Where the game's text segments keep their members (offsets in a `TextSegment`, a `TextLink`'s past it, and a
+/// `Font`'s platform font; WONLobbyTextAreaConfig.h, registered by GuiHost.cpp at static initialisation).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeWonSegAt {
+    pub text: usize,
+    pub color: usize,
+    pub font: usize,
+    pub line_break: usize,
+    pub pressed: usize,
+    pub down_color: usize,
+    pub normal_color: usize,
+    pub font_rust: usize,
+}
+static SEG_AT: Mutex<Option<EeWonSegAt>> = Mutex::new(None);
+/// The text a copy gathers (the C++ `TextArea::mSelText` until R6 WON GUI round 40): a copy runs to its end in one
+/// call (`CopySelection`), so one buffer serves every area.
+static SEL_TEXT: Mutex<Vec<u32>> = Mutex::new(Vec::new());
+
+/// Registers the text segments' member offsets (GuiHost.cpp).
+///
+/// # Safety
+/// `at` points at the offsets.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_text_seg_register(at: *const EeWonSegAt) {
+    if let Ok(mut s) = SEG_AT.lock() {
+        // SAFETY: the contract
+        *s = Some(unsafe { *at });
+    }
+}
+
+/// A game segment's members at their registered offsets.
+#[derive(Clone, Copy)]
+struct Seg {
+    p: usize,
+    at: EeWonSegAt,
+}
+
+impl Seg {
+    fn m(&self, off: usize) -> *mut u8 {
+        (self.p + off) as *mut u8
+    }
+    fn int(&self, off: usize) -> i32 {
+        // SAFETY: an int member of the live segment (`Seg`'s contract)
+        unsafe { *(self.m(off) as *const i32) }
+    }
+    fn set_int(&self, off: usize, v: i32) {
+        // SAFETY: as `int`
+        unsafe { *(self.m(off) as *mut i32) = v };
+    }
+    fn flag(&self, off: usize) -> bool {
+        // SAFETY: a bool member of the live segment
+        unsafe { *self.m(off) != 0 }
+    }
+    fn set_flag(&self, off: usize, v: bool) {
+        // SAFETY: as `flag`
+        unsafe { *self.m(off) = u8::from(v) };
+    }
+    /// The text slot (a `GUIString`: one pointer to its text).
+    fn text_slot(&self) -> *mut *const crate::guistrobj::EeWonGstr {
+        self.m(self.at.text).cast()
+    }
+    /// The text's block (None for no text).
+    fn buf(&self) -> Option<&crate::guistrobj::EeWonGuiStrBuf> {
+        // SAFETY: the segment's text slot
+        let t = unsafe { *self.text_slot() } as *const u8;
+        // SAFETY: a live text's block at its offset (guistrobj.rs)
+        (!t.is_null()).then(|| unsafe {
+            &*(t.add(crate::guistrobj::EE_WON_GSTR_DATA_AT) as *const crate::guistrobj::EeWonGuiStrBuf)
+        })
+    }
+    fn len(&self) -> usize {
+        self.buf().map_or(0, |b| usize::from(b.length))
+    }
+    fn unit(&self, i: usize) -> u32 {
+        self.buf().map_or(0, |b| b.unit(i, crate::guistrobj::EE_WON_GSTR_WCHAR))
+    }
+    /// The held font's platform font.
+    fn font(&self) -> *const crate::platfont::EeWonPlatFont {
+        // SAFETY: the segment's font slot holds a live Font, its platform font at the registered offset
+        unsafe {
+            let f = *(self.m(self.at.font) as *const *const u8);
+            *(f.add(self.at.font_rust) as *const *const crate::platfont::EeWonPlatFont)
+        }
+    }
+    /// `mFont->GetHeight()` (0) or `GetAscent()` (1).
+    fn metric(&self, which: i32) -> isize {
+        // SAFETY: the segment's live platform font
+        let m = unsafe { crate::platfont::ee_won_plat_font_metric(self.font(), which) };
+        m as isize
+    }
+    /// `mFont->GetCharacterWidth(ch)`.
+    fn char_width(&self, ch: i32) -> isize {
+        // SAFETY: as `metric`
+        let w = unsafe { crate::platfont::ee_won_plat_font_char_width(self.font(), ch) };
+        w as isize
+    }
+    /// `mFont->GetStringWidth(mText, from, n)`.
+    fn width(&self, from: usize, n: usize) -> isize {
+        if n == 0 {
+            return 0;
+        }
+        let t = self.buf().map_or(std::ptr::null_mut(), |b| b.text) as *const u8;
+        let ws = crate::guistrobj::EE_WON_GSTR_WCHAR;
+        // SAFETY: the segment's font and its text from `from` (the original's `mText + offset`, `n` units)
+        let w =
+            unsafe { crate::platfont::ee_won_plat_font_width(self.font(), t.wrapping_add(from * ws).cast(), n as u16) };
+        w as isize
+    }
+}
+
+/// The text area's host's statements on its segments, its link and its copy in the game (R6 WON GUI round 40): a
+/// segment's text, colour, font and line break and a link's pressed state read and set in place, the font's
+/// measures its platform font's, the copy's text Rust's; the area's link parameter (never read, and no link sets
+/// one) is gone. `out` is the area's other calls. None in a driver's world and for the others.
+pub(crate) fn text_host_op(op: Op, a: isize, b: isize, c: isize, out: &dyn Fn(Op, isize) -> isize) -> Option<isize> {
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    let at = (*SEG_AT.lock().ok()?)?;
+    // (the op's contract: `a` a live TextSegment, a TextLink for the link's statements)
+    let s = Seg { p: a as usize, at };
+    Some(match op {
+        Op::TextSetLinkParam => 0,
+        Op::SegLineBreak => isize::from(s.flag(at.line_break)),
+        Op::SegSetLineBreak => {
+            s.set_flag(at.line_break, b != 0);
+            0
+        }
+        Op::SegLength => s.len() as isize,
+        Op::SegColor => s.int(at.color) as isize,
+        Op::SegSetColor => {
+            s.set_int(at.color, b as i32);
+            0
+        }
+        Op::SegTextTake => {
+            let v: Vec<u32> = (0..s.len()).map(|i| s.unit(i)).collect();
+            if b != 0 && !v.is_empty() {
+                // SAFETY: a take sink (the op's contract)
+                unsafe { (*(b as *mut Vec<u32>)).extend(v) };
+            }
+            0
+        }
+        Op::SegSetText => {
+            // SAFETY: `b` a live GUIString; the slot holds its text's reference (SmartPtr's assignment)
+            unsafe {
+                let new = *(b as *const *const crate::guistrobj::EeWonGstr);
+                if !new.is_null() {
+                    crate::guistrobj::gstr_ref(new);
+                }
+                let old = std::mem::replace(&mut *s.text_slot(), new);
+                if !old.is_null() {
+                    crate::guistrobj::gstr_release(old);
+                }
+            }
+            0
+        }
+        Op::SegSetFont => {
+            if b != 0 {
+                rf(b, true)?;
+            }
+            // SAFETY: the segment's font slot (a SmartPtr: one pointer)
+            let old = unsafe { std::mem::replace(&mut *(s.m(at.font) as *mut isize), b) };
+            if old != 0 {
+                rf(old, false)?;
+            }
+            0
+        }
+        Op::SegFontStringWidth => s.width(0, s.len()),
+        Op::SegStringWidth => s.width(b as u16 as usize, c as u16 as usize),
+        Op::SegFontHeight => s.metric(0),
+        Op::SegFontAscent => s.metric(1),
+        Op::SegCharWidth => s.char_width(s.unit(b as usize) as i32),
+        // a link's Pressed and Released (TextLink's statements; only a link is the area's current link)
+        Op::SegPressed => {
+            s.set_flag(at.pressed, true);
+            s.set_int(at.normal_color, s.int(at.color));
+            s.set_int(at.color, s.int(at.down_color));
+            0
+        }
+        Op::SegReleased => {
+            if !s.flag(at.pressed) {
+                return Some(0);
+            }
+            s.set_int(at.color, s.int(at.normal_color));
+            s.set_flag(at.pressed, false);
+            1
+        }
+        // the copy's text: a segment's part, a line break; then the clipboard's, and emptied
+        Op::SelTextAppend => {
+            let from = b as u16 as usize;
+            let part: Vec<u32> = (from..from + c as u16 as usize).map(|i| s.unit(i)).collect();
+            SEL_TEXT.lock().ok()?.extend(part);
+            0
+        }
+        Op::SelTextBreak => {
+            SEL_TEXT.lock().ok()?.extend([13, 10]);
+            0
+        }
+        Op::SelTextCopy => {
+            let units = std::mem::take(&mut *SEL_TEXT.lock().ok()?);
+            let mut t = crate::guistrobj::GText::new(&units);
+            out(Op::ClipboardSetText, t.arg());
+            0
+        }
+        _ => return None,
+    })
 }
 
 #[cfg(test)]

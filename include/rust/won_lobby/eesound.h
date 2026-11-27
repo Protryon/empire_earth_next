@@ -76,6 +76,12 @@ ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrd
 int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
                             const uint8_t *path);
 
+/// The game's host of the sounds' ops (EELobbyGlueHost.cpp, at static initialisation).
+void ee_won_eesound_register(EeWonEeSoundHostFn host);
+
+/// `new EELobbyMusic(SoundDescriptor("", 2))`: the lobby music, with no reference yet.
+void *ee_won_eesound_music();
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_LOBBY_EESOUND_H

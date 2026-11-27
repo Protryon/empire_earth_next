@@ -223,6 +223,10 @@ pub unsafe extern "C" fn ee_won_cursor_native(c: *const EeWonCursor, me: isize) 
     unsafe { (*c).native(me) }
 }
 
+/// The offset of `mRust` (the `EeWonCursor*`) in the game's `Cursor` handle, after RefCount's head (checked in
+/// Container.cpp).
+pub const EE_WON_CURSOR_RUST_AT: usize = 16;
+
 /// `GetComponent(x, y)`.
 ///
 /// # Safety

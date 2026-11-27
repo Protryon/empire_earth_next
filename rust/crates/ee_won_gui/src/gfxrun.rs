@@ -361,7 +361,12 @@ unsafe fn one(g: *mut EeWonGraphics, o: &EeWonDrawOp, s: &EeWonDrawSlots) {
                 _ = gc(g, C::DrawStringPart, [o.b as u16 as i32, o.c as u16 as i32, o.d, o.e], s.string)
             }
             EE_WON_DRAW_STRING_ALL => _ = gc(g, C::DrawString, [o.b, o.c, string_len(s.string), 0], s.string),
-            EE_WON_DRAW_TEXT => hook(g, H::Text, [o.b, o.c], s.text),
+            // (a wrapped text's paint is wrapobj.rs's in the game: R6 WON GUI round 41)
+            EE_WON_DRAW_TEXT => {
+                if crate::wrapobj::game_paint(g, s.text as isize, o.b, o.c).is_none() {
+                    hook(g, H::Text, [o.b, o.c], s.text)
+                }
+            }
             // every other pixel in the current colour (TreeItem's dotted lines)
             EE_WON_DRAW_DOTTED_LINE => {
                 let color = (*g).st.color as i32;

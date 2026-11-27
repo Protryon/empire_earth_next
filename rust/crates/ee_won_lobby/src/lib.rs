@@ -40,6 +40,7 @@ pub mod lobbypopup;
 pub mod lobbyprv;
 pub mod lobbyrun;
 pub mod lobbyscreens;
+pub mod lobbytext;
 pub mod logics;
 pub mod model;
 pub mod modelbuf;

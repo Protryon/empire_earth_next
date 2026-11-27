@@ -317,6 +317,8 @@ enum class EeWonComp : uint32_t {
   GNew,
   /// `delete (BackgroundGrabber*)b`.
   GDelete,
+  /// `MouseWheel(c)` (the manager's wheel to the topmost popup, R6 WON GUI round 40).
+  VMouseWheel,
 };
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).

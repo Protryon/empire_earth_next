@@ -20,7 +20,6 @@ public:
     Background(Image*); //335cf0: a tiled image
     Background(int,int=-1); //335d80: a fill and border colour
     Background(Component*); //335db0: a painted component
-    void SetColor(int); //335e50
     void Paint(Graphics&,int,int,int,int,int=0,int=0); //335e60
     bool GetWantGrabBG() const { return this->mWantGrabBG; }
     // Actual implicit copy/assignment/destruction retain/release bothSmartPtrs.

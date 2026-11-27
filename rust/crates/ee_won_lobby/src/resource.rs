@@ -1192,6 +1192,26 @@ pub fn string_data(row: usize) -> isize {
     unsafe { *(at as *const isize) }
 }
 
+/// Resource string `row`'s `GUIString*` (its slot; 0 unbound or out of the table).
+pub fn string_slot(row: usize) -> isize {
+    let base = SLOTS.load(std::sync::atomic::Ordering::Relaxed);
+    if base == 0 || row >= RESOURCES.len() {
+        return 0;
+    }
+    (base + row * SLOT_SIZE.load(std::sync::atomic::Ordering::Relaxed)) as isize
+}
+
+/// Resource `row`'s sound (its slot's `SmartPtr<Sound>`, after the string and the image; 0 unbound, out of the
+/// table or none).
+pub fn sound(row: usize) -> isize {
+    let slot = string_slot(row);
+    if slot == 0 {
+        return 0;
+    }
+    // SAFETY: a bound slot: GUIString, SmartPtr<Image>, SmartPtr<Sound>, a pointer each
+    unsafe { *((slot as usize + 2 * std::mem::size_of::<usize>()) as *const isize) }
+}
+
 /// Resource string `row`'s units (none when unbound).
 pub fn text(row: usize) -> Vec<u32> {
     // SAFETY: a slot's string is a live `GUIStringData` (or NULL)

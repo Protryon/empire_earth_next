@@ -178,7 +178,7 @@ fn st(w: W) -> &'static mut EeWonPlatWin {
 fn host(w: W, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
     let (me, h) = (st(w).me, st(w).host);
     // a game window's own Rust parts (R6 WON GUI round 37)
-    if let Some(r) = crate::gamewin::plat_win_op(me as isize, op, a, b) {
+    if let Some(r) = crate::gamewin::plat_win_op(me as isize, op, a, b, c, d) {
         return r;
     }
     h(me, op, a, b, c, d)

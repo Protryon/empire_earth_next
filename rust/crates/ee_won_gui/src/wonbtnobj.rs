@@ -177,7 +177,7 @@ impl EeWonWonButton {
         if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, b, c) {
             return r;
         }
-        if let Some(r) = crate::gamewin::wonbtn_op(op, a, b) {
+        if let Some(r) = crate::gamewin::wonbtn_op(op, a, b, c) {
             return r;
         }
         match self.host {

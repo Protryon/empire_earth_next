@@ -8,6 +8,10 @@
 #include <stddef.h>
 #include "rust/won_gui/records.h"
 
+/// The offset of `mRust` (the `EeWonCursor*`) in the game's `Cursor` handle, after RefCount's head (checked in
+/// Container.cpp).
+constexpr static const size_t EE_WON_CURSOR_RUST_AT = 16;
+
 /// What a cursor asks of the C++ (`a` a `Cursor*` unless said).
 enum class EeWonCursorOp {
   /// `((Cursor*)a)->AddRef()`.

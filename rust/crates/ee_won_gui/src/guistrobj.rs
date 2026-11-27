@@ -449,6 +449,8 @@ pub unsafe fn ee_won_gstr(
 pub struct EeWonGstr {
     pub vtable: *const c_void,
     pub refs: i32,
+    /// 0: a text (wmobj.rs's events are the other Rust RefCount, `EE_WON_RC_EVENT`)
+    pub kind: u32,
     pub buf: EeWonGuiStrBuf,
 }
 
@@ -462,7 +464,7 @@ unsafe fn refs<'a>(p: *const EeWonGstr) -> &'a std::sync::atomic::AtomicI32 {
 }
 
 fn boxed() -> *mut EeWonGstr {
-    Box::into_raw(Box::new(EeWonGstr { vtable: std::ptr::null(), refs: 0, buf: EeWonGuiStrBuf::new() }))
+    Box::into_raw(Box::new(EeWonGstr { vtable: std::ptr::null(), refs: 0, kind: 0, buf: EeWonGuiStrBuf::new() }))
 }
 
 /// A new text with no reference: `NewCapacity` (`a` units of room), `NewCopy` (`other` a text), `NewSub` (`b`
@@ -569,6 +571,24 @@ pub unsafe fn gstr_release(p: *const EeWonGstr) {
 /// `p` is a text `ee_won_gstr_new` or `gstr_from_units` made, no longer referenced.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_gstr_free(p: *mut EeWonGstr) {
+    // a window event made in Rust (R6 WON GUI round 40)
+    // SAFETY: the contract: a Rust RefCount, its kind after the count
+    if unsafe { (*p).kind } == crate::wmobj::EE_WON_RC_EVENT {
+        // SAFETY: one wmobj.rs made
+        return unsafe { crate::wmobj::free_rust_event(p as *mut c_void) };
+    }
+    // a sound (R6 WON GUI round 41)
+    // SAFETY: as above
+    if unsafe { (*p).kind } == crate::soundobj::EE_WON_RC_SOUND {
+        // SAFETY: one soundobj.rs made
+        return unsafe { crate::soundobj::free_sound(p as *mut c_void) };
+    }
+    // a game wrapped text (R6 WON GUI round 41)
+    // SAFETY: as above
+    if unsafe { (*p).kind } == crate::wrapobj::EE_WON_RC_WRAP {
+        // SAFETY: one wrapobj.rs made
+        return unsafe { crate::wrapobj::free_rc(p as *mut c_void) };
+    }
     // SAFETY: the contract: made by Box
     let mut b = unsafe { Box::from_raw(p) };
     b.buf.free();

@@ -107,4 +107,3 @@ dbcc8 dc682 Empire Earth/Database/EETerrainTypeTable.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
-29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp

@@ -13,7 +13,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/EELobbySound.h"
+#include "rust/won_gui/soundobj.h" // the lobby's sounds
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/btnobj.h"
@@ -51,7 +51,7 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::BtnHandleActivate: return t->HandleActivate() ? 1 : 0;
     case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
     case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;
-    case Op::BtnPlayClick: t->mClickSound->Play(); return 0;
+    case Op::BtnPlayClick: ee_won_sound_call((EeWonSound*)t->mClickSound.get(), EeWonSoundCall::Play, 0); return 0;
     default: return 0;
     }
 }
@@ -121,10 +121,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     (void)d;
     MSButtonBase* t = (MSButtonBase*)inComp;
     switch (op) {
-    case Op::WrapSetMaxWidth: t->mText->SetMaxWidth((int)a); return 0;
-    case Op::WrapSetCentered: t->mText->SetCentered(a != 0); return 0;
-    case Op::WrapWidth: return t->mText->GetWidth();
-    case Op::WrapHeight: return t->mText->GetHeight();
+    // (the wrapped text's methods are wrapobj.rs's in the game: R6 WON GUI round 40)
     case Op::SkinBoxPainter: // the check box's or radio button's default painter function (never replaced), 13 x 13
         WONMsPaint(*(Graphics*)a,WONMsPaintOf((EeWonMsBox)b == EeWonMsBox::Checkbox ? EeWonMsPaintKind::Check : EeWonMsPaintKind::Radio,13,13,(t->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(t->IsChecked()?EE_WON_MSPAINT_CHECKED:0)));
         return 0;
@@ -137,7 +134,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
 // the colours, alignments, focus style and pads)
 MSButtonBase::MSButtonBase() {
     this->mMsb=ee_won_msbtn_new(this,ee_won_guicpp_msbtn_call);
-    this->mText=new WrappedText;
+    this->mText=WrappedText::New();
     this->mText->SetWrap(false);
     this->mText->SetFont(this->GetNamedFont("MSButton"));
 }
@@ -153,30 +150,12 @@ MSButtonBase::~MSButtonBase() { ee_won_msbtn_free(this->mMsb); }
 static WrappedText* Txt(intptr_t a) { return (WrappedText*)a; }
 static Image* Img(intptr_t a) { return (Image*)a; }
 
-// a wrapped text's method (EeWonWbText; `b` the text)
-static intptr_t TextOp(intptr_t which, intptr_t b, intptr_t c)
-{
-    switch ((EeWonWbText)which) {
-    case EeWonWbText::New: { WrappedText* t = new WrappedText; t->AddRef(); return (intptr_t)t; }
-    case EeWonWbText::SetText: Txt(b)->SetText(*(const GUIString*)c); return 0;
-    case EeWonWbText::SetMaxWidth: Txt(b)->SetMaxWidth((int)c); return 0;
-    case EeWonWbText::SetWrap: Txt(b)->SetWrap(c != 0); return 0;
-    case EeWonWbText::SetCentered: Txt(b)->SetCentered(c != 0); return 0;
-    case EeWonWbText::SetFont: Txt(b)->SetFont((Font*)c); return 0;
-    case EeWonWbText::Width: return Txt(b)->GetWidth();
-    case EeWonWbText::Height: return Txt(b)->GetHeight();
-    case EeWonWbText::Font: return (intptr_t)Txt(b)->mFont.get();
-    case EeWonWbText::Text: return (intptr_t)&Txt(b)->GetText();
-    default: return 0;
-    }
-}
-
 extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WONButton* t = (WONButton*)inComp;
     switch (op) {
     case Op::WbBaseCopy: t->Button::CopyAttributes((Button*)a); return 0;
-    case Op::WbText: return TextOp(a,b,c);
+    // (a wrapped text's methods and New are wrapobj.rs game_wrap_op's: R6 WON GUI rounds 40-41)
     // (WbImage, WbFont and the texts' references are gamewin.rs wonbtn_op's in the game: R6 WON GUI round 38)
     case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, Img(c), Txt(d)), WONDrawNoCall()); return 0;
     default: return 0; // (the size and the button's state: gamewin.rs common_op's)
@@ -215,42 +194,10 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 {
     ComboBox* t = static_cast<ComboBox*>((Component*)inComp);
     switch (op) {
-    // (the list area's methods and an item's width are comboobj.rs game_list_op's in the game: R6 WON GUI round 38)
-    case Op::ComboPart:
-        switch (a) {
-        case 0: return (intptr_t)static_cast<Component*>(t->mEdit.get());
-        case 1: return (intptr_t)static_cast<Component*>(t->mButton.get());
-        case 2: return (intptr_t)static_cast<Component*>(t->mListBox.get());
-        default: return (intptr_t)static_cast<Component*>(t->mListArea.get());
-        }
+    // (the list area's methods and an item's width are comboobj.rs game_list_op's in the game: R6 WON GUI round 38;
+    // the parts, the input box's calls, the item's text, the undo text and the popup its game_combo_op's: round 41)
     case Op::ComboInsertString: return (intptr_t)t->mListArea->InsertString(*(const GUIString*)a, (int)b);
-    case Op::ComboDropItem: { SmartPtr<TextListItem> held = Item(a); return 0; }
-    case Op::ComboSetListBox: t->mListBox = static_cast<Scroller*>(Comp(a)); return 0;
-    case Op::ComboBoxArea: return (intptr_t)static_cast<Component*>(static_cast<Scroller*>(Comp(a))->GetScrollArea());
-    case Op::ComboEditClear: t->mEdit->SetText(GUIString(""), a != 0); return 0;
-    case Op::ComboEditItemText: t->mEdit->SetText(Item(a)->mText, true); return 0;
-    case Op::ComboEditSetText: t->mEdit->SetText(*(const GUIString*)a, b != 0); return 0;
-    case Op::ComboEditUndo: t->mEdit->SetText(t->mUndoStr, true); return 0;
-    case Op::ComboUndoSave: t->mUndoStr = t->mEdit->GetText(); return 0;
-    case Op::ComboEditSelect: t->mEdit->SelectRange((int)a, (int)b); return 0;
-    case Op::ComboEditAllowSelection: t->mEdit->SetAllowSelection(a != 0); return 0;
-    case Op::ComboItemTextLength: return Item(a)->mText.length();
     case Op::ComboDeliverSel: t->DeliverEvent(ComboSelChangedEvent(t, Item(a), b != 0), false); return 0;
-    case Op::ComboItemTextIs: return Item(a)->mText == (b == 0 ? t->mEdit->GetText() : *(const GUIString*)b) ? 1 : 0; // (b 0: the edit's)
-    case Op::ComboOpenPopup: {
-        Window* window = t->GetRoot();
-        int x = 0, y = t->Height();
-        t->LocalToRoot(x, y);
-        PopupParams params(t->mListBox.get(), 0x2347, t, x, y);
-        params.mInputComponent = t; // input component (+0x08)
-        params.mAvoidRect.y = y - t->Height();
-        params.mAvoidRect.height = t->Height();
-        window->OpenPopup(params);
-        return 0;
-    }
-    case Op::ComboRelayout: t->Relayout(); return 0;
-    case Op::ComboUnlisten: t->mListBox->AddListener(NULL); return 0;
-    case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
     case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
     default: return CtlOp(t, op, a, b, c, d);
     }
@@ -259,6 +206,11 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 namespace WONAPI {
 // Creates a combo box that takes focus and passes input to its children (the Rust combo box: the list hidden, a
 // 200 x 150 list box)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+[[maybe_unused]] static const bool sComboAt = (ee_won_combo_parts_register(offsetof(ComboBox, mEdit), offsetof(ComboBox, mButton),
+                                                                        offsetof(ComboBox, mListBox), offsetof(ComboBox, mListArea)), true);
+#pragma clang diagnostic pop
 ComboBox::ComboBox() : mCombo(ee_won_combo_make(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt)) {}
 // Destroys the combo box, first detaching it from its list box's listeners (the Rust combo box)
 ComboBox::~ComboBox() { ee_won_combo_free(this->mCombo); }
@@ -360,11 +312,7 @@ template <class C> static intptr_t SkinScrollPart(C* t, intptr_t which)
 static intptr_t SkinPart(Component* c, SK k, intptr_t which)
 {
     switch (k) {
-    case SK::MsCombo: case SK::WonCombo: case SK::WonComboSize: {
-        ComboBox* t = static_cast<ComboBox*>(c);
-        return (SP)which == SP::Button ? (intptr_t)static_cast<Component*>(t->mButton.get())
-             : (SP)which == SP::Edit ? (intptr_t)static_cast<Component*>(t->mEdit.get()) : (intptr_t)static_cast<Component*>(t->mListArea.get());
-    }
+    // (a combo box's are comboobj.rs's in place: R6 WON GUI round 41)
     case SK::MsScroll: case SK::MsList: case SK::WonScroll: case SK::WonList: case SK::WonListTextHeader: case SK::WonListHeader:
         return SkinScrollPart(static_cast<ScrollbarScroller*>(c), which);
     default: return 0;
@@ -439,24 +387,22 @@ typedef EeWonLeafOp Lo;
 static_assert(offsetof(ListItem, mSelected) == EE_WON_LIST_ITEM_AT && offsetof(ListItem, mSelectable) == EE_WON_LIST_ITEM_AT + 1 &&
               offsetof(ListItem, mTop) == EE_WON_LIST_ITEM_AT + 4 && offsetof(ListItem, mWidth) == EE_WON_LIST_ITEM_AT + 8 &&
               offsetof(ListItem, mHeight) == EE_WON_LIST_ITEM_AT + 12, "leafpaint.rs's EeWonListItemRec");
+// where leafpaint.rs reads the text items', menu items', component items', backgrounds' and lists' members in the game
+// (R6 WON GUI round 40)
+static const EeWonLeafAt kTextItemAt = {offsetof(TextListItem, mText), offsetof(TextListItem, mColor),
+    offsetof(TextListItem, mFont), offsetof(TextListItem, mImage), offsetof(MenuItem, mSubMenu), offsetof(MenuItem, mDisabled),
+    offsetof(ListArea, mFont), offsetof(ListArea, mTextColor), offsetof(ListArea, mSelColor), offsetof(ListArea, mRust),
+    offsetof(ListArea, mPane), offsetof(Font, mRust), offsetof(ComponentListItem, mComponent),
+    offsetof(ComponentListItem, mIsSizable), offsetof(Background, mImage), offsetof(Background, mComponent),
+    offsetof(Background, mColor), offsetof(Background, mBorderColor), offsetof(Background, mUseOffsets),
+    offsetof(Background, mStretchImage)};
 #pragma clang diagnostic pop
+[[maybe_unused]] static const bool sTextItemAt = (ee_won_leaf_members_register(&kTextItemAt), true);
 extern "C" intptr_t ee_won_guicpp_textitem_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
     TextListItem* t = (TextListItem*)inMe;
-    ListArea* l = (ListArea*)a;
     switch (op) {
-    case Lo::ItemHasFont: return t->mFont.get() != NULL ? 1 : 0;
-    case Lo::ItemTakeListFont: t->mFont = l->mFont; return 0;
-    case Lo::ItemColor: return (intptr_t)t->mColor;
-    case Lo::ItemTakeListColor: t->mColor = l->GetTextColor(); return 0;
-    case Lo::ItemHasImage: return t->mImage.get() != NULL ? 1 : 0;
-    case Lo::ItemImageWidth: return t->mImage->GetWidth();
-    case Lo::ItemImageHeight: return t->mImage->GetHeight();
-    case Lo::ItemTextWidth: return t->mFont->GetStringWidth(t->mText);
-    case Lo::ItemFontHeight: return t->mFont->GetHeight();
-    case Lo::ItemListFlag: return l->ListFlagSet((int)b) ? 1 : 0;
-    case Lo::ItemListSel: *(EeWonSelColor*)b = WONDrawSelOf(l->GetSelColor()); return 0;
-    case Lo::ItemListPaintWidth: return l->GetPaintWidth();
+    // (the item's, the menu item's and the list's reads are leafpaint.rs text_item_op's in the game: R6 WON GUI round 40)
     case Lo::ItemDraw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(t->mFont.get(), &t->mText, t->mImage.get()), WONDrawNoCall()); return 0;
     default: return 0;
     }
@@ -483,25 +429,14 @@ void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
 // selection rules are its guimenu module (guimenu.rs); this unit keeps the menus and submenus; the item's paint is guidraw's menu_item.
 
 namespace WONAPI {
-// the menu item's own reads for leafpaint.rs (the text item's are TextListItem.cpp's)
-static intptr_t MenuItemCall(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
-{
-    MenuItem* t = (MenuItem*)static_cast<TextListItem*>(inMe);
-    switch (op) {
-    case EeWonLeafOp::MenuDisabled: return t->mDisabled ? 1 : 0;
-    case EeWonLeafOp::MenuHasSubMenu: return t->mSubMenu.get() != NULL ? 1 : 0;
-    case EeWonLeafOp::MenuListSel: *(EeWonSelColor*)b = WONDrawSelOf(((ListArea*)a)->mSelColor); return 0;
-    case EeWonLeafOp::MenuListViewWidth: return ((ListArea*)a)->GetViewWidth();
-    default: return ee_won_guicpp_textitem_call(inMe, op, a, b);
-    }
-}
+// (the menu item's own reads are leafpaint.rs text_item_op's in the game: R6 WON GUI round 40)
 // Measures the menu item as text plus room for the icon and submenu arrow (32 wider, 4 taller)
-void MenuItem::CalcDimensions(ListArea* area) { ee_won_leaf_call(static_cast<TextListItem*>(this), MenuItemCall, EeWonLeafCall::MenuItemMeasure, (intptr_t)area, 0); }
+void MenuItem::CalcDimensions(ListArea* area) { ee_won_leaf_call(static_cast<TextListItem*>(this), ee_won_guicpp_textitem_call, EeWonLeafCall::MenuItemMeasure, (intptr_t)area, 0); }
 // Draws the menu item: icon, selection highlight with an icon box, text (embossed grey when disabled)
 // and a submenu arrow; the box's bottom edge runs to x = height-1, not to the box width
 void MenuItem::Paint(Graphics& g,ListArea* area)
 {
-    ee_won_leaf_call(static_cast<TextListItem*>(this), MenuItemCall, EeWonLeafCall::MenuItemPaint, (intptr_t)&g, (intptr_t)area);
+    ee_won_leaf_call(static_cast<TextListItem*>(this), ee_won_guicpp_textitem_call, EeWonLeafCall::MenuItemPaint, (intptr_t)&g, (intptr_t)area);
 }
 // ---- the menu item's constructor and the popup menu's AddItem overloads (MenuItemLifetime.cpp and MenuAddItem.cpp
 // until R6 WON GUI round 36)
@@ -539,17 +474,8 @@ extern "C" intptr_t ee_won_guicpp_compitem_call(void* inMe, EeWonLeafOp op, intp
 {
     ComponentListItem* t = (ComponentListItem*)static_cast<ListItem*>(inMe);
     switch (op) {
-    case Lo::CompItemHasComponent: return t->mComponent.get() != NULL ? 1 : 0;
-    case Lo::CompItemWidth: return t->mComponent->Width();
-    case Lo::CompItemHeight: return t->mComponent->Height();
-    case Lo::CompItemSetParent: t->mComponent->mParent = (Container*)a; return 0;
+    // (the members and the component's non-virtual calls are leafpaint.rs member_op's in the game: R6 WON GUI round 40)
     case Lo::CompItemAdded: t->mComponent->AddedToParent(); return 0;
-    case Lo::CompItemBaseSetPos: t->ListItem::SetPos((int)a, (int)b); return 0;
-    case Lo::CompItemSetPos: t->mComponent->SetPos((int)a, (int)b); return 0;
-    case Lo::CompItemSizable: return t->mIsSizable ? 1 : 0;
-    case Lo::CompItemListPaintWidth: return ((ListArea*)a)->GetPaintWidth();
-    case Lo::CompItemSetSize: t->mComponent->SetSize((int)a, (int)b); return 0;
-    case Lo::CompItemMarkInvalid: t->mComponent->MarkInvalid(); return 0;
     case Lo::CompItemPaint: t->mComponent->Paint(*(Graphics*)a); return 0;
     default: return 0;
     }
@@ -626,11 +552,6 @@ Background::Background() : mColor((int)0x8000000d) {}
 Background::Background(Image* theImage) : mImage(theImage) {}
 Background::Background(int theColor, int theBorderColor) : mColor(theColor), mBorderColor(theBorderColor) {}
 Background::Background(Component* theComponent) : mComponent(theComponent) {}
-// Sets the fill colour (-1 for none)
-void Background::SetColor(int theColor)
-{
-	this->mColor = theColor;
-}
 
 // the background's reads and calls for leafpaint.rs (R6 WON round 34: the paint is Rust's), one statement each
 extern "C" intptr_t ee_won_guicpp_background_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
@@ -638,17 +559,8 @@ extern "C" intptr_t ee_won_guicpp_background_call(void* inMe, EeWonLeafOp op, in
 	Background* t = (Background*)inMe;
 	Graphics* g = (Graphics*)a;
 	switch (op) {
-	case EeWonLeafOp::BgHasImage: return t->mImage.get() != NULL ? 1 : 0;
-	case EeWonLeafOp::BgStretch: return t->mStretchImage ? 1 : 0;
-	case EeWonLeafOp::BgUseOffsets: return t->mUseOffsets ? 1 : 0;
-	case EeWonLeafOp::BgHasComponent: return t->mComponent.get() != NULL ? 1 : 0;
-	case EeWonLeafOp::BgImageWidth: return t->mImage->GetWidth();
-	case EeWonLeafOp::BgImageHeight: return t->mImage->GetHeight();
-	case EeWonLeafOp::BgColor: return t->mColor;
-	case EeWonLeafOp::BgBorderColor: return t->mBorderColor;
+	// (the members and the component's SetSize and Invalidate are leafpaint.rs member_op's in the game: R6 WON GUI round 40)
 	case EeWonLeafOp::BgDraw: WONDrawOne(*g, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, t->mImage.get()), WONDrawNoCall()); return 0;
-	case EeWonLeafOp::BgCompSetSize: t->mComponent->SetSize((int)a, (int)b); return 0;
-	case EeWonLeafOp::BgCompInvalidate: t->mComponent->Invalidate(); return 0;
 	case EeWonLeafOp::BgCompPaint: t->mComponent->Paint(*g); return 0;
 	default: return 0;
 	}
@@ -667,9 +579,6 @@ void Background::Paint(Graphics &g, int xpos, int ypos, int width, int height, i
 typedef EeWonTipOp To;
 static_assert(StandardColor_ToolTipBack == EE_WON_TIP_COLOR_BACK && StandardColor_ToolTipText == EE_WON_TIP_COLOR_TEXT, "tipobj.rs colours");
 
-// OpenPopup takes its parameters by reference
-static void OpenWith(Window* inWindow, PopupParams inParams) { inWindow->OpenPopup(inParams); }
-
 extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a, intptr_t b)
 {
     ListAreaToolTip* t = (ListAreaToolTip*)inMe;
@@ -677,15 +586,8 @@ extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a
     switch (op) {
     case To::BasePaint: t->Component::Paint(*g); return 0;
     // (the item, the members, the sizes, SetSize and LocalToRoot are tipobj.rs's in the game: R6 WON GUI round 39)
-    case To::HasOwnScheme: return t->GetOwnColorScheme() != NULL ? 1 : 0;
-    case To::ListScheme: return (intptr_t)t->mListArea->GetColorScheme();
-    case To::ListLeftPad: return t->mListArea->GetLeftPad();
-    case To::ListRightPad: return t->mListArea->GetRightPad();
-    case To::ListTopPad: return t->mListArea->GetTopPad();
-    case To::ListVertOffset: return t->mListArea->GetVertOffset();
-    case To::ScrollPaint: t->mListArea->ScrollPaint(*g); return 0;
-    case To::OpenPopup: OpenWith(t->mListArea->GetRoot(), PopupParams(t, EE_WON_TIP_POPUP_FLAGS, t->mListArea, (int)a, (int)b)); return 0;
-    case To::ClosePopup: t->mListArea->GetRoot()->ClosePopup(t); return 0;
+    // (the schemes and the list's pads and offset too: R6 WON GUI round 40; the list's ScrollPaint and the popup:
+    // round 41)
     default: return 0;
     }
 }

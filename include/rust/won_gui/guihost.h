@@ -162,34 +162,6 @@ enum class EeWonSkinBtn : uint32_t {
   SetFlag,
 };
 
-/// A wrapped text's method (`WbText`; `b` the text).
-enum class EeWonWbText : uint32_t {
-  /// `new WrappedText`, answered with one reference (the Rust's).
-  New = 1,
-  /// `AddRef()` (a `SmartPtr` the Rust holds).
-  Hold,
-  /// `Release()`.
-  Release,
-  /// `SetText(*(const GUIString*)c)`.
-  SetText,
-  /// `SetMaxWidth(c)`.
-  SetMaxWidth,
-  /// `SetWrap(c != 0)`.
-  SetWrap,
-  /// `SetCentered(c != 0)`.
-  SetCentered,
-  /// `SetFont((Font*)c)`.
-  SetFont,
-  /// `GetWidth()`.
-  Width,
-  /// `GetHeight()`.
-  Height,
-  /// `mFont.get()` (a pure read).
-  Font,
-  /// `&GetText()` (a `const GUIString*`).
-  Text,
-};
-
 /// An image's method (`WbImage`; `b` the image).
 enum class EeWonWbImage : uint32_t {
   /// `AddRef()`.

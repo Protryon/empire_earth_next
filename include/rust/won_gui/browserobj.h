@@ -84,6 +84,9 @@ using EeWonBrowserHostFn = ptrdiff_t(*)(void *me, EeWonBrowserOp op, ptrdiff_t a
 
 extern "C" {
 
+/// Registers the view's offset (GuiHost.cpp at static initialisation).
+void ee_won_browser_view_register(size_t offset);
+
 /// The constructor (`BrowserComponent::BrowserComponent`): the record and the view the host makes.
 EeWonBrowser *ee_won_browser_new(void *me, EeWonBrowserHostFn host, uint32_t wchar_size);
 

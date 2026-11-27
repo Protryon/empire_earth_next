@@ -20,7 +20,7 @@
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
-#include "ee/wonapi/EELobbySound.h"
+#include "rust/won_gui/soundobj.h" // the lobby's sounds
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyEvents.h"
@@ -51,7 +51,7 @@ void LobbyDoErrorDialog(const GUIString& title,WONStatus status)
 // Plays the lobby sound unless the lobby is missing or suspended
 void LobbyPlaySound(Sound* sound)
 {
-    if(gLobbyData.get()!=NULL && !LobbyIsSuspended() && sound!=NULL) sound->Play();
+    if(gLobbyData.get()!=NULL && !LobbyIsSuspended() && sound!=NULL) ee_won_sound_call((EeWonSound*)sound, EeWonSoundCall::Play, 0);
 }
 // Pings the game to measure its latency; inForce sends the ping now even when the ping queue is full
 void LobbyPingGame(LobbyGame* game,bool force)

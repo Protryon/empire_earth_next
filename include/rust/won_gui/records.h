@@ -1225,6 +1225,88 @@ enum class EeWonLayoutMgrCall : uint32_t {
   Count,
 };
 
+/// The inward calls (`ee_won_win_call`).
+enum class EeWonWinCall : uint32_t {
+  CanClose = 1,
+  Close,
+  /// `CheckResize(a)` (a tick).
+  CheckResize,
+  /// `SetTitle`'s platform part (the C++ stored the title).
+  TitleChanged,
+  /// `SetIcon`'s platform part (the C++ stored the icon).
+  IconChanged,
+  /// `Center(a != 0)`.
+  Center,
+  SetClientSize,
+  Show,
+  HandleMouseExit,
+  /// `HandleKeyEvent`, `HandleMouseDown`, `HandleMouseEvent`, `HandleInputEvent` with `a` an `EeWonWinEvent*`.
+  HandleKeyEvent,
+  HandleMouseDown,
+  HandleMouseEvent,
+  HandleInputEvent,
+  /// `IdleUpdate()` (0 or 1).
+  IdleUpdate,
+  /// `TimerEvent(a)`.
+  TimerEvent,
+  /// `Create`'s statements after the icon (`a`, `b` the rectangle's width and height).
+  Create,
+  /// the base `PlatformClose`.
+  PlatformClose,
+  ShowNativeCursor,
+  CheckSetCursor,
+  InvalidateRoot,
+  Minimize,
+  SuspendRootResize,
+  RemoveComponent,
+  IsMouseDown,
+  AddComponent,
+  SetModal,
+  CheckDoubleClick,
+  /// `SetParent((Window*)a)`.
+  SetParent,
+  /// the child window set: `a` inserted (`b != 0`) or erased (the parent's half of `Create` / `PlatformClose`).
+  ChildSet,
+  /// the field `a` (`EeWonWinField`).
+  GetField,
+  /// the field `a` set to `b`.
+  SetField,
+};
+
+/// What an image asks of the C++ (`a`..`d` per op).
+enum class EeWonImageHost : int32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  Ref = 0,
+  /// `((RefCount*)a)->Release()`.
+  Unref = 1,
+  /// A new handle for the image `(EeWonImage*)a` (its class by the kind), no reference taken. (3..6 read a handle's
+  /// `mRust` and a DisplayContext's members: read in place since R6 WON GUI round 38, [`EE_WON_IMAGE_RUST_AT`] and
+  /// [`EeWonDisplayContextRec`].)
+  Wrap = 2,
+  /// `((Graphics*)a)`'s translation into `((int*)b)[0..2]`.
+  GfxTrans = 7,
+  /// `((Graphics*)a)->mDisplayContext.get()`.
+  GfxContext = 8,
+  /// The `c` draw operations at `(EeWonDrawOp*)b` run on `(Graphics*)a` (WONDrawRun), their image slots the four
+  /// `Image*` at `(intptr_t*)d`.
+  GfxRun = 9,
+  /// `((Graphics*)a)->DrawImage((Image*)b, ((int*)c)[0], ((int*)c)[1])`.
+  GfxDrawImage = 10,
+  /// `new DisplayContext((EeWonSurface*)a, *(const float*)b)` (its pixel scale): one reference. (11 and 12 made the
+  /// C++ SurfaceBase and read its surface; a native image's surface is its own since R6 WON GUI round 36.)
+  NewContext = 13,
+  /// `new PlatGraphics` attached to `(DisplayContext*)a`: owned by the image.
+  NewGraphics = 14,
+  /// `delete (Graphics*)a`.
+  FreeGraphics = 15,
+  /// `((DisplayContext*)a)->CreateImage(b, c)`: a native image's handle with one reference.
+  CreateImage = 16,
+  /// `WindowManager::GetDefaultWindowManager()->DecodeImage((const char*)a)`: a handle with one reference, or 0.
+  Decode = 17,
+  /// `GETextureManager::GetTexturePackLogicalShift()` when there is a default window manager, else 0.
+  PackShift = 18,
+};
+
 /// A virtual the Rust calls on the C++ object (`args` its ints, `p` its object).
 enum class EeWonGfxHook {
   ClearClipRect,
@@ -1467,6 +1549,34 @@ enum class EeWonShellHostOp : uint32_t {
   MsgWinClose,
 };
 
+/// A wrapped text's method (`WbText`; `b` the text).
+enum class EeWonWbText : uint32_t {
+  /// `new WrappedText`, answered with one reference (the Rust's).
+  New = 1,
+  /// `AddRef()` (a `SmartPtr` the Rust holds).
+  Hold,
+  /// `Release()`.
+  Release,
+  /// `SetText(*(const GUIString*)c)`.
+  SetText,
+  /// `SetMaxWidth(c)`.
+  SetMaxWidth,
+  /// `SetWrap(c != 0)`.
+  SetWrap,
+  /// `SetCentered(c != 0)`.
+  SetCentered,
+  /// `SetFont((Font*)c)`.
+  SetFont,
+  /// `GetWidth()`.
+  Width,
+  /// `GetHeight()`.
+  Height,
+  /// `mFont.get()` (a pure read).
+  Font,
+  /// `&GetText()` (a `const GUIString*`).
+  Text,
+};
+
 /// The Rust Container.
 struct EeWonContainer;
 
@@ -1529,6 +1639,30 @@ struct EeWonPlatCursorFns {
   void (*set)(void *cursor);
   void (*destroy)(void *cursor);
 };
+
+/// An input event's fields: the C++ `InputEvent`'s own record (`mEv`; `KeyEvent`, `MouseEvent` and `SizeEvent` fill
+/// theirs, the other fields 0).
+struct EeWonWinEvent {
+  /// the `WindowEventType`
+  int32_t kind;
+  int32_t x;
+  int32_t y;
+  int32_t key_mod;
+  /// a mouse event's button or wheel amount
+  int32_t button;
+  /// a key event's key
+  int32_t key;
+  /// a size event's
+  int32_t width;
+  int32_t height;
+};
+
+/// The host: one C++ function for every op.
+using EeWonImageHostFn = ptrdiff_t(*)(EeWonImageHost op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
 
 /// The host: the hook on the C++ Graphics `g` with up to seven ints at `args` and an object `p`; its answer.
 using EeWonGfxHost = uint32_t(*)(void *g, EeWonGfxHook hook, const int32_t *args, const void *p);
@@ -1641,6 +1775,8 @@ struct EeWonGuiStrBuf {
 struct EeWonGstr {
   const void *vtable;
   int32_t refs;
+  /// 0: a text (wmobj.rs's events are the other Rust RefCount, `EE_WON_RC_EVENT`)
+  uint32_t kind;
   EeWonGuiStrBuf buf;
 };
 
@@ -1660,23 +1796,6 @@ using EeWonShellHostFn = ptrdiff_t(*)(void *shell,
                                       ptrdiff_t b,
                                       ptrdiff_t c,
                                       ptrdiff_t d);
-
-/// An input event's fields: the C++ `InputEvent`'s own record (`mEv`; `KeyEvent`, `MouseEvent` and `SizeEvent` fill
-/// theirs, the other fields 0).
-struct EeWonWinEvent {
-  /// the `WindowEventType`
-  int32_t kind;
-  int32_t x;
-  int32_t y;
-  int32_t key_mod;
-  /// a mouse event's button or wheel amount
-  int32_t button;
-  /// a key event's key
-  int32_t key;
-  /// a size event's
-  int32_t width;
-  int32_t height;
-};
 
 /// A window event's record (the C++ `WindowEventBase::mRec`, R6 WON GUI round 38): the input record first (its kind
 /// the event's type; the rest an input event's), the window the event is for, and an input event's handler (the

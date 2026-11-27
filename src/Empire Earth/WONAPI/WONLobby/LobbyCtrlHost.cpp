@@ -15,6 +15,10 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/rows.h"
+#include <set>
+#include "ee/wonapi/WONLobbyResourceGlobals.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/lobbyids.h"
 
 namespace WONAPI {
 bool LobbyIAmReady();
@@ -122,10 +126,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
     case Op::Invalidate: aComp->Invalidate(); return 0;
-    case Op::EventControlId: return anEvent->GetControlId();
     case Op::EventIsSelectedItem: return anEvent->GetItem<ListItem>() == static_cast<ListArea*>(anEvent->GetComponent())->GetSelItem() ? 1 : 0;
-    case Op::EventButton: return anEvent->mEv.button;
-    case Op::EventDoubleClick: return anEvent->mEv.flag;
     case Op::BrowserBackEnabled: return aBrowser->BackButtonEnabled() ? 1 : 0;
     case Op::BrowserForwardEnabled: return aBrowser->ForwardButtonEnabled() ? 1 : 0;
     case Op::BrowserStopEnabled: return aBrowser->StopButtonEnabled() ? 1 : 0;
@@ -167,10 +168,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ResetNetworkAdapter: LobbySetNetworkAdapter(LobbyGetNetworkAdapter()); return 0;
     case Op::CurrentScreen: return (intptr_t)LobbyGetCurrentScreen();
     case Op::BroadcastDown: aComp->BroadcastEventDown(new LobbyEvent((int)b)); return 0;
-    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
-    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
-    case Op::ClickSoundMute: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
-    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
     case Op::OnLoginScreen: return LobbyOnLoginScreen() ? 1 : 0;
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
     case Op::FirewallTestDone: return LobbyIsFirewallTestDone() ? 1 : 0;
@@ -202,4 +199,60 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     // round 13's ops (the Internet controls)
     return LobbyNetCtrlHost(aCtl, inOp, a, b, c);
 }
+}
+
+// ---- WONLobbyResource.cpp until R6 WON GUI round 41 (the lobby's resource slots)
+using namespace WONAPI;
+// The lobby's resources: their slots, the table by id, registration, load and unload. The 469 resources are the
+// rows of ee_won's table (rust/crates/ee_won_lobby/src/resource.rs: each one's section, key and kind in the original's load
+// order, EeWonLobbyRes their names); the original's named globals are one slot per row (LOBBY_STRING(name) etc.).
+
+// the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row
+LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT];
+
+// Registers the lobby's resource loader and control ids on the given (or a new) resource table and returns it
+ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
+{
+    ResourceConfigTablePtr aTable=theTable;
+    if(theTable==NULL)
+        aTable=theTable=new ResourceConfigTable;
+    theTable->RegisterGlueResourceFunc(LobbyResource_SafeGlueResources);
+    // the controls by name, in the original's order (lobbyids.rs's rows)
+    int anId=0;
+    for(size_t i=0; const char* aName=ee_won_lobbyids_control(i,&anId); ++i)
+        theTable->RegisterControlId(aName,anId);
+    return aTable;
+}
+
+// Loads every lobby string, image and sound from its section of the resource table (ee_won's rows in order: a
+// section is looked up again where it changes, as the original's statements did)
+void LobbyResource_SafeGlueResources(ResourceConfigTable* theTable)
+{
+    ResourceConfig* aConfig = NULL;
+    for (size_t i = 0; i < EE_WON_LOBBYRES_COUNT; ++i) {
+        EeWonResource aRow;
+        if (!ee_won_resource_row(i, &aRow))
+            break;
+        LobbyResourceSlot& aSlot = gLobbyResources[i];
+        if (aRow.new_section)
+            aConfig = theTable->SafeGetConfig(aRow.section);
+        switch (aRow.kind) {
+        case EeWonResKind::String: aSlot.mString = aConfig->SafeGetString(aRow.key); break;
+        case EeWonResKind::Image: aSlot.mImage = aConfig->SafeGetImage(aRow.key); break;
+        case EeWonResKind::Sound: aSlot.mSound = aConfig->SafeGetSound(aRow.key); break;
+        }
+    }
+}
+
+// Releases every lobby image and sound and empties every lobby string (ee_won's rows in order)
+void LobbyResource_UnloadResources()
+{
+    for (size_t i = 0; i < EE_WON_LOBBYRES_COUNT; ++i) {
+        LobbyResourceSlot& aSlot = gLobbyResources[i];
+        switch (ee_won_lobbyres_kind((EeWonLobbyRes)i)) {
+        case EeWonResKind::String: aSlot.mString.erase(); break;
+        case EeWonResKind::Image: aSlot.mImage = NULL; break;
+        case EeWonResKind::Sound: aSlot.mSound = NULL; break;
+        }
+    }
 }

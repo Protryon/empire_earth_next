@@ -15,40 +15,6 @@ constexpr static const size_t EE_WON_IMAGE_RUST_AT = 16;
 /// The offset of a DisplayContext's members ([`EeWonDisplayContextRec`]) in the C++ object (after RefCount's head).
 constexpr static const size_t EE_WON_CONTEXT_AT = 16;
 
-/// What an image asks of the C++ (`a`..`d` per op).
-enum class EeWonImageHost : int32_t {
-  /// `((RefCount*)a)->AddRef()`.
-  Ref = 0,
-  /// `((RefCount*)a)->Release()`.
-  Unref = 1,
-  /// A new handle for the image `(EeWonImage*)a` (its class by the kind), no reference taken. (3..6 read a handle's
-  /// `mRust` and a DisplayContext's members: read in place since R6 WON GUI round 38, [`EE_WON_IMAGE_RUST_AT`] and
-  /// [`EeWonDisplayContextRec`].)
-  Wrap = 2,
-  /// `((Graphics*)a)`'s translation into `((int*)b)[0..2]`.
-  GfxTrans = 7,
-  /// `((Graphics*)a)->mDisplayContext.get()`.
-  GfxContext = 8,
-  /// The `c` draw operations at `(EeWonDrawOp*)b` run on `(Graphics*)a` (WONDrawRun), their image slots the four
-  /// `Image*` at `(intptr_t*)d`.
-  GfxRun = 9,
-  /// `((Graphics*)a)->DrawImage((Image*)b, ((int*)c)[0], ((int*)c)[1])`.
-  GfxDrawImage = 10,
-  /// `new DisplayContext((EeWonSurface*)a, *(const float*)b)` (its pixel scale): one reference. (11 and 12 made the
-  /// C++ SurfaceBase and read its surface; a native image's surface is its own since R6 WON GUI round 36.)
-  NewContext = 13,
-  /// `new PlatGraphics` attached to `(DisplayContext*)a`: owned by the image.
-  NewGraphics = 14,
-  /// `delete (Graphics*)a`.
-  FreeGraphics = 15,
-  /// `((DisplayContext*)a)->CreateImage(b, c)`: a native image's handle with one reference.
-  CreateImage = 16,
-  /// `WindowManager::GetDefaultWindowManager()->DecodeImage((const char*)a)`: a handle with one reference, or 0.
-  Decode = 17,
-  /// `GETextureManager::GetTexturePackLogicalShift()` when there is a default window manager, else 0.
-  PackShift = 18,
-};
-
 /// An image's value (`ee_won_image_get`).
 enum class EeWonImageField : int32_t {
   Width = 0,
@@ -164,13 +130,6 @@ struct EeWonImage;
 /// The multi-decoder: the decoders by file extension (a map ordered and matched without case: the first spelling
 /// of a key stays) and the current extension.
 struct EeWonImgDecoder;
-
-/// The host: one C++ function for every op.
-using EeWonImageHostFn = ptrdiff_t(*)(EeWonImageHost op,
-                                      ptrdiff_t a,
-                                      ptrdiff_t b,
-                                      ptrdiff_t c,
-                                      ptrdiff_t d);
 
 extern "C" {
 

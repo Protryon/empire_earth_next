@@ -20,6 +20,7 @@
 #include "rust/won_net/reqops.h"
 #include "rust/won_net/adminop.h"
 #include "rust/won_lobby/lobbyconf.h"
+#include "rust/won_lobby/lobbytext.h"
 #include "rust/won_lobby/staging.h"
 
 // ---- LobbyLogic.cpp: RustLogic, the shell (and the base: runs network ops, tracked so they can be killed)
@@ -96,7 +97,6 @@ static RoutingOp* RO(intptr_t a) { return reinterpret_cast<RoutingOp*>(a); }
 static RoutingConnection* RC(intptr_t a) { return reinterpret_cast<RoutingConnection*>(a); }
 static AsyncOp* AO(intptr_t a) { return reinterpret_cast<AsyncOp*>(a); }
 static RustServerOp* RS(intptr_t a) { return static_cast<RustServerOp*>(AO(a)); }
-static ChatCommandParser* P(intptr_t a) { return reinterpret_cast<ChatCommandParser*>(a); }
 template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
 {
     if (inPtr.get() != NULL) inPtr->AddRef();
@@ -118,13 +118,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     typedef EeWonRouteLogicOp O;
     RustLogic* L = static_cast<RustLogic*>(inObj);
     switch (inOp) {
-    case O::TextFree: delete T(a); return 0;
-    case O::TextLength: return T(a)->length();
     case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
-    case O::TextUnits: // the text's wchar_t units (to b when not 0); 0 is the empty text
-        if (b != 0)
-            for (unsigned i = 0; i < TX(a).mData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)TX(a).mData->mText[i];
-        return TX(a).mData->mLength;
     // ---- the lobby
     case O::Killed: return L->mKilled;
     case O::RunWithStatus:
@@ -178,7 +172,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
-    case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
     // ---- the routing ops and connection (the ops' and connections' one-call cases are Rust's: netops.rs route_op)
     case O::RSetText: RO(a)->SetText((int)b, TX(c)); return 0;
@@ -189,19 +182,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::ConnCreateGameObject: RoutingRequestValues().N(true).N((unsigned short)c).S(std::string("G")).W(L"").D(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL); return 0;
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
     // ---- the parser, the events, the dialogs
-    case O::ParserNum:
-        switch (b) {
-        case 0: return (intptr_t)P(a)->GetRoomFlags();
-        case 1: return P(a)->GetCommand();
-        case 2: return (intptr_t)P(a)->GetDuration();
-        case 3: return (intptr_t)P(a)->GetTarget();
-        case 4: return (intptr_t)P(a)->GetClients();
-        }
-        return 0;
-    case O::ParserText: return (intptr_t) new GUIString(P(a)->GetText());
-    case O::ParserSetInput: P(a)->SetInput(C(b)->GetName()); return 0;
-    case O::EventComponent: return E(a)->mEv.comp;
-    case O::EventType: return E(a)->mEv.kind;
     case O::EventFindServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(LobbyEvtAddr(E(a), LobbyEvtField::Address));
     case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
     case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
@@ -221,15 +201,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         case 2: L->mDialog[kRoutingAdminAction]->LCall(EeWonLobbyDlgCall::Reset, (int)b, (intptr_t)C(c)); break;
         case 4: L->mDialog[kRoutingCreateRoom]->LCall(EeWonLobbyDlgCall::Reset, b != 0); break;
         case 5: L->mDialog[kRoutingPassword]->LCall(EeWonLobbyDlgCall::Reset); break;
-        }
-        return 0;
-    case O::DialogText:
-        switch (a) {
-        case 1: return (intptr_t) new GUIString(L->mDialog[kRoutingCreateRoom]->InputText(0));
-        case 2: return (intptr_t) new GUIString(L->mDialog[kRoutingCreateRoom]->InputTextOf(L->mDialog[kRoutingCreateRoom]->LCall(EeWonLobbyDlgCall::GetPassword)));
-        case 3: return (intptr_t) new GUIString(L->mDialog[kRoutingPassword]->InputText(0));
-        case 4: return (intptr_t) new GUIString(L->mDialog[kRoutingAdminAction]->InputText(2));
-        case 5: return (intptr_t) new GUIString(L->mDialog[kRoutingAddFriend]->InputText(0));
         }
         return 0;
     case O::DialogNum:
@@ -356,16 +327,12 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::BroadcastAccount:
         LobbyBroadcastEvent(QueryAccountResultEvent(R(a)->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL), R(a)->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1) != 0), true);
         return 0;
-    case O::AddUserNamed: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), "", false);
-    case O::AddUserNoPassword: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), GUIString(GetEmptyGUIStringData()), false);
-    case O::AddUserWithPassword: return (intptr_t)LobbyAddUser(LobbyEvtStr<std::wstring>(E(a), EF::UserName), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false);
     case O::UserSetTOUNow: UserSetTOUNow(reinterpret_cast<LobbyUserInfo*>(a)); return 0;
     case O::SaveGlobalPrefsNow: LobbySaveGlobalPrefs(true); return 0;
     case O::SetCurrentUser: LobbySetCurrentUser(reinterpret_cast<LobbyUserInfo*>(a)); return 0;
     case O::BroadcastLoginFields: LobbyBroadcastEvent(SetLoginFieldsEvent(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)), GUIString(LobbyEvtStr<std::wstring>(E(a), EF::Password)), false), true); return 0;
     case O::RootWindow: return (intptr_t)LobbyGetRootWindow();
     case O::KeyMod: return reinterpret_cast<Window*>(a)->GetKeyMod();
-    case O::FindUserOfEvent: return (intptr_t)LobbyFindUser(GUIString(LobbyEvtStr<std::wstring>(E(a), EF::UserName)));
     case O::UserTOUNewer: return LobbyIsTOUNewer(LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 0), LobbyUserTOU(reinterpret_cast<LobbyUserInfo*>(a), 1));
     case O::AuthSetUserNameOf: A(a)->SetUserName(LobbyEvtStr<std::wstring>(E(b), EF::UserName)); return 0;
     case O::AuthSetPasswordOf: A(a)->SetPassword(LobbyEvtStr<std::wstring>(E(b), EF::Password)); return 0;
@@ -461,10 +428,13 @@ static Component* FindDialog(ComponentConfig* inConfig, bool inStatus)
     return aFound;
 }
 
-// the composed cases' locals (logicsplit.rs): NewWindow's window, StatusSetStatus's text, OkCancelSetText's buttons
 static SmartPtr<Window> sDlgNewWindow;
-static GUIString sDlgStatusText;
-static const GUIString* sDlgButtons[2];
+// the dialogs' texts are lobbytext.rs's since R6 WON GUI round 40, which calls a dialog's Rust object, reads a logic's
+// dialogs, an input box's text and a combo box's input box at these offsets
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const bool sDlgAtRegistered = (ee_won_lobbytext_dialog_at(offsetof(LobbyRustDialog, mLobbyDlg), offsetof(RustLogic, mDialog), offsetof(InputBox, mRealText), offsetof(ComboBox, mEdit)), true);
+#pragma clang diagnostic pop
 
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
@@ -504,15 +474,11 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::WindowShow: aWindow->Show(true); return 0;
     case Op::RunDialog: return aWindow->RunDialog(reinterpret_cast<Component*>(b));
     case Op::LobbySuspended: return LobbyIsSuspended() ? 1 : 0;
-    case Op::StatusSetText:
-        static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetText, b, c, d != 0);
-        return 0;
     case Op::StatusSetStartTick: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetStartTick, (intptr_t)WONTickCount()); return 0;
     case Op::SoundEffects: return LobbyGetLobbySoundEffects() ? 1 : 0;
     case Op::PlayErrorSound: LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_Error_Sound).get()); return 0;
     case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
     // R6 WON lobby and network round 35: the statements of the cases logicsplit.rs composes (WmPopups, Bounds,
-    // NewWindow, SetUpPopup, StatusSetStatus, OkCancelSetText); the locals are the statics above
     case Op::WmDefault: return (intptr_t)WONAPI::WindowManager::GetDefaultWindowManager();
     case Op::WmPopupsOf: return reinterpret_cast<WindowManager*>(a)->GetPopupsInOwnWindow() ? 1 : 0;
     case Op::BoundsX: return aComp->GetBounds().x;
@@ -528,11 +494,6 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::WindowCreatePopup: aWindow->Create(WONRectangle(0, 0, 100, 100)); return 0;
     case Op::WindowListenRoot: LobbyAddLogicListener(aWindow->mRoot.get()); return 0;
     case Op::WindowRootSetScheme: aWindow->mRoot->SetColorScheme(LobbyGetColorScheme()); return 0;
-    case Op::StatusTextOf: sDlgStatusText = GetWONStatusString((WONStatus)a); return 0;
-    case Op::StatusSetHeldText: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetStatus, (intptr_t)&sDlgStatusText, false); return 0;
-    case Op::StatusTextDrop: sDlgStatusText = GUIString(); return 0;
-    case Op::ButtonTextSet: sDlgButtons[a] = &gLobbyResources[b].mString; return 0;
-    case Op::OkCancelSetHeldText: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetText, b, c, (intptr_t)sDlgButtons); return 0;
     case Op::InvalidateRect: {
         const int* aRect = reinterpret_cast<const int*>(b);
         WONRectangle aBounds(aRect[0], aRect[1], aRect[2], aRect[3]);
@@ -705,8 +666,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::SaveGlobalPrefs: LobbySaveGlobalPrefs(false);
         return 0;
     case EeWonLobbyOp::SaveUserPrefs: LobbySaveUserPrefs(false);
-        return 0;
-    case EeWonLobbyOp::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
         return 0;
     case EeWonLobbyOp::GameClearPlayers: g->ClearPlayers();
         return 0;

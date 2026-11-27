@@ -7,6 +7,7 @@
 #ifndef EE_WONAPI_WONLOBBYMODELOBJ_H
 #define EE_WONAPI_WONLOBBYMODELOBJ_H
 #include "rust/won_lobby/records.h"
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "rust/won_lobby/modelobj.h"
 #include "rust/won_net/ipobj.h"
 // (rust/won_lobby/eegame.h and ee/wonapi/WONLobbyGuard.h: WONLobbyResource.h, at global scope)
@@ -53,7 +54,6 @@ public:
     virtual bool IsTeammate(LobbyPlayer* inOther) { return false; } // 0x3a90d0: the base player has no teams
     bool ReadFromBuffer(ReadBuffer& inBuffer);
     void WriteToBuffer(WriteBuffer& outBuffer);
-    bool IsSameTeam(LobbyPlayer* inOther) { return this->M(LobbyMC::PlayerIsSameTeam, (intptr_t)inOther) != 0; }
 protected:
     typedef LobbyPlayer* (*LobbyPlayerFactory)();
     static LobbyPlayerFactory mPlayerFactory;
@@ -65,25 +65,15 @@ public:
     void SetReady(bool inReady) { this->MSet(LobbyMF::PlayerReady, inReady); }
     unsigned short GetPing() const { return (unsigned short)this->MGet(LobbyMF::PlayerPing); }
     void SetPing(unsigned short inPing) { this->MSet(LobbyMF::PlayerPing, inPing); }
+#include EE_WON_DRV(Model_LobbyPlayer) // the drivers' members
 };
 
 // a client of the lobby's room (0x2c bytes in the original: 0x3a51a0)
 class LobbyClient : public LobbyModelObject {
 public:
     LobbyClient() : LobbyModelObject(EeWonModelKind::Client) {}
-    void ClearGroup(unsigned short inId, bool inGame) { this->M(LobbyMC::ClientClearGroup, inId, inGame); }
-    bool IsInChatGroup() { return this->M(LobbyMC::ClientInChat) != 0; }
-    bool IsInGameGroup() { return this->M(LobbyMC::ClientInGame) != 0; }
-    void UpdateIgnoreStatus() { this->M(LobbyMC::ClientUpdateIgnore); }
-    bool IsAnonymous() { return this->M(LobbyMC::ClientAnonymous) != 0; }
-    bool IsMuted(bool inGame) { return this->M(LobbyMC::ClientMuted, inGame) != 0; }
-    bool IsAway() { return this->M(LobbyMC::ClientAway) != 0; }
-    bool IsAdmin() { return this->M(LobbyMC::ClientAdmin) != 0; }
-    bool IsModerator() { return this->M(LobbyMC::ClientModerator) != 0; }
-    bool IsCaptain(bool inGame) { return this->M(LobbyMC::ClientIsCaptain, inGame) != 0; }
     void SetCaptain(bool inCaptain, bool inGame) { this->M(LobbyMC::ClientSetCaptain, inCaptain, inGame); }
     void SetPlayer(LobbyPlayer* inPlayer) { this->MSet(LobbyMF::ClientPlayer, (intptr_t)inPlayer); }
-    bool HasPlayer() { return this->M(LobbyMC::ClientHasPlayer) != 0; }
     bool IsReady() { return this->M(LobbyMC::ClientIsReady) != 0; }
     unsigned short GetPing() { return (unsigned short)this->M(LobbyMC::ClientPing); }
     bool IsTeammate(LobbyClient* inOther) { return this->M(LobbyMC::ClientIsTeammate, (intptr_t)inOther) != 0; }
@@ -91,16 +81,14 @@ public:
     unsigned short GetClientId() { return (unsigned short)this->MGet(LobbyMF::ClientId); }
     unsigned long GetWONUserId() const { return (unsigned long)this->MGet(LobbyMF::ClientWonUserId); }
     void SetGroupId(unsigned short inId, bool inGame) { this->M(LobbyMC::ClientSetGroupId, inId, inGame); }
-    void SetMemberFlags(unsigned char inFlags, bool inGame) { this->M(LobbyMC::ClientSetMemberFlags, inFlags, inGame); }
     bool IsIgnored() const { return this->MGet(LobbyMF::ClientIgnored) != 0; }
     bool IsBlocked() const { return this->MGet(LobbyMF::ClientBlocked) != 0; }
     GUIString GetName() const { return this->MText(LobbyMF::ClientName); }
     void SetName(const GUIString& inName) { this->MSetText(LobbyMF::ClientName, inName); }
-    void SetClientId(unsigned short inId) { this->MSet(LobbyMF::ClientId, inId); }
-    void SetClientFlags(unsigned long inFlags) { this->MSet(LobbyMF::ClientFlags, (intptr_t)inFlags); }
     void SetBlocked(bool inBlocked) { this->MSet(LobbyMF::ClientBlocked, inBlocked); }
     void SetIgnored(bool inIgnored) { this->MSet(LobbyMF::ClientIgnored, inIgnored); }
     SmartPtr<LobbyPlayer> GetPlayer() const { return SmartPtr<LobbyPlayer>((LobbyPlayer*)this->MGet(LobbyMF::ClientPlayer)); }
+#include EE_WON_DRV(Model_LobbyClient) // the drivers' members
 };
 
 // RTTI LobbyClientList : RefCount; constructor 0x3a55f0, 0x14 bytes. GetCount / ClientAt walk the clients in id order.
@@ -108,14 +96,13 @@ class LobbyClientList : public LobbyModelObject {
 public:
     LobbyClientList() : LobbyModelObject(EeWonModelKind::ClientList) {}
     void Clear() { this->M(LobbyMC::ListClear); }
-    void UpdateIgnoreStatus() { this->M(LobbyMC::ListUpdateIgnore); }
     void AddClient(LobbyClient* inClient) { this->M(LobbyMC::ListAdd, (intptr_t)inClient); }
     LobbyClient* FindClient(unsigned short inId) { return (LobbyClient*)this->M(LobbyMC::ListFind, inId); }
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId) { return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::ListRemove, inId)); }
     LobbyClient* FindClientByWONId(unsigned long inId) { return (LobbyClient*)this->M(LobbyMC::ListFindByWonId, (intptr_t)inId); }
-    void ClearInvited() { this->M(LobbyMC::ListClearInvited); }
     size_t GetCount() const { return (size_t)this->M(LobbyMC::ListCount); }
     LobbyClient* ClientAt(size_t i) const { return (LobbyClient*)this->M(LobbyMC::ListAt, (intptr_t)i); } // in id order
+#include EE_WON_DRV(Model_LobbyClientList) // the drivers' members
 };
 
 // Generic non-owning client iterator: 0x3a5f70..0x3a6140. It walks as the map's iterator walked: the next client
@@ -153,10 +140,7 @@ GUIString EELobbyStatusString(intptr_t inStatus);
 class LobbyGame : public LobbyModelObject {
 public:
     void ClearPlayers() { this->M(LobbyMC::GameClearPlayers); }
-    bool IsSameGame(LobbyGame* inOther) { return this->M(LobbyMC::GameIsSameGame, (intptr_t)inOther) != 0; }
-    void ReadGroup(LobbyGroup* inGroup) { this->M(LobbyMC::GameReadGroup, (intptr_t)inGroup); }
     ConstSmartPtr<ByteBuffer> GetJoinRequest();
-    void HandleHostGame(LobbyClient* inClient) { this->M(LobbyMC::GameHandleHost, (intptr_t)inClient); }
     bool AreAllReady() { return this->M(LobbyMC::GameAllReady) != 0; }
     bool CanStartGame() { return this->M(LobbyMC::GameCanStart) != 0; }
     short HandleJoinRequest(ReadBuffer& inBuffer, LobbyClient* inClient, WriteBuffer& outBuffer);
@@ -235,7 +219,6 @@ public:
     void HandlePlayerJoined(LobbyClient* inClient) { this->HandlePlayerJoinedHook(inClient); }
     void HandleGameMessage(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom) { this->HandleGameMessageHook(inType, inBuffer, inFrom); }
     bool IsFull() { return this->M(LobbyMC::GameIsFull) != 0; }
-    short GetJoinStatus() { return (short)this->M(LobbyMC::GameJoinStatus); }
     void WriteSummary(WriteBuffer& outBuffer);
     bool ReadSummary(ReadBuffer& inBuffer);
     void RemoveClient(LobbyClient* inClient) { this->M(LobbyMC::GameRemoveClient, (intptr_t)inClient); }
@@ -245,7 +228,6 @@ public:
     long GetGameType() { return (long)this->MGet(LobbyMF::GameType); }
     long GetNumPlayers() { return (long)this->MGet(LobbyMF::GameNumPlayers); }
     long GetMaxPlayers() { return (long)this->MGet(LobbyMF::GameOpenSlots); }
-    void SetMaxPlayers(long inSlots) { this->MSet(LobbyMF::GameOpenSlots, inSlots); }
     unsigned short GetPing() { return (unsigned short)this->MGet(LobbyMF::GamePing); }
     void SetPing(unsigned short inPing) { this->MSet(LobbyMF::GamePing, inPing); }
 protected:
@@ -269,6 +251,7 @@ public:
     bool GetIsHost() const { return this->MGet(LobbyMF::GameIsHost) != 0; }
     void SetPingReplied(bool inValue) { this->MSet(LobbyMF::GamePingReplied, inValue); }
     void SetShowDetails(bool inValue) { this->MSet(LobbyMF::GameShowDetails, inValue); }
+#include EE_WON_DRV(Model_LobbyGame) // the drivers' members
 };
 
 #endif
