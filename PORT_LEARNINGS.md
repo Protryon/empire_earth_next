@@ -42489,3 +42489,76 @@ All lane gates PASS on the merged tip (batch 31 in; the builds and game checks o
 - SendFileOp and its completion, TransferSetSavesPath, GlueText, EELobbyColorButton/Chooser, WONRouting.h's core-table
   shims (from round 39's list, not reached).
 - won_lobby33_gen.py still reads LobbyConfig.cpp; won_lobbyconf_test does not vary the UseLocalIP registry value.
+
+## R6 WON GUI, round 41: the Sound family, the combo and input hosts, WrappedText and the widgets' forwards in Rust; five units folded (ee_won_gui soundobj.rs, gamefwd.rs, wrapobj.rs, comboobj.rs, inputobj.rs; ee_won_lobby eesound.rs; branch rust-wongui41, 2026-11-26)
+
+The round started from rust-wongui40 (9ffe7cd8a) with origin/rust batch 30 merged (eae41e517). Wave 1 forks A (the
+Sound family) and B (the combo box, the input box, the tooltip, WrappedText, the formatted text) were merged (one
+conflict: both took Rust RefCount kind 2; the wrapped text is now 3); wave 2 fork C (GuiHost.cpp's widget forwards);
+then batch 31 (38bb1e104, rust-wonnet39) and the lead's unit folds.
+
+### What moved (`port_metrics.py` cpp_lines)
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| A c71591d76 | soundobj.rs: a sound is a Rust RefCount (kind 2; flags, path, looping, a `SoundHook`); the decoder a Rust fn; eesound.rs's music and effect are hooks registered by EELobbyGlueHost.cpp; the lobby's music and click cases answered in Rust; EELobbySound.h, Sound/SoundDescriptor/SoundDecoder, EELobbyMusic/EELobbySound/EELobbySoundDecoder and WindowManager's decoder gone (`class Sound : public RefCount {}` stays as SmartPtr's name) | -199, classes -6 |
+| B f21be948d | the combo box's parts read and set in place, its edit/undo/item/popup cases in Rust (3 cases left: they build C++ objects) | |
+| B d6908a0ca | 22 input box cases, the tooltip's ScrollPaint/OpenPopup/ClosePopup, WrappedText::Paint and the Graphics host's Text case | |
+| B 3b518961e, 095456541 | WrappedText a Rust RefCount (kind 3: text, font, wrap; the C++ class a handle); the formatted text a Rust sink (the four Fmt* functions gone) | B total -110 |
+| C b2fe334ed, 53af0cdd2, d8945e135 | gamefwd.rs: every GuiHost case that only called a widget's non-virtual forward is that Rust call (the object from the registry), the list/text areas' constructor statements member writes in place; ImageOp, SplitterHostCall, five uncalled forwards gone | -112 |
+| lead 16c8ec47c | LobbyContainer.cpp -> RootScreen.cpp (dropped at the rust-wonnet40 merge: theirs is Rust), CreditsDialog.cpp -> LobbyDialogHost.cpp, WONLobbyResource.cpp -> LobbyCtrlHost.cpp, EELobbyResource.cpp -> EELobbyGlueHost.cpp | -45, files -4 |
+| lead 12b13461d | Window.cpp -> WindowManager.cpp | -20, files -1 |
+
+Lane total: cpp_lines **-486**, cpp_files **-5** (forks against eae41e517 -421; the folds against 35f2d78f2 -65),
+logic -124, classes -6, extern_c +15, rust_hdrs +2, unsafe +120. Short of -1,500; the file target (3) met.
+
+### Why not -1,500
+What is left in the GUI hosts calls C++ virtuals (list items, AdjustPosition, SetCursor), builds C++ objects or
+paints C++ Backgrounds; none maps to a Rust object's call until those classes move. The lobby's big blocks are the
+lobby lane's (gLobbyData, the config object model). The forks ran under heavy load (wontest at ~20 minutes for 28
+drivers), which cost most of the round's time.
+
+### Problems met
+- Two forks each took the next free Rust RefCount kind (2): kinds are a crate-wide registry; check soundobj.rs,
+  wmobj.rs and wrapobj.rs before taking one.
+- Folding units: keep the UNIT-FLAGS class the same (EELobbyGlueHost.cpp and EELobbyResource.cpp are the exe's
+  game-flag units; the WONLobby units are -GX), rename clashing file statics (Window.cpp's sHostFont), and inline
+  into a header only what needs no class the header forward-declares (LobbyContainer's RootScreen comparisons
+  stayed out of line).
+- A forward deleted as uncalled in the game can still be called by a driver's subclass of the game class (the cfgset
+  driver's OrigWONButton called WONButton::SetButtonState): the fork's GUI-driver subset missed it, the full wontest
+  on the merged tip caught it; the method went into the driver's subclass.
+- A fold moves `__FILE__`: LobbyContainer's SafeGetComponent errors now name RootScreen.cpp.
+
+### Behaviour changes
+- `ee_won_sound_call` on a null sound does nothing; the decoder is process-wide (not the manager's member).
+- The combo box's undo text is held in Rust; a wrapped text is freed by Rust at its last reference.
+- ClosePopup goes straight to the manager's EndPopup.
+
+### Left
+- EvNew and LHandle (ComponentListener's vtable subclasses); InputBox's `mRealText` (lobbytext.rs returns a
+  reference to it); ComboInsertString, ComboDeliverSel, ListenTo; ViewAddText (needs `mHTMLView`'s offset).
+- GuiHost.cpp: the list items' virtuals, the tooltip cases, the sort, MenuItemOf (`dynamic_cast`), the shell's
+  layouts. Button's click sound could be read in place.
+- LobbyPlaySound and its four cases (gLobbyData, lobby lane); the driver-only host variants (TextBytes, TextAppend,
+  ParserCommandText, StatusSetStatus, OkCancelSetText) are Rust and driver lines only, so they do not move cpp_lines.
+
+### Merging rust-wonnet40 (c08bf625b)
+Batch 32 left round 40 out (19 conflicting files with WON lobby/net 39+40), so rust-wonnet40 (2b7968a65) was
+merged here directly. Its round moved AccountLogic, DialogLogic, InitLogic, LobbyLogic, PingLogic and RoutingLogic.cpp
+into LobbyLogicHost.cpp and WONLobbyPrv.cpp: rounds 40 and 41's case deletions in those units were carried over as
+exact removed-line hunks found in the new homes (16 of 19 matched; the other three were sound lines theirs had
+already dropped), and DialogLogic's lobbytext.rs offset registration moved to LobbyLogicHost.cpp. LobbyContainer and
+CreditsDialog's config reader became theirs (lobbyscreens.rs, lobbycfgrd.rs), so this round's fold of LobbyContainer
+was dropped. The Rust dispatchers try lobbytext.rs before logicshell.rs. A check that pays: list each conflicted
+file's lines ours added or removed against the merge base and compare with the result (diff3's alignment silently
+dropped an include ours had added inside a block).
+
+### Gates
+On c08bf625b (batch 31 and rust-wonnet40 merged; logs in build/w41m of the merge worktree): builds `--sim` and
+`--test-profile windowed-software` 0/0; rust header current; rust gate PASS on 517aff4d2 (c08bf625b failed rustfmt
+only: the merged module order in ee_won_lobby lib.rs); won_host_coverage PASS; oracle 2-7 identical; captures oracle
+and late PASS (the WON GUI is not in EE-SIM, so no other profile covers it); saveload matrix PASS; scenario_check
+27/27; gates.sh GATES PASS (tour, ai-game [4, 36, 37] classic_lua x2, lan-game); the LAN game PASS (host 2808, joiner
+2804) and lan_capture_compare against build/w40lanM: the lobby captures identical but two 15-pixel input-box carets.
+wontest: 185 of 186 drivers exit 0 (151 on c08bf625b, the other 35 on 8cb0ca8a2 after the cfgset driver fix); won_ping36_test shows one mismatch in the ping op's status and references, and rust-wonnet40 (2b7968a65) alone fails it the same way, so it came with the lobby/net round, not this one. The same set passed before the rust-wonnet40 merge on 12b13461d.
