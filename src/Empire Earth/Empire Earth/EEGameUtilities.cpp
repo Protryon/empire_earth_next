@@ -45,11 +45,6 @@ std::vector<EEDisplayRasterizer> gDisplayRasterizers;
 
 // (the bodies: ee_game gamecpp utilities.rs)
 
-// Plays a sound when the player is the local player; returns the sound instance, or -1 when nothing played
-unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound)
-{
-    return ee_gamecpp_play_for_local(inPlayer, inSound);
-}
 
 // Shows a load or sync failure message in the main game form; with a checksum, appends the game state's checksum
 // and whether it matches (logging the differences in verbose mode), taking the world's read lock when asked
@@ -66,21 +61,11 @@ SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObjec
     return (SESMInstanceNode*)ee_gamecpp_play_animation_sound(&inLocation, inGraphicObject, inAnimation, inSound, inFrame, inStart);
 }
 
-// Maps a world point into camera space, returning it divided by its depth, and the depth
-void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth)
-{
-    ee_gamecpp_camera_point(&inPoint, &outScreen, &outDepth);
-}
 
 // ---- the game's helpers the actions, the ghosts and the data loading thread use (they were
 // EEWonNetAvailableGameFormManager.cpp's: in the UI's unit they put the actions and the ghost units in one
 // dependency cycle with the UI; tools/cpp_deps.py, PORT_LEARNINGS "Cycle cuts, round 3")
 
-// Shows the command-confirmation click effect at the ground point under the cursor
-void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit)
-{
-    ee_gamecpp_order_at_cursor(&inPoint, inUnit);
-}
 
 // Creates the local-only click confirmation effect on a unit or on the ground
 void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
@@ -88,11 +73,6 @@ void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
     ee_gamecpp_make_click_effect(&inLocation, inUnit);
 }
 
-// Returns the local player's first selected unit; false when nothing is selected
-bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit)
-{
-    return ee_gamecpp_first_selected_unit((void**)&outUnit);
-}
 
 // Finds the tile under a screen point (picking the visible tile first); false when only the plain map lookup hit
 bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag)
@@ -107,14 +87,6 @@ bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& ou
     return ee_gamecpp_point_unit_or_tile(&inPoint, (void**)&outTile, &outPoint, inFlag);
 }
 
-// NEAR: the original pushes mCurrentPlayer as a dword: ExecuteRemovePlayer's first parameter is wider than
-// the header's unsigned char (NESynchronousCommunications/EEServer/EEClient; header item)
-// Leaves the game: a client removes itself (server lost) or notifies the server; the server posts the removal
-// of all players when the game is open, running or paused
-void EEExitGame()
-{
-    ee_gamecpp_exit_game();
-}
 
 // ------------------------------------------------------------------------- round 10, lane D: the Empire Earth directory's managers and utilities
 

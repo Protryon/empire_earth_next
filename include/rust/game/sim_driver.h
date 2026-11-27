@@ -682,12 +682,6 @@ void ee_sim_driver_debug(const char *text);
 /// and the exit.
 void ee_sim_driver_game_ended(int result);
 
-/// The PTs per second and the autosave period the run's settings take (EESimPreferences).
-///
-/// # Safety
-/// The out values are writable.
-void ee_sim_driver_preferences(long *pt_rate, long *autosave_ms);
-
 /// An action's run (EEAction::Virtual4 of the C++ action class): the step's code then its marker, or the marker's
 /// repost or end.
 ///

@@ -17,6 +17,7 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/sim/units.h"
 
 // ---- EEUCLandable.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The unit class of the
@@ -58,8 +59,6 @@ bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
     return ee_units_uc_rest(EE_UNITS_UC_DO_R_TILE_FREE, NULL, inUnit, 0, (int64_t)inX, (int64_t)inY, NULL) != 0;   // uc_rest.rs
 }
 
-// Fills a new carrier with aircraft of the best of three fighter techs its player has (else unit class 0x1f)
-void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer) { ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, inUnit, 0, inPlayer, 0, NULL); }  // uca_air.rs
 
 // ---- EEUCAirAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The flying animal's
 // unit class: 0x20a279..0x20b192 (after EESelectedGroup.cpp's sort COMDATs; EEUCAirplane.cpp follows). One unit per
@@ -68,20 +67,11 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer) { ee_units_uc
 // airport, used by Virtual74) comes first, then the slots +0x24, +0x2c, +0x74, +0x78, +0x88, +0xa0, (+0xc0 folded)
 // +0xb8 in source order. Bodies are the EEUCLandable twins' (0x213ed2.., same sizes) with the animal's states.
 
-// New (R5b.4, the fourteenth round): EEUCAirAnimal::ActionChanged's operations that are more than a call (the
-// original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): the path to the goal
-// when preparing to move (EE_UNITS_ACT_AIR_ANIMAL_PATH), the dying spin (EE_UNITS_ACT_DEATH_ROLL 0)
-void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_PATH, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
-
-void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_DEATH_ROLL, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
 
-// New (R5b.4, the fourteenth round): EEUCPlanetSpaceship::ActionChanged's holding pattern over its home airport (dies
-// without one; the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HOLDING_PATTERN 1 calls it)
-void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_SPACESHIP_HOLDING, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
 // ---- EEUCHelicopter.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The helicopter's unit
@@ -89,9 +79,6 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24,
 // +0x74, +0xb8 in source order (the others are ICF-folded into twins).
 
-// New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
-// original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
-void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0, NULL); }  // uca_air.rs
 
 // ---- EEUCSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The spaceship's unit
 // class: 0x21a219..0x21a6e0 (after EEUCSpaceBuilding.cpp; EEUCSpaceTransport.cpp's +0xe4 0x21a6e0 follows). Unit
@@ -103,7 +90,7 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_un
 void EEUnitClass::AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                                         float* outPitch)
 {
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_BASE, this, inUnit, inSound, outVolume, outPan, outPitch);
     float theCamera[3] = {::gWorld.mTransformation.GetX(), ::gWorld.mTransformation.GetY(), ::gWorld.mTransformation.GetZ()};
     ee_units_uu_doppler_pitch_unnoted(*outVolume, inUnit->mComplexUnit->mVelocity, (const float(*)[4][4])&inUnit->mComplexUnit->mPhysicalModel.GetLocation().mMatrix[0][0], &theCamera, outPitch);   // ee_units uu_world.rs doppler_pitch
 }

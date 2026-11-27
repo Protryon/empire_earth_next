@@ -34,6 +34,9 @@
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEMapDimensions.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
+#include "rust/sim/units.h"
 
 static_assert(sizeof(GERectangle) == 4 * sizeof(float) && offsetof(U2DRectangle<long>, mBottom) == 0 && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "GetBounds hands Rust the rectangle's four floats; AREA_OUTLINES reads rectangles as bottom, left, right, top");
 
@@ -91,17 +94,17 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     // the path requests (their request, cancel, references, fields, save, load and the loaded ones' waits) and
     // the terrain flags: Rust (group_host.rs over ee_sim::astar request.rs)
     // (SetGroupPathGoals: group_host.rs over waypoints.rs)
-    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets();
+    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, theUnit, 0, 0, 0);
         return 0;
     case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
-    case EE_UNITS_GROUP_OP_POST_SELECTION: gUserInterface->PostMessage424Once();
+    case EE_UNITS_GROUP_OP_POST_SELECTION: ee_screens_ui_post_icon_bar_once(gUserInterface);
         return 0;
     // the selection's (selection.rs)
     case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
     case EE_UNITS_GROUP_OP_SELECTABLE: return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
     case EE_UNITS_GROUP_OP_DOPPELGANGER: return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theTarget->mTile), theTarget, thePlayer->GetPlayerID());
     case EE_UNITS_GROUP_OP_LOCAL_SELECTION: return gWorld.mExecutingLocalSelection;
-    case EE_UNITS_GROUP_OP_PLAY_SOUND: EEPlayForLocalPlayer(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
+    case EE_UNITS_GROUP_OP_PLAY_SOUND: ee_gamecpp_play_for_local(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
         return 0;
     case EE_UNITS_GROUP_OP_ACK_DELAY: return (int64_t)(unsigned long)gWorldTable.GetLongValue(kWorldAcknowledgementDelay);
     case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB));
@@ -109,7 +112,7 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     // RefreshUpgrades' (selection.rs)
     case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init();
         return 0;
-    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects();
+    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, theUnit, 0, 0, 0);
         return 0;
     case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
         return 0;

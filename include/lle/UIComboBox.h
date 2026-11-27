@@ -12,7 +12,7 @@
 #ifndef LLE_UICOMBOBOX_H
 #define LLE_UICOMBOBOX_H
 #include "rust/ui/comboobj.h"
-#include "rust/ui/lle_combo.h"
+#include "lle/UILBString.h"
 
 
 class LLE_API UIComboBox : public UIControl {
@@ -35,7 +35,6 @@ public:
     long GetCurrentSelection(unsigned long& outSelection) const { return ee_ui_combo_current_selection(this->mRust, &outSelection); }
     GEText* GetGEText() const { return static_cast<GEText*>(ee_ui_combo_ge_text(this->mRust)); }   // the label's or edit box's
     const UILBString* GetListBox() const { return this->GetList(); }
-    GERhombus* GetSelectedBackground() const { return this->GetList()->GetSelectedBackground(); }
 #ifdef LLE_EXE_HEADERS   // the game sets the label's text (EESEInstructions::Virtual14 0x171ce3 calls
                          // UITextLabel::SetText on +0xa0): non-const like UICheckBox/UIRadioButton (owner decision 2)
     UITextLabel* GetTextLabel() const { return reinterpret_cast<UITextLabel*>(this->PartOf(4)); }
@@ -56,7 +55,6 @@ public:
         this->Call(EeUiComboCall::SetSelectedColor, 0, 0, UIF4(inColor));
     }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiComboCall::SetLocation, 0, 0, UIF4(inLocation)); }
-    void SetScrollBarBgColor(const GEColor& inColor) { this->GetList()->SetScrollBarBgColor(inColor); }
     void SetTextBoxBgColor(const GEColor& inColor) { this->PartOf(0)->SetBgColor(inColor); }
     void SetTextBoxBgOpacity(float inOpacity) { this->PartOf(0)->SetBgOpacity(inOpacity); }
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiComboCall::UpdateKeyboard); }

@@ -26,7 +26,6 @@ public:
 {
     this->SubCall(EeUiButtonCall::CheckInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inScaleBitmap ? 1.0f : 0.0f);
 }
-    // the dtor (0x1005f9da) deleted the label: the Rust button's release does
     // Copies the button and its label for the draw pass, deleting the label once the text was cleared
     virtual long CopyData() { return (long)this->SubCall(EeUiButtonCall::CheckCopyData); }
     // Draws the box bitmap (scaled to the control height when scaling) and the label
@@ -38,9 +37,6 @@ public:
     virtual unsigned long GetType() const { return kControlTypeCheckBox; }
     // Checks or unchecks the box (unless disabled), swapping its bitmaps and firing the checked or unchecked trigger
     void SetChecked(bool inChecked) { this->SubCall(EeUiButtonCall::CheckSetChecked, inChecked); }
-    // Enables or disables the box; a disabled box shows pressed, an enabled one normal
-    // Fixed (kept): enabling shows the box normal, not pressed
-    void SetDisabled(bool inDisabled) { this->SubCall(EeUiButtonCall::CheckSetDisabled, inDisabled); }
     // Moves the check box and its label
     virtual void SetLocation(const GE2DPoint& inLocation) { this->SubCall(EeUiButtonCall::CheckSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY()); }
     // Sets the label text, creating the label on first use; empty text hides the label

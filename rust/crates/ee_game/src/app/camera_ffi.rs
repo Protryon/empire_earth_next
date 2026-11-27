@@ -6,7 +6,7 @@ use crate::app::camera::{
     self, CameraHost, EeAppCameraFields, EeAppCameraKey, EeAppCameraMove, EE_APP_CAMERA_NO_UNIT, EE_APP_CAMERA_UNIT_A,
 };
 use ee_base::math::types::Ge3DPlane;
-use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation};
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeTransformation};
 use ee_render::gfx::camera::EeGfxEdgePlanes;
 use std::ffi::c_void;
 use std::os::raw::c_long;
@@ -286,33 +286,6 @@ pub unsafe extern "C" fn ee_app_camera_turn(
     unsafe { *out = t };
 }
 
-/// `SlerpViewTurn` (which 0) or `SlerpOffsetTurn` (1) at a step.
-///
-/// # Safety
-/// live records.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_camera_slerp(
-    rec: *const EeAppCameraFields,
-    which: u32,
-    step: f32,
-    out: *mut GeQuaternion,
-) {
-    let c = unsafe { *rec };
-    let q = if which == 0 { c.mQ014.slerp(&c.mQ04C, step) } else { c.mQ024.slerp(&c.mQ05C, step) };
-    unsafe { *out = q };
-}
-
-/// `KeepPose`.
-///
-/// # Safety
-/// `rec` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_camera_keep_pose(rec: *mut EeAppCameraFields) {
-    let mut c = unsafe { *rec };
-    camera::keep_pose(&mut c);
-    unsafe { *rec = c };
-}
-
 /// `SetChanged`.
 ///
 /// # Safety
@@ -372,15 +345,6 @@ pub unsafe extern "C" fn ee_app_camera_set_clipping_distances(
     with(rec, ctx, call, |c, h| camera::set_clipping_distances(c, h))
 }
 
-/// `NextKey`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_camera_next_key(rec: *mut EeAppCameraFields, ctx: *mut c_void, call: EeAppCameraFn) {
-    with(rec, ctx, call, camera::next_key)
-}
-
 /// `StartPath`.
 ///
 /// # Safety
@@ -388,43 +352,6 @@ pub unsafe extern "C" fn ee_app_camera_next_key(rec: *mut EeAppCameraFields, ctx
 #[no_mangle]
 pub unsafe extern "C" fn ee_app_camera_start_path(rec: *mut EeAppCameraFields, ctx: *mut c_void, call: EeAppCameraFn) {
     with(rec, ctx, call, camera::start_path)
-}
-
-/// `BuildView(out, step)`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_camera_build_view(
-    rec: *mut EeAppCameraFields,
-    ctx: *mut c_void,
-    call: EeAppCameraFn,
-    step: f32,
-    out: *mut GeTransformation,
-) {
-    with(rec, ctx, call, |c, h| {
-        let t = camera::build_view(c, h, step);
-        unsafe { *out = t }
-    })
-}
-
-/// `GetGroundPoint(line, out)`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_camera_ground_point(
-    rec: *mut EeAppCameraFields,
-    ctx: *mut c_void,
-    call: EeAppCameraFn,
-    line: *const Ge3DLine,
-    out: *mut Ge3DPoint,
-) {
-    with(rec, ctx, call, |c, h| {
-        let line = unsafe { *line };
-        let p = camera::ground_point(c, h, &line);
-        unsafe { *out = p }
-    })
 }
 
 /// `GetUnitTurn(unit, out)`.
@@ -505,23 +432,6 @@ pub unsafe extern "C" fn ee_app_camera_scroll(
     dy: f32,
 ) {
     with(rec, ctx, call, |c, h| camera::scroll(c, h, dx, dy))
-}
-
-/// `GoTo(key)`.
-///
-/// # Safety
-/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_camera_go_to(
-    rec: *mut EeAppCameraFields,
-    ctx: *mut c_void,
-    call: EeAppCameraFn,
-    key: *const EeAppCameraKey,
-) {
-    with(rec, ctx, call, |c, h| {
-        let key = unsafe { *key };
-        camera::go_to(c, h, &key)
-    })
 }
 
 /// `SetOffset(point, immediate)`.

@@ -41,6 +41,8 @@
 #include "ee/EEMouse.h"
 #include "ee/EEWheel.h"
 #include "ee/EEAreaEffectTemplate.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -250,7 +252,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoWheelCount: return RO_CX->mNumWheels;
     case O::RoUnitAreaEffectCount: return (int64_t)RO_CX->mAffectingAreaEffects.mItems.size();
     case O::RoUnitAreaEffectKind: return RO_CX->mAffectingAreaEffects.mItems[a[0]]->mTemplate->mKind;
-    case O::RoUnitAreaEffectStrength: return RO_CX->mAffectingAreaEffects.mItems[a[0]]->GetStrength();
+    case O::RoUnitAreaEffectStrength: return (long)ee_screens_ae_strength((uintptr_t)RO_CX->mAffectingAreaEffects.mItems[a[0]]);
     case O::RoComplexInView: return RO_UN->mComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
     case O::RoComplexLocation: return RO_P64(&((EEComplexUnit*)p)->mPhysicalModel.GetLocation());
     case O::RoComplexIsFoundation: return ((EEComplexUnit*)p)->IsFoundation();
@@ -326,15 +328,15 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoTriggerSelectUnits: return RO_P64(dynamic_cast<EESEUICTriggerSelectUnits*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS)));
     case O::RoSelectionIsDrawn: return ((EEUICSelectUnits*)p)->GetIsDrawn();
     case O::RoTriggerSelectionIsDrawn: return ((EESEUICTriggerSelectUnits*)p)->GetIsDrawn();
-    case O::RoPickUnits: gUnitPicker.PickUnits(((EEUICSelectUnits*)p)->GetSelectionRectangle(), (EEPlayer*)a[0], 0, gU4E9230);
+    case O::RoPickUnits: ee_gamecpp_pz_box(&gUnitPicker, &(((EEUICSelectUnits*)p)->GetSelectionRectangle()), false, (EEPlayer*)a[0], 0, &gU4E9230);
         break;
-    case O::RoPickUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EEUICSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+    case O::RoPickUnitsInRectangle: ee_gamecpp_pz_box(&gUnitPicker, &(((EEUICSelectUnits*)p)->GetSelectionRectangle()), true, NULL, 0, &gU4E9230);
         break;
-    case O::RoPickTriggerUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+    case O::RoPickTriggerUnitsInRectangle: ee_gamecpp_pz_box(&gUnitPicker, &(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle()), true, NULL, 0, &gU4E9230);
         break;
-    case O::RoAmbientCountUnit: gAmbientSoundManager.mAnalyzer.CountUnit((EEComplexUnit*)p);
+    case O::RoAmbientCountUnit: ee_gamecpp_ambient_count_unit(&gAmbientSoundManager.mAnalyzer, (EEComplexUnit*)p);
         break;
-    case O::RoAmbientCountTree: gAmbientSoundManager.mAnalyzer.CountTree(RO_UN);
+    case O::RoAmbientCountTree: ee_gamecpp_ambient_count_tree(&gAmbientSoundManager.mAnalyzer, RO_UN);
         break;
     case O::RoAmbientFrameCountIncrement: gAmbientSoundManager.mFrameCount++;
         break;

@@ -22,9 +22,6 @@ public:
     unsigned long GetTextureIndex() { return ee_ge_mat_get(this->mRust, EeGeMatField::TextureIndex, 0); }
     unsigned long GetVertexRangeLength() { return ee_ge_mat_get(this->mRust, EeGeMatField::VertexLength, 0); }
     unsigned long GetVertexStartingIndex() { return ee_ge_mat_get(this->mRust, EeGeMatField::VertexStart, 0); }
-    void SetColor(const GEColor& inColor) { this->GetColor() = inColor; }
-    void SetName(const UString& inName) { ee_ge_mat_set_name(this->mRust, &inName); }
-    void SetOpacity(float inOpacity) { ee_ge_mat_set_opacity(this->mRust, inOpacity); }
     void SetPolygonStartingIndex(unsigned long inIndex, unsigned long inLOD) { ee_ge_mat_set(this->mRust, EeGeMatField::PolygonStart, inLOD, inIndex); }
     void SetPolygonRangeLength(unsigned long inLength, unsigned long inLOD) { ee_ge_mat_set(this->mRust, EeGeMatField::PolygonLength, inLOD, inLength); }
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_mat_set_texture(this->mRust, inTexture, inScreen); }

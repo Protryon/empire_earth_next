@@ -29,6 +29,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEHerd.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/sim/units.h"
 
 const UString EEHerd::sData("EEHerd-SaveLoadData");
 // 0x4e5e40, right after sData (0x4e5e30 + 0x10) in the original's initialised .data, value 0; its only use clears it
@@ -144,7 +145,7 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_TO_COMPLEX: return (int64_t)EEHerdHandle(dynamic_cast<EEComplexUnit*>(reinterpret_cast<EEUnit*>((uintptr_t)inA)));
     case EE_CP_HERD_SET_TARGET_SEARCH: theUnit->SetTargetSearchTimer((long)v[0]);
         return 0;
-    case EE_CP_HERD_HOLD_UNIT: theUnit->HoldUnit(EEHerdUnit(inB));
+    case EE_CP_HERD_HOLD_UNIT: ee_units_cu_small(EE_UNITS_CU_S_DO_HOLD_UNIT, theUnit, EEHerdUnit(inB), 0);
         return 0;
     case EE_CP_HERD_MEDIA_LOAD: reinterpret_cast<EEMedia*>((uintptr_t)inA)->LoadMedia();
         return 0;

@@ -24,13 +24,6 @@ class EERenderObject : public RTSRenderObject {
 public:
     // inline
     EERenderObject() {  }
-    // implicit dtor: ??_G 0x10ae51 and EEROEffects's dtor call ~RTSRenderObject 0x10ae6d (it stores RTSRenderObject's vptr 0x441390)
-    // 0x10bdd2 (EEROEffects::FrameStarting tail-calls it; provisional name)
-    void QueueEffects() { ee_gamecpp_ro_queue_effects(this); }
-    // 0x10c036 (EEROGroundShadows::FrameStarting; provisional name)
-    void Fn10C036() { ee_gamecpp_ro_fn10c036(this); }
-    // 0x10eabe (EEROGroundShadows::FrameStarting; provisional name)
-    void FillRenderLists() { ee_gamecpp_ro_fill_render_lists(this); }
     // FillRenderLists' per-unit helpers (IsUnitDrawn 0x10b3b3, DrawGroundCircle 0x10bba4, FillGhostRecords 0x10c952,
     // FillObject, FillUnit, the doppelgangers' fills, GetUnitOpacity 0x10f412): gamecpp render_object.rs
 };

@@ -36,6 +36,7 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEGamePreferences.h"
+#include "rust/game/cp_engine.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
@@ -110,14 +111,14 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::OptMapType: return P64(&OPT->mMapType);
     case O::OptCampaignNameLength: return OPT->mCampaignName.GetLength();
-    case O::OptGetCampaignMapName: return OPT->GetCampaignMapName(WSTR(0));
+    case O::OptGetCampaignMapName: return ee_gamecpp_options_campaign_map_name(OPT, &(WSTR(0)));
     case O::OptCopyCampaignName: OPT->mCampaignName = ((EEGameOptions*)a[0])->mCampaignName;
         break;
     case O::OptCopyScenarioName: OPT->mScenarioName = ((EEGameOptions*)a[0])->mScenarioName;
         break;
     case O::OptSetMapName: OPT->mMapName = WSTR(0);
         break;
-    case O::OptGetMapDimensions: OPT->GetMapDimensions(*(long*)a[0], *(long*)a[1]);
+    case O::OptGetMapDimensions: ee_gamecpp_options_map_dimensions(OPT, (long*)a[0], (long*)a[1]);
         break;
     case O::OptAssign: *OPT = *(EEGameOptions*)a[0];
         break;
@@ -165,7 +166,7 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::NewWorldPlayer: return P64(static_cast<EEPlayer*>(new EEHumanPlayer(UWideString("World"), 0)));
     case O::NewHumanPlayerNamed: return P64(static_cast<EEPlayer*>(new EEHumanPlayer(SLOT->mName, (unsigned long)a[0])));
-    case O::CpEngineResolve: return EECPEngineResolve((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
+    case O::CpEngineResolve: return (unsigned long)ee_cp_engine_resolve((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
     case O::CpEngineSet: EECPEngineSet((EEComputerPlayer*)p, (unsigned long)a[0]);
         break;
     case O::WorldTableLong: return gWorldTable.GetLongValue((EEWorldConstant)a[0]);

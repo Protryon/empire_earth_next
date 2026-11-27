@@ -887,60 +887,6 @@ pub(crate) unsafe fn with<R>(refs: *const EeUnitsPlayerRefs, body: impl FnOnce(&
     body(&mut Player { h: &mut h, saved: r.saved, fields: r.fields, stats: r.stats })
 }
 
-/// The cost decisions: `what` 0 `CanAffordScaled(node, a, f, b)`, 1 `CanAffordSingleResource(node, a, b)`, 2
-/// `EEPlayer::CanAfford(node, a, b)`, 3 `CanAffordTechnology(a, f, reason)`, 4 `EEPlayer::Pay(node, a, f)`, 5
-/// `RefundTechnology(node, a, f)`.
-///
-/// # Safety
-/// As [`with`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_player_cost(
-    refs: *const EeUnitsPlayerRefs,
-    what: u32,
-    node: *mut c_void,
-    a: c_long,
-    b: c_long,
-    f: f32,
-    reason: *mut c_void,
-) -> bool {
-    let node = node as i64;
-    // SAFETY: the caller's contract
-    unsafe {
-        with(refs, |p| match what {
-            0 => p.can_afford_scaled(node, a, f, b),
-            1 => p.can_afford_single(node, a, b),
-            2 => p.can_afford(node, a, b),
-            3 => p.can_afford_technology(a, f, reason as i64),
-            4 => {
-                p.pay(node, a, f);
-                false
-            }
-            _ => {
-                p.refund_technology(node, a, f);
-                false
-            }
-        })
-    }
-}
-
-/// `EEPlayer::CanProduce` (see [`Player::can_produce`]).
-///
-/// # Safety
-/// As [`with`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_player_can_produce(
-    refs: *const EeUnitsPlayerRefs,
-    tech: c_long,
-    unit_class: c_long,
-    count: c_long,
-    check_cost: bool,
-    wonder_mode: c_long,
-    reason: *mut c_void,
-) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { with(refs, |p| p.can_produce(tech, unit_class, count, check_cost, wonder_mode, reason as i64)) }
-}
-
 /// The improvement decisions on unit type `unit_type` and improvement `improvement`: `what` 0
 /// `GetImprovementLevel`, 1 `CountQueuedImprovements`, 2 `CanImprove`, 3 `CanBuy(reason)`, 4 `IsImprovementMaxed`,
 /// 5 `QueueImprovement(flag front, flag2 paid)`, 6 `RemoveQueuedImprovement(flag)`, 7 `AdvanceImprovement`, 8

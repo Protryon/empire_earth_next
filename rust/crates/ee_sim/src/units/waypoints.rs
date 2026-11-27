@@ -897,17 +897,6 @@ pub unsafe extern "C" fn ee_units_waypoints_second(list: *const EeUnitsWaypoints
     }
 }
 
-/// `AddWaypoint(at, snap)` of the complex unit `unit`.
-///
-/// # Safety
-/// `unit` is a live complex unit, `at` three floats.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_add(unit: u64, at: *const f32, snap: bool) {
-    // SAFETY: the caller's contract
-    unsafe { add(unit, [*at, *at.add(1), *at.add(2)], snap) }
-}
-
 /// `NextWaypoint()` of the complex unit `unit`: 0, or 7 without one.
 ///
 /// # Safety
@@ -928,51 +917,6 @@ pub unsafe extern "C" fn ee_units_waypoints_next(unit: u64) -> i32 {
 pub unsafe extern "C" fn ee_units_waypoints_drop(unit: u64) {
     // SAFETY: the caller's contract
     unsafe { drop_path(unit) }
-}
-
-/// `SnapLastWaypoint()` of the complex unit `unit`.
-///
-/// # Safety
-/// `unit` is a live complex unit.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_snap(unit: u64) {
-    // SAFETY: the caller's contract
-    unsafe { snap_last(unit) }
-}
-
-/// `TakePath(path, smooth)` of the complex unit `unit` (`points` the path, changed in place to the adjusted one:
-/// its new count returned; room for `count`).
-///
-/// # Safety
-/// `unit` is a live complex unit, `points` `count` points.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_take_path(
-    unit: u64,
-    points: *mut [f32; 3],
-    count: u32,
-    smooth: bool,
-) -> u32 {
-    // SAFETY: the caller's contract
-    let mut path =
-        if count == 0 { Vec::new() } else { unsafe { std::slice::from_raw_parts(points, count as usize) }.to_vec() };
-    unsafe { take_path(unit, &mut path, smooth) };
-    let n = path.len().min(count as usize);
-    // SAFETY: room for `count`
-    unsafe { std::ptr::copy_nonoverlapping(path.as_ptr(), points, n) };
-    n as u32
-}
-
-/// `ShouldMoveToNextAutoWaypoint()` of complex unit `unit`.
-///
-/// # Safety
-/// `unit` is a live complex unit.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_next_auto(unit: u64) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { next_auto(unit) }
 }
 
 /// `SetGroupPathGoals(path)` of complex unit `unit` (`points` `count` x, y, z points).

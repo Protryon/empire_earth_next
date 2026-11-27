@@ -12,11 +12,10 @@
 
 #include "ee/EEWorldConstants.h"
 #include "ee/EEGlobalConstants.h"
-#include "rust/data/tables.h"
-#include "rust/sim/combat.h"
 #include "ee/EEDbList.h"
 #include "rust/data/media.h"
 #include "rust/game/gamecpp.h"
+#include "lle/GEColor.h"
 
 class FSFileSpec;
 class EEUnitClass;
@@ -115,8 +114,6 @@ public:
     // 0xdb5c8 (counted by mLoadCount; sets the mesh's texture sets)
     void Load(GETerrainMesh& ioMesh) { ee_gamecpp_db_terrain_mesh(this, &ioMesh, true); }
     void Unload(GETerrainMesh& ioMesh) { ee_gamecpp_db_terrain_mesh(this, &ioMesh, false); }
-    // 0xdb96c (EEMap::RegisterTerrainSets hands it the registered set) (provisional name)
-    void AttachTextures(GETextureSet* inTextureSet) { ee_gamecpp_db_terrain_attach(this, inTextureSet); }
     static unsigned long GetNumCliffTerrains() { return EETerrainTable::sCliffTable.size(); }
     static unsigned long GetNumTables() { return EETerrainTable::sTable.size(); }
     unsigned long GetNumUnitClasses() const { return this->mUnitClasses.size(); }
@@ -188,8 +185,5 @@ public:
 
 // db\dbrandommap's and db\dbterraingraytextures' records are ee_data tables.rs' (the game reads neither).
 
-// Original-backed terrain preparation/cleanup, cdecl noargs; caller/callee proof.
-void EELoadTerrainPreviews();
-void EEReleaseTerrainPreviews();
 
 #endif

@@ -121,10 +121,6 @@ void ee_ts_lock_free(EeTsLock *lock);
 
 /// # Safety
 /// `lock` is live.
-int32_t ee_ts_lock_read_count(const EeTsLock *lock);
-
-/// # Safety
-/// `lock` is live.
 void ee_ts_lock_read(const EeTsLock *lock);
 
 /// # Safety
@@ -158,9 +154,6 @@ long ee_ts_thread_free(EeTsThread *thread);
 /// `TSScheduler::GetCurrentThread`.
 EeTsThread *ee_ts_thread_current();
 
-/// `TSScheduler::GetCurrentThreadIndex` (-1 when the calling thread is not registered).
-unsigned long ee_ts_thread_current_index();
-
 /// # Safety
 /// `thread` is live.
 uint32_t ee_ts_thread_exit_code(const EeTsThread *thread);
@@ -188,24 +181,8 @@ long ee_ts_thread_post(const EeTsThread *thread,
 long ee_ts_thread_receive(const EeTsThread *thread, unsigned long *message, void **p1, void **p2);
 
 /// # Safety
-/// `thread` is live.
-long ee_ts_thread_resume(const EeTsThread *thread);
-
-/// # Safety
-/// `thread` is live.
-long ee_ts_thread_suspend(const EeTsThread *thread);
-
-/// # Safety
-/// `thread` is live.
-long ee_ts_thread_terminate(const EeTsThread *thread);
-
-/// # Safety
 /// `thread` is live; `name` is NULL or NUL-terminated.
 void ee_ts_thread_set_name(const EeTsThread *thread, const char *name);
-
-/// # Safety
-/// `thread` is live.
-bool ee_ts_thread_is_suspended(const EeTsThread *thread);
 
 /// The thread's message lock (`LockMessageQueue`/`UnlockMessageQueue` enter and leave it).
 ///

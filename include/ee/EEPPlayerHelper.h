@@ -8,6 +8,8 @@
 #define EE_EEPPLAYERHELPER_H
 
 #include "rust/game/gamecpp.h"
+#include "lle/FSPersistent.h"
+#include "rust/sim/game_ids.h"
 class EEPlayer;
 class EEWorld;
 class EEGameState;
@@ -25,8 +27,6 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_pph_save(this, inMajorVersion, inMinorVersion, &outFile); }
     // +0x14 0x14b42f
     virtual FSPersistent* CreateDefault() const { return new EEPPlayerHelper; }
-    // 0x14b4a3 (13 until loaded)
-    long GetLocalPlayerIndex(long& outIndex) { return ee_gamecpp_pph_local_index(this, &outIndex); }
 
     // class static keys (guard byte 0x531b00, bits 1..8)
 

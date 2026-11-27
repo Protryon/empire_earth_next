@@ -27,6 +27,10 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESEARust.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)
@@ -102,7 +106,7 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_DEREFERENCE: reinterpret_cast<UReferenceCounter*>(p[1])->Dereference();
         return 0;
-    case EE_SCREENS_SELTX_SHOW_LOADED: gUserInterface->ShowLoadedObject(reinterpret_cast<UReferenceCounter*>(p[1]));
+    case EE_SCREENS_SELTX_SHOW_LOADED: ee_screens_ui_show_loaded(gUserInterface, reinterpret_cast<UReferenceCounter*>(p[1]));
         return 0;
     case EE_SCREENS_SELTX_QUEUE_DONE: T(p)->mMessageQueueDone->Set();
         return 0;
@@ -117,9 +121,9 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
     case EE_SCREENS_SELTX_PLAYER: return H(gWorld.mPlayers[a[0]]);
     case EE_SCREENS_SELTX_POST_TEXT: T(p)->mChangeLoadText->Post(Text(p, a));
         return 0;
-    case EE_SCREENS_SELTX_LOAD_ALL_MEDIA: P(p)->LoadAllClassMedia();
+    case EE_SCREENS_SELTX_LOAD_ALL_MEDIA: ee_units_player_rest(P(p), EE_UNITS_PLAYER_REST_LOAD_ALL_CLASS_MEDIA, 0, 0, 0);
         return 0;
-    case EE_SCREENS_SELTX_UNLOAD_ALL_MEDIA: P(p)->UnloadAllClassMedia();
+    case EE_SCREENS_SELTX_UNLOAD_ALL_MEDIA: ee_units_player_rest(P(p), EE_UNITS_PLAYER_REST_UNLOAD_ALL_CLASS_MEDIA, 0, 0, 0);
         return 0;
     case EE_SCREENS_SELTX_TERRAIN: return H(EETerrainTable::Get((unsigned long)a[0]));
     case EE_SCREENS_SELTX_MAP_EXISTS: return gWorld.mMap != NULL;
@@ -145,13 +149,13 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
     case EE_SCREENS_SELTX_GHOST: EEGhostUnit::Create(T(p)->mEditor->GetMouseLocation(), (long)a[0], P(p),
                             a[1] != 0 ? ee_screens_seun_angle(T(p)->mEditor->GetUnitTab()) : 0.0f, false);
         return 0;
-    case EE_SCREENS_SELTX_RELOAD_TECH: P(p)->ReloadTechTree(a[0] != 0);
+    case EE_SCREENS_SELTX_RELOAD_TECH: ee_units_player_rest(P(p), EE_UNITS_PLAYER_REST_RELOAD_TECH_TREE, 0, a[0] != 0, 0);
         return 0;
     case EE_SCREENS_SELTX_FLUSH_PLACEMENTS: gWorld.FlushQueuedPlacements();
         return 0;
     case EE_SCREENS_SELTX_ADD_PENDING: P(p)->AddPendingUnits(0, 0);
         return 0;
-    case EE_SCREENS_SELTX_REMOVE_KILLED: P(p)->RemoveKilledUnits();
+    case EE_SCREENS_SELTX_REMOVE_KILLED: ee_rts_player_remove_killed_units(P(p));
         return 0;
     case EE_SCREENS_SELTX_RELEASE_PENDING: P(p)->ReleasePendingUnits();
         return 0;
@@ -166,8 +170,8 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
     case EE_SCREENS_SELTX_RESUME_GROUP: gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
         return 0;
     case EE_SCREENS_SELTX_WRITE_HEADER: return (int64_t)(unsigned long)fprintf((FILE*)*S(p), "{Version_%ld}\n\n", (long)a[0]);
-    case EE_SCREENS_SELTX_EXPORT_TEXT: return gWorld.mScenarioManager->ExportText(*S(p));
-    case EE_SCREENS_SELTX_IMPORT_TEXT: return gWorld.mScenarioManager->ImportTriggerText(*S(p), (unsigned long)a[0], a[1] != 0);
+    case EE_SCREENS_SELTX_EXPORT_TEXT: return ee_scenario_en_text(gWorld.mScenarioManager, &(*S(p)), true, 0, false);
+    case EE_SCREENS_SELTX_IMPORT_TEXT: return ee_scenario_en_text(gWorld.mScenarioManager, &(*S(p)), false, (unsigned long)a[0], a[1] != 0);
     case EE_SCREENS_SELTX_ERROR_COUNT: return (int64_t)gWorld.mScenarioManager->mImportErrors.size();
     case EE_SCREENS_SELTX_ERROR: return Write(gWorld.mScenarioManager->mImportErrors[(size_t)a[0]], p, a);
     case EE_SCREENS_SELTX_NAME_CHANGED: return UWideString(S(p)->GetFile()) != gWorld.mScenarioManager->mExportFileName;

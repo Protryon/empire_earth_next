@@ -29,6 +29,8 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMEffect.h"
 #include "ee/EEPersistentTemplates.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 
 
 
@@ -115,7 +117,7 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::CivBuilderEdit: CivBuilderEditCurrentCivilization();
         break;
     case O::CivBuilderSave: return CivBuilderSaveCivilization(UString((const char*)a[0]), true);
-    case O::CivBuilderFree: CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
+    case O::CivBuilderFree: ee_screens_cb_free_civilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
         break;
     case O::ApplyCivilization: return EEApplyCivilizationFile(*(UString*)p, gWorld.GetCurrentPlayer());
     // EECampaign::Load (p: the campaign, or the UWideString / file named)
@@ -192,7 +194,11 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
         break;
     case O::HeaderNew: return (int64_t)(intptr_t)new EEPSaveGameHeader;
     case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->LoadFromFile(*(FSFileSpec*)a[0]);
-    case O::HeaderListMedia: return EESMMediaStrings(((EEPSaveGameHeader*)p)->mMediaStrings).ListMediaFiles(UWideString((const char*)a[0]), *(std::vector<UWideString>*)a[1], *(UWideString*)a[2], a[3] != 0);
+    case O::HeaderListMedia: {
+        EESMMediaStrings theStrings(((EEPSaveGameHeader*)p)->mMediaStrings);
+        UWideString theDirectory((const char*)a[0]);
+        return ee_scenario_en_media_files(&theStrings, (void*)&theDirectory, (std::vector<UWideString>*)a[1], (UWideString*)a[2], a[3] != 0);
+    }
     case O::HeaderDelete: delete (EEPSaveGameHeader*)p;
         break;
     case O::PersistentLoad: return EELoadPersistent(UString((const char*)a[0]), 6, *(FSPersistent**)a[1]);

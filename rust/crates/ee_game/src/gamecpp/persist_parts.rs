@@ -110,18 +110,6 @@ pub unsafe extern "C" fn ee_gamecpp_pph_local_index(helper: *mut c_void, out: *m
     PP_NOT_LOADED as c_long
 }
 
-/// `EEPPlayerHelper::GetPlayers`: the loaded players; 13 unless the chunk was loaded.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_pph_players(helper: *mut c_void, out: *mut c_void) -> c_long {
-    let helper = helper as P;
-    let f = *fields(helper);
-    if f.mIsForLoading && f.mLoaded {
-        h(O::PphCopyPlayers, helper, &[out as i64]);
-        return PF_OK as c_long;
-    }
-    PP_NOT_LOADED as c_long
-}
-
 /// A length-prefixed byte block (a uint32 length, then the bytes; `limit` the most it may hold, `zero_fails` when 0 is
 /// an error): the result and the bytes.
 fn read_block(file: Pf, limit: c_ulong, zero_fails: bool, fill: u8) -> (i64, Vec<u8>) {

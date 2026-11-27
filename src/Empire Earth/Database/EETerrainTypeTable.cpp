@@ -18,6 +18,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECombatFormulas.h"
+#include "rust/sim/combat.h"
 
 // Returns the damage factor of an attack kind against a unit class (its family row), 0 when it cannot be attacked or a
 // player is missing; the base table unless exactly one player (player 0 aside) is human, then a twin by difficulty
@@ -44,7 +45,7 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
             }
         }
     }
-    return EECombatAttackFactor(theIn);
+    return ee_combat_attack_factor_captured(&theIn);
 }
 
 // gDamageTable[inRow][inColumn] (ee_combat's checked accessor: 0 off the table)

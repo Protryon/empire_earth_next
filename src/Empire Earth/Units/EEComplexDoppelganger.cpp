@@ -30,6 +30,7 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUGRust.h"
+#include "rust/sim/units.h"
 
 // port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
 // makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit
@@ -110,7 +111,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SCRATCH_CARGO_CLEAR: sRepairCargo.clear(); return 0;
     case EE_UNITS_DOP_SCRATCH_CARGO_PUSH: sRepairCargo.push_back(theOther); return 0;
     case EE_UNITS_DOP_CARGO_ASSIGN: theUnit->mCargo = sRepairCargo; return 0;
-    case EE_UNITS_DOP_ADD_REPATROL: theUnit->GetPlayer()->AddUnitToRepatrol(theUnit); return 0;
+    case EE_UNITS_DOP_ADD_REPATROL: ee_units_player_rest(theUnit->GetPlayer(), EE_UNITS_PLAYER_REST_ADD_TO_REPATROL, (uint64_t)(int64_t)(uintptr_t)(void*)theUnit, 0, 0); return 0;
     case EE_UNITS_DOP_LOCATION_AUTO: return EELocationGoalCast(theGoal)->GetIsAutoWaypoint() == true;
     case EE_UNITS_DOP_BUILD_TECH: return static_cast<EEUGRust*>(theGoal)->GetBuildTechTreeID();
     case EE_UNITS_DOP_PLAYER_PATROL_GROUP: return EEDopHandle(theUnit->GetPlayer()->GetPatrolGroup(USavedID(theUnit->mPatrolGroup)));
@@ -130,7 +131,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_TURRETS_DELETE: delete[] theUnit->mTurretAngles; return 0;
     case EE_UNITS_DOP_TURRETS_ASSIGN: theUnit->mTurretAngles = sRepairTurrets; return 0;
     case EE_UNITS_DOP_PAST_LAST_FRAME: return theUnit->GetStats()->mModel->mLastFrames[theUnit->mAnimation] <= theUnit->mPhysicalModel.GetFrame();
-    case EE_UNITS_DOP_RESTART_ANIMATION: theUnit->SetAnimationFrame(theUnit->mStats->mModel->mStartFrames[theUnit->mAnimation]); return 0;
+    case EE_UNITS_DOP_RESTART_ANIMATION: ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, theUnit, NULL, (int64_t)(theUnit->mStats->mModel->mStartFrames[theUnit->mAnimation])); return 0;
     case EE_UNITS_DOP_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->GetPlayer()->mPlayerID, (long)inB); return 0;
     case EE_UNITS_DOP_OWN_TECH_NODE: return EEDopHandle(theUnit->GetTechTreeNode());
     case EE_UNITS_DOP_ADD_WONDER: theUnit->GetPlayer()->AddWonder(theUnit, inB != 0); return 0;
@@ -144,7 +145,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_LAST_RESOURCE_LINK: return EEDopHandle(dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mLastResource))));
     case EE_UNITS_DOP_AREA_EFFECTS_CLEAR: theUnit->mAreaEffects.Clear(); return 0;
     case EE_UNITS_DOP_AREA_EFFECTS_ITEMS_CLEAR: theUnit->mAreaEffects.mItems.clear(); return 0;
-    case EE_UNITS_DOP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects(); return 0;
+    case EE_UNITS_DOP_MAKE_AREA_EFFECTS: ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, theUnit, 0, 0, 0); return 0;
     case EE_UNITS_DOP_HAS_RUNNING_STATE: return EESaveHasRunningState((unsigned long)inB, (unsigned long)inC);
     case EE_UNITS_DOP_IS_AUTO_WAYPOINT_GOAL: return EELocationGoalCast(theGoal) != NULL && EELocationGoalCast(theGoal)->GetIsAutoWaypoint();
     case EE_UNITS_DOP_FIRST_QUEUE_POP_BACK: theUnit->mGoalQueues[0].PopBack(); return 0;
@@ -174,10 +175,10 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_CONTACTS_TAKE: sDopContacts.clear(); sDopContacts.swap(sLoadedContacts); return 0;
     case EE_UNITS_DOP_CONTACTS_COUNT: return (int64_t)sDopContacts.size();
     case EE_UNITS_DOP_CONTACTS_VALID: return static_cast<RTSUnit*>(sDopContacts[(size_t)inB].first.first) == gWorld.GetUnit(sDopContacts[(size_t)inB].first.second);
-    case EE_UNITS_DOP_CONTACTS_CLEAR: sDopContacts[(size_t)inB].first.first->ClearContacts(); return 0;
+    case EE_UNITS_DOP_CONTACTS_CLEAR: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_CONTACTS, sDopContacts[(size_t)inB].first.first, 0, 0, 0); return 0;
     case EE_UNITS_DOP_CONTACTS_ID_COUNT: return (int64_t)sDopContacts[(size_t)inB].second.size();
     case EE_UNITS_DOP_CONTACTS_UNIT: return EEDopHandle(LoadedComplexUnit(sDopContacts[(size_t)inB].second[(size_t)inC]));
-    case EE_UNITS_DOP_CONTACTS_ADD: sDopContacts[(size_t)inB].first.first->AddContact(theOther); return 0;
+    case EE_UNITS_DOP_CONTACTS_ADD: ee_units_cu_body(EE_UNITS_CU_DO_ADD_CONTACT, sDopContacts[(size_t)inB].first.first, (int64_t)(uintptr_t)theOther, 0, 0); return 0;
     // dop_load.rs's live state at the first tick
     case EE_UNITS_DOP_IS_WORLD_UNIT: return static_cast<RTSUnit*>(theUnit) == gWorld.GetUnit((unsigned long)inB);
     case EE_UNITS_DOP_IGNORED_TARGETS_CLEAR: theUnit->mIgnoredTargets.clear(); return 0;
@@ -193,7 +194,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOPX_MEDIA: return (int64_t)(uintptr_t)EEMedia::Get((unsigned long)inB);
     case EE_UNITS_DOPX_LOAD_MEDIA: return EEDopObject<EEModel>(inA)->LoadMedia();
     case EE_UNITS_DOPX_CLAMP_FRAME: theDop->mFrame = min(theDop->mFrame, EEDopObject<EEModel>(inA)->mModel->GetFrameCount() - 1); return 0;
-    case EE_UNITS_DOPX_ADD_TO_TILES: gDoppelgangerManager.AddToTiles(theDop, theDop->mTileX, theDop->mTileY, theDop->mUnit->mUnitClass->GetUnitType() == kUnitTypeAirport); return 0;
+    case EE_UNITS_DOPX_ADD_TO_TILES: ee_units_dm_body(EE_UNITS_DM_DO_ADD_TO_TILES, static_cast<EEDoppelganger*>(theDop), theDop->mTileX, theDop->mTileY, theDop->mUnit->mUnitClass->GetUnitType() == kUnitTypeAirport); return 0;
     case EE_UNITS_DOPX_FREE: gDoppelgangerManager.Free(theDop); return 0;
     case EE_UNITS_DOPX_FINISH_FRACTIONS: ee_units_unit_finish_fractions(theUnit, &(sDopMaxima = EeUnitsFinishLoadIn{theUnit->mStats->mMaxHitPoints, theUnit->mStats->mFlightTime, theUnit->GetUnitClass()->mGarrisonCapacity, theUnit->mStats->mPower})); return 0;
     case EE_UNITS_DOPX_OLD_FOUNDATION: return theUnit->mIsFoundation = theUnit->GetUnitClass()->IsLandBuilding() && theUnit->GetUnitClass()->GetUnitType() != kUnitTypeFarm && !theUnit->mIsBuilt && theUnit->GetHitPoints() == 1;
@@ -293,7 +294,7 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
         }
     case EE_UNITS_UNIT_LOAD_SET:
         switch (inIndex) {
-        case EE_UNITS_UNIT_LOAD_SET_TURRETS: theComplex->ResizeTurretAngles((long)io->i); return 0;
+        case EE_UNITS_UNIT_LOAD_SET_TURRETS: ee_units_cu_more(EE_UNITS_CUM_DO_RESIZE_TURRETS, theComplex, (int64_t)(unsigned long)((long)io->i), 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL); return 0;
         // dop_load.rs's sections
         case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_CLEAR: theComplex->mBuildQueue.clear(); return 0;
         case EE_UNITS_UNIT_LOAD_SET_BUILD_QUEUE_SECOND: sLoadSecond = (unsigned long)io->i; return 0;

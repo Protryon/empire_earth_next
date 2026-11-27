@@ -149,27 +149,6 @@ pub fn step_push(store: &mut Store, reads: &mut Reads, id: u32, object: u64, mem
     push(v.push_x, v.push_y, v.period, v.max_velocity, v.tick_seconds, v.loc_x, v.loc_y)
 }
 
-/// `AfterStep`'s roll decay over the store: the new roll.
-#[no_mangle]
-pub extern "C" fn ee_units_step_roll(id: u32, object: u64, member: f32, tick_seconds: f32) -> f32 {
-    crate::units::store::with_store(|s| {
-        crate::units::step::with_reads(|reads| step_roll(s, reads, id, object, member, tick_seconds))
-    })
-}
-
-/// `Move`'s push arithmetic over the store.
-///
-/// # Safety
-/// `member` points to a valid input.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_step_push(id: u32, object: u64, member: *const EeUnitsPushIn) -> EeUnitsPush {
-    // SAFETY: the caller's contract
-    let member = unsafe { *member };
-    crate::units::store::with_store(|s| {
-        crate::units::step::with_reads(|reads| step_push(s, reads, id, object, &member))
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

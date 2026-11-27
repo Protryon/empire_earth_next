@@ -31,10 +31,6 @@ public:
     // Writes the area's name, text, anchor, rectangle, flags, select mode, tile time and ID; returns the first error
     // +0x04 0x1ba78e
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_scenario_en_area_io(this, &outFile, true); }
-    // 0x1ba0d1: whether inUnit is in this area (EESMObject's 0x1c6458 asks; provisional name)
-    // Returns whether the unit is in the area (no anchor: the unit is off the map; negative anchor: it has no complex
-    // unit or that stands on the unit's tile; else by tile); false for no unit
-    bool ContainsUnit(EEUnit* inUnit) { return ee_scenario_en_area_contains_unit(this, inUnit); }
     // Returns whether a tile is in the area: inside the rectangle, on the anchor's continent, or inside the hull of a
     // non-Gaia town that contains the anchor
     bool ContainsTile(const U2DPoint<long>& inTile) { return ee_scenario_en_area_contains_tile(this, inTile.mX, inTile.mY); }
@@ -46,8 +42,6 @@ public:
     // 0x1ba495: real typed cache/output family
     void GetTiles(std::vector<U2DPoint<long> >& outTiles) { ee_scenario_en_area_tiles(this, &outTiles); }
     const UWideString& GetName() const { return this->mName; }  // inline (DuplicateArea 0x5b120d)
-    bool IsUnset() const { return ee_scenario_area_is_unset(this); }
-    bool IsOffMap() const { return ee_scenario_area_is_off_map(this); }
     // inline (COMDAT 0x17d381, first emitted by the editor's area screen; Reset 0x1afbb1 calls it) (provisional name)
     void SetAnchor(const U2DPoint<long>& inAnchor) { ee_scenario_en_area_set_anchor(this, inAnchor.mX, inAnchor.mY); }
     // inline (COMDAT 0x17d34c, before SetAnchor's: the editor's area screen 0x17d272 calls both) (provisional name)

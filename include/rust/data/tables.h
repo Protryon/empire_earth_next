@@ -99,58 +99,6 @@ struct EeDataUnitBehaviorFields {
   bool mCanFlee;
 };
 
-/// `EEStartingResources`' members (`include/ee/EEStartingResources.h`: the class's base).
-struct EeDataStartingResourcesFields {
-  /// Food, wood, stone, gold, iron.
-  long mAmounts[5];
-  /// The preset's name string id.
-  long mNameID;
-};
-
-/// `EEUCUpgradeFactor`: one upgraded value.
-struct EeDataUpgradeFactor {
-  float mScale;
-  float mOffset;
-};
-
-/// `EEUCUpgradeTable`'s members (`include/ee/EEUCUpgradeTable.h`: the class's base).
-struct EeDataUpgradeFields {
-  EeDataUpgradeFactor mFactors[16];
-  long mMaxLevel;
-};
-
-/// `EETerrainTypeTable`'s members from `mID` (`include/ee/EEDatabaseTables.h`: the class's base).
-struct EeDataTerrainTypeFields {
-  /// The map's colour set of the type (EEMap sets it; not from the record).
-  long mColorSetID;
-  long mID;
-  long mFirstColor;
-  long mLastColor;
-  long mNameID;
-  long mL18;
-  bool mIsInEditor;
-};
-
-/// `EEGameVariant`'s members (`include/ee/EEGameVariant.h`: the class's base).
-struct EeDataGameVariantFields {
-  /// The (set, factor) pairs' factors.
-  float mFactors[10];
-  float mDepositFactor;
-  float mEpochCostFactor;
-  float mWorkTimeFactor;
-  float mFirstEpochCostFactor;
-  float mSecondEpochCostFactor;
-  float mCostSetFactor;
-  float mEarthquakeDamageFactor;
-  /// The pairs' unit sets (`gUnitSetManager` ids; > 0: used).
-  long mSets[10];
-  long mIndex;
-  long mMoraleBonus;
-  long mNameID;
-  long mCostSet;
-  bool mSelectable;
-};
-
 /// `EETerrainTable`'s members from the record (`include/ee/EEDatabaseTables.h`: the class's base).
 struct EeDataTerrainFields {
   long mWaterAnimationPeriod;
@@ -351,6 +299,18 @@ struct EeDataWorldEntry {
   int32_t mLongValue;
   uint32_t mLongValue2;
   int32_t mUnused;
+};
+
+/// `EEUCUpgradeFactor`: one upgraded value.
+struct EeDataUpgradeFactor {
+  float mScale;
+  float mOffset;
+};
+
+/// `EEUCUpgradeTable`'s members (`include/ee/EEUCUpgradeTable.h`: the class's base).
+struct EeDataUpgradeFields {
+  EeDataUpgradeFactor mFactors[16];
+  long mMaxLevel;
 };
 
 /// One dbobjects record (`EEUnitClassRecord` in the C++, 0x7a8 bytes: `EEDbObject::mRecord`): the class factory
@@ -884,6 +844,46 @@ struct EeDataCpBehavior {
   bool mIsSettable;
 };
 
+/// `EEGameVariant`'s members (`include/ee/EEGameVariant.h`: the class's base).
+struct EeDataGameVariantFields {
+  /// The (set, factor) pairs' factors.
+  float mFactors[10];
+  float mDepositFactor;
+  float mEpochCostFactor;
+  float mWorkTimeFactor;
+  float mFirstEpochCostFactor;
+  float mSecondEpochCostFactor;
+  float mCostSetFactor;
+  float mEarthquakeDamageFactor;
+  /// The pairs' unit sets (`gUnitSetManager` ids; > 0: used).
+  long mSets[10];
+  long mIndex;
+  long mMoraleBonus;
+  long mNameID;
+  long mCostSet;
+  bool mSelectable;
+};
+
+/// `EEStartingResources`' members (`include/ee/EEStartingResources.h`: the class's base).
+struct EeDataStartingResourcesFields {
+  /// Food, wood, stone, gold, iron.
+  long mAmounts[5];
+  /// The preset's name string id.
+  long mNameID;
+};
+
+/// `EETerrainTypeTable`'s members from `mID` (`include/ee/EEDatabaseTables.h`: the class's base).
+struct EeDataTerrainTypeFields {
+  /// The map's colour set of the type (EEMap sets it; not from the record).
+  long mColorSetID;
+  long mID;
+  long mFirstColor;
+  long mLastColor;
+  long mNameID;
+  long mL18;
+  bool mIsInEditor;
+};
+
 extern "C" {
 
 /// The size of a dbanimals record.
@@ -926,29 +926,6 @@ void ee_data_to_hit_load(size_t index,
 /// The size of a dbstartingresources record.
 size_t ee_data_starting_resources_record_size();
 
-/// `EEStartingResources::Load`'s copy of one record; false (and `fields` untouched) for a skipped row.
-///
-/// # Safety
-/// `bytes` holds `ee_data_starting_resources_record_size()` bytes; `fields` is writable.
-bool ee_data_starting_resources_from_record(const uint8_t *bytes,
-                                            EeDataStartingResourcesFields *fields);
-
-/// The size of a dbupgrade record.
-size_t ee_data_upgrade_record_size();
-
-/// The constructor's entry (see [`upgrade_default`]).
-///
-/// # Safety
-/// `fields` is writable.
-void ee_data_upgrade_default(EeDataUpgradeFields *fields);
-
-/// `EEUCUpgradeTable::Load`'s copy of one record; false (and `fields` untouched) for a row without an entry.
-///
-/// # Safety
-/// `bytes` holds `ee_data_upgrade_record_size()` bytes; `fields` is writable.
-bool ee_data_upgrade_from_record(const uint8_t *bytes,
-                                 EeDataUpgradeFields *fields);
-
 /// `EEColorTable`'s colour `which` (0 the main, 1 the second, 2 the dark shade, 3 the fourth) of player colour
 /// `index` into `out[3]`; white (`GEColor()`, the class's `sColor`) past the table or for a row not loaded.
 ///
@@ -983,24 +960,6 @@ void ee_data_ai_targeting_unload();
 /// # Safety
 /// `out` has room for 30 values.
 bool ee_data_ai_targeting_table(int32_t *out);
-
-/// The size of a dbterraintype record.
-size_t ee_data_terrain_type_record_size();
-
-/// `EETerrainTypeTable::Load`'s copy of one record.
-///
-/// # Safety
-/// `bytes` holds `ee_data_terrain_type_record_size()` bytes; `fields` is writable.
-void ee_data_terrain_type_from_record(const uint8_t *bytes, EeDataTerrainTypeFields *fields);
-
-/// The size of a dbgamevariant record.
-size_t ee_data_game_variant_record_size();
-
-/// `EEGameVariant::Load`'s copy of one record; false (and `fields` untouched) for a skipped row.
-///
-/// # Safety
-/// `bytes` holds `ee_data_game_variant_record_size()` bytes; `fields` is writable.
-bool ee_data_game_variant_from_record(const uint8_t *bytes, EeDataGameVariantFields *fields);
 
 /// The size of a dbterrain record (after its lead string).
 size_t ee_data_terrain_record_size();
@@ -1141,12 +1100,6 @@ void ee_data_graphic_object_default(EeDataGraphicObjectFields *fields);
 /// `bytes` holds `ee_data_graphic_object_record_size()` bytes; `fields` is readable and writable.
 EeDataGraphicObjectSounds ee_data_graphic_object_from_record(const uint8_t *bytes,
                                                              EeDataGraphicObjectFields *fields);
-
-/// [`tag_point_kinds`] of a NUL-terminated name into `out` (room for 0x48); returns the count.
-///
-/// # Safety
-/// `name` is NUL-terminated; `out` has room for 0x48 `long`s.
-size_t ee_data_tag_point_kinds(const char *name, long *out);
 
 /// [`graphic_frame_maps`] over `count` parts: `insert(context, slot, frame, value)` for each entry, each part's slot
 /// into `slots`.

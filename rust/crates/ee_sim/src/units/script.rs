@@ -496,16 +496,6 @@ pub extern "C" fn ee_units_script_delete_all() {
     delete_all()
 }
 
-/// The action id of a NUL-terminated name (0: unknown).
-///
-/// # Safety
-/// `name` is a NUL-terminated string.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_script_action_id(name: *const std::ffi::c_char) -> i32 {
-    // SAFETY: the caller's contract
-    action_id(unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes())
-}
-
 /// The NUL-terminated name of an action id ("" unknown), static.
 #[no_mangle]
 pub extern "C" fn ee_units_script_action_name(id: u32) -> *const std::ffi::c_char {

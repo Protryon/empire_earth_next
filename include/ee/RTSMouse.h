@@ -25,13 +25,9 @@ public:
     virtual long Release();                 // +0x08 0x11b373 (returns 0)
     // 0x11b3cc (under mInputLock after ISMouse::RefreshXY; provisional name)
     void Update() { ee_rts_mouse_update(this); }
-    // drawn by RTSGraphics::Render 0x11a71c in this order (provisional names)
-    void BeginFrame() { ee_rts_mouse_begin_frame(this); }
     void SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin);
     void Draw(GESurface* inSurface, const GE2DPoint& inOrigin);
     long RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, bool inIsWindowed);  // 0x11ae5d (the original returns the CopyTo result, 0 on the first call: re-mangle names.txt 11ae5d with any retype)
-    // 0x10a94c: releases +0x74, clears +0xa1, leaves mRenderLock
-    void EndFrame() { ee_rts_mouse_end_frame(this); }
     // inline: the game settings store the mouse sensitivity value first, then load gMouse (0x1d6c80, 0x1d88eb;
     // provisional name)
     void SetSensitivity(float inSensitivity) { this->mSensitivity = inSensitivity; }

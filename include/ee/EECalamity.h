@@ -10,8 +10,8 @@
 #define EE_EECALAMITY_H
 
 #include "lle/U2DPoint.h"
-#include "rust/sim/tech.h"   // EeCalamityFields (ee_tech calamity_record.rs)
 #include "rust/game/gamecpp.h"
+#include "lle/FSRestorable.h"
 class EECalamityClass;
 class EEUnit;
 class SESMInstanceNode;
@@ -43,8 +43,6 @@ public:
     bool GetTargetUnit(EEUnit*& outUnit) { return (outUnit = this->mTargetUnit) != NULL; }
     // out of line in another unit (0xdfd80; EECalamity.cpp calls it): stops mSecondarySound (provisional name)
     float GetTimeAlive() const { return this->mTimeAlive; }  // inline (compared as an FP value, not a memory operand)
-    // inline (inferred); its nested GERectangle::operator= is refused in CreateSourceEffect (0xb0409 79.8 -> 93.5)
-    void SetRectangle(const GERectangle& inRectangle) { this->mRectangle = inRectangle; }
 
     GERectangle mRectangle;                 // +0x04 (saved first, no key; provisional name)
     GE3DPoint mTargetLocation;              // +0x14

@@ -5,8 +5,8 @@
 #ifndef EE_EECLIENT_H
 #define EE_EECLIENT_H
 
-#include "rust/game/app.h"
 #include "rust/game/gamecpp.h"
+#include "lle/NESynchronousClient.h"
 class EEGameOptionsPlayer;
 
 class EEClient : public NESynchronousClient {
@@ -77,6 +77,5 @@ class EEUnit;
 // not read: the server and the client also call it with the address of a zeroed local; provisional name; types
 // inferred)
 void CancelGameCallback(void* inData);
-void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlayerID, long inCommand, long inGoalQueue);
 
 #endif

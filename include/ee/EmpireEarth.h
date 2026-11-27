@@ -41,7 +41,6 @@ void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer
 bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner);
 class EEPlayer;
 class EESoundObject;
-unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound);  // 0x14831c (cdecl; returns -1 or Play's result; EEMSavedGroupSelect; plays inSound for the current player)
 extern unsigned long gCollisionDetectionUnit;   // 0x4c2378 (unsigned: EEPhysics 0x15401e's fidiv) (initialised .data; EEMToggleCollisionDetection sets it)
 class UWideString;
 // 0x280a05 (Civilization Builder; EEMCivUpgradesRequested): requires <vector>
@@ -68,33 +67,26 @@ extern long& gDifficultyLevel2;             // 0x530704 (likewise; provisional n
 // (provisional name and meaning; the campaign editor shows its fields through it)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern unsigned long& gTexturePixelDepth;   // the textures' depth (Empire Earth.cpp)
-void EEExitGame();                         // 0x27a93e (disconnects and leaves the game; provisional name)
 class EEUnit;
 // 0x27a737 (cdecl): the tile picked at inPoint (EEMap::PickScreenTile; true) or else the tile under it (false) and its
 // coordinates (the out pointer is an EETile*, both stores come from EEMap tile lookups);
 // EEACalamity::Cast/Check pass (location, &unit, mX, mY, true) (provisional names; types inferred)
 class EETile;
-long EESetCivBuilderButtonBlinking(bool inBlinking);  // 0x27fcf0 (cdecl; the main game form's blinking buttons; EEPlayer::RepairPointers keeps the result) (provisional name)
 bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag);
 // 0x27a77a (cdecl): the map location under inPoint (EEMap::GetLocationAt into outTile/outPoint; true when found),
 // else the tile centre at its mesh height (false) (provisional name; types inferred; EEUICCommandUnits)
 class GE3DPoint;
 bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag);
-// 0x27a60c (cdecl): EEACalamity::Cast's feedback at inPoint for inUnit (provisional name)
-void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit);
 // 0x27a644 (cdecl): the flare effect at inLocation (graphic effect 0xd1 on the ground, 0xd3 on inUnit) for the
 // current player (EEOrderAtCursor, 0x2700f7; provisional name)
 void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit);
 class EEComplexUnit;
-// 0x27a701 (cdecl): the current player's first selected unit (false when nothing is selected) (provisional name)
-bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit);
 // 0x27a7f5 (cdecl): message 0x41b for the keyboard's modifier state in the game / scenario editor forms (0x27518a)
 // (provisional name)
 class EEUIFMainGame;
 extern UString gMultiplayerString;         // 0x562fd8 (EEGlobals.cpp; constructed by UI Events/EEScreens.cpp, ""; provisional name)
 bool EEIsMultiplayerGame(bool inFlag);     // 0x2989a9 (inFlag ? byte 0x531664 : true; provisional name)
 void EEStartExternalLobby();               // 0x297276 (the main screen's MultiPlayer when the check passes; provisional name)
-void EEShowSinglePlayerScreen();           // 0x13fe97 (the campaign choice's Back, after Pop; provisional name)
 // the built-in campaigns' names (Empire Earth.cpp init chains 0x13eef8..; provisional names)
 extern UWideString gCampaignAOCRoman;      // 0x52a2f8 "AOCRoman"
 extern UWideString gCampaignAOCPacific;    // 0x52a2e0 "AOCPacific"
@@ -145,7 +137,6 @@ extern long gCollisionSphereMode;
 // 0x140d3c; the campaign form adds the campaign's archive to it). (provisional names)
 class FSPath;
 extern FSPath* gDataPath;
-void EESetDataPaths();                     // 0x140d3c (SetTexturePath/SetModelPath/SetPath(gDataPath))
 extern UWideString gU52A280;               // 0x52a280 "een1ve1s_" (prefixed to campaign scenario and media file names)
 extern UWideString gU530BC8;               // 0x530bc8 (Empire Earth.cpp; EEUIESSEOpen appends it to label 0's text)
 

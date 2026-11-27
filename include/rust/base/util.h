@@ -71,23 +71,6 @@ using EeUtilShutdownFn = void(*)(bool forced);
 
 extern "C" {
 
-/// `UConfig::GetValue(block, key, long&)`: kErrorOK with the value, kErrorNotFound (the value left) when the key
-/// holds no integer.
-///
-/// # Safety
-/// As `PlatConfigGetInt`; `out` is valid.
-long ee_uconfig_get_long(const char *block,
-                         const char *key,
-                         long *out);
-
-/// `UConfig::GetFlag`: kErrorOK with whether the integer is nonzero, kErrorNotFound (the flag left) otherwise.
-///
-/// # Safety
-/// As `PlatConfigGetInt`; `out` is valid.
-long ee_uconfig_get_flag(const char *block,
-                         const char *key,
-                         bool *out);
-
 /// `UConfig::GetValue(block, key, UWideString&)`: the key's text (at most 1023 bytes) handed to `assign` (the C++
 /// string's assignment) and kErrorOK, or kErrorNotFound (the string left) when the key holds none.
 ///
@@ -140,12 +123,6 @@ void ee_util_fractal_compute(EeUtilFractal *fractal, float corner, float range, 
 /// # Safety
 /// `fractal` is a live map.
 float ee_util_fractal_value(const EeUtilFractal *fractal, unsigned long x, unsigned long y);
-
-/// `GetSquareDimension`.
-///
-/// # Safety
-/// `fractal` is a live map.
-unsigned long ee_util_fractal_dimension(const EeUtilFractal *fractal);
 
 /// `UGraphSeries()`.
 EeUtilSeries *ee_util_series_new();
@@ -336,12 +313,6 @@ void *ee_util_pool_new_object(EeUtilPool *pool);
 /// `pool` from [`ee_util_pool_new`]; `object` from its `New`.
 void ee_util_pool_delete(EeUtilPool *pool, void *object);
 
-/// `AddChunk`.
-///
-/// # Safety
-/// `pool` from [`ee_util_pool_new`].
-bool ee_util_pool_add_chunk(EeUtilPool *pool);
-
 /// `Release`.
 ///
 /// # Safety
@@ -428,9 +399,6 @@ void ee_util_shutdown(bool forced,
 
 /// `UShutdownInProgress`.
 bool ee_util_shutdown_in_progress();
-
-/// `UGetOSType`.
-unsigned long ee_util_os_type();
 
 /// `UGetOSLanguage`.
 uint16_t ee_util_os_language();

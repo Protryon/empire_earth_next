@@ -53,19 +53,14 @@
 #include "ee/EEStringIDs.h"
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/tech_tree.h"
+#include "rust/sim/units.h"
 
 // the location goal's host hands the unit's transformation to ee_ge's GeTransformation (the same 4x4 floats)
 static_assert(sizeof(GETransformation) == 64, "GETransformation is ee_ge's GeTransformation");
 
 long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the teleporter's unload sound)
-
-// ---- the build/repair goal's world work (EEUGBuildRepair.cpp's helpers; the goal itself is build.rs)
-
-// Orders units farthest from the reference tile first, so a sort leaves the nearest unit last
-inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const { return this->DistanceSquared(EETileCoordinate(inUnit->mTileX, inUnit->mTileY)); }
-
-// (the two distances are pure reads: their order does not matter)
-bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const { return this->DistanceSquared(inFirst) > this->DistanceSquared(inSecond); }
 
 // ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
 
@@ -199,11 +194,11 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_TRANSPORT_UNLOAD_TILES: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindUnloadTiles(ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1], &TilesAt(ioArgs)[2], &TilesAt(ioArgs)[3]); return 0;
     case EE_UNITS_GOAL_HOST_X_AIRPLANE_UNLOAD_TILES: EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindUnloadTiles(ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1], &TilesAt(ioArgs)[2], &TilesAt(ioArgs)[3]); return 0;
     case EE_UNITS_GOAL_HOST_X_CAN_UNLOAD_NEAR: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->CanUnloadNear(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inA)->GetCargo(0), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1], &TilesAt(ioArgs)[2]);
-    case EE_UNITS_GOAL_HOST_UNLOAD_AT: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->UnloadAt(ObjectOf<EEComplexUnit>(inA), (long)ioArgs->i[0], (long)ioArgs->i[1]); return 0;
+    case EE_UNITS_GOAL_HOST_UNLOAD_AT: ee_units_uck_dispatch(EE_UNITS_BODY_UNLOAD_AT, EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass()), ObjectOf<EEComplexUnit>(inA), 0, (long)ioArgs->i[0], (long)ioArgs->i[1], NULL); return 0;
     case EE_UNITS_GOAL_HOST_X_SPACE_UNLOAD_SOUND: return gSpaceUnloadSoundID;
     case EE_UNITS_GOAL_HOST_X_SOUND_GET: return Handle(EESoundObject::Get((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_X_SOUND_PARAMETERS:
-        ObjectOf<EEComplexUnit>(inA)->mUnitClass->GetSoundParameters(ObjectOf<EEComplexUnit>(inA), ObjectOf<EESoundObject>(inB), &ioArgs->f[0], &ioArgs->f[1], &ioArgs->f[2]);
+        ee_units_uck_sound(ObjectOf<EEComplexUnit>(inA)->mUnitClass, static_cast<EEUnit*>(ObjectOf<EEComplexUnit>(inA)), ObjectOf<EESoundObject>(inB), &ioArgs->f[0], &ioArgs->f[1], &ioArgs->f[2]);
         return 0;
     case EE_UNITS_GOAL_HOST_X_SOUND_PLAY: ObjectOf<EESoundObject>(inA)->Play(ioArgs->f[0], ioArgs->f[1], ioArgs->f[2]); return 0;
     case EE_UNITS_GOAL_HOST_X_SOUND_PLAY_PLAIN: ObjectOf<EESoundObject>(inA)->Play(); return 0;
@@ -235,7 +230,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     // the build/repair goal's
     // (EE_UNITS_GOAL_HOST_BUILD_UNIT's reads are Rust's views: rust_goal.rs build_unit_fields)
     case EE_UNITS_GOAL_HOST_IN_WORK_REACH: return EEIsInWorkReach(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB));
-    case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS: ObjectOf<EEPlayer>(inA)->CheckButtonsPreloaded((long)ioArgs->i[0]); return 0;
+    case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS: ee_units_player_rest(ObjectOf<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)((long)ioArgs->i[0]), 1, 0); return 0;
     case EE_UNITS_GOAL_HOST_X_SPACE_WALL: EECreateSpaceWallEnergyWall(ObjectOf<EEComplexUnit>(inA)); return 0;
     case EE_UNITS_GOAL_HOST_X_PLAY_SAMPLE: gSoundManager->Play(ObjectOf<EESoundObject>(inA)->mSampleID, ObjectOf<EESoundObject>(inA)->mVolume, 0.0f, 1.0f, false, NULL); return 0;
     case EE_UNITS_GOAL_HOST_X_MAIN_GAME_FORM: return Handle(gUIManager->GetMainGameForm());
@@ -249,7 +244,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR: return ObjectOf<EEComplexUnit>(inA)->mPlayer->CanAffordRepair(ObjectOf<EEUnit>(inB), ObjectOf<EEComplexUnit>(inA), (unsigned long)ioArgs->i[0]);
     case EE_UNITS_GOAL_HOST_PAY: ObjectOf<EEPlayer>(inA)->Pay(ObjectOf<EETechTreeNode>(inB), 0x20, ioArgs->f[0]); return 0;
     case EE_UNITS_GOAL_HOST_X_WONDER_CHAT: WonderStartedChat(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB)); return 0;
-    case EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA: ObjectOf<EEComplexUnit>(inA)->mPlayer->LoadUnitClassMedia(ObjectOf<EEUnit>(inB)->mUnitClass->GetUnitType()); return 0;
+    case EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA: ee_units_player_rest(ObjectOf<EEComplexUnit>(inA)->mPlayer, EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)(ObjectOf<EEUnit>(inB)->mUnitClass->GetUnitType()), 0, 0); return 0;
     case EE_UNITS_GOAL_HOST_X_LOAD_MEDIA: ObjectOf<EEComplexUnit>(inA)->LoadMedia(false); return 0;
     case EE_UNITS_GOAL_HOST_X_POST_UNLOAD_CLASS:
         gDataPreLoading->PostUnloadUnitClass(ObjectOf<EEComplexUnit>(inA)->mPlayer->mPlayerID, ObjectOf<EEComplexUnit>(inA)->mUnitClass->GetUnitType());
@@ -269,11 +264,11 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_LAST_WAYPOINT: PointOut(ioArgs, GE3DPoint(ObjectOf<EEComplexUnit>(inA)->mWaypoints.back().mLocation)); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST: return Handle(EEFindLoadedGhost((unsigned long)inA));
-    case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT: return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
+    case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT: return Handle(static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit((unsigned long)inA)));
     case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: return EEIsLineToUnitBlocked(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), &sGoalBlocker, &sGoalBlockTile[0], &sGoalBlockTile[1]);
     // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
     case EE_UNITS_GOAL_HOST_TAKE_HIT: ObjectOf<EEUnit>(inA)->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1); return 0;
-    case EE_UNITS_GOAL_HOST_REGROW: ObjectOf<EEUnit>(inA)->RegrowForest(ObjectOf<EEComplexUnit>(inB)); return 0;
+    case EE_UNITS_GOAL_HOST_REGROW: ee_units_eu_more(EE_UNITS_EUM_DO_REGROW_FOREST, ObjectOf<EEUnit>(inA), ObjectOf<EEComplexUnit>(inB), 0, 0); return 0;
     case EE_UNITS_GOAL_HOST_X_WORK_TIME_FACTOR: ioArgs->f[0] = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor; return 0;
     case EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS: return EEGetRules().Epoch(ObjectOf<EEComplexUnit>(inA)->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;
     // the location goal's
@@ -287,7 +282,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_COMBAT_G_STEP: EECombatStep((int32_t)ioArgs->i[0], ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnitGoal>((uint64_t)ioArgs->i[2]), ObjectOf<EEUnit>((uint64_t)ioArgs->i[1])); return 0;
     case EE_COMBAT_G_CLASS_NAME: return ObjectOf<EEComplexUnit>(inA)->mUnitClass != NULL ? (int64_t)(uintptr_t)(const char*)ObjectOf<EEComplexUnit>(inA)->mUnitClass->mName : 0;
-    case EE_COMBAT_G_RELEASE_HEAL_EFFECT: ObjectOf<EEComplexUnit>(inA)->ReleaseHealEffect(); return 0;
+    case EE_COMBAT_G_RELEASE_HEAL_EFFECT: ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, ObjectOf<EEComplexUnit>(inA), NULL, 0); return 0;
     case EE_COMBAT_G_CAN_HEAL: return EECanHeal(ObjectOf<EEUnit>(inA), ObjectOf<EEComplexUnit>((uint64_t)ioArgs->i[0]));
     }
     return 0;
@@ -328,14 +323,6 @@ EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, st
 void EEUGRust::DumpOutOfSynch(FILE* inFile) { Goal(EE_UNITS_GOAL_DUMP, this, 0, 0, NULL, NULL, NULL, inFile); }
 
 void EEUGRust::GetDebugLine(UWideString& ioText) { Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText); }
-
-long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    // the base goal's record first (but the heal goal's), then the kind's: one Rust sequence (rust_goal.rs)
-    return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
-}
-
-long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile); }
 
 // ---- the C++ of EEGatherNextTree's Rust body (ee_units uu_gather_tree.rs; EE_UNITS_GT_*): one statement each
 

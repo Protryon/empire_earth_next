@@ -32,6 +32,9 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIForest.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
+#include "rust/sim/units.h"
 
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
@@ -71,7 +74,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_PART_TAKE_HIT: EEEuObject<EEComplexUnit>(inA)->TakeHit(EEEuObject<EEUnit>((uint64_t)theArgs[0]), (long)theArgs[1], (unsigned long)theArgs[2], (long)theArgs[3]); return 0;
     case EE_UNITS_EU_SPARKS: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactSparksEffect, NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_BLOOD: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mImpactBloodEffect, NULL, false, 0, 0); return 0;
-    case EE_UNITS_EU_APPLY_MODIFIERS: theComplex->mAffectingAreaEffects.ApplyModifiers(1, EEEuObject<long>(inA)[0], EEEuObject<long>(inA)[1], theComplex); return 0;
+    case EE_UNITS_EU_APPLY_MODIFIERS: ee_screens_ael_apply_modifiers(&theComplex->mAffectingAreaEffects, 1, &EEEuObject<long>(inA)[0], &EEEuObject<long>(inA)[1], theComplex); return 0;
     case EE_UNITS_EU_HAS_UNDER_ATTACK: return theComplex->mUnitClass->FindAction(kActionUnderAttack) != NULL;
     case EE_UNITS_EU_ACTION_CHANGED: theComplex->mUnitClass->ActionChanged(theComplex); return 0;
     case EE_UNITS_EU_SHOOTS_TRACERS: return theOther->mUnitClass->mShotEffect != NULL && theOther->mUnitClass->mShotEffect->mKind == kEffect3DTracers;
@@ -89,12 +92,12 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_ICBM_EXPLOSION: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectAircraftExplosion), NULL, false, 0, 0); return 0;
     case EE_UNITS_EU_MINIMAP_PING: gMiniMap->Ping(GE2DPoint((float)theUnit->mTileX, (float)theUnit->mTileY)); return 0;
     case EE_UNITS_EU_SELECTED: return theUnit->mPlayer->mSelectedGroup->Contains(theComplex);
-    case EE_UNITS_EU_POST_424: gUserInterface->PostMessage424Once(); return 0;
+    case EE_UNITS_EU_POST_424: ee_screens_ui_post_icon_bar_once(gUserInterface); return 0;
     // eu_body.rs's
     case EE_UNITS_EU_ADD_OFF_MAP: theUnit->mPlayer->AddOffMapUnit(theUnit); return 0;
     case EE_UNITS_EU_REMOVE_OFF_MAP: theUnit->mPlayer->RemoveOffMapUnit(theUnit); return 0;
     case EE_UNITS_EU_IS_FOUNDATION: return theUnit->IsFoundation();
-    case EE_UNITS_EU_MINIMAP_MOVE: gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
+    case EE_UNITS_EU_MINIMAP_MOVE: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
     case EE_UNITS_EU_SIGHT_MOVED: theUnit->SightMoved(theUnit->mTileX, theUnit->mTileY, (long)inB, (long)inC); return 0;
     case EE_UNITS_EU_REMOVE_FROM_REGION: theUnit->mUnitClass->RemoveFromRegion(theUnit); return 0;
     case EE_UNITS_EU_INFLUENCE_REMOVE: gWorld.mInfluenceTable->RemoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY); return 0;
@@ -107,9 +110,9 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_RESORT: gWorld.ResortUnit(theUnit); return 0;
     case EE_UNITS_EU_SIGHT_OFF_HERE: theUnit->SightOff(theUnit->mTileX, theUnit->mTileY); return 0;
     case EE_UNITS_EU_HAS_DOPPELGANGER: return gDoppelgangerManager.GetDoppelganger(EEEuObject<EETile>(inA), theUnit, theUnit->mPlayer->mPlayerID) != NULL;
-    case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN: gDoppelgangerManager.TileShown(EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, theUnit->mPlayer); return 0;
+    case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN: ee_units_dm_body(EE_UNITS_DM_DO_TILE_SHOWN, EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, (int64_t)(uintptr_t)theUnit->mPlayer); return 0;
     case EE_UNITS_EU_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
-    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &EEEuObject<float>(inA)[0], &EEEuObject<float>(inA)[1], &EEEuObject<float>(inA)[2]); return 0;
+    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: ee_units_uck_sound(theUnit->mUnitClass, theUnit, theUnit->mStats->mDeathSound, &EEEuObject<float>(inA)[0], &EEEuObject<float>(inA)[1], &EEEuObject<float>(inA)[2]); return 0;
     case EE_UNITS_EU_DEATH_SOUND_PLAY: gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, EEEuObject<float>(inA)[0], EEEuObject<float>(inA)[1], EEEuObject<float>(inA)[2], theUnit->mStats->mDeathSound->mLooping, NULL); return 0;
     case EE_UNITS_EU_SIGHT_ON_HERE: theUnit->SightOn(theUnit->mTileX, theUnit->mTileY); return 0;
     case EE_UNITS_EU_CAMERA_UNIT_IS_THIS: return EEUnitHandleResolved<EEUnit>(ee_app_camera_unit((uint32_t)inB)) == theUnit;
@@ -122,7 +125,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_MAP_SIZE: return inB == 0 ? (int64_t)gMapWidth : (int64_t)gMapHeight;
     case EE_UNITS_EU_CONTINENT_ID: return gContinentManager.GetContinentID((long)inB, (long)inC);
     case EE_UNITS_EU_CONTINENT_BY_ID: return (uint64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)inB);
-    case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return UFloatBits(theUnit->GetTileDistanceSquared(theOther));
+    case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return UFloatBits(ee_units_atc_tile_distance_squared(theUnit, theOther));
     case EE_UNITS_EU_KILL_UNIT: theUnit->mPlayer->KillUnit(theUnit, false); return 0;
     // eu_more.rs's
     case EE_UNITS_EUM_UNIT_REMOVED: theUnit->mUnitClass->UnitRemoved(); return 0;
@@ -148,8 +151,8 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EUM_POST_LOAD: gDataPreLoading->PostLoadUnitClass(theUnit->mPlayer->mPlayerID, theUnit->mUnitClass->mUnitType); return 0;
     case EE_UNITS_EUM_DEREFERENCE_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker->Dereference(); return 0;
     case EE_UNITS_EUM_REFERENCE_OF: EEEuObject<EEComplexUnit>(inA)->Reference(); return 0;
-    case EE_UNITS_EUM_CX_RESET_COMPLEX: static_cast<EEComplexUnit*>(theUnit)->ResetEEComplexUnit(true, false); return 0;
-    case EE_UNITS_EUM_RESET_EE_UNIT: theUnit->ResetEEUnit(); return 0;
+    case EE_UNITS_EUM_CX_RESET_COMPLEX: ee_units_cu_body(EE_UNITS_CU_DO_RESET, static_cast<EEComplexUnit*>(theUnit), true, false, 0); return 0;
+    case EE_UNITS_EUM_RESET_EE_UNIT: ee_units_eu_more(EE_UNITS_EUM_DO_RESET, theUnit, NULL, 0, 0); return 0;
     case EE_UNITS_EUM_RTS_RESET: theUnit->Reset(); return 0;
     case EE_UNITS_EUM_FREE_NODE: theUnit->FreeNode(); return 0;
     case EE_UNITS_EUM_ZERO_REFERENCES: theUnit->mReferenceCount = 0; return 0;

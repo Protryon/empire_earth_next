@@ -831,16 +831,6 @@ pub unsafe extern "C" fn ee_rts_graphics_objects_pass(graphics: *mut c_void, whi
     unsafe { objects_pass(&mut Ffi, graphics as usize, which) }
 }
 
-/// `RTSGraphics::RenderLobby`.
-///
-/// # Safety
-/// `graphics` is the live object.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_rts_graphics_render_lobby(graphics: *mut c_void) {
-    unsafe { render_lobby(&mut Ffi, &mut Plat, graphics as usize) }
-}
-
 /// `RTSGraphics::PostPause`.
 ///
 /// # Safety

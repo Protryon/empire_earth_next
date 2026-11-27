@@ -22,6 +22,7 @@
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
+#include "rust/sim/scenario.h"
 
 // Unit action names are the real EEUnitAction::sActionNames table at 0x563668.
 
@@ -110,8 +111,7 @@ extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEOB_OP_CLEAR_SELECTION: SeobEditor(p[0])->ClearSelection(); return 0;
     case EE_SCREENS_SEOB_OP_PLAYER_COUNT: return (int32_t)SeobEditor(p[0])->PlayerCall(EE_SCREENS_SEPL_PLAYER_COUNT);
     case EE_SCREENS_SEOB_OP_GET_NAMES:
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_OBJECTS,
-                                          *static_cast<std::vector<UWideString>*>(p[0]));
+        ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_NAMES, (unsigned long)(EE_SCENARIO_NAMES_USER_OBJECTS), 0, 0, &(*static_cast<std::vector<UWideString>*>(p[0])));
         return 0;
     case EE_SCREENS_SEOB_OP_SELECTED_UNIT_ID: return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnit(i[0])->mUnitID;
     case EE_SCREENS_SEOB_OP_SELECTED_COUNT: return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();

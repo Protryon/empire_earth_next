@@ -760,16 +760,6 @@ pub unsafe extern "C" fn ee_units_group_reference(g: *mut EeUnitsGroup) {
     unsafe { go::reference(g) }
 }
 
-/// `Dereference()`.
-///
-/// # Safety
-/// As [`ee_units_group_reference`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_dereference(g: *mut EeUnitsGroup) {
-    // SAFETY: the caller's contract
-    unsafe { go::dereference(&mut GameGroups, g) }
-}
-
 /// `GetNumUnits()`.
 ///
 /// # Safety
@@ -897,16 +887,6 @@ pub unsafe extern "C" fn ee_units_group_set_formation(g: *mut EeUnitsGroup, form
     unsafe { go::set_formation(&mut GameGroups, g, formation as u64) }
 }
 
-/// `Remove(id)` and `CancelPathRequest(id)`.
-///
-/// # Safety
-/// As [`ee_units_group_reference`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_cancel_path(g: *mut EeUnitsGroup, id: c_long) {
-    // SAFETY: the caller's contract
-    unsafe { go::cancel_path_request(&mut GameGroups, g, id as i64) }
-}
-
 /// `GetBounds(out)`: `out` the rectangle's bottom, left, right, top.
 ///
 /// # Safety
@@ -949,21 +929,6 @@ pub unsafe extern "C" fn ee_units_group_file(
     }
 }
 
-/// `Fill(selection, sort, slot)`.
-///
-/// # Safety
-/// `g` a live active group, `selection` a live selection.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_fill(
-    g: *mut EeUnitsGroup,
-    selection: *mut EeUnitsGroup,
-    sort: c_long,
-    slot: c_long,
-) {
-    // SAFETY: the caller's contract
-    unsafe { go::fill(&mut GameGroups, g, selection, sort as i64, slot as i64) }
-}
-
 /// `SetGoal(goal, queued)`.
 ///
 /// # Safety
@@ -974,26 +939,6 @@ pub unsafe extern "C" fn ee_units_group_set_goal(g: *mut EeUnitsGroup, goal: *mu
     unsafe { go::set_goal(&mut GameGroups, g, goal as u64, queued) }
 }
 
-/// `RequestPaths(units)`: the `n` units at `units`.
-///
-/// # Safety
-/// `g` a live active group with a goal; `units` `n` live complex units.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_request_paths(
-    g: *mut EeUnitsGroup,
-    units: *const *mut c_void,
-    n: usize,
-) -> bool {
-    // SAFETY: the caller's contract
-    let list: Vec<u64> = if n == 0 {
-        Vec::new()
-    } else {
-        unsafe { std::slice::from_raw_parts(units, n) }.iter().map(|&u| u as u64).collect()
-    };
-    // SAFETY: as above
-    unsafe { go::request_paths(&mut GameGroups, g, &list) }
-}
-
 /// `TellGroup(unit, location)`.
 ///
 /// # Safety
@@ -1002,15 +947,6 @@ pub unsafe extern "C" fn ee_units_group_request_paths(
 pub unsafe extern "C" fn ee_units_group_tell(g: *mut EeUnitsGroup, unit: *mut c_void, location: *const [f32; 3]) {
     // SAFETY: the caller's contract
     unsafe { go::tell_group(&mut GameGroups, g, unit as u64, *location) }
-}
-
-/// `EEPlayer::GetActiveGroupOf(unit)`.
-///
-/// # Safety
-/// `player` a live player.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_active_of(player: *mut c_void, unit: *mut c_void) -> *mut EeUnitsGroup {
-    go::active_group_of(&mut GameGroups, player as u64, unit as u64) as usize as *mut EeUnitsGroup
 }
 
 /// The player's groups (`op`): 0 the running groups emptied, released and cleared (`~EEPlayer`, `Reset`, `Clear`), 1

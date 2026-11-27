@@ -35,6 +35,9 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECombatGoals.h"
 #include "rust/data/ffi.h"   // ee_data_rules_ai_level
+#include "rust/sim/units.h"
+#include "rust/game/tech_tree.h"
+#include "rust/sim/tech.h"
 
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
@@ -79,7 +82,7 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     theItem.mGoals.push_back(theGoal);
     theGoal->SetOwner(theItem.GetUnit());
     this->RefreshGoals();
-    this->RefreshActiveGoal();
+    ee_units_unit_refresh_active_goal((uint64_t)(uintptr_t)this);
 }
 
 void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit) { ee_cp_pl_unit_stranded(EECP_THIS, EECP_UNIT(inUnit)); }
@@ -128,7 +131,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_UNIT_CONTINENT_AT: return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
     case EE_CP_PLAYER_IS_EPOCH: return EEIsEpochID((long)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_UNIT_IS_BUILDING: return theComplex->mUnitClass->IsBuilding() ? 1 : 0;
-    case EE_CP_PLAYER_UNIT_OBSOLETE: return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
+    case EE_CP_PLAYER_UNIT_OBSOLETE: return theComplex->GetTechTreeNode() != NULL && ee_gamecpp_tech_obj_obsolete(theComplex->GetTechTreeNode()) ? 1 : 0;
     case EE_CP_PLAYER_SEEN_BY: return EECombatIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
     case EE_CP_PLAYER_KILL: theComplex->Kill(true, false, false);
         return 0;
@@ -188,7 +191,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_BASE_SAVE: return thePlayer->EEPlayer::Save((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
     case EE_CP_PLAYER_FILE_OPEN: return reinterpret_cast<FSFile*>((uintptr_t)inA)->GetIsOpen() ? 1 : 0;
     case EE_CP_PLAYER_SAVE_PRIMITIVE: return (int64_t)(uintptr_t)&EESaveFilePrimitive;
-    case EE_CP_PLAYER_EPOCH_COUNT: return EEEpochCount();
+    case EE_CP_PLAYER_EPOCH_COUNT: return (long)ee_tech_epoch_count();
     case EE_CP_PLAYER_BASE_TAKE_RESOURCE: thePlayer->EEPlayer::TakeResource((long)v[0], (long)v[1]);
         return 0;
     case EE_CP_PLAYER_BASE_PAY: thePlayer->EEPlayer::Pay(reinterpret_cast<EETechnology*>((uintptr_t)inA), (long)v[0], io->f[0]);
@@ -227,7 +230,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_GOAL_COUNT: return (int64_t)theComplex->mGoalQueues[0].mGoals.size();
     case EE_CP_PLAYER_GOAL_STATE_KIND: return theComplex->GetGoalState() != NULL ? (int64_t)theComplex->GetGoalState()->GetKind() : -1;
     case EE_CP_PLAYER_REPAIRABLE: return theComplex->IsRepairable() ? 1 : 0;
-    case EE_CP_PLAYER_CLEAR_GOALS: theComplex->ClearGoalQueue(0);
+    case EE_CP_PLAYER_CLEAR_GOALS: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, theComplex, 0, 0, 0);
         return 0;
     case EE_CP_PLAYER_START_ACTION: theComplex->StartAction((long)v[0]);
         return 0;
@@ -240,7 +243,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_GOAL_CONDITION: return theGoal->EvaluateCondition(theComplex, (unsigned long)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_LOAD_TILE_X: return theGoal->GetLoadContainerTile().GetX();
     case EE_CP_PLAYER_LOAD_TILE_Y: return theGoal->GetLoadContainerTile().GetY();
-    case EE_CP_PLAYER_UNLOAD_AT: theComplex->UnloadCargoAtTile((long)v[0], (long)v[1], true);
+    case EE_CP_PLAYER_UNLOAD_AT: ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, theComplex, (long)v[0], (long)v[1], true);
         return 0;
     case EE_CP_PLAYER_NEW_UNLOAD: return (int64_t)(uintptr_t)EEUGRust::NewUnloadTransport(theComplex, (long)v[0], (long)v[1], true);
     case EE_CP_PLAYER_CAN_UNLOAD: return theGoal->CanUnloadAtDestination() ? 1 : 0;
@@ -248,7 +251,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_SET_EMPTY: return gUnitSetManager.GetSet((long)v[0])->IsEmpty() ? 1 : 0;
     case EE_CP_PLAYER_SET_HAS: return gUnitSetManager.GetSet((long)v[0])->Contains((long)v[1]) ? 1 : 0;
-    case EE_CP_PLAYER_NODE_OBSOLETE: return thePlayer->GetTechTree()->Get((long)v[0])->GetIsObsolete() ? 1 : 0;
+    case EE_CP_PLAYER_NODE_OBSOLETE: return ee_gamecpp_tech_obj_obsolete(thePlayer->GetTechTree()->Get((long)v[0])) ? 1 : 0;
     case EE_CP_PLAYER_TOTAL_POPULATION: return thePlayer->GetTotalPopulation(v[0] != 0, v[1] != 0);
     case EE_CP_PLAYER_GAME_TIME: return (int64_t)gPhysics->mGameTime;
     }

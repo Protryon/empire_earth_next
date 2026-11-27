@@ -108,30 +108,12 @@ public:
     // +0x20 0x153082
     virtual void Tick();                    // +0x20 0x153082 (out of line: the test profile's harness hook)
     virtual void Unlock();                  // +0x28 0x153c4d
-    // 0x151e4d (EEDataPreLoading::LoadGame, under gWorld's lock; provisional name)
-    void ClearServerMessages() { ee_physics_clear_server_messages(this); }
-    // 0x151f3a: the game is over (every player's result, the campaign progress, the main game form's blinking
-    // button, the teams); the cheat codes 0x12bb7b/0x12bbad and Virtual20 call it (provisional name)
-    void EndGame(bool inIsVictory) { ee_physics_end_game(this, inIsVictory); }
 
     // (provisional names)
-    // 0x151efe (runs Virtual20 while mUB8 is set; DrainInput first)
-    void RunOwedTicks() { ee_physics_run_owed_ticks(this); }
-    // 0x15268d: inTime (0: mLD0) as whole minutes and the seconds left over
-    void GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime) { ee_physics_minutes_and_seconds(this, outMinutes, outSeconds, inTime); }
     // 0x152909 (the ctor and message 0x509: the counters, the queues)
     void Init() { ee_physics_init(this); }
-    // 0x153c23 (both referenced; processed by 0x1534d1)
-    void QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew) { ee_physics_queue_unit_swap(this, inOld, inNew); }
     // 0x153836 (Virtual20's; provisional name)
     void ReportStatistics();                // 0x153836 (out of line: the test profile's harness hook)
-    // the thread messages (provisional names)
-    long PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
-    long PostInit() { return ee_physics_post(this, 0x509); }
-    // inline (COMDAT 0x761b5, first emitted by EECPCombatManager.cpp): the queued unit swaps (mSound2Index7.size())
-    // (provisional name)
-    // 0x1526d2 (ret 4): the unit's queued swap kind (0: none; 1, 5, 7) (provisional name)
-    long GetUnitSwapKind(EEComplexUnit* inUnit) { return ee_physics_unit_swap_kind(this, inUnit); }
     // (provisional names): 0x1520cf the out-of-synch checksum (inDump: also the "OOS <date>.log" dump)
     // 0x15253e the elapsed game time as text; 0x153430 one queued swap (camera, contagion, scenario, effects);
     // 0x153ca1 the civ timers; 0x153dff the queued load/save messages; 0x15401e the collision period (returns the

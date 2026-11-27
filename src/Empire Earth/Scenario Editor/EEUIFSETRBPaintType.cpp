@@ -35,6 +35,7 @@
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
 #include "lle/UICheckBox.h"
+#include "rust/sim/tech.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).
@@ -74,7 +75,7 @@ extern "C" int32_t ee_screenscpp_seex(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEEX_NAMES_CLEAR: sSeexNames.clear();
         return 0;
-    case EE_SCREENS_SEEX_EPOCH_TITLE: gResource->GetString(EEEpochTitleID((unsigned long)i[0]), gSefxText);
+    case EE_SCREENS_SEEX_EPOCH_TITLE: gResource->GetString((long)ee_tech_epoch_title_id((int32_t)(long)((unsigned long)i[0])), gSefxText);
         return 0;
     case EE_SCREENS_SEEX_NAMES_PUSH: sSeexNames.push_back(gSefxText);
         return 0;
@@ -82,7 +83,7 @@ extern "C" int32_t ee_screenscpp_seex(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEEX_COMBO_APPEND: static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeexNames);
         return 0;
-    case EE_SCREENS_SEEX_EPOCH_COUNT: return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEEX_EPOCH_COUNT: return (int32_t)(long)ee_tech_epoch_count();
     case EE_SCREENS_SEEX_HAS_EDITOR: return gUIManager->GetScenarioEditorForm() != NULL;
     case EE_SCREENS_SEEX_MAX_PLAYERS: return (int32_t)gWorld.mMaxPlayers;
     }

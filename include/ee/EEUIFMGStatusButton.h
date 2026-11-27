@@ -8,7 +8,7 @@
 
 #include "rust/game/screens.h"   // EeScreensStatusButtonFields
 
-#include "lle/LLEForward.h"
+#include "lle/UIButton.h"
 
 class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields, public EeScreensStatusButtonObjects {
 public:
@@ -31,8 +31,6 @@ public:
     virtual bool GetHelpString(UWideString& outString) const;   // +0x20 0x26ebdf
     // Presses the button from its hot key
     void HotKeyDown() { this->ButtonDown(); }                      // 0x26f16c (the hot-key event, pressed)
-    // Releases the button from its hot key
-    void HotKeyUp() { ee_screens_sbt_hot_key_up((uintptr_t)this); }                        // 0x26f174 (the hot-key event, released)
     // Presses a tech button on a right press (ee_screens hud_more.rs)
     virtual long MouseRButtonDown() { return (long)ee_screens_sbm_right_down((uintptr_t)this); }   // +0x44 0x26f186
     virtual long MouseRButtonUp();          // +0x48 0x26f1a4

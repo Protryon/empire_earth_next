@@ -43,8 +43,6 @@ public:
     long Size() const { return ee_sparse_size(this->mPoints); }
     // Returns the point at the given index over all columns in order (default point when out of range)
     U2DPoint<long> operator[](long inIndex) const { return Point(ee_sparse_get(this->mPoints, (int32_t)inIndex)); }
-    // (the set's other members, Clear, Create, Insert, Remove, GetRandomPoint and the saved form, are the Rust's
-    // alone: the AI's areas call them on the handle, ee_sim::astar)
     // New (port): where the handle is (ee_sim::astar cm_io.rs reads an area's tiles from its object)
     EeSparseArray* const* GetHandleSlot() const { return &this->mPoints; }
 

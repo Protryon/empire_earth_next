@@ -477,18 +477,6 @@ pub unsafe extern "C" fn ee_dx7r_draw_model(
     draw_model::draw_model(&mut unsafe { Host::new(rast, screen) }, model, detail, orthographic)
 }
 
-/// `DrawModelHierarchy` from outside the recursion (no parent transform).
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_draw_model_hierarchy(
-    rast: *mut EeDx7Rasterizer,
-    screen: c_ulong,
-    model: Handle,
-    detail: f32,
-    orthographic: bool,
-) -> c_long {
-    draw_model::draw_model_hierarchy(&mut unsafe { Host::new(rast, screen) }, model, detail, orthographic, None)
-}
-
 /// `Draw3DLine`: `points` is `count` `(x, y, z, advance)` records.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]

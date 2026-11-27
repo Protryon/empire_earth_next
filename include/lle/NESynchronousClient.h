@@ -19,16 +19,10 @@ public:
     virtual ~NESynchronousClient() { ee_net_cl_free(this->mClient); }
 
     NEConnection* GetConnection() const { return static_cast<NEConnection*>(ee_net_cl_connection(this->mClient)); }
-    unsigned long GetCurrentPhysicsTick() const { return ee_net_cl_current_physics_tick(this->mClient); }
     unsigned long GetDetectedGameCount() const { return ee_net_cl_detected_game_count(this->mClient); }
     unsigned char GetMySendToSlot() const { return ee_net_cl_my_send_to_slot(this->mClient); }
     unsigned long GetNumConnectionTrys() const { return ee_net_cl_num_connection_trys(this->mClient); }
-    // the recorder's mode (NERecordPlaybackMode) and its playback speed (ee_net recplay.rs)
-    unsigned char GetRecordPlaybackMode() const { return ee_net_cl_record_playback_mode(this->mClient); }
-    void SetSlowPlayback() { ee_net_cl_set_slow_playback(this->mClient); }
-    void SetNormalPlayback() { ee_net_cl_set_normal_playback(this->mClient); }
     void SendStartConnectMessage(NEMessage* inMessage) { ee_net_cl_send_start_connect_message(this->mClient, inMessage); }
-    void SetCurrentPhysicsTick(unsigned long& inTick) { ee_net_cl_set_current_physics_tick(this->mClient, (uint32_t)inTick); }
     void SetMaxNumConnectionTrys(unsigned long inMax) { ee_net_cl_set_max_num_connection_trys(this->mClient, (uint32_t)inMax); }
     void SetMySendToSlot(unsigned char inSlot) { ee_net_cl_set_my_send_to_slot(this->mClient, inSlot); }
 
@@ -44,7 +38,6 @@ public:
 
     // (the original's vtable 0x98994 slots 9..22: StartThreads/StopThreads, then the game's callbacks)
     void StartThreads() { ee_net_cl_start_threads(this->mClient); }
-    void StopThreads() { ee_net_cl_stop_threads(this->mClient); }
 
     // The client's calls out to the game (the original's pure virtuals, slots +0x24..+0x58; LLE round 13: the
     // subclass's members by name), then the engine's (Host): the subclass passes GameHost<itself> to the constructor

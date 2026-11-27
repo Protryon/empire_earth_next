@@ -67,12 +67,6 @@ extern "C" {
 /// `Main`: the thread drains its messages (queueing or handling each, 1 ms apart) until told to quit.
 unsigned long ee_preload_main(void *p);
 
-void ee_preload_handle_message(void *p, uint32_t message, void *parameter1, void *parameter2);
-
-void ee_preload_queue_message(void *p, uint32_t message, void *parameter1, void *parameter2);
-
-void ee_preload_flush_queue(void *p);
-
 void ee_preload_start_queueing();
 
 /// The pre-loader made (`fresh`) or destroyed: the flags cleared, the queued messages dropped.

@@ -201,16 +201,6 @@ fn after_load_last() {}
 
 // ---- the C++ callers' accessors (the opaque `EEAutoPathRequest*`)
 
-/// `Reference()`.
-///
-/// # Safety
-/// `h` a live request.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_request_reference(h: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe { reference(h as u64) }
-}
-
 /// `Dereference()`.
 ///
 /// # Safety
@@ -291,15 +281,6 @@ pub unsafe fn cancel_and_release(h: u64) {
     cancel(h);
     // SAFETY: the caller's reference
     unsafe { dereference(h) };
-}
-
-/// `CancelAutoPathRequest` for the C++ (`EEPathManager::CancelAutoPathRequest`).
-///
-/// # Safety
-/// `h` a live request.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_request_cancel(h: *mut c_void) {
-    cancel(h as u64)
 }
 
 /// The goal host's reach test (EEUGRust.cpp's `PATH_REACHABLE`): unit `unit`'s player's request from `from` to `to`

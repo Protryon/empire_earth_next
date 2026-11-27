@@ -1,9 +1,9 @@
 //! The C ABI of the managers' logic (`managers.rs`), called by `GETextureManager.cpp` and `GEModelManager.cpp`. Names
 //! go in as NUL-terminated C strings and come back into a caller's buffer (NUL-terminated, cut to the capacity).
 
-use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
+use std::ffi::{c_char, c_long, c_void, CStr};
 
-use crate::ge::managers::{self, with_pack};
+use crate::ge::managers::with_pack;
 
 /// The C string at `s` as bytes (empty for NULL).
 ///
@@ -16,33 +16,6 @@ unsafe fn c_bytes<'a>(s: *const c_char) -> &'a [u8] {
         // SAFETY: the caller's contract
         unsafe { CStr::from_ptr(s) }.to_bytes()
     }
-}
-
-/// Writes `bytes` NUL-terminated into `out` (cut to `capacity - 1` bytes); the bytes written without the NUL.
-///
-/// # Safety
-/// `out` holds `capacity` bytes.
-unsafe fn put_c_string(bytes: &[u8], out: *mut c_char, capacity: usize) -> usize {
-    if out.is_null() || capacity == 0 {
-        return 0;
-    }
-    let n = bytes.len().min(capacity - 1);
-    // SAFETY: the caller's contract
-    unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out.cast::<u8>(), n);
-        *out.add(n) = 0;
-    }
-    n
-}
-
-/// `GETextureStem`: the length of a texture's cache name within `name`.
-///
-/// # Safety
-/// `name` is NUL-terminated.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_stem(name: *const c_char) -> usize {
-    // SAFETY: the caller's contract
-    managers::texture_stem(unsafe { c_bytes(name) })
 }
 
 /// `GETextureManager::SetTexturePack`.
@@ -80,12 +53,6 @@ pub unsafe extern "C" fn ee_ge_texpack_name(name: *const c_char, out: *mut c_voi
 /// `GetTexturePackName`'s buffer (`char theBuffer[1024]`).
 const PACK_NAME_BUFFER: usize = 1024;
 
-/// Whether the pack is on (`sTexturePackEnabled`).
-#[no_mangle]
-pub extern "C" fn ee_ge_texpack_enabled() -> bool {
-    with_pack(|p| p.enabled)
-}
-
 /// `GetTexturePackLogicalShift`.
 #[no_mangle]
 pub extern "C" fn ee_ge_texpack_logical_shift() -> c_long {
@@ -96,99 +63,4 @@ pub extern "C" fn ee_ge_texpack_logical_shift() -> c_long {
 #[no_mangle]
 pub extern "C" fn ee_ge_texpack_mip_levels_to_drop() -> c_long {
     with_pack(|p| p.mip_levels_to_drop)
-}
-
-/// `LoadTexture`'s MIP decisions: the levels to drop and whether to build MIP levels; returns the pack's extra drop.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texpack_load_plan(
-    create_mipmaps: bool,
-    drop: c_long,
-    from_pack: bool,
-    out_drop: *mut c_long,
-    out_mipmaps: *mut bool,
-) -> c_long {
-    let (pack_drop, total, mipmaps) = with_pack(|p| p.load_plan(create_mipmaps, drop, from_pack));
-    // SAFETY: the caller's contract
-    unsafe {
-        *out_drop = total;
-        *out_mipmaps = mipmaps;
-    }
-    pack_drop
-}
-
-/// `SetTexturePackSizes`' arithmetic: the texture's new `mNumMipLevelsToDrop` and its logical shift.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texpack_sizes(
-    drop: c_ulong,
-    mip_levels: c_long,
-    out_drop: *mut c_ulong,
-    out_shift: *mut c_ulong,
-) {
-    let (new_drop, shift) = with_pack(|p| p.pack_sizes(drop, mip_levels));
-    // SAFETY: the caller's contract
-    unsafe {
-        *out_drop = new_drop;
-        *out_shift = shift;
-    }
-}
-
-/// The surface description a texture description asks for: depth, format and `mNoAlpha`.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_surface_format(
-    pixel_depth: c_ulong,
-    has_alpha: bool,
-    out_depth: *mut c_ulong,
-    out_format: *mut c_ulong,
-    out_no_alpha: *mut bool,
-) {
-    let (depth, format, no_alpha) = managers::surface_format(pixel_depth, has_alpha);
-    // SAFETY: the caller's contract
-    unsafe {
-        *out_depth = depth;
-        *out_format = format;
-        *out_no_alpha = no_alpha;
-    }
-}
-
-/// A manager's removal decision at reference count `count`: whether to remove and release; the result code.
-///
-/// # Safety
-/// `out_remove` is valid for a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_manager_remove_decision(count: c_ulong, out_remove: *mut bool) -> c_long {
-    let (remove, result) = managers::remove_decision(count);
-    // SAFETY: the caller's contract
-    unsafe { *out_remove = remove };
-    result
-}
-
-/// The next made texture's name (`MakeTexture`), into `out`.
-///
-/// # Safety
-/// `out` holds `capacity` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texman_made_name(out: *mut c_char, capacity: usize) -> usize {
-    // SAFETY: the caller's contract
-    unsafe { put_c_string(&managers::next_made_texture_name(), out, capacity) }
-}
-
-/// The next created model's name (`CreateModel`) from the caller's, into `out`.
-///
-/// # Safety
-/// `name` is NUL-terminated; `out` holds `capacity` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_modman_created_name(name: *const c_char, out: *mut c_char, capacity: usize) -> usize {
-    // SAFETY: the caller's contract
-    let name = unsafe { c_bytes(name) };
-    // SAFETY: the caller's contract
-    unsafe { put_c_string(&managers::next_created_model_name(name), out, capacity) }
 }

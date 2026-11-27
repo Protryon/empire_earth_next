@@ -42638,3 +42638,49 @@ saveload matrix, scenario_check, sim_editor, gates.sh). Two forks in two rounds 
   gate on dead code (tech_cases.rs); allow dead_code under cfg(test) or move the helpers under the same cfg.
 - **A saveload matrix failure in a loaded worktree**: fork B's first matrix run lost every load (no output files);
   the same code passed on the merged tip and again later. Rerun the matrix alone before bisecting.
+
+## The game headers lane, round 4: one-call wrappers of Rust exports inlined at their callers, dead code, self-contained headers (branch rust-headers4, 2026-11-26)
+
+- **One-call wrappers inlined** (owner's direction: callers call the Rust export directly, the shim's declaration and
+  definition go; header inlines only in headers that are not hot). build/hd4/scan2.py lists C++ functions whose whole
+  body is one call to a Rust export (2,148 on the tip; 794 with no member or global in the arguments, 357 virtual);
+  build/hd4/inline.py plans the safe ones and rewrites every call site with the shim's own statement. 385 shims went
+  (-701 C++ lines with the temporaries fix; shim removal, not logic).
+- **A text rewrite needs the compiler to check types**: the Rust parameters are `void*`, so passing a caller's
+  `EEComplexUnit*` straight to a slot the shim typed `EEUnit*` skips the derived-to-base adjustment, and a caller's
+  `unsigned long` passed where the shim took `long` and Rust an `int64_t` changes the value. A check pass wraps each
+  substituted argument in a template that static_asserts the exact type (`EEHD4V<T, id>`, and `EEHD4R` for references,
+  which also asserts an lvalue: clang-cl's MS extensions bind rvalues to non-const references and take their address,
+  which POSIX clang refuses); the compile's "requested here" notes name the failing ids, and only those get a cast.
+- **What a rewrite must not inline**: a shim that takes the address of a by-value parameter (`&inValue` to Rust: the
+  inlined call would hand Rust the caller's own variable); a parameter used twice with a side-effecting argument;
+  calls whose object expression is not a plain postfix expression; names another class declares (a text rewrite
+  cannot tell `a->Reset()` from `b->Reset()`); C++ functions Rust calls (`ee_*cpp_*` with no C++ caller looked dead:
+  the first full link listed them unresolved).
+- **The object of a call, backwards**: parse a postfix chain (identifiers, `::`, `->`, `.`, balanced `()`/`[]`, a
+  template cast's `<...>`) and stop at the first other token; keywords (`return`) end it without eating the space
+  before them. A `#define X(a) ...->Shim(a)` body is a call site like any other.
+- **Doc comments of a removed member**: the comment lines directly above go when a blank line, a closing brace or an
+  access specifier follows the member, or code precedes the comment; otherwise (a group heading over several members)
+  only a last line naming the member or an address. Layout notes (`// +0x...`) stay.
+- **-O0 scans on the lle units** (fork A): the lle units build with `LLE_API = __declspec(dllexport)`, which emits
+  every inline member, so "no object emits it" never fires there; count a member used only when a relocation
+  (.text/.rdata/.data) or ee_game.lib's undefined list names it. Fork C instead built with LLE_API empty (a local
+  patch, never committed) and relinked with `/OPT:REF /VERBOSE`, which lists every discarded section transitively
+  (under Git Bash the link flags must start with `-`: MSYS rewrites `/U...` as a path). After rounds 3 and 4 the
+  out-of-line layer is nearly empty (about 25 functions discarded in both links, most of them golden-driver or
+  harness entry points).
+- **Self-contained headers** (fork B): the alone test's prelude must always end in lle/LowLevelEngine.h (LLE_API);
+  the 73 headers that failed it needed their bases' and by-value members' includes. The trim then dropped 95 includes.
+  A full trim of the lle headers is hours: every one reaches all 248 units through LowLevelEngine.h.
+- **Merging batch 30**: fork B's new `#include "ee/EETeam.h"` met batch 30's deletion of EETeam.h (EEPWorldHelper.h);
+  fork A's deletion of `ee_gamecpp_world_teams_add` met batch 30's rewrite of teams.rs (theirs taken; fork C then
+  found it unreferenced and deleted it).
+- **Address of a temporary**: the check pass missed 13 sites in units a fatal error had stopped; compile every unit
+  with `/clang:-Werror=address-of-temporary` (build/hd4/tempaddr.py) before trusting a Windows-only build for POSIX.
+- **Behaviour changes**: none intended. Gates: both builds 0/0, the Rust gate PASS, oracle seeds 2-7 identical
+  against batch 30, captures oracle/late/units/scenario/calamity/effects/groups PASS, the saveload matrix PASS,
+  scenario_check 27/27 (one form time-out on the first run), sim_editor and --civbuilder PASS, editor and
+  random-game tours PASS, won_host_coverage PASS, wontest 185/185 (won_ping36 passed alone after one timing line),
+  gates.sh GATES PASS. Not run: transport, space, missile, app, placement captures, plain saveload, a POSIX build
+  (the Linux game build needs a sysroot this machine lacks).

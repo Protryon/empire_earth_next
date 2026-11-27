@@ -2218,45 +2218,6 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
-/// A flight step's outputs.
-struct EeCombatFlightOut {
-  /// the unit moved (Step2 may not; its location is then the input's)
-  int32_t moved;
-  /// the new velocity (Accelerate, Home)
-  float speed;
-  /// the new location
-  float matrix[16];
-};
-
-/// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
-struct EeCombatFlightIn {
-  /// the unit's location (`mMatrix`, row by row) (Step2, Accelerate, Home)
-  float location[16];
-  /// the projectile's launch point (`mProjectileStart`) (Step0)
-  float start[3];
-  /// the drop target's point (Home)
-  float target[3];
-  /// the projectile's yaw (Step0)
-  float yaw;
-  /// the arc's move along the heading and up, and its pitch (`ee_combat_arc`) (Step0)
-  float move_y;
-  float move_z;
-  float pitch;
-  /// the class's gravity (`mAcceleration`) (Step2)
-  float gravity;
-  /// the tick's seconds
-  float step;
-  /// the unit's velocity
-  float speed;
-  /// the stats' top speed, acceleration and turn rate (Accelerate, Home)
-  float max_speed;
-  float accel;
-  float max_angular;
-  /// the ground point was read (Step2: only at or below height 0) and its height
-  int32_t ground_read;
-  float ground_z;
-};
-
 /// An attack-unit goal's own state (the original's members).
 struct EeCombatAttackGoal {
   /// `mLocation`: the goal's destination (float bits)
@@ -2321,140 +2282,6 @@ struct EeCombatStepHost {
   int32_t (*op)(void *context, int32_t op, int32_t arg);
 };
 
-/// An impact test's outcome.
-struct EeCombatImpactOut {
-  /// the test's answer
-  int32_t result;
-  /// where it returned (for the capture): projectile ground 0 not yet, 1 above the ground, 2 impact; missile ground
-  /// 0 not its goal, 1 boosting or near its target, 2 no goal, 3 above the ground, 4 on the ground; water 0 not yet
-  /// (projectile), 1 dry or above, 2 impact; torpedo 1 above, 2 impact
-  int32_t stage;
-  /// `EE_COMBAT_IMPACT_GOAL_*`
-  int32_t goal;
-  float goal_point[3];
-  /// leave a shell hole (projectile: at the ground point; missile: at the position placed on the ground)
-  int32_t decal;
-  /// the missile is placed on the ground and moved `offset` up (missile ground)
-  int32_t place;
-  float offset;
-};
-
-/// An impact test's reads (the capture's CBGI and CBWI layout). The `*_read` fields and the values beside them are
-/// the lazy reads, written by the test.
-struct EeCombatImpactIn {
-  /// `EE_COMBAT_IMPACT_*`
-  int32_t kind;
-  /// the class is a bomb's (projectile)
-  int32_t bomb;
-  /// `mFlightTime` (projectile: ms flown; missile: the launch delay left)
-  int32_t flight_time;
-  /// `mProjectileStart`'s height (projectile ground)
-  float start_z;
-  float position[3];
-  /// the floor tile under the position is on the map (projectile ground)
-  int32_t tile_present;
-  /// the unit's tile's height, read for an off-map position (projectile ground)
-  float tile_height;
-  int32_t has_goal;
-  /// the goal's `mKind` (0 without one)
-  int32_t goal_kind;
-  /// the goal's location, read past the first test (missile ground)
-  float goal_location[3];
-  /// the attack target is a land building or a wall, its tile, its size, the unit's tile; read at an impact under
-  /// an attack-unit goal (projectile ground)
-  int32_t target_building;
-  int32_t target_tile[2];
-  int32_t target_size;
-  int32_t unit_tile[2];
-  /// the class has a shell hole effect
-  int32_t shell_hole;
-  /// the launcher is a missile base (`kUnitTypeCpMissileBase`, `kUnitTypeMissileBase`) (missile ground)
-  int32_t launcher_cp_base;
-  int32_t launcher_missile_base;
-  int32_t ground_read;
-  /// `EEMap::GetGroundPoint`'s height under the position
-  float ground_z;
-  /// `EEIsOnTargetTiles` (missile ground, an attack-unit goal)
-  int32_t on_target_read;
-  int32_t on_target;
-  /// the goal location's tile is the unit's (missile ground, a missile base's)
-  int32_t same_tile_read;
-  int32_t same_tile;
-  /// `CanMoveOnTerrain` on the unit's tile (water, at or below height 0)
-  int32_t move_read;
-  int32_t can_move;
-};
-
-/// The attack target's footprint (projectile ground).
-struct EeCombatImpactTarget {
-  int32_t building;
-  int32_t tile[2];
-  int32_t size;
-  int32_t unit_tile[2];
-};
-
-/// The host's lazy reads (`ctx` is the C++'s).
-struct EeCombatImpactHost {
-  void *ctx;
-  float (*ground_z)(void *ctx, float x, float y, float z);
-  float (*tile_height)(void *ctx);
-  void (*target)(void *ctx, EeCombatImpactTarget *out);
-  void (*goal_location)(void *ctx, float *out);
-  int32_t (*on_target_tiles)(void *ctx);
-  int32_t (*same_tile)(void *ctx, float x, float y);
-  int32_t (*can_move)(void *ctx);
-};
-
-/// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
-struct EeCombatLaunchIn {
-  /// `EE_COMBAT_LAUNCH_KIND_*`
-  int32_t kind;
-  /// the shooter's `mIsSpecialAttack` (shot)
-  int32_t special;
-  /// the launcher class's `mHasSpecialAttack` (shot)
-  int32_t has_special;
-  /// the shooter is a Sp15 capital ship or the Yamato (shot)
-  int32_t capital;
-  /// the shooter is a Roman legionnaire (shot)
-  int32_t legionnaire;
-  /// the animation's tag points (0 without a list) (shot, attach)
-  int32_t point_count;
-  /// `mWeaponTagPoint` (shot, attach)
-  int32_t weapon_index;
-  /// the launcher class is a building: the shot faces the target (shot)
-  int32_t building;
-  /// not a bomb's launcher: the shot turns to the target about its own axis (shot)
-  int32_t turn;
-  /// the shooter's location (`mMatrix`, row by row)
-  float location[16];
-  /// the stats' scale
-  float scale;
-  /// the turret's yaw (turret)
-  float yaw;
-  /// the tag point at the frame, in its model's space (when there is one)
-  float point[3];
-  /// the target location (shot)
-  float target[3];
-  /// the number of model chain transforms
-  int32_t chain;
-};
-
-/// A launch's outputs.
-struct EeCombatLaunchOut {
-  /// the tag point fired from (-1 without one) (shot)
-  int32_t index;
-  /// a special attack fires flaming arrows (shot)
-  int32_t flaming;
-  /// the unit has a tag point (attach)
-  int32_t result;
-  /// the launch transform (shot, turret)
-  float launch[16];
-  /// the attach point (attach)
-  float point[3];
-  /// the launch's floor tile (shot)
-  int32_t tile[2];
-};
-
 /// A class's fields the targetable tests read (`EEUUGetIsUnitClassTargetable`, `EECanTargetClass`), filled by the
 /// C++ from the attacker and the class.
 struct EeCombatTargetableIn {
@@ -2468,34 +2295,6 @@ struct EeCombatTargetableIn {
   uint32_t unit_type;
   uint32_t family;
   int32_t can_be_attacked;
-};
-
-/// `FacesPoint`'s reads (plain): the unit's location, the point, the class's arc, offset and broadside flag, the unit's
-/// type and special attack, its model's turret part count and its stats' scale.
-struct EeCombatFacingIn {
-  /// `mPhysicalModel.GetLocation()` (`mMatrix`, row by row)
-  float location[16];
-  /// the point's x, y
-  float point[2];
-  int32_t use_tolerance;
-  /// the class (`this`)'s `mFiringArc`, `mFacingOffset`, `mFiresBroadside`
-  float firing_arc;
-  float facing_offset;
-  int32_t fires_broadside;
-  /// the unit's `mUnitClass->GetUnitType()`, `mIsSpecialAttack`
-  int32_t unit_type;
-  int32_t special_attack;
-  /// `GetModel()->GetNumParts()` (its `mTurretParts.size()`)
-  int32_t turrets;
-  /// `mStats->GetScale()`
-  float scale;
-};
-
-/// One turret part: its `mPosition`, the model's `GetTurretPartTransformation(i)`, the unit's `mTurretAngles[i]`.
-struct EeCombatTurret {
-  float position[3];
-  float transformation[16];
-  float angle;
 };
 
 /// An opaque C++ object (a unit, a tile node); 0 is none.
@@ -2526,41 +2325,6 @@ struct EeCombatShotHost {
   /// the shot (its `EEUnit*`) and its class: the plain statements' (shot_view.rs)
   uint64_t unit;
   uint64_t unit_class;
-};
-
-/// What the work does: the goal's new elapsed time (`work`), and the target's new hit points (`heal`).
-struct EeCombatHealWorkOut {
-  int32_t work;
-  uint32_t elapsed;
-  int32_t heal;
-  int32_t hit_points;
-};
-
-/// `EEUGHealUnit::Work`'s reads (plain; the target's fields 0 without one).
-struct EeCombatHealWorkIn {
-  /// the healer's command's `mType` (0 without one)
-  uint32_t command;
-  int32_t has_target;
-  /// `gWorld.mInCinematic`
-  int32_t cinematic;
-  int32_t target_hp;
-  /// the target's player is the healer's; at war with the healer's (`mEnemies[healer's player] != 0`)
-  int32_t same_player;
-  int32_t target_enemy_of;
-  /// the goal's `mElapsedTime`, `gPhysics->mTickTimeMs`
-  uint32_t elapsed;
-  int32_t tick_ms;
-  /// the healer's `mStats->mHealingPoints`, the target's `mStats->mMaxHitPoints`
-  int32_t healing;
-  int32_t max_hp;
-};
-
-/// `EECanConvert`'s result and its out flag (written only when `flag_written`).
-struct EeCombatCanConvertOut {
-  int32_t result;
-  int32_t flag_written;
-  /// the target is shielded (0 when not written)
-  int32_t flag;
 };
 
 /// `EECanConvert`'s inputs (`inPriest`, `inTarget`; every flag 0 or 1).
@@ -2617,73 +2381,165 @@ struct EeCombatCanConvertIn {
   int32_t shielded;
 };
 
-/// `EECanHeal`'s inputs (`inUnit` heals `inTarget`).
-struct EeCombatCanHealIn {
-  /// the healer's `mWonderUnitSet` is not 0
-  int32_t has_set;
-  /// the target `IsRepairable`
-  int32_t repairable;
-  int32_t hit_points;
-  int32_t maximum;
-  /// the healer's class `GetHealThreshold`
-  float threshold;
-  int32_t same_unit;
-  int32_t same_player;
-  /// the target's player is not the healer's enemy
-  int32_t allied;
-  /// the healer's unit set holds the target's type (0 for a set out of the manager's range)
-  int32_t in_set;
+/// `EECanConvert`'s result and its out flag (written only when `flag_written`).
+struct EeCombatCanConvertOut {
+  int32_t result;
+  int32_t flag_written;
+  /// the target is shielded (0 when not written)
+  int32_t flag;
 };
 
-/// The result: blocked, and the last tile reached.
-struct EeCombatLineOut {
-  int32_t blocked;
-  int32_t x;
-  int32_t y;
+/// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
+struct EeCombatFlightIn {
+  /// the unit's location (`mMatrix`, row by row) (Step2, Accelerate, Home)
+  float location[16];
+  /// the projectile's launch point (`mProjectileStart`) (Step0)
+  float start[3];
+  /// the drop target's point (Home)
+  float target[3];
+  /// the projectile's yaw (Step0)
+  float yaw;
+  /// the arc's move along the heading and up, and its pitch (`ee_combat_arc`) (Step0)
+  float move_y;
+  float move_z;
+  float pitch;
+  /// the class's gravity (`mAcceleration`) (Step2)
+  float gravity;
+  /// the tick's seconds
+  float step;
+  /// the unit's velocity
+  float speed;
+  /// the stats' top speed, acceleration and turn rate (Accelerate, Home)
+  float max_speed;
+  float accel;
+  float max_angular;
+  /// the ground point was read (Step2: only at or below height 0) and its height
+  int32_t ground_read;
+  float ground_z;
 };
 
-/// `EEIsLineToUnitBlocked`'s inputs (`inUnit` shooting at `inTarget`).
-struct EeCombatLineIn {
-  int32_t from_x;
-  int32_t from_y;
-  int32_t to_x;
-  int32_t to_y;
-  /// the shooter's class `mSkipsLineOfFireCheck`
-  int32_t skips_check;
-  /// the target's hit points are positive
-  int32_t target_alive;
-  /// the shooter's class `mIsMelee`: the walls' bare test, no shot height
-  int32_t bare;
+/// A flight step's outputs.
+struct EeCombatFlightOut {
+  /// the unit moved (Step2 may not; its location is then the input's)
+  int32_t moved;
+  /// the new velocity (Accelerate, Home)
+  float speed;
+  /// the new location
+  float matrix[16];
 };
 
-/// The target's top, as the C++ reads it (`EeCombatLineHost::target_top`).
-struct EeCombatTargetTop {
-  /// the target is a complex unit (else nothing below is read)
-  int32_t present;
-  /// the z of its model's bounding box's top right back corner at its frame
-  float box_top;
-  /// its stats' `GetScale`
+/// An impact test's reads (the capture's CBGI and CBWI layout). The `*_read` fields and the values beside them are
+/// the lazy reads, written by the test.
+struct EeCombatImpactIn {
+  /// `EE_COMBAT_IMPACT_*`
+  int32_t kind;
+  /// the class is a bomb's (projectile)
+  int32_t bomb;
+  /// `mFlightTime` (projectile: ms flown; missile: the launch delay left)
+  int32_t flight_time;
+  /// `mProjectileStart`'s height (projectile ground)
+  float start_z;
+  float position[3];
+  /// the floor tile under the position is on the map (projectile ground)
+  int32_t tile_present;
+  /// the unit's tile's height, read for an off-map position (projectile ground)
+  float tile_height;
+  int32_t has_goal;
+  /// the goal's `mKind` (0 without one)
+  int32_t goal_kind;
+  /// the goal's location, read past the first test (missile ground)
+  float goal_location[3];
+  /// the attack target is a land building or a wall, its tile, its size, the unit's tile; read at an impact under
+  /// an attack-unit goal (projectile ground)
+  int32_t target_building;
+  int32_t target_tile[2];
+  int32_t target_size;
+  int32_t unit_tile[2];
+  /// the class has a shell hole effect
+  int32_t shell_hole;
+  /// the launcher is a missile base (`kUnitTypeCpMissileBase`, `kUnitTypeMissileBase`) (missile ground)
+  int32_t launcher_cp_base;
+  int32_t launcher_missile_base;
+  int32_t ground_read;
+  /// `EEMap::GetGroundPoint`'s height under the position
+  float ground_z;
+  /// `EEIsOnTargetTiles` (missile ground, an attack-unit goal)
+  int32_t on_target_read;
+  int32_t on_target;
+  /// the goal location's tile is the unit's (missile ground, a missile base's)
+  int32_t same_tile_read;
+  int32_t same_tile;
+  /// `CanMoveOnTerrain` on the unit's tile (water, at or below height 0)
+  int32_t move_read;
+  int32_t can_move;
+};
+
+/// An impact test's outcome.
+struct EeCombatImpactOut {
+  /// the test's answer
+  int32_t result;
+  /// where it returned (for the capture): projectile ground 0 not yet, 1 above the ground, 2 impact; missile ground
+  /// 0 not its goal, 1 boosting or near its target, 2 no goal, 3 above the ground, 4 on the ground; water 0 not yet
+  /// (projectile), 1 dry or above, 2 impact; torpedo 1 above, 2 impact
+  int32_t stage;
+  /// `EE_COMBAT_IMPACT_GOAL_*`
+  int32_t goal;
+  float goal_point[3];
+  /// leave a shell hole (projectile: at the ground point; missile: at the position placed on the ground)
+  int32_t decal;
+  /// the missile is placed on the ground and moved `offset` up (missile ground)
+  int32_t place;
+  float offset;
+};
+
+/// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
+struct EeCombatLaunchIn {
+  /// `EE_COMBAT_LAUNCH_KIND_*`
+  int32_t kind;
+  /// the shooter's `mIsSpecialAttack` (shot)
+  int32_t special;
+  /// the launcher class's `mHasSpecialAttack` (shot)
+  int32_t has_special;
+  /// the shooter is a Sp15 capital ship or the Yamato (shot)
+  int32_t capital;
+  /// the shooter is a Roman legionnaire (shot)
+  int32_t legionnaire;
+  /// the animation's tag points (0 without a list) (shot, attach)
+  int32_t point_count;
+  /// `mWeaponTagPoint` (shot, attach)
+  int32_t weapon_index;
+  /// the launcher class is a building: the shot faces the target (shot)
+  int32_t building;
+  /// not a bomb's launcher: the shot turns to the target about its own axis (shot)
+  int32_t turn;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// the stats' scale
   float scale;
-  int32_t built;
-  int32_t hit_points;
-  int32_t max_hit_points;
-  /// its location's z
-  float z;
+  /// the turret's yaw (turret)
+  float yaw;
+  /// the tag point at the frame, in its model's space (when there is one)
+  float point[3];
+  /// the target location (shot)
+  float target[3];
+  /// the number of model chain transforms
+  int32_t chain;
 };
 
-/// `EEIsLineToUnitBlocked`'s world (see `LineHost`).
-struct EeCombatLineHost {
-  void *ctx;
-  float (*start_height)(void *ctx, int32_t bare);
-  /// The tile line as `count` (x, y) pairs, valid until the next call.
-  const int32_t *(*tile_line)(void *ctx,
-                              int32_t from_x,
-                              int32_t from_y,
-                              int32_t to_x,
-                              int32_t to_y,
-                              uint32_t *count);
-  void (*target_top)(void *ctx, EeCombatTargetTop *out);
-  int32_t (*tile_top_above)(void *ctx, int32_t x, int32_t y, float height, int32_t bare);
+/// A launch's outputs.
+struct EeCombatLaunchOut {
+  /// the tag point fired from (-1 without one) (shot)
+  int32_t index;
+  /// a special attack fires flaming arrows (shot)
+  int32_t flaming;
+  /// the unit has a tag point (attach)
+  int32_t result;
+  /// the launch transform (shot, turret)
+  float launch[16];
+  /// the attach point (attach)
+  float point[3];
+  /// the launch's floor tile (shot)
+  int32_t tile[2];
 };
 
 extern "C" {
@@ -2986,11 +2842,6 @@ bool ee_units_cgq_in_contact_range_bits(uint64_t unit, uint64_t target, int32_t 
 /// As above.
 bool ee_units_cgq_heal_in_range(uint64_t healer, uint64_t target);
 
-/// `EECombatIsEnemyWithinRange(unit)`
-/// # Safety
-/// As above.
-bool ee_units_cgq_enemy_in_range(uint64_t unit);
-
 /// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
 ///
 /// # Safety
@@ -3025,12 +2876,6 @@ const float *ee_combat_damage_table_row(uint32_t table,
 /// `gDamageTable[row][column]` (the base table): 0 out of range or before a load.
 float ee_combat_damage_factor(int32_t row, int32_t column);
 
-/// `EEToHitTable::GetAttackFactor`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-float ee_combat_attack_factor(const EeCombatAttackFactorIn *input);
-
 /// The to-hit factor `ee_combat_damage` uses (the C++ reads the elevation only when it is positive).
 ///
 /// # Safety
@@ -3042,24 +2887,6 @@ float ee_combat_hit_factor(const EeCombatDamageIn *input);
 /// # Safety
 /// `input` must point to a valid record.
 EeCombatDamageOut ee_combat_damage(const EeCombatDamageIn *input);
-
-/// `EEUnitClass::GetElevationFactor`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-float ee_combat_elevation(const EeCombatElevationIn *input);
-
-/// `EEComplexUnit::ApplyMorale`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_morale(const EeCombatMoraleIn *input);
-
-/// `EEUnit::TakeHit`'s hit points.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatHitPointsOut ee_combat_hit_points(const EeCombatHitPointsIn *input);
 
 /// `EEUnit::TakeHit`'s damage effect test.
 ///
@@ -3121,12 +2948,6 @@ EeCombatArcOut ee_combat_arc(const EeCombatArcIn *input);
 /// `input` must point to a valid record.
 int32_t ee_combat_range(const EeCombatRangeIn *input);
 
-/// `EECanReach`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_can_reach(const EeCombatReachIn *input);
-
 /// `EEIsInWorkReach`.
 ///
 /// # Safety
@@ -3147,51 +2968,6 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
-
-/// `EEPMProjectile::Step0`'s placement on the arc.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatFlightOut ee_combat_projectile_launch(const EeCombatFlightIn *input);
-
-/// `EEPMProjectile::Step2`'s tick.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatFlightOut ee_combat_projectile_step(const EeCombatFlightIn *input);
-
-/// `EEPMMissile::Accelerate`'s tick.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatFlightOut ee_combat_missile_accelerate(const EeCombatFlightIn *input);
-
-/// `EEPMMissile::Home`'s tick.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatFlightOut ee_combat_missile_home(const EeCombatFlightIn *input);
-
-/// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
-/// a larger buffer when it exceeds `capacity`).
-///
-/// # Safety
-/// `out` must point to `capacity` pairs (or be NULL with `capacity` 0).
-uint32_t ee_combat_tile_line(int32_t x1,
-                             int32_t y1,
-                             int32_t x2,
-                             int32_t y2,
-                             int32_t ends,
-                             int32_t thin,
-                             int32_t (*out)[2],
-                             uint32_t capacity);
-
-/// The line of fire's start height (the weapon tag point's world z) over `input.chain` model transforms.
-///
-/// # Safety
-/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
-float ee_combat_weapon_height(const EeCombatWeaponIn *input,
-                              const float (*chain)[16]);
 
 /// The weapon tag point's world point (`weapon_point`) into `out` (three floats).
 ///
@@ -3263,26 +3039,6 @@ EeCombatConditionOut ee_combat_condition(EeCombatConditionIn *input,
 /// As [`ee_combat_condition`].
 void ee_combat_goal_step(EeCombatStepIn *input,
                          const EeCombatStepHost *host);
-
-/// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
-///
-/// # Safety
-/// `input` must point to a valid record and `host` to a valid table whose functions may be called with its `ctx`.
-EeCombatImpactOut ee_combat_impact(EeCombatImpactIn *input,
-                                   const EeCombatImpactHost *host);
-
-/// The tag point `LaunchShot` fires from (-1: none).
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_launch_index(const EeCombatLaunchIn *input);
-
-/// The launch of `input.kind` over `input.chain` model transforms.
-///
-/// # Safety
-/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
-EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
-                                   const float (*chain)[16]);
 
 /// `EEGetFiringPosition` (`firing` 1) or `EEGetLeadPosition` (0) of `attacker` on `target` over `host` (the point in
 /// and out).
@@ -3364,14 +3120,6 @@ int32_t ee_combat_heal_in_range(uint64_t healer, uint64_t target, const EeCombat
 /// # Safety
 /// As [`ee_combat_impact_unit`].
 int32_t ee_combat_enemy_in_range(uint64_t unit, const EeCombatQueryHost *host);
-
-/// `FacesPoint` over `input`; `turret(ctx, i, out)` reads turret part `i`.
-///
-/// # Safety
-/// `input` must point to a valid record and `turret` be callable with `ctx` for every index below `input.turrets`.
-int32_t ee_combat_faces_point(const EeCombatFacingIn *input,
-                              void *ctx,
-                              void (*turret)(void *ctx, int32_t index, EeCombatTurret *out));
 
 /// A new table of `side * side` regions of `size` tiles (`EEMap`'s; freed by `ee_combat_regions_free`).
 EeCombatUnitRegions *ee_combat_regions_new(uint32_t side,
@@ -3516,54 +3264,6 @@ void ee_combat_shot_step(int32_t kind,
                          uint32_t func,
                          uint64_t unit,
                          const EeCombatShotHost *host);
-
-/// `EEUGHealUnit::Work` over its reads.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatHealWorkOut ee_combat_heal_work(const EeCombatHealWorkIn *input);
-
-/// `EEUGHealUnit::Work`'s store part over `input` (see [`fill_heal_work`]).
-///
-/// # Safety
-/// `input` must point to a writable record.
-void ee_combat_fill_heal_work(EeCombatHealWorkIn *input, uint64_t unit, uint64_t target);
-
-/// `EECombatFillCondition`'s store part over `input` (see [`fill_condition`]).
-///
-/// # Safety
-/// `input` must point to a writable record.
-void ee_combat_fill_condition(EeCombatConditionIn *input,
-                              int32_t kind,
-                              uint64_t unit,
-                              uint32_t event,
-                              uint64_t target,
-                              uint64_t complex);
-
-/// `EECombatFillStep`'s store part over `input` (see [`fill_step`]).
-///
-/// # Safety
-/// `input` must point to a writable record.
-void ee_combat_fill_step(EeCombatStepIn *input, int32_t kind, uint64_t unit, uint64_t target);
-
-/// `EECanConvert`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatCanConvertOut ee_combat_can_convert(const EeCombatCanConvertIn *input);
-
-/// `EECanHeal`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
-
-/// `EEIsLineToUnitBlocked`.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-EeCombatLineOut ee_combat_line_blocked(const EeCombatLineIn *input,
-                                       const EeCombatLineHost *host);
 
 /// One body of this module (`EE_COMBAT_WORLD_*`) of `unit` on `target` over `host`: the answer (0/1); the attack
 /// reach writes its tile into `tile` when it sets one.

@@ -119,9 +119,6 @@ struct EeAppMapDims {
 /// A unit's reference count changed by `delta` (the C++'s `Reference` / `Dereference`, applied at once).
 using EeAppActiveRefsFn = void(*)(uint32_t, int32_t);
 
-/// The C++'s own step between the queues' and the lists' references (`Clear`'s unborn deactivations).
-using EeAppActiveBetweenFn = void(*)();
-
 /// One host operation's arguments and answers.
 struct EeAppCheatIo {
   /// `STRING`'s resource id; `ACTION`'s action
@@ -260,12 +257,6 @@ bool ee_app_active_deactivate(uint32_t id);
 /// `refs` is callable with any queued unit's id.
 void ee_app_active_update(EeAppActiveRefsFn refs);
 
-/// Every list emptied, the references dropped through `refs` (`between` after the queues').
-///
-/// # Safety
-/// As [`ee_app_active_update`]; `between` callable.
-void ee_app_active_clear(EeAppActiveRefsFn refs, EeAppActiveBetweenFn between);
-
 /// A unit stepped from now (two references taken by the caller).
 void ee_app_active_start(uint32_t id);
 
@@ -361,29 +352,6 @@ EeAppCheats *ee_app_cheats_new(EeAppCheatFn call, void *ctx);
 /// `p` came from [`ee_app_cheats_new`] (or is null) and is not used again.
 void ee_app_cheats_free(EeAppCheats *p);
 
-/// `ParseCheatCode(text)`: `code` and (when the line ends in a number) `parameter`.
-///
-/// # Safety
-/// `p` is live, `text` holds `len` bytes, the outputs are live; `call` and `ctx` are live for the call.
-void ee_app_cheats_parse(const EeAppCheats *p,
-                         EeAppCheatFn call,
-                         void *ctx,
-                         const uint8_t *text,
-                         size_t len,
-                         long *code,
-                         long *parameter);
-
-/// `ApplyCheatCode(code, player, parameter)`.
-///
-/// # Safety
-/// `p` is live; `call` and `ctx` are live for the call.
-void ee_app_cheats_apply(const EeAppCheats *p,
-                         EeAppCheatFn call,
-                         void *ctx,
-                         long code,
-                         long player,
-                         long parameter);
-
 /// `mGhostUnits.size()`.
 size_t ee_app_ghost_count();
 
@@ -420,12 +388,6 @@ size_t ee_app_record_statistics(const EeAppStatsWorld *world,
                                 size_t cap,
                                 long *current_index,
                                 bool *is_scenario);
-
-/// `EEEMStorm(kind)`'s plain members.
-///
-/// # Safety
-/// `out` is live.
-void ee_app_storm_init(EeAppStormFields *out, long kind);
 
 /// `Step(time)`: the record copied in, the step run, copied back (no host op touches it).
 ///
@@ -470,12 +432,6 @@ int32_t ee_app_team_save(void *file,
 
 /// `mTeams[team].ContainsPlayer(player)` (false past the end).
 bool ee_app_teams_contains(size_t team, uint32_t player);
-
-/// `EEWorld::AddTeam` of `n` players.
-///
-/// # Safety
-/// `players` holds `n` ids; `w` as [`calls`].
-void ee_app_teams_add(const uint32_t *players, size_t n, const EeAppTeamsWorld *w);
 
 /// `EEWorld::AddAlliance`.
 ///

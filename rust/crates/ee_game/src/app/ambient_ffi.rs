@@ -209,22 +209,6 @@ pub unsafe extern "C" fn ee_app_ambient_update(
     with(manager, counts, ctx, call, ambient::update);
 }
 
-/// `UpdateState(time of day, time)`.
-///
-/// # Safety
-/// as [`ee_app_ambient_update`]
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_ambient_update_state(
-    manager: *mut EeAppAmbientFields,
-    counts: *mut EeAppAmbientCounts,
-    ctx: *mut c_void,
-    call: EeAppAmbientFn,
-    time_of_day: f32,
-    time: i32,
-) {
-    with(manager, counts, ctx, call, |m, c, h| ambient::update_state(m, c, h, time_of_day, time as _));
-}
-
 /// `SetEnabled(enabled)`.
 ///
 /// # Safety
@@ -253,20 +237,4 @@ pub unsafe extern "C" fn ee_app_ambient_stop_sounds(
     pause: bool,
 ) {
     with(manager, counts, ctx, call, |m, _c, h| if pause { ambient::pause(m, h) } else { ambient::stop_sounds(h) });
-}
-
-/// `EEAmbientSound::PlayAtVolume(volume)` (0 or less: the sound stopped and silent).
-///
-/// # Safety
-/// as [`ee_app_ambient_update`]
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_ambient_play_at_volume(
-    manager: *mut EeAppAmbientFields,
-    counts: *mut EeAppAmbientCounts,
-    ctx: *mut c_void,
-    call: EeAppAmbientFn,
-    slot: u32,
-    volume: f32,
-) {
-    with(manager, counts, ctx, call, |_m, _c, h| ambient::play_at_volume(h, slot as usize, volume));
 }

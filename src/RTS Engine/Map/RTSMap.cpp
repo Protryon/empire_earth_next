@@ -14,6 +14,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDoppelgangerManager.h"
+#include "rust/sim/units.h"
 
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)
@@ -62,7 +63,7 @@ void EEMap::PrepareSave()
     EESightScope theCapture(kSightPrepareSave, NULL);   // TSGT (TEST ONLY)
     ee_units_tile_sight_map((uint64_t)(uintptr_t)&::gWorld, (uint64_t)(uintptr_t)this, 2, 0);   // ee_units tile_sight.rs
     for (unsigned long i = 1; i < this->mU19561C; i++)
-        gDoppelgangerManager.UnregisterPlayer(::gWorld.mPlayers[i]);
+        ee_units_dm_body(EE_UNITS_DM_DO_UNREGISTER_PLAYER, ::gWorld.mPlayers[i], 0, 0, 0);
 }
 
 // Returns the tile closest to a point and stores its coordinates

@@ -172,19 +172,6 @@ pub unsafe extern "C" fn ee_contagion_functor_init(
     unsafe { *out = init(&*class, kind) };
 }
 
-/// [`params`].
-///
-/// # Safety
-/// `f` valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_contagion_functor_params(
-    f: *const EeContagionFunctorFields,
-    blocked_by_immunity: bool,
-) -> EeContagionParams {
-    // SAFETY: the caller's contract
-    params(unsafe { &*f }, blocked_by_immunity)
-}
-
 /// [`discrete_time`].
 ///
 /// # Safety

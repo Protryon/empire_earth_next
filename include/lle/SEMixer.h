@@ -21,7 +21,6 @@ struct IDirectSound;
 // SEConductor* is an EeSoundConductor* inside its mixer; the members are inline forwarders (SEConductor.cpp is gone).
 class LLE_API SEConductor : URustView {
 public:
-    unsigned long GetConductorState() const { return ee_sound_conductor_fields(Rust()).state; }
     float GetVolume() const { return ee_sound_conductor_fields(Rust()).volume; }
 
     SEScore* GetScore(long inID) const
@@ -37,8 +36,6 @@ public:
         return theResult;
     }
     long Play(long inID) { return ee_sound_conductor_play(Rust(), (int32_t)inID); }
-    // the engine has no segment queue: the score starts at the next measure (the game never queues)
-    long Queue(long inID) { return ee_sound_conductor_queue(Rust(), (int32_t)inID); }
     long SetChannelGroupCount(unsigned long inCount)
     {
         return ee_sound_conductor_set_channel_group_count(Rust(), (uint32_t)inCount);
@@ -75,24 +72,9 @@ const UString& SEMixerPlugInName();
 
 class LLE_API SEMixer : URustView {
 public:
-    static SEMixer* GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
     SEConductor& GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(Rust())); }
     static unsigned long GetCount() { return ee_sound_mixer_count(); }
-    // the registered mixer with the given index; kErrorBeyondEnd past the last
-    static long GetMixer(unsigned long inIndex, SEMixer*& outMixer)
-    {
-        return ee_sound_mixer_get((uint32_t)inIndex, reinterpret_cast<EeSoundMixer**>(&outMixer));
-    }
     const UString& GetName() { return SEMixerPlugInName(); }
-    bool IsValid() { return ee_mixer_plugin_is_valid(); }   // (PIMIsValid)
-    bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-    {
-        return ee_sound_mixer_process_message(Rust(), inMessage, inParameter1, inParameter2);
-    }
-    // the given mixer active (NULL: none), the current one's music stopped and the mixer deactivated first
-    static long UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
-    // this port's addition: the mixer's output rate
-    unsigned long GetOutputRate() const { return ee_sound_mixer_output_rate(Rust()); }
     EeSoundMixer* Rust() const { return reinterpret_cast<EeSoundMixer*>(const_cast<SEMixer*>(this)); }
 };
 

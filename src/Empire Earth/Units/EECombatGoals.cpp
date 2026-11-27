@@ -26,6 +26,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EEUnitBehavior.h"
+#include "rust/sim/units.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -159,7 +160,7 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
 void EEQueryAct(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
     switch (inCode) {
-    case EE_COMBAT_A_IGNORE: EEQueryContextOf(inContext)->mUnit->IgnoreTarget(EEQueryComplex(inObject)); break;
+    case EE_COMBAT_A_IGNORE: ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, EEQueryContextOf(inContext)->mUnit, EEQueryComplex(inObject), 0); break;
     }
 }
 
@@ -216,7 +217,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_HELP_START_ACTION: EEQueryComplex(inObject)->StartAction(EEQueryContextOf(inContext)->mHelpGoal->GetStartAction()); return 0;
     case EE_COMBAT_W_DEREFERENCE_LAST_ATTACKER: EEQueryComplex(inObject)->mLastAttacker->Dereference(); return 0;
     case EE_COMBAT_W_LAUNCH_STORED_MISSILE: EEQueryContextOf(inContext)->mClass->LaunchStoredMissile(EEQueryComplex(inObject)); return 0;
-    case EE_COMBAT_W_RELOAD: EEQueryComplex(inObject)->SetRandomReloadTimer((long)(*ioArgs)[0]); return 0;
+    case EE_COMBAT_W_RELOAD: ee_units_cu_body(EE_UNITS_CU_DO_SET_RANDOM_RELOAD_TIMER, EEQueryComplex(inObject), (long)(*ioArgs)[0], 0, 0); return 0;
     case EE_COMBAT_W_FIND_DROP: return EEQueryHandleOf(EECombatFindDropLocation(EEQueryComplex(inObject), NULL, EEQueryContextOf(inContext)->mPoint));
     case EE_COMBAT_W_LINE_BLOCKED_AT: return EEIsLineToUnitBlocked(EEQueryComplex(inObject), EEQueryUnit(inOther), EEObjectOf<EEUnit*>((*ioArgs)[0]), EEObjectOf<long>((*ioArgs)[1]), EEObjectOf<long>((*ioArgs)[2]));
     case EE_COMBAT_W_LAUNCH_SHOT: EEQueryContextOf(inContext)->mClass->LaunchShot(EEQueryComplex(inObject), EEQueryUnit(inOther), EEQueryContextOf(inContext)->mPoint, NULL); return 0;

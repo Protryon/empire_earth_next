@@ -867,16 +867,6 @@ fn media(kl: P) -> EeCalamityClassMedia {
     m
 }
 
-/// `GetMedia` for the C++.
-///
-/// # Safety
-/// `out` valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_calamity_class_get_media(kl: *mut c_void, out: *mut EeCalamityClassMedia) {
-    // SAFETY: the caller's contract
-    unsafe { *out = media(kl as P) };
-}
-
 /// `Initialize`: the common fields, the class's effects and sounds fetched as it fetched them, its numbers, its
 /// contagion functor (ee_tech calamity_class.rs).
 ///
@@ -1612,20 +1602,6 @@ fn valid_location(kl: P, cast: &EeCalamityCast, cx: P, unit_class_index: c_long)
     let host = CastHost { class: kl, unit: cx, target_unit: 0, target: 0, unit_class_index, units: 0 };
     // SAFETY: our cast and host
     with_cast_host(host, |ffi| unsafe { ee_sim::tech::ffi::ee_calamity_valid_location(cast, ffi) })
-}
-
-/// `EECalamityCanCastAt` for the C++ callers (ee/EECalamityUpdate.h).
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_can_cast_at(
-    kl: *mut c_void,
-    mode: EeCalamityCastMode,
-    cx: *mut c_void,
-    x: c_ulong,
-    y: c_ulong,
-    check: bool,
-    target_unit: *mut c_void,
-) -> c_long {
-    can_cast_at(kl as P, mode, cx as P, x, y, check, target_unit as P)
 }
 
 #[cfg(test)]

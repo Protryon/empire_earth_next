@@ -682,18 +682,6 @@ pub(crate) mod ffi {
         clear(&mut Ffi, unit as usize)
     }
 
-    /// `RTSUnit::RemoveFromList`.
-    #[no_mangle]
-    pub extern "C" fn ee_rts_unit_remove_from_list(unit: *mut c_void) {
-        remove_from_list(&mut Ffi, unit as usize)
-    }
-
-    /// `RTSUnit::InsertAfter`.
-    #[no_mangle]
-    pub extern "C" fn ee_rts_unit_insert_after(unit: *mut c_void, after: *mut c_void) {
-        insert_after(&mut Ffi, unit as usize, after as usize)
-    }
-
     /// `RTSUnit::Link`.
     #[no_mangle]
     pub extern "C" fn ee_rts_unit_link(unit: *mut c_void, after: *mut c_void) {
@@ -736,18 +724,6 @@ pub(crate) mod ffi {
         player_reset(&mut Ffi, player as usize)
     }
 
-    /// `RTSPlayer::AddPendingUnits`.
-    #[no_mangle]
-    pub extern "C" fn ee_rts_player_add_pending_units(player: *mut c_void, keep_id: bool, release: bool) {
-        add_pending_units(&mut Ffi, player as usize, keep_id, release)
-    }
-
-    /// `RTSPlayer::ReleasePendingUnits`.
-    #[no_mangle]
-    pub extern "C" fn ee_rts_player_release_pending_units(player: *mut c_void) {
-        release_pending_units(&mut Ffi, player as usize)
-    }
-
     /// `EEPlayer::AddPendingUnits`: the pending groups appended to the running ones (`groups`, the player's
     /// `mGroupLists`: ee_sim group_obj.rs), then `RTSPlayer`'s.
     ///
@@ -780,12 +756,6 @@ pub(crate) mod ffi {
     #[no_mangle]
     pub extern "C" fn ee_rts_player_add_unit(player: *mut c_void, unit: *mut c_void, keep_id: bool) {
         add_unit(&mut Ffi, player as usize, unit as usize, keep_id)
-    }
-
-    /// `RTSPlayer::InsertUnit`.
-    #[no_mangle]
-    pub extern "C" fn ee_rts_player_insert_unit(player: *mut c_void, unit: *mut c_void) {
-        insert_unit(&mut Ffi, player as usize, unit as usize)
     }
 
     /// `RTSPlayer::RemoveKilledUnits`.

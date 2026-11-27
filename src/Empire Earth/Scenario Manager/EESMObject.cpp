@@ -28,6 +28,8 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
+#include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
@@ -77,10 +79,10 @@ extern "C" int64_t ee_scenariocpp_world_object(EESMHostContext* inContext, uint3
     switch (inOp) {
     case EE_SCENARIO_WZ_GROUP_CONTAINS: return SMWzOf<EEPlayer>(a[0])->mActiveGroup->Contains(SMWzOf<EEUnit>(a[1])->mComplexUnit);
     case EE_SCENARIO_WZ_AREA: return SMWzPtr(gWorld.mScenarioManager->GetArea((unsigned long)a[0]));
-    case EE_SCENARIO_WZ_AREA_CONTAINS_UNIT: return SMWzOf<EESMArea>(a[0])->ContainsUnit(SMWzOf<EEUnit>(a[1]));
+    case EE_SCENARIO_WZ_AREA_CONTAINS_UNIT: return ee_scenario_en_area_contains_unit(SMWzOf<EESMArea>(a[0]), SMWzOf<EEUnit>(a[1]));
     case EE_SCENARIO_WZ_FOOTPRINT_DISTANCE:
         return EESMBits(EEGetFootprintDistance(static_cast<EEComplexUnit*>(SMWzOf<EEUnit>(a[0])), (long)a[1], (long)a[2], SMWzOf<long>(a[3]), SMWzOf<long>(a[4])));
-    case EE_SCENARIO_WZ_NEAREST_TILE: SMWzOf<EEUnit>(a[0])->GetNearestFootprintTile(SMWzOf<EEUnit>(a[1]), SMWzOf<long>(a[2]), SMWzOf<long>(a[3]));
+    case EE_SCENARIO_WZ_NEAREST_TILE: ee_units_eu_nearest_footprint_tile(SMWzOf<EEUnit>(a[0]), SMWzOf<EEUnit>(a[1]), SMWzOf<long>(a[2]), SMWzOf<long>(a[3]));
         return 0;
     case EE_SCENARIO_WZ_CHAT_TEXT: sWZText[0] = inContext->mCondition->mChatText;
         return 0;

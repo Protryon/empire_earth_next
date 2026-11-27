@@ -10,15 +10,6 @@ unsafe fn read<'a, T>(input: *const T) -> &'a T {
     unsafe { &*input }
 }
 
-/// `EEToHitTable::GetAttackFactor`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_attack_factor(input: *const EeCombatAttackFactorIn) -> f32 {
-    attack_factor(unsafe { read(input) })
-}
-
 /// The to-hit factor `ee_combat_damage` uses (the C++ reads the elevation only when it is positive).
 ///
 /// # Safety
@@ -35,33 +26,6 @@ pub unsafe extern "C" fn ee_combat_hit_factor(input: *const EeCombatDamageIn) ->
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_damage(input: *const EeCombatDamageIn) -> EeCombatDamageOut {
     damage(unsafe { read(input) })
-}
-
-/// `EEUnitClass::GetElevationFactor`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_elevation(input: *const EeCombatElevationIn) -> f32 {
-    elevation(unsafe { read(input) })
-}
-
-/// `EEComplexUnit::ApplyMorale`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_morale(input: *const EeCombatMoraleIn) -> i32 {
-    morale(unsafe { read(input) })
-}
-
-/// `EEUnit::TakeHit`'s hit points.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_hit_points(input: *const EeCombatHitPointsIn) -> EeCombatHitPointsOut {
-    hit_points(unsafe { read(input) })
 }
 
 /// `EEUnit::TakeHit`'s damage effect test.
@@ -152,15 +116,6 @@ pub unsafe extern "C" fn ee_combat_arc(input: *const EeCombatArcIn) -> EeCombatA
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_range(input: *const EeCombatRangeIn) -> i32 {
     range(unsafe { read(input) })
-}
-
-/// `EECanReach`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_can_reach(input: *const EeCombatReachIn) -> i32 {
-    can_reach(unsafe { read(input) })
 }
 
 /// `EEIsInWorkReach`.

@@ -12,10 +12,6 @@ extern "C" void ee_gamecpp_msgcap_import(void* message, const uint8_t* data);
 extern "C" void ee_gamecpp_msgcap_executed(void* message);
 extern "C" void ee_gamecpp_msgcap_sweep();
 
-// one NMEX record for a game message the physics executes (its members and its bytes), then the message built again
-// from its bytes (an NMIM record, written by the factory, gamecpp msg_objs.rs): in a single-player game the messages
-// reach the physics unencoded
-inline void EEMessageCaptureExecuted(NEMessage* inMessage) { ee_gamecpp_msgcap_executed(inMessage); }
 
 // NMDC, the Execute decisions' records, are Rust (ee_sim netmsg decisions.rs: ee_netmsg_capture_decision, and
 // ee_netmsg_capture_decision_sweep over the world table's trade rates)

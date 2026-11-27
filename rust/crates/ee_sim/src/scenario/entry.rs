@@ -1453,27 +1453,6 @@ mod game {
             })
             .unzip()
     }
-
-    /// [`region_inputs`] for the C++: the count of areas, and (when `capacity` holds them) each area's input and id.
-    ///
-    /// # Safety
-    /// `inputs` and `ids` point to `capacity` entries (or `capacity` is 0).
-    #[no_mangle]
-    pub unsafe extern "C" fn ee_scenario_area_region_inputs(
-        inputs: *mut crate::astar::manager::EeScenarioArea,
-        ids: *mut c_long,
-        capacity: usize,
-    ) -> usize {
-        let (a, i) = region_inputs();
-        if a.len() <= capacity && !a.is_empty() {
-            // SAFETY: the caller's contract
-            unsafe {
-                std::ptr::copy_nonoverlapping(a.as_ptr(), inputs, a.len());
-                std::ptr::copy_nonoverlapping(i.as_ptr(), ids, i.len());
-            }
-        }
-        a.len()
-    }
 }
 
 #[cfg(test)]

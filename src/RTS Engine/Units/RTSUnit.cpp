@@ -16,30 +16,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "rust/game/rts.h"
+#include "rust/sim/units.h"
 
 // New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h) is Rust (ee_units): a lock-free radix
 // tree over the id's bits, so any thread may resolve a handle while another thread inserts a unit or runs its
 // last Dereference. Looked up only, never iterated.
 RTSUnit* RTSResolveUnitID(uint32_t inUnitID) { return static_cast<RTSUnit*>(ee_rts_unit_resolve(inUnitID)); }
 
-// A unit's id is final when its player inserts it. A second object with the same id (none in a game: ids count up)
-// replaces the first in the registry; the first one's FreeNode then leaves the entry alone.
-// (ee_game rts units.rs: an unregister leaves the entry alone unless it is still this unit)
-void RTSRegisterUnit(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, true); }
-void RTSUnregisterUnit(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, false); }
 
 // A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer). The
 // typed halves are ee/EEUnitHandle.h's casts.
 uint32_t EEUnitHandleID(const RTSUnit* inUnit) { return ee_rts_unit_handle_id(inUnit); }
 
-void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere) { ee_rts_unit_check_list(inHead, inWhere); }
 
 // Destroys the unit and its tile node (asserts it was invalidated)
 RTSUnit::~RTSUnit()
 {
     this->mObjectKind.mValue = 0;   // New (port): an RTSUnit again (ee/EEUnitKind.h)
     ESVERIFY_AT(this->mIsValid == false, 62);
-    EEUnitStoreRemove(this);   // New (R5b.4, round 26): the store reads this object's records; none outlives it
+    ee_units_store_remove_object((uint64_t)(uintptr_t)this);   // New (R5b.4, round 26): the store reads this object's records; none outlives it
     delete this->mTileNode;
 }
 
@@ -55,10 +51,10 @@ RTSDummyUnit* ee_rtsucpp_dummy_head(RTSUnit* inLink) { return RTSDummyHead(inLin
 RTSUnit** ee_rtsucpp_head_first_slot(RTSDummyUnit* inHead) { return &inHead->mFirst; }
 RTSUnitLink* ee_rtsucpp_link_new() { return new RTSUnitLink; }
 void ee_rtsucpp_link_delete(RTSUnitLink* inLink) { delete inLink; }
-void ee_rtsucpp_store_linked(RTSUnit* inUnit) { EEUnitStoreLinked(inUnit); }
-void ee_rtsucpp_store_remove(RTSUnit* inUnit) { EEUnitStoreRemove(inUnit); }
-void ee_rtsucpp_unregister(RTSUnit* inUnit) { RTSUnregisterUnit(inUnit); }
-void ee_rtsucpp_register(RTSUnit* inUnit) { RTSRegisterUnit(inUnit); }
+void ee_rtsucpp_store_linked(RTSUnit* inUnit) { ee_units_store_linked((uint64_t)(uintptr_t)inUnit); }
+void ee_rtsucpp_store_remove(RTSUnit* inUnit) { ee_units_store_remove_object((uint64_t)(uintptr_t)inUnit); }
+void ee_rtsucpp_unregister(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, false); }
+void ee_rtsucpp_register(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, true); }
 RTSTile* ee_rtsucpp_map_tile(EEMap* inMap, long inX, long inY) { return inMap->GetTile(inX, inY); }
 void ee_rtsucpp_sight_on(RTSUnit* inUnit) { inUnit->SightOnHere(); }
 void ee_rtsucpp_sight_off(RTSUnit* inUnit) { inUnit->SightOffHere(); }

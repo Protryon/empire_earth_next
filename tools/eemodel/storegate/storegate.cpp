@@ -336,7 +336,7 @@ int main(int argc, char** argv)
         };
         for (const StoreDescription& theCase : kDescriptions) {
             if (theCase.mPack)
-                GETextureManager::SetTexturePack("textures", 1, 1);
+                ee_ge_texpack_set("textures", 1, 1);
             GETextureManager* theManager = new GETextureManager(thePath);
             theManager->SetScreen(theScreen);
             std::vector<GETexture*> theLoaded;
@@ -371,7 +371,7 @@ int main(int argc, char** argv)
             theManager->RemoveAllTextures();
             delete theManager;
             if (theCase.mPack)
-                GETextureManager::SetTexturePack(NULL, 0, 0);
+                ee_ge_texpack_set(NULL, 0, 0);
         }
     }
     fclose(theOut);

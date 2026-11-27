@@ -2,8 +2,6 @@
 //! the next engine's view ask of a unit class. Pure over the class's category, type and speed; the C ABI reads the
 //! class through `ee_sim::world`'s view.
 
-use std::os::raw::c_ulong;
-
 use crate::world::{ClassView, WorldRead};
 
 /// The categories of a military class (`EEUnitCategory`): air, naval and land fighters, priests, transports, the
@@ -42,14 +40,6 @@ pub unsafe extern "C" fn ee_ai_military_class(class: u64) -> bool {
     let v: f32 = crate::world_field!(c.fields(), mMaxVelocity);
     let projectile: bool = crate::world_field!(c.fields(), mIsProjectile);
     military_class(c.category(), c.unit_type(), v, projectile)
-}
-
-/// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
-#[no_mangle]
-pub extern "C" fn ee_ai_military_type(unit_type: c_ulong) -> bool {
-    // SAFETY: the caller holds the world (the simulation thread or a reader of the classes)
-    let t = unsafe { WorldRead::begin() };
-    ClassView::by_index(&t, unit_type as usize).is_some_and(|c| military_category(c.category()))
 }
 
 #[cfg(test)]

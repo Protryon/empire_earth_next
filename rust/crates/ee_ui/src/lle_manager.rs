@@ -317,13 +317,6 @@ pub unsafe extern "C" fn ee_ui_manager_load_database(
     load_database(&mut crate::lle_cpp::Ffi, manager as usize, path as usize, directory as usize);
 }
 
-/// `UIManager::RemoveDatabase` (the C++ member's body).
-#[cfg(not(any(test, feature = "no_cpp")))]
-#[no_mangle]
-pub extern "C" fn ee_ui_manager_remove_database() {
-    remove_database(&mut crate::lle_cpp::Ffi);
-}
-
 /// The constructor's body after the Rust manager is made: `Init` (its ops read the manager through the C++
 /// forwarders, so `mRust` must be set), then the shared mouse buttons looked up.
 ///

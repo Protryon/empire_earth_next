@@ -21,8 +21,6 @@ public:
         { return *this = GEVector(this->mX - inVector.mX, this->mY - inVector.mY, this->mZ - inVector.mZ); }
     bool operator==(const GEVector& inVector) const { return this->mX == inVector.mX && this->mY == inVector.mY && this->mZ == inVector.mZ; }
     bool operator!=(const GEVector& inVector) const { return this->mX != inVector.mX || this->mY != inVector.mY || this->mZ != inVector.mZ; }
-    void Add(const GEVector& inVector, GEVector& outVector) const
-        { outVector = GEVector(inVector.mX + this->mX, inVector.mY + this->mY, inVector.mZ + this->mZ); }
     float GetX() const { return this->mX; }  // inline (exported, ICF-folded with GE2DPoint's)
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
@@ -40,7 +38,6 @@ public:
     void Scale(float inScale, GEVector& outVector) const { outVector = GEVector(inScale * this->mX, inScale * this->mY, inScale * this->mZ); }
     void SetX(float inX) { this->mX = inX; }  // inline (exported 0x54ae4 / 0xc56c / 0xc576)
     void SetY(float inY) { this->mY = inY; }
-    void SetZ(float inZ) { this->mZ = inZ; }
     template <class F> long Load(F& inFile) { return ee_ge_vector_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) const { return ee_ge_vector_save(GERust(*this), GERustFile(inFile)); }
 };
@@ -66,21 +63,11 @@ public:
     bool operator==(const GETransformation& inTransformation) const;   // (exact; lle/GETransformation.h)
     // inline (InterpolateTo 0xdae4 expands it); its exported copy is ICF-folded into GEVector's 0x1000c29f
     bool operator!=(const GE3DPoint& inPoint) const { return mX != inPoint.mX || mY != inPoint.mY || mZ != inPoint.mZ; }
-    void Add(const GEVector& inVector, GE3DPoint& outPoint) const
-        { outPoint = GE3DPoint(inVector.mX + this->mX, inVector.mY + this->mY, inVector.mZ + this->mZ); }
     void Clear() { *this = GE3DPoint(); }
-    float DistanceTo(const GE3DPoint& inPoint) const { return ee_ge_3d_distance(GERust(*this), GERust(inPoint)); }
-    float DistanceToSquared(const GE3DPoint& inPoint) const { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
     void GetChecksum(ESChecksum& ioChecksum) const {}
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
-    // the frustum points' calls (GEViewport): the vector cleared (no point), then each point
-    static void Push(void* inPoints, const EeGe3DPoint* inPoint)
-    {
-        inPoint ? static_cast<std::vector<GE3DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint))
-                : static_cast<std::vector<GE3DPoint>*>(inPoints)->clear();
-    }
     // x, y and z from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
     template <class F> long Load(F& inFile) { return ee_ge_3d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Load(unsigned long, unsigned long, F& inFile) { return this->Load(inFile); }
@@ -88,7 +75,6 @@ public:
     template <class F> long Save(unsigned long, unsigned long, F& inFile) const { return this->Save(inFile); }
     void SetX(float inX) { this->mX = inX; }
     void SetY(float inY) { this->mY = inY; }
-    void SetZ(float inZ) { this->mZ = inZ; }
     void SetXYZ(float inX, float inY, float inZ) { *this = GE3DPoint(inX, inY, inZ); }
 };
 

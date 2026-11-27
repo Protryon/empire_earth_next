@@ -7,6 +7,7 @@
 // Requires lle/LowLevelEngine.h, lle/USingleton.h, <stdio.h> (FILE).
 #ifndef EE_EECALAMITYMANAGER_H
 #define EE_EECALAMITYMANAGER_H
+#include "lle/USingleton.h"
 
 class EECalamity;
 class EECalamityClass;
@@ -40,8 +41,6 @@ public:
     virtual long GetOutOfSynchChecksum() { return ee_gamecpp_calamity_checksum_all(this); }
 
     void DestroyCalamities() { ee_gamecpp_calamity_destroy_all(this); }
-    // 0xae070 (db\dbcalamity.dat; EEWorld 0x141d95)
-    long LoadCalamityClasses(FSFileSpec* inFile) { return ee_gamecpp_calamity_load_classes(this, inFile); }
     // 0xae526/0xae5ac/0xae66b: a new calamity of class inClassEnum (false if the class or a unit is missing)
     bool CreateGlobalCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID, unsigned long inPlayerNumber) { return ee_gamecpp_calamity_create(this, 0, inClassEnum, inCasterUnitID, 0, 0, 0, inPlayerNumber); }
     bool CreateLocationCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID, long inX, long inY, unsigned long inPlayerNumber) { return ee_gamecpp_calamity_create(this, 1, inClassEnum, inCasterUnitID, 0, inX, inY, inPlayerNumber); }
@@ -49,7 +48,6 @@ public:
     void GetCalamities(std::vector<EECalamity*>*& outCalamities) { outCalamities = &this->mCalamities; }
     // 0xae71d: 0 past the end
     EECalamityClass* GetCalamityClass(const EECalamityEnum& inClassEnum) const { return (EECalamityClass*)ee_gamecpp_calamity_class_of(const_cast<EECalamityManager*>(this), inClassEnum); }
-    bool GetCalamityIndex(EECalamity* inCalamity, long& outIndex) { return ee_gamecpp_calamity_index(this, inCalamity, false, &outIndex); }
     // 0xae774: 0 past the end
     EECalamityClass* GetCalamityClass(unsigned long inClassEnum) const { return (EECalamityClass*)ee_gamecpp_calamity_class_of(const_cast<EECalamityManager*>(this), inClassEnum); }
     unsigned long GetCalamityClassCount() const { return this->mCalamityClasses.size(); }  // inline (out-of-line COMDAT 0x138e4b, 33 callers; EESETSETGameCalamity::Virtual14; provisional name)
@@ -61,8 +59,6 @@ public:
     void LoadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum) { ee_gamecpp_calamity_class_media(this, inPlayer, inClassEnum, true); }
     // 0xae869: takes over loaded calamities (games older than 0.30 drop their plagues, leprosy and fire)
     void Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, std::vector<EECalamity*>& inCalamities) { ee_gamecpp_calamity_restore(this, inMajorVersion, inMinorVersion, &inCalamities); }
-    // 0xae8bc (kept only if its class starts it)
-    void DestroyCalamityClasses(bool inShutdown) { ee_gamecpp_calamity_destroy_classes(this); }
     // 0xae966 (the class's Virtual34)
     void UnloadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum) { ee_gamecpp_calamity_class_media(this, inPlayer, inClassEnum, false); }
     void Update(float inElapsedTime) { ee_gamecpp_calamity_update_all(this, inElapsedTime); }

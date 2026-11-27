@@ -286,12 +286,6 @@ pub fn cheat_on(id: u64, cheat: c_long) -> bool {
     cheats(id) & cheat != 0
 }
 
-/// `EECPCheatOn(player, cheat)` for the C++ (`id` 0: no player).
-#[no_mangle]
-pub extern "C" fn ee_ai_cheat_on(id: u64, cheat: c_long) -> bool {
-    cheat_on(id, cheat)
-}
-
 /// `EECPCheatNames`: the cheats that are on ("cost,reveal,..." or "none")
 pub fn cheat_names(id: u64) -> String {
     switches::cheat_names(cheats(id))

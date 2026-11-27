@@ -482,19 +482,6 @@ pub(crate) mod ffi {
         }
     }
 
-    /// `RTSMouse::LoadPointer`.
-    ///
-    /// # Safety
-    /// `file` a C string, `screen` a live screen, `slot` a surface slot.
-    #[no_mangle]
-    pub unsafe extern "C" fn ee_rts_mouse_load_pointer(
-        file: *const c_char,
-        screen: *mut c_void,
-        slot: *mut *mut c_void,
-    ) -> c_long {
-        unsafe { load_pointer(&mut Ffi, core::ffi::CStr::from_ptr(file), screen as usize, slot) }
-    }
-
     /// `RTSMouse::Load`.
     ///
     /// # Safety

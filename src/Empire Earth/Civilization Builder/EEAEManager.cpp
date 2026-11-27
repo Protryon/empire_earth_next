@@ -43,6 +43,8 @@
 #include "rust/sim/units.h"
 #include "rust/game/screens.h"   // the host (area_effect_host.rs)
 #include "lle/FSMemoryFile.h"
+#include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 
 // The unit functors of the manager's passes (the original's ApplyGeneratedEffectsToOthersFunctor,
 // SetAffectedByAreaEffectFunctor, ClearAreaEffectsFunctor, RebuildAreaEffectRegionListFunctor,
@@ -151,8 +153,8 @@ extern "C" uintptr_t ee_screenscpp_aem_manager() { return (uintptr_t)&gAEManager
 #define AEM_M(m) ((EEAEManager*)(m))
 extern "C" void ee_screenscpp_aem_for_each(uint32_t inPass, uintptr_t inArg, uint64_t inPlayer, float inElapsed, float inX, float inY)
 { EEForEachPlayersUnit(EEAETemp(EEAEPassFunctor(inPass, inArg, inPlayer, inElapsed, inX, inY))); }
-extern "C" void ee_screenscpp_aem_apply_area_effects(uintptr_t inUnit) { AEM_U(inUnit)->ApplyAreaEffects(); }
-extern "C" void ee_screenscpp_aem_remove_affecting(uintptr_t inUnit) { AEM_U(inUnit)->RemoveAffectingAreaEffects(); }
+extern "C" void ee_screenscpp_aem_apply_area_effects(uintptr_t inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_APPLY_AREA_EFFECTS, AEM_U(inUnit), 0, 0, 0); }
+extern "C" void ee_screenscpp_aem_remove_affecting(uintptr_t inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_AFFECTING, AEM_U(inUnit), 0, 0, 0); }
 extern "C" uintptr_t ee_screenscpp_aem_affecting_list(uintptr_t inUnit)
 { return (uintptr_t)&AEM_U(inUnit)->mAffectingAreaEffects; }
 extern "C" void ee_screenscpp_aem_update_area_effects(uintptr_t inUnit, float inElapsed)
@@ -239,7 +241,7 @@ extern "C" bool ee_screenscpp_aeh_idle(uintptr_t inT) { return AE_T(inT)->GetCom
 extern "C" void ee_screenscpp_aeh_set_cloakable_own(uintptr_t inT)
 { AE_T(inT)->SetCloakableChain(AE_T(inT)->mUnitClass->mIsCloakable); }
 extern "C" void ee_screenscpp_aeh_minimap_hide(uintptr_t inT)
-{ gMiniMap->MoveUnit(AE_T(inT), -10000, -10000, AE_T(inT)->mTileX, AE_T(inT)->mTileY); }
+{ ee_gamecpp_minimap_move_unit(gMiniMap, AE_T(inT), -10000, (long)(-10000), AE_T(inT)->mTileX, AE_T(inT)->mTileY); }
 extern "C" uintptr_t ee_screenscpp_aeh_owner(uintptr_t inEffect) { return (uintptr_t)AE_E(inEffect)->mUnit; }
 extern "C" void ee_screenscpp_aeh_rect_top(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mTop = inV; }
 extern "C" void ee_screenscpp_aeh_rect_left(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAERect).mLeft = inV; }
@@ -345,7 +347,7 @@ extern "C" uintptr_t ee_screenscpp_aec_template_count() { return gAEManager.mTem
 extern "C" uintptr_t ee_screenscpp_aec_template_at(uintptr_t inIndex)
 { return (uintptr_t)gAEManager.mTemplates[inIndex]; }
 extern "C" int32_t ee_screenscpp_aec_effect_index(uintptr_t inEffect)
-{ return (int32_t)EEGraphicEffect::IndexOf((EEGraphicEffect*)inEffect); }
+{ return (int32_t)ee_gfx_geffect_index_of(static_cast<const EEGraphicEffect*>((EEGraphicEffect*)inEffect)); }
 extern "C" uint64_t ee_screenscpp_aec_media_count() { return (uint64_t)EEMedia::GetCount(); }
 extern "C" uintptr_t ee_screenscpp_aec_media_at(uint64_t inIndex)
 { return (uintptr_t)EEMedia::Get((unsigned long)inIndex); }

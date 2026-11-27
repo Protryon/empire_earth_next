@@ -23,6 +23,7 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EETown.h"
+#include "rust/sim/cp.h"
 
 
 // a tile as one word (x high, y low; ee_sim::cp town_world.rs unpack)
@@ -34,7 +35,7 @@ extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uin
     EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)inA);
     (void)inB;
     switch (inOp) {
-    case EE_CP_TOWN_IS_TOWN_UNIT: return EETown::IsTownUnit(theUnit) ? 1 : 0;
+    case EE_CP_TOWN_IS_TOWN_UNIT: return ee_cp_town_is_town_unit((uint64_t)(uintptr_t)theUnit) ? 1 : 0;
     case EE_CP_TOWN_PLAYER: return (int64_t)(uintptr_t)me->mPlayer;
     case EE_CP_TOWN_HAS_PATROL: return me->mPatrolGroup != NULL ? 1 : 0;
     case EE_CP_TOWN_SET_PATROL: EEPGSetPatrolPoints(me->mPatrolGroup, std::vector<U2DPoint<long> >((const U2DPoint<long>*)(uintptr_t)io->v[0], (const U2DPoint<long>*)(uintptr_t)io->v[0] + io->v[1]), me->mPlayer->GetPlayerID());

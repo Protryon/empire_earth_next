@@ -230,16 +230,6 @@ pub fn animate(i: &EeUnitsAnimateIn) -> EeUnitsAnimateOut {
     o
 }
 
-/// `EEUnitClass::Animate`'s decisions (`out` filled).
-///
-/// # Safety
-/// `input` and `out` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_animate(input: *const EeUnitsAnimateIn, out: *mut EeUnitsAnimateOut) {
-    // SAFETY: the caller's contract
-    unsafe { *out = animate(&*input) };
-}
-
 #[cfg(test)]
 #[path = "animate_tests.rs"]
 mod tests;

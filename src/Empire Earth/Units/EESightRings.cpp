@@ -18,6 +18,8 @@
 #include "ee/EEMap.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEDoppelgangerManager.h"
+#include "rust/game/gamecpp.h"
+#include "rust/sim/units.h"
 
 // Drops one of the player's sight references on the tile; the last one leaves it explored
 void RTSTile::RemoveSight(EEPlayer* inPlayer) { ee_units_tile_sight_tile((uintptr_t)&gWorld, kSightTileRemove, 0, (uintptr_t)this, (uintptr_t)inPlayer); }

@@ -9,6 +9,7 @@
 
 #include "rust/game/gamecpp.h"
 #include "ee/EEPersistentTag.h"
+#include "lle/FSPersistent.h"
 class EEPMultiplayerHelper : public FSPersistent {
 public:
     // Creates the saved multiplayer-state chunk

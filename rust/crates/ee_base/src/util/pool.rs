@@ -373,15 +373,6 @@ pub unsafe extern "C" fn ee_util_pool_delete(pool: *mut EeUtilPool, object: *mut
     with_pool!(pool, (), |p| p.delete(object))
 }
 
-/// `AddChunk`.
-///
-/// # Safety
-/// `pool` from [`ee_util_pool_new`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_util_pool_add_chunk(pool: *mut EeUtilPool) -> bool {
-    with_pool!(pool, false, |p| p.add_chunk())
-}
-
 /// `Release`.
 ///
 /// # Safety

@@ -527,18 +527,6 @@ enum class EeAStarCmFree {
   PathAreas = 1,
 };
 
-/// Which tile grid.
-enum class EeAStarCmGrid {
-  /// `mTileValues` (`long` per tile)
-  TileValues = 0,
-  /// `mContinentIDs` (`unsigned short` per tile)
-  ContinentIds = 1,
-  /// `mPathSubSectorIDs` (`unsigned short` per tile)
-  SubSectorIds = 2,
-  /// `mTileFlags` (`bool`, `mFlagsWidth` squared: the continents' adjacency)
-  TileFlags = 3,
-};
-
 /// Which id list (`EEAIContinent`'s members in their order).
 enum class EeAStarContinentList {
   /// `mForestIDs` (sorted, duplicates kept)
@@ -613,9 +601,6 @@ struct EeContinentGrid;
 
 /// The C++ manager's handle: the manager and its host.
 struct EePathManager;
-
-/// The lists a saved search carries beside its record (the C++ fills them through `ee_path_saved_*`).
-struct EePathSavedLists;
 
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
@@ -763,14 +748,6 @@ struct EeAStarCmRecord {
   long sectors_y;
 };
 
-/// One entry of the serial table.
-struct EeAStarCmArea {
-  /// the area's serial (`EEAIArea::GetSerial()` when added)
-  unsigned long serial;
-  /// the `EEAIArea*`
-  uint64_t area;
-};
-
 /// One host call's values.
 struct EeAStarCmIo {
   uint64_t h[2];
@@ -865,6 +842,24 @@ struct EeSectorRect {
   int32_t center_y;
 };
 
+/// The map's diagonal edge lines (`EEMap::mL195608`, `mL195610`, `mL19560C`).
+struct EeMapEdges {
+  int32_t sum_low;
+  int32_t half;
+  int32_t sum_high;
+};
+
+/// The tile's path area as the start test reads it.
+struct EePathAreaIDs {
+  /// the area exists
+  bool present;
+  int32_t kind;
+  uint16_t land_mass;
+  uint16_t water_body;
+  uint16_t space_region;
+  uint16_t surface_region;
+};
+
 /// One unit of a tile's list as the classification reads it.
 struct EeTileUnit {
   /// the class's resource type is wood
@@ -887,109 +882,6 @@ struct EeTileUnit {
   bool space_dock;
   /// `mUnitID`
   int32_t id;
-};
-
-/// The map's diagonal edge lines (`EEMap::mL195608`, `mL195610`, `mL19560C`).
-struct EeMapEdges {
-  int32_t sum_low;
-  int32_t half;
-  int32_t sum_high;
-};
-
-/// The tile's path area as the start test reads it.
-struct EePathAreaIDs {
-  /// the area exists
-  bool present;
-  int32_t kind;
-  uint16_t land_mass;
-  uint16_t water_body;
-  uint16_t space_region;
-  uint16_t surface_region;
-};
-
-/// One tile as the repair reads it: the map tile, then its path area (`GetPathAreaAt`; none without a map tile).
-struct EeAreaTile {
-  bool tile;
-  int32_t terrain;
-  bool area;
-  uint16_t id;
-  uint16_t continent;
-  int32_t kind;
-  int32_t unit_id;
-  /// `mTiles.Size()` (a `long`)
-  int32_t size;
-  uint16_t land_mass;
-  uint16_t water_body;
-  uint16_t space_region;
-  uint16_t surface_region;
-};
-
-/// What `RepairPathArea` does with the tile, as indices into `NEIGHBOURS`.
-struct EeRepairPlan {
-  /// `REPAIR_*`
-  int32_t action;
-  /// the joined area's neighbour (`REPAIR_JOIN`, `REPAIR_SINGLE`)
-  int32_t target;
-  /// the areas merged into the joined one, in the C++'s order (`REPAIR_JOIN`)
-  int32_t merged[8];
-  int32_t merged_count;
-};
-
-/// A continent as `GetLargestContinent` reads it.
-struct EeContinentSize {
-  bool present;
-  uint8_t category;
-  /// `mTiles.Size()` (a `long`)
-  int32_t size;
-};
-
-/// What `PruneChokePoints` asks the C++ manager (`manager::PruneHost`), as C function pointers over `ctx`.
-struct EePruneCallbacks {
-  void *ctx;
-  bool (*choke_exists)(void*, size_t);
-  size_t (*area_count)(void*, size_t);
-  int32_t (*area)(void*, size_t, size_t);
-  /// `k` -1 for the choke point itself
-  bool (*is_near)(void*, size_t, size_t, ptrdiff_t);
-  void (*remove)(void*, size_t);
-};
-
-/// One rectangle area to create: the scenario area's index, its id, its tile rectangle.
-struct EeScenarioAreaPlan {
-  int32_t index;
-  uint16_t id;
-  int32_t top;
-  int32_t bottom;
-  int32_t left;
-  int32_t right;
-};
-
-/// A path point (`GE3DPoint`).
-struct EePathPoint {
-  float x;
-  float y;
-  float z;
-};
-
-/// A search's bounds (`EEAIAStarBounds`: top, left, bottom, right).
-struct EePathBounds {
-  int32_t top;
-  int32_t left;
-  int32_t bottom;
-  int32_t right;
-};
-
-/// What `EEAIContinent::GetShoreInRegions` asks the continent manager (`area_geom::ShoreHost`), over `ctx`.
-struct EeShoreCallbacks {
-  void *ctx;
-  /// the path area at the tile: false without one, else true and its region id of the kind in `id`
-  bool (*path_area_region)(void*, long, long, bool, uint16_t*);
-  /// the continent at the tile exists and is land
-  bool (*is_land)(void*, long, long);
-  /// `GetContinent(tile, kind)`
-  uint16_t (*region)(void*, long, long, bool);
-  uint32_t map_width;
-  uint32_t map_height;
 };
 
 /// `EEAIAStarContinentGoal`'s fill state.
@@ -1177,28 +1069,6 @@ struct EeAStarViewCallbacks {
   bool (*live_space_dock)(void *ctx, int32_t x, int32_t y);
 };
 
-/// The continents as the chain search reads and numbers them (the C++ objects, by their graph handle:
-/// `AStarGraphableObjectBase*`).
-struct EeAStarChainCallbacks {
-  void *ctx;
-  /// `GetContinents().size()`
-  int32_t (*count)(void *ctx);
-  /// `GetContinents()[i]`'s handle, null for none
-  void *(*continent)(void *ctx, int32_t i);
-  /// `GetCategory()`, `GetID()`, `GetCount(kind)`, `SetCount(kind, id)`
-  uint8_t (*category)(void *ctx, void *object);
-  int32_t (*id)(void *ctx, void *object);
-  uint16_t (*chain_id)(void *ctx, void *object, uint32_t kind);
-  void (*set_chain_id)(void *ctx, void *object, uint32_t kind, uint16_t id);
-  /// `GetHullCenter()` (the graph location)
-  void (*center)(void *ctx, void *object, EePoint *out);
-  /// `GetNumNeighbors()`, `GetNeighbors()[i]`
-  uint32_t (*num_neighbors)(void *ctx, void *object);
-  void *(*neighbor)(void *ctx, void *object, uint32_t i);
-  /// the manager's `NextChainID(kind)`
-  uint16_t (*next_chain_id)(void *ctx, uint32_t kind);
-};
-
 /// A graph search's members as the path manager's dumps and its PMRQ capture read them.
 struct EeAStarGraphSearchInfo {
   int32_t machine_type;
@@ -1257,18 +1127,6 @@ struct EePathIo {
 /// The C++ host: `(context, op, io) -> the answer`.
 using EePathHostFn = int64_t(*)(void*, int32_t, EePathIo*);
 
-/// A queued search as the capture and the dumps see it.
-struct EePathQueued {
-  /// 0 `mPaths`, 1 `mAutoPaths`
-  uint32_t queue;
-  uint32_t unit;
-  int32_t x;
-  int32_t y;
-  int32_t passes;
-  uint64_t machine;
-  uint64_t request;
-};
-
 /// `EEAIPathSector`'s members.
 struct EeAStarSectorRecord {
   /// the lists (`ee_astar_sector_*`)
@@ -1279,13 +1137,6 @@ struct EeAStarSectorRecord {
   EeHullPoint center;
   /// `mID`: its index in the manager's sectors
   uint16_t id;
-};
-
-/// One sub sector of a sector (`mSubSectors`' entry).
-struct EeAStarSectorSub {
-  uint16_t id;
-  /// the `EEAIPathSubSector*`
-  uint64_t sub;
 };
 
 /// `EEAIPathSubSector`'s members but the tiles.
@@ -1308,13 +1159,6 @@ struct EeAStarSubSectorRecord {
   long player_id;
   /// `mIsStale`: its path area is being repaired
   bool is_stale;
-};
-
-/// One link of a sub sector (`mLinks`' entry: the other's id, then the two corner sub sectors or 0).
-struct EeAStarSubSectorLink {
-  uint16_t id;
-  uint64_t first;
-  uint64_t second;
 };
 
 /// A view of the world: `map` the search's map (an `EEMap*`), `quiet` a modifier's view whose answers are not noted.
@@ -1450,6 +1294,13 @@ struct EeAStarGraphGoalRec {
   int32_t l70;
 };
 
+/// A path point (`GE3DPoint`).
+struct EePathPoint {
+  float x;
+  float y;
+  float z;
+};
+
 extern "C" {
 
 /// The record of a new area: everything zero, no hull.
@@ -1470,12 +1321,6 @@ void ee_astar_area_free(EeAStarAreaRecord *r);
 /// `r` a live record, `count` valid.
 const EeHullPoint *ee_astar_area_hull_points(const EeAStarAreaRecord *r,
                                              size_t *count);
-
-/// `SetPoints(points, false)` on the hull.
-///
-/// # Safety
-/// `r` a live record, `points` holds `count` points (NULL when 0).
-void ee_astar_area_set_hull(EeAStarAreaRecord *r, const EeHullPoint *points, size_t count);
 
 /// The hull as a saved game has it (points, bounds, center, area).
 ///
@@ -1499,18 +1344,6 @@ void ee_astar_area_clear_hull(EeAStarAreaRecord *r);
 /// # Safety
 /// `r` a live record.
 void ee_astar_area_update_bounds(EeAStarAreaRecord *r, long region_size);
-
-/// `UpdateHull`: the hull of `tiles`' extreme edge points, then the region bounds.
-///
-/// # Safety
-/// `r` a live record, `tiles` a live set.
-void ee_astar_area_update_hull(EeAStarAreaRecord *r, const EeSparseArray *tiles, long region_size);
-
-/// `RemoveTile(tile)`: whether the tile was there (then the hull is rebuilt).
-///
-/// # Safety
-/// `r` a live record, `tiles` a live set.
-bool ee_astar_area_remove_tile(EeAStarAreaRecord *r, EeSparseArray *tiles, int32_t x, int32_t y);
 
 /// `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints` for the C++ (the slot of `this`'s kind).
 ///
@@ -1723,80 +1556,17 @@ void ee_astar_cm_table_set(EeAStarCmRecord *r,
                            size_t id,
                            uint64_t object);
 
-/// `table.push_back(object)`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_table_push(EeAStarCmRecord *r, EeAStarCmTable table, uint64_t object);
-
-/// The serial table (sorted by serial); `count` gets its size. Valid until it changes.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `count` writable.
-const EeAStarCmArea *ee_astar_cm_areas(const EeAStarCmRecord *r, size_t *count);
-
-/// `AddArea`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_add_area(EeAStarCmRecord *r, unsigned long serial, uint64_t area);
-
-/// `RemoveArea`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-bool ee_astar_cm_remove_area(EeAStarCmRecord *r, unsigned long serial);
-
-/// `GetArea`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-uint64_t ee_astar_cm_area(const EeAStarCmRecord *r, unsigned long serial);
-
-/// Empties the serial table.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_clear_areas(EeAStarCmRecord *r);
-
-/// `AddSectorTiles`' insert of one tile under sector `id`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_add_sector_tile(EeAStarCmRecord *r, uint16_t id, EeHullPoint tile);
-
-/// `RemoveSectorTiles`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_remove_sector_tiles(EeAStarCmRecord *r, uint16_t id);
-
 /// The pending sectors' count (`mSectorTiles.size()`).
 ///
 /// # Safety
 /// `r` from `ee_astar_cm_init`.
 size_t ee_astar_cm_sector_tiles_count(const EeAStarCmRecord *r);
 
-/// The `index`-th pending sector in id order: its id, and its tiles (`count` gets their number). NULL past the end.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `id` and `count` writable.
-const EeHullPoint *ee_astar_cm_sector_tiles(const EeAStarCmRecord *r,
-                                            size_t index,
-                                            uint16_t *id,
-                                            size_t *count);
-
 /// Empties the pending sector tiles.
 ///
 /// # Safety
 /// `r` from `ee_astar_cm_init`.
 void ee_astar_cm_clear_sector_tiles(EeAStarCmRecord *r);
-
-/// A shore list; `count` gets its size. Valid until it changes.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `count` writable.
-const EeHullPoint *ee_astar_cm_shore(const EeAStarCmRecord *r, EeAStarCmShore list, size_t *count);
 
 /// Replaces a shore list with `count` tiles.
 ///
@@ -1813,12 +1583,6 @@ void ee_astar_cm_set_shore(EeAStarCmRecord *r,
 /// `r` from `ee_astar_cm_init`.
 bool ee_astar_cm_is_shore(const EeAStarCmRecord *r, long x, long y);
 
-/// A free id list; `count` gets its size.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `count` writable.
-const uint16_t *ee_astar_cm_free_ids(const EeAStarCmRecord *r, EeAStarCmFree list, size_t *count);
-
 /// Appends `count` ids to a free id list (`insert(end, ...)` / `push_back`); `clear` empties it first.
 ///
 /// # Safety
@@ -1829,33 +1593,6 @@ void ee_astar_cm_add_free_ids(EeAStarCmRecord *r,
                               size_t count,
                               bool clear);
 
-/// `NewSubSectorID`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-uint16_t ee_astar_cm_new_sub_sector_id(EeAStarCmRecord *r);
-
-/// `NewPathAreaID`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-uint16_t ee_astar_cm_new_path_area_id(EeAStarCmRecord *r);
-
-/// A grid of `count` zeroed entries (`allocate`), or none (`!allocate`); the record's pointer follows.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_set_grid(EeAStarCmRecord *r,
-                          EeAStarCmGrid grid,
-                          bool allocate,
-                          size_t count);
-
-/// A grid's entry count (0: none).
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-size_t ee_astar_cm_grid_len(const EeAStarCmRecord *r, EeAStarCmGrid grid);
-
 /// `Reset`'s part on the record and tables: the counters, the serial table, the pending tiles, the shore lists
 /// and the free path area ids (the C++ deletes the objects first and empties the object tables).
 ///
@@ -1863,32 +1600,11 @@ size_t ee_astar_cm_grid_len(const EeAStarCmRecord *r, EeAStarCmGrid grid);
 /// `r` from `ee_astar_cm_init`.
 void ee_astar_cm_reset(EeAStarCmRecord *r);
 
-/// `EEAIPathSectorRegionInformation::Init` (`map_size` the map's tiles per side).
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-void ee_astar_cm_init_sectors(EeAStarCmRecord *r, long map_size, long sector_size);
-
 /// `DeletePathSectors`' part after the sectors are deleted: the last sub sector id, its free ids, the sector grid.
 ///
 /// # Safety
 /// `r` from `ee_astar_cm_init`.
 void ee_astar_cm_sectors_deleted(EeAStarCmRecord *r);
-
-/// The path sector table's index of (x, y) (`GetPathSector`), -1 off the map.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-ptrdiff_t ee_astar_cm_sector_index(const EeAStarCmRecord *r, long x, long y);
-
-/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: the ids into `out` (room for `flags_width`); their count.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `out` holds `flags_width` ids.
-size_t ee_astar_cm_adjacent_ids(const EeAStarCmRecord *r,
-                                uint16_t id,
-                                bool with_self,
-                                uint16_t *out);
 
 /// `CreateContinentGrid`'s store (the grid freed).
 ///
@@ -1915,9 +1631,6 @@ bool ee_astar_cntq_enter(uint32_t kind);
 /// A value of the open record (only a scope that records calls it).
 void ee_astar_cntq_i(int32_t v);
 
-/// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
-void ee_astar_cntq_leave(bool on);
-
 /// `EESaveContinentRegions`: the manager's regions into the save.
 ///
 /// # Safety
@@ -1938,18 +1651,6 @@ bool ee_astar_cm_regions_pending();
 /// # Safety
 /// `h` a live area (an `EEAIArea*`); `points` holds `n` points.
 void ee_astar_area_create_of(uint64_t h, const EeHullPoint *points, size_t n);
-
-/// `EEAIArea::UpdateHull()` for the C++.
-///
-/// # Safety
-/// `h` a live area (an `EEAIArea*`).
-void ee_astar_area_update_hull_of(uint64_t h);
-
-/// `EEAIArea::RemoveTile(tile)` / `EEAIForest::RemoveTile(tile)` for the C++ (the kind's slot).
-///
-/// # Safety
-/// `h` a live area.
-bool ee_astar_area_remove_tile_of(uint64_t h, long x, long y);
 
 /// `GetContinentID(x, y)`: the grid's id, `FindContinentID` without the grid, 0 off the map.
 ///
@@ -1998,23 +1699,11 @@ uint64_t ee_astar_cmq_unit_area_at(const EeAStarCmRecord *r,
 /// `r` a live record.
 uint64_t ee_astar_cm_sector_at(const EeAStarCmRecord *r, long x, long y);
 
-/// `GetPathSector(unit)`: the sector at the unit's tile.
-///
-/// # Safety
-/// `r` a live record; `unit` 0 or a live unit.
-uint64_t ee_astar_cm_unit_sector_at(const EeAStarCmRecord *r, uint64_t unit);
-
 /// `GetPathSubSectorID(x, y)`: the grid's id, `FindPathSubSectorID` without it, 0 off the map.
 ///
 /// # Safety
 /// `r` a live record.
 uint16_t ee_astar_cm_sub_sector_id_at(const EeAStarCmRecord *r, long x, long y);
-
-/// `GetPathSubSectorID(unit)`: the id at the unit's tile (0 off the grid).
-///
-/// # Safety
-/// `r` a live record; `unit` 0 or a live unit.
-uint16_t ee_astar_cm_unit_sub_sector_id(const EeAStarCmRecord *r, uint64_t unit);
 
 /// `GetPathSubSectorAt(x, y)`: the sub sector at the tile (0 if none).
 ///
@@ -2053,18 +1742,6 @@ void ee_astar_cmq_choke_points_into(const EeAStarCmRecord *r,
                                     void *list,
                                     void (*clear_list)(void*),
                                     void (*push)(void*, uint64_t));
-
-/// `GetTilesNextTo(x, y, out, id)`: the answer, `out` cleared and given the tiles (at most eight).
-///
-/// # Safety
-/// `r` a live record; the callbacks the C++ list's.
-bool ee_astar_cmq_tiles_next_to_into(const EeAStarCmRecord *r,
-                                     long x,
-                                     long y,
-                                     uint16_t id,
-                                     void *list,
-                                     void (*clear_list)(void*),
-                                     void (*push)(void*, long, long));
 
 /// `EEAIContinent::GetShoreInRegions(ids, out, kind)`: `clear(list)`, then the tiles found pushed.
 ///
@@ -2115,12 +1792,6 @@ void ee_astar_cm_bytes_free(EeAStarCmBytes *b);
 /// `r` the manager's record; its objects live.
 EeAStarCmBytes *ee_astar_cm_write_regions(const EeAStarCmRecord *r);
 
-/// `EEContinentRegionsDigest`.
-///
-/// # Safety
-/// As `ee_astar_cm_write_regions`.
-unsigned long ee_astar_cm_regions_digest(const EeAStarCmRecord *r);
-
 /// TEST ONLY: `EEAIContinentCapture(tag)`: one record of the manager's state under `tag` (CNTB, CNTR); nothing
 /// unless the capture is on.
 ///
@@ -2128,12 +1799,6 @@ unsigned long ee_astar_cm_regions_digest(const EeAStarCmRecord *r);
 /// `r` the manager's record; its objects live.
 void ee_astar_cm_capture(const EeAStarCmRecord *r,
                          uint32_t tag);
-
-/// `EEAIContinentDigest` (TEST ONLY).
-///
-/// # Safety
-/// As `ee_astar_cm_write_regions`.
-uint64_t ee_astar_cm_capture_digest(const EeAStarCmRecord *r);
 
 /// `ReadRegions`: NULL on a bad block (or another map's).
 ///
@@ -2174,12 +1839,6 @@ bool ee_astar_cm_read_area(uint64_t h, const uint8_t *data, size_t len);
 /// # Safety
 /// `r` the manager's record; its objects live.
 uint64_t ee_astar_cm_find_continent(const EeAStarCmRecord *r, long x, long y);
-
-/// `FindPathSubSector`.
-///
-/// # Safety
-/// As `ee_astar_cm_find_continent`.
-uint64_t ee_astar_cm_find_sub_sector(const EeAStarCmRecord *r, long x, long y);
 
 /// `ApplySubSectorLinks`.
 ///
@@ -2391,31 +2050,11 @@ void ee_astar_cmq_repair_path_area(EeAStarCmRecord *r, long x, long y);
 void ee_astar_cmq_remove_forest_tile(EeAStarCmRecord *r,
                                      uint64_t unit);
 
-/// A query left in C++ (`CanGetTo`, `AreConnectedForUnit`, `UpdateWallUnit`) records an area as Rust does.
-///
-/// # Safety
-/// `h` 0 or a live area.
-void ee_astar_cntq_area(uint64_t h);
-
 /// A C++ query's change ends with the state's digest.
 ///
 /// # Safety
 /// `r` a live record.
 void ee_astar_cntq_state(const EeAStarCmRecord *r);
-
-/// `FindContinentID(x, y)`: the continent found through the tile's path sector, its id (0 if none).
-///
-/// # Safety
-/// `r` a live record.
-uint16_t ee_astar_cm_found_continent_id(const EeAStarCmRecord *r, long x, long y);
-
-/// `FindPathSubSectorID(x, y)`: the sub sector found through the tile's path sector, its id (0 if none).
-///
-/// # Safety
-/// `r` a live record.
-uint16_t ee_astar_cm_sub_sector_id_found(const EeAStarCmRecord *r,
-                                         long x,
-                                         long y);
 
 /// `AddArea(area)`: the serial table gets the area under its serial.
 ///
@@ -2444,12 +2083,6 @@ uint64_t ee_astar_cm_area_at(const EeAStarCmRecord *r,
                              long x,
                              long y);
 
-/// `GetContinent(tile, kind)`.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`.
-uint16_t ee_astar_cm_region_id_at(const EeAStarCmRecord *r, long x, long y, long kind);
-
 /// `EEAIContinent::GetPathAreaAt` (`object` a continent) or `EEAIPathSector::GetPathAreaAt` (a sector).
 ///
 /// # Safety
@@ -2460,67 +2093,11 @@ uint64_t ee_astar_cm_object_path_area_at(const EeAStarCmRecord *r,
                                          long x,
                                          long y);
 
-/// `InSameArea`.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`; `tiles` holds `count` points.
-bool ee_astar_cm_in_same_area(const EeAStarCmRecord *r,
-                              const EeHullPoint *tiles,
-                              size_t count,
-                              long kind);
-
-/// `AreConnected` (the continents' addresses).
-///
-/// # Safety
-/// `first`, `second` live continents or 0.
-bool ee_astar_cm_are_connected(uint64_t first, uint64_t second, int32_t flags);
-
-/// `GetLargestContinent`.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`.
-uint16_t ee_astar_cm_largest_continent(const EeAStarCmRecord *r, int8_t kind);
-
-/// `GetRandomArea` (`continent` true: `GetRandomContinent(kind)`, else of area type `kind` on `on_continent`).
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`; `random` a live `URandom*`.
-uint64_t ee_astar_cm_random_area(const EeAStarCmRecord *r,
-                                 bool continent,
-                                 long kind,
-                                 void *random,
-                                 uint16_t on_continent);
-
-/// `GetChokePoints(id)` into `out` (room for `capacity`); their count (more than `capacity`: call again).
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`; `out` holds `capacity` handles.
-size_t ee_astar_cm_choke_points(const EeAStarCmRecord *r,
-                                uint16_t id,
-                                uint64_t *out,
-                                size_t capacity);
-
-/// `RemoveForestTile` at tile (x, y), `empty` whether no wood with resources is left on it.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`.
-void ee_astar_cm_remove_forest_tile(EeAStarCmRecord *r, long x, long y, bool empty);
-
 /// `RepairPathArea`.
 ///
 /// # Safety
 /// `r` the manager's record; its objects live; the layout and host registered.
 void ee_astar_cm_repair_path_area(EeAStarCmRecord *r, long x, long y);
-
-/// `GetAdjacentAreaID`.
-///
-/// # Safety
-/// As `ee_astar_cm_repair_path_area`.
-uint16_t ee_astar_cm_adjacent_area_id(const EeAStarCmRecord *r,
-                                      int32_t kind,
-                                      long x,
-                                      long y,
-                                      int32_t area_kind);
 
 /// `EERestoreContinentRegions`: the regions of the save being loaded put back (its block taken: `cm_file.rs`); false
 /// without one.
@@ -2543,18 +2120,6 @@ bool ee_astar_cm_restore_regions(EeAStarCmRecord *r,
 /// # Safety
 /// `unit` a live unit.
 bool ee_astar_cm_can_get_to(uint64_t unit, long x, long y);
-
-/// `EEAIContinentManager::AreConnectedForUnit(unit, first, second)`.
-///
-/// # Safety
-/// `unit` 0 or a live unit; the continents live areas or 0.
-bool ee_astar_cm_connected_for_unit(uint64_t unit, uint64_t first, uint64_t second);
-
-/// `EEComplexUnit::GetFootprintContinent(kind)`.
-///
-/// # Safety
-/// `unit` a live complex unit.
-uint16_t ee_astar_cm_footprint_continent(uint64_t unit, long kind);
 
 /// 0: the terrain mesh's `GetIsSpaceMap()`; 1: complex unit `unit`'s `mPlanetID`, given its land continent
 /// (`EEGetLandContinentOf`, with the original's trace) when 0 (EEAIContinentManager.cpp)
@@ -2585,24 +2150,6 @@ EeHullPoint ee_astar_area_random_point(uint64_t area);
 /// # Safety
 /// `area` a live rectangle area.
 EeHullPoint ee_astar_rect_random_point(uint64_t area);
-
-/// The adjacent continents and their count; valid until they next change.
-///
-/// # Safety
-/// `r` a live record, `count` valid.
-const uint64_t *ee_astar_continent_neighbors(const EeAStarContinentRecord *r, size_t *count);
-
-/// `mNeighbors.push_back(continent)`.
-///
-/// # Safety
-/// `r` a live record.
-void ee_astar_continent_add_neighbor(EeAStarContinentRecord *r, uint64_t continent);
-
-/// `mNeighbors.clear()`.
-///
-/// # Safety
-/// `r` a live record.
-void ee_astar_continent_clear_neighbors(EeAStarContinentRecord *r);
 
 /// The record of a new continent: no lists, counts zero, category 0, id 0 (the ctor 0x41d846).
 ///
@@ -2785,28 +2332,8 @@ EeSectorSizes ee_astar_sector_sizes(int32_t size_class);
 /// `Build`'s number of choke point passes by the map's size class.
 int32_t ee_astar_choke_passes(int32_t size_class);
 
-/// `EEAIPathSectorRegionInformation::Init`'s sectors per side.
-int32_t ee_astar_sectors_per_side(int32_t map_size, int32_t sector_size);
-
 /// `CreatePathSectors`' rectangle of sector `(x, y)`.
 EeSectorRect ee_astar_sector_rect(int32_t x, int32_t y, int32_t sector_size, int32_t map_size);
-
-/// `EEAIGetTileKind` of a map tile: its continent's `category`, its `terrain`, its AI value `flag` and its units.
-///
-/// # Safety
-/// `units` valid for `count` records (any pointer when `count` is 0).
-int32_t ee_astar_tile_kind(uint8_t category,
-                           int32_t terrain,
-                           int32_t flag,
-                           const EeTileUnit *units,
-                           size_t count);
-
-/// `EEAIGetTileWallID` of a map tile's units: the first live finished blocker's or gate's id, -1 if none.
-///
-/// # Safety
-/// `units` valid for `count` records (any pointer when `count` is 0).
-int32_t ee_astar_tile_wall_id(const EeTileUnit *units,
-                              size_t count);
 
 /// A fill's `mCheckCorners` at `(x, y)`: not of terrain `no_corners` and off the map's diagonal edges.
 bool ee_astar_check_corners(int32_t terrain,
@@ -2829,223 +2356,6 @@ bool ee_astar_path_area_kind_starts(int32_t kind,
                                     const EeTileUnit *units,
                                     size_t count,
                                     bool *flag);
-
-/// `GetAdjacentAreaID`: the `kind` region id next to `centre` from its eight neighbours (`repair::NEIGHBOURS`'
-/// order), 0 if none.
-///
-/// # Safety
-/// `centre` valid, `neighbours` valid for 8 records.
-uint16_t ee_astar_adjacent_area_id(int32_t kind,
-                                   int32_t area_kind,
-                                   const EeAreaTile *centre,
-                                   const EeAreaTile *neighbours);
-
-/// `RepairPathArea`'s choice for a tile of new kind `kind` from its eight neighbours (`repair::NEIGHBOURS`' order).
-///
-/// # Safety
-/// `neighbours` valid for 8 records.
-EeRepairPlan ee_astar_repair_plan(int32_t kind,
-                                  uint16_t area_continent,
-                                  uint16_t tile_continent,
-                                  int32_t wall_id,
-                                  const EeAreaTile *neighbours);
-
-/// `AreConnected`'s chain for crossing `flags`, -1 for none.
-int32_t ee_astar_connected_chain(int32_t flags);
-
-/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: continent `id`'s neighbours from the `width` x `width`
-/// adjacency matrix `flags` into `out` (room for `width` ids); returns their count.
-///
-/// # Safety
-/// `flags` valid for `width * width` bools, `out` writable for `width` ids.
-size_t ee_astar_adjacent_ids(const bool *flags,
-                             size_t width,
-                             uint16_t id,
-                             bool with_self,
-                             uint16_t *out);
-
-/// `GetLargestContinent`: the index of the largest of `continents` of category `kind` (0 any), -1 if none.
-///
-/// # Safety
-/// `continents` valid for `count` records (any pointer when `count` is 0).
-int32_t ee_astar_largest_continent(const EeContinentSize *continents,
-                                   size_t count,
-                                   int8_t kind);
-
-/// `GetTilesNextTo(x, y, id)`: `continent(ctx, x, y)` is the manager's `GetContinentID`, `flags` its adjacency
-/// matrix (`flags_count` cells, NULL for none), `out` room for the 8 ring tiles; their count in `out_count`.
-///
-/// # Safety
-/// `flags` valid for `flags_count` cells (or NULL), `out` for 8 points, `out_count` valid; `continent` must not
-/// call back into `ee_astar`.
-bool ee_astar_tiles_next_to(int32_t x,
-                            int32_t y,
-                            uint16_t id,
-                            uint32_t width,
-                            uint32_t height,
-                            const bool *flags,
-                            size_t flags_count,
-                            int32_t flags_width,
-                            uint16_t (*continent)(void*, int32_t, int32_t),
-                            void *ctx,
-                            EePoint *out,
-                            size_t *out_count);
-
-/// `PruneChokePoints` over the continents' `categories` (`count` of them, -1 for none) and `chokes` choke points.
-///
-/// # Safety
-/// `categories` valid for `count` (any pointer when 0), `cb` valid and its functions callable.
-void ee_astar_prune_choke_points(const int32_t *categories,
-                                 size_t count,
-                                 size_t chokes,
-                                 const EePruneCallbacks *cb);
-
-/// `CreateScenarioAreas`' choice over `count` scenario areas: the areas to create into `out` (room for `count`);
-/// returns their number.
-///
-/// # Safety
-/// `areas` and `out` valid for `count` records (any pointer when 0).
-size_t ee_astar_scenario_area_plan(const EeScenarioArea *areas,
-                                   size_t count,
-                                   EeScenarioAreaPlan *out);
-
-/// `TrimPath`'s cut: the index to erase the path from, -1 for none.
-///
-/// # Safety
-/// `path` valid for `count` points.
-ptrdiff_t ee_path_trim_index(const EePathPoint *path,
-                             size_t count,
-                             size_t waypoints,
-                             float unit_x,
-                             float unit_y);
-
-/// `AppendWaypoints` after no cut: the points to append to the path (`count` of them) from the unit's
-/// `waypoint_count` waypoints, into `out` (room for `waypoint_count`); returns their number.
-///
-/// # Safety
-/// `path` valid for `count`, `waypoints` and `out` for `waypoint_count` points.
-size_t ee_path_append_waypoints(const EePathPoint *path,
-                                size_t count,
-                                const EePathPoint *waypoints,
-                                size_t waypoint_count,
-                                EePathPoint *out);
-
-/// `MergeWaypoints`: the index of the last waypoint (walked from the end) that lies on a tile of the path, or -1;
-/// the C++ appends the waypoints after it to the path.
-///
-/// # Safety
-/// `path` valid for `count`, `waypoints` for `waypoint_count` points.
-ptrdiff_t ee_path_merge_waypoints(const EePathPoint *path,
-                                  size_t count,
-                                  const EePathPoint *waypoints,
-                                  size_t waypoint_count);
-
-/// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
-/// takes the path up to that point and the detour).
-///
-/// # Safety
-/// `path` valid for `count`, `detour` for `detour_count` points.
-bool ee_path_join_paths(const EePathPoint *path,
-                        size_t count,
-                        const EePathPoint *detour,
-                        size_t detour_count,
-                        size_t join);
-
-/// `FinishFailedPath`'s detour search: the count from the path's end, -1 for none.
-///
-/// # Safety
-/// `path` valid for `count`, `detour` for `detour_count` points.
-ptrdiff_t ee_path_detour_join_count(const EePathPoint *path,
-                                    size_t count,
-                                    const EePathPoint *detour,
-                                    size_t detour_count);
-
-/// `TryShortPath`'s revolutions.
-int32_t ee_path_short_path_revs(int32_t queued,
-                                int32_t from_x,
-                                int32_t from_y,
-                                int32_t to_x,
-                                int32_t to_y);
-
-/// The bounds `margin` tiles around a tile, clipped to the map.
-EePathBounds ee_path_bounds_around(int32_t x, int32_t y, int32_t margin, int32_t map_size);
-
-/// `SetGraphRevs`' step budget (`repeated`: the path history's same-tile request).
-int32_t ee_path_graph_revs(int32_t distance, bool kind_allowed, bool repeated);
-
-/// `SetPathRevs`' step budget.
-int32_t ee_path_path_revs(int32_t distance, bool amphibious, bool same_continent);
-
-/// `GetClosestOutlinePoint`.
-///
-/// # Safety
-/// `points` holds `count` points.
-EeHullPoint ee_hull_closest_outline_point(const EeHullPoint *points,
-                                          size_t count,
-                                          EeHullPoint point);
-
-/// `GetClosestPoint`.
-///
-/// # Safety
-/// `points` holds `count` points.
-EeHullPoint ee_hull_closest_point(const EeHullPoint *points, size_t count, EeHullPoint point);
-
-/// `U2DConvexHull<long>::Contains`.
-///
-/// # Safety
-/// `points` holds `count` points.
-bool ee_hull_contains(const EeHullPoint *points, size_t count, EeHullPoint point);
-
-/// `EEAIArea::GetClosestHullPoint`.
-///
-/// # Safety
-/// `points` holds `count` points, `bounds` valid.
-EeHullPoint ee_area_closest_hull_point(const EeHullPoint *points,
-                                       size_t count,
-                                       const EeHullRect *bounds,
-                                       EeHullPoint point);
-
-/// `EEAIArea::GetHullDistanceSquared`.
-///
-/// # Safety
-/// `points` holds `count` points, `other` `other_count`.
-float ee_area_hull_distance_squared(const EeHullPoint *points,
-                                    size_t count,
-                                    const EeHullPoint *other,
-                                    size_t other_count);
-
-/// The loop of `EEAIArea::GetClosestPoints` / `EEAIContinent::GetClosestPoints`: false (the outputs untouched) for
-/// no points.
-///
-/// # Safety
-/// `points` holds `count` points, `other` `other_count`; the outputs valid.
-bool ee_area_closest_points_to_hull(const EeHullPoint *points,
-                                    size_t count,
-                                    const EeHullPoint *other,
-                                    size_t other_count,
-                                    EeHullPoint *out_this,
-                                    EeHullPoint *out_other);
-
-/// `EEAIArea::GetTiles`: `push(ctx, x, y)` for every tile under the hull, row by row.
-///
-/// # Safety
-/// `points` holds `count` points.
-void ee_area_tiles(const EeHullPoint *points, size_t count, void *ctx, void (*push)(void*,
-                                                                                    long,
-                                                                                    long));
-
-/// `EEAIContinent::GetShoreInRegions`: `push(out, x, y)` for each shore tile found (the C++ clears its list first).
-///
-/// # Safety
-/// `shore` holds `count` points, `ids` `id_count`, `host` valid.
-void ee_area_shore_in_regions(const EeHullPoint *shore,
-                              size_t count,
-                              const uint16_t *ids,
-                              size_t id_count,
-                              bool space,
-                              const EeShoreCallbacks *host,
-                              void *out,
-                              void (*push)(void*, long, long));
 
 /// A new fill of `kind` (its machine's `mType`) on a map of `map_size`.
 EeAStarFlood *ee_astar_flood_new(EeAStarFloodKind kind, int32_t machine_type, int32_t map_size);
@@ -3126,12 +2436,6 @@ const uint32_t *ee_astar_flood_serials(EeAStarFlood *f, size_t *count);
 /// As `fl`; `count` writable.
 const EePoint *ee_astar_flood_stale(EeAStarFlood *f, size_t *count);
 
-/// `EEAIContinentManager::NumberContinentChains(kind)`.
-///
-/// # Safety
-/// `cb` valid, its functions callable.
-void ee_astar_number_chains(uint32_t kind, const EeAStarChainCallbacks *cb);
-
 /// # Safety
 /// `search` a live graph search (a graph machine's handle); `out` writable.
 void ee_astar_graph_search_info(const void *search, EeAStarGraphSearchInfo *out);
@@ -3200,16 +2504,6 @@ void ee_astar_object_delete(EeAStarCmTable t, uint64_t h);
 /// The size of table `t`'s object (the C++ headers check their classes against it at load: `sizeof` must match).
 size_t ee_astar_object_size(EeAStarCmTable t);
 
-/// `EEAIContinent::GetPathAreaAt` (`object` a continent) or `EEAIPathSector::GetPathAreaAt` (`sector`), over the
-/// registered manager (0 before it is).
-///
-/// # Safety
-/// `object` a live continent or sector of the registered manager.
-uint64_t ee_astar_object_path_area_at(uint64_t object,
-                                      bool sector,
-                                      long x,
-                                      long y);
-
 /// Appends a tile to a search's tile list (the host's `EE_PATH_BLOCKED_TILES`, `EE_PATH_UNIT_TILES`).
 ///
 /// # Safety
@@ -3233,12 +2527,6 @@ EePathManager *ee_path_manager_new(EePathHostFn f, void *ctx);
 /// `p` from `ee_path_manager_new` (or NULL), not used after.
 void ee_path_manager_free(EePathManager *p);
 
-/// The bounded machine (`mBoundedMachine`, a path_search.rs search), null for none.
-///
-/// # Safety
-/// `p` from `ee_path_manager_new`.
-const void *ee_path_manager_bounded(EePathManager *p);
-
 /// The manager's calls (`what`; tiles as `i`, handles as `h`; the answer, `io` for the out values):
 /// 1 `Update`, 2 `Reset`, 3 `Clear`, 4 `FreePaths`, 5 `RequestPendingPaths`, 6 `SetRegionUpdates(i0, i1)`,
 /// 7 `CancelPaths(h0, i0)`, 8 `CancelAutoPathRequest(h0)`, 9 `CompletePath(h0)`, 10 `CompleteAutoPath(h0)`,
@@ -3257,18 +2545,6 @@ int64_t ee_path_manager_call(EePathManager *p,
                              int32_t what,
                              EePathIo *io);
 
-/// The queued searches into `out` (up to `cap`), `mPaths` then `mAutoPaths`; their count.
-///
-/// # Safety
-/// `p` a live manager; `out` writable for `cap` entries (or NULL with `cap` 0).
-uint32_t ee_path_manager_queued(EePathManager *p, EePathQueued *out, uint32_t cap);
-
-/// The pending unit `k` (its id and tile into `out`); false past the end.
-///
-/// # Safety
-/// `p` a live manager, `out` writable for three values.
-bool ee_path_manager_pending(EePathManager *p, uint32_t k, int32_t *out);
-
 /// The saved game's parts: `what` 0 the running state, 1 the tile searches, 2 the graph searches; `load` reads
 /// (the answer the file's error, 0 done), else writes.
 ///
@@ -3281,37 +2557,6 @@ int32_t ee_path_manager_file(EePathManager *p,
 
 /// `EEAfterLoad(fixup)` (EEPathManager.cpp).
 extern void ee_path_after_load(void (*f)());
-
-/// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
-/// the end; `push` appends (x, y).
-///
-/// # Safety
-/// `lists` a live `EePathSavedLists`, `out` writable for two values.
-bool ee_path_saved_tile(EePathSavedLists *lists,
-                        uint32_t which,
-                        uint32_t k,
-                        int32_t *out);
-
-/// Appends (x, y) to a saved search's tile list `which`.
-///
-/// # Safety
-/// `lists` a live `EePathSavedLists`.
-void ee_path_saved_tile_push(EePathSavedLists *lists, uint32_t which, int32_t x, int32_t y);
-
-/// A saved search's storage bytes: set from `data[..len]` (`data` non-NULL), and their pointer and length.
-///
-/// # Safety
-/// `bytes` a live `Vec<u8>` (an `EePathSavedLists`'s `storage` or a saved graph's), `data` readable for `len`.
-const uint8_t *ee_path_saved_bytes(void *bytes,
-                                   const uint8_t *data,
-                                   uint32_t len,
-                                   uint32_t *out_len);
-
-/// The storage bytes of a saved search's lists.
-///
-/// # Safety
-/// `lists` a live `EePathSavedLists`.
-void *ee_path_saved_storage(EePathSavedLists *lists);
 
 /// A dump's text into `out` (up to `cap` bytes, no terminator); its length. `what` 0: `DumpSim`'s (TEST ONLY, EE-SIM's
 /// state dumps: the searches in progress, the pending requests, the timers, then the bounded machine's storage as
@@ -3354,12 +2599,6 @@ bool ee_path_manager_path_goal(EePathManager *p, uint64_t unit, long *out);
 /// # Safety
 /// `p` from `ee_path_manager_new`, not used after.
 EePathManager *ee_path_manager_destroy(EePathManager *p);
-
-/// Appends `count` points to a Rust point list (a host operation's list in `h1`).
-///
-/// # Safety
-/// `list` a live `Vec<EePathPoint>` from this module, `points` readable for `count` points.
-void ee_path_points_append(void *list, const EePathPoint *points, uint32_t count);
 
 /// Opens the record of a call the C++ makes (`kind`: 3 `FindPath`, 4 `FindBoundedPath`); whether it records.
 ///
@@ -3404,12 +2643,6 @@ void ee_path_resolve_graph_searches();
 /// `EEAfterLoadLast(f)` (EEPathManager.cpp's one statement)
 extern void ee_path_after_load_last(void (*f)());
 
-/// `Reference()`.
-///
-/// # Safety
-/// `h` a live request.
-void ee_path_request_reference(void *h);
-
 /// `Dereference()`.
 ///
 /// # Safety
@@ -3428,12 +2661,6 @@ bool ee_path_request_done(const void *h);
 /// `h` a live request; `out` NULL or writable for `cap` pairs.
 uint32_t ee_path_request_tiles(const void *h, long *out, uint32_t cap);
 
-/// `CancelAutoPathRequest` for the C++ (`EEPathManager::CancelAutoPathRequest`).
-///
-/// # Safety
-/// `h` a live request.
-void ee_path_request_cancel(void *h);
-
 /// The C++ view's notes (`EEAIAStarView::Note`): a no-op unless a run is captured on this thread.
 void ee_astar_capture_note(uint8_t kind,
                            int32_t a,
@@ -3451,29 +2678,11 @@ void ee_astar_sector_init(EeAStarSectorRecord *r);
 /// `r` from `ee_astar_sector_init`.
 void ee_astar_sector_free(EeAStarSectorRecord *r);
 
-/// The sector's sub sectors in id order; `count` gets their number. Valid until they change.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `count` writable.
-const EeAStarSectorSub *ee_astar_sector_subs(const EeAStarSectorRecord *r, size_t *count);
-
 /// `mSubSectors.insert((id, sub))`.
 ///
 /// # Safety
 /// `r` from `ee_astar_sector_init`.
 void ee_astar_sector_insert_sub(EeAStarSectorRecord *r, uint16_t id, uint64_t sub);
-
-/// `mSubSectors.clear()` (the C++ deletes the objects first).
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`.
-void ee_astar_sector_clear_subs(EeAStarSectorRecord *r);
-
-/// The continents touching the sector; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `count` writable.
-const uint64_t *ee_astar_sector_neighbors(const EeAStarSectorRecord *r, size_t *count);
 
 /// `AddNeighbor` (`unique`), or a plain `push_back` (a saved game's list).
 ///
@@ -3481,29 +2690,11 @@ const uint64_t *ee_astar_sector_neighbors(const EeAStarSectorRecord *r, size_t *
 /// `r` from `ee_astar_sector_init`.
 void ee_astar_sector_add_neighbor(EeAStarSectorRecord *r, uint64_t continent, bool unique);
 
-/// The sector's path area ids; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `count` writable.
-const uint16_t *ee_astar_sector_path_area_ids(const EeAStarSectorRecord *r, size_t *count);
-
 /// `AddPathAreaID`.
 ///
 /// # Safety
 /// `r` from `ee_astar_sector_init`.
 void ee_astar_sector_add_path_area_id(EeAStarSectorRecord *r, uint16_t id);
-
-/// `RemovePathAreaID`.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`.
-void ee_astar_sector_remove_path_area_id(EeAStarSectorRecord *r, uint16_t id);
-
-/// The path area ids as saved.
-///
-/// # Safety
-/// `r` from `ee_astar_sector_init`; `ids` holds `count` ids (NULL for 0).
-void ee_astar_sector_set_path_area_ids(EeAStarSectorRecord *r, const uint16_t *ids, size_t count);
 
 /// # Safety
 /// `r` points to a record (uninitialised is fine).
@@ -3513,55 +2704,11 @@ void ee_astar_sub_sector_init(EeAStarSubSectorRecord *r);
 /// `r` from `ee_astar_sub_sector_init`.
 void ee_astar_sub_sector_free(EeAStarSubSectorRecord *r);
 
-/// Every link in order; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`; `count` writable.
-const EeAStarSubSectorLink *ee_astar_sub_sector_links_all(const EeAStarSubSectorRecord *r,
-                                                          size_t *count);
-
-/// The links under `id`; `count` gets their number.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`; `count` writable.
-const EeAStarSubSectorLink *ee_astar_sub_sector_links_of(const EeAStarSubSectorRecord *r,
-                                                         uint16_t id,
-                                                         size_t *count);
-
-/// `mLinks.insert((id, (first, second)))`.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-void ee_astar_sub_sector_insert_link(EeAStarSubSectorRecord *r,
-                                     uint16_t id,
-                                     uint64_t first,
-                                     uint64_t second);
-
-/// `RemoveLinks`.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-void ee_astar_sub_sector_remove_links(EeAStarSubSectorRecord *r, uint16_t id);
-
-/// `RemoveNeighbor` (`other` the sub sector, `other_id` its id).
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-bool ee_astar_sub_sector_remove_neighbor(EeAStarSubSectorRecord *r,
-                                         uint64_t other,
-                                         uint16_t other_id);
-
 /// The neighbours; `count` gets their number.
 ///
 /// # Safety
 /// `r` from `ee_astar_sub_sector_init`; `count` writable.
 const uint64_t *ee_astar_sub_sector_neighbors(const EeAStarSubSectorRecord *r, size_t *count);
-
-/// `mNeighbors.push_back(other)`.
-///
-/// # Safety
-/// `r` from `ee_astar_sub_sector_init`.
-void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other);
 
 /// `IsPassable(player)` of the sub-sector whose tile set is `tiles`.
 ///

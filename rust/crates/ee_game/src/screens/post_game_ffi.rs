@@ -1,6 +1,6 @@
 //! The post-game summary's host over the C++ calls (`post_game.rs`; `UI Events/EEScreens.cpp`).
 
-use core::ffi::{c_int, c_long, c_ulong};
+use core::ffi::{c_int, c_long};
 use std::sync::Mutex;
 
 use crate::screens::menus_ffi::Form;
@@ -57,12 +57,6 @@ fn record(index: u32) -> EeScreensPgsRecord {
         crate::screens::sgvw::record(g, &format!("PR {index} {out:?}"));
     }
     out
-}
-
-/// The post-game summary's event code for a control event id, 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_post_game_event_for(id: c_ulong) -> u32 {
-    crate::screens::post_game::event_for_control(id)
 }
 
 /// The colours of the statistics' records (toolkit.rs's combined graph).

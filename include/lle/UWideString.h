@@ -34,7 +34,6 @@ public:
     void Export(unsigned char* outData) const { ee_uwstring_export(&this->mState, outData); }
     unsigned long Find(const UWideString& inString, unsigned long inStart) const { return ee_uwstring_find(&this->mState, &inString.mState, inStart); }
     unsigned long Find(const char* inString, unsigned long inStart) const { return ee_uwstring_find_text(&this->mState, inString, inStart); }
-    unsigned long GetBytesUsedToSave() const { return ee_uwstring_bytes_to_save(&this->mState); }
     // adds a checksum of the characters (weighted by position, times the length) named after the text (ESChecksum)
     void GetChecksum(ESChecksum& ioChecksum);
     unsigned long GetExportSize() const { return ee_uwstring_export_size(&this->mState); }
@@ -46,24 +45,11 @@ public:
     // empty and the error returned; an old Windows-1252 string is converted, D6)
     long Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
     long Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
-    // splits at any of the separator characters, skipping empty tokens (ee_uwstring_tokens: the tokens' first and
-    // last characters); always true
-    bool Tokenize(const UWideString& inSeparators, std::vector<UWideString>& outTokens) const
-        { return ee_uwstring_tokens(&this->mState, &inSeparators.mState, &outTokens, PushToken); }
     unsigned long GetLength() const { return this->mState.length; }
     unsigned long GetTCHARLength() const { return this->mState.byte_length; }
-    unsigned long GetAllocatedLength() const { return this->mState.capacity; }
     void Clear() { ee_uwstring_clear(&this->mState); }
-    bool Equals(const char* inString) const { return PlatMbsCmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool Equals(const char* inString, unsigned long inCount) const { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     bool EqualsIgnoreCase(const char* inString) const { return PlatMbsICmp(Bytes(*this), Bytes(inString)) == 0; }
     bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
-    void ToLower() { PlatMbsLwr(reinterpret_cast<unsigned char*>(this->mState.string)); }
-    void ToUpper() { PlatMbsUpr(reinterpret_cast<unsigned char*>(this->mState.string)); }
-    // Replaces the buffer with an empty one of inSize + 1 bytes. (The original dropped the fresh buffer and pointed
-    // mString at a "" literal, which Import then overwrote and the destructor freed.)
-    void Reallocate(unsigned long inSize) { ee_uwstring_reallocate(&this->mState, inSize); }
-    static void SetDefaultAllocationLength(unsigned long inLength) { ee_uwstring_set_default_allocation(inLength); }
     static const unsigned char* Bytes(const char* inString) { return reinterpret_cast<const unsigned char*>(inString); }
 
     enum Unset { kUnset };                  // a result the Rust side initialises
@@ -75,13 +61,6 @@ public:
     {
         inChange(&this->mState, inArguments...);
         return *this;
-    }
-    // ee_uwstring_tokens' calls: the vector cleared (no record), then each token from its first to its last character
-    static void PushToken(void* inTokens, const EeUWideString* inString, uint32_t inFirst, uint32_t inLast)
-    {
-        inString ? static_cast<std::vector<UWideString>*>(inTokens)->push_back(
-                       UWideString(kUnset, ee_uwstring_indexed_substring, inString, inFirst, inLast))
-                 : static_cast<std::vector<UWideString>*>(inTokens)->clear();
     }
 
     EeUWideString mState;                   // +0x04 mString, +0x08 mByteLength (_mbsnbcnt), +0x0c mLength

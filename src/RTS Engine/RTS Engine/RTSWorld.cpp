@@ -12,6 +12,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSUnit.h"
+#include "rust/base/math.h"
 
 // Sets the camera, deriving its view line, yaw and pitch, and reports the change
 void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
@@ -23,8 +24,8 @@ void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
     inTransformation.Apply(theForward, theDirection);
     this->mLine.SetStart(thePosition);
     this->mLine.SetDirection(theDirection);
-    this->mCameraYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    this->mCameraPitch = UMArcCos(-theDirection.GetZ()) - 1.5707964f;
+    this->mCameraYaw = ee_ge_um_arctan2(-theDirection.GetX(), theDirection.GetY());
+    this->mCameraPitch = ee_ge_um_arccos(-theDirection.GetZ()) - 1.5707964f;
     this->CameraChanged(inTransformation);
 }
 

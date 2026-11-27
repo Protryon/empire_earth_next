@@ -67,9 +67,6 @@ class EETagPoint {
 public:
     // 0xdaccd: the point at inFrame through the model's part transformations, then inTransformation
     void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint);
-    // 0xdad54: likewise with the part's own transformation inPart (a separately oriented part) first
-    void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
-                  GE3DPoint& outPoint);
     // 0xdab97 (the point at inFrame in the model's space)
     void GetOffset(unsigned long inFrame, GE3DPoint& outPoint) { ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, NULL, GERust(outPoint)); }
     // 0xdac22: GetOffset with the part's own transformation inPart first (provisional name)
@@ -143,9 +140,6 @@ public:
     // blast wave's and the shield's; null without one) (provisional name)
     // Returns the tag points of a kind on a part's model, or NULL when it has none (ee_gfx tags.rs)
     EETagPointList* GetTagPoints(unsigned long inPart, long inKind) { return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind)); }
-    // 0xd85aa: the index of inModel among the parts (0: found; 3: not) (provisional name)
-    // Finds the turret part for a model and returns its index; returns 0 when found, else 3 (preload_media.rs)
-    long FindTurretPart(GEModel* inModel, unsigned long& outIndex) { return ee_preload_find_turret_part(this, inModel, &outIndex); }
     // the part count (ICF-folded into 0x91f11, a vector size; EEUnitClass 0x2364f3) (provisional name)
     unsigned long GetNumParts() const { return this->mTurretParts.size(); }
 

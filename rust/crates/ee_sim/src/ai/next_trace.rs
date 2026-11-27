@@ -606,15 +606,6 @@ pub(super) unsafe fn stats(me: *mut c_void, time: c_ulong) {
     scope_end(saved);
 }
 
-/// `EECPTraceStats` for the C++.
-///
-/// # Safety
-/// `me` is a live computer player.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_trace_stats(me: *mut c_void, time: c_ulong) {
-    stats(me, time);
-}
-
 /// `EECPTraceProfile`: the AI's real time per player: every 60 game s the sum and the largest single update.
 #[no_mangle]
 pub extern "C" fn ee_ai_trace_profile(player: c_ulong, time: c_ulong, microseconds: i64) {

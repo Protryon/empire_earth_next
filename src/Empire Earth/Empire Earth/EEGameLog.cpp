@@ -59,6 +59,8 @@
 #include "ee/EECivilizationManager.h"
 #include <utility>
 #include "ee/EEGameLog.h"
+#include "rust/game/physics.h"
+#include "rust/game/screens.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
@@ -303,7 +305,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcSetHitPoints: B_UN->SetHitPoints((long)a[0]);
         break;
-    case O::DcEndGame: gPhysics->EndGame(a[0] != 0);
+    case O::DcEndGame: ee_physics_end_game(gPhysics, a[0] != 0);
         break;
     // the app profile's cheat sweep (TEST ONLY)
     case O::DcParse: gCheatCodes->ParseCheatCode(UWideString((const char*)a[0]), *(long*)a[1], *(long*)a[2]);
@@ -328,7 +330,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DvUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::DvNameNarrow: B_CV->mName = (const char*)*(UString*)a[0];
         break;
-    case O::DvApplyUpgrade: return gCivilizationManager.ApplyUpgrade((EECivUpgrade)a[0], (long)a[1]);
+    case O::DvApplyUpgrade: return ee_screens_civm_apply_upgrade((EECivUpgrade)a[0], (long)a[1]);
     default: return EECore11OpC2(inOp, p, a, f);
     }
     return 0;

@@ -33,6 +33,9 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEScreenEvent.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/tech_tree.h"
+#include "rust/sim/tech.h"
 
 
 
@@ -113,7 +116,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT: gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(SeplControl(p))->GetText(0)); return 0;
     case EE_SCREENS_SEPL_OP_NAME_TO_LABEL: static_cast<UITextLabel*>(SeplControl(p))->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
     case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;
-    case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: gMiniMap->Recolor(); return 0;
+    case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: ee_gamecpp_minimap_recolor(gMiniMap); return 0;
     }
     return 0;
 }
@@ -229,7 +232,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_COLOR_DIFFERS: return gWorld.mPlayers[i[0]]->mColor != EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR));
     case EE_SCREENS_SEPX_SET_PLAYER_COLOR: gWorld.mPlayers[i[0]]->SetColor(EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR))); return 0;
     case EE_SCREENS_SEPX_MINIMAP: return gMiniMap != NULL;
-    case EE_SCREENS_SEPX_MINIMAP_REDRAW: gMiniMap->Redraw();
+    case EE_SCREENS_SEPX_MINIMAP_REDRAW: ee_gamecpp_minimap_redraw(gMiniMap);
         return 0;
     case EE_SCREENS_SEPX_POST_406:
         gUIManager->GetScenarioEditorForm()->GetLoadThread()->Post406(reinterpret_cast<void*>((uintptr_t)i[0]), reinterpret_cast<void*>((intptr_t)gWorld.GetPlayer(i[0])->GetTechTree()->mStartEpoch));
@@ -241,7 +244,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPX_TT_IDS_CLEAR: sSepxIDs.clear();
         return 0;
-    case EE_SCREENS_SEPX_TT_IDS: gTechTree.GetNodeIDs(sSepxIDs);
+    case EE_SCREENS_SEPX_TT_IDS: ee_gamecpp_tech_node_ids(&gTechTree, true, 0, &sSepxIDs);
         return 0;
     case EE_SCREENS_SEPX_TT_COUNT: return (int32_t)sSepxIDs.size();
     case EE_SCREENS_SEPX_TT_CLEAR: SepxTechs(i[0])->clear();
@@ -357,7 +360,7 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPX_ADD_CONTROL: F(p)->AddControl(H(p), (unsigned long)i[0]);
         return 0;
-    case EE_SCREENS_SEPX_CIV_COUNT: return (int32_t)gCivilizationManager.GetNumCivilizations();
+    case EE_SCREENS_SEPX_CIV_COUNT: return (int32_t)(unsigned long)ee_tech_civ_civilization_count();
     case EE_SCREENS_SEPX_CIV_NAME_ID: return gCivilizationManager.GetCivilization((unsigned long)i[0]).mNameID;
     case EE_SCREENS_SEPX_CIV_FILE: return SepxWrite(UWideString(gCivilizationManager.GetCivilization((unsigned long)i[0]).mFileName), p, i);
     case EE_SCREENS_SEPX_FILES_CLEAR: sSepxFiles.clear();

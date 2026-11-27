@@ -76,6 +76,7 @@ EEClient::EEClient()
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEStringIDs.h"
+#include "rust/game/cp_engine.h"
 extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
 void EELobbyPostConnectStatus(bool inConnected);  // 0x295ce3 (EELobbyInit.cpp; provisional name)
 
@@ -504,7 +505,7 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
             thePlayer.mPing = theInfo->Get<float>(5);
             thePlayer.mLoadedType = theInfo->Get<int32_t>(3);
             thePlayer.mStartingCitizens = theInfo->Get<int32_t>(8);
-            thePlayer.mEngine = (unsigned long)theInfo->Get<int32_t>(12) < EECPEngineChoiceCount() ? (unsigned long)theInfo->Get<int32_t>(12)
+            thePlayer.mEngine = (unsigned long)theInfo->Get<int32_t>(12) < (unsigned long)ee_cp_engine_choice_count() ? (unsigned long)theInfo->Get<int32_t>(12)
                                                                                        : (unsigned long)kEECPChoiceClassic;   // port
             thePlayer.mB36 = theInfo->Get<bool>(11);
             thePlayer.mIsReady = theInfo->Get<bool>(9);

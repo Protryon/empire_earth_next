@@ -661,15 +661,6 @@ fn c_name<'a>(name: *const c_char) -> &'a [u8] {
     unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes()
 }
 
-/// `EEOrbital::IsOrbitalModel` of a model named `name`.
-///
-/// # Safety
-/// `name` is NULL or NUL-terminated.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_orbital_is_model(name: *const c_char) -> bool {
-    is_orbital_name(c_name(name))
-}
-
 /// `EEOrbital::Init`'s speed of a model named `name`.
 ///
 /// # Safety

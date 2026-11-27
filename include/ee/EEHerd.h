@@ -12,6 +12,7 @@
 
 #include <vector>
 #include "rust/sim/cp.h"             // EeHerdFields
+#include "ee/EEAIArea.h"
 
 class EEComplexUnit;
 class EEAnimal;

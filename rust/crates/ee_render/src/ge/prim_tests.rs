@@ -272,9 +272,6 @@ fn the_four_corner_calls_are_the_per_vertex_calls_in_turn() {
         ee_ge_prim_set_opacities(p, 2, 0.75, 0.75, 0.0, 0.0);
         ee_ge_prim_opacities(p, &mut a, &mut b, &mut c2, std::ptr::null_mut());
         assert_eq!((a, b, c2), (0.75, 0.75, 0.125), "the first two set, the third kept");
-        ee_ge_prim_set_z(p, 1.0, 2.0, 3.0, 4.0);
-        let z: Vec<_> = vertices(p).iter().map(|v| v.point.z).collect();
-        assert_eq!(z, [1.0, 2.0, 3.0, 4.0]);
         ee_ge_prim_destroy(p);
     }
 }

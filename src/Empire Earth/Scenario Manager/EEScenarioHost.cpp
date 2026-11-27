@@ -29,6 +29,9 @@
 #include "ee/EESaveGameFiles.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+#include "rust/sim/app.h"
+#include "rust/sim/scenario.h"
+#include "rust/sim/tech.h"
 
 namespace {
 
@@ -53,12 +56,12 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;
-    case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0) : -1;
+    case EE_SCENARIO_READ_CAPTURE_SEED: return ee_app_capture_active() ? ee_scenariocpp_capture(EE_SCENARIO_CAP_SEED, NULL, 0, 0) : -1;
     case EE_SCENARIO_READ_CONTINENT: return gContinentManager.GetContinentID(inA, inB);
     case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->GetTown(inB)->HullContains(U2DPoint<long>(inC, inD));
     case EE_SCENARIO_READ_CATEGORY_IN_SET: return gUnitSetManager.Contains((long)inA, (unsigned long)inB);
     case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
-    case EE_SCENARIO_READ_OBJECT_PICK: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
+    case EE_SCENARIO_READ_OBJECT_PICK: return ee_scenario_en_object_pick_unit_type(gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA));
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
     }
     return EESMObjectRead(theContext, inOp, inA, inB, inC, inD);   // the objects' and units' reads

@@ -5,18 +5,14 @@
 
 #include <stdio.h>
 #include <vector>
-#include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
-#include "lle/U2DPoint.h"               // RTSMapTileRun holds two by value
 #include "lle/U2DRectangle.h"           // RTSColoredRectangle holds one by value
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
 #include "ee/EESightCapture.h"       // TSGT (TEST ONLY): the sight functions' scope
-#include "rust/sim/combat.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
-#include "rust/sim/units.h"
-#include "rust/base/math.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
+#include "lle/GETerrainMesh.h"
 
 // One map tile (provisional name and layout)
 class EEDoppelganger;
@@ -176,9 +172,6 @@ struct RTSMapVertexColors {
 // calls it); trivially destructible (the map's dtor `_Tidy` is ICF-folded 0xa9c2c). Name is provisional.
 struct RTSMapTileRun {
     RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd) : mStart(inStart), mEnd(inEnd) {  }
-    // out of line (COMDAT 0x9fec3 among EECPWallManager.cpp's, called by its find 0x9fe9d; the four fields compared in
-    // order) (provisional name)
-    bool operator==(const RTSMapTileRun& inOther) const;
 
     U2DPoint<long> mStart;                  // +0x00
     U2DPoint<long> mEnd;                    // +0x08
@@ -225,7 +218,6 @@ public:
     // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
     void ClearU1955DC() { this->mU1955DC.clear(); }
     void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles) { ee_rts_map_create(this, inWidth, inHeight, inPlayerCount, inCreateTiles); }
-    void ApplyVertexColors() { ee_rts_map_apply_vertex_colors(this); }
     bool IsTileFlat(unsigned long inX, unsigned long inY);
     EEMapTile* GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface);  // 0x122ee8 (EEMap::PickScreenTile)
     EEMapTile* GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface);  // 0x12307d (EEMap::GetLocationAt)
@@ -317,21 +309,11 @@ public:
     // 0x122c9b: the nearest tile on the map to inPoint; its coordinates in ioX/ioY (EEMPathTo; provisional name)
     EEMapTile* GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY);
     bool IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius);
-    // EEMap.cpp members called by the random map (EERandomMap.cpp; provisional names)
-    // 0x11d34b (the tile's terrain texture)
-    void PaintTerrain(long inX, long inY, long inTerrain) { ee_gamecpp_mx_paint(this, inX, inY, inTerrain); }
-    void UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop) { ee_gamecpp_mx_update_cliffs(this, inLeft, inRight, inBottom, inTop); }
-    // 0x11df99 (+0x19565c = it, then UpdateCliffs over the whole map)
-    void SetCliffTexture(long inCliffTexture) { ee_gamecpp_mx_set_cliff_texture(this, inCliffTexture); }
     unsigned long GetTileCount() { return ee_gamecpp_map_tile_count(this); }
     // EEMap.cpp's other members in address order (provisional names)
     // 0x11c13f / 0x11d006: inPlayer stops / starts seeing the tiles within inRadius of (inX, inY)
     void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false); }
-    // 0x11c9a3 (the ctors' common part)
-    void Initialize() { ee_gamecpp_map_initialize(this); }
     void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true); }
-    void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff) { ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff); }
-    void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop) { ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop); }
 
     // +0x28 0x11cf60 (ret 4: the out-of-synch dump's file, EEPhysics 0x152311) (provisional name)
     virtual void DumpOutOfSynch(FILE* inFile) { ee_gamecpp_map_dump(this, inFile); }

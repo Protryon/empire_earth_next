@@ -24,9 +24,6 @@ public:
     // 0x12c5e9 (ret 0xc): the cost of inUpgrade (inList, else mPurchasedUpgrades, for the category count) into outCost; true when
     // affordable (or gGameOptions.mAllowCustomCivs is clear)
     bool CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList) { return ee_gamecpp_civ_can_afford(this, inUpgrade, outCost, inList); }
-    bool CanAffordAll(std::vector<EECivUpgrade>& inUpgrades) { return ee_gamecpp_civ_can_afford_all(this, &inUpgrades); }  // 0x12c648: every one affordable in turn
-    // 0x12c847 (ret 0xc): inPurchase pays and records it; then applies it for inPlayer
-    bool Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase) { return ee_gamecpp_civ_buy(this, inUpgrade, inPlayer, inPurchase); }
     void SetPoints(long inPoints) { this->mAvailablePoints = inPoints; }   // 0x12ca99
     void AddPoints(long inAmount) { ee_gamecpp_civ_add_points(this, inAmount); }   // 0x12c73b: adds to both epoch fields and clears mB3C
     void SetPointsAndMax(long inEpoch) { this->mMaxPoints = this->mAvailablePoints = inEpoch; }   // 0x12caa3 (sets +0x38 and +0x34)
@@ -53,9 +50,6 @@ public:
     // 0x12c916 (EEPlayer::RepairPointers): the purchased upgrades applied again, the deferred kind kept for later; 13
     // when one fails
     long Reapply(class EEPlayer* inPlayer, unsigned long, unsigned long) { return ee_gamecpp_civ_reapply(this, inPlayer); }
-    // 0x12c9a1 (EEWorld::Fn139749; provisional name): the deferred upgrades applied and forgotten; 13 when one fails
-    long ApplyDeferred(class EEPlayer* inPlayer, unsigned long, unsigned long) { return ee_gamecpp_civ_apply_deferred(this, inPlayer); }
-    void ApplyLevel21ToWorld() { ee_gamecpp_civ_apply_level21(this); }   // 0x12c8ce (EEWorld::SetPopulationLimit; provisional name)
     bool GetUnchanged() { return this->mUnchanged; }
     long GetAvailablePoints() { return this->mAvailablePoints; }   // the points left to spend
     long GetMaxPoints() { return this->mMaxPoints; }

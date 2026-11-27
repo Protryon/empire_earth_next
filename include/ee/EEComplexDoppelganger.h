@@ -7,7 +7,6 @@
 #define EE_EECOMPLEXDOPPELGANGER_H
 
 #include "ee/EEDoppelganger.h"
-#include "rust/sim/units.h"             // the inline bodies' Rust calls
 
 class EEComplexDoppelganger : public EEDoppelganger, public EeUnitsComplexDopFields {
 public:

@@ -8,9 +8,9 @@
 // Requires ee/EEAIArea.h.
 #ifndef EE_EETOWN_H
 #define EE_EETOWN_H
-#include "rust/sim/units.h"
 
 #include "rust/sim/cp.h"             // EeTownFields
+#include "ee/EEAIArea.h"
 
 class EEPlayer;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
@@ -38,7 +38,6 @@ public:
     bool CanTake(EEUnit* inUnit) { return ee_cp_town_can_take(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this), (uint64_t)(uintptr_t)inUnit); }
     // 0xac4b6: mPatrolGroup found or made, its points the hull's
     void RefreshPatrolGroup() { ee_cp_town_refresh_patrol_group(static_cast<void*>(this), static_cast<void*>(static_cast<EEAIArea*>(this)), static_cast<EeTownFields*>(this)); }
-    static bool IsTownUnit(EEUnit* inUnit) { return ee_cp_town_is_town_unit((uint64_t)(uintptr_t)inUnit); }
 
     EEPlayer* mPlayer;                      // +0x68 (ctor argument 1)
     EEPPatrolGroup* mPatrolGroup;           // +0x6c (AddUnit makes one and registers it with mPlayer; Reset releases it)

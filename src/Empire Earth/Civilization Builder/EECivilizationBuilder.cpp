@@ -71,6 +71,8 @@
 #include "ee/EEGraphicEffect.h"
 #include "rust/game/screens.h"   // the host and the premade list (civ_manager_calls.rs)
 #include "ee/EEUnitUtilities.h"   // EEUpgradeHitPoints
+#include "rust/game/civilization.h"
+#include "rust/game/gamecpp.h"
 
 // the civilization file being saved or loaded (EECBCivilizationFiles.cpp's file spec 0x565518: EELoadCivilization
 // shares it)
@@ -83,10 +85,6 @@ long EEProcessTimerExpired()
     return ee_screens_cb_timer_expired();
 }
 
-long EESetCivBuilderButtonBlinking(bool inBlinking)
-{
-    return ee_screens_cb_set_blinking(inBlinking);
-}
 
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 {
@@ -160,7 +158,7 @@ extern "C" void ee_screenscpp_cbh_send_server(uintptr_t inMessage)
 { gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotServer); }
 extern "C" void ee_screenscpp_cbh_message_execute(uintptr_t inMessage) { ((NEMessage*)inMessage)->Execute(); }
 extern "C" void ee_screenscpp_cbh_message_release(uintptr_t inMessage) { ((NEMessage*)inMessage)->Dereference(); }
-extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(EEScratch<UWideString>(kScratchCBString)); }
+extern "C" bool ee_screenscpp_cbh_campaign_name() { return ee_gamecpp_options_campaign_map_name(&gWorld.mGameOptions, &(EEScratch<UWideString>(kScratchCBString))); }
 extern "C" void ee_screenscpp_cbh_message(EeScreensShimText inText)
 { gUIManager->DisplayMessage(EEShimText(inText), 1, NULL, NULL, true); }
 extern "C" void ee_screenscpp_cbh_question(EeScreensShimText inText, uintptr_t inForm, uint32_t inAnswer)
@@ -362,12 +360,12 @@ extern "C" uint64_t ee_screenscpp_civf_cost() { return (uint64_t)EEScratch<unsig
 extern "C" uint64_t ee_screenscpp_civf_civ_max_points(uintptr_t inCtx)
 { return (uint64_t)CF(inCtx)->mPlayer->mCivilization.GetMaxPoints(); }
 extern "C" void ee_screenscpp_civf_civ_buy(uintptr_t inCtx, uint32_t inUpgrade)
-{ CF(inCtx)->mPlayer->mCivilization.Buy((EECivUpgrade)inUpgrade, CF(inCtx)->mPlayer->mPlayerID, true); }
+{ ee_gamecpp_civ_buy(&CF(inCtx)->mPlayer->mCivilization, (EECivUpgrade)inUpgrade, (long)(CF(inCtx)->mPlayer->mPlayerID), true); }
 extern "C" void ee_screenscpp_civf_civ_set_points(uintptr_t inCtx) { CF(inCtx)->mPlayer->mCivilization.SetPoints(0); }
 extern "C" bool ee_screenscpp_civf_purchased(uintptr_t inCtx) { return CF(inCtx)->mPlayer->mCivUpgradesPurchased; }
 extern "C" bool ee_screenscpp_civf_in_scenario_editor() { return gUIManager->GetInScenarioEditor(); }
 extern "C" bool ee_screenscpp_civf_can_afford_all(uintptr_t inCtx)
-{ return CF(inCtx)->mPlayer->mCivilization.CanAffordAll(CF(inCtx)->mUpgrades); }
+{ return ee_gamecpp_civ_can_afford_all(&CF(inCtx)->mPlayer->mCivilization, &(CF(inCtx)->mUpgrades)); }
 extern "C" uintptr_t ee_screenscpp_civf_grant_new(uintptr_t inCtx, int64_t inPoints)
 { return (uintptr_t) new EEMRecord(kMessageCivUpgradesPurchased, {CF(inCtx)->mPlayerIndex, (long)inPoints, CF(inCtx)->mUpgrades, CF(inCtx)->mName}); }
 extern "C" void ee_screenscpp_civf_send(uintptr_t inMessage)
@@ -474,7 +472,7 @@ extern "C" int64_t ee_screenscpp_civh_population_limit(int32_t inPlayer)
 extern "C" void ee_screenscpp_civh_recompute_area_effects(int32_t inPlayer)
 { CIVH_P(inPlayer)->SuggestRecomputeAllAreaEffects(); }
 extern "C" void ee_screenscpp_civh_show_selection_areas(int32_t inPlayer)
-{ CIVH_P(inPlayer)->mSelectedGroup->ShowSelectionAreas(); }
+{ ee_units_group_do(CIVH_P(inPlayer)->mSelectedGroup, 7, NULL); }
 extern "C" uintptr_t ee_screenscpp_civh_sound(int64_t inKind) { return (uintptr_t)EESoundObject::Get((long)inKind); }
 extern "C" void ee_screenscpp_civh_sound_load(uintptr_t inSound) { ((EESoundObject*)inSound)->LoadMedia(); }
 extern "C" void ee_screenscpp_civh_add_sound(int32_t inPlayer, uintptr_t inSound)

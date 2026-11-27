@@ -274,22 +274,6 @@ impl CzHost for Game {
 
 // ---- the entry points (the `EEUnitClass` members; units and goals as their addresses)
 
-/// `EEUnitClass::FindWoodSite(unit, unit type, out)`: 1 and the tile in `out` when found.
-///
-/// # Safety
-/// `out` is two floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cz_find_wood_site(unit: u64, unit_type: i32, out: *mut [f32; 2]) -> u8 {
-    match citizen::find_wood_site(&mut Game, unit, unit_type) {
-        Some(p) => {
-            // SAFETY: the caller's contract
-            unsafe { *out = p };
-            1
-        }
-        None => 0,
-    }
-}
-
 /// `EEUnitClass::FindResourceOfKind` of a class of `category` (its `mCategory`); `taken` the `count` units of
 /// `ioUnits`.
 ///
@@ -321,24 +305,6 @@ pub unsafe extern "C" fn ee_units_cz_find_resource_of_kind(
 #[no_mangle]
 pub extern "C" fn ee_units_cz_find_storage(unit: u64, any_storage: u8) -> u64 {
     citizen::find_storage(&mut Game, unit, any_storage != 0)
-}
-
-/// `EEUnitClass::FindGatherPoint(unit, x, y, size x, size y, out)`.
-///
-/// # Safety
-/// `out` is three floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cz_find_gather_point(
-    unit: u64,
-    x: u32,
-    y: u32,
-    size_x: i32,
-    size_y: i32,
-    out: *mut [f32; 3],
-) {
-    let p = citizen::find_gather_point(&mut Game, unit, x, y, size_x, size_y);
-    // SAFETY: the caller's contract
-    unsafe { *out = p };
 }
 
 /// `EEUnitClass::HasGatherPoint(unit, resource)`.

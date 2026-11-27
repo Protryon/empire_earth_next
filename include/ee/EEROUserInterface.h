@@ -6,7 +6,8 @@
 #ifndef EE_EEROUSERINTERFACE_H
 #define EE_EEROUSERINTERFACE_H
 
-#include "rust/game/gamecpp.h"
+#include "ee/EERenderObject.h"
+#include "lle/UIManager.h"
 class UIManager;
 
 class EEROUserInterface : public EERenderObject {

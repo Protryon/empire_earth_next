@@ -18,6 +18,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/sim/units.h"
 
 static uint64_t PGObject(const void* inPointer)
 {
@@ -82,7 +83,7 @@ extern "C" uint64_t ee_units_pg_host_unit(int32_t inWhich, uint64_t inUnit, uint
         theUnit->GetPlayer()->KillUnit(theUnit, false);
         return 0;
     case EE_UNITS_PG_REMOVE_GROUP:
-        theUnit->GetPlayer()->RemovePatrolGroup(PGGroup(inOther));
+        ee_units_player_rest(theUnit->GetPlayer(), EE_UNITS_PLAYER_REST_REMOVE_PATROL, (uint64_t)(uintptr_t)(PGGroup(inOther)), 0, 0);
         return 0;
     case EE_UNITS_PG_UNIT_ID:
         return (uint64_t)(uint32_t)theUnit->mUnitID;
@@ -90,7 +91,7 @@ extern "C" uint64_t ee_units_pg_host_unit(int32_t inWhich, uint64_t inUnit, uint
         return PGObject(EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((long)(int32_t)(uint32_t)inOther)));
     case EE_UNITS_PG_SELECT:
     case EE_UNITS_PG_SELECT_FLAG:
-        return reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inOther))->TrySelectUnit(theUnit, inWhich == EE_UNITS_PG_SELECT_FLAG) ? 1 : 0;
+        return ee_units_selection(reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inOther)), 1, static_cast<EEUnit*>(theUnit), 0, NULL, 0, inWhich == EE_UNITS_PG_SELECT_FLAG, false) ? 1 : 0;
     default:
         return 0;
     }

@@ -30,7 +30,6 @@ public:
     unsigned long GetDrawPriority() const { return this->mDrawPriority; }
     unsigned long GetFormID() const { return this->mFormID; }
     bool GetHasAlpha() const { return this->mHasAlpha; }
-    long GetID() const { return this->mID; }
     const UILayoutUtility& GetLayout() const { return *reinterpret_cast<const UILayoutUtility*>(&this->mLayout); }
     long GetNumCols() const { return this->mNumCols; }
     long GetNumRows() const { return this->mNumRows; }

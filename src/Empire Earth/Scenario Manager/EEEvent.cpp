@@ -19,6 +19,8 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEScenarioHost.h"
 #include "ee/EEUnitUtilities.h"   // EEReplaceQueuedTechnology
+#include "rust/game/rts.h"
+#include "rust/sim/units.h"
 
 // The pathfinding functor of attribute 42 (its step: ee_sim scenario event.rs)
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
@@ -63,7 +65,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     switch (inOp) {
     case EE_SCENARIO_EV_EVENTS_ENABLED: return gEventsEnabled;
     case EE_SCENARIO_EV_MAKE_AREA_EFFECTS:
-        P(EEUnit, 0)->mComplexUnit->MakeAreaEffects();
+        ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, P(EEUnit, 0)->mComplexUnit, 0, 0, 0);
         return 0;
     case EE_SCENARIO_EV_SIGHT_OFF:
         P(EEUnit, 0)->SightOffHere();
@@ -93,7 +95,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_MEDIA: return R(static_cast<EEGraphicObject*>(EEMedia::Get(a[0])));
     case EE_SCENARIO_EV_UPGRADE_MODEL: return R(P(EEUnitClassUpgrade, 0)->mModel);
     case EE_SCENARIO_EV_SET_CLASS_MODEL: P(EEPlayer, 0)->SetClassModel((unsigned long)a[1], P(EEGraphicObject, 2)); return 0;
-    case EE_SCENARIO_EV_SWAP_GRAPHIC: P(EEComplexUnit, 0)->SwapGraphic(P(EEGraphicObject, 1), P(EEGraphicObject, 2)); return 0;
+    case EE_SCENARIO_EV_SWAP_GRAPHIC: ee_units_cu_body(EE_UNITS_CU_DO_SWAP_GRAPHIC, P(EEComplexUnit, 0), (int64_t)(uintptr_t)(P(EEGraphicObject, 1)), (int64_t)(uintptr_t)(P(EEGraphicObject, 2)), 0); return 0;
     case EE_SCENARIO_EV_SOUND: return R(EESoundObject::Get(a[0]));
     case EE_SCENARIO_EV_SET_ACKNOWLEDGE: P(EEPlayer, 0)->SetClassAcknowledgeSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]); return 0;
     case EE_SCENARIO_EV_SET_CREATION: P(EEPlayer, 0)->SetClassCreationSound((unsigned long)a[1], P(EESoundObject, 2)); return 0;

@@ -10,8 +10,6 @@
 class EEVoting : public EeAppVoting {
 public:
     EEVoting() : EeAppVoting{} {}          // 0x137b3f: every member 0 (the original left +0x09)
-    // 0x137b7b (1: a proposal is already open) (EEMEdictProposal 0xbde48; provisional name)
-    long Propose(unsigned short inEdict, long inArg2) { return ee_app_voting_propose(this, inEdict, inArg2); }
 };
 
 #endif

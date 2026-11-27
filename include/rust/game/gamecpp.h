@@ -3072,12 +3072,6 @@ void ee_gamecpp_calamity_class_media_list(void *kl,
                                           void *pl,
                                           bool on_demand);
 
-/// `GetMedia` for the C++.
-///
-/// # Safety
-/// `out` valid.
-void ee_gamecpp_calamity_class_get_media(void *kl, EeCalamityClassMedia *out);
-
 /// `Initialize`: the common fields, the class's effects and sounds fetched as it fetched them, its numbers, its
 /// contagion functor (ee_tech calamity_class.rs).
 ///
@@ -3179,15 +3173,6 @@ void ee_gamecpp_functor_apply(void *fu,
                               void *u,
                               float elapsed,
                               void *c);
-
-/// `EECalamityCanCastAt` for the C++ callers (ee/EECalamityUpdate.h).
-long ee_gamecpp_calamity_can_cast_at(void *kl,
-                                     EeCalamityCastMode mode,
-                                     void *cx,
-                                     unsigned long x,
-                                     unsigned long y,
-                                     bool check,
-                                     void *target_unit);
 
 /// EEGraphics::FrameStarting: the whole UI redrawn when needed, then the frame's data copied under the world lock
 /// (the read lock and the UI's for modes 0 and 1, the write lock for 2 and 3; 1 and 3 keep it until FrameDone).
@@ -4107,9 +4092,6 @@ long ee_gamecpp_map_checksum(void *map);
 /// EEMiniMap's constructor's body: the Rust half, the map attached if given, the terrain light.
 void ee_gamecpp_minimap_construct(void *mm, void *map);
 
-/// EEMiniMap's destructor's body.
-void ee_gamecpp_minimap_destroy(void *mm);
-
 /// AddDoppelganger (4) and RemoveDoppelganger (5): a building image's dot (a wall's next three segments too).
 void ee_gamecpp_minimap_doppelganger(void *mm,
                                      void *d,
@@ -4215,9 +4197,6 @@ void ee_gamecpp_pph_checksum(const void *helper, void *checksum);
 long ee_gamecpp_pph_local_index(void *helper,
                                 long *out);
 
-/// `EEPPlayerHelper::GetPlayers`: the loaded players; 13 unless the chunk was loaded.
-long ee_gamecpp_pph_players(void *helper, void *out);
-
 /// `EEPPlayerHelper::Load`: the slot count, the local player index and each player (human or computer), then each
 /// player's ally list filled with the allies that share line of sight; the first read error.
 long ee_gamecpp_pph_load(void *helper,
@@ -4319,20 +4298,11 @@ bool ee_gamecpp_ps_check_saved_options(void *saved,
 bool ee_gamecpp_ps_validate(void *file,
                             void *message);
 
-/// `SaveGameToFile`'s C++ entry (EESaveLoad.cpp's `SaveGameToFile`, 0x14d34b).
-long ee_gamecpp_ps_save_to_file(void *file, unsigned long time);
-
 /// `WriteSaveGame`'s C++ entry.
 long ee_gamecpp_ps_write_save(const void *name, unsigned long time, void *file, void *other);
 
 /// `EEGameStateLoader::Load`'s C++ entry.
 bool ee_gamecpp_loader_load(void *state, void *file);
-
-/// `EEGameStateLoader::LoadGame`: the game state restored from a saved header and its chunks; on failure "Load game
-/// file is corrupt." reported and the state cleared; whether it worked.
-bool ee_gamecpp_loader_load_game(void *state,
-                                 void *header_file,
-                                 void *file);
 
 /// `EEGameState::SetDefaultMapCenter`: the camera centred on the middle of the map, if there is one.
 void ee_gamecpp_st_default_map_center(void *state);
@@ -4927,9 +4897,6 @@ void ee_gamecpp_env_delete_storms(void *manager);
 void ee_gamecpp_fw_register(uint64_t complex_scale,
                             uint64_t complex_frame);
 
-/// `EEEffectFile`: an `FSFile` as the effects' file.
-EeGfxEffectFile ee_gamecpp_fw_file(void *file_);
-
 /// EEEffectManager::Load: the manager's effects from the file.
 long ee_gamecpp_fw_load(EeGfxEffectManager *m,
                         void *file_,
@@ -5466,11 +5433,6 @@ int ee_gamecpp_posix_sim_skip(int argc, const char *const *argv);
 /// window's shape at 768 high (rounded, even), at least the original's 1024 (a 5:4 screen: 1024x768).
 unsigned long ee_gamecpp_menu_width(unsigned long width,
                                     unsigned long height);
-
-/// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-void ee_gamecpp_world_teams_add(void *_w,
-                                const unsigned long *players,
-                                size_t n);
 
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
 void ee_gamecpp_world_teams_ally(void *_w, uint32_t a, uint32_t b);

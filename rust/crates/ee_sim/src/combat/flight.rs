@@ -197,43 +197,6 @@ pub fn missile_home(i: &EeCombatFlightIn) -> EeCombatFlightOut {
 
 // ---- the C ABI
 
-// (one function each: cbindgen does not expand macros)
-/// `EEPMProjectile::Step0`'s placement on the arc.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_projectile_launch(input: *const EeCombatFlightIn) -> EeCombatFlightOut {
-    projectile_launch(unsafe { &*input })
-}
-
-/// `EEPMProjectile::Step2`'s tick.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_projectile_step(input: *const EeCombatFlightIn) -> EeCombatFlightOut {
-    projectile_step(unsafe { &*input })
-}
-
-/// `EEPMMissile::Accelerate`'s tick.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_missile_accelerate(input: *const EeCombatFlightIn) -> EeCombatFlightOut {
-    missile_accelerate(unsafe { &*input })
-}
-
-/// `EEPMMissile::Home`'s tick.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_missile_home(input: *const EeCombatFlightIn) -> EeCombatFlightOut {
-    missile_home(unsafe { &*input })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

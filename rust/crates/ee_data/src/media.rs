@@ -165,20 +165,6 @@ pub unsafe extern "C" fn ee_data_media_release(
     unsafe { release(usage, &*lock, &*unload) }
 }
 
-/// [`locked`] for the C++.
-///
-/// # Safety
-/// As [`ee_data_media_acquire`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_data_media_locked(
-    usage: *mut EeDataMediaUse,
-    lock: *const EeDataMediaLock,
-    step: *const EeDataMediaStep,
-) {
-    // SAFETY: the caller's guarantee
-    unsafe { locked(usage, &*lock, &*step) }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

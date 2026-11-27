@@ -150,19 +150,5 @@ pub fn form_event_for(id: c_ulong) -> u32 {
     }
 }
 
-/// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
-/// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the
-/// manager's scenario editor flag (the save and load forms' kind).
-#[no_mangle]
-pub extern "C" fn ee_screens_control_event_for(id: c_ulong, screen_active: bool, in_editor: bool) -> u32 {
-    control_event_for(id, screen_active, in_editor)
-}
-
-/// `EEUIManager`'s form-event factory: the event code for a form event id, 0 for none.
-#[no_mangle]
-pub extern "C" fn ee_screens_form_event_for(id: c_ulong) -> u32 {
-    form_event_for(id)
-}
-
 #[cfg(test)]
 mod golden;

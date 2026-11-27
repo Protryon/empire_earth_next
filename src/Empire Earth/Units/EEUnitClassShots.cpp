@@ -28,6 +28,9 @@
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
+#include "rust/game/gamecpp.h"
+#include "rust/sim/tech.h"
+#include "rust/sim/units.h"
 
 // ---- EEUCProjectile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The projectile's unit
 // class (EEUCBomb derives from it and shares these slots by ICF): 0x219143..0x219c49 (after EEUCPlanetSpaceship.cpp;
@@ -63,15 +66,15 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     switch (inOp) {
     // ---- reads
     case EE_COMBAT_SHOT_R_RANDOM: return (int32_t)UFloatBits(gPhysics->mRandom.Generate());
-    case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
+    case EE_COMBAT_SHOT_R_FLAMING_CHANCE: return (int32_t)UFloatBits((float)(reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)kCivPowerFlamingArrows)))->mChance);
     case EE_COMBAT_SHOT_R_WORLD_CLEARING: return gWorld.mClearing;
     case EE_COMBAT_SHOT_R_FREE_CAMERA: return gFreeCamera;
     case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS: return (int32_t)EEShotAttack(theUnit)->GetAttackTarget()->mHitPoints;
     // ---- operations
-    case EE_COMBAT_SHOT_UPDATE_ROTTING: theUnit->UpdateRottingAwayTime(); break;
+    case EE_COMBAT_SHOT_UPDATE_ROTTING: (long)ee_units_ucp_call(EE_UNITS_UCP_DO_ROTTING_TIME, NULL, theUnit, 0, 0); break;
     case EE_COMBAT_SHOT_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0); break;
     case EE_COMBAT_SHOT_UNLOAD_CARGO:
-        theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false);
+        ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, theUnit, (long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false);
         break;
     case EE_COMBAT_SHOT_SIGHT_OFF: theUnit->SightOffHere(); break;
     case EE_COMBAT_SHOT_SIGHT_ON: theUnit->SightOnHere(); break;
@@ -82,11 +85,11 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         break;
     case EE_COMBAT_SHOT_CREATE_REMAINS: theClass->CreateRemainsUnit(theUnit); break;
     case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED:
-        theClass->HandleActionChanged(theUnit);
+        ee_units_class_action_changed(EE_UNITS_ACTION_BASE, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)theUnit);
         break;
-    case EE_COMBAT_SHOT_MINIMAP_OFF: gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, -10000, -10000); break;
+    case EE_COMBAT_SHOT_MINIMAP_OFF: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, theUnit->mTileX, theUnit->mTileY, (long)(-10000), (long)(-10000)); break;
     case EE_COMBAT_SHOT_STEP_PHYSICS: theClass->mPhysicsModel->Step(theUnit); break;
-    case EE_COMBAT_SHOT_REFRESH_SOUND: theClass->RefreshSound(theUnit); break;
+    case EE_COMBAT_SHOT_REFRESH_SOUND: ee_units_uc_body(EE_UNITS_UC_DO_REFRESH_SOUND, theClass, theUnit); break;
     }
     return 0;
 }
@@ -108,7 +111,7 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
     case EE_COMBAT_SHOT_X_SPLASH_AT: gWorld.mEffectManager->CreatePlacedEffect(p, theClass->mSplashEffect, NULL); return 0;
     case EE_COMBAT_SHOT_X_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(p), p); return 0;
     case EE_COMBAT_SHOT_X_SET_LOCATION_XYZ: theUnit->mPhysicalModel.SetLocationXYZ(p); return 0;
-    case EE_COMBAT_SHOT_X_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, reinterpret_cast<EESoundObject*>(inA), &ioF[0], &ioF[1], &ioF[2]); return 0;
+    case EE_COMBAT_SHOT_X_SOUND_PARAMETERS: ee_units_uck_sound(theClass, static_cast<EEUnit*>(theUnit), reinterpret_cast<EESoundObject*>(inA), &ioF[0], &ioF[1], &ioF[2]); return 0;
     case EE_COMBAT_SHOT_X_PLAY: gSoundManager->Play(reinterpret_cast<EESoundObject*>(inA)->mSampleID, ioF[0], ioF[1], ioF[2], reinterpret_cast<EESoundObject*>(inA)->mLooping, NULL); return 0;
     case EE_COMBAT_SHOT_X_ATTACK_GOAL: return (int64_t)(uintptr_t)EEShotAttack(theUnit);
     case EE_COMBAT_SHOT_X_ATTACK_TARGET: return (int64_t)(uintptr_t)reinterpret_cast<EEUGRust*>(inA)->GetAttackTarget();

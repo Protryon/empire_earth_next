@@ -27,6 +27,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
+#include "rust/game/gamecpp.h"
 
 // the effect generations' save key (FSLoadVector's; was EECalamity.cpp's EECalamity::mEffectGenerationStringID, the
 // one of the original's 21 keys 0xacb75..0xad0f4 ever read)
@@ -95,7 +96,7 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CgUnitsAt: return P64((*(std::vector<EEComplexUnit*>*)p)[a[0]]);
     case O::CgUnitsInArea: EEGetUnitsInRectangle(*(const EETileArea*)a[0], *(std::vector<EEComplexUnit*>*)p, EEAnyUnit(), true);
         break;
-    case O::CgCalamityIndex: return EECalamityManager::GetInstance()->GetCalamityIndex((EECalamity*)p, *(long*)a[0]);
+    case O::CgCalamityIndex: return ee_gamecpp_calamity_index(EECalamityManager::GetInstance(), (EECalamity*)p, false, (long*)a[0]);
     case O::CgWriteClassId: return ((FSFile*)a[0])->Write((unsigned long)((EECalamity*)p)->mClass->mID);
     case O::CgFileReadLong: return ((FSFile*)p)->Read(*(long*)a[0]);
     case O::CgFileWriteLong: return ((FSFile*)p)->Write((long)a[0]);

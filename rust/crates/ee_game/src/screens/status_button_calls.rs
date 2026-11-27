@@ -302,11 +302,6 @@ mod ffi {
     pub extern "C" fn ee_screens_sbt_destroy(button: usize) {
         super::destroy(&mut Ffi, button)
     }
-    /// `EEUIFMGStatusButton::ReleaseButton`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_sbt_release(button: usize) {
-        super::release(&mut Ffi, button)
-    }
     /// `EEUIFMGStatusButton::DrawPolygons`.
     #[no_mangle]
     pub extern "C" fn ee_screens_sbt_draw_polygons(button: usize) -> i64 {
@@ -322,25 +317,10 @@ mod ffi {
     pub extern "C" fn ee_screens_sbt_hot_key_up(button: usize) {
         super::hot_key_up(&mut Ffi, button)
     }
-    /// `EEUIFMGStatusButton::SetCommandButton`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_sbt_set_command(button: usize, index: u32) {
-        super::set_command(&mut Ffi, button, index)
-    }
-    /// `EEUIFMGStatusButton::SetTechButton`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_sbt_set_tech(button: usize, technology: i64, kind: u32, id: u32) {
-        super::set_tech(&mut Ffi, button, technology, kind, id)
-    }
     /// `EEUIFMGStatusButton::SetLocation`.
     #[no_mangle]
     pub extern "C" fn ee_screens_sbt_set_location(button: usize, x: f32, y: f32) {
         super::set_location(&mut Ffi, button, x, y)
-    }
-    /// `EEUIManager::Fn26FA6A` (`set`) / `Fn26FA55`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_sbt_main_group_refill(set: bool) {
-        super::main_group_refill(&mut Ffi, set)
     }
 }
 

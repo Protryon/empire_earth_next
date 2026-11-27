@@ -46,16 +46,10 @@ public:
     T GetY() const { return this->mY; }
     void SetX(T inX) { this->mX = inX; }
     void SetY(T inY) { this->mY = inY; }
-    void SetXY(T inX, T inY) { *this = U2DPoint(inX, inY); }  // exe: EEUGUnloadTransport's (bool) ctor 0x23c685 (as GE2DPoint's)
-    // exe (out-of-line COMDAT 0xe964, an AI unit's): the squared distance as a float (EEUGUnloadTransport 0x228683)
-    // (provisional name)
-    // Inline with the doubled differences: 0xe964 exact, and the float copy is ICF-identical to
-    // DistanceToSquared<float> 0x1f0eb5; its inline cost puts GetClosestCorner's budget where the original's is
 #ifdef LLE_EXE_HEADERS
     // exe: the squared distance (out-of-line COMDAT ICF-identical to EETileDistanceLess::DistanceSquared 0x8a3f; the no-/Og
     // header sort functor 0x408fd7 calls it on GetTile()'s result). Inline: VC6's /Os post-check undoes it at every
     // site; at a no-/Og site its locals and the getter temps keep 4 caller frame slots (r37_load family note)
-    T DistanceSquared(const U2DPoint& inPoint) const { return this->DistanceToSquared(inPoint); }
     float DistanceToSquaredF(const U2DPoint& inPoint) const
     {
         return (float)((this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX())) +
@@ -70,13 +64,6 @@ public:
     // GetLineTiles' vector: the Rust tiles replace its contents
     static void AssignTiles(void* outTiles, const long (*inTiles)[2], size_t inCount)
         { static_cast<std::vector<U2DPoint>*>(outTiles)->assign(reinterpret_cast<const U2DPoint*>(inTiles), reinterpret_cast<const U2DPoint*>(inTiles) + inCount); }
-#endif
-#ifdef LLE_EXE_HEADERS
-    // exe: the squares are summed as floats (fild dx2; fiadd dy2; EECPResourceCenter COMDAT 0x48d421), not as T
-    T DistanceTo(const U2DPoint& inPoint) const
-        { return (T)sqrt((float)((this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX())) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY())); }
-#else
-    T DistanceTo(const U2DPoint& inPoint) const { return (T)sqrt(this->DistanceToSquared(inPoint)); }
 #endif
     // each difference written out twice (a squaring macro's shape): the one form that gives both the float copy
     // (GETerrainMesh.cpp 0x1002fe6c: y difference first, the squares from st0/st2) and the long copy

@@ -8,7 +8,6 @@
 #ifndef EE_EEMUSICMANAGER_H
 #define EE_EEMUSICMANAGER_H
 
-#include "rust/audio/sound.h"
 #include "rust/game/gamecpp.h"
 class EEMusicObject;
 class SEConductor;

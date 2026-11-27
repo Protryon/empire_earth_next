@@ -10,7 +10,6 @@
 // high (ee_scenario world_route.rs)
 inline int64_t EESMBits(float inValue) { return ee_scenario_f32_bits(inValue); }
 inline float EESMFloat(int64_t inBits) { return ee_scenario_bits_f32(inBits); }
-inline int64_t EESMPack(long inX, long inY) { return ee_scenario_pack_xy(inX, inY); }
 
 class FSFile;
 class UWideString;

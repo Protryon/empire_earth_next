@@ -52,19 +52,6 @@ public:
     // Reloads the three unit improvement textures (after a device loss); returns the first error
     // (status_box_calls.rs)
     static long ReloadIcons() { return (long)ee_screens_sb_reload_icons(); }              // 0x26dcd9 (ReloadTexture of the three textures)
-    // (0x564ed8, the 50 loaded icons, a class static in the original: Rust's, ee_screens_icon_bitmap, hud_fields.rs)
-    // (the host of ee_screens status_box.rs is Rust over EEUIFMGStatusBox.cpp's shims: status_box_calls.rs)
-    // The control an EE_SCREENS_BOX_CTL_* names
-    // (the record's slots)
-    UIControl* GetBoxControl(int64_t inControl) const
-    {
-        return static_cast<UIControl*>(ee_screens_status_box_control(this, inControl));
-    }  // an EE_SCREENS_BOX_CTL_*
-    // inline (EEUIFMGMainGroup::Open loads the label first: the arguments are evaluated right to left)
-    void SetControls(long inIndex, UIControl* inIcon, UIControl* inLabel)
-    {
-        ee_screens_status_box_set_controls(this, (int64_t)inIndex, inIcon, inLabel);   // (main_form_fields.rs)
-    }
 };
 
 #endif

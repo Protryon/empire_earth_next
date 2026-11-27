@@ -32,7 +32,6 @@ public:
                                             unsigned long inCursor) { return (long)this->Call(EeUiEditCall::ImeChange, (intptr_t)(const char*)inString, inCursor, (intptr_t)(const char*)inAttributes); }
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiEditCall::ChangeFont, (intptr_t)inFont); }
     virtual long CloseIMECompositionString() { return (long)this->Call(EeUiEditCall::ImeClose); }
-    void Copy() { this->Call(EeUiEditCall::Copy); }
     virtual long CopyData() { return (long)this->Call(EeUiEditCall::CopyData); }
     void DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex,
                     unsigned long inEndLine) { this->Call(EeUiEditCall::DeleteRange, inStartIndex, inStartLine, inEndIndex, inEndLine); }

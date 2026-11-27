@@ -21,11 +21,6 @@ class EEComputerPlayer;
 // (the script's results, the gather safety's tests and limits, the event kinds, the placement searches: ee_ai
 // names.rs, next_game.rs, next_value.rs)
 
-// the unit id of the threat at a tile (0: none) and its kind; inNow: only soldiers in sight now, no towers
-inline long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
-{
-    return ee_ai_next_site_threat(inPlayer, inX, inY, inNow, outKind);
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // The per-player state (EEComputerPlayer::mNextState: an opaque Rust record, ee_ai next_state.rs; created on its first

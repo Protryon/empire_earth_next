@@ -82,7 +82,6 @@
 #include "rust/ui/direct.h"
 #include "rust/ui/draw.h"
 #include "rust/ui/draw2d.h"
-#include "rust/ui/draw_ffi.h"
 #include "rust/ui/edit.h"
 #include "rust/ui/editobj.h"
 #include "rust/ui/eventobj.h"

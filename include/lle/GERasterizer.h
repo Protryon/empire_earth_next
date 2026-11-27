@@ -110,7 +110,6 @@ public:
     // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
     long EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
     long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
-    unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) { return 0; }   // 0 for any capability
     // The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the
     // screen's state (GetScreenState); the fog type, projection mode and v-sync only record it
     void SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
@@ -203,8 +202,6 @@ public:
     // keseOK result: it enumerates the DirectDraw devices into screens and makes this the active rasterizer. Textures
     // need no handle here (the original's CreateTextureHandle, DestroyTextureHandle and PromoteTexture are gone).
     long ActivateRasterizer() { return this->mDX7 != NULL ? ee_dx7r_activate_rasterizer(this->mDX7) : kErrorOK; }   // slot 0x118
-    // makes a surface the render target (swapping the references) and fits the viewport to its size (slot 0x134)
-    void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) { ee_dx7r_set_render_target(this->mDX7, inTarget, inScreen); }
 
     // The state is Rust's (rust/crates/ee_render/src/ge rastobj.rs: the colours, the screen records, the debug font and text,
     // the drawing lock, the ripple, the culling, the flags, the name, the screen id, and the statics sRasterizers and

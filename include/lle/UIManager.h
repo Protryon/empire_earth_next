@@ -6,16 +6,11 @@
 // members are the Rust manager's now (see the class). Requires lle/UIForm.h (CreateForm).
 #ifndef LLE_UIMANAGER_H
 #define LLE_UIMANAGER_H
-#include "lle/LLEForward.h"
 
 #include <stdint.h>
 
 #include "lle/UIEvent.h"
-#include "rust/ui/managerobj.h"
-#include "rust/ui/lle_manager.h"
-#include "rust/ui/lle_control.h"
-#include "rust/ui/obj.h"
-#include "lle/UIObjHost.h"
+#include "lle/UIForm.h"
 
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
@@ -74,7 +69,6 @@ public:
     GEBitmap* GetCheckOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 11)); }
     GEBitmap* GetCheckOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 13)); }
     UIForm* GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
-    GEFont* GetFont(unsigned long inIndex) const { return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex)); }
     // Returns the form with the given ID (NULL: none)
     UIForm* GetFormByID(unsigned long inID) const
     {
@@ -126,7 +120,6 @@ public:
     void RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long)) { this->Call(EeUiManagerCall::RegisterFormCallback, (intptr_t)inCallback); }
     // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
     void RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
-    void SetFont(unsigned long inIndex, GEFont* inFont) { this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont); }
     // Swaps the left and right mouse buttons when the left-handed setting changes
     static void SetMouseLeftHanded(bool inLeftHanded) { ee_ui_manager_set_mouse_left_handed(inLeftHanded); }
     // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK

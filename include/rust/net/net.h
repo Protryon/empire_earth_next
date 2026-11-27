@@ -692,11 +692,7 @@ void ee_net_cl_start_threads(const EeNetClient *c);
 /// `StopThreads` and `SendExitMessage`
 void ee_net_cl_stop_threads(const EeNetClient *c);
 
-void ee_net_cl_clear_incoming_messages(const EeNetClient *c);
-
 void ee_net_cl_send_start_connect_message(const EeNetClient *c, void *msg);
-
-void ee_net_cl_send_end_connect_message(const EeNetClient *c);
 
 /// `Connect(name, host, address)`: `strings` points at the three (an `EeNetClStrings` with `tcp`), handed to the
 /// host's Connect without.
@@ -712,11 +708,7 @@ int32_t ee_net_cl_connect_text(const EeNetClient *c,
                                const char *host,
                                const char *address);
 
-int32_t ee_net_cl_connect_for_xfer(const EeNetClient *c);
-
 int32_t ee_net_cl_disconnect(const EeNetClient *c);
-
-int32_t ee_net_cl_disconnect_from_xfer(const EeNetClient *c);
 
 /// `GetDetectedGame(index, name, host, address)`: `strings` points at the three (an `EeNetClSinks` with `tcp`),
 /// handed to the host without.
@@ -733,9 +725,6 @@ int32_t ee_net_cl_process_user_input(const EeNetClient *c,
                                      void *msg,
                                      uint8_t player,
                                      bool guaranteed);
-
-/// The protocol the client uses (protocol 0, `NEProtocol*`)
-void *ee_net_cl_protocol(const EeNetClient *c);
 
 /// The game connection (`NEConnection*`, NULL when not connected)
 void *ee_net_cl_connection(const EeNetClient *c);
@@ -1094,8 +1083,6 @@ void ee_net_sv_start_threads(const EeNetServer *s);
 
 void ee_net_sv_stop_threads(const EeNetServer *s);
 
-void ee_net_sv_send_exit_message(const EeNetServer *s);
-
 /// A field (`SvGet`) for the accessors
 uint32_t ee_net_sv_get(const EeNetServer *s, EeNetSvGet field);
 
@@ -1126,32 +1113,19 @@ void ee_net_sv_lock_send_communications_tick(const EeNetServer *s);
 
 void ee_net_sv_unlock_send_communications_tick(const EeNetServer *s);
 
-/// SimGameRunning (TEST ONLY)
-bool ee_net_sv_sim_game_running(const EeNetServer *s);
-
 /// SimCommunicationsTick (TEST ONLY)
 void ee_net_sv_sim_communications_tick(const EeNetServer *s);
 
 /// The recorder's mode (1 passing, 2 recording, 3 playing back; a server that was not published: passing)
 uint8_t ee_net_sv_record_playback_mode(const EeNetServer *s);
 
-void ee_net_sv_set_slow_playback(const EeNetServer *s);
-
-void ee_net_sv_set_normal_playback(const EeNetServer *s);
-
 void ee_net_sv_abort_xfer(const EeNetServer *s, uint32_t id);
-
-void ee_net_sv_boot_all_laggers(const EeNetServer *s, uint32_t number);
 
 int32_t ee_net_sv_broadcast_message(const EeNetServer *s, void *msg);
 
 uint32_t ee_net_sv_message_manager_current_number(const EeNetServer *s);
 
-void ee_net_sv_set_message_manager_current_number(const EeNetServer *s, uint32_t number);
-
 void ee_net_sv_set_message_manager_lowest_cts(const EeNetServer *s, uint32_t ct);
-
-bool ee_net_sv_is_oos(const EeNetServer *s);
 
 void ee_net_sv_log_checksum_response(const EeNetServer *s,
                                      uint32_t tick,
@@ -1199,15 +1173,6 @@ long ee_net_sv_xfer_file_to_client(const EeNetServer *s,
                                    uint32_t user_data,
                                    uint8_t slot,
                                    unsigned long *id);
-
-/// The checksums' state (the tests): writes at most `size` bytes of `Server::checks_state` (NUL-terminated) and
-/// answers its length.
-///
-/// # Safety
-/// `out` holds `size` bytes.
-size_t ee_net_sv_checks_state(const EeNetServer *s,
-                              uint8_t *out,
-                              size_t size);
 
 /// The queues' lengths (the tests): the incoming inputs, the queued send-to-all-and-waits
 ///

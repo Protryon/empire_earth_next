@@ -78,7 +78,6 @@ public:
     void SetGraphicsPostModelTransform(const GETransformation& inTransform)
         { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Post, 0, (const EeGeTransformation*)&inTransform); }
     void SetGraphicsScale(float inScale) { ee_ge_mod_set_graphics_scale(this->mRust, inScale); }
-    void SetOpacity(float inOpacity) { ee_ge_mod_set_opacity(this->mRust, inOpacity); }
 
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
     // retired under D9; GEModelManager::LoadModel stores a glTF's model with ee_ge_mod_store_loaded)

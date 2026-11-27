@@ -5,7 +5,6 @@
 #define LLE_FSARCHIVE_H
 
 #include <map>
-#include <set>
 #include <vector>
 
 #include <stdio.h>
@@ -36,21 +35,14 @@ public:
     }
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
         { return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), Text(inFiles.data()), inFiles.size(), inCompression); }
-    // every archived file below a destination directory, creating directories as needed
-    long ExtractAll(const FSFileSpec& inDestination)   // (the progress lines are Rust's: after the C runtime's)
-        { return ee_fs_arch_extract_all(Rec(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory)); }
     // a file by name (case-insensitive), decompressed as a new memory file
     long FindFile(const UString& inName, FSMemoryFile*& outFile) { return ee_fs_arch_find_file(Rec(this), Text(&inName), reinterpret_cast<void**>(&outFile)); }
     long FindFile(const UWideString& inName, FSMemoryFile*& outFile) { return this->FindFile(UString((const char*)inName), outFile); }
-    const FSFileSpec& GetArchiveFile() const { return this->mArchiveFile; }    // folded 0x40cb (inline)
     // a named archive tag's value, or kErrorNotFound
     long GetTag(const UWideString& inName, UWideString& outValue) const
     {
         return ee_fs_archive_get_tag(this->mTable, (const char*)inName, AssignTag, &outValue);
     }
-    // the archived files matching a '*' pattern
-    long ListFiles(const UString& inPattern, std::set<UString>& outFiles, bool inClear)
-        { return ee_fs_archive_list_files(this->mTable, (const char*)inPattern, inClear, ListName, &outFiles); }
     // checks the header, reads the file and tag tables, maps the file into memory
     long Open() { return ee_fs_arch_open(Rec(this)); }
     // closes the archive and points it at another archive file
@@ -60,9 +52,6 @@ public:
         { return ee_fs_archive_set_tag(this->mTable, (const char*)inName, (const char*)inValue); }
 
     static void AssignTag(void* inValue, const char* inText) { *static_cast<UWideString*>(inValue) = inText; }
-    // a listed name into the set; null clears it (ee_fs_archive_list_files)
-    static void ListName(void* inFiles, const char* inName)
-        { inName ? (void)static_cast<std::set<UString>*>(inFiles)->insert(UString(inName)) : static_cast<std::set<UString>*>(inFiles)->clear(); }
     static EeFsArchiveObj* Rec(FSArchive* inArchive) { return reinterpret_cast<EeFsArchiveObj*>(inArchive); }
     static const EeFsArchiveObj* Rec(const FSArchive* inArchive) { return reinterpret_cast<const EeFsArchiveObj*>(inArchive); }
     static EeFsSpec* Spec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }

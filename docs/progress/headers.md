@@ -214,3 +214,92 @@ unchanged; rust_lines +3,794 (the string table).
 Captures run: oracle and late (always); units, scenario, calamity, effects and groups because the dead
 declarations and include trims touched their code (EEActiveGroup.cpp, EEContagionManager.cpp, the scenario and
 effect headers). Not run: space, missile, app, placement, transport; plain saveload; a POSIX build.
+
+## Round 4 (branch rust-headers4, 2026-11-26): one-call wrappers of Rust exports inlined at their callers, dead code, self-contained headers
+
+State: done; target (-3,000 C++ lines) not met: -1,384 lane lines, all real removals. Base: 274334e73 (round 3), batch 30
+merged (126ab1513). port_metrics per part (each against its own base, so batch 30's own changes are out):
+
+| Part | cpp_lines | other | commits |
+|---|---|---|---|
+| one-call wrappers of Rust exports inlined at their callers (382 + 3 shims; shim removal, not logic) | -701 | code -475, shim -451, logic -24; extern_c, unsafe, layout 0 | da96bee32 .. 9354c2eef (6, one per area), 56af9ff67, 2e4c3336a, 91be8bd5f |
+| fork A: dead members (-O0 objects, relocations and ee_game.lib's undefined list), UEncryption.h | -603 | code -424, shim -409, logic -15 | 02d12f616, 6eea18e30, 9db2dfb02, d29a87dc5 |
+| fork A: 600 Rust exports no C++ named, and what only they used (ui/draw_ffi.h gone) | 0 | extern_c -607, rust_hdrs -1, rust_lines -7,418, unsafe -864, layout -7 | 6f3a02551 |
+| fork B: the 73 headers that did not compile alone made self-contained, then htrim | +3 (+101 / -98) | | 53a8f66b2, 7d4cd1407, ed2e14209 |
+| fork C: the next layer of dead code (-Od -Gy, /OPT:REF /VERBOSE relink) and 6 Rust exports | -83 | extern_c -7, rust_lines -76 | b1440b5dc .. 2b7f13894 (10) |
+
+### What moved
+
+- **One-call wrappers** (build/hd4/scan2.py, inline.py, parse.py): a C++ function (free or member, header or .cpp)
+  whose whole body is one call to a Rust export, with no member or global in its arguments, not virtual, not a
+  constructor, not address-taken (every mention of the name is a call), not named by tools/harness, no other
+  definition or declaration of the name, at most 8 call sites, none in the WON code. Every call site becomes the
+  shim's own statement with `this` and the parameters replaced by the call's object and arguments (defaults from the
+  declaration), and the shim and its declaration (with the doc comment above it) go. Calls in .cpp files get the
+  narrow `rust/<crate>/<module>.h`; headers get none (they compile through what they already include).
+  - **Types are checked, not guessed**: a first pass wraps every substituted argument in
+    `EEHD4V<ParamType, id>(arg)` / `EEHD4R<ParamType, id>(arg)` (static_assert: the argument's type is exactly the
+    shim's parameter type; the reference form also asserts an lvalue) and compiles; each failing id gets an explicit
+    conversion in the final text (`static_cast<T*>` for pointers, keeping a derived-to-base adjustment the void*
+    Rust parameter would otherwise skip; `(T)` for numbers, keeping the two-step conversion), a reference argument
+    that is not exactly the type drops the whole shim. The result's type keeps a cast where the shim's return type
+    differs from the Rust one. Literals (NULL, 0, true) pass as they are.
+  - Dropped: shims that take the address of a by-value parameter (the Rust side could write through to the caller's
+    variable), that use `this` twice, whose parameter with a non-trivial argument appears twice, and every shim a
+    final build rejected (a static or free context for `this`, a macro of the shim's own file, an rvalue whose
+    address the shim took).
+  - Commits are cumulative from the same base (each subset of shims is independent), each linked 0/0.
+  - 91be8bd5f: thirteen inlined calls took a temporary's address (`&(GE2DPoint(x, y))`, `&(EeCombatMoraleIn{...})`):
+    clang-cl's MS extensions accept it, POSIX clang does not, and the check pass missed them in units a fatal error
+    had stopped. A named local each; build/hd4/tempaddr.py compiles every unit with
+    `/clang:-Werror=address-of-temporary` (one older site left: EESMEffect.cpp's `NewLocation(&GE3DPoint(...))`).
+
+### Left
+
+- The 220 candidates whose name another candidate shares, the 80 whose name another class declares and the 24
+  qualified definitions: an exact-type probe at each call site (static_assert on the object's type, as the
+  argument checks) would sort the calls by class.
+- Shims with more than 8 callers (14), shims whose argument names a member or a global (about 1,350 of the 2,148
+  one-call wrappers), the 357 virtual ones.
+- The include trim over all headers (fork C's build/hd4c/htrim.py is ready; each trial of an lle header rebuilds
+  every unit: hours).
+- nettest `ee_session_test`: the session bodies are Rust on real ee_net objects, the driver's NE classes are C++
+  fakes; it needs a stand-in with real ee_net objects and tracing hosts (a re-baselined golden), or retiring in
+  favour of the LAN game gate (fork B's attempt: build/hd4b/nettest_attempt.diff, not kept).
+- Member templates and per-overload dead members (fork A's list); about 1,600 Rust exports only Rust calls could
+  lose `#[no_mangle] extern "C"`; 12 Rust exports only their definitions name (build/hd4c/rust_only_def.txt).
+- `EEWonNet` is never constructed (fork C's scan): for the WON lane.
+- A POSIX build of the trimmed headers: build/hd4/TRIMMED.txt (fork B's 53 headers, also appended to build/hd3/TRIMMED.txt).
+
+### Gates (on 2e4c3336a, batch 30 in; the reduced lane set; 91be8bd5f after it: builds, oracle, ping driver)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | 0 unresolved, 0 duplicates (EE-AOC 293, EE-SIM 294, test 293 inputs); again on 91be8bd5f |
+| `rust_build.py header` / `gate` | current (366 headers) / PASS |
+| oracle seeds 2-7 (against batch 30's b30q) | identical; again identical on 91be8bd5f |
+| captures oracle, late, units, scenario, calamity, effects, groups | PASS each (598, 598, 510, 113, 623, 18, 6 digests) |
+| saveload matrix (`--settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at 1000,1900 --expect`) | PASS |
+| `scenario_check.py` | 26/27 (AOCRoman "restoring the republic": timed out waiting for form 4 at 0 ms), rerun alone 27/27 |
+| `sim_editor.py`, `--civbuilder` | PASS (14,448), PASS (4,062) |
+| editor tour, `random-game --box-select --orders --seed 7` | PASS, PASS (BOX SELECT, ORDERS) |
+| `won_host_coverage.py`, `xbuild.py wontest` | PASS; 184 of 185 (won_ping36_test: one status WS_NoReply against WS_Pending, a timing line), rerun alone 0 mismatches |
+| `gates.sh` | GATES PASS: ai-game time-cap units [4, 38, 38], alive_computers [2, 3], classic_lua x 2; lan-game |
+| POSIX | `xbuild.py game --target linux-x86_64` cannot build here (alsa-sys needs pkg-config/a sysroot); the gnu-dialect census fails on most units at the base too; the address-of-temporary check above stands in |
+
+Captures run: oracle and late (always); units, scenario, calamity, effects and groups because the inlined call sites
+are in the units, scenario manager, calamity/area-effect and active-group code. Not run: transport (disk), space,
+missile, app, placement; plain saveload; eedata check/cppgate (no table, rule or text-compiler change).
+
+### After batch 31 (merged af73aa9de, third pass b1c062eab)
+
+Batch 31 rewrote 33 files the inlining had changed: theirs taken, the calls they make to deleted shims inlined
+again from the old specs (build/hd4/resites.py), 15 declarations they still need restored from origin/rust, then a
+third pass (148 shims, -217 lines). port_metrics origin/rust (38bb1e104) -> b1c062eab: cpp_lines -1,345, code -914,
+shim -868, logic -46, extern_c -576, unsafe -815, rust_lines -7,039.
+
+Gates on b1c062eab before C: ran out of space (other lanes' runs, 0.7 GB free at the stop): both builds 0/0 (290 / 291 /
+290 inputs), the address-of-temporary check (only the older EESMEffect.cpp site), oracle seeds 2-7 identical against
+batch 31's b31q, the Rust gate PASS, captures oracle, late, units, scenario, calamity, effects, groups PASS, the
+saveload matrix PASS, scenario_check 27/27, sim_editor and --civbuilder PASS, won_host_coverage PASS, the editor tour
+PASS. Not finished: wontest (stopped at driver 72 by "no space on device"), the random-game tour and gates.sh.

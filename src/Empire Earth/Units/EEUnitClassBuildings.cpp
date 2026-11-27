@@ -21,6 +21,8 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/game/rts.h"
+#include "rust/sim/units.h"
 
 // C:\EEX\Empire Earth\Units\EEUCBuilding.cpp (__FILE__ 0x4c8f28: the volcano assert, line 261). The buildings' unit
 // class: 0x20e58d..0x21005e (after EEUCBomb.cpp; EEUCBuildingPriest.cpp follows). Unit flags: the exe's module set.
@@ -33,23 +35,10 @@
 
 // 0x446ff4 (-2.0, below it a building is gone) is ee_units cls_condition.rs BUILDING_SUNK
 
-// Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
-// sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
-long EEGetDockFacing(unsigned long inX, unsigned long inY) { return ee_units_ucn_facing(0, (int32_t)inX, (int32_t)inY); }
-
-// Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
-// that has them, else the side with the longest run (cls_building.rs)
-
-// Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
-// (cls_building.rs)
-long EEGetFacingQuarter(long inX, long inY) { return ee_units_ucn_facing(2, (int32_t)inX, (int32_t)inY); }
 
 // Returns the map quarter the unit's tile faces
-long EEGetUnitFacingQuarter(EEComplexUnit* inUnit) { return EEGetFacingQuarter(inUnit->GetTileX(), inUnit->GetTileY()); }
+long EEGetUnitFacingQuarter(EEComplexUnit* inUnit) { return (long)ee_units_ucn_facing(2, (int32_t)(inUnit->GetTileX()), (int32_t)(inUnit->GetTileY())); }
 
-// Returns the model part for a wall piece kind (0..8); outFlag is set for the corner kinds 0, 2, 6 and 8
-// (inferred meaning)
-long EEGetWallPiecePart(long inIndex, bool* outFlag) { return ee_units_ucb_wall_piece_part((int32_t)inIndex, outFlag); }  // ucb_release.rs
 
 // ---- EEUCGate.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The wall gate's unit class:

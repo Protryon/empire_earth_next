@@ -2,7 +2,7 @@
 //! one forward. Out parameters are the members' own.
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_char, c_long, c_ulong, c_void};
+use core::ffi::{c_long, c_ulong};
 
 use crate::screens::civ_manager_obj as m;
 use crate::screens::game_cpp::Ffi;
@@ -45,36 +45,6 @@ pub unsafe extern "C" fn ee_screens_civm_split(upgrade: u32, category: *mut c_ul
     }
 }
 
-/// `MatchesPremadeCivilization(file, name, upgrades, name_id)` (`characters` the name's `GetLength()`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_civm_matches(
-    file: *const c_char,
-    name: *const c_char,
-    characters: u32,
-    upgrades: *const u32,
-    count: usize,
-    name_id: *mut c_long,
-) -> bool {
-    let mut id = 0i32;
-    // SAFETY: the caller's strings and upgrades
-    let result =
-        unsafe { ee_sim::tech::civ::ee_tech_civ_matches_premade(file, name, characters, upgrades, count, &mut id) };
-    // SAFETY: the caller's out
-    unsafe { *name_id = id as c_long };
-    result
-}
-
-/// `GetCategory(category, out)`: the record in place, `out` left alone without one.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_civm_category(category: u32, out: *mut *mut c_void) -> bool {
-    let entry = ee_sim::tech::civ::ee_tech_civ_category(category);
-    if !entry.is_null() {
-        // SAFETY: the caller's out
-        unsafe { *out = entry as *mut c_void };
-    }
-    !entry.is_null()
-}
-
 /// `GetCategoryNameID(category, out)`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_civm_category_name_id(category: u32, out: *mut c_long) -> bool {
@@ -85,17 +55,6 @@ pub unsafe extern "C" fn ee_screens_civm_category_name_id(category: u32, out: *m
     // SAFETY: a category in place; the caller's out
     unsafe { *out = (*entry).mNameID as c_long };
     true
-}
-
-/// `ToLegacy(upgrade, out)`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_civm_to_legacy(upgrade: u32, out: *mut c_ulong) -> bool {
-    let mut legacy = 0u32;
-    // SAFETY: a local out
-    let result = unsafe { ee_sim::tech::civ::ee_tech_civ_to_legacy(upgrade, &mut legacy) };
-    // SAFETY: the caller's out
-    unsafe { *out = legacy as c_ulong };
-    result
 }
 
 /// `EELoadCivilization(name, directory, out name, out upgrades)` (`civ_load.rs`; the `UString*`s, the

@@ -171,12 +171,6 @@ void ee_rts_graphics_render(void *graphics, bool draw_mouse, bool show_scene);
 void ee_rts_graphics_objects_pass(void *graphics,
                                   uint32_t which);
 
-/// `RTSGraphics::RenderLobby`.
-///
-/// # Safety
-/// `graphics` is the live object.
-void ee_rts_graphics_render_lobby(void *graphics);
-
 /// `RTSGraphics::PostPause`.
 ///
 /// # Safety
@@ -256,12 +250,6 @@ void ee_rts_mouse_construct(void *mouse);
 /// `mouse` is the C++ object being destroyed.
 void ee_rts_mouse_destruct(void *mouse);
 
-/// `RTSMouse::LoadPointer`.
-///
-/// # Safety
-/// `file` a C string, `screen` a live screen, `slot` a surface slot.
-long ee_rts_mouse_load_pointer(const char *file, void *screen, void **slot);
-
 /// `RTSMouse::Load`.
 ///
 /// # Safety
@@ -306,12 +294,6 @@ void ee_rts_mouse_pointer_destruct(void *pointer);
 /// # Safety
 /// `pointer` is the live object.
 unsigned long ee_rts_mouse_pointer_main(void *pointer);
-
-/// `RTSMousePointer::HandleMessage`.
-///
-/// # Safety
-/// `pointer` is the live object.
-void ee_rts_mouse_pointer_handle_message(void *pointer, unsigned long message, void *first);
 
 /// `RTSPhysics::RTSPhysics`.
 ///
@@ -433,12 +415,6 @@ void ee_rts_unit_reset(void *unit);
 /// `RTSUnit::Clear`.
 void ee_rts_unit_clear(void *unit);
 
-/// `RTSUnit::RemoveFromList`.
-void ee_rts_unit_remove_from_list(void *unit);
-
-/// `RTSUnit::InsertAfter`.
-void ee_rts_unit_insert_after(void *unit, void *after);
-
 /// `RTSUnit::Link`.
 void ee_rts_unit_link(void *unit, void *after);
 
@@ -460,12 +436,6 @@ void ee_rts_unit_check_list(const void *head, const char *where_);
 /// `RTSPlayer::Reset`.
 void ee_rts_player_reset(void *player);
 
-/// `RTSPlayer::AddPendingUnits`.
-void ee_rts_player_add_pending_units(void *player, bool keep_id, bool release);
-
-/// `RTSPlayer::ReleasePendingUnits`.
-void ee_rts_player_release_pending_units(void *player);
-
 /// `EEPlayer::AddPendingUnits`: the pending groups appended to the running ones (`groups`, the player's
 /// `mGroupLists`: ee_sim group_obj.rs), then `RTSPlayer`'s.
 ///
@@ -484,9 +454,6 @@ void ee_rts_eeplayer_release_pending_units(void *player, void *groups);
 
 /// `RTSPlayer::AddUnit`.
 void ee_rts_player_add_unit(void *player, void *unit, bool keep_id);
-
-/// `RTSPlayer::InsertUnit`.
-void ee_rts_player_insert_unit(void *player, void *unit);
 
 /// `RTSPlayer::RemoveKilledUnits`.
 void ee_rts_player_remove_killed_units(void *player);
@@ -544,12 +511,6 @@ void ee_rts_world_reset(void *world);
 /// # Safety
 /// `world` is the live object, `checksum` an `ESChecksum*`.
 void ee_rts_world_checksum(void *world, void *checksum);
-
-/// `RTSWorld::GetPlayerIndex`.
-///
-/// # Safety
-/// `world` is the live object.
-long ee_rts_world_player_index(void *world, void *player);
 
 /// `RTSWorld::GetUnit`.
 ///

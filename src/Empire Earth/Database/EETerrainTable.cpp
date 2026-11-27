@@ -37,18 +37,6 @@ long gFirstCliffTerrain;
 
 
 
-// Loads each terrain's list-box preview texture (its file name with _1) and references the button of its first unit
-// class (the terrain list of EEUIFSETerrain)
-void EELoadTerrainPreviews()
-{
-    ee_gamecpp_db_terrain_previews(true);
-}
-
-// Releases each terrain's preview texture and its first unit class's button reference
-void EEReleaseTerrainPreviews()
-{
-    ee_gamecpp_db_terrain_previews(false);
-}
 
 // Returns the terrain at an index, or NULL when out of range or unused (negative id)
 EETerrainTable* EETerrainTable::Get(long inIndex)

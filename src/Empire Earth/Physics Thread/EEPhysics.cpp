@@ -41,6 +41,11 @@
 #include "ee/EEMessageCapture.h"
 #include <functional>
 #include "ee/EEGameLog.h"
+#include "rust/game/game_log.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/sim/units.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 
@@ -108,7 +113,7 @@ extern void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase);
 extern "C" size_t ee_units_order_log_host(uint8_t inOp, int64_t inKey, uint8_t* ioText, size_t inCapacity)
 {
     if (inOp == 2) {
-        EEGameLogLine((const char*)ioText);
+        ee_game_log_line((const char*)ioText);
         return 0;
     }
     return ee_ai_name_copy(inOp, inKey, ioText, inCapacity);   // ee_ai names_db.rs
@@ -165,7 +170,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::FixupDelete: delete (std::function<void()>*)p;
         break;
-    case O::UnitOrderReset: EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
+    case O::UnitOrderReset: ee_units_order_reset_world();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
         break;
     case O::ServerLockEnter: PH->mServerMessageQueueLock->Enter();
         break;
@@ -213,9 +218,9 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NewExitShiftMode: return P64(new EEMRecord(kMessageExitShiftMode, {(long)a[0]}));
     case O::NewCivTimerExpired: return P64(new EEMRecord(kMessageCivTimerExpired, {(unsigned char)a[0]}));
     // the captures (TEST ONLY)
-    case O::CaptureExecuted: EEMessageCaptureExecuted(MSG);
+    case O::CaptureExecuted: ee_gamecpp_msgcap_executed(MSG);
         break;
-    case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
+    case O::UnitStoreCheck: (unsigned long)ee_units_us_check((unsigned long)a[0]);
         break;
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
         break;
@@ -256,7 +261,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CampaignNameLength: return gWorld.mGameOptions.mCampaignName.GetLength();
     case O::CanBuyCivilization: return gWorld.mGameOptions.CanBuyCivilization();
-    case O::CheckUnitList: RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
+    case O::CheckUnitList: ee_rts_unit_check_list(static_cast<const RTSDummyUnit*>(&gWorld.mUnits), static_cast<const char*>("EEPhysics::FlushWorld (start)"));   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
         break;
     // a player
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(0, 1);
@@ -304,7 +309,7 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
         break;
-    case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
+    case O::CivBuilderBlink: ee_screens_cb_set_blinking(a[0] != 0);
         break;
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));
     case O::FileClose: fclose((FILE*)p);

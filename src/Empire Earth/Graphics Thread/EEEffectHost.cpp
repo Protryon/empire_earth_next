@@ -48,6 +48,8 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEAEManager.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/game/preload_media.h"
+#include "rust/sim/units.h"
 
 // The effects' meshes built in Rust (rust/crates/ee_render/src/gfx mesh.rs: the farm's, the volcano's) are stored
 // into a model's vertex and polygon arrays. Each record says which values its builder set; only those are stored
@@ -126,12 +128,6 @@ void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
     ee_gamecpp_fx_place_impact_decal(inUnit, reinterpret_cast<const EeGe3DPoint*>(&inLocation));
 }
 
-// Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
-// (moved forward along the heading for giraffes and horses)
-void EEPlaceTrackDecal(EEComplexUnit* inUnit)
-{
-    ee_gamecpp_fx_place_track_decal(inUnit);
-}
 
 // ------------------------------------------------------------------------- round 9, lane B: this file's bodies' C++
 
@@ -353,7 +349,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::FwGeffUnload: ((EEGraphicEffect*)p)->Unload();
         break;
-    case O::FwGeffMedia: return P64(static_cast<EEGraphicObject*>(((EEGraphicEffect*)p)->GetMedia()));
+    case O::FwGeffMedia: return P64(static_cast<EEGraphicObject*>(static_cast<EEMedia*>(ee_preload_effect_media(((EEGraphicEffect*)p)))));
     case O::FwGeffGet: return P64(EEGraphicEffect::Get((uint32_t)a[0]));
     case O::FwGeffCount: return (uint32_t)EEGraphicEffect::GetCount();
     case O::FwModelDeref: ((GEModel*)p)->Dereference();
@@ -373,7 +369,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FwScreen: return (uint32_t)(a[0] != 0 ? gGamePreferences.mSettings.GetScreenID() : gScreenIndex);
     // the answers of the 3D and 2D kinds
     case O::FwDoppelgangerAny: return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(((EEUnit*)p)->mTile), (EEUnit*)p) == true;
-    case O::FwCxSetScaledModel: ((EEComplexUnit*)p)->SetScaledModel((GEModel*)a[0]);
+    case O::FwCxSetScaledModel: ee_units_cu_tiny(EE_UNITS_CU_T_DO_SET_SCALED_MODEL, ((EEComplexUnit*)p), (GEModel*)a[0], 0, 0, 0.0f, 0.0f, 0.0f);
         break;
     case O::FwTileBlocked: return gWorld.IsTileBlocked((int32_t)a[0], (int32_t)a[1]);
     case O::FwAreaEffect: return gAEManager.HasEffect((int32_t)a[0], f[0], f[1], (uint32_t)a[1], false, &((EEComplexUnit*)p)->mAreaEffects);

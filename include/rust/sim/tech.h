@@ -1089,17 +1089,6 @@ struct EeCalamityReply {
   float w;
 };
 
-/// What the C++ knows of the class's effects and sounds when it asks: which are set
-/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
-/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
-struct EeCalamityClassMedia {
-  uint32_t present;
-  uint32_t duration[4];
-  float size[4];
-  uint32_t time1[4];
-  float quake_damage_factor;
-};
-
 /// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`, the C++
 /// name of this record; 236 bytes on every target). Gap-free, from the file itself (36 records of 0xec bytes): the
 /// name, then floats, ids and flags. Field names are provisional unless a reader names them.
@@ -1289,6 +1278,17 @@ struct EeCalamityClassFields {
   float mMinimumInterval;
   float mMaximumInterval;
   float mSightBonus;
+};
+
+/// What the C++ knows of the class's effects and sounds when it asks: which are set
+/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
+/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
+struct EeCalamityClassMedia {
+  uint32_t present;
+  uint32_t duration[4];
+  float size[4];
+  uint32_t time1[4];
+  float quake_damage_factor;
 };
 
 /// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
@@ -1577,59 +1577,6 @@ struct EeTechCivPower {
   int32_t mUnitType;
 };
 
-/// A class upgrade's stats a level changes (`up_*`; the C++ `long`s as i64) and its class's base values (`class_*`).
-struct EeTechCivStats {
-  float up_attack;
-  int64_t up_reload_time;
-  float up_armor[6];
-  float up_range;
-  float up_line_of_sight;
-  float up_max_velocity;
-  int64_t up_flight_time;
-  float up_area_effect;
-  int64_t up_gather_times[7];
-  float up_build_time_scale;
-  int64_t up_repair_rate;
-  float up_area_effect_scale;
-  float up_cost_scale;
-  int64_t class_attack;
-  int64_t class_reload_time;
-  int64_t class_armor[6];
-  float class_range;
-  float class_line_of_sight;
-  float class_max_velocity;
-  int64_t class_flight_time;
-  float class_area_effect;
-  int64_t class_gather_times[7];
-  int64_t class_repair_rate;
-  float class_area_effect_scale;
-  /// the class's `mCategory` as the C++ `long`
-  int64_t class_category;
-};
-
-/// One host call: `player` the player's index (`gWorld.mPlayers`); `stats` what [`EE_TECH_CIV_OP_PUT`] writes.
-struct EeTechCivCall {
-  uint32_t op;
-  int32_t player;
-  int64_t a;
-  int64_t b;
-  float real;
-  EeTechCivStats stats;
-};
-
-/// The host's answer.
-struct EeTechCivReply {
-  int64_t value;
-  float real;
-  EeTechCivStats stats;
-};
-
-/// The C++ host: a callback.
-struct EeTechCivHost {
-  void *ctx;
-  void (*call)(void *ctx, const EeTechCivCall *call, EeTechCivReply *reply);
-};
-
 /// What [`read_file`] gave, for the C++: the result, the name (when set) and the error (when any) as owned bytes
 /// the C++ frees with [`ee_tech_civ_file_free`], the upgrades.
 struct EeTechCivFileRead {
@@ -1665,9 +1612,6 @@ struct EeTechCivFileHost {
   void (*call)(void *ctx, const EeTechCivFileCall *call, EeTechCivFileReply *reply);
 };
 
-/// A C++ apply step: `EECivilizationManager::ApplyUpgrade(upgrade, player)`.
-using EeTechCivApply = bool(*)(void *context, EeTechCivUpgrade upgrade);
-
 /// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
 /// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
 /// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
@@ -1693,18 +1637,6 @@ struct EeContagionFunctorFields {
   unsigned long mUpdates;
   /// The extra damage's flag: the pulse cannon effect, else the battle cry.
   bool mFlag;
-};
-
-/// The functor's answers an update reads (all plain getters, read once before it).
-struct EeContagionParams {
-  /// `GetSpreadTime()`.
-  uint32_t spread_time;
-  /// `GetChance()`.
-  float chance;
-  /// `GetRadius()`.
-  float radius;
-  /// `EE_CONTAGION_*` bits.
-  uint32_t flags;
 };
 
 /// What `Apply` does to a unit ([`apply_damage`]): whether it hits and the damage.
@@ -2466,12 +2398,6 @@ EeTechCivPower *ee_tech_civ_power_record(int32_t id);
 /// `purchased` names `count` upgrades or is null.
 bool ee_tech_civ_has_power(const EeTechCivUpgrade *purchased, size_t count, int32_t id);
 
-/// `ApplyUpgrade` over the C++ host ([`apply_upgrade`]).
-///
-/// # Safety
-/// `host` names a live host whose callback answers every op.
-bool ee_tech_civ_apply_upgrade(EeTechCivHost *host, EeTechCivUpgrade upgrade, int32_t player);
-
 /// `EELoadCivilization`'s bytes ([`read_file`]): `file` the file's name (`<name>.civ`, NUL-terminated).
 ///
 /// # Safety
@@ -2525,35 +2451,6 @@ bool ee_tech_civ_can_afford_all(const EeTechCivUpgrade *purchased,
                                 unsigned long available,
                                 bool allow_custom);
 
-/// [`reapply`]: the deferred upgrades into `deferred` (room for `count`), their number into `deferred_count`.
-///
-/// # Safety
-/// `purchased` names `count` upgrades; `deferred` has room for `count`; `deferred_count` is writable.
-bool ee_tech_civ_reapply(const EeTechCivUpgrade *purchased,
-                         size_t count,
-                         EeTechCivApply apply,
-                         void *context,
-                         EeTechCivUpgrade *deferred,
-                         size_t *deferred_count);
-
-/// [`apply_all`].
-///
-/// # Safety
-/// `upgrades` names `count` upgrades.
-bool ee_tech_civ_apply_all(const EeTechCivUpgrade *upgrades,
-                           size_t count,
-                           EeTechCivApply apply,
-                           void *context);
-
-/// `ApplyLevel21ToWorld`: applies every purchased upgrade of the deferred index (results ignored).
-///
-/// # Safety
-/// `purchased` names `count` upgrades.
-void ee_tech_civ_apply_deferred_kind(const EeTechCivUpgrade *purchased,
-                                     size_t count,
-                                     EeTechCivApply apply,
-                                     void *context);
-
 /// [`init`] into `*out`.
 ///
 /// # Safety
@@ -2561,13 +2458,6 @@ void ee_tech_civ_apply_deferred_kind(const EeTechCivUpgrade *purchased,
 void ee_contagion_functor_init(EeContagionFunctorFields *out,
                                const EeCalamityClassFields *class_,
                                uint32_t kind);
-
-/// [`params`].
-///
-/// # Safety
-/// `f` valid for reads.
-EeContagionParams ee_contagion_functor_params(const EeContagionFunctorFields *f,
-                                              bool blocked_by_immunity);
 
 /// [`discrete_time`].
 ///

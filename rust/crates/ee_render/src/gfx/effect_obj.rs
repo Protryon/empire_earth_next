@@ -1946,16 +1946,6 @@ pub unsafe extern "C" fn ee_gfx_effect_queues_draw(pass: u32) {
 
 // ---- the storms (EEEMStorm's)
 
-/// The weather storm's tiles' bounds (left, top, right, bottom); false without tiles.
-///
-/// # Safety
-/// `bounds` holds four values.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_storm_bounds(e: EffectPtr, bounds: *mut i32) -> bool {
-    // SAFETY: the function's contract
-    unsafe { crate::gfx::ffi_effect::ee_gfx_storm_bounds(head(e).record, bounds) }
-}
-
 /// The weather storm's move one step towards `(x, y)`: its tiles, their bounds into `bounds`, the storm recentred on
 /// the terrain there (`SetTransformation`); false when it did not move (the bounds then the caller's to ignore).
 ///
