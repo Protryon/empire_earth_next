@@ -67,9 +67,6 @@ class EETagPoint {
 public:
     // 0xdaccd: the point at inFrame through the model's part transformations, then inTransformation
     void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint);
-    // 0xdad54: likewise with the part's own transformation inPart (a separately oriented part) first
-    void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
-                  GE3DPoint& outPoint);
     // 0xdab97 (the point at inFrame in the model's space)
     void GetOffset(unsigned long inFrame, GE3DPoint& outPoint) { ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, NULL, GERust(outPoint)); }
     // 0xdac22: GetOffset with the part's own transformation inPart first (provisional name)

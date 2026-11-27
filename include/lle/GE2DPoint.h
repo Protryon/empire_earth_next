@@ -24,7 +24,6 @@ public:
     void SetX(long inX) { this->mX = (float)inX; }
     void SetY(long inY) { this->mY = (float)inY; }
     void SetXY(float inX, float inY) { *this = GE2DPoint(inX, inY); }
-    float DistanceToSquared(const GE2DPoint& inPoint) const { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
     // x and y from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
     template <class F> long Load(F& inFile) { return ee_ge_2d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_2d_point_save(GERust(*this), GERustFile(inFile)); }

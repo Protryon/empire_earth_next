@@ -112,10 +112,3 @@ void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTrans
 {
     ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), NULL, GERust(outPoint));
 }
-
-void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
-                          GE3DPoint& outPoint)
-{
-    ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), GERust(inPart),
-                     GERust(outPoint));
-}

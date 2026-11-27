@@ -172,9 +172,6 @@ struct RTSMapVertexColors {
 // calls it); trivially destructible (the map's dtor `_Tidy` is ICF-folded 0xa9c2c). Name is provisional.
 struct RTSMapTileRun {
     RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd) : mStart(inStart), mEnd(inEnd) {  }
-    // out of line (COMDAT 0x9fec3 among EECPWallManager.cpp's, called by its find 0x9fe9d; the four fields compared in
-    // order) (provisional name)
-    bool operator==(const RTSMapTileRun& inOther) const;
 
     U2DPoint<long> mStart;                  // +0x00
     U2DPoint<long> mEnd;                    // +0x08

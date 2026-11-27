@@ -5,7 +5,6 @@
 #define LLE_FSARCHIVE_H
 
 #include <map>
-#include <set>
 #include <vector>
 
 #include <stdio.h>
@@ -53,9 +52,6 @@ public:
         { return ee_fs_archive_set_tag(this->mTable, (const char*)inName, (const char*)inValue); }
 
     static void AssignTag(void* inValue, const char* inText) { *static_cast<UWideString*>(inValue) = inText; }
-    // a listed name into the set; null clears it (ee_fs_archive_list_files)
-    static void ListName(void* inFiles, const char* inName)
-        { inName ? (void)static_cast<std::set<UString>*>(inFiles)->insert(UString(inName)) : static_cast<std::set<UString>*>(inFiles)->clear(); }
     static EeFsArchiveObj* Rec(FSArchive* inArchive) { return reinterpret_cast<EeFsArchiveObj*>(inArchive); }
     static const EeFsArchiveObj* Rec(const FSArchive* inArchive) { return reinterpret_cast<const EeFsArchiveObj*>(inArchive); }
     static EeFsSpec* Spec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }

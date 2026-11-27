@@ -495,12 +495,6 @@ pub fn upgrade_fields(r: &DbUpgrade) -> Option<EeDataUpgradeFields> {
     Some(f)
 }
 
-/// The size of a dbupgrade record.
-#[no_mangle]
-pub extern "C" fn ee_data_upgrade_record_size() -> usize {
-    core::mem::size_of::<DbUpgrade>()
-}
-
 // ---- EEColorTable (db\dbcolortable)
 
 /// One record of dbcolortable (`EEColorTableRecord`, 168 bytes): a player's colours.
@@ -729,12 +723,6 @@ pub fn terrain_type_fields(r: &DbTerrainType) -> EeDataTerrainTypeFields {
     }
 }
 
-/// The size of a dbterraintype record.
-#[no_mangle]
-pub extern "C" fn ee_data_terrain_type_record_size() -> usize {
-    core::mem::size_of::<DbTerrainType>()
-}
-
 #[test]
 fn a_terrain_type_keeps_its_palette_index_as_l18() {
     // SAFETY: plain integers and bytes
@@ -850,12 +838,6 @@ pub fn game_variant_fields(r: &DbGameVariant) -> Option<EeDataGameVariantFields>
         mCostSet: r.mCostSet as c_long,
         mSelectable: r.mSelectable != 0,
     })
-}
-
-/// The size of a dbgamevariant record.
-#[no_mangle]
-pub extern "C" fn ee_data_game_variant_record_size() -> usize {
-    core::mem::size_of::<DbGameVariant>()
 }
 
 #[test]

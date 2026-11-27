@@ -625,28 +625,6 @@ pub unsafe extern "C" fn ee_fs_archive_list(
     }
 }
 
-/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
-/// [`ee_fs_archive_list`]; always `kErrorOK`.
-///
-/// # Safety
-/// As [`ee_fs_archive_list`]; `sink` takes a null text.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fs_archive_list_files(
-    archive: *const Archive,
-    pattern: *const c_char,
-    clear: bool,
-    sink: EeFsTextSink,
-    context: *mut c_void,
-) -> i32 {
-    if clear {
-        // SAFETY: the function's contract
-        unsafe { sink(context, std::ptr::null()) };
-    }
-    // SAFETY: the function's contract
-    unsafe { ee_fs_archive_list(archive, pattern, sink, context) };
-    status::OK
-}
-
 /// Visits a FAT entry; `name` is valid during the call.
 pub type EeFsFatVisitor =
     unsafe extern "C" fn(context: *mut c_void, name: *const c_char, start: i32, end: i32, length: i32);

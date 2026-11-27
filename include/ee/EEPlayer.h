@@ -446,10 +446,9 @@ public:
     void Reset(long inSeries, long inAmount) { this->Record(1, inSeries, inAmount); }
     void Lower(long inSeries, long inAmount) { this->Record(2, inSeries, inAmount); }
     void Set(long inIndex, long inValue) { this->Record(0, inIndex, inValue); }
-    // the series' largest value, last value (0 without one), the points whose next one is larger
+    // the series' largest value, last value (0 without one)
     unsigned long GetValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 0); }
     unsigned long GetLastValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 1); }
-    unsigned long CountIncreases(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 2); }
     void Clear() { this->mName = UWideString(); this->mEndTime = 0; ee_units_stats_clear(this->mStats); }
     EEPlayerStatistics& operator=(const EEPlayerStatistics& inStatistics)
     {

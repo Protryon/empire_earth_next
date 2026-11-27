@@ -90,29 +90,12 @@ public:
     // (without the drawing lock); the points are std::pair<GE3DPoint, float>: (x, y, z, advance)
     template <class Point> long Draw3DLine(std::vector<Point>& inPoints, GETexture* inTexture, float inV, unsigned long inScreen, bool inOrthographic)
         { return ee_dx7r_draw_3d_line(this->mDX7, inScreen, reinterpret_cast<const float(*)[4]>(inPoints.data()), inPoints.size(), inTexture, inV, inOrthographic); }
-    // grid lines between tile corners whose both ends are visible, as one red line list of at most 1200 lines (the runs:
-    // RTSMapTileRun in the game's view, std::pair<U2DPoint<long>, U2DPoint<long> > in the LLE's; four longs each)
-    template <class Mesh, class Run> long DrawGridLines(Mesh& inMesh, std::vector<Run>& inLines, GETexture* inTexture, float inWidth, unsigned long inScreen, bool inOrthographic)
-        { return ee_dx7r_draw_grid_lines(this->mDX7, inScreen, inMesh.GetRust(), reinterpret_cast<const long(*)[4]>(inLines.data()), inLines.size(), inTexture, inWidth, inOrthographic); }
     // the sky model like any model; always kErrorOK
     long DrawSky(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
         { return this->Draw(inModel, inScreen, inOpacity, inOrthographic), kErrorOK; }
-    // two red edge lines for every visible tile, one draw call per tile
-    template <class Mesh> long DrawTerrainGrid(Mesh& inMesh, unsigned long inScreen, bool inOrthographic)
-        { return ee_dx7r_draw_terrain_grid(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic); }
-    // shades a tile rectangle (a U2DRectangle<long>) with a translucent colour over every valid visible tile, drawn in
-    // batches of 400 quads
-    template <class Mesh, class Rect> long DrawTerrainHighlight(Mesh& inMesh, const Rect& inRectangle, unsigned long inScreen, bool inOrthographic, const GEColor& inColor, float inOpacity)
-        { return ee_dx7r_draw_terrain_highlight(this->mDX7, inScreen, inMesh.GetRust(), &inRectangle.mBottom, reinterpret_cast<const float*>(&inColor), inOpacity, inOrthographic); }
-    // every water material, unclipped then clipped polygons; counts its triangles
-    template <class Mesh> long DrawWater(Mesh& inMesh, unsigned long inScreen, bool inOrthographic)
-        { return ee_dx7r_draw_water(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic); }
     // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
     long EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
     long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
-    // lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times the
-    // vertex colour
-    template <class Mesh> void Light(Mesh& inMesh, unsigned long inScreen) { ee_dx7r_light_terrain(this->mDX7, inScreen, inMesh.GetRust()); }
     // The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the
     // screen's state (GetScreenState); the fog type, projection mode and v-sync only record it
     void SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
@@ -150,10 +133,6 @@ public:
     // Shows the frame (flip full screen, blit to the window's client area windowed); every 12 frames updates the frame,
     // polygon and texture-change statistics
     long ShowScene(unsigned long inScreen) { return ee_dx7r_show_scene(this->mDX7, inScreen); }
-    // moves the visible terrain and water vertices to camera space (animating the water waves) and sets their clip
-    // flags, then sorts each material's polygons into unclipped and clipped lists; water-only mode skips dry vertices
-    template <class Mesh> void TransformToCamera(Mesh& inMesh, GEViewport& inViewport, float inScale, bool inWaterOnly, bool inOrthographic)
-        { ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic); }
     // sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
     long UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen) { return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen); }
 

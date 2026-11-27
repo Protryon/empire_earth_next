@@ -59,14 +59,6 @@ static_assert(sizeof(GETransformation) == 64, "GETransformation is ee_ge's GeTra
 
 long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the teleporter's unload sound)
 
-// ---- the build/repair goal's world work (EEUGBuildRepair.cpp's helpers; the goal itself is build.rs)
-
-// Orders units farthest from the reference tile first, so a sort leaves the nearest unit last
-inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const { return this->DistanceSquared(EETileCoordinate(inUnit->mTileX, inUnit->mTileY)); }
-
-// (the two distances are pure reads: their order does not matter)
-bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const { return this->DistanceSquared(inFirst) > this->DistanceSquared(inSecond); }
-
 // ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
 
 // EEAIContinentManager's inline forest id (ee/EEAIContinentManager.h declares it; EEAIForest is complete here). Its
@@ -365,14 +357,6 @@ EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, st
 void EEUGRust::DumpOutOfSynch(FILE* inFile) { Goal(EE_UNITS_GOAL_DUMP, this, 0, 0, NULL, NULL, NULL, inFile); }
 
 void EEUGRust::GetDebugLine(UWideString& ioText) { Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText); }
-
-long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    // the base goal's record first (but the heal goal's), then the kind's: one Rust sequence (rust_goal.rs)
-    return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
-}
-
-long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile); }
 
 // ---- the C++ of EEGatherNextTree's Rust body (ee_units uu_gather_tree.rs; EE_UNITS_GT_*): one statement each
 

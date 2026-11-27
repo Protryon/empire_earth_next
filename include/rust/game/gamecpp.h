@@ -5842,11 +5842,6 @@ int ee_gamecpp_posix_sim_skip(int argc, const char *const *argv);
 unsigned long ee_gamecpp_menu_width(unsigned long width,
                                     unsigned long height);
 
-/// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-void ee_gamecpp_world_teams_add(void *_w,
-                                const unsigned long *players,
-                                size_t n);
-
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
 void ee_gamecpp_world_teams_ally(void *_w, uint32_t a, uint32_t b);
 

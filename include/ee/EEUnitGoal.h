@@ -66,11 +66,9 @@ public:
     unsigned long GetCreationTime() { return this->mCreationTime; }   // +0x38
     void SetOwner(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_SET_OWNER, H(inUnit)); }   // +0x3c
     void Step(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_STEP, H(inUnit)); }            // +0x40
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x44
     void Abandon(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_ABANDON, H(inUnit)); }        // +0x4c
     long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)this->Call(EE_UNITS_GOAL_REPAIR, inMajorVersion, inMinorVersion); }  // +0x50
     void Start(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_START, H(inUnit)); }          // +0x54
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x58
     // +0x5c: the base goal's count, then the kind's (the attack unit's: 0 also clears the sidestep count)
     void SetStartTime(long inValue) { this->mStartTime = inValue; }   // +0x60
     bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent) { return this->Call(EE_UNITS_GOAL_EVALUATE, H(inUnit), inEvent) != 0; }  // +0x64

@@ -48,10 +48,3 @@ bool EEUnit::IsPathMarker()
 {
     return this->mUnitClass->mUnitType == kUnitTypeWaypoint || this->mUnitClass->mUnitType == kUnitTypePathPoint;
 }
-
-// RTSMapTileRun (ee/EEMap.h): its two out-of-line members sat among EECPWallManager.cpp's COMDATs (RTSMap.cpp calls them)
-bool RTSMapTileRun::operator==(const RTSMapTileRun& inOther) const
-{
-    return inOther.mStart.mX == this->mStart.mX && inOther.mStart.mY == this->mStart.mY && inOther.mEnd.mX == this->mEnd.mX &&
-        inOther.mEnd.mY == this->mEnd.mY;
-}

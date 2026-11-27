@@ -2260,12 +2260,6 @@ void ee_ge_prim_opacities(EeGePrim *p,
 /// `p` is live with at least `count` vertices.
 void ee_ge_prim_set_opacities(EeGePrim *p, unsigned long count, float a, float b, float c, float d);
 
-/// A rhombus's `SetZPerVertex(a, b, c, d)`.
-///
-/// # Safety
-/// `p` is a live rhombus.
-void ee_ge_prim_set_z(EeGePrim *p, float a, float b, float c, float d);
-
 /// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
 ///
 /// # Safety

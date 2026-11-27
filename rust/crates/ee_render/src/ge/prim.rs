@@ -520,16 +520,6 @@ pub unsafe extern "C" fn ee_ge_prim_set_opacities(p: *mut EeGePrim, count: c_ulo
     }
 }
 
-/// A rhombus's `SetZPerVertex(a, b, c, d)`.
-///
-/// # Safety
-/// `p` is a live rhombus.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_prim_set_z(p: *mut EeGePrim, a: f32, b: f32, c: f32, d: f32) {
-    // SAFETY: the caller's contract
-    unsafe { ee_ge_prim_set_depths(p, &[a, b, c, d]) }
-}
-
 /// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
 ///
 /// # Safety
