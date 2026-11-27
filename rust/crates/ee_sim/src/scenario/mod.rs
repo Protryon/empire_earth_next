@@ -72,6 +72,7 @@ pub mod placement;
 pub mod player;
 pub mod read_compose;
 pub mod round;
+pub mod run_state;
 pub mod save;
 pub mod sm_capture;
 pub mod sm_capture_game;

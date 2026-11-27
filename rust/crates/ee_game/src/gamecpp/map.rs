@@ -138,6 +138,57 @@ pub(crate) fn world_unit(id: i64) -> P {
     }
 }
 
+/// The map's and the tiles' members at the layout's offsets (EEWorldLayout.cpp): `mTileArray`, `mVisibilityWords`,
+/// `mTiles[i]`, `&mTileArray[i]`; a tile's `mHeight`, `mVisibility`, `mTerrainType`.
+fn at(object: P, offset: u64) -> *mut P {
+    (object + offset as usize) as *mut P
+}
+
+fn lay() -> &'static ee_sim::world::EeWorldLayout {
+    ee_sim::world::layout::layout()
+}
+
+pub(crate) fn map_tile_array(m: P) -> P {
+    // SAFETY: a live map's pointer member
+    unsafe { *at(m, lay().map_tile_array) }
+}
+
+pub(crate) fn map_words(m: P) -> P {
+    // SAFETY: as above
+    unsafe { *at(m, lay().map_visibility_words) }
+}
+
+pub(crate) fn map_tile_at(m: P, i: i64) -> P {
+    map_tile_array(m) + i as usize * lay().tile_stride as usize
+}
+
+pub(crate) fn map_rts_tile(m: P, i: i64) -> P {
+    // SAFETY: the map's tile pointer array, i below mSize * mSize
+    unsafe { *((*at(m, lay().map_tiles) + i as usize * std::mem::size_of::<P>()) as *const P) }
+}
+
+pub(crate) fn tile_set_height(t: P, height: f32) {
+    // SAFETY: a live tile's float member
+    unsafe { *(at(t, lay().tile_height) as *mut f32) = height };
+}
+
+pub(crate) fn tile_set_visibility(t: P, m: P, word: i64) {
+    // SAFETY: a live tile's pointer member, into the map's words
+    unsafe { *at(t, lay().tile_visibility) = map_words(m) + word as usize * 4 };
+}
+
+pub(crate) fn tile_set_terrain_type(t: P, kind: c_long) {
+    // SAFETY: a live tile's long member
+    unsafe { *(at(t, lay().tile_terrain_type) as *mut c_long) = kind };
+}
+
+/// The tile `t`'s `GetVisibility(player)`.
+pub(crate) fn tile_visibility(t: P, player: usize) -> c_ulong {
+    // SAFETY: a live tile
+    let r = unsafe { WorldRead::begin() };
+    unsafe { ee_sim::world::view::TileView::of(&r, t as u64) }.map_or(0, |k| k.visibility(player) as c_ulong)
+}
+
 /// The visibility words of a tile: two players a word.
 fn words_per_tile(players: c_ulong) -> c_ulong {
     (players >> 1).wrapping_add(players & 1)
@@ -231,7 +282,7 @@ pub extern "C" fn ee_gamecpp_map_destroy(map: *mut c_void) {
     h(O::MpEffectRegionsFree, m, &[]);
     h(O::MpDeleteTiles, m, &[]);
     // SAFETY: the map's words (Rust's)
-    unsafe { ee_units_map_words_free(hp(O::MpWords, m, &[]) as *mut u32) };
+    unsafe { ee_units_map_words_free(map_words(m) as *mut u32) };
     let water = h(O::MpGlobalWaterSet, m, &[]);
     h(O::MpTerrainUnload, m, &[water]);
     let n = (rts(m).mSize.wrapping_add(1)) as c_ulong;
@@ -252,9 +303,9 @@ pub extern "C" fn ee_gamecpp_map_create_tile(map: *mut c_void, height: f32) -> *
     let m = map as P;
     let players = rts(m).mU19561C;
     let next = fields(m).mNextTile;
-    let tile = hp(O::MpTileAt, m, &[next as i64]);
-    hf(O::MpTileSetHeight, tile, &[], &[height]);
-    h(O::MpTileSetVisibility, m, &[pa(tile), words_per_tile(players).wrapping_mul(next) as i64]);
+    let tile = map_tile_at(m, next as i64);
+    tile_set_height(tile, height);
+    tile_set_visibility(tile, m, words_per_tile(players).wrapping_mul(next) as i64);
     fields(m).mNextTile = next.wrapping_add(1);
     tile as *mut c_void
 }
@@ -264,10 +315,10 @@ pub extern "C" fn ee_gamecpp_map_create_tile(map: *mut c_void, height: f32) -> *
 pub extern "C" fn ee_gamecpp_map_reserve_tiles(map: *mut c_void, count: c_ulong) {
     let m = map as P;
     let words = words_per_tile(rts(m).mU19561C);
-    if hp(O::MpTileArray, m, &[]) != 0 {
+    if map_tile_array(m) != 0 {
         h(O::MpDeleteTiles, m, &[]);
         // SAFETY: the map's words (Rust's)
-        unsafe { ee_units_map_words_free(hp(O::MpWords, m, &[]) as *mut u32) };
+        unsafe { ee_units_map_words_free(map_words(m) as *mut u32) };
         h(O::MpSetTiles, m, &[0]);
         h(O::MpSetWords, m, &[0]);
     }
@@ -284,7 +335,7 @@ pub extern "C" fn ee_gamecpp_map_set_player_count(map: *mut c_void, players: c_u
     let m = map as P;
     let old = words_per_tile(rts(m).mU19561C);
     let new = words_per_tile(players);
-    let words = hp(O::MpWords, m, &[]) as *mut u32;
+    let words = map_words(m) as *mut u32;
     let tiles = tile_count(&dims(m));
     // SAFETY: the map's own words
     let w = unsafe { ee_units_map_words_resize(m as u64, words, tiles as u64, old as u64, new as u64) };
@@ -472,8 +523,8 @@ pub extern "C" fn ee_gamecpp_map_load_tile(
     let m = map as P;
     let next = fields(m).mNextTile;
     let players = rts(m).mU19561C;
-    let tile = hp(O::MpTileAt, m, &[next as i64]);
-    h(O::MpTileSetVisibility, m, &[pa(tile), words_per_tile(players).wrapping_mul(next) as i64]);
+    let tile = map_tile_at(m, next as i64);
+    tile_set_visibility(tile, m, words_per_tile(players).wrapping_mul(next) as i64);
     fields(m).mNextTile = next.wrapping_add(1);
     if major == 0 && minor <= 0x2e {
         let mut terrain: c_ulong = 0;
@@ -576,7 +627,7 @@ pub extern "C" fn ee_gamecpp_map_register_terrain_sets(map: *mut c_void) {
 pub extern "C" fn ee_gamecpp_map_save_tile(map: *mut c_void, file: *mut c_void, x: c_long, y: c_long) -> i32 {
     let m = map as P;
     let size = rts(m).mSize;
-    let tile = hp(O::MpRtsTile, m, &[size.wrapping_mul(y).wrapping_add(x) as i64]);
+    let tile = map_rts_tile(m, size.wrapping_mul(y).wrapping_add(x) as i64);
     if tile == 0 {
         return 0;
     }
@@ -746,9 +797,9 @@ pub extern "C" fn ee_gamecpp_map_sight_record(
     if m == 0 {
         return;
     }
-    let array = hp(O::MpTileArray, m, &[]) as u64;
+    let array = map_tile_array(m) as u64;
     let count = fields(m).mTileArrayCount as u64;
-    let size = h(O::MpTileSize, 0, &[]) as u64;
+    let size = lay().tile_stride;
     let index = tile_index(tile, array, count, size);
     let mesh = hp(O::MpMeshRust, m, &[]);
     // SAFETY: the caller's arguments, the world's map

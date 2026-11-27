@@ -19,9 +19,6 @@ public:
     static long CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>& inPlayers, unsigned long inPlayer,
                                 const UWideString& inGenerator, unsigned long inSeed, EEMap* inMap,
                                 GE3DPoint& outLocation);
-    // 0x286804 ("EERandomMap::Initialize: %s random map generator detected."): the generator list from
-    // Data\Random Map Scripts\*.rmv
-    static long Initialize(const FSFileSpec& inDirectory);
     // sRandomMapGenerators (0x565570: 0x38-byte entries of the name, the display name and the module) is ee_sim rmap
     // object.rs' generator list (ee/EERandomMapGenerators.h)
 };

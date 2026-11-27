@@ -21,7 +21,6 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEEnvironmentManager.h"
-#include "rust/game/gamecpp.h"   // the camera's keys (camera_io.rs)
 
 namespace {
 
@@ -82,7 +81,6 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_TRIGGER_EFFECTS: return (int64_t)ST(inP)->mEffects.size();
     case EE_SCENARIO_CAP_OBJECT_UNITS: return (int64_t)SO(inP)->mUnits.size();
     case EE_SCENARIO_CAP_OBJECT_UNIT: return (int64_t)(uint32_t)SO(inP)->mUnits[(size_t)inA];
-    case EE_SCENARIO_CAP_TIME_OF_DAY_RUNS: return gPhysics->mTimeOfDayRuns;
     case EE_SCENARIO_CAP_WEATHER: return gWorld.mEnvironmentManager != NULL && gWorld.mEnvironmentManager->mIsEnabled;
     case EE_SCENARIO_CAP_LAST_SUM: return (int64_t)gPhysics->mLastOutOfSynchChecksum;
     case EE_SCENARIO_CAP_SUM: return (int64_t)gPhysics->GetOutOfSynchChecksum(false, (unsigned long)inA);
@@ -92,7 +90,6 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_NEXT_UNIT: return P(static_cast<EEUnit*>(SU(inP)->mTileNode->mNext));
     case EE_SCENARIO_CAP_PLAYER_PENDING_GROUPS: return (int64_t)SP(inP)->GetNumPendingGroups();
     case EE_SCENARIO_CAP_PLAYER_RUNNING_GROUPS: return (int64_t)SP(inP)->GetNumRunningGroups();
-    case EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS: return (int64_t)ee_units_lists_len(SP(inP)->mLists, EE_UNITS_LISTS_PATROLS);
     case EE_SCENARIO_CAP_PLAYER_CIV_AVAILABLE: return (int64_t)SP(inP)->mCivilization.mAvailablePoints;
     case EE_SCENARIO_CAP_PLAYER_CIV_MAX: return (int64_t)SP(inP)->mCivilization.mMaxPoints;
     case EE_SCENARIO_CAP_PLAYER_COMPUTER: return P(SP(inP)->mComputerPlayer);
@@ -100,7 +97,6 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_COMPUTER_SEA: return (int64_t)SCP(inP)->mFavoriteSeaType;
     case EE_SCENARIO_CAP_COMPUTER_AIR: return (int64_t)SCP(inP)->mFavoriteAirType;
     case EE_SCENARIO_CAP_COMPUTER_DIFFICULTY: return (int64_t)SCP(inP)->mDifficulty;
-    case EE_SCENARIO_CAP_UNIT_TILE_NODE: return P(SU(inP)->mTileNode);
     case EE_SCENARIO_CAP_UNIT_NAME: return P((const char*)SU(inP)->GetStats()->mName);
     case EE_SCENARIO_CAP_UNIT_CHECKSUM: return (int64_t)SU(inP)->GetChecksum(3);
     case EE_SCENARIO_CAP_GOAL_KIND: return (int64_t)((EEUnitGoal*)inP)->mKind;
@@ -108,7 +104,6 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_QUEUE_GOAL: return P(SX(inP)->mGoalQueues[(size_t)inA].mGoals[(size_t)inB]);
     case EE_SCENARIO_CAP_BEHAVIORS: return (int64_t)EEUnitBehavior::sTable.size();
     case EE_SCENARIO_CAP_BEHAVIOR_AT: return P(EEUnitBehavior::sTable[(size_t)inA]);
-    case EE_SCENARIO_CAP_LOCATION: return P(&SX(inP)->mPhysicalModel.GetLocation().mMatrix);
     case EE_SCENARIO_CAP_LONGS: return (int64_t)SV(inP)->size();
     case EE_SCENARIO_CAP_LONGS_AT: return (int64_t)(*SV(inP))[(size_t)inA];
     }

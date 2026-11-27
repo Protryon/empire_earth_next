@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 #include "rust/sim/astar.h"
 
 /// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
@@ -4349,6 +4350,36 @@ constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_CREATED = 3003;
 /// `inRun->mObject->SetUnits(inRun->mCreatedUnits)`.
 constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_SET_UNITS = 3004;
 
+/// `ResetPath()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_RESET_PATH = 0;
+
+/// `ClearUnitA()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_CLEAR_A = 1;
+
+/// `ClearUnitB()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_CLEAR_B = 2;
+
+/// `mTurnYaw = 0.0f`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_TURN_RESET = 3;
+
+/// `SetMode(a)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_MODE = 4;
+
+/// `SetChanged()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_CHANGED = 5;
+
+/// `Update(0.0f)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_UPDATE = 6;
+
+/// `mMode`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_MODE = 7;
+
+/// `GetZoom()` (`mZoom`), its bits.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_ZOOM = 8;
+
+/// `SetZoom(a's float)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_ZOOM = 9;
+
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
 struct EeScenarioTiles;
 
@@ -4729,6 +4760,24 @@ struct EeScenarioListHost {
   EeScenarioManagerFields *manager;
   EeScenarioTimedQueue *timed;
   void *(*op)(void *ctx, uint32_t op, uint32_t list, size_t index, void *element, const char *text);
+};
+
+/// The run's values (`EESMEffectRun`'s second base): the calamity's point, the camera move's end and start, the task
+/// placement's point, the unit's transformation and the terrain's roll and pitch, the facing's transformation and
+/// point, the ground's transformation, Create Units' location and transformation.
+struct EeScenarioRunState {
+  EeGe3DPoint mPoint;
+  EeGe3DPoint mEnd;
+  EeGe3DPoint mStart;
+  EeGe2DPoint mPlace;
+  EeGeTransformation mTransformation;
+  float mRoll;
+  float mPitch;
+  EeGeTransformation mFace;
+  EeGe3DPoint mFacePoint;
+  EeGeTransformation mGround;
+  EeGe2DPoint mCreateLocation;
+  EeGeTransformation mCreateTransform;
 };
 
 /// SMTE's trigger state before (`EESMCaptureTriggerState`): on, fired, the condition start time.
@@ -5589,6 +5638,9 @@ void ee_scenario_object_changed(const EeScenarioListHost *host,
 /// # Safety
 /// `xy` must point to `2 * count` longs (or be anything when `count` is 0).
 uint64_t ee_scenario_tiles_hash(const long *xy, size_t count);
+
+/// A new run's values (`EESMEffectRun`'s constructor).
+EeScenarioRunState ee_scenario_run_state_new();
 
 /// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
 extern int64_t ee_scenariocpp_capture(uint32_t op, const void *p, int64_t a, int64_t b);

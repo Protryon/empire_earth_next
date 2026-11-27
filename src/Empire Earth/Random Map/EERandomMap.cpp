@@ -17,13 +17,11 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEGameOptions.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"                // gWorld.mUsingCarbon
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
-#include "rust/sim/rmap.h"
 
 
 // The world a random map is made in (ee_rmap_cpp's p)
@@ -175,45 +173,5 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
     return ee_rmap_create_random_map(&theWorld, inMap, (uint32_t)inPlayer, inGenerator, (uint32_t)inSeed, &outLocation.mX);
 }
 
-// The generator list is ee_sim rmap object.rs' (initialize_generators): the names by value
-unsigned long EERMGetNumberOfGenerators()
-{
-    return ee_rmap_generator_count();
-}
-
-UWideString EERMGetGeneratorDisplayName(unsigned long inIndex)
-{
-    return UWideString(ee_rmap_generator_text(inIndex, true));
-}
-
-// the display name of the generator with the given name, or the name itself when none matches
-UWideString EERMGetGeneratorDisplayName(const UWideString& inName)
-{
-    return UWideString(ee_rmap_generator_display(inName));
-}
-
-UWideString EERMGetGeneratorName(unsigned long inIndex)
-{
-    return UWideString(ee_rmap_generator_text(inIndex, false));
-}
-
-// a generator's index by name; 3 when there is none
-long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex)
-{
-    return ee_rmap_find_generator(inName, &outIndex);
-}
-
-// Lists the random-map generators: each .rmv script naming the linked generator (Default), with its string-table
-// display name, sorted; asserts that there is one (ee_sim rmap object.rs initialize_generators)
-long EERandomMap::Initialize(const FSFileSpec& inDirectory)
-{
-    ee_rmap_initialize_generators();
-    return 0;
-}
-
-// Drops the registered random-map generators (at Empire Earth.cpp's shutdown); returns 0
-// (cdecl; provisional name)
-long EEClearRandomMapGenerators()
-{
-    return ee_rmap_generators_clear();
-}
+// (the generator list, Initialize and the clear are ee_sim rmap object.rs': ee/EERandomMapGenerators.h's inlines,
+// gamecpp startup.rs by path)
