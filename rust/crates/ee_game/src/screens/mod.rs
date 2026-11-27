@@ -464,6 +464,7 @@ pub(crate) mod ui_message_calls;
 pub mod ui_objects;
 #[cfg(not(test))]
 mod ui_objects_ffi;
+pub(crate) mod uit_direct;
 #[cfg(not(test))]
 pub(crate) use ui_objects_ffi::post_if_ui;
 pub mod ui_thread;

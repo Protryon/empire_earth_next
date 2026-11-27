@@ -224,6 +224,8 @@ macro_rules! shim_call {
 use crate::screens::civ_direct;
 #[cfg(not(test))]
 use crate::screens::scr_direct;
+#[cfg(not(test))]
+use crate::screens::uit_direct;
 
 macro_rules! shims {
     ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $($sym:ident)::+ ; )*) => {
@@ -598,21 +600,21 @@ shims! {
     fn manager_change_rasterizer() = ee_screenscpp_manager_change_rasterizer;
     fn menu_width() -> u32 = ee_screenscpp_menu_width;
     fn menu_height() -> u32 = ee_screenscpp_menu_height;
-    fn manager_lock_for_copy() = ee_screenscpp_manager_lock_for_copy;
-    fn manager_unlock_for_copy() = ee_screenscpp_manager_unlock_for_copy;
-    fn manager_form_visible(form: u32) -> bool = ee_screenscpp_manager_form_visible;
+    fn manager_lock_for_copy() = uit_direct::manager_lock_for_copy;
+    fn manager_unlock_for_copy() = uit_direct::manager_unlock_for_copy;
+    fn manager_form_visible(form: u32) -> bool = uit_direct::manager_form_visible;
     fn control_set_display_mode(control: usize, mode: u32) = ee_screenscpp_control_set_display_mode;
     fn label_append_wide(label: usize, text: usize) = ee_screenscpp_label_append_wide;
     fn select_server_event_new() -> usize = ee_screenscpp_select_server_event_new;
-    fn manager_form_set_open_event(form: u32, event: usize) = ee_screenscpp_manager_form_set_open_event;
-    fn manager_form_set_close_event(form: u32, event: usize) = ee_screenscpp_manager_form_set_close_event;
+    fn manager_form_set_open_event(form: u32, event: usize) = uit_direct::manager_form_set_open_event;
+    fn manager_form_set_close_event(form: u32, event: usize) = uit_direct::manager_form_set_close_event;
     fn check_box_checked(check: usize) -> bool = ee_screenscpp_check_box_checked;
     fn won_password_from_edit(edit: usize) = ee_screenscpp_won_password_from_edit;
     fn won_password_clear() = ee_screenscpp_won_password_clear;
     fn multiplayer_string_from_edit(edit: usize) = ee_screenscpp_multiplayer_string_from_edit;
-    fn manager_pop_to(form: u32) = ee_screenscpp_manager_pop_to;
-    fn manager_push(form: u32) = ee_screenscpp_manager_push;
-    fn manager_form(form: u32) -> usize = ee_screenscpp_manager_form;
+    fn manager_pop_to(form: u32) = uit_direct::manager_pop_to;
+    fn manager_push(form: u32) = uit_direct::manager_push;
+    fn manager_form(form: u32) -> usize = uit_direct::manager_form;
     fn keyboard_refresh() = ee_screenscpp_keyboard_refresh;
     fn mouse_input_lock_enter() = ee_screenscpp_mouse_input_lock_enter;
     fn mouse_refresh() = ee_screenscpp_mouse_refresh;
@@ -899,9 +901,9 @@ shims! {
     fn um_load_database(manager: usize) = ee_screenscpp_um_load_database;
     fn um_add_like(manager: usize, control: usize) -> i64 = ee_screenscpp_um_add_like;
     fn um_move(moves: usize) -> i64 = ee_screenscpp_um_move;
-    fn um_clear_u138(manager: usize) = ee_screenscpp_um_clear_u138;
+    fn um_clear_u138(manager: usize) = uit_direct::um_clear_u138;
     fn um_save_form_set_activate(manager: usize, event: usize) = ee_screenscpp_um_save_form_set_activate;
-    fn um_set_in_editor(manager: usize) = ee_screenscpp_um_set_in_editor;
+    fn um_set_in_editor(manager: usize) = uit_direct::um_set_in_editor;
     fn um_clear_multiplayer() = ee_screenscpp_um_clear_multiplayer;
     fn comms_present() -> bool = ee_screenscpp_comms_present;
     fn comms_delete() = ee_screenscpp_comms_delete;
@@ -924,11 +926,11 @@ shims! {
     fn comms_start_loading() = ee_screenscpp_comms_start_loading;
     fn um_key_load(key: u32) = ee_screenscpp_um_key_load;
     fn um_key_just_pressed() -> bool = ee_screenscpp_um_key_just_pressed;
-    fn um_current_form(manager: usize) -> usize = ee_screenscpp_um_current_form;
-    fn form_keyboard_captured(form: usize) -> bool = ee_screenscpp_form_keyboard_captured;
+    fn um_current_form(manager: usize) -> usize = uit_direct::um_current_form;
+    fn form_keyboard_captured(form: usize) -> bool = uit_direct::form_keyboard_captured;
     fn loading_saved_game() -> bool = ee_screenscpp_loading_saved_game;
-    fn form_manager(form: usize) -> usize = ee_screenscpp_form_manager;
-    fn um_in_editor(manager: usize) -> bool = ee_screenscpp_um_in_editor;
+    fn form_manager(form: usize) -> usize = uit_direct::form_manager;
+    fn um_in_editor(manager: usize) -> bool = uit_direct::um_in_editor;
     fn game_screen_active() -> bool = ee_screenscpp_game_screen_active;
     fn um_editor_form(manager: usize) -> usize = ee_screenscpp_um_editor_form;
     fn um_main_game_form(manager: usize) -> usize = ee_screenscpp_um_main_game_form;
@@ -938,7 +940,7 @@ shims! {
     fn um_new_wns_cancel() -> usize = ee_screenscpp_um_new_wns_cancel;
     fn um_new_editor(manager: usize) = ee_screenscpp_um_new_editor;
     fn um_delete_editor(manager: usize) = ee_screenscpp_um_delete_editor;
-    fn um_clear_editor(manager: usize) = ee_screenscpp_um_clear_editor;
+    fn um_clear_editor(manager: usize) = uit_direct::um_clear_editor;
     fn um_form_data_id(data: usize) -> u32 = ee_screenscpp_um_form_data_id;
     fn um_base_create_form(manager: usize, data: usize) -> usize = ee_screenscpp_um_base_create_form;
     fn um_new_main_game(manager: usize, data: usize) -> usize = ee_screenscpp_um_new_main_game;
@@ -947,7 +949,7 @@ shims! {
     fn bt_attribute1(table: usize) -> bool = ee_screenscpp_bt_attribute1;
     fn bt_attribute2(table: usize) -> bool = ee_screenscpp_bt_attribute2;
     fn bt_attribute3(table: usize) -> bool = ee_screenscpp_bt_attribute3;
-    fn um_form_by_id(manager: usize, id: u32) -> usize = ee_screenscpp_um_form_by_id;
+    fn um_form_by_id(manager: usize, id: u32) -> usize = uit_direct::um_form_by_id;
     fn um_new_generic_background(manager: usize, table: usize, form: usize, flags: u32) -> usize = ee_screenscpp_um_new_generic_background;
     fn ct_form_id(table: usize) -> u32 = ee_screenscpp_ct_form_id;
     fn ct_type(table: usize) -> u32 = ee_screenscpp_ct_type;
@@ -1115,27 +1117,27 @@ shims! {
     fn sbt_main_group_reset() = ee_screenscpp_sbt_main_group_reset;
     fn sbt_object(button: usize) -> usize = ee_screenscpp_sbt_object;
     fn sbt_object_release(button: usize) = ee_screenscpp_sbt_object_release;
-    fn sbt_object_clear(button: usize) = ee_screenscpp_sbt_object_clear;
+    fn sbt_object_clear(button: usize) = uit_direct::sbt_object_clear;
     fn sbt_object_acquire(button: usize) = ee_screenscpp_sbt_object_acquire;
     fn sbt_set_object(button: usize, index: u32) = ee_screenscpp_sbt_set_object;
     fn sbt_set_node_object(button: usize, technology: i64) = ee_screenscpp_sbt_set_node_object;
     fn sbt_set_count(button: usize, count: i64) = ee_screenscpp_sbt_set_count;
     fn sbt_set_command(button: usize, command: bool) = ee_screenscpp_sbt_set_command;
-    fn sbt_set_button(button: usize, index: u32) = ee_screenscpp_sbt_set_button;
+    fn sbt_set_button(button: usize, index: u32) = uit_direct::sbt_set_button;
     fn sbt_set_technology(button: usize, technology: i64) = ee_screenscpp_sbt_set_technology;
     fn sbt_set_unit_type(button: usize, kind: u32) = ee_screenscpp_sbt_set_unit_type;
-    fn sbt_set_unit_id(button: usize, id: u32) = ee_screenscpp_sbt_set_unit_id;
+    fn sbt_set_unit_id(button: usize, id: u32) = uit_direct::sbt_set_unit_id;
     fn sbt_icon_dereference(button: usize) = ee_screenscpp_sbt_icon_dereference;
     fn sbt_queue_delete(button: usize) = ee_screenscpp_sbt_queue_delete;
     fn sbt_dither_dereference(button: usize) = ee_screenscpp_sbt_dither_dereference;
-    fn sbt_draw_icon(button: usize) -> bool = ee_screenscpp_sbt_draw_icon;
+    fn sbt_draw_icon(button: usize) -> bool = uit_direct::sbt_draw_icon;
     fn sbt_icon_white(button: usize) = ee_screenscpp_sbt_icon_white;
     fn sbt_draw_icon_bitmap(button: usize) = ee_screenscpp_sbt_draw_icon_bitmap;
-    fn sbt_available(button: usize) -> bool = ee_screenscpp_sbt_available;
+    fn sbt_available(button: usize) -> bool = uit_direct::sbt_available;
     fn sbt_dither_at_drawn(button: usize) = ee_screenscpp_sbt_dither_at_drawn;
     fn sbt_draw_dither(button: usize) = ee_screenscpp_sbt_draw_dither;
     fn sbt_base_draw_polygons(button: usize) -> i64 = ee_screenscpp_sbt_base_draw_polygons;
-    fn sbt_show_count(button: usize) -> bool = ee_screenscpp_sbt_show_count;
+    fn sbt_show_count(button: usize) -> bool = uit_direct::sbt_show_count;
     fn sbt_draw_count(button: usize) = ee_screenscpp_sbt_draw_count;
     fn sbt_base_draw_text(button: usize) -> i64 = ee_screenscpp_sbt_base_draw_text;
     fn sbt_pressed(button: usize) -> bool = ee_screenscpp_sbt_pressed;
@@ -1240,10 +1242,10 @@ shims! {
     fn mm_set_origin(map: usize, x: f32, y: f32) = ee_screenscpp_mm_set_origin;
     fn mm_set_lines(map: usize, draw: bool) = ee_screenscpp_mm_set_lines;
     fn mm_line_drawn(map: usize, line: u32) -> bool = ee_screenscpp_mm_line_drawn;
-    fn mm_set_show_flare(map: usize, show: bool) = ee_screenscpp_mm_set_show_flare;
-    fn mm_set_flare_blink(map: usize, blink: bool) = ee_screenscpp_mm_set_flare_blink;
-    fn mm_show_flare(map: usize) -> bool = ee_screenscpp_mm_show_flare;
-    fn mm_flare_blink(map: usize) -> bool = ee_screenscpp_mm_flare_blink;
+    fn mm_set_show_flare(map: usize, show: bool) = uit_direct::mm_set_show_flare;
+    fn mm_set_flare_blink(map: usize, blink: bool) = uit_direct::mm_set_flare_blink;
+    fn mm_show_flare(map: usize) -> bool = uit_direct::mm_show_flare;
+    fn mm_flare_blink(map: usize) -> bool = uit_direct::mm_flare_blink;
     fn mm_action(map: usize) -> usize = ee_screenscpp_mm_action;
     fn mm_action_dereference(map: usize) = ee_screenscpp_mm_action_dereference;
     fn mm_origin_x(map: usize) -> f32 = ee_screenscpp_mm_origin_x;
@@ -1272,7 +1274,7 @@ shims! {
     fn mm_bitmap_at_origin(bitmap: u32, map: usize) = ee_screenscpp_mm_bitmap_at_origin;
     fn mm_bitmap_scale(bitmap: u32, x: f32, y: f32) = ee_screenscpp_mm_bitmap_scale;
     fn mm_flare_color(blink: bool) = ee_screenscpp_mm_flare_color;
-    fn mm_redraw_all() = ee_screenscpp_mm_redraw_all;
+    fn mm_redraw_all() = uit_direct::mm_redraw_all;
     fn mm_flare_at(x: f32, y: f32) = ee_screenscpp_mm_flare_at;
     fn mm_line_start(map: usize, line: u32, x: f32, y: f32) = ee_screenscpp_mm_line_start;
     fn mm_line_end(map: usize, line: u32, x: f32, y: f32) = ee_screenscpp_mm_line_end;
@@ -1297,8 +1299,8 @@ shims! {
     fn mm_viewport_apply(map: usize) = ee_screenscpp_mm_viewport_apply;
     fn mm_mouse_x(map: usize) -> f32 = ee_screenscpp_mm_mouse_x;
     fn mm_mouse_y(map: usize) -> f32 = ee_screenscpp_mm_mouse_y;
-    fn mm_form_mouse_x(map: usize) -> f32 = ee_screenscpp_mm_form_mouse_x;
-    fn mm_form_mouse_y(map: usize) -> f32 = ee_screenscpp_mm_form_mouse_y;
+    fn mm_form_mouse_x(map: usize) -> f32 = uit_direct::mm_form_mouse_x;
+    fn mm_form_mouse_y(map: usize) -> f32 = uit_direct::mm_form_mouse_y;
     fn mm_bounds() -> usize = ee_screenscpp_mm_bounds;
     fn mm_modifiers() -> u32 = ee_screenscpp_mm_modifiers;
     fn mm_action_mode(map: usize, mode: i64) = ee_screenscpp_mm_action_mode;
@@ -1325,15 +1327,15 @@ shims! {
     fn mm_terrain_texture_set(minimap: usize) = ee_screenscpp_mm_terrain_texture_set;
     fn mm_world_texture_set(minimap: usize) = ee_screenscpp_mm_world_texture_set;
     // EEUIBGenericBackground.cpp's (backgrounds_calls.rs)
-    fn gb_set_opacity(bg: usize, opacity: f32) = ee_screenscpp_gb_set_opacity;
-    fn gb_set_flags(bg: usize, flags: u32) = ee_screenscpp_gb_set_flags;
+    fn gb_set_opacity(bg: usize, opacity: f32) = uit_direct::gb_set_opacity;
+    fn gb_set_flags(bg: usize, flags: u32) = uit_direct::gb_set_flags;
     fn gb_set_color(bg: usize, color: usize) = ee_screenscpp_gb_set_color;
-    fn gb_set_scale_x(bg: usize, scale: f32) = ee_screenscpp_gb_set_scale_x;
-    fn gb_set_scale_y(bg: usize, scale: f32) = ee_screenscpp_gb_set_scale_y;
-    fn gb_rasterizer(bg: usize) -> usize = ee_screenscpp_gb_rasterizer;
-    fn gb_screen(bg: usize) -> u32 = ee_screenscpp_gb_screen;
+    fn gb_set_scale_x(bg: usize, scale: f32) = uit_direct::gb_set_scale_x;
+    fn gb_set_scale_y(bg: usize, scale: f32) = uit_direct::gb_set_scale_y;
+    fn gb_rasterizer(bg: usize) -> usize = uit_direct::gb_rasterizer;
+    fn gb_screen(bg: usize) -> u32 = uit_direct::gb_screen;
     fn gb_color(bg: usize) -> usize = ee_screenscpp_gb_color;
-    fn gb_opacity(bg: usize) -> f32 = ee_screenscpp_gb_opacity;
+    fn gb_opacity(bg: usize) -> f32 = uit_direct::gb_opacity;
     fn gb_bitmap(bg: usize) -> usize = ee_screenscpp_gb_bitmap;
     fn gb_stretch(bitmap: usize, t0: f32, t1: f32, t2: f32, t3: f32, d0: f32, d1: f32, d2: f32, d3: f32, cell: u32, screen: u32) = ee_screenscpp_gb_stretch;
     fn gb_coordinates_load(bitmap: usize) = ee_screenscpp_gb_coordinates_load;
@@ -1344,8 +1346,8 @@ shims! {
     fn gb_base_open(bg: usize) = ee_screenscpp_gb_base_open;
     fn gb_window_width() -> f32 = ee_screenscpp_gb_window_width;
     fn gb_window_height() -> f32 = ee_screenscpp_gb_window_height;
-    fn gb_designed_width(bg: usize) -> f32 = ee_screenscpp_gb_designed_width;
-    fn gb_designed_height(bg: usize) -> f32 = ee_screenscpp_gb_designed_height;
+    fn gb_designed_width(bg: usize) -> f32 = uit_direct::gb_designed_width;
+    fn gb_designed_height(bg: usize) -> f32 = uit_direct::gb_designed_height;
     fn mb_file_clear() = ee_screenscpp_mb_file_clear;
     fn mb_image_clear() = ee_screenscpp_mb_image_clear;
     fn mb_secondary_surface() -> usize = ee_screenscpp_mb_secondary_surface;
@@ -1543,7 +1545,7 @@ shims! {
     fn gt_record_name(index: u32, out: EeScreensShimOut) = ee_screenscpp_gt_record_name;
     fn gt_map_type(options: usize, out: EeScreensShimOut) = ee_screenscpp_gt_map_type;
     // EEUIFMGStatusBar.cpp's (status_bar_calls.rs)
-    fn sba_set_pressed(bar: usize, pressed: bool) = ee_screenscpp_sba_set_pressed;
+    fn sba_set_pressed(bar: usize, pressed: bool) = uit_direct::sba_set_pressed;
     fn sba_border(bar: usize) -> f32 = ee_screenscpp_sba_border;
     fn sba_rect_left(rect: usize) -> f32 = ee_screenscpp_sba_rect_left;
     fn sba_rect_top(rect: usize) -> f32 = ee_screenscpp_sba_rect_top;
@@ -1577,7 +1579,7 @@ shims! {
     fn sba_count_at(bar: usize, x: f32, y: f32) = ee_screenscpp_sba_count_at;
     fn sba_count_white(bar: usize) = ee_screenscpp_sba_count_white;
     fn sba_count_transparent(bar: usize) = ee_screenscpp_sba_count_transparent;
-    fn sba_set_show_count(bar: usize, show: bool) = ee_screenscpp_sba_set_show_count;
+    fn sba_set_show_count(bar: usize, show: bool) = uit_direct::sba_set_show_count;
     fn sba_black(bar: usize) = ee_screenscpp_sba_black;
     fn sba_bg_opaque(bar: usize) = ee_screenscpp_sba_bg_opaque;
     fn sba_bar_delete(bar: usize) = ee_screenscpp_sba_bar_delete;
@@ -1590,10 +1592,10 @@ shims! {
     fn sba_bar_copy_data(bar: usize) -> i64 = ee_screenscpp_sba_bar_copy_data;
     fn sba_icon_copy_data(bar: usize) -> i64 = ee_screenscpp_sba_icon_copy_data;
     fn sba_value_copy_data(bar: usize, which: u32) -> i64 = ee_screenscpp_sba_value_copy_data;
-    fn sba_queued(bar: usize) -> i64 = ee_screenscpp_sba_queued;
+    fn sba_queued(bar: usize) -> i64 = uit_direct::sba_queued;
     fn sba_count_text(bar: usize, text: EeScreensShimText) = ee_screenscpp_sba_count_text;
-    fn sba_copy_enabled(bar: usize) = ee_screenscpp_sba_copy_enabled;
-    fn sba_copied_enabled(bar: usize) -> bool = ee_screenscpp_sba_copied_enabled;
+    fn sba_copy_enabled(bar: usize) = uit_direct::sba_copy_enabled;
+    fn sba_copied_enabled(bar: usize) -> bool = uit_direct::sba_copied_enabled;
     fn sba_button_draw_polygons(bar: usize) -> i64 = ee_screenscpp_sba_button_draw_polygons;
     fn sba_icon_draw_polygons(bar: usize) -> i64 = ee_screenscpp_sba_icon_draw_polygons;
     fn sba_bar_draw_polygons(bar: usize) -> i64 = ee_screenscpp_sba_bar_draw_polygons;
@@ -1607,7 +1609,7 @@ shims! {
     fn sba_icon_draw_text(bar: usize) -> i64 = ee_screenscpp_sba_icon_draw_text;
     fn sba_value_draw_text(bar: usize, which: u32) -> i64 = ee_screenscpp_sba_value_draw_text;
     fn sba_value2_has_text(bar: usize) -> bool = ee_screenscpp_sba_value2_has_text;
-    fn sba_show_count(bar: usize) -> bool = ee_screenscpp_sba_show_count;
+    fn sba_show_count(bar: usize) -> bool = uit_direct::sba_show_count;
     fn sba_draw_count(bar: usize, left: f32, top: f32, right: f32, bottom: f32) -> i64 = ee_screenscpp_sba_draw_count;
     // EEUICCommandUnits.cpp's (command_units_calls.rs)
     fn cu_set_listener(cu: usize, listener: usize) = ee_screenscpp_cu_set_listener;
@@ -2062,7 +2064,7 @@ shims! {
     fn sh_post_select_tab(tab: u8, page: i32) = ee_screenscpp_sh_post_select_tab;
     fn sh_select_tab(control: usize, tab: u8, page: i32) = ee_screenscpp_sh_select_tab;
     fn sh_list_current(control: usize, selection: EeScreensShimULongOut) -> i64 = ee_screenscpp_sh_list_current;
-    fn sh_form_control(control: usize, id: i64) -> usize = ee_screenscpp_sh_form_control;
+    fn sh_form_control(control: usize, id: i64) -> usize = uit_direct::sh_form_control;
     fn sh_is_radio(control: usize) -> bool = ee_screenscpp_sh_is_radio;
     fn sh_radio_checked(control: usize) -> bool = ee_screenscpp_sh_radio_checked;
     fn sh_check_checked(control: usize) -> bool = ee_screenscpp_sh_check_checked;
@@ -2544,13 +2546,13 @@ shims! {
     fn pt_button_acquire(p: usize) = ee_screenscpp_pt_button_acquire;
     fn pt_face_texture(p: usize) = ee_screenscpp_pt_face_texture;
     fn pt_face_bitmap(p: usize) = ee_screenscpp_pt_face_bitmap;
-    fn pt_level(p: usize) -> u64 = ee_screenscpp_pt_level;
-    fn pt_first_bar(p: usize) -> bool = ee_screenscpp_pt_first_bar;
-    fn pt_second_bar(p: usize) -> bool = ee_screenscpp_pt_second_bar;
-    fn pt_set_level(p: usize, v: u64) = ee_screenscpp_pt_set_level;
-    fn pt_set_first_bar(p: usize, v: bool) = ee_screenscpp_pt_set_first_bar;
-    fn pt_set_second_bar(p: usize, v: bool) = ee_screenscpp_pt_set_second_bar;
-    fn pt_set_show_level(p: usize, v: bool) = ee_screenscpp_pt_set_show_level;
+    fn pt_level(p: usize) -> u64 = uit_direct::pt_level;
+    fn pt_first_bar(p: usize) -> bool = uit_direct::pt_first_bar;
+    fn pt_second_bar(p: usize) -> bool = uit_direct::pt_second_bar;
+    fn pt_set_level(p: usize, v: u64) = uit_direct::pt_set_level;
+    fn pt_set_first_bar(p: usize, v: bool) = uit_direct::pt_set_first_bar;
+    fn pt_set_second_bar(p: usize, v: bool) = uit_direct::pt_set_second_bar;
+    fn pt_set_show_level(p: usize, v: bool) = uit_direct::pt_set_show_level;
     fn pt_unit_complex(p: usize) -> usize = ee_screenscpp_pt_unit_complex;
     fn pt_researched(unit: usize) -> i64 = ee_screenscpp_pt_researched;
     fn pt_node(id: i64) -> usize = ee_screenscpp_pt_node;
@@ -2565,7 +2567,7 @@ shims! {
     fn pt_total_cost(unit: usize) -> i64 = ee_screenscpp_pt_total_cost;
     fn pt_points_max() -> i64 = ee_screenscpp_pt_points_max;
     fn pt_text(p: usize, text: EeScreensShimText) = ee_screenscpp_pt_text;
-    fn pt_update_help(p: usize) = ee_screenscpp_pt_update_help;
+    fn pt_update_help(p: usize) = uit_direct::pt_update_help;
     fn pt_contains(p: usize, left: f32, top: f32, right: f32, bottom: f32) -> bool = ee_screenscpp_pt_contains;
     fn pt_unit_building(p: usize) -> bool = ee_screenscpp_pt_unit_building;
     fn pt_strings_clear() = ee_screenscpp_pt_strings_clear;
@@ -3032,7 +3034,7 @@ shims! {
     fn upb_set_disabled(button: usize, value: bool) = ee_screenscpp_upb_set_disabled;
     fn upb_disabled(button: usize) -> bool = ee_screenscpp_upb_disabled;
     fn upb_base_button_down(button: usize) = ee_screenscpp_upb_base_button_down;
-    fn upb_update_help(button: usize) = ee_screenscpp_upb_update_help;
+    fn upb_update_help(button: usize) = uit_direct::upb_update_help;
     fn upb_base_copy_data(button: usize) -> i64 = ee_screenscpp_upb_base_copy_data;
     fn upb_cost_label(button: usize) -> usize = ee_screenscpp_upb_cost_label;
     fn upb_label_dirty_rect(button: usize, label: usize) = ee_screenscpp_upb_label_dirty_rect;
@@ -3116,17 +3118,17 @@ shims! {
     fn att_border(attr: usize) -> u32 = ee_screenscpp_att_border;
     fn att_text_set_location(attr: usize, x: f32, y: f32) = ee_screenscpp_att_text_set_location;
     fn att_base_copy_data(attr: usize) -> i64 = ee_screenscpp_att_base_copy_data;
-    fn att_queued(attr: usize) -> i64 = ee_screenscpp_att_queued;
+    fn att_queued(attr: usize) -> i64 = uit_direct::att_queued;
     fn att_level_text(attr: usize, text: EeScreensShimText) = ee_screenscpp_att_level_text;
-    fn att_set_show(attr: usize, show: bool) = ee_screenscpp_att_set_show;
-    fn att_show(attr: usize) -> bool = ee_screenscpp_att_show;
+    fn att_set_show(attr: usize, show: bool) = uit_direct::att_set_show;
+    fn att_show(attr: usize) -> bool = uit_direct::att_show;
     fn att_text_x(attr: usize) -> f32 = ee_screenscpp_att_text_x;
     fn att_text_y(attr: usize) -> f32 = ee_screenscpp_att_text_y;
     fn att_height(attr: usize) -> u32 = ee_screenscpp_att_height;
     fn att_width(attr: usize) -> u32 = ee_screenscpp_att_width;
     fn att_base_draw_text(attr: usize) -> i64 = ee_screenscpp_att_base_draw_text;
     fn att_draw_level(attr: usize, left: f32, top: f32, right: f32, bottom: f32) -> i64 = ee_screenscpp_att_draw_level;
-    fn sbm_is_command(button: usize) -> bool = ee_screenscpp_sbm_is_command;
+    fn sbm_is_command(button: usize) -> bool = uit_direct::sbm_is_command;
     fn sbm_capture_mouse(button: usize) = ee_screenscpp_sbm_capture_mouse;
     fn sbm_base_button_down(button: usize) = ee_screenscpp_sbm_base_button_down;
     fn sbm_state(button: usize) -> u32 = ee_screenscpp_sbm_state;

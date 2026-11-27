@@ -18873,6 +18873,8 @@ bool ee_screens_sci_has_media(size_t m);
 /// `EEUISCIFormManager::SetBlinking`.
 void ee_screens_sci_set_blinking(bool blinking);
 
+extern ptrdiff_t ee_screenscpp_rec_offset(uint32_t kind);
+
 /// `EEUIFMGStatusBar`'s constructor's body (`rect` the `GERectangle*`, `form` the `UIForm*`).
 void ee_screens_sba_construct(size_t bar, size_t rect, size_t form, bool editor, bool large_icon);
 
