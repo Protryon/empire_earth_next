@@ -331,9 +331,10 @@ return {
     plan_lean_air = 50, plan_lean_navy = 50, plan_lean_anti_air = 50,
     plan_lean_pressure = 50, plan_lean_defences = 50, plan_lean_spread = 50,
     -- [persona.c] the persona (traits + leanings); the leanings only change play when persona_style is on
-    persona = "balanced",           -- an id from personas.lua ("balanced", "aggressive", "defensive", "tall",
+    persona = "random",             -- an id from personas.lua ("balanced", "aggressive", "defensive", "tall",
                                     -- "wide", "naval") or from the mod's own personalities ("baumeister",
-                                    -- "eroberer", "fuchs", "haendler", "hitzkopf", "ritter"), or "random"
+                                    -- "eroberer", "fuchs", "haendler", "hitzkopf", "ritter"), or "random" (the default:
+                                    -- each AI a different one, dealt from its player id and the map)
     persona_style = false,          -- upstream [ai_base] ai_style (default off): personalities only talk/negotiate;
                                     -- here, off keeps the leanings neutral (50) and the plan's play as before
     stations = false,               -- the switch; upstream runs it while [ai_base] game_ai = 0 (off as shipped)

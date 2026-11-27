@@ -643,7 +643,8 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 personality's plain line, not the situation-specific one), the {placeholders} (stripped, so a line
                 can read bare), the talk trait and the other situations, title/civilization/colour (engine-side),
                 style and priorities (the experimental ai_style has no port), the mod/computer.eeai layer, and
-                upstream's per-game assignment without repeats (M.pick stays the port's deterministic pick).
+                upstream's colour-matched assignment (M.pick deals by player id and map size, no repeats in a game,
+                through voice.lua's greeting line at the start).
   returns.c     PORTED -> returns.lua (port forward 7a17182; strategy_plans, off until the consumers are wired).
                 Ported: 8 kinds, rt_kind classification, died-event tracking (killer/dead/value), per-kind ring
                 with RT_HALF decay, field refresh, worth/worth_of clamped 0.2..2.0 with prior. Deviations: memory

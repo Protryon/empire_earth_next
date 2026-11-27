@@ -206,10 +206,20 @@ function M.pick(memory, view)
     end
     local id = S.persona or "balanced"
     if id == "random" then
-        local r = 0
-        if view ~= nil and view.time ~= nil then
-            r = (view.time + (memory.me or 0) * 7919) % #M.ORDER
+        -- per AI and per map, without repeats: the player id deals the order (5 is coprime with the list's length),
+        -- the map's size shifts the deal so a new map deals anew
+        local me = 0
+        if ai ~= nil and ai.me ~= nil then
+            me = ai.me() or 0
         end
+        local off = 0
+        if ai ~= nil and ai.map ~= nil then
+            local m = ai.map()
+            if m ~= nil then
+                off = ((m.width or 0) * 7 + (m.height or 0) * 3) % #M.ORDER
+            end
+        end
+        local r = (me * 5 + off) % #M.ORDER
         id = M.ORDER[r + 1]
     end
     if M.PERSONAS[id] == nil then
@@ -247,6 +257,11 @@ end
 function M.step(memory, view)
     memory.persona = memory.persona or {}
     local id = M.pick(memory, view)
+    if not memory.persona.logged then
+        memory.persona.logged = true
+        local me = (ai ~= nil and ai.me ~= nil) and (ai.me() or 0) or 0
+        print(string.format("persona p%d %s (%s)", me, id, M.get(id).name or id))
+    end
     memory.persona = memory.persona or {}
     memory.persona.trait = M.traits(memory, view)
     if S.persona_style then

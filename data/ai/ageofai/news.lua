@@ -12,11 +12,15 @@ local M = {}
 local EVERY = 60000
 
 function M.step(view, memory)
+    memory.news = memory.news or {held = nil, t = -1000000}
+    local n = memory.news
+    if not n.greeted then
+        n.greeted = true
+        VC.say(memory, "greeting")
+    end
     if S.news == false or S.ai_lines == false then
         return
     end
-    memory.news = memory.news or {held = nil, t = -1000000}
-    local n = memory.news
     local held = 0
     for i = 1, TV.count() do
         local info = TV.info(i)
