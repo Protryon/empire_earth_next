@@ -864,11 +864,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::SetPublicAddress: LobbySetPublicAddress(FW(a)->AddrOf(EE_WON_FWOP_PUBLIC_ADDR)); return 0;
     case O::HasFirewallSocket: return aLogic->mSlot[kInitFirewallSocket].get() != NULL;
     case O::DnsOpNew: return Held(NewDnsTestOp(std::string(reinterpret_cast<const char*>(a), (size_t)b)));
-    case O::RunTrackedDns: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::InitDns), 0); return 0;
-    case O::RunTrackedDocument: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::InitDocument), 0); return 0;
-    case O::RunTrackedDirectory: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::InitDirectory), 0); return 0;
-    case O::RunTrackedVersion: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::InitVersion), 0); return 0;
-    case O::RunTrackedFirewall: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new ShellCompletion(aLogic, EeWonLogicShellDone::InitFirewall), 0); return 0;
     case O::HttpDocNew: return Held(RustServerOp::NewHttpDocument(std::string(reinterpret_cast<const char*>(b), (size_t)c), (int)a));
     case O::HttpDocSetConfig: R(a)->SetBytes(EE_WON_HTTPDOC_CONFIG, std::string(reinterpret_cast<const char*>(b), (size_t)c)); return 0;
     case O::HttpDocSetSession: R(a)->Set(EE_WON_HTTPDOC_SESSION, aLogic->Slot<HTTPSession>(kInitSession)); return 0;

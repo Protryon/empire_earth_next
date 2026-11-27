@@ -652,7 +652,11 @@ impl EeWonLogic {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
-        let out = |o: Op, a: isize, b: isize, c: isize, d: isize| host_call(self.host, self.obj, o, a, b, c, d);
+        // the compositions' calls out reach the shell's runs too (in the game; the host's otherwise)
+        let out = |o: Op, a: isize, b: isize, c: isize, d: isize| {
+            crate::logicshell::logic_op(self.obj, o, a, b)
+                .unwrap_or_else(|| host_call(self.host, self.obj, o, a, b, c, d))
+        };
         if let Some(r) = crate::logicshell::logic_op(self.obj, op, a, b) {
             return r;
         }

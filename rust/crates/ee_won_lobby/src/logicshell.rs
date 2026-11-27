@@ -512,11 +512,15 @@ pub(crate) fn route_op(
 }
 
 /// PingLogic's host cases of its completions, runs, receive and tracker (PingLogic.cpp's until R6 WON lobby and
-/// network round 40), answered here in the game (`None`: the host's).
+/// network round 40) and InitLogic's tracked runs, answered here in the game (`None`: the host's).
 pub(crate) fn logic_op(logic: *mut c_void, op: crate::logics::EeWonLogicOp, a: isize, b: isize) -> Option<isize> {
     use crate::logics::EeWonLogicOp as O;
     use EeWonLogicShellDone as D;
     shell_cpp()?;
+    let run = |done: D| {
+        run_op(logic, a, Some((done, 0)), true, 0);
+        0
+    };
     let r = match op {
         // `((UDPManager*)a)->SetDefaultCompletion(new ShellCompletion(logic, PingRecv))`
         O::SetDefaultRecv => {
@@ -528,6 +532,12 @@ pub(crate) fn logic_op(logic: *mut c_void, op: crate::logics::EeWonLogicOp, a: i
             run_op(logic, a, Some((D::PingDone, 0)), true, b as u32);
             0
         }
+        // InitLogic's `aLogic->RunTrackedOp((AsyncOp*)a, new ShellCompletion(aLogic, Init...), 0)`
+        O::RunTrackedDns => run(D::InitDns),
+        O::RunTrackedDocument => run(D::InitDocument),
+        O::RunTrackedDirectory => run(D::InitDirectory),
+        O::RunTrackedVersion => run(D::InitVersion),
+        O::RunTrackedFirewall => run(D::InitFirewall),
         // `((UDPManagerRecvOp*)a)->GetMsg()`: its data (NULL for none), its length in `*(size_t*)b`
         O::RecvMsg => {
             let bytes = net::buffer_bytes(net::udp_recv_msg(a as *mut c_void));
