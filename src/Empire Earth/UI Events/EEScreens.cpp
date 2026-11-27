@@ -5,6 +5,7 @@
 // a section here, headed by its path and keeping its comment. EEScreenEvent.cpp, the screen event class and its
 // factory, stays a leaf unit of its own. The includes are one list.
 #include <windows.h>
+#include <list>   // WONRouting.h's std::list (MSVC's headers reach it, libstdc++'s do not: a POSIX census found it)
 #include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureManager.h"
