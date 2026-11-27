@@ -78,7 +78,7 @@ eemodel/storegate.py, xbuild.py tcptest, storegate/fakes.h) and tests (net, inpu
   calls (FSMemoryFile overrides them).
 - Sound Engine.cpp's ee_soundcpp_* and NESynchronousServer's SimMode: their fake hosts are goldens (golden_objects.rs,
   ne_server_test), so a direct call would re-record them.
-- include/dx7 (not counted): DX7Rasterizer.h is an include list EERenderObject.cpp still uses.
+- include/dx7 (not counted): deleted in LLE/UI round 3 (EERenderObject.cpp includes the LLE headers it uses).
 
 ### Pass 2 (fork A2: branch `rust-lleui2-c`, 2026-11-26)
 
@@ -468,3 +468,17 @@ every one-statement case of the cbindgen enums' host switches counts as logic: a
 the round's base (a variant that accepts `::` measured 5,812 in-scope logic lines against 6,281).
 
 Round 9's numbers are the fixed script's (`case EeX::Y:` one-statement cases count as shims).
+
+## LLE/UI round 3, fork A pass 2 (branch `rust-lleui3-a`, 2026-11-26)
+
+- include/dx7 deleted (DX7Rasterizer.h, an include list, and DX7Common.h); GERasterizer and GESurface were already
+  concrete (rounds 12, 13), so no virtual was left to fold.
+- Graphics Engine.cpp: the host cases over Rust state answered by the Rust objects (bmpobj.rs: a texture's and its
+  frame's sizes; modobj.rs: a screen's texture manager; texobj_tex.rs: a surface's Reference and logical shift, its
+  C++ members). A case that calls a surface's or screen's Rust object (`ee_dx7sf_*`, `ee_dx7sc_*`) stays C++: the
+  model store gate links its own memory surfaces and screen under those names (`/FORCE:MULTIPLE`), so a Rust call of
+  the Rust surface would read its memory surface as an `EeDx7Surface`. Moving those needs the store gate's surfaces
+  to become Rust surfaces first. storegate.py passes (25,140 lines).
+- The Network Engine: no virtual has one implementation (ExecuteRemovePlayer has two and is called through
+  `gCommunications`); the message ops (MsgType, MsgSlot, the slot setters) cannot be answered in Rust from the
+  header's fields, since tests/net hands the Rust client and server stand-in messages by world id.
