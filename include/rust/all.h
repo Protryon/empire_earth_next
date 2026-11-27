@@ -200,6 +200,7 @@
 #include "rust/won_gui/shell_won.h"
 #include "rust/won_gui/skinlay.h"
 #include "rust/won_gui/skinobj.h"
+#include "rust/won_gui/soundobj.h"
 #include "rust/won_gui/splitobj.h"
 #include "rust/won_gui/stretchobj.h"
 #include "rust/won_gui/surface.h"

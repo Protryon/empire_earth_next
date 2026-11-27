@@ -15,7 +15,6 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyAccountLogic.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "rust/won_lobby/flow.h"
 #include "rust/won_lobby/logics.h"
 #include "rust/won_net/hostop.h"
@@ -104,9 +103,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     // the three controls the login screen disables while it initialises
     case O::EnableLogin: reinterpret_cast<Container*>(a)->EnableControlsById(ControlIdSet{200001, 200002, 200003}, b != 0); return 0;
     case O::LobbyMusic: return LobbyGetLobbyMusic();
-    case O::MusicSetLooping: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->SetLooping(true); return 0;
-    case O::MusicPlay: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Play(); return 0;
-    case O::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
     case O::RoomDirServersGet: return (intptr_t)LobbyGetRoomDirServers();
     case O::RememberHostAddress: IPAddr().SetRememberHostString(true); return 0;
     case O::DirServersRemoveAll: LobbyGetDirServers()->RemoveAllAddresses(); return 0;

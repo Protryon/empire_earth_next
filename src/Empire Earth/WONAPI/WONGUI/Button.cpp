@@ -13,7 +13,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/EELobbySound.h"
+#include "rust/won_gui/soundobj.h" // the lobby's sounds
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/btnobj.h"
@@ -51,7 +51,7 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::BtnHandleActivate: return t->HandleActivate() ? 1 : 0;
     case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
     case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;
-    case Op::BtnPlayClick: t->mClickSound->Play(); return 0;
+    case Op::BtnPlayClick: ee_won_sound_call((EeWonSound*)t->mClickSound.get(), EeWonSoundCall::Play, 0); return 0;
     default: return 0;
     }
 }

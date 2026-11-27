@@ -18,7 +18,6 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONStatus.h"
 #include "rust/won_lobby/lobbyhost.h"
 #include "rust/won_lobby/staging.h"
@@ -187,8 +186,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::SaveGlobalPrefs: LobbySaveGlobalPrefs(false);
         return 0;
     case EeWonLobbyOp::SaveUserPrefs: LobbySaveUserPrefs(false);
-        return 0;
-    case EeWonLobbyOp::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
         return 0;
     case EeWonLobbyOp::GameClearPlayers: g->ClearPlayers();
         return 0;

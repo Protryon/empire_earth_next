@@ -24,7 +24,6 @@
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "rust/won_lobby/netdisp.h"
 #include "rust/won_lobby/lobbyprv.h"
 namespace WONAPI {

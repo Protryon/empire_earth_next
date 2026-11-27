@@ -21,6 +21,8 @@ use ee_won_gui::guistrobj::{
 };
 
 use crate::lobbyctl::EeWonLobbyCtlOp as Op;
+use crate::resource::EeWonLobbyRes as R;
+use ee_won_gui::soundobj::EeWonSoundCall as SC;
 
 /// `offsetof(TextListItem, mText)` (LobbyNetCtrlHost.cpp asserts it): the item's text pointer, then `mColor`.
 pub const EE_WON_TEXT_ITEM_TEXT_AT: usize = 32;
@@ -277,6 +279,10 @@ unsafe impl Sync for FmtTexts {}
 static FMT_TEXTS: FmtTexts = FmtTexts([FMT[0].0.get().cast_const(), FMT[1].0.get().cast_const()]);
 /// EeColumn's text (`sEELobbyColumnText`).
 static COLUMN: Slot = Slot::new();
+/// `LOBBY_SOUND(row)->call(a)` (R6 WON GUI round 41: the sounds are soundobj.rs's).
+fn snd(row: crate::resource::EeWonLobbyRes, call: ee_won_gui::soundobj::EeWonSoundCall, a: isize) -> isize {
+    crate::eesound::res_sound(row, call, a)
+}
 
 /// The controls' text and event ops (lobbyctl.rs and rows.rs, in the game; `None`: the host's).
 pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
@@ -285,6 +291,11 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     }
     let r = match op {
         Op::ResText => res(a),
+        // the lobby music and the click and logon sounds
+        Op::MusicResume => snd(R::LobbyGlobal_LobbyMusic_Sound, SC::Resume, 0),
+        Op::MusicStop => snd(R::LobbyGlobal_LobbyMusic_Sound, SC::Stop, 0),
+        Op::ClickSoundMute => snd(R::LobbyGlobal_ButtonClick_Sound, SC::SetMuted, a),
+        Op::LogonSoundStop => snd(R::LobbyGlobal_SierraLogon_Sound, SC::Stop, 0),
         Op::TextFind => read(GRead::Find, a, b, 0, 0),
         Op::TextToInt => read(GRead::ToInt, a, 0, 0, 0),
         Op::TextCompareNoCase => read(GRead::CompareNoCase, a, b, 0, 0),
@@ -604,6 +615,9 @@ pub(crate) fn logic_op(op: crate::logics::EeWonLogicOp, a: isize, b: isize) -> O
     let slot = a as *mut *mut EeWonGstr;
     let r = match op {
         L::TextNew => gstring_new(if a >= 0 { res(a) } else { 0 }),
+        L::MusicSetLooping => snd(R::LobbyGlobal_LobbyMusic_Sound, SC::SetLooping, 1),
+        L::MusicPlay => snd(R::LobbyGlobal_LobbyMusic_Sound, SC::Play, 0),
+        L::MusicStop => snd(R::LobbyGlobal_LobbyMusic_Sound, SC::Stop, 0),
         L::TextAppendRes => {
             // SAFETY: a GUIString TextNew made
             unsafe { append(slot, res(b)) };
@@ -871,6 +885,7 @@ pub(crate) fn lobby_op(
     };
     let r = match op {
         L::EventComponent => ev(a)?.comp,
+        L::LogonSoundStop => is_game().then(|| snd(R::LobbyGlobal_SierraLogon_Sound, SC::Stop, 0))?,
         // `l->mDialog[kLanName]->InputText(0).length()`
         L::LanNameDialogLength => len(dialog_input(logic, 1, 0)?),
         L::LanDirectInputLength => len(dialog_input(logic, 0, 0)?),
