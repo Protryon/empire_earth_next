@@ -293,6 +293,35 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                     _ => s.class()?.unit_type() as i64,
                 });
             }
+            // the saved game's live state (save_versions.rs); town `a`'s hull (its EEAIArea's record: the point
+            // count, point b packed); unit `a`'s line of sight (its stats', the float's bits)
+            EE_UNITS_PLAYER_BODY_LIVE_STATE => {
+                return Some(i64::from(crate::save_versions::EESaveHasLiveState(b as c_ulong, c as c_ulong)))
+            }
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_HULL_COUNT
+            | crate::units::player_rest::EE_UNITS_PLAYER_BODY_HULL_POINT => {
+                let area = (a as usize + l.town_area as usize) as *const crate::astar::area::EeAStarAreaRecord;
+                let mut n = 0usize;
+                let points = crate::astar::area::ee_astar_area_hull_points(area, &mut n);
+                return Some(if op == crate::units::player_rest::EE_UNITS_PLAYER_BODY_HULL_COUNT {
+                    n as c_ulong as i64
+                } else {
+                    let pt = *points.add(b as c_long as usize);
+                    ((u64::from(pt.x as u32) << 32) | u64::from(pt.y as u32)) as i64
+                });
+            }
+            EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT => {
+                let t = crate::world::WorldRead::begin();
+                let s = crate::world::UnitView::of(&t, a)?.stats()?;
+                return Some((*s.fields().ptr()).mLineOfSight.to_bits() as i32 as i64);
+            }
+            // the unit sets (ee_sim app unit_sets.rs; EEUnitSetManager.h): set `a` holds type b, set c holds type b
+            EE_UNITS_PLAYER_BODY_SET_HAS => {
+                return Some(i64::from(crate::app::unit_sets::ee_unit_set_contains(a as usize as *const _, b as u32)))
+            }
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_SET_MANAGER_CONTAINS => {
+                return Some(i64::from(crate::app::unit_sets::ee_unit_sets_contains(c as c_ulong as usize, b as u32)))
+            }
             // the continent manager's: a town's or herd's serial and area, the continent of tile (b, c)
             crate::units::player_rest::EE_UNITS_PLAYER_BODY_TOWN_SERIAL => area_op(a, false, 0),
             crate::units::player_rest::EE_UNITS_PLAYER_BODY_TOWN_ADD_AREA => area_op(a, false, 1),
@@ -530,6 +559,46 @@ pub unsafe fn player(
                 return Some(UnitView::of(&t, a0 as u64)?.holder_handle() as i64);
             }
             EE_UNITS_PLAYER_X_WONDER_STARTED => return Some(0),
+            // the dead unit's statistic (player_rest.rs)
+            #[cfg(not(test))]
+            crate::units::player_units::EE_UNITS_PLAYER_DEAD_STATISTIC => {
+                return Some(crate::units::player_rest::game::ee_units_dead_unit_statistic(a0 as u64) as i64)
+            }
+            // set a[0] holds type a[1]; the healed units' set (a[1]: set a[0], else none)
+            crate::units::player_units::EE_UNITS_PLAYER_SET_CONTAINS => {
+                let set = crate::app::unit_sets::ee_unit_sets_get(a0 as c_ulong as usize);
+                return Some(i64::from(
+                    !set.is_null() && crate::app::unit_sets::ee_unit_set_contains(set, io.i[1] as c_ulong as u32),
+                ));
+            }
+            crate::units::player_units::EE_UNITS_PLAYER_HEALED_SET => {
+                let set = if io.i[1] != 0 { crate::app::unit_sets::ee_unit_sets_get(a0 as c_ulong as usize) } else { std::ptr::null() };
+                *slot(p, layout().player_healed_unit_set) = set as usize as u64;
+                return Some(0);
+            }
+            // the unit added to or removed from its town or herd (player_areas.rs)
+            #[cfg(not(test))]
+            crate::units::player_units::EE_UNITS_PLAYER_ADD_TO_TOWN
+            | crate::units::player_units::EE_UNITS_PLAYER_ADD_TO_HERD
+            | crate::units::player_units::EE_UNITS_PLAYER_REMOVE_FROM_TOWN
+            | crate::units::player_units::EE_UNITS_PLAYER_REMOVE_FROM_HERD => {
+                use crate::units::player_units as pu;
+                let refs = crate::units::player::EeUnitsPlayerRefs {
+                    player: pv,
+                    host: host.0,
+                    saved: saved(p),
+                    fields: fields(p),
+                    stats: host.1,
+                };
+                let what = match op {
+                    pu::EE_UNITS_PLAYER_ADD_TO_TOWN => 0,
+                    pu::EE_UNITS_PLAYER_ADD_TO_HERD => 1,
+                    pu::EE_UNITS_PLAYER_REMOVE_FROM_TOWN => 2,
+                    _ => 3,
+                };
+                let r = crate::units::player_areas::ee_units_player_areas(&refs, what, a0 as usize as *mut c_void);
+                return Some(if what < 2 { i64::from(r) } else { 0 });
+            }
             // the towns' and herds' bodies (ee_cp town_game.rs, herd_game.rs; EETown.h, EEHerd.h): a[0] 0 a town, 1 a
             // herd (the list), the area, the unit
             crate::units::player_areas::EE_UNITS_PLAYER_AREA_CAN_TAKE | crate::units::player_areas::EE_UNITS_PLAYER_AREA_ADD => {
@@ -752,7 +821,13 @@ pub unsafe fn tick(op: i32, p: u64, index: u32, io: &mut crate::units::player_sa
                     _ => return Some((*f).mState as i32),
                 }
             }
-            // the wonders' heal (the world table)
+            // the wonders' heal: unit io.i's type in the healed units' set; the world table's
+            EE_UNITS_PLAYER_TICK_X_HEALED => {
+                let set = *slot(p, layout().player_healed_unit_set) as usize as *const _;
+                let t = WorldRead::begin();
+                let unit_type = UnitView::of(&t, io.i as u64)?.class()?.unit_type();
+                return Some(i32::from(crate::app::unit_sets::ee_unit_set_contains(set, unit_type as u32)));
+            }
             EE_UNITS_PLAYER_TICK_X_HEAL_AMOUNT => io.i = world_long(W::kWorldWonderHealAmount as i64),
             EE_UNITS_PLAYER_TICK_X_HEAL_STEP => io.i = world_long(W::kWorldWonderHealEpochStep as i64),
             EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR => io.f = world_float(W::kWorldWonderHealEpochFactor as i64),
