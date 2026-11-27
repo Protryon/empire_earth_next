@@ -42,6 +42,7 @@
 #include "lle/USingleton.h"
 #include "lle/NEMessage.h"
 #include "ee/EmpireEarth.h"
+#include "ee/EEUserInterface.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
@@ -4615,6 +4616,7 @@ extern "C" int EECPNextLLMPoll(unsigned long long since, char* out, int cap);
 extern "C" unsigned long long EECPNextLLMSeq(void);
 
 // ai.say: a chat line as this computer player (the game's in-game chat; no effect in the headless simulation)
+extern "C" void EECPNextChatPush(int player, const char* text);   // the AI's chat inbox (EECPNextLLM.cpp)
 static int LuaSay(lua_State* L) {
     EECPUnitsCharge(L, kCostCall);
     EEComputerPlayer* me = EECPUnitsMe(L);
@@ -4623,8 +4625,6 @@ static int LuaSay(lua_State* L) {
         return 1;
     }
     // the answer is UTF-8; the game's chat is in its own codepage (the language the game runs in)
-    unsigned long savedChatType = me->mChatType;
-    me->mChatType = 0;   // "all" - so the line is shown to the local player regardless of its setting
     const char* utf8 = lua_tostring(L, 1);
     std::wstring wide;
     int wn = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
@@ -4640,12 +4640,14 @@ static int LuaSay(lua_State* L) {
             WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, &local[0], an, NULL, NULL);
         }
     }
-    UWideString text(!local.empty() ? local.c_str() : utf8);
-    EEMInGameChat* msg = new EEMInGameChat(text);
-    msg->SetOriginatingSlot(me->mSlot);
-    msg->Execute();
-    msg->Dereference();
-    me->mChatType = savedChatType;
+    const char* text = !local.empty() ? local.c_str() : utf8;
+    // the game's own chat line, as upstream's chat.c shows it: the log, the AI's inbox and the UI directly (the
+    // EEMInGameChat message carries chat-type and observer tests a computer player can fail)
+    EEGameLogChat(me->mPlayerID, text);
+    EECPNextChatPush(me->mPlayerID, text);
+    if (gUserInterface != NULL) {
+        gUserInterface->AddChatLogEntry(me->mColor, me->mName, UWideString(text), 15000, 0);
+    }
     lua_pushboolean(L, 1);
     return 1;
 }
