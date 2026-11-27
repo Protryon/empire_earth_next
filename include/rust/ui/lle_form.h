@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// `sizeof(UIDbDataForms)`: the forms file's record.
 constexpr static const size_t EE_UI_FORM_RECORD_SIZE = 268;

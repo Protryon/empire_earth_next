@@ -14,6 +14,8 @@ pub mod gate;
 pub mod media;
 pub mod msg;
 pub mod node;
+/// The records C++ classes derive from or embed (include/rust/data/records.h, declaring no function).
+pub mod records;
 pub mod rules;
 pub mod spec;
 pub mod tables;

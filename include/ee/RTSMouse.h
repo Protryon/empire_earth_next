@@ -5,6 +5,7 @@
 #ifndef EE_RTSMOUSE_H
 #define EE_RTSMOUSE_H
 
+#include "rust/game/records.h"
 #include "rust/game/rts.h"              // EeRtsMouseFields (RTSMouse' plain members)
 #include "rust/render/gfx.h"
 

@@ -6,6 +6,7 @@
 #ifndef LLE_TMPOLL_H
 #define LLE_TMPOLL_H
 
+#include "rust/base/records.h"
 #include "rust/base/time.h"
 
 class LLE_API TMPoll {

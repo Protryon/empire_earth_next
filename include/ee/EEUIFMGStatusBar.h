@@ -8,6 +8,7 @@
 
 #include "ee/EEUIBUpgrade.h"
 #include "lle/UITextLabel.h"
+#include "rust/game/records.h"
 
 class EEUIFMGStatusBar : public EEUIBUpgrade, public EeScreensStatusBarFields {
 public:

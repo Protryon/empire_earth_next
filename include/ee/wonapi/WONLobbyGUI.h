@@ -5,6 +5,7 @@
 #ifndef EE_WONAPI_WONLOBBYGUI_H
 #define EE_WONAPI_WONLOBBYGUI_H
 
+#include "rust/won_gui/records.h"
 #include "rust/won_net/ffi_net.h" // LobbyGetNetAddresses
 #include <exception>
 #include <deque>

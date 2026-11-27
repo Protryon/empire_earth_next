@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// UIBitmap's inward calls.
 enum class EeUiBitmapCall : uint32_t {
@@ -22,18 +22,6 @@ enum class EeUiBitmapCall : uint32_t {
   DrawText = 5,
   /// `SetBitmap(a)`: the old one released, `a` referenced (the original's: never NULL), the control dirty.
   SetBitmap = 6,
-};
-
-/// `UIBitmap`'s members (`include/lle/UIBitmap.h`), the C++ class's private base.
-struct EeUiBitmapFields {
-  /// The host of the calls out (its object is the record).
-  EeUiHostFn mBitmapHost;
-  /// The control's top left as of the last `CopyData` (x, y).
-  float mLocation[2];
-  /// The bitmap (`GEBitmap*`, referenced; NULL for none).
-  void *mBitmap;
-  /// The bitmap as of the last `CopyData` (referenced), drawn.
-  void *mCopiedBitmap;
 };
 
 extern "C" {

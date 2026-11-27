@@ -6,6 +6,7 @@
 #define EE_EEGAMEVARIANT_H
 
 #include "ee/EEDbList.h"
+#include "rust/data/records.h"
 #include "rust/sim/app.h"   // the unit sets
 
 // The record (EEGameVariantData) and its copy are Rust's: rust/crates/ee_data tables.rs (DbGameVariant).

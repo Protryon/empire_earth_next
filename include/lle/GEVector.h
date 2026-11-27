@@ -6,6 +6,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GEVector : public EeGeVector {   // the Rust record (mX, mY, mZ; rust/base/math.h)
 public:

@@ -6,9 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/buffer.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/ipobj.h"
+#include "rust/won_net/records.h"
 
 /// `RoutingGetUserStatusOp` (userstatus.rs): `ctx` an `EeWonUserStatus*`.
 constexpr static const int32_t EE_WON_UDP_BODY_USER_STATUS = 1;

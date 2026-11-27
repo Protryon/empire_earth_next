@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// `kDisplayModeHidden` / `kDisplayModeShown`.
 constexpr static const unsigned long HIDDEN = 0;

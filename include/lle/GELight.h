@@ -4,6 +4,7 @@
 #ifndef LLE_GELIGHT_H
 #define LLE_GELIGHT_H
 
+#include "rust/render/records.h"
 #include "rust/render/ge.h"
 
 class LLE_API GELight {                     // sizeof 0x74

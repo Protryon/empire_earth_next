@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include "rust/game/records.h"
 #include "rust/game/rts.h"            // EeRtsGraphicsFields (RTSGraphics' plain members)
 
 class FSFileSpec;

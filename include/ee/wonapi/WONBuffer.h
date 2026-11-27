@@ -9,6 +9,7 @@
 #include <string.h>
 #include <string>
 #include "ee/EEWonNet.h"
+#include "rust/won_net/records.h"
 #include "rust/won_net/buffer.h"
 #include "rust/won_net/ffi.h"
 namespace WONAPI {

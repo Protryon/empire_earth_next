@@ -9,6 +9,8 @@
 use std::ffi::c_char;
 
 // the RTS Engine's bodies over one-statement C++ shims (LLE round 8: src/RTS Engine)
+/// The records C++ classes derive from or embed (include/rust/game/records.h, declaring no function).
+pub mod records;
 pub mod rts;
 // the Low-Level Engine's bodies over one-statement C++ shims (LLE round 8)
 pub mod lle;

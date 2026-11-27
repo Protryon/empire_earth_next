@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_gui/imgfilter.h"
-#include "rust/won_gui/surface.h"
+#include "rust/won_gui/records.h"
 
 /// A 1-bit mask (`PlatNativeMask`: RawImage1's rows, MSB first, rows padded to 4 bytes); a set bit is a transparent
 /// pixel.

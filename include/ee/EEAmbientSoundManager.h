@@ -6,6 +6,7 @@
 #define EE_EEAMBIENTSOUNDMANAGER_H
 
 #include <vector>
+#include "rust/game/records.h"
 #include "rust/game/gamecpp.h"
 
 class EEAmbientSound;

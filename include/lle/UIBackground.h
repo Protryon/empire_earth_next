@@ -9,6 +9,7 @@
 #ifndef LLE_UIBACKGROUND_H
 #define LLE_UIBACKGROUND_H
 
+#include "rust/ui/records.h"
 #include "rust/ui/bgobj.h"
 #include "lle/UILayoutUtility.h"
 #include "lle/UIObjHost.h"

@@ -89,7 +89,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DkTileY: return ((EEUnit*)p)->GetTileY();
     case O::DkSetOrtho: gViewport.SetOrthographicRectangle(GERectangle(f[0], f[1], f[2], f[3]));
         break;
-    case O::DkSetWorldCamera: gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(CAM->mView));
+    case O::DkSetWorldCamera: gWorld.SetCameraTransformation(CAM->mView);   // a GETransformation (split.rs CPP_VALUES)
         break;
     case O::DkSetFieldOfView: ee_ge_viewport_set_field_of_view(&gViewport, f[0]);
         break;

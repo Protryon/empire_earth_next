@@ -3,6 +3,7 @@
 #ifndef LLE_GEQUATERNION_H
 #define LLE_GEQUATERNION_H
 #include "lle/GERust.h"
+#include "rust/base/records.h"
 
 class GEQuaternion : public EeGeQuaternion {   // the Rust record (mX, mY, mZ, mW; rust/base/math.h)
 public:

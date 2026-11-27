@@ -122,6 +122,37 @@ pub struct GeRectangle {
     pub top: f32,
 }
 
+/// `GEColor` (sizeof 0xc): red, green, blue. The C++ class keeps its own members; a record member of this type is
+/// declared as a `GEColor` (xtask split.rs `CPP_VALUES`, which asserts one size and alignment).
+/// cbindgen:field-names=[mRed, mGreen, mBlue]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct GeColor {
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+}
+
+/// `U2DPoint<long>` (x, y; `long` is 32-bit on Windows, 64-bit on LP64), declared as such in a records header.
+/// cbindgen:field-names=[mX, mY]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct U2DPointLong {
+    pub x: std::ffi::c_long,
+    pub y: std::ffi::c_long,
+}
+
+/// `U2DPoint<float>` (x, y), declared as such in a records header.
+/// cbindgen:field-names=[mX, mY]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct U2DPointFloat {
+    pub x: f32,
+    pub y: f32,
+}
+
+const _: () = assert!(core::mem::size_of::<GeColor>() == 0xc);
+const _: () = assert!(core::mem::size_of::<U2DPointFloat>() == 8);
 const _: () = assert!(core::mem::size_of::<Ge2DPoint>() == 8);
 const _: () = assert!(core::mem::size_of::<Ge3DPoint>() == 0xc);
 const _: () = assert!(core::mem::size_of::<GeVector>() == 0xc);

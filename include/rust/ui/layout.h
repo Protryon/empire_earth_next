@@ -33,16 +33,4 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
-};
-
 #endif  // EE_RUST_UI_LAYOUT_H

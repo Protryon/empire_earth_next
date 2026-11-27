@@ -10,7 +10,9 @@ struct EeGfxGraphicTags;
 
 #include <vector>
 #include "ee/EEMedia.h"
+#include "rust/data/records.h"
 #include "rust/data/media.h"
+#include "rust/data/tables.h"   // ee_data_graphic_object_default
 
 class GETexture;
 class GETransformation;

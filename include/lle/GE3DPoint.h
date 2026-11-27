@@ -5,6 +5,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GE3DPoint : public EeGe3DPoint {   // the Rust record (mX, mY, mZ; rust/base/math.h)
 public:

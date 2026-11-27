@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 #include "ee/EEAreaEffectTemplate.h"   // mTemplate's members (LoadMedia, UnloadMedia, IsInRange)
+#include "rust/sim/records.h"
 
 class EEComplexUnit;
 class EEUnit;

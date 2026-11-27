@@ -6,6 +6,7 @@
 // The rest of the model (friends, rooms, servers, the lists) is WONLobbyModel.h's.
 #ifndef EE_WONAPI_WONLOBBYMODELOBJ_H
 #define EE_WONAPI_WONLOBBYMODELOBJ_H
+#include "rust/won_lobby/records.h"
 #include "rust/won_lobby/modelobj.h"
 #include "rust/won_net/ipobj.h"
 // (rust/won_lobby/eegame.h and ee/wonapi/WONLobbyGuard.h: WONLobbyResource.h, at global scope)

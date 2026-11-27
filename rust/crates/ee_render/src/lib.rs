@@ -20,3 +20,5 @@ pub mod gfx;
 pub mod gx;
 /// The crate ee_openformats before the restructure.
 pub mod openformats;
+/// The records C++ classes derive from or embed (include/rust/render/records.h, declaring no function).
+pub mod records;

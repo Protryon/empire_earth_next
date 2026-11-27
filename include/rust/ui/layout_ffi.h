@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/ui/layout.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 extern "C" {
 

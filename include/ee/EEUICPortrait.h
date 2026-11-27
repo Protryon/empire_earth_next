@@ -9,6 +9,7 @@
 
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUIRustControl.h"
+#include "rust/game/records.h"
 
 class EEUnit;
 

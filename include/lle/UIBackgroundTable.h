@@ -9,6 +9,7 @@
 #ifndef LLE_UIBACKGROUNDTABLE_H
 #define LLE_UIBACKGROUNDTABLE_H
 
+#include "rust/ui/records.h"
 #include "rust/ui/bgtableobj.h"
 #include "rust/ui/ids.h"
 #include "lle/UILayoutUtility.h"

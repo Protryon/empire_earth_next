@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "rust/data/records.h"
 #include "rust/data/tables.h"
 #include "ee/EEMedia.h"
 

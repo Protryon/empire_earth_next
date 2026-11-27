@@ -8,6 +8,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GETransformation : public EeGeTransformation {   // the Rust record (mMatrix: row-major 4x4, the translation in
 public:                                                // column 3; rust/base/math.h)

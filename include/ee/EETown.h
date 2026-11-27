@@ -9,6 +9,7 @@
 #ifndef EE_EETOWN_H
 #define EE_EETOWN_H
 
+#include "rust/sim/records.h"
 #include "rust/sim/cp.h"             // EeTownFields
 #include "ee/EEAIArea.h"
 

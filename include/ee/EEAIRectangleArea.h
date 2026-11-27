@@ -4,6 +4,7 @@
 #ifndef EE_EEAIRECTANGLEAREA_H
 #define EE_EEAIRECTANGLEAREA_H
 #include "ee/EEAIArea.h"
+#include "rust/sim/records.h"
 
 // Port: the members are the Rust record EeAStarRectRecord (ee_sim::astar area_kinds.rs), the private base: +0x68 the
 // rectangle, +0x78 the scenario area, +0x7c/+0x80/+0x84 the tiles by continent category (EECPCombatManager 0x47306c

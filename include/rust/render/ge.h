@@ -6,9 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/render/geval.h"
-#include "rust/sim/world.h"
+#include "rust/base/records.h"
+#include "rust/render/records.h"
+#include "rust/sim/records.h"
 
 /// The glyph atlas textures' pixel format (`kPixelFormatA4R4G4B4`).
 constexpr static const unsigned long GE_FONT_ATLAS_FORMAT = 2;
@@ -955,27 +955,6 @@ struct EeGeTextOps {
   uint8_t *(*next_chars)(const uint8_t *text, size_t characters);
   int (*cp1252_byte_of)(uint32_t character);
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
-};
-
-/// `GELight`'s members in the C++'s order (sizeof 0x74).
-struct EeGeLight {
-  float color[3];
-  float computed_color[3];
-  float location[3];
-  float model_space_location[3];
-  float direction[3];
-  float model_space_direction[3];
-  float attenuation0;
-  float attenuation1;
-  float attenuation2;
-  float intensity;
-  float range;
-  float range_inverse;
-  float range_squared;
-  float model_space_range;
-  float model_space_range_inverse;
-  float model_space_range_squared;
-  unsigned long style;
 };
 
 /// One command as the executor reads it.

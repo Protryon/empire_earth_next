@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
-#include "rust/won_gui/winobj.h"
 
 /// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
 /// bubbled up from the component) is guisplit.rs's.
@@ -326,15 +325,6 @@ struct EeWonWmPopup {
   int32_t x;
   int32_t y;
   EeWonRect4 avoid;
-};
-
-/// A window event's record (the C++ `WindowEventBase::mRec`, R6 WON GUI round 38): the input record first (its kind
-/// the event's type; the rest an input event's), the window the event is for, and an input event's handler (the
-/// `EeWonWinCall` its original class's `Deliver` ran on the window; 0 for any other event, whose `Deliver` is C++).
-struct EeWonWmEventRec {
-  EeWonWinEvent ev;
-  ptrdiff_t window;
-  uint32_t handler;
 };
 
 extern "C" {

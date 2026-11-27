@@ -7,8 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/ui/listobj.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ shim's methods).
 enum class EeUiComboCall : uint32_t {

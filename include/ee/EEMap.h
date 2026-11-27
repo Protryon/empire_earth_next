@@ -10,6 +10,7 @@
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
 #include "ee/EESightCapture.h"       // TSGT (TEST ONLY): the sight functions' scope
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
 #include "lle/GETerrainMesh.h"

@@ -4,6 +4,7 @@
 #ifndef EE_EEUIFMGSTATUSBOX_H
 #define EE_EEUIFMGSTATUSBOX_H
 
+#include "rust/game/records.h"
 #include "rust/game/screens.h"   // EeScreensStatusBoxFields
 #include <stdint.h>
 

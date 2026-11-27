@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/records.h"
 
 /// `Graphics::SetPixel(a, b, g.GetStandardColor(c))`: a pixel in a standard colour.
 constexpr static const int32_t EE_WON_DRAW_SYS_PIXEL = 22;

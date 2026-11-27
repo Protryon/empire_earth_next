@@ -60,6 +60,7 @@
 #include "rust/sim/combat.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
+#include "rust/sim/world.h"
 
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 

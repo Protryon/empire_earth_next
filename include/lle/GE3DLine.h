@@ -4,6 +4,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GE3DLine : public EeGe3DLine {   // the Rust record (mStart, mDirection; rust/base/math.h)
 public:

@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ shim's methods). Rectangles and points travel in `f`.
 enum class EeUiFormCall : uint32_t {

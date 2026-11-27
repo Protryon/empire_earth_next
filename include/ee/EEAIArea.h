@@ -17,6 +17,7 @@
 
 #include <stddef.h>
 #include <vector>
+#include "rust/sim/records.h"
 #include "rust/sim/astar.h"         // EeAStarAreaRecord
 #include "ee/EEAIListView.h"
 #include "lle/U2DSparseArray.h"

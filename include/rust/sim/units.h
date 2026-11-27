@@ -6,10 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/data/tables.h"
+#include "rust/base/records.h"
+#include "rust/data/records.h"
 #include "rust/sim/astar.h"
-#include "rust/sim/world.h"
+#include "rust/sim/records.h"
 
 /// `EEUnitClass::ActionChanged` (every class's `HandleActionChanged`)
 constexpr static const int32_t EE_UNITS_ACTION_BASE = 1;
@@ -17155,23 +17155,6 @@ struct EeUnitsGhostWalls {
   float rotation;
 };
 
-/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object. The C++
-/// `class EEUnitGoal` derives from it and reads the members by their C++ names (units round 11).
-///
-struct EeUnitsGoalBase {
-  bool mIsActive;
-  uint8_t mKind;
-  /// `mAction` (the action the goal starts: `kActionIdle` when made)
-  unsigned long mAction;
-  unsigned long mStartTime;
-  unsigned long mCreationTime;
-  /// `mID`: the goal's number (`sGoalCounter`'s value when made)
-  unsigned long mID;
-  long mPathAttempts;
-  bool mB1C;
-  bool mB1D;
-};
-
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 struct EeUnitsGoalIo {
   int64_t i[8];
@@ -17219,99 +17202,6 @@ struct EeUnitsGroupIo {
   const void *list2;
   /// the list it fills (`ee_units_group_push`)
   void *out;
-};
-
-/// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
-struct EeUnitsActiveGroupFields {
-  /// the command's action (`kActionIdle` 5000 when made; the messages store a goal id)
-  long mAction;
-  /// per stat (the units' max velocity, acceleration, max angular velocity, angular acceleration) the mean, the
-  /// maximum and the minimum
-  float mSpeed;
-  float mMaxSpeed;
-  float mMinSpeed;
-  float mAcceleration;
-  float mMaxAcceleration;
-  float mMinAcceleration;
-  float mTurnSpeed;
-  float mMaxTurnSpeed;
-  float mMinTurnSpeed;
-  float mTurnAcceleration;
-  float mMaxTurnAcceleration;
-  float mMinTurnAcceleration;
-  /// 1 / the means (0 when not > 0)
-  float mInverseSpeed;
-  float mInverseAcceleration;
-  float mInverseTurnSpeed;
-  float mInverseTurnAcceleration;
-  /// the world table's group speed cap factor (the means are capped at the minimum times it)
-  float mCapFactor;
-  bool mIsFinished;
-  bool mIsQueued;
-  bool mMovesTogether;
-  bool mIsSpecialAttack;
-};
-
-/// The members of a group the C++ reads in place (the head of the Rust allocation; `EEGroup` derives from it).
-struct EeUnitsGroup {
-  /// the player (`EEPlayer*`, the constructor's)
-  void *mPlayer;
-  /// the formation (`EEFormation*`, referenced; `EEFormation::Create(0)` when made)
-  void *mFormation;
-  /// the units' classes' kind flags or'ed
-  long mKindFlags;
-  /// a selection's saved group (`EESelectedGroup::mSavedGroup`; its index while loading)
-  EeUnitsGroup *mSavedGroup;
-  /// a selection's last change (`TMGetTime()`)
-  long mChangeTime;
-  /// a selection asks to be sorted (`EESelectedGroup::mNeedsSort`)
-  bool mNeedsSort;
-  /// the kind (`EE_UNITS_GROUP_KIND_*`)
-  uint8_t mGroupKind;
-  /// a hot-key group's index (`EESavedGroup::mIndex`: 1..20, posted to the user interface)
-  long mIndex;
-  /// an active group's goal (`EEUnitGoal*`, owned)
-  void *mGoal;
-  /// an active group's plain record (`EEActiveGroup`'s action, speeds and flags)
-  EeUnitsActiveGroupFields mFields;
-};
-
-/// `EEPhysics`' plain members (ee/EEPhysics.h), in the class's order.
-struct EeUnitsPhysicsSaved {
-  unsigned long mCurrentTick;
-  float mF84;
-  float mTicksPerGameSecond;
-  float mTickSeconds;
-  float mTimeOfDayStep;
-  float mGameClock;
-  float mTickTime;
-  float mAreaEffectsClock;
-  float mShiftModeClock;
-  long mTickTimeMs;
-  long mTickStartTime;
-  long mPreviousTickStartTime;
-  long mTickRandom;
-  unsigned long mNumTicksDone;
-  unsigned long mTicksToProcess;
-  unsigned long mTickGapSum;
-  unsigned long mTickGapCount;
-  unsigned long mTickWorkSum;
-  unsigned long mTickWorkCount;
-  /// untouched by the constructor, its init and Load/Save
-  long mAutoSaveClock;
-  long mGameTime;
-  long mLD4;
-  long mAveragePhysicsUpdateTime;
-  long mAverageTimeBetweenPhysicsTicks;
-  bool mTimeOfDayRuns;
-  bool mGameStarted;
-  bool mBE2;
-  bool mCivTimerRuns;
-  bool mCivTimerFirstWarning;
-  bool mCivTimerSecondWarning;
-  bool mGameOver;
-  bool mBE7;
-  bool mResourceTimerPending;
 };
 
 /// One host call's values: the arguments in `i`/`f`, the answers back in them.
@@ -17838,42 +17728,6 @@ struct EeUnitsPlayerUnit {
   uint64_t container;
   long current_research;
   long build_queue;
-};
-
-/// `EEGhostUnit`'s plain members (after its vtable; its `mTransformation` follows the record).
-struct EeUnitsGhostFields {
-  /// the footprint's ground heights (Reset zeroes them)
-  float mHeights[144];
-  long mTileX;
-  long mTileY;
-  long mFrame;
-  /// 7 after Reset
-  long mAnimation;
-  class EEPlayer *mPlayer;
-  /// `gUnitClassTable[inUnitClass]`
-  class EEUnitClass *mUnitClass;
-  long mUnitSet;
-  /// per footprint tile: placeable (UpdateFootprint fills it with mCanPlace; Reset clears it)
-  bool mFootprint[12][12];
-  bool mCanPlace;
-  bool mNoMedia;
-  int16_t mU332;
-};
-
-/// `EEComplexDoppelganger`'s plain members (its `mTransformation`, the unit's location, follows the record).
-struct EeUnitsComplexDopFields {
-  class EEGraphicObject *mModel;
-  /// the unit's animation
-  unsigned long mAnimation;
-  /// the unit's model scale
-  float mScale;
-  /// the hit points, bit 31 the built flag
-  long mPackedHitPoints;
-  long mTileX;
-  long mTileY;
-  /// the unit's model frame
-  unsigned long mFrame;
-  bool mIsFoundation;
 };
 
 /// EEUnitUpdate.cpp's `EEUpdateContext` (units round 12: this record, rust/cbindgen.toml's rename): the class, the

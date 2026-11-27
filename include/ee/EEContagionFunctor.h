@@ -7,6 +7,7 @@
 #ifndef EE_EECONTAGIONFUNCTOR_H
 #define EE_EECONTAGIONFUNCTOR_H
 
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
 
 class EECalamity;

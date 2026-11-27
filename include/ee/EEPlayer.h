@@ -12,6 +12,7 @@
 #include "lle/GEColor.h"
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
+#include "rust/sim/records.h"
 #include "rust/sim/units.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
 #include "rust/game/rts.h"              // RTSPlayer's bodies (ee_game rts units.rs)
 #include "rust/game/tech_tree.h"        // the tech tree classes' bodies (ee_game tech_tree)

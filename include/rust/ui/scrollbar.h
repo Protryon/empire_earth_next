@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/records.h"
 #include "rust/ui/rect.h"
 
 /// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the

@@ -19,6 +19,9 @@
 #include "ee/EEHerd.h"
 #include "ee/EETown.h"
 #include "ee/EECPPlacement.h"
+#include "ee/EERecordBase.h"
+#include "rust/base/record_head.h"
+#include "rust/sim/world.h"
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
 #if defined(__clang__)
@@ -43,13 +46,6 @@ static_assert(sizeof(((EEHerd*)0)->mID) == 2, "a herd's id is an unsigned short"
 
 namespace {
 
-// where Base sits in a Derived object (a cast of a made-up address: nothing is read)
-template <class Derived, class Base> uint64_t BaseOffset()
-{
-    Derived* theObject = reinterpret_cast<Derived*>(static_cast<uintptr_t>(0x10000));
-    return reinterpret_cast<uintptr_t>(static_cast<Base*>(theObject)) - 0x10000;
-}
-
 void Fail(const char* inWhat)
 {
     fprintf(stderr, "EE-WORLD-LAYOUT: %s\n", inWhat);
@@ -61,11 +57,27 @@ void Fail(const char* inWhat)
 void EEWorldLayoutRegister()
 {
     // a handle is the first base's address: RTSUnit, RTSPlayer, RTSMap, RTSTile, RTSTUnitList at offset 0
-    if (BaseOffset<EEUnit, RTSUnit>() != 0 || BaseOffset<EEComplexUnit, RTSUnit>() != 0
-        || BaseOffset<EEPlayer, RTSPlayer>() != 0 || BaseOffset<EEMap, RTSMap>() != 0
-        || BaseOffset<EETile, RTSTile>() != 0 || BaseOffset<EETUnitList, RTSTUnitList>() != 0
-        || BaseOffset<EESelectedGroup, EEGroup>() != 0)
+    if (EERecordBaseOffset<EEUnit, RTSUnit>() != 0 || EERecordBaseOffset<EEComplexUnit, RTSUnit>() != 0
+        || EERecordBaseOffset<EEPlayer, RTSPlayer>() != 0 || EERecordBaseOffset<EEMap, RTSMap>() != 0
+        || EERecordBaseOffset<EETile, RTSTile>() != 0 || EERecordBaseOffset<EETUnitList, RTSTUnitList>() != 0
+        || EERecordBaseOffset<EESelectedGroup, EEGroup>() != 0)
         Fail("a first base is not at offset 0");
+    // the Rust heads (ee_sim world heads.rs): every record base one declares, as this compiler placed it
+    const EeRecordBase theBases[] = {
+        EE_RECORD_BASE(RTSUnit, EeUnitsRtsUnitFields),
+        EE_RECORD_BASE(EEUnitClass, EeUnitsUnitClassFields),
+        EE_RECORD_BASE(EEUnitClass, EeUnitsUnitClassLinks),
+        EE_RECORD_BASE(EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks),
+        EE_RECORD_BASE(EEUnitClassUpgrade, EeUnitsUnitClassUpgradeFields),
+        EE_RECORD_BASE(EEPlayer, EeUnitsRtsPlayerFields),
+        EE_RECORD_BASE(EEPlayer, EeUnitsPlayerSaved),
+        EE_RECORD_BASE(EEPlayer, EeUnitsPlayerFields),
+        EE_RECORD_BASE(RTSMap, EeUnitsRtsMapFields),
+        EE_RECORD_BASE(EETechTreeNode, EeTechNodeFields),
+        EE_RECORD_BASE(EETechTree, EeTechTreeFields),
+    };
+    if (!ee_world_record_bases_check(theBases, sizeof(theBases) / sizeof(theBases[0])))
+        Fail("a record base is not where its Rust head puts it (EE-RECORD-BASES above)");
     // the library's vector: its begin and end are its first two words (MSVC's _Myfirst, _Mylast; libc++'s __begin_,
     // __end_; libstdc++'s _M_start, _M_finish)
     std::vector<EEComplexUnit*> theProbe(2);
@@ -77,16 +89,16 @@ void EEWorldLayoutRegister()
 
     EeWorldLayout theLayout = {};
     theLayout.size = sizeof(EeWorldLayout);
-    theLayout.rts_unit_fields = BaseOffset<RTSUnit, EeUnitsRtsUnitFields>();
-    theLayout.unit_fields = BaseOffset<EEUnit, EeUnitsUnitFields>();
-    theLayout.complex_unit_fields = BaseOffset<EEComplexUnit, EeUnitsComplexUnitFields>();
-    theLayout.unit_class_fields = BaseOffset<EEUnitClass, EeUnitsUnitClassFields>();
-    theLayout.stats_fields = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeFields>();
-    theLayout.rts_player_fields = BaseOffset<EEPlayer, EeUnitsRtsPlayerFields>();
-    theLayout.player_saved = BaseOffset<EEPlayer, EeUnitsPlayerSaved>();
-    theLayout.player_fields = BaseOffset<EEPlayer, EeUnitsPlayerFields>();
-    theLayout.rts_map_fields = BaseOffset<EEMap, EeUnitsRtsMapFields>();
-    theLayout.map_fields = BaseOffset<EEMap, EeUnitsMapFields>();
+    theLayout.rts_unit_fields = EERecordBaseOffset<RTSUnit, EeUnitsRtsUnitFields>();
+    theLayout.unit_fields = EERecordBaseOffset<EEUnit, EeUnitsUnitFields>();
+    theLayout.complex_unit_fields = EERecordBaseOffset<EEComplexUnit, EeUnitsComplexUnitFields>();
+    theLayout.unit_class_fields = EERecordBaseOffset<EEUnitClass, EeUnitsUnitClassFields>();
+    theLayout.stats_fields = EERecordBaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeFields>();
+    theLayout.rts_player_fields = EERecordBaseOffset<EEPlayer, EeUnitsRtsPlayerFields>();
+    theLayout.player_saved = EERecordBaseOffset<EEPlayer, EeUnitsPlayerSaved>();
+    theLayout.player_fields = EERecordBaseOffset<EEPlayer, EeUnitsPlayerFields>();
+    theLayout.rts_map_fields = EERecordBaseOffset<EEMap, EeUnitsRtsMapFields>();
+    theLayout.map_fields = EERecordBaseOffset<EEMap, EeUnitsMapFields>();
     theLayout.unit_object_kind = offsetof(RTSUnit, mObjectKind);
     theLayout.unit_tile_node = offsetof(RTSUnit, mTileNode);
     theLayout.unit_next = offsetof(RTSUnit, mNext);
@@ -135,14 +147,14 @@ void EEWorldLayoutRegister()
     theLayout.player_viewed_unit = offsetof(EEPlayer, mViewedUnit);
     theLayout.player_selected_viewed_unit = offsetof(EEPlayer, mSelectedViewedUnit);
     theLayout.player_technologies = offsetof(EEPlayer, mTechnologies);   // lane A round 2 (tech_view.rs)
-    theLayout.tech_tree_fields = BaseOffset<EETechTree, EeTechTreeFields>();
-    theLayout.node_fields = BaseOffset<EETechTreeNode, EeTechNodeFields>();
+    theLayout.tech_tree_fields = EERecordBaseOffset<EETechTree, EeTechTreeFields>();
+    theLayout.node_fields = EERecordBaseOffset<EETechTreeNode, EeTechNodeFields>();
     theLayout.node_data = offsetof(EETechTreeNode, mData);
     theLayout.tech_host = (uint64_t)(uintptr_t)&EETechHost;
-    theLayout.cp_fields = BaseOffset<EEComputerPlayer, EeCpFields>();
-    theLayout.stats_links = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
+    theLayout.cp_fields = EERecordBaseOffset<EEComputerPlayer, EeCpFields>();
+    theLayout.stats_links = EERecordBaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
     theLayout.physics_pointer = (uint64_t)(uintptr_t)&gPhysics;   // the units' round 1 (the game time, the tick)
-    theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
+    theLayout.physics_saved = EERecordBaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
     // the units' saves (the units' state lane: unit_save_views.rs)
     const size_t theModelAt = offsetof(EEComplexUnit, mPhysicalModel);
     theLayout.complex_patrol_group = offsetof(EEComplexUnit, mPatrolGroup);
@@ -160,10 +172,10 @@ void EEWorldLayoutRegister()
     theLayout.complex_angular_velocity = offsetof(EEComplexUnit, mAngularVelocity);
     theLayout.complex_orientation = offsetof(EEComplexUnit, mOrientation);
     theLayout.herd_id = offsetof(EEHerd, mID);
-    theLayout.class_links = BaseOffset<EEUnitClass, EeUnitsUnitClassLinks>();
+    theLayout.class_links = EERecordBaseOffset<EEUnitClass, EeUnitsUnitClassLinks>();
     theLayout.active_group_fields = offsetof(EEActiveGroup, mFields);   // the group objects (group_obj.rs)
     theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
-    theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
+    theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - EERecordBaseOffset<EEComputerPlayer, EEPlayer>();
     theLayout.placement_town = offsetof(EECPPlacement, town);
     theLayout.placement_rust = offsetof(EECPPlacement, rust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
@@ -174,7 +186,7 @@ void EEWorldLayoutRegister()
     theLayout.player_healed_unit_set = offsetof(EEPlayer, mHealedUnitSet);
     theLayout.player_air_traffic = offsetof(EEPlayer, mAirTraffic);
     theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
-    theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
+    theLayout.town_fields = EERecordBaseOffset<EETown, EeTownFields>();
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

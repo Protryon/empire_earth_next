@@ -5,13 +5,58 @@
 //! found in the crates' sources. A name defined in more than one crate goes to the crate whose definition matches the
 //! item (the doc comment, then the field and variant names, then the numbers); identical ones (bare `OK = 0`
 //! constants) and the items of `ee_rust` itself go to the common header. A header includes the headers of the crates
-//! whose items its items name. The text of every item is cbindgen's, unchanged.
+//! whose items its items name. The text of every item is cbindgen's, unchanged, but for the C++ value classes in the
+//! records headers.
+//!
+//! Records headers (`rust/<crate>/records.h`): the records a crate's `records.rs` lists (`pub use` of their
+//! definitions) or defines, and every type they name, go to their crate's records header instead of their module's.
+//! It declares no function and includes only other records headers (and the C++ value classes' headers,
+//! [`CPP_VALUES`]), so a C++ class header that needs only its records is not rebuilt by a change to a function.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 
 /// The header with the items of `ee_rust` itself and the names no one crate owns.
 pub const COMMON: &str = "common";
+/// The stem of a crate's records header (`sim/records`): the records its `records.rs` lists and the types they name.
+pub const RECORDS: &str = "records";
+
+/// The C++ value classes whose storage is a Rust mirror (the mirror's C name, the class, its header). A records
+/// header declares a member of a mirror's type with the class itself, includes the class's header and asserts that
+/// the two have one size and alignment; base's and render's do not, since the classes' headers include theirs.
+pub const CPP_VALUES: &[(&str, &str, &str)] = &[
+    ("EeGe2DPoint", "GE2DPoint", "lle/GE2DPoint.h"),
+    ("EeGe3DPoint", "GE3DPoint", "lle/GE3DPoint.h"),
+    ("EeGeVector", "GEVector", "lle/GEVector.h"),
+    ("EeGe3DLine", "GE3DLine", "lle/GE3DLine.h"),
+    ("EeGe3DPlane", "GE3DPlane", "lle/GE3DPlane.h"),
+    ("EeGeTransformation", "GETransformation", "lle/GETransformation.h"),
+    ("EeGeOrientation", "GEOrientation", "lle/GEOrientation.h"),
+    ("EeGeQuaternion", "GEQuaternion", "lle/GEQuaternion.h"),
+    ("EeGeBoundingBox", "GEBoundingBox", "lle/GEBoundingBox.h"),
+    ("EeGeRectangle", "GERectangle", "lle/GERectangle.h"),
+    ("EeGeColor", "GEColor", "lle/GEColor.h"),
+    ("EeU2DPointLong", "U2DPoint<long>", "lle/U2DPoint.h"),
+    ("EeU2DPointFloat", "U2DPoint<float>", "lle/U2DPoint.h"),
+];
+
+/// The lle math headers a records header that uses a C++ value class includes first, in the engine's order (they
+/// need each other: `lle/LowLevelEngine.h`'s geometry block).
+const CPP_VALUE_CHAIN: &[&str] = &[
+    "lle/LowLevelEngineCore.h",
+    "lle/UMFastMath.h",
+    "lle/GE2DPoint.h",
+    "lle/GEVector.h",
+    "lle/GE3DPoint.h",
+    "lle/GE3DLine.h",
+    "lle/GE3DPlane.h",
+    "lle/GERectangle.h",
+    "lle/GEOrientation.h",
+    "lle/GETransformation.h",
+];
+
+/// The crate directories whose records headers keep the mirrors' C names (see [`CPP_VALUES`]).
+const NO_CPP_VALUES: &[&str] = &["base", "render"];
 /// The umbrella that includes every header.
 pub const UMBRELLA: &str = "all";
 
@@ -164,6 +209,9 @@ pub fn parse(text: &str) -> Result<Parsed, String> {
     let sys_includes = lines[..start].iter().filter(|l| l.starts_with("#include <")).map(|l| l.to_string()).collect();
     let mut types = Vec::new();
     for chunk in chunks(&lines[start..types_end]) {
+        if chunk.iter().find(|l| !is_comment(l)).is_some_and(|l| l.starts_with("static_assert")) {
+            continue; // a records header's checks of the C++ value classes
+        }
         types.push(Item { name: type_name(&chunk)?, function: false, lines: chunk });
     }
     let mut functions = Vec::new();
@@ -319,6 +367,166 @@ pub fn scan_text(krate: &str, text: &str, defs: &mut HashMap<String, Vec<Def>>) 
     }
 }
 
+/// The records each crate's `records.rs` lists or defines, by the crate's header directory (`sim`), under their C
+/// names: the type names (capitalized identifiers, but those after `as`) of its `use` declarations and the types it
+/// defines.
+pub fn record_roots(
+    crates_dir: &Path,
+    crates: &[String],
+    renames: &HashMap<String, String>,
+) -> BTreeMap<String, BTreeSet<String>> {
+    let mut out = BTreeMap::new();
+    for krate in crates {
+        let Some((_, dir)) = CRATE_DIRS.iter().find(|(k, _)| k == krate) else { continue };
+        let Ok(text) = std::fs::read_to_string(crates_dir.join(krate).join("src").join("records.rs")) else { continue };
+        out.insert(
+            dir.to_string(),
+            records_listed(&text).into_iter().map(|n| renames.get(&n).cloned().unwrap_or(n)).collect(),
+        );
+    }
+    out
+}
+
+/// The Rust names of the records a `records.rs` text lists or defines.
+fn records_listed(text: &str) -> BTreeSet<String> {
+    let code: String = text.lines().map(|l| code_part(l)).collect::<Vec<_>>().join("\n");
+    let mut out = BTreeSet::new();
+    for line in code.lines() {
+        if let Some(name) = defined_name(line) {
+            if name.starts_with(|c: char| c.is_ascii_uppercase()) {
+                out.insert(name.to_string());
+            }
+        }
+    }
+    for statement in code.split(';') {
+        let words = identifiers(statement);
+        let Some(at) = words.iter().position(|w| *w == "use") else { continue };
+        for (i, word) in words.iter().enumerate().skip(at + 1) {
+            if word.starts_with(|c: char| c.is_ascii_uppercase()) && words[i - 1] != "as" {
+                out.insert(word.to_string());
+            }
+        }
+    }
+    out
+}
+
+/// The crate directory of a header (`sim/units`: `sim`); none for the common header.
+fn dir_of(header: &str) -> Option<&str> {
+    header.split_once('/').map(|(dir, _)| dir)
+}
+
+/// Moves the records (and every type they name) to their crates' records headers.
+fn assign_records(
+    types: &[Item],
+    owner: &mut [String],
+    roots: &BTreeMap<String, BTreeSet<String>>,
+) -> Result<(), String> {
+    let index: HashMap<&str, usize> = types.iter().enumerate().map(|(i, t)| (t.name.as_str(), i)).collect();
+    let mut todo: Vec<usize> = Vec::new();
+    for (dir, names) in roots {
+        for name in names {
+            let at = types
+                .iter()
+                .zip(owner.iter())
+                .position(|(t, o)| t.name == *name && dir_of(o) == Some(dir.as_str()))
+                .ok_or_else(|| {
+                    format!("{dir}'s records.rs lists `{name}`, which its crate's headers do not declare")
+                })?;
+            todo.push(at);
+        }
+    }
+    let mut done = BTreeSet::new();
+    while let Some(at) = todo.pop() {
+        if !done.insert(at) {
+            continue;
+        }
+        let Some(dir) = dir_of(&owner[at]).map(str::to_string) else {
+            return Err(format!("the record `{}` is in the common header (no one crate defines it)", types[at].name));
+        };
+        owner[at] = format!("{dir}/{RECORDS}");
+        for word in identifiers(&code_text(&types[at].lines)) {
+            if let Some(&other) = index.get(word) {
+                if other != at {
+                    todo.push(other);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Whether a header is a records header.
+pub fn is_records(header: &str) -> bool {
+    header.rsplit('/').next() == Some(RECORDS) && header.contains('/')
+}
+
+/// A records header's items with the C++ value classes for their mirrors (see [`CPP_VALUES`]), and the headers and
+/// checks those need.
+fn with_cpp_values(header: &str, types: &[&Item]) -> (Vec<Item>, Vec<String>) {
+    let mut used: BTreeSet<usize> = BTreeSet::new();
+    let skip = dir_of(header).is_some_and(|d| NO_CPP_VALUES.contains(&d));
+    let items = types
+        .iter()
+        .map(|item| {
+            let mut item = (*item).clone();
+            if skip {
+                return item;
+            }
+            for line in item.lines.iter_mut().filter(|l| !is_comment(l)) {
+                for (i, (mirror, class, _)) in CPP_VALUES.iter().enumerate() {
+                    let replaced = replace_word(line, mirror, class);
+                    if replaced != *line {
+                        used.insert(i);
+                        *line = replaced;
+                    }
+                }
+            }
+            item
+        })
+        .collect();
+    let mut preamble: Vec<String> = Vec::new();
+    let quoted = |h: &str| if h.starts_with('<') { format!("#include {h}") } else { format!("#include \"{h}\"") };
+    if !used.is_empty() {
+        preamble.extend(CPP_VALUE_CHAIN.iter().map(|h| quoted(h)));
+    }
+    for &i in &used {
+        let include = quoted(CPP_VALUES[i].2);
+        if !preamble.contains(&include) {
+            preamble.push(include);
+        }
+    }
+    if !used.is_empty() {
+        preamble.push(String::new());
+    }
+    for &i in &used {
+        let (mirror, class, _) = CPP_VALUES[i];
+        preamble.push(format!(
+            "static_assert(sizeof({class}) == sizeof({mirror}) && alignof({class}) == alignof({mirror}), \
+             \"{class} is its Rust mirror {mirror}\");"
+        ));
+    }
+    (items, preamble)
+}
+
+/// A line with every whole-word `from` replaced by `to`.
+fn replace_word(line: &str, from: &str, to: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut rest = line;
+    while let Some(at) = rest.find(from) {
+        let before = rest[..at].chars().next_back();
+        let after = rest[at + from.len()..].chars().next();
+        out.push_str(&rest[..at]);
+        if before.is_some_and(is_ident_char) || after.is_some_and(is_ident_char) {
+            out.push_str(from);
+        } else {
+            out.push_str(to);
+        }
+        rest = &rest[at + from.len()..];
+    }
+    out.push_str(rest);
+    out
+}
+
 const CPP_WORDS: &[&str] = &[
     "constexpr",
     "static",
@@ -415,11 +623,13 @@ pub fn split(
     single: &str,
     defs: &HashMap<String, Vec<Def>>,
     renames: &HashMap<String, String>,
+    roots: &BTreeMap<String, BTreeSet<String>>,
     note: &str,
 ) -> Result<BTreeMap<String, String>, String> {
     let parsed = parse(single)?;
     let all: Vec<&Item> = parsed.types.iter().chain(&parsed.functions).collect();
-    let owner = owners(&all, defs, renames);
+    let mut owner = owners(&all, defs, renames);
+    assign_records(&parsed.types, &mut owner[..parsed.types.len()], roots)?;
     let by_name: HashMap<&str, &str> = all.iter().zip(&owner).map(|(i, o)| (i.name.as_str(), o.as_str())).collect();
     let mut seen = BTreeSet::new();
     for item in &all {
@@ -449,7 +659,20 @@ pub fn split(
             .filter(|(_, o)| o == header)
             .map(|(i, _)| i)
             .collect();
-        out.insert(header.to_string(), render(header, note, &parsed.sys_includes, includes, &types, &functions));
+        let text = if is_records(header) {
+            if !functions.is_empty() {
+                return Err(format!("{header}.h would declare the function `{}`", functions[0].name));
+            }
+            if let Some(other) = includes.iter().find(|h| !is_records(h)) {
+                return Err(format!("{header}.h would include {other}.h, which is not a records header"));
+            }
+            let (items, preamble) = with_cpp_values(header, &types);
+            let items: Vec<&Item> = items.iter().collect();
+            render(header, note, &parsed.sys_includes, includes, &preamble, &items, &[])
+        } else {
+            render(header, note, &parsed.sys_includes, includes, &[], &types, &functions)
+        };
+        out.insert(header.to_string(), text);
     }
     let mut umbrella = format!(
         "{note}\n// Every module's C interface. Include only the headers of the modules a file uses \
@@ -505,11 +728,18 @@ pub fn render(
     note: &str,
     sys_includes: &[String],
     includes: &BTreeSet<&str>,
+    preamble: &[String],
     types: &[&Item],
     functions: &[&Item],
 ) -> String {
     let what = if header == COMMON {
         "The C interface of ee_game's root and the names more than one module defines alike".to_string()
+    } else if is_records(header) {
+        let krate = dir_of(header).and_then(|d| CRATE_DIRS.iter().find(|(_, x)| *x == d)).map_or("", |(k, _)| *k);
+        format!(
+            "The records of {krate} that C++ classes derive from or embed (its records.rs), and the types they name; \
+             no function"
+        )
     } else {
         format!("The C interface of {}", module_of(header))
     };
@@ -522,6 +752,10 @@ pub fn render(
     }
     for include in includes {
         text.push_str(&format!("#include \"rust/{include}.h\"\n"));
+    }
+    for line in preamble {
+        text.push_str(line);
+        text.push('\n');
     }
     text.push('\n');
     for item in types {
@@ -555,7 +789,14 @@ pub fn union_of(headers: &BTreeMap<String, String>) -> Result<Vec<Item>, String>
     let mut names = BTreeMap::new();
     for (header, text) in headers.iter().filter(|(h, _)| *h != UMBRELLA) {
         let parsed = parse(text)?;
-        for item in parsed.types.into_iter().chain(parsed.functions) {
+        for mut item in parsed.types.into_iter().chain(parsed.functions) {
+            if is_records(header) {
+                for line in item.lines.iter_mut() {
+                    for (mirror, class, _) in CPP_VALUES {
+                        *line = replace_word(line, class, mirror);
+                    }
+                }
+            }
             if let Some(other) = names.insert(item.name.clone(), header.clone()) {
                 return Err(format!("`{}` is in {other}.h and {header}.h", item.name));
             }
@@ -630,7 +871,7 @@ mod tests {
 
     #[test]
     fn each_header_includes_the_headers_its_items_name() {
-        let headers = split(SINGLE, &defs(), &renames(), "// note").unwrap();
+        let headers = split(SINGLE, &defs(), &renames(), &BTreeMap::new(), "// note").unwrap();
         let won = &headers["ee_won"];
         assert!(won.contains("#include \"rust/ee_ge.h\"\n"));
         assert!(!headers["ee_ge"].contains("#include \"rust/ee_won.h\""));
@@ -644,7 +885,7 @@ mod tests {
 
     #[test]
     fn the_union_of_the_headers_is_the_single_header() {
-        let headers = split(SINGLE, &defs(), &renames(), "// note").unwrap();
+        let headers = split(SINGLE, &defs(), &renames(), &BTreeMap::new(), "// note").unwrap();
         assert_eq!(union_of(&headers).unwrap(), sorted_items(SINGLE));
     }
 
@@ -653,6 +894,114 @@ mod tests {
         let deps: BTreeMap<&str, BTreeSet<&str>> =
             [("a", ["b"].into_iter().collect()), ("b", ["a"].into_iter().collect())].into_iter().collect();
         assert!(check_acyclic(&deps).unwrap_err().contains("a -> b -> a"));
+    }
+}
+
+#[cfg(test)]
+mod records_tests {
+    use super::*;
+
+    const SINGLE: &str = r#"// note
+
+#ifndef EE_RUST_H
+#define EE_RUST_H
+
+#include <stdint.h>
+
+/// A point.
+struct EeGe3DPoint {
+  float mX;
+};
+
+enum class Kind : uint8_t {
+  A,
+};
+
+struct EeUnitsFields {
+  EeGe3DPoint mPos;
+  Kind mKind;
+};
+
+struct EeUnitsArgs {
+  int32_t a;
+};
+
+extern "C" {
+
+void ee_units_go(EeUnitsFields *f, EeUnitsArgs a);
+
+}  // extern "C"
+
+#endif  // EE_RUST_H
+"#;
+
+    const UNITS_RS: &str = r#"pub enum Kind { A }
+pub struct EeUnitsFields { pub pos: Ge3DPoint, pub kind: Kind }
+pub struct EeUnitsArgs { pub a: i32 }
+pub extern "C" fn ee_units_go(f: *mut EeUnitsFields, a: EeUnitsArgs) {}
+"#;
+
+    fn defs() -> HashMap<String, Vec<Def>> {
+        let mut defs = HashMap::new();
+        scan_text("base/math", "pub struct Ge3DPoint { pub x: f32 }", &mut defs);
+        scan_text("sim/units", UNITS_RS, &mut defs);
+        defs
+    }
+
+    fn headers() -> BTreeMap<String, String> {
+        let renames = [("Ge3DPoint".to_string(), "EeGe3DPoint".to_string())].into_iter().collect();
+        let roots = [("sim".to_string(), ["EeUnitsFields".to_string()].into_iter().collect())].into_iter().collect();
+        split(SINGLE, &defs(), &renames, &roots, "// note").unwrap()
+    }
+
+    #[test]
+    fn records_rs_lists_its_uses_and_definitions() {
+        let text = r#"//! Doc `Ignored`.
+pub use crate::a::{B, C as D};
+pub use crate::e::F;
+#[repr(C)]
+pub struct G { pub x: u8 }
+"#;
+        let names: Vec<String> = records_listed(text).into_iter().collect();
+        assert_eq!(names, ["B", "C", "F", "G"]);
+    }
+
+    #[test]
+    fn a_record_and_the_types_it_names_go_to_the_records_header() {
+        let headers = headers();
+        let records = &headers["sim/records"];
+        assert!(records.contains("struct EeUnitsFields {\n  GE3DPoint mPos;\n  Kind mKind;\n};"), "{records}");
+        assert!(records.contains("enum class Kind"));
+        assert!(
+            records.contains("#include \"rust/base/records.h\"\n#include \"lle/LowLevelEngineCore.h\"\n"),
+            "{records}"
+        );
+        assert!(records.contains("#include \"lle/GE3DPoint.h\"\n"), "{records}");
+        assert!(records.contains("static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint)"));
+        assert!(!records.contains("extern \"C\""));
+        assert!(headers["base/records"].contains("struct EeGe3DPoint {"));
+        let units = &headers["sim/units"];
+        assert!(units.contains("#include \"rust/sim/records.h\""));
+        assert!(units.contains("struct EeUnitsArgs") && units.contains("void ee_units_go("));
+        assert!(!headers.contains_key("base/math"), "its one type is a record's");
+    }
+
+    #[test]
+    fn the_records_headers_declare_what_the_single_header_declares() {
+        assert_eq!(union_of(&headers()).unwrap(), sorted_items(SINGLE));
+    }
+
+    #[test]
+    fn a_listed_record_the_header_lacks_is_an_error() {
+        let roots = [("sim".to_string(), ["EeNoSuch".to_string()].into_iter().collect())].into_iter().collect();
+        let err = split(SINGLE, &defs(), &HashMap::new(), &roots, "// note").unwrap_err();
+        assert!(err.contains("EeNoSuch"), "{err}");
+    }
+
+    #[test]
+    fn words_are_replaced_whole() {
+        let line = "  EeGe3DPoint mA; EeGe3DPointX mB;";
+        assert_eq!(replace_word(line, "EeGe3DPoint", "GE3DPoint"), "  GE3DPoint mA; EeGe3DPointX mB;");
     }
 }
 

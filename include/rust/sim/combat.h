@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
+#include "rust/base/records.h"
 
 /// `kDamageDirect`, `kDamageSplash`, `kDamageTrample` (`ee/EERules.h`).
 constexpr static const int32_t EE_COMBAT_DAMAGE_DIRECT = 0;

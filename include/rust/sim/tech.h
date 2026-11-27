@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/data/ffi.h"
+#include "rust/sim/records.h"
 
 /// `kAreaEffectHealing` (ee/EEAreaEffectKindIDs.h).
 constexpr static const long EE_AREA_EFFECT_HEALING = 1;
@@ -1043,10 +1044,6 @@ struct EeContagionManager;
 /// A near-unit list the C++ fills (`EE_CONTAGION_WORLD_NEAR`).
 struct EeContagionUnitList;
 
-/// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
-/// `mSavedSOLs`), applied by `ApplySavedState`.
-struct EeTechTreeSaved;
-
 /// The calamity's members an update reads and writes (`EECalamity`).
 struct EeCalamityState {
   float time_alive;
@@ -1173,21 +1170,6 @@ struct EeCalamityData {
   bool mUnusedClassFlag;
 };
 
-/// An area effect's numbers (`EEAreaEffect` and its kinds' members; its location, template and owner unit are C++
-/// members).
-struct EeAreaEffectFields {
-  /// The template's kind when the effect was made: the original's class.
-  long mKind;
-  /// The owner's player id.
-  long mPlayer;
-  /// The morale from buildings' cap (the template's maximum level plus the game variant's morale bonus).
-  long mMax;
-  /// The morale from buildings' count of buildings.
-  long mCount;
-  /// The morale from buildings' recount flag.
-  bool mDirty;
-};
-
 /// One of a unit's own effects: its location and, for a morale from buildings, its recount flag and count.
 struct EeAreaEffectSavedOwn {
   float mX;
@@ -1207,77 +1189,6 @@ struct EeAreaEffectSavedRef {
 struct EeCalamityIoFfi {
   void *ctx;
   long (*call)(void *ctx, uint32_t op, void *value);
-};
-
-/// A calamity class's numbers (`EECalamityClass` derives from it). The base members first, in their order.
-struct EeCalamityClassFields {
-  float mLifeTime;
-  long mClassEnum;
-  /// Each class's calamity flag bit (set on the units it holds).
-  unsigned long mClassFlags;
-  unsigned long mUnitSet;
-  long mNameID;
-  /// The record's id (`EECalamityKind`).
-  long mID;
-  long mRange;
-  long mCost;
-  bool mB24;
-  bool mIsBlockedByImmunity;
-  bool mIsCastByAllSelected;
-  bool mOverWater;
-  bool mPositive;
-  bool mFunctorFlag;
-  /// The earthquake's, the hurricane's, the leprosy's, the plague's and the fire's damage.
-  long mDamage;
-  /// The earthquake's and the hurricane's tick time.
-  long mTickTime;
-  long mShake;
-  long mCrackCount;
-  long mArea;
-  /// The hurricane's, the volcano's, the meteor storm's and the drop object's unit class.
-  long mUnitClassIndex;
-  /// The time warp's and the teleport's `EEFindPlacement` range.
-  long mPlacementRange;
-  long mDepartTime;
-  long mAwayTime;
-  long mHoldTime;
-  /// The morale's effect duration.
-  long mEffectDuration;
-  /// The area effects' and the leprosy's first effect's duration.
-  unsigned long mEffect1Duration;
-  long mEffect2Time;
-  unsigned long mEffectTime2;
-  unsigned long mEffectTime3;
-  /// The area effects' and the leprosy's radius in tiles (their `mRadius`).
-  unsigned long mRadiusTiles;
-  /// The area effect's damage factor.
-  long mDamageFactor;
-  long mBurn;
-  /// The functors' spread, update or damage time (a local of the classes' `Initialize`).
-  long mSpreadTime;
-  long mL3C;
-  long mL40;
-  long mL48;
-  /// The teleport's share of the caster's hit points (its `mDamageFactor`).
-  float mDamageShare;
-  float mDuration;
-  /// The earthquake's, the hurricane's, the fire's, the meteor storm's (and the plague functor's) radius.
-  float mRadius;
-  float mShakeInterval;
-  float mVolume;
-  float mQuakeVolume;
-  float mMinimumFactor;
-  float mQuakeMinimumFactor;
-  float mSpeed;
-  float mSourceSpeed;
-  float mFalloff;
-  /// The fire's (and the plague functor's) chance.
-  float mChance;
-  float mMaximumRadius;
-  float mMinimumRadius;
-  float mMinimumInterval;
-  float mMaximumInterval;
-  float mSightBonus;
 };
 
 /// What the C++ knows of the class's effects and sounds when it asks: which are set
@@ -1385,121 +1296,6 @@ struct EeCalamityCast {
   bool blocked_by_immunity;
   /// The hurricane only over water (`mOverWater`).
   bool over_water;
-};
-
-/// An active calamity's plain members (`EECalamity` derives from it).
-struct EeCalamityFields {
-  /// 1.0 after `Reset`.
-  float mEpicenterFactor;
-  float mFloatPlaceHolder1;
-  float mFloatPlaceHolder2;
-  float mHeight;
-  float mTimeAlive;
-  float mDiscreteUpdateTime;
-  float mTimeElapsedSinceLastUpdate;
-  /// The area effect classes keep their contagion helper id here.
-  long mIntPlaceHolder1;
-  long mIntPlaceHolder2;
-  unsigned long mTargetUnitID;
-  /// The caster unit's id.
-  unsigned long mOriginatingUnitID;
-  unsigned long mPlayerNumber;
-  bool mBoolPlaceHolder1;
-  bool mBoolPlaceHolder2;
-  bool mInitialized;
-  bool mHasTargetLocation;
-  bool mHasTargetUnit;
-};
-
-/// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
-struct EeTechNodeDataFields {
-  /// the costs by resource (`Load` zeroes all seven, then copies five)
-  long mCosts[7];
-  long mCostResource;
-  long mRequiredStatistic;
-  /// past the end of the unit classes (`GetUnitClass`)
-  long mDefaultUnitClass;
-  /// a calamity's `EECalamityEnum` (the cast-calamity goal)
-  unsigned long mCalamity;
-  /// 3 repeatable, 4 a wonder, 5 never researched
-  long mKind;
-  /// an epoch's: its position; a node's: from 1000
-  long mID;
-  long mResearchedEvent;
-  long mObsoleteEvent;
-  long mBuildTime;
-  long mPrerequisite1;
-  long mPrerequisite2;
-  long mPrerequisite3;
-  long mPrerequisite4;
-  /// the `gUnitClassTable` index of what it builds
-  long mUnitClass;
-  long mRequiredStatisticValue;
-  long mNameID;
-  long mHotKey;
-  bool mMakesUnit;
-  bool mCountsTowardEpoch;
-  bool mShowInEditor;
-  bool mObsoletedByDefault;
-  bool mAvailableWithEpoch;
-  bool mResearchedWithEpoch;
-  /// the unit classes and their cost tables (an [`EeTechClassTable`], Rust's; 0 before the load makes it)
-  size_t mClassTable;
-};
-
-/// A node's and an epoch's members (ee/EEPlayer.h: `EETechTreeNode` derives from it and adds none; the nodes and
-/// epochs are made and freed by Rust: tree_objects.rs).
-struct EeTechNodeFields {
-  bool mIsResearched;
-  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
-  bool mIsObsolete;
-  bool mIsAvailable;
-  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
-  uint8_t mPrerequisiteFlags;
-  bool mIsAllowed;
-  bool mScenEditorObsoleted;
-  bool mIsUnitMediaLoaded;
-  /// an epoch's: off between a saved game's load and its applied state
-  bool mIsCountingSOL;
-  /// the epoch it belongs to
-  long mEpoch;
-  long mObsoleteEpoch;
-  /// `ResearchNode` counts it down
-  long mResearchDelay;
-  long mRequiredSOL;
-  long mFirstNodeID;
-  long mCurrentSOL;
-  long mNextEpoch;
-  /// the title string (epochs.yaml; 0: 30145 + the epoch)
-  long mTitleID;
-  /// the node data (shared by a tree's copies; made by the load, freed by `Unload`)
-  EeTechNodeDataFields *mData;
-  /// the tree it belongs to
-  class EETechTree *mTree;
-  /// `EEButtonObject::Get` of the record's button
-  class EEButtonObject *mButton;
-  /// an epoch's nodes and loaded unit classes (an [`crate::tech::tree_objects::EeTechEpochLists`]); 0: a node
-  size_t mLists;
-};
-
-/// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
-struct EeTechTreeFields {
-  long mCurrentEpoch;
-  long mStartEpoch;
-  long mEndEpoch;
-  long mEpochsBeforeWonders;
-  long mMediaID;
-  /// the epoch name the interface shows (a string id)
-  long mEpochNameID;
-  bool mIsLoaded;
-  /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
-  EeTechTreeSaved *mSaved;
-  /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
-  long mPlayerIndex;
-  /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
-  class EEPlayer *mPlayer;
-  /// the epochs, one per epoch of the tech tree file (a `Vec` of nodes: tree_objects.rs; 0 before the first)
-  size_t mEpochs;
 };
 
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
@@ -1610,33 +1406,6 @@ struct EeTechCivFileReply {
 struct EeTechCivFileHost {
   void *ctx;
   void (*call)(void *ctx, const EeTechCivFileCall *call, EeTechCivFileReply *reply);
-};
-
-/// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
-/// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
-/// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
-struct EeContagionFunctorFields {
-  /// The functor's kind (`EE_CALAMITY_FUNCTOR_*`).
-  uint32_t mKind;
-  /// The spread radius (the fire's, the plague's).
-  float mRadius;
-  /// The spread chance (the fire's, the plague's).
-  float mChance;
-  /// The fire's burn: hundredths of the unit's maximum hit points burnt at once.
-  long mBurn;
-  /// The damage per discrete update (the area effects': the factor of the unit's attack stat).
-  long mDamage;
-  /// The discrete update time (the fire's and the leprosy's spread time, the plague's damage time, the area
-  /// effects' update time).
-  unsigned long mSpreadTime;
-  /// The unit set it can infect.
-  unsigned long mUnitSet;
-  /// `TakeHit`'s mode: 2 when the class is blocked by immunity, else 3.
-  long mMode;
-  /// The calamity's discrete updates of this helper update (`Update`).
-  unsigned long mUpdates;
-  /// The extra damage's flag: the pulse cannon effect, else the battle cry.
-  bool mFlag;
 };
 
 /// What `Apply` does to a unit ([`apply_damage`]): whether it hits and the damage.
@@ -1922,43 +1691,6 @@ struct EeAreaEffectData {
   bool mUnusedFlag4;
   bool mUnusedFlag5;
   uint8_t mPad[3];
-};
-
-/// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
-/// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
-struct EeAreaEffectTemplateFields {
-  /// The kind (`EE_AREA_EFFECT_*`): which effect `CreateAreaEffect` makes.
-  long mKind;
-  /// The area's shape: 1 a square, 2 a circle.
-  long mShape;
-  /// The players it affects: 1 the owner, 2 its allies, 3 its enemies, 4 everyone.
-  long mMode;
-  /// The radius in tiles, scaled by the owner unit's area-effect scale (0 or less: everywhere).
-  float mRadius;
-  float mColorAlpha;
-  long mID;
-  /// The unit set it covers (`EEUnitSetManager`; 4: no continent test).
-  long mUnitSet;
-  /// The cloaking's strength; the morale from buildings' cap before the variant's bonus.
-  long mMaxLevel;
-  /// The healing's hit points per second, the morale's level.
-  long mLevel;
-  long mL44;
-  long mL48;
-  long mL4C;
-  float mRed;
-  float mGreen;
-  float mBlue;
-  float mAlpha;
-  float mF60;
-  bool mB64;
-  bool mB65;
-  bool mB66;
-  bool mB67;
-  bool mB68;
-  float mColorRed;
-  float mColorGreen;
-  float mColorBlue;
 };
 
 /// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).

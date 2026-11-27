@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guilayout.h"
+#include "rust/won_gui/records.h"
 
 /// A virtual the Rust calls on the C++ object (`args` its ints, `p` its object).
 enum class EeWonGfxHook {
@@ -83,20 +83,8 @@ enum class EeWonGfxCall {
   BaseFillRect,
 };
 
-/// The clip stack (`mClipStack`).
-struct EeWonGfx;
-
 /// The host: the hook on the C++ Graphics `g` with up to seven ints at `args` and an object `p`; its answer.
 using EeWonGfxHost = uint32_t(*)(void *g, EeWonGfxHook hook, const int32_t *args, const void *p);
-
-/// The C++ Graphics' translation, colour and clip rectangle (`mTransX`, `mTransY`, `mColor`, `mClipRect`, in that
-/// order).
-struct EeWonGfxState {
-  int32_t trans_x;
-  int32_t trans_y;
-  uint32_t color;
-  EeWonRect clip;
-};
 
 extern "C" {
 

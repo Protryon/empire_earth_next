@@ -9,6 +9,7 @@
 #ifndef LLE_UIHOTKEY_H
 #define LLE_UIHOTKEY_H
 
+#include "rust/ui/records.h"
 #include "rust/ui/hotkeyobj.h"
 #include "rust/ui/hotkey_ffi.h"
 #include "lle/UIEntity.h"

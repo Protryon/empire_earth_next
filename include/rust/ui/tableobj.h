@@ -6,11 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/button.h"
 #include "rust/ui/controls_table.h"
-#include "rust/ui/layout.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The static calls ([`ee_ui_controls_tables`]).
 enum class EeUiTablesCall : uint32_t {

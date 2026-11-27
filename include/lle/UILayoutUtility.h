@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 
+#include "rust/ui/records.h"
 #include "rust/ui/layout_ffi.h"
 #include "rust/ui/ids.h"
 

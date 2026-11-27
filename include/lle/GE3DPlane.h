@@ -4,6 +4,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GE3DPlane : public EeGe3DPlane {   // the Rust record (mPoint, mNormal; rust/base/math.h)
 public:

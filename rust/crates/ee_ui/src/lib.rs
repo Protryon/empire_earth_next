@@ -65,6 +65,8 @@ pub mod managerobj;
 pub mod mediaobj;
 pub mod mouse;
 pub mod obj;
+/// The records C++ classes derive from or embed (include/rust/ui/records.h, declaring no function).
+pub mod records;
 pub mod rect;
 pub mod scrollbar;
 pub mod scrollbarobj;

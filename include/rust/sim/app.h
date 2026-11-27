@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/sim/records.h"
 #include "rust/sim/units.h"
 
 /// id -> text, len: the string resource
@@ -187,25 +188,6 @@ struct EeAppStatsRecord {
   long play_time;
 };
 
-/// The storm's plain members (names and order the C++ class's).
-struct EeAppStormFields {
-  /// = 1; clamped to [0, 2]
-  float mTargetIntensity;
-  /// = 1; the weather effect's intensity follows it
-  float mIntensity;
-  /// = 0.02: the fade's relative step
-  float mStep;
-  /// the kind (1..4)
-  long mType;
-  /// = 1; the step's state (2 routing, 3 moving, 4 pausing, 5 dying, 6 over, 7 lingering, 8 to route again)
-  long mState;
-  unsigned long mNextMoveTime;
-  /// = -1
-  unsigned long mEndTime;
-  /// a hurricane or a blizzard
-  bool mIsSevere;
-};
-
 /// One host operation's arguments and answers.
 struct EeAppStormIo {
   bool flag;
@@ -232,16 +214,6 @@ struct EeAppTeamsWorld {
 
 /// A unit-type callback (`EEUnitSetFunctor::Execute` through its C++ trampoline): false stops the walk.
 using EeUnitSetVisit = bool(*)(void *functor, uint32_t unit_type);
-
-/// `EEVoting`'s members (the class's base; zero when made).
-struct EeAppVoting {
-  /// the proposed edict (0: none)
-  int16_t mEdict;
-  int16_t mU06;
-  bool mB08;
-  bool mB09;
-  bool mB0A;
-};
 
 extern "C" {
 

@@ -6,7 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
+#include "rust/base/records.h"
+#include "rust/game/records.h"
 #include "rust/render/ge.h"
 #include "rust/sim/app.h"
 
@@ -266,40 +267,6 @@ constexpr static const int32_t EE_APP_SETTINGS_ERROR_NOT_FOUND = 3;
 /// The mini map's Rust half.
 struct EeAppMiniMap;
 
-/// `EEAmbientSoundManager`'s plain members (the analyzer, the generator and the sounds stay C++).
-struct EeAppAmbientFields {
-  /// the day phase: 1 night .. 4 dawn (see [`phase`])
-  long mState;
-  long mFrameCount;
-  long mNextUpdateFrame;
-  /// 10 frames
-  long mUpdateInterval;
-  bool mIsEnabled;
-  bool mIsPaused;
-};
-
-/// `EEAmbientSound`'s plain members (the sound object and the instance stay C++).
-struct EeAppAmbientSoundFields {
-  long mSoundID;
-  long mSoundIndex;
-  float mProbability;
-  float mVolume;
-  float mTargetVolume;
-  float mMaximumVolume;
-  float mStartVolume;
-  /// FadeIn multiplies the volume by it
-  float mFadeUp;
-  float mFadeDown;
-  float mPan;
-  float mPitch;
-  float mF38;
-  float mF3C;
-  /// ms
-  long mInterval;
-  long mNextTime;
-  bool mIsLooping;
-};
-
 /// The database record's fields `Init` copies (EEAmbientSoundRecord).
 struct EeAppAmbientRecord {
   int32_t sound_id;
@@ -309,22 +276,6 @@ struct EeAppAmbientRecord {
   float fade_down;
   float probability;
   int32_t interval_seconds;
-};
-
-/// The world analyzer's counts (`EEAmbientWorldAnalyzer`, after its vtable), in the class's order.
-struct EeAppAmbientCounts {
-  long mNumAirRaiders;
-  long mNumTrees;
-  long mNumCitizens;
-  long mNumAttackers;
-  long mNumFarms;
-  long mNumGoats;
-  long mNumEagles;
-  long mL20;
-  long mL24;
-  long mL28;
-  /// the first visible forest's resource kind (0: none yet)
-  long mForestType;
 };
 
 /// One host operation's arguments and answers.
@@ -345,41 +296,6 @@ struct EeAppAmbientIo {
 
 /// The host: `(ctx, op, io)`.
 using EeAppAmbientFn = void(*)(void*, int32_t, EeAppAmbientIo*);
-
-/// `EECameraControl`'s plain members, in the class's order (the key list and the two unit handles stay C++).
-struct EeAppCameraFields {
-  /// the start orientations (slerped to `mQ04C`/`mQ05C`)
-  EeGeQuaternion mQ014;
-  EeGeQuaternion mQ024;
-  /// the start points (lerped to `mEndOffset`/`mEndFocus`)
-  EeGe3DPoint mStartOffset;
-  EeGe3DPoint mStartFocus;
-  /// the target key's orientations
-  EeGeQuaternion mQ04C;
-  EeGeQuaternion mQ05C;
-  EeGe3DPoint mEndOffset;
-  EeGe3DPoint mEndFocus;
-  EeGeTransformation mView;
-  /// x = -10000: none
-  EeGe3DPoint mTargetPoint;
-  float mFraction;
-  float mRate;
-  /// 0 (near) .. 1 (far), past 1 with the port's farther zoom
-  float mZoom;
-  /// the key's hold time
-  float mWait;
-  float mWaited;
-  float mTurnYaw;
-  float mTurnPitch;
-  /// 3: the free camera mode
-  long mMode;
-  long mPathIndex;
-  bool mChanged;
-  bool mIsFollowingUnitB;
-  /// a path plays
-  bool mLocked;
-  bool mB0FF;
-};
 
 /// The terrain mesh's four edge planes (ee_gfx camera.rs's `EeGfxEdgePlanes`, repeated so that the C header does not
 /// need ee_gfx's).
@@ -451,53 +367,6 @@ struct EeAppCheatSweepHost {
   int32_t (*levels)(void*, uint64_t, uint32_t, int32_t*);
   /// the camera's location at its fraction (x, y, z)
   void (*camera)(void*, float*);
-};
-
-/// `EEGameOptionsPlayer`'s plain members (its name stays a C++ `UWideString`), in the class's order.
-struct EeAppOptionsPlayerFields {
-  /// 0/1 human, 2 computer, 3 closed
-  unsigned long mType;
-  long mLoadedType;
-  /// the lobby's ping meter
-  float mPing;
-  /// the slot index
-  unsigned long mSlot;
-  unsigned long mColor;
-  unsigned long mTeam;
-  unsigned long mStartingCitizens;
-  /// a transfer in progress when > 0
-  unsigned long mTransferID;
-  bool mIsLocal;
-  bool mIsReady;
-  bool mB36;
-  /// a computer slot's engine choice (ee/EECPEngine.h: 0 classic, 1 random, 2 + k the manifest's entry k)
-  unsigned long mEngine;
-};
-
-/// `EEGameOptions`' plain members (the slots, strings and lock stay C++), in the class's order.
-struct EeAppOptionsFields {
-  unsigned long mGameSpeed;
-  /// 0 new game, 1 scenario, 2 saved game ... (< `load_types`)
-  unsigned long mLoadType;
-  unsigned long mMapSize;
-  long mEpochStart;
-  long mEpochEnd;
-  unsigned long mVariant;
-  unsigned long mResources;
-  unsigned long mUnitLimit;
-  unsigned long mWondersForVictory;
-  unsigned long mDifficulty;
-  unsigned long mCampaignChecksum;
-  bool mVictory;
-  bool mLockTeams;
-  bool mLockSpeed;
-  bool mRevealMap;
-  bool mCheatCodes;
-  bool mRecordGames;
-  bool mAllowCustomCivs;
-  bool mB407;
-  bool mIsMultiplayer;
-  bool mIsScenarioGame;
 };
 
 /// The limits and defaults the bodies check against (gameoptions.yaml's lists and numbers, the tables' sizes).
@@ -623,110 +492,6 @@ struct EeAppMiniMapUnitDot {
   long flag;
   long x;
   long y;
-};
-
-/// `EEGameSettings`' plain members (the game options and the strings stay C++), in the class's order.
-struct EeAppSettingsFields {
-  float mMouseSensitivity;
-  float mSideScrollSpeed;
-  float mGrabScrollSpeed;
-  float mSoundVolume;
-  float mMusicVolume;
-  float mMaxNumberOfSounds;
-  float mUnitScaleFactor;
-  float mZoomLock;
-  long mZoomStyle;
-  long mL53C;
-  long mL540;
-  long mScreenMode;
-  long mButtonMIPLevelsToDrop;
-  long mL54C;
-  long mL550;
-  long mL554;
-  long mL558;
-  long mL55C;
-  long mL560;
-  /// `gDifficultyLevel`
-  long mComputerPlayerDifficultyLevel;
-  long mGameBitDepth;
-  unsigned long mGameWindowHeight;
-  unsigned long mGameWindowWidth;
-  long mCTSendIntervalStepUp;
-  long mCTSendIntervalStepDown;
-  long mMaxPTsPerSecond;
-  long mMinPTsPerSecond;
-  long mMaxCTSendInterval;
-  long mMIPLevelsToDrop;
-  long mModelDetail;
-  long mEffectDetail;
-  long mNetworkAdapter;
-  unsigned long mPTRateTuningThreshold;
-  long mScreenID;
-  long mStartingKeyboardLayout;
-  long mTerrainMIPLevelsToDrop;
-  long mTextureBitDepth;
-  unsigned long mNumberOfAutoSaves;
-  unsigned long mAutoSaveInMilliseconds;
-  long mLastOpenPostGameStatsPage;
-  long mL5B8;
-  long mL5BC;
-  bool mB5C0;
-  /// `gZoomEnabled`
-  bool mZoomEnabled;
-  bool mB5C2;
-  bool mAnimationSmoothing;
-  bool mB5C4;
-  bool mB5C5;
-  bool mB5C6;
-  bool mDisplayClouds;
-  bool mDisplayShadows;
-  bool mDisplayBattlefieldAmbients;
-  bool mB5CA;
-  bool mB5CB;
-  bool mB5CC;
-  bool mEnableAnimalHerds;
-  bool mTrilinearFilter;
-  /// the start screen shows when set
-  bool mFullScreen;
-  bool mReverbEnabled;
-  bool mWaitForVSync;
-  bool mAmbientSounds;
-  bool mShowBlood;
-  bool mMusicEnabled;
-  bool mRightHandMouseOrientation;
-  bool mB5D6;
-  bool mUnitLighting;
-  bool mUseAreaEffectOverlays;
-  bool mUseCandidateWindow;
-  bool mDisplayWeatherEffects;
-  bool mDebugOOSHandling;
-  bool mTakeJPGScreenshots;
-  bool mAntiAliasing;
-  bool mTakeEndGameScreenshots;
-  bool mShowAutoWaypoints;
-  /// port: 0 (the original textures), 2 or 4 (Data/Textures-4x)
-  long mTextureResolution;
-  /// port: percent, 0 Auto
-  long mUIScale;
-  /// port: percent of the display's pixels (50..100)
-  long mRenderResolution;
-  /// port: 0 full screen (borderless), 1 windowed
-  long mWindowMode;
-  /// port: 0 v-sync, -1 unlimited, else frames a second
-  long mFrameRateLimit;
-  /// port: 0 bilinear, 1 trilinear, 2 anisotropic
-  long mTextureFiltering;
-  /// port: percent (100 unchanged)
-  long mBrightness;
-  /// port: percent
-  long mMasterVolume;
-  bool mMuteInBackground;
-  /// port: percent of the original's farthest zoom (100..300)
-  long mMaximumZoomOut;
-  /// port: 1 writes Logs/game-*.log
-  long mGameLog;
-  /// port: the audio device's name (empty: the system's default)
-  char mAudioDevice[128];
 };
 
 extern "C" {

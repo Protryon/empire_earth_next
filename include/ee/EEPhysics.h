@@ -8,6 +8,8 @@
 
 #include <vector>
 #include <deque>
+#include "rust/game/records.h"
+#include "rust/sim/records.h"
 #include "rust/sim/units.h"             // EeUnitsPhysicsSaved (EEPhysics' saved block)
 #include "rust/game/rts.h"              // EeRtsPhysicsFields (RTSPhysics' plain members)
 #include "rust/game/physics.h"

@@ -11,6 +11,7 @@
 #define EE_EEAREAEFFECTTEMPLATE_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+#include "rust/sim/records.h"
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"
 

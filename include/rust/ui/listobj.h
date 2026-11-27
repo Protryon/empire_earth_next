@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ template's forwarders).
 enum class EeUiListCall : uint32_t {

@@ -6,6 +6,7 @@
 // are provisional. Requires lle/UIFormManager.h, ee/EESMMediaStrings.h.
 #ifndef EE_EEUISCIFORMMANAGER_H
 #define EE_EEUISCIFORMMANAGER_H
+#include "rust/game/records.h"
 #include "rust/game/screens.h"
 
 #include "lle/UIFormManager.h"

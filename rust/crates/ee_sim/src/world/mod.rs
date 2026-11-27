@@ -10,6 +10,7 @@
 pub mod check;
 /// cbindgen:ignore
 pub mod effects;
+pub mod heads;
 pub mod layout;
 pub mod map_fields;
 pub mod player_fields;

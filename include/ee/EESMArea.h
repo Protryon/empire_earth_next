@@ -12,6 +12,7 @@
 
 #include <vector>
 #include "ee/EEAreaUtilities.h"
+#include "rust/sim/records.h"
 #include "rust/sim/scenario.h"
 
 class EEUnit;

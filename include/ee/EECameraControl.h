@@ -7,6 +7,7 @@
 #include <vector>
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
+#include "rust/game/records.h"
 #include "rust/game/gamecpp.h"
 
 class GE3DPoint;

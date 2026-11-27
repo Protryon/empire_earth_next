@@ -10,6 +10,7 @@ class FSFileSpec;
 class GETexture;
 class UIHotKey;
 
+#include "rust/data/records.h"
 #include "rust/data/media.h"
 #include "rust/game/gamecpp.h"
 

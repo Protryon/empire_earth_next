@@ -6,6 +6,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GEOrientation : public EeGeOrientation {   // the Rust record (mYaw, mPitch, mRoll; rust/base/math.h)
 public:

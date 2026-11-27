@@ -9,6 +9,7 @@
 #define EE_EESMOBJECT_H
 
 #include <vector>
+#include "rust/sim/records.h"
 #include "rust/sim/scenario.h"
 class EEComplexUnit;
 class EEUnit;

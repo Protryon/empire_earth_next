@@ -6,6 +6,7 @@
 
 #include "ee/EEDbList.h"
 #include "ee/EEDbRecords.h"
+#include "rust/data/records.h"
 
 class FSFileSpec;
 

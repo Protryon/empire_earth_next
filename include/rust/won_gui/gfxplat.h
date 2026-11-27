@@ -8,15 +8,7 @@
 #include <stddef.h>
 #include "rust/won_gui/gfxobj.h"
 #include "rust/won_gui/platfont.h"
-#include "rust/won_gui/surface.h"
-
-/// Where a Graphics draws (PlatGraphics' members): the surface of the display context it is attached to (borrowed:
-/// the image that owns the context keeps it; null while detached or when the context has none) and the context's
-/// pixel scale.
-struct EeWonGfxPlat {
-  EeWonSurface *surface;
-  float scale;
-};
+#include "rust/won_gui/records.h"
 
 extern "C" {
 

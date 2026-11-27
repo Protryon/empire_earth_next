@@ -3,6 +3,7 @@
 // the image, font and wrapped-text calls are Graphics.cpp's host).
 #ifndef EE_WONAPI_WONGUIDRAW_H
 #define EE_WONAPI_WONGUIDRAW_H
+#include "rust/won_gui/records.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/mspaint.h"
 #include "ee/wonapi/WONLobbyGUI.h"

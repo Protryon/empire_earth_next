@@ -4,6 +4,7 @@
 // form's combo box 98 and sends EEMHackANewUnit (place a unit) / EEMLoadUnitData (reload a class).
 #ifndef EE_EEUIFMGUNITHACK_H
 #define EE_EEUIFMGUNITHACK_H
+#include "rust/game/records.h"
 #include "rust/game/screens.h"
 
 class EEUIFMainGame;

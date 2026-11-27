@@ -9,6 +9,7 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
 
 class EECalamity;

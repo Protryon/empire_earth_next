@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/surface.h"
+#include "rust/won_gui/records.h"
 
 /// A hook (`ee_won_plat_gfx`; its arguments in the hook's order).
 enum class EeWonPlatGfx : uint32_t {

@@ -5,6 +5,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GEBoundingBox : public EeGeBoundingBox {   // the Rust record (mBottomLeftFront, mTopRightBack, mWidth (x),
 public:                                          // mHeight (z), mDepth (y); rust/base/math.h)

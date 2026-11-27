@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/surface.h"
+#include "rust/won_gui/records.h"
 
 /// The Rust PlatGUIFont.
 struct EeWonPlatFont;

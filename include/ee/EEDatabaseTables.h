@@ -13,6 +13,7 @@
 #include "ee/EEWorldConstants.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEDbList.h"
+#include "rust/data/records.h"
 #include "rust/data/media.h"
 #include "rust/game/gamecpp.h"
 #include "lle/GEColor.h"

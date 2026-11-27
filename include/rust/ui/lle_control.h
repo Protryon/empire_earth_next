@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/controlobj.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
 /// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/sparse.h"
+#include "rust/sim/records.h"
 
 /// A tile of an area of its own (`0x36`).
 constexpr static const int32_t KIND_AREA = 54;
@@ -563,38 +564,17 @@ enum class EeAStarSkip {
   Trees = 2,
 };
 
-/// The hull's points (opaque to C++).
-struct EeAStarAreaHull;
-
 /// A byte block (opaque to C++).
 struct EeAStarCmBytes;
 
 /// A load's leftovers (opaque to C++).
 struct EeAStarCmLoad;
 
-/// The tables (opaque to C++).
-struct EeAStarCmTables;
-
-/// The lists (opaque to C++).
-struct EeAStarContinentLists;
-
 /// One fill: the machine, its storage, the goal.
 struct EeAStarFlood;
 
-/// A list of ids (opaque to C++).
-struct EeAStarIdList;
-
 /// A modifier (opaque to C++).
 struct EeAStarModifier;
-
-/// A sector's lists (opaque to C++).
-struct EeAStarSectorLists;
-
-/// A list of area serials (opaque to C++).
-struct EeAStarSerialList;
-
-/// A sub sector's lists (opaque to C++).
-struct EeAStarSubSectorLists;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
@@ -604,85 +584,6 @@ struct EePathManager;
 
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
-
-/// A hull's bounds (`U2DRectangle<long>`, its members in their order).
-struct EeHullRect {
-  long bottom;
-  long left;
-  long right;
-  long top;
-};
-
-/// `U2DPoint<long>` (the C++ class's layout: two `long`s).
-struct EeHullPoint {
-  long x;
-  long y;
-};
-
-/// `EEAIArea`'s members but the tile set (the C++ class's first base; `ee_astar_area_init` / `ee_astar_area_free`
-/// in its ctor and dtor).
-struct EeAStarAreaRecord {
-  /// the hull's points (`ee_astar_area_hull_points`); NULL until a hull is set
-  EeAStarAreaHull *hull;
-  /// the hull's input's bounds (`U2DRectangle<long>`'s layout: the C++ hands it out as one)
-  EeHullRect hull_bounds;
-  /// the hull's center (`U2DPoint<long>`'s layout)
-  EeHullPoint hull_center;
-  /// the hull's area (`float`)
-  float hull_area;
-  /// `mBounds`: the hull's bounds in influence-table regions
-  EeHullRect bounds;
-  /// `mSerial`: `EEAIContinentManager::mLastSerial` when made, the key of its `mAreas`
-  unsigned long serial;
-  /// `mAreaType`: the area kind (`kAIArea*`)
-  long area_type;
-};
-
-/// `EEAIPathArea`'s members.
-struct EeAStarPathAreaRecord {
-  /// `mSectorIDs`: the path sectors it is in (sorted, unique)
-  EeAStarIdList *sector_ids;
-  /// `mContinentID`
-  uint16_t continent_id;
-  /// `mID`: the index in the manager's path areas
-  uint16_t id;
-  /// `mKind`: the tile kind (`EEAIGetTileKind`)
-  long kind;
-  /// `mUnitID`: the wall or gate of an obstacle area, -1
-  long unit_id;
-  /// the region ids by kind
-  uint16_t surface_region;
-  uint16_t water_body;
-  uint16_t land_mass;
-  uint16_t space_region;
-};
-
-/// `EEAIChokePoint`'s members.
-struct EeAStarChokeRecord {
-  /// `mAreaSerials`: the areas it joins
-  EeAStarSerialList *area_serials;
-  /// `mIndex`: its index in the manager's choke points
-  long index;
-  /// `mContinentID`
-  uint16_t continent_id;
-};
-
-/// `EEAIForest`'s members.
-struct EeAStarForestRecord {
-  /// `mResourceKind`: the highest kind (1..3) with trees
-  long resource_kind;
-  /// the trees by kind 1, 2, 3
-  long num_resources1;
-  long num_resources2;
-  long num_resources3;
-  /// `mL78` (only zeroed)
-  long l78;
-  /// `mNextRenewal`: the game time of the next regrowth
-  unsigned long next_renewal;
-  /// `mContinentID`, `mID`
-  uint16_t continent_id;
-  uint16_t id;
-};
 
 /// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
 /// tile (outside the playable rhombus it has none), its continent's category
@@ -696,56 +597,6 @@ struct EeChokeTileInfo {
   bool forest;
   uint32_t forest_serial;
   int32_t forest_tiles;
-};
-
-/// `EEAIContinentManager`'s members (`ee_astar_cm_init` / `ee_astar_cm_free` in its ctor and dtor). The grid
-/// pointers are the tables' grids (NULL: none), kept here for the C++'s inline lookups.
-struct EeAStarCmRecord {
-  /// the tables (`ee_astar_cm_*`)
-  EeAStarCmTables *tables;
-  /// `mTileValues` (width x height)
-  long *tile_values;
-  /// `mContinentIDs` (width x height)
-  uint16_t *continent_ids;
-  /// `mPathSubSectorIDs` (width x height)
-  uint16_t *sub_sector_ids;
-  /// `mTileFlags` (flags_width squared)
-  bool *tile_flags;
-  /// `mNextIDs`: the continental chains' next numbers by kind
-  uint16_t next_ids[7];
-  /// `mState` (2 while `Rebuild` repairs the path areas)
-  long state;
-  /// `mLastSerial`: the last area serial handed out
-  unsigned long last_serial;
-  /// `mL118` (only zeroed)
-  long l118;
-  /// `mNextPathAreaID`
-  uint16_t next_path_area_id;
-  /// `mLastSubSectorID`
-  uint16_t last_sub_sector_id;
-  /// `mChecksum`
-  long checksum;
-  /// `mNextID124`..`mNextID130`: the next land mass, water body, space region and surface region ids
-  long next_land_mass;
-  long next_water_body;
-  long next_space_region;
-  long next_surface_region;
-  /// `mNumWaterTiles`, `mNumLandTiles`, `mNumSpaceTiles`
-  long num_water_tiles;
-  long num_land_tiles;
-  long num_space_tiles;
-  /// `mFlagsWidth`: the adjacency matrix's side (the continent count)
-  long flags_width;
-  /// `mWidth`, `mHeight`: the map's tiles
-  unsigned long width;
-  unsigned long height;
-  /// `mClearing` (between `Clear` and the end of `BuildRegions`)
-  bool clearing;
-  /// the sector grid (was `EEAIPathSectorRegionInformation`): tiles per sector side, its square, sectors per side
-  long sector_size;
-  long sector_area;
-  long sectors_x;
-  long sectors_y;
 };
 
 /// One host call's values.
@@ -781,18 +632,6 @@ struct EeScenarioArea {
   float right;
   float height;
   float width;
-};
-
-/// `EEAIContinent`'s own members (`ee_astar_continent_init` / `ee_astar_continent_free` in its ctor and dtor).
-struct EeAStarContinentRecord {
-  /// the lists (`ee_astar_continent_*`)
-  EeAStarContinentLists *lists;
-  /// `mCounts`: the continental chain numbers by chain kind (`NumberContinentChains`)
-  uint16_t counts[7];
-  /// `mCategory`: land, water, space, cliff, map edge (`kContinentCategory*`)
-  uint8_t category;
-  /// `mID`: the index in the manager's `mContinents`
-  uint16_t id;
 };
 
 /// A continent's neighbour (`mNeighbors.push_back`): continent `id` gets `neighbor`.
@@ -1127,40 +966,6 @@ struct EePathIo {
 /// The C++ host: `(context, op, io) -> the answer`.
 using EePathHostFn = int64_t(*)(void*, int32_t, EePathIo*);
 
-/// `EEAIPathSector`'s members.
-struct EeAStarSectorRecord {
-  /// the lists (`ee_astar_sector_*`)
-  EeAStarSectorLists *lists;
-  /// `mBounds` (`U2DRectangle<long>`'s layout)
-  EeHullRect bounds;
-  /// `mCenter` (`U2DPoint<long>`'s layout)
-  EeHullPoint center;
-  /// `mID`: its index in the manager's sectors
-  uint16_t id;
-};
-
-/// `EEAIPathSubSector`'s members but the tiles.
-struct EeAStarSubSectorRecord {
-  /// the lists (`ee_astar_sub_sector_*`)
-  EeAStarSubSectorLists *lists;
-  /// `mLocation`: the tiles' center
-  EeHullPoint location;
-  /// `mSector`: the `EEAIPathSector*`
-  uint64_t sector;
-  /// `mNumTiles`
-  long num_tiles;
-  /// `mContinentID`, `mPathAreaID`, `mID`
-  uint16_t continent_id;
-  uint16_t path_area_id;
-  uint16_t id;
-  /// `mKind`: the tile kind
-  long kind;
-  /// `mPlayerID`
-  long player_id;
-  /// `mIsStale`: its path area is being repaired
-  bool is_stale;
-};
-
 /// A view of the world: `map` the search's map (an `EEMap*`), `quiet` a modifier's view whose answers are not noted.
 struct EeAStarWorldView {
   void *map;
@@ -1210,28 +1015,6 @@ struct EePathSavedGraph {
   bool any_continent;
   bool avoid_friendly_blockers;
   bool sub_group;
-};
-
-/// `EEAIHill`'s members.
-struct EeAStarHillRecord {
-  uint16_t continent_id;
-  uint16_t id;
-};
-
-/// `EEAIRectangleArea`'s members.
-struct EeAStarRectRecord {
-  /// `mRect`: the scenario area's tiles
-  EeHullRect rect;
-  /// `mScenarioAreaID`
-  long scenario_area_id;
-  /// the tiles by continent category (`UpdateContinents`)
-  long num_land_tiles;
-  long num_water_tiles;
-  long num_space_tiles;
-  /// `mContinentID`: the continent with most of its tiles
-  uint16_t continent_id;
-  /// `mID`
-  uint16_t id;
 };
 
 /// The goal's members: `EEAIAStarGoalBase`'s, `EEAIAStarPathfindingGoalBase`'s and `EEAIAStarBoundedPathGoal`'s.

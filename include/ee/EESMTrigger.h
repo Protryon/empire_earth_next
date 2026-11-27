@@ -8,6 +8,7 @@
 #define EE_EESMTRIGGER_H
 
 #include <vector>
+#include "rust/sim/records.h"
 #include "rust/sim/scenario.h"
 
 // a condition entry and an effect entry (new'd value-initialized: zeros, the End operator) are Rust records

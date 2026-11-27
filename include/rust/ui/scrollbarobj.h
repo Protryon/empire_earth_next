@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 #include "rust/ui/rect.h"
 #include "rust/ui/scrollbar.h"
 

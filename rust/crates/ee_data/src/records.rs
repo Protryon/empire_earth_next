@@ -1,0 +1,12 @@
+//! The records C++ classes derive from or embed (the data records pass, docs/progress/headers.md "How to add a
+//! record"). Their C declarations, and those of the types they name, go to `include/rust/data/records.h`
+//! (xtask split.rs), a header that declares no function, so a class header that includes only it is not rebuilt
+//! by a change to a function. A record is listed here by a `pub use` of its definition, or defined here.
+
+pub use crate::media::EeDataMediaUse;
+pub use crate::tables::{
+    EeDataAnimalFields, EeDataButtonFields, EeDataCliffTerrainFields, EeDataGameVariantFields,
+    EeDataGraphicEffectFields, EeDataGraphicObjectFields, EeDataMusicFields, EeDataSoundFields,
+    EeDataStartingResourcesFields, EeDataTerrainFields, EeDataTerrainTypeFields, EeDataUnitBehaviorFields,
+    EeDataUpgradeFields,
+};

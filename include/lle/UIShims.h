@@ -11,7 +11,7 @@
 #include <string>
 #include "lle/UString.h"
 #include "lle/UWideString.h"
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 #include "rust/ui/lle_cpp.h"   // ee_ui_shim_out
 #include "rust/ui/lle_bg_edit.h"   // the hosts (ee_ui_background_host, ee_ui_edit_host; the next four likewise)
 #include "rust/ui/lle_combo.h"

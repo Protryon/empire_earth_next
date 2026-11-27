@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "lle/U2DPoint.h"
+#include "rust/sim/records.h"
 #include "rust/sim/unit_ids.h"        // kGoalAttackGround
 #include "rust/sim/units.h"
 #include "rust/sim/combat.h"

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// UIEvent's inward calls on an event.
 enum class EeUiEventCall : uint32_t {
@@ -14,12 +14,6 @@ enum class EeUiEventCall : uint32_t {
   Initialize = 1,
   /// `Uninitialize()`: one user less, `UninitializeEvent` when the last leaves -> its result.
   Uninitialize = 2,
-};
-
-/// `UIEvent`'s member (`include/lle/UIEvent.h`), the C++ class's private base.
-struct EeUiEventFields {
-  /// `Initialize`/`Uninitialize`'s nesting: the event is initialised while it is not 0.
-  unsigned long mInitializeCount;
 };
 
 extern "C" {

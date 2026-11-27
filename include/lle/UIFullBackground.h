@@ -7,6 +7,7 @@
 #ifndef LLE_UIFULLBACKGROUND_H
 #define LLE_UIFULLBACKGROUND_H
 
+#include "rust/ui/records.h"
 #include "rust/ui/bgobj.h"
 #include "rust/ui/lle_hosts.h"
 #include "lle/UIObjHost.h"

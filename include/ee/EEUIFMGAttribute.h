@@ -6,6 +6,7 @@
 #ifndef EE_EEUIFMGATTRIBUTE_H
 #define EE_EEUIFMGATTRIBUTE_H
 #include "ee/EEUIBUpgrade.h"
+#include "rust/game/records.h"
 
 
 class EEUIFMGAttribute : public EEUIBUpgrade, public EeScreensAttributeFields {

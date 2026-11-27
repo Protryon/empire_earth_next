@@ -12,6 +12,7 @@
 #include <vector>
 #include "ee/EEAction.h"
 #include "lle/TMPoll.h"
+#include "rust/game/records.h"
 #include "rust/game/screens.h"
 
 class EEMessage;
