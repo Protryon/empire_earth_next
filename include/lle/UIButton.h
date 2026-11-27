@@ -24,7 +24,6 @@ public:
         : UIControl(kControlTypeButton, inId, inRectangle, inForm, inIndex, inBorderThickness, 1),
           mRust(ee_ui_button_new(this, ee_ui_button_host, inNormalBitmap, inFocusedBitmap, inPressedBitmap)) {}
     virtual ~UIButton() { ee_ui_button_free(this->mRust); }
-    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiButtonCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiButtonCall::VirtCopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiButtonCall::VirtDrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiButtonCall::DrawText); }

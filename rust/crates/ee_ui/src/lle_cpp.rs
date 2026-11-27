@@ -399,7 +399,6 @@ shims! {
     fn instance_dereference(instance: usize) = ee_uicpp_instance_dereference;
     fn db_find(path: usize, directory: usize, name: EeUiShimText, file: EeUiShimPtrOut) -> c_long = ee_uicpp_db_find;
     fn file_delete(file: usize) = ee_uicpp_file_delete;
-    fn mouse_button_fetch(which: u32, button: u32) = ee_uicpp_mouse_button_fetch;
     fn mouse_left_handed() -> bool = ee_ui_mouse_left_handed;
     fn mouse_set_left_handed(left: bool) = ee_ui_mouse_set_left_handed;
     // UIForm.cpp's (lle_form.rs); the file's open, read and close are UIHotKey.cpp's
@@ -412,18 +411,13 @@ shims! {
     fn hot_key_set_pressed(key: usize, event: usize) = ee_uicpp_hot_key_set_pressed;
     fn hot_key_set_just_unpressed(key: usize, event: usize) = ee_uicpp_hot_key_set_just_unpressed;
     fn hot_key_set_double_pressed(key: usize, event: usize) = ee_uicpp_hot_key_set_double_pressed;
-    fn form_fetch_tab_key() = ee_uicpp_form_fetch_tab_key;
-    fn form_fetch_shift_key() = ee_uicpp_form_fetch_shift_key;
     fn event_uninitialize(event: usize) = ee_uicpp_event_uninitialize;
     fn event_initialize(event: usize) = ee_uicpp_event_initialize;
     fn control_ime_result(control: usize, text: usize) = ee_uicpp_control_ime_result;
     fn control_ime_change(control: usize, text: usize, attributes: usize, cursor: u32) -> c_long = ee_uicpp_control_ime_change;
-    fn control_ime_close(control: usize) -> c_long = ee_uicpp_control_ime_close;
-    fn control_ime_open(control: usize) -> c_long = ee_uicpp_control_ime_open;
     fn control_translated_key(control: usize, key: usize, repeat: i32) -> c_long = ee_uicpp_control_translated_key;
     fn mgr_create_form(m: usize, data: EeUiShimBytes) -> usize = ee_uicpp_mgr_create_form;
     // UIControl.cpp's (lle_control.rs, mouse_ffi.rs)
-    fn control_key_fetch(slot: u32, code: u32) = ee_uicpp_control_key_fetch;
     fn control_mouse_left_double(control: usize) -> c_long = ee_uicpp_control_mouse_left_double;
     fn control_mouse_left_up(control: usize) -> c_long = ee_uicpp_control_mouse_left_up;
     fn control_mouse_left_down(control: usize) -> c_long = ee_uicpp_control_mouse_left_down;
@@ -466,14 +460,9 @@ shims! {
     fn list_line_count(list: usize) -> u32 = ee_uicpp_list_line_count;
     fn combo_set_rust(combo: usize, rust: usize) = ee_uicpp_combo_set_rust;
     fn list_change_selection(list: usize, index: u32, a: bool, b: bool) = ee_uicpp_list_change_selection;
-    fn control_set_bg_opacity(control: usize, opacity: f32) = ee_uicpp_control_set_bg_opacity;
-    fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = ee_uicpp_control_set_bg_color;
     // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
-    fn keyboard_entity(key: u32, out: EeUiShimPtrOut) = ee_uicpp_keyboard_entity;
     fn edit_scroll_bar_new(edit: usize, x: f32, y: f32, length: f32) -> usize = ee_uicpp_edit_scroll_bar_new;
-    fn line_new_black() -> usize = ee_uicpp_line_new_black;
-    fn line_new() -> usize = ee_uicpp_line_new;
     rust:
     // the input entities, the key slots, the texts (LLE/UI round 2: their shims were one call on a Rust object)
     fn mouse_buttons_ready() -> bool = own::mouse_buttons_ready;
@@ -499,6 +488,12 @@ shims! {
     // ui13a: the key predicates (lle_control.rs key_pressed)
     fn entity_long_value(entity: usize) -> c_long = own::entity_long_value;
     fn num_lock_off() -> bool = own::num_lock_off;
+    // the keyboard's and mouse's entities into the key slots (LLE/UI round 3: gISKeyboard, gISMouse are ee_base's)
+    fn mouse_button_fetch(which: u32, button: u32) = own::mouse_button_fetch;
+    fn form_fetch_tab_key() = own::form_fetch_tab_key;
+    fn form_fetch_shift_key() = own::form_fetch_shift_key;
+    fn control_key_fetch(slot: u32, code: u32) = own::control_key_fetch;
+    fn keyboard_entity(key: u32, out: EeUiShimPtrOut) = own::keyboard_entity;
     // the controls' button-down members (their records', lle_hosts.rs fields)
     fn control_left_down(control: usize) -> bool = crate::lle_hosts::control_left_down;
     fn control_right_down(control: usize) -> bool = crate::lle_hosts::control_right_down;
@@ -549,18 +544,26 @@ shims! {
     fn radio_set_up_checked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_up_checked;
     fn label_text(label: usize) -> usize = crate::lle_hosts::chains::label_text;
     fn edit_text(edit: usize) -> usize = crate::lle_hosts::chains::edit_text;
+    // UIControl's virtuals that only toolkit classes overrode, by the control's kind (LLE/UI round 3)
+    fn control_ime_close(control: usize) -> c_long = crate::lle_hosts::chains::control_ime_close;
+    // the edit box's lines (GELine: lle_hosts.rs ge)
+    fn line_new_black() -> usize = crate::lle_hosts::ge::line_new_black;
+    fn line_new() -> usize = crate::lle_hosts::ge::line_new;
+    fn control_ime_open(control: usize) -> c_long = crate::lle_hosts::chains::control_ime_open;
+    fn control_set_bg_opacity(control: usize, opacity: f32) = crate::lle_hosts::chains::control_set_bg_opacity;
+    fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = crate::lle_hosts::chains::control_set_bg_color;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's
 /// records, a `GEText`'s only member is ee_render's text, the key slots are [`crate::lle_control`]'s).
 #[cfg(not(any(test, feature = "no_cpp")))]
 mod own {
-    use core::ffi::c_long;
+    use core::ffi::{c_long, c_ulong};
 
     use ee_base::input::ffi::{self as input, EeInputEntity};
     use ee_render::ge::smallobj::{self as ge, EeGeText};
 
-    use crate::lle_control::{ee_ui_key_pressed, ee_ui_key_slot, key, EeUiKey, EeUiKeyPress};
+    use crate::lle_control::{ee_ui_key_pressed, ee_ui_key_slot, key, key_slot_at, EeUiKey, EeUiKeyPress};
 
     fn entity(e: usize) -> *const EeInputEntity {
         e as *const EeInputEntity
@@ -623,6 +626,35 @@ mod own {
     }
     pub(super) fn key_enter_value() -> bool {
         entity_value(key(EeUiKey::Enter)) != 0
+    }
+
+    /// `gISKeyboard->GetEntity(code, UIControl::Key(slot))` (a slot of [`EeUiKey`]'s order).
+    pub(super) fn control_key_fetch(slot: u32, code: u32) {
+        // SAFETY: the key slot lives for the process
+        unsafe { crate::lle_hosts::input::keyboard_entity(code as c_ulong, key_slot_at(slot)) };
+    }
+    /// `gISMouse->GetEntity(button, UIControl::Key(LeftMouse + which))`.
+    pub(super) fn mouse_button_fetch(which: u32, button: u32) {
+        // SAFETY: as control_key_fetch's
+        unsafe {
+            crate::lle_hosts::input::mouse_entity(button as c_ulong, key_slot_at(EeUiKey::LeftMouse as u32 + which))
+        };
+    }
+    /// `gISKeyboard->GetEntity(kKeyTab, UIControl::Key(Tab))`.
+    pub(super) fn form_fetch_tab_key() {
+        control_key_fetch(EeUiKey::Tab as u32, 0x0f);
+    }
+    /// `gISKeyboard->GetEntity(kKeyShift, UIControl::Key(Shift))`.
+    pub(super) fn form_fetch_shift_key() {
+        control_key_fetch(EeUiKey::Shift as u32, 0xe1);
+    }
+    /// `gISKeyboard->GetEntity(key, *out)`.
+    ///
+    /// # Safety
+    /// `out` a live pointer.
+    pub(super) unsafe fn keyboard_entity(key: u32, out: super::EeUiShimPtrOut) {
+        // SAFETY: the contract
+        unsafe { crate::lle_hosts::input::keyboard_entity(key as c_ulong, out.0.cast()) };
     }
 
     /// `TSScheduler::CreateCriticalSection(*lock)`: a new section (always made).

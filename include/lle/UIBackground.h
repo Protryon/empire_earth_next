@@ -32,7 +32,6 @@ public:
     virtual ~UIBackground() { ee_ui_bg_free(this); }
     virtual void Close() { this->Call(EeUiBgCall::Close); }                   // slot 0x04
     virtual void Open() { this->Call(EeUiBgCall::Open); }
-    virtual void RelayoutBackground() { this->Call(EeUiBgCall::Relayout); }
     virtual long LoadBackground() = 0;      // slot 0x10
     virtual long DrawBackground(const GERectangle& inRectangle) = 0;
     virtual long UnloadBackground() = 0;    // slot 0x18

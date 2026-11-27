@@ -104,7 +104,6 @@ public:
     {
         ee_ui_list_insert(this->mRust, &inLine, inIndex, const_cast<P*>(&inSort), UILineOps<T>::template Less<P>);
     }
-    virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(UIListBoxCall::MouseWheelTurned, inDelta); }
     bool ScrollBarExists() { return this->Call(UIListBoxCall::ScrollBar) != 0; }
     void SetAutoSelect(bool inAutoSelect) { this->Call(UIListBoxCall::SetAutoSelect, inAutoSelect); }
     void SetFocusedRectColor(const GEColor& inColor)
@@ -147,8 +146,6 @@ public:
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void ProcessDown() { this->Call(UIListBoxCall::ProcessDown); }
-    virtual void ProcessEnd() { this->Call(UIListBoxCall::ProcessEnd); }
-    virtual void ProcessHome() { this->Call(UIListBoxCall::ProcessHome); }
     virtual void ProcessUp() { this->Call(UIListBoxCall::ProcessUp); }
     virtual void TabbedFrom() { this->Call(UIListBoxCall::TabbedFrom); }
     virtual void TabbedTo() { this->SetDirty(true); }
@@ -171,8 +168,6 @@ template <class T> struct UIListBoxRust {
         case EeUiOp::ListClearSelection: l->ClearSelection(); break;
         case EeUiOp::ListProcessDown: l->ProcessDown(); break;
         case EeUiOp::ListProcessUp: l->ProcessUp(); break;
-        case EeUiOp::ListProcessHome: l->ProcessHome(); break;
-        case EeUiOp::ListProcessEnd: l->ProcessEnd(); break;
         case EeUiOp::ButtonDown: l->ButtonDown(); break;
         case EeUiOp::ButtonUp: l->ButtonUp(); break;
         case EeUiOp::ListAppendLine: l->AppendLine(*reinterpret_cast<const T*>(a)); break;
