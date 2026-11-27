@@ -19,6 +19,7 @@ use crate::combat::{
 use crate::units::uc_anim::*;
 use crate::units::uc_body::game::ee_units_uc_host;
 use crate::units::uc_body::*;
+use crate::units::uc_class::*;
 use crate::units::uc_create::*;
 use crate::units::uc_produce::*;
 use crate::units::uc_view::Ctx;
@@ -39,6 +40,8 @@ thread_local! {
     static TILE: Cell<[c_long; 2]> = const { Cell::new([0; 2]) };
     /// `FindTurretPart`'s part index
     static PART: Cell<c_ulong> = const { Cell::new(0) };
+    /// CreateUnitClasses' dbobjects file (an `FSFileSpec*`, `EEDbFindFile`'s output)
+    static DB_FILE: Cell<usize> = const { Cell::new(0) };
 }
 
 fn host(x: &Ctx<'_>, op: i32, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
@@ -56,6 +59,11 @@ fn i(v: c_long) -> i32 {
 pub(crate) fn scratch_view(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     let interval = || crate::tech::civ::rules().combat.regeneration_interval;
     Some(match op {
+        // CreateUnitClasses' dbobjects file: found into the cell (its address in a), tested, loaded and deleted (its value
+        // in a)
+        EE_UNITS_UC_DB_FIND => host(x, op, DB_FILE.with(|d| d.as_ptr() as usize as u64), b, c, f),
+        EE_UNITS_UC_DB_FILE => i64::from(DB_FILE.get() != 0),
+        EE_UNITS_UC_DB_LOAD | EE_UNITS_UC_DB_DELETE => host(x, op, DB_FILE.get() as u64, b, c, f),
         // `gPhysics->GetRandom()`
         EE_UNITS_UC_RANDOM => {
             f[0] = crate::units::uc_view::physics_generate();

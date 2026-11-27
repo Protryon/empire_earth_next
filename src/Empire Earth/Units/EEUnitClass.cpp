@@ -56,10 +56,8 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
 
-void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 
-static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
 
 // the unit classes by type (0x5636ac in the original: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
 // (the original's fixed EEUnitClassCount() slots; now one per unit type, sized by CreateUnitClasses: EEUnitClassCount() empty slots until then)
@@ -222,8 +220,6 @@ static std::vector<float> sUcChain;
 template <class T> static T* EEUcObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // the constructor's effects: the record's ids and the class's members, in the original's order (uc_class.rs)
-// CreateUnitClasses' dbobjects file
-static FSFileSpec* sUcDbFile;
 // the gate bodies' vectors (ucb_gate.rs: one per local of the originals) and EEFindGateWall's direction
 static std::vector<EEUnit*> sUcbUnits[8];
 static std::vector<U2DPoint<long> > sUcbTiles[3];
@@ -286,11 +282,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_SET_AI_SCRIPT: theClass->mAIScript = EEUnitAction::GetScript(theClass->mAIScriptName); return 0;
     case EE_UNITS_UC_SET_CLASS_BEHAVIOR: theClass->mBehavior = EEUnitBehavior::sTable[static_cast<EEUnitClassRecord*>(inUnit)->mBehavior]; return 0;
     // CreateUnitClasses' (uc_class.rs)
-    case EE_UNITS_UC_DB_FIND: return EEDbFindFile(gDataPath, kDbObjectsFile, sUcDbFile = NULL);
+    case EE_UNITS_UC_DB_FIND: return EEDbFindFile(gDataPath, kDbObjectsFile, *EEUcObject<FSFileSpec*>(inA) = NULL);   // the file: Rust's cell (uc_scratch_view.rs)
     case EE_UNITS_UC_VERIFY: ESVERIFY_AT(inB != 0, (long)inC); return 0;
-    case EE_UNITS_UC_DB_FILE: return sUcDbFile != NULL;
-    case EE_UNITS_UC_DB_LOAD: return gDatabaseObjects.Load(sUcDbFile);
-    case EE_UNITS_UC_DB_DELETE: delete sUcDbFile; return 0;
+    case EE_UNITS_UC_DB_LOAD: return gDatabaseObjects.Load(EEUcObject<FSFileSpec>(inA));
+    case EE_UNITS_UC_DB_DELETE: delete EEUcObject<FSFileSpec>(inA); return 0;
     case EE_UNITS_UC_DB_COUNT: return gDatabaseObjects.GetCount();
     case EE_UNITS_UC_DB_RECORD: return EEObj(gDatabaseObjects.GetEntry((unsigned long)inB)->mRecord);
     case EE_UNITS_UC_TABLE_ASSIGN: gUnitClassTable.assign((size_t)inB, NULL); return 0;
@@ -333,7 +328,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_R_FIND_DROP_LOCATION: EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_R_GOAL_DESTINATION: EEUcObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_R_PRIEST_DESTINATION: EEGetHelicopterPriestDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
-    case EE_UNITS_UC_R_LANDING_POINT: EEFindLandingPoint(theUnit, reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UC_R_LANDING_POINT: ee_units_find_landing_point(EEObj(theUnit), (float(*)[3])f); return 0;   // EEFindLandingPoint
     case EE_UNITS_UC_R_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
     case EE_UNITS_UC_R_SET_HEIGHT: theUnit->SetHeight(f[0]); return 0;
     case EE_UNITS_UC_R_ELEVATION_LAUNCHER: return EEGetRules().mCombat.IsElevationLauncher((long)inB);
@@ -342,7 +337,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_R_WORLD_FLOAT: f[0] = gWorldTable.GetFloatValue((EEWorldConstant)inB); return 0;
     case EE_UNITS_UC_R_ELEVATION: f[0] = EECombatElevation(*EEUcObject<EeCombatElevationIn>(inA)); return 0;
     case EE_UNITS_UC_R_SOUND_VOLUME: f[0] = EEUcObject<EESoundObject>(inA)->mVolume; return 0;
-    case EE_UNITS_UC_R_COMPUTE_SOUND: EEComputeSoundParameters(f[3], GE3DPoint(f[0], f[1], f[2]), f[0], f[1], f[2], kSoundDistanceFactor); return 0;
+    case EE_UNITS_UC_R_COMPUTE_SOUND: EEComputeSoundParameters(f[3], GE3DPoint(f[0], f[1], f[2]), f[0], f[1], f[2], 4.0f); return 0;   // 0x447ac4 (Virtual2C)
     case EE_UNITS_UC_R_IS_SEEN: return EEIsSeen(EEUcObject<EEUnit>(inA));
     case EE_UNITS_UC_R_DOPPLER_PITCH: EEGetDopplerPitch(EEUcObject<EEUnit>(inA), EEUcObject<EESoundObject>((uint64_t)inB), &f[0], &f[1], &f[2]); return 0;
     case EE_UNITS_UC_R_LOAD_INDICATOR: EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false); return 0;
@@ -748,7 +743,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UCA_GOAL_LOCATION: EEUcObject<EEUGRust>(inA)->GetGoalLocation((*reinterpret_cast<GE3DPoint*>(f))); return 0;
     case EE_UNITS_UCA_ATTACK_TARGET: return EEObj(EEUcObject<EEUGRust>(inA)->GetAttackTarget());
     case EE_UNITS_UCA_FIND_DROP: return EEObj(EECombatFindDropLocation(theUnit, NULL, (*reinterpret_cast<GE3DPoint*>(f))));
-    case EE_UNITS_UCA_LANDING_POINT: EEFindLandingPoint(theUnit, &(*reinterpret_cast<GE3DPoint*>(f))); return 0;
+    case EE_UNITS_UCA_LANDING_POINT: ee_units_find_landing_point(EEObj(theUnit), (float(*)[3])f); return 0;   // EEFindLandingPoint
     case EE_UNITS_UCA_GET_TILE: return EEObj(::gWorld.mMap->GetTile((long)inB, (long)inC));
     case EE_UNITS_UCA_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&(*reinterpret_cast<GE3DPoint*>(f)), EEUcObject<long>(inA), EEUcObject<long>(inA) + 1));
     case EE_UNITS_UCA_TILE_HEIGHT_OF: f[0] = EEUcObject<EEMapTile>(inA)->GetHeight(); return 0;
