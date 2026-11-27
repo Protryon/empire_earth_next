@@ -29,12 +29,6 @@ struct EeRtsVideoMode {
   unsigned long pixel_format;
 };
 
-/// `RTSUnitBucket`: the first unit of the bucket's chain and its count.
-struct EeRtsUnitBucket {
-  size_t first;
-  unsigned long count;
-};
-
 /// `RTSMapVertexColors`: a rectangle of colour-table indices (x in [left, right), y in [bottom, top), row-major).
 struct EeRtsMapVertexColors {
   long bottom;

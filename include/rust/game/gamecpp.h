@@ -13,6 +13,7 @@
 #include "rust/render/gfx.h"
 #include "rust/sim/app.h"
 #include "rust/sim/netmsg.h"
+#include "rust/sim/records.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 

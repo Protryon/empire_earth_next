@@ -588,6 +588,12 @@ struct EeRtsMouseFields {
   bool mIsFrozen;
 };
 
+/// `RTSUnitBucket`: the first unit of the bucket's chain and its count.
+struct EeRtsUnitBucket {
+  size_t first;
+  unsigned long count;
+};
+
 /// `EEUIFMainGame`'s C++ objects (ee/EEUIFMainGame.h; UI lane round 15), as untyped pointers the C++ casts at
 /// its uses: the unit information background, the wheel zoom and grab scroll events, the error strings' lock, the
 /// unit hack, the 200 ms poll and the mouse actions (scroll, click, lasso, build, calamity). The panel groups stay

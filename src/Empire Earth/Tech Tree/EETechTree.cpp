@@ -38,6 +38,7 @@
 #include "ee/EEUIFMainGame.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
+#include "rust/game/tech_tree.h"
 
 static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNodeID == 1000 &&
               IDS_PREHISTORIC_AGE == 30145, "ee_game tech_tree load.rs");
@@ -162,3 +163,41 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     }
     return 0;
 }
+
+// out of line from ee/EEPlayer.h (its Rust function headers stay out of it)
+
+long EETechTreeNode::GetCost(long inResource, long inUnitClass, float inScale)
+{ return ee_gamecpp_tech_obj_cost(this, inResource, inUnitClass, inScale); }
+
+void EETechTreeNode::LoadMedia(EEPlayer* inPlayer) { ee_gamecpp_tech_obj_media(this, inPlayer, true); }
+void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer) { ee_gamecpp_tech_obj_media(this, inPlayer, false); }
+void EETechTreeNode::SetButton(unsigned long inButton) { ee_gamecpp_tech_node_set_button(this, inButton); }
+UIHotKey* EETechTreeNode::GetHotKey() { return (UIHotKey*)ee_gamecpp_tech_node_hot_key(this); }
+long EETechTreeNode::GetUnitClass(unsigned long inIndex) { return ee_gamecpp_tech_obj_unit_class(this, inIndex); }
+
+void EETechTreeEpoch::LoadMediaOfKind(long inKind)
+{ this->EpochWalk(EeTechEpochOp::MediaOfKind, inKind, true, (EEComplexUnit*)ee_gamecpp_tech_tree_player(this->mTree)); }
+
+void EETechTreeEpoch::UnloadMediaOfKind(long inKind)
+{ this->EpochWalk(EeTechEpochOp::MediaOfKind, inKind, false, (EEComplexUnit*)ee_gamecpp_tech_tree_player(this->mTree)); }
+
+EETechTree::EETechTree() { ee_gamecpp_tech_tree_init(this); }
+EETechTree::~EETechTree() { ee_gamecpp_tech_tree_free(this); }
+EETechTreeNode* EETechTree::Get(long inID) { return (EETechTreeNode*)ee_gamecpp_tech_obj_get(this, inID); }
+long EETechTree::Load(FSFileSpec& inFile) { return ee_gamecpp_tech_load_file(this, &inFile); }
+EEPlayer* EETechTree::GetPlayer() { return (EEPlayer*)ee_gamecpp_tech_tree_player(this); }
+
+long EETechTree::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{ return ee_gamecpp_tech_tree_save(this, &inFile, true, inMajorVersion, inMinorVersion); }
+
+long EETechTree::Save(unsigned long, unsigned long, FSFile& outFile)
+{ return ee_gamecpp_tech_tree_save(this, &outFile, false, 0, 0); }
+
+void EETechTree::SetPlayer(EEPlayer* inPlayer) { ee_gamecpp_tech_set_player(this, inPlayer); }
+void EETechTree::UpdateInterface(bool inEpochChanged) { ee_gamecpp_tech_update_interface(this, inEpochChanged); }
+
+EETechTree& EETechTree::operator=(const EETechTree& inOther)
+{ return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther); }
+
+
+int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io) { return ee_gamecpp_tech_host(inTree, inOp, io); }

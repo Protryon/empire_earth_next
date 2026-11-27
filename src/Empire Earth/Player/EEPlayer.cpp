@@ -1158,3 +1158,374 @@ void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
                        UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gWorld.mLoadingSavedGame ? EE_UNITS_STATS_LOADING
                        : gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
 }
+
+// out of line from ee/EEPlayer.h (its Rust function headers stay out of it)
+
+EEPPlayerEventList::EEPPlayerEventList() : mList(ee_units_events_new()), mSound(NULL), mPlayed(NULL)
+{ ee_units_events_sounds(this, &EEPPlayerEventList::Host, true); }
+
+EEPPlayerEventList::~EEPPlayerEventList() { ee_units_events_destroy(this->mList, this, &EEPPlayerEventList::Host); }
+
+long EEPPlayerEventList::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{ return ee_units_events_file(this->mList, &inFile, &EESaveFilePrimitive, false); }
+
+long EEPPlayerEventList::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{ return ee_units_events_file(this->mList, &outFile, &EESaveFilePrimitive, true); }
+
+long EEPPlayerEventList::RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    this->Call(inPlayer, EE_UNITS_EVENTS_REPAIR, 0.0f);
+    return 0;
+}
+
+void EEPPlayerEventList::TickEvents(EEPlayer* inPlayer, float inElapsed)
+{ this->Call(inPlayer, EE_UNITS_EVENTS_TICK, inElapsed); }
+
+void EEPPlayerEventList::ShowEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_SHOW_ALL, 0.0f); }
+void EEPPlayerEventList::HideEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_HIDE_ALL, 0.0f); }
+void EEPPlayerEventList::Clear(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_CLEAR, 0.0f); }
+
+void EEPPlayerEventList::Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed)
+{ ee_units_events_call(this->mList, this, inPlayer, &EEPPlayerEventList::Host, inWhat, inElapsed); }
+
+void EEGroup::Add(EEComplexUnit* inUnit) { ee_units_group_do(this, 0, inUnit); }
+bool EEGroup::Contains(EEComplexUnit* inUnit) { return ee_units_group_contains(this, inUnit); }
+
+EEComplexUnit* EEGroup::GetUnit(long inIndex)
+{ return static_cast<EEComplexUnit*>(ee_units_group_unit(this, inIndex)); }
+
+unsigned long EEGroup::GetNumUnits() { return ee_units_group_len(this); }
+
+long EEGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{ return ee_units_group_file(this, false, &inFile, &EESaveFilePrimitive); }
+
+void EEGroup::Clear() { ee_units_group_do(this, 2, NULL); }
+void EEGroup::RemoveUnit(EEComplexUnit* inUnit) { ee_units_group_do(this, 1, inUnit); }
+
+long EEGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{ return ee_units_group_file(this, true, &outFile, &EESaveFilePrimitive); }
+
+void EEGroup::GetBounds(GERectangle& outBounds)
+{ ee_units_group_bounds(this, reinterpret_cast<float(*)[4]>(&outBounds)); }
+
+void EEGroup::Assign(EEGroup* inGroup) { ee_units_group_with(this, 3, inGroup); }
+
+EEComplexUnit* EEGroup::FindUnitOfCategory(long inCategory)
+{ return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_group_get(this, 3, inCategory))); }
+
+EEComplexUnit* EEGroup::FindUnitWithFlags(unsigned long inFlags)
+{ return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_group_get(this, 4, (int64_t)inFlags))); }
+
+bool EEGroup::HasUnitType(long inKey) { return ee_units_group_get(this, 1, inKey) != 0; }
+
+EESelectedGroup& EESelectedGroup::CopySelection(EESelectedGroup* inGroup)
+{ ee_units_group_with(this, 2, inGroup); return *this; }
+
+void EESelectedGroup::AddUnit(EEComplexUnit* inUnit, bool inNeedsSort)
+{ ee_units_group_do(this, inNeedsSort ? 11 : 12, inUnit); }
+
+unsigned short EESelectedGroup::GetContinent() { return (unsigned short)ee_units_group_get(this, 5, 0); }
+
+EEActiveGroup* EEActiveGroup::New(EEPlayer* inPlayer)
+{ return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(ee_units_group_new(2, inPlayer, 0))); }
+
+void EEActiveGroup::Finish() { ee_units_group_do(this, 15, NULL); }
+
+bool EEActiveGroup::IsReserved(const GE3DPoint& inLocation)
+{ return ee_units_ag_reserved(H(this), (const float(*)[3])&inLocation.mX, 0) != 0; }
+
+void EEActiveGroup::SplitCalamityCasters(EECalamityClass* inCalamity, EETechTreeNode* inNode, EEUnit* inTarget)
+{ ee_units_ag_split_calamity_casters(H(this), H(inCalamity), H(inNode), H(inTarget)); }
+
+void EEActiveGroup::SetGoal(EEUnitGoal* inGoal, bool inFlag) { ee_units_group_set_goal(this, inGoal, inFlag); }
+void EEActiveGroup::Plan() { ee_units_ag_plan(H(this)); }
+
+void EEActiveGroup::SpreadAroundTile(long inTileX, long inTileY)
+{ ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 0); }
+
+void EEActiveGroup::SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY)
+{ ee_units_ag_spread_around_unit(H(this), H(inTarget), (int32_t)inTileX, (int32_t)inTileY); }
+
+void EEActiveGroup::KeepMobileUnits() { ee_units_ag_keep_mobile(H(this)); }
+
+void EEActiveGroup::TellGroup(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
+{ ee_units_group_tell(this, inUnit, (const float(*)[3])&inLocation.mX); }
+
+EEStatisticsSeries::EEStatisticsSeries() : mPoints(1, EeUnitsStatPoint{0, 0}), mMaxValue(0), mKeepHistory(false) {}
+EEPlayerStatistics::EEPlayerStatistics() : mStats(ee_units_stats_new()), mEndTime(0) {}
+
+EEPlayerStatistics::EEPlayerStatistics(const EEPlayerStatistics& inOther) : mName(inOther.mName), mStats(ee_units_stats_new()), mEndTime(inOther.mEndTime)
+{
+    ee_units_stats_copy(this->mStats, inOther.mStats);
+}
+
+EEPlayerStatistics::~EEPlayerStatistics() { ee_units_stats_free(this->mStats); }
+
+long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    long theResult = this->mName.Load(inFile);
+    return theResult != 0 ? theResult : ee_units_stats_load(this->mStats, &inFile, &EESaveFilePrimitive, &this->mEndTime);
+}
+
+long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{
+    long theResult = this->mName.Save(outFile);
+    return theResult != 0 ? theResult : ee_units_stats_save(this->mStats, &outFile, &EESaveFilePrimitive, this->mEndTime);
+}
+
+unsigned long EEPlayerStatistics::GetValue(unsigned long inSeries)
+{ return ee_units_stats_value(this->mStats, inSeries, 0); }
+
+unsigned long EEPlayerStatistics::GetLastValue(unsigned long inSeries)
+{ return ee_units_stats_value(this->mStats, inSeries, 1); }
+
+unsigned long EEPlayerStatistics::CountIncreases(unsigned long inSeries)
+{ return ee_units_stats_value(this->mStats, inSeries, 2); }
+
+void EEPlayerStatistics::Clear()
+{ this->mName = UWideString(); this->mEndTime = 0; ee_units_stats_clear(this->mStats); }
+
+EEPlayerStatistics& EEPlayerStatistics::operator=(const EEPlayerStatistics& inStatistics)
+{
+    this->mName = inStatistics.mName;
+    this->mEndTime = inStatistics.mEndTime;
+    ee_units_stats_copy(this->mStats, inStatistics.mStats);
+    return *this;
+}
+
+EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)
+{
+    EEStatisticsSeries theSeries;
+    theSeries.mPoints.resize(ee_units_stats_value(this->mStats, inSeries, 3));
+    if (!theSeries.mPoints.empty())
+        ee_units_stats_points(this->mStats, inSeries, theSeries.mPoints.data(), theSeries.mPoints.size());
+    theSeries.mMaxValue = ee_units_stats_value(this->mStats, inSeries, 0);
+    theSeries.mKeepHistory = ee_units_stats_value(this->mStats, inSeries, 4) != 0;
+    return theSeries;
+}
+
+EEPlayer::EEPlayer()
+{ ee_rts_player_reset(this); ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 0, 0, 0.0f); }
+
+EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
+{
+    ee_rts_player_reset(this);
+    this->mName = inName;
+    this->mPlayerID = inPlayerID;
+    this->mSaveVisMap = inPlayerID != 0;
+    ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 1, (int64_t)inPlayerID, 0.0f);
+}
+
+EEPlayer::~EEPlayer()
+{
+    ee_units_player_body(this, EE_UNITS_PLAYER_DO_DESTROY, 0, 0, 0, 0.0f);
+    ee_units_store_clear_player_object((uint64_t)(uintptr_t)this);
+}
+
+void EEPlayer::Clear() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CLEAR, 0, 0, 0, 0.0f); }
+void EEPlayer::RemovalsDone() { ee_units_groups_player(this, 3); }
+
+long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
+{ return (long)ee_units_player_body(this, EE_UNITS_PLAYER_DO_REPAIR_POINTERS, inFirst, (int64_t)inSecond, 0, 0.0f); }
+
+void EEPlayer::AddPendingUnits(bool inKeepID, bool inReleasePending)
+{ ee_rts_eeplayer_add_pending_units(this, this->mGroupLists, inKeepID, inReleasePending); }
+
+void EEPlayer::ReleasePendingUnits() { ee_rts_eeplayer_release_pending_units(this, this->mGroupLists); }
+
+void EEPlayer::GetChecksum(ESChecksum& ioChecksum)
+{ ee_units_player_rest(this, EE_UNITS_PLAYER_REST_CHECKSUM, (uint64_t)(uintptr_t)&ioChecksum, 0, 0); }
+
+void EEPlayer::UnitRemoved(RTSUnit* inUnit)
+{ ee_units_player_rest(this, EE_UNITS_PLAYER_REST_UNIT_REMOVED, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0); }
+
+void EEPlayer::RemovingUnit(RTSUnit* inUnit)
+{ ee_units_player_rest(this, EE_UNITS_PLAYER_REST_REMOVING_UNIT, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0); }
+
+void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction)
+{ ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_REFUND_TECHNOLOGY, inTechnology, inUnitType, 0, 0, 0, 0, inFraction, NULL); }
+
+long EEPlayer::GetHeroCount(bool inByClass, bool inRequests)
+{ return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_NUM_HEROES, NULL, inByClass, inRequests, 0, 0, 0, 0.0f, NULL); }
+
+bool EEPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_PRODUCE, NULL, inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, 0.0f, outReason) != 0; }
+
+bool EEPlayer::CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long inValue)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD_REPAIR, inUnit, (int64_t)reinterpret_cast<uintptr_t>(inOther), inValue, 0, 0, 0, 0.0f, NULL) != 0; }
+
+EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
+{ return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(ee_units_player_body(this, EE_UNITS_PLAYER_DO_NEAREST_SITE, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0, 0.0f))); }
+
+bool EEPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD, inTechnology, inUnitType, inCount, 0, 0, 0, 0.0f, NULL) != 0; }
+
+void EEPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
+{ ee_units_player_body(this, EE_UNITS_PLAYER_DO_DAMAGE, 0, inPlayer, inAmount, 0.0f); }
+
+void EEPlayer::PlayAcknowledgement(EEComplexUnit* inUnit)
+{ ee_units_selection(this, 9, inUnit, 0, NULL, 0, false, false); }
+
+void EEPlayer::RefreshTownGroups() { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_REFRESH_TOWN_GROUPS, 0, 0, 0); }
+
+long EEPlayer::FinishUnitsLoad(long inMajorVersion, long inMinorVersion)
+{ return (long)ee_units_player_rest(this, EE_UNITS_PLAYER_REST_FINISH_UNITS_LOAD, 0, inMajorVersion, inMinorVersion); }
+
+void EEPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
+{ ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_PAY_IMPROVEMENT, inClass, inImprovement, 0, 0, 0, 0, 0.0f, NULL); }
+
+void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
+{ ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_PAY, inTechnology, inUnitType, 0, 0, 0, 0, inFraction, NULL); }
+
+void EEPlayer::UnitGoalDone(EEComplexUnit* inUnit)
+{ ee_units_player_rest(this, EE_UNITS_PLAYER_REST_UNIT_GOAL_DONE, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0); }
+
+bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_ADVANCE_IMPROVEMENT, NULL, (int32_t)inUnitType, 0, 0, 0, 0, 0.0f, NULL) != 0; }
+
+void EEPlayer::DeselectUnit(EEUnit* inUnit) { ee_units_selection(this, 7, inUnit, 0, NULL, 0, false, false); }
+void EEPlayer::EnableCamouflagePower() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CAMOUFLAGE, 0, 1, 0, 0.0f); }
+
+unsigned long EEPlayer::GetNumTowns() const
+{ return (unsigned long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_TOWNS); }
+
+EETown* EEPlayer::GetTown(unsigned long inIndex) const
+{ return reinterpret_cast<EETown*>(static_cast<uintptr_t>(ee_units_lists_at(this->mLists, EE_UNITS_LISTS_TOWNS, inIndex))); }
+
+void EEPlayer::ApplyImprovement(long inUnitType, long inImprovement, bool inFlag)
+{ ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_APPLY_IMPROVEMENT, NULL, inUnitType, inImprovement, inFlag, 0, 0, 0.0f, NULL); }
+
+EEWUnitsOffMapInfo* EEPlayer::GetOffMapInfo(EEComplexUnit* inUnit)
+{ return ee_units_off_map_info(this->mLists, (int64_t)(uintptr_t)(void*)inUnit); }
+
+void EEPlayer::UnselectAllUnits() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_UNSELECT_ALL, 0, 0, 0, 0.0f); }
+
+EEPPatrolGroup* EEPlayer::GetPatrolGroup(unsigned long inID)
+{ return reinterpret_cast<EEPPatrolGroup*>(static_cast<uintptr_t>(ee_units_player_body(this, EE_UNITS_PLAYER_DO_PATROL_GROUP, inID, 0, 0, 0.0f))); }
+
+void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
+{ ee_units_lists_add(this->mLists, EE_UNITS_LISTS_PATROLS, (uint64_t)(uintptr_t)inGroup); }
+
+long EEPlayer::CountQueuedImprovements(unsigned long inUnitType, long inArg) const
+{ return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_COUNT_QUEUED, NULL, (int32_t)inUnitType, inArg, 0, 0, 0, 0.0f, NULL); }
+
+void EEPlayer::RemoveQueuedImprovement(long inUnitType, long inImprovement, bool inFlag)
+{ ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_REMOVE_QUEUED, NULL, inUnitType, inImprovement, inFlag, 0, 0, 0.0f, NULL); }
+
+bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_BUY, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outText) != 0; }
+
+void EEPlayer::QueueImprovement(unsigned long inUnitType, unsigned long inImprovement, bool inFront, bool inAlreadyPaid)
+{ ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_QUEUE_IMPROVEMENT, NULL, (int32_t)inUnitType, (int32_t)inImprovement, inFront, inAlreadyPaid, 0, 0.0f, NULL); }
+
+bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outReason)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_IMPROVE, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outReason) != 0; }
+
+void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
+{ ee_units_player_body(this, EE_UNITS_PLAYER_DO_PULSE_SIGHT, (uint64_t)(int64_t)inID, inByID, 0, inSight); }
+
+unsigned long EEPlayer::GetTeamIndex()
+{ return (unsigned long)ee_units_player_body(this, EE_UNITS_PLAYER_DO_TEAM_INDEX, 0, 0, 0, 0.0f); }
+
+void EEPlayer::EraseQueuedImprovements(unsigned long inUnitType)
+{ ee_units_queued_op(this->mQueued, 0, inUnitType, 0); }
+
+void EEPlayer::MoveQueuedImprovements(unsigned long inFrom, unsigned long inTo)
+{ ee_units_queued_op(this->mQueued, 1, inFrom, inTo); }
+
+long EEPlayer::GetResearchedImprovement(unsigned long inUnitType)
+{ return (long)ee_units_queued_op(this->mQueued, 2, inUnitType, 0); }
+
+float EEPlayer::GetImprovementProgress(unsigned long inUnitType)
+{ return ee_units_queued_timer(this->mQueued, inUnitType); }
+
+void EEPlayer::AssignHerds() { ee_units_player_areas(EEPlayerRefs(this), 5, NULL); }
+void EEPlayer::AssignTowns() { ee_units_player_areas(EEPlayerRefs(this), 4, NULL); }
+
+void EEPlayer::SetSelectedViewedUnit(RTSUnit* inUnit)
+{ ee_units_player_body(this, EE_UNITS_PLAYER_DO_SET_SELECTED_VIEWED, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0, 0.0f); }
+
+void EEPlayer::ExecuteSelectionMessage(NEMessage* inMessage)
+{ ee_units_player_body(this, EE_UNITS_PLAYER_DO_EXECUTE_SELECTION, (uint64_t)(uintptr_t)inMessage, 0, 0, 0.0f); }
+
+void EEPlayer::AddSightSharer(EEPlayer* inPlayer)
+{ ee_units_player_diplomacy(EEPlayerRefs(this), 1, inPlayer, 0, false); }
+
+void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
+{ ee_units_player_diplomacy(EEPlayerRefs(this), 2, inPlayer, 0, false); }
+
+void EEPlayer::AddStrandedUnit(EEUnit* inUnit)
+{ ee_units_lists_add(this->mLists, EE_UNITS_LISTS_STRANDED, (int64_t)(uintptr_t)(void*)inUnit); }
+
+void EEPlayer::AddConstructionSite(EEComplexUnit* inUnit)
+{
+    if (!ee_units_lists_has(this->mLists, EE_UNITS_LISTS_SITES, (uint64_t)(uintptr_t)(void*)inUnit))
+        ee_units_lists_add(this->mLists, EE_UNITS_LISTS_SITES, (uint64_t)(uintptr_t)(void*)inUnit);
+}
+
+void EEPlayer::RemoveOffMapUnit(RTSUnit* inUnit)
+{ ee_units_off_map(this->mLists, 1, (int64_t)(uintptr_t)(void*)inUnit, 0, 0, 0); }
+
+void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMap)
+{ ee_units_player_diplomacy(EEPlayerRefs(this), 0, inOther, (unsigned long)inStance, inMap != NULL); }
+
+void EEPlayer::RefreshTerrainVisibility()
+{ ee_units_player_body(this, EE_UNITS_PLAYER_DO_REFRESH_TERRAIN, 0, 0, 0, 0.0f); }
+
+void EEPlayer::SetSharedLOS(bool inFlag, EEMap* inArg)
+{ ee_units_player_diplomacy(EEPlayerRefs(this), 3, NULL, 0, inFlag); }
+
+bool EEPlayer::HasLoadedUnitID(unsigned long inUnitID)
+{ return ee_units_lists_has(this->mLists, EE_UNITS_LISTS_LOADED_IDS, inUnitID); }
+
+long EEPlayer::GetCitizenPassability()
+{ return (long)ee_units_player_body(this, EE_UNITS_PLAYER_DO_CITIZEN_PASSABILITY, 0, 0, 0, 0.0f); }
+
+long EEPlayer::GetTotalPopulation(bool inFirst, bool inSecond)
+{ return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_TOTAL_POPULATION, NULL, inFirst, inSecond, 0, 0, 0, 0.0f, NULL); }
+
+long EEPlayer::GetImprovementLevel(unsigned long inUnitType, long inImprovement) const
+{ return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_IMPROVEMENT_LEVEL, NULL, (int32_t)inUnitType, inImprovement, 0, 0, 0, 0.0f, NULL); }
+
+bool EEPlayer::IsImprovementMaxed(unsigned long inUnitType, long inImprovement)
+{ return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_IS_IMPROVEMENT_MAXED, NULL, (int32_t)inUnitType, inImprovement, 0, 0, 0, 0.0f, NULL) != 0; }
+
+void EEPlayer::AddLoadedMedia(EEMedia* inMedia)
+{ ee_units_lists_add(this->mLists, EE_UNITS_LISTS_MEDIA, (uint64_t)(uintptr_t)inMedia); }
+
+long EEPlayer::GetWonderTime(long inIndex) const
+{ return (long)ee_units_player_rest(const_cast<EEPlayer*>(this), EE_UNITS_PLAYER_REST_WONDER_TIME, 0, inIndex, 0); }
+
+unsigned long EEPlayer::GetNumWonderUnits() const
+{ return (unsigned long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_WONDERS); }
+
+void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond)
+{ ee_units_player_body(this, EE_UNITS_PLAYER_DO_SWAP_BUTTONS, (uint64_t)(uintptr_t)inFirst, (int64_t)inUnitClass, (int64_t)(uintptr_t)inSecond, 0.0f); }
+
+RTSUnit* EEPlayer::GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_player_unit(this, inUnitID)); }
+
+void EEPlayer::SetColor(const GEColor& inColor)
+{
+    ee_units_player_set_color(reinterpret_cast<float(*)[3]>(&this->mColor), reinterpret_cast<float(*)[3]>(&this->mShadeColor), reinterpret_cast<const float(*)[3]>(&inColor));
+}
+
+void EEPlayer::KillUnit(RTSUnit* inUnit, bool inForce) { ee_rts_player_kill_unit(this, inUnit, inForce); }
+
+unsigned long EEPlayer::GetNumRunningGroups()
+{ return ee_units_player_groups_len(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_RUNNING); }
+
+EEGroup* EEPlayer::GetRunningGroup(unsigned long inIndex)
+{ return static_cast<EEGroup*>(ee_units_player_groups_at(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_RUNNING, inIndex)); }
+
+unsigned long EEPlayer::GetNumPendingGroups()
+{ return ee_units_player_groups_len(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_PENDING); }
+
+void EEPlayer::AddPendingGroup(EEGroup* inGroup)
+{ ee_units_player_groups_push(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_PENDING, inGroup); }
+
+
+bool EESaveIsPrimitive(int32_t inOp)
+{
+    return (inOp >= EE_UNITS_PLAYER_SAVE_READ_ULONG && inOp <= EE_UNITS_PLAYER_SAVE_WRITE_BOOL) ||
+           inOp == EE_UNITS_PLAYER_SAVE_READ_USHORT || inOp == EE_UNITS_PLAYER_SAVE_WRITE_USHORT;
+}

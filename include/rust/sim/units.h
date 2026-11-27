@@ -16779,9 +16779,6 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_TILE_TYPES = 11;
 /// The list a host operation fills.
 struct EeUnitsAgListHandle;
 
-/// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
-struct EeUnitsAtc;
-
 /// The list a host operation fills (pushed one pair at a time).
 struct EeUnitsClsListHandle;
 
@@ -16791,37 +16788,12 @@ struct EeUnitsCzList;
 /// One goal queue: its unit (`mUnit`'s address), its goals' objects in queue order (0: a null entry) and its timer.
 struct EeUnitsGoalQueue;
 
-/// A patrol group: its reference count (`UReferenceCounter`'s, 1 when made), its points (unit handles; between a
-/// load and `RepairPointers` the saved ids in their place) and its fields. Its handle is the box's address; the C++
-/// holders keep `EEPPatrolGroup*` (ee/EEPPatrolGroup.h: a name for this type).
-struct EeUnitsPatrolGroup;
-
-/// The events (`EEPPlayerEventList`'s state).
-struct EeUnitsPlayerEvents;
-
-/// A player's three group lists (EEPlayer's `mGroupLists`): the groups by address, in the vectors' order; the lists
-/// hold no reference of their own (the bodies count them, as the original's did).
-struct EeUnitsPlayerGroups;
-
-/// The player's lists.
-struct EeUnitsPlayerLists;
-
-/// The 31 series (the C++ `mStats`).
-struct EeUnitsPlayerStats;
-
 /// The deque (`std::deque<EEComplexUnitWaypoint>` until this round).
 struct EeUnitsWaypoints;
 
 /// `UpdateFanaticismColor`'s function statics: the effect's two colours, the colour, the time last computed
 /// (the original's file static `sU563238`).
 struct FanaticismColors;
-
-/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsPlayerSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
-};
 
 /// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
 /// count) or reads (`cap` entries).
@@ -17204,62 +17176,8 @@ struct EeUnitsGroupIo {
   void *out;
 };
 
-/// One host call's values: the arguments in `i`/`f`, the answers back in them.
-struct EeUnitsPlayerIo {
-  int64_t i[8];
-  float f[2];
-};
-
-/// The C++ host: `(player, op, io) -> the answer`.
-using EeUnitsPlayerFn = int64_t(*)(void*, int32_t, EeUnitsPlayerIo*);
-
-/// What a call needs: the player (the host's context), the host, the records and the statistics.
-struct EeUnitsPlayerRefs {
-  void *player;
-  EeUnitsPlayerFn host;
-  EeUnitsPlayerSaved *saved;
-  EeUnitsPlayerFields *fields;
-  const EeUnitsPlayerStats *stats;
-};
-
-/// One event (`EEPPlayerEvent`'s members).
-struct EeUnitsPlayerEvent {
-  /// `mSource` (the tile the event is about: the camera jumps there)
-  long source_x;
-  long source_y;
-  /// `mLocation` (an attack: the attacker's tile, where the sight is shared)
-  long x;
-  long y;
-  /// `mType`
-  long kind;
-  /// `mTimeRemaining` (ms)
-  float time;
-  /// `mTextID` (-1 none)
-  long text;
-  /// `mActive`
-  bool active;
-};
-
 /// The C++ host: `(list, player, op, event) -> the answer`.
 using EeUnitsEventsFn = int32_t(*)(void*, void*, int32_t, const EeUnitsPlayerEvent*);
-
-/// `EEWUnitsOffMapInfo`: a unit taken off the map (its C++ names and types; the callers set `mReason`).
-struct EeUnitsOffMapInfo {
-  /// the tile it left (`EETileLocation`: x, y; saved)
-  long mLocation[2];
-  /// the unit (`RTSUnit*`, referenced; its id while loading)
-  void *mUnit;
-  /// the game time it left (saved)
-  unsigned long mTime;
-  /// why (1..7: the transports, the calamities, the scenario's effect; saved)
-  long mReason;
-};
-
-/// One point (`EEStatisticsPoint`: the value, the game time).
-struct EeUnitsStatPoint {
-  unsigned long value;
-  unsigned long time;
-};
 
 /// The host: `(ctx, op, index, io) -> the operation's result`.
 using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);

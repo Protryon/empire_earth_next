@@ -37,6 +37,27 @@ struct EeHerdLists;
 /// `mSavedSOLs`), applied by `ApplySavedState`.
 struct EeTechTreeSaved;
 
+/// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
+struct EeUnitsAtc;
+
+/// A patrol group: its reference count (`UReferenceCounter`'s, 1 when made), its points (unit handles; between a
+/// load and `RepairPointers` the saved ids in their place) and its fields. Its handle is the box's address; the C++
+/// holders keep `EEPPatrolGroup*` (ee/EEPPatrolGroup.h: a name for this type).
+struct EeUnitsPatrolGroup;
+
+/// The events (`EEPPlayerEventList`'s state).
+struct EeUnitsPlayerEvents;
+
+/// A player's three group lists (EEPlayer's `mGroupLists`): the groups by address, in the vectors' order; the lists
+/// hold no reference of their own (the bodies count them, as the original's did).
+struct EeUnitsPlayerGroups;
+
+/// The player's lists.
+struct EeUnitsPlayerLists;
+
+/// The 31 series (the C++ `mStats`).
+struct EeUnitsPlayerStats;
+
 /// The wonders' Rust state: the count of the player's wonders per unit type (`mWonderTypeCounts`) and the powers
 /// they grant, in the order granted (`mWonderPowers`: a power once per wonder type that grants it).
 struct EeUnitsPlayerWonders;
@@ -59,6 +80,13 @@ struct EeUnitsRtsUnitFields {
   bool mIsNodeFreed;
   /// named by the asserts "this->mIsValid == true"
   bool mIsValid;
+};
+
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
 };
 
 /// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
@@ -1661,6 +1689,15 @@ struct EeUnitsPhysicsSaved {
   bool mResourceTimerPending;
 };
 
+/// One host call's values: the arguments in `i`/`f`, the answers back in them.
+struct EeUnitsPlayerIo {
+  int64_t i[8];
+  float f[2];
+};
+
+/// The C++ host: `(player, op, io) -> the answer`.
+using EeUnitsPlayerFn = int64_t(*)(void*, int32_t, EeUnitsPlayerIo*);
+
 /// `EEPlayer`'s saved numbers (their C++ names and types).
 struct EeUnitsPlayerSaved {
   /// the scenario's player variables (zeroed together; saved)
@@ -1730,6 +1767,51 @@ struct EeUnitsPlayerFields {
   EeUnitsQueued *mQueued;
   /// the wonders' types and powers (player_units.rs; made by the constructors, freed by the destructor)
   EeUnitsPlayerWonders *mWonderState;
+};
+
+/// What a call needs: the player (the host's context), the host, the records and the statistics.
+struct EeUnitsPlayerRefs {
+  void *player;
+  EeUnitsPlayerFn host;
+  EeUnitsPlayerSaved *saved;
+  EeUnitsPlayerFields *fields;
+  const EeUnitsPlayerStats *stats;
+};
+
+/// One event (`EEPPlayerEvent`'s members).
+struct EeUnitsPlayerEvent {
+  /// `mSource` (the tile the event is about: the camera jumps there)
+  long source_x;
+  long source_y;
+  /// `mLocation` (an attack: the attacker's tile, where the sight is shared)
+  long x;
+  long y;
+  /// `mType`
+  long kind;
+  /// `mTimeRemaining` (ms)
+  float time;
+  /// `mTextID` (-1 none)
+  long text;
+  /// `mActive`
+  bool active;
+};
+
+/// `EEWUnitsOffMapInfo`: a unit taken off the map (its C++ names and types; the callers set `mReason`).
+struct EeUnitsOffMapInfo {
+  /// the tile it left (`EETileLocation`: x, y; saved)
+  long mLocation[2];
+  /// the unit (`RTSUnit*`, referenced; its id while loading)
+  void *mUnit;
+  /// the game time it left (saved)
+  unsigned long mTime;
+  /// why (1..7: the transports, the calamities, the scenario's effect; saved)
+  long mReason;
+};
+
+/// One point (`EEStatisticsPoint`: the value, the game time).
+struct EeUnitsStatPoint {
+  unsigned long value;
+  unsigned long time;
 };
 
 /// `RTSPlayer`'s plain members (ee/EEPlayer.h), in the class's order.

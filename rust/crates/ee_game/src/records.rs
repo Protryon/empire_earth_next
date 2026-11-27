@@ -11,6 +11,7 @@ pub use crate::civilization::EeGameCivFields;
 pub use crate::rts::graphics::EeRtsGraphicsFields;
 pub use crate::rts::mouse::EeRtsMouseFields;
 pub use crate::rts::physics::EeRtsPhysicsFields;
+pub use crate::rts::units::EeRtsUnitBucket;
 pub use crate::screens::command_units::EeScreensCommandUnitsFields;
 pub use crate::screens::game_actions::EeScreensGaFields;
 pub use crate::screens::hud_direct::EeScreensFormCallObjects;

@@ -37,3 +37,12 @@ pub use crate::world::unit_class_fields::{EeUnitsUnitClassFields, EeUnitsUnitCla
 pub use crate::world::unit_fields::{
     EeUnitsComplexUnitFields, EeUnitsIgnoredTarget, EeUnitsProductionEntry, EeUnitsRtsUnitFields, EeUnitsUnitFields,
 };
+// types the class headers name in members and declarations (EEPlayer.h: its lists, events, groups, statistics)
+pub use crate::units::atc::EeUnitsAtc;
+pub use crate::units::group_obj::EeUnitsPlayerGroups;
+pub use crate::units::patrol_group::EeUnitsPatrolGroup;
+pub use crate::units::player::EeUnitsPlayerRefs;
+pub use crate::units::player_events::{EeUnitsPlayerEvent, EeUnitsPlayerEvents};
+pub use crate::units::player_lists::{EeUnitsOffMapInfo, EeUnitsPlayerLists};
+pub use crate::units::player_save::EeUnitsPlayerSaveIo;
+pub use crate::units::player_stats::{EeUnitsPlayerStats, EeUnitsStatPoint};
