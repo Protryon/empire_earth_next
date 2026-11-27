@@ -39,9 +39,8 @@ public:
     void Update(float inElapsedTime) { ee_gamecpp_camera_update(this, inElapsedTime); }
     // inline (the grab scroll copies it to a temporary before its GetValue call, 0x1d9a5c)
     float GetZoom() const { return this->mZoom; }
-    // port: the end offset and focus as the C++ value class (the scenario's camera keys, the test fixture)
+    // port: the end offset as the C++ value class (the scenario's camera keys, the test fixture)
     const GE3DPoint& GetEndOffset() const { return reinterpret_cast<const GE3DPoint&>(this->mEndOffset); }
-    const GE3DPoint& GetEndFocus() const { return reinterpret_cast<const GE3DPoint&>(this->mEndFocus); }
     // 0x12934f: SetZoom(1.0f)
     void ResetZoom() { this->SetZoom(1.0f); }
     // 0x128722 (the mouse revolve event; provisional name)
@@ -56,9 +55,6 @@ public:
     void ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST); }
     // 0x129a04: the same for mUnitB, then resets mIsFollowingUnitB/mF0C4.. (provisional name)
     void ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST); }
-    // 0x129dfe (ret 0x14; EEPhysics 0x153474 pushes (unit, (byte) mIsFollowingUnitB, 1.0f, mTurnYaw, mTurnPitch))
-    // (provisional name)
-    void Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch) { ee_app_camera_follow(EE_CAMERA_HOST, EECameraID(inUnit), inFlag, inDuration, inTurnYaw, inTurnPitch); }
     // 0x128ea5 (the edge-scroll action EEAScroll; provisional name)
     void Scroll(float inDX, float inDY) { ee_app_camera_scroll(EE_CAMERA_HOST, inDX, inDY); }
     // 0x129eb2: 0 (near) .. 1 (far)
