@@ -438,7 +438,8 @@ return {
     llm_fallback = "rules",         -- what it does when the model fails
     llm_max_tokens = 300,
     llm_temperature = 80,           -- percent
-    llm_think = false,              -- false: requests ask for no reasoning (reasoning_effort none)
+    llm_think = false,              -- retained for parity; the transport never sends reasoning_effort (servers that
+                                    -- reject it returned HTTP 400), so this is currently a no-op
     llm_extra = "",                 -- extra JSON for the request
     llm_log = true,                 -- prompts and answers into the log
 }

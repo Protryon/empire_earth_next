@@ -154,7 +154,7 @@ std::string extract_answer(const std::string& body) {
     return body.substr(0, 400);
 }
 
-bool http_post(const std::string& url, const std::string& key, const std::string& body, int timeout_s, std::string& out) {
+bool http_post(const std::string& url, const std::string& key, const std::string& body, int timeout_s, std::string& out, int* status_code) {
     std::wstring wurl = wide(url);
     URL_COMPONENTS uc;
     memset(&uc, 0, sizeof uc);
@@ -167,7 +167,7 @@ bool http_post(const std::string& url, const std::string& key, const std::string
     std::wstring host(uc.lpszHostName, uc.dwHostNameLength);
     std::wstring path(uc.lpszUrlPath, uc.dwUrlPathLength);
     if (uc.lpszExtraInfo && uc.dwExtraInfoLength) path.append(uc.lpszExtraInfo, uc.dwExtraInfoLength);
-    HINTERNET session = WinHttpOpen(L"Empire Earth AI/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+    HINTERNET session = WinHttpOpen(L"Empire Earth AI/1.0", WINHTTP_ACCESS_TYPE_NO_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!session) return false;
     int ms = timeout_s * 1000;
@@ -190,10 +190,12 @@ bool http_post(const std::string& url, const std::string& key, const std::string
     BOOL ok = WinHttpSendRequest(req, wh.c_str(), (DWORD)-1, (LPVOID)body.data(), (DWORD)body.size(),
                                  (DWORD)body.size(), 0);
     if (ok) ok = WinHttpReceiveResponse(req, NULL);
+    int code = 0;
     if (ok) {
-        DWORD code = 0, len = sizeof code;
+        DWORD c = 0, len = sizeof c;
         WinHttpQueryHeaders(req, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                            WINHTTP_HEADER_NAME_BY_INDEX, &code, &len, WINHTTP_NO_HEADER_INDEX);
+                            WINHTTP_HEADER_NAME_BY_INDEX, &c, &len, WINHTTP_NO_HEADER_INDEX);
+        code = (int)c;
         std::string raw;
         char buf[8192];
         for (;;) {
@@ -208,16 +210,22 @@ bool http_post(const std::string& url, const std::string& key, const std::string
     WinHttpCloseHandle(req);
     WinHttpCloseHandle(conn);
     WinHttpCloseHandle(session);
+    if (status_code) *status_code = code;
     return ok != FALSE;
 }
 
 void worker(std::string url, std::string key, std::string body, int timeout_s) {
     std::string raw, answer;
-    bool ok = http_post(url, key, body, timeout_s, raw);
+    int code = 0;
+    bool ok = http_post(url, key, body, timeout_s, raw, &code);
     {
         std::lock_guard<std::mutex> h(g.lock);
         answer = extract_answer(raw);
-        if (!ok) answer = "llm error: " + answer;
+        if (!ok) {
+            char b[64];
+            snprintf(b, sizeof b, " (http %d, win %lu)", code, (unsigned long)GetLastError());
+            answer = "llm error: " + answer + b;
+        }
         g.answer = answer;
         g.answer_seq++;
     }
@@ -263,7 +271,6 @@ extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, cons
     body += "{\"role\":\"user\",\"content\":\"" + json_escape(prompt) + "\"}],";
     body += "\"max_tokens\":300,\"temperature\":0.8";
     if (!model.empty()) body += ",\"model\":\"" + json_escape(model) + "\"";
-    if (!think) body += ",\"reasoning_effort\":\"none\"";
     body += "}";
     unsigned long long seq;
     {

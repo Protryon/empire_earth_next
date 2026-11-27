@@ -4623,6 +4623,8 @@ static int LuaSay(lua_State* L) {
         return 1;
     }
     // the answer is UTF-8; the game's chat is in its own codepage (the language the game runs in)
+    unsigned long savedChatType = me->mChatType;
+    me->mChatType = 0;   // "all" - so the line is shown to the local player regardless of its setting
     const char* utf8 = lua_tostring(L, 1);
     std::wstring wide;
     int wn = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
@@ -4643,6 +4645,7 @@ static int LuaSay(lua_State* L) {
     msg->SetOriginatingSlot(me->mSlot);
     msg->Execute();
     msg->Dereference();
+    me->mChatType = savedChatType;
     lua_pushboolean(L, 1);
     return 1;
 }

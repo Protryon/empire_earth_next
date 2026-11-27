@@ -11,6 +11,7 @@ local M = {}
 
 local EVERY = 8000          -- a line every this long at most
 local MAX_REQ = 6           -- requests before it gives up for the game
+local FAIL_LIMIT = 3        -- LLM failures before it stops trying and prints one notice
 
 local function available()
     return ai ~= nil and ai.llm ~= nil
@@ -52,18 +53,28 @@ function M.step(view, memory)
     -- the answer, when it comes: into the game's chat (ai.say) when the game has it, else the trace
     local ans = ai.llm()
     if ans ~= nil and ans ~= "" then
-        v.line = ans
-        v.answered = (v.answered or 0) + 1
-        local said = false
-        if ai.say ~= nil and S.llm_lines ~= false then
-            said = ai.say(ans) ~= false
-        end
-        if not said then
-            print(string.format("voice: %s", ans))
+        if type(ans) == "string" and string.sub(ans, 1, 9) == "llm error" then
+            -- a dead or refusing server: count it, say nothing, and stop trying after a few
+            v.fails = (v.fails or 0) + 1
+            if v.fails >= FAIL_LIMIT and not v.llm_off then
+                v.llm_off = true
+                print(string.format("voice: LLM unavailable (%s) - giving up for this game", ans))
+            end
+        else
+            v.line = ans
+            v.answered = (v.answered or 0) + 1
+            v.fails = 0
+            local said = false
+            if ai.say ~= nil and S.llm_lines ~= false then
+                said = ai.say(ans) ~= false
+            end
+            if not said then
+                print(string.format("voice: %s", ans))
+            end
         end
     end
     -- the human's chat (llm_ai_talk): answer the next line from the human (player 1, single player)
-    if ai.chat ~= nil and S.llm_ai_talk then
+    if ai.chat ~= nil and S.llm_ai_talk and not v.llm_off then
         local text, player = ai.chat()
         if text ~= nil and (player or 0) == 1 and text ~= "" then
             v.talk = (v.talk or 0) + 1
@@ -74,6 +85,16 @@ function M.step(view, memory)
     -- a line now and then (not while a decision waits for the model: one request at a time)
     if v.dec ~= nil and next(v.dec) ~= nil then
         return
+    end
+    -- the persona's own line now and then, so the chat is not silent while the model is off or down
+    if v.llm_off or view.time - (v.persona_t or 0) >= 300000 then
+        if view.time - (v.persona_t or 0) >= 300000 then
+            v.persona_t = view.time
+            M.say(memory, "greeting")
+        end
+        if v.llm_off then
+            return
+        end
     end
     if view.time - (v.t or 0) < EVERY or (v.req or 0) >= MAX_REQ then
         return
