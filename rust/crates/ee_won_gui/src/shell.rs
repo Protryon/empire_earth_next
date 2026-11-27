@@ -466,6 +466,18 @@ impl Sh {
                     _ => None,
                 }
             }
+            // `MultiListHeader::GetSortTypeForButton(comp)` over the game's answers (gamewin.rs common_op)
+            EeWonShellHostOp::SortType if crate::compobj::is_game() => {
+                let out = |op: crate::guihost::EeWonGuiOp, a: isize, b: isize, c: isize, _: isize| {
+                    crate::gamewin::common_op(0, op, a, b, c).unwrap_or(0)
+                };
+                Some(crate::guisplit::sort_type_for_button(self.comp, &out) as isize)
+            }
+            // a tab control's container layout point (`mContainerLayout`, read in place)
+            EeWonShellHostOp::TabLayoutPoint if crate::compobj::is_game() => {
+                // SAFETY: the game's live tab control, its SmartPtr member at the registered offset
+                crate::gamefwd::member(self.comp, |at| at.tab_container_layout).map(|p| unsafe { *(p as *const isize) })
+            }
             // a named font, held (`a` the NUL-terminated name)
             EeWonShellHostOp::GetNamedFont if crate::compobj::is_game() && a != 0 => {
                 // SAFETY: the op's contract: a NUL-terminated name

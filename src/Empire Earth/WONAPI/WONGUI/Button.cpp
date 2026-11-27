@@ -552,11 +552,6 @@ Background::Background() : mColor((int)0x8000000d) {}
 Background::Background(Image* theImage) : mImage(theImage) {}
 Background::Background(int theColor, int theBorderColor) : mColor(theColor), mBorderColor(theBorderColor) {}
 Background::Background(Component* theComponent) : mComponent(theComponent) {}
-// Sets the fill colour (-1 for none)
-void Background::SetColor(int theColor)
-{
-	this->mColor = theColor;
-}
 
 // the background's reads and calls for leafpaint.rs (R6 WON round 34: the paint is Rust's), one statement each
 extern "C" intptr_t ee_won_guicpp_background_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)

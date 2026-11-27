@@ -22,6 +22,17 @@ pub struct EeWonAreaAt {
     pub text_text_color: usize,
     pub text_link_color: usize,
     pub pane_viewport: usize,
+    /// `Label::mBackground`, `InputBox::mDisabledBackground` (Backgrounds: their colour is leafpaint.rs's
+    /// `bg_color` in them), `TabCtrl::mContainerLayout` (a SmartPtr)
+    pub label_background: usize,
+    pub input_disabled_background: usize,
+    pub tab_container_layout: usize,
+}
+
+/// `comp`'s member at the registered offset `f` picks (None before the registration or for no component).
+pub(crate) fn member(comp: isize, f: impl Fn(&EeWonAreaAt) -> usize) -> Option<usize> {
+    let at = (*AREA_AT.lock().ok()?).filter(|_| comp != 0)?;
+    Some(comp as usize + f(&at))
 }
 
 static AREA_AT: Mutex<Option<EeWonAreaAt>> = Mutex::new(None);
@@ -58,10 +69,36 @@ pub(crate) unsafe fn set_font(slot: *mut isize, font: isize) {
     }
 }
 
-/// A list area's (`text` false) or text area's constructor statements and SetFont over its own members, in place.
-pub(crate) fn area_op(text: bool, me: isize, op: Op, a: isize) -> Option<isize> {
+/// A list area's, text area's, label's or input box's (`which`) constructor statements over its own members, in
+/// place, and the list's selection background.
+pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: Op, a: isize) -> Option<isize> {
+    use crate::guisplit::EeWonGuiSplitHost as W;
     if !crate::compobj::is_game() || me == 0 {
         return None;
+    }
+    let text = which == W::Text;
+    match (which, op) {
+        // `mBackground.SetColor(-1)`, `mDisabledBackground.SetColor(0x80000001)`: the Background's colour
+        (W::Label, Op::CtorBackgroundNone) | (W::Input, Op::CtorDisabledBackground) => {
+            let leaf = crate::leafpaint::leaf_at()?;
+            let (bg, color) = if which == W::Label {
+                (member(me, |at| at.label_background)?, -1)
+            } else {
+                (member(me, |at| at.input_disabled_background)?, 0x80000001u32 as i32)
+            };
+            // SAFETY: the game's live widget's Background member, its colour at leafpaint.rs's offset
+            unsafe { *((bg + leaf.bg_color) as *mut i32) = color };
+            return Some(0);
+        }
+        (W::Input, Op::CtorFontNamed) => return crate::inputobj::game_set_font(me, named_font("InputBox")?),
+        (W::List, Op::SelBackground) => {
+            // `GetSelColor().GetBackgroundColor(g)`: the selection colour's background (an unsigned long)
+            let leaf = crate::leafpaint::leaf_at()?;
+            // SAFETY: the game's live list, its SelectionColor at leafpaint.rs's offset
+            return Some(unsafe { (*((me as usize + leaf.list_sel) as *const crate::guidraw::EeWonSelColor)).background } as isize);
+        }
+        (W::List | W::Text, _) => {}
+        _ => return None,
     }
     if op == Op::CtorPads {
         // `SetPads(a, a, a, a)`: the scroll pane's four fields
@@ -234,6 +271,19 @@ pub(crate) fn fwd_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Optio
             // SAFETY: as above, its bool member
             isize::from(unsafe { *((a as usize + leaf.disabled) as *const u8) } != 0)
         }
+        // a multi-column row's cells (MultiListItem's GetItem and SetItem: the row's calls with no list)
+        Op::RowCell => {
+            // SAFETY: as above
+            let r = unsafe { get::<crate::multiobj::EeWonMRow>(a, Kind::MRow) }?;
+            r.call(None, crate::multiobj::EeWonMRowCall::GetItem, b as i32 as isize, 0, 0)
+        }
+        Op::RowSetCell => {
+            // SAFETY: as above
+            let r = unsafe { get::<crate::multiobj::EeWonMRow>(a, Kind::MRow) }?;
+            z(r.call(None, crate::multiobj::EeWonMRowCall::SetItem, b, c as i32 as isize, 0))
+        }
+        // `GetRoot()->ClosePopup(a)`: the one manager's EndPopup
+        Op::ClosePopup => z(crate::gamewin::wm(crate::wmobj::EeWonWmCall::EndPopup, a, 0)?),
         // the tree's rows
         Op::NodeOf => crate::registry::find(a, Kind::TreeNode) as isize,
         // the popup menus
