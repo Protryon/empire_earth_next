@@ -186,7 +186,7 @@ static void Ping(const char* inName, unsigned short inId, unsigned char inFlags,
         N(anOp->GetNumRetransmits()) + " timeout " + N((long long)anOp->GetMsgTimeout()));
     if (Mutate(4)) anOp->AddRef(); // (the mutation's missing reference, so the run can go on)
     if (inMode == NO_REPLY)
-        anOp->SetMsgTimeout(300);
+        anOp->SetMsgTimeout(1000); // past the refused reply's 300 ms of pumping (a 300 ms timeout raced it)
     SmartPtr<Done> aDone = new Done;
     anOp->SetCompletion(aDone);
     if (inMode == BLOCK) {
