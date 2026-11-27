@@ -17,7 +17,7 @@ use ee_sim::tech::capture_rec::{
 use ee_sim::tech::tech_ids::ee_tech_epoch_count;
 
 use super::persistent::Longs;
-use super::{O, P};
+use super::P;
 use crate::tech_tree::host::ee_gamecpp_tech_node_ids;
 use crate::tech_tree::load::{
     data_of, ee_gamecpp_tech_sum_costs_captured, node_data, node_fields, tree_fields, TbRecord,
@@ -241,11 +241,8 @@ pub(crate) fn player_record(pl: P) -> Vec<u8> {
     if pl == 0 {
         r.i32(-1);
     } else {
-        use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsRtsPlayerFields};
         // SAFETY: the live player's records
-        let (rts, f) = unsafe {
-            (&*super::rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl), &*super::rec::<EeUnitsPlayerFields>(O::PlFields, pl))
-        };
+        let (rts, f) = unsafe { (&*crate::gamecpp::records::pl_rts(pl), &*crate::gamecpp::records::pl_fields(pl)) };
         r.i32(rts.mPlayerID as i32);
         r.i32(f.mPopulationLimitBonus as i32);
         r.bytes(&f.mTributeFee.to_le_bytes());

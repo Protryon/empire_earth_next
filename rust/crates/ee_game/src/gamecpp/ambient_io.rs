@@ -11,14 +11,12 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_TOWNS};
-use ee_sim::world::player_fields::{EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
-use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
 
 use crate::app::ambient::{EeAppAmbientCounts, EeAppAmbientRecord, EeAppAmbientSoundFields};
 use crate::app::ambient_ffi::*;
 
-use super::{h, hd, hf, hp, pa, ptr, rec, O, P};
+use super::{h, hd, hf, hp, pa, ptr, O, P};
 
 // ee/EEUnitClassIDs.h, ee/EEUnitGoal.h, ee/EETechTreeTechID.h, ee/EEResourceType.h
 const CATEGORY_LAND_CITIZEN: c_ulong = 6;
@@ -126,7 +124,7 @@ pub extern "C" fn ee_gamecpp_ambient_load(manager: *mut c_void, file: *mut c_voi
     let mut record = [0u8; RECORD_SIZE];
     h(O::EaFileOpen, f, &[]);
     h(O::EaSeed, m, &[]);
-    let mut result = h(O::EaFileReadCount, f, &[ptr(&mut count)]);
+    let mut result = h(O::MpFileReadUlong, f, &[ptr(&mut count)]);
     if result == 0 {
         h(O::EaResize, m, &[count as i64]);
         for _ in 0..count {
@@ -172,7 +170,7 @@ pub fn is_attacker(goal_kind: Option<i64>, k: &EeUnitsUnitClassFields) -> bool {
 pub extern "C" fn ee_gamecpp_ambient_count_unit(counts: *mut EeAppAmbientCounts, unit: *mut c_void) {
     let u = unit as P;
     // SAFETY: the unit's class record, copied
-    let k = unsafe { *rec::<EeUnitsUnitClassFields>(O::UcFields, hp(O::UnClass, u, &[])) };
+    let k = unsafe { *crate::gamecpp::records::uc_fields(hp(O::UnClass, u, &[])) };
     // SAFETY: the analyzer's counts, the caller's
     let c = unsafe { &mut *counts };
     count_class(c, &k);
@@ -187,14 +185,14 @@ pub extern "C" fn ee_gamecpp_ambient_count_unit(counts: *mut EeAppAmbientCounts,
     let local = hp(O::DuLocalPlayer, 0, &[]);
     let owner = hp(O::UnPlayer, u, &[]);
     // SAFETY: the players' records, copied
-    let id = unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, owner)).mPlayerID } as usize;
+    let id = unsafe { (*crate::gamecpp::records::pl_rts(owner)).mPlayerID } as usize;
     // SAFETY: as above
-    let enemies = unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, local)).mEnemies };
+    let enemies = unsafe { (*crate::gamecpp::records::pl_saved(local)).mEnemies };
     if owner == local || enemies[id] == 0 {
         return;
     }
     // SAFETY: the unit's record, copied
-    let r = unsafe { *rec::<EeUnitsRtsUnitFields>(O::UnRts, u) };
+    let r = unsafe { *crate::gamecpp::records::un_rts(u) };
     if crate::tech_tree::objects::current_epoch(crate::tech_tree::objects::player_tree(local)) < EPOCH_ATOMIC_WW1 as i64
     {
         return;
@@ -213,7 +211,7 @@ pub extern "C" fn ee_gamecpp_ambient_count_unit(counts: *mut EeAppAmbientCounts,
 pub extern "C" fn ee_gamecpp_ambient_count_tree(counts: *mut EeAppAmbientCounts, unit: *mut c_void) {
     let u = unit as P;
     // SAFETY: the unit's class record, read at once
-    let resource = unsafe { (*rec::<EeUnitsUnitClassFields>(O::UcFields, hp(O::UnClass, u, &[]))).mResourceType };
+    let resource = unsafe { (*crate::gamecpp::records::uc_fields(hp(O::UnClass, u, &[]))).mResourceType };
     if resource == RESOURCE_WOOD {
         ee_gamecpp_ambient_add_tree(counts, unit);
     }

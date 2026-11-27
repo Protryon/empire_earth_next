@@ -27,12 +27,9 @@ public:
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
     unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
-    GETexture* GetStageTexture(unsigned long inStage) const { return (GETexture*)this->GetStage()->mTexture; }
     unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }
     bool HasChanged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::HasChanged) != 0; }
-    long Promote() { return ee_ge_tex_promote(this->mRust); }
     void SetData(void* inData) { ee_ge_tex_set(this->mRust, EeGeTexVal::FrameData, (intptr_t)inData); }
-    void ValidateChanges() { ee_ge_tex_set(this->mRust, EeGeTexVal::HasChanged, 0); }
 
     unsigned long GetFrame() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::Frame); }
     unsigned long GetFrameCount() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameCount); }

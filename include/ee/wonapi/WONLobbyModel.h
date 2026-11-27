@@ -92,7 +92,6 @@ public:
     LobbyServer* FindServer(const IPAddr& inAddress) { return (LobbyServer*)this->M(LobbyMC::ServerListFind, (intptr_t)inAddress.GetValue()); }
     size_t GetCount() const { return (size_t)this->M(LobbyMC::ServerListCount); }
     bool IsEmpty() const { return this->GetCount() == 0; }
-    LobbyServer* ServerAt(size_t i) const { return (LobbyServer*)this->M(LobbyMC::ServerListAt, (intptr_t)i); }
     IPAddr AddressAt(size_t i) const
     {
         return IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)this->M(LobbyMC::ServerListAddressAt, (intptr_t)i)));

@@ -1,4 +1,4 @@
-//! The Input System's device buffers (`include/lle/ISDeviceInput.h`): what the keyboard and the mouse read from
+//! The Input System's device buffers (the original's `ISDeviceInput`): what the keyboard and the mouse read from
 //! DirectInput 7 before the port, with its semantics, filled by the window thread's events (`ISHandleEvent`) and read
 //! by the game threads (`ISKeyboard`, `ISMouse`). The whole class lives here (LLE lane round 1); C++ keeps the record
 //! structs, a one-line `ISHandleEvent` and calls these functions through an opaque device pointer.

@@ -19,16 +19,6 @@ enum class EeWonRunOp : uint32_t {
   WindowRunFailureDialog,
   /// `gLobbyData.get() != NULL`.
   HasData,
-  /// `gLobbyData->mLobbyStatus = a`.
-  SetStatus,
-  /// `gLobbyData->mLobbyStatus`.
-  Status,
-  /// `gLobbyData->mRunMode = a`.
-  SetRunMode,
-  /// `gLobbyData->mRunMode`.
-  RunMode,
-  /// `gLobbyData->mSuspended = a != 0`.
-  SetSuspended,
   /// `GetLobbyWindow()`.
   LobbyWindow,
   /// `((WindowManager*)a)->MessageLoop()`.

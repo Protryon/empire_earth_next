@@ -30,8 +30,7 @@ from ee import CLANG, MODULE_FLAGS   # noqa: E402
 
 # (module, unit): together they include every class the harness and the exe's member table read
 UNITS = [
-    ("lle", "Low-Level Engine/User Interface/UIManager.cpp"),
-    ("lle", "Low-Level Engine/User Interface/UIForm.cpp"),
+    ("lle", "Low-Level Engine/User Interface/User Interface.cpp"),
     ("lle", "Low-Level Engine/Graphics Engine/GERasterizer.cpp"),
     ("lle", "Low-Level Engine/Input System/Input System.cpp"),
     ("lle", "Low-Level Engine/Network Engine/NESynchronousServer.cpp"),
@@ -81,7 +80,7 @@ def parse(text, into):
             if not m:
                 continue
             off, depth, decl = int(m.group(1)), (len(m.group(4)) - 1) // 2, m.group(5).strip()
-            del stack[depth:]
+            del stack[max(depth - 1, 0):]   # (the class's own members are depth 1: stack[0])
             if decl.endswith(("(base)", "(base) (empty)", "(primary base)")) or "vftable pointer" in decl \
                     or "vbtable pointer" in decl or "(virtual base)" in decl:
                 stack.append(None)   # base subobject: its members join the derived class's names

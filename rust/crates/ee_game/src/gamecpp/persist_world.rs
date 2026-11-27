@@ -26,9 +26,9 @@ use ee_sim::units::group_host::{ee_units_groups_load_active, ee_units_groups_sav
 use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
 use ee_sim::units::save_prim::game::ee_units_save_primitive;
 use ee_sim::units::world_save::*;
-use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
-use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
+use ee_sim::world::layout::EeWorldLayout;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
+use ee_sim::world::view::{ClassView, MapView, WorldRead};
 
 use super::persistent::{after_load, Longs, Pf, PF_BEYOND_END, PF_OK};
 use super::state::EeGameStateTail;
@@ -69,21 +69,59 @@ fn fields(helper: P) -> *mut EePWorldHelperFields {
 
 fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's RTSUnit record, used before the next C++ call that changes it
-    unsafe { &mut *rec(O::UnRts, u) }
+    unsafe { &mut *crate::gamecpp::records::un_rts(u) }
 }
 
 fn unf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cxf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: a live complex unit's record
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn num_players() -> c_ulong {
-    h(O::PwNumPlayers, 0, &[]) as c_ulong
+    super::message::num_players()
+}
+
+// ---- the members the world layout places (ee_sim world layout.rs, the views' offsets): the map, its tiles' array
+// and unit-region table, a tile's terrain type and first node, a node's unit and next, a player's first unit, a
+// unit's next (were EEPWorldHelper.cpp's one-statement cases)
+
+fn lay() -> &'static EeWorldLayout {
+    ee_sim::world::layout::layout()
+}
+
+/// The member of type T at `object + offset`.
+fn at<T: Copy>(object: P, offset: u64) -> T {
+    // SAFETY: a live object of the world whose member of type T the layout places there
+    unsafe { *((object + offset as usize) as *const T) }
+}
+
+/// The member of type T at `object + offset` set to `value`.
+fn put<T>(object: P, offset: u64, value: T) {
+    // SAFETY: as at
+    unsafe { *((object + offset as usize) as *mut T) = value }
+}
+
+/// `gWorld.mMap` (0: none).
+fn map() -> P {
+    at(super::message::world(), lay().world_map)
+}
+
+/// The map's `mSize` (tiles per side).
+fn map_size(map: P) -> i64 {
+    // SAFETY: the world's map, read on the thread that holds the world
+    let token = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    unsafe { MapView::of(&token, map as u64) }.map_or(0, |m| m.size())
+}
+
+/// The map's `mTiles[i]`.
+fn map_tile_at(map: P, i: i64) -> P {
+    at(at::<P>(map, lay().map_tiles), i as u64 * std::mem::size_of::<P>() as u64)
 }
 
 fn player(i: u64) -> P {
@@ -441,7 +479,7 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
             0
         }
         EE_UNITS_WORLD_DEBUG => {
-            h(O::PwDebugText, 0, &[io.list as usize as i64]);
+            h(O::DuDebugOut, 0, &[io.list as usize as i64]);
             0
         }
         EE_UNITS_WORLD_UNIT_ID => unit_id(u) as i64,
@@ -463,7 +501,7 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
         EE_UNITS_WORLD_TILE_X => rts(u).mTileX as i64,
         EE_UNITS_WORLD_LINK => {
             let to = if io.b != 0 { io.b as P } else { hp(O::PwChainHead, 0, &[]) };
-            h(O::PwLink, u, &[pa(to)]);
+            h(O::UnLink, u, &[pa(to)]);
             0
         }
         EE_UNITS_WORLD_STEP_LIST | EE_UNITS_WORLD_STEP_SET | EE_UNITS_WORLD_STEP_DROP | EE_UNITS_WORLD_STEP_ADD => {
@@ -477,7 +515,7 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
         }
         EE_UNITS_WORLD_FOREST_RENEWAL => h(O::PwForestRenewal, u, &[]),
         EE_UNITS_WORLD_FOREST_TILES => {
-            let points = hp(O::PwPointsNew, 0, &[]);
+            let points = hp(O::DsPointsNew, 0, &[]);
             h(O::PwForestTiles, u, &[pa(points)]);
             let n = h(O::PwPointsCount, points, &[]) as usize;
             for t in 0..n {
@@ -501,33 +539,33 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
         }
         EE_UNITS_WORLD_AI_SET_SCHEDULE => schedule::ee_ai_schedule_set(io.a, io.b),
         EE_UNITS_WORLD_TILE_COUNT => {
-            let map = hp(O::PwMap, 0, &[]);
+            let map = map();
             if map != 0 {
-                let size = h(O::PwMapSize, map, &[]);
+                let size = map_size(map);
                 size * size
             } else {
                 0
             }
         }
         EE_UNITS_WORLD_TILE_UNITS | EE_UNITS_WORLD_TILE_SET => {
-            let tile = hp(O::PwMapTileAt, hp(O::PwMap, 0, &[]), &[io.a]);
+            let tile = map_tile_at(map(), io.a);
             let mut n: usize = 0;
             let mut node = if tile != 0 { hp(O::TileUnits, tile, &[]) } else { 0 };
             while node != 0 {
                 if op == EE_UNITS_WORLD_TILE_UNITS {
-                    fill(io, n, hp(O::PwNodeUnit, node, &[]) as u64);
+                    fill(io, n, at::<P>(node, lay().unit_node_unit) as u64);
                 } else if n as i64 == io.b {
                     // SAFETY: the list holds the unit
-                    h(O::PwNodeSetUnit, node, &[unsafe { *io.list } as i64]);
+                    put(node, lay().unit_node_unit, unsafe { *io.list } as P);
                 }
-                node = hp(O::PwNodeNext, node, &[]);
+                node = at(node, lay().unit_node_next);
                 n += 1;
             }
             n as i64
         }
         EE_UNITS_WORLD_REGION_ORDER | EE_UNITS_WORLD_REGION_RESTORE => {
-            let map = hp(O::PwMap, 0, &[]);
-            let table = if map != 0 { hp(O::PwMapRegions, map, &[]) } else { 0 } as *mut EeCombatUnitRegions;
+            let map = map();
+            let table = if map != 0 { at::<P>(map, lay().map_unit_regions) } else { 0 } as *mut EeCombatUnitRegions;
             if op == EE_UNITS_WORLD_REGION_RESTORE {
                 // SAFETY: the list holds `cap` ids
                 let ids: Vec<u32> = (0..io.cap).map(|i| unsafe { *io.list.add(i) } as u32).collect();
@@ -555,7 +593,7 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
             0
         }
         EE_UNITS_WORLD_DEREFERENCE => {
-            h(O::PwUnitDereference, u, &[]);
+            h(O::CgUnitDereference, u, &[]);
             0
         }
         EE_UNITS_WORLD_PLAYER_COUNT => num_players() as i64,
@@ -591,15 +629,15 @@ fn step(op: i32, io: &mut EeUnitsWorldIo) -> i64 {
         // SAFETY: the ids' copy in
         unsafe { ee_app_active_set_list(which, ids.as_ptr(), ids.len()) };
     } else if op == EE_UNITS_WORLD_STEP_DROP {
-        h(O::PwUnitDereference, cx, &[]);
+        h(O::CgUnitDereference, cx, &[]);
         if which == 0 {
-            h(O::PwUnitDereference, cx, &[]);
+            h(O::CgUnitDereference, cx, &[]);
             ee_app_active_set(unit_id(cx) as u32, false);
         }
     } else {
-        h(O::PwUnitReference, cx, &[]);
+        h(O::CgUnitReference, cx, &[]);
         if which == 0 {
-            h(O::PwUnitReference, cx, &[]);
+            h(O::CgUnitReference, cx, &[]);
             ee_app_active_set(unit_id(cx) as u32, true);
         }
     }
@@ -624,16 +662,16 @@ fn player_op(op: i32, io: &mut EeUnitsWorldIo) -> i64 {
             h(O::PwUnitSetPrevious, order[i], &[if i > 0 { pa(order[i - 1]) } else { 0 }]);
             h(O::PwUnitSetNext, order[i], &[if i + 1 < n { pa(order[i + 1]) } else { 0 }]);
         }
-        h(O::PwPlayerSetFirstUnit, pl, &[if n == 0 { 0 } else { pa(order[0]) }]);
+        put(pl, lay().player_first_unit, if n == 0 { 0 } else { order[0] });
         h(O::PwPlayerSetLastUnit, pl, &[if n == 0 { 0 } else { pa(order[n - 1]) }]);
         return 0;
     }
     let mut n = 0;
-    let mut owned = if pl != 0 { hp(O::PwPlayerFirstUnit, pl, &[]) } else { 0 };
+    let mut owned = if pl != 0 { at::<P>(pl, lay().player_first_unit) } else { 0 };
     while owned != 0 {
         fill(io, n, owned as u64);
         n += 1;
-        owned = hp(O::PwUnitNext, owned, &[]);
+        owned = at(owned, lay().unit_next);
     }
     n as i64
 }
@@ -643,7 +681,7 @@ fn add_held_ghost(u: P, complex: &mut Vec<P>, simple: &mut Vec<P>) {
     if u == 0 || world_unit(unit_id(u)) == u {
         return;
     }
-    let cx = hp(O::PwDynComplex, u, &[]); // (a removed unit's store fields read 0)
+    let cx = hp(O::FxDynComplex, u, &[]); // (a removed unit's store fields read 0)
     if cx != 0 {
         if !complex.contains(&cx) {
             complex.push(cx);
@@ -661,29 +699,29 @@ fn gather_ghosts() -> (Vec<P>, Vec<P>) {
     let players = num_players();
     for p in 0..players as u64 {
         let pl = player(p);
-        let mut u = if pl != 0 { hp(O::PwPlayerFirstUnit, pl, &[]) } else { 0 };
+        let mut u = if pl != 0 { at::<P>(pl, lay().player_first_unit) } else { 0 };
         while u != 0 {
             let cx = hp(O::UnComplex, u, &[]);
-            let attacker = if cx != 0 { hp(O::PwCxLastAttacker, cx, &[]) } else { 0 };
+            let attacker = if cx != 0 { cxf(cx).mLastAttacker as P } else { 0 };
             if !(attacker == 0 || world_unit(unit_id(attacker)) == attacker || dead.contains(&attacker)) {
                 dead.push(attacker);
             }
-            u = hp(O::PwUnitNext, u, &[]);
+            u = at(u, lay().unit_next);
         }
     }
     for p in 0..players as u64 {
         let pl = player(p);
-        let mut u = if pl != 0 { hp(O::PwPlayerFirstUnit, pl, &[]) } else { 0 };
+        let mut u = if pl != 0 { at::<P>(pl, lay().player_first_unit) } else { 0 };
         while u != 0 {
             let cx = hp(O::UnComplex, u, &[]);
             let queues = if cx != 0 { h(O::PwCxGoalQueueCount, cx, &[]) } else { 0 };
             for q in 0..queues {
-                let goals = h(O::PwCxGoalCount, cx, &[q]);
+                let goals = h(O::FxQueueGoalCount, cx, &[q]);
                 for g in 0..goals {
-                    let goal = hp(O::PwCxGoalAt, cx, &[q, g]);
-                    let attack = hp(O::PwAttackUnitCast, goal, &[]);
+                    let goal = hp(O::FxQueueGoalAt, cx, &[q, g]);
+                    let attack = hp(O::FxAttackUnitCast, goal, &[]);
                     if attack != 0 {
-                        add_held_ghost(hp(O::PwAttackTarget, attack, &[]), &mut dead, &mut simple);
+                        add_held_ghost(hp(O::FxGoalAttackTarget, attack, &[]), &mut dead, &mut simple);
                     } else {
                         let gather = hp(O::PwGatherGoalCast, goal, &[]);
                         if gather != 0 {
@@ -693,7 +731,7 @@ fn gather_ghosts() -> (Vec<P>, Vec<P>) {
                     }
                 }
             }
-            u = hp(O::PwUnitNext, u, &[]);
+            u = at(u, lay().unit_next);
         }
     }
     (dead, simple)
@@ -704,11 +742,10 @@ fn ghost_fields(u: P, io: &mut EeUnitsWorldIo) {
     io.v[0] = r.mUnitID as i64;
     let class = hp(O::UnClass, u, &[]);
     // SAFETY: the class's record
-    io.v[1] =
-        if class != 0 { unsafe { (*rec::<EeUnitsUnitClassFields>(O::UcFields, class)).mUnitType as i64 } } else { -1 };
+    io.v[1] = if class != 0 { unsafe { (*crate::gamecpp::records::uc_fields(class)).mUnitType as i64 } } else { -1 };
     let pl = hp(O::UnPlayer, u, &[]);
     // SAFETY: the player's record
-    io.v[2] = if pl != 0 { unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID as i64 } } else { -1 };
+    io.v[2] = if pl != 0 { unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID as i64 } } else { -1 };
     let f = *unf(u);
     io.v[3] = f.mHitPoints as i64;
     io.v[4] = r.mTileX as i64;
@@ -718,7 +755,7 @@ fn ghost_fields(u: P, io: &mut EeUnitsWorldIo) {
     if io.b != 0 {
         // a complex unit: built flag and placement
         io.v[6] = cxf(u).mIsBuilt as i64;
-        h(O::PwCxGetPlacement, u, &[io.m.as_mut_ptr() as usize as i64]);
+        h(O::EcLocation, u, &[io.m.as_mut_ptr() as usize as i64]);
     }
 }
 
@@ -740,10 +777,10 @@ pub extern "C" fn ee_gamecpp_find_loaded_ghost_unit(id: c_ulong) -> *mut c_void 
     if !unsafe { ee_units_world_ghost_find(id, &mut g) } {
         return std::ptr::null_mut();
     }
-    let class = if (g.unit_type as i64) < h(O::PwUnitClassCount, 0, &[]) {
-        hp(O::PwUnitClassAt, 0, &[g.unit_type as i64])
-    } else {
-        0
+    let class = {
+        // SAFETY: the loading thread holds the world
+        let token = unsafe { WorldRead::begin() };
+        ClassView::by_index(&token, g.unit_type as usize).map_or(0, |c| c.handle() as P)
     };
     let pl = if g.player < num_players() { player(g.player as u64) } else { 0 };
     if class == 0 || pl == 0 {
@@ -769,7 +806,7 @@ pub extern "C" fn ee_gamecpp_find_loaded_ghost_unit(id: c_ulong) -> *mut c_void 
     rts(unit).mTileY = g.tile_y;
     // a used-up simple resource keeps its tile pointer, off the tile's lists (the gather goal's ResourceAccessible
     // reads its terrain), as MoveTo sets it without adding the unit to the tile
-    if !g.is_complex && hp(O::PwMap, 0, &[]) != 0 {
+    if !g.is_complex && map() != 0 {
         let tile = hp(O::MapTile, 0, &[g.tile_x as i64, g.tile_y as i64]);
         h(O::PwUnitSetTile, unit, &[pa(tile)]);
     }
@@ -868,11 +905,11 @@ fn load_tech_allowed(file: Pf) -> i64 {
 
 /// 0.283 (EESaveHasTileTypes): the saved terrain types back on the map's tiles (row by row; -1 leaves a tile).
 fn apply_tile_types(types: &[c_long]) {
-    let map = hp(O::PwMap, 0, &[]);
+    let map = map();
     if map == 0 {
         return;
     }
-    let size = h(O::PwMapSize, map, &[]) as c_long;
+    let size = map_size(map) as c_long;
     if types.len() as c_long != size.wrapping_mul(size) {
         return;
     }
@@ -881,7 +918,7 @@ fn apply_tile_types(types: &[c_long]) {
             let tile = hp(O::MapTile, 0, &[x as i64, y as i64]);
             let t = types[(y * size + x) as usize];
             if tile != 0 && t >= 0 {
-                h(O::PwTileSetTerrainType, tile, &[t as i64]);
+                put::<c_long>(tile, lay().tile_terrain_type, t);
             }
         }
     }
@@ -889,15 +926,15 @@ fn apply_tile_types(types: &[c_long]) {
 
 /// 0.283: every map tile's terrain type, row by row (y outer, x inner), as runs of a count and a type (-1: no tile).
 fn save_tile_types(file: Pf) -> i64 {
-    let map = hp(O::PwMap, 0, &[]);
-    let size: c_long = if map != 0 { h(O::PwMapSize, map, &[]) as c_long } else { 0 };
+    let map = map();
+    let size: c_long = if map != 0 { map_size(map) as c_long } else { 0 };
     let mut r = file.write_long(size);
     let mut run: c_ulong = 0;
     let mut run_type: c_long = -1;
     let mut i: c_long = 0;
     while i < size * size && r == PF_OK {
         let tile = hp(O::MapTile, 0, &[(i % size) as i64, (i / size) as i64]);
-        let t: c_long = if tile != 0 { h(O::TileTerrainType, tile, &[]) as c_long } else { -1 };
+        let t: c_long = if tile != 0 { h(O::FxTileTerrainType, tile, &[]) as c_long } else { -1 };
         if run != 0 && t != run_type {
             r = file.write_ulong(run);
             if r == PF_OK {

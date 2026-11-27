@@ -72,6 +72,7 @@ pub mod placement;
 pub mod player;
 pub mod read_compose;
 pub mod round;
+pub mod run_state;
 pub mod save;
 pub mod sm_capture;
 pub mod sm_capture_game;
@@ -86,6 +87,7 @@ pub mod unit_change;
 pub mod unit_views;
 pub mod world_compose;
 pub mod world_route;
+pub mod world_views;
 
 #[cfg(test)]
 mod cpp_consts_tests;

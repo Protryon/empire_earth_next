@@ -18,7 +18,7 @@ use super::server::{ee_gamecpp_session_host, SS_SLOT_NONE};
 use super::{h, hp, pa, ptr, rec, Owned, O, P};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
-/// `kConnectionRemovedByHost` (NEMessageID.h; EEServer.cpp asserts it).
+/// `kConnectionRemovedByHost` (rust/net/msgid.h; EEServer.cpp asserts it).
 const CONNECTION_REMOVED_BY_HOST: i64 = 5;
 
 /// The server's network slot of each lobby slot (was EEServer's `mSendToSlots`, a `std::map`: kept in key order, an
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn ee_gamecpp_session(
     player: *const c_void,
     version: *const c_void,
 ) -> i64 {
-    let registers = [hp(O::C11PlayerNew, 0, &[]), hp(O::C11PlayerNew, 0, &[])];
+    let registers = [hp(O::OptionsPlayerNew, 0, &[]), hp(O::OptionsPlayerNew, 0, &[])];
     let mut frame =
         Frame { comms: comms as P, server, registers, player: player as P, version: version as P, protocol: 0 };
     let r = ee_netmsg_session(session_host, &mut frame as *mut Frame as *mut c_void, server, what, a, b, c, d);
@@ -282,7 +282,7 @@ unsafe fn fields<'a>(player: P) -> &'a mut EeAppOptionsPlayerFields {
 /// human, the default citizens, no ping, not ready), its firewall flag, then the request checked and answered
 /// (ProcessConnectionRequest); the request released.
 pub fn take_connection_request(server: P, request: P) {
-    let player = Owned::new(O::C11PlayerNew, O::C11PlayerDelete);
+    let player = Owned::new(O::OptionsPlayerNew, O::C11PlayerDelete);
     h(O::C11PlayerNameFromRequest, player.0, &[pa(request), 2]);
     let citizens = h(O::SsCitizensDefault, 0, &[]);
     // SAFETY: the new player's plain members
@@ -295,8 +295,8 @@ pub fn take_connection_request(server: P, request: P) {
         r.mIsReady = false;
     }
     h(O::C11RequestFirewall, server, &[pa(request)]);
-    let origin = h(O::SsMsgOrigin, 0, &[pa(request)]);
-    let version = Owned::new(O::SsNewString, O::SsDeleteString);
+    let origin = h(O::LcMsgOrigSlot, request, &[]);
+    let version = Owned::new(O::StrNew, O::StrFree);
     h(O::C11RequestString, version.0, &[pa(request), 1]);
     let checksum = h(O::C11RequestChecksum, 0, &[pa(request)]);
     // SAFETY: the server, the player and the version live through the call
@@ -313,7 +313,7 @@ pub fn take_connection_request(server: P, request: P) {
             version.0 as *const c_void,
         );
     }
-    h(O::SsMsgDereference, 0, &[pa(request)]);
+    h(O::LcMsgDereference, request, &[]);
 }
 
 /// The connection response (error, send-to slot, lobby slot) sent to `slot` from the server's, the slot forgotten
@@ -323,7 +323,7 @@ pub fn send_connection_response(server: P, slot: i64, error: i64, send_to: i64, 
     h(O::SsMsgSetOriginServer, 0, &[pa(response)]);
     let engine = super::net::net(server as *const c_void).server;
     ee_net::net::ffi_server::ee_net_sv_send_message_to(engine, slot as u8, response as *mut c_void, true);
-    h(O::SsMsgDereference, 0, &[pa(response)]);
+    h(O::LcMsgDereference, response, &[]);
     if unregister {
         ee_net::net::ffi_server::ee_net_sv_unregister_slot(engine, slot as u8);
     }
@@ -332,7 +332,7 @@ pub fn send_connection_response(server: P, slot: i64, error: i64, send_to: i64, 
 /// A lobby slot's player options sent to everyone (a copy of the plain members and the name; the loaded type, the
 /// local flag and the transfer id as a new player has them), then the slot's line refreshed.
 pub fn send_full_player_information(server: P, options: P) {
-    let player = Owned::new(O::C11PlayerNew, O::C11PlayerDelete);
+    let player = Owned::new(O::OptionsPlayerNew, O::C11PlayerDelete);
     // SAFETY: two live players' plain members, no C++ call while held
     let slot = unsafe {
         let from = *fields(options);
@@ -371,7 +371,7 @@ pub unsafe extern "C" fn ee_gamecpp_server_refuse(server: *mut c_void, player: *
 
 /// A human slot's connection quality sent to everyone (under the options' read lock).
 pub fn send_ping_stat(server: P, player: i64, ping: f32) {
-    h(O::C11OptionsReadLock, 0, &[]);
+    h(O::LobbyReadLock, 0, &[]);
     // SAFETY: the options' slot's plain members, read under the lock
     let kind = unsafe { (*rec::<EeAppOptionsPlayerFields>(O::C11OptionsPlayerFields, player as P)).mType };
     if kind == 1 || kind == 2 {
@@ -388,14 +388,14 @@ pub fn send_ping_stat(server: P, player: i64, ping: f32) {
             super::mrecord::new_record(ee_sim::message_ids::EEMessageID::kMessageUpdatePingStat as u8, &values);
         super::net::net(server as *const c_void).local_input(message as *mut c_void, 0xff);
     }
-    h(O::C11OptionsReadUnlock, 0, &[]);
+    h(O::LobbyReadUnlock, 0, &[]);
 }
 
 /// EEServer::GetFreePlayerSlot: the first world player index below the maximum that holds no player, else 0xff.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_free_player_slot(server: *mut c_void) -> u8 {
     let max = super::net::net(server).sv_get(ee_net::net::ffi_server::EeNetSvGet::MaxPlayers) as u8;
-    free_player_slot(max, |i| hp(O::SsWorldPlayer, 0, &[i as i64]) != 0)
+    free_player_slot(max, |i| hp(O::WorldPlayer, 0, &[i as i64]) != 0)
 }
 
 /// EEServer::PlayWarningSound: 1 out of sync, 2 resending.

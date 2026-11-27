@@ -46,7 +46,7 @@ use super::effect_host::{
     ee_gamecpp_fx_storm_step_toward, ee_gamecpp_fx_tile_seen, ee_gamecpp_fx_volcano_build,
     ee_gamecpp_fx_wall_gate_posts, ee_gamecpp_fx_wall_piece, ee_gamecpp_fx_weapon_point,
 };
-use super::{cptr, h, hd, hf, hp, ptr, rec, O, P};
+use super::{cptr, h, hd, hf, hp, ptr, O, P};
 
 // ---- the layout (ee_gfx effect_reads.rs EeGfxObjectLayout)
 
@@ -148,7 +148,7 @@ extern "C" fn loading_saved_game() -> bool {
     h(O::FwLoadingSaved, 0, &[]) != 0
 }
 extern "C" fn regions() -> *mut EeGfxEffectRegions {
-    let map = hp(O::MpWorldMap, 0, &[]);
+    let map = super::map::world_map();
     if map == 0 {
         return std::ptr::null_mut();
     }
@@ -191,7 +191,7 @@ extern "C" fn height(point: *const Ge3DPoint) -> f32 {
     super::rast::mesh_z(super::rast::world_mesh(), at.x, at.y)
 }
 extern "C" fn mesh() -> *const EeGeTerrainMesh {
-    hp(O::MpMeshRust, hp(O::MpWorldMap, 0, &[]), &[]) as *const EeGeTerrainMesh
+    hp(O::MpMeshRust, super::map::world_map(), &[]) as *const EeGeTerrainMesh
 }
 extern "C" fn unit_graphic(_: *mut c_void, u: u64) -> u64 {
     h(O::UnGetModel, u as P, &[]) as u64
@@ -202,7 +202,7 @@ extern "C" fn storm_on_map(_: *mut c_void, x: i32, y: i32) -> bool {
     hp(O::MapTile, 0, &[x as i64, y as i64]) != 0
 }
 extern "C" fn storm_ground_z(_: *mut c_void, x: i32, y: i32) -> f32 {
-    hd(O::FwMeshGetZ, hp(O::MpWorldMap, 0, &[]), &[x as i64, y as i64], &[])
+    hd(O::FwMeshGetZ, super::map::world_map(), &[x as i64, y as i64], &[])
 }
 
 /// The complex unit of an answer's effect's unit.
@@ -213,7 +213,7 @@ fn ask_complex(ask: *mut c_void) -> P {
 }
 fn complex_fields<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: a live complex unit's record
-    unsafe { &mut *rec::<EeUnitsComplexUnitFields>(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 extern "C" fn farm_set_variant(ask: *mut c_void, variant: i32) {

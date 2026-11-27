@@ -48,7 +48,6 @@ public:
     long SetMode(unsigned long inIndex) { return ee_dx7sc_set_mode(this->mDX7, inIndex); }
 
     GETextureManager* GetTextureManager() const { return this->mTextureManager; }
-    void SetTextureManager(GETextureManager* inManager) { this->mTextureManager = inManager; }
     static HINSTANCE__* GetInstance() { return GEScreen::sInstance; }
 
     GETextureManager* mTextureManager = NULL;   // +0x04

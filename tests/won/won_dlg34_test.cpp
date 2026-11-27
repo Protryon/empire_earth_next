@@ -508,6 +508,14 @@ static intptr_t GameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t 
         aTransfer->mHost = theAddress;
         return 0;
     }
+    // EELobbyGameHost.cpp's transfer calls as they were before R6 WON lobby/net round 40
+    case Op::TransferServe: ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Serve, (unsigned short)b, 0); return 0;
+    case Op::TransferSize: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 2, 0);
+    case Op::TransferChecksum: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 3, 0);
+    case Op::TransferStop: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Stop, 0, 0);
+    case Op::TransferCloseClients: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::CloseClients, 0, 0);
+    case Op::TransferIsFileHere: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::IsFileHere, 0, 0);
+    case Op::TransferDownload: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Download, 0, 0);
     default: Log(F("orig: unexpected game op %lld", (long long)inOp)); return 0;
     }
 }
@@ -1034,6 +1042,29 @@ static void Games()
                     sides[s] = std::move(sTrace);
                 }
                 Check("transfer file info", k++, sides[0], sides[1]);
+            }
+    // the transfer's calls (R6 WON lobby/net round 40): on a transfer with a file's size and checksum, a port
+    static const EeWonEeGameOp kCalls[] = {Op::TransferServe, Op::TransferSize, Op::TransferChecksum, Op::TransferStop,
+                                           Op::TransferCloseClients, Op::TransferIsFileHere, Op::TransferDownload};
+    for (EeWonEeGameOp call : kCalls)
+        for (unsigned port : kPorts)
+            for (long long size : kNums) {
+                std::vector<std::string> sides[2];
+                for (int s = 0; s < 2; s++) {
+                    sTrace.clear();
+                    EELobbyGame aGame;
+                    {
+                        SmartPtr<EELobbyFileTransfer> aTransfer = new EELobbyFileTransfer;
+                        aTransfer->mRust = ee_won_eexfer_new(aTransfer.get(), XferWorld);
+                        ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::SetFileInfo, (uint32_t)size, (uint32_t)(size * 3));
+                        intptr_t r = s == 0 ? WonDlg34Orig::GameHost(&aGame, call, (intptr_t)aTransfer.get(), port, 0, 0)
+                                            : ee_won_eegame_split_op(&aGame, call, (intptr_t)aTransfer.get(), port, 0, 0, NewGame);
+                        Log(F("call %lld result %lld", (long long)call, (long long)r));
+                        ee_won_eexfer_free(aTransfer->mRust);
+                    }
+                    sides[s] = std::move(sTrace);
+                }
+                Check("transfer call", k++, sides[0], sides[1]);
             }
 }
 

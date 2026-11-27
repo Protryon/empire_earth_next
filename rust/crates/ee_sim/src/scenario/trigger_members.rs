@@ -252,12 +252,84 @@ mod sys {
     }
 }
 
+/// An entry's member statement (`EE_SCENARIO_TR_FIRST` .. `_SET_OPERATOR` of the conditions' or effects' list) on the
+/// entry's record (fields.rs `EeScenarioTConditionWrapper`, `EeScenarioTEffectWrapper`) found by `at(list + TR_AT)`;
+/// None for another statement. A condition's first is `mIsNot`, its second `mValue`; an effect's `mDelay` and
+/// `mEffectIndex`.
+fn entry_field(op: u32, v: i64, at: &mut dyn FnMut(u32) -> i64) -> Option<i64> {
+    use crate::scenario::fields::{EeScenarioTConditionWrapper as C, EeScenarioTEffectWrapper as E};
+    let (base, member) = if (EE_SCENARIO_TR_EFFECTS..EE_SCENARIO_TR_NAME_EMPTY).contains(&op) {
+        (EE_SCENARIO_TR_EFFECTS, op - EE_SCENARIO_TR_EFFECTS)
+    } else if op < EE_SCENARIO_TR_EFFECTS {
+        (EE_SCENARIO_TR_CONDITIONS, op - EE_SCENARIO_TR_CONDITIONS)
+    } else {
+        return None;
+    };
+    if !(EE_SCENARIO_TR_SET_FIRST..=EE_SCENARIO_TR_OPERATOR).contains(&member) {
+        return None;
+    }
+    let w = at(base + EE_SCENARIO_TR_AT) as usize;
+    // SAFETY: the trigger's live entry `i` (the list's record)
+    Some(unsafe {
+        if base == EE_SCENARIO_TR_CONDITIONS {
+            let c = &mut *(w as *mut C);
+            match member {
+                EE_SCENARIO_TR_SET_FIRST => {
+                    c.mIsNot = v != 0;
+                    c.mIsNot as i64
+                }
+                EE_SCENARIO_TR_SET_SECOND => {
+                    c.mValue = v as c_ulong;
+                    c.mValue as i64
+                }
+                EE_SCENARIO_TR_SET_OPERATOR => {
+                    c.mOperator = v as c_long;
+                    c.mOperator as i64
+                }
+                EE_SCENARIO_TR_FIRST => c.mIsNot as i64,
+                EE_SCENARIO_TR_SECOND => c.mValue as i64,
+                _ => c.mOperator as i64,
+            }
+        } else {
+            let e = &mut *(w as *mut E);
+            match member {
+                EE_SCENARIO_TR_SET_FIRST => {
+                    e.mDelay = v as c_ulong;
+                    e.mDelay as i64
+                }
+                EE_SCENARIO_TR_SET_SECOND => {
+                    e.mEffectIndex = v as c_ulong;
+                    e.mEffectIndex as i64
+                }
+                EE_SCENARIO_TR_SET_OPERATOR => {
+                    e.mOperator = v as c_long;
+                    e.mOperator as i64
+                }
+                EE_SCENARIO_TR_FIRST => e.mDelay as i64,
+                EE_SCENARIO_TR_SECOND => e.mEffectIndex as i64,
+                _ => e.mOperator as i64,
+            }
+        }
+    })
+}
+
 /// The C++ statements (`ee_scenariocpp_trigger`, EESMObject.cpp).
 pub fn game(op: u32, t: i64, i: i64, v: i64) -> i64 {
     #[cfg(not(test))]
     {
         // SAFETY: the statement host's contract: `t` a live trigger, `i` and `v` as its op names
-        unsafe { sys::ee_scenariocpp_trigger(op, t as usize as *mut c_void, i, v) }
+        unsafe {
+            match op {
+                // the trigger's record and the world's flag (entry.rs, world_views.rs)
+                EE_SCENARIO_TR_FIELDS => crate::scenario::entry::element_record(
+                    crate::scenario::entry::EE_SCENARIO_EN_TRIGGER_FIELDS,
+                    t as u64,
+                ) as i64,
+                EE_SCENARIO_TR_WORLD_CINEMATIC => crate::scenario::world_views::in_cinematic() as i64,
+                _ => entry_field(op, v, &mut |at| sys::ee_scenariocpp_trigger(at, t as usize as *mut c_void, i, 0))
+                    .unwrap_or_else(|| sys::ee_scenariocpp_trigger(op, t as usize as *mut c_void, i, v)),
+            }
+        }
     }
     #[cfg(test)]
     {
@@ -301,3 +373,26 @@ pub unsafe extern "C" fn ee_scenario_trigger_evaluate_member(
 #[cfg(test)]
 #[path = "trigger_members_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod entry_field_tests {
+    use super::*;
+    use crate::scenario::fields::{EeScenarioTConditionWrapper, EeScenarioTEffectWrapper};
+
+    #[test]
+    fn an_entry_s_members_on_its_record() {
+        let mut c = EeScenarioTConditionWrapper::default();
+        let mut e = EeScenarioTEffectWrapper::default();
+        let (ca, ea) = (&mut c as *mut _ as i64, &mut e as *mut _ as i64);
+        let mut at = |op: u32| if op == EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_AT { ca } else { ea };
+        assert_eq!(entry_field(EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_FIRST, 5, &mut at), Some(1));
+        assert_eq!(entry_field(EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SET_SECOND, 9, &mut at), Some(9));
+        assert_eq!(entry_field(EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_OPERATOR, -2, &mut at), Some(-2));
+        assert_eq!(entry_field(EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_SET_FIRST, 7, &mut at), Some(7));
+        assert_eq!(entry_field(EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_FIRST, 0, &mut at), Some(7));
+        assert_eq!(entry_field(EE_SCENARIO_TR_CONDITIONS + EE_SCENARIO_TR_SECOND, 0, &mut at), Some(9));
+        assert_eq!(entry_field(EE_SCENARIO_TR_EFFECTS + EE_SCENARIO_TR_COUNT, 0, &mut at), None);
+        assert_eq!(entry_field(EE_SCENARIO_TR_FIELDS, 0, &mut at), None);
+        assert!(c.mIsNot && e.mOperator == -2);
+    }
+}

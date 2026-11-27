@@ -15,6 +15,8 @@ use crate::logics::EeWonLogicOp as Op;
 use crate::resource::EeWonLobbyRes as Res;
 use crate::routelogic::EeWonRouteLogicOp as ROp;
 
+use crate::lobbyconf::{self, EeWonLobbyConfList as Cl};
+
 /// The calls out: the op through the same dispatch the moved op came by.
 pub(crate) type Out<'a> = &'a dyn Fn(Op, isize, isize, isize, isize) -> isize;
 /// RoutingLogic's calls out (`a`..`e`).
@@ -45,6 +47,31 @@ pub(crate) fn game_prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize>
         return None;
     }
     prv_op(op, a, b, c)
+}
+
+/// InitLogic's `DocBytes` in the game: `((RustServerOp*)op)->GetHttpDocument(owner)`'s bytes, read from the op's
+/// Rust op (an op without a document: empty, as the C++ `ByteBuffer` of no bytes); none in a driver or for another op.
+pub(crate) fn game_doc_bytes(op: isize, owner: isize) -> Option<Vec<u8>> {
+    if !ee_won_net::cppnet::bound() {
+        return None;
+    }
+    let h = ee_won_net::cppcore::host_op_of(op as *mut std::ffi::c_void)?;
+    let mut doc: Vec<u8> = Vec::new();
+    unsafe extern "C" fn sink(v: *mut std::ffi::c_void, bytes: *const u8, n: usize) {
+        // SAFETY: the vector below and the bytes given
+        unsafe { (*(v as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, n)) };
+    }
+    // SAFETY: the op's live Rust op; the sink and its vector
+    unsafe {
+        ee_won_net::hostop::ee_won_hostop_bytes(
+            h,
+            ee_won_net::httpdoc::EE_WON_HTTPDOC_DOCUMENT,
+            owner as i64,
+            sink,
+            &mut doc as *mut Vec<u8> as *mut std::ffi::c_void,
+        )
+    };
+    Some(doc)
 }
 
 /// The ops whose C++ cases were one call answered in Rust (R6 WON round 39; those cases are gone): InitLogic's on the
@@ -118,6 +145,19 @@ pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
                     }
                 }
             }
+        }
+        // a ping op's members and their game (PingLogic.cpp's `Rec(a)`, `ee_won_pingop_call(Rec(a), Field, 5)`;
+        // R6 WON round 40)
+        Op::OpRecord | Op::OpGame => {
+            // SAFETY: `a` is null or a live op (its `RefCount*`)
+            let rec = unsafe { ee_won_net::udpops::ee_won_udp_body_of(p, ee_won_net::udpops::EE_WON_UDP_BODY_PING) };
+            if op == Op::OpRecord {
+                return Some(rec as isize);
+            }
+            // SAFETY: null or the op's live members
+            let game =
+                unsafe { crate::logics::ee_won_pingop_call(rec as *const _, crate::logics::EeWonPingOpCall::Field, 5) };
+            return Some(game as isize);
         }
         // `AsyncSocket::HasInternetConnection()`
         Op::HasInternet => return Some(ee_won_net::ffi_net::ee_won_has_internet_connection() as isize),
@@ -361,8 +401,15 @@ pub(crate) fn logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out: Out)
             );
             0
         }
+        // ---- the config's reads (lobbyconf.rs; the C++ cases until R6 WON lobby/net round 40)
+        Op::NoPingInProgress => lobbyconf::current().is_some_and(|c| c.no_ping_in_progress) as isize,
+        Op::PingCeiling => lobbyconf::current().map_or(5000, |c| c.ping_ceiling as isize),
+        Op::CheckForInternet => lobbyconf::current().is_some_and(|c| c.check_for_internet) as isize,
+        Op::HasAuthConfig => lobbyconf::current().is_some_and(|c| !c.auth_servers.is_empty()) as isize,
+        Op::DnsTestReady => lobbyconf::current().is_some_and(|c| !c.dir_servers.is_empty()) as isize,
+        Op::VersionReady => (on(Op::InitListGet, 4) != 0 && lobbyconf::current().is_some()) as isize,
         Op::DnsReady => {
-            (on(Op::HasConfig, 0) != 0
+            (lobbyconf::current().is_some()
                 && on(Op::DirServers, 0) != 0
                 && on(Op::RoomDirServersGet, 0) != 0
                 && on(Op::InitListGet, 1) != 0) as isize
@@ -370,9 +417,17 @@ pub(crate) fn logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out: Out)
         Op::FillDnsServers => {
             on(Op::RememberHostAddress, 0);
             on(Op::DirServersRemoveAll, 0);
-            on(Op::AddAllDir, 0);
-            on(Op::AddAllRoomDir, 0);
-            on(Op::AddAllAuth, 0);
+            // the config's directory, room directory and auth servers added to the lobby's lists (InitAddAll)
+            for (list, which) in [
+                (Op::DirServers, Cl::DirServers),
+                (Op::RoomDirServersGet, Cl::RoomDirServers),
+                (Op::InitListGet, Cl::AuthServers),
+            ] {
+                let list = on(list, 1);
+                for name in lobbyconf::current().map(|c| c.list(which).clone()).unwrap_or_default() {
+                    out(Op::ServerAddAddress, list, name.as_ptr() as isize, name.len() as isize, 0);
+                }
+            }
             0
         }
         Op::PromotionImage => {
@@ -392,7 +447,7 @@ pub(crate) fn logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out: Out)
             0
         }
         Op::DirReady => {
-            (on(Op::HasConfig, 0) != 0
+            (lobbyconf::current().is_some()
                 && on(Op::InitListGet, 2) != 0
                 && on(Op::InitListGet, 1) != 0
                 && on(Op::InitListGet, 3) != 0
@@ -425,17 +480,19 @@ pub(crate) fn logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out: Out)
             0
         }
         Op::RunDnsTest => {
-            let op = on(Op::DnsOpNew, 0);
+            let first = lobbyconf::current().and_then(|c| c.dir_servers.first().cloned()).unwrap_or_default();
+            let op = out(Op::DnsOpNew, first.as_ptr() as isize, first.len() as isize, 0, 0);
             on(Op::RunTrackedDns, op);
             on(Op::Release, op);
             0
         }
         Op::StartDocuments => {
-            if on(Op::HasConfig, 0) != 0 {
+            if let Some(conf) = lobbyconf::current() {
+                let (product, language) = (conf.product_name.clone(), conf.language.clone());
                 let mut ops = [0isize; 3];
                 for (i, kind) in [HTTPDOC_MOTD, HTTPDOC_TOU, HTTPDOC_ADV].into_iter().enumerate() {
-                    ops[i] = on(Op::HttpDocNew, kind);
-                    on(Op::HttpDocSetConfig, ops[i]);
+                    ops[i] = out(Op::HttpDocNew, kind, product.as_ptr() as isize, product.len() as isize, 0);
+                    out(Op::HttpDocSetConfig, ops[i], language.as_ptr() as isize, language.len() as isize, 0);
                     on(Op::HttpDocSetSession, ops[i]);
                     on(Op::RunTrackedDocument, ops[i]);
                 }
@@ -447,14 +504,36 @@ pub(crate) fn logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out: Out)
             0
         }
         Op::RunDirQuery => {
-            let count = if on(Op::HasConfig, 0) != 0 { 4 } else { 3 };
-            let op = out(Op::DirQueryNew, a, count, 0, 0);
+            // the four (three without a config) service paths' query (the patch servers' under the product directory)
+            let dir = lobbyconf::current().map(|c| c.product_directory.clone());
+            let count = if dir.is_some() { 4 } else { 3 };
+            let (p, n) =
+                dir.as_ref().map_or((std::ptr::null(), 0), |d| (d.as_ptr() as *const std::ffi::c_void, d.len()));
+            // SAFETY: the directory's `n` units
+            let req = unsafe { ee_won_net::reqmake::ee_won_reqmake_init_dirs(0x04000002, p, n, WCHAR as u32, count) };
+            let op = out(Op::RequestNew, a, req as isize, 0, 0);
             on(Op::RunTrackedDirectory, op);
             on(Op::Release, op);
             0
         }
         Op::RunVersionCheck => {
-            let op = on(Op::VersionCheckNew, 0);
+            // CheckValidVersionOp: the product, the config (the language) and the version, on the patch servers
+            let (product, language, version) = lobbyconf::current()
+                .map(|c| (c.product_name.clone(), c.language.clone(), c.version.clone()))
+                .unwrap_or_default();
+            let list = on(Op::InitListGet, 4);
+            // SAFETY: the three texts' bytes
+            let req = unsafe {
+                ee_won_net::reqops::ee_won_reqop_version_check(
+                    product.as_ptr(),
+                    product.len(),
+                    language.as_ptr(),
+                    language.len(),
+                    version.as_ptr(),
+                    version.len(),
+                )
+            };
+            let op = out(Op::RequestNew, list, req as isize, 0, 0);
             on(Op::RunTrackedVersion, op);
             on(Op::Release, op);
             0
@@ -603,6 +682,9 @@ const LOBBY_EVENT_QUERY_SERVER_GROUPS: isize = 100042;
 pub(crate) fn route_op(op: ROp, g: [isize; 5], out: ROut) -> Option<isize> {
     let [a, b, c, d, e] = g;
     let r = match op {
+        // the config's reads (lobbyconf.rs)
+        ROp::HasConfig => lobbyconf::current().is_some() as isize,
+        ROp::ConfigPingCeiling => lobbyconf::current().map_or(-1, |c| c.ping_ceiling as isize),
         ROp::ConnDo => match b {
             1 => {
                 out(ROp::ConnSetAuth, &[a, c]);
@@ -647,7 +729,8 @@ pub(crate) fn route_op(op: ROp, g: [isize; 5], out: ROut) -> Option<isize> {
             id
         }
         ROp::DirOpRun => {
-            let op = out(ROp::DirOpNew, &[a]);
+            let dir = lobbyconf::current().map(|c| c.product_directory.clone()).unwrap_or_default();
+            let op = out(ROp::DirOpNew, &[a, dir.as_ptr() as isize, dir.len() as isize]);
             let res = |r: Res| r as isize;
             out(
                 ROp::RunWithStatus,
@@ -841,11 +924,16 @@ mod tests {
 
     #[test]
     fn the_documents_are_released_last_to_first() {
+        // with the lobby's config (lobbyconf.rs), then without
+        let conf = unsafe { crate::lobbyconf::ee_won_lobbyconf_new(std::ptr::null_mut()) };
+        crate::lobbyconf::ee_won_lobbyconf_set_current(conf);
         let (_, log) = run(Op::StartDocuments, 0, 7);
-        assert_eq!(log.len(), 1 + 3 * 4 + 3);
-        assert!(log[13..].iter().all(|x| x.0 == Op::Release));
+        crate::lobbyconf::ee_won_lobbyconf_set_current(std::ptr::null_mut());
+        unsafe { crate::lobbyconf::ee_won_lobbyconf_free(conf) };
+        assert_eq!(log.len(), 3 * 4 + 3);
+        assert!(log[12..].iter().all(|x| x.0 == Op::Release));
         let (_, log) = run(Op::StartDocuments, 0, 0);
-        assert_eq!(log, [(Op::HasConfig, 0)]);
+        assert!(log.is_empty());
     }
 
     #[test]

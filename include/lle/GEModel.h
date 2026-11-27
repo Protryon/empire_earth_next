@@ -13,11 +13,36 @@
 
 #include <map>
 #include <stdint.h>
-#include "lle/GEBoundingBox.h"
 #include "rust/base/math.h"   // the model (ee_ge modobj.rs), its host's EeGeModOp
 #include "rust/render/ge.h"
 
 #include "lle/LLEForward.h"
+#include "lle/GERust.h"
+
+// C:\EEX\Low-Level Engine\Graphics Engine\GEBoundingBox.h (RECONSTRUCTION; folded here in LLE/UI round 2).
+// GEBoundingBox.cpp 0x10013501..; the ctors, operator=, Define and the setters are inline (emitted first by
+// GEBoundingBox.cpp itself, 0x10010550). (The two-corner constructor and Define, which nothing called, went.)
+class GEBoundingBox : public EeGeBoundingBox {   // the Rust record (mBottomLeftFront, mTopRightBack, mWidth (x),
+public:                                          // mHeight (z), mDepth (y); rust/base/math.h)
+    GEBoundingBox() : EeGeBoundingBox{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, 0.0f, 0.0f, 0.0f} { this->ComputeDimensions(); }
+    // the two corners, then the extents computed again (ee_ge_bbox_define)
+    GEBoundingBox& operator=(const GEBoundingBox& inBox)
+        { return *static_cast<GEBoundingBox*>(ee_ge_bbox_define(this, &inBox.mBottomLeftFront, &inBox.mTopRightBack)); }
+    const GE3DPoint& GetBottomLeftFront() const { return GECpp(this->mBottomLeftFront); }
+    float GetDepth() const { return this->mDepth; }
+    float GetHeight() const { return this->mHeight; }
+    const GE3DPoint& GetTopRightBack() const { return GECpp(this->mTopRightBack); }
+    float GetWidth() const { return this->mWidth; }
+    // the two corners from the file (an FSFileSpec), then the size; the first read error
+    template <class F> long Load(F& inFile) { return ee_ge_bbox_load(GERust(*this), GERustFile(inFile)); }
+    template <class F> long Save(F& inFile) { return ee_ge_bbox_save(GERust(*this), GERustFile(inFile)); }
+    // the axis-aligned box around the eight transformed corners
+    void Transform(const GETransformation& inTransformation, GEBoundingBox& outBox) const
+        { ee_ge_bbox_transform(GERust(*this), GERust(inTransformation), GERust(outBox)); }
+    // (Contains, the two Intersects, LineToPlaneIntersection and TransformPoint are Rust's alone: ee_ge bbox.rs)
+    // each axis ordered (the first corner the minimum), then the width (x), height (z) and depth (y)
+    void ComputeDimensions() { ee_ge_bbox_compute_dimensions(GERust(*this)); }
+};
 
 class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 in the original (GEModelManager: operator new(0x188))
 public:
@@ -28,8 +53,6 @@ public:
     bool GetClipToPlane(unsigned long inPlane) { return ee_ge_mod_clip(this->mRust, inPlane); }
     unsigned long GetFrameCount() const { return this->Val(EeGeModVal::FrameCount); }
     float GetFractionalFramePosition() const { return ee_ge_mod_getf(this->mRust, EeGeModFloat::FractionalFramePosition); }
-    const GEBoundingBox& GetGraphicsBoundingBox() const { return *this->GetGraphicsBoundingBoxPointer(); }
-    float GetGraphicsBoundingRadius() const { return this->GetBoundingRadius(this->GetGraphicsCurrentFrame()); }
     unsigned long GetGraphicsCurrentFrame() const { return this->Val(EeGeModVal::CurrentFrame); }
     unsigned long GetGraphicsNextFrame() const { return this->Val(EeGeModVal::NextFrame); }
     const GETransformation& GetGraphicsPostModelTransform() const { return *(const GETransformation*)this->Ptr(EeGeModPtr::PostTransform); }
@@ -52,7 +75,6 @@ public:
     const GE3DPoint& GetTagPoint(unsigned long inIndex, unsigned long inFrame) const { return this->GetFrameTagPoints()[inFrame][inIndex]; }
     unsigned long GetTagPointCount() const { return this->Val(EeGeModVal::TagPointCount); }
     GE3DPoint* GetTagPointList() const { return (GE3DPoint*)this->Ptr(EeGeModPtr::TagPoints); }
-    void SetClipToPlane(unsigned long inPlane, bool inClip) { ee_ge_mod_set_clip(this->mRust, inPlane, inClip); }
     void SetGraphicsPostModelTransform(const GETransformation& inTransform)
         { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Post, 0, (const EeGeTransformation*)&inTransform); }
     void SetGraphicsScale(float inScale) { ee_ge_mod_set_graphics_scale(this->mRust, inScale); }

@@ -34,7 +34,6 @@ use ee_sim::tech::calamity_class::{
 use ee_sim::tech::calamity_record::EeCalamityFields;
 use ee_sim::tech::calamity_update::{EeCalamityCall, EeCalamityOp, EeCalamityReply, EeCalamityState};
 use ee_sim::tech::contagion_functor::{self as cf, EeContagionFunctorFields};
-use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
@@ -63,22 +62,22 @@ fn klass<'a>(kl: P) -> &'a mut EeCalamityClassFields {
 
 fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     // SAFETY: a live unit's record, as cal
-    unsafe { &mut *rec(O::UnRts, u) }
+    unsafe { &mut *crate::gamecpp::records::un_rts(u) }
 }
 
 fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cxf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: as rts
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn ucf<'a>(uc: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: as rts
-    unsafe { &*rec(O::UcFields, uc) }
+    unsafe { &*crate::gamecpp::records::uc_fields(uc) }
 }
 
 fn functor<'a>(fu: P) -> &'a mut EeContagionFunctorFields {
@@ -88,12 +87,12 @@ fn functor<'a>(fu: P) -> &'a mut EeContagionFunctorFields {
 
 fn player_id(pl: P) -> c_ulong {
     // SAFETY: a live player's record
-    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+    unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID }
 }
 
 fn enemy(pl: P, other: c_ulong) -> c_ulong {
     // SAFETY: as player_id
-    unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies[other as usize] }
+    unsafe { (*crate::gamecpp::records::pl_saved(pl)).mEnemies[other as usize] }
 }
 
 fn complex(u: P) -> P {
@@ -156,7 +155,7 @@ fn is_none32(id: c_ulong) -> bool {
 /// A file's text (the out-of-sync dumps).
 fn puts(file: P, text: &str) {
     let t = CString::new(text).expect("no NUL");
-    h(O::FilePuts, file, &[t.as_ptr() as usize as i64]);
+    h(O::C11CgText, file, &[t.as_ptr() as usize as i64]);
 }
 
 // ---- EECalamity
@@ -318,7 +317,7 @@ pub extern "C" fn ee_gamecpp_calamity_set_unit(c: *mut c_void, u: *mut c_void, i
     }
     h(set, c, &[pa(u)]);
     if u != 0 {
-        h(O::RefUnitReference, u, &[]);
+        h(O::CgUnitReference, u, &[]);
         let id = rts(u).mUnitID;
         if is_target {
             cal(c).mTargetUnitID = id;
@@ -423,7 +422,7 @@ pub extern "C" fn ee_gamecpp_calamity_load_classes(m: *mut c_void, file: *mut c_
             // SAFETY: an all-zero record is a valid EeCalamityData (numbers and bools)
             let mut data: EeCalamityData = unsafe { std::mem::zeroed() };
             let size = std::mem::size_of::<EeCalamityData>() as i64;
-            result = h(O::FileReadBytes, file, &[ptr(&mut data), size, ptr(&mut read)]) as c_long;
+            result = h(O::DtFileReadRecord, file, &[ptr(&mut data), size, ptr(&mut read)]) as c_long;
             // the class of the record's kind (none for kinds 1, 2, 5, 6, 11, 12, unknown ones or a negative id)
             let kl =
                 if data.mID >= 0 && cc::ee_calamity_class_target_kind(data.mClassEnum) != cc::EE_CALAMITY_TARGET_NONE {
@@ -724,7 +723,7 @@ pub extern "C" fn ee_gamecpp_calamity_update_all(m: *mut c_void, elapsed: f32) {
     for i in 1..n {
         let pl = hp(O::WPlayer, world, &[i as i64]);
         // SAFETY: the live player's record
-        unsafe { (*rec::<EeUnitsPlayerFields>(O::PlFields, pl)).mEarthquakeShaken = false };
+        unsafe { (*crate::gamecpp::records::pl_fields(pl)).mEarthquakeShaken = false };
     }
     let mut i = 0;
     while i < active(m) {
@@ -768,7 +767,7 @@ pub extern "C" fn ee_gamecpp_calamity_create_unit(
     if player != -1 {
         number = player;
     }
-    let class = hp(O::UcAt, 0, &[unit_class_index as i64]);
+    let class = crate::tech_tree::objects::class_at(unit_class_index as i64);
     if class == 0 {
         return std::ptr::null_mut();
     }
@@ -810,12 +809,12 @@ fn media_steps(kl: P, list: u32, pl: P, on_demand: bool) {
             let e = fx[(step - cc::EE_CALAMITY_STEP_EFFECT1) as usize];
             if list == cc::EE_CALAMITY_MEDIA_DESTROY {
                 if e != 0 {
-                    h(O::GfxEffectDereference, e, &[]);
+                    h(O::FwGeffDeref, e, &[]);
                 }
             } else if e != 0 && load {
-                h(O::GfxEffectLoadPtr, e, &[on_demand as i64]);
+                h(O::FwGeffLoad, e, &[on_demand as i64]);
             } else if e != 0 {
-                h(O::GfxEffectUnloadPtr, e, &[]);
+                h(O::FwGeffUnload, e, &[]);
             }
         } else if list == cc::EE_CALAMITY_MEDIA_DESTROY {
             if step == cc::EE_CALAMITY_STEP_FUNCTOR {
@@ -827,9 +826,9 @@ fn media_steps(kl: P, list: u32, pl: P, on_demand: bool) {
         } else if step == cc::EE_CALAMITY_STEP_SOUND || step == cc::EE_CALAMITY_STEP_SECONDARY_SOUND {
             let sound = hp(if step == cc::EE_CALAMITY_STEP_SOUND { O::KlSound } else { O::KlSecondary }, kl, &[]);
             if sound != 0 && load {
-                h(O::SoundObjectLoadPtr, sound, &[]);
+                h(O::FxSoundObjectLoad, sound, &[]);
             } else if sound != 0 {
-                h(O::SoundObjectUnloadPtr, sound, &[]);
+                h(O::FxSoundObjectUnload, sound, &[]);
             }
         } else if step == cc::EE_CALAMITY_STEP_UNIT_MEDIA && load {
             if on_demand == true {
@@ -839,7 +838,7 @@ fn media_steps(kl: P, list: u32, pl: P, on_demand: bool) {
         } else if step == cc::EE_CALAMITY_STEP_UNIT_MEDIA {
             h(O::PlUnloadClassMedia, pl, &[index]);
         } else if step == cc::EE_CALAMITY_STEP_UNIT_BUTTONS && load {
-            h(O::PlLoadButtons, pl, &[index]);
+            h(O::TkClassButtonsLoad, pl, &[index]);
         } else if step == cc::EE_CALAMITY_STEP_UNIT_BUTTONS {
             h(O::PlUnloadClassButtons, pl, &[index]);
         }
@@ -912,7 +911,7 @@ pub unsafe extern "C" fn ee_gamecpp_calamity_class_initialize(kl: *mut c_void, d
             let e = hp(O::GfxEffectGet, 0, &[id as i64]);
             h(setters[i], kl, &[pa(e)]);
             if e != 0 {
-                h(O::GfxEffectReference, e, &[]);
+                h(O::FwGeffRef, e, &[]);
             }
         } else if i == 4 {
             h(O::KlSetSound, kl, &[pa(hp(O::SoundObjectGet, 0, &[id as i64]))]);
@@ -1021,7 +1020,7 @@ pub extern "C" fn ee_gamecpp_calamity_class_update_sound(
     }
     let (mut vol, mut pan, mut pitch) = (0f32, 0f32, 0f32);
     let base = hd(O::SoVolume, sound, &[], &[]);
-    hf(O::SoParams, 0, &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)], &[base, falloff]);
+    hf(O::FxComputeSound, 0, &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)], &[base, falloff]);
     if volume != -1.0 {
         vol = if 1.0 < volume { 1.0 } else { wmax(0.0, volume) };
     }
@@ -1108,6 +1107,18 @@ pub extern "C" fn ee_gamecpp_calamity_class_valid_location(
     valid_location(kl, &cast, cx as P, unit_class_index)
 }
 
+/// `EEContagionFunctor::CanInfect(unit)` (every kind's `CanInfectType`, the ICF-shared 0xb6c4d): the unit's class's
+/// type is in the functor's unit set.
+pub(crate) fn functor_can_infect(functor: P, unit: P) -> bool {
+    use ee_sim::world::view::{UnitView, WorldRead};
+    // SAFETY: a live functor, whose record is its first base
+    let set = unsafe { (*(functor as *const ee_sim::tech::contagion_functor::EeContagionFunctorFields)).mUnitSet };
+    // SAFETY: a live unit, read on the simulation thread
+    let t = unsafe { WorldRead::begin() };
+    let kind = unsafe { UnitView::of(&t, unit as u64) }.and_then(|u| u.class()).map_or(0, |k| k.unit_type() as c_long);
+    ee_sim::app::unit_sets::ee_unit_sets_contains(set as usize, kind as u32)
+}
+
 /// `IsValidTarget` of a unit class: the fire's and the plague's functor decides (CanInfect), the others' the shared
 /// rule.
 #[no_mangle]
@@ -1118,7 +1129,7 @@ pub extern "C" fn ee_gamecpp_calamity_class_valid_target(
 ) -> bool {
     let kl = kl as P;
     if cc::ee_calamity_class_targets_by_functor(klass(kl).mClassEnum as i32) {
-        return h(O::FnCanInfect, hp(O::KlFunctor, kl, &[]), &[target_unit as i64]) != 0;
+        return functor_can_infect(hp(O::KlFunctor, kl, &[]), target_unit as P);
     }
     valid_target(kl, cx as P, target_unit as P)
 }
@@ -1141,8 +1152,8 @@ pub unsafe extern "C" fn ee_gamecpp_calamity_class_random_location(
     let mut o = Ge3DPoint::new(o[0], o[1], o[2]);
     let mut tile;
     loop {
-        let angle = hd(O::PhysGenerate, 0, &[], &[]) * 6.2831855 - 3.1415927;
-        let fraction = hd(O::PhysGenerate, 0, &[], &[]);
+        let angle = hd(O::C11CgRandom, 0, &[], &[]) * 6.2831855 - 3.1415927;
+        let fraction = hd(O::C11CgRandom, 0, &[], &[]);
         let cos = um_cos(angle);
         let sin = um_cos(1.5707964 - angle);
         let f = *klass(kl);
@@ -1169,7 +1180,7 @@ pub extern "C" fn ee_gamecpp_calamity_class_place(kl: *mut c_void, u: *mut c_voi
     if klass(kl).mClassEnum != CAL_O_VOLCANO {
         return;
     }
-    let class = hp(O::UcAt, 0, &[klass(kl).mUnitClassIndex as i64]);
+    let class = crate::tech_tree::objects::class_at(klass(kl).mUnitClassIndex as i64);
     ee_sim::units::uu_ffi::ee_units_uu_step_aside(
         0,
         class as u64,
@@ -1194,7 +1205,7 @@ pub extern "C" fn ee_gamecpp_functor_construct(fu: *mut c_void, kl: *mut c_void,
     h(O::FnSetEffect3, fu, &[0]);
     if kind == cc::EE_CALAMITY_FUNCTOR_FIRE {
         h(O::FnSetEffect1, fu, &[pa(hp(O::KlEffect2, kl, &[]))]);
-        h(O::GfxEffectReference, hp(O::FnEffect1, fu, &[]), &[]);
+        h(O::FwGeffRef, hp(O::FnEffect1, fu, &[]), &[]);
     } else if kind == cc::EE_CALAMITY_FUNCTOR_MIND_CONTROL {
         h(O::FnSetEffect1, fu, &[pa(hp(O::KlEffect3, kl, &[]))]);
     } else if kind == cc::EE_CALAMITY_FUNCTOR_AREA {
@@ -1268,7 +1279,7 @@ pub extern "C" fn ee_gamecpp_functor_infect(fu: *mut c_void, u: *mut c_void, c: 
             // the target effect at the calamity's target on the ground (at height 0 on water terrain types 1 and 10)
             let mut at = target_location(c);
             let tile = hp(O::MapTile, 0, &[floor(at.x) as i64, floor(at.y) as i64]);
-            let terrain = h(O::TileTerrainType, tile, &[]);
+            let terrain = h(O::FxTileTerrainType, tile, &[]);
             if terrain != 1 && terrain != 10 {
                 at.z = hd(O::MeshZ, 0, &[], &[at.x, at.y]);
             } else {
@@ -1489,7 +1500,7 @@ unsafe extern "C" fn cast_call(
             ) as i32;
         }
         C::TileVisible => {
-            r.ok = h(O::TileVisibleTo, hp(O::MapTile, 0, &[x as i64, y as i64]), &[pa(unit_player(unit))]) != 0
+            r.ok = h(O::FxTileVisibleTo, hp(O::MapTile, 0, &[x as i64, y as i64]), &[pa(unit_player(unit))]) != 0
         }
         C::AreaEffect => r.ok = h(O::AeHas2, 0, &[3, x as i64, y as i64, c.value as i64]) != 0,
         C::TargetLookup => {
@@ -1519,7 +1530,9 @@ unsafe extern "C" fn cast_call(
         C::CasterContinent => r.value = h(O::ContinentOfUnit, unit, &[]) as i32,
         C::TileContinent => r.value = h(O::ContinentOfTile, 0, &[x as i64, y as i64]) as i32,
         C::TileBlocked => r.ok = h(O::WorldTileBlocked, 0, &[x as i64, y as i64]) != 0,
-        C::InnerSphere => r.x = hd(O::UcInnerSphere, hp(O::UcAt, 0, &[host.unit_class_index as i64]), &[], &[]),
+        C::InnerSphere => {
+            r.x = hd(O::UcInnerSphere, crate::tech_tree::objects::class_at(host.unit_class_index as i64), &[], &[])
+        }
         C::UnitsNear => {
             let at = [c.x, c.y, c.z];
             // SAFETY: the run's C++ unit vector
@@ -1532,7 +1545,9 @@ unsafe extern "C" fn cast_call(
             let t = ucf(unit_class(near)).mUnitType;
             r.ok = uf(near).mHitPoints > 0 && (t == UNIT_TYPE_HURRICANE || t == UNIT_TYPE_ANTI_MATTER_STORM);
         }
-        C::TileSize => r.value = ucf(hp(O::UcAt, 0, &[host.unit_class_index as i64])).mTileSize as i32,
+        C::TileSize => {
+            r.value = ucf(crate::tech_tree::objects::class_at(host.unit_class_index as i64)).mTileSize as i32
+        }
         C::EdgeTile => r.ok = h(O::MapIsEdgeTile, 0, &[c.index as i64, c.index2 as i64]) != 0,
         C::TileUnblocked => {
             let player = if unit != 0 { unit_player(unit) } else { hp(O::WorldPlayer, 0, &[0]) };

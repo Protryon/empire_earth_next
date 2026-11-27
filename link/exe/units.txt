@@ -8,7 +8,6 @@ a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
 acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
-adf97 aebb7 Empire Earth/Calamities/EECalamityManager.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp
@@ -85,13 +84,10 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1aaad4 1af2a9 Empire Earth/Scenario Editor/EEUIFSETerrain.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp
 1afa90 1ba02f Empire Earth/Scenario Manager/EEScenarioManager.cpp
-1ba02f 1ba89f Empire Earth/Scenario Manager/EESMArea.cpp
 1bb5a5 1c5783 Empire Earth/Scenario Manager/EESMEffect.cpp
 1c5f73 1ca4ee Empire Earth/Scenario Manager/EESMObject.cpp
 1ca4ee 1cba2f Empire Earth/Scenario Manager/EEEvent.cpp
 1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp
-1e71cc 1e853a Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
-1e9fed 1eafcb Empire Earth/UI Events/EEUIEWonNetArenaGameEvents.cpp
 1ebc47 1f1f19 Empire Earth/Units/EEActiveGroup.cpp
 1f1f19 1f57d3 Empire Earth/Units/EEComplexDoppelganger.cpp
 1f57d3 201d85 Empire Earth/Units/EEComplexUnit.cpp
@@ -109,24 +105,7 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
-254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
-25619b 25643d Empire Earth/User Interface Thread/EEUIBuildGate.cpp
-25643d 256845 Empire Earth/User Interface Thread/EEUIBuildWall.cpp
-256845 257223 Empire Earth/User Interface Thread/EEUIBUpgrade.cpp
-257881 258464 Empire Earth/User Interface Thread/EEUICCommandUnits.cpp
-25861c 25952f Empire Earth/User Interface Thread/EEUICPortrait.cpp
-25952f 259f7f Empire Earth/User Interface Thread/EEUICSelectUnits.cpp
-260c27 2624a6 Empire Earth/User Interface Thread/EEUIFError.cpp
-26272b 26783d Empire Earth/User Interface Thread/EEUIFMainGame.cpp
-26783d 267ad9 Empire Earth/User Interface Thread/EEUIFMGAttribute.cpp
-267ec8 2691b2 Empire Earth/User Interface Thread/EEUIFMGMainGroup.cpp
-2691b2 269ca8 Empire Earth/User Interface Thread/EEUIFMGStatusBar.cpp
-269ca8 26de97 Empire Earth/User Interface Thread/EEUIFMGStatusBox.cpp
-26de97 271319 Empire Earth/User Interface Thread/EEUIFMGStatusButton.cpp
-271319 2753b1 Empire Earth/User Interface Thread/EEUIManager.cpp
-2753b1 276442 Empire Earth/User Interface Thread/EEUIMiniMap.cpp
-276631 27a37e Empire Earth/User Interface Thread/EEUserInterface.cpp
-27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
+254911 27aa0b Empire Earth/User Interface Thread/EEUserInterface.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
 283b2e 28befc Empire Earth/Random Map/EERandomMap.cpp

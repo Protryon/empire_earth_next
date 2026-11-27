@@ -26,7 +26,6 @@ public:
     virtual void GetPoint(GE3DPoint& outPoint, unsigned long inIndex) const   // slot 0x14
         { this->Get(EeGeVaField::Point, inIndex, &outPoint); }
     virtual unsigned long GetSize() const { return ee_ge_va_size(this->mRust, false); }
-    virtual void GetTextureCoordinate(GETextureCoordinate& outCoordinate, unsigned long inIndex) const { this->Get(EeGeVaField::Uv, inIndex, &outCoordinate); }
     virtual unsigned long GetType() const { return ee_ge_va_type(this->mRust); }
     virtual void SetColor(const GEColor& inColor, unsigned long inIndex)       // slot 0x24
         { this->Set(EeGeVaField::Color, inIndex, &inColor); }
@@ -49,6 +48,30 @@ public:
 
     void* mVertices;                        // the Rust array's vertices
     EeGeVertexArray* mRust;
+};
+
+// C:\EEX\Low-Level Engine\Graphics Engine\GEPolygonArray.h (RECONSTRUCTION; folded here in LLE/UI round 2). Abstract
+// in the original (DX7HRDisplay DX7PolygonArray gives the slot order).
+//
+// port (R4.3 part 17): concrete over ee_render geval vertarr.rs (the renderer's DX7PolygonArray, 16-bit triangle
+// indices, merged in); the draws read the indices in place (mIndices); the model's calls are on the Rust array (ee_ge
+// modobj.rs array_op).
+class LLE_API GEPolygonArray {
+public:
+    explicit GEPolygonArray(unsigned long inCount) : mRust(ee_ge_pa_new(inCount)) { this->mIndices = ee_ge_pa_indices(this->mRust); }
+    virtual ~GEPolygonArray() { ee_ge_pa_destroy(this->mRust); }
+    virtual unsigned long GetSize() const { return ee_ge_pa_size(this->mRust, false); }
+    virtual void SetVertexIndex1(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 0, inIndex); }
+    virtual void SetVertexIndex2(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 1, inIndex); }
+    virtual void SetVertexIndex3(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 2, inIndex); }
+    virtual void SetVertexIndices(unsigned long inPolygon, unsigned long inIndex1, unsigned long inIndex2,
+                                  unsigned long inIndex3)   // (inPolygon first: DX7PolygonArray.cpp)
+        { ee_ge_pa_set_indices(this->mRust, inPolygon, inIndex1, inIndex2, inIndex3); }
+    virtual unsigned long SizeOf() const { return ee_ge_pa_size(this->mRust, true); }
+    const unsigned short* GetIndices() const { return this->mIndices; }   // three per triangle
+
+    unsigned short* mIndices;               // the Rust array's indices
+    EeGePolygonArray* mRust;
 };
 
 #endif

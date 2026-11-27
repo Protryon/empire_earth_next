@@ -1,5 +1,6 @@
-//! The C ABI of the TCP plug-in (called by the C++ shim, `TCP Protocol.cpp`), and the `Host` that reaches the platform
-//! layer (`platform/PlatSocket.h`) and the engine (the shim's `ee_tcp_host_*`). Compiled out of `cargo test`.
+//! The C ABI of the TCP plug-in, and the `Host` that reaches the platform layer (`platform/PlatSocket.h`) and the
+//! engine (ee_base's error system, clock and the simulation's port offset: the C++ shim `TCP Protocol.cpp` that made
+//! those calls is gone). Compiled out of `cargo test`.
 
 use std::ffi::{c_char, c_int, c_void};
 use std::slice;
@@ -37,11 +38,6 @@ mod sys {
         pub(super) fn PlatSocketFormatIPv4(address: u32, text: *mut c_char);
         pub(super) fn PlatSocketGetAdapters(adapters: *mut RawAdapter, max: u32) -> u32;
         pub(super) fn PlatSleep(milliseconds: u32);
-        // implemented by the C++ shim
-        pub(super) fn ee_tcp_host_record_native_error(error: u32);
-        pub(super) fn ee_tcp_host_native_error() -> u32;
-        pub(super) fn ee_tcp_host_time_ms() -> u32;
-        pub(super) fn ee_tcp_host_port_offset() -> i32;
     }
 }
 use sys::*;
@@ -155,16 +151,16 @@ impl Host for PlatHost {
         unsafe { PlatSleep(milliseconds) }
     }
     fn time_ms(&self) -> u32 {
-        unsafe { ee_tcp_host_time_ms() }
+        ee_base::time::ee_time_get()
     }
     fn record_native_error(&self, error: u32) {
-        unsafe { ee_tcp_host_record_native_error(error) }
+        ee_base::error::ee_error_record_native(error as std::ffi::c_ulong);
     }
     fn native_error(&self) -> u32 {
-        unsafe { ee_tcp_host_native_error() }
+        ee_base::error::ee_error_native() as u32
     }
     fn port_offset(&self) -> i32 {
-        unsafe { ee_tcp_host_port_offset() }
+        ee_base::plat_core::sim::gPlatSimPortOffset.get()
     }
 }
 

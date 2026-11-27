@@ -1,8 +1,6 @@
 #include "rust/won_gui/cfgcomp.h"
-#include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgset.h"
 #include "rust/won_gui/cfgtab.h"
-#include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinobj.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
@@ -371,4 +369,12 @@ static bool CfgKeyHost(void* c,EeWonCfgKeyOp op,int32_t t,const uint8_t* k,uintp
     }
 }
 static bool CfgKeyRethrow(int r) { if(r==2) std::rethrow_exception(std::exchange(sCfgKeyError,nullptr)); return r==1; }
-bool ComponentConfig::Virtual24(const std::string& key) { return CfgKeyRethrow(ee_won_cfg_v24(CfgKeyHost,this,this->mKind,(const uint8_t*)key.data(),key.size())); }
+// The walk of kind k's steps over c; a lobby control's kind (R6 WON lobby/net round 40) is the lobby's reader
+// (lobbycfgrd.rs, LobbyNetCtrlHost.cpp), which walks its base kind through here for the keys it does not hold.
+bool LobbyCfgV24(ComponentConfig*,const std::string&);
+bool CfgKindV24(ComponentConfig* c,EeWonCfgKind k,const std::string& key)
+{
+    int r=ee_won_cfg_v24(CfgKeyHost,c,k,(const uint8_t*)key.data(),key.size());
+    return r==3 ? LobbyCfgV24(c,key) : CfgKeyRethrow(r);
+}
+bool ComponentConfig::Virtual24(const std::string& key) { return CfgKindV24(this,this->mKind,key); }

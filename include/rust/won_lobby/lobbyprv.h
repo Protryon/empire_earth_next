@@ -30,6 +30,12 @@ enum class EeWonLobbyPrvField : uint32_t {
   LanProductId,
   /// `mHasSetHashFileList` (+0xa4; the login's file hashes were given, GetLobbyAuthContext's once: R6 WON round 39).
   HashFilesSet,
+  /// `mLobbyStatus` (+0x4c; LobbyRun's result, LobbyExit's status; 0 from the constructor: R6 WON lobby/net 40).
+  LobbyStatus,
+  /// `mRunMode` (+0x50; 1 from the constructor and LobbyRun).
+  RunMode,
+  /// `mSuspended` (+0x54; LobbySuspend's, cleared by LobbyRun, LobbyResume and LobbyStart).
+  Suspended,
 };
 
 /// The host's ops: each one C++ statement.
@@ -50,22 +56,16 @@ enum class EeWonLobbyPrvOp : uint32_t {
   ErrorParseHead,
   /// `p->mInitError.append(GUIString(sPrvParser->GetAbortReason()))`.
   ErrorParseReason,
-  /// `p->mConfig->mLobbyPort` (the lobby port: the Rust's member, R6 WON lobby and network round 38).
-  ConfigLobbyPort,
   /// `sPrvComponentConfig = new ContainerConfig`.
   ComponentConfigNew,
   /// `p->mLobbyContainer = new LobbyContainer`.
   LobbyContainerNew,
-  /// `ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory)`.
+  /// `ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + PrvText(a))` (the config's resource
+  /// directory: `a` its bytes and length).
   SetResourceFolder,
-  /// `sPrvDefine = p->mConfig->mDefines.begin()`.
-  DefinesBegin,
-  /// `sPrvDefine == p->mConfig->mDefines.end()`.
-  DefinesAtEnd,
-  /// `sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false)`.
+  /// `sPrvParser->AddDefine(PrvText(a), PrvText(a + 2 words), false)` (a config define: its name's and value's
+  /// bytes and lengths).
   DefineAdd,
-  /// `++sPrvDefine`.
-  DefineNext,
   /// `return WonGuard([&] { return sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser); });`.
   ReadMaster,
   /// `p->mInitError = sPrvComponentConfig->mConfigError`.
@@ -74,18 +74,6 @@ enum class EeWonLobbyPrvOp : uint32_t {
   LogicMgrInit,
   /// `return WonGuard([&] { return PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }); });`.
   InitFuncRun,
-  /// `sPrvCrc = CRC16()`.
-  CrcNew,
-  /// `sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length())`.
-  CrcPutProductName,
-  /// `sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length())`.
-  CrcPutVersion,
-  /// `sPrvCrc.Get()` (a product id).
-  CrcGet,
-  /// `sPrvCrc.Reset()`.
-  CrcReset,
-  /// `sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length())`.
-  CrcPutLanVersion,
   /// `p->mChatCommandParser->InitCommands()`.
   ChatParserInitCommands,
   /// `sPrvTable = NULL`.
@@ -112,27 +100,20 @@ enum class EeWonLobbyPrvOp : uint32_t {
   CommunitySet,
   /// `p->mAuthContext->SetCommunity(p->mLoginCommunity)`.
   AuthSetCommunity,
-  /// `p->mConfig->mCDKeyCheck`.
-  CdKeyCheck,
-  /// `p->mCDKey.SetProductString(p->mConfig->mProductName)`.
+  /// `p->mCDKey.SetProductString(PrvText(a))` (the config's product name: `a` its bytes and length).
   CdKeySetProduct,
   /// `p->mCDKey.LoadFromRegistry()`.
   CdKeyLoad,
   /// `p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey)`.
   AuthSetCdKey,
-  /// `p->mSuspended = false`.
-  SuspendedClear,
   /// `p->mCurGameType = (LobbyGameType)0`.
   CurGameTypeClear,
-  /// `p->mLobbyStatus = (LobbyStatus)0`.
-  LobbyStatusClear,
-  /// `p->mRunMode = (LobbyRunMode)1`.
-  RunModeOne,
   /// `p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"`.
   SysTouPath,
   /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
   GameTouPath,
-  /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39).
+  /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39); its
+  /// record (lobbyconf.rs), the lobby's from then on.
   ConfigNew,
   /// `p->mPersistentData = new LobbyPersistentData`.
   PersistentDataNew,
@@ -190,7 +171,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   ResGuiInit,
   /// `sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>)`.
   AllocBrowserComponent,
-  /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>)`.
+  /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<EeWonCfgKind::LobbyChat>,NewComponentOf<ChatCtrl>)`.
   AllocChatCtrl,
   /// `sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>)`.
   AllocCreateAccountCtrl,
@@ -198,11 +179,11 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocDirectConnectCtrl,
   /// `sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>)`.
   AllocFriendsListCtrl,
-  /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>)`.
+  /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<EeWonCfgKind::LobbyGameBrowser>,NewComponentOf<GameBrowserCtrl>)`.
   AllocGameBrowserCtrl,
   /// `sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>)`.
   AllocGameStagingCtrl,
-  /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory)`.
+  /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<EeWonCfgKind::LobbyGameUserList>,CtlFactory<Ck::UserList>)`.
   AllocGameUserListCtrl,
   /// `sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>)`.
   AllocInitFailedCtrl,
@@ -232,13 +213,13 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocQuickPlayCtrl,
   /// `sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>)`.
   AllocRoomCtrl,
-  /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>)`.
+  /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<EeWonCfgKind::LobbyRoomLabel>,NewComponentOf<RoomLabelCtrl>)`.
   AllocRoomLabelCtrl,
-  /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>)`.
+  /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<EeWonCfgKind::LobbyServerList>,NewComponentOf<ServerListCtrl>)`.
   AllocServerListCtrl,
   /// `sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>)`.
   AllocUpdateAccountCtrl,
-  /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory)`.
+  /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<EeWonCfgKind::LobbyUserList>,CtlFactory<Ck::Users>)`.
   AllocUserListCtrl,
   /// `sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>)`.
   AllocAddFriendDialog,
@@ -248,7 +229,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocBadUserDialog,
   /// `sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>)`.
   AllocChooseNetworkAdapterDialog,
-  /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
+  /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<EeWonCfgKind::LobbyCredits>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
   AllocCreditsDialog,
   /// `sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>)`.
   AllocCreateGameDialog,
@@ -270,9 +251,9 @@ enum class EeWonLobbyPrvOp : uint32_t {
   AllocStatusDialog,
   /// `sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>)`.
   AllocTOUDialog,
-  /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>)`.
+  /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<EeWonCfgKind::LobbyCrossPromotion>,NewComponentOf<CrossPromotionButton>)`.
   AllocCrossPromotionButton,
-  /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>)`.
+  /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<EeWonCfgKind::LobbyImageText>,NewComponentOf<ImageTextButton>)`.
   AllocImageTextButton,
   /// `sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>)`.
   AllocMaxSplitterButton,
@@ -357,8 +338,7 @@ EeWonIpAddr *ee_won_lobbyprv_public_addr();
 /// LobbyGetMyAddress: the address to give peers, a new value: the public address unless room spec 1, no valid
 /// public address or the config's UseLocalIP (`use_local_ip`), else the local one; on the lobby port. An empty
 /// address without a lobby.
-EeWonIpAddr *ee_won_lobbyprv_my_address(int32_t room_spec,
-                                        bool use_local_ip);
+EeWonIpAddr *ee_won_lobbyprv_my_address(int32_t room_spec);
 
 /// `~WONLobbyPrv`: the lobby `prv` gone, its members with it (a newer lobby's stay).
 void ee_won_lobbyprv_drop(void *prv);

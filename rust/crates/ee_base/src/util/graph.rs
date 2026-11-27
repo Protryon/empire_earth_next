@@ -330,7 +330,7 @@ unsafe fn combine(this: *const EeUtilGraph, other: *const EeUtilGraph, out: *mut
     (*out).recompute();
 }
 
-// ---- the C interface (lle/UGraph.h)
+// ---- the C interface (tests/util/UGraph.h, the golden driver's classes)
 
 /// `UGraphSeries()`.
 #[no_mangle]

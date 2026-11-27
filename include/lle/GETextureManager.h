@@ -57,8 +57,6 @@ public:
         { return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription); }
     // Removes and releases every texture nobody else references; returns 5 if any are still in use
     long RemoveAllTextures() { return ee_ge_texman_remove_all(this->mRust); }
-    // Removes and releases one texture if nobody else references it; 5 if still in use, 3 if not managed here
-    long RemoveTexture(GETexture* inTexture) { return ee_ge_texman_remove(this->mRust, inTexture); }
     void SetScreen(GEScreen* inScreen) { ee_ge_texman_set_screen(this->mRust, inScreen); }
     // Replaces the texture search path, moving the reference
     void SetTexturePath(FSPath* inTexturePath) { ee_ge_texman_set_path(this->mRust, inTexturePath); }
@@ -79,8 +77,6 @@ public:
     static bool GetTexturePackName(const UString& inName, UString& outName) { return ee_ge_texpack_name(inName, &outName); }
     static long GetTexturePackLogicalShift() { return ee_ge_texpack_logical_shift(); }
     static long GetTexturePackMipLevelsToDrop() { return ee_ge_texpack_mip_levels_to_drop(); }
-    // Marks the texture as promoted; always succeeds
-    long PromoteTexture(GETexture* inTexture) { return ee_ge_texman_promote(this->mRust, inTexture); }
     // the calls the Rust object makes on other objects (GETexture.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 

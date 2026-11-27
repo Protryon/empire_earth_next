@@ -28,14 +28,6 @@ enum class EeWonNetOp {
   Lock8Enter,
   /// `mLock8->Leave()`
   Lock8Leave,
-  /// `mLobbyWindow->Close(true)`
-  LobbyWindowClose,
-  /// `mLobbyWindow->mClosed`
-  LobbyWindowClosed,
-  /// `delete mLobbyWindow`
-  LobbyWindowDelete,
-  /// `mLobbyWindow->Virtual18()`
-  LobbyWindowVirtual18,
   /// `delete mLobby`
   LobbyDelete,
   /// `mLobby->Pump((unsigned long)a, 0)`
@@ -399,7 +391,6 @@ struct EeWonNetObjects {
   void *dir_servers;
   void *auth_servers;
   void *lobby;
-  void *lobby_window;
   void *user;
   void *servers;
   void *motd_op;

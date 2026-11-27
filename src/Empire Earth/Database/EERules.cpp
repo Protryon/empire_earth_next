@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "EEDataText.h"   // the ee_data C API
 
 const EEEpochMedia& EERules::Epoch(long inEpoch) const
 {

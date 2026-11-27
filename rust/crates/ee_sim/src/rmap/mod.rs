@@ -22,3 +22,4 @@ pub mod object;
 pub mod points;
 pub mod resources;
 pub mod rmv;
+pub mod views;

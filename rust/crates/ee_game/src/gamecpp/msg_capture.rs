@@ -14,7 +14,7 @@
 //! A record committed while another is open (the NMIM of a message an NMEX or the sweep builds) is written first,
 //! as the C++'s were: each record is committed when it is complete.
 
-use std::ffi::{c_long, c_ulong, CStr};
+use std::ffi::{c_ulong, CStr};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use ee_base::plat_core::string::PlatMbsLen;
@@ -31,7 +31,7 @@ use ee_sim::netmsg::ne_records::{
 };
 
 use super::calamity_capture::Record;
-use super::{h, hp, pa, ptr, Owned, O, P};
+use super::{h, hp, ptr, O, P};
 
 /// The capture tags (EECaptureTag order: the first letter in the low byte).
 const MC_NMSW: u32 = 0x5753_4d4e;
@@ -113,12 +113,11 @@ fn members(r: &mut Record, m: P) {
         }
     }
     if class == EE_NETMSG_SELECT_UNITS {
-        let ids = Owned::new(O::LcLongVecNew, O::LcLongVecDelete);
-        h(O::LcMsgSelectIDs, m, &[pa(ids.0)]);
-        let n = h(O::LcLongVecSize, ids.0, &[]);
-        r.u32(n as u32);
-        for i in 0..n {
-            r.i32(h(O::LcLongVecAt, ids.0, &[i]) as c_long as i32);
+        // (the record is the game message the type names: EEGameMessageCast's, at the message's address)
+        let ids = super::msg_objs::selection_ids(m);
+        r.u32(ids.len() as u32);
+        for id in ids {
+            r.i32(id);
         }
     }
 }

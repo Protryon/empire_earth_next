@@ -1,17 +1,9 @@
 // Localized text for a WONStatus (GetWONStatusString; which text is ee_won statusstr.rs).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <string>
-#include <list>
-#include <map>
-#include <set>
-#include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/statusstr.h"
 namespace WONAPI {
 const char* WONStatusToString(WONStatus);

@@ -1,7 +1,6 @@
 #ifndef EE_WONLOBBYIMAGEBUTTON_H
 #define EE_WONLOBBYIMAGEBUTTON_H
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "platform/PlatWindow.h" // PlatOpenURL
 namespace WONAPI {
 enum ImageButtonType { ImageButtonType_Normal, ImageButtonType_Over, ImageButtonType_Down,
     ImageButtonType_Disabled, ImageButtonType_Checked, ImageButtonType_None };

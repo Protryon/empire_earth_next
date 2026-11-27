@@ -130,7 +130,7 @@ pub enum EeGeTexStage {
     TextureAddressingMode,
 }
 
-/// `kStageOpModulate`, `kMipFilterPoint`, `kAddressingClamp` (lle/GERenderState.h).
+/// `kStageOpModulate`, `kMipFilterPoint`, `kAddressingClamp` (rust/render/gestate.h).
 const STAGE_OP_MODULATE: isize = 2;
 const MIP_FILTER_POINT: isize = 1;
 const ADDRESSING_CLAMP: isize = 0;
@@ -338,6 +338,10 @@ impl EeGeTextureManager {
     unsafe fn op(p: *mut Self, op: EeGeManOp, obj: usize, a: isize, b: isize, c: isize) -> isize {
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner, direct) = unsafe { ((*p).host, (*p).owner, (*p).direct) };
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { crate::ge::manobj::direct_op(op, obj, a, b) } {
+            return r;
+        }
         if direct {
             // SAFETY: the C++ manager's textures are GETextures
             if let Some(r) = unsafe { tex_direct(op, obj, a, b) } {

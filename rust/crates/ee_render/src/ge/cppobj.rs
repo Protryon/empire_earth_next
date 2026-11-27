@@ -28,6 +28,30 @@ pub struct CppCounted {
     pub rust: *mut c_void,
 }
 
+/// A C++ `GESurface`: the reference-counted object over its Rust surface (`mDX7`; dx7 surfobj.rs), then its logical
+/// members (`mLogicalShift`, `mLogicalWidth`, `mLogicalHeight`). The C++ asserts the layout (DX7Rasterizer.cpp).
+#[repr(C)]
+pub struct CppSurface {
+    pub counted: CppCounted,
+    pub logical_shift: c_ulong,
+    pub logical_width: c_ulong,
+    pub logical_height: c_ulong,
+}
+
+/// `GESurface::GetWidth()` (`height` false) / `GetHeight()`: its logical size (`ee_dx7sf_logical_size`'s, over the
+/// logical members).
+///
+/// # Safety
+/// `cpp` is a live `GESurface` over a Rust surface.
+pub unsafe fn surface_logical_size(cpp: usize, height: bool) -> c_ulong {
+    // SAFETY: the caller's contract
+    unsafe {
+        let s = &*(cpp as *const CppSurface);
+        let set = if height { s.logical_height } else { s.logical_width };
+        crate::dx7::surfobj::EeDx7Surface::logical_size(s.counted.rust.cast(), set, s.logical_shift, height)
+    }
+}
+
 /// The Rust object of a reference-counted C++ object (`GEModel*`, `GEMaterial*`, `GEFont*`, `GETexture*`,
 /// `GEBitmap*`, `GEFontBitmap*`); NULL for NULL.
 ///
@@ -72,6 +96,15 @@ pub unsafe fn plain<T>(cpp: usize) -> *mut T {
     }
     // SAFETY: the caller's contract
     unsafe { *(cpp as *const *mut T) }
+}
+
+/// A C++ `GEScreen`: its texture manager, its rasterizer index and its Rust screen (`mDX7`; dx7 scrobj.rs). The C++
+/// asserts the layout (DX7Rasterizer.cpp).
+#[repr(C)]
+pub struct CppScreen {
+    pub texture_manager: *mut c_void,
+    pub rasterizer_index: c_ulong,
+    pub dx7: *mut c_void,
 }
 
 /// A C++ `GEVertexArray` (or `GEPolygonArray`): its vtable pointer, the GPU's vertices (indices), its Rust array

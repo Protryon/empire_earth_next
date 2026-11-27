@@ -12,7 +12,7 @@
 //! follows GEOpenFormats.cpp. The refusals of the gate's edited models are import.rs's and unchanged.
 
 mod document;
-mod ffi;
+pub(crate) mod ffi;
 pub mod find;
 mod import;
 mod json;

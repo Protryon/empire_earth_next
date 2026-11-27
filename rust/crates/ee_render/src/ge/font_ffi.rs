@@ -1,5 +1,5 @@
 //! The C ABI of the text (`font.rs`): `GEText::ComputeTextExtent`, the platform's text functions as the C++ passes
-//! them (a `GeTextOps` table, `GERustText.h`) and a font bitmap's glyph cell (`GeFbCharacter`, `fbobj.rs`). Every
+//! them (a `GeTextOps` table, `platform_text_ops`) and a font bitmap's glyph cell (`GeFbCharacter`, `fbobj.rs`). Every
 //! input is read before the call returns and nothing calls back into C++ objects.
 
 use std::ffi::{c_char, c_int, c_ulong, c_void};
@@ -15,6 +15,19 @@ pub struct GeTextOps {
     pub next_chars: unsafe extern "C" fn(text: *const u8, characters: usize) -> *mut u8,
     pub cp1252_byte_of: extern "C" fn(character: u32) -> c_int,
     pub measure: unsafe extern "C" fn(font: *const c_void, text: *const c_char, length: u32) -> i32,
+}
+
+/// The table of ee_base's own text functions, which the C++ hosts' `GERustTextOps()` gave before the objects asked
+/// for it themselves (a test's fake host answers `TextOps` instead).
+pub fn platform_text_ops() -> *const GeTextOps {
+    use ee_base::plat_core::string::{PlatCp1252ByteOf, PlatMbsNInc, PlatUtf8Decode};
+    unsafe extern "C" fn measure(font: *const c_void, text: *const c_char, length: u32) -> i32 {
+        // SAFETY: the table's contract (a live platform font, `length` bytes of text)
+        unsafe { ee_base::plat_ui::font::PlatFontMeasure(font.cast(), text, length) }
+    }
+    static OPS: GeTextOps =
+        GeTextOps { decode: PlatUtf8Decode, next_chars: PlatMbsNInc, cp1252_byte_of: PlatCp1252ByteOf, measure };
+    &OPS
 }
 
 impl TextOps for GeTextOps {

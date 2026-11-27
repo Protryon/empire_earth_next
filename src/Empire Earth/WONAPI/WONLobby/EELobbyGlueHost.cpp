@@ -35,7 +35,7 @@
 #include "lle/TMPoll.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/TSScheduler.h"
-#include "lle/SESample.h"
+#include "lle/SEMixer.h"
 #include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/Input System.h"
@@ -86,6 +86,7 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/eecolor.h"
 #include "rust/won_lobby/eeglue.h"
 #include "rust/won_lobby/rows.h"
@@ -241,12 +242,7 @@ public:
 // (the locks are gluesplit.rs's LocksRelease and LocksRetake, one op per lock: R6 WON round 32)
 
 static LobbyPlayer* EELobbyNewPlayer() { return new LobbyPlayer(EeWonModelKind::EePlayer); }
-static ComponentConfig* EELobbyNewButtonConfig() { return CfgNewOfKind(EeWonCfgKind::Button); }
-static ComponentConfig* EELobbyNewContainerConfig() { return new ContainerConfig; }
-static ComponentConfig* EELobbyNewDialogConfig() { return CfgNewOfKind(EeWonCfgKind::Dialog); }
-static Component* EELobbyNewGameOptionsCtrl() { return new LobbyRustCtrl(EeWonLobbyCtlKind::GameOptions); }
-static Component* EELobbyNewPlayerOptionsCtrl() { return new LobbyRustCtrl(EeWonLobbyCtlKind::PlayerOptions); }
-static Component* EELobbyNewColorButton() { return new EELobbyColorButton; }
+template <EeWonLobbyCtlKind K> static Component* EELobbyNewCtrl() { return new LobbyRustCtrl(K); } // a control kind's
 static void EELobbyGetComponents(ComponentConfig* inConfig) { Glue(GL::GetComponents, (intptr_t)inConfig); }
 static void EELobbySendConnectStatus(int inConnected) { Glue(GL::SendConnectStatus, inConnected); }
 
@@ -467,8 +463,8 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(GlueText((intptr_t)EeWonEeGlueText::MapType, b)); return 0;
     case Op::LobbyClose: EELobbyClose(); return 0;
     case Op::ResourceDestroy: EELobbyResource_Destroy(); return 0;
-    case Op::Config: return (intptr_t)GetLobbyConfig();
-    case Op::ConfigPort: return reinterpret_cast<LobbyConfig*>(a)->mFileTransferPort;
+    case Op::Config: return (intptr_t)ee_won_lobbyconf_current();
+    case Op::ConfigPort: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::FileTransferPort);
     case Op::SetGameInProgress: LobbySetGameInProgress((int)a); return 0;
     case Op::LeaveGame: LobbyLeaveGame(a != 0); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
@@ -741,11 +737,11 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
     case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
     case Op::ResInit: sEELobbyResources = EELobbyResource_Init(NULL); return 0;
-    case Op::ResAllocGameOptions: sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl); return 0;
-    case Op::ResAllocPlayerOptions: sEELobbyResources->AddAllocator("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl); return 0;
-    case Op::ResAllocColorButton: sEELobbyResources->AddAllocator("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton); return 0;
-    case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, NewLobbyDialog<EeWonLobbyDlgKind::File>); return 0;
-    case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, NewLobbyDialog<EeWonLobbyDlgKind::Connect>); return 0;
+    case Op::ResAllocGameOptions: sEELobbyResources->AddAllocator("GameOptionsCtrl", NewConfigOf<ContainerConfig>, EELobbyNewCtrl<EeWonLobbyCtlKind::GameOptions>); return 0;
+    case Op::ResAllocPlayerOptions: sEELobbyResources->AddAllocator("PlayerOptionsCtrl", NewConfigOf<ContainerConfig>, EELobbyNewCtrl<EeWonLobbyCtlKind::PlayerOptions>); return 0;
+    case Op::ResAllocColorButton: sEELobbyResources->AddAllocator("EELobbyColorButton", NewConfigOf<EeWonCfgKind::Button>, NewComponentOf<EELobbyColorButton>); return 0;
+    case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", NewConfigOf<EeWonCfgKind::Dialog>, NewLobbyDialog<EeWonLobbyDlgKind::File>); return 0;
+    case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", NewConfigOf<EeWonCfgKind::Dialog>, NewLobbyDialog<EeWonLobbyDlgKind::Connect>); return 0;
     // EELobbyAddResources: the LobbyGlobal section with the lobby music
     case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2))); return 0;
     case Op::ResAddLoader: LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents); return 0;

@@ -19,13 +19,11 @@
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitSetManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
 
@@ -37,17 +35,7 @@ EEContagionFunctor::~EEContagionFunctor()
         this->mEffect->Dereference();
 }
 
-// Accepts a unit type in the functor's unit set (every functor's CanInfectType, by ICF)
-bool EEContagionFunctor::CanInfectType(long inCategory, long inUnitType)
-{
-    return gUnitSetManager.Contains(inUnitType, this->mUnitSet);
-}
-
-// Tells whether the functor can infect the unit's category and type
-bool EEContagionFunctor::CanInfect(EEUnit* inUnit)
-{
-    return this->CanInfectType(inUnit->mUnitClass->GetCategory(), inUnit->mUnitClass->GetUnitType());
-}
+// (CanInfect, the update's periods, Infect, Cure and Apply are gamecpp calamity_objects.rs', called by path)
 
 // Reads the helpers and their calamity indexes from a saved game (the last helper id from 0.273 on: ee/
 // EESaveGameFiles.h EESaveHasContagionCounter); the first read error (contagion_store.rs EeContagionManager::load)
@@ -67,11 +55,6 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
 // (the calamities' addresses as the Rust's 64-bit handles: every target is 64-bit)
 static_assert(sizeof(EECalamity*) == sizeof(uint64_t), "the calamities' handles");
 
-void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime)
-{
-    EECalamity* theCalamity = reinterpret_cast<EECalamity*>((uintptr_t)ee_contagion_helper_calamity(inHelper));
-    ee_contagion_helper_update(inHelper, theCalamity->mClass->mIsBlockedByImmunity, inElapsedTime);
-}
 
 // ------------------------------------------------------------------------- round 9, lane B: the hosts' compound cases' C++
 
@@ -130,16 +113,6 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CalHandleRead: return FSF.Read(CAL->mEffectHandle.mValue);
     case O::C11CalHandleWrite: return FSF.Write(CAL->mEffectHandle.mValue);
     // the contagion world (a0, a1 the unit and the calamity unless noted)
-    case O::C11CgInfect: FNC->Infect((EEUnit*)a[0], (EECalamity*)a[1]);
-        break;
-    case O::C11CgCure: FNC->Cure((EEUnit*)a[0], (EECalamity*)a[1]);
-        break;
-    case O::C11CgApply: FNC->Apply((EEUnit*)a[0], f[0], (EECalamity*)a[1]);
-        break;
-    case O::C11CgFunctorUpdate: FNC->Update(f[0], (EECalamity*)a[0]);
-        break;
-    case O::C11CgCanInfect: return FNC->CanInfectType(((EEUnit*)a[0])->mUnitClass->GetCategory(), ((EEUnit*)a[0])->mUnitClass->GetUnitType());
-    case O::C11CgUnit: return P64(gWorld.GetUnit((unsigned long)a[0]));
     case O::C11CgChecksum: return CAL->GetOutOfSynchChecksum();
     case O::C11CgFunctor: return P64(CAL->mClass->GetContagionFunctor());
     case O::C11CgDump: CAL->DumpOutOfSynch((FILE*)a[0]);

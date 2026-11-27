@@ -26,7 +26,6 @@ public:
         Call(EeUiButtonCall::TriInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight());
     }
     // the dtor (0x100805c4) deleted the label: the Rust button's release does
-    void ChangeWidth(unsigned long inWidth) { Call(EeUiButtonCall::TriChangeWidth, (intptr_t)inWidth); }
     virtual long CopyData() { return (long)Call(EeUiButtonCall::TriCopyData); }
     virtual long DrawPolygons() { return (long)Call(EeUiButtonCall::TriDrawPolygons); }
     virtual long DrawTextA() { return (long)Call(EeUiButtonCall::TriDrawText); }

@@ -97,6 +97,8 @@ static int32_t LoggedRun(const EeWonCfgTabHost* h, int32_t t, const uint8_t* k, 
     if (sPrint && r != -1) sGold += P((long long)t) + "\t" + Hex(k, n, 1) + "\t" + P((long long)r) + "\t" + (sEv.empty() ? "-" : sEv.substr(1)) + "\n";
     return r;
 }
+// no lobby control kinds here (their reader is the lobby's, LobbyNetCtrlHost.cpp)
+static bool LobbyCfgV24(ComponentConfig*, const std::string&) { return false; }
 #define ee_won_cfg_tab_run LoggedRun
 #include "ee/wonapi/WONCfgTable.inl"
 #undef ee_won_cfg_tab_run

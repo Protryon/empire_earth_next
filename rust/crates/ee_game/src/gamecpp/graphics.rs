@@ -147,7 +147,7 @@ pub extern "C" fn ee_gamecpp_gfx_restore_surfaces(g: *mut c_void) -> c_long {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_gfx_screenshot(g: *mut c_void, capture: *mut c_void) {
     let (g, capture) = (g as P, capture as P);
-    let file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
+    let file = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
     let mut now = [0 as c_ulong; 6];
     // SAFETY: a TMTime is six unsigned longs
     unsafe { ee_base::time::ee_time_of_day(now.as_mut_ptr().cast()) };

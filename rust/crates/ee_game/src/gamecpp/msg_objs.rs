@@ -9,7 +9,7 @@ use std::ffi::{c_long, c_void};
 use ee_sim::netmsg::ffi::{ee_netmsg_class_of_type, ee_netmsg_compress_units, ee_netmsg_decompress_units};
 use ee_sim::netmsg::records::ee_netmsg_record_class;
 
-use super::{cptr, h, hp, pa, ptr, Owned, O, P};
+use super::{cptr, h, hp, pa, Owned, O, P};
 
 /// The capacity of a selection's decoded ids (the C++'s `int32_t theIDs[0x100]`).
 const SELECT_IDS: usize = 0x100;
@@ -65,12 +65,12 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     unit_type: c_long,
     kind: u8,
 ) -> *mut c_void {
-    let picked = Owned::new(O::C11UlongsNew, O::C11UlongsDelete);
+    let picked = Owned::new(O::MpColorSetNew, O::MpColorSetDelete);
     h(O::C11PickUnits, picked.0, &[pa(rectangle as P), unit_type as i64]);
     // only the low 32 (24) bits count
     let ids: Vec<u32> =
         (0..h(O::C11UlongsCount, picked.0, &[])).map(|i| h(O::C11UlongsAt, picked.0, &[i]) as u32).collect();
-    let owner = h(O::C11CurrentPlayerId, 0, &[]) as u32;
+    let owner = super::message::prts(hp(O::WorldCurrentPlayer, 0, &[])).mPlayerID as u32;
     let mut buffer = [0u8; 0x100];
     let size = ee_netmsg_compress_units(ids.as_ptr(), ids.len(), owner, buffer.as_mut_ptr());
     // the list's size, 0, 0, the unit type (the C++'s `(unsigned char)`, `(long)`)
@@ -87,18 +87,12 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     message as *mut c_void
 }
 
-/// EESelectUnitsIDs: a box selection's compact buffer decoded into unit ids, replacing the list (a C++
-/// `std::vector<long>`: each the 32-bit value, sign-extended on LP64).
-///
-/// # Safety
-/// `message` is a live record, `out` a live `std::vector<long>`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_msg_select_ids(message: *const c_void, out: *mut c_void) {
-    let m = message as P;
+/// EESelectUnitsIDs: a box selection's compact buffer (the live record `m`'s list) decoded into unit ids.
+pub(super) fn selection_ids(m: P) -> Vec<i32> {
     let data = hp(O::C11MsgListData, m, &[]) as *const u8;
     let size = h(O::C11MsgListSize, m, &[]) as u8 as usize;
-    let ids = select_ids(data, size);
-    h(O::C11LongsAssign, out as P, &[pa(ids.as_ptr() as P), ids.len() as i64]);
+    // SAFETY: the record's list holds `size` bytes
+    unsafe { select_ids(data, size) }
 }
 
 /// A farm's sort key: built, paid for, its tile (EEMessage.cpp's `C11FarmKey` fills it in one statement).
@@ -151,14 +145,17 @@ pub unsafe extern "C" fn ee_gamecpp_farm_order(
     second: *mut c_void,
     greater: bool,
 ) -> bool {
-    let mut a = EeGamecppFarmKey::default();
-    let mut b = EeGamecppFarmKey::default();
-    h(O::C11FarmKey, first as P, &[ptr(&mut a)]);
-    h(O::C11FarmKey, second as P, &[ptr(&mut b)]);
+    let (a, b) = (farm_key(first as P), farm_key(second as P));
     ee_gamecpp_farm_key_order(cx, cy, &a, &b, greater)
 }
 
-/// The farm order of two keys (exported so that the header declares the key, which EEMessage.cpp's case fills).
+/// A farm's key: its built and paid-for flags and its tile (its records' members).
+fn farm_key(farm: P) -> EeGamecppFarmKey {
+    let (cx, rts) = (super::message::cf(farm), super::message::rts(farm));
+    EeGamecppFarmKey { built: cx.mIsBuilt, paid: cx.mIsPaidFor, tile_x: rts.mTileX, tile_y: rts.mTileY }
+}
+
+/// The farm order of two keys (exported: the header declares the key).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_farm_key_order(
     cx: c_long,

@@ -81,7 +81,7 @@ pub unsafe extern "C" fn pump() -> bool {
         let width = h(O::C12GameWindowSize, 0, &[0]) as u64;
         let height = h(O::C12GameWindowSize, 0, &[1]) as u64;
         let line = std::ffi::CString::new(log_line(&event, ui, width, height).replace('\0', "")).unwrap_or_default();
-        h(O::C12DebugText, 0, &[pa(line.as_ptr() as P)]);
+        h(O::DuDebugOut, 0, &[pa(line.as_ptr() as P)]);
     }
     // SAFETY: the event's fields as ISHandleEvent and EEUserInterface::HandleEvent read them
     unsafe {

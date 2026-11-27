@@ -22,7 +22,12 @@
 #include "platform/PlatWindow.h"
 #include "rust/base/time.h"
 
-void ISHandleEvent(const PlatInputEvent& inEvent);   // Input System.cpp
+// (the game's ISHandleEvent, gone in LLE/UI round 2: the window pump calls ee_input_handle_event itself)
+static void ISHandleEvent(const PlatInputEvent& inEvent)
+{
+    ee_input_handle_event(inEvent.mType, inEvent.mKey.mScanCode, inEvent.mMouse.mDeltaX, inEvent.mMouse.mDeltaY,
+                          inEvent.mMouse.mButton, inEvent.mMouse.mWheel);
+}
 
 static uint64_t gRand;
 static uint32_t R(uint32_t n)

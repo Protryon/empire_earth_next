@@ -28,6 +28,27 @@
 #include "won_netlogic_world.h"
 #include "won_netlogic_orig.h"
 #include "won_netlogic_new.h"
+#include "rust/won_lobby/lobbyconf.h"
+// the Rust's record of the world's config (lobbyconf.rs: the Internet logics' compositions read it, R6 WON lobby/net
+// round 40), the world's values or none
+static EeWonLobbyConf* sRustConf;
+static void SyncConf(const LoWorld::LobbyConfig* c)
+{
+    ee_won_lobbyconf_free(sRustConf);
+    sRustConf = NULL;
+    if (c == NULL) return;
+    sRustConf = ee_won_lobbyconf_new(NULL);
+    typedef EeWonLobbyConfList L;
+    for (const std::string& n : c->mDirServers) ee_won_lobbyconf_list_push(sRustConf, L::DirServers, (const uint8_t*)n.data(), n.size());
+    for (const std::string& n : c->mRoomDirServers) ee_won_lobbyconf_list_push(sRustConf, L::RoomDirServers, (const uint8_t*)n.data(), n.size());
+    for (const std::string& n : c->mAuthServers) ee_won_lobbyconf_list_push(sRustConf, L::AuthServers, (const uint8_t*)n.data(), n.size());
+    ee_won_lobbyconf_set_text(sRustConf, EeWonLobbyConfText::ProductName, (const uint8_t*)c->mProductName.data(), c->mProductName.size());
+    ee_won_lobbyconf_set_text(sRustConf, EeWonLobbyConfText::Language, (const uint8_t*)c->mLanguage.data(), c->mLanguage.size());
+    ee_won_lobbyconf_set_text(sRustConf, EeWonLobbyConfText::Version, (const uint8_t*)c->mVersion.data(), c->mVersion.size());
+    ee_won_lobbyconf_set_product_dir(sRustConf, c->mProductDirectory.data(), c->mProductDirectory.size());
+    ee_won_lobbyconf_set_num(sRustConf, EeWonLobbyConfNum::AllowJoinGameWithoutPing, c->mAllowJoinGameWithoutPing);
+    ee_won_lobbyconf_set_current(sRustConf);
+}
 
 using namespace LoWorld;
 typedef EeWonLobbyOp Op;
@@ -394,6 +415,7 @@ static void NMake(NSide& s, unsigned k)
     s.mConfig.mVersion = "2.0";
     s.mConfig.mProductDirectory = L"/EmpireEarth";
     sConfig = (k >> NK_CONFIG & 1) ? &s.mConfig : NULL;
+    SyncConf(sConfig);
     for (int i = 1; i <= 6; i++) sLists[i] = (k >> (NK_AUTH_ + i - 1) & 1) ? s.mLists[i] : NULL;
     sUser = (k >> NK_USER & 1) ? s.mUser : NULL;
     sNewer = (k >> NK_NEWER & 1) != 0;

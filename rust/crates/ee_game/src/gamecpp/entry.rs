@@ -81,7 +81,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_file_checksum(
     use_file_times: c_long,
 ) -> c_ulong {
     let directory = directory as P;
-    let file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
+    let file = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
     let mut checksum: c_ulong = 0;
     if h(O::EntrySpecFirstFile, directory, &[pa(pattern as P), pa(file.0)]) != ENTRY_OK {
         return checksum;
@@ -105,22 +105,22 @@ pub unsafe extern "C" fn ee_gamecpp_entry_file_checksum(
             checksum = checksum.wrapping_add(time_and_size(file.0));
             continue;
         }
-        if h(O::EntrySpecOpenRead, file.0, &[]) != ENTRY_OK {
+        if h(O::DxOpen, file.0, &[]) != ENTRY_OK {
             continue;
         }
         let mut length: c_ulong = 0;
-        h(O::EntrySpecLength, file.0, &[ptr(&mut length)]);
+        h(O::DxLength, file.0, &[ptr(&mut length)]);
         while length > 0 {
             let amount = length.min(ENTRY_CHUNK as c_ulong);
             let mut read: c_ulong = 0;
-            h(O::EntrySpecRead, file.0, &[pa(buffer.as_mut_ptr() as P), amount as i64, ptr(&mut read)]);
+            h(O::DtFileReadRecord, file.0, &[pa(buffer.as_mut_ptr() as P), amount as i64, ptr(&mut read)]);
             if read == 0 || read > amount {
                 break;
             }
             checksum = entry_byte_sum(checksum, &buffer[..read as usize]);
             length -= read;
         }
-        h(O::EntrySpecClose, file.0, &[]);
+        h(O::TkFileClose, file.0, &[]);
     }
     checksum
 }
@@ -222,8 +222,8 @@ fn folder_checksum(file: P, folder: &CStr, pattern: &[u8]) -> u32 {
 /// bits appended to the game version.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_entry_initialize_network() {
-    let file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
-    let directory = Owned::new(O::FileSpecNew, O::FileSpecDelete);
+    let file = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
+    let directory = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
     set_network_folder(directory.0, NET_EXE);
     let result = h(O::EntryNeInitialize, directory.0, &[]);
     h(O::Verify, 0, &[(result == ENTRY_OK) as i64, 1578]);
@@ -384,7 +384,7 @@ fn load_game(name: &[u8]) {
         h(O::EntryOptionsLoadType, 0, &[2]);
         h(O::EntryOptionsMapTypeOf, file, &[]);
         h(O::EntryOptionsWriteUnlock, 0, &[]);
-        h(O::FileSpecDelete, file, &[]);
+        h(O::FxFileSpecDelete, file, &[]);
         h(O::EntryNotMultiplayer, 0, &[]);
         h(O::EntryNewServer, 0, &[]);
         h(O::EntryServerStartThreads, 0, &[]);
@@ -543,7 +543,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         ee_base::util::fp::ee_util_fp_set_precision(
             ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong,
         );
-        h(O::RunSqrtTable, 0, &[]);
+        // (the original's UMFastMath::BuildSqrtTable here was empty: the square root table was not built)
         // (the original's first command-line pass here only chose whether to play the intro movies)
         h(O::RunSetInstance, 0, &[pa(instance as P)]);
         ee_base::error::ee_error_initialize();
@@ -580,13 +580,13 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
                 initialized = h(O::RunUserInterface, 0, &[pa(command_line as P)]) == ENTRY_OK;
                 super::startup::ee_gamecpp_startup_clear_game();
                 ee_base::util::system::ee_util_shutdown(initialized, false);
-                h(O::RunReleaseDataPath, 0, &[]);
-                h(O::RunReleaseCivilizationPath, 0, &[]);
+                h(O::DataPathDereference, 0, &[]);
+                h(O::CivPathDereference, 0, &[]);
             }
         } else {
             ee_base::util::system::ee_util_shutdown(initialized, false);
-            h(O::RunReleaseDataPath, 0, &[]);
-            h(O::RunReleaseCivilizationPath, 0, &[]);
+            h(O::DataPathDereference, 0, &[]);
+            h(O::CivPathDereference, 0, &[]);
         }
         h(O::RunComUninit, 0, &[]);
         PlatWindowSystemStop();

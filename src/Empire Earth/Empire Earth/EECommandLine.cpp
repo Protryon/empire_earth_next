@@ -27,7 +27,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EECommunications.h"
 #include "ee/EEGamePreferences.h"
-#include "ee/EEMessage.h"
 #include "ee/EEServer.h"
 #include "ee/EEClient.h"
 #include "ee/EEARust.h"
@@ -106,13 +105,7 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::EntryNotInEditor: gUIManager->mInScenarioEditor = false;
         break;
     // "update_saved_games" (gamecpp saved_games.rs)
-    case O::UsgWorldWriteLock: gWorld.mLock->WriteLock();
-        break;
-    case O::UsgWorldWriteUnlock: gWorld.mLock->WriteUnlock();
-        break;
     case O::UsgSetDirectory: SPEC->SetDirectory(gStartupDirectory + (const char*)a[0]);
-        break;
-    case O::UsgSetFile: SPEC->SetFile((const char*)a[0]);
         break;
     case O::UsgDelete: SPEC->Delete();
         break;
@@ -122,8 +115,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::UsgPuts: fputs((const char*)a[0], (FILE*)*SPEC);
         break;
     case O::UsgFlush: fflush((FILE*)*SPEC);
-        break;
-    case O::UsgClose: SPEC->Close();
         break;
     case O::UsgFirstFile: return SPEC->GetFirstFile((const char*)a[0], *(FSFileSpec*)a[1]);
     case O::UsgFileName: return P64((const char*)SPEC->GetFile());

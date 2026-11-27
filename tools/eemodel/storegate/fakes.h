@@ -17,11 +17,8 @@
 #include "lle/UString.h"
 #include "lle/UWideString.h"
 #include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
 #include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
@@ -36,8 +33,7 @@
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GEPolygonArray.h"
-#include "lle/GERenderState.h"
+#include "rust/render/gestate.h"
 #include "lle/GERasterizer.h"
 
 // A surface in memory, the state behind a GESurface (its mDX7: storegate.cpp defines the ee_dx7sf_* functions the

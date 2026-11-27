@@ -53,12 +53,10 @@ static GE3DPoint sRoundStart;   // MoveCameraToStart's point (the original's loc
 extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32_t inOp, int64_t inA, int64_t inB, float inTime)
 {
     switch (inOp) {
-    case EE_SCENARIO_ROUND_GAME_SPEED: return EESMBits(gWorld.mGameSpeed);
     case EE_SCENARIO_ROUND_TICK_SECONDS: return EESMBits(gPhysics->GetTickSeconds());
     case EE_SCENARIO_ROUND_MESSAGE_COUNT: return (int64_t)theManager->mMessages.size();
     case EE_SCENARIO_ROUND_DIALOG_PAUSED: return gCommunications == NULL || gCommunications->GetIsGamePaused();
     case EE_SCENARIO_ROUND_MESSAGE_CINEMATIC: return theManager->mMessages[(size_t)inA].mIsCinematic;
-    case EE_SCENARIO_ROUND_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_SCENARIO_ROUND_MOVE_CAMERA: ee_scenario_en_round(theManager, EE_SCENARIO_MN_MOVE_CAMERA, NULL, 0, 0); return 0;
     case EE_SCENARIO_ROUND_TRIGGER_COUNT: return (int64_t)theManager->mTriggers.size();
     case EE_SCENARIO_ROUND_EVALUATE_TRIGGER: theManager->GetTrigger((unsigned long)inA)->Evaluate(inTime); return 0;
@@ -91,7 +89,6 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
     case EE_SCENARIO_ROUND_EFFECTS: return (int64_t)theManager->mEffects.size();
     case EE_SCENARIO_ROUND_EFFECT_AT: return (int64_t)(intptr_t)theManager->mEffects[(size_t)inA];
     case EE_SCENARIO_ROUND_LINE_START: return (int64_t)(intptr_t)&(sRoundStart = gWorld.mLine.GetStart());
-    case EE_SCENARIO_ROUND_CAMERA_ZOOM_FIELD: return EESMBits(gWorld.mCameraControl.mZoom);
     case EE_SCENARIO_ROUND_SIDE_SCROLL_SPEED: return EESMBits(gSideScrollSpeed);
     case EE_SCENARIO_ROUND_CAMERA_SET_START: gWorld.mCameraControl.SetLocation(sRoundStart, false, true);
         return 0;
@@ -105,12 +102,9 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_MESSAGE_ERASE: theManager->mMessages.erase(theManager->mMessages.begin() + (size_t)inA);
         return 0;
-    case EE_SCENARIO_ROUND_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
-    case EE_SCENARIO_ROUND_PLAYER_EXISTS: return gWorld.GetPlayer((unsigned long)inA) != NULL;
     case EE_SCENARIO_ROUND_DELAY_WONDERS: gWorld.GetPlayer((unsigned long)inA)->DelayWonderTimers((long)inB);
         return 0;
     case EE_SCENARIO_ROUND_PLAYER_HUMAN: return gWorld.GetPlayer((unsigned long)inA)->IsHuman();
-    case EE_SCENARIO_ROUND_PLAYER_OBSERVER: return gWorld.GetPlayer((unsigned long)inA)->mObserverMode;
     case EE_SCENARIO_ROUND_UNSELECT: gWorld.GetPlayer((unsigned long)inA)->UnselectAllUnits();
         return 0;
     case EE_SCENARIO_ROUND_COPY_SELECTION:
@@ -122,15 +116,6 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_FADE_IN: gGraphics->PostFadeIn(0);
         return 0;
-    case EE_SCENARIO_ROUND_CAMERA_RESET_PATH: gWorld.mCameraControl.ResetPath();
-        return 0;
-    case EE_SCENARIO_ROUND_CAMERA_CLEAR_B: gWorld.mCameraControl.ClearUnitB();
-        return 0;
-    case EE_SCENARIO_ROUND_CAMERA_CLEAR_A: gWorld.mCameraControl.ClearUnitA();
-        return 0;
-    case EE_SCENARIO_ROUND_CAMERA_TURN_RESET: return EESMBits(gWorld.mCameraControl.mTurnYaw = 0.0f);
-    case EE_SCENARIO_ROUND_CAMERA_SET_MODE: gWorld.mCameraControl.SetMode((long)inA);
-        return 0;
     case EE_SCENARIO_ROUND_CAMERA_SET_ZOOM: gWorld.mCameraControl.SetZoom(theManager->mSavedZoom);
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_SET_OFFSET: gWorld.mCameraControl.SetOffset(theManager->mK008.mOffset, true);
@@ -141,10 +126,6 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_SET_OFFSET_TURN: gWorld.mCameraControl.SetOffsetTurn(theManager->mK008.mT40, true);
         return 0;
-    case EE_SCENARIO_ROUND_CAMERA_SET_CHANGED: gWorld.mCameraControl.SetChanged();
-        return 0;
-    case EE_SCENARIO_ROUND_CAMERA_UPDATE: gWorld.mCameraControl.Update(0.0f);
-        return 0;
     case EE_SCENARIO_ROUND_CAMERA_GET_OFFSET: gWorld.mCameraControl.GetOffset(gWorld.mCameraControl.mFraction, theManager->mK008.mOffset);
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_GET_LOCATION: gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theManager->mK008.mFocus);
@@ -152,9 +133,6 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
     case EE_SCENARIO_ROUND_CAMERA_GET_VIEW_TURN: gWorld.mCameraControl.GetViewTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT00);
         return 0;
     case EE_SCENARIO_ROUND_CAMERA_GET_OFFSET_TURN: gWorld.mCameraControl.GetOffsetTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT40); return 0;
-    case EE_SCENARIO_ROUND_CAMERA_MODE: return (int64_t)gWorld.mCameraControl.mMode;
-    case EE_SCENARIO_ROUND_CAMERA_ZOOM: return EESMBits(gWorld.mCameraControl.GetZoom());
-    case EE_SCENARIO_ROUND_SET_IN_CINEMATIC: return gWorld.mInCinematic = inA != 0;
     case EE_SCENARIO_ROUND_SAVE_GAME_SPEED: return EESMBits(gWorld.mSavedGameSpeed = gWorld.GetGameSpeed());
     case EE_SCENARIO_ROUND_RESTORE_GAME_SPEED: gWorld.SetGameSpeed(gWorld.mSavedGameSpeed);
         return 0;

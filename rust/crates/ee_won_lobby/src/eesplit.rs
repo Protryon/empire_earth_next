@@ -8,6 +8,8 @@
 //! - PlayerAttach: the player's slot (its game and number: the original's slot pointer), then the slot number.
 //! - TransferSetFileInfo: the name stored, then the transfer's Rust call; TransferSetHost: the game's address copied,
 //!   then its port.
+//! - TransferServe, TransferSize, TransferChecksum, TransferStop, TransferCloseClients, TransferIsFileHere and
+//!   TransferDownload: the transfer's Rust call itself (R6 WON lobby/net round 40; the C++ cases were pass-throughs).
 //! - The transfer's sockets: NewSocket (the reference the Rust's), RepeatAccept, QueueSend and QueueDownload (the
 //!   completions, the receive op and its file and progress, the connect and the queued ops).
 
@@ -75,6 +77,28 @@ pub(crate) fn game_op(op: G, a: isize, b: isize, c: isize, d: isize, out: GameOu
             out(G::TransferHostFromGame, a, 0, 0, 0);
             out(G::TransferHostSetPort, a, b, 0, 0);
             Some(0)
+        }
+        G::TransferServe
+        | G::TransferSize
+        | G::TransferChecksum
+        | G::TransferStop
+        | G::TransferCloseClients
+        | G::TransferIsFileHere
+        | G::TransferDownload => {
+            let (call, x) = match op {
+                G::TransferServe => (XC::Serve, b as u16 as isize),
+                G::TransferSize => (XC::Field, 2),
+                G::TransferChecksum => (XC::Field, 3),
+                G::TransferStop => (XC::Stop, 0),
+                G::TransferCloseClients => (XC::CloseClients, 0),
+                G::TransferIsFileHere => (XC::IsFileHere, 0),
+                _ => (XC::Download, 0),
+            };
+            let rust = out(G::TransferRust, a, 0, 0, 0) as *const crate::eexfer::EeWonEeXfer;
+            // SAFETY: the transfer's live Rust object (the shell's member)
+            let r = unsafe { crate::eexfer::ee_won_eexfer_call(rust, call, x, 0) };
+            // the original's Serve case answered 0
+            Some(if op == G::TransferServe { 0 } else { r })
         }
         // EELobbyGetVersion's: the version text (one reference the caller's), then the checksum into `*(uint32_t*)a`
         G::Version => {

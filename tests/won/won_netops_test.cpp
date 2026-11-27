@@ -142,6 +142,8 @@ struct World {
                 AsyncOp* op = static_cast<AsyncOp*>(this->mObj[i]);
                 s += "/" + N(op->GetStatus()) + "/" + N(op->IsKilled());
             }
+            if (i == W_ROP || i == W_ROP2)
+                for (int f = 0; f < 6; f++) s += "/" + N(static_cast<RoutingOp*>(static_cast<AsyncOp*>(this->mObj[i]))->Num(f));
             if (IsSocket(i)) {
                 AsyncSocket* k = static_cast<AsyncSocket*>(this->mObj[i]);
                 s += "/" + N(k->IsOpen()) + N(k->IsConnected());
@@ -213,8 +215,8 @@ static std::string Run(World& w, const Step& s, bool inRust)
                    : WonNetopsOrig::Xfer((EeWonEeXferOp)s.mOp, (intptr_t)a, &aHandled);
         break;
     default:
-        r = inRust ? ee_won_netops_route((RO)s.mOp, (intptr_t)a, s.mB, &aHandled)
-                   : WonNetopsOrig::Route((RO)s.mOp, (intptr_t)a, s.mB, &aHandled);
+        r = inRust ? ee_won_netops_route((RO)s.mOp, (intptr_t)a, s.mB, c, &aHandled)
+                   : WonNetopsOrig::Route((RO)s.mOp, (intptr_t)a, s.mB, c, &aHandled);
         break;
     }
     std::string out = "handled " + N(aHandled);
@@ -258,7 +260,7 @@ static std::vector<Step> Steps(int inCount)
     bool aTimerRun = false;
     while ((int)v.size() < inCount) {
         Step s = {0, 0, -1, -1, 0, 0, NULL};
-        switch (R(20)) {
+        switch (R(23)) {
         case 0: { int o = AnyObj(); v.push_back({0, (int)LO::RefHold, o, -1, 0, 0, NULL}); s = {0, (int)LO::RefRelease, o, -1, 0, 0, NULL}; break; }
         case 1: { int o = AnyObj(); v.push_back({0, (int)LO::ClientHold, o, -1, 0, 0, NULL}); s = {0, (int)LO::ClientRelease, o, -1, 0, 0, NULL}; break; }
         case 2: s = {0, (int)LO::LanOpSocket, AnySocketOp(), -1, 0, 0, NULL}; break;
@@ -282,6 +284,11 @@ static std::vector<Step> Steps(int inCount)
         case 16: s = {2, (int)RO::RNum, R(2) ? W_ROP : W_ROP2, R(6), 0, 0, NULL}; break;
         case 17: s = {2, (int)(R(2) ? RO::RRecipient : RO::RIsGameData), R(2) ? W_ROP : W_ROP2, -1, 0, 0, NULL}; break;
         case 18: s = {2, (int)(R(3) == 0 ? RO::AsyncOpNew : R(2) ? RO::Now : RO::Tick), -1, -1, 0, 0, NULL}; break;
+        // R6 WON lobby and network round 40's: a routing op's number set, a socket's connected flag, a user status
+        // op's map (none of these ops has one)
+        case 19: s = {2, (int)RO::RSetNum, R(2) ? W_ROP : W_ROP2, R(6), R(3) == 0 ? -1 - R(100) : R(70000), 0, NULL}; break;
+        case 20: s = {2, (int)RO::ConnIsConnected, R(W_S + 1), -1, 0, 0, NULL}; break;
+        case 21: s = {2, (int)RO::StatusOpRust, AnyOp(), -1, 0, 0, NULL}; break;
         default: s = {2, (int)RO::OpSocket, AnySocketOp(), -1, 0, 0, NULL}; break;
         }
         v.push_back(s);

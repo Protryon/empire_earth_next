@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <mbstring.h>
 #include <stdlib.h>
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
@@ -147,10 +146,6 @@ int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DuLocalPlayer: return P64(gWorld.mPlayers[gWorld.mCurrentPlayer]);
     case O::DuPlaySound: return gSoundManager->Play(((EESoundObject*)p)->GetSampleID(), ((EESoundObject*)p)->GetVolume(), 0.0f, 1.0f, false, NULL);
     // the failure report
-    case O::DuWorldReadLock: gWorld.mLock->ReadLock();
-        break;
-    case O::DuWorldReadUnlock: gWorld.mLock->ReadUnlock();
-        break;
     case O::DuNewChecksum: return P64(new ESChecksum(CS->GetIsVerboseMode()));
     case O::DuWorldChecksum: gWorld.GetChecksum(*CS);
         break;
@@ -198,14 +193,10 @@ int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DuSound2: return P64(GO->mSounds2[a[0]]);
     case O::DuSoundSample: return ((EESoundObject*)p)->GetSampleID();
     case O::DuNodeSample: return gSoundManager->GetSampleID(NODE);
-    case O::DuNodeReference: NODE->Reference();
-        break;
     case O::DuNodeLooping: return gSoundManager->GetIsLooping(NODE);
     case O::DuNodeSetParameters: gSoundManager->SetSoundParameters(NODE, f[0], f[1], f[2]);
         break;
     case O::DuNodeStop: gSoundManager->Stop(NODE, a[0] != 0);
-        break;
-    case O::DuSoundParameters: EEComputeSoundParameters(f[0], PT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], f[1]);
         break;
     // the camera point, the click effect, the screen point's tile
     case O::DuCameraInverseApply: gU4E8F08.GetCameraInverse().Apply(*(GE3DPoint*)p, PT(0));
@@ -217,8 +208,6 @@ int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DuSetLocal: ((EEEffect*)p)->SetLocalTo(::gWorld.GetCurrentPlayer()->mPlayerID);
         break;
     case O::DuSelectedGroup: return P64(::gWorld.GetCurrentPlayer()->mSelectedGroup);
-    case O::DuGroupCount: return ((EESelectedGroup*)p)->GetNumUnits();
-    case O::DuGroupUnit: return P64(((EESelectedGroup*)p)->GetUnit((unsigned long)a[0]));
     case O::DuPickScreenTile: return P64(::gWorld.mMap->PickScreenTile(SP(0), *(long*)a[1], *(long*)a[2], a[3] != 0));
     case O::DuTileAt: return P64(::gWorld.mMap->GetTileAt(SP(0), *(long*)a[1], *(long*)a[2]));
     case O::DuLocationAt: return P64(::gWorld.mMap->GetLocationAt(SP(0), PT(1), a[2] != 0));
@@ -232,10 +221,6 @@ int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DuServerState: return static_cast<NESynchronousServer*>(gCommunications)->GetGameState();
     case O::DuNewRemoveAll: return P64(new EEARemovePlayer(0xfe, true));
-    case O::DuPostAction: gUserInterface->PostAction((EEAction*)p);
-        break;
-    case O::DuActionDereference: ((EEAction*)p)->Dereference();
-        break;
     default: return EECore10OpD2(inOp, p, a, f);
     }
     return 0;

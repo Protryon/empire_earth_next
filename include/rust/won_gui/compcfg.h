@@ -436,6 +436,12 @@ size_t ee_won_cc_record_size(EeWonCcKind kind,
 /// A new config's Rust object over the C++ config `this_` (its `ConfigObject*`).
 EeWonCompCfg *ee_won_cc_new(void *this_, EeWonCcHost host);
 
+/// The config's two words of its kind's own (see `EeWonCompCfg::slots`).
+///
+/// # Safety
+/// `o` came from `ee_won_cc_new` and lives while the words are used.
+ptrdiff_t *ee_won_cc_slots(EeWonCompCfg *o);
+
 /// The config's object freed: the current group given back, then the child configs (the members' order).
 ///
 /// # Safety

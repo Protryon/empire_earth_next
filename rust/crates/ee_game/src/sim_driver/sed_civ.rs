@@ -392,7 +392,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 "editor",
                 if editor != 0 { h(O::EditorCivilization, editor, &[]) as usize } else { 0 },
             ));
-            let player = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
+            let player = gc::h(gc::O::WorldCurrentPlayer, 0, &[]) as usize;
             out.push(civ_digest(
                 "player",
                 if player != 0 { h(O::PlayerCivilization, player, &[]) as usize } else { 0 },
@@ -412,15 +412,15 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let spec = user_spec(arg(2));
             let mut line = format!("  file {}", arg(2));
             let mut size: c_ulong = 0;
-            if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0
-                || gc::h(gc::O::EntrySpecLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
+            if gc::h(gc::O::DxOpen, spec, &[]) != 0
+                || gc::h(gc::O::DxLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
             {
                 line += " missing";
             } else {
                 let mut bytes = vec![0u8; size as usize + 1];
                 let mut read: c_ulong = 0;
                 gc::h(
-                    gc::O::FileReadBytes,
+                    gc::O::DtFileReadRecord,
                     spec,
                     &[bytes.as_mut_ptr() as i64, size as i64, &mut read as *mut c_ulong as i64],
                 );
@@ -466,10 +466,10 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 upgrades(&upgrade_list(O::UpgradesCount, O::UpgradesAt, list))
             ));
             h(O::UpgradesFree, list, &[]);
-            gc::h(gc::O::SsDeleteString, name, &[]);
+            gc::h(gc::O::StrFree, name, &[]);
         }
         "apply" => {
-            let player = gc::h(gc::O::SsWorldPlayer, 0, &[number(arg(2)) as i64]) as usize;
+            let player = gc::h(gc::O::WorldPlayer, 0, &[number(arg(2)) as i64]) as usize;
             let name = hs(O::NarrowNew, 0, &word(arg(3))) as usize;
             out.push(format!("  apply -> {}", h(O::CivApply, player, &[name as i64]) as c_long));
             out.push(civ_digest("applied", h(O::PlayerCivilization, player, &[]) as usize));

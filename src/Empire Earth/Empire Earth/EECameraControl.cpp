@@ -24,7 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EECombatGoals.h"
 
-// the GE value classes and their Rust mirrors share their storage (GERustMath.h)
+// the GE value classes and their Rust mirrors share their storage (lle/GERust.h)
 static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
                   sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GEQuaternion) == sizeof(EeGeQuaternion) &&
                   sizeof(EECameraKey) == sizeof(EeAppCameraKey) && offsetof(EECameraKey, mChanged) == offsetof(EeAppCameraKey, mChanged),
@@ -84,7 +84,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkLocationApply: CX->mPhysicalModel.GetLocation().Apply(*(const GE3DPoint*)a[0], *(GE3DPoint*)a[1]);
         break;
-    case O::DkTileX: return ((EEUnit*)p)->GetTileX();
     case O::DkTileY: return ((EEUnit*)p)->GetTileY();
     case O::DkSetOrtho: gViewport.SetOrthographicRectangle(GERectangle(f[0], f[1], f[2], f[3]));
         break;
@@ -99,22 +98,14 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DkClearB529068: gB529068 = false;
         break;
     // round 11, lane B: the camera's host (gamecpp camera_io.rs)
-    case O::EcReference: ((EEUnit*)p)->Reference();
-        break;
-    case O::EcDereference: ((EEUnit*)p)->Dereference();
-        break;
-    case O::EcHitPoints: return ((EEUnit*)p)->mHitPoints;
     case O::EcTileXRaw: return ((EEUnit*)p)->mTileX;
     case O::EcContainer: return P64(CX->mContainer);
     case O::EcContainerId: return EEUnitHandleID(CX->mContainer);
     case O::EcFacesCamera: return ((EEUnit*)p)->mUnitClass->mFacesCamera;
     case O::EcLocation: *(GETransformation*)a[0] = CX->mPhysicalModel.GetLocation();
         break;
-    case O::EcInCinematic: return gWorld.mInCinematic;
-    case O::EcCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::EcIsSeen: return EEIsSeen((EEUnit*)p);
     case O::EcFarRearClipping: return gFarRearClipping;
-    case O::EcOrthographic: return gOrthographicView;
     case O::EcHasMap: return gWorld.mMap != NULL;
     case O::EcWorldTransformation: *(GETransformation*)a[0] = gWorld.mTransformation;
         break;
@@ -145,16 +136,10 @@ double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::DkModelScale: return CX->mPhysicalModel.GetScale();
     case O::DkModelHeight: return CX->mPhysicalModel.GetModel()->GetBoundingBox(0).GetHeight();
     case O::DkCameraFocus: return CX->mStats->GetCameraFocus();
-    case O::DkFrontClipping: return gViewport.GetFrontClippingDistance();
-    case O::DkRearClipping: return gViewport.GetRearClippingDistance();
     case O::EcVelocity: return CX->GetVelocity();
-    case O::EcGameSpeed: return gWorld.GetGameSpeed();
     case O::EcWorldCameraYaw: return gWorld.mCameraYaw;
-    case O::EcViewportXCenter: return gViewport.GetXCenter();
-    case O::EcViewportYCenter: return gViewport.GetYCenter();
     case O::EcViewportHalfHeight: return gViewport.GetHalfHeight();
     case O::EcViewportCameraX: return gViewport.GetCamera().GetX();
     case O::EcViewportCameraY: return gViewport.GetCamera().GetY();

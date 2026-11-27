@@ -227,7 +227,7 @@ pub fn physics() -> EeSimDriverPhysics {
     if !p.present {
         return p;
     }
-    p.timer_running = gc::h(gc::O::SsTimerRunning, 0, &[]) != 0;
+    p.timer_running = gc::h(gc::O::PhysTimerRunning, 0, &[]) != 0;
     p.game_over = gc::h(gc::O::FwGameOver, 0, &[]) != 0;
     p.game_ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
     p.pt = physics_record().mNumTicksDone;
@@ -248,7 +248,7 @@ pub fn editor_up() -> bool {
 /// computers stay at war with each other; an observer seat, or its units removed, ends the single-player game at
 /// once).
 pub fn prepare_human(human_out: bool) {
-    let human = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
+    let human = gc::h(gc::O::WorldCurrentPlayer, 0, &[]) as usize;
     h(O::PlayerSetCivilizationChosen, human, &[1]);
     h(O::PlayerSetCivilizationLocked, human, &[1]);
     if !human_out {
@@ -320,12 +320,14 @@ pub(super) const WORLD_TRADE_RATE_FOOD_WOOD: u32 = 92;
 
 /// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`; the live unit's, read on the thread that owns it).
 fn unit_fields(u: usize) -> *const ee_sim::world::unit_fields::EeUnitsUnitFields {
-    gc::h(gc::O::UnFields, u, &[]) as usize as *const _
+    // SAFETY: a live unit of the world (the record's address only)
+    unsafe { gc::records::un_fields(u) }
 }
 
 /// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
 fn cx_fields(c: usize) -> *const ee_sim::world::unit_fields::EeUnitsComplexUnitFields {
-    gc::h(gc::O::CxFields, c, &[]) as usize as *const _
+    // SAFETY: as unit_fields
+    unsafe { gc::records::cx_fields(c) }
 }
 
 /// gPhysics' saved block (EE-SIM's reads while the physics lives).
@@ -353,7 +355,7 @@ fn first_building(player: c_ulong) -> usize {
     let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
         if gc::h(gc::O::UnComplex, u, &[]) != 0
-            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::RoUnitHitPointsValue, u, &[]) as c_long > 0
             && h(O::UnitIsBuilding, u, &[]) != 0
         {
             return u;
@@ -366,12 +368,12 @@ fn first_building(player: c_ulong) -> usize {
 /// --flare: the idle human's flare at the building, told to the human's allies as EEMSendFlare::Execute tells them
 /// (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no computer sends.
 pub fn flare(player: c_ulong) -> EeSimDriverSpot {
-    let human = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
+    let human = gc::h(gc::O::WorldCurrentPlayer, 0, &[]) as usize;
     let spot = first_building(player);
     if human == 0 || spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let (x, y) = (gc::h(gc::O::DkTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
+    let (x, y) = (gc::h(gc::O::PkUnitTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
         ee_sim::units::player_lists::player_list(human as u64, ee_sim::units::player_lists::EE_UNITS_LISTS_ALLIES)
             .into_iter()
@@ -389,7 +391,7 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
     if spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let x = gc::h(gc::O::DkTileX, spot, &[]) as c_long + 6;
+    let x = gc::h(gc::O::PkUnitTileX, spot, &[]) as c_long + 6;
     let y = gc::h(gc::O::DkTileY, spot, &[]) as c_long + 6;
     let manager = gc::hp(gc::O::CalamityManager, 0, &[]);
     let cast =
@@ -581,10 +583,10 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
     while u != 0 {
         let c = gc::h(gc::O::UnComplex, u, &[]) as usize;
         if c != 0
-            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::RoUnitHitPointsValue, u, &[]) as c_long > 0
             && !unsafe { (*unit_fields(u)).mStats }.is_null()
             && h(O::ComplexOnMap, c, &[]) != 0
-            && gc::h(gc::O::DkTileX, c, &[]) as c_long != -10000
+            && gc::h(gc::O::PkUnitTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
             && (priests || h(O::ComplexIsPriest, c, &[]) == 0)
             && (missiles || ![missile, torpedo].contains(&category_of(c)))
@@ -614,10 +616,10 @@ fn list_search_sweep() {
         let first = all.len().saturating_sub(64);
         for &a in &all[first..] {
             let ignored = h(O::IgnoredSave, a, &[]) as usize;
-            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::PkUnitTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x, y], &[1.0]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
-            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::PkUnitTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x + 2, y - 2], &[1.5]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
             h(O::IgnoredFree, ignored, &[]);
@@ -642,7 +644,8 @@ fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
     cap::ee_app_capture_exclusive(true);
     let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
-    let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| gc::h(gc::O::UcAt, 0, &[k]) as usize).collect();
+    let table: Vec<usize> =
+        (0..h(O::ClassCount, 0, &[])).map(|k| crate::tech_tree::objects::class_at(k) as usize).collect();
     let mut classes = Vec::new();
     let mut launchers = Vec::new();
     for &class in &table {
@@ -672,8 +675,8 @@ fn missile_sweep() {
         let first = units.len().saturating_sub(4);
         for (i, &a) in units.iter().enumerate().skip(first) {
             for (k, &class) in classes.iter().enumerate() {
-                if gc::h(gc::O::EcHitPoints, target, &[]) as c_long <= 0
-                    || gc::h(gc::O::DkTileX, target, &[]) as c_long == -10000
+                if gc::h(gc::O::RoUnitHitPointsValue, target, &[]) as c_long <= 0
+                    || gc::h(gc::O::PkUnitTileX, target, &[]) as c_long == -10000
                 {
                     break;
                 }
@@ -682,7 +685,7 @@ fn missile_sweep() {
                     O::ClassCreateUnit,
                     class,
                     &[
-                        gc::h(gc::O::DkTileX, a, &[]),
+                        gc::h(gc::O::PkUnitTileX, a, &[]),
                         gc::h(gc::O::DkTileY, a, &[]),
                         gc::h(gc::O::RoPlayerId, owner, &[]),
                         a as i64,
@@ -728,7 +731,7 @@ fn missile_sweep() {
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120
-                    && gc::h(gc::O::DkTileX, m, &[]) as c_long != -10000
+                    && gc::h(gc::O::PkUnitTileX, m, &[]) as c_long != -10000
                     && !unsafe { (*cx_fields(m)).mGoalState }.is_null()
                 {
                     h(O::ClassStep, class, &[m as i64]);
@@ -762,9 +765,9 @@ pub fn sight_capture_sweep() {
     let map_size = gc::h(gc::O::TeMapSize, 0, &[]) as c_long;
     let size = map_size as f32;
     let points = [[size * 0.5, size * 0.5], [5.5, 7.5], [size - 3.25, size * 0.3]];
-    let n = gc::h(gc::O::MmNumPlayers, 0, &[]) as c_ulong;
+    let n = gc::map::num_players() as c_ulong;
     for p in 1..n {
-        let player = gc::h(gc::O::SsWorldPlayer, 0, &[p as i64]) as usize;
+        let player = gc::h(gc::O::WorldPlayer, 0, &[p as i64]) as usize;
         if player == 0 {
             continue;
         }
@@ -776,13 +779,13 @@ pub fn sight_capture_sweep() {
         hf(O::MapRemoveSight, player, &[1], &[points[0][0] + 2.0, points[0][1] - 1.0, radius * 0.5]);
     }
     if n > 1 {
-        let last = gc::h(gc::O::SsWorldPlayer, 0, &[(n - 1) as i64]) as usize;
+        let last = gc::h(gc::O::WorldPlayer, 0, &[(n - 1) as i64]) as usize;
         gc::h(gc::O::DcExplore, last, &[]);
         h(O::MapFogSeen, last, &[]);
     }
     // two full cycles of the checksum's 64 x 64 windows
     let bands = (map_size + 63) / 64;
-    let map = crate::gamecpp::hp(crate::gamecpp::O::MpWorldMap, 0, &[]) as *mut c_void;
+    let map = crate::gamecpp::map::world_map() as *mut c_void;
     for _ in 0..2 * bands * bands + 1 {
         crate::gamecpp::map::ee_gamecpp_map_checksum(map);
     }

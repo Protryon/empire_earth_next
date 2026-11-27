@@ -33,7 +33,7 @@ use super::{cptr, h, hf, hp, pa, ptr, rec, O, P};
 const DB_OK: i64 = 0;
 /// LoadTexture's status for a missing button texture.
 const DB_NO_TEXTURE: c_long = 3;
-/// The texture stages' values (lle/GERenderState.h; static_assert'd in EETerrainTable.cpp).
+/// The texture stages' values (rust/render/gestate.h; static_assert'd in EETerrainTable.cpp).
 const DB_STAGE_MODULATE: i64 = 2;
 const DB_ADDRESSING_CLAMP: i64 = 0;
 const DB_MIP_NONE: i64 = 0;
@@ -224,7 +224,7 @@ pub extern "C" fn ee_gamecpp_db_terrain_load(file: *mut c_void) -> c_long {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_db_terrain_unload() {
     let mut j: c_ulong = 0;
-    let count = h(O::DtTerrainCount, 0, &[]) as c_ulong;
+    let count = h(O::MpTerrainCount, 0, &[]) as c_ulong;
     for i in 0..count {
         let t = hp(O::DtTerrainAt, 0, &[i as i64]);
         if t == 0 {
@@ -250,9 +250,9 @@ pub extern "C" fn ee_gamecpp_db_terrain_unload() {
 pub extern "C" fn ee_gamecpp_db_terrain_dump(file: *mut c_void) {
     let file = file as P;
     print(file, b"\n\n**********Terrain Table*********\n\n");
-    let count = h(O::DtTerrainCount, 0, &[]) as c_ulong;
+    let count = h(O::MpTerrainCount, 0, &[]) as c_ulong;
     for i in 0..count {
-        let t = hp(O::DtTerrainGet, 0, &[i as i64]);
+        let t = hp(O::MpTerrainGet, 0, &[i as i64]);
         if t == 0 {
             continue;
         }
@@ -292,7 +292,7 @@ pub extern "C" fn ee_gamecpp_db_terrain_mesh(terrain: *mut c_void, mesh: *mut c_
     let mesh = mesh as P;
     let lock = media_lock(hp(O::DtTerrainLock, 0, &[]));
     let usage = terrain_use(t);
-    let texture_set = || hp(O::DtMeshTextureSet, mesh, &[h(O::DtTerrainTextureSetId, t, &[])]);
+    let texture_set = || hp(O::DtMeshTextureSet, mesh, &[h(O::MpTerrainTextureSetOf, t, &[])]);
     if load {
         let mut load_step = || {
             ee_gamecpp_db_terrain_textures(t as *mut c_void);
@@ -354,7 +354,7 @@ pub extern "C" fn ee_gamecpp_db_terrain_texture(terrain: *mut c_void, name: *con
     tex_stage(texture, TexStage::MagFilterMode, 1);
     tex_mip_bias(texture, -1.0);
     tex_stage(texture, TexStage::TextureAddressingMode, DB_ADDRESSING_CLAMP);
-    let mip = if h(O::DtTrilinearFilter, 0, &[]) != 0 { DB_MIP_LINEAR } else { DB_MIP_POINT };
+    let mip = if h(O::TeTrilinear, 0, &[]) != 0 { DB_MIP_LINEAR } else { DB_MIP_POINT };
     tex_stage(texture, TexStage::MipFilterMode, mip);
     texture as *mut c_void
 }
@@ -391,9 +391,9 @@ pub extern "C" fn ee_gamecpp_db_terrain_textures(terrain: *mut c_void) {
 /// loaded or released, and its first unit class's button referenced or dereferenced.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_db_terrain_previews(load: bool) {
-    let count = h(O::DtTerrainCount, 0, &[]) as c_ulong;
+    let count = h(O::MpTerrainCount, 0, &[]) as c_ulong;
     for i in 0..count {
-        let t = hp(O::DtTerrainGet, 0, &[i as i64]);
+        let t = hp(O::MpTerrainGet, 0, &[i as i64]);
         if t == 0 {
             continue;
         }
@@ -566,14 +566,14 @@ pub extern "C" fn ee_gamecpp_db_button_dump(file: *mut c_void) {
 }
 
 fn button_acquire(b: P) -> c_long {
-    let lock = media_lock(hp(O::DbtLock, 0, &[]));
+    let lock = media_lock(hp(O::DtTerrainLock, 0, &[]));
     let mut load = || ee_gamecpp_db_button_load_texture(b as *mut c_void);
     let mut after = || 0;
     media::acquire(button_use(b), &lock, &step(&mut load), &step(&mut after), true)
 }
 
 fn button_release(b: P) -> c_long {
-    let lock = media_lock(hp(O::DbtLock, 0, &[]));
+    let lock = media_lock(hp(O::DtTerrainLock, 0, &[]));
     let mut unload = || {
         let texture = slot(O::DbtTexture, b);
         h(O::DtTexDereference, get(texture), &[]);
@@ -693,7 +693,7 @@ pub extern "C" fn ee_gamecpp_db_button_reload() -> c_long {
         use_texture_pack: true,
     };
     let mut result = DB_OK;
-    let lock = hp(O::DbtLock, 0, &[]);
+    let lock = hp(O::DtTerrainLock, 0, &[]);
     lock_enter(lock as *mut c_void);
     description.pixel_depth = h(O::DbtPixelDepth, 0, &[]) as c_ulong;
     description.mip_maps = false;
@@ -842,11 +842,11 @@ pub extern "C" fn ee_gamecpp_db_colors_load() -> c_long {
         no_alpha: false,
     };
     let mut surface: P = 0;
-    let mut result = h(O::DcCreateSurface, 0, &[ptr(&mut description), ptr(&mut surface)]);
+    let mut result = h(O::FxCreateSurface, 0, &[ptr(&mut description), ptr(&mut surface)]);
     verify(result == DB_OK, 76);
     let mut file: P = 0;
     // the original's .tga as PNG (RUST_PLAN D9)
-    result = h(O::DcFindFile, 0, &[DB_PALETTE.as_ptr() as usize as i64, ptr(&mut file)]);
+    result = h(O::FxFindTexture, 0, &[DB_PALETTE.as_ptr() as usize as i64, ptr(&mut file)]);
     verify(result == DB_OK, 81);
     verify(file != 0, 82);
     result = h(O::DcSurfaceLoad, surface, &[pa(file)]);
@@ -854,8 +854,8 @@ pub extern "C" fn ee_gamecpp_db_colors_load() -> c_long {
     if file != 0 {
         h(O::DxDelete, file, &[]);
     }
-    h(O::DcLock, surface, &[]);
-    let pixels = hp(O::DcMemory, surface, &[]) as *const u32;
+    h(O::FxSurfaceLock, surface, &[]);
+    let pixels = hp(O::FxSurfaceMemory, surface, &[]) as *const u32;
     let row_length = h(O::DcBytesPerRow, surface, &[]) as c_ulong / 4;
     if result == DB_OK {
         let count = (h(O::DcWidth, surface, &[]) as c_ulong).wrapping_mul(h(O::DcHeight, surface, &[]) as c_ulong);
@@ -871,8 +871,8 @@ pub extern "C" fn ee_gamecpp_db_colors_load() -> c_long {
             h(O::DcSet, 0, &[i as i64, color as i64]);
         }
     }
-    h(O::DcUnlock, surface, &[]);
-    h(O::DcDereference, surface, &[]);
+    h(O::FxSurfaceUnlock, surface, &[]);
+    h(O::FxSurfaceDereference, surface, &[]);
     result as c_long
 }
 

@@ -47,15 +47,9 @@ public:
     }
     virtual long Read(char* outData, unsigned long inLength, unsigned long& outRead)            // +0x60 0xa624
         { return this->Read(reinterpret_cast<unsigned char*>(outData), inLength, outRead); }
-    virtual long Read(uint32_t& outValue) { return this->MemRead(outValue); }             // +0x5c (folded 0xa638)
-    virtual long Read(int32_t& outValue) { return this->MemRead(outValue); }              // +0x58 0xa638
-    virtual long Read(unsigned short& outValue) { return this->MemRead(outValue); }       // +0x54 (folded 0xa64d)
-    virtual long Read(short& outValue) { return this->MemRead(outValue); }                // +0x50 0xa64d
-    virtual long Read(unsigned char& outValue) { return this->MemRead(outValue); }        // +0x4c (folded 0xa662)
-    virtual long Read(signed char& outValue) { return this->MemRead(outValue); }          // +0x48 0xa662
-    virtual long Read(float& outValue) { return this->MemRead(outValue); }                // +0x44 (folded 0xa638)
-    virtual long Read(double& outValue) { return this->MemRead(outValue); }               // +0x40 0xa677
-    virtual long Read(bool& outValue) { return this->MemRead(outValue); }                 // +0x3c (folded 0xa662)
+    // the scalars' bytes (lle/FSFile.h; the original's 18 slots, 0xa638..0xa677 and 0xa7e3..0xa82b), no count out
+    virtual long ReadBytes(void* outValue, size_t inSize) { return ee_fs_mem_read(this->mState, static_cast<unsigned char*>(outValue), (unsigned long)inSize, NULL); }
+    virtual long WriteBytes(const void* inValue, size_t inSize) { return ee_fs_mem_write(this->mState, static_cast<const unsigned char*>(inValue), (unsigned long)inSize, NULL); }
     // bytes at the position, growing the buffer by a block or by doubling; kErrorNotOpen when closed
     virtual long Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten)  // +0x9c 0xa754
     {
@@ -63,15 +57,6 @@ public:
     }
     virtual long Write(const char* inData, unsigned long inLength, unsigned long& outWritten)           // +0x98 0xa7cc
         { return this->Write(reinterpret_cast<const unsigned char*>(inData), inLength, outWritten); }
-    virtual long Write(const uint32_t& inValue) { return this->MemWrite(inValue); }       // +0x94 (folded 0xa7e3)
-    virtual long Write(const int32_t& inValue) { return this->MemWrite(inValue); }        // +0x90 0xa7e3
-    virtual long Write(const unsigned short& inValue) { return this->MemWrite(inValue); } // +0x8c (folded 0xa7fb)
-    virtual long Write(const short& inValue) { return this->MemWrite(inValue); }          // +0x88 0xa7fb
-    virtual long Write(const unsigned char& inValue) { return this->MemWrite(inValue); }  // +0x84 (folded 0xa813)
-    virtual long Write(const signed char& inValue) { return this->MemWrite(inValue); }    // +0x80 0xa813
-    virtual long Write(const float& inValue) { return this->MemWrite(inValue); }          // +0x7c (folded 0xa7e3)
-    virtual long Write(const double& inValue) { return this->MemWrite(inValue); }         // +0x78 0xa82b
-    virtual long Write(const bool& inValue) { return this->MemWrite(inValue); }           // +0x74 (folded 0xa813)
 
     virtual long DeleteDirectory() { return kErrorFailed; }                                // +0xa4 (0x4652)
     // +0xa8 0xa343 (a temporary disk copy)
@@ -107,12 +92,6 @@ public:
     // the first inLength bytes to another file, or the length and then the compacted contents (the second write's result)
     long Save(FSFile& outFile, unsigned long inLength) { return ee_fs_mem_save(this->mState, &outFile, inLength); }
     long Save(FSFile& outFile) { return ee_fs_mem_save_prefixed(this->mState, &outFile); }
-
-    // the scalars' bytes (no count out)
-    template <typename T> long MemRead(T& outValue)
-        { return ee_fs_mem_read(this->mState, reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), NULL); }
-    template <typename T> long MemWrite(const T& inValue)
-        { return ee_fs_mem_write(this->mState, reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), NULL); }
 
     UString mTemporaryFileName;                       // +0x48
     URust<EeFsMemFile> mState;                              // the contents (rust/crates/ee_base/src/fs/memfile.rs)

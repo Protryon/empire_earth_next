@@ -30,14 +30,6 @@ template<class T> unsigned long DeleteVectorContents(T& ioList)
     return theCount;
 }
 
-class EEUnit;
-class GETransformation;
-
-// 0xaeb83 (EECalamityManager.cpp, after its template COMDATs): a new unit of class inUnitClass at inTransformation for
-// inPlayerNumber (-1: inCalamity's player); 0 if the class does not exist (provisional name)
-EEUnit* EECreateCalamityUnit(EECalamity* inCalamity, long inUnitClass, GETransformation& inTransformation,
-                             long inPlayerNumber);
-
 class EECalamityManager : public USingleton<EECalamityManager> {
 public:
     EECalamityManager() {  }
