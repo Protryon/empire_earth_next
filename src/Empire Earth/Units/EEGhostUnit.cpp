@@ -23,6 +23,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "rust/game/gamecpp.h"
 #include "rust/sim/app.h"
+#include "rust/sim/units.h"
 bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUnit's, before EEGoalQueueContainer's; ee/EEGhostUnit.h)
 
 long EETurnGatePart(GETransformation&, long, long);
@@ -82,7 +83,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_TERRAIN_Z: return UFloatBits(theMap->mTerrainMesh.GetZ((long)inB, (long)inC));
     case EE_UNITS_GHOST_IS_LAND_TERRAIN: return EEIsLandTerrain((long)inB);
     case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return EEIsSpaceDockSiteOpen(theGhost->mTileX, theGhost->mTileY, theGhost->mPlayer);
-    case EE_UNITS_GHOST_DOCK_FACING: return EEGetDockFacing(theGhost->mTileX, theGhost->mTileY);
+    case EE_UNITS_GHOST_DOCK_FACING: return (long)ee_units_ucn_facing(0, (int32_t)(unsigned long)(theGhost->mTileX), (int32_t)(unsigned long)(theGhost->mTileY));
     case EE_UNITS_GHOST_SPACE_DOCK_YAW: return UFloatBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
     case EE_UNITS_GHOST_SET_YAW: theGhost->mTransformation.SetOrientationYPR(UBitsFloat((uint32_t)(inB)), 0.0f, 0.0f); return 0;
     case EE_UNITS_GHOST_NODE_IN_SET: return theNode->mUnit != NULL && gUnitSetManager.Contains(theNode->mUnit->mUnitClass->GetUnitType(), theGhost->mUnitSet);
@@ -102,7 +103,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = UBitsFloat((uint32_t)(inC)); return 0;
     case EE_UNITS_GHOST_GET_MODEL: theGhost->GetModel(); return 0;
     case EE_UNITS_GHOST_AIRPORT_TILE_SIZE: return EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(gUnitClassTable[kUnitTypeAirport])->GetTileSize();
-    case EE_UNITS_GHOST_FACING_QUARTER: return EEGetFacingQuarter((long)inB, (long)inC);
+    case EE_UNITS_GHOST_FACING_QUARTER: return (long)ee_units_ucn_facing(2, (int32_t)((long)inB), (int32_t)((long)inC));
     case EE_UNITS_GHOST_SET_FARM_SLOT: EEGhostUnit::SetFarmSlotTile(theGhost, (long)inB); return 0;
     case EE_UNITS_GHOST_IS_LAND_BUILDING: return theGhost->mUnitClass->IsLandBuilding();
     case EE_UNITS_GHOST_SET_POSITION: theGhost->mTransformation.SetPosition(sGhostPosition); return 0;
@@ -125,7 +126,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_NEW: return (uint64_t)(uintptr_t)new EEGhostUnit(EEGhostObject<EEUnitClass>(inA)->GetUnitType(), EEGhostObject<EEPlayer>((uint64_t)inB), inC != 0);
     case EE_UNITS_GHOST_ADD: ee_app_ghost_push(theGhost); return 0;
     case EE_UNITS_GHOST_FARM_TYPE: return EEGetFarmType(EEGhostObject<EEPlayer>(inA));
-    case EE_UNITS_GHOST_WALL_PIECE_PART: return EEGetWallPiecePart((long)inB, &sGhostPieceFlag);
+    case EE_UNITS_GHOST_WALL_PIECE_PART: return (long)ee_units_ucb_wall_piece_part((int32_t)((long)inB), &sGhostPieceFlag);
     case EE_UNITS_GHOST_PIECE_FLAG: return sGhostPieceFlag;
     case EE_UNITS_GHOST_SET_ANIMATION: theGhost->SetAnimation((long)inB); return 0;
     case EE_UNITS_GHOST_GATE_CLASS: return (uint64_t)(uintptr_t)EEUnitClassOfKind<EE_CLASS_KIND_GATE>(EEGhostObject<EEUnitClass>(inA));
@@ -140,7 +141,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SET_Z: theGhost->mTransformation.SetZ(UBitsFloat((uint32_t)(inB))); return 0;
     // ghost_more.rs's
     case EE_UNITS_GHOST_M_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_GHOST_M_LOAD_CLASS_MEDIA: EEGhostObject<EEPlayer>(inA)->LoadUnitClassMedia((long)inB); return 0;
+    case EE_UNITS_GHOST_M_LOAD_CLASS_MEDIA: ee_units_player_rest(EEGhostObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)((long)inB), 0, 0); return 0;
     case EE_UNITS_GHOST_M_SET_CLASS_MEDIA: theGhost->mPlayer->SetUnitClassMedia((long)inB, 0x7f); return 0;
     case EE_UNITS_GHOST_M_POST_LOAD: gDataPreLoading->PostLoadUnitClass(EEGhostObject<EEPlayer>(inA)->mPlayerID, (long)inB); return 0;
     case EE_UNITS_GHOST_M_SHUTTING_DOWN: return UShutdownInProgress() == true;

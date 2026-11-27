@@ -353,7 +353,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_CREATE_AT:
         return (uint64_t)(uintptr_t)EEUcObject<EEUnitClass>(inA)
             ->CreateUnitAt(*EEUcObject<GETransformation>((uint64_t)inB), theUnit->GetPlayer()->GetPlayerID(), false, theUnit)->mComplexUnit;
-    case EE_UNITS_UC_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, -1); return 0;
+    case EE_UNITS_UC_CARRIER_AIRCRAFT: ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, theOther, 0, -1, 0, NULL); return 0;
     case EE_UNITS_UC_IS_HUMAN: return theUnit->GetPlayer()->IsHuman();
     case EE_UNITS_UC_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
     // round 9's bodies (uc_rest.rs: EE_UNITS_UC_R_*)
@@ -422,7 +422,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_QUEUE_LEN: return theUnit->GetQueueGoals((unsigned long)inB).size();
     case EE_UNITS_UC_QUEUE_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC];
     case EE_UNITS_UC_GOAL_SUITS: return EEUcObject<EEUnitGoal>(inA)->Suits(EEUcObject<EEComplexUnit>((uint64_t)inB));
-    case EE_UNITS_UC_ADD_BUILD_TARGET: theOther->AddBuildTarget(EEBuildRepairGoalCast(EEUcObject<EEUnitGoal>((uint64_t)inB))->GetBuildTarget()); return 0;
+    case EE_UNITS_UC_ADD_BUILD_TARGET: ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, theOther, (int64_t)(uintptr_t)(EEBuildRepairGoalCast(EEUcObject<EEUnitGoal>((uint64_t)inB))->GetBuildTarget()), 0, 0); return 0;
     case EE_UNITS_UC_GOAL_CLONE: return (uint64_t)(uintptr_t)EEUcObject<EEUnitGoal>(inA)->Clone();
     case EE_UNITS_UC_GOAL_IS_LOAD: return EEUcObject<EEUnitGoal>(inA)->IsLoadGoal();
     case EE_UNITS_UC_GOAL_ADD_CREATED: EEUcObject<EEUnitGoal>(inA)->AddCreatedUnit(EEUcObject<EEComplexUnit>((uint64_t)inB)); return 0;
@@ -450,7 +450,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_RESEARCH_CLASS: return (uint64_t)(uintptr_t)gUnitClassTable[theUnit->mPlayer->mTechnologies->Get(theUnit->mCurrentResearch)->mData->mUnitClass];
     case EE_UNITS_UC_RESEARCH: theUnit->mPlayer->mTechnologies->Research(theUnit->mCurrentResearch, theUnit); return 0;
     case EE_UNITS_UC_SET_PRODUCTION_TIME: theUnit->SetProductionTime((long)inB); return 0;
-    case EE_UNITS_UC_UPDATE_ROTTING: return (long)theUnit->UpdateRottingAwayTime();
+    case EE_UNITS_UC_UPDATE_ROTTING: return (long)(long)ee_units_ucp_call(EE_UNITS_UCP_DO_ROTTING_TIME, NULL, theUnit, 0, 0);
     case EE_UNITS_UC_SET_ROTTING: theOther->SetRottingAwayTime((long)inB); return 0;
     case EE_UNITS_UC_CONTINUE_PRODUCTION: theUnit->ContinueProduction(); return 0;
     // UpdateAnimal's
@@ -464,7 +464,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_MODEL_SOUND1: return (uint64_t)(uintptr_t)theUnit->GetModel()->mSounds1[theUnit->GetAnimation()];
     case EE_UNITS_UC_MODEL_SOUND2: return (uint64_t)(uintptr_t)theUnit->GetModel()->mSounds2[theUnit->mAnimation];
     case EE_UNITS_UC_SAMPLE_ID: return EEUcObject<EESoundObject>(inA)->mSampleID;
-    case EE_UNITS_UC_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, EEUcObject<EESoundObject>(inA), &f[0], &f[1], &f[2]); return 0;
+    case EE_UNITS_UC_SOUND_PARAMETERS: ee_units_uck_sound(theClass, theUnit, EEUcObject<EESoundObject>(inA), &f[0], &f[1], &f[2]); return 0;
     case EE_UNITS_UC_SET_SOUND_PARAMETERS: gSoundManager->SetSoundParameters(theUnit->mSound, f[0], f[1], f[2]); return 0;
     // CreateDeathUnit's
     case EE_UNITS_UC_CREATE_UNIT: return (uint64_t)(uintptr_t)EEUcObject<EEUnitClass>(inA)->CreateUnit((long)inB, (long)inC, theUnit->mPlayer->GetPlayerID(), false, NULL)->GetComplexUnit();
@@ -483,10 +483,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_REFERENCE: EEUcObject<RTSUnit>(inA)->Reference(); return 0;
     case EE_UNITS_UC_DEREFERENCE: EEUcObject<RTSUnit>(inA)->Dereference(); return 0;
     case EE_UNITS_UC_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_UC_CHECK_BUTTONS: EEUcObject<EEPlayer>(inA)->CheckButtonsPreloaded(theClass->mUnitType); return 0;
-    case EE_UNITS_UC_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
+    case EE_UNITS_UC_CHECK_BUTTONS: ee_units_player_rest(EEUcObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)theClass->mUnitType, 1, 0); return 0;
+    case EE_UNITS_UC_SET_PLANET: theOther->mPlanetID = (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_LAND_CONTINENT_OF, (uint64_t)(uintptr_t)theOther, 0, 0, 0); return 0;
     case EE_UNITS_UC_SET_ORIENTATION: theOther->mOrientation = GEOrientation(f[0], f[1], f[2]); return 0;
-    case EE_UNITS_UC_LOAD_CLASS_MEDIA_OF: EEUcObject<EEPlayer>(inA)->LoadUnitClassMedia(theClass->mUnitType); return 0;
+    case EE_UNITS_UC_LOAD_CLASS_MEDIA_OF: ee_units_player_rest(EEUcObject<EEPlayer>(inA), EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)theClass->mUnitType, 0, 0); return 0;
     case EE_UNITS_UC_UNIT_LOAD_MEDIA: EEUcObject<EEUnit>(inA)->LoadMedia(inB != 0); return 0;
     case EE_UNITS_UC_ADD_UNIT_ENTRY: ::gWorld.AddUnitEntry(EEUcObject<EEUnit>(inA), EEUcObject<EEUnit>((uint64_t)inB)); return 0;
     case EE_UNITS_UC_CREATE_RUNWAYS: theClass->CreateRunways(theOther, EEUcObject<EEPlayer>((uint64_t)inB), inC != 0); return 0;

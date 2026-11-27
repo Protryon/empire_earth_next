@@ -21,6 +21,8 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/game/rts.h"
+#include "rust/sim/units.h"
 
 // C:\EEX\Empire Earth\Units\EEUCBuilding.cpp (__FILE__ 0x4c8f28: the volcano assert, line 261). The buildings' unit
 // class: 0x20e58d..0x21005e (after EEUCBomb.cpp; EEUCBuildingPriest.cpp follows). Unit flags: the exe's module set.
@@ -33,24 +35,10 @@
 
 // 0x446ff4 (-2.0, below it a building is gone) is ee_units cls_condition.rs BUILDING_SUNK
 
-// Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
-// sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
-long EEGetDockFacing(unsigned long inX, unsigned long inY) { return ee_units_ucn_facing(0, (int32_t)inX, (int32_t)inY); }
-
-// Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
-// that has them, else the side with the longest run (cls_building.rs)
-static long GetNavyYardFacing(unsigned long inX, unsigned long inY) { return ee_units_ucn_facing(1, (int32_t)inX, (int32_t)inY); }
-
-// Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
-// (cls_building.rs)
-long EEGetFacingQuarter(long inX, long inY) { return ee_units_ucn_facing(2, (int32_t)inX, (int32_t)inY); }
 
 // Returns the map quarter the unit's tile faces
-long EEGetUnitFacingQuarter(EEComplexUnit* inUnit) { return EEGetFacingQuarter(inUnit->GetTileX(), inUnit->GetTileY()); }
+long EEGetUnitFacingQuarter(EEComplexUnit* inUnit) { return (long)ee_units_ucn_facing(2, (int32_t)(inUnit->GetTileX()), (int32_t)(inUnit->GetTileY())); }
 
-// Returns the model part for a wall piece kind (0..8); outFlag is set for the corner kinds 0, 2, 6 and 8
-// (inferred meaning)
-long EEGetWallPiecePart(long inIndex, bool* outFlag) { return ee_units_ucb_wall_piece_part((int32_t)inIndex, outFlag); }  // ucb_release.rs
 
 // ---- EEUCGate.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The wall gate's unit class:
@@ -192,13 +180,13 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_POSITION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->GetPosition(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCB_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
     case EE_UNITS_UCB_SET_LOCATION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->SetLocation(*reinterpret_cast<GE3DPoint*>(f), true); return 0;
-    case EE_UNITS_UCB_LINK_PART: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->LinkPart(EEUcbObject<EEUnit>((uint64_t)inB)->GetComplexUnit()); return 0;
+    case EE_UNITS_UCB_LINK_PART: ee_units_cu_body(EE_UNITS_CU_DO_LINK_PART, EEUcbObject<EEUnit>(inA)->GetComplexUnit(), (int64_t)(uintptr_t)(EEUcbObject<EEUnit>((uint64_t)inB)->GetComplexUnit()), 0, 0); return 0;
     case EE_UNITS_UCB_START_ACTION_OF: EEUcbObject<EEUnit>(inA)->GetComplexUnit()->StartAction((long)inB); return 0;
     case EE_UNITS_UCB_SET_HEALTH: EEUcbObject<EEUnit>(inA)->SetHitPoints(UMFloatToLong(EEUcbObject<EEUnit>(inA)->GetStats()->mMaxHitPoints * f[0])); return 0;
     case EE_UNITS_UCB_IN_EDITOR: return gUIManager->mInScenarioEditor && !gWorld.mGameScreenActive;
     case EE_UNITS_UCB_FLUSH_PLACEMENTS: ::gWorld.FlushQueuedPlacements(); return 0;
     case EE_UNITS_UCB_ADD_PENDING: EEUcbObject<EEPlayer>(inA)->AddPendingUnits(0, true); return 0;
-    case EE_UNITS_UCB_REMOVE_KILLED: EEUcbObject<EEPlayer>(inA)->RemoveKilledUnits(); return 0;
+    case EE_UNITS_UCB_REMOVE_KILLED: ee_rts_player_remove_killed_units(EEUcbObject<EEPlayer>(inA)); return 0;
     case EE_UNITS_UCB_SPACE_GATES:
         return EEUcbObject<EEPlayer>(inA)->mTechnologies->Get(kTechGateSpace)->GetIsAvailable() && EEUcbObject<EEUnitClass>((uint64_t)inB)->GetUnitType() != kUnitTypeGatePalisades;
     case EE_UNITS_UCB_ENERGY_WALL: EECreateSpaceGateEnergyWall(EEUnitCast<EEComplexUnit>(EEUcbObject<EEUnit>(inA))); return 0;
@@ -240,12 +228,12 @@ extern "C" int64_t ee_units_ucb_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCB_SET_RESOURCE_AMOUNT: theUnit->SetResourceAmount(theClass->mResourceAmount); return 0;
     case EE_UNITS_UCB_FACING_QUARTER: return EEGetUnitFacingQuarter(theUnit);
     case EE_UNITS_UCB_SET_FACING: theUnit->SetFacing((unsigned long)inB); return 0;
-    case EE_UNITS_UCB_NAVY_YARD_FACING: return GetNavyYardFacing(theUnit->GetTileX(), theUnit->GetTileY());
+    case EE_UNITS_UCB_NAVY_YARD_FACING: return (long)ee_units_ucn_facing(1, (int32_t)(unsigned long)(theUnit->GetTileX()), (int32_t)(unsigned long)(theUnit->GetTileY()));
     case EE_UNITS_UCB_SPACE_DOCK_YAW: f[0] = EEGetSpaceDockYaw(theUnit->GetTileX() + 1, theUnit->GetTileY() + 1, theUnit->mUnitClass->GetTileSize()); return 0;
     case EE_UNITS_UCB_UPDATE_TURRETS: theUnit->UpdateTurrets(); return 0;
     case EE_UNITS_UCB_GOAL_WORK: theUnit->mGoalState->Work(theUnit); return 0;
-    case EE_UNITS_UCB_SET_MINE: EEUcbObject<EEUnit>(inA)->mComplexUnit->SetMine(EEUcbObject<EEUnit>((uint64_t)inB)); return 0;
-    case EE_UNITS_UCB_FACING_QUARTER_AT: return EEGetFacingQuarter((long)inB, (long)inC);
+    case EE_UNITS_UCB_SET_MINE: ee_units_cu_body(EE_UNITS_CU_DO_SET_MINE, EEUcbObject<EEUnit>(inA)->mComplexUnit, (int64_t)(uintptr_t)(EEUcbObject<EEUnit>((uint64_t)inB)), 0, 0); return 0;
+    case EE_UNITS_UCB_FACING_QUARTER_AT: return (long)ee_units_ucn_facing(2, (int32_t)((long)inB), (int32_t)((long)inC));
     case EE_UNITS_UCB_TILES_CLEAR: EEUcbObject<std::vector<EETileCoordinate>>(inA)->clear(); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }

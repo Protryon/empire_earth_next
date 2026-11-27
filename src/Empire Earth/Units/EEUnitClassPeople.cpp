@@ -45,7 +45,6 @@ static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEff
 // (EETechTree::Research for inUnit)
 static const float kUnitEffectSoundFalloff = 4.0f;  // 0x446fd8 (EEComputeSoundParameters's last argument)
 
-void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect) { ee_units_ucp_call(EE_UNITS_UCP_DO_PLAY_UNIT_EFFECT, NULL, inUnit, 0, inEffect); }  // ucp_people.rs
 
 // The citizens' searches' host (ee_units citizen.rs, citizen_host.rs; EE_UNITS_CZ_*): the units' reads, the noted
 // world tests, each as the original called it (the tile rings, the shuffle and the plain reads are Rust's)
@@ -83,11 +82,6 @@ long EEGetConversionCost(EEComplexUnit* inUnit)
                                                            (int32_t)inUnit->mStats->mPower});
 }
 
-// Returns whether a priest can convert a target now (enemy, resistance, faith, priests and buildings rules, the
-// temple's range); outFlag is set when the target is shielded
-// (new: the decision is ee_combat's can_convert over a record of pure reads, gathered here; the damage table is
-// read only for a valid ammo column, the shield and the building priest's distance always: none has side effects)
-bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag) { return ee_units_ucp_can_convert(inPriest, inTarget, &outFlag); }  // ucp_people.rs
 
 // Turns the unit's turrets when its model has parts
 void EEComplexUnit::UpdateTurrets()

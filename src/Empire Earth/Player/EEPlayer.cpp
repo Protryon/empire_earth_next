@@ -197,7 +197,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         return 0;
     case EE_UNITS_PLAYER_GENERATE: io->f[0] = gPhysics->mRandom.Generate();
         return 0;
-    case EE_UNITS_PLAYER_PRODUCE: return theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), gUnitClassTable[(size_t)a[1]], false);
+    case EE_UNITS_PLAYER_PRODUCE: return ee_units_uc_produce(theUnit->GetUnitClass(), theUnit->GetComplexUnit(), gUnitClassTable[(size_t)a[1]], false);
     case EE_UNITS_PLAYER_SLAVERY_SOUND: gSoundManager->Play(EESoundObject::Get(kSoundSlavery)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         return 0;
     case EE_UNITS_PLAYER_HEALED_SET: thePlayer->mHealedUnitSet = a[1] != 0 ? gUnitSetManager.GetSet((long)a[0]) : NULL;
@@ -687,6 +687,8 @@ void EEPlayer::SuggestRecomputeAllAreaEffects()
 #include "rust/game/physics.h"
 #include "rust/sim/cp.h"
 #include "rust/sim/tech.h"
+#include "rust/game/rts.h"
+#include "rust/game/tech_tree.h"
 
 // The context of UpdatePlayer's operations: the player
 struct EEPlayerTickContext {
@@ -763,7 +765,7 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
         return 0;
     case EE_UNITS_PLAYER_BODY_EXECUTE: reinterpret_cast<NEMessage*>(static_cast<uintptr_t>(inA))->Execute();
         return 0;
-    case EE_UNITS_PLAYER_BODY_REPLACE_UNITS: theComplex->ReplaceUnits(*theSwaps);
+    case EE_UNITS_PLAYER_BODY_REPLACE_UNITS: ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_UNITS, theComplex, (int64_t)(uintptr_t)&(*theSwaps), 0, 0);
         return 0;
     case EE_UNITS_PLAYER_BODY_ATC_REPLACE: EEATCReplaceUnits(thePlayer->mAirTraffic[inB], *theSwaps);
         return 0;
@@ -805,17 +807,17 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_LIVE_STATE: return EESaveHasLiveState((unsigned long)inB, (unsigned long)inC);
     case EE_UNITS_PLAYER_BODY_ADD_TO_TOWN: return ee_units_player_areas(EEPlayerRefs(thePlayer), 0, static_cast<RTSUnit*>(theComplex));
     case EE_UNITS_PLAYER_BODY_CIV_POINTS: return !thePlayer->mCivilization.GetNoPointsAdded() && thePlayer->mCivilization.GetAvailablePoints() != 0;
-    case EE_UNITS_PLAYER_BODY_CIV_BLINK: return EESetCivBuilderButtonBlinking(true);
+    case EE_UNITS_PLAYER_BODY_CIV_BLINK: return ee_screens_cb_set_blinking(true);
     case EE_UNITS_PLAYER_BODY_RECOUNT_POPULATION: thePlayer->RecountPopulation();
         return 0;
     case EE_UNITS_PLAYER_BODY_HERD_REPAIR: EEPlayerHerdAt(inA)->RepairPointers((unsigned long)inB, (unsigned long)inC);
         return 0;
-    case EE_UNITS_PLAYER_BODY_REGISTER_HERDS: thePlayer->RegisterHerds();
+    case EE_UNITS_PLAYER_BODY_REGISTER_HERDS: ee_units_player_rest(thePlayer, EE_UNITS_PLAYER_REST_REGISTER, 0, 1, 0);
         return 0;
     case EE_UNITS_PLAYER_BODY_EVENTS_REPAIR: return thePlayer->mEvents.RepairEvents(thePlayer, (unsigned long)inB, (unsigned long)inC);
     case EE_UNITS_PLAYER_BODY_REQUEUE: EEPlayerImprovement(thePlayer, 10, 0, 0);   // the queued improvements queued again (ee_units player.rs requeue)
         return 0;
-    case EE_UNITS_PLAYER_BODY_TECH_OBSOLETE: return thePlayer->GetTechTree()->Get((long)inB)->GetIsObsolete();
+    case EE_UNITS_PLAYER_BODY_TECH_OBSOLETE: return ee_gamecpp_tech_obj_obsolete(thePlayer->GetTechTree()->Get((long)inB));
     case EE_UNITS_PLAYER_BODY_TECH_ALLOW: thePlayer->GetTechTree()->Get((long)inB)->mIsAllowed = inC != 0;
         return 0;
     case EE_UNITS_PLAYER_BODY_APPLY_SAVED_TOWNS: EEApplySavedTowns(thePlayer);   // port (0.260): the rebuilt towns take their saved ids and order
@@ -902,7 +904,7 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_HERD_ADD_AREA: gContinentManager.AddArea(EEPlayerHerdAt(inA));
         return 0;
     case EE_UNITS_PLAYER_BODY_GOAL_QUEUES: return (int64_t)theComplex->GetNumGoalQueues();
-    case EE_UNITS_PLAYER_BODY_CLEAR_GOAL_QUEUE: theComplex->ClearGoalQueue((unsigned long)inB);
+    case EE_UNITS_PLAYER_BODY_CLEAR_GOAL_QUEUE: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, theComplex, (unsigned long)inB, 0, 0);
         return 0;
     case EE_UNITS_PLAYER_BODY_FINISH_LOAD: static_cast<EEUnit*>(theUnit)->FinishLoad((long)inB, (long)inC);
         return 0;
@@ -964,7 +966,7 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_TILE_EMPTY: return gWorld.mMap->GetTile((long)inB, (long)inC) != NULL && gWorld.mMap->GetTile((long)inB, (long)inC)->mUnits == NULL;
     case EE_UNITS_PLAYER_BODY_MESH_VALID: return gWorld.mMap->mTerrainMesh.GetIsValidTile((long)inB, (long)inC);
     case EE_UNITS_PLAYER_BODY_MESH_Z: return (uint32_t)UFloatBits(gWorld.mMap->mTerrainMesh.GetMeshZ(EEPlayerPtr<float>(inA)[0], EEPlayerPtr<float>(inA)[1]));
-    case EE_UNITS_PLAYER_BODY_DROP_PATH: theComplex->DropPath();
+    case EE_UNITS_PLAYER_BODY_DROP_PATH: ee_units_waypoints_drop((uint64_t)(uintptr_t)theComplex);
         return 0;
     case EE_UNITS_PLAYER_BODY_START_IDLE: theComplex->StartAction(kActionIdle);
         return 0;
@@ -1037,7 +1039,7 @@ static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, E
     case EE_UNITS_RTS_PLAYER_SAVE_COLOR_SAVE: return thePlayer->mColor.Save(theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_NAME_SAVE: return thePlayer->mName.Save(theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_SAVE_UNITS:
-        return thePlayer->SaveUnits(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+        return ee_rts_player_save_units(thePlayer, theContext.mMajorVersion, theContext.mMinorVersion, &theFile);
     }
     return EESavePrimitive(theFile, inOp, io);
 }

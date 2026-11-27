@@ -31,6 +31,7 @@
 #include "lle/FSPath.h"
 #include "rust/sim/app.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/tech.h"
 
 namespace {
 
@@ -53,7 +54,7 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
     case EE_SCENARIO_READ_COMPUTER_DIFFICULTY: return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
-    case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
+    case EE_SCENARIO_READ_EPOCH_COUNT: return (long)ee_tech_epoch_count();
     case EE_SCENARIO_READ_TIME: return EESMBits(gWorld.mScenarioManager->mTime);
     case EE_SCENARIO_READ_TIME_OF_DAY: return EESMBits(gWorld.GetTimeOfDay());
     case EE_SCENARIO_READ_DIFFICULTY: return gDifficultyLevel;

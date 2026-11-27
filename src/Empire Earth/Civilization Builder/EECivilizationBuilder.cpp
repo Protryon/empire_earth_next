@@ -85,10 +85,6 @@ long EEProcessTimerExpired()
     return ee_screens_cb_timer_expired();
 }
 
-long EESetCivBuilderButtonBlinking(bool inBlinking)
-{
-    return ee_screens_cb_set_blinking(inBlinking);
-}
 
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 {
@@ -498,7 +494,7 @@ extern "C" int64_t ee_screenscpp_civh_population_limit(int32_t inPlayer)
 extern "C" void ee_screenscpp_civh_recompute_area_effects(int32_t inPlayer)
 { CIVH_P(inPlayer)->SuggestRecomputeAllAreaEffects(); }
 extern "C" void ee_screenscpp_civh_show_selection_areas(int32_t inPlayer)
-{ CIVH_P(inPlayer)->mSelectedGroup->ShowSelectionAreas(); }
+{ ee_units_group_do(CIVH_P(inPlayer)->mSelectedGroup, 7, NULL); }
 extern "C" void ee_screenscpp_civh_research(int32_t inPlayer, int64_t inKind)
 { CIVH_P(inPlayer)->GetTechTree()->Research((long)inKind, NULL); }
 extern "C" uintptr_t ee_screenscpp_civh_node(int32_t inPlayer, int64_t inKind)

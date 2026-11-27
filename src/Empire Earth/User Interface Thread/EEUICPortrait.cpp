@@ -27,6 +27,7 @@
 #include "ee/EEScreensShims.h"
 #include "ee/EEStringIDs.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/tech_tree.h"
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text
 
@@ -72,7 +73,7 @@ extern "C" uintptr_t ee_screenscpp_pt_node_upgrade(uintptr_t inP, uintptr_t inNo
 { return (uintptr_t)PT(inP)->mUnit->GetPlayer()->mUnitClassUpgrades[PT_N(inNode)->mData->mUnitClass]; }
 extern "C" float ee_screenscpp_pt_upgrade_build_scale(uintptr_t inUp)
 { return ((EEUnitClassUpgrade*)inUp)->mBuildTimeScale; }
-extern "C" int64_t ee_screenscpp_pt_node_build_time(uintptr_t inNode) { return PT_N(inNode)->GetBuildTime(); }
+extern "C" int64_t ee_screenscpp_pt_node_build_time(uintptr_t inNode) { return ee_gamecpp_tech_obj_build_time(PT_N(inNode)); }
 extern "C" int64_t ee_screenscpp_pt_improvement_level(uintptr_t inUnit, int64_t inKind)
 { return PT_CU(inUnit)->GetStats()->mImprovement.GetLevel((long)inKind); }
 extern "C" int64_t ee_screenscpp_pt_improvement_time(int64_t inKind)

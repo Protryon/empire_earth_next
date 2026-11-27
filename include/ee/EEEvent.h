@@ -33,12 +33,6 @@ public:
     // Creates an event with no effects
     EEEvent() : mEffects(NULL), mNumEffects(0), mID(0) {  }
     virtual ~EEEvent();
-    // 0x1ca76c (cdecl): runs the effects of event inEvent (the tech tree passes the node's event id, the tree's
-    // player index, the node id, the tree's player and the research's player) (provisional names)
-    // Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result.
-    // RunEffect 0x1ca7cf and its handlers (the stats, button, model, sounds, research, unit conversion, with the EVRN
-    // and EVAT records) are ee_sim scenario event.rs, over the statements below
-    static long Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit) { return ee_scenario_ev_trigger(inEvent, inPlayerIndex, inID, inPlayer, inUnit); }
     // inline accessors: EETechTree::BuildUnitClassInfo expands them once, then calls the
     // out-of-line GetEffect copy 0x1cdf0c (EETechTree.cpp's last function)
     unsigned long GetNumEffects() const { return this->mNumEffects; }

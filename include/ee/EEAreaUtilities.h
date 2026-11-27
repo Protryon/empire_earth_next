@@ -17,10 +17,6 @@ class EEUnitClass;
 // cdecl helpers EEMBuildUnit::Execute 0xbbcc4 calls with the message's (long) x/y (provisional names; types
 // inferred; units per the map: EEHitPointUpgrader.cpp / EEFOFindNewTargetNearOldTarget.cpp)
 EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY);
-// cdecl helpers the heal goal calls (provisional names; types inferred)
-// 0x242542 (EEActiveGroup::SpreadAroundUnit: a unit whose class IsPriest holds and the target's complex unit)
-// (provisional name)
-bool EECanConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget, bool& outFlag);
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 // 0x20d571 (EEUCBasicPriest.cpp): the faith a conversion of inUnit costs (provisional name)
 long EEGetConversionCost(EEComplexUnit* inUnit);

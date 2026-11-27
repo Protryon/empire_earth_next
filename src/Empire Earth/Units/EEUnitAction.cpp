@@ -14,6 +14,7 @@
 
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
+#include "rust/sim/units.h"
 
 extern FSPath* gDataPath;
 
@@ -54,8 +55,8 @@ extern "C" int64_t ee_units_ai_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_AI_H_CONDITION: return (static_cast<EEComplexUnit*>(inUnit))->mUnitClass->EvaluateCondition((static_cast<EEComplexUnit*>(inUnit)), (long)inB);
     case EE_UNITS_AI_H_START_ACTION: (static_cast<EEComplexUnit*>(inUnit))->StartAction((long)inB); return 0;
     case EE_UNITS_AI_H_ACTION_CHANGED: (static_cast<EEComplexUnit*>(inUnit))->GetUnitClass()->ActionChanged((static_cast<EEComplexUnit*>(inUnit))); return 0;
-    case EE_UNITS_AI_H_DROP_FINISHED_GOALS: (static_cast<EEComplexUnit*>(inUnit))->DropFinishedGoals(false); return 0;
-    case EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: (static_cast<EEComplexUnit*>(inUnit))->UpdateCamouflage((long)inB); return 0;
+    case EE_UNITS_AI_H_DROP_FINISHED_GOALS: ee_units_unit_drop_finished_goals((uint64_t)(uintptr_t)(static_cast<EEComplexUnit*>(inUnit)), false); return 0;
+    case EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_CAMOUFLAGE, (static_cast<EEComplexUnit*>(inUnit)), (long)inB, 0, 0); return 0;
     default: return 0;
     }
 }

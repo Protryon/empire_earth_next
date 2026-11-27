@@ -173,7 +173,7 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
 {
     const EEGameOptionRules& theRules = EEGetRules().mGameOptions;   // gameoptions.yaml
     switch (inWhich) {
-    case EE_SCREENS_LE_RULE_EPOCHS: return (uint32_t)EEEpochCount();
+    case EE_SCREENS_LE_RULE_EPOCHS: return (uint32_t)(long)ee_tech_epoch_count();
     case EE_SCREENS_LE_RULE_UNIT_MINIMUM: return (uint32_t)EERuleLong(theRules.mUnitLimitMinimum);
     case EE_SCREENS_LE_RULE_UNIT_MAXIMUM: return (uint32_t)EERuleLong(theRules.mUnitLimitMaximum);
     case EE_SCREENS_LE_RULE_UNIT_STEP: return (uint32_t)theRules.mUnitLimitStep;

@@ -48,6 +48,5 @@ public:
 
 // 0x563240: cleared by EEGhostUnit::Create once the new ghosts are in the world (provisional name)
 extern bool gGhostUnitsChanged;
-long EEGetWallPiecePart(long inIndex, bool* outFlag);
 
 #endif

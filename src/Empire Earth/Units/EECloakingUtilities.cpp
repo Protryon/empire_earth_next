@@ -16,6 +16,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
+#include "rust/sim/units.h"
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);
@@ -36,7 +37,7 @@ extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int
     case EE_UNITS_CK_IS_EDGE: return gWorld.mMap->IsEdgeTile((long)inC, (long)inD);
     case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
     case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>((*ioF)), (long)inC, (long)inD, 0, 0);
-    case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
+    case EE_UNITS_CK_DOCK_FACING: return (long)ee_units_ucn_facing(0, (int32_t)(unsigned long)((long)inC), (int32_t)(unsigned long)((long)inD));
     case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
     case EE_UNITS_CK_CREATE_CLOAK: return gWorld.GetEffectManager()->CreateUnitEffect(CkObj<EEUnit>(inA), EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
     case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = sCkHandle.mValue; return 0;

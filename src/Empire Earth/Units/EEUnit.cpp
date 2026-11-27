@@ -123,7 +123,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_HAS_DOPPELGANGER: return gDoppelgangerManager.GetDoppelganger(EEEuObject<EETile>(inA), theUnit, theUnit->mPlayer->mPlayerID) != NULL;
     case EE_UNITS_EU_DOPPELGANGER_TILE_SHOWN: ee_units_dm_body(EE_UNITS_DM_DO_TILE_SHOWN, EEEuObject<EETile>(inA), theUnit->mTileX, theUnit->mTileY, (int64_t)(uintptr_t)theUnit->mPlayer); return 0;
     case EE_UNITS_EU_DEATH_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
-    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]); return 0;
+    case EE_UNITS_EU_DEATH_SOUND_PARAMETERS: ee_units_uck_sound(theUnit->mUnitClass, theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]); return 0;
     case EE_UNITS_EU_DEATH_SOUND_PLAY:
         gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, sDeathSound[0], sDeathSound[1], sDeathSound[2], theUnit->mStats->mDeathSound->mLooping, NULL);
         return 0;
@@ -138,7 +138,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_MAP_SIZE: return inB == 0 ? (int64_t)gMapWidth : (int64_t)gMapHeight;
     case EE_UNITS_EU_CONTINENT_ID: return gContinentManager.GetContinentID((long)inB, (long)inC);
     case EE_UNITS_EU_CONTINENT_BY_ID: return (uint64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)inB);
-    case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return UFloatBits(theUnit->GetTileDistanceSquared(theOther));
+    case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return UFloatBits(ee_units_atc_tile_distance_squared(theUnit, theOther));
     case EE_UNITS_EU_KILL_UNIT: theUnit->mPlayer->KillUnit(theUnit, false); return 0;
     default: return 0;
     }
@@ -175,8 +175,8 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_POST_LOAD: gDataPreLoading->PostLoadUnitClass(theUnit->mPlayer->mPlayerID, theUnit->mUnitClass->mUnitType); return 0;
     case EE_UNITS_EUM_DEREFERENCE_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker->Dereference(); return 0;
     case EE_UNITS_EUM_REFERENCE_OF: EEEuObject<EEComplexUnit>(inA)->Reference(); return 0;
-    case EE_UNITS_EUM_CX_RESET_COMPLEX: static_cast<EEComplexUnit*>(theUnit)->ResetEEComplexUnit(true, false); return 0;
-    case EE_UNITS_EUM_RESET_EE_UNIT: theUnit->ResetEEUnit(); return 0;
+    case EE_UNITS_EUM_CX_RESET_COMPLEX: ee_units_cu_body(EE_UNITS_CU_DO_RESET, static_cast<EEComplexUnit*>(theUnit), true, false, 0); return 0;
+    case EE_UNITS_EUM_RESET_EE_UNIT: ee_units_eu_more(EE_UNITS_EUM_DO_RESET, theUnit, NULL, 0, 0); return 0;
     case EE_UNITS_EUM_RTS_RESET: theUnit->Reset(); return 0;
     case EE_UNITS_EUM_FREE_NODE: theUnit->FreeNode(); return 0;
     case EE_UNITS_EUM_ZERO_REFERENCES: theUnit->mReferenceCount = 0; return 0;

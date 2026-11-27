@@ -35,7 +35,6 @@ bool EERestoreContinentRegions();
 class EEComplexUnit;
 class EEUnit;
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
-EEUnit* EEFindLoadedGhostUnit(unsigned long inID);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

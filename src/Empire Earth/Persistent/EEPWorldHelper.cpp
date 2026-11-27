@@ -76,6 +76,8 @@
 #include "rust/game/cp_engine.h"
 #include "rust/game/rts.h"
 #include "rust/game/screens.h"
+#include "rust/game/tech_tree.h"
+#include "rust/sim/units.h"
 
 // The saved world's bodies are ee_game gamecpp persist_world.rs (game core lane, round 9): the constructors, Load,
 // Save, Restore, the teams' load and save, the host of ee_sim's world_save.rs (the running state from save 0.254 on),
@@ -104,13 +106,9 @@ EEPWorldHelper::EEPWorldHelper(EEWorld& inWorld)
 // their pointers (EEComplexUnit::RepairPointers, the goals'), held by world_save.rs until the first tick.
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
 {
-    return dynamic_cast<EEComplexUnit*>(EEFindLoadedGhostUnit(inID));
+    return dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID)));
 }
 
-EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
-{
-    return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
-}
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
@@ -252,7 +250,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwRegisterUnit: ee_rts_unit_registry(static_cast<RTSUnit*>(UNIT), static_cast<RTSUnit*>(UNIT), true);
         break;
-    case O::PwTreeNodeIds: ((EETechTree*)p)->GetNodeIDs(*(std::vector<long>*)a[0]);
+    case O::PwTreeNodeIds: ee_gamecpp_tech_node_ids(((EETechTree*)p), true, 0, (std::vector<long>*)a[0]);
         break;
     // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
     // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
@@ -534,7 +532,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
         break;
-    case O::PsShowSelectionAreas: gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();
+    case O::PsShowSelectionAreas: ee_units_group_do(gWorld.GetCurrentPlayer()->mActiveGroup, 7, NULL);
         break;
     case O::PsOpenMainGameForm: gUserInterface->OpenForm(gUIManager->GetMainGameForm());
         break;
@@ -567,7 +565,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsRestorableOfEffects: return P64(static_cast<FSRestorable*>((EEEffectManager*)p));
     case O::PsRestorableOfCalamities: return P64(static_cast<FSRestorable*>((EEPCalamityHelper*)p));
     case O::PsRestorableOfEnvironment: return P64(static_cast<FSRestorable*>((EEEnvironmentManager*)p));
-    case O::PsPlayerRemoveAlly: ((EEPlayer*)p)->RemoveAlly((EEPlayer*)a[0]);
+    case O::PsPlayerRemoveAlly: ee_units_player_rest(((EEPlayer*)p), EE_UNITS_PLAYER_REST_REMOVE_ALLY, (uint64_t)(uintptr_t)((EEPlayer*)a[0]), 0, 0);
         break;
     case O::PsEditorFormPresent: return gUIManager->GetScenarioEditorForm() != NULL;
     case O::PsEditorClearSelection: gUIManager->GetScenarioEditorForm()->ClearSelection();

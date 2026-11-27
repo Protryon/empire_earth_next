@@ -208,7 +208,7 @@ extern "C" void ee_units_pm_host_set_blocking_unit(uint64_t inObject, uint64_t i
 
 extern "C" void ee_units_pm_host_clear_goal_queue(uint64_t inObject)
 {
-    PMUnit(inObject)->ClearGoalQueue(0);
+    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, PMUnit(inObject), 0, 0, 0);
 }
 
 extern "C" void ee_units_pm_host_start_action(uint64_t inObject, int32_t inAction)

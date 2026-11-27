@@ -93,9 +93,9 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CxClearBuildTargets: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, CX, 0, 0, 0);
         break;
     case O::CxNumGoalQueues: return CX->GetNumGoalQueues();
-    case O::CxClearGoalQueue: CX->ClearGoalQueue((unsigned long)a[0]);
+    case O::CxClearGoalQueue: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, CX, (unsigned long)a[0], 0, 0);
         break;
-    case O::CxClearGoals: CX->ClearGoals((long)a[0]);
+    case O::CxClearGoals: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, CX, (long)a[0], 0, 0);
         break;
     case O::CxSetDisabled: CX->SetDisabled(a[0] != 0, (long)a[1]);
         break;
@@ -119,7 +119,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CxWaypointCount: return (int64_t)CX->mWaypoints.size();
     case O::CxNextWaypoint: return CX->NextWaypoint();
     case O::CxGetPathStart: return CX->GetPathStart(PT(0), *(float*)a[1]);
-    case O::CxDropPath: CX->DropPath();
+    case O::CxDropPath: ee_units_waypoints_drop((uint64_t)(uintptr_t)CX);
         break;
     case O::CxSet2DPosition: CX->Set2DPosition(*(const U2DPoint<float>*)a[0]);
         break;

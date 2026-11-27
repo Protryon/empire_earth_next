@@ -5,8 +5,6 @@
 #define EE_EEUNITUPDATE_H
 
 #include <stdint.h>
-void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit);           // EEUCHelicopter.cpp
-void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit);  // EEUCHelicopterTransport.cpp
 #include "rust/sim/units.h"              // upd_entry.rs
 
 class EEUnitClass;
@@ -17,11 +15,8 @@ class EEComplexUnit;
 // helpers and constants): each the original's statements of its branch, called by the host (EEUnitUpdate.cpp)
 #include <stdint.h>
 void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit);     // EEUCHelicopterPriest.cpp
-void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit);            // EEUCAirAnimal.cpp
-void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit);
 void EEAirplaneCircleSide(EEUnitClass* inClass, EEComplexUnit* inUnit);             // EEUCAirplane.cpp
 void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit);
-void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit);  // EEUCPlanetSpaceship.cpp
 // EEUCLandable.cpp: one of the landable's operations (EE_UNITS_ACT_*); inoutAirport the nearest airport found
 int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EEComplexUnit* inUnit, int64_t inA,
                                   EEComplexUnit** inoutAirport);

@@ -14,6 +14,7 @@
 #include "ee/EEWheel.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
+#include "rust/sim/units.h"
 
 template <class T> static T* EEUcgObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
@@ -36,7 +37,7 @@ extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCG_SET_CLASS_POWER: theUnit->SetPower(theUnit->mUnitClass->mPower); return 0;
     case EE_UNITS_UCG_MAP_TILE: return EEObj(::gWorld.GetMap()->GetTile((long)inB, (long)inC));
     case EE_UNITS_UCG_CREATE_PLANE: return EEObj(EEUcgObject<EEUnitClass>(inA)->CreateUnitAt(*EEUcgObject<GETransformation>((uint64_t)inB), 0, 0, theUnit)->mComplexUnit);
-    case EE_UNITS_UCG_CARRIER_AIRCRAFT: EECreateCarrierAircraft(theOther, theUnit->mPlayer->mPlayerID); return 0;
+    case EE_UNITS_UCG_CARRIER_AIRCRAFT: ee_units_uca_call(EE_UNITS_UCA_DO_CARRIER_AIRCRAFT, NULL, theOther, 0, (long)(theUnit->mPlayer->mPlayerID), 0, NULL); return 0;
     case EE_UNITS_UCG_NEW_UNLOAD_TRANSPORT: return EEObj(EEUGRust::NewUnloadTransport(theOther, (long)inB, (long)inC, false));
     case EE_UNITS_UCG_SET_FLIGHT_TIME_OF: theOther->SetFlightTime((unsigned long)inB); return 0;
     case EE_UNITS_UCG_WAYPOINT_COUNT: return theUnit->mWaypoints.size();

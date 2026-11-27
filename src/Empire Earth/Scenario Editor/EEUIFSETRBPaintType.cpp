@@ -83,7 +83,7 @@ extern "C" int32_t ee_screenscpp_seex(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEEX_COMBO_APPEND: static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeexNames);
         return 0;
-    case EE_SCREENS_SEEX_EPOCH_COUNT: return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEEX_EPOCH_COUNT: return (int32_t)(long)ee_tech_epoch_count();
     case EE_SCREENS_SEEX_HAS_EDITOR: return gUIManager->GetScenarioEditorForm() != NULL;
     case EE_SCREENS_SEEX_MAX_PLAYERS: return (int32_t)gWorld.mMaxPlayers;
     }

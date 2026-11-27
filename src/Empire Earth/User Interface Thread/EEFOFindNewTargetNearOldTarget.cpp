@@ -636,7 +636,7 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     case 18: return EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(UUUnit(inA)->GetUnitClass())->HasGatherPoint(static_cast<EEComplexUnit*>(UUUnit(inA)), UUUnit(inB));   // (its UCBD note)
     case 20: return (uint64_t)(int64_t)UUId(UUUnit(inA));
     case 21: ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, static_cast<EEComplexUnit*>(UUUnit(inA)), (int64_t)(uintptr_t)(UUUnit(inB)), 0, 0); return 0;
-    case 22: static_cast<EEComplexUnit*>(UUUnit(inA))->ClearGoals(0); return 0;
+    case 22: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, static_cast<EEComplexUnit*>(UUUnit(inA)), 0, 0, 0); return 0;
     case 23: static_cast<EEComplexUnit*>(UUUnit(inA))->StartAction(kActionIdle); return 0;
     case 24: static_cast<EEComplexUnit*>(UUUnit(inA))->mUnitClass->ActionChanged(static_cast<EEComplexUnit*>(UUUnit(inA))); return 0;
     case 25: UUTile(inA)->mUnits = UUTile(inA)->AddUnit(UUUnit(inB), UUTile(inA)->mUnits); return 0;
@@ -868,7 +868,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_CLEAR_BLOCKING: ee_units_cu_body(EE_UNITS_CU_DO_SET_BLOCKING_UNIT, UbObj<EEComplexUnit>(inA), (int64_t)(uintptr_t)NULL, 0, 0); return 0;
     case EE_UNITS_UB_COLLISION_STATE: return UbObj<EEComplexUnit>(inA)->mCollisionState;
     case EE_UNITS_UB_CLEAR_COLLISION_STATE: UbObj<EEComplexUnit>(inA)->mCollisionState = 0; return 0;
-    case EE_UNITS_UB_DROP_PATH: UbObj<EEComplexUnit>(inA)->DropPath(); return 0;
+    case EE_UNITS_UB_DROP_PATH: ee_units_waypoints_drop((uint64_t)(uintptr_t)UbObj<EEComplexUnit>(inA)); return 0;
     case EE_UNITS_UB_IGNORE_TARGET: ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, UbObj<EEComplexUnit>(inA), UbObj<EEComplexUnit>(inB), 0); return 0;
     case EE_UNITS_UB_FIND_NEW_TARGET: return UbFindNewTarget(UbObj<EEComplexUnit>(inA), UbObj<EEComplexUnit>(inB), (long)inC, (long)inD, (long)inE);
     case EE_UNITS_UB_NO_TARGET_TRACE: EEDebugTrace(">>> SHAWN %d could not find a target.\n", UbObj<EEComplexUnit>(inA)->GetUnitClass()->GetName()); return 0;

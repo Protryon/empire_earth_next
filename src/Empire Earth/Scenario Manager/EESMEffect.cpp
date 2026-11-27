@@ -83,6 +83,7 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 #include "rust/game/tech_tree.h"
 #include "rust/sim/scenario.h"
 #include "rust/sim/units.h"
+#include "rust/sim/tech.h"
 
 
 // what one effect's run keeps between its world calls (entry.rs makes and frees it: EE_SCENARIO_WORLD_RUN_*) (ee_scenario effect.rs, effect_ai.rs, task.rs): the
@@ -686,7 +687,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_FLIGHT_TIME: return SMEUnit(a[0])->GetComplexUnit()->mFlightTime;
     case EE_SCENARIO_WX_HOME_BASE: return SMEUnit(a[0])->GetComplexUnit()->mHomeBase != NULL;
     case EE_SCENARIO_WX_EFFECT_TECH: return inRun->mEffect->mTechnology;
-    case EE_SCENARIO_WX_EPOCH_COUNT: return EEEpochCount();
+    case EE_SCENARIO_WX_EPOCH_COUNT: return (long)ee_tech_epoch_count();
         SMEPlayer(a[0])->GetTechTree()->ResetEpochRange(SMEPlayer(a[0])->GetTechTree()->mStartEpoch, inRun->mEffect->mTechnology);
         return 0;
     case EE_SCENARIO_WX_TECH_NEEDS_MEDIA:
@@ -833,8 +834,8 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_OBJECT_PICK: return ee_scenario_en_object_pick_unit_type(gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]));
 
     case EE_SCENARIO_WORLD_CREATE_UNITS: ee_scenario_en_effect_create_units(inRun->mEffect); return 0;
-    case EE_SCENARIO_WORLD_CLEAR_GOALS: SMEComplex(a[0])->ClearGoals((unsigned long)a[1]); return 0;
-    case EE_SCENARIO_WORLD_CLEAR_QUEUE: SMEComplex(a[0])->ClearGoalQueue((unsigned long)a[1]); return 0;
+    case EE_SCENARIO_WORLD_CLEAR_GOALS: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, SMEComplex(a[0]), (long)((unsigned long)a[1]), 0, 0); return 0;
+    case EE_SCENARIO_WORLD_CLEAR_QUEUE: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, SMEComplex(a[0]), (unsigned long)a[1], 0, 0); return 0;
     case EE_SCENARIO_WORLD_SET_DELETABLE: SMEComplex(a[0])->SetIsDeletable(a[1] != 0); return 0;
     case EE_SCENARIO_WORLD_SET_DISABLED: SMEComplex(a[0])->SetDisabled(a[1] != 0, 0); return 0;
     case EE_SCENARIO_WORLD_SET_COMMANDABLE: SMEComplex(a[0])->SetIsCommandable(a[1] != 0); return 0;

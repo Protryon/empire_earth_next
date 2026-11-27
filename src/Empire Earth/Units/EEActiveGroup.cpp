@@ -27,6 +27,7 @@
 #include "ee/EEUnitClassKinds.h"   // EEObj
 #include "ee/EECombatGoals.h"
 #include "rust/game/gamecpp.h"
+#include "rust/sim/units.h"
 
 // Returns the unit's top speed: its active group's value when it is in one, else its stats'
 // (was EECPEngineHelpers.cpp's, out of line after its first user there)
@@ -73,7 +74,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_ADD_TIME: theUnit->mGoalQueues[1].AddTime(1);
         return 0;
     case EE_UNITS_AG_CAN_GET_TO: return gContinentManager.CanGetTo(theUnit, (long)inC, (long)inD);
-    case EE_UNITS_AG_CAN_CONVERT: return EECanConvert(theUnit, (EEComplexUnit*)(uintptr_t)inB, *static_cast<bool*>(io->list));
+    case EE_UNITS_AG_CAN_CONVERT: return ee_units_ucp_can_convert(theUnit, (EEComplexUnit*)(uintptr_t)inB, &(*static_cast<bool*>(io->list)));
     case EE_UNITS_AG_CAN_ATTACK_CLASS: return theUnit->CanAttackClass((EEUnitClass*)(uintptr_t)inB);
     case EE_UNITS_AG_HAS_ACTION: return ((EEUnitClass*)(uintptr_t)inA)->FindAction((long)inC) != NULL;
     case EE_UNITS_AG_PASSABLE: return ((EEUnit*)(uintptr_t)inA)->IsPassableBy((EEComplexUnit*)(uintptr_t)inB);
@@ -82,9 +83,9 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     // the compound statements' parts (ag_host.rs)
     case EE_UNITS_AG_QUEUE_ADD_ONLY: theUnit->mGoalQueues[(size_t)inC].Add(theOther);
         return 0;
-    case EE_UNITS_AG_QUEUE_SQUADRON: theUnit->QueueSquadronGoals(theOther, inC != 0);
+    case EE_UNITS_AG_QUEUE_SQUADRON: ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_SQUADRON_GOALS, theUnit, (int64_t)(uintptr_t)theOther, inC != 0, 0);
         return 0;
-    case EE_UNITS_AG_SET_SQUADRON: theUnit->SetSquadronGoals(theOther, inC != 0);
+    case EE_UNITS_AG_SET_SQUADRON: ee_units_cu_body(EE_UNITS_CU_DO_SET_SQUADRON_GOALS, theUnit, (int64_t)(uintptr_t)theOther, inC != 0, 0);
         return 0;
     case EE_UNITS_AG_CALAMITY_COST: return ((EECalamityClass*)(uintptr_t)inA)->GetCost();
     case EE_UNITS_AG_NODE_HAS_TYPE: return ((EETechTreeNode*)(uintptr_t)inA)->Contains(((EEComplexUnit*)(uintptr_t)inB)->mUnitClass->mUnitType);

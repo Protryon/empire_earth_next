@@ -20,8 +20,7 @@
 extern "C" int32_t ee_tech_epoch_count(void);
 extern "C" int32_t ee_tech_epoch_of(int32_t id);
 extern "C" int32_t ee_tech_epoch_title_id(int32_t epoch);
-inline long EEEpochCount() { return ee_tech_epoch_count(); }
-inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < EEEpochCount(); }
+inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < (long)ee_tech_epoch_count(); }
 const long kTechFirstNodeID = 1000;
 
 #endif // EE_EETECHTREETECHID_H

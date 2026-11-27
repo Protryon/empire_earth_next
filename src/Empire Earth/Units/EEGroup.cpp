@@ -36,6 +36,7 @@
 #include "ee/EEMapDimensions.h"
 #include "rust/game/gamecpp.h"
 #include "rust/game/screens.h"
+#include "rust/sim/units.h"
 
 static_assert(sizeof(GERectangle) == 4 * sizeof(float) && offsetof(U2DRectangle<long>, mBottom) == 0 && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "GetBounds hands Rust the rectangle's four floats; AREA_OUTLINES reads rectangles as bottom, left, right, top");
 
@@ -118,7 +119,7 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     // the path requests (their request, cancel, references, fields, save, load and the loaded ones' waits) and
     // the terrain flags: Rust (group_host.rs over ee_sim::astar request.rs)
     // (SetGroupPathGoals: group_host.rs over waypoints.rs)
-    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets();
+    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, theUnit, 0, 0, 0);
         return 0;
     case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
     case EE_UNITS_GROUP_OP_POST_SELECTION: ee_screens_ui_post_icon_bar_once(gUserInterface);
@@ -137,7 +138,7 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_UPGRADE: return (int64_t)(uintptr_t)thePlayer->GetUpgrade((long)inC);
     case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init();
         return 0;
-    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects();
+    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, theUnit, 0, 0, 0);
         return 0;
     case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
         return 0;

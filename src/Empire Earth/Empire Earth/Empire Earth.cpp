@@ -215,15 +215,6 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 #include <typeinfo>
 #include "ee/EEUnit.h"
 
-// Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
-// Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
-// original game's loose data (tools/open_data.py). The original searched four places: this install's Data\data.ssa
-// and Data\, then the original Empire Earth's (its install path from the registry); the original game is no longer
-// needed. A Data\data.ssa is still mounted when present (an install copy), behind the folder as before.
-void EEShowSinglePlayerScreen()
-{
-    ee_gamecpp_startup_data_paths();
-}
 
 // Creates the game state, empty
 EEGameState::EEGameState()
@@ -247,11 +238,6 @@ void EESetGameViewRectangle(const GERectangle& inRectangle)
     ee_gamecpp_startup_game_view(reinterpret_cast<const EeGeRectangle*>(&inRectangle));
 }
 
-// Points the texture, model and sound managers at the data search path
-void EESetDataPaths()
-{
-    ee_gamecpp_startup_set_data_paths();
-}
 
 #ifdef _WIN32
 static HANDLE sInstanceMutex;

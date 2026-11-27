@@ -36,6 +36,7 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/game/tech_tree.h"
 #include "rust/sim/scenario.h"
+#include "rust/sim/tech.h"
 
 
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
@@ -240,7 +241,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_CLASS_DOMAINS: return (int32_t)static_cast<EEUnitClass*>(p[0])->mDomains;
     case EE_SCREENS_SEETX_TECHS_CLEAR: sSeetTechs.clear(); return 0;
     case EE_SCREENS_SEETX_TECHS_NODE_IDS: ee_gamecpp_tech_node_ids(&gTechTree, true, 0, &sSeetTechs); return 0;
-    case EE_SCREENS_SEETX_EPOCH_COUNT: return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEETX_EPOCH_COUNT: return (int32_t)(long)ee_tech_epoch_count();
     case EE_SCREENS_SEETX_TECHS_PUSH: sSeetTechs.push_back((long)(unsigned long)(uint32_t)i[0]); return 0;
     case EE_SCREENS_SEETX_TECHS_COUNT: return (int32_t)sSeetTechs.size();
     case EE_SCREENS_SEETX_TECHS_AT: return (int32_t)sSeetTechs[(size_t)i[0]];
