@@ -68,6 +68,8 @@ pub enum Kind {
     Table,
     /// `UIHotKey`'s record ([`EeUiHotKeyFields`](crate::hotkeyobj::EeUiHotKeyFields)).
     HotKey,
+    /// `UIFileListBox`'s and `UIFileComboBox`'s [`EeUiFileList`](crate::filelistobj::EeUiFileList) (their own `mRust`).
+    FileList,
 }
 
 /// The C++ pointer of a toolkit object (`UIForm*`, `UIControl*`, ...).
