@@ -68,7 +68,6 @@ class EETile;
 // Orders tiles by their distance from mCenter (the volcano sorts the free tiles around its square with it; its
 // operator() is expanded in the sort COMDATs 0xb538d.., DistanceSquared is out of line at 0x8a3f, an AI unit's
 // range). Provisional name; layout inferred (8 bytes, passed by value).
-struct RTSMapTileRun;
 class EEAIContinent;
 class EEAIChokePoint;
 class EETown;
@@ -83,18 +82,12 @@ struct EETileDistanceLess {
     ~EETileDistanceLess() {}
     EETileDistanceLess(const EETileCoordinate& inCenter) : mCenter(inCenter) {}
     long DistanceSquared(const EETileCoordinate& inTile) const;
-    long DistanceSquared(EEUnit* inUnit) const;   // inline: the unit's tile (0x21e104 expands it twice) (provisional name)
     bool operator()(const EETileCoordinate& inFirst, const EETileCoordinate& inSecond) const
         { return this->DistanceSquared(inFirst) < this->DistanceSquared(inSecond); }
-    // 0x21e104 (EEUGBuildRepair.cpp; built without /Og): the units by their tiles, the farther first (provisional name)
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
     // 0xc995c (an inline COMDAT among EEMessage.cpp's sort COMDATs, after its first user _Insertion_sort_1 0xc98ab):
     // units with +0x34c set first, then +0x344, then the nearer; it builds the second unit's tile through the
     // 2-reference ctor 0xaa817. Body not written (provisional name)
     bool operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const;
-    // 0x9cad8 (EECPWallManager.cpp; built without /Og): two runs by the distance of their middle tiles (provisional
-    // name)
-    bool operator()(const RTSMapTileRun& inFirst, const RTSMapTileRun& inSecond) const;
 
     EETileCoordinate mCenter;
 };
