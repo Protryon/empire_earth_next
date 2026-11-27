@@ -765,7 +765,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_STRINGS_RESET: sUbStrings = EEUbStrings(); return 0;
     case EE_UNITS_UB_NUM_POWERS: return (unsigned long)ee_tech_civ_power_count();
     case EE_UNITS_UB_UNIT_HAS_POWER: return gCivPowersManager.HasPower(UUUnit(inA)->GetPlayer(), (unsigned long)inC);
-    case EE_UNITS_UB_MAKE_POWER_UPGRADE: return (unsigned long)ee_tech_civ_power_upgrade((uint32_t)(EECivilizationManager::PowerLevel((unsigned long)inC)));
+    case EE_UNITS_UB_MAKE_POWER_UPGRADE: return (unsigned long)ee_tech_civ_power_upgrade((uint32_t)((unsigned long)ee_tech_civ_power_level((uint32_t)((unsigned long)inC))));
     case EE_UNITS_UB_POWER_NAME: gCivPowersManager.GetName((unsigned long)inC, sUbStrings.mName); return 0;
     case EE_UNITS_UB_UPGRADES_COPY: sUbUpgrades = UUUnit(inA)->GetPlayer()->mCivilization.GetPurchasedUpgrades(); return 0;
     case EE_UNITS_UB_UPGRADES_SHUFFLE: EEAIRandomShuffle(sUbUpgrades.begin(), sUbUpgrades.end()); return 0;

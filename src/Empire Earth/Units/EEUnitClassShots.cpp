@@ -106,7 +106,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_START_ACTION: theUnit->StartAction((unsigned long)inArg); break;
     case EE_COMBAT_SHOT_ACTION_CHANGED: theClass->ActionChanged(theUnit); break;
     case EE_COMBAT_SHOT_CREATE_REMAINS: theClass->CreateRemainsUnit(theUnit); break;
-    case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED: theClass->HandleActionChanged(theUnit); break;
+    case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED: ee_units_class_action_changed(EE_UNITS_ACTION_BASE, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)theUnit); break;
     case EE_COMBAT_SHOT_POPULATION: theUnit->mPlayer->mPopulationCount -= inArg; break;
     case EE_COMBAT_SHOT_MINIMAP_OFF: ee_gamecpp_minimap_move_unit(gMiniMap, theUnit, theUnit->mTileX, theUnit->mTileY, -10000, (long)(-10000)); break;
     case EE_COMBAT_SHOT_STEP_PHYSICS: theClass->mPhysicsModel->Step(theUnit); break;

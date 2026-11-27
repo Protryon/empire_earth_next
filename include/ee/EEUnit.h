@@ -763,8 +763,6 @@ public:
     void MoveToTileCentre(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_MOVE_TO_TILE_CENTRE, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x23658b (to its tile centre, or a step forward; 0x22db0f) (provisional name)
     void CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation);  // 0x232e4a (CreateUnitAt for unit type 0x42; bool: CreateUnitAt passes its bool through) (provisional name)
     void ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_REPLANT_FARM, this, inUnit, H(inPlayer), 0, 0, NULL, NULL); }  // 0x232c9f (EEMReplantFarms, farm classes)
-    // EEUCProjectile.cpp's callees (provisional names)
-    void HandleActionChanged(EEComplexUnit* inUnit) { ee_units_class_action_changed(EE_UNITS_ACTION_BASE, (uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inUnit); }  // 0x22db0f (the default +0x74 command handling)
     EEUnit* FindImpactUnit(EEComplexUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_ucn_impact_unit(H(inUnit)); }  // 0x233410 (a target for inUnit, or 0)
     void CreateRemainsUnit(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_CREATE_REMAINS_UNIT, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x237e79 (the class's +0x108 unit where inUnit ends)
     void UpdateRipples(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_RIPPLES, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x2393ff (like UpdateTrail, the +0x80 media)

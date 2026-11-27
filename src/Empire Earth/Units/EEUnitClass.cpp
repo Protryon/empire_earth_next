@@ -599,7 +599,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_TILE_SIZE: return theClass->GetTileSize();
     case EE_UNITS_UC_ALIGN_YAW: EEUcAlignYaw(theOther, *EEUcObject<GETransformation>((uint64_t)inB), *EEUcObject<GETransformation>((uint64_t)inC)); return 0;
     case EE_UNITS_UC_CLASS_FLIES_OVER: return EEUcObject<EEUnitClass>(inA)->FliesOver();
-    case EE_UNITS_UC_AREA_EFFECT_AT: return (uint64_t)(uintptr_t)gAEManager.FindEffectAtTile(8, theOther->GetTileX(), theOther->GetTileY(), theOther->GetPlayer()->GetPlayerID());
+    case EE_UNITS_UC_AREA_EFFECT_AT: return (uint64_t)(uintptr_t)static_cast<EEAreaEffect*>(ee_screens_aem_find(&gAEManager, 8, (float)(theOther->GetTileX()), (float)(theOther->GetTileY()), theOther->GetPlayer()->GetPlayerID(), false, NULL));
     case EE_UNITS_UC_EFFECT_OWNER: return (uint64_t)(uintptr_t)EEUcObject<EEAreaEffect>(inA)->mUnit;
     case EE_UNITS_UC_EFFECT_COVERS:
         return EEUcObject<EEAreaEffect>(inA)->Covers(EEUcObject<EEAreaEffect>(inA)->mUnit->GetPlayer()->GetPlayerID(),

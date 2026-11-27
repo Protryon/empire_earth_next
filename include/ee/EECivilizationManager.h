@@ -48,7 +48,6 @@ public:
     {
         return ee_tech_civ_category_level((uint32_t)(unsigned long)(inUpgrade >> kCivUpgradeLevelBits), (uint32_t)(unsigned long)(inUpgrade & kCivUpgradeLevelMask), outValue, outBonus);
     }
-    static unsigned long PowerLevel(unsigned long inPowerID) { return ee_tech_civ_power_level((uint32_t)inPowerID); }
 };
 
 extern EECivilizationManager gCivilizationManager;

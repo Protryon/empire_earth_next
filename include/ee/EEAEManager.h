@@ -10,11 +10,6 @@ class FSFile;
 
 class EEAEManager {
 public:
-    // Returns the effect of the kind that covers a tile and affects the player, or NULL
-    EEAreaEffect* FindEffectAtTile(long inKind, long inX, long inY, unsigned long inPlayer)
-    {
-        return static_cast<EEAreaEffect*>(ee_screens_aem_find(this, inKind, (float)inX, (float)inY, inPlayer, false, NULL));
-    } // 0x67b527: ret 0x10, fild x/y, forwards to 0x67b3d2 (EEUnitClass 0x631ed1)
     // Releases every template and empties the active effect list
     void Clear() { ee_screens_aem_clear((uintptr_t)this); }    // original27b5d1 clears real manager-owned containers; no implementation credit
     // Reads the area-effect templates from the area-effect file (an empty slot for records with id 0); returns 3
