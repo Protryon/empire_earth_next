@@ -53,7 +53,7 @@ unsigned long EEGetCivTimerFirstWarning();  // 0x27ffb4 (240000)
 extern unsigned long& gContinentManagerChecksum;  // 0x530d10 (the continent manager's checksum; provisional name)
 
 // Creates the physics simulation: makes its save-game lock, resets its clocks and starts the thread's main loop
-EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
+EEPhysics::EEPhysics(EEGraphics* inGraphics, EeTimeTimer* inTimer)
     : RTSPhysics(inGraphics, inTimer, 1, 0xf), mInputMessagesProcessed(0), mLastOutOfSynchChecksum(0)
 {
     ee_physics_construct(this);   // (physics.rs)
