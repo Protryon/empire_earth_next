@@ -851,17 +851,7 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_NO_HUMAN_DEFEAT: return gPlatSimNoHumanDefeat;
     case EE_UNITS_PLAYER_BODY_NO_DEFEAT_HIT: gPlatSimNoHumanDefeatHits++;
         return 0;
-    case EE_UNITS_PLAYER_BODY_TEXT_NEW: return (int64_t)(intptr_t)new UWideString;
-    case EE_UNITS_PLAYER_BODY_TEXT_DELETE: delete EEPlayerPtr<UWideString>(inA);
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TEXT_RESOURCE: return gResource->GetString((unsigned long)inB, *EEPlayerPtr<UWideString>(inA));
-    case EE_UNITS_PLAYER_BODY_TEXT_FORMAT: sprintf(*EEPlayerPtr<UWideString>(inA), *EEPlayerPtr<UWideString>(inB), (const char*)*EEPlayerPtr<UWideString>(inC));
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TEXT_NAME: *EEPlayerPtr<UWideString>(inA) = thePlayer->mName;
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME: sprintf(*EEPlayerPtr<UWideString>(inA), "%s - (%s)", (const char*)thePlayer->mCivilization.mName, (const char*)thePlayer->mName);
-        return 0;
-    case EE_UNITS_PLAYER_BODY_CHAT_RESULT: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), *EEPlayerPtr<UWideString>(inA), *EEPlayerPtr<UWideString>(inB), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
+    case EE_UNITS_PLAYER_BODY_CHAT_RESULT: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), EEPlayerPtr<const char>(inA), EEPlayerPtr<const char>(inB), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
         return 0;
     case EE_UNITS_PLAYER_BODY_HULL_COUNT: return (int64_t)EEPlayerTownAt(inA)->GetHullPointCount();
     case EE_UNITS_PLAYER_BODY_HULL_POINT: return EEPlayerPackPoint(EEPlayerTownAt(inA)->GetHullPoint((long)inB));

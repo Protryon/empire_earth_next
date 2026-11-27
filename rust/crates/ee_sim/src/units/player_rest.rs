@@ -133,17 +133,8 @@ pub const EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS: i32 = 301;
 pub const EE_UNITS_PLAYER_BODY_UPGRADE_AT: i32 = 302;
 pub const EE_UNITS_PLAYER_BODY_DUMP_COUNT: i32 = 303;
 pub const EE_UNITS_PLAYER_BODY_DUMP_TEXT: i32 = 304;
-/// the result line's texts: `new UWideString`, `delete (UWideString*)a`, `gResource->GetString(b, *(UWideString*)a)`
-pub const EE_UNITS_PLAYER_BODY_TEXT_NEW: i32 = 307;
-pub const EE_UNITS_PLAYER_BODY_TEXT_DELETE: i32 = 308;
-pub const EE_UNITS_PLAYER_BODY_TEXT_RESOURCE: i32 = 309;
-/// `sprintf(*(UWideString*)a, *(UWideString*)b, (const char*)*(UWideString*)c)`
-pub const EE_UNITS_PLAYER_BODY_TEXT_FORMAT: i32 = 310;
-/// `*(UWideString*)a = mName`; `sprintf(*(UWideString*)a, "%s - (%s)", mCivilization.mName, mName)`
-pub const EE_UNITS_PLAYER_BODY_TEXT_NAME: i32 = 311;
-pub const EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME: i32 = 312;
-/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), *(UWideString*)a, *(UWideString*)b,
-/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)`
+/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), UWideString(a), UWideString(b),
+/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)` (`a`, `b` NUL-terminated texts)
 pub const EE_UNITS_PLAYER_BODY_CHAT_RESULT: i32 = 313;
 
 /// IDS_MSG_GAME, IDS_PLAYER_HAS_BEEN_DEFEATED, IDS_PLAYER_IS_VICTORIOUS (ee/EEStringIDs.h)
@@ -253,6 +244,8 @@ pub trait RestHost {
     /// unit `u`'s `mPlayer`
     fn unit_player(&mut self, u: u64) -> u64;
     fn c_string(&mut self, text: u64) -> Vec<u8>;
+    /// the player's `mName` and its civilization's `mName` (`EEPlayer::mCivilization`)
+    fn names(&mut self, p: u64) -> (Vec<u8>, Vec<u8>);
 }
 
 fn unpack(v: i64) -> (c_long, c_long) {
@@ -480,22 +473,44 @@ pub fn set_game_result<H: RestHost + ?Sized>(h: &mut H, p: u64, state: c_long) {
 /// The chat log's line of a player's victory or defeat ("--GAME--", the reason with the player's name; a computer
 /// player's civilization before its name), white, shown twice the chat log's display time.
 pub fn announce_result<H: RestHost + ?Sized>(h: &mut H, p: u64, victory: bool) {
-    let mut text = || h.body(EE_UNITS_PLAYER_BODY_TEXT_NEW, p, 0, 0, 0) as u64;
-    let (line, reason, title, name) = (text(), text(), text(), text());
     let id = if victory { IDS_PLAYER_IS_VICTORIOUS } else { IDS_PLAYER_HAS_BEEN_DEFEATED };
-    h.body(EE_UNITS_PLAYER_BODY_TEXT_RESOURCE, p, reason, id, 0);
-    h.body(EE_UNITS_PLAYER_BODY_TEXT_RESOURCE, p, title, IDS_MSG_GAME, 0);
-    let named = if h.body(EE_UNITS_PLAYER_BODY_IS_HUMAN, p, 0, 0, 0) != 0 {
-        EE_UNITS_PLAYER_BODY_TEXT_NAME
-    } else {
-        EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME
+    // gResource->GetString: a missing string leaves the text empty
+    let resource = |id: i64| {
+        let mut t = ee_base::util::strings::resource_string_for_get(id as u16).unwrap_or_default();
+        t.pop();
+        t
     };
-    h.body(named, p, name, 0, 0);
-    h.body(EE_UNITS_PLAYER_BODY_TEXT_FORMAT, p, line, reason as i64, name as i64);
-    h.body(EE_UNITS_PLAYER_BODY_CHAT_RESULT, p, title, line as i64, 0);
-    for t in [line, reason, title, name] {
-        h.body(EE_UNITS_PLAYER_BODY_TEXT_DELETE, p, t, 0, 0);
+    let (reason, mut title) = (resource(id), resource(IDS_MSG_GAME));
+    let human = h.body(EE_UNITS_PLAYER_BODY_IS_HUMAN, p, 0, 0, 0) != 0;
+    let (player, civ) = h.names(p);
+    let name = if human { player } else { [&civ[..], b" - (", &player[..], b")"].concat() };
+    let mut line = format_s(&reason, &name);
+    title.push(0);
+    line.push(0);
+    h.body(EE_UNITS_PLAYER_BODY_CHAT_RESULT, p, title.as_ptr() as u64, line.as_ptr() as i64, 0);
+}
+
+/// `sprintf(out, format, text)` for a format of `%s` and `%%` conversions (each `%s` takes `text`).
+pub fn format_s(format: &[u8], text: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(format.len() + text.len());
+    let mut i = 0;
+    while i < format.len() {
+        match (format[i], format.get(i + 1)) {
+            (b'%', Some(b's')) => {
+                out.extend_from_slice(text);
+                i += 2;
+            }
+            (b'%', Some(b'%')) => {
+                out.push(b'%');
+                i += 2;
+            }
+            (c, _) => {
+                out.push(c);
+                i += 1;
+            }
+        }
     }
+    out
 }
 
 /// `AdoptTownPatrol(town)`: a town patrol no other town holds, with a point on one of the town's hull vertices,
@@ -942,6 +957,15 @@ pub mod game {
             // SAFETY: the live player
             let t = unsafe { WorldRead::begin() };
             unsafe { PlayerView::of(&t, p) }.map_or(0, |v| v.id())
+        }
+        fn names(&mut self, p: u64) -> (Vec<u8>, Vec<u8>) {
+            let l = layout();
+            let text = |at: u64| {
+                // SAFETY: the live player's UWideString record (its buffer NUL-terminated)
+                let s = unsafe { &*((p as usize + at as usize) as *const ee_base::ustring::EeUWideString) };
+                unsafe { std::ffi::CStr::from_ptr(s.string) }.to_bytes().to_vec()
+            };
+            (text(l.player_name_text), text(l.player_civ_name_text))
         }
         fn c_string(&mut self, text: u64) -> Vec<u8> {
             if text == 0 {

@@ -138,6 +138,9 @@ impl RestHost for World {
     fn c_string(&mut self, _: u64) -> Vec<u8> {
         b"Archer".to_vec()
     }
+    fn names(&mut self, _: u64) -> (Vec<u8>, Vec<u8>) {
+        (b"Ann".to_vec(), b"Rome".to_vec())
+    }
 }
 
 fn pack(x: i64, y: i64) -> i64 {
@@ -446,11 +449,7 @@ fn a_color_and_its_shade() {
 fn a_computer_players_result_names_its_civilization() {
     let mut w = World::default();
     announce_result(&mut w, 1, true);
-    let ops = w.ops();
-    assert_eq!(ops.iter().filter(|&&o| o == EE_UNITS_PLAYER_BODY_TEXT_NEW).count(), 4);
-    assert_eq!(ops.iter().filter(|&&o| o == EE_UNITS_PLAYER_BODY_TEXT_DELETE).count(), 4);
-    let at = |op| ops.iter().position(|&o| o == op).unwrap();
-    assert!(at(EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME) < at(EE_UNITS_PLAYER_BODY_TEXT_FORMAT));
-    assert!(at(EE_UNITS_PLAYER_BODY_TEXT_FORMAT) < at(EE_UNITS_PLAYER_BODY_CHAT_RESULT));
-    assert!(!ops.contains(&EE_UNITS_PLAYER_BODY_TEXT_NAME));
+    assert_eq!(w.ops(), vec![EE_UNITS_PLAYER_BODY_IS_HUMAN, EE_UNITS_PLAYER_BODY_CHAT_RESULT]);
+    let line = format_s(b"Player '%s' is victorious! 100%%", b"Rome - (Ann)");
+    assert_eq!(line, b"Player 'Rome - (Ann)' is victorious! 100%");
 }

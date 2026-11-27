@@ -8302,23 +8302,8 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_COUNT = 303;
 
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_TEXT = 304;
 
-/// the result line's texts: `new UWideString`, `delete (UWideString*)a`, `gResource->GetString(b, *(UWideString*)a)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_NEW = 307;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_DELETE = 308;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_RESOURCE = 309;
-
-/// `sprintf(*(UWideString*)a, *(UWideString*)b, (const char*)*(UWideString*)c)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_FORMAT = 310;
-
-/// `*(UWideString*)a = mName`; `sprintf(*(UWideString*)a, "%s - (%s)", mCivilization.mName, mName)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_NAME = 311;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME = 312;
-
-/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), *(UWideString*)a, *(UWideString*)b,
-/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)`
+/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), UWideString(a), UWideString(b),
+/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)` (`a`, `b` NUL-terminated texts)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_CHAT_RESULT = 313;
 
 constexpr static const uint32_t EE_UNITS_PLAYER_REST_NEAREST_AREA = 1;

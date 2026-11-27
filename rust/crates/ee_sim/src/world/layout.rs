@@ -241,6 +241,9 @@ pub struct EeWorldLayout {
     /// `EeHerdFields` in `EEHerd`; `EETown::mPatrolGroup` (an `EEPPatrolGroup*`) (player_native.rs, player_rest.rs)
     pub herd_fields: u64,
     pub town_patrol_group: u64,
+    /// `EEPlayer::mName`'s and `mCivilization.mName`'s records (`EeUWideString`: player_rest.rs's result line)
+    pub player_name_text: u64,
+    pub player_civ_name_text: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

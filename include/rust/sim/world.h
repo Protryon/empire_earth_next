@@ -826,6 +826,9 @@ struct EeWorldLayout {
   /// `EeHerdFields` in `EEHerd`; `EETown::mPatrolGroup` (an `EEPPatrolGroup*`) (player_native.rs, player_rest.rs)
   uint64_t herd_fields;
   uint64_t town_patrol_group;
+  /// `EEPlayer::mName`'s and `mCivilization.mName`'s records (`EeUWideString`: player_rest.rs's result line)
+  uint64_t player_name_text;
+  uint64_t player_civ_name_text;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of
