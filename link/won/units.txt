@@ -3,7 +3,6 @@
 2f62b0 2f7903 WONGUI/Container.cpp
 329c30 32b519 WONGUI/Window.cpp
 32b660 33531e WONGUI/WindowManager.cpp
-357f30 358de2 WONLobby/LobbyConfig.cpp
 358e50 35b9be WONLobby/LobbyServiceSupport.cpp
 35baa0 360e91 WONLobby/LobbyPersistentData.cpp
 361260 361ee7 WONLobby/LobbyStagingSupport.cpp
@@ -15,7 +14,6 @@
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3db150 3dc3ef WONLobby/AccountLogic.cpp
 3dc3f0 3dd0f5 WONLobby/DialogLogic.cpp
-3dd100 3dfb83 WONLobby/InitLogic.cpp
 3e5930 3e5c10 WONLobby/LobbyLogic.cpp
 3e5ed0 3e6e75 WONLobby/PingLogic.cpp
 3e6e80 3ef15e WONLobby/RoutingLogic.cpp

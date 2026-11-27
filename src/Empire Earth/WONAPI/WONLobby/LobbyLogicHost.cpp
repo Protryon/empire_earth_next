@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_net/status_codes.h"
 #include "rust/won_lobby/lobbyhost.h"
 #include "rust/won_lobby/staging.h"
@@ -210,8 +211,8 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return 0;
     case EeWonLobbyOp::GameSetShowDetails: g->SetShowDetails(inC != 0);
         return 0;
-    case EeWonLobbyOp::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
-    case EeWonLobbyOp::ConfigAllowJoinWithoutPing: return static_cast<LobbyConfig*>(inA)->mAllowJoinGameWithoutPing;
+    case EeWonLobbyOp::LobbyConfigGet: return (intptr_t)ee_won_lobbyconf_current();
+    case EeWonLobbyOp::ConfigAllowJoinWithoutPing: return ee_won_lobbyconf_num(static_cast<EeWonLobbyConf*>(inA), EeWonLobbyConfNum::AllowJoinGameWithoutPing);
     case EeWonLobbyOp::Exit: LobbyExit((int)inC); return 0;
     case EeWonLobbyOp::Now: return (intptr_t)time(NULL);
     default: return LanLogicHostCall(static_cast<RustLogic*>(inLogic), inOp, inA, inB, inC, inD);

@@ -137,7 +137,7 @@ CHECKS = [
                # the cases whose statements are Rust (R6 WONLobby round 29)
                (RS / "ee_won_lobby" / "src" / "lobbyops.rs", "lobby_op")], allowed={}),
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
-         hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
+         hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "WONLobbyPrv.cpp"],
          # the cases whose statements are Rust (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op"),
                # the one-call cases answered in Rust (R6 WON round 39)
@@ -164,9 +164,6 @@ CHECKS = [
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "logicsplit.rs", "dlg_op")], allowed={}),
-    # LobbyConfig::PostParse (R6 WON round 32: lobbycfg.rs; LobbyConfig.cpp's host)
-    dict(enum="EeWonLobbyCfgOp", header="won_lobby/lobbycfg.h",
-         hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
     # the lobby's network entry points (R6 WON round 32: netdisp.rs; LobbyStagingSupport.cpp's host)
     dict(enum="EeWonNetDispOp", header="won_lobby/netdisp.h",
          hosts=[LOBBY / "LobbyStagingSupport.cpp"], rust=[], allowed={}),
@@ -198,14 +195,13 @@ CHECKS = [
     dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",
          hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
     # R6 WON round 33 (lobby): WONLobbyPrv (lobbyprv.rs), the model's buffers (modelbuf.rs), ChatCtrl's link
-    # (chatlink.rs), LobbyConfig's constructor (lobbyconf.rs), the controls' config readers (lobbycfgrd.rs: one host
-    # in LobbyNetCtrlHost.cpp since round 40)
+    # (chatlink.rs), the controls' config readers (LobbyConfig a Rust record since round 40: lobbyconf.rs, no host) (lobbycfgrd.rs:
+    # one host in LobbyNetCtrlHost.cpp since round 40)
     dict(enum="EeWonLobbyPrvOp", header="won_lobby/lobbyprv.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     # the lobby's top container (R6 WON lobby/net round 40: lobbyscreens.rs; LobbyContainer.cpp merged into WONLobbyPrv.cpp)
     dict(enum="EeWonLobbyScreensOp", header="won_lobby/lobbyscreens.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     dict(enum="EeWonModelBufOp", header="won_lobby/modelbuf.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
     dict(enum="EeWonChatLinkOp", header="won_lobby/chatlink.h", hosts=[LOBBY / "LobbyNetCtrlHost.cpp"], rust=[], allowed={}),
-    dict(enum="EeWonLobbyConfOp", header="won_lobby/lobbyconf.h", hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
     dict(enum="EeWonLobbyCfgRdOp", header="won_lobby/lobbycfgrd.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp"],
          rust=[], allowed={}),

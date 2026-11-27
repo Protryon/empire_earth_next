@@ -91,8 +91,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::MessageBox: LobbyMessageBox(gLobbyResources[a].mString, gLobbyResources[b].mString); return 0;
     case O::ErrorDialog: LobbyDoErrorDialog(gLobbyResources[a].mString, (WONStatus)b); return 0;
     case O::YesNo: return LobbyDoYesNoDialog(gLobbyResources[a].mString, gLobbyResources[b].mString, true);
-    case O::HasConfig: return GetLobbyConfig() != NULL;
-    case O::ConfigPingCeiling: return GetLobbyConfig() != NULL ? (intptr_t)(uint16_t)GetLobbyConfig()->mPingCeiling : -1;
     case O::AuthContext: return (intptr_t)GetLobbyAuthContext();
     case O::MyGame: return (intptr_t)GetMyLobbyGame();
     case O::MyClient: return (intptr_t)GetMyLobbyClient();
@@ -128,7 +126,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     }
     // ---- the model
     // (the model's other values, and the routing records read into it, are its Rust objects': modelobj.rs route_op)
-    case O::ServerNum: return b == 4 ? S(a)->GetName() == LobbyGetLastServerName() : S(a)->HasAddress(GetLobbyConfig()->mLanguage);
+    case O::ServerNum: return S(a)->GetName() == LobbyGetLastServerName(); // 4 (modelobj.rs answers the others)
     case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
@@ -254,7 +252,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteGroups), 0); return 0;
     case O::RoomDirServers: return Held(SmartPtr<ServerContext>(LobbyGetRoomDirServers()));
-    case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), GetLobbyConfig()->mProductDirectory, 0x04000622, kDirTypes, 2));
+    case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), std::wstring(reinterpret_cast<const wchar_t*>(b), (size_t)c), 0x04000622, kDirTypes, 2));
     case O::DirEntitiesNew: return (intptr_t) new DirList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
     case O::DirListEmpty: return reinterpret_cast<DirList*>(a)->empty();
     case O::DirUpdate: L->Slot<LobbyServerList>(kRoutingServerList)->UpdateFromDirectory(*reinterpret_cast<DirList*>(a)); return 0;

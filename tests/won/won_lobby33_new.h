@@ -9,8 +9,8 @@ using namespace L33World;
 static ConfigParser* sPrvParser;
 static SmartPtr<ContainerConfig> sPrvComponentConfig;
 static ResourceConfigTablePtr sPrvTable;
-static std::map<std::string, std::string, StringLessNoCase>::iterator sPrvDefine;
-static CRC16 sPrvCrc;
+// a text the Rust gives (its bytes and length)
+static std::string PrvText(intptr_t a) { const uintptr_t* t = reinterpret_cast<const uintptr_t*>(a); return std::string((const char*)t[0], (size_t)t[1]); }
 // Init's try: a config error is the init error (0); 1 when f returned
 template <class F> static intptr_t PrvConfigTry(WONLobbyPrv* p, F f)
 {
@@ -35,24 +35,14 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
     case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
     case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
-    case Op::ConfigLobbyPort: return p->mConfig->mLobbyPort;
     case Op::ComponentConfigNew: sPrvComponentConfig = new ContainerConfig; return 0;
     case Op::LobbyContainerNew: p->mLobbyContainer = new LobbyContainer; return 0;
-    case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory); return 0;
-    case Op::DefinesBegin: sPrvDefine = p->mConfig->mDefines.begin(); return 0;
-    case Op::DefinesAtEnd: return (sPrvDefine == p->mConfig->mDefines.end()) ? 1 : 0;
-    case Op::DefineAdd: sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false); return 0;
-    case Op::DefineNext: ++sPrvDefine; return 0;
+    case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + PrvText(a)); return 0;
+    case Op::DefineAdd: sPrvParser->AddDefine(PrvText(a), PrvText(a + 2 * sizeof(uintptr_t)), false); return 0;
     case Op::ReadMaster: return WON_GUARDED(sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser));
     case Op::ErrorFromConfig: p->mInitError = sPrvComponentConfig->mConfigError; return 0;
     case Op::LogicMgrInit: return WON_GUARDED(PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }));
     case Op::InitFuncRun: return WON_GUARDED(PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }));
-    case Op::CrcNew: sPrvCrc = CRC16(); return 0;
-    case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
-    case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;
-    case Op::CrcGet: return sPrvCrc.Get();
-    case Op::CrcReset: sPrvCrc.Reset(); return 0;
-    case Op::CrcPutLanVersion: sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length()); return 0;
     case Op::ChatParserInitCommands: p->mChatCommandParser->InitCommands(); return 0;
     case Op::ResDone: sPrvTable = NULL; return 0;
     case Op::ComponentConfigDone: sPrvComponentConfig = NULL; return 0;
@@ -66,8 +56,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AuthClear: p->mAuthContext = NULL; return 0;
     case Op::CommunitySet: p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a); return 0;
     case Op::AuthSetCommunity: p->mAuthContext->SetCommunity(p->mLoginCommunity); return 0;
-    case Op::CdKeyCheck: return (p->mConfig->mCDKeyCheck) ? 1 : 0;
-    case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
+    case Op::CdKeySetProduct: p->mCDKey.SetProductString(PrvText(a)); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
@@ -281,53 +270,6 @@ static intptr_t ChatLinkHost(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
     case Op::SetFont: k->mFont = (Font*)a; return 0;
     case Op::SetEnabled: k->mEnabled = true; return 0;
     case Op::ClearPrevious: k->mPrevious = NULL; return 0;
-    }
-    return 0;
-}
-
-static RegKey* sConfRegistry;
-static DWORD sConfRegistryValue;
-static std::string sConfName, sConfValue;
-
-static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t cc)
-{
-    typedef EeWonLobbyConfOp Op;
-    LobbyConfig* c = static_cast<LobbyConfig*>(inConfig);
-    switch (inOp) {
-    case Op::KeyDirServer: c->KeyAdd("DirServer", c->mDirServers, NULL, true); return 0;
-    case Op::KeyRoomDirServer: c->KeyAdd("RoomDirServer", c->mRoomDirServers, NULL, true); return 0;
-    case Op::KeyAuthServers: c->KeyAdd("AuthServers", c->mAuthServers, NULL, true); return 0;
-    case Op::KeyProductName: c->KeyAdd("ProductName", c->mProductName, NULL); return 0;
-    case Op::KeyProductDirectory: c->KeyAdd("ProductDirectory", c->mProductDirectory, NULL); return 0;
-    case Op::KeyResourceDirectory: c->KeyAdd("ResourceDirectory", c->mResourceDirectory, NULL); return 0;
-    case Op::KeyVersion: c->KeyAdd("Version", c->mVersion, NULL); return 0;
-    case Op::KeyLanVersion: c->KeyAdd("LanVersion", c->mLanVersion, NULL); return 0;
-    case Op::KeyLanguage: c->KeyAdd("Language", c->mLanguage, ""); return 0;
-    case Op::KeyCrcCheck: c->KeyAdd("CRCCheck", c->mCRCCheck, true); return 0;
-    case Op::KeyCdKeyCheck: c->KeyAdd("CDKeyCheck", c->mCDKeyCheck, true); return 0;
-    case Op::KeyPublic: c->KeyAdd("Public", c->mPublic, false); return 0;
-    case Op::KeyLanBroadcastPort: c->KeyAdd("LanBroadcastPort", c->mLanBroadcastPort, 8585); return 0;
-    case Op::KeyNoPingInProgress: c->KeyAdd("NoPingInProgress", c->mNoPingInProgress, true); return 0;
-    case Op::KeyLobbyPort: c->KeyAdd("LobbyPort", c->mLobbyPort, 8888); return 0;
-    case Op::KeyCheckForInternet: c->KeyAdd("CheckForInternet", c->mCheckForInternet, true); return 0;
-    case Op::KeyPingCeiling: c->KeyAdd("PingCeiling", c->mPingCeiling, 1000); return 0;
-    case Op::KeyAllowDuplicateNames: c->KeyAdd("AllowDuplicateNames", c->mAllowDuplicateNames, true); return 0;
-    case Op::KeyAppendNumberToDefaultLanName: c->KeyAdd("AppendNumberToDefaultLanName", c->mAppendNumberToDefaultLanName, true); return 0;
-    case Op::KeyAllowJoinGameWithoutPing: c->KeyAdd("AllowJoinGameWithoutPing", c->mAllowJoinGameWithoutPing, true); return 0;
-    case Op::RegistryOpen: sConfRegistry = new RegKey(2, "SOFTWARE\\Sierra\\WONLobby", false, true); return 0;
-    case Op::RegistryValueClear: sConfRegistryValue = 0; return 0;
-    case Op::RegistryQuery: return (intptr_t)(sConfRegistry->QueryDWORD("UseLocalIP", sConfRegistryValue));
-    case Op::RegistryValue: return (intptr_t)(sConfRegistryValue);
-    case Op::SetUseLocalIp: c->mUseLocalIP = a != 0; return 0;
-    case Op::KeyUseLocalIp: c->KeyAdd("UseLocalIP", gLobbyUseLocalIP, a != 0); return 0;
-    case Op::RegistryClose: delete sConfRegistry; return 0;
-    case Op::KeyIsLobbyDefine: return (*(const std::string*)a == "LOBBYDEFINE") ? 1 : 0;
-    case Op::DefineLocalsClear: sConfName = sConfValue = std::string(); return 0;
-    case Op::DefineReadName: ((StringParser*)a)->ReadString(sConfName, true); return 0;
-    case Op::DefineReadValue: ((StringParser*)a)->ReadString(sConfValue, false); return 0;
-    case Op::DefineNameEmpty: return (sConfName.empty()) ? 1 : 0;
-    case Op::DefineStore: c->mDefines[sConfName] = sConfValue; return 0;
-    case Op::BaseHandleValue: return WON_GUARDED(c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc));
     }
     return 0;
 }

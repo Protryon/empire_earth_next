@@ -6,107 +6,168 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_lobby/cfgval.h"
+#include "rust/won_net/cfgobject.h"
+#include "rust/won_net/cfgparser.h"
+#include "rust/won_net/ffi.h"
 
-/// The host's ops: each one C++ statement.
-enum class EeWonLobbyConfOp : uint32_t {
-  /// `c->KeyAdd("DirServer", c->mDirServers, NULL, true)`.
-  KeyDirServer = 1,
-  /// `c->KeyAdd("RoomDirServer", c->mRoomDirServers, NULL, true)`.
-  KeyRoomDirServer,
-  /// `c->KeyAdd("AuthServers", c->mAuthServers, NULL, true)`.
-  KeyAuthServers,
-  /// `c->KeyAdd("ProductName", c->mProductName, NULL)`.
-  KeyProductName,
-  /// `c->KeyAdd("ProductDirectory", c->mProductDirectory, NULL)`.
-  KeyProductDirectory,
-  /// `c->KeyAdd("ResourceDirectory", c->mResourceDirectory, NULL)`.
-  KeyResourceDirectory,
-  /// `c->KeyAdd("Version", c->mVersion, NULL)`.
-  KeyVersion,
-  /// `c->KeyAdd("LanVersion", c->mLanVersion, NULL)`.
-  KeyLanVersion,
-  /// `c->KeyAdd("Language", c->mLanguage, "")`.
-  KeyLanguage,
-  /// `c->KeyAdd("CRCCheck", c->mCRCCheck, true)`.
-  KeyCrcCheck,
-  /// `c->KeyAdd("CDKeyCheck", c->mCDKeyCheck, true)`.
-  KeyCdKeyCheck,
-  /// `c->KeyAdd("Public", c->mPublic, false)`.
-  KeyPublic,
-  /// `c->KeyAdd("LanBroadcastPort", c->mLanBroadcastPort, 8585)`.
-  KeyLanBroadcastPort,
-  /// `c->KeyAdd("NoPingInProgress", c->mNoPingInProgress, true)`.
-  KeyNoPingInProgress,
-  /// `c->KeyAdd("LobbyPort", c->mLobbyPort, 8888)`.
-  KeyLobbyPort,
-  /// `c->KeyAdd("CheckForInternet", c->mCheckForInternet, true)`.
-  KeyCheckForInternet,
-  /// `c->KeyAdd("PingCeiling", c->mPingCeiling, 1000)`.
-  KeyPingCeiling,
-  /// `c->KeyAdd("AllowDuplicateNames", c->mAllowDuplicateNames, true)`.
-  KeyAllowDuplicateNames,
-  /// `c->KeyAdd("AppendNumberToDefaultLanName", c->mAppendNumberToDefaultLanName, true)`.
-  KeyAppendNumberToDefaultLanName,
-  /// `c->KeyAdd("AllowJoinGameWithoutPing", c->mAllowJoinGameWithoutPing, true)`.
-  KeyAllowJoinGameWithoutPing,
-  /// `sConfRegistry = new RegKey(2, "SOFTWARE\\Sierra\\WONLobby", false, true)`.
-  RegistryOpen,
-  /// `sConfRegistryValue = 0`.
-  RegistryValueClear,
-  /// `sConfRegistry->QueryDWORD("UseLocalIP", sConfRegistryValue)`.
-  RegistryQuery,
-  /// `sConfRegistryValue`.
-  RegistryValue,
-  /// `c->mUseLocalIP = a != 0`.
-  SetUseLocalIp,
-  /// `c->KeyAdd("UseLocalIP", gLobbyUseLocalIP, a != 0)`.
-  KeyUseLocalIp,
-  /// `delete sConfRegistry`.
-  RegistryClose,
-  /// `*(const std::string*)a == "LOBBYDEFINE"`.
-  KeyIsLobbyDefine,
-  /// `sConfName = sConfValue = std::string()`.
-  DefineLocalsClear,
-  /// `((StringParser*)a)->ReadString(sConfName, true)`.
-  DefineReadName,
-  /// `((StringParser*)a)->ReadString(sConfValue, false)`.
-  DefineReadValue,
-  /// `sConfName.empty()`.
-  DefineNameEmpty,
-  /// `c->mDefines[sConfName] = sConfValue`.
-  DefineStore,
-  /// `c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc)` (under
-  /// `WonGuard`: `EE_WON_LOBBY_THROWN` when it threw, the C++ entry rethrows).
-  BaseHandleValue,
+/// The scalar values (a getter's and the drivers' setter's names).
+enum class EeWonLobbyConfNum : uint32_t {
+  CrcCheck = 1,
+  CdKeyCheck,
+  Public,
+  LanBroadcastPort,
+  UseLocalIp,
+  NoPingInProgress,
+  LobbyPort,
+  CheckForInternet,
+  PingCeiling,
+  AllowDuplicateNames,
+  AppendNumberToDefaultLanName,
+  AllowJoinGameWithoutPing,
+  FileTransferPort,
 };
 
-/// The calls in.
-enum class EeWonLobbyConfCall : uint32_t {
-  /// `LobbyConfig::LobbyConfig()`'s body.
-  Construct = 1,
-  /// `HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)c)`.
-  HandleValue,
+/// The narrow texts.
+enum class EeWonLobbyConfText : uint32_t {
+  ProductName = 1,
+  Version,
+  LanVersion,
+  Language,
+  ResourceDirectory,
 };
 
-/// The host: `(config, op, a, b, c) -> result`.
-using EeWonLobbyConfHostFn = ptrdiff_t(*)(void *config,
-                                          EeWonLobbyConfOp op,
-                                          ptrdiff_t a,
-                                          ptrdiff_t b,
-                                          ptrdiff_t c);
+/// The server lists.
+enum class EeWonLobbyConfList : uint32_t {
+  DirServers = 1,
+  RoomDirServers,
+  AuthServers,
+};
+
+/// LobbyConfig's values (the original's members from +0x54).
+struct EeWonLobbyConf;
 
 extern "C" {
 
-/// One of LobbyConfig's methods on `config` over the host `host`.
+/// Sets the running lobby's config (NULL: none).
+void ee_won_lobbyconf_set_current(EeWonLobbyConf *conf);
+
+/// The running lobby's config, or NULL.
+EeWonLobbyConf *ee_won_lobbyconf_current();
+
+/// `LobbyConfig::LobbyConfig()`: a record with every WONLobby.cfg key registered on the group `group` (NULL: none,
+/// the drivers' bare record), in the original's order with its defaults; UseLocalIP from the registry.
 ///
 /// # Safety
-/// `host` answers the ops for `config` (ConfHost).
-ptrdiff_t ee_won_lobbyconf_call(void *config,
-                                EeWonLobbyConfHostFn host,
-                                EeWonLobbyConfCall which,
-                                ptrdiff_t a,
-                                ptrdiff_t b,
-                                ptrdiff_t c);
+/// `group` is NULL or the C++ LobbyConfig's group, freed before the record.
+EeWonLobbyConf *ee_won_lobbyconf_new(EeWonCfgObject *group);
+
+/// Frees a record (`~LobbyConfig`, after its group); the running lobby's is cleared.
+///
+/// # Safety
+/// `conf` is from `ee_won_lobbyconf_new` (or NULL), not used afterwards.
+void ee_won_lobbyconf_free(EeWonLobbyConf *conf);
+
+/// `HandleValueInstruction(parser, key, values)`: a LOBBYDEFINE line (its name, then its value; a nameless one
+/// ignored) is the record's (1); any other key the group's base reader's (its answer; -1/-2 an exception in `exc`,
+/// as `ee_won_cfgo_handle_value_instruction`).
+///
+/// # Safety
+/// `conf` a record, `group` its group, `parser` the C++ ConfigParser, `key` `n` bytes, `sp` a live StringParser,
+/// `exc` the caller's ConfigObject::CfgExc.
+int32_t ee_won_lobbyconf_handle_value(EeWonLobbyConf *conf,
+                                      EeWonCfgObject *group,
+                                      void *parser,
+                                      const uint8_t *key,
+                                      size_t n,
+                                      EeWonCfgStringParser *sp,
+                                      void *exc);
+
+/// `PostParse(parser)` (its error set on the Rust parser `parser`).
+///
+/// # Safety
+/// `conf` a record, `parser` a live parser.
+bool ee_won_lobbyconf_post_parse(EeWonLobbyConf *conf, EeWonCfgParser *parser);
+
+/// A scalar value (`conf` NULL: 0).
+///
+/// # Safety
+/// `conf` a record or NULL.
+int32_t ee_won_lobbyconf_num(const EeWonLobbyConf *conf, EeWonLobbyConfNum which);
+
+/// Sets a scalar value (the drivers' worlds).
+///
+/// # Safety
+/// `conf` a record.
+void ee_won_lobbyconf_set_num(EeWonLobbyConf *conf, EeWonLobbyConfNum which, int32_t v);
+
+/// A narrow text to `sink`.
+///
+/// # Safety
+/// `conf` a record.
+void ee_won_lobbyconf_text(EeWonLobbyConf *conf,
+                           EeWonLobbyConfText which,
+                           EeWonByteSink sink,
+                           void *context);
+
+/// Sets a narrow text (the drivers' worlds).
+///
+/// # Safety
+/// `conf` a record; `data` holds `n` bytes.
+void ee_won_lobbyconf_set_text(EeWonLobbyConf *conf,
+                               EeWonLobbyConfText which,
+                               const uint8_t *data,
+                               size_t n);
+
+/// The product directory's `wchar_t` units to `sink`.
+///
+/// # Safety
+/// `conf` a record.
+void ee_won_lobbyconf_product_dir(const EeWonLobbyConf *conf, EeWonCfgValUnits sink, void *context);
+
+/// Sets the product directory (`n` `wchar_t` units; the drivers' worlds).
+///
+/// # Safety
+/// `conf` a record; `units` holds `n` units.
+void ee_won_lobbyconf_set_product_dir(EeWonLobbyConf *conf, const void *units, size_t n);
+
+/// A server list's item `index` to `sink` (when there is one); the list's size.
+///
+/// # Safety
+/// `conf` a record.
+size_t ee_won_lobbyconf_list(const EeWonLobbyConf *conf,
+                             EeWonLobbyConfList which,
+                             size_t index,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// Appends to a server list (the drivers' worlds).
+///
+/// # Safety
+/// `conf` a record; `data` holds `n` bytes.
+void ee_won_lobbyconf_list_push(EeWonLobbyConf *conf,
+                                EeWonLobbyConfList which,
+                                const uint8_t *data,
+                                size_t n);
+
+/// The define `index` (in the map's order): its name then its value to `sink`; false past the end.
+///
+/// # Safety
+/// `conf` a record.
+bool ee_won_lobbyconf_define_at(const EeWonLobbyConf *conf,
+                                size_t index,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `mDefines[name] = value` (the drivers' worlds).
+///
+/// # Safety
+/// `conf` a record; the texts hold their bytes.
+void ee_won_lobbyconf_set_define(EeWonLobbyConf *conf,
+                                 const uint8_t *name,
+                                 size_t n,
+                                 const uint8_t *value,
+                                 size_t m);
 
 }  // extern "C"
 

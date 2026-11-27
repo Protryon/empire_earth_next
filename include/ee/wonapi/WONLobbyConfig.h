@@ -97,6 +97,5 @@ public:
 };
 extern SmartPtr<WONLobbyPrv> gLobbyData;     // 0x96630c (an intrusive SmartPtr)
 // LobbyConfig::mDefaultFileName is 0x966310; declared in WONLobbyGUI.h.
-extern bool gLobbyUseLocalIP;                // 0x96634d; a config key writes it, nothing reads it
 }
 #endif

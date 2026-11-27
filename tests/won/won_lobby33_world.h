@@ -353,15 +353,12 @@ struct LobbyLogicMgr {
     void Kill() { Log("LogicMgr Kill"); }
     void AddLogic(LobbyLogic* l) { Log("LogicMgr AddLogic " + Id(l)); }
 };
+// the real CRC16 (ee_won's), untraced: the product ids are computed in Rust since R6 WON lobby/net round 40
 struct CRC16 {
     unsigned short mRegister = 0;
-    void Put(const void* d, unsigned int n)
-    {
-        Log("crc Put " + std::string(static_cast<const char*>(d), n));
-        for (unsigned i = 0; i < n; i++) this->mRegister = (unsigned short)(this->mRegister * 31 + static_cast<const unsigned char*>(d)[i]);
-    }
-    unsigned short Get() const { return this->mRegister ^ 0x5a5a; }
-    void Reset() { Log("crc Reset"); this->mRegister = 0; }
+    void Put(const void* d, unsigned int n) { this->mRegister = ee_won_crc16_put(this->mRegister, static_cast<const uint8_t*>(d), n); }
+    unsigned short Get() const { return this->mRegister; }
+    void Reset() { this->mRegister = 0; }
 };
 struct ChatCommandParser : Tracked {
     ChatCommandParser() { Log("new ChatCommandParser " + Id(this)); }
