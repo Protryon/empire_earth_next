@@ -105,3 +105,41 @@ EEComputerPlayer's CanAfford, GetPopulationLimit and GetHeroCount virtuals; UWid
 
 **Next**: EEPlayer.cpp's BODY_TECH_* cases and the other lanes' tech cases over the node records; the tree's
 new/delete in Rust; the event list's sounds into its Rust record; herds and patrol groups through the layout.
+
+## Round 4 (branch rust-playertech4, 2026-11-26)
+
+Main measure C++ lines (tools/port_metrics.py against the lead's merge of batch 30): -515 for the round (the target
+was -1,500), compiled files -3 (EETechTree.cpp, EECalamity.cpp, EECalamityManager.cpp gone), logic -11,
+extern_c -5. Two forks in two rounds each and the lead; batch 30 merged at the start. Behaviour unchanged.
+
+- **The player's tech tree in Rust** (fork A): player_native.rs answers the body and save hosts' TECH_* cases; the
+  player trees are boxed EeTechTreeFields made, copied from gTechTree, freed and saved through a table ee_game
+  registers in ee_sim (tree_objects.rs `TreeBodies`, ee_rust_init); EETechTree's ctor-free members with no caller
+  gone.
+- **EEComputerPlayer's virtuals** (fork A): GetHeroCount, GetPopulationLimit, CanAfford and ScaleCost are one Rust
+  entry (`ee_units_player_virtual`, player_econ.rs) that dispatches on mComputerPlayer; the explicit `EEPlayer::`
+  base calls pass `base`; the four overrides and EEPlayer::GetPopulationLimit's body gone.
+- **The other lanes' tech statements** (fork B): the units hosts' (ee_sim units tech_cases.rs), the editor's
+  (screens editor_tech.rs), the scenario's, the actions', the UI's (screens tech_direct.rs), the AI's and the
+  civilization builder's tech and upgrade one-liners answered in Rust (about 150 cases and shims).
+- **mUnitClassUpgrades read in place** (fork B): the layout's player_unit_class_upgrades; player_upgrades.rs reads
+  the vector's size, an element and a class's upgrade for every host that only read it. The vector's growth and
+  the upgrades' new/delete stay C++.
+- **EEPlayer.cpp's hosts** (fork A, round 2): the temporary vectors of ClearFootprint and KillHerdUnits are Rust
+  Vecs, the result line's texts are made in Rust, the herd, town, patrol group, area and continent manager
+  statements go through the layout (herd_fields, town_patrol_group, town_area, herd_area, player_name_text,
+  player_civ_name_text) and ee_cp's bodies; 31 dead inline members of EEPlayer.h gone.
+- **EETechTree.cpp gone** (lead): its operations that repeated another chain's C++ call use that one (the file's
+  open/length/close, the class media and buttons, IsHuman, the statistics' Set, the sound and media loads), the
+  buttons call ee_game's bodies, gTechTree is `objects::global_tree()`; the rest of the chain ends EEPlayer.cpp,
+  the calamity host's new/delete join EEContagionManager.cpp. EECalamity.cpp (one save key) and
+  EECalamityManager.cpp (a shim the Rust called back through EEGameOps.cpp) gone.
+
+**C++ left**: EEPlayer.cpp's hosts are now mostly C++ object work (new/delete, class Load/Save, virtuals, the sound
+and minimap globals, gResource into UWideString, gCivPowersManager); the civilization builder's file-context,
+scratch and UI shims; the area effects' C++ members; the upgrade vector itself; TECH_CHECKSUM; the Pay cases
+(virtual).
+
+**Next**: the area effects' location/template/unit into their Rust record (frees most of EEAEManager.cpp); the
+upgrade vector as a Rust record; a registered EEPlayerHost pointer in Rust for the body host's remaining calls; the
+event list's sounds.
