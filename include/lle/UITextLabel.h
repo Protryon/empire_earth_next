@@ -30,7 +30,6 @@ public:
     void DeleteLine(unsigned long inLine) { this->Call(EeUiLabelCall::DeleteLine, inLine); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiLabelCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiLabelCall::DrawText); }
-    bool GetFitRectToText() const { return this->Call(EeUiLabelCall::FitRectToText) != 0; }
     GEText* GetGEText() const { return reinterpret_cast<GEText*>(this->Call(EeUiLabelCall::Text)); }
     unsigned long GetLineCount() const { return (unsigned long)this->Call(EeUiLabelCall::LineCount); }
     unsigned long GetNumberLinesDisplayed() const { return (unsigned long)this->Call(EeUiLabelCall::LinesDisplayed); }
@@ -57,7 +56,6 @@ public:
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiLabelCall::MouseMove, 0, 0, inLocation.GetX(), inLocation.GetY()); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    void SetTextRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiLabelCall::SetTextRectangle, inRectangle); }
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
     void SetText(const UWideString& inText, bool inReplace) { this->Call(EeUiLabelCall::SetText, (intptr_t)(const char*)inText, inReplace); }

@@ -409,8 +409,8 @@ def cmd_fonttest(a):
 
 # ---- tcptest: the TCP/IP network plug-in over 127.0.0.1 (tools/tcp_test/tcp_test.cpp)
 
-TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
-# the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
+# the engine units the plug-in links with (tcp_test.cpp stands in for the rest; the engine calls the plug-in makes are
+# ee_base's, the C++ shim TCP Protocol.cpp is gone)
 TCP_ENGINE_UNITS = []   # (the strings are header classes over ee_base since LLE round 8, NEProtocol is ee_net's;
 # TSEvent and TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
@@ -423,9 +423,9 @@ def cmd_tcptest(a):
     out = t.out / "tcp_test"
     out.mkdir(parents=True, exist_ok=True)
     exe = out / ("tcp_test" + t.exe_suffix)
-    game = [TCP_UNIT, *TCP_ENGINE_UNITS, ROOT / "tools" / "tcp_test" / "tcp_test.cpp"]
+    game = [*TCP_ENGINE_UNITS, ROOT / "tools" / "tcp_test" / "tcp_test.cpp"]
     # the game's include path and dialect (tools/clang_build.py; on POSIX the census's, include/compat/ first)
-    inc = [ROOT / "include", TCP_UNIT.parent, *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    inc = [ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     # the engine units with the engine's module define (tools/ee.py MODULE_FLAGS "lle")
     unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if src in TCP_ENGINE_UNITS else [])]

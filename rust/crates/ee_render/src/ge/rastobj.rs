@@ -353,12 +353,120 @@ fn pixel_width(v: &GeViewport, mut camera: Ge3DPoint, radius: f32, orthographic:
     width
 }
 
+/// The rasterizer's calls on the debug text, the models and the placed models, each of which is one call or read of
+/// their Rust objects (a `GEText` and a `GEModel` hold theirs, a `GEPhysicalModel` is `modobj.rs`'s `PlacedModel`:
+/// `cppobj.rs`): made here rather than through the C++ host (a test's fake host answers them instead). Floats are
+/// their bits, as the host's.
+///
+/// # Safety
+/// The operation's objects and arguments are as `EeGeRastOp` describes.
+unsafe fn direct_op(op: EeGeRastOp, obj: usize, a: isize, b: isize) -> Option<isize> {
+    if cfg!(test) {
+        return None;
+    }
+    use crate::ge::cppobj;
+    use crate::ge::modobj::{
+        ee_ge_mod_get, ee_ge_mod_ptr, ee_ge_mod_set_clip, EeGeModPtr, EeGeModVal, EeGeModel, PlacedModel,
+    };
+    use crate::ge::smallobj::{
+        ee_ge_text_color, ee_ge_text_location, ee_ge_text_set_alignment, ee_ge_text_set_font,
+        ee_ge_text_set_transparent, EeGeText,
+    };
+    // SAFETY (every use): the caller's contract
+    let text = || unsafe { cppobj::plain::<EeGeText>(obj) };
+    let model = || unsafe { cppobj::counted::<EeGeModel>(obj) };
+    let ptr = |field: EeGeModPtr| unsafe { ee_ge_mod_ptr(model(), field) };
+    let placed = || unsafe { &*(obj as *const PlacedModel) };
+    // SAFETY (each call and read): the caller's contract
+    unsafe {
+        Some(match op {
+            EeGeRastOp::TextSetAlignment => {
+                ee_ge_text_set_alignment(text(), a as c_ulong);
+                0
+            }
+            EeGeRastOp::TextSetFgColor | EeGeRastOp::TextSetBgColor => {
+                let color = ee_ge_text_color(text(), op == EeGeRastOp::TextSetFgColor);
+                std::ptr::copy_nonoverlapping(a as *const f32, color, 3);
+                0
+            }
+            EeGeRastOp::TextSetFont => {
+                ee_ge_text_set_font(text(), a as *mut c_void);
+                0
+            }
+            EeGeRastOp::TextSetIsTransparent => {
+                ee_ge_text_set_transparent(text(), a != 0);
+                0
+            }
+            EeGeRastOp::TextSetLocation => {
+                let location = &mut *ee_ge_text_location(text());
+                location.x = f32::from_bits(a as u32);
+                location.y = f32::from_bits(b as u32);
+                0
+            }
+            EeGeRastOp::ModelCenter => {
+                *(a as *mut Ge3DPoint) = *(ptr(EeGeModPtr::Center) as *const Ge3DPoint);
+                0
+            }
+            EeGeRastOp::ModelBoundingRadius => {
+                (*(ptr(EeGeModPtr::BoundingRadii) as *const f32).add(a as usize)).to_bits() as isize
+            }
+            EeGeRastOp::ModelGraphicsRadius => {
+                let frame = ee_ge_mod_get(model(), EeGeModVal::CurrentFrame) as c_ulong as usize;
+                (*(ptr(EeGeModPtr::BoundingRadii) as *const f32).add(frame)).to_bits() as isize
+            }
+            EeGeRastOp::ModelGraphicsBox => {
+                *(a as *mut GeBoundingBox) = *(ptr(EeGeModPtr::GraphicsBoundingBox) as *const GeBoundingBox);
+                0
+            }
+            EeGeRastOp::ModelSetClip => {
+                ee_ge_mod_set_clip(model(), a as c_ulong, b != 0);
+                0
+            }
+            EeGeRastOp::ModelInternalTransform => {
+                *(b as *mut GeTransformation) =
+                    *(ptr(EeGeModPtr::InternalTransforms) as *const GeTransformation).add(a as usize);
+                0
+            }
+            EeGeRastOp::PlacedScale => placed().scale.to_bits() as isize,
+            EeGeRastOp::PlacedFrame => placed().frame as isize,
+            EeGeRastOp::PlacedModel => placed().model as isize,
+            EeGeRastOp::PlacedLocation => {
+                *(a as *mut GeTransformation) = placed().location;
+                0
+            }
+            _ => return None,
+        })
+    }
+}
+
 impl EeGeRasterizer {
     /// A host call made by rasterizer `p`.
     ///
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeRastOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeRastOp, obj: usize, a: isize, b: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { direct_op(op, obj, a, b) } {
+            return r;
+        }
+        // the drawing lock's creation and destruction end in ee_base (TSScheduler's one call each; the creation is
+        // always kErrorOK): made here (a test's fake host answers them instead)
+        if !cfg!(test) {
+            use ee_base::ts::{ee_ts_section_free, ee_ts_section_new, EeTsSection};
+            match op {
+                EeGeRastOp::LockCreate => {
+                    // SAFETY: `a` is the lock's out pointer
+                    unsafe { *(a as *mut usize) = ee_ts_section_new() as usize };
+                    return 0;
+                }
+                EeGeRastOp::LockDestroy => {
+                    // SAFETY: the lock is the one LockCreate made
+                    unsafe { ee_ts_section_free(obj as *mut EeTsSection) };
+                    return 0;
+                }
+                _ => {}
+            }
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (rs(p).host, rs(p).owner) };
         // SAFETY: the host's contract

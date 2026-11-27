@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <type_traits>
 #include "platform/PlatFile.h"
 #include "lle/UString.h"       // their Load and Save (below)
 #include "lle/UWideString.h"
@@ -32,7 +33,7 @@ static_assert(sizeof(short) == 2 && sizeof(float) == 4 && sizeof(double) == 8 &&
 // The file classes are one class (LLE round 12): FSFile holds what FSBasicFile (the names, access, version, open flag)
 // and FSFileSpec (a file on disk: the platform handle and stream) had, its members whole in Rust
 // (rust/crates/ee_base/src/fs/spec.rs) over the object from its vtable pointer on (EeFsSpec; the layout is pinned in
-// File System.cpp). FSBasicFile and FSFileSpec keep their constructors; FSMemoryFile overrides the virtuals. The
+// File System.cpp). FSFileSpec keeps its constructors (FSBasicFile went); FSMemoryFile overrides the virtuals. The
 // original's FSFile was abstract (every slot pure), its slot order the comments' offsets.
 class LLE_API FSFile {
 public:
@@ -80,16 +81,6 @@ public:
         { return ee_fs_spec_read(Rec(), outData, inLength, &outRead); }
     virtual long Read(char* outData, unsigned long inLength, unsigned long& outRead)             // +0x60 0x1420
         { return this->Read(reinterpret_cast<unsigned char*>(outData), inLength, outRead); }
-    // the scalar reads: kErrorFailed on a short read
-    virtual long Read(uint32_t& outValue) { return this->ReadValue(outValue); }          // +0x5c
-    virtual long Read(int32_t& outValue) { return this->ReadValue(outValue); }           // +0x58
-    virtual long Read(unsigned short& outValue) { return this->ReadValue(outValue); }    // +0x54
-    virtual long Read(short& outValue) { return this->ReadValue(outValue); }             // +0x50
-    virtual long Read(unsigned char& outValue) { return this->ReadValue(outValue); }     // +0x4c
-    virtual long Read(signed char& outValue) { return this->ReadValue(outValue); }       // +0x48
-    virtual long Read(float& outValue) { return this->ReadValue(outValue); }             // +0x44
-    virtual long Read(double& outValue) { return this->ReadValue(outValue); }            // +0x40
-    virtual long Read(bool& outValue) { return this->ReadValue(outValue); }              // +0x3c
     virtual long SetLength(unsigned long& ioLength, bool inTruncate) { return ee_fs_spec_set_length(Rec(), ioLength); }   // +0xcc
     virtual long SetPosition(long inOffset, unsigned long inOrigin, bool inExtend)   // +0xd0
         { return ee_fs_spec_set_position(Rec(), inOffset, inOrigin, inExtend); }
@@ -98,17 +89,21 @@ public:
         { return ee_fs_spec_write(Rec(), inData, inLength, &outWritten); }
     virtual long Write(const char* inData, unsigned long inLength, unsigned long& outWritten)           // +0x98 0x1434
         { return this->Write(reinterpret_cast<const unsigned char*>(inData), inLength, outWritten); }
-    virtual long Write(const uint32_t& inValue) { return this->WriteValue(inValue); }          // +0x94
-    virtual long Write(const int32_t& inValue) { return this->WriteValue(inValue); }           // +0x90
-    virtual long Write(const unsigned short& inValue) { return this->WriteValue(inValue); }    // +0x8c
-    virtual long Write(const short& inValue) { return this->WriteValue(inValue); }             // +0x88
-    virtual long Write(const unsigned char& inValue) { return this->WriteValue(inValue); }     // +0x84
-    virtual long Write(const signed char& inValue) { return this->WriteValue(inValue); }       // +0x80
-    virtual long Write(const float& inValue) { return this->WriteValue(inValue); }             // +0x7c
-    virtual long Write(const double& inValue) { return this->WriteValue(inValue); }            // +0x78
-    virtual long Write(const bool& inValue) { return this->WriteValue(inValue); }              // +0x74
     operator FILE*() const { return this->mStream; }  // exported ??BFSFileSpec@@QBEPAU_iobuf@@XZ (inline; ESFilterDebugOutput)
 
+    // The scalars (uint32_t, int32_t, unsigned short, short, unsigned char, signed char, float, double, bool): their
+    // bytes through ReadBytes/WriteBytes, a file's two scalar slots (the original's eighteen, one per type and
+    // direction: +0x3c..+0x5c, +0x74..+0x94; LLE/UI round 2); kErrorFailed on a short read. A value promoted to int (a
+    // char, an enum) is written as the int32_t, as the overloads chose.
+    template <class T> using Scalar = std::integral_constant<bool, std::is_same<T, uint32_t>::value ||
+        std::is_same<T, int32_t>::value || std::is_same<T, unsigned short>::value || std::is_same<T, short>::value ||
+        std::is_same<T, unsigned char>::value || std::is_same<T, signed char>::value || std::is_same<T, float>::value ||
+        std::is_same<T, double>::value || std::is_same<T, bool>::value>;
+    template <class T, typename std::enable_if<Scalar<T>::value, int>::type = 0> long Read(T& outValue) { return this->ReadBytes(&outValue, sizeof(T)); }
+    template <class T, typename std::enable_if<Scalar<T>::value, int>::type = 0> long Write(const T& inValue) { return this->WriteBytes(&inValue, sizeof(T)); }
+    long Write(const int32_t& inValue) { return this->WriteBytes(&inValue, sizeof(inValue)); }
+    virtual long ReadBytes(void* outValue, size_t inSize) { return ee_fs_spec_read_value(Rec(), static_cast<uint8_t*>(outValue), (unsigned long)inSize); }
+    virtual long WriteBytes(const void* inValue, size_t inSize) { return ee_fs_spec_write_value(Rec(), static_cast<const uint8_t*>(inValue), (unsigned long)inSize); }
     long Read(long& outValue) { return ee_fs_read_long(this, &outValue); }   // (ee_base fs cppfile.rs)
     long Read(unsigned long& outValue) { return ee_fs_read_ulong(this, &outValue); }
     long Write(const long& inValue) { return this->Write(static_cast<int32_t>(inValue)); }
@@ -121,9 +116,6 @@ public:
     const EeFsSpec* Rec() const { return reinterpret_cast<const EeFsSpec*>(this); }
     static EeFsSpec* Spec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }
     static const EeFsString* Startup(const UString* inPath) { return reinterpret_cast<const EeFsString*>(inPath); }
-    template <typename T> long ReadValue(T& outValue) { return ee_fs_spec_read_value(Rec(), reinterpret_cast<uint8_t*>(&outValue), sizeof(outValue)); }
-    template <typename T> long WriteValue(const T& inValue)
-        { return ee_fs_spec_write_value(Rec(), reinterpret_cast<const uint8_t*>(&inValue), sizeof(inValue)); }
 
     UString mVolume;                                  // +0x04
     UString mDirectory;                               // +0x14

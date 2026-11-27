@@ -33,12 +33,8 @@ public:
     // exported ?GetLength@UString@@QBEKXZ = `mov eax,[ecx+8]; ret`; inlined in TCP 0x287c
     unsigned long GetLength() const { return this->mState.length; }
     unsigned long GetAllocatedLength() const { return this->mState.capacity; }
-    bool Equals(const UString& inString) const { return ee_ustring_compare(*this, inString) == 0; }
-    bool Equals(const UString& inString, unsigned long inCount) const { return ee_ustring_compare_count(*this, inString, inCount) == 0; }
     bool Equals(const char* inString) const { return ee_ustring_compare(*this, inString) == 0; }
     bool Equals(const char* inString, unsigned long inCount) const { return ee_ustring_compare_count(*this, inString, inCount) == 0; }
-    bool EqualsIgnoreCase(const UString& inString) const { return ee_ustring_equals_ignore_case(*this, inString, false, 0); }
-    bool EqualsIgnoreCase(const UString& inString, unsigned long inCount) const { return ee_ustring_equals_ignore_case(*this, inString, true, inCount); }
     bool EqualsIgnoreCase(const char* inString) const { return ee_ustring_equals_ignore_case(*this, inString, false, 0); }
     bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const { return ee_ustring_equals_ignore_case(*this, inString, true, inCount); }
     static void SetDefaultAllocationLength(unsigned long inLength) { ee_ustring_set_default_allocation(inLength); }
@@ -103,18 +99,12 @@ public:
 
 inline UString operator+(const UString& inLeft, const UString& inRight) { return UString(UString::kUnset, ee_ustring_concat, &inLeft.mState, &inRight.mState); }
 inline UString operator+(const UString& inLeft, const char* inRight) { return UString(UString::kUnset, ee_ustring_concat_text, &inLeft.mState, inRight); }
-// the comparisons: strcmp order
-inline bool operator==(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) == 0; }
+// the comparisons: strcmp order (a UString on the right converts to its text)
 inline bool operator==(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) == 0; }
-inline bool operator!=(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) != 0; }
 inline bool operator!=(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) != 0; }
-inline bool operator<(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) < 0; }
 inline bool operator<(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) < 0; }
-inline bool operator<=(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) <= 0; }
 inline bool operator<=(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) <= 0; }
-inline bool operator>(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) > 0; }
 inline bool operator>(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) > 0; }
-inline bool operator>=(const UString& inLeft, const UString& inRight) { return ee_ustring_compare(inLeft, inRight) >= 0; }
 inline bool operator>=(const UString& inLeft, const char* inRight) { return ee_ustring_compare(inLeft, inRight) >= 0; }
 // formats into the string (lle/LowLevelEngineCore.h UFormat); vsprintf's result
 #pragma clang diagnostic push

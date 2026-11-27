@@ -950,6 +950,7 @@ impl EeUiControlsTable {
         let t = unsafe { &*p };
         let cpp = t.op(Op::TblWrap, p as isize, 0, 0, 0);
         t.with(|s| s.host.obj = cpp as *mut c_void);
+        crate::direct::put(crate::direct::Kind::Table, cpp as *const c_void, p as *const c_void);
         p as usize
     }
 
@@ -1154,6 +1155,7 @@ pub unsafe extern "C" fn ee_ui_controls_table_free(table: *mut EeUiControlsTable
     if table.is_null() {
         return;
     }
+    crate::direct::forget(crate::direct::Kind::Table, table as *const c_void);
     // SAFETY: the contract
     unsafe { (*table).release() };
     // SAFETY: the contract

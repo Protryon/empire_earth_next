@@ -32,7 +32,6 @@ public:
     void SetFocusedTextColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->CallF(EeUiStatusBarCall::SetLocation, inLocation.GetX(), inLocation.GetY()); }
     void SetRange(unsigned long inMin, unsigned long inMax) { this->Call(EeUiStatusBarCall::SetRange, inMin, inMax); }
-    void SetStatusBarOpacity(float inOpacity) { this->CallF(EeUiStatusBarCall::SetStatusBarOpacity, inOpacity); }
     void SetStatusBarColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetStatusBarColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
     void SetText(const UWideString& inText, GEFont* inFont) { this->Call(EeUiStatusBarCall::SetText, (intptr_t)&inText, (intptr_t)inFont); }
     virtual long UpdateKeyboard() { return kErrorOK; }

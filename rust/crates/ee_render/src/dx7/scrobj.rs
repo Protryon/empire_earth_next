@@ -84,6 +84,10 @@ impl ScreenRef {
     /// # Safety
     /// The object is live; the operation's arguments are as [`EeDx7ObjOp`] describes.
     unsafe fn op(&self, op: EeDx7ObjOp, obj: H, a: isize, b: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { crate::dx7::surfobj::direct_op(op, obj, a) } {
+            return r;
+        }
         // SAFETY: the caller's contract (the host is copied out before the call)
         let host = unsafe { sc(self.0).host };
         // SAFETY: the host's contract

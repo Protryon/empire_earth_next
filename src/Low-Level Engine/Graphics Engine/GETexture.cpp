@@ -10,34 +10,21 @@
 // SetSurface and the texture pack's logical shift. This unit is its shell: the forwarders and the host, which makes
 // each call the original made on another object (its surfaces, screen, frames, manager, the rasterizer, the file).
 #include <windows.h>
-#include <math.h>
-#include <string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include "lle/LowLevelEngineCore.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/GEColor.h"
+#include <stdio.h>
+#include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
 #include "lle/GERasterizer.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <map>
+#include "lle/GETextureSet.h"
+#include "lle/GETextureCoordinate.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
-#include "lle/GETextureSet.h"
+#include "rust/render/openformats.h"
+
+// the data path's host for ee_of_find_texture (a texture's PNG frames; GEModel.cpp)
+intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b);
 // the Rust mirrors (texobj_tex.rs), field for field
 static_assert(sizeof(EeGeTexCoord) == sizeof(GETextureCoordinate), "GETextureCoordinate");
 static_assert(offsetof(EeGeTexCoord, v) == offsetof(GETextureCoordinate, mV), "GETextureCoordinate");
@@ -86,12 +73,8 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
         return ((GESurface*)inObj)->CopyTo((GESurface*)a, ((GERectangle*)b)[0], ((GERectangle*)b)[1], c != 0);
     case EeGeTexOp::ScreenCreateSurface:
         return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
-    case EeGeTexOp::FileInfo:
-        ee_of_texture_info((const EeOfTexture*)inObj, (EeOfTextureInfo*)a);
-        return 0;
-    case EeGeTexOp::FileFrame:
-        ee_of_texture_frame((const EeOfTexture*)inObj, (uint32_t)a, (EeOfTextureFrame*)b);
-        return 0;
+    // (FileInfo, FileFrame, RasterCreate, RasterDestroy, ManagerRemove, ManagerPromote: the Rust object's own, ee_ge
+    // texobj_tex.rs)
     case EeGeTexOp::SurfPixelFormat: return (intptr_t)((GESurface*)inObj)->GetPixelFormat();
     case EeGeTexOp::SurfPixelDepth: return (intptr_t)((GESurface*)inObj)->GetPixelDepth();
     case EeGeTexOp::SurfVolatility: return (intptr_t)((GESurface*)inObj)->GetSurfaceVolatility();
@@ -102,16 +85,8 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     case EeGeTexOp::TexBaseDereference:
         ((GETexture*)inObj)->UReferenceCounter::Dereference();
         return 0;
-    case EeGeTexOp::ManagerRemove:
-        return ((GETextureManager*)inObj)->RemoveTexture((GETexture*)a);
-    case EeGeTexOp::ManagerPromote:
-        return ((GETextureManager*)inObj)->PromoteTexture((GETexture*)a);
-    case EeGeTexOp::RasterCreate:
-        return ((GERasterizer*)a)->CreateTextureHandle(((GETexture*)inObj));
-    case EeGeTexOp::RasterDestroy:
-        ((GERasterizer*)a)->DestroyTextureHandle(((GETexture*)inObj));
+    default:
         return 0;
-    default: return 0;
     }
 }
 
@@ -127,20 +102,7 @@ static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "G
 intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeManOp::LockCreate: return TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a);
-    case EeGeManOp::LockVerify: ESVERIFY_AT(a == keseOK, 43); return 0;
-    case EeGeManOp::LockDestroy:
-        TSScheduler::DestroyCriticalSection((TSCriticalSection*)inObj);
-        return 0;
-    case EeGeManOp::LockEnter:
-        ((TSCriticalSection*)inObj)->Enter();
-        return 0;
-    case EeGeManOp::LockLeave:
-        ((TSCriticalSection*)inObj)->Leave();
-        return 0;
-    case EeGeManOp::PathReference:
-        ((FSPath*)inObj)->Reference();
-        return 0;
+    // (the lock's calls, the path's Reference and TexFreeFile: Rust's own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
@@ -150,9 +112,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     case EeGeManOp::DumpText: fprintf(*(FSFileSpec*)inObj, "%s", (const char*)a); return 0;
     case EeGeManOp::TexFindFile:
         return ee_of_find_texture(&GEOpenFormatsHost, inObj, (const char*)a, (EeOfTexture**)c);
-    case EeGeManOp::TexFreeFile:
-        ee_of_texture_free((EeOfTexture*)inObj);
-        return 0;
     case EeGeManOp::TexNew:
         return (intptr_t)new GETexture(((GETextureManager*)inOwner));
     case EeGeManOp::TexNewFromSurface:

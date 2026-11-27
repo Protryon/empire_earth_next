@@ -6,7 +6,7 @@
 
 #include <vector>
 #include <utility>
-#include "lle/GERenderState.h"
+#include "rust/render/gestate.h"
 #include "rust/render/ge.h"
 #include "rust/render/dx7.h"
 
@@ -16,7 +16,6 @@
 #include "lle/GEText.h"
 #include "lle/GESurface.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/GEPolygonArray.h"
 #include "lle/GEVertexArray.h"
 #include "GEWindow.h"
 
@@ -24,6 +23,23 @@
 // (rust/crates/ee_render/src/ge rastobj.rs; rust/render/ge.h): the plug-in reads and writes the device-side fields
 // through GERasterizer::GetScreenState.
 typedef EeGeRastFog GERFogAttributes;
+
+// C:\EEX\Low-Level Engine\Graphics Engine\GELight.h (RECONSTRUCTION; folded here in LLE/UI round 2). A light
+// whole in Rust (LLE round 9): the class holds the Rust record (rust/crates/ee_render/src/ge light.rs, EeGeLight: the
+// original's members in their order) and forwards; the DX7 rasterizer reads the record directly.
+class LLE_API GELight {                     // sizeof 0x74
+public:
+    GELight() { ee_ge_light_init(&this->mRust); }
+    GELight& operator=(const GELight& inLight) { ee_ge_light_assign(&this->mRust, &inLight.mRust); return *this; }
+    void SetAttenuation0(float inAttenuation) { this->mRust.attenuation0 = inAttenuation; }
+    void SetAttenuation1(float inAttenuation) { this->mRust.attenuation1 = inAttenuation; }
+    void SetAttenuation2(float inAttenuation) { this->mRust.attenuation2 = inAttenuation; }
+    void SetColor(const GEColor& inColor) { ee_ge_light_set_color(&this->mRust, reinterpret_cast<const float(*)[3]>(&inColor)); }
+    void SetDirection(const GEVector& inDirection) { ee_ge_light_set_direction(&this->mRust, reinterpret_cast<const float(*)[3]>(&inDirection)); }
+    void SetIntensity(float inIntensity) { ee_ge_light_set_intensity(&this->mRust, inIntensity); }
+    void SetStyle(unsigned long inStyle) { this->mRust.style = inStyle; }
+    EeGeLight mRust;
+};
 
 struct EeGeRasterizer;                      // rust/ee_ge.h
 
@@ -63,8 +79,6 @@ public:
     // a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
     long Draw(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
         { return ee_dx7r_draw_model(this->mDX7, inScreen, inModel, inOpacity, inOrthographic); }
-    long Draw(GEPoint* inPoint, unsigned long inCount, unsigned long inScreen)       // slot 0x48
-        { return ee_dx7r_draw_points(this->mDX7, inScreen, inPoint, inCount); }
     long Draw(GERhombus* inRhombus, unsigned long inScreen) { return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus); }
     // a text with the platform fonts on the target, aligned; shadow fonts get a black or white shadow 1 pixel down-right
     long Draw(GEText* inText, GESurface* inTarget) { return ee_dx7r_draw_text(inText, NULL, *inTarget); }
@@ -90,30 +104,13 @@ public:
     // (without the drawing lock); the points are std::pair<GE3DPoint, float>: (x, y, z, advance)
     template <class Point> long Draw3DLine(std::vector<Point>& inPoints, GETexture* inTexture, float inV, unsigned long inScreen, bool inOrthographic)
         { return ee_dx7r_draw_3d_line(this->mDX7, inScreen, reinterpret_cast<const float(*)[4]>(inPoints.data()), inPoints.size(), inTexture, inV, inOrthographic); }
-    // grid lines between tile corners whose both ends are visible, as one red line list of at most 1200 lines (the runs:
-    // RTSMapTileRun in the game's view, std::pair<U2DPoint<long>, U2DPoint<long> > in the LLE's; four longs each)
-    template <class Mesh, class Run> long DrawGridLines(Mesh& inMesh, std::vector<Run>& inLines, GETexture* inTexture, float inWidth, unsigned long inScreen, bool inOrthographic)
-        { return ee_dx7r_draw_grid_lines(this->mDX7, inScreen, inMesh.GetRust(), reinterpret_cast<const long(*)[4]>(inLines.data()), inLines.size(), inTexture, inWidth, inOrthographic); }
     // the sky model like any model; always kErrorOK
     long DrawSky(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
         { return this->Draw(inModel, inScreen, inOpacity, inOrthographic), kErrorOK; }
-    // two red edge lines for every visible tile, one draw call per tile
-    template <class Mesh> long DrawTerrainGrid(Mesh& inMesh, unsigned long inScreen, bool inOrthographic)
-        { return ee_dx7r_draw_terrain_grid(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic); }
-    // shades a tile rectangle (a U2DRectangle<long>) with a translucent colour over every valid visible tile, drawn in
-    // batches of 400 quads
-    template <class Mesh, class Rect> long DrawTerrainHighlight(Mesh& inMesh, const Rect& inRectangle, unsigned long inScreen, bool inOrthographic, const GEColor& inColor, float inOpacity)
-        { return ee_dx7r_draw_terrain_highlight(this->mDX7, inScreen, inMesh.GetRust(), &inRectangle.mBottom, reinterpret_cast<const float*>(&inColor), inOpacity, inOrthographic); }
-    // every water material, unclipped then clipped polygons; counts its triangles
-    template <class Mesh> long DrawWater(Mesh& inMesh, unsigned long inScreen, bool inOrthographic)
-        { return ee_dx7r_draw_water(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic); }
     // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
     long EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
     long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
     unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) { return 0; }   // 0 for any capability
-    // lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times the
-    // vertex colour
-    template <class Mesh> void Light(Mesh& inMesh, unsigned long inScreen) { ee_dx7r_light_terrain(this->mDX7, inScreen, inMesh.GetRust()); }
     // The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the
     // screen's state (GetScreenState); the fog type, projection mode and v-sync only record it
     void SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
@@ -151,16 +148,11 @@ public:
     // Shows the frame (flip full screen, blit to the window's client area windowed); every 12 frames updates the frame,
     // polygon and texture-change statistics
     long ShowScene(unsigned long inScreen) { return ee_dx7r_show_scene(this->mDX7, inScreen); }
-    // moves the visible terrain and water vertices to camera space (animating the water waves) and sets their clip
-    // flags, then sorts each material's polygons into unclipped and clipped lists; water-only mode skips dry vertices
-    template <class Mesh> void TransformToCamera(Mesh& inMesh, GEViewport& inViewport, float inScale, bool inWaterOnly, bool inOrthographic)
-        { ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic); }
     // sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
     long UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen) { return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen); }
 
     long Activate() { return (long)ee_ge_rast_activate(this->mRust); }
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
-    long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
     const GEColor& GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
     float GetAmbientIntensity() const { return ee_ge_rast_ambient_intensity(this->mRust); }
@@ -209,11 +201,8 @@ public:
     // The original's eight pure slots after the dtor (vtable 0x10097954 ends at 0x138; DX7HRDisplay.dll's exports
     // ?ActivateRasterizer@DX7Rasterizer@@MAEJXZ, ...). Activate calls ActivateRasterizer and keys mIsActivated on its
     // keseOK result: it enumerates the DirectDraw devices into screens and makes this the active rasterizer. Textures
-    // need no handle here (CreateTextureHandle, DestroyTextureHandle and PromoteTexture do nothing).
+    // need no handle here (the original's CreateTextureHandle, DestroyTextureHandle and PromoteTexture are gone).
     long ActivateRasterizer() { return this->mDX7 != NULL ? ee_dx7r_activate_rasterizer(this->mDX7) : kErrorOK; }   // slot 0x118
-    long CreateTextureHandle(GETexture* inTexture) { return kErrorOK; }             // slot 0x120: GETexture gains a surface
-    void DestroyTextureHandle(GETexture* inTexture) {}                              // slot 0x128: GETexture loses its surface
-    long PromoteTexture(GETexture* inTexture) { return kErrorOK; }                  // slot 0x130
     // makes a surface the render target (swapping the references) and fits the viewport to its size (slot 0x134)
     void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) { ee_dx7r_set_render_target(this->mDX7, inTarget, inScreen); }
 

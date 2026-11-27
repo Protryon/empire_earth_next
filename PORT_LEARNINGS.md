@@ -42467,3 +42467,95 @@ All lane gates PASS on the merged tip (batch 31 in; the builds and game checks o
 - SendFileOp and its completion, TransferSetSavesPath, GlueText, EELobbyColorButton/Chooser, WONRouting.h's core-table
   shims (from round 39's list, not reached).
 - won_lobby33_gen.py still reads LobbyConfig.cpp; won_lobbyconf_test does not vary the UseLocalIP registry value.
+
+## The LLE and UI lane, round 2: the toolkit's, the UI thread's and the UI events' units one each, the host chains and ops in Rust over direct.rs, dead LLE members and headers gone, the small headers folded into their includers (ee_ui lle_chains.rs, direct.rs, lle_hosts.rs polls/own/fields; ee_render ge cppobj.rs CppScreen/CppSurface, the objects' direct_op; ee_net net_tcp; ee_audio sound sys.rs; branch rust-lleui2, forks rust-lleui2-a, -b, -c, -d, 2026-11-26)
+
+The brief: -2,000 C++ lines (tools/port_metrics.py's cpp_lines), whole files and classes first, over the LLE
+(src/Low-Level Engine, include/lle) and the game's UI layer (the UI thread, the UI events). **-2,337 C++ lines, -39
+compiled files** against origin/rust 47e9ad712 (batch 29, merged into the round): 88,934 / 269 -> 86,597 / 230
+(-2,336 against batch 30, 126ab1513, merged last: 87,771 / 253 -> 85,435 / 214);
+code -1,048, shim -1,007, logic -41; classes 724 -> 715; extern_c +6, rust_hdrs unchanged (367), unsafe +188 (the
+Rust objects reading the C++ ones in place), layout +1. Against the round's start (a102c738e) the forks' pass 1 measured
+-812 (A) and -909 (B); batch 29 trimmed the same units' includes, so after its merge pass 1 counted -971. Two passes
+with two forks each, then the lead's unit merges.
+
+### What moved
+
+- **The UI toolkit's 20 units one** (fork B, 6cb005e72, bbd4fa7b8): `User Interface.cpp`, each old unit a section
+  under its own comment, one include list (40 headers for 610 include lines); UICheckBox.cpp and UIRadioButton.cpp
+  compiled to nothing. The toolkit's polls, locks, clock, keys, clipboard and a control's own fields are Rust calls
+  (lle_hosts.rs `polls`, `own`, `fields`); in pass 2 (fork B2, a122d23cf) the ~200 host ops that were chains of
+  non-virtual C++ forwarders (`theForm->GetManager()->GetScreen()`) are made in Rust (lle_chains.rs), direct.rs
+  finding each Rust object by its C++ pointer, and the forwarders and members nothing calls any more went.
+- **The LLE's dead code and host cases** (fork A): the members `tools/dead_members.py` lists, dead free functions and
+  headers (GE2DVertex.h, UEncryption.h, the six one-include constant headers, ISDeviceInput.h, GERustText.h, UMFastMath);
+  TCP Protocol.cpp deleted (ee_net_tcp calls ee_base); the host cases whose callee is a Rust forwarder made by the Rust
+  object itself (`direct_op`/`object_op`/`platform_op`, skipped under `cfg(test)` so the fake hosts' goldens stay). In
+  pass 2 (fork A2) an -O0 census of inline members no unit uses, UConfig, FSBasicFile, GEPoint, UGraph.h (to
+  tests/util), FSFile's 18 scalar virtuals as two templates over ReadBytes/WriteBytes, and 16 small headers folded
+  into the one header that includes them (TSEvent/TSReadWriteLock/TSThread into TSScheduler.h, GEVector into
+  GE3DPoint.h, GELight into GERasterizer.h, ...).
+- **The game's UI units** (the lead): the UI thread's 18 original units and the port's two hosts are
+  `EEUserInterface.cpp` (115 headers for 676 include lines); the UI events' two original units are sections of
+  `EEScreens.cpp`. EEFOFindNewTargetNearOldTarget.cpp (the units lane's) and EEScreenEvent.cpp (a leaf) stay apart.
+
+### Lessons
+
+- With a class's logic in Rust, its unit is host shims under a long include list: in the toolkit 610 of 2,100 lines,
+  in the UI thread 676 of 3,700. One unit per directory needs one list. Find it by compiling the merged unit once per
+  include left out (in parallel), then once with every removable one out; reject a warning as well as an error
+  (build/lleui2 inc_trim.py over clang_build.compile_one). Keep a `.inl` that reads the unit's statics where it was;
+  `#undef` each section's macros at its end (sections reuse `C`, `FORM`, `SBN`); identical file statics become one.
+- A lane and a header-trimming batch that touch the same units overlap: batch 29 dropped most of the include lines
+  fork B's merge removed. Merge the batch's include trims before a unit merge, or count the lane against the merged
+  base, not its start.
+- Resolving a merge whose two sides each deleted different members of the same reformatted lines: take the side that
+  reformatted, minus every member the other side deleted against the base; a literal written for the resolution must
+  hold real line breaks (`\n` passed through a shell argument stays two characters: GETerrainMesh.h failed to compile).
+- An op that finds its object through direct.rs needs the object registered before any call out that can reach it: a
+  background's constructor adds itself to its form before `made()` registered it, the form got NULL and EE-SIM
+  faulted on every seed (1a2932dd6). The oracle opens the forms, so it shows; `EE_DIRECT_CHECK` names the op.
+- tools/harness/layout_gen.py kept a member's previous sibling on its path stack: in a class whose first member is a
+  plain field the later ones were named under it (`mMouseSensitivity.mSideScrollSpeed`); classes opening with a vtable,
+  a base or an empty member hid it, until UConfig's empty member went (d568176b3: `del stack[max(depth - 1, 0):]`).
+
+### Behaviour changes
+
+None intended; the oracle traces are identical. Unreachable paths: a direct.rs lookup of an unknown object answers
+0 where the C++ shim would have crashed; the store gate's rasterizer (no DX7 rasterizer, no draws) draws nothing for
+the 2D bitmap, rhombus and line commands instead of calling the DX7 draw on NULL; the hot keys' pressed poll starts at
+its first use instead of at static initialisation (nothing reads it before).
+
+### Gates
+
+On the round's tip aa2e6dade (merged with origin/rust 126ab1513, batch 30), through build/lleui2/chain.sh (logs in
+build/lleui2/gates), and before that the same set on 617ecd086 (merged with batch 29), all PASS but as noted:
+
+- `build.py -j 10 --sim` 0/0 (EE-AOC 255 inputs, EE-SIM 256), the test profile 0/0 (255); the headers current (367);
+  `rust_build.py gate` PASS;
+- the oracle seeds 2-7 identical to a102c738e's (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the captures `oracle` (598 digests equal) and `late` (598 equal), the lane's two (no app shell change); the saveload
+  matrix `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` (4,062: the
+  toolkit's tables serve the editor);
+- won_host_coverage PASS; `xbuild.py wontest`: on 617ecd086 all 185 programs exit 0; on aa2e6dade 183, and two failed
+  under the other lanes' load: won_auth_test (killed at 1,200 s; alone: 117,983 checks, 0 failures) and
+  won_ping36_test (1 then 2 mismatches, different lines each run: a reply's `done` flag, a reference count before a
+  release; alone 0, 0 and 1 mismatches in three runs, so a timing race of the test itself; the round changes no WON
+  code);
+- through slot.py, the test profile, the main checkout's tree: the editor (RESULT PASS editor); `random-game
+  --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS);
+  `bash tools/gates.sh`: GATES PASS (tour: RENDER CHECK ok, view 85.7% lit, F3 ok; ai-game time-cap PT 12481, units
+  [4, 38, 39], alive [2, 3], classic_lua x 2; lan-game PT 2837/2842).
+- Not run: the POSIX builds (the include lists were found on Windows only: a POSIX compile may need a header back),
+  `gates.sh --legacy`, nettest (fork A2 ran it: the NE goldens 0 differing; ee_session_test does not compile at
+  61544a7d6 either), eedata check/cppgate (no table, rule or text compiler change).
+
+### Left
+
+The toolkit's virtual members (the game's classes override them), the constructors and deletes of C++ objects, the
+C++ strings and string vectors, the file system's and sound manager's calls, `gISKeyboard`/`gISMouse`, the list box's
+line views (docs/progress/ui-cluster.md "Round 15", pass 2's "What is left"); in the LLE the game's one light
+(EERenderObject.cpp, the game core lane's), TMTimer's three users, the store gate's surface reads, the NE's real
+virtuals, URandom.h (tests/net) (lle-shims.md "Round 15"); the Rust behind deleted C++ (ee_uconfig_*, the GEPoint
+paths) is uncounted and can go. The UI thread's unit is the next candidate for the toolkit's pass-2 treatment: its
+shims are chains over the game's forms and controls.

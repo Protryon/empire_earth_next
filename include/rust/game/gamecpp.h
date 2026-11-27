@@ -15,7 +15,7 @@
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
 
-/// `kSlotServer`, `kSlotNone` (NEMessageID.h).
+/// `kSlotServer`, `kSlotNone` (rust/net/msgid.h).
 constexpr static const int64_t SS_SLOT_SERVER = 254;
 
 constexpr static const int64_t SS_SLOT_NONE = 255;

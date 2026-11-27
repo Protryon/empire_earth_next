@@ -455,12 +455,21 @@ impl QHost for QFfiHost {
         self.call(EeNetQOp::Time, 0, 0, 0, 0) as u32
     }
     fn verify(&self, unit: u32, line: u32) {
+        if self.native {
+            return native::verify(unit, line);
+        }
         self.call(EeNetQOp::Verify, unit as usize, line as usize, 0, 0);
     }
     fn fpu_start(&self) {
+        if self.native {
+            return native::fpu_start();
+        }
         self.call(EeNetQOp::FpuStart, 0, 0, 0, 0);
     }
     fn fpu_check(&self) {
+        if self.native {
+            return native::fpu_check();
+        }
         self.call(EeNetQOp::FpuCheck, 0, 0, 0, 0);
     }
     fn event_new(&self) -> Ev {

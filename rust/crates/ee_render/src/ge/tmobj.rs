@@ -77,6 +77,60 @@ pub enum EeGeTmOp {
     TexDereference,
 }
 
+/// The mesh's calls that end in Rust, made here rather than through the C++ host (a test's fake host answers them
+/// instead): the clock (`TMGetTime`: ee_base's), the fractals (`U2DFractal`'s members are one call each of ee_base's
+/// fractal, so a fractal here is the `EeUtilFractal` itself, made and freed by its own calls), a texture set's reads
+/// (`GETextureSet`'s accessors over its Rust set, read in place: `cppobj.rs` plain) and a texture's `Reference()`.
+///
+/// # Safety
+/// The operation's arguments are as `EeGeTmOp` describes; a fractal is one `FractalNew` made.
+unsafe fn direct_op(op: EeGeTmOp, obj: usize, a: isize, b: isize) -> Option<isize> {
+    if cfg!(test) {
+        return None;
+    }
+    use crate::ge::cppobj;
+    use crate::ge::texset::{ee_ge_tset_get, ee_ge_tset_size, EeGeTextureSet};
+    use ee_base::util::fractal::{
+        ee_util_fractal_compute, ee_util_fractal_free, ee_util_fractal_new, ee_util_fractal_value, EeUtilFractal,
+    };
+    let fractal = obj as *mut EeUtilFractal;
+    // SAFETY (every use): the caller's contract
+    let set = || unsafe { cppobj::plain::<EeGeTextureSet>(obj) };
+    // SAFETY (each call): the caller's contract
+    unsafe {
+        Some(match op {
+            EeGeTmOp::Time => ee_base::time::ee_time_get() as isize,
+            EeGeTmOp::FractalNew => {
+                let f = ee_util_fractal_new(64);
+                ee_util_fractal_compute(f, 0.0, 10.5, a as c_ulong);
+                f as isize
+            }
+            EeGeTmOp::FractalDelete => {
+                ee_util_fractal_free(fractal);
+                0
+            }
+            EeGeTmOp::FractalValue => {
+                *(a as *mut f32) = ee_util_fractal_value(fractal, (b >> 16) as c_ulong, (b & 0xffff) as c_ulong);
+                0
+            }
+            EeGeTmOp::FractalCompute => {
+                ee_util_fractal_compute(fractal, 0.0, 10.5, a as c_ulong);
+                0
+            }
+            EeGeTmOp::SetWidth => ee_ge_tset_size(set(), 0) as isize,
+            EeGeTmOp::SetHeight => ee_ge_tset_size(set(), 1) as isize,
+            EeGeTmOp::SetCoverage => ee_ge_tset_size(set(), 2) as isize,
+            EeGeTmOp::SetTexture => ee_ge_tset_get(set(), a as c_ulong, b as c_ulong, true) as isize,
+            EeGeTmOp::SetTextureAt => ee_ge_tset_get(set(), a as c_ulong, b as c_ulong, false) as isize,
+            EeGeTmOp::TexReference => {
+                cppobj::reference(obj);
+                0
+            }
+            _ => return None,
+        })
+    }
+}
+
 /// The host: `owner` is the C++ terrain mesh of the object calling.
 pub type EeGeTmHostFn =
     unsafe extern "C" fn(owner: *mut c_void, op: EeGeTmOp, obj: *mut c_void, a: isize, b: isize) -> isize;
@@ -278,6 +332,10 @@ impl EeGeTerrainMesh {
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeTmOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeTmOp, obj: usize, a: isize, b: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { direct_op(op, obj, a, b) } {
+            return r;
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (tm(p).host, tm(p).owner) };
         // SAFETY: the host's contract

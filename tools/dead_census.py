@@ -28,7 +28,7 @@ import ee   # noqa: E402
 
 ROOT = ee.ROOT
 NM = ee.LLVM / "llvm-nm.exe" if (ee.LLVM / "llvm-nm.exe").exists() else ee.LLVM / "llvm-nm"
-MODULES = ["exe", "lle", "tcp", "mixer", "dx7hrtnl"]
+MODULES = ["exe", "lle", "mixer", "dx7hrtnl"]
 MAP_ROW = re.compile(r"^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+(\S+)")
 GENERATED = ("??_G", "??_E", "??__E", "??__F", "??_R", "??_7", "??_8", "?dtor$", "?catch$", "?fin$", "$")
 

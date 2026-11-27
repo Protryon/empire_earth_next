@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "rust/net/net.h"
-#include "ne_tcp_host.h"
 #include "rust/net/msgid.h"
 
 // ---- the world

@@ -18,7 +18,7 @@ use super::server::{ee_gamecpp_session_host, SS_SLOT_NONE};
 use super::{h, hp, pa, ptr, rec, Owned, O, P};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
-/// `kConnectionRemovedByHost` (NEMessageID.h; EEServer.cpp asserts it).
+/// `kConnectionRemovedByHost` (rust/net/msgid.h; EEServer.cpp asserts it).
 const CONNECTION_REMOVED_BY_HOST: i64 = 5;
 
 /// The server's network slot of each lobby slot (was EEServer's `mSendToSlots`, a `std::map`: kept in key order, an

@@ -13,7 +13,7 @@
 #include <initializer_list>
 #include <type_traits>
 #include <vector>
-#include "lle/NEMessageID.h"
+#include "rust/net/msgid.h"
 #include "rust/game/lle.h"
 #include "rust/sim/netmsg.h"
 

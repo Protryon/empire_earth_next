@@ -44,7 +44,7 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EECivPowersManager.h"
 #include "lle/UResourceFile.h"
 #include "lle/TMTimer.h"
-#include "lle/FSPersistentList.h"
+#include "lle/FSChunk.h"          // FSPersistentList
 #include "ee/EEMap.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEEnvironmentManager.h"
@@ -994,8 +994,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 #ifdef _WIN32
         CoUninitialize();
 #endif
-        break;
-    case O::RunSqrtTable: UMFastMath::BuildSqrtTable();
         break;
     case O::RunSetInstance: gInstance = (HINSTANCE)a[0];
         break;

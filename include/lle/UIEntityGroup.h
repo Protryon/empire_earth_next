@@ -22,8 +22,6 @@ public:
     UIEntity* GetEntity(unsigned long inIndex) { return (UIEntity*)this->Call(EeUiEntityGroupCall::Entity, inIndex); }
     unsigned long GetEntityCount() { return (unsigned long)this->Call(EeUiEntityGroupCall::Count); }
     bool GetIsEnabled() { return this->Call(EeUiEntityGroupCall::IsEnabled) != 0; }
-    long AddEntity(UIEntity* inEntity) { return (long)this->Call(EeUiEntityGroupCall::Add, (intptr_t)inEntity); }
-    long RemoveEntity(UIEntity* inEntity) { return (long)this->Call(EeUiEntityGroupCall::Remove, (intptr_t)inEntity); }
     intptr_t Call(EeUiEntityGroupCall inCall, intptr_t a = 0) { return ee_ui_entity_group_call(this->mRust, inCall, a); }
 
     URust<EeUiEntityGroup> mRust;                 // the entities and the disable count (groupobj.rs)

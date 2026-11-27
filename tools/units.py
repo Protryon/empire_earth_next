@@ -10,10 +10,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ee import LINK_DIR, MODULE_FLAGS, ROOT, module_units
 
 # Every module is linked into the one exe (no DLLs): the game, the engine, and the
-# plug-ins (TCP protocol, mixer, the DX7 T&L renderer; the Default random maps are Rust, ee_sim rmap).
-MODULES = ["tcp", "mixer", "lle", "dx7hrtnl", "won", "exe"]
+# plug-ins (mixer, the DX7 T&L renderer; the TCP protocol and the Default random maps are Rust: ee_net_tcp, ee_sim rmap).
+MODULES = ["mixer", "lle", "dx7hrtnl", "won", "exe"]
 TARGETS = ["exe"]
-TARGET_MODULES = {"exe": ["exe", "won", "lle", "tcp", "mixer", "dx7hrtnl"]}
+TARGET_MODULES = {"exe": ["exe", "won", "lle", "mixer", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, and new game units that have no address in the original (the db text loader, ...)
@@ -29,10 +29,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/WONAPI/WONLobby/EELobbyGlueHost.cpp",
                        # the effects' constructors and hosts (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_2d.rs)
                        "Empire Earth/Graphics Thread/EEEffectHost.cpp",
-                       # the host of the game's controls whose logic is Rust (ee_screens hud_ctl.rs; ee/EEUIRustControl.h)
-                       "Empire Earth/User Interface Thread/EEUIRustControl.cpp",
-                       # the generic shells of the game's control classes whose logic is Rust (ee_game shells.rs; ee/EEUIShell.h)
-                       "Empire Earth/User Interface Thread/EEUIShell.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)

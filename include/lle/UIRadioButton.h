@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\User Interface\UIRadioButton.h (RECONSTRUCTION). A UIButton checked exclusively
-// within its entity group (control type 6). UIRadioButton.cpp (0x1007bbff..) holds the ctor and the out-of-line
+// within its entity group (control type 6). UIRadioButton.cpp (0x1007bbff..) held the ctor and the out-of-line
 // members; the inline members are emitted first by UICheckBox.cpp (0x1005fc41..). Vtable 0x100990c8 (UIButton's 37
 // slots, then Check, UnCheck). Owner: the utils worker; started by ui-core with what UIForm.cpp needs (GetIsChecked).
 // Requires lle/UIButton.h (ui-core added the inline members UICheckBox.cpp emits, the copy-ctor-proven bools and the

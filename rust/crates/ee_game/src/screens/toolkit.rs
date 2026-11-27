@@ -62,14 +62,14 @@ use crate::screens::scenario_screens::{
 use crate::screens::settings_form::*;
 use crate::screens::splash::EE_SCREENS_OP_SS_BAR_VALUE;
 
-/// The toolkit's constants the ops use (lle/UIControl.h, GETextAlignment.h, ee/EEUIManager.h; associated, so the
-/// header generator leaves them out).
+/// The toolkit's constants the ops use (lle/UIControl.h, rust/render/gestate.h, ee/EEUIManager.h; associated, so
+/// the header generator leaves them out).
 struct K;
 
 impl K {
     /// `kControlTriggerSelectionChanged` (lle/UIControl.h).
     const TK_TRIGGER_SELECTION_CHANGED: isize = 0x3eb;
-    /// `kTextAlignLeft`, `kTextAlignCenter` (lle/GETextAlignment.h).
+    /// `kTextAlignLeft`, `kTextAlignCenter` (rust/render/gestate.h).
     const TK_ALIGN_LEFT: isize = 0;
     const TK_ALIGN_CENTER: isize = 1;
     /// `kFormChatLog`, `kChatLogChatLogTextBox` (ee/EEUIManager.h): the chat log's label.
@@ -86,7 +86,7 @@ impl K {
     const TK_PGS_COMBINE_SECOND: u32 = 0x0e;
 }
 
-/// `kKeyNone` (lle/ISKeyCode.h): no key, no modifier.
+/// `kKeyNone` (rust/base/lle_enums.h): no key, no modifier.
 const KEY_NONE: u64 = 0x7fff;
 /// `kUIEventFormOpen`, `kUIEventFormClose`, `kUIEventMouseMove`, the keyboard-captured event: `UIForm::SetEvent`'s
 /// indices.

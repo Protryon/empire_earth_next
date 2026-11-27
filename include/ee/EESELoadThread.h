@@ -3,7 +3,7 @@
 // member names mThread/mThreadCreated/mThreadDone/mMessageQueueDone, the parameter inThreadPriority and
 // EESELoadThread::Main come from the ctor's ESVERIFY texts; everything else is named by offset (provisional name).
 // The editor holds it at EEUIFScenarioEditor +0x200. Posted messages 0x401..0x40c go to HandleMessage (0x17285c).
-// Requires lle/TSThread.h, lle/TSEvent.h, lle/TSScheduler.h (its EESEAChangeLoadText: ee/EEARust.h). The posts
+// Requires lle/TSScheduler.h (the threads, the events) (its EESEAChangeLoadText: ee/EEARust.h). The posts
 // are inline (one TSThread::Post each): out of line, the game's actions named the editor's load thread for three of
 // them (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts, round 3").
 #ifndef EE_EESELOADTHREAD_H

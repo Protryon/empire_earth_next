@@ -1,4 +1,5 @@
-// Low-Level Engine U2DFractal (exported class), as seen by its includers. Member names are provisional.
+// TEST ONLY (tests/util/util_golden.cpp): the Low-Level Engine U2DFractal (exported class), as its includers saw it
+// until the terrain mesh called ee_base's fractal itself (LLE/UI round 2). Member names are provisional.
 // Requires lle/LowLevelEngine.h. A square height map filled by diamond-square subdivision.
 //
 // Whole in Rust (rust/crates/ee_base/src/util fractal.rs, LLE lane round 7): the class holds the map's pointer and forwards.

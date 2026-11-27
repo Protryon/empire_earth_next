@@ -30,7 +30,7 @@ fn comms_of(f: P) -> P {
 }
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
-/// `kSlotServer`, `kSlotNone` (NEMessageID.h).
+/// `kSlotServer`, `kSlotNone` (rust/net/msgid.h).
 pub const SS_SLOT_SERVER: i64 = 0xfe;
 pub const SS_SLOT_NONE: i64 = 0xff;
 /// The strings the session's lines show (ee/EEStringIDs.h; cpp_consts_tests.rs checks them): `IDS_MSG_GAME`,

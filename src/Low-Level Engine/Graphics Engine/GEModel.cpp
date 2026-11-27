@@ -11,20 +11,9 @@
 // (the rasterizer, the vertex and polygon arrays, the materials, the texture manager and textures, the manager, the
 // sub-models' reference counts, the UStrings).
 #include <windows.h>
-#include <stdint.h>
-#include <vector>
-
-#include "lle/LowLevelEngineCore.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEOrientation.h"
-#include "lle/GETransformation.h"
-#include "lle/TSScheduler.h"
-#include "lle/UReferenceCounter.h"
-#include "lle/GEColor.h"
+#include <stdio.h>
+#include "lle/LowLevelEngine.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
@@ -32,17 +21,16 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "rust/render/openformats.h"
-#include <stdio.h>
-#include <map>
+#include "lle/GEPhysicalModel.h"
+#include "lle/GETextureSet.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/GEPhysicalModel.h"
-#include <stddef.h>
-#include "lle/U2DFractal.h"
-#include "lle/GETextureSet.h"
+#include "lle/GETextureCoordinate.h"
+#include "rust/render/openformats.h"
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// the vertex arrays' values as floats (ee_ge_va_get/set; lle/GEVertexArray.h)
+static_assert(sizeof(GEColor) == 3 * sizeof(float) && sizeof(GE3DPoint) == 3 * sizeof(float) &&
+              sizeof(GEVector) == 3 * sizeof(float) && sizeof(GETextureCoordinate) == 2 * sizeof(float), "vertarr.rs");
 
 // The calls the model makes on other objects (EeGeModOp), in the original's statements; the materials, the
 // strings' records, the references taken and the sub-models' objects are read in place (ee_ge cppobj.rs)
@@ -50,14 +38,11 @@ static_assert(sizeof(GEModel) == 3 * sizeof(void*), "ee_ge cppobj.rs CppCounted 
 intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeModOp::RasterActive:
-        return (intptr_t)GERasterizer::GetActiveRasterizer();
+    // (the active rasterizer, its screen id and the textures' stage filters: Rust's own, ee_ge modobj.rs direct_op)
     case EeGeModOp::RasterVertexArray:
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
     case EeGeModOp::RasterPolygonArray:
         return (intptr_t)((GERasterizer*)inObj)->CreatePolygonArray((unsigned long)a);
-    case EeGeModOp::RasterScreenId:
-        return (intptr_t)((GERasterizer*)inObj)->GetScreenID();
     case EeGeModOp::RasterTextureManager:
         return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
     // (the arrays' other calls are on their Rust arrays: ee_ge modobj.rs array_op)
@@ -94,15 +79,6 @@ intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t 
         return 0;
     case EeGeModOp::TexLoad:
         return (intptr_t)((GETextureManager*)inObj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b);
-    case EeGeModOp::TexMinFilter:
-        ((GETexture*)inObj)->SetStageMinFilterMode((unsigned long)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::TexMagFilter:
-        ((GETexture*)inObj)->SetStageMagFilterMode((unsigned long)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::TexMipFilter:
-        ((GETexture*)inObj)->SetStageMipFilterMode((unsigned long)a, (unsigned long)b);
-        return 0;
     }
     return 0;
 }
@@ -117,7 +93,10 @@ intptr_t GEModel::Host(void*, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t 
 
 // ---- GEModelManager (GEModelManager.cpp, folded here in R4.3 part 16)
 
-// ---- the open-format lookups' host: the calls ee_openformats find.rs makes on the data path and its files
+// ---- the open-format lookups' host. The game's models and textures are glTF and PNG files only (docs/RUST_PLAN.md
+// D9, docs/MODEL_FORMATS.md): Rust finds them on the data path and decodes them into what the engine stores
+// (ee_openformats find.rs: ee_of_find_model, a model's .glb/.gltf; ee_of_find_texture, GETexture.cpp: a texture's PNG
+// frames); the path and its files are C++, reached through this host
 intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     unsigned long theRead = 0;
@@ -139,48 +118,23 @@ intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
 intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (inOp) {
-    case EeGeManOp::LockCreate: return TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a);
-    case EeGeManOp::LockVerify: ESVERIFY_AT(a == keseOK, 39); return 0;
-    case EeGeManOp::LockDestroy:
-        TSScheduler::DestroyCriticalSection((TSCriticalSection*)inObj);
-        return 0;
-    case EeGeManOp::LockEnter:
-        ((TSCriticalSection*)inObj)->Enter();
-        return 0;
-    case EeGeManOp::LockLeave:
-        ((TSCriticalSection*)inObj)->Leave();
-        return 0;
-    case EeGeManOp::PathReference:
-        ((FSPath*)inObj)->Reference();
-        return 0;
+    // (the lock's calls, the path's Reference, a model's reference count, name, sub-model, size and verification,
+    // ModelStoreLoaded and ModelFreeFile: Rust's own, ee_ge manobj.rs direct_op)
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
-    case EeGeManOp::RefCount:
-        return (intptr_t)((GEModel*)inObj)->mReferenceCount;
     case EeGeManOp::BaseDereference:
         ((GEModel*)inObj)->UReferenceCounter::Dereference();
         return 0;
     case EeGeManOp::DumpText: fprintf(*(FSFileSpec*)inObj, "%s", (const char*)a); return 0;
     case EeGeManOp::ModelNew: return (intptr_t)new GEModel(*(const EeGeModelCreate*)a, UString((const char*)b), (GEModelManager*)inOwner);
     case EeGeManOp::ModelNewSub: return (intptr_t)new GEModel(*(const EeGeModelCreate*)a, *(const UString*)b, (GEModelManager*)inOwner);
-    case EeGeManOp::ModelName: return (intptr_t)&((GEModel*)inObj)->GetName();
-    case EeGeManOp::ModelSetSub: ((GEModel*)inObj)->SetSubModel((GEModel*)a, (unsigned long)b); return 0;
     case EeGeManOp::ModelFindFile:
         return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, (const EeGeSharedFrames*)b, (EeGeCemModel**)c);
     case EeGeManOp::ModelNewEmpty:
         return (intptr_t)new GEModel(((GEModelManager*)inOwner));
-    case EeGeManOp::ModelStoreLoaded:
-        return ee_ge_mod_store_loaded(((GEModel*)inObj)->mRust, (const EeGeCemModel*)a, (const EeGeSharedFrames*)b);
-    case EeGeManOp::ModelSizeOf:
-        return (intptr_t)((GEModel*)inObj)->SizeOf();
-    case EeGeManOp::ModelVerify:
-        ((GEModel*)inObj)->Verify();
+    default:
         return 0;
-    case EeGeManOp::ModelFreeFile:
-        ee_ge_cem_free((EeGeCemModel*)inObj);
-        return 0;
-    default: return 0;
     }
 }
 
@@ -218,36 +172,11 @@ bool GEPhysicalModel::Intersects(const GEViewport& inViewport, bool inOrthograph
 static intptr_t TerrainMeshHost(void*, EeGeTmOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
-    case EeGeTmOp::Time:
-        return (intptr_t)TMGetTime();
-    case EeGeTmOp::FractalNew:
-        return (intptr_t) new U2DFractal(64, 0.0f, 10.5f, (unsigned long)a);
-    case EeGeTmOp::FractalDelete:
-        delete (U2DFractal*)inObj;
-        return 0;
-    case EeGeTmOp::FractalValue:
-        *(float*)a = ((U2DFractal*)inObj)->GetValue((unsigned long)(b >> 16), (unsigned long)(b & 0xffff));
-        return 0;
-    case EeGeTmOp::FractalCompute:
-        ((U2DFractal*)inObj)->ComputeFractal(0.0f, 10.5f, (unsigned long)a);
-        return 0;
+    // (the clock, the fractals, the texture sets' reads and a texture's Reference: Rust's own, ee_ge tmobj.rs direct_op)
     case EeGeTmOp::Quantize:
         return (intptr_t)((const GEVector*)a)->GetQuantizedVersion();
     case EeGeTmOp::SetDelete:
         delete ((GETextureSet*)inObj);
-        return 0;
-    case EeGeTmOp::SetWidth:
-        return (intptr_t)((GETextureSet*)inObj)->GetNumTexturesInWidth();
-    case EeGeTmOp::SetHeight:
-        return (intptr_t)((GETextureSet*)inObj)->GetNumTexturesInHeight();
-    case EeGeTmOp::SetCoverage:
-        return (intptr_t)((GETextureSet*)inObj)->GetTextureTileCoverage();
-    case EeGeTmOp::SetTexture:
-        return (intptr_t)((GETextureSet*)inObj)->GetTexture((unsigned long)a, (unsigned long)b);
-    case EeGeTmOp::SetTextureAt:
-        return (intptr_t)((GETextureSet*)inObj)->GetTextureAt((unsigned long)a, (unsigned long)b);
-    case EeGeTmOp::TexReference:
-        ((GETexture*)inObj)->Reference();
         return 0;
     case EeGeTmOp::TexDereference:
         ((GETexture*)inObj)->Dereference();

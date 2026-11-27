@@ -120,6 +120,37 @@ pub(crate) unsafe fn vertex_op(op: EeGeBmpOp, obj: usize, a: isize, b: isize) ->
     Some(0)
 }
 
+/// The bitmaps' and primitives' calls that are one call or read of a Rust object: the active rasterizer and its screen
+/// count (a `GERasterizer`'s first member is its Rust object), a texture's `Reference()` and dropped MIP levels (read
+/// in place: `cppobj.rs`). Made here rather than through the C++ host (a test's fake host answers them instead).
+///
+/// # Safety
+/// The operation's objects are as `EeGeBmpOp` describes.
+pub(crate) unsafe fn direct_op(op: EeGeBmpOp, obj: usize) -> Option<isize> {
+    if cfg!(test) {
+        return None;
+    }
+    use crate::ge::rastobj::{ee_ge_rast_active, ee_ge_rast_get, EeGeRastVal, EeGeRasterizer};
+    use crate::ge::texobj_tex::{ee_ge_tex_get, EeGeTexVal, EeGeTexture};
+    // SAFETY (each call and read): the caller's contract
+    unsafe {
+        Some(match op {
+            EeGeBmpOp::RasterActive => ee_ge_rast_active() as isize,
+            EeGeBmpOp::RasterScreenCount => {
+                ee_ge_rast_get(cppobj::plain::<EeGeRasterizer>(obj), EeGeRastVal::ScreenCount)
+            }
+            EeGeBmpOp::TexReference => {
+                cppobj::reference(obj);
+                0
+            }
+            EeGeBmpOp::TexDropLevels => {
+                ee_ge_tex_get(cppobj::counted::<EeGeTexture>(obj), EeGeTexVal::NumMipLevelsToDrop) as c_ulong as isize
+            }
+            _ => return None,
+        })
+    }
+}
+
 /// The host: `owner` is the C++ bitmap of the object calling.
 pub type EeGeBmpHostFn =
     unsafe extern "C" fn(owner: *mut c_void, op: EeGeBmpOp, obj: *mut c_void, a: isize, b: isize) -> isize;
@@ -177,6 +208,10 @@ impl EeGeBitmap {
     unsafe fn op(p: *mut Self, op: EeGeBmpOp, obj: usize, a: isize, b: isize) -> isize {
         // SAFETY: the caller's contract
         if let Some(r) = unsafe { vertex_op(op, obj, a, b) } {
+            return r;
+        }
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { direct_op(op, obj) } {
             return r;
         }
         // SAFETY: the caller's contract (host and owner are copied out before the call)

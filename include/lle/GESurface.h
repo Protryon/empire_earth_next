@@ -28,7 +28,6 @@ public:
     GESurface(GXSurface* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen);
     operator GXSurface*() { return static_cast<GXSurface*>(ee_dx7sf_gx(this->mDX7)); }
 
-    long AttachSurface(GESurface* inSurface) { return ee_dx7sf_attach(this->mDX7, inSurface); }
     long Clear(GEColor& inColor, float inAlpha) { return ee_dx7sf_clear(this->mDX7, NULL, reinterpret_cast<const float*>(&inColor), inAlpha); }
     long Clear(GERectangle& inRectangle, GEColor& inColor, float inAlpha)
         { return ee_dx7sf_clear(this->mDX7, reinterpret_cast<const float*>(&inRectangle), reinterpret_cast<const float*>(&inColor), inAlpha); }
@@ -76,8 +75,6 @@ public:
     // An explicit logical size for a surface whose pixels are not a power of two times it (the WON lobby's frame:
     // 1024x768 logical at the window's pixels); 0, 0 goes back to the logical shift
     void SetLogicalSize(unsigned long inWidth, unsigned long inHeight) { this->mLogicalWidth = inWidth; this->mLogicalHeight = inHeight; }
-    unsigned long GetLogicalWidthSet() const { return this->mLogicalWidth; }
-    unsigned long GetLogicalHeightSet() const { return this->mLogicalHeight; }
     unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }
     unsigned long GetPixelHeight() const { return this->GetSurfaceDescription().mHeight; }
 

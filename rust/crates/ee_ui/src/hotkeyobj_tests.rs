@@ -67,13 +67,13 @@ fn replay(golden: &str) -> usize {
     r.run(|_, w| match w[0] {
         "new" => {
             // SAFETY: the test's record
-            unsafe { ee_ui_hotkey_init(a, Some(host_current)) };
+            unsafe { ee_ui_hotkey_init(a, Some(host_current), core::ptr::null_mut()) };
             true
         }
         "copy" => {
             let form = w[1].parse::<isize>().unwrap() as *mut c_void;
             // SAFETY: the test's records
-            unsafe { ee_ui_hotkey_copy(b, Some(host_current), a, form) };
+            unsafe { ee_ui_hotkey_copy(b, Some(host_current), a, form, core::ptr::null_mut()) };
             true
         }
         "free" => {

@@ -3,7 +3,8 @@
 //! the server's and client's WaitAny, ThreadPriority and Sleep ops did (`TMGetTime`, `TSScheduler::CreateEvent` with
 //! its manual reset, `TSEvent`, `TSScheduler::CreateThread`, `TSThread::SetName`/`SetPriority`, `PlatSleep`), all of
 //! them Rust's (ee_time, ee_ts, the platform layer) behind their C ABI. A thread kind (`QHost::thread_new`) is the
-//! entry function of that object's thread.
+//! entry function of that object's thread. The queues' Verify, FpuStart and FpuCheck ops too (LLE/UI round 2:
+//! `ESVerify`, `UMSetFloatingPointPrecision(kFPPrecision53)`, `ee_util_fp_check`, ee_base's).
 
 use std::ffi::{c_char, c_ulong, c_void, CString};
 
@@ -36,6 +37,9 @@ mod sys {
         pub fn ee_ts_thread_set_priority(thread: *const c_void, priority: i32) -> c_long;
         pub fn ee_ts_thread_set_name(thread: *const c_void, name: *const c_char);
         pub fn PlatSleep(milliseconds: u32);
+        pub fn ee_error_verify(file: *const c_char, line: std::ffi::c_ulong, expression: *const c_char);
+        pub fn ee_util_fp_set_precision(precision: std::ffi::c_ulong);
+        pub fn ee_util_fp_check();
     }
 }
 
@@ -79,6 +83,15 @@ mod sys {
         unreachable!()
     }
     pub unsafe fn PlatSleep(_: u32) {
+        unreachable!()
+    }
+    pub unsafe fn ee_error_verify(_: *const c_char, _: std::ffi::c_ulong, _: *const c_char) {
+        unreachable!()
+    }
+    pub unsafe fn ee_util_fp_set_precision(_: std::ffi::c_ulong) {
+        unreachable!()
+    }
+    pub unsafe fn ee_util_fp_check() {
         unreachable!()
     }
 }
@@ -146,6 +159,31 @@ pub fn thread_name(t: Thr, name: &str) {
 /// `TSScheduler::DestroyThread`
 pub fn thread_free(t: Thr) {
     unsafe { ee_ts_thread_free(t as *mut c_void) };
+}
+
+/// The original units a queue's verification names (`QHost::verify`'s unit), the first out of range
+const UNITS: [&std::ffi::CStr; 5] = [
+    c"NELagLossSimulator.cpp",
+    c"NERecordPlayback.cpp",
+    c"NETimestampedMessage.cpp",
+    c"NESynchronousClient.cpp",
+    c"NESynchronousServer.cpp",
+];
+
+/// `ESVerify(unit, line, "(ee_net)")`: a failed verification of a queue
+pub fn verify(unit: u32, line: u32) {
+    let file = UNITS[if (unit as usize) < UNITS.len() { unit as usize } else { 0 }];
+    unsafe { ee_error_verify(file.as_ptr(), line as std::ffi::c_ulong, c"(ee_net)".as_ptr()) }
+}
+
+/// `UMSetFloatingPointPrecision(kFPPrecision53)`: a queue thread's start
+pub fn fpu_start() {
+    unsafe { ee_util_fp_set_precision(0x10000) }
+}
+
+/// `ee_util_fp_check()`
+pub fn fpu_check() {
+    unsafe { ee_util_fp_check() }
 }
 
 macro_rules! entries {

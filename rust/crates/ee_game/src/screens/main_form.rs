@@ -744,7 +744,7 @@ const KEYBOARD_TESTS: [(i64, i64); 22] = [
     (21, 0),
 ];
 
-// the keys (ISKeyCode.h: DirectInput's codes and the three modifiers)
+// the keys (rust/base/lle_enums.h: DirectInput's codes and the three modifiers)
 const K_ESCAPE: u16 = 0x01;
 const K_BACK: u16 = 0x0e;
 const K_TAB: u16 = 0x0f;

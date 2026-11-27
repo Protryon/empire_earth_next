@@ -51,17 +51,21 @@ struct EeUiHotKeyFields {
 
 extern "C" {
 
-/// `UIHotKey()` over its record.
+/// `UIHotKey()` over its record, the C++ hot key `cpp`'s base (recorded for [`crate::direct`]).
 ///
 /// # Safety
 /// `rec` is the C++ hot key's base.
-void ee_ui_hotkey_init(EeUiHotKeyFields *rec, EeUiHostFn host);
+void ee_ui_hotkey_init(EeUiHotKeyFields *rec, EeUiHostFn host, void *cpp);
 
 /// `UIHotKey(form, *other)` over its record.
 ///
 /// # Safety
 /// `rec` is the C++ hot key's base, `other` a live hot key's.
-void ee_ui_hotkey_copy(EeUiHotKeyFields *rec, EeUiHostFn host, EeUiHotKeyFields *other, void *form);
+void ee_ui_hotkey_copy(EeUiHotKeyFields *rec,
+                       EeUiHostFn host,
+                       EeUiHotKeyFields *other,
+                       void *form,
+                       void *cpp);
 
 /// One of `UIHotKey`'s methods ([`EeUiHotKeyCall`], not the constructors).
 ///

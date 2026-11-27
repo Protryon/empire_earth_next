@@ -129,6 +129,81 @@ boxes' line structs and members (UIListBox<T> templates over C++ strings: a Rust
 destructor); EEUIFSETerrain.h 17, UIListBox.h 16, UIObjHost.h 16 (UIF4), EEScreens.cpp 14; the status button's four
 members (they need EEUIFMainGame complete: ButtonCall), the main group's constructor (it news the status box).
 
+## Round 15 (LLE/UI round 2, fork B: the UI toolkit; branch `rust-lleui2-b`, 2026-11-25)
+
+The measure is total C++ lines (`tools/port_metrics.py`). The toolkit (src/Low-Level Engine/User Interface,
+include/lle/UI*.h): **-909 C++ lines, -20 compiled files** against a102c738e (95,507 / 275; logic -1, shim -104;
+classes unchanged). Behaviour: none intended (oracle seeds 2-7 identical; a harness tour with `EE_DIRECT_CHECK` found
+every control record by its C++ pointer, 78,691 lookups, none missing).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| bbd4fa7b8 | UICheckBox.cpp and UIRadioButton.cpp deleted: they compiled to nothing (includes and a comment their headers carry) | -102 (-2 files) |
+| 6cb005e72 | the 18 other units one, `User Interface.cpp`: each a section under its unit's own comment (a reference elsewhere to UIForm.cpp's host or UIButton.cpp's shims names its section), one include list of 40 headers found by trial compiles (the units had 610 include lines); the three `LLE_UI*_CPP` switches gone with the units; `tools/harness/layout_gen.py` dumps the one unit (every class its two units saw, checked) | -668 (-18 files) |
+| eef347435 | the controls' and forms' polls (`TMPoll`, whose only member is ee_base's `EeTimePoll`) made, run and freed in Rust (lle_hosts.rs `polls`), and the hot keys' static 50 ms poll | -47 |
+| 042eb1a06 | lle_cpp.rs's `shims!` takes a `rust:` part, calls that were one statement on another crate's Rust object (the fake logs them alike, so the goldens stay): the input entities, the shared key slots and the key predicates, Num Lock, the texts' colours (`own`) | -29 |
+| 8011fedfc | the tables' ops on the locks (ee_base sections), the clock, the form's Tab, Shift and wheel, the clipboard and the texts' setters (lle_hosts.rs `own`); the UI lock's creation | -23 |
+| 43f231d39 | a control's own members (border thickness, type and opacity, index, always-dirty, the button-down flags, a form slot's) read and written in its record, which direct.rs finds by the C++ control (lle_hosts.rs `fields`) | -16 |
+| 702a53cf6 | UIButtonState.h (one include of rust/ui/ids.h) gone; UIEMouseWheelScroll and UITiledBackground, included only by the toolkit's unit, in it | -24 |
+
+Lessons: the include lists were most of what was left (610 of 2,100 lines in 21 units): with the classes whole in
+Rust, the units are their host shims, and one unit needs one list. A shim of one call on another crate's Rust object
+(`TMPoll`, `ISEntity`, `TSCriticalSection`, `GEText`: each a C++ class over one Rust record or pointer) is a Rust call
+of that crate's C ABI; the host tables' `x` entries and `shims!`'s `rust:` part take it without changing what a
+golden sees (the objects still make the op).
+
+What is left: the shims that call a C++ virtual (the controls', forms', backgrounds' and events' overridable members:
+the game's classes override them), the constructors (`new UIButton`, `new GEText(font)`, `new GERhombus`: the C++
+object is the host owner the Rust object calls back), the `gISKeyboard`/`gISMouse` lookups (C++ globals of the
+input system, fork A's), the strings and string vectors (`UWideString` has a vtable: its record is not at the
+object's address), the fonts (a `GEFont` is a `UReferenceCounter`), and the non-virtual members of forms and
+managers that Rust could call through direct.rs (`GetManager()->GetScreen()` chains: next).
+
+### Pass 2 (branch `rust-lleui2-d`, from rust-lleui2 61544a7d6 with origin/rust batch 29)
+
+**-462 C++ lines** against 61544a7d6 (87,963 -> 87,501; compiled files unchanged, 251; logic unchanged, shim -381;
+classes unchanged; extern_c +5: the harness's six EETestUI* are Rust's now, the 200 removed shims were `EE_UI_CASE`
+macros the metric does not count). Behaviour: none intended (oracle seeds 2-7 identical after the background fix
+below; a fixture tour, RESULT PASS, with `EE_DIRECT_CHECK`: 1,488,000 lookups by C++ pointer, none missing).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| a122d23cf | ee_ui lle_chains.rs: the ~200 host ops whose shim was a chain of non-virtual C++ forwarders (`theForm->GetManager()->GetScreen()`, `ctl->GetForm()->GetTabStop()`, a control's, background's, hot key's or table's member, a scroll bar's slider, the database loaders' statics) make the forwarders' inward calls themselves; direct.rs finds each Rust object by the C++ pointer (new kinds: ScrollBar, Table, HotKey; the hot key's constructors hand Rust the C++ object). The forwarders nothing calls any more and the members no C++ ever called went with them | -311 |
+| 3311121dd | the combo box's parts (PartOf's rectangle and border, the edit box's text, UIControl's CopyData/SetRectangle/SetLocation, the base rectangle); the harness's EETestUI* in direct.rs (the unit keeps the `/include:` pragmas); the macros the moved shims used; 21 more members no C++ calls | -81 |
+| 9ee87014c | the controls table's setters whose C++ member is a non-virtual forwarder (lle_hosts.rs SET takes a shim or a Rust op), the combo box's list queries, the file lists' selections, the radio button's checked state and bitmaps, the label's fit; five ChangeWidth members no C++ calls | -59 |
+| 773698328 | SetupText's texts (the list box's `mText` keeps its shim), the combo box's label and edit texts, the graph text's colour and transparency | -11 |
+| 1a2932dd6 | bgobj.rs: a background is registered for direct.rs before its constructor's calls out: its `BgAdd` (now Rust: `AddBackground` of the registry's `UIBackground*`) ran before the registration and handed the form NULL, which the first form Open dereferenced (EE-SIM faulted in `ee_uicpp_form_bg_open` on every seed) | 0 |
+
+Lessons: an op that finds its object through direct.rs needs the object registered before the first call out that
+can reach it, and a constructor's own calls out come before `made()`'s registration (the form's and manager's
+`new` make none; the background's `init` adds itself to its form; the control's record and the hot key are
+registered first). The sim oracle opens the forms, so a NULL from the registry shows there; the lookup check
+(`EE_DIRECT_CHECK`) names the op. A virtual stays a shim when any class overrides it (`GetType`: the check, radio and
+tri-state boxes; `UnCheck`: the editor's tabs).
+
+What is left (the unit is 1,037 lines): the virtuals (the controls', forms', backgrounds', events' and the manager's
+overridable members), the constructors and deletes of C++ objects (controls, texts, rhombi, lines, strings, hot keys,
+events, the wheel event), the GE objects' calls (bitmaps, textures, the rasterizer's windows and blending, GEText's
+font and string, the rhombi: fork A's), the string table and the C++ strings (`UWideString`, `std::vector`), the file
+system's calls (`FSFileSpec`, `FSPath`, the file lists' searches), the sound manager's, `gISKeyboard`/`gISMouse` and
+the list box's members over its C++ line views (`mData`, `mCopyLineArray`, `mText`).
+
+### The lead: the game's UI units (branch `rust-lleui2`, 2026-11-26)
+
+The game's UI layer gets pass 1's toolkit treatment: with the controls' logic in Rust, its units are host shims under
+long include lists (676 include lines in the UI thread's 20 units), and one unit needs one list.
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| 645e4e7bc | the UI thread's 18 original units (0x254911..0x27aa0b) and the port's two hosts (EEUIRustControl.cpp, EEUIShell.cpp) one, `EEUserInterface.cpp`: each a section under its comment, one include list of 115 headers (each dropped only when the unit compiled without it and without a warning: build/lleui2 inc_trim.py); two identical file-static `C()` helpers one; EEFOFindNewTargetNearOldTarget.cpp (the units lane's) stays its own unit | -378 (-19 files) |
+| 617ecd086 | the UI events' two original units (EEUIEScenarioIntroEvents.cpp, EEUIEWonNetArenaGameEvents.cpp) sections of `EEScreens.cpp`; `ee/EEWonFrontHost.inl` stays below the arena section's statics it reads; EEScreenEvent.cpp stays a leaf | -74 (-2 files) |
+
+The round (fork A, fork B, the two pass-2 forks and the lead), against origin/rust 47e9ad712 (batch 29, merged into the
+round): **-2,337 C++ lines, -39 compiled files** (88,934 / 269 -> 86,597 / 230); logic -41, shim -1,007; classes -9.
+Merged with batch 30 (126ab1513, whose changes to five UI thread units went into their sections; the unit keeps
+EEMiniMap.h, which batch 30 had dropped from EEUserInterface.cpp alone): -2,336 and -39 against it (87,771 / 253 ->
+85,435 / 214).
+
 ## Round 16 (branches `rust-ui16a` toolkit then civilization builder and UI thread, `rust-ui16b` game UI then HUD, two passes each, merged on `rust-ui16`, 2026-11-23)
 
 The collapse phase: classes deleted, not only bodies moved. Lane classes 115 -> 96 (+2 outside the lane).

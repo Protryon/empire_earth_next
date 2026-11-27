@@ -11,7 +11,7 @@
 
 #include "lle/UWideString.h"
 #include "lle/GEFont.h"
-#include "lle/GETextAlignment.h"
+#include "rust/render/gestate.h"
 
 class LLE_API GEText {
 public:

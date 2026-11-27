@@ -61,7 +61,7 @@ static UWideString operator+(const UWideString& a, const UWideString& b) { retur
 struct UString : UWideString {
     UString(const char* inText) : UWideString(inText) {}
 };
-#include "lle/ISModifierState.h"
+#include "rust/base/lle_enums.h"
 struct UResourceFile {
     void GetString(unsigned long, UWideString&) {}
 };
