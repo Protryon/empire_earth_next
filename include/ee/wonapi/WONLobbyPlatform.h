@@ -37,12 +37,7 @@
 #include "platform/PlatWindow.h"
 #include "platform/PlatThread.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/won_gui/surface.h"
-#include "rust/won_gui/platcursor.h"
-#include "rust/won_gui/platfont.h"
 #include "rust/won_gui/platimg.h"
-#include "rust/won_gui/platwin.h"
-#include "rust/won_gui/platwm.h"
 
 namespace WONAPI {
 

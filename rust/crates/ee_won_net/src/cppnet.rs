@@ -202,6 +202,51 @@ pub fn socket_kill(socket: *mut c_void) {
     }
 }
 
+// ---- the lobby logics' completions and runs (R6 WON lobby and network round 40: logicshell.rs)
+
+/// `op->SetCompletion(completion)` (a reference taken on a new one, the old one's given back).
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the completion reaches only the C++ table, as the host's case passed it
+pub fn op_set_completion(o: *mut c_void, completion: *mut c_void) {
+    if let Some(op) = cppcore::op(o) {
+        // SAFETY: the caller's live completion or null
+        unsafe { op.set_completion(completion) }
+    }
+}
+/// `op->RunAsync(timeout)`.
+pub fn op_run_async(o: *mut c_void, timeout: u32) {
+    if let Some(op) = cppcore::op(o) {
+        op.run(1, timeout);
+    }
+}
+/// `((RoutingConnection*)conn)->SetOpCompletion(type, completion)`.
+pub fn routeconn_set_completion(conn: *mut c_void, ty: i32, completion: *mut c_void) {
+    let r = cppcore::object_of(conn, EeWonCoreObject::RouteConn) as *const crate::routeconn::EeWonRouteConn;
+    // SAFETY: the connection's live Rust object
+    if let Some(r) = unsafe { r.as_ref() } {
+        r.set_completion(ty, completion)
+    }
+}
+/// `((QueueSocket*)socket)->SetCloseCompletion(completion)`.
+pub fn queue_set_close_completion(socket: *mut c_void, completion: *mut c_void) {
+    if let Some(q) = cppcore::queue(socket) {
+        q.set_close_completion(completion)
+    }
+}
+/// `((UDPManager*)manager)->SetDefaultCompletion(completion)`.
+pub fn udp_set_default_completion(manager: *mut c_void, completion: *mut c_void) {
+    let m = cppcore::object_of(manager, EeWonCoreObject::UdpManager) as *const crate::udpmgr::EeWonUdpManager;
+    // SAFETY: the manager's live Rust object
+    if let Some(m) = unsafe { m.as_ref() } {
+        m.set_default_completion(completion as usize)
+    }
+}
+/// `((UDPManagerRecvOp*)o)->GetMsg()` (null for none or another op).
+pub fn udp_recv_msg(o: *mut c_void) -> *mut c_void {
+    let r = cppcore::object_of(o, EeWonCoreObject::UdpRecv) as *const crate::udpops::EeWonUdpRecvOp;
+    // SAFETY: the op's live Rust object
+    unsafe { r.as_ref() }.map_or(null_mut(), |r| r.msg() as *mut c_void)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

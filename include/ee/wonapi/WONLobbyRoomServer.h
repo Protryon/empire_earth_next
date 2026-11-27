@@ -4,7 +4,6 @@
 #define EE_WONAPI_WONLOBBYROOMSERVER_H
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyScreens.h"
-#include "ee/wonapi/WONLobbyRustCtrl.h"
 namespace WONAPI {
 class RoomLabelCtrl : public LobbyRustCtrl {
 public:

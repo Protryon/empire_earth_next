@@ -13,22 +13,13 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatFile.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "ee/wonapi/WONGUIShell.h"
 #include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/dialogs.h"
-#include "rust/won_lobby/lobbydlg.h"
-#include "rust/won_lobby/lobbypopup.h"
-#include "rust/won_net/httpdoc.h"
 
 using namespace WONAPI;
 

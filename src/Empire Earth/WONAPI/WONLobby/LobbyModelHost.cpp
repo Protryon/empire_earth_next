@@ -6,25 +6,12 @@
 // and records: the directory's entries handed to the Rust as values, the summaries, the join request and reply, a
 // player's bytes, the status texts. The routing server's records are read in Rust (R6 WONLobby round 12).
 #include <windows.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <string.h>
-#include <time.h>
-#include <string>
-#include <list>
-#include <vector>
-#include <map>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/model.h"
-#include "rust/won_lobby/modelobj.h"
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/lobbyhost.h"

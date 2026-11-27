@@ -36,8 +36,13 @@ use crate::lobbyprv::EE_WON_LOBBY_THROWN;
 use crate::logics::{ee_won_logic_call, ee_won_logic_free, EeWonLogic, EeWonLogicCall as Lc};
 use crate::routelogic::{ee_won_routelogic_call, ee_won_routelogic_free, EeWonRouteLogic, EeWonRouteLogicCall as Rc};
 use crate::stagingobj::{ee_won_staging_call, ee_won_staging_free, EeWonStaging, EeWonStagingCall as Sc};
-use ee_won_net::opobj::{ee_won_logic_completion_runs, EeWonRemoveTrackedFn};
+use ee_won_net::cppnet as net;
+use ee_won_net::opobj::{
+    ee_won_logic_completion_runs, ee_won_op_tracker_add, ee_won_op_tracker_at, ee_won_op_tracker_kill_all,
+    ee_won_op_tracker_len, EeWonOpTracker, EeWonRemoveTrackedFn,
+};
 use std::ffi::{c_char, c_void, CStr};
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 /// Which logic a shell is (its Rust object's type).
 #[repr(u32)]
@@ -408,6 +413,174 @@ pub unsafe extern "C" fn ee_won_logicshell_done(
     }
     // SAFETY: the contract
     unsafe { run(rust, r) };
+}
+
+/// The shell's C++ (LobbyLogic.cpp binds it at start-up, R6 WON lobby and network round 40): `new
+/// ShellCompletion(logic, done, code)` (its `mCheckTracker` set for a tracked run; no reference taken yet; a
+/// `LobbyCompletionBase`, run on the window thread) and the logic's op tracker (`logic->mTracker`'s Rust object).
+#[repr(C)]
+pub struct EeWonLogicShellCpp {
+    pub completion: Option<
+        unsafe extern "C" fn(logic: *mut c_void, done: EeWonLogicShellDone, code: i32, tracked: bool) -> *mut c_void,
+    >,
+    pub tracker: Option<unsafe extern "C" fn(logic: *mut c_void) -> *mut EeWonOpTracker>,
+}
+
+static SHELL_CPP: AtomicPtr<EeWonLogicShellCpp> = AtomicPtr::new(std::ptr::null_mut());
+
+/// Binds the shell's C++ (a static table; null leaves the binding as it is).
+#[no_mangle]
+pub extern "C" fn ee_won_logicshell_bind(cpp: *const EeWonLogicShellCpp) {
+    if !cpp.is_null() {
+        SHELL_CPP.store(cpp.cast_mut(), Ordering::Release);
+    }
+}
+
+/// The bound table, in the game only (the network core bound too; the drivers' hosts answer otherwise).
+fn shell_cpp() -> Option<&'static EeWonLogicShellCpp> {
+    if !net::bound() {
+        return None;
+    }
+    // SAFETY: a bound table lives for the program
+    unsafe { SHELL_CPP.load(Ordering::Acquire).as_ref() }
+}
+
+/// A new completion of `logic` (null unbound).
+fn completion(logic: *mut c_void, done: EeWonLogicShellDone, code: i32, tracked: bool) -> *mut c_void {
+    // SAFETY: the table's contract: `logic` is the live shell the caller's object belongs to
+    shell_cpp().and_then(|c| c.completion).map_or(std::ptr::null_mut(), |f| unsafe { f(logic, done, code, tracked) })
+}
+
+/// `logic->mTracker`'s Rust object (null unbound).
+fn tracker(logic: *mut c_void) -> *const EeWonOpTracker {
+    // SAFETY: as `completion`
+    shell_cpp().and_then(|c| c.tracker).map_or(std::ptr::null(), |f| unsafe { f(logic) })
+}
+
+/// `LobbyLogic::RunOp(op, completion, timeout)` (`done` none: a NULL completion) or, `tracked`, `RunTrackedOp`:
+/// the op's completion set, the op tracked, run async (`LobbyRunOp`: a 0 timeout is the lobby's 60 s).
+fn run_op(logic: *mut c_void, op: isize, done: Option<(EeWonLogicShellDone, i32)>, tracked: bool, timeout: u32) {
+    let op = op as *mut c_void;
+    let c = done.map_or(std::ptr::null_mut(), |(d, code)| completion(logic, d, code, tracked));
+    net::op_set_completion(op, c);
+    if tracked {
+        let t = tracker(logic);
+        if !t.is_null() {
+            // SAFETY: the logic's live tracker and the caller's op
+            unsafe { ee_won_op_tracker_add(t, op, 0) };
+        }
+    }
+    net::op_run_async(op, if timeout == 0 { 60000 } else { timeout });
+}
+
+/// RoutingLogic's host cases of its completions and runs (RoutingLogic.cpp's until R6 WON lobby and network round
+/// 40), answered here in the game (`logic` the shell; `None`: the host's).
+pub(crate) fn route_op(
+    logic: *mut c_void,
+    op: crate::routelogic::EeWonRouteLogicOp,
+    a: isize,
+    b: isize,
+    c: isize,
+) -> Option<isize> {
+    use crate::routelogic::EeWonRouteLogicOp as R;
+    use EeWonLogicShellDone as D;
+    shell_cpp()?;
+    let p = a as *mut c_void;
+    match op {
+        // `L->RunOp(AO(a), NULL, 0)`
+        R::RunOp => run_op(logic, a, None, false, 0),
+        // `L->RunOp(AO(a), new ShellCompletion(L, RouteUserStatus), 10000)`
+        R::StatusOpRun => run_op(logic, a, Some((D::RouteUserStatus, 0)), false, 10000),
+        // `L->RunTrackedOp(AO(a), new ShellCompletion(L, RouteGroups), 0)`
+        R::RunTrackedGroups => run_op(logic, a, Some((D::RouteGroups, 0)), true, 0),
+        // `RC(a)->SetOpCompletion(b, new ShellCompletion(L, RouteNotify, c))`
+        R::ConnSetNotice => {
+            net::routeconn_set_completion(p, b as i32, completion(logic, D::RouteNotify, c as i32, false))
+        }
+        // `RC(a)->SetCloseCompletion(new ShellCompletion(L, RouteClosed))`
+        R::ConnSetClose => net::queue_set_close_completion(p, completion(logic, D::RouteClosed, 0, false)),
+        // SubscribeDataObject(0xffff, the game data type "G", false, the notice completion of code 21)
+        R::ConnSubscribeGames => {
+            use ee_won_net::routecpp::{request, Value, EE_WON_RTQ_READ_DATA};
+            let n = |num: i64| Value { num, bytes: Vec::new() };
+            let values = [n(1), n(0xffff), Value { num: 0, bytes: b"G".to_vec() }, n(0)];
+            request(p, EE_WON_RTQ_READ_DATA, &values, completion(logic, D::RouteNotify, 21, false));
+        }
+        _ => return None,
+    }
+    Some(0)
+}
+
+/// PingLogic's host cases of its completions, runs, receive and tracker (PingLogic.cpp's until R6 WON lobby and
+/// network round 40), answered here in the game (`None`: the host's).
+pub(crate) fn logic_op(logic: *mut c_void, op: crate::logics::EeWonLogicOp, a: isize, b: isize) -> Option<isize> {
+    use crate::logics::EeWonLogicOp as O;
+    use EeWonLogicShellDone as D;
+    shell_cpp()?;
+    let r = match op {
+        // `((UDPManager*)a)->SetDefaultCompletion(new ShellCompletion(logic, PingRecv))`
+        O::SetDefaultRecv => {
+            net::udp_set_default_completion(a as *mut c_void, completion(logic, D::PingRecv, 0, false));
+            0
+        }
+        // `logic->RunTrackedOp((AsyncOp*)a, new ShellCompletion(logic, PingDone), b)`
+        O::RunTracked => {
+            run_op(logic, a, Some((D::PingDone, 0)), true, b as u32);
+            0
+        }
+        // `((UDPManagerRecvOp*)a)->GetMsg()`: its data (NULL for none), its length in `*(size_t*)b`
+        O::RecvMsg => {
+            let bytes = net::buffer_bytes(net::udp_recv_msg(a as *mut c_void));
+            // SAFETY: the logic's length slot
+            unsafe { *(b as *mut usize) = bytes.map_or(0, |v| v.len()) };
+            bytes.map_or(0, |v| v.as_ptr() as isize)
+        }
+        // `mTracker.GetNumTrack()`, `mTracker.KillAll()`, a tracked ping op's game (NULL for another op)
+        O::NumTracked => {
+            let t = tracker(logic);
+            // SAFETY: the logic's live tracker
+            if t.is_null() {
+                0
+            } else {
+                unsafe { ee_won_op_tracker_len(t) as i32 as isize }
+            }
+        }
+        O::KillTracked => {
+            let t = tracker(logic);
+            if !t.is_null() {
+                // SAFETY: as above
+                unsafe { ee_won_op_tracker_kill_all(t) };
+            }
+            0
+        }
+        O::TrackedGame => {
+            let t = tracker(logic);
+            if t.is_null() {
+                return Some(0);
+            }
+            // SAFETY: the logic's live tracker; the op it gives (or null) and its ping body (or null)
+            unsafe {
+                let o = ee_won_op_tracker_at(t, a as usize);
+                let body = ee_won_net::udpops::ee_won_udp_body_of(o, ee_won_net::udpops::EE_WON_UDP_BODY_PING);
+                crate::logics::ee_won_pingop_call(body.cast(), crate::logics::EeWonPingOpCall::Field, 5) as isize
+            }
+        }
+        _ => return None,
+    };
+    Some(r)
+}
+
+/// DialogLogic's `RunOp` case, `logic->RunOp((AsyncOp*)a, new ShellCompletion(logic, DlgStatusOp), b)`, in the game
+/// (`None`: the host's).
+pub(crate) fn dlg_op(logic: *mut c_void, op: crate::dlglogic::EeWonDlgLogicOp, a: isize, b: isize) -> Option<isize> {
+    shell_cpp()?;
+    match op {
+        crate::dlglogic::EeWonDlgLogicOp::RunOp => {
+            run_op(logic, a, Some((EeWonLogicShellDone::DlgStatusOp, 0)), false, b as u32);
+            Some(0)
+        }
+        _ => None,
+    }
 }
 
 /// Frees the kind's Rust object (the shell's destructor).

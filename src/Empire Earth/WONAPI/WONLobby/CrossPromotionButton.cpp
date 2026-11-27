@@ -1,19 +1,9 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <string>
-#include <list>
-#include <vector>
-#include <map>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyCrossPromotion.h"
-#include "ee/wonapi/EELobbySound.h"
-#include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONLobbyEvents.h"
-#include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guiconf.h"
-#include "ee/wonapi/WONLobbyGuard.h"
 #include "ee/wonapi/WONGUIShell.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.

@@ -9,7 +9,6 @@
 #include "rust/won_net/authlogin.h"
 #include "rust/won_net/authobj.h"
 #include "rust/won_net/cdkeystore.h"
-#include "rust/won_net/ffi.h"
 
 namespace WONAPI {
 inline const uint8_t* WonBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }

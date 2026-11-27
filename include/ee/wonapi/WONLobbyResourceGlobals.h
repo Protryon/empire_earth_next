@@ -27,9 +27,6 @@ inline const bool gLobbyResourcesBound = (ee_won_lobbyres_bind(gLobbyResources, 
 typedef int LobbyResourceId; // a row of EeWonLobbyRes
 
 WONAPI::ResourceConfigTablePtr LobbyResource_Init(WONAPI::ResourceConfigTable* = NULL);
-const WONAPI::GUIString& LobbyResource_GetString(LobbyResourceId);
-WONAPI::Image* LobbyResource_GetImage(LobbyResourceId);
-WONAPI::Sound* LobbyResource_GetSound(LobbyResourceId);
 void LobbyResource_SafeGlueResources(WONAPI::ResourceConfigTable*);
 void LobbyResource_UnloadResources();
 
