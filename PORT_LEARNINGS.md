@@ -42270,3 +42270,80 @@ worktrees and the lead; batch 29 landed mid-round and was merged into the lead.
   EEDataPreLoading.cpp, EEEffectHost.cpp, EEEvent.cpp, EEScenarioHost.cpp, EESMEffect.cpp, EECPNextUnits.cpp,
   EECPNext.cpp, EEComputerPlayer.cpp, EEUIFMGStatusButton.cpp, EEDataTextFile.cpp; Rust in ee_game gamecpp,
   preload.rs, sim_driver and ee_sim scenario and ai.
+
+## The game core lane, round 17: the world views answer the scenario's, random map's, map's and physics' reads; EECalamityManager.cpp and EESMArea.cpp gone; an effect run's state a Rust record; duplicate host cases to their twins; SendAutoSave from Rust; the record casts as gamecpp records.rs (ee_sim scenario world_views.rs, run_state.rs, event.rs, trigger_members.rs, rmap views.rs; ee_game gamecpp map.rs, records.rs, camera_io.rs, calamity_capture.rs, mrecord.rs, msg_objs.rs; branch rust-core17, 2026-11-26)
+
+The lead and two forks in parallel worktrees, two passes each (A: the Scenario Manager, Campaign, Random Map,
+Calamities, Formations, Map; B: Communications, the Physics Thread, Persistent, Actions, then the Empire Earth
+directory, Database and Data Pre-Loading). The round was finished by a third lead after two stops on usage limits.
+port_metrics: 4a1572766 (round 16) -> 271cf30b3 (first pass + batch 29) is -8,389 C++ lines, of which batch 29 and
+round 16 are most; against batch 31 (origin/rust 38bb1e104, which carries round 16) the round is -1,273 C++ lines
+and -2 compiled files (EECalamityManager.cpp, EESMArea.cpp; code -1,053, shim -993, logic -60; unsafe +200, layout
++5, extern_c +3; Rust +2,539). Against batch 30 it was -1,342: batch 31's own moves took some of the same cases.
+
+- **The world views are the cheap way out of a read case.** Most of the first pass (both forks) was the same move:
+  a host case that only reads a C++ member of the map, a tile, a player, a unit or the scenario's objects becomes a
+  Rust read over the registered world layout (world_views.rs `read`/`event`/`round`, rmap views.rs, gamecpp map.rs
+  `world_map`/`map_tile`). EECalamityManager.cpp and EESMArea.cpp went whole that way; EERandomMap.cpp lost 25
+  cases. Writes of plain fields go the same way (the views' setters); only calls on C++ objects stay.
+- **An object's own scalar state can become a Rust base class.** EESMEffectRun's points and transformations
+  (mPoint ... mCreateTransform) are `EeScenarioRunState` (scenario/run_state.rs), the class's second base right after
+  the host context; a static_assert in EESMEffect.cpp pins the offset Rust uses. The 19 cases that only set or read
+  them went; the C++ statements that still pass them to C++ calls read the record in place through `SMEGe<T>` (the GE
+  classes derive from the record's field types, so no copy). The same shape fits any C++ class whose host cases are
+  mostly its own fields.
+- **Duplicate cases are found mechanically.** Fork B compared every one-statement EeGameCpp case's statement with the
+  file's macros expanded: 113 (second pass) plus the first pass's message, session, save and physics twins were word
+  for word another case's, and their Rust callers now name the twin. Exclusions: ESVERIFY cases (their `__FILE__`
+  differs) and names shared by two Rust enums.
+- **Record casts are address computations.** The seven `static_cast` record reads of EEGameOps.cpp (UnRts, UnFields,
+  CxFields, UcFields, PlRts, PlSaved, PlFields) are gamecpp records.rs over the world layout's offsets (the layout is
+  registered from those same casts). Renaming the chain's first variant broke EETechTree.cpp's chain-end assert
+  (player/tech lane's file), which names it: grep for `EeGameCpp::<first variant>` after reordering the enum.
+- **ee_game -> ee_sim hooks**: the scenario's camera statements go through a hook gamecpp camera_io.rs registers into
+  ee_sim (`world_views::register_camera`, a `OnceLock`: the first registration, at the world camera's creation,
+  stands). It is the pattern round 16 asked for the mini map (still the units lane's).
+- **SendAutoSave from Rust**: the EEMRecord is built by mrecord.rs `new_record` (the name through StrNew/StrAppendC)
+  and sent with ee_net's `ee_net_sv_send_to_all_and_wait`, what NESynchronousServer::SendToAllAndWait called: no new
+  physics host op was needed.
+- **Shims**: EELoadOrSave, EESelectUnitsIDs (the message capture now decodes the selection ids in Rust, msg_objs.rs
+  `selection_ids`), EEChangeUnit, RandomMapInitialize and five dead forwarders (SaveGameToFile, EEFamilyCount,
+  EEDeleteMediaTable, EEParseCommandLine, EEDumpRules) are gone. The random map generator list's five shims are
+  inlines in the cold `ee/EERandomMapGenerators.h`: their callers are WON, UI and screen files.
+- **Includes**: a second per-include trial pass (exe flags, syntax only) found 19 + 7 lines; earlier censuses had
+  taken the rest. Units with `#if` blocks (Empire Earth.cpp, EESim.cpp, EETestFixture.cpp) were left alone: only
+  Windows checks a trim.
+- **Shared lock queue cost**: each fork job waited 40 to 60 minutes on the round's FIFO lock with eight lanes on the
+  machine, which bounded the second pass (A -166 against -300, B -241 against -350). Batch several commits per build.
+- **Merge lessons**: batch 30 carried batch 29's merge resolved on origin with the same intent but a different
+  layout (PlayCreationEffect's place in EEUnitClass.cpp, one-line cases in EEComputerPlayer.cpp): where both sides
+  are equivalent, take origin's form so the next merge does not conflict again. Batch 31 (player/tech 3) moved the
+  tech tree's host cases to Rust while this round sent duplicate cases to twins in EETechTree.cpp: the build caught
+  the two twins it had deleted (TkClassAt -> tech_tree objects.rs `class_at`, TkCurrentPlayer -> the identical
+  WorldCurrentPlayer). A silent one the build could not catch: batch 31's scenario `tech_native` asked the C++ host
+  for WX_EFFECT_TECH, whose case this round had answered in the world views and deleted; the merged closure calls the
+  Rust world host again. After a merge where both sides delete host cases, check every remaining direct call of a
+  C++ host op against the cases left (a deleted case falls to the default's assert only at run time). Case-list
+  conflicts resolve mechanically: ours minus the case groups theirs deleted (scratchpad casemerge.py); watch for a
+  deleted label whose body sat outside the conflict block (batch 31 left one orphaned statement in EESMEffect.cpp).
+- **Behaviour**: none intended; the oracle and every capture are identical. Where the C++ would have dereferenced a
+  NULL pointer, the Rust read answers 0. `__LINE__` values in the trimmed units moved.
+- **Gates**, on the batch-31 tip (5ed20852d; 42890b34d only reformats it): both builds 0/0 (EE-AOC 288 inputs,
+  EE-SIM 289; the test profile 288), headers current, the Rust gate PASS (one run failed on ee_won_net's
+  `dnstest::an_empty_or_bad_host_is_invalid`, which passes alone and on the rerun: a parallel-test flake); the oracle
+  seeds 2-7 identical; captures oracle (598 digests), late (598), scenario (113), calamity (623), placement (4),
+  groups (6), app (38) PASS; the saveload matrix `saveload expect: PASS`; scenario_check 27/27; won_host_coverage
+  PASS; `xbuild.py wontest` PASS (185 drivers, exit 0); `gates.sh` GATES PASS (tour; ai-game time-cap units [4, 36, 37]
+  alive_computers [2, 3] engines classic_lua x 2; lan-game PT host=2832 joiner=2829; the first run's AI game hit the
+  blank main-menu capture flake). The batch-30 tip (73dd8bb5a) passed the same set (gates.sh first time: units
+  [4, 38, 39], lan-game 2814/2821), but for wontest's won_ping36_test (one reply-timeout mismatch under load; it
+  passes alone). Not run (the reduced lane set): space, units, effects, missile, transport captures, plain
+  saveload, sim_editor, eedata, POSIX builds.
+- **Left**: the scenario round's camera cases that read the manager's key (need its key record in Rust);
+  EECampaignProgress's wrappers and the campaign constructors (callers in other lanes' files); EEFormation's Arrange
+  and Place wrappers (they resize vectors); EESMEffect.cpp's statements on C++ objects (goals, groups, calamities,
+  sounds, UI); EEGameOps' method cases (units, classes, calamities: their C++ bodies first); shims whose callers sit
+  in other lanes' files (EEPointUnitOrTile*, EEGetFirstSelectedUnit, EEOrderAtCursor, EEReportLoadFailure, the save
+  file functions used by the UI and campaign); the include trim of the three `#if` units (needs a POSIX check); the
+  generic Rust-callback EEAction/UIEvent class (EESimEditorAction/EESimEditorDone) was not reached; EEPhysics'
+  GetRandom (its callers are the AI Thread's hosts). GetPlayerBySlot went in the first pass.
