@@ -49,7 +49,6 @@ public:
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
         { return ee_cp_herd_save(this, this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &outFile, &EESaveFilePrimitive); }
     long RepairPointers(long inMajorVersion, long inMinorVersion) { return ee_cp_herd_repair_pointers(static_cast<void*>(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }
-    void GetUnits(std::vector<EEComplexUnit*>& outUnits);   // mUnits, in order
 
     EEAnimal* GetAnimal() const { return reinterpret_cast<EEAnimal*>((uintptr_t)this->mAnimal); }
 };

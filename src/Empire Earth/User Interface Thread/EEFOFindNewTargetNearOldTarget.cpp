@@ -216,7 +216,6 @@ extern "C" int64_t ee_units_sr_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_SR_GOAL: return UUHandle(EESrComplex(inA)->GetGoal());
     case EE_UNITS_SR_ATTACK_CAST: return UUHandle(EEAttackUnitCast(UbObj<EEUnitGoal>(inA)));
     case EE_UNITS_SR_ATTACK_TARGET_COMPLEX: return UUHandle(UbObj<EEUGRust>(inA)->GetAttackTarget()->mComplexUnit);
-    case EE_UNITS_SR_TECH_NODE: return UUHandle(EESrUnit(inA)->mPlayer->mTechnologies->Get(EESrUnit(inA)->GetUnitClass()->mTechnology));
     case EE_UNITS_SR_NODE_KIND: return UbObj<EETechTreeNode>(inA)->mData->mKind;
     case EE_UNITS_SR_LAUNCHER: return EESrComplex(inA)->mLauncherClass != NULL;
     case EE_UNITS_SR_GOAL_STATE: return UUHandle(EESrComplex(inA)->mGoalState);
@@ -249,7 +248,6 @@ extern "C" int64_t ee_units_sr_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_SR_UNIT_REGIONS: return UUHandle(gWorld.mMap->mUnitRegions);
     case EE_UNITS_SR_SCREEN: return UbObj<EEFOFindNewTargetScreenBase>(inA)->Virtual08(EESrComplex((uint64_t)inC));
     case EE_UNITS_SR_RETARGET: EERetargetAttack(EESrComplex(inUnit), UbObj<EEUnitGoal>(inA), EESrComplex((uint64_t)inC)); return 0;
-    case EE_UNITS_SR_OWN_TECHNOLOGY: return UUHandle(EESrComplex(inUnit)->GetPlayer()->GetTechTree()->Get(EESrUnit(inA)->GetUnitClass()->GetTechnology()));
     case EE_UNITS_SR_TECHNOLOGY_KIND: return UbObj<EETechnology>(inA)->mData->mKind;
     }
     return 0;
@@ -667,7 +665,6 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     case 50: static_cast<EEComplexUnit*>(UUUnit(inA))->GetPlayer()->AddConstructionSite(static_cast<EEComplexUnit*>(UUUnit(inA))); return 0;
     case 51: return (uint64_t)(int64_t)UUUnit(inA)->GetStats()->mMaxHitPoints;
     case 52: static_cast<EEComplexUnit*>(UUUnit(inA))->SetBuilt(1, 0, 1); return 0;
-    case 53: return ((EEPlayer*)(uintptr_t)inB)->GetTechTree()->Get(kTechWallSpace)->GetIsAvailable();
     case 54: EECreateSpaceWallEnergyWall(static_cast<EEComplexUnit*>(UUUnit(inA))); return 0;
     case 55: return static_cast<EEComplexUnit*>(UUUnit(inA))->mIsPaidFor;
     case 56: static_cast<EEComplexUnit*>(UUUnit(inA))->mIsPaidFor = true; return 0;
@@ -838,7 +835,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_GROUP_UNIT: return UUHandle(UbObj<EEGroup>(inA)->GetUnit((unsigned long)inC));
     case EE_UNITS_UB_GROUP_ADD: UbObj<EEGroup>(inA)->Add(UbObj<EEComplexUnit>(inB)); return 0;
     case EE_UNITS_UB_DROP_UNSUITED_GOALS: UbObj<EEComplexUnit>(inA)->DropUnsuitedGoals(0); return 0;
-    case EE_UNITS_UB_TECH_AVAILABLE: return UbObj<EEPlayer>(inA)->mTechnologies->Get((long)inC)->GetIsAvailable();
     case EE_UNITS_UB_NEXT_PART: return UUHandle(UbObj<EEComplexUnit>(inA)->mNextPart);
     case EE_UNITS_UB_ENERGY_WALL: gWorld.GetEffectManager()->CreateUnitEffect(UbObj<EEComplexUnit>(inA), EEGraphicEffect::Get(inC != 0 ? kGraphicEffectSpaceGateEnergyWall : kGraphicEffectSpaceWallEnergyWall), &UbObj<EEComplexUnit>(inA)->mFireEffect, 0, 0, 0); return 0;
     case EE_UNITS_UB_HIT_POINTS: return UUUnit(inA)->mHitPoints;
@@ -853,7 +849,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_PLAYER_ID: return UbObj<EEPlayer>(inA)->GetPlayerID();
     // EEReplaceQueuedTechnology's
     case EE_UNITS_UB_CLASS_TECHNOLOGY: return UbObj<EEUnitClass>(inA)->mTechnology;
-    case EE_UNITS_UB_TECHNOLOGY: return UUHandle(UbObj<EEPlayer>(inA)->mTechnologies->Get((long)inC));
     case EE_UNITS_UB_TECH_NUM_CLASSES: return UbObj<EETechnology>(inA)->GetNumUnitClasses();
     case EE_UNITS_UB_TECH_CLASS: return UbObj<EETechnology>(inA)->GetUnitClass((unsigned long)inC);
     case EE_UNITS_UB_UNITS_OF_TYPE: return ee_units_uu_player_units_of_type((long)inC, UbObj<EEPlayer>(inA)->GetPlayerID(), &sUbUnits);
@@ -883,7 +878,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_CALAMITY_GOAL: return UUHandle(static_cast<EEUnitGoal*>(EECastCalamityGoalCast(UbObj<EEComplexUnit>(inA)->GetGoal())));
     case EE_UNITS_UB_GOAL_LOCATION: static_cast<EEUGRust*>(UbObj<EEUnitGoal>(inA))->GetGoalLocation(*reinterpret_cast<GE3DPoint*>((*ioF))); return 0;
     case EE_UNITS_UB_CALAMITY_TYPE: return static_cast<EEUGRust*>(UbObj<EEUnitGoal>(inA))->GetCalamityType();
-    case EE_UNITS_UB_UNIT_TECHNOLOGY: return UUHandle(UUUnit(inA)->mPlayer->mTechnologies->Get((long)inC));
     case EE_UNITS_UB_CALAMITY_RANGE:
         return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)UbObj<EETechnology>(inA)->mData->mCalamity)->mRange;
     case EE_UNITS_UB_POSITION: UbObj<EEComplexUnit>(inA)->GetPosition(*reinterpret_cast<GE3DPoint*>((*ioF))); return 0;
@@ -942,7 +936,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return 0;
     case EE_UNITS_UB_TILE_SIZE: return UbObj<EEUnitClass>(inA)->mTileSize;
     case EE_UNITS_UB_TABLE_MODEL: return UUHandle(gUnitClassTable[inC]->mModel);
-    case EE_UNITS_UB_UPGRADE_MODEL: return UUHandle(UbObj<EEPlayer>(inA)->mUnitClassUpgrades[inC]->mModel);
     // EEFindTargetNear's, EEFindNearbyTarget's, EECanBallisticHit's, EECanPriestConvert's
     case EE_UNITS_UB_RANGE: return (int64_t)UFloatBits(UUUnit(inA)->mStats->GetRange());
     case EE_UNITS_UB_LINE_OF_SIGHT: return (int64_t)UFloatBits(UbObj<EEComplexUnit>(inA)->GetLineOfSight());

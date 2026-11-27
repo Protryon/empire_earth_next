@@ -1799,18 +1799,6 @@ int32_t ee_cp_herd_save(void *herd,
 /// As [`ee_cp_herd_construct_default`].
 long ee_cp_herd_repair_pointers(void *herd, EeHerdFields *f, uint32_t major, uint32_t minor);
 
-/// The units' count (`mUnits.size()`).
-///
-/// # Safety
-/// `f` is a live record.
-size_t ee_cp_herd_unit_count(const EeHerdFields *f);
-
-/// Unit `i`'s handle (`mUnits[i]`: a unit id).
-///
-/// # Safety
-/// `f` is a live record; `i` below the count.
-uint32_t ee_cp_herd_unit_handle(const EeHerdFields *f, size_t i);
-
 /// The history's length.
 ///
 /// # Safety

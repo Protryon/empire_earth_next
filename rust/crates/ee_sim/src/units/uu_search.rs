@@ -638,6 +638,9 @@ mod game {
 
     impl SrHost for Game {
         fn sr(&mut self, op: i32, unit: u64, a: u64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::sr(op, unit, a) {
+                return v;
+            }
             // SAFETY: the search runs inside the C++ call that handed over its live objects
             unsafe { ee_units_sr_host(op, unit, a, c, f) }
         }

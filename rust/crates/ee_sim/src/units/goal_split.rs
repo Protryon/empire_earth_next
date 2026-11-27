@@ -666,6 +666,9 @@ pub struct FfiSplit<'a>(pub &'a EeUnitsGoalHost);
 
 impl GoalSplitHost for FfiSplit<'_> {
     fn raw(&mut self, op: i32, a: u64, b: u64, io: &mut EeUnitsGoalIo) -> i64 {
+        if let Some(v) = crate::units::tech_cases::goal(op, a, b, io.i[0]) {
+            return v;
+        }
         #[cfg(not(test))]
         if let Some(v) = crate::units::goal_view::goal_view(op, a, b, io) {
             return v;

@@ -62,8 +62,6 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
     case EE_SCENARIO_EV_EVENTS_ENABLED: return gEventsEnabled;
-    case EE_SCENARIO_EV_UPGRADE: return R(P(EEPlayer, 0)->mUnitClassUpgrades[a[1]]);
-    case EE_SCENARIO_EV_GET_UPGRADE: return R(P(EEPlayer, 0)->GetUpgrade(a[1]));
     case EE_SCENARIO_EV_MAKE_AREA_EFFECTS:
         P(EEUnit, 0)->mComplexUnit->MakeAreaEffects();
         return 0;

@@ -444,12 +444,7 @@ fn create_storm(kl: P, c: P) -> bool {
     let index = klass(kl).mUnitClassIndex as i64;
     let half = ucf(crate::tech_tree::objects::class_at(index)).mTileSize as f32 * 0.5;
     set_position(&mut t, at.x - half, at.y - half, cal(c).mHeight);
-    let u = super::calamity_objects::ee_gamecpp_calamity_create_unit(
-        c as *mut c_void,
-        index as c_long,
-        ptr(&mut t) as P as *mut c_void,
-        -1,
-    ) as P;
+    let u = super::calamity_objects::create_unit(c, index as c_long, &mut t as *mut _ as P, -1);
     if u == 0 {
         return false;
     }
@@ -682,12 +677,8 @@ fn create_volcano(host: P, kl: P, c: P) {
     let uc = crate::tech_tree::objects::class_at(index);
     let half = ucf(uc).mTileSize as f32 * 0.5;
     set_position(&mut t, at.x - half, at.y - half, cal(c).mHeight - 0.9);
-    let u = super::calamity_objects::ee_gamecpp_calamity_create_unit(
-        c as *mut c_void,
-        index as c_long,
-        ptr(&mut t) as P as *mut c_void,
-        cal(c).mPlayerNumber as c_long,
-    ) as P;
+    let u =
+        super::calamity_objects::create_unit(c, index as c_long, &mut t as *mut _ as P, cal(c).mPlayerNumber as c_long);
     if u != 0 {
         h(O::CxSetBuilt, complex(u), &[1, 0, 1]);
         volcano_clear_area(host, uc, floor(at.x - 0.5) as c_long, floor(at.y - 0.5) as c_long);

@@ -579,7 +579,7 @@ fn world(f: P, v: &[i64; 8]) -> i64 {
     match v[0] {
         EE_NETMSG_SESS_WORLD_PLAYER => h(O::WorldPlayer, 0, &[v[1]]),
         EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT => super::message::player_by_slot(v[1]) as i64,
-        EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::TbIsHuman, pl, &[]),
+        EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::PlIsHuman, pl, &[]),
         EE_NETMSG_SESS_WORLD_SLOT => prts(pl).mSlot as i64,
         EE_NETMSG_SESS_WORLD_HAS_HUMAN => h(O::SsPlHasHuman, pl, &[]),
         EE_NETMSG_SESS_WORLD_ID => prts(pl).mPlayerID as i64,

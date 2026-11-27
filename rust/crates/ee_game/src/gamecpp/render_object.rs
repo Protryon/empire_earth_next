@@ -851,7 +851,7 @@ impl FillHost for GameFill {
     fn label(&mut self, out: *mut EeGfxFillUnit, player: u64) {
         let player = player as P;
         h(O::RoSetLabelUnit, out as P, &[]);
-        if h(O::TbIsHuman, player, &[]) == 0 && h(O::RoCivilizationUnchanged, player, &[]) == 0 {
+        if h(O::PlIsHuman, player, &[]) == 0 && h(O::RoCivilizationUnchanged, player, &[]) == 0 {
             h(O::RoLabelCivilizationName, player, &[]);
         } else {
             h(O::RoLabelPlayerName, player, &[]);

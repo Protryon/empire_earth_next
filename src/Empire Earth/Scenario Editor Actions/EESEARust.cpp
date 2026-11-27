@@ -310,7 +310,6 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_PLAYER: return (intptr_t)gWorld.mPlayers[i[0]];
     case EE_SCREENS_SEAX_PLAYER_OBSERVER: return static_cast<EEPlayer*>(p)->mObserverMode != false;
     case EE_SCREENS_SEAX_PLAYER_HUMAN: return dynamic_cast<EEHumanPlayer*>(static_cast<EEPlayer*>(p)) != NULL;
-    case EE_SCREENS_SEAX_PLAYER_START_EPOCH: return (int32_t)static_cast<EEPlayer*>(p)->GetTechTree()->mStartEpoch;
     case EE_SCREENS_SEAX_PLAYERS_CLEAR: sSeaxPlayers.clear(); return 0;
     case EE_SCREENS_SEAX_PLAYERS_PUSH: sSeaxPlayers.push_back(gWorld.mPlayers[i[0]]); return 0;
     case EE_SCREENS_SEAX_POINT_ZERO: sSeaxPoint = GE3DPoint(0.0f, 0.0f, 0.0f); return 0;

@@ -158,6 +158,9 @@ pub struct AgGame;
 
 impl AgGame {
     fn io(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsAgIo) -> i64 {
+        if let Some(v) = crate::units::tech_cases::ag(op, a, b) {
+            return v;
+        }
         if let Some(v) = crate::units::dm_group_view::ag_plain(op, a, b, c) {
             return v;
         }

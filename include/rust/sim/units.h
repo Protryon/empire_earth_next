@@ -8097,24 +8097,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_HULL_POINT = 239;
 /// town `a`'s `mPatrolGroup = b`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_SET_PATROL = 240;
 
-/// `ClearFootprint`'s: `new std::vector<EEUnit*>`, `new std::vector<EETileCoordinate>`, their `delete`, sizes, the
-/// unit `b` (an `RTSUnit` address) and the tile `b` (packed as the closest point)
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_NEW = 260;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_NEW = 261;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_DELETE = 262;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_DELETE = 263;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_SIZE = 264;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_SIZE = 265;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNITS_AT = 266;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILES_AT = 267;
-
 /// `gUnitSetManager.Contains(b, c)`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_SET_MANAGER_CONTAINS = 268;
 
@@ -8127,9 +8109,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_PATH_START = 271;
 
 /// complex unit `a` moved to the point `*(float(*)[3])b` keeping its orientation (`SetTransformation(.., true)`)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_MOVE_TO = 272;
-
-/// `std::sort` of the tiles `a` by `EETileDistanceLess(b, c)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_SORT_TILES = 273;
 
 /// the map's tile (b, c) is there with no units on it
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_TILE_EMPTY = 274;
@@ -8173,18 +8152,7 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLASS_NAME = 289;
 /// `delete` herd `a` (the areas' delete: `EEDeletePointers`)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_DELETE = 292;
 
-/// herd `a`'s `GetUnits(*(std::vector<EEComplexUnit*>*)b)`; `new`/`delete`/size/entry of such a vector; complex unit
-/// `a`'s `Kill(b, 0, 0)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_HERD_UNITS = 294;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_NEW = 295;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_DELETE = 296;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE = 297;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_COMPLEXES_AT = 298;
-
+/// complex unit `a`'s `Kill(b, 0, 0)`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_KILL_KILLED = 299;
 
 /// `DumpMedia(*(FSFileSpec*)a)`'s: the header line, `mUnitClassUpgrades.size()`, `mUnitClassUpgrades[b]`, upgrade
@@ -8199,23 +8167,8 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_COUNT = 303;
 
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_DUMP_TEXT = 304;
 
-/// the result line's texts: `new UWideString`, `delete (UWideString*)a`, `gResource->GetString(b, *(UWideString*)a)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_NEW = 307;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_DELETE = 308;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_RESOURCE = 309;
-
-/// `sprintf(*(UWideString*)a, *(UWideString*)b, (const char*)*(UWideString*)c)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_FORMAT = 310;
-
-/// `*(UWideString*)a = mName`; `sprintf(*(UWideString*)a, "%s - (%s)", mCivilization.mName, mName)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_NAME = 311;
-
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME = 312;
-
-/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), *(UWideString*)a, *(UWideString*)b,
-/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)`
+/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), UWideString(a), UWideString(b),
+/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)` (`a`, `b` NUL-terminated texts)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_CHAT_RESULT = 313;
 
 constexpr static const uint32_t EE_UNITS_PLAYER_REST_NEAREST_AREA = 1;
@@ -20245,6 +20198,21 @@ int64_t ee_units_player_econ(const EeUnitsPlayerRefs *refs,
                              float f,
                              void *text);
 
+/// EEPlayer's virtuals GetHeroCount, GetPopulationLimit, CanAfford and ScaleCost (`op` the player host's
+/// operation: HERO_COUNT `a`, `b` the two flags; POPULATION_LIMIT `a` the argument; CAN_AFFORD `object` the node,
+/// `a` the unit type, `b` the count; SCALE_COST `a` the cost): EEComputerPlayer's overrides (cp player_game.rs)
+/// when the player is a computer player (`mComputerPlayer` set), else, or with `base` (`EEPlayer::CanAfford`'s
+/// qualified calls), EEPlayer's own.
+///
+/// # Safety
+/// As [`ee_units_player_econ`].
+int64_t ee_units_player_virtual(const EeUnitsPlayerRefs *refs,
+                                int32_t op,
+                                void *object,
+                                int64_t a,
+                                int64_t b,
+                                bool base);
+
 /// The list's alert sounds got and loaded (`load`, the constructor's) or unloaded and the one playing released (the
 /// destructor's) over the C++ host on `list` (player_events_split.rs).
 ///
@@ -20421,7 +20389,7 @@ void ee_units_cloak_chain(uint64_t unit,
 int64_t ee_units_player_rest(void *player, uint32_t what, uint64_t a, int64_t b, int64_t c);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
-/// and its C++ parts through `f`.
+/// and its C++ parts through `f`; `file` the saved game's `FSFile` (the tech tree's load).
 ///
 /// # Safety
 /// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
@@ -20431,7 +20399,8 @@ int32_t ee_units_player_load(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
                              uint32_t major,
-                             uint32_t minor);
+                             uint32_t minor,
+                             void *file);
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
 ///
@@ -20442,7 +20411,8 @@ int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
                              uint32_t major,
-                             uint32_t minor);
+                             uint32_t minor,
+                             void *file);
 
 /// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) of `player` through `f` on
 /// `ctx` (the loaded unit's id into the player's loaded ids is Rust's: `lists_answer`).

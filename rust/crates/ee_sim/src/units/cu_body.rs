@@ -1066,6 +1066,9 @@ pub mod game {
 
     impl CuHost for Game {
         fn cu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::cu(op, unit, a, b) {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ member that handed over its live unit (the plain record reads
             // and stores first: cu_view.rs)
             unsafe {

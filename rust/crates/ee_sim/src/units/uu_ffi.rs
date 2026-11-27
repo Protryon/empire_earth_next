@@ -466,24 +466,30 @@ pub unsafe extern "C" fn ee_units_uu_units_in_rectangle(
     bottom: f32,
     io: *mut c_void,
 ) -> i32 {
-    let n = Note::begin(38);
     // SAFETY: the caller's contract
     unsafe {
         let mut units = units_of(io);
-        n.f(left).f(top).f(right).f(bottom).us(&units);
-        let floor = ee_base::math::um::floor;
-        let (r, b, l, t) = (floor(right), floor(bottom), floor(left), floor(top));
-        let mut tiles = Vec::new();
-        for x in l..=r {
-            for y in t..=b {
-                tiles.push([x, y]);
-            }
-        }
-        let count = uu::units_on_tiles(&mut Game, &tiles, &mut units);
+        let count = units_in_rectangle(left, top, right, bottom, &mut units);
         set_units(io, &units);
-        n.i(count.into()).us(&units);
         count
     }
+}
+
+/// [`ee_units_uu_units_in_rectangle`] into a Rust list (appended).
+pub(crate) fn units_in_rectangle(left: f32, top: f32, right: f32, bottom: f32, units: &mut Vec<u64>) -> i32 {
+    let n = Note::begin(38);
+    n.f(left).f(top).f(right).f(bottom).us(units);
+    let floor = ee_base::math::um::floor;
+    let (r, b, l, t) = (floor(right), floor(bottom), floor(left), floor(top));
+    let mut tiles = Vec::new();
+    for x in l..=r {
+        for y in t..=b {
+            tiles.push([x, y]);
+        }
+    }
+    let count = uu::units_on_tiles(&mut Game, &tiles, units);
+    n.i(count.into()).us(units);
+    count
 }
 
 /// `EEGetWallUnitsOfTypeOnTiles` (43): appended to `io`; their number.

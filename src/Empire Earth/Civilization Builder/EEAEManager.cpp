@@ -227,8 +227,6 @@ struct EEAEMFBBuildingInRange {
 #define AE_T(t) ((EEComplexUnit*)(t))
 #define AE_P(p) ((EEPlayer*)(p))
 #define AE_E(e) ((EEAreaEffect*)(e))
-extern "C" uintptr_t ee_screenscpp_aeh_tech_node(int32_t inPlayer, uintptr_t inT)
-{ return (uintptr_t)gWorld.mPlayers[inPlayer]->GetTechTree()->Get(AE_T(inT)->GetUnitClass()->mTechnology); }
 extern "C" bool ee_screenscpp_aeh_allied(uintptr_t inPlayer, uintptr_t inOther)
 { return AE_P(inPlayer)->IsAlliedWith(AE_P(inOther)); }
 extern "C" bool ee_screenscpp_aeh_repairable(uintptr_t inT) { return AE_T(inT)->IsRepairable(); }

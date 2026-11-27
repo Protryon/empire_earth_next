@@ -1139,8 +1139,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         EE_NETMSG_PACT_CHAT_TYPE => psaved(pl).mChatType = i[1] as c_ulong,
         EE_NETMSG_PACT_SEND_CHAT => psaved(pl).mSendChatMessage[i[1] as usize] = i[2] != 0,
         EE_NETMSG_PACT_REPORT => {
-            h(O::TkStatSet, pl, &[0x14, i[1]]);
-            h(O::TkStatSet, pl, &[0x15, i[2]]);
+            h(O::PlSavedGroupsSet, pl, &[0x14, i[1]]);
+            h(O::PlSavedGroupsSet, pl, &[0x15, i[2]]);
         }
         EE_NETMSG_PACT_CLEAR_SAVED => {
             // SAFETY: the live player (EEPlayer::ClearSavedGroup)

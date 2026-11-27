@@ -7,7 +7,6 @@
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
-acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp
@@ -86,7 +85,6 @@ dbcc8 dc682 Empire Earth/Database/EETerrainTypeTable.cpp
 1bb5a5 1c5783 Empire Earth/Scenario Manager/EESMEffect.cpp
 1c5f73 1ca4ee Empire Earth/Scenario Manager/EESMObject.cpp
 1ca4ee 1cba2f Empire Earth/Scenario Manager/EEEvent.cpp
-1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp
 1ebc47 1f1f19 Empire Earth/Units/EEActiveGroup.cpp
 1f1f19 1f57d3 Empire Earth/Units/EEComplexDoppelganger.cpp
 1f57d3 201d85 Empire Earth/Units/EEComplexUnit.cpp

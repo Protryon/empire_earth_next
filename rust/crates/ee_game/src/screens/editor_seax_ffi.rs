@@ -26,6 +26,9 @@ mod sys {
 /// # Safety
 /// The operands are what the op reads and writes.
 pub(crate) unsafe fn host(op: u32, p: *mut c_void, q: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> isize {
+    if let Some(r) = crate::screens::editor_tech::seax(op, p as usize) {
+        return r;
+    }
     unsafe { sys::ee_screenscpp_seax(op, p, q, t, i, f) }
 }
 
@@ -34,6 +37,9 @@ pub(crate) struct Seax;
 
 impl SeaxHost for Seax {
     fn x(&mut self, op: u32, a: &mut SeaxArgs) -> isize {
+        if let Some(r) = crate::screens::editor_tech::seax(op, a.p) {
+            return r;
+        }
         unsafe {
             sys::ee_screenscpp_seax(
                 op,

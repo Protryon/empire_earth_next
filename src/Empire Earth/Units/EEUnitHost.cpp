@@ -235,7 +235,6 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_NODE_BLOCKS: return UhNode(inB)->mUnit->mUnitClass->mTileSize > 1 && !UhNode(inB)->mUnit->IsPassableBy(ComplexOf(UhID(inA))->GetComplexUnit());
     case EE_UNITS_UH_NEAREST_FOOTPRINT: ComplexOf(UhID(inA))->GetNearestFootprintTile(UhNode(inB)->mUnit, &(sUhXY[0] = (long)inC), &(sUhXY[1] = (long)inD)); return 0;
     case EE_UNITS_UH_NEW_PIECES: return EEObj(new std::vector<EEUnit*>());
-    case EE_UNITS_UH_TECH_CLASS: return EEObj(gUnitClassTable[UhObject<EEPlayer>(inA)->mTechnologies->Get((long)inC)->mData->mUnitClass]);
     case EE_UNITS_UH_PIECES_SIZE: return (int64_t)UhObject<std::vector<EEUnit*> >(inB)->size();
     case EE_UNITS_UH_PIECE_ID: return (uint32_t)(*UhObject<std::vector<EEUnit*> >(inB))[(size_t)inC]->mUnitID;
     case EE_UNITS_UH_DELETE_PIECES: delete UhObject<std::vector<EEUnit*> >(inB); return 0;
@@ -250,7 +249,6 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_LOAD_GATHER_GOAL: return EEObj(static_cast<EEUnitGoal*>(EEGatherGoalCast(ComplexOf(UhID(inA))->GetLoadGoal())));
     case EE_UNITS_UH_GATHER_RESOURCE: return EEObj(UhGoal(inB)->GetGatherResource());
     case EE_UNITS_UH_CAN_TAKE: return ComplexOf(UhID(inA))->CanTake(ComplexOf(UhID(inB)), ComplexOf(UhID(inB))->mResourceType);
-    case EE_UNITS_UH_TECH_NODE: return EEObj(NodeOf(UhObject<void>(inA), (int32_t)inC));
     case EE_UNITS_UH_NODE_CALAMITY_CLASS: return EEObj(EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)UhObject<EETechTreeNode>(inB)->mData->mCalamity));
     case EE_UNITS_UH_CLASS_ENUM: return (int32_t)UhObject<EECalamityClass>(inB)->mClassEnum;
     case EE_UNITS_UH_CAST_BY_ALL: return UhObject<EECalamityClass>(inB)->mIsCastByAllSelected;
@@ -276,9 +274,6 @@ extern "C" int64_t ee_units_uh_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UH_FILTER: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ComplexOf(UhID(inA))->mUnitClass)->FilterLoadable(&sUhUnits, ComplexOf(UhID(inA)), &sUhRejected); return 0;
     case EE_UNITS_UH_REJECTED_SIZE: return (int64_t)sUhRejected.size();
     case EE_UNITS_UH_REJECTED_ID: return (uint32_t)sUhRejected[(size_t)inC]->mUnitID;
-    case EE_UNITS_UH_TREE_NODE: return EEObj(UhObject<EEPlayer>(inA)->GetTechTree()->Get((long)inC));
-    case EE_UNITS_UH_NODE_KIND: return UhObject<EETechTreeNode>(inB)->mData->mKind;
-    case EE_UNITS_UH_NODE_HERO: return UhObject<EETechTreeNode>(inB)->mData->mUnitClass > 0 && gUnitClassTable[UhObject<EETechTreeNode>(inB)->mData->mUnitClass] && gUnitClassTable[UhObject<EETechTreeNode>(inB)->mData->mUnitClass]->mAIKind == kAIKindHero;
     case EE_UNITS_UH_NODE_BUNDESWEHR: return gCivPowersManager.GetPower(kCivPowerBundeswehr, sUhPower = EECivPower()) && sUhPower.mTechnology == UhObject<EETechTreeNode>(inB)->mData->mPrerequisite1;
     case EE_UNITS_UH_NODE_MAKES_UNIT: return UhObject<EETechTreeNode>(inB)->mData->mMakesUnit;
     case EE_UNITS_UH_IS_EPOCH: return EEIsEpochID((long)inC);

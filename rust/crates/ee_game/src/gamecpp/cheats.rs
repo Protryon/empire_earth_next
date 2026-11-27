@@ -102,7 +102,7 @@ fn research_all(pl: P) {
         if class == 0 {
             continue;
         }
-        let upgrade = hp(O::DcPlayerUpgrade, pl, &[i as i64]);
+        let upgrade = ee_sim::units::player_upgrades::at(pl as u64, i as usize) as P;
         if upgrade != 0 {
             for j in 0..0x10i64 {
                 if h(O::DcCanImprove, pl, &[i as i64, j]) == 0 {
@@ -306,10 +306,10 @@ unsafe extern "C" fn sweep_set_enabled(_: *mut c_void, on: bool) -> bool {
 
 unsafe extern "C" fn sweep_levels(_: *mut c_void, player: u64, index: u32, out: *mut i32) -> i32 {
     let pl = player as P;
-    if index as i64 >= h(O::DcPlayerUpgradeCount, pl, &[]) {
+    if index as i64 >= ee_sim::units::player_upgrades::slots(pl as u64) as i64 {
         return -1;
     }
-    let upgrade = hp(O::DcPlayerUpgrade, pl, &[index as i64]);
+    let upgrade = ee_sim::units::player_upgrades::at(pl as u64, index as usize) as P;
     if upgrade == 0 {
         return 0;
     }

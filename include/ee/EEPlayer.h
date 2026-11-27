@@ -168,7 +168,6 @@ public:
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }   // the inline members' handles
     static EEActiveGroup* New(EEPlayer* inPlayer)
         { return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(ee_units_group_new(2, inPlayer, 0))); }
-    // inUnits' clusters each request a path from their first unit's tile to the goal's; true when there were clusters
     void AddMember(EEComplexUnit* inUnit, bool inRemoveFromOld) { ee_units_group_do(this, inRemoveFromOld ? 13 : 14, inUnit); }
     // the selected group's units for one slot; inSort 0: SortUnits first, 1: sorted slowest first afterwards
     void Finish() { ee_units_group_do(this, 15, NULL); }   // the goal dropped, into the player's finished groups
@@ -269,39 +268,26 @@ public:
     EETechTree() { ee_gamecpp_tech_tree_init(this); }   // every epoch, the prehistoric one current
     ~EETechTree() { ee_gamecpp_tech_tree_free(this); }   // 0x1cbd99: the saved game's lists, the epochs
     EETechTree(const EETechTree&) = delete;
-    void SetPlayerIndex(long inValue) { this->mPlayerIndex = inValue; }   // the player's index (provisional name)
     // an epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf)
     EETechTreeNode* Get(long inID) { return (EETechTreeNode*)ee_gamecpp_tech_obj_get(this, inID); }
     RTSTechTreeNodeData* GetData(long inID) { return this->Get(inID)->mData; }   // inline (editor P7)
     // 0x1cbdf0 (the database): every epoch block of the file, the epoch count, the epoch range reset to all epochs
     long Load(FSFileSpec& inFile) { return ee_gamecpp_tech_load_file(this, &inFile); }
     static void BuildUnitClassInfo() { gTechTree.Walk(EeTechTreeOp::BuildUnitClassInfo); }   // 0x1cbe4a (gTechTree's events by unit class)
-    void UnloadAll() { ee_gamecpp_tech_unload_all(this); }   // every epoch's media
     void GetNodeIDs(std::vector<long>& outIDs) { ee_gamecpp_tech_node_ids(this, true, 0, &outIDs); }   // every epoch's nodes
-    // the researched/obsolete state of every tech and epoch, weighted by position (ee_tech tree_checksum)
-    void GetChecksum(ESChecksum& ioChecksum);
-    // whether a tech's model or sound effect for a unit class is the latest one the tree still uses
-    static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind) { return ee_tech_is_latest_effect(inTree, &EETechHost, inTree, (int32_t)inID, (int32_t)inUnitClass, (int32_t)inKind); }
     EEPlayer* GetPlayer() { return (EEPlayer*)ee_gamecpp_tech_tree_player(this); }   // by index when no player pointer is set
     // a loaded tree's state reapplied: editor-obsoleted techs, the epoch range, research, each epoch's counters, then
     // the interface
     void ApplySavedState(bool inApplyObsoleted, bool inApplyResearch) { this->Walk(EeTechTreeOp::ApplySavedState, inApplyObsoleted ? 1 : 0, inApplyResearch ? 1 : 0); }
-    // 0x1ccbc9 (saved game): the research, obsolete and editor-obsoleted ids, the epochs and each epoch's state
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_tech_tree_save(this, &inFile, true, inMajorVersion, inMinorVersion); }
     void MakeObsolete(long inID) { this->Walk(EeTechTreeOp::MakeObsolete, inID); }
     void SetPrerequisite(long inID, long inPrerequisite) { this->Walk(EeTechTreeOp::SetPrerequisite, inID, inPrerequisite); }
     // 0x1ccec2 (inUnit: the researching unit, passed on to EEEvent::Trigger) (TTRS, TEST ONLY)
     void Research(long inID, EEComplexUnit* inUnit) { this->Walk(EeTechTreeOp::Research, inID, 0, inUnit); }
-    long Save(unsigned long, unsigned long, FSFile& outFile) { return ee_gamecpp_tech_tree_save(this, &outFile, false, 0, 0); }
     // forward to an epoch (never back), recorded in statistics series 0xc, researching up to it
     void SetEpoch(long inEpoch) { this->Walk(EeTechTreeOp::SetEpoch, inEpoch); }
     void ResetEpochRange(long inStart, long inEnd) { this->Walk(EeTechTreeOp::ResetEpochRange, inStart, inEnd); }   // the current epoch its start, no research
-    void SetNodeAvailable(long inID, bool inValue) { this->Walk(EeTechTreeOp::SetNodeAvailable, inID, inValue ? 1 : 0); }   // unless it has a research delay
-    void SetPlayer(EEPlayer* inPlayer) { ee_gamecpp_tech_set_player(this, inPlayer); }   // and, for a player, its index
     // for the local player's tree, the new epoch's name shown and the main game form's group panel refreshed
     void UpdateInterface(bool inEpochChanged) { ee_gamecpp_tech_update_interface(this, inEpochChanged); }
-    // another tree's epochs, epoch range and player; the copy is not marked loaded
-    EETechTree& operator=(const EETechTree& inOther) { return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther); }
     int32_t Walk(EeTechTreeOp inOp, long inA = 0, long inB = 0, EEComplexUnit* inUnit = NULL) { return ee_tech_walk_tree(this, &EETechHost, inOp, this, (int32_t)inA, (int32_t)inB, inUnit); }
 };
 inline int32_t EETechTreeNode::Walk(EeTechNodeOp inOp, long inA, bool inB, EEComplexUnit* inUnit)
@@ -351,7 +337,6 @@ public:
     // the series' largest value, last value (0 without one), the points whose next one is larger
     unsigned long GetValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 0); }
     unsigned long GetLastValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 1); }
-    unsigned long CountIncreases(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 2); }
     void Clear() { this->mName = UWideString(); this->mEndTime = 0; ee_units_stats_clear(this->mStats); }
     EEPlayerStatistics& operator=(const EEPlayerStatistics& inStatistics)
     {
@@ -432,30 +417,33 @@ public:
     virtual void AddResource(long inIndex, long inAmount) { this->mResourceCaps[inIndex] += inAmount; EEGameLogIncome(this, inIndex, inAmount); }
     virtual void DetachUnitFromAI(EEComplexUnit* inUnit);  // +0x4c 0x16367b (sets the unit's mIsDetachedFromAI)
     // +0x50 (EEComplexUnit::QueueResearch compares GetHeroCount(1, 1) with mHeroLimit: a count) (provisional name)
-    virtual long GetHeroCount(bool inByClass, bool inRequests) { return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_NUM_HEROES, NULL, inByClass, inRequests, 0, 0, 0, 0.0f, NULL); }    // (bools: 0x164223 reads bytes; EEComputerPlayer 0x2e248 stores them as bytes)
+    virtual long GetHeroCount(bool inByClass, bool inRequests) { return (long)this->Dispatch(EE_UNITS_PLAYER_HERO_COUNT, NULL, inByClass, inRequests); }    // (bools: 0x164223 reads bytes; EEComputerPlayer 0x2e248 stores them as bytes)
     // +0x54 0x163a25 (ret 0x18; can the player build inTechnology: EEABuild 0x1760 passes (id, 0x20, 1, 1, 3, 0); +0x14
     // is read as a byte, +0x1c receives the reason through UResourceFile::GetString; provisional names)
     virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_PRODUCE, NULL, inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, 0.0f, outReason) != 0; }
     virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag) {}  // +0x58 0x163d6f (EESMEffect 0x1be94e passes (another player, false); 0x55cee tests a byte; ret 8: EEComputerPlayer 0x2dca6 forwards both)
     virtual void Virtual60() {}               // +0x60
     virtual void UnitCompleted(EEComplexUnit* inUnit) { EEPlayerUnits(this, 3, inUnit); }  // +0x68 0x164003 (ret 4: EEComputerPlayer 0x2e1e9 forwards it)
-    virtual long ScaleCost(long inCost) { return inCost; }  // +0x6c 0xa549a
+    virtual long ScaleCost(long inCost) { return (long)this->Dispatch(EE_UNITS_PLAYER_SCALE_COST, NULL, inCost, 0); }  // +0x6c 0xa549a (its own: the cost)
     // +0x70 0x164bea (ret 0xc): reads inUnit's mStats/mUnitClass and inOther's class, then 0x16542e (provisional name)
     virtual bool CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long inValue) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD_REPAIR, inUnit, (int64_t)reinterpret_cast<uintptr_t>(inOther), inValue, 0, 0, 0, 0.0f, NULL) != 0; }  // (bool: EEUGBuildRepair::EvaluateCondition tests al)
     EEUnit* GetNearestConstructionSite(EEComplexUnit* inUnit) { return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(ee_units_player_body(this, EE_UNITS_PLAYER_DO_NEAREST_SITE, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0, 0.0f))); }  // 0x164820 (the next unit inUnit should build; EEUGBuildRepair::FindNextWork) (provisional name)
     virtual bool IsHuman() { return false; }                 // +0x74 (EEPlayer::SwapClassButtonMedia tests `al == 1`)
     // inline accessors the diplomacy form expands (EEUIEDSOpen 0x1d4165 reads each through a temporary;
     // provisional names)
-    unsigned long GetGameResult() const { return this->mGameResult; }
     long GetEnemy(unsigned long inPlayer) const { return this->mEnemies[inPlayer]; }
     // inline: inPlayer is this player or not at war with it (EECPCombatManager::IsValidTarget 0x473684 compares the
     // result as a byte: `cmp al, bl` for `== false`) (provisional name)
     bool IsAlly(EEPlayer* inPlayer) { return inPlayer == this || this->mEnemies[inPlayer->mPlayerID] == 0; }
     virtual long GetExtraPopulation(long inUnitClass) { return 1; }  // +0x78 0xa54a1 (`push 1; pop eax; ret 4`: a long, not a bool)
-    virtual long GetPopulationLimit(long inArg);  // +0x7c 0x16528b (ret 4: mB24 + mB20 + a global; EECPCombatStrategy 0x771be)
+    // +0x7c 0x16528b (its own: mPopulationLimitBonus + mShareBonus + gWorld.mPlayerPopulationLimit; EECPCombatStrategy 0x771be)
+    virtual long GetPopulationLimit(long inArg) { return (long)this->Dispatch(EE_UNITS_PLAYER_POPULATION_LIMIT, NULL, inArg, 0); }
     // +0x80 (conscription 0xafe5f) (provisional name)
     // (0x16566a: arg 3 is a count, multiplied with each cost: `imul` in CanAffordScaled)
-    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD, inTechnology, inUnitType, inCount, 0, 0, 0, 0.0f, NULL) != 0; }
+    virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return this->Dispatch(EE_UNITS_PLAYER_CAN_AFFORD, inTechnology, inUnitType, inCount) != 0; }
+    // GetHeroCount, ScaleCost, GetPopulationLimit, CanAfford: EEComputerPlayer's when mComputerPlayer is set, else (or
+    // with inBase: the qualified EEPlayer:: calls) EEPlayer's own (ee_units player_econ.rs ee_units_player_virtual)
+    int64_t Dispatch(int32_t inOp, void* inObject, int64_t inA, int64_t inB, bool inBase = false) { return ee_units_player_virtual(EEPlayerRefs(this), inOp, inObject, inA, inB, inBase); }
     // +0x84 0x16569c (ret 0xc; EEComputerPlayer's 0x2f16d passes its unit third)
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_DAMAGE, 0, inPlayer, inAmount, 0.0f); }
     virtual void EpochMediaLoaded(long inEpoch) {}  // +0x88 (0x157269 `ret 4`, empty; EETechTreeNode 0x1cf989 passes a node's +0x4c)

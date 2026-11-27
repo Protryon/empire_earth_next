@@ -118,7 +118,7 @@ pub extern "C" fn ee_gamecpp_update_saved_games() {
         folder(log.0, search.0, file.0, c"Data\\Saved Games\\", c"*.ees");
         folder(log.0, search.0, file.0, c"Data\\Scenarios\\", c"*.scn");
         puts(log.0, b"Conversion completed!\n");
-        h(O::TkFileClose, log.0, &[]);
+        h(O::FileClose, log.0, &[]);
     }
     h(O::WorldWriteUnlock, 0, &[]);
 }

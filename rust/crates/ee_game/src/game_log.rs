@@ -255,7 +255,7 @@ fn open(l: &mut Log) {
         let Some(p) = world.player(i) else { continue };
         let pl = p.handle() as P;
         let ai = hp(O::EgComputer, pl, &[]);
-        let kind = if h(O::TbIsHuman, pl, &[]) != 0 {
+        let kind = if h(O::PlIsHuman, pl, &[]) != 0 {
             "human"
         } else if ai != 0 {
             "computer"
@@ -425,7 +425,7 @@ fn killer(unit: P) -> usize {
     let owner = if attacker != 0 { hp(O::UnPlayer, attacker, &[]) } else { 0 };
     if owner == 0 || player_id(owner) == 0 {
         2
-    } else if h(O::TbIsHuman, owner, &[]) != 0 {
+    } else if h(O::PlIsHuman, owner, &[]) != 0 {
         0
     } else {
         1

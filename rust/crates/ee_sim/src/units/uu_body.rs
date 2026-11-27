@@ -1478,6 +1478,9 @@ pub(crate) mod game {
 
     impl UbHost for Game {
         fn ub(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, e: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::ub(op, a, c) {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ function that handed over its live objects
             unsafe { ee_units_ub_host(op, a, b, c, d, e, f) }
         }

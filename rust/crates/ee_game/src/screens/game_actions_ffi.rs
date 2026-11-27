@@ -31,6 +31,9 @@ impl GaCpp for Cpp {
         if let Some(answer) = record_case(key, p, i, f) {
             return answer;
         }
+        if let Some(v) = tech(key, i) {
+            return v;
+        }
         unsafe { sys::ee_screenscpp_ga(key, r, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
     }
 }
@@ -380,6 +383,27 @@ fn record_case(key: u32, p: usize, i: &[i64; 8], f: &mut [f32; 8]) -> Option<i64
         _ if key == EE_SCREENS_GAH_E_SET_MUSIC => hf(O::PsSetMusicVolume, 0, &[], &[f[0]]),
         _ => return None,
     })
+}
+
+/// The current player's technologies (the tree is Rust's: tech_tree objects.rs): `gUnitClassTable[the node i1's
+/// mData->mUnitClass]`, the node i1's `Contains(i2)`. None for the other keys.
+fn tech(key: u32, i: &[i64; 8]) -> Option<i64> {
+    use crate::screens::game_actions::{EE_SCREENS_GA_K_NODE_CONTAINS, EE_SCREENS_GA_OP_TECH};
+    use crate::screens::game_actions_host::EE_SCREENS_GAH_K_CLASS;
+    use crate::tech_tree::objects::{class_at, get, node_data, player_tree};
+    if key != EE_SCREENS_GAH_K_CLASS && key != (EE_SCREENS_GA_OP_TECH << 8 | EE_SCREENS_GA_K_NODE_CONTAINS as u32) {
+        return None;
+    }
+    // SAFETY: the actions run on the UI thread inside the game's call, which holds the world
+    let t = unsafe { ee_sim::world::WorldRead::begin() };
+    let player = ee_sim::world::WorldView::global(&t)?.current_player()?.handle() as usize;
+    let data = node_data(get(player_tree(player), i[1] as core::ffi::c_long));
+    if key == EE_SCREENS_GAH_K_CLASS {
+        // SAFETY: the node's live data
+        return Some(class_at(unsafe { (*data).mUnitClass } as i64) as i64);
+    }
+    // SAFETY: as above
+    Some(i64::from(unsafe { ee_sim::tech::nodes::ee_tech_node_classes_contains(data, i[2] as core::ffi::c_long) }))
 }
 
 impl GaHost for Host {

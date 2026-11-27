@@ -72,7 +72,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_SET_SQUADRON: theUnit->SetSquadronGoals(theOther, inC != 0);
         return 0;
     case EE_UNITS_AG_CALAMITY_COST: return ((EECalamityClass*)(uintptr_t)inA)->GetCost();
-    case EE_UNITS_AG_NODE_HAS_TYPE: return ((EETechTreeNode*)(uintptr_t)inA)->Contains(((EEComplexUnit*)(uintptr_t)inB)->mUnitClass->mUnitType);
     case EE_UNITS_AG_RANDOM: return gPhysics->GetRandom((long)inC, (long)inD);
     case EE_UNITS_AG_TILE_PRESENT: return ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1])) != NULL;
     case EE_UNITS_AG_TILE_HEIGHT: io->f = ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]))->GetHeight();

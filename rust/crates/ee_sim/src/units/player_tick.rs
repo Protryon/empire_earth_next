@@ -404,7 +404,7 @@ impl PlayerTickHost for FnHost {
         let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe {
             // the player's own Rust bodies and plain reads first (player_native.rs)
             #[cfg(not(test))]
-            if let Some(r) = crate::units::player_native::tick(op, player, io) {
+            if let Some(r) = crate::units::player_native::tick(op, player, index, io) {
                 return r;
             }
             f(ctx, op, index, io)

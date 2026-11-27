@@ -177,10 +177,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     case EE_AI_UNITS_HOST_DETACH:
         me->DetachUnitFromAI((EEComplexUnit*)(uintptr_t)a);
         return 0;
-    case EE_AI_UNITS_HOST_UPGRADE_COUNT:
-        return (int64_t)((EEPlayer*)(uintptr_t)a)->mUnitClassUpgrades.size();
-    case EE_AI_UNITS_HOST_UPGRADE_AT:
-        return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mUnitClassUpgrades[(size_t)b];
     case EE_AI_UNITS_HOST_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_HUMAN:
@@ -276,7 +272,7 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     case EE_AI_UNITS_HOST_T_SPACE:
         return gWorld.mMap != NULL && gWorld.mMap->mTerrainMesh.GetIsSpaceMap() ? 1 : 0;
     case EE_AI_UNITS_HOST_T_POP_LIMIT:
-        return me->EEPlayer::GetPopulationLimit(0);
+        return me->Dispatch(EE_UNITS_PLAYER_POPULATION_LIMIT, NULL, 0, 0, true);
     case EE_AI_UNITS_HOST_T_BEHAVIORS:
         return (int64_t)(uintptr_t)gCPBehaviors;
     case EE_AI_UNITS_HOST_TILES_LEVEL:

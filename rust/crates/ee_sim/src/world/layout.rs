@@ -246,6 +246,20 @@ pub struct EeWorldLayout {
     pub unit_in_store: u64,
     /// `EEFormation::mOrientation`: where the formation's `EeFormationFields` start (formations/units.rs; units round 14)
     pub formation_fields: u64,
+    // ---- the player/tech lane, round 4
+    /// `EEPlayer::mUnitClassUpgrades` (a `std::vector<EEUnitClassUpgrade*>`: its begin and end pointers first)
+    pub player_unit_class_upgrades: u64,
+    /// `EeHerdFields` in `EEHerd`; `EETown::mPatrolGroup` (an `EEPPatrolGroup*`) (player_native.rs, player_rest.rs)
+    pub herd_fields: u64,
+    pub town_patrol_group: u64,
+    /// `EEPlayer::mName`'s and `mCivilization.mName`'s records (`EeUWideString`: player_rest.rs's result line)
+    pub player_name_text: u64,
+    pub player_civ_name_text: u64,
+    /// `EEAIArea` in `EETown` (ee_cp's town bodies take it: player_native.rs) and in `EEHerd`
+    pub town_area: u64,
+    pub herd_area: u64,
+    /// `EEPlayer::mCivilization` (an `EECivilization`: `EeGameCivFields`, then its two `std::vector<EECivUpgrade>`)
+    pub player_civilization: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

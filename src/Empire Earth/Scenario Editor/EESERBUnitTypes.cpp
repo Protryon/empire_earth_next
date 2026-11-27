@@ -112,7 +112,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_NAME_TO_EDIT: static_cast<UIEditBox*>(SeplControl(p))->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
     case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT: gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(SeplControl(p))->GetText(0)); return 0;
     case EE_SCREENS_SEPL_OP_NAME_TO_LABEL: static_cast<UITextLabel*>(SeplControl(p))->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
-    case EE_SCREENS_SEPL_OP_EPOCH_RANGE: gWorld.mPlayers[i[0]]->GetTechTree()->ResetEpochRange(i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: gMiniMap->Recolor(); return 0;
     }
@@ -179,9 +178,6 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_WORLD_SET + EE_SCREENS_SEPL_WORLD_OPT_CHEATS: return gWorld.mGameOptions.mCheatCodes = i[0] != 0;
     case EE_SCREENS_SEPX_CAP: return (int32_t)SepxPlayer(i)->mResourceCaps[i[2]];
     case EE_SCREENS_SEPX_SET_CAP: return (int32_t)(SepxPlayer(i)->mResourceCaps[i[2]] = i[3]);
-    case EE_SCREENS_SEPX_CURRENT_EPOCH: return SepxPlayer(i)->GetTechTree()->mCurrentEpoch;
-    case EE_SCREENS_SEPX_END_EPOCH: return SepxPlayer(i)->GetTechTree()->mEndEpoch;
-    case EE_SCREENS_SEPX_START_EPOCH: return SepxPlayer(i)->GetTechTree()->mStartEpoch;
     case EE_SCREENS_SEPX_LOS: return SepxPlayer(i)->mSharedLOS;
     case EE_SCREENS_SEPX_SET_LOS: SepxPlayer(i)->SetSharedLOS(i[3] != 0, gWorld.mMap);
         return 0;

@@ -42613,3 +42613,28 @@ EEFormation); the logic (-400) and C++ line (-1,500) targets are not.
   deleted files.
 - **Behaviour changes**: none observed (oracle seeds 2-7 identical after each merge; captures, the saveload matrix
   and the gates as listed in units.md).
+
+## The player/tech lane, round 4: the player's tech tree made and saved in Rust, the computer player's virtuals one Rust entry, the other lanes' tech statements answered in Rust, EETechTree.cpp gone (ee_sim units player_native.rs, player_upgrades.rs, tech_cases.rs, tech/tree_objects.rs; ee_game screens editor_tech.rs, tech_direct.rs; branch rust-playertech4, 2026-11-26)
+
+The round's measure was total C++ lines (tools/port_metrics.py), target -1,500: -515, compiled files -3, logic
+-11, with no behaviour change (the oracle's six seeds identical after every step; the capture profiles, the
+saveload matrix, scenario_check, sim_editor, gates.sh). Two forks in two rounds each and the lead.
+
+- **ee_sim cannot call ee_game, but ee_game can register into ee_sim**: the player trees' new/free/copy/save bodies
+  are ee_game's (tech_tree objects.rs), so ee_sim's player host reaches them through a table of fns ee_game sets in
+  `ee_rust_init` (tree_objects.rs `TreeBodies`), registered in the test build too. A Rust-allocated object must
+  never meet a C++ `delete`: move `new` and `delete` together and grep both sides.
+- **A virtual overridden by a subclass that has a Rust body**: make the base virtual itself dispatch (one Rust entry
+  that tests the subclass's pointer member, here mComputerPlayer) and pass `base = true` from every explicit
+  `Base::Method()` call, or the override's own call of its base recurses.
+- **An operation that repeats another chain's C++ statement is a duplicate**: before moving a case, grep the other
+  chains' `case O::` lines for the same statement (EETechTree.cpp's file, class media and sound operations were
+  EEGameOps.cpp's, EEWorld.cpp's, EEDataTextFile.cpp's); the Rust then uses the existing operation and the case
+  goes. Check the other case is in the same enum (`typedef EeGameCpp O`), not another file's EePreloadCpp/EePhysCpp.
+- **A C++ shim the Rust calls back into Rust**: EECreateCalamityUnit only forwarded to ee_gamecpp_calamity_create_unit
+  and its one caller was EEGameOps.cpp's CalCreateUnit, called from Rust: the Rust calls its own function and the
+  export, the shim, the case and the declaration go.
+- **Code used only from `#[cfg(not(test))]` paths warns in the test build**: clippy's `-D warnings` then fails the
+  gate on dead code (tech_cases.rs); allow dead_code under cfg(test) or move the helpers under the same cfg.
+- **A saveload matrix failure in a loaded worktree**: fork B's first matrix run lost every load (no output files);
+  the same code passed on the merged tip and again later. Rerun the matrix alone before bisecting.

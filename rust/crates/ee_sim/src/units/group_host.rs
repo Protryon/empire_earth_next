@@ -548,7 +548,8 @@ impl crate::units::selection::UpgradesHost for GameGroups {
         self.op(EE_UNITS_GROUP_OP_CLASS_COUNT, 0, 0, 0, 0) as u64
     }
     fn upgrade(&mut self, player: u64, class: u64) -> u64 {
-        self.op(EE_UNITS_GROUP_OP_UPGRADE, player, 0, class as i64, 0) as u64
+        // GetUpgrade(class) (player_upgrades.rs: the vector read in place)
+        crate::units::player_upgrades::at(player, class as i64 as c_long as usize)
     }
     fn upgrade_values(&mut self, upgrade: u64) -> (c_long, c_long, c_long, i64) {
         // SAFETY: a live upgrade

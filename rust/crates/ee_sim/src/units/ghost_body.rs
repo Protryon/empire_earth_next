@@ -675,6 +675,9 @@ pub(crate) mod game {
             if let Some(v) = crate::units::ghost_scratch_view::ghost_scratch_view(op, ghost, a, b, c) {
                 return v;
             }
+            if let Some(v) = crate::units::tech_cases::ghost(op, a, b) {
+                return v;
+            }
             if let Some(v) = crate::units::ghost_view::ghost_view(op, ghost, a, b, c) {
                 return v;
             }

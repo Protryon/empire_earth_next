@@ -154,7 +154,6 @@ EEUnit* SMEUnitOf(int64_t inHandle) { return (EEUnit*)(intptr_t)inHandle; }
 extern "C" int64_t ee_scenariocpp_world_class(void*, uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
-    case EE_SCENARIO_WK_UPGRADE: return SMEPtr(SMEPlayerOf(a[0])->GetUpgrade((long)a[1]));
     case EE_SCENARIO_WK_CAPTURE:   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
         ee_scenario_en_cap_unit_change(1, (const long*)(intptr_t)a[0], NULL, SMEPlayerOf(a[1]), SMEUpgradeOf(a[2]), (unsigned int)a[3]);
         return 0;

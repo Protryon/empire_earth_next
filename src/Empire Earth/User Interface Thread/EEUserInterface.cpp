@@ -361,8 +361,6 @@ extern "C" int64_t ee_screenscpp_up_unit_type(uintptr_t inUnit)
 extern "C" bool ee_screenscpp_up_class_exists(int64_t inUnitType) { return gUnitClassTable[(long)inUnitType] != NULL; }
 extern "C" int64_t ee_screenscpp_up_class_technology(int64_t inUnitType)
 { return (int64_t)gUnitClassTable[(long)inUnitType]->GetTechnology(); }
-extern "C" uintptr_t ee_screenscpp_up_node(int64_t inTechnology)
-{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inTechnology); }
 extern "C" void ee_screenscpp_up_text_cost(uintptr_t inCall, uintptr_t inNode, uintptr_t inUnit, float inFactor)
 { reinterpret_cast<EETechTreeNode*>(inNode)->GetCostString(UPC(inCall).mText, reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(), inFactor); }
 extern "C" void ee_screenscpp_up_sound(uint32_t inWhich)
@@ -613,8 +611,6 @@ extern "C" uintptr_t ee_screenscpp_pt_unit_complex(uintptr_t inP)
 { return (uintptr_t)PT(inP)->mUnit->GetComplexUnit(); }
 extern "C" int64_t ee_screenscpp_pt_researched(uintptr_t inUnit)
 { return PT_CU(inUnit)->GetPlayer()->GetResearchedImprovement(PT_CU(inUnit)->GetUnitClass()->GetUnitType()); }
-extern "C" uintptr_t ee_screenscpp_pt_node(int64_t inId)
-{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inId); }
 extern "C" bool ee_screenscpp_pt_node_makes_unit(uintptr_t inNode) { return PT_N(inNode)->mData->mMakesUnit; }
 extern "C" uintptr_t ee_screenscpp_pt_node_upgrade(uintptr_t inP, uintptr_t inNode)
 { return (uintptr_t)PT(inP)->mUnit->GetPlayer()->mUnitClassUpgrades[PT_N(inNode)->mData->mUnitClass]; }
@@ -1108,8 +1104,6 @@ extern "C" uintptr_t ee_screenscpp_mf_control(uintptr_t inRec, uint32_t inContro
 extern "C" uint32_t ee_screenscpp_mf_info_unit_type(uintptr_t inRec) { return (uint32_t)static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mUnitType; }
 extern "C" uint32_t ee_screenscpp_unit_class_count() { return (uint32_t)EEUnitClassCount(); }
 extern "C" bool ee_screenscpp_unit_class_exists(uint32_t inKind) { return gUnitClassTable[inKind] != NULL; }
-extern "C" bool ee_screenscpp_player_class_has_button(uint32_t inKind)
-{ return gWorld.GetCurrentPlayer()->mUnitClassUpgrades[inKind]->mButton != NULL; }
 extern "C" void ee_screenscpp_mf_info_set_face(uintptr_t inRec, uintptr_t inBitmap, uintptr_t inPortrait)
 { gWorld.GetCurrentPlayer()->mUnitClassUpgrades[static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mUnitType]->mButton->SetFaceBitmap(reinterpret_cast<GEBitmap*>(inBitmap), C(inPortrait)->GetRectangle(), C(inPortrait)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_ui_bitmap_set_bitmap(uintptr_t inControl, uintptr_t inBitmap)
@@ -1299,7 +1293,6 @@ extern "C" bool ee_screenscpp_mf_user_paused() { return gWorld.mUserPaused; }
 extern "C" void ee_screenscpp_mf_master_volume() { gSoundManager->SetMasterVolume(gMasterVolume); }
 extern "C" void ee_screenscpp_mf_mouse_position(float inX, float inY) { gMouse->SetPosition(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_mf_fill_hack(uintptr_t inRec) { static_cast<EEUIFMGUnitHack*>(MF(inRec)->mUnitHack)->FillComboBox(); }
-extern "C" bool ee_screenscpp_mf_has_techs() { return gWorld.GetCurrentPlayer()->mTechnologies != NULL; }
 extern "C" void ee_screenscpp_mf_text_epoch_title(uintptr_t inRec)
 { gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch), R(inRec)->mText); }
 extern "C" void ee_screenscpp_mf_unit_info_background(uintptr_t inRec)
@@ -1307,8 +1300,6 @@ extern "C" void ee_screenscpp_mf_unit_info_background(uintptr_t inRec)
 extern "C" void ee_screenscpp_mf_media_old_load(uintptr_t inRec)
 { R(inRec)->mOldMedia = EEMedia::Get(MF(inRec)->mMediaID); }
 extern "C" bool ee_screenscpp_mf_has_media_old(uintptr_t inRec) { return static_cast<EEMedia*>(R(inRec)->mOldMedia) != NULL; }
-extern "C" int64_t ee_screenscpp_mf_player_media_id()
-{ return (int64_t)gWorld.GetCurrentPlayer()->mTechnologies->mMediaID; }
 extern "C" bool ee_screenscpp_mf_using_carbon() { return gWorld.mUsingCarbon; }
 extern "C" void ee_screenscpp_mf_media_get(uintptr_t inRec, int64_t inMedia)
 { R(inRec)->mMedia = EEMedia::Get((long)inMedia); }
@@ -1462,8 +1453,6 @@ extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentP
 extern "C" int32_t ee_screenscpp_group_conversions_max() { return gWorldTable.GetLongValue(kWorldConversionsStatisticMax); }
 extern "C" int32_t ee_screenscpp_group_wonders_to_win() { return gWorld.mNumberOfWondersToWin; }
 extern "C" bool ee_screenscpp_group_has_player() { return gWorld.GetCurrentPlayer() != NULL; }
-extern "C" int32_t ee_screenscpp_group_start_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mStartEpoch; }
-extern "C" int32_t ee_screenscpp_group_end_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mEndEpoch; }
 extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return EEEpochTitleID(inEpoch); }
 
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
@@ -1524,8 +1513,6 @@ extern "C" bool ee_screenscpp_mg_player_fanaticism(uintptr_t inPlayer)
 extern "C" bool ee_screenscpp_mg_player_jit(uintptr_t inPlayer)
 { return gCivPowersManager.HasPower(MGP(inPlayer), kCivPowerJustInTimeManufacturing); }
 extern "C" bool ee_screenscpp_mg_player_jit_on(uintptr_t inPlayer) { return MGP(inPlayer)->mJITManufacturing; }
-extern "C" uintptr_t ee_screenscpp_mg_player_node(uintptr_t inPlayer, int64_t inTechnology)
-{ return (uintptr_t)MGP(inPlayer)->GetTechTree()->Get(inTechnology); }
 extern "C" uintptr_t ee_screenscpp_mg_button_object(uint32_t inIndex)
 { return (uintptr_t)EEButtonObject::Get(inIndex); }
 extern "C" int64_t ee_screenscpp_mg_object_position(uintptr_t inObject)
@@ -3006,8 +2993,6 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_LIST_START_LINE: static_cast<UILBString*>(c)->SetStartingDisplayLine((unsigned long)a); break;
     case EE_SCREENS_SH_LIST_SELECT_SCROLL: static_cast<UILBString*>(c)->ChangeSelectionIndex((unsigned long)a, false, true); break;
     case EE_SCREENS_SH_FORM_CONTROL: return (int64_t)c->GetForm()->GetControlById((unsigned long)a);
-    case EE_SCREENS_SH_TECH_EPOCH: return EETechTreeEpochOf((long)a);
-    case EE_SCREENS_SH_TECH_DATA_ID: return gTechTree.Get((long)a)->mData->mID;
     // the unit tab's (EEUIFSELBUnitList, EEUIFSELBCargoList, EEUIFSEBRotation)
     case EE_SCREENS_SH_UNIT_SELECT_TYPE: static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT); break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
@@ -3205,14 +3190,6 @@ extern "C" bool ee_screenscpp_sh_radio_checked(uintptr_t inControl)
 { return dynamic_cast<UIRadioButton*>(C(inControl))->GetIsChecked(); }
 extern "C" bool ee_screenscpp_sh_check_checked(uintptr_t inControl)
 { return static_cast<UICheckBox*>(C(inControl))->GetIsChecked(); }
-extern "C" int64_t ee_screenscpp_sh_tech_name_id(int64_t inTechnology)
-{ return (int64_t)gTechTree.Get((long)inTechnology)->mData->mNameID; }
-extern "C" int64_t ee_screenscpp_sh_tech_class_name_id(int64_t inTechnology)
-{ return (int64_t)gUnitClassTable[gTechTree.Get((long)inTechnology)->mData->mUnitClass]->mNameStringID; }
-extern "C" uintptr_t ee_screenscpp_sh_player_tree(uint32_t inSelection)
-{ return (uintptr_t)gWorld.mPlayers[inSelection + 1]->GetTechTree(); }
-extern "C" int64_t ee_screenscpp_sh_tree_data_id(uintptr_t inTree, int64_t inTechnology)
-{ return (int64_t)TREE(inTree)->Get((long)inTechnology)->mData->mID; }
 extern "C" int64_t ee_screenscpp_sh_tree_depends(uintptr_t inTree, int64_t inTechnology, int64_t inOn)
 { return (int64_t)TREE(inTree)->Get((long)inTechnology)->DependsOn((long)inOn); }
 extern "C" void ee_screenscpp_sh_tree_set_obsoleted(uintptr_t inTree, int64_t inTechnology, bool inObsoleted)

@@ -120,7 +120,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_file_checksum(
             checksum = entry_byte_sum(checksum, &buffer[..read as usize]);
             length -= read;
         }
-        h(O::TkFileClose, file.0, &[]);
+        h(O::FileClose, file.0, &[]);
     }
     checksum
 }

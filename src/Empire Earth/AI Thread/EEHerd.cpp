@@ -50,16 +50,6 @@ bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
         EEAnimal::Find(inUnit->mUnitClass->mUnitType) && inUnit->mTileX != -10000 && inUnit->mTileY != -10000;
 }
 
-
-void EEHerd::GetUnits(std::vector<EEComplexUnit*>& outUnits)
-{
-    for (size_t i = 0, n = ee_cp_herd_unit_count(this); i < n; i++) {
-        EEComplexUnit* theUnit;
-        EEUnitHandleResolve(ee_cp_herd_unit_handle(this, i), theUnit);
-        outUnits.push_back(theUnit);
-    }
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The herd's host (ee_sim::cp herd.rs EE_CP_HERD_*, herd_world.rs): `a`, `b` units (EEComplexUnit*), herds, animals,
 // goals, formations or media; one statement each (the unit's record, the formations, CanStandOn, the goals, the birth

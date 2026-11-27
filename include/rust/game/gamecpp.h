@@ -356,6 +356,8 @@ enum class EeGameCpp : uint32_t {
   PlColorIsPlayerColor,
   PlDelete,
   PlFirstUnit,
+  PlIsHuman,
+  PlLoadButtons,
   PlLoadFrom,
   PlNumPending,
   PlPendingAt,
@@ -772,6 +774,7 @@ enum class EeGameCpp : uint32_t {
   PlRefundTechnology,
   PlRemoveQueuedImprovement,
   PlSavedGroupAt,
+  PlSavedGroupsSet,
   PlTakeResource,
   PlaceUnit,
   PlayForLocalSelectionSound,
@@ -1968,11 +1971,6 @@ enum class EeGameCpp : uint32_t {
   TkUnitId,
   TkEpochReached,
   TkStatReset,
-  TkStatSet,
-  TkUnloadClassMedia,
-  TkClassMedia,
-  TkClassButtonsLoad,
-  TkClassButtonsUnload,
   TkEpochMediaLoaded,
   TkEpochMediaUnloaded,
   TkEventsEnabled,
@@ -1980,19 +1978,9 @@ enum class EeGameCpp : uint32_t {
   TkEvent,
   TkEventEffects,
   TkEventEffect,
-  TkButtonAcquire,
-  TkButtonRelease,
-  TkItemLoad,
-  TkItemUnload,
   TkAeTemplateLoad,
   TkAeTemplateUnload,
-  TkSoundLoad,
-  TkSoundUnload,
-  TkFileOpenRead,
-  TkFileLength,
   TkFilePosition,
-  TkFileClose,
-  TkUpgrade,
   TkInCostSet,
   TkVariant,
   TkClassHasRallyPoint,
@@ -2227,8 +2215,6 @@ enum class EeGameCpp : uint32_t {
   DxRulesRefresh,
   TbButtonGet,
   TbSwapButton,
-  TbGlobalTree,
-  TbIsHuman,
   PchClearContagion,
   PchNewContagion,
   PchContagion,
@@ -2412,7 +2398,6 @@ enum class EeGameCpp : uint32_t {
   DcCxKill,
   DcPlayerKillUnit,
   DcClassCount,
-  DcPlayerUpgrade,
   DcCanImprove,
   DcClassMaxLevel,
   DcUpgradeLevel,
@@ -2433,7 +2418,6 @@ enum class EeGameCpp : uint32_t {
   DcParse,
   DcApply,
   DcSwapCheatsEnabled,
-  DcPlayerUpgradeCount,
   DvListCount,
   DvListAt,
   DvPurchased,
@@ -3078,13 +3062,6 @@ void ee_gamecpp_calamity_destroy_classes(void *m);
 /// ones that report 7 (done) stopped (CALT) and deleted.
 void ee_gamecpp_calamity_update_all(void *m,
                                     float elapsed);
-
-/// `EECreateCalamityUnit`: a unit of the class at the transformation for the player (-1: the calamity's); NULL if
-/// the class does not exist.
-void *ee_gamecpp_calamity_create_unit(void *c,
-                                      long unit_class_index,
-                                      void *t,
-                                      long player);
 
 /// `GetDefaultTarget`: a unit class's: the id of the unit under the mouse, -1 if none; -1 for the others.
 long ee_gamecpp_calamity_class_default_target(void *kl);

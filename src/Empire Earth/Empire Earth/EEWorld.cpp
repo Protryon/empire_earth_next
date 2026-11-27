@@ -230,7 +230,7 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
         // New (gameoptions.yaml defeat_without_recovery): the means to train a citizen
         EEPlayer* thePlayer = gWorld.mPlayers[inA];
         EETechTreeNode* theCitizen = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->Get(kTechCitizen) : NULL;
-        return theCitizen == NULL || thePlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
+        return theCitizen == NULL || thePlayer->Dispatch(EE_UNITS_PLAYER_CAN_AFFORD, theCitizen, kUnitTypeCitizen, 1, true) != 0;
     }
     }
     return 0;
@@ -438,6 +438,8 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlUpgradeUnloadMedia: PL->mUnitClassUpgrades[a[0]]->UnloadMedia(PL);
         break;
+    case O::PlLoadButtons: PL->LoadUnitClassButtons((long)a[0]);
+        break;
     case O::PlUnloadClassMedia: PL->UnloadUnitClassMedia((unsigned long)a[0]);
         break;
     case O::PlUnloadClassButtons: PL->UnloadUnitClassButtons((unsigned long)a[0]);
@@ -465,6 +467,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlRestartTowns: PL->RestartTowns();
         break;
+    case O::PlIsHuman: return PL->IsHuman();
     case O::HumanGetName: *(UWideString*)a[0] = static_cast<EEHumanPlayer*>(PL)->GetName();
         break;
     case O::HumanSetName: static_cast<EEHumanPlayer*>(PL)->SetName(*(UWideString*)a[0]);

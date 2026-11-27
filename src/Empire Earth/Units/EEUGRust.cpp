@@ -159,8 +159,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_PLAYER_GROUP: return Handle(ObjectOf<EEComplexUnit>(inA)->GetPlayer()->GetPatrolGroup((unsigned long)inB));
 
     // the cast calamity's
-    case EE_UNITS_GOAL_HOST_X_PLAYER_TECH: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->mTechnologies->Get((long)ioArgs->i[0]));
-    case EE_UNITS_GOAL_HOST_X_NODE_CALAMITY: return ObjectOf<EETechTreeNode>(inA)->mData->mCalamity;
     case EE_UNITS_GOAL_HOST_X_CALAMITY_CLASS_OF: return Handle(EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_CALAMITY_PLACE: ObjectOf<EECalamityClass>(inA)->Place(ObjectOf<EEComplexUnit>(inB), (unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1]); return 0;
     case EE_UNITS_GOAL_HOST_X_CALAMITY_TARGET_KIND: return ObjectOf<EECalamityClass>(inA)->GetTargetKind();
@@ -231,20 +229,13 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_SET_FIRE_EFFECT: ObjectOf<EEComplexUnit>(inA)->mFireEffect = sGoalEffect; return 0;
     case EE_UNITS_GOAL_HOST_X_RESET_EFFECT: sGoalEffect = EEEffectHandle(); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_RENDEZVOUS: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindRendezvousTiles(&sGoalComplexes, ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1]); return 0;
-    case EE_UNITS_GOAL_HOST_X_TECH_TREE_GET: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->GetTechTree()->Get((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_X_NODE_NEW_CLASS: return EEEvent::GetEventEffect(EEEvent::Get(ObjectOf<EETechTreeNode>(inA)->mData->mResearchedEvent)->GetEffect(0))->mNewUnitClass;
-    case EE_UNITS_GOAL_HOST_X_NODE_AVAILABLE: return ObjectOf<EETechTreeNode>(inA)->GetIsAvailable();
     case EE_UNITS_GOAL_HOST_X_REPLACE_UNIT: EEReplaceUnit(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inA)->mPlayer->mPlayerID, ObjectOf<EEUnitClass>(inB)); return 0;
     case EE_UNITS_GOAL_HOST_GENERATE: ioArgs->f[0] = gPhysics->mRandom.Generate(); return 0;
     // the build/repair goal's
     // (EE_UNITS_GOAL_HOST_BUILD_UNIT's reads are Rust's views: rust_goal.rs build_unit_fields)
-    case EE_UNITS_GOAL_HOST_X_NODE_ID: return ObjectOf<EETechTreeNode>(inA)->mData->mID;
-    case EE_UNITS_GOAL_HOST_X_NODE_KIND: return ObjectOf<EETechTreeNode>(inA)->mData->mKind;
-    case EE_UNITS_GOAL_HOST_X_NODE_BUILD_TIME: return ObjectOf<EETechTreeNode>(inA)->GetBuildTime();
     case EE_UNITS_GOAL_HOST_IN_WORK_REACH: return EEIsInWorkReach(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB));
-    case EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS: ObjectOf<EEPlayer>(inA)->mTechnologies->Research(ObjectOf<EEComplexUnit>(inB)->mUnitClass->GetTechnology(), NULL); return 0;
     case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS: ObjectOf<EEPlayer>(inA)->CheckButtonsPreloaded((long)ioArgs->i[0]); return 0;
-    case EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE: return ObjectOf<EEPlayer>(inA)->mTechnologies->Get((long)ioArgs->i[0])->GetIsAvailable();
     case EE_UNITS_GOAL_HOST_X_SPACE_WALL: EECreateSpaceWallEnergyWall(ObjectOf<EEComplexUnit>(inA)); return 0;
     case EE_UNITS_GOAL_HOST_X_PLAY_SAMPLE: gSoundManager->Play(ObjectOf<EESoundObject>(inA)->mSampleID, ObjectOf<EESoundObject>(inA)->mVolume, 0.0f, 1.0f, false, NULL); return 0;
     case EE_UNITS_GOAL_HOST_X_MAIN_GAME_FORM: return Handle(gUIManager->GetMainGameForm());

@@ -271,16 +271,10 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_IS_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
     case EE_UNITS_CU_UNLOAD_BUTTONS: theUnit->mPlayer->UnloadUnitClassButtons(theUnit->GetUnitClass()->GetUnitType()); return 0;
     // StartProduction's
-    case EE_UNITS_CU_TECH_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get((long)inB);
-    case EE_UNITS_CU_NODE_AVAILABLE: return theNode->GetIsAvailable() == true;
     case EE_UNITS_CU_CAN_PRODUCE: return theUnit->GetPlayer()->CanProduce((long)inB, theUnit->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
-    case EE_UNITS_CU_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
-    case EE_UNITS_CU_NODE_UNIT_CLASS: return theNode->mData->mUnitClass;
-    case EE_UNITS_CU_BUILD_TIME_SCALE: return UFloatBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
     case EE_UNITS_CU_CLASS_IS_AIRCRAFT: return theClass->IsAircraft();
     case EE_UNITS_CU_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], (int32_t)inB);
     case EE_UNITS_CU_RANDOM: return UFloatBits(gPhysics->mRandom.Generate());
-    case EE_UNITS_CU_NODE_BUILD_TIME: return theNode->GetBuildTime();
     case EE_UNITS_CU_UI_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_UNITS_CU_QUEUE_POP_FRONT: theUnit->mBuildQueue.erase(theUnit->mBuildQueue.begin()); return 0;
     case EE_UNITS_CU_REFUND_TECHNOLOGY: theUnit->GetPlayer()->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB)); return 0;
@@ -312,7 +306,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SOUND_PARAMETERS: theUnit->GetUnitClass()->GetSoundParameters(theUnit, EECuObject<EESoundObject>(inA), &f[0], &f[1], &f[2]); return 0;
     case EE_UNITS_CU_PLAY_FRAME_SOUND: theUnit->SetSound(gSoundManager->PlayAndReturnReferencedNode( EECuObject<EESoundObject>(inA)->GetSampleID(), f[0], f[1], f[2], EECuObject<EESoundObject>(inA)->GetLooping(), const_cast<char*>((const char*)theUnit->GetUnitClass()->mName))); return 0;
     // PayInsurance's (inA the player)
-    case EE_UNITS_CU_CLASS_TECH_NODE: return (uint64_t)(uintptr_t)thePlayer->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
     case EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY: theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_DISBAND_EFFECT: gWorld.mEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, true, 0, 0); return 0;
     case EE_UNITS_CU_INSURANCE_SOUND: return (uint64_t)(uintptr_t)EESoundObject::Get(kSoundInsuranceCollected);
@@ -321,12 +314,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_FLIES_OVER: return theClass->FliesOver();
     case EE_UNITS_CU_OTHER_IS_FOUNDATION: return theOther->IsFoundation();
     // the production queue's (cu_cargo.rs; inA a node or class)
-    case EE_UNITS_CU_CURRENT_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
-    case EE_UNITS_CU_NODE_CLASS_INDEX: return theNode->mData->mUnitClass;
-    case EE_UNITS_CU_SET_NODE_ALLOWED: theNode->mIsAllowed = inB != 0; return 0;
-    case EE_UNITS_CU_NODE_ALLOWED: return theNode->mIsAllowed;
     case EE_UNITS_CU_QUEUE_POP_BACK: theUnit->mBuildQueue.pop_back(); return 0;
-    case EE_UNITS_CU_PLAYER_NODE: return (uint64_t)(uintptr_t)theUnit->mPlayer->mTechnologies->Get((long)inB);
     case EE_UNITS_CU_REFUND_ONE: theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->mUnitType, 1.0f); return 0;
     case EE_UNITS_CU_QUEUE_CLEAR: theUnit->mBuildQueue.clear(); return 0;
     case EE_UNITS_CU_QUEUE_PUSH_BACK: theUnit->mBuildQueue.push_back(EECuEntry(inB, inC)); return 0;
@@ -336,7 +324,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SCENARIO_GAME: return ::gWorld.mGameOptions.mIsScenarioGame;
     case EE_UNITS_CU_HERO_COUNT: return theUnit->mPlayer->GetHeroCount(1, 1);
     case EE_UNITS_CU_PAY: theUnit->mPlayer->Pay(theNode, theUnit->GetUnitClass()->GetUnitType(), 1.0f); return 0;
-    case EE_UNITS_CU_NODE_KIND: return theNode->mData->mKind;
     // the cargo's (inA another unit)
     case EE_UNITS_CU_CARGO_PUSH: theUnit->mCargo.push_back(theOther); return 0;
     case EE_UNITS_CU_REFERENCE: EECuObject<RTSUnit>(inA)->Reference(); return 0;
@@ -412,7 +399,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_WAITING_GATHERER: return (uint64_t)(uintptr_t)EEGetWaitingGatherer(theUnit->mGatheredResource);
     case EE_UNITS_CU_ADD_RESOURCE_USER: ::gWorld.AddResourceUser(theUnit->mGatheredResource); return 0;
     case EE_UNITS_CU_POST_UNLOAD_TECHNOLOGY: gDataPreLoading->PostUnloadTechnology(theUnit->mPlayer->mPlayerID, theUnit->mCurrentResearch); return 0;
-    case EE_UNITS_CU_UNLOAD_TECHNOLOGY_MEDIA: theUnit->GetPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch)->UnloadMedia(theUnit->GetPlayer()); return 0;
     case EE_UNITS_CU_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->mPlayer->mPlayerID, (long)inB); return 0;
     case EE_UNITS_CU_DESTROY_FIRE_EFFECT: gWorld.mEffectManager->DestroyEffect(theUnit->mFireEffect); return 0;
     case EE_UNITS_CU_REMOVE_CLOAK_EFFECT: EERemoveCloakEffect(theUnit); return 0;
@@ -511,7 +497,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CITIZEN_POP_FRONT: theUnit->mCitizenBuildQueue.pop_front(); return 0;
     case EE_UNITS_CU_START_FANATICISM: theUnit->mCloaked = gPhysics->mGameTime + gWorldTable.GetLongValue(kWorldFanaticism); return 0;
     case EE_UNITS_CU_FANATICISM_COST: return UFloatBits(gWorldTable.GetFloatValue(kWorldFanaticism));
-    case EE_UNITS_CU_CITIZEN_TECH_HAS_TYPE: return theUnit->GetPlayer()->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_HELD_ERASE: theUnit->mHeldUnits.erase(theUnit->mHeldUnits.begin() + (size_t)inB); return 0;
     case EE_UNITS_CU_HELD_DEREFERENCE: theUnit->mHeldUnits[(size_t)inB]->Dereference(); return 0;
     case EE_UNITS_CU_HELD_CLEAR: theUnit->mHeldUnits.clear(); return 0;
@@ -538,7 +523,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_MODEL_PARTS: return (int64_t)theOther->GetModel()->GetNumParts();
     case EE_UNITS_CU_COPY_ORBITAL_ANGLE: theUnit->mOrbitals[inB]->mAngle = theOther->mOrbitals[inB]->mAngle; return 0;
     case EE_UNITS_CU_COPY_WHEEL_ANGLE: theUnit->mWheels[inB]->mAngle = theOther->mWheels[inB]->mAngle; return 0;
-    case EE_UNITS_CU_UNIT_UPGRADE: return (uint64_t)(uintptr_t)theOther->GetPlayer()->GetUpgrade(theOther->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_HAS_CAMOUFLAGE_POWER: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerCamouflage);
     case EE_UNITS_CU_CAMOUFLAGE_POWER_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet);
     case EE_UNITS_CU_SET_CONTAINS_UNIT: return EECuObject<EEUnitSet>(inA)->Contains(EECuObject<EEComplexUnit>((uint64_t)inB)->GetUnitClass()->GetUnitType());
@@ -634,7 +618,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_INIT_COLLIDABLE: theUnit->mIsCollidable = theClass->mIsCollidable && (!(theClass->mDomains & kMovementAir) || theClass->FliesOver()) && !theClass->mIsProjectile && theClass->mUnitType != kUnitTypeWaypoint; return 0;
     case EE_UNITS_CU_INIT_CAN_BE_HIDDEN: theUnit->mCanBeHidden = (!(theClass->mDomains & kMovementAir) && !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f) || theClass->mFamily == kUnitFamilyAABuilding; return 0;
     case EE_UNITS_CU_UM_FLOOR: return UMFloor(UBitsFloat(inB));
-    case EE_UNITS_CU_UPGRADE_AREA_TEMPLATE: return thePlayer->GetUpgrade(theUnit->GetUnitClass()->GetUnitType())->mAreaEffectTemplates[inB];
     case EE_UNITS_CU_CREATE_AREA_EFFECT: return (uint64_t)(uintptr_t)gAEManager.CreateAreaEffect((long)inB, theUnit);
     case EE_UNITS_CU_AREA_EFFECTS_ADD: theUnit->mAreaEffects.Add(EECuObject<EEAreaEffect>(inA)); return 0;
     case EE_UNITS_CU_EFFECT_DEREFERENCE: EECuObject<EEAreaEffect>(inA)->Dereference(); return 0;

@@ -756,22 +756,17 @@ pub extern "C" fn ee_gamecpp_calamity_update_all(m: *mut c_void, elapsed: f32) {
 
 /// `EECreateCalamityUnit`: a unit of the class at the transformation for the player (-1: the calamity's); NULL if
 /// the class does not exist.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_create_unit(
-    c: *mut c_void,
-    unit_class_index: c_long,
-    t: *mut c_void,
-    player: c_long,
-) -> *mut c_void {
-    let mut number = cal(c as P).mPlayerNumber as c_long;
+/// (was the C++ function's body, called back through EEGameOps.cpp's `CalCreateUnit`)
+pub(crate) fn create_unit(c: P, unit_class_index: c_long, t: P, player: c_long) -> P {
+    let mut number = cal(c).mPlayerNumber as c_long;
     if player != -1 {
         number = player;
     }
     let class = crate::tech_tree::objects::class_at(unit_class_index as i64);
     if class == 0 {
-        return std::ptr::null_mut();
+        return 0;
     }
-    hp(O::UcCreateUnitAt, class, &[t as i64, number as i64]) as *mut c_void
+    hp(O::UcCreateUnitAt, class, &[t as i64, number as i64])
 }
 
 // ---- EECalamityClass
@@ -838,7 +833,7 @@ fn media_steps(kl: P, list: u32, pl: P, on_demand: bool) {
         } else if step == cc::EE_CALAMITY_STEP_UNIT_MEDIA {
             h(O::PlUnloadClassMedia, pl, &[index]);
         } else if step == cc::EE_CALAMITY_STEP_UNIT_BUTTONS && load {
-            h(O::TkClassButtonsLoad, pl, &[index]);
+            h(O::PlLoadButtons, pl, &[index]);
         } else if step == cc::EE_CALAMITY_STEP_UNIT_BUTTONS {
             h(O::PlUnloadClassButtons, pl, &[index]);
         }

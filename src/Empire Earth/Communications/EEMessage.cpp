@@ -281,6 +281,8 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PlName: return P64(&PL->mName);
     case O::PlActiveGroup: return P64(PL->mActiveGroup);
     case O::PlSavedGroupAt: return P64(PL->mGroups[a[0]]);
+    case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
+        break;
     case O::PlAddEvent: PL->mEvents.AddEvent(U2DPoint<long>((long)a[0], (long)a[1]), (long)a[2], (EEPlayer*)a[3], (long)a[4], a[5] != 0);
         break;
     case O::PlFlareReceived: PL->FlareReceived((EEPlayer*)a[0], U2DPoint<long>((long)a[1], (long)a[2]));
