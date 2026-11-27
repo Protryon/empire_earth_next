@@ -27,11 +27,6 @@ public:
       mRust(ee_ui_edit_new(this, ee_ui_edit_host, inFont, inMaxChars, ee_ui_edit_flags(inNumbersOnly, inMultiLine, inPasswordBox),
                            inBorderThickness)) {}
     virtual ~UIEditBox() { ee_ui_edit_free(this->mRust); }
-    virtual void AddIMEResultString(const UWideString& inString) { this->Call(EeUiEditCall::AddImeResult, (intptr_t)(const char*)inString); }
-    virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                            unsigned long inCursor) { return (long)this->Call(EeUiEditCall::ImeChange, (intptr_t)(const char*)inString, inCursor, (intptr_t)(const char*)inAttributes); }
-    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiEditCall::ChangeFont, (intptr_t)inFont); }
-    virtual long CloseIMECompositionString() { return (long)this->Call(EeUiEditCall::ImeClose); }
     virtual long CopyData() { return (long)this->Call(EeUiEditCall::CopyData); }
     void DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex,
                     unsigned long inEndLine) { this->Call(EeUiEditCall::DeleteRange, inStartIndex, inStartLine, inEndIndex, inEndLine); }
@@ -40,12 +35,9 @@ public:
     virtual long DrawTextA() { return (long)this->Call(EeUiEditCall::DrawText); }
     void GetAllText(UWideString& outString) const { outString = (const char*)this->Call(EeUiEditCall::AllText); }
     GEText* GetGEText() const { return reinterpret_cast<GEText*>(this->Call(EeUiEditCall::Text)); }
-    virtual bool GetIMEEnabled() const { return this->Call(EeUiEditCall::ImeEnabled) != 0; }
     unsigned long GetLineCount() const { return (unsigned long)this->Call(EeUiEditCall::LineCount); }
     const char* GetText(unsigned long inLine) const { return (const char*)this->Call(EeUiEditCall::Line, inLine); }
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
-    virtual long OpenIMECompositionString() { return (long)this->Call(EeUiEditCall::ImeOpen); }
-    virtual void ReleaseCapturedKeyboard() { this->Call(EeUiEditCall::ReleaseKeyboard); }
     void SelectText() { this->Call(EeUiEditCall::SelectAll); }
     void SelectText(unsigned long inCaretIndex, unsigned long inStartIndex, unsigned long inCaretLine,
                     unsigned long inStartLine) { this->Call(EeUiEditCall::Select, inCaretIndex, inStartIndex, inCaretLine, inStartLine); }

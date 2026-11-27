@@ -106,7 +106,6 @@ public:
     virtual ~GEModel() { ee_ge_mod_destroy(this->mRust); }
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
-    void SetSubModel(GEModel* inModel, unsigned long inIndex) { ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex); }
     // what the friends read (the store gate's digest), as accessors
     unsigned long GetVertexCount() const { return this->Val(EeGeModVal::VertexCount); }
     unsigned long GetSharedFrameCount() const { return this->Val(EeGeModVal::SharedFrameCount); }

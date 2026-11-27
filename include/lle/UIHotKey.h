@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\User Interface\UIHotKey.h (RECONSTRUCTION). A key combination that fires up to
 // four events. Vtable 0x1009997c (??_E, FireEvents); the original's sizeof was 0x38 (UIForm::AddHotKey news 0x38).
-// Requires lle/UIEntity.h, lle/Input System.h (gISKeyboard).
+// Requires lle/UIObjHost.h (UIEntity).
 //
 // Whole in Rust (rust/crates/ee_ui/src/hotkeyobj.rs, R6 ui round 20): the members are EeUiHotKeyFields, the class's
 // private base (UIForm.cpp, a friend, reads them in place); the constructors, the event setters, SetKey, SetModifier,
@@ -12,7 +12,6 @@
 #include "rust/ui/records.h"
 #include "rust/ui/hotkeyobj.h"
 #include "rust/ui/hotkey_ffi.h"
-#include "lle/UIEntity.h"
 #include "lle/TMPoll.h"
 #include "rust/ui/lle_hosts.h"
 #include "lle/UIObjHost.h"
@@ -29,7 +28,6 @@ public:
     UIHotKey() : UIEntity(0) { ee_ui_hotkey_init(this, ee_ui_hotkey_host, this); }
     UIHotKey(UIForm* inForm, const UIHotKey& inHotKey) : UIEntity(0) { ee_ui_hotkey_copy(this, ee_ui_hotkey_host, const_cast<UIHotKey*>(&inHotKey), inForm, this); }
     virtual ~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
-    virtual bool FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }              // slot 0x04
     static UIHotKey* GetHotKey(unsigned long inIndex) { return static_cast<UIHotKey*>(ee_ui_hotkey_at(inIndex)); }
     void GetHotKeyName(UWideString& outName) { outName = ee_ui_hotkey_display_name(this); }
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }

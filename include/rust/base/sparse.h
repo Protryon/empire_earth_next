@@ -50,12 +50,6 @@ void ee_sparse_free(EeSparseArray *s);
 /// `s` a live set.
 int32_t ee_sparse_size(const EeSparseArray *s);
 
-/// `Clear()`.
-///
-/// # Safety
-/// `s` a live set.
-void ee_sparse_clear(EeSparseArray *s);
-
 /// `Contains(point)`.
 ///
 /// # Safety

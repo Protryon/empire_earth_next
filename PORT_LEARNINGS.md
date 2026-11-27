@@ -42714,3 +42714,87 @@ saveload matrix, scenario_check, sim_editor, gates.sh). Two forks in two rounds 
   their text; one-line bodies stay one line.
 - **Bash tool heredocs halve backslashes** (`\\n` arrives as `\n`): write Python or Rust with escapes through the
   Write/Edit tools, not a heredoc.
+
+## The LLE and UI lane, round 3: the toolkit's single-body virtuals as Rust ops, the screens' and the UI thread's toolkit chains and record members in Rust, the LLE one unit per engine directory, TMTimer, URandom, GELight and include/dx7 gone (ee_ui lle_chains.rs, direct.rs Kind::FileList, lle_hosts.rs ge; ee_game screens scr_direct.rs, uit_direct.rs; ee_base input system.rs; branch rust-lleui3, forks rust-lleui3-a, -b, 2026-11-26)
+
+The brief: -2,000 C++ lines (tools/port_metrics.py), whole files and classes first. **-537 C++ lines, -8 compiled
+files** for the round's own work (fork A -97 and -8 files, fork B -173 in pass 1 against 416ec808d; after the batch 31
+merge, 79d919d95 -> c0892ac68, fork A -23, fork B -187, the lead -57). Against origin/rust 38bb1e104, which does not
+hold round 2 yet: 79,339 / 249 -> 76,469 / 202 (-2,870 / -47, round 2's -2,336 / -39 included); code -1,479, shim
+-1,432, logic -47; classes -11; extern_c -59; rust_hdrs unchanged (367); unsafe +144; Rust +2,642 (fork A deleted 887
+lines of dead Rust: the ee_uconfig_* exports, the GEPoint paths, 60 LLE exports nothing named). The target was not
+reached: what is left is mostly not shims of the kind this lane can answer (below).
+
+### What moved
+
+- **The LLE** (fork A): one unit per engine directory (File System, Sound Engine, Network Engine but NEMessage.cpp,
+  which tests/net links alone, Graphics Engine with DX7Rasterizer), include lists trimmed; TMTimer.h gone (the game
+  timer an `EeTimeTimer*`); URandom.h folded into LowLevelEngine.h (tests/net keeps a copy); GELight gone
+  (EERenderObject.cpp holds an `EeGeLight`); include/dx7 gone; GE host cases over Rust state answered by the objects.
+- **The toolkit** (fork B): the input calls straight to ee_base; a census of every virtual's overrides: one-body
+  virtuals made Rust ops, the ones only toolkit classes override dispatched by the control's kind (`direct::is`),
+  the IME virtuals gone or non-virtual; the rhombi, lines and texts a toolkit object owns made in Rust; three headers
+  folded.
+- **The screens** (fork B2): 80 shims of EEScreens.cpp and EECivilizationBuilder.cpp whose statement was a chain of the
+  toolkit's non-virtual forwarders answered through `ee_ui::direct` (scr_direct.rs; the file lists registered as
+  `Kind::FileList`).
+- **The UI thread** (the lead): 22 chain shims of EEUserInterface.cpp the same way, and 36 shims that read or wrote a
+  member of a game class's Rust record (the class's second base) read in place at the offset
+  `ee_screenscpp_rec_offset` answers (one C++ table of `static_cast` offsets for nine classes; uit_direct.rs).
+
+### Lessons
+
+- A game class's Rust record is a second base at an offset only C++ knows. One exported table of
+  `static_cast<R*>(reinterpret_cast<C*>(0x1000)) - 0x1000` offsets turns every member shim of those classes into a
+  Rust read, without moving the record or changing a golden (the `= module::name` entries of game_cpp.rs's `shims!`
+  are logged by the fake like the C++ ones).
+- A virtual no class outside the toolkit overrides is a Rust op; one overridden only inside the toolkit is a Rust
+  dispatch on the control's kind. The census of overrides must cover tests/ and the WON GUI and editor classes.
+- Round 2's include lists were trimmed on Windows only: the linux-x86_64 census (`xbuild.py census --target
+  linux-x86_64 --dialect ms`, which runs on Windows against the Debian sysroot) found EEScreens.cpp without `<list>`
+  (WONRouting.h's std::list: MSVC's headers reach it transitively, libstdc++'s do not). `xbuild.py game --target
+  linux-x86_64` does not build on Windows (alsa-sys needs pkg-config for the target), so the census is the POSIX check
+  available here.
+- What is left is no longer shims over Rust objects: calls that reach a game override or a game class's C++ state,
+  `dynamic_cast` checks the kinds cannot tell apart, shims making a C++ UWideString in place or `new GEBitmap` into a
+  record's pointer, the store gate's surfaces (a Rust call of an `ee_dx7sf_*` surface would read the store gate's
+  memory surface, linked under the same names), and the game-state shims (gWorld, players, units) of other lanes.
+
+### Behaviour changes
+
+None intended; the oracle traces are identical. Unreachable paths: a direct lookup of an unknown or NULL object
+answers 0 where the C++ dereferenced it; an input lookup before ISInitialize gets a NULL entity; the toolkit's rhombi,
+lines and texts come from Rust's allocator; vtables of UIForm, UIManager, UIControl and 13 toolkit classes are
+shorter (layout.json regenerates; tools/harness/human/human_input.c names UIManager's slot 0x28 for the 32-bit
+original only).
+
+### Gates
+
+On c0892ac68 (merged with origin/rust 38bb1e104, batch 31), through build/lleui3/chain.sh (logs in build/lleui3/gates),
+all PASS: `build.py -j 10 --sim` 0/0 (EE-AOC 243 inputs, EE-SIM 244), the test profile 0/0 (243); the headers current
+(367); `rust_build.py gate` PASS; the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines); the
+captures `oracle` (598 digests equal) and `late` (598 equal), the lane's two (no app shell change); the saveload matrix
+`saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448) and `--civbuilder` PASS (4,062: the controls
+table's setters changed); won_host_coverage PASS; `xbuild.py wontest` all 185 programs exit 0; through slot.py on the
+main checkout's tree: the editor (RESULT PASS editor), `random-game --box-select --orders --seed 7` (BOX SELECT PASS,
+ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS), `bash tools/gates.sh` GATES PASS (tour: RENDER CHECK
+ok, view 85.7% lit, F3 ok; ai-game time-cap PT 11788, units [4, 35, 36], alive [2, 3], classic_lua x 2; lan-game PT
+2847/2929). The forks ran the store gate (fork A: 25,140 lines equal), `xbuild.py nettest` (fork A: every driver 0
+differing; ee_session_test does not compile at batch 31 either: it names EEServer members the headers lane deleted)
+and their own oracle runs. The one later commit (54021b27d, EEScreens.cpp's `<list>`) was built again: 0/0 both
+profiles. The linux-x86_64 census of every unit: no lane unit fails (the remaining failures are other lanes' or
+pre-existing: Empire Earth.cpp's ee_sim_driver_game_ended, EEMiniMap.cpp's dot record size, WONGUI Button.cpp's
+list item offset, LobbyConfig.cpp's ee_won_regkey_op, the GE fog record's size on LP64, and every unit's
+intrinsic-header vector errors of the census environment).
+Not run: `gates.sh --legacy`, the macOS build, eedata check/cppgate (no table, rule or text compiler change).
+
+### Left
+
+The toolkit: the overridden virtuals (the controls' CopyData, draws, mouse handlers, SetLocation/SetRectangle; the
+forms' Open/Close/Activate; the backgrounds' Load/Draw; ProcessEvent; the manager's Create*), the controls'
+constructors (the game derives from them), UIEntityGroup, UIHotKey, GEBitmap, the strings and string vectors, the list
+box's line views (EECivilizationBuilder.cpp reads them). The screens and the UI thread: shims reaching game overrides
+or a game class's C++ state, kind-ambiguous `dynamic_cast`s, UIBitmap, in-place UWideStrings, `new GEBitmap` into
+records, and the game-state shims. The LLE: the store gate's surfaces as Rust surfaces (then ~25 Surf* cases), the
+NE's message ops (tests/net's stand-in messages), SetDisplayNoTextureMode/OverdrawMode (empty; RTSGraphics.cpp's
+callers), ~550 Rust exports nothing calls in other lanes' crates (build/lu3a/dead_exports.py in the fork A worktree).

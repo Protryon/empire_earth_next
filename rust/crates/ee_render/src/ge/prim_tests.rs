@@ -188,16 +188,10 @@ fn a_line_from_two_points_takes_their_colours_and_one_opacity() {
 }
 
 #[test]
-fn a_point_is_one_vertex_and_its_texture_slots_release_on_destruction() {
+fn a_primitives_texture_slots_release_on_destruction() {
     take_log();
-    let c = [0.25f32, 0.5, 0.75];
-    let p =
-        unsafe { ee_ge_prim_new_point(host, std::ptr::null_mut(), &Ge2DPoint::new(5.0, 6.0), c.as_ptr().cast(), 0.75) };
-    let log = take_log();
-    assert!(log[1].ends_with("type 1 count 1"));
-    assert_eq!(&log[2..], ["point 0 5 6 0", "color 0 [0.25, 0.5, 0.75]", "opacity 0 0.75", "uv 0 [0.0, 0.0]"]);
+    let p = unsafe { ee_ge_prim_new(host, std::ptr::null_mut(), EeGePrimKind::Line) };
     unsafe {
-        assert_eq!(ee_ge_prim_opacity(p, 0), 0.75);
         ee_ge_prim_set_texture(p, 0x77 as *mut c_void, 1);
         // the same texture again: released, then referenced (no early return, as the original)
         ee_ge_prim_set_texture(p, 0x77 as *mut c_void, 1);
@@ -210,10 +204,6 @@ fn a_point_is_one_vertex_and_its_texture_slots_release_on_destruction() {
         ee_ge_prim_destroy(p);
         assert_eq!(take_log(), [format!("delete {v:x}"), "deref 88".into(), "deref 77".into()]);
     }
-    let q = unsafe { ee_ge_prim_new(host, std::ptr::null_mut(), EeGePrimKind::Point) };
-    let log = take_log();
-    assert_eq!(&log[2..], ["opacity 0 1", "uv 0 [0.0, 0.0]"]);
-    unsafe { ee_ge_prim_destroy(q) };
 }
 
 #[test]

@@ -170,7 +170,7 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::PartMouseDown as isize => R(ee_uicpp_combo_a_part_mouse_down),
         x if x == A::PartMouseUp as isize => R(ee_uicpp_combo_a_part_mouse_up),
         x if x == A::PartMouseMove as isize => R(ee_uicpp_combo_a_part_mouse_move),
-        x if x == A::ListWheel as isize => R(ee_uicpp_combo_a_list_wheel),
+        x if x == A::ListWheel as isize => X(chains::combo_a_list_wheel),
         x if x == A::PartUpdateKeyboard as isize => R(ee_uicpp_combo_a_part_update_keyboard),
         x if x == A::PartTranslatedKey as isize => R(ee_uicpp_combo_a_part_translated_key),
         x if x == A::PartSetRectangle as isize => V(ee_uicpp_combo_a_part_set_rectangle),
@@ -186,10 +186,10 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::Fire as isize => X(chains::combo_a_fire),
         x if x == A::CaptureMouse as isize => X(chains::combo_a_capture_mouse),
         x if x == A::CaptureKeyboard as isize => X(chains::combo_a_capture_keyboard),
-        x if x == A::ReleaseMouse as isize => V(ee_uicpp_combo_a_release_mouse),
-        x if x == A::ReleaseKeyboard as isize => V(ee_uicpp_combo_a_release_keyboard),
-        x if x == A::OpenList as isize => V(ee_uicpp_combo_a_open_list),
-        x if x == A::CloseList as isize => V(ee_uicpp_combo_a_close_list),
+        x if x == A::ReleaseMouse as isize => X(chains::combo_a_release_mouse),
+        x if x == A::ReleaseKeyboard as isize => X(chains::ctl_release_keyboard),
+        x if x == A::OpenList as isize => X(chains::combo_a_open_list),
+        x if x == A::CloseList as isize => X(chains::combo_a_close_list),
         x if x == A::AddString as isize => R(ee_uicpp_combo_a_add_string),
         x if x == A::ChangeSelection as isize => V(ee_uicpp_combo_a_change_selection),
         _ => None,
@@ -332,22 +332,29 @@ unsafe fn mgr_form_rect_call(o: *mut c_void, a: isize, b: isize, c: isize, d: is
     0
 }
 
-/// The manager's IME calls on form `a` (`b` a manager_media.rs `ImeCall`, `c` its argument) -> the form's result.
+/// The manager's IME calls on form `a` (`b` a manager_media.rs `ImeCall`, `c` its argument) -> the form's result
+/// (`UIForm::AddIMEResultString`, `ChangeIMECompositionString`, `CloseIMECompositionString`, `OpenIMECompositionString`).
 ///
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn mgr_form_ime(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
-    // SAFETY: the contract
+unsafe fn mgr_form_ime(_o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+    // the form's IME members (no class overrides them): its pass to the control holding the keyboard
+    let form = a as *mut c_void;
+    let none = core::ptr::null();
+    // SAFETY: the contract: `a` is a live form; `c` the result string or the composition
     unsafe {
         match b {
             0 => {
-                ee_uicpp_mgr_form_ime_result(o, a, b, c, d, f);
+                crate::lle_form::ee_ui_form_pass_to_keyboard(form, 0, c as *const c_void, none, 0);
                 0
             }
-            1 => ee_uicpp_mgr_form_ime_change(o, a, b, c, d, f),
-            2 => ee_uicpp_mgr_form_ime_close(o, a, b, c, d, f),
-            _ => ee_uicpp_mgr_form_ime_open(o, a, b, c, d, f),
+            1 => {
+                let k = &*(c as *const crate::managerobj::EeUiImeComposition);
+                crate::lle_form::ee_ui_form_pass_to_keyboard(form, 1, k.string, k.attributes, k.cursor as u32) as isize
+            }
+            2 => crate::lle_form::ee_ui_form_pass_to_keyboard(form, 2, none, none, 0) as isize,
+            _ => crate::lle_form::ee_ui_form_pass_to_keyboard(form, 3, none, none, 0) as isize,
         }
     }
 }
@@ -372,10 +379,10 @@ unsafe fn form_hot_key_temp(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: 
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn form_key_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+unsafe fn form_key_entity(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
     let mut e: *mut c_void = core::ptr::null_mut();
-    // SAFETY: the contract; the slot is live for the call
-    unsafe { ee_uicpp_form_key_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    // SAFETY: the slot is live for the call
+    unsafe { input::keyboard_entity(a as core::ffi::c_ulong, &mut e) };
     e as isize
 }
 
@@ -384,10 +391,10 @@ unsafe fn form_key_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: is
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn form_mouse_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+unsafe fn form_mouse_entity(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
     let mut e: *mut c_void = core::ptr::null_mut();
-    // SAFETY: the contract; the slot is live for the call
-    unsafe { ee_uicpp_form_mouse_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    // SAFETY: the slot is live for the call
+    unsafe { input::mouse_entity(a as core::ffi::c_ulong, &mut e) };
     e as isize
 }
 
@@ -599,6 +606,24 @@ pub unsafe extern "C" fn ee_ui_scroll_bar_host(
     unsafe { chain(&[base, part, scroll_bar], o, op, a, b, c, d, f) }
 }
 
+/// `UIControl::SetBgOpacity`, `SetBgColor` and `ReleaseCapturedKeyboard` for their C++ callers (only toolkit classes
+/// overrode them; LLE/UI round 3): `which` 0 the opacity `f[0]`, 1 the colour `f[0..3]`, 2 the keyboard's release.
+/// The override of the control's kind (lle_chains.rs `virt_bg`, `virt_release_keyboard`), else UIControl's.
+///
+/// # Safety
+/// `control` a live control, `f` four floats.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_control_virt(control: *mut c_void, which: u32, f: *const f32) {
+    // SAFETY: the contract
+    let v = unsafe { [*f, *f.add(1), *f.add(2), *f.add(3)] };
+    match which {
+        0 => chains::virt_bg(control, false, v),
+        1 => chains::virt_bg(control, true, v),
+        _ => chains::virt_release_keyboard(control),
+    }
+}
+
 /// The list boxes' ops that do not depend on T (`UIListBoxRust<T>::Op`'s default).
 ///
 /// # Safety
@@ -758,6 +783,15 @@ pub unsafe extern "C" fn ee_ui_file_combo_host(
     unsafe { chain(&[file_shared, file_combo], o, op, a, b, c, d, f) }
 }
 
+/// The events' `InitializeEvent` and `UninitializeEvent`, which no event overrides: kErrorOK.
+///
+/// # Safety
+/// None (the host contract's signature).
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn event_virt_ok(_o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    0
+}
+
 /// The hot keys' `HkEntity`: the keyboard's entity of key `a` (`a` itself when there is none, the original's
 /// unset local).
 ///
@@ -806,11 +840,169 @@ unsafe fn hotkey_event_call(_o: *mut c_void, a: isize, b: isize, _c: isize, _d: 
 /// `entity` a live pointer.
 #[cfg(not(any(test, feature = "no_cpp")))]
 unsafe fn hotkey_get_entity(key: isize, entity: *mut *mut c_void) -> isize {
-    extern "C" {
-        fn ee_uicpp_hk_get_entity(key: isize, entity: *mut *mut c_void) -> isize;
-    }
     // SAFETY: the contract
-    unsafe { ee_uicpp_hk_get_entity(key, entity) }
+    unsafe { input::keyboard_entity(key as core::ffi::c_ulong, entity) as isize }
+}
+
+/// The GE objects a toolkit object owns by address (`GERhombus`, `GELine`, `GEText`), made and freed here (LLE/UI
+/// round 3: their C++ shims were `new` and `delete`): a C++-layout shell of one pointer, the Rust object (the C++
+/// classes' only member, `URust`), so the C++ that draws them or calls their members reads them as its classes. Each
+/// is freed by the op that pairs with its maker, never by a C++ `delete`.
+#[cfg(not(any(test, feature = "no_cpp")))]
+pub(crate) mod ge {
+    use core::ffi::c_void;
+
+    use ee_render::ge::game_hosts::{ee_ge_game_prim_new, ee_ge_game_prim_new_line, ee_ge_game_text_new};
+    use ee_render::ge::prim::{ee_ge_prim_destroy, EeGePrim, EeGePrimKind};
+    use ee_render::ge::smallobj::{ee_ge_text_destroy, EeGeText};
+
+    #[repr(C)]
+    struct Shell<T> {
+        rust: *mut T,
+    }
+
+    /// A new shell whose object `new` makes for the shell's address (the C++ constructor's `this`).
+    fn make<T>(new: impl FnOnce(*mut c_void) -> *mut T) -> isize {
+        let s = Box::into_raw(Box::new(Shell::<T> { rust: core::ptr::null_mut() }));
+        // SAFETY: the new shell
+        unsafe { (*s).rust = new(s.cast()) };
+        s as isize
+    }
+    /// The shell `p` freed after `destroy` of its object (nothing for NULL, as `delete`).
+    ///
+    /// # Safety
+    /// `p` is NULL or a shell [`make`] made of `T`, not used again.
+    unsafe fn free<T>(p: isize, destroy: unsafe extern "C" fn(*mut T)) {
+        if p != 0 {
+            // SAFETY: the contract
+            unsafe { destroy(Box::from_raw(p as *mut Shell<T>).rust) }
+        }
+    }
+    /// `new GERhombus`.
+    pub(crate) fn rhombus_new() -> usize {
+        // SAFETY: the game's vertex host; the shell lives until rhombus_delete
+        make(|o| unsafe { ee_ge_game_prim_new(o, EeGePrimKind::Rhombus) }) as usize
+    }
+    /// `new GELine`.
+    pub(crate) fn line_new() -> usize {
+        // SAFETY: as rhombus_new's
+        make(|o| unsafe { ee_ge_game_prim_new(o, EeGePrimKind::Line) }) as usize
+    }
+    /// `new GELine(origin, origin, black, black, 1.0f)`.
+    pub(crate) fn line_new_black() -> usize {
+        let (origin, black) = ([0.0f32; 2], [0.0f32; 3]);
+        // SAFETY: as rhombus_new's; the points and colours live for the call
+        make(|o| unsafe {
+            ee_ge_game_prim_new_line(
+                o,
+                origin.as_ptr().cast(),
+                origin.as_ptr().cast(),
+                black.as_ptr().cast(),
+                black.as_ptr().cast(),
+                1.0,
+            )
+        }) as usize
+    }
+    /// `delete` of a rhombus or line.
+    ///
+    /// # Safety
+    /// As [`free`]'s.
+    pub(crate) unsafe fn prim_delete(p: usize) {
+        // SAFETY: the contract
+        unsafe { free::<EeGePrim>(p as isize, ee_ge_prim_destroy) }
+    }
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$a:ident| $x:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract (`a` the object to free, made by this module).
+            #[allow(unused_unsafe, unused_variables)]
+            pub(crate) unsafe fn $name(_o: *mut c_void, $a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $x }
+            }
+        )*};
+    }
+    ops! {
+        /// `new GERhombus`.
+        rhombus_create => |a| rhombus_new() as isize;
+        /// `delete` of a rhombus `a`.
+        rhombus_delete => |a| { prim_delete(a as usize); 0 };
+        /// `new GELine(origin, origin, black, black, 1.0f)`.
+        line_create => |a| line_new_black() as isize;
+        /// `new GELine`.
+        line_create_plain => |a| line_new() as isize;
+        /// `delete` of a line `a`.
+        line_delete => |a| { prim_delete(a as usize); 0 };
+        /// `new GEText(font a)`.
+        text_create => |a| make(|o| ee_ge_game_text_new(o, a as *mut c_void));
+        /// `delete` of a text `a`.
+        text_delete => |a| { free::<EeGeText>(a, ee_ge_text_destroy); 0 };
+    }
+}
+
+/// The input system's devices and entities (ee_base's: `gISKeyboard`, `gISMouse`, `ISEntity`), which the toolkit's
+/// C++ shims called (LLE/UI round 3).
+#[cfg(not(any(test, feature = "no_cpp")))]
+pub(crate) mod input {
+    use core::ffi::{c_long, c_ulong, c_void};
+
+    use ee_base::input::ffi::{self as i, EeInputEntity};
+    use ee_base::input::system::{system_keyboard, system_mouse};
+
+    /// `gISKeyboard->GetEntity(key, *out)`.
+    ///
+    /// # Safety
+    /// `out` a live pointer.
+    pub(crate) unsafe fn keyboard_entity(key: c_ulong, out: *mut *mut c_void) -> c_long {
+        // SAFETY: the contract
+        unsafe { i::ee_input_keyboard_entity(system_keyboard(), key, out.cast()) }
+    }
+    /// `gISMouse->GetEntity(button, *out)`.
+    ///
+    /// # Safety
+    /// `out` a live pointer.
+    pub(crate) unsafe fn mouse_entity(button: c_ulong, out: *mut *mut c_void) -> c_long {
+        // SAFETY: the contract
+        unsafe { i::ee_input_mouse_entity(system_mouse(), button, out.cast()) }
+    }
+    fn e(a: isize) -> *const EeInputEntity {
+        a as *const EeInputEntity
+    }
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$a:ident| $x:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract (`a` a live entity where the op names one).
+            #[allow(unused_unsafe, unused_variables)]
+            pub(crate) unsafe fn $name(_o: *mut c_void, $a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $x }
+            }
+        )*};
+    }
+    ops! {
+        /// `a->GetValue()`.
+        entity_value => |a| i::ee_input_entity_value(e(a)) as isize;
+        /// `a->JustDoublePressed()`.
+        entity_double_pressed => |a| i::ee_input_entity_just_double_pressed(e(a)) as isize;
+        /// `a->JustPressed()`.
+        entity_just_pressed => |a| i::ee_input_entity_just_pressed(e(a)) as isize;
+        /// `a->JustUnpressed()`.
+        entity_just_unpressed => |a| i::ee_input_entity_just_unpressed(e(a)) as isize;
+        /// `a->GetIndex()`.
+        entity_index => |a| i::ee_input_entity_index(e(a)) as isize;
+        /// `gISKeyboard->GetModifierState()`.
+        keyboard_modifiers => |a| i::ee_input_keyboard_modifiers(system_keyboard()) as isize;
+        /// `ISKeyboard::ComputeModifierState(a)`.
+        modifier_of => |a| i::ee_input_modifier_state(a as c_ulong) as isize;
+        /// `gISKeyboard->GetShouldUpdate()`.
+        keyboard_should_update => |a| i::ee_input_keyboard_should_update(system_keyboard()) as isize;
+        /// `gISMouse->GetShouldUpdate()`.
+        mouse_should_update => |a| i::ee_input_mouse_should_update(system_mouse()) as isize;
+    }
 }
 
 /// UIHotKey's host (its object the record).
@@ -1005,11 +1197,11 @@ const SET: [Option<SetFn>; 45] = [
     Some(SetFn::R(chains::tbl_set_label_align)),
     Some(SetFn::R(chains::tbl_set_label_scroll_opacity)),
     Some(SetFn::R(chains::tbl_set_label_fit)),
-    Some(SetFn::C(ee_uicpp_tbl_set_bg_color)),
-    Some(SetFn::C(ee_uicpp_tbl_set_bg_opacity)),
+    Some(SetFn::R(chains::part_set_bg_color)),
+    Some(SetFn::R(chains::part_set_bg_opacity)),
     Some(SetFn::R(chains::tbl_set_always_dirty)),
     Some(SetFn::C(ee_uicpp_tbl_set_set_rectangle)),
-    Some(SetFn::C(ee_uicpp_tbl_set_change_font)),
+    Some(SetFn::R(chains::table_change_font)),
     Some(SetFn::R(chains::tbl_set_set_trigger)),
 ];
 

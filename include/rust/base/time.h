@@ -51,9 +51,6 @@ void ee_time_shutdown(bool _forced);
 /// `TMGetTime`: milliseconds (32 bits on every data model), or the time pinned on this thread.
 uint32_t ee_time_get();
 
-/// `TMGetMicroTime`.
-int64_t ee_time_get_micro();
-
 /// Pins `TMGetTime` on the calling thread to `time` (-1: the clock again). TEST ONLY: EE-SIM's scripted editor.
 void ee_time_pin(int64_t time);
 

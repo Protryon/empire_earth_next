@@ -44,7 +44,7 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/TMTimer.h"
+#include "rust/base/time.h"
 #include "lle/FSChunk.h"          // FSPersistentList
 #include "ee/EEMap.h"
 #include "ee/EEScenarioManager.h"
@@ -722,7 +722,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PreloadWaitForQueue: (long)ee_preload_wait_for_queue(gDataPreLoading);
         break;
-    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, (TMTimer*)p);
+    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, (EeTimeTimer*)p);
         break;
     case O::PhysShutdown: ee_gamecpp_startup_quit_thread(gPhysics->mThread, gPhysics->mThreadDone);
         break;
@@ -932,8 +932,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DeleteCheatCodes: delete std::exchange(gCheatCodes, nullptr);
         break;
-    case O::NewGameTimer: return P64(new TMTimer(0, 0, true));
-    case O::DeleteGameTimer: delete (TMTimer*)p;
+    case O::NewGameTimer: return P64(ee_time_timer_new(0, 0, true));
+    case O::DeleteGameTimer: ee_time_timer_free((EeTimeTimer*)p);
         break;
     case O::ContinentsShutdown: EEAIContinentManager::Shutdown();
         break;

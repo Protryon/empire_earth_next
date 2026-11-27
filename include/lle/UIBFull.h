@@ -1,11 +1,11 @@
 // C:\EEX\Low-Level Engine\User Interface\UIBFull.h (RECONSTRUCTION). A full-form background cut into a grid of
 // bitmaps, one texture file per cell (<name>_<row>_<column><ext>). Vtable 0x10098bd4 (UIBackground's 7 slots, then
-// SetBitmapTexture); the original's sizeof was 0x84 (??_E stride). Requires lle/UITextureBackground.h.
+// SetBitmapTexture); the original's sizeof was 0x84 (??_E stride). Requires lle/UIBitmapBackground.h.
 // Whole in Rust (bgobj.rs, R6 ui round 20): the grid is the record's mBitmaps, mColumns, mRows.
 #ifndef LLE_UIBFULL_H
 #define LLE_UIBFULL_H
 
-#include "lle/UITextureBackground.h"
+#include "lle/UIBitmapBackground.h"   // UITextureBackground
 
 
 class LLE_API UIBFull : public UITextureBackground {

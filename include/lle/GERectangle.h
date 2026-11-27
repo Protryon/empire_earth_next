@@ -55,7 +55,6 @@ public:
         return inRectangle.mLeft >= this->mLeft && inRectangle.mRight <= this->mRight && inRectangle.mTop >= this->mTop &&
                inRectangle.mBottom <= this->mBottom;
     }
-    GE2DPoint GetBottomRight() const { return GE2DPoint(this->mRight, this->mBottom); }
     void GetCenter(GE2DPoint& outCenter) const
         { outCenter = GE2DPoint((this->mRight - this->mLeft) * 0.5f + this->mLeft, (this->mBottom - this->mTop) * 0.5f + this->mTop); }
     GE2DPoint GetTopLeft() const { return GE2DPoint(this->mLeft, this->mTop); }

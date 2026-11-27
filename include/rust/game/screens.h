@@ -18297,6 +18297,8 @@ void ee_screens_ui_post_icon_bar_once(EeScreensUserInterfaceFields *rec);
 void ee_screens_ui_set_load_progress(const EeScreensUserInterfaceFields *rec,
                                      float fraction);
 
+extern ptrdiff_t ee_screenscpp_rec_offset(uint32_t kind);
+
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,
                            uint32_t message,

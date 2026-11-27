@@ -237,10 +237,8 @@ enum class EeGeObjOp : uint32_t {
 enum class EeGePrimKind : uint32_t {
   /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
   Line = 1,
-  /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
-  Point,
   /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
-  Rhombus,
+  Rhombus = 3,
 };
 
 /// What a command draws.
@@ -251,8 +249,6 @@ enum class EeGeDraw2DKind : uint32_t {
   Rhombus,
   /// `Draw(GELine*, count, screen)`.
   Lines,
-  /// `Draw(GEPoint*, count, screen)`.
-  Points,
   /// `Draw(GEText*, clip, surface)`: `surface` null is the screen's secondary surface (`UIManager::GetDrawingSurface`).
   TextClipped,
   /// `Draw(GEText*, surface)`.
@@ -938,9 +934,9 @@ struct EeGeTextOps {
 /// One command as the executor reads it.
 struct EeGeDraw2D {
   EeGeDraw2DKind kind;
-  /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEPoint*`, `GEText*`).
+  /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEText*`).
   void *object;
-  /// The lines' or points' count.
+  /// The lines' count.
   unsigned long count;
   /// The text's clip (`TextClipped`).
   EeGeRectangle clip;
@@ -1478,15 +1474,6 @@ EeGePrim *ee_ge_game_prim_new_line(void *owner,
                                    const void *end_color,
                                    float opacity);
 
-/// `GEPoint(point, colour, opacity)` over the game's vertex host.
-///
-/// # Safety
-/// As [`ee_ge_game_bmp_new`]; the pointers are valid.
-EeGePrim *ee_ge_game_prim_new_point(void *owner,
-                                    const EeGe2DPoint *point,
-                                    const void *color,
-                                    float opacity);
-
 /// `GEText(font)` over the game's object host.
 ///
 /// # Safety
@@ -1514,12 +1501,6 @@ EeGeFont *ee_ge_game_font_new(void *owner,
 /// # Safety
 /// `l` is valid for a write.
 void ee_ge_light_init(EeGeLight *l);
-
-/// `operator=(inLight)`.
-///
-/// # Safety
-/// Both are live.
-void ee_ge_light_assign(EeGeLight *l, const EeGeLight *other);
 
 /// `SetColor(inColor)`.
 ///
@@ -2046,16 +2027,6 @@ EeGePrim *ee_ge_prim_new_line(EeGeBmpHostFn host,
                               const void *start_color,
                               const void *end_color,
                               float opacity);
-
-/// `GEPoint(point, colour, opacity)` (the colour as `const GEColor*`).
-///
-/// # Safety
-/// As `ee_ge_prim_new`; the pointers are valid.
-EeGePrim *ee_ge_prim_new_point(EeGeBmpHostFn host,
-                               void *owner,
-                               const EeGe2DPoint *point,
-                               const void *color,
-                               float opacity);
 
 /// The destructors.
 ///

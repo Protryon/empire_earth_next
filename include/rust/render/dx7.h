@@ -409,11 +409,6 @@ long ee_dx7r_draw_lines(EeDx7Rasterizer *rast,
                         EeDx7Handle lines,
                         unsigned long count);
 
-long ee_dx7r_draw_points(EeDx7Rasterizer *rast,
-                         unsigned long screen,
-                         EeDx7Handle points,
-                         unsigned long count);
-
 long ee_dx7r_draw_rhombus(EeDx7Rasterizer *rast, unsigned long screen, EeDx7Handle rhombus);
 
 /// `Draw(GEPolygonArray&, ...)`: `vertex_type` 1 is coloured.

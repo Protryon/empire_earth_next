@@ -113,8 +113,6 @@ static void EECBAnswerAccept(UIForm* inForm)
 
 static const EEUIFErrorCallback kCBAnswers[3] = {EECBAnswerWrite, EECBAnswerDelete, EECBAnswerAccept};
 
-extern "C" uintptr_t ee_screenscpp_cbh_as_file_list(uintptr_t inControl)
-{ return (uintptr_t)dynamic_cast<UIFileListBox*>((UIControl*)inControl); }
 extern "C" uintptr_t ee_screenscpp_cbh_as_list(uintptr_t inControl)
 { return (uintptr_t)dynamic_cast<EECBUIListBox*>((UIControl*)inControl); }
 extern "C" int32_t ee_screenscpp_cbh_close_form() { return gUserInterface->CloseForm(NULL); }
@@ -124,16 +122,7 @@ extern "C" void ee_screenscpp_cbh_spec_directory()
 { EEScratch<FSFileSpec>(kScratchCBSpec).SetDirectory(gStartupDirectory + "Users\\default\\Civilizations\\"); }
 extern "C" void ee_screenscpp_cbh_path_add() { EEScratch<FSPath*>(kScratchCBPath)->AddDirectory(EEScratch<FSFileSpec>(kScratchCBSpec), true); }
 extern "C" void ee_screenscpp_cbh_fl_set_paths(uintptr_t inList) { ((UIFileListBox*)inList)->SetSearchPaths(EEScratch<FSPath*>(kScratchCBPath)); }
-extern "C" void ee_screenscpp_cbh_fl_add_extension(uintptr_t inList)
-{ ((UIFileListBox*)inList)->AddValidExtension(UString(".civ")); }
-extern "C" void ee_screenscpp_cbh_fl_create_entries(uintptr_t inList) { ((UIFileListBox*)inList)->CreateEntries(1); }
 extern "C" void ee_screenscpp_cbh_path_release() { EEScratch<FSPath*>(kScratchCBPath)->Dereference(); }
-extern "C" int32_t ee_screenscpp_cbh_fl_selection(uintptr_t inList, unsigned long* inIndex)
-{ return ((UIFileListBox*)inList)->GetCurrentSelection(*inIndex); }
-extern "C" void ee_screenscpp_cbh_fl_line(uintptr_t inList, uint32_t inLine, void* inOut)
-{ EEShimOut(inOut, ((UIFileListBox*)inList)->GetData(inLine)); }
-extern "C" int32_t ee_screenscpp_cbh_fl_delete(uintptr_t inList)
-{ return ((UIFileListBox*)inList)->DeleteSelectedFile(); }
 extern "C" uintptr_t ee_screenscpp_cbh_screen_event(uint32_t inCode) { return (uintptr_t)EECreateScreenEvent(inCode); }
 extern "C" void ee_screenscpp_cbh_event_release(uintptr_t inEvent) { ((UIEvent*)inEvent)->Dereference(); }
 extern "C" int32_t ee_screenscpp_cbh_string_load(uint32_t inId) { return gResource->GetString(inId, EEScratch<UWideString>(kScratchCBString)); }
@@ -167,10 +156,6 @@ extern "C" void ee_screenscpp_cbh_set_blink_flag(bool inValue)
 { gUIManager->GetMainGameForm()->mIsButtonBlinking = inValue; }
 extern "C" uintptr_t ee_screenscpp_cbh_main_builder_button(uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(dynamic_cast<UIBlinkingButton*>(((UIForm*)inForm)->GetControl(kMainGameCivSelectorBuilder))); }
-extern "C" uintptr_t ee_screenscpp_cbh_main_alert_button()
-{ return (uintptr_t)gUIManager->GetMainGameForm()->GetControl(kMainGameLargeCivBuilderAlert); }
-extern "C" void ee_screenscpp_cbh_button_blink(uintptr_t inButton, bool inValue)
-{ static_cast<UIBlinkingButton*>((UIControl*)inButton)->SetIsBlinking(inValue); }
 extern "C" void ee_screenscpp_cbh_f_volume() { gU565518.SetVolume(gStartupVolume); }
 extern "C" void ee_screenscpp_cbh_f_directory(EeScreensShimText inText) { gU565518.SetDirectory(EEShimString(inText)); }
 extern "C" void ee_screenscpp_cbh_f_name(EeScreensShimText inText) { gU565518.SetFile(EEShimString(inText)); }
@@ -252,8 +237,6 @@ extern "C" uintptr_t ee_screenscpp_cbb_lines_count(uintptr_t inLines)
 { return ((std::vector<UWideString>*)inLines)->size(); }
 extern "C" void ee_screenscpp_cbb_line(uintptr_t inLines, uintptr_t inIndex, void* inOut)
 { EEShimOut(inOut, (*(std::vector<UWideString>*)inLines)[inIndex]); }
-extern "C" int64_t ee_screenscpp_cbb_base_copy_data(uintptr_t inList)
-{ return (int64_t)CBB(inList)->UILBString::CopyData(); }
 
 // New (port), TEST ONLY: the civilization builder lane's capture records (tools/sim_capture.py).
 // Reads the manager, the powers, the players and their class upgrades; changes nothing but the capture file (CVMG
@@ -363,7 +346,6 @@ extern "C" void ee_screenscpp_civf_civ_buy(uintptr_t inCtx, uint32_t inUpgrade)
 { ee_gamecpp_civ_buy(&CF(inCtx)->mPlayer->mCivilization, (EECivUpgrade)inUpgrade, (long)(CF(inCtx)->mPlayer->mPlayerID), true); }
 extern "C" void ee_screenscpp_civf_civ_set_points(uintptr_t inCtx) { CF(inCtx)->mPlayer->mCivilization.SetPoints(0); }
 extern "C" bool ee_screenscpp_civf_purchased(uintptr_t inCtx) { return CF(inCtx)->mPlayer->mCivUpgradesPurchased; }
-extern "C" bool ee_screenscpp_civf_in_scenario_editor() { return gUIManager->GetInScenarioEditor(); }
 extern "C" bool ee_screenscpp_civf_can_afford_all(uintptr_t inCtx)
 { return ee_gamecpp_civ_can_afford_all(&CF(inCtx)->mPlayer->mCivilization, &(CF(inCtx)->mUpgrades)); }
 extern "C" uintptr_t ee_screenscpp_civf_grant_new(uintptr_t inCtx, int64_t inPoints)

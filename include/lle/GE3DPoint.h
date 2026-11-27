@@ -76,7 +76,6 @@ public:
     template <class F> long Save(unsigned long, unsigned long, F& inFile) const { return this->Save(inFile); }
     void SetX(float inX) { this->mX = inX; }
     void SetY(float inY) { this->mY = inY; }
-    void SetXYZ(float inX, float inY, float inZ) { *this = GE3DPoint(inX, inY, inZ); }
 };
 
 #endif

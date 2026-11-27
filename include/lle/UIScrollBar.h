@@ -39,8 +39,6 @@ public:
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     void SetCurrentRangeValue(unsigned long inValue) { this->Call(EeUiScrollBarCall::SetCurrentRangeValue, inValue); }
-    virtual void SetBgColor(const GEColor& inColor) { this->CallF(EeUiScrollBarCall::SetBgColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
-    virtual void SetBgOpacity(float inOpacity) { this->CallF(EeUiScrollBarCall::SetBgOpacity, inOpacity); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->CallF(EeUiScrollBarCall::SetLocation, inLocation.GetX(), inLocation.GetY()); }
     void SetPageSize(unsigned long inPageSize) { this->Call(EeUiScrollBarCall::SetPageSize, inPageSize); }
     void SetRange(unsigned long inMin, unsigned long inMax) { this->Call(EeUiScrollBarCall::SetRange, inMin, inMax); }

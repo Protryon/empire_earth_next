@@ -10,7 +10,7 @@
 #include "rust/ui/bgtableobj.h"
 
 
-// UIEditBox.cpp (0x1006a9a5; not exported): the multi-byte character at inString
-#include "lle/UIMultiByte.h"
+// UIEditBox.cpp (0x1006a9a5; not exported): the multi-byte character at inString, GetMultiByteChar
+#include "platform/PlatString.h"
 
 #endif

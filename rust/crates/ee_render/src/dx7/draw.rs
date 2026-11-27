@@ -22,7 +22,6 @@ pub type LongResult = c_long;
 /// The `GXERR_WASSTILLDRAWING` every draw retries on.
 pub(crate) const WAS_STILL_DRAWING: i32 = (0x8876_0000u32 | 540) as i32;
 
-pub(crate) const PT_POINTLIST: u32 = 1;
 pub(crate) const PT_LINELIST: u32 = 2;
 pub(crate) const PT_TRIANGLELIST: u32 = 4;
 

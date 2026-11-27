@@ -310,6 +310,19 @@ impl EeGeTexture {
                     return 0;
                 }
                 EeGeTexOp::RasterCreate | EeGeTexOp::RasterDestroy => return 0,
+                // a surface's reference count and logical shift: its C++ members, read in place (cppobj.rs
+                // CppSurface; the store gate's memory surfaces have the same C++ layout)
+                EeGeTexOp::SurfReference => {
+                    unsafe { crate::ge::cppobj::reference(obj) };
+                    return 0;
+                }
+                EeGeTexOp::SurfLogicalShift => {
+                    return unsafe { (*(obj as *const crate::ge::cppobj::CppSurface)).logical_shift } as isize
+                }
+                EeGeTexOp::SurfSetLogicalShift => {
+                    unsafe { (*(obj as *mut crate::ge::cppobj::CppSurface)).logical_shift = a as c_ulong };
+                    return 0;
+                }
                 // the manager's RemoveTexture and PromoteTexture (a GETextureManager is its Rust manager alone)
                 EeGeTexOp::ManagerRemove => {
                     return unsafe {

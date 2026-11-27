@@ -485,12 +485,6 @@ pub extern "C" fn ee_time_get() -> u32 {
     TIME.time(&PlatClock, PINNED.with(Cell::get))
 }
 
-/// `TMGetMicroTime`.
-#[no_mangle]
-pub extern "C" fn ee_time_get_micro() -> i64 {
-    TIME.micro_time(&PlatClock)
-}
-
 /// Pins `TMGetTime` on the calling thread to `time` (-1: the clock again). TEST ONLY: EE-SIM's scripted editor.
 #[no_mangle]
 pub extern "C" fn ee_time_pin(time: i64) {

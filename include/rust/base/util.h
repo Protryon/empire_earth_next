@@ -71,16 +71,6 @@ using EeUtilShutdownFn = void(*)(bool forced);
 
 extern "C" {
 
-/// `UConfig::GetValue(block, key, UWideString&)`: the key's text (at most 1023 bytes) handed to `assign` (the C++
-/// string's assignment) and kErrorOK, or kErrorNotFound (the string left) when the key holds none.
-///
-/// # Safety
-/// As `PlatConfigGetString`; `assign` takes `target` and a NUL-terminated text.
-long ee_uconfig_get_text(const char *block,
-                         const char *key,
-                         void (*assign)(void*, const char*),
-                         void *target);
-
 /// `UMGetFloatingPointPrecision`: `_PC_53`.
 unsigned long ee_util_fp_precision();
 

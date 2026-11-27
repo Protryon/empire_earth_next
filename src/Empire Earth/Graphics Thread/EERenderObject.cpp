@@ -11,7 +11,14 @@
 // inline ctors) follows the ghost-unit pass.
 #include <windows.h>
 
-#include "dx7/DX7Rasterizer.h"
+#include "lle/LowLevelEngine.h"
+#include "lle/GESurface.h"
+#include "lle/GETextureManager.h"
+#include "lle/GETexture.h"
+#include "lle/GEScreen.h"
+#include "lle/GEViewport.h"
+#include "lle/GERasterizer.h"
+#include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
@@ -72,7 +79,8 @@ GEColor gU4E9220(1.0f, 1.0f, 1.0f);
 
 GEVector gU4E9210;                         // 0x4e9210 (the sun direction: Fn10C036, SetTerrainLighting)
 
-GELight gU4E9198;
+// the scene's one light (GELight's record, ee_ge light.rs; the DX7 rasterizer reads it directly)
+EeGeLight gU4E9198 = [] { EeGeLight theLight; ee_ge_light_init(&theLight); return theLight; }();
 unsigned long gU4E9190;                     // 0x4e9190 (gU4E9198's index in the rasterizer: AddLight/UpdateLight)
 
 GEViewport gU4E8F08;
@@ -158,13 +166,13 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoMusicFollowsBattle: return gMusicFollowsBattle;
     case O::RoMusicIntensity: return gMusicManager->mIntensity;
     case O::RoCollisionSphereMode: return gCollisionSphereMode;
-    case O::RoLightAttenuation0: gU4E9198.SetAttenuation0(f[0]);
+    case O::RoLightAttenuation0: gU4E9198.attenuation0 = f[0];
         break;
-    case O::RoLightAttenuation1: gU4E9198.SetAttenuation1(f[0]);
+    case O::RoLightAttenuation1: gU4E9198.attenuation1 = f[0];
         break;
-    case O::RoLightAttenuation2: gU4E9198.SetAttenuation2(f[0]);
+    case O::RoLightAttenuation2: gU4E9198.attenuation2 = f[0];
         break;
-    case O::RoLightStyle: gU4E9198.SetStyle((unsigned long)a[0]);
+    case O::RoLightStyle: gU4E9198.style = (unsigned long)a[0];
         break;
     case O::RoNewBitmap: return RO_P64(new GEBitmap);
     case O::RoBitmapDereference: ((GEBitmap*)p)->Dereference();
@@ -355,15 +363,15 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoScreenPoint: GetScreenPoint(*(const GE3DPoint*)a[0], *(GE2DPoint*)a[1]);
         break;
-    case O::RoLightColor: gU4E9198.SetColor(GEColor(f[0], f[1], f[2]));
+    case O::RoLightColor: ee_ge_light_set_color(&gU4E9198, reinterpret_cast<const float(*)[3]>(f));
         break;
-    case O::RoLightIntensity: gU4E9198.SetIntensity(f[0]);
+    case O::RoLightIntensity: ee_ge_light_set_intensity(&gU4E9198, f[0]);
         break;
-    case O::RoLightDirection: gU4E9198.SetDirection(GEVector(f[0], f[1], f[2]));
+    case O::RoLightDirection: ee_ge_light_set_direction(&gU4E9198, reinterpret_cast<const float(*)[3]>(f));
         break;
-    case O::RoRastAddLight: gRasterizer->AddLight(gU4E9198, gScreenIndex, gU4E9190);
+    case O::RoRastAddLight: ee_dx7r_add_light(gRasterizer->mDX7, &gU4E9198, gScreenIndex, &gU4E9190);
         break;
-    case O::RoRastUpdateLight: gRasterizer->UpdateLight(gU4E9190, gU4E9198, gScreenIndex);
+    case O::RoRastUpdateLight: ee_dx7r_update_light(gRasterizer->mDX7, gU4E9190, &gU4E9198, gScreenIndex);
         break;
     // the textures, the text and the screen line the raster table makes
     case O::RoLoadTexture: return RO_P64(gTextureManager->LoadTexture(UString((const char*)a[0]), *(const GETextureDescription*)a[1]));

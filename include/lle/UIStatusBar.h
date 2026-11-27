@@ -19,7 +19,6 @@ class LLE_API UIStatusBar : public UIControl {
 public:
     UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeStatusBar, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_status_bar_new(this, ee_ui_status_bar_host, inBorderThickness); }
     virtual ~UIStatusBar() { ee_ui_status_bar_free(this->mRust); }
-    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiStatusBarCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiStatusBarCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiStatusBarCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiStatusBarCall::DrawText); }
