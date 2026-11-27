@@ -751,9 +751,6 @@ constexpr static const int32_t EE_UNITS_CLS_CR_LOCATION_GOAL_POINT = 80;
 /// unit `a`'s `SetHomeBase(` its air traffic control's first slot's airport `)`
 constexpr static const int32_t EE_UNITS_CLS_CR_HOME_FIRST_SLOT = 81;
 
-/// `gPhysics->mRandom.Generate()` into `io.f`
-constexpr static const int32_t EE_UNITS_CLS_CR_RANDOM = 82;
-
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_CR_HEIGHT_AT = 83;
 
@@ -21223,14 +21220,6 @@ void ee_units_uc_rest_sound(int32_t what,
                             float *pan,
                             float *pitch);
 
-extern int64_t ee_units_uca_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
 /// The air classes' body `what` (`EE_UNITS_UCA_DO_*`) of `class` on `unit`, with its arguments `a`, `b`, `c` and
 /// its floats `p` (three, in and out; NULL for none). For `EE_UNITS_UCA_DO_LANDABLE_OP`: `a` the airport slot's
 /// address, `b` the operation, `c` its argument; `EE_UNITS_UCA_DO_GROUND_HEIGHT`: `a` the output's address. The
@@ -21260,15 +21249,6 @@ int64_t ee_units_ucb_gate(int32_t what,
                           int64_t b,
                           int64_t c,
                           float f);
-
-/// the buildings' host (EEUnitClassBuildings.cpp; ucb_gate.rs's too)
-extern int64_t ee_units_ucb_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The buildings' body `what` (`EE_UNITS_UCB_DO_*`) of `class` on `unit`: `a` an object, `b`, `c` values, `m`
 /// a transformation (or NULL); the created unit, the choice, or 0.
@@ -21539,14 +21519,6 @@ void ee_units_ucn_fire_shot(uint64_t class_,
 void ee_units_ucn_attacked(uint64_t class_,
                            uint64_t unit);
 
-extern int64_t ee_units_ucp_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
 /// The people's body `what` (`EE_UNITS_UCP_DO_*`) of `class` (or NULL) on `unit`: `a` an object, `b` a value;
 /// the body's answer, or 0.
 ///
@@ -21584,14 +21556,6 @@ int64_t ee_units_ucs_call(int32_t what,
                           void *unit,
                           uint64_t a,
                           const float (*f)[3]);
-
-extern int64_t ee_units_ucx_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
 
 /// The transports' body `what` (`EE_UNITS_UCX_DO_*`) of `class` on `unit`: `a` an object, `b`, `c` values; the
 /// choice, or 0.

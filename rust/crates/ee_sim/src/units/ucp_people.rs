@@ -4,7 +4,7 @@
 //! `BasicPriestShowConversionEffects`/`BasicPriestHideConversionEffects`, and the unit's step timers
 //! (`UpdateReloadTimer`, `UpdateTargetSearchTimer`, `UpdateHealSearchTimer`, `UpdateRottingAwayTime`,
 //! `UpdateResourcesRotting`: the countdowns step.rs's over the store, their USTM notes notes.rs's, as the C++ called
-//! them). Each C++ statement one `EE_UNITS_UCP_*` case of `ee_units_ucp_host` (EEUnitClassPeople.cpp; the class
+//! them). Each C++ statement one `EE_UNITS_UCP_*` case of `ee_units_uc_host` (EEUnitClass.cpp; the class
 //! host's statements, `EE_UNITS_UC_*`, reach EEUnitClass.cpp's through it), in the original's order.
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -701,19 +701,9 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-    extern "C" {
-        fn ee_units_ucp_host(
-            op: i32,
-            class: *mut c_void,
-            unit: *mut c_void,
-            a: u64,
-            b: i64,
-            c: i64,
-            f: *mut [f32; 4],
-        ) -> i64;
-    }
+    use crate::units::uc_body::game::ee_units_uc_host;
 
-    /// The people's host (`ee_units_ucp_host`; the class host's statements pass through it).
+    /// The people's host (`ee_units_uc_host`, EEUnitClass.cpp's since units round 14; the plain statements are the views').
     struct GameP;
 
     impl UcHost for GameP {
@@ -725,7 +715,7 @@ pub(crate) mod game {
                 return v;
             }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_ucp_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

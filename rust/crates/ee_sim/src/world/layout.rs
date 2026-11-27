@@ -160,6 +160,11 @@ pub struct EeWorldLayout {
     /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
     pub physics_pointer: u64,
     pub physics_saved: u64,
+    /// `EEPhysics::mRandom` (an `EeURandom`; units round 14: the class hosts' draws), `&gEffectDetail` (an
+    /// `unsigned long`) and `EeDataGraphicEffectFields` in `EEGraphicEffect` (the ripple and trail detail tests)
+    pub physics_random: u64,
+    pub effect_detail: u64,
+    pub graphic_effect_fields: u64,
     // ---- the units' saves (the units' state lane, round 1: unit_save_views.rs)
     /// `EEComplexUnit`'s pointer members `mLauncherClass` (an `EEUnitClass*`), `mPatrolGroup` (an
     /// `EEPPatrolGroup*`), `mHomeBase`, `mGatheredResource`, `mLastAttacker`, `mOwner`, `mMine`, `mHolder`,

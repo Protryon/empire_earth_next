@@ -11,7 +11,9 @@
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
 #![allow(clippy::unnecessary_cast)]
 
-use crate::units::uc_view::{air_traffic, complex_mut, long, obj, stats_links, ulong, word, Ctx, Kind};
+use crate::units::uc_view::{
+    air_traffic, complex_mut, effect_detailed, long, obj, physics_generate, stats_links, ulong, word, Ctx, Kind,
+};
 use crate::units::waypoints::{ee_units_waypoints_len, ee_units_waypoints_start, EeUnitsWaypoints};
 use crate::world::layout::layout;
 use crate::world::unit_fields::EeUnitsUnitFields;
@@ -38,13 +40,13 @@ use crate::units::ucx_transports::*;
 pub(crate) fn kind_view(kind: Kind, x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     match kind {
         Kind::Class => None,
-        Kind::Air => air(x, op, f),
-        Kind::Buildings => buildings(x, op, b, f),
+        Kind::Air => air(x, op, f).or_else(|| crate::units::uca_view::air_view(x, op, b, c, f)),
+        Kind::Buildings => buildings(x, op, b, f).or_else(|| crate::units::ucb_view::buildings_view(x, op, b, c)),
         Kind::Ground => ground(x, op, b, c, f),
         Kind::Kinds => kinds(x, op, b).or_else(|| kinds_call(x, op, b, c, f)),
-        Kind::People => people(x, op, f),
+        Kind::People => people(x, op, f).or_else(|| crate::units::ucp_view::people_view(x, op, b, c, f)),
         Kind::Shots => shots(x, op, b, c, f),
-        Kind::Transports => transports(x, op, f),
+        Kind::Transports => transports(x, op, f).or_else(|| crate::units::ucx_view::transports_view(x, op, b, c, f)),
     }
 }
 
@@ -69,7 +71,38 @@ fn set_contact(u: &UnitView<'_>, f: &[f32; 4]) {
     unsafe { std::ptr::write(at as *mut [f32; 3], [f[0], f[1], f[2]]) }
 }
 
-/// `unit->mPlayer->mComputerPlayer`.
+/// `unit->mPlayer->mComputerPlayer`./// `kUnitTypeCatalina`, `kUnitTypeDock`, `kUnitTypeNavyYard` (rust/sim/unit_ids.h)
+const KINDS_TYPE_CATALINA: u64 = 731;
+const KINDS_TYPE_DOCK: u64 = 36;
+const KINDS_TYPE_NAVY_YARD: u64 = 65;
+
+/// The kinds' `UpdateEffects` tests: `class->mRippleEffect != NULL` (body 2 also the unit's class a Catalina, body 4
+/// the class a dock's or navy yard's) and the unit's hit points `!= 0` (bodies 2, 3, 4) or `> 0` (body 5) and the
+/// effect's detail level within `gEffectDetail`; the trail's: hit points `> 0`, `mTrailEffect`, a moving unit and
+/// its detail level.
+fn effects_due(x: &Ctx<'_>, op: i32) -> Option<bool> {
+    let (cls, u) = (x.cls()?, x.u()?);
+    let links = crate::units::uc_view::links(&cls);
+    let hp = u.hit_points();
+    if op == EE_UNITS_UCK_TRAIL_DUE {
+        let trail = world_field!(links, mTrailEffect);
+        let velocity: f32 = world_field!(u.complex(), mVelocity);
+        return Some(hp > 0 && !trail.is_null() && velocity != 0.0 && effect_detailed(trail as u64));
+    }
+    let ripple = world_field!(links, mRippleEffect);
+    let due = match op {
+        EE_UNITS_UCK_RIPPLES_DUE => !ripple.is_null() && u.class()?.unit_type() == KINDS_TYPE_CATALINA && hp != 0,
+        EE_UNITS_UCK_RIPPLES_DUE_4 => {
+            (cls.unit_type() == KINDS_TYPE_DOCK || cls.unit_type() == KINDS_TYPE_NAVY_YARD)
+                && !ripple.is_null()
+                && hp != 0
+        }
+        EE_UNITS_UCK_RIPPLES_DUE_5 => !ripple.is_null() && hp > 0,
+        _ => !ripple.is_null() && hp != 0,
+    };
+    Some(due && effect_detailed(ripple as u64))
+}
+
 fn computer_player(x: &Ctx<'_>) -> Option<i64> {
     // SAFETY: the unit's player's pointer member
     Some(unsafe { word(x.u()?.player()?.handle(), layout().player_computer_player) } as i64)
@@ -244,6 +277,15 @@ fn buildings(x: &Ctx<'_>, op: i32, b: i64, f: &mut [f32; 4]) -> Option<i64> {
 fn ground(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> {
     let (u, o) = (|| x.u(), || x.o());
     Some(match op {
+        // `gPhysics->mRandom.Generate()`, `gPhysics->GetRandom(f[0], f[1])`
+        EE_UNITS_UCG_RANDOM_GENERATE => {
+            f[0] = physics_generate();
+            0
+        }
+        EE_UNITS_UCG_RANDOM_RANGE => {
+            f[0] = physics_generate() * (f[1] - f[0]) + f[0];
+            0
+        }
         EE_UNITS_UCG_TILE_X_OF => o()?.tile_xy().0,
         EE_UNITS_UCG_TILE_Y_OF => o()?.tile_xy().1,
         EE_UNITS_UCG_QUEUED_FOR_DELETE => i64::from(o()?.queued_for_delete()),
@@ -309,6 +351,12 @@ fn ground(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64>
 
 fn kinds(x: &Ctx<'_>, op: i32, b: i64) -> Option<i64> {
     Some(match op {
+        // the ripples' and trail's tests (`UpdateEffects`): the effect, the unit's hit points, its detail level
+        EE_UNITS_UCK_RIPPLES_DUE
+        | EE_UNITS_UCK_RIPPLES_DUE_3
+        | EE_UNITS_UCK_RIPPLES_DUE_4
+        | EE_UNITS_UCK_RIPPLES_DUE_5
+        | EE_UNITS_UCK_TRAIL_DUE => i64::from(effects_due(x, op)?),
         EE_UNITS_UCK_D_DOMAINS => i64::from(world_field!(x.cls()?.fields(), mDomains)),
         EE_UNITS_UCK_D_IS_FLARE => i64::from(world_field!(x.cls()?.fields(), mIsFlare)),
         EE_UNITS_UCK_D_UNIT_TYPE_OF => x.o()?.class()?.unit_type() as i64,
@@ -389,6 +437,10 @@ fn people(x: &Ctx<'_>, op: i32, f: &mut [f32; 4]) -> Option<i64> {
             f[0] = world_field!(x.world()?.physics()?, mTickTime);
             0
         }
+        EE_UNITS_UCP_RANDOM => {
+            f[0] = physics_generate();
+            0
+        }
         _ => return None,
     })
 }
@@ -424,6 +476,12 @@ fn shots(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32; 4]) -> Option<i64> 
             0
         }
         // units round 14: the shots' host's other plain statements
+        EE_UNITS_UCS_TRAIL_DETAILED => {
+            i64::from(effect_detailed(world_field!(crate::units::uc_view::links(&x.cls()?), mTrailEffect) as u64))
+        }
+        EE_UNITS_UCS_RIPPLE_DETAILED => {
+            i64::from(effect_detailed(world_field!(crate::units::uc_view::links(&x.cls()?), mRippleEffect) as u64))
+        }
         EE_UNITS_UCS_IS_BOMB => i64::from(x.cls()?.category() == SHOTS_CATEGORY_BOMB),
         EE_UNITS_UCS_LOCATION => {
             let at = u()?.location();
