@@ -103,7 +103,6 @@ fn effects_due(x: &Ctx<'_>, op: i32) -> Option<bool> {
     Some(due && effect_detailed(ripple as u64))
 }
 
-
 fn computer_player(x: &Ctx<'_>) -> Option<i64> {
     // SAFETY: the unit's player's pointer member
     Some(unsafe { word(x.u()?.player()?.handle(), layout().player_computer_player) } as i64)

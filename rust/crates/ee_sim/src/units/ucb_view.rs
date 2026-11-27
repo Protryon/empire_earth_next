@@ -32,7 +32,8 @@ pub(crate) fn buildings_view(x: &Ctx<'_>, op: i32, b: i64, c: i64) -> Option<i64
         // `theUnit->SetResourceType(theClass->mResourceType)`, `SetResourceAmount(theClass->mResourceAmount)`
         EE_UNITS_UCB_SET_RESOURCE_TYPE | EE_UNITS_UCB_SET_RESOURCE_AMOUNT => {
             let class = x.cls()?.fields();
-            let (ty, amount): (c_long, c_long) = (world_field!(class, mResourceType), world_field!(class, mResourceAmount));
+            let (ty, amount): (c_long, c_long) =
+                (world_field!(class, mResourceType), world_field!(class, mResourceAmount));
             let to = x.u()?.fields().ptr() as *mut EeUnitsUnitFields;
             // SAFETY: the unit's members
             unsafe {

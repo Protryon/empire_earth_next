@@ -57,7 +57,8 @@ pub(crate) fn transports_view(x: &Ctx<'_>, op: i32, b: i64, c: i64, f: &mut [f32
         // `a->SetResourceType(theClass->mResourceType)`, `a->SetResourceAmount(theClass->mResourceAmount)`
         EE_UNITS_UCX_SET_RESOURCE_TYPE | EE_UNITS_UCX_SET_RESOURCE_AMOUNT => {
             let class = x.cls()?.fields();
-            let (ty, amount): (c_long, c_long) = (world_field!(class, mResourceType), world_field!(class, mResourceAmount));
+            let (ty, amount): (c_long, c_long) =
+                (world_field!(class, mResourceType), world_field!(class, mResourceAmount));
             let to = x.o()?.fields().ptr() as *mut EeUnitsUnitFields;
             // SAFETY: the unit's members
             unsafe {
