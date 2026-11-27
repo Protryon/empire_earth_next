@@ -24,7 +24,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 // 0x529b90 (init chain 0x13242b: ctor 0x132435, atexit 0x13243f, guarded dtor 0x13244b)
 EEGameSettings EEGamePreferences::sDefaultSettings;
 
-
 // port: the texture packs (docs/DATA_FORMATS.md "Texture packs"; ee_game gamecpp preferences.rs)
 void EESetTextureResolution(long inResolution) { ee_gamecpp_prefs_texture_resolution(inResolution); }
 
@@ -39,9 +38,6 @@ EEGameSettings::EEGameSettings()
     this->mFullScreen = true;   // (also Rust's default) the test profile's windowed overlay patches this line (tools/build.py)
     this->mRasterizerName = "Direct3D";
 }
-
-// Sets the default player, host and Sierra names to the "unknown" string and the WON password to ""
-void EEInitializeDefaultSettings() { ee_gamecpp_prefs_init_defaults(); }
 
 // Reads every game setting from config.yaml, writing the default for each missing value (no blood in Korean),
 // then loads the game options; returns their result (the rows and the rest: ee_game gamecpp preferences.rs, ee_app

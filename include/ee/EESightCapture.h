@@ -51,10 +51,4 @@ public:
     EESightScope(const EESightScope&) = delete;
 };
 
-// EE-SIM's tick hook, every game minute: a kSightSnapshot record of the whole map
-inline void EESightCaptureSnapshot()
-{
-    EESightScope theScope(kSightSnapshot, NULL);
-}
-
 #endif

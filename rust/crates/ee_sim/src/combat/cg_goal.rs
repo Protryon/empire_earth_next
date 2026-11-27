@@ -395,6 +395,9 @@ mod game {
 
     impl CgHost for Game {
         fn cg(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::combat::cg_view::cg_plain(op, unit, a, b, c, f) {
+                return v;
+            }
             // SAFETY: inside the C++ call that handed over its live objects
             unsafe { ee_units_cg_host(op, unit, a, b, c, f) }
         }

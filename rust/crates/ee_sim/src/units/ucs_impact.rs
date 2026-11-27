@@ -263,7 +263,7 @@ pub fn run<H: UcHost + ?Sized>(h: &mut H, what: i32, class: u64, unit: u64) -> b
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::ucs_shots::game::ee_units_ucs_host;
     use std::os::raw::c_void;
@@ -273,6 +273,11 @@ mod game {
     impl UcHost for GameI {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) =
+                crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Shots, op, class, unit, a, b, c, f)
+            {
+                return v;
+            }
             // SAFETY: the test runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_ucs_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

@@ -27,7 +27,6 @@ public:
     // inline accessors (the SCL load event's inline budget needs these five expansions; provisional names)
     void SetMajorVersion(unsigned long inVersion) { this->mMajorVersion = inVersion; }
     void SetMinorVersion(unsigned long inVersion) { this->mMinorVersion = inVersion; }
-    const EESMMediaStrings& GetMediaStrings() const { return this->mMediaStrings; }
 
     UString mName;                          // +0x04 ("Load game name")
     UString mDescription;                   // +0x14 ("Load game description")

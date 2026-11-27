@@ -6,11 +6,9 @@
 
 #include "rust/game/screens.h"   // EeScreensStatusBoxFields
 #include <stdint.h>
-#include "ee/EEImprovementIDs.h"
 
 class EEComplexUnit;
 class EEUnit;
-#include "lle/LLEForward.h"
 #include "lle/GETextureManager.h"   // GETextureDescription (the call record's)
 
 // The host's record of one status box call (ee_screens status_box.rs): the box, the unit (Fill, Refresh), the

@@ -128,10 +128,15 @@ impl UpdateHost for ViewUpdateHost<'_> {
         }
         // SAFETY: the host's call runs on the simulation thread, which holds the world (the C++ caller's)
         let t = unsafe { WorldRead::begin() };
-        match view_read(&t, self.unit, self.host.class, code) {
-            Some(v) => v,
-            None => (self.host.read)(self.host.ctx, code),
+        if let Some(v) = view_read(&t, self.unit, self.host.class, code) {
+            return v;
         }
+        #[cfg(not(test))]
+        // SAFETY: the host's live context
+        if let Some(v) = unsafe { crate::units::cu_view::upd_read_view(self.host.ctx, code) } {
+            return v;
+        }
+        (self.host.read)(self.host.ctx, code)
     }
     fn act(&mut self, code: i32, a: i64, b: i64) -> i64 {
         #[cfg(not(test))]
@@ -155,7 +160,7 @@ impl UpdateHost for ViewUpdateHost<'_> {
         if let Some(r) = crate::units::upd_split::split(&mut RawUpdateHost(self.host), code, a) {
             return r;
         }
-        (self.host.act)(self.host.ctx, code, a, b)
+        crate::units::upd_split::UpdSplitHost::act(&mut RawUpdateHost(self.host), code, a, b)
     }
 }
 
@@ -164,6 +169,12 @@ struct RawUpdateHost<'h>(&'h EeUnitsUpdateHost);
 
 impl crate::units::upd_split::UpdSplitHost for RawUpdateHost<'_> {
     fn act(&mut self, code: i32, a: i64, b: i64) -> i64 {
+        // the record reads and stores and the one-call members first (cu_view.rs)
+        #[cfg(not(test))]
+        // SAFETY: the host's live context
+        if let Some(v) = unsafe { crate::units::cu_view::upd_act_view(self.0.ctx, code, a, b) } {
+            return v;
+        }
         (self.0.act)(self.0.ctx, code, a, b)
     }
 }

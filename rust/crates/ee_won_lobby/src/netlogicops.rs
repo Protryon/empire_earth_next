@@ -34,7 +34,120 @@ pub(crate) fn game_logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out:
     if !ee_won_net::cppnet::bound() {
         return None;
     }
-    logic_op(op, a, b, c, d, out)
+    // the compositions' calls out reach the private state's ops here too
+    let out = |o: Op, a: isize, b: isize, c: isize, d: isize| prv_op(o, a, b, c).unwrap_or_else(|| out(o, a, b, c, d));
+    prv_op(op, a, b, c).or_else(|| logic_op(op, a, b, c, d, &out))
+}
+
+/// [`prv_op`] in the game only (as [`game_logic_op`]).
+pub(crate) fn game_prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    if !ee_won_net::cppnet::bound() {
+        return None;
+    }
+    prv_op(op, a, b, c)
+}
+
+/// The ops whose C++ cases were one call answered in Rust (R6 WON round 39; those cases are gone): InitLogic's on the
+/// lobby's private state (LobbySetVersionStatus, LobbyResetFirewallTest, LobbySetBehindFirewall, LobbySetTOUTimes and
+/// LobbyGetTOUTimes, the first four gone too: lobbyprv.rs), and the Account, Init and Ping hosts' references and op
+/// reads over the network objects (cppnet.rs: the classes' table the game binds).
+pub(crate) fn prv_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::lobbyprv::{self as prv, EeWonLobbyPrvField as F};
+    use ee_won_net::cppnet;
+    use std::ptr::{null, null_mut};
+    let p = a as *mut std::ffi::c_void;
+    match op {
+        Op::AddRef => cppnet::ref_add(p),
+        Op::Release => cppnet::ref_release(p),
+        Op::OpStatus => return Some(cppnet::op_status(p) as isize),
+        Op::OpKilled => return Some(cppnet::op_killed(p) as isize),
+        // `((RustServerOp*)a)->SetNum(b, c)`
+        Op::OpSetNum => {
+            if let Some(h) = ee_won_net::cppcore::host_op_of(p) {
+                // SAFETY: the op's live Rust op; no bytes, address or object
+                unsafe { ee_won_net::hostop::ee_won_hostop_set(h, b as i32, c as i64, null(), 0, null(), null_mut()) };
+            }
+        }
+        // `ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, ..., HTTPCache::GetGlobalCache())`: the
+        // global cache in the WON directory, the op's reference
+        Op::HttpGetSetCache => {
+            if let Some(h) = ee_won_net::cppcore::host_op_of(p) {
+                let mut dir: Vec<u8> = Vec::new();
+                unsafe extern "C" fn sink(v: *mut std::ffi::c_void, bytes: *const u8, n: usize) {
+                    // SAFETY: the vector below and the bytes given
+                    unsafe { (*(v as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, n)) };
+                }
+                // SAFETY: the sink and its vector; the op's live Rust op and the cache's new reference
+                unsafe {
+                    ee_won_net::hostnative::ee_won_api_file_directory(
+                        sink,
+                        &mut dir as *mut Vec<u8> as *mut std::ffi::c_void,
+                    );
+                    let cache = ee_won_net::httpcache::ee_won_http_cache_global(dir.as_ptr(), dir.len());
+                    ee_won_net::hostop::ee_won_hostop_set(
+                        h,
+                        ee_won_net::httpget::EE_WON_HTTPGET_CACHE,
+                        0,
+                        null(),
+                        0,
+                        null(),
+                        cache,
+                    );
+                }
+            }
+        }
+        // `((AuthContext*)a)->SetDoAutoRefresh(true)`, `AddCommunity(L"Admin")`, `RemoveCommunity(L"Admin")`
+        Op::AutoRefresh | Op::AuthAddAdmin | Op::AuthRemoveAdmin => {
+            use ee_won_net::authlogin::{
+                ee_won_auth_login_set_wide, EE_WON_AUTH_LOGIN_ADD_COMMUNITY, EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY,
+            };
+            if let Some(c) = ee_won_net::cppcore::auth_ctx_of(p) {
+                let admin: Vec<u16> = "Admin".encode_utf16().collect();
+                let which = if op == Op::AuthAddAdmin {
+                    EE_WON_AUTH_LOGIN_ADD_COMMUNITY
+                } else {
+                    EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY
+                };
+                // SAFETY: the context's live Rust object; the key's units (UTF-16, two bytes each)
+                unsafe {
+                    if op == Op::AutoRefresh {
+                        ee_won_net::authobj::ee_won_authctx_set_do_auto_refresh(c, true);
+                    } else {
+                        let l = ee_won_net::authobj::ee_won_authctx_login(c);
+                        ee_won_auth_login_set_wide(l, which, admin.as_ptr().cast(), 2, admin.len(), null(), 0, 0);
+                    }
+                }
+            }
+        }
+        // `AsyncSocket::HasInternetConnection()`
+        Op::HasInternet => return Some(ee_won_net::ffi_net::ee_won_has_internet_connection() as isize),
+        // `LobbyGetVersionStatus()` (as int)
+        Op::VersionStatus => return Some(prv::ee_won_lobbyprv_get(F::VersionStatus) as i32 as isize),
+        // `((RustServerOp*)a)->GetNum(b, c)`
+        Op::OpNum => {
+            let n = ee_won_net::cppcore::host_op_of(p).map_or(0, |h| {
+                // SAFETY: the op's live Rust op
+                unsafe { ee_won_net::hostop::ee_won_hostop_num(h, b as i32, c as i64) }
+            });
+            return Some(n as isize);
+        }
+        Op::SetVersionStatus => prv::ee_won_lobbyprv_set(F::VersionStatus, a as i32 as i64),
+        Op::ResetFirewallTest => prv::ee_won_lobbyprv_reset_firewall(),
+        Op::SetBehindFirewall => prv::ee_won_lobbyprv_set(F::BehindFirewall, (a != 0) as i64),
+        Op::SetTOUTimes => prv::ee_won_lobbyprv_set_tou(a as std::ffi::c_long, b as std::ffi::c_long),
+        Op::TOUTimes => {
+            let (mut system, mut game): (std::ffi::c_long, std::ffi::c_long) = (0, 0);
+            // SAFETY: the locals
+            unsafe { prv::ee_won_lobbyprv_tou_times(&mut system, &mut game) };
+            // SAFETY: the op's two int32 outputs (the caller's locals)
+            unsafe {
+                *(a as *mut i32) = system;
+                *(b as *mut i32) = game;
+            }
+        }
+        _ => return None,
+    }
+    Some(0)
 }
 
 /// A status wait's flags as `RunWithStatusRes`'s `d` (the original's `(a, b)` arguments).

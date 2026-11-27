@@ -133,7 +133,7 @@ extern "C" uintptr_t ee_screenscpp_sbt_node(uintptr_t inRec)
 extern "C" int64_t ee_screenscpp_sbt_node_kind(uintptr_t inNode) { return SBN(inNode)->mData->mKind; }
 extern "C" int64_t ee_screenscpp_sbt_node_class(uintptr_t inNode) { return SBN(inNode)->mData->mUnitClass; }
 extern "C" int64_t ee_screenscpp_sbt_node_makes_unit(uintptr_t inNode) { return SBN(inNode)->mData->mMakesUnit; }
-extern "C" int64_t ee_screenscpp_sbt_node_calamity(uintptr_t inNode) { return SBN(inNode)->mData->GetCalamity(); }
+extern "C" int64_t ee_screenscpp_sbt_node_calamity(uintptr_t inNode) { return SBN(inNode)->mData->mCalamity; }
 extern "C" int64_t ee_screenscpp_sbt_node_name_id(uintptr_t inNode) { return SBN(inNode)->mData->mNameID; }
 extern "C" bool ee_screenscpp_sbt_node_contains(uintptr_t inNode, int64_t inUnit)
 { return SBN(inNode)->Contains(inUnit); }

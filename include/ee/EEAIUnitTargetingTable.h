@@ -7,7 +7,6 @@
 #define EE_EEAIUNITTARGETINGTABLE_H
 
 #include "ee/EEDbRecords.h"
-#include "rust/data/tables.h"
 
 // The table is Rust's (ee_data tables.rs: three rows of ten weights, read by EEFOFindNewTargetNearOldTarget's target
 // search); EEAIUnitTargetingTable.cpp went in the game's leaves round 1.

@@ -38,22 +38,8 @@ public:
     void Load(bool inIsOnDemand) { ee_screens_ael_template_load(this, inIsOnDemand); }
     // Unloads the template's graphic effects and sound media
     void Unload() { ee_screens_ael_template_unload(this); }                          // 0x27c5de: EEGraphicEffect::Unload on both, then mMedia's UnloadMedia
-    // 0x27c1c5: player inOther counts for inPlayer under mMode (4 everyone, 1 itself, 2 allies, 3 players it is at
-    // war with)
-    bool AffectsPlayer(long inPlayer, long inOther)
-    {
-        return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, false);
-    }
-    bool AffectsPlayerReversed(long inPlayer, long inOther)
-    {
-        return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, true);
-    }  // 0x27c233: 1 the others, 2 the enemies, 3 the friends
     // 0x27c334: inPoint lies within inScale * mRadius of inCenter (a square or a circle), and on inCenter's continent
     // unless mUnitSet is 4 (a space dock or turret inUnit carried by a unit also passes on that unit's planet)
-    bool IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale, EEComplexUnit* inUnit)
-    {
-        return ee_screens_aet_is_within((uintptr_t)this, inCenter.mX, inCenter.mY, inPoint.mX, inPoint.mY, inScale, (uintptr_t)inUnit);
-    }
     bool Init(const EEAreaEffectData& inData) { return ee_screens_aet_init((uintptr_t)this, (uintptr_t)&inData); }   // 0x27c489 (EEAEManager::Load): the members from inData
 
     // +0x14 (referenced; EEComplexUnit::GetEffect 0x1f9df3 hands it out, EEAreaEffect::ShowOn plays it on a unit)

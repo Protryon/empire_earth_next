@@ -151,3 +151,66 @@ Regate (reduced set): both builds 0/0 (test 331 inputs), headers current, Rust g
 identical, captures oracle, late, units, scenario PASS, saveload matrix PASS, scenario_check 27/27, sim_editor and
 `--civbuilder` PASS, editor tour PASS, won_host_coverage PASS, wontest PASS (185 drivers), gates.sh GATES PASS
 (ai-game units [4, 36, 38], alive_computers [2, 3], classic_lua x 2; lan-game).
+
+## Round 3 (branch rust-headers3, 2026-11-26): the string ids as Rust's, dead declarations, header includes
+
+State: done; target (-3,000 C++ lines) met by removals alone, no line joins. Base: batch 29 (47e9ad712, which has
+round 2). port_metrics 47e9ad712 -> the tip: cpp_lines 88,934 -> 83,943 (**-4,991**), compiled files 269 -> 268,
+code -635, shim -548, logic 12,147 -> 12,060 (-87), classes 724 -> 717; extern_c, rust_hdrs, unsafe and layout
+unchanged; rust_lines +3,794 (the string table).
+
+| Kind | lines | commits |
+|---|---|---|
+| EEStringIDs.h: 3,765 ids -> rust/crates/ee_base/src/string_ids.rs; the header keeps the 164 the C++ uses | -3,601 | 841be00ca |
+| dead declarations (fork hd3a: names nothing else mentions, inline members no object emits, out-of-line functions no relocation names) | -1,127 | 1b4b29f5c .. 8f437116f (11) |
+| headers nothing includes (EEAIAStarView, EEAutoPathRequest, EECPExperimentTimers, EEEffectKindIDs, EERenderCapture, EEStormType) | -98 | db5e028e0 |
+| header includes (htrim.py) and the six headers that left empty (EEAIKindIDs, EEAreaEffectKindIDs, EECivPowerIDs, EEImprovementIDs, EEUIEChatLogEvents, EEUnitClassIDs) | -162 | 5d61f45dd .. e16793be3 |
+| EESaveActiveGroups/EELoadActiveGroups declarations | -3 | 072520cdc |
+
+### What moved
+
+- **The string ids**: `ee_base::string_ids` holds the whole table (`pub const IDS_...: u32`, `ALL`, `by_name`) under
+  the names the header had; its test checks every `#define IDS_` left in `ee/EEStringIDs.h` equals it. The header
+  keeps what C++ (src, include, tests) names. The Rust tests that parsed the header for their private ids use
+  `by_name`, or read the .rs file (its `NAME = value,` lines parse like enumerators); tools/eedata rules.py and
+  rulesgen.py read the .rs.
+- **Dead declarations** (fork a): a scan of header names nobody else mentions, then two object scans of an `-O0`
+  build of both profiles: in-class inline members that no object emits, and out-of-line functions no relocation
+  names. Virtuals, constructors, the WON headers and what the harness names stay. Five headers no one included went
+  with RTSVisibleMap.cpp (gMapTileSize moved to RTSMap.cpp).
+- **Header includes**: build/hd3/htrim.py drops a header's `#include "..."` when every exe unit that includes the
+  header (per-unit include sets from `/showIncludes`) still compiles (/Zs) and the header still compiles alone after
+  the units' prelude (the first user's `<...>` includes and lle/LowLevelEngine.h). Headers that do not compile alone
+  are left as they are (73 of 198), the WON headers too. No dropped header defines a macro anything tests in `#if`;
+  none of the changed headers has a platform branch. The list is build/hd3/TRIMMED.txt (64 files).
+
+### Left
+
+- The members whose body needs a type the header only forward-declares (round 2's list): each needs EEUnit.h in an
+  AI or UI header, a new edge into a hot header; out-of-class inline definitions would save only comment lines.
+- The host-case collapses (EE_COMBAT_H_GOAL_TARGET, EE_UNITS_UCK_CONDITION, ...): about one C++ line each against a
+  Rust host trait and its fake-host tests.
+- Another `-O0` object pass (the next layer of dead code); the member-template and virtual-name cases fork a left;
+  the Rust `ee_gamecpp_*` exports whose C++ wrappers went.
+- The 73 headers that do not compile alone: making them self-contained first would let the trim reach them.
+- A POSIX build of the trimmed headers (build/hd3/TRIMMED.txt); only Windows clang-cl checked them.
+
+### Gates (on e16793be3, batch 29 in; the reduced lane set)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | 0 unresolved, 0 duplicates (EE-AOC 309, EE-SIM 310, test 309 inputs) |
+| `rust_build.py header` / `gate` | current (367 headers) / PASS |
+| oracle seeds 2-7 (against batch 29's b29q) | identical |
+| captures oracle, late, units, scenario, calamity, effects, groups | PASS each (598, 598, 510, 113, 623, 18, 6 digests) |
+| saveload matrix (`--settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at 1000,1900 --expect`) | PASS |
+| `scenario_check.py` | 27/27 |
+| `sim_editor.py`, `--civbuilder` | PASS (14,448), PASS (4,062) |
+| `eedata.py check`, `cppgate` | PASS, PASS |
+| editor tour, `random-game --box-select --orders --seed 7` | PASS, PASS (BOX SELECT, ORDERS) |
+| `won_host_coverage.py`, `xbuild.py wontest` | PASS, exit 0 (185 drivers) |
+| `gates.sh` | GATES PASS: ai-game time-cap units [4, 36, 37], alive_computers [2, 3], classic_lua x 2; lan-game |
+
+Captures run: oracle and late (always); units, scenario, calamity, effects and groups because the dead
+declarations and include trims touched their code (EEActiveGroup.cpp, EEContagionManager.cpp, the scenario and
+effect headers). Not run: space, missile, app, placement, transport; plain saveload; a POSIX build.

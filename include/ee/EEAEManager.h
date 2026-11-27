@@ -3,7 +3,6 @@
 // global object at 0x52f638 (provisional name). Only what the decompiled units call (provisional names).
 #ifndef EE_EEAEMANAGER_H
 #define EE_EEAEMANAGER_H
-#include "rust/game/screens.h"
 class FSFile;
 
 #include <vector>

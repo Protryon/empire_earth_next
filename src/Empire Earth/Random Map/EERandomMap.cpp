@@ -25,7 +25,6 @@
 #include "ee/EERules.h"
 #include "rust/sim/rmap.h"
 
-
 // The world a random map is made in (ee_rmap_cpp's p)
 struct EERMWorld {
     EEMap* mMap;
@@ -236,11 +235,4 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
 {
     ee_rmap_initialize_generators();
     return 0;
-}
-
-// Drops the registered random-map generators (at Empire Earth.cpp's shutdown); returns 0
-// (cdecl; provisional name)
-long EEClearRandomMapGenerators()
-{
-    return ee_rmap_generators_clear();
 }

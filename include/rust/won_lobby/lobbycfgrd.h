@@ -107,14 +107,6 @@ enum class EeWonLobbyCfgRdOp : uint32_t {
   CreditsBase,
   /// `CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b)` (`LCall(AddLine, &line, ...)`).
   CreditsAddLine,
-  /// `static_cast<ContainerConfig*>(c)->ContainerConfig::SetComponent((Component*)a)` (guarded).
-  BaseSetComponent = 200,
-  /// `rl->mRoomLabel = static_cast<RoomLabelCtrl*>((Component*)a)`.
-  RoomSetLabel,
-  /// `cc_->mChatCtrl = static_cast<ChatCtrl*>((Component*)a)`.
-  ChatSetCtrl,
-  /// `sl->mServerList = static_cast<ServerListCtrl*>((Component*)a)`.
-  ServerSetList,
 };
 
 /// The calls in: `(key's bytes, its length, the key as a `const std::string*`, d)`.
@@ -132,11 +124,6 @@ enum class EeWonLobbyCfgRdCall : uint32_t {
   CrossPromotion,
   ImageText,
   Credits,
-  /// The configs' `SetComponent((Component*)d)` (no key): the room label's member then the base's; the chat's
-  /// and the game list's the base's then the member.
-  RoomLabelSetComponent,
-  ChatSetComponent,
-  ServerListSetComponent,
 };
 
 /// The host: `(config, op, a, b, c) -> result`.

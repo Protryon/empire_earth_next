@@ -19,19 +19,10 @@
 #include "ee/wonapi/WONLobbyGuard.h"
 using namespace WONAPI;
 
-// The class-static allocator at 0x8d954c holds DefaultAllocator (0x757f30), the SDK's default factory
-LobbyConfig::ConfigAllocator LobbyConfig::mAllocator = LobbyConfig::DefaultAllocator;
-
 std::string LobbyConfig::mDefaultFileName("WONLobby.cfg");
 
 namespace WONAPI {
 bool gLobbyUseLocalIP;
-}
-
-// Creates a default lobby configuration object
-LobbyConfig* LobbyConfig::DefaultAllocator()
-{
-    return new LobbyConfig;
 }
 
 // the constructor's and HandleValueInstruction's statements (lobbyconf.rs composes them, R6 WON round 33); their
@@ -84,8 +75,14 @@ static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intp
 
 // Creates the lobby configuration and registers every WONLobby.cfg key with its default; UseLocalIP comes
 // from the HKLM\SOFTWARE\Sierra\WONLobby registry value (the config key writes the global gLobbyUseLocalIP,
-// 0x96634d, which nothing reads, not mUseLocalIP: a UseLocalIP line in WONLobby.cfg has no effect)
-LobbyConfig::LobbyConfig() { ee_won_lobbyconf_call(this, ConfHost, EeWonLobbyConfCall::Construct, 0, 0, 0); }
+// 0x96634d, which nothing reads, not mUseLocalIP: a UseLocalIP line in WONLobby.cfg has no effect); then the game's
+// file transfer port (EELobbyConfig's constructor: the class and its allocator, SDK's DefaultAllocator 0x757f30 and the
+// class static 0x8d954c, folded in R6 WON lobby and network round 39)
+LobbyConfig::LobbyConfig()
+{
+    ee_won_lobbyconf_call(this, ConfHost, EeWonLobbyConfCall::Construct, 0, 0, 0);
+    this->KeyAdd("EEFileTransferPort", this->mFileTransferPort, 8889);
+}
 
 // The destructor is implicit (the shared one at 0x694e04); the scalar deleting destructor 0x758570 and the
 // map destructors 0x758590/0x758650 are compiler-generated

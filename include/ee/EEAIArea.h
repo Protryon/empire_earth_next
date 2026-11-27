@@ -18,7 +18,6 @@
 #include <stddef.h>
 #include <vector>
 #include "rust/sim/astar.h"         // EeAStarAreaRecord
-#include "ee/EEAIKindIDs.h"
 #include "ee/EEAIListView.h"
 
 class EEInfluenceTable;
@@ -34,28 +33,14 @@ public:
     void Create(const std::vector<U2DPoint<long> >& inTiles);
     // +0x14 0xd8e6 (ret 8, hidden result): the area tile closest to inPoint
     U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint) { return this->mTiles.GetClosestPoint(inPoint); }
-    // +0x18 0xd8a5 (ret 8, hidden result): inPoint if the hull contains it, else the hull outline's closest point
-    U2DPoint<long> GetClosestHullPoint(const U2DPoint<long>& inPoint)
-        { return EEAIArea::PointOf(ee_astar_area_closest_hull_point(this, EEAIArea::HullPoint(inPoint))); }
-    // +0x1c 0xd8fe (ret 0xc): this area's tile and inOther's hull outline point closest to each other; false (both
-    // (0, 0)) when either area is empty (a continent: its own)
-    // (Rust: ee_sim::astar area_continent.rs, the kind's slot)
-    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
-        { return ee_astar_area_closest_points_of((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther,
-                                                 reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther)); }
     // +0x20 0xda77 (ret 4, hidden result): a random tile from the game's random stream, (0, 0) when empty (a town,
     // herd or rectangle area: its own)
     U2DPoint<long> GetRandomPoint();
     U2DPoint<long> AreaRandomPoint() { return EEAIArea::PointOf(ee_astar_area_random_point((uint64_t)(uintptr_t)this)); }
-    // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed (a forest:
-    // its own)
-    bool RemoveTile(const U2DPoint<long>& inPoint) { return ee_astar_area_remove_tile_of((uint64_t)(uintptr_t)this, inPoint.mX, inPoint.mY); }
 
     // inline COMDAT 0xc6fd (emitted at its first user in EECPASGU*'s range): the hull (bounds first), then the tiles
     // Provisional name
     bool Contains(const U2DPoint<long>& inPoint) { return this->HullContains(inPoint) && this->mTiles.Contains(inPoint); }
-    // 0xd81e: the squared distance of the hulls' closest points (provisional name)
-    float GetHullDistanceSquared(EEAIArea* inOther) { return ee_astar_area_hull_distance_squared(this, inOther); }
     // 0xdaae: appends every tile of the hull's scan lines (provisional name)
     void GetTiles(std::vector<U2DPoint<long> >& outTiles) { ee_astar_area_get_tiles(this, outTiles.size(), &outTiles, EEAIPushPoint); }
 
@@ -77,8 +62,6 @@ public:
     U2DPoint<long> GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint)   // (HULL 2)
         { return EEAIArea::PointOf(ee_astar_area_hull_closest_outline_point(this, EEAIArea::HullPoint(inPoint))); }
     // the tiles' bounds in influence-table regions
-    U2DRectangle<long>& GetBounds() { return reinterpret_cast<U2DRectangle<long>&>(this->bounds); }
-    const U2DRectangle<long>& GetBounds() const { return reinterpret_cast<const U2DRectangle<long>&>(this->bounds); }
     void SetSerial(unsigned long inSerial) { this->serial = inSerial; }
     EeAStarAreaRecord* AreaRecord() { return this; }   // New (port): the record (ee_sim::astar cm_io.rs's layout)
 

@@ -10,7 +10,6 @@ class GE3DPoint;
 class EEUnit;
 class EEUnitClass;
 #include <algorithm>                  // U2DComputeCenterPoint (EEComputeTileCenterPoint) uses std::find
-#include "lle/U2DPoint.h"           // EETileArea::Extend/GetCenter use U2DPoint<long> (orchestrator fix)
 #include "lle/U2DRectangle.h"       // EETileArea, EEAIAStarBounds (exe view: no statics)
 
 #include "ee/EETileCoordinate.h"     // the tile coordinates (moved there)
@@ -29,11 +28,6 @@ long EEGetConversionCost(EEComplexUnit* inUnit);
 bool EECanConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget, bool& outFlag);
 bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget);
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
-// 0x24cbd7 (cdecl): the tile next to inTile in direction inDirection (1..8) (provisional name)
-void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile);  // 0x24734c (can inUnit work on inTarget)
-// 0x24b8ac (cdecl; a path distance from inUnit to ioTile, 10000 when none: EEUGGather::EvaluateCondition 0x1f4b; the
-// body writes ioTile; the definition's types, one prototype) (provisional name)
-float EEGetPathLengthTo(EEComplexUnit* inUnit, EETileCoordinate& ioTile, unsigned long inLimit, bool inWalls);
 // 0x247772: the cast-calamity goal's in-range test at range 0 (inDistanceSquared from inUnit to inTarget)
 bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanceSquared);
 // 0x245903 / 0x245a19 / 0x23eabc (cdecl): EEUGGather's 0xfbd handler (the units around inUnit, the first free one
@@ -50,7 +44,6 @@ bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** out
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);
 class GERectangle;
 long EEGetAttackFrameSet(EEComplexUnit* inUnit);
-
 
 class EEComplexUnit;
 class FSFile;
@@ -74,7 +67,6 @@ class GERectangle;
 class EEPlayer;
 class EEUnitClass;
 class EETile;
-
 
 // Orders tiles by their distance from mCenter (the volcano sorts the free tiles around its square with it; its
 // operator() is expanded in the sort COMDATs 0xb538d.., DistanceSquared is out of line at 0x8a3f, an AI unit's

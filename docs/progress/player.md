@@ -70,3 +70,38 @@ tree's epoch list and the node's mData/mTree/mButton; EECivilization's vectors a
 ee_units_player_unit); the herds' and patrol groups' fields through the world layout as the towns'; the player's
 remaining C++ pointer members (mUnitClassUpgrades as a Rust list of upgrades, mTechnologies) toward a Rust-owned
 record; the dead Rust exports fork A listed.
+
+## Round 3 (branch rust-playertech3, 2026-11-26)
+
+Main measure C++ lines (tools/port_metrics.py): -767 for the round against origin/rust (batch 29; fork A -410, fork B
+-320, the lead -37; the target was -1,500), compiled files -3 (EEAreaEffect.cpp, EECBCivilizationFiles.cpp,
+EECivilizationManager.cpp merged into their neighbours), classes -3, logic -25, extern_c -15. The whole tree at the
+tip: 88,167 C++ lines, 266 compiled files, 12,122 logic lines, 721 classes.
+
+- **The civilization builder's shims** (fork A): civ_direct.rs answers the builder's toolkit calls (ee_ui::direct),
+  its world, table and Rust-record reads (game options, unit sets, classes and upgrades, the tech nodes' researched
+  and allowed flags, the sound manager, the capture's set walk) through ee_sim's views; game_cpp.rs's `shims!` takes
+  a Rust path (`= civ_direct::name`) in place of a C++ symbol. EECBUIListBox's members are civ_list_state.rs';
+  EECivilization's plain members the Rust base EeGameCivFields. About 160 shims, the dead members of the builder,
+  the area effects and the CP headers (ee/EECPExperimentTimers.h whole), and five units merged into two.
+- **The dead Rust exports** (fork A): ee_area_effect_* (but mark_dirty and checksum), ee_tech_effect_*,
+  ee_screens_cb_out_*.
+- **The tech tree as Rust records** (fork B): EeTechNodeFields gained mData, mTree, mButton and mLists (an epoch's
+  lists), EeTechTreeFields mEpochs; the node, epoch and tree classes have no vtable or members of their own, so an
+  object pointer is its record (layout node_fields and tech_tree_fields 0). Rust makes and frees the nodes, epochs and
+  node data, walks the tree and dispatches the epoch's virtuals on mLists; about 140 host cases (EETechTree.cpp,
+  EEPlayer.cpp, the scenario, the classic_lua hosts, the game's) answered in Rust; ee/EETechTreeRecord.h and
+  EETechTreeEpochList gone.
+- **The player's hosts** (lead): EEComputerPlayer's ScaleCost and TakeResource dispatched in Rust on mComputerPlayer
+  (player_native.rs), its four overrides equal to EEPlayer's gone (batch 29 had already inlined its other members);
+  the unit load's loaded id pushed in Rust (the player passed to ee_units_player_unit); the save primitives over
+  ee_base's CppFile (EEPlayer.cpp's ee_units_file_* shims gone).
+
+**C++ left**: EETechTree.cpp's media, UI, statistics, file (FSFileSpec virtuals), TkUpgrade and TkPushId cases; the
+player's `new/delete EETechTree` (BODY and SAVE must move together); mUnitClassUpgrades (52 uses in many lanes'
+files); the tech cases in Units/ (units13's), the UI's, the editor's and EEPlayer.cpp's BODY_TECH_* cases, all
+answerable now the nodes are records; the event list's sounds; the herds' and patrol groups' fields via the layout;
+EEComputerPlayer's CanAfford, GetPopulationLimit and GetHeroCount virtuals; UWideString and the temporary vectors.
+
+**Next**: EEPlayer.cpp's BODY_TECH_* cases and the other lanes' tech cases over the node records; the tree's
+new/delete in Rust; the event list's sounds into its Rust record; herds and patrol groups through the layout.

@@ -26,9 +26,6 @@ public:
     // Writes the condition; returns the first error (ee_scenario save.rs condition_save)
     // +0x14 0x1bb3b6
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_scenario_en_condition_io(this, &outFile, true); }
-    // 0x1ba998: inValue against inTarget by the operator index (mOperator: <, <=, ==, >=, >) (provisional name)
-    // Returns whether the value compares to the target under the operator (<, <=, ==, >=, >); false for any other
-    bool Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget) { return ee_scenario_compare((uint32_t)inValue, (uint32_t)inOperator, (uint32_t)inTarget); }
     // Returns whether the condition holds: object exists, player attribute/technology/diplomacy for any or all chosen
     // players, trigger on/fired, elapsed time/hour/difficulty, or the last chat text containing a phrase (ee_scenario
     // condition.rs over the host's reads; entry.rs adds the simulation capture's SMCE record)
@@ -38,14 +35,7 @@ public:
     void Copy(const EESMCondition& inCondition) { ee_scenario_en_condition_copy(this, (void*)&inCondition); }
     // inline accessors (the condition screen's Virtual24/Virtual2C: their inline cost decides which
     // GetTriggerScreen sites VC6 refuses)
-    const UWideString& GetName() const { return this->mName; }
-    const UWideString& GetText() const { return this->mText; }
     unsigned long GetType() const { return this->mType; }
-    unsigned long GetID() const { return this->mID; }
-    unsigned long GetObjectIndex() const { return this->mObjectIndex; }  // inline (EEScenarioManager 0x5b0d37 / 0x5b3f11)
-    void SetName(const UWideString& inName) { this->mName = inName; }
-    void SetText(const UWideString& inText) { this->mText = inText; }
-    void SetType(unsigned long inType) { this->mType = inType; }
 
     UWideString mName;                      // +0x04 (the condition screen's name edit box)
     UWideString mText;                      // +0x18 (the condition screen's text edit box)

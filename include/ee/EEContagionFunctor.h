@@ -7,7 +7,6 @@
 #ifndef EE_EECONTAGIONFUNCTOR_H
 #define EE_EECONTAGIONFUNCTOR_H
 
-#include "rust/sim/tech.h"   // EeContagionFunctorFields (ee_tech contagion_functor.rs)
 #include "rust/game/gamecpp.h"
 
 class EECalamity;

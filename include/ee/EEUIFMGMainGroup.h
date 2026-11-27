@@ -9,7 +9,6 @@
 class EEUnit;
 class EEUIFMainGame;
 class EEUIFMGStatusBox;
-#include "lle/LLEForward.h"
 
 extern GEFont* gU531930;                    // 0x531930 (a UI font; Empire Earth.cpp's globals; the queue timers' text)
 
@@ -44,7 +43,6 @@ public:
     // the ctor 0x267ec8: the owner, the record zeroed, +8 = a new object (ctor 0x26ada8)
     EEUIFMainGame* mOwner;                  // +0x04 the main game form
     EEUIFMGStatusBox* mStatusBox;           // +0x08 (ee/EEUIFMGStatusBox.h)
-    long GetMode() const { return this->mMode; }
 };
 
 #endif

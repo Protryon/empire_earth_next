@@ -501,8 +501,8 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
         unload_foundations(old);
     }
     set_player(w, index as c_long, new);
-    let tech = hp(O::PlTechnologies, new, &[]);
-    h(O::TechSetPlayer, tech, &[pa(new)]);
+    let tech = crate::tech_tree::objects::player_tree(new);
+    crate::tech_tree::load::ee_gamecpp_tech_set_player(tech as *mut std::ffi::c_void, new as *mut std::ffi::c_void);
     let mut k: i64 = 0;
     while k < h(O::PlNumPending, new, &[]) {
         let u = hp(O::PlPendingAt, new, &[k]);
@@ -971,12 +971,17 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
     while (i as usize) < super::state::players_len() {
         let pl = super::state::player(i as usize);
         set_player(w, i as c_long, pl);
-        let tree = hp(O::PlTechTree, pl, &[]);
-        h(O::TechSetPlayer, tree, &[pa(pl)]);
-        if h(O::TechIsLoaded, tree, &[]) == 0 {
+        let tree = crate::tech_tree::objects::player_tree(pl);
+        crate::tech_tree::load::ee_gamecpp_tech_set_player(tree as *mut std::ffi::c_void, pl as *mut std::ffi::c_void);
+        if !crate::tech_tree::objects::is_loaded(tree) {
             let o = state_options(st);
             let (start, end) = (o.mEpochStart as i64, o.mEpochEnd as i64);
-            h(O::TechResetEpochRange, tree, &[start, end]);
+            crate::tech_tree::objects::tree_walk(
+                tree,
+                ee_sim::tech::nodes::EeTechTreeOp::ResetEpochRange,
+                start as i32,
+                end as i32,
+            );
         }
         let mut j: i64 = 0;
         while j < h(O::PlNumPending, pl, &[]) {
@@ -1481,7 +1486,10 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
         super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
         super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
         player_body(pl, pb::EE_UNITS_PLAYER_DO_REFRESH_TERRAIN);
-        h(O::TechUpdateInterface, hp(O::PlTechTree, pl, &[]), &[1]);
+        crate::tech_tree::host::ee_gamecpp_tech_update_interface(
+            crate::tech_tree::objects::player_tree(pl) as *mut std::ffi::c_void,
+            true,
+        );
         h(O::UiPostUpdateBackground, 0, &[]);
         h(O::SetCameraFollowing, 0, &[0]);
     }

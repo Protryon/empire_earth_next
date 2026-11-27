@@ -547,7 +547,55 @@ EEUnitGoal.h 28 -> 20, EEUnitCollector.h 26 -> 0, EESightRings.cpp 17 -> 13, EEW
 
 Gates on dd2ded36d: the builds and the test profile 0/0; headers current (347); Rust gate PASS; oracle seeds 2-7 identical; the twelve capture profiles PASS at seeds 2-3; saveloads plain and matrix (`--expect`) PASS; scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS; the tour `random-game --box-select --orders --seed 7` and the editor PASS; gates.sh GATES PASS (ai-game units [4, 34, 36], alive_computers [2, 3], classic_lua twice; lan-game). Not run: the POSIX builds.
 
+## Round 13 (branch `rust-units13`, from origin/rust a102c738e with batch 29, 2026-11-26)
+
+The brief: -2,000 C++ lines and -400 logic lines (port_metrics), whole unit classes and files gone, the unit hosts'
+C++ cases answered in Rust, the unit-class virtuals collapsed into Rust dispatch. Two forks (A: the complex unit's,
+the unit's and the small hosts, then the update, trigger and doppelganger hosts; B: the unit class family's hosts,
+then the goal, combat goal, ghost, doppelganger manager, groups' and tree gathering hosts). Each ran two legs; leg 2
+was cut short by a disk pause (C: under 15 GB, other lanes' captures), and the round was finished by a resumed lead.
+
+The method: every host case that is a plain record read or store, or one call of a Rust entry point, is answered in
+Rust before the C++ is asked (a `*_view.rs` per host: a `match` over the op that returns `Some(answer)`, `None`
+falling through to the C++ host), and the C++ case is deleted. The C++ hosts keep only the cases that call C++
+(actions, the path manager, sounds, effects, the calamity classes, the tech tree, the C++ containers).
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| ffa901b4a, 32152e2ba, 6e63a6bae (A) | the complex unit's, unit's, unit host's, store's and cloaking hosts' plain reads and stores, one-call members, the held units, contacts and class table reads in Rust (cu_view.rs); the unit files' unused includes | -709 |
+| 37fc20a24, 1a458fed5, db2211b74, e325fd266, 75fba0d1d, d1655eb7b (B) | the class hosts' plain reads and stores and one-call members over the world views (uc_view.rs, uc_kind_view.rs, uc_fwd_view.rs, cls_mv_view.rs, combat/shot_view.rs); EEUnitClass's members no C++ calls gone from ee/EEUnit.h; EEUnitClass.cpp's descriptions of bodies that left it | -796 |
+| 3e2dfeb6a (lead) | origin/rust 47e9ad712 (batch 29) merged: nine conflicted lane files resolved by a script (ours as the skeleton, theirs' deletions and line joins applied) | |
+| f38f55a23 (lead) | the lane headers' members nothing names (34 declarations, 2 definitions, their comments) | -44 |
+| f266a3ed1 (lead) | the unused includes of the unit class family, EESightRings, EEUGRustCombat and EEWorldLayout (each removal compiled syntax-only) | -45 |
+| cf84ca013 (lead) | the class family's orphan descriptions of bodies now Rust's, its emptied sections' notes; EEIsOnTargetTiles' duplicate declaration | -316 |
+| ef9cdff33, 1cda1fde6, e9d8480df (A, leg 2) | the update, trigger, doppelganger and save hosts' plain cases in Rust (cu_view.rs); EE_UNITS_CU_UNIT_LOAD_MEDIA restored (see PORT_LEARNINGS); clippy | -218 |
+| d6385d8a9, 53dc35363 (B, leg 2) | GoalOp (34 cases), the combat goals' hosts (44), the ghost host (35), the doppelganger manager (27), the active group (10), the group (5) and tree gathering (14) answered in Rust (units/goal_view.rs, combat/cg_view.rs, units/ghost_view.rs, units/dm_group_view.rs) | -177 |
+
+Round total (port_metrics, 47e9ad712 = origin/rust -> e7f818c6e): **cpp_lines -2,089** (88,934 -> 86,845), compiled
+files 269 -> 269, code -1,591, shim -1,584, **logic -7 (12,147 -> 12,140)**, classes 724 -> 724, extern_c and rust_hdrs unchanged,
+unsafe +274, layout +14, Rust lines +5,267. The segments add up to more (-2,305) than the total: batch 29
+had already joined or deleted some of the lines the forks' first legs deleted. The C++ line target is met; the logic
+target is not: almost every deleted case was a one-statement host case, which logic_lines.py counts as shim, so the
+round's deletions are shim lines (-1,584) and the logic left in the lane is the C++ calls the hosts still make.
+
+Lane .cpp files: 28 -> 28 (no file emptied: each host keeps its C++-calling cases). Per file (C++ lines deleted):
+EEComplexUnit.cpp -418, EEUnitClass.cpp -329, EEUnitClassBuildings.cpp -160, EEComplexDoppelganger.cpp -126,
+EEUnit.cpp -103, ee/EEUnit.h -97, EEUnitClassShots.cpp -89 +7, EEUnitClassPeople.cpp -91, EEUnitClassKinds.cpp -86,
+EEUnitClassAir.cpp -80, EEUnitClassGround.cpp -77, EEUnitClassTransports.cpp -52, EEUGRust.cpp -48,
+EECombatGoals.cpp -45, EEGhostUnit.cpp -35 +3 (the record offset check), EEUnitUpdate.cpp -37, EEUnitClassUpgrade.cpp -35 +1, EEUnitAI.cpp -30,
+EEUnitHost.cpp -29, EEDoppelgangerManager.cpp -27, EEActiveGroup.cpp -21, EEUnitStore.cpp -21, EECloakingUtilities.cpp
+-20, EEUnitAction.cpp -16, EEGroup.cpp -7, EEWorldLayout.cpp -6, the rest under 6.
+
+Gates on e7f818c6e: the builds `--sim` and the test profile 0/0; headers current (367); Rust gate PASS; oracle seeds 2-7 identical (also after merging fork A alone); captures oracle, late, units, groups (the groups' hosts changed) and transport PASS (units work); the saveload matrix (`--expect`) PASS; scenario_check 27/27; won_host_coverage PASS; xbuild wontest 185/185; gates.sh GATES PASS (tour; ai-game units [4, 34, 37], alive_computers [2, 3], classic_lua twice; lan-game). Not run (lane check set): the other capture profiles, plain saveload, sim_editor, eedata, the harness tours, the POSIX builds.
+
 ## What is left (behaviour)
+
+- **Round 13's measure**: the hosts' C++ cases that call C++: GoalOp's sGoalPoint statics, calamity, sound and tech
+  calls and `X_FIND_COMPLEX`/`PLAIN`; the combat world op's ignored-targets deque, rules and effects; the ghost
+  host's scratch statics and map calls; the doppelganger objects' own fields (C++ members with no Rust record); the
+  groups' formations; the class family's StartAction/ActionChanged, path manager, sound and effect cases. Deleting
+  more one-statement cases moves cpp_lines, not logic; logic moves only with the C++ callees (actions, paths, sounds,
+  effects, the calamity classes, the tech tree, the C++ containers) or whole bodies.
 
 - **Round 12's measure** (perfile.py at dd2ded36d, lane total 1,295): EEUnit.h 143 (the containers, the points and
   orientations, `mPatrolGroup`: their users are spread over the hosts and other lanes' files), EEWorldLayout.cpp 134

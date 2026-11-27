@@ -36,9 +36,6 @@ public:
     // inline: the earthquake's Update loads it as an FP value before its fimul (provisional name)
     float GetEarthquakeDamageFactor() const { return this->mEarthquakeDamageFactor; }
     // inline: the tech tree's cost factors load first, before the other operands (provisional names)
-    float GetEpochCostFactor() const { return this->mEpochCostFactor; }
-    float GetFirstEpochCostFactor() const { return this->mFirstEpochCostFactor; }
-    float GetSecondEpochCostFactor() const { return this->mSecondEpochCostFactor; }
     float GetCostSetFactor() const { return this->mCostSetFactor; }
 
     // the members are EeDataGameVariantFields (ee_data tables.rs): the pairs' factors and sets, the cost, work-time,

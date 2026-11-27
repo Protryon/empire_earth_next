@@ -33,7 +33,7 @@ pub const EE_AI_NEXT_HOST_NEAREST_AREA: i32 = 75;
 
 fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
     // SAFETY: the C++ switch over the live game
-    unsafe { ee_ai_next_host(op, me, a, b, c, out) }
+    unsafe { crate::ai::units_bind::tech_ops::next(op, a, b).unwrap_or_else(|| ee_ai_next_host(op, me, a, b, c, out)) }
 }
 
 /// One of the computer player's host operations (ee_sim::cp's EE_CP_PLAYER_*, EE_CP_CENTER_*).

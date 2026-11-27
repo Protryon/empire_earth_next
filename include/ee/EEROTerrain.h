@@ -32,11 +32,6 @@ public:
     // 0x1138a6: mGridMode cycles 0..0x11 (provisional name)
     void StepGridMode(bool inBackwards) { this->mGridMode = ee_gfx_terrain_grid_mode_step((int32_t)this->mGridMode, inBackwards); }
 
-    // 0x112e7f (the sky, clouds, stars and the area-effect textures)
-    static void CreateSkyModel() { ee_gamecpp_te_create_sky_model(); }
-    // Releases the sky, cloud and star models and textures and the two area-effect textures (ee_gfx ro_terrain.rs)
-    static void ReleaseSkyModels() { ee_gamecpp_te_release_sky_models(); }
-
     long mGridMode;                         // +0x04 (= 0 in the ctor; non-zero: Virtual08 draws the terrain grid) (provisional name)
 };
 

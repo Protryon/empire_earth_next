@@ -59,7 +59,22 @@ extern "C" fn arg(_: *mut c_void, what: EeWonCfgArg, s: i32) -> isize {
 }
 
 fn host() -> EeWonCfgTabHost {
-    EeWonCfgTabHost { ctx: std::ptr::null_mut(), read, comma: yes, end: yes, text, push, apply, fail, clear, peek, arg }
+    EeWonCfgTabHost {
+        ctx: std::ptr::null_mut(),
+        read,
+        comma: Some(yes),
+        end: Some(yes),
+        text,
+        push,
+        apply,
+        fail,
+        clear,
+        peek,
+        arg,
+        cc: std::ptr::null_mut(),
+        cc_frame: std::ptr::null_mut(),
+        put: None,
+    }
 }
 
 extern "C" fn hook(_: *mut c_void, comp: *mut c_void, _: i32, t: *const EeWonCfgSetTrace) {

@@ -10,34 +10,13 @@ use crate::tech::calamity_update::{
 };
 use crate::tech::contagion::{self, EeCalamityDiscrete};
 use crate::tech::effects::{
-    self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
-    EeTechUnitWalk,
+    self, EeTechAttribute, EeTechConversion, EeTechEffectValues, EeTechUnitStep, EeTechUnitView, EeTechUnitWalk,
 };
 use crate::tech::tree::{self, EeTechCostInput, SumCostsNode, SumCostsView};
 use std::ffi::c_void;
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
 // and writes, as the C++ adapters do from their own locals.
-
-/// `EEApplyEventEffect(float, float, EEEventEffect*)`.
-///
-/// # Safety
-/// `effect` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_effect_f32(value: f32, base: f32, effect: *const EeTechEffectValues) -> f32 {
-    // SAFETY: the caller's contract
-    effects::apply_f32(value, base, unsafe { &*effect })
-}
-
-/// `EEApplyEventEffect(long, long, EEEventEffect*)`.
-///
-/// # Safety
-/// `effect` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_effect_i32(value: i32, base: i32, effect: *const EeTechEffectValues) -> i32 {
-    // SAFETY: the caller's contract
-    effects::apply_i32(value, base, unsafe { &*effect })
-}
 
 /// `ApplyEventGatherRate`'s new gather time.
 ///
@@ -102,18 +81,6 @@ pub extern "C" fn ee_tech_attribute(attribute: i32) -> EeTechAttribute {
 #[no_mangle]
 pub extern "C" fn ee_tech_attribute_is_player(attribute: i32) -> bool {
     effects::attribute_is_player(effects::attribute(attribute).op)
-}
-
-/// `RunEffect`'s handler of an effect.
-#[no_mangle]
-pub extern "C" fn ee_tech_effect_handler(
-    known: bool,
-    kind: i32,
-    loading: bool,
-    run_on_load: u8,
-    events_enabled: bool,
-) -> EeTechEffectHandler {
-    effects::effect_handler(known, kind, loading, run_on_load, events_enabled)
 }
 
 /// `EETechTreeNode::GetCost`.
