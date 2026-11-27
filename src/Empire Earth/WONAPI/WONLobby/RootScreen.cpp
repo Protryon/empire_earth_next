@@ -132,4 +132,37 @@ bool RootScreen::OnDirectConnectTab() { return RootCall(this, RC::OnDirectConnec
 bool RootScreen::OnLanTab() { return RootCall(this, RC::OnLanTab) != 0; }
 void RootScreen::InitComponent(ComponentInit& inInit) { RootCall(this, RC::InitComponent, (intptr_t)&inInit); }
 
+// ---- LobbyContainer.cpp until R6 WON GUI round 41: the lobby's top container (the login, Internet and LAN screens)
+// Finds and adds the login, Internet and LAN screens and shows the login one
+void LobbyContainer::InitComponent(ComponentInit& inInit)
+{
+    if(inInit.mType!=2) return;
+    ComponentConfig* config=static_cast<ComponentConfigInit&>(inInit).mConfig;
+    SafeGetComponent(config,this->mLoginScreen,"LoginScreen",__FILE__,37);
+    SafeGetComponent(config,this->mInternetScreen,"InternetScreen",__FILE__,38);
+    SafeGetComponent(config,this->mLanScreen,"LanScreen",__FILE__,39);
+    this->AddScreen(this->mLoginScreen.get());
+    this->AddScreen(this->mInternetScreen.get());
+    this->AddScreen(this->mLanScreen.get());
+    this->ShowScreen(this->mLoginScreen.get(),true);
+}
+// Shows the login screen with the message of the day (mLoginScreen is read again after ShowScreen)
+void LobbyContainer::ShowLoginScreen()
+{
+    this->ShowScreen(this->mLoginScreen.get(),true);
+    this->mLoginScreen->ShowMOTD();
+}
+void LobbyContainer::ShowInternetScreen() { this->ShowScreen(this->mInternetScreen.get(),true); }
+void LobbyContainer::ShowLanScreen() { this->ShowScreen(this->mLanScreen.get(),true); }
+bool LobbyContainer::OnInternetScreen() { return this->mCurScreen==this->mInternetScreen.get(); }
+bool LobbyContainer::OnLanScreen() { return this->mCurScreen==this->mLanScreen.get(); }
+int LobbyContainer::GetGameScreenType()
+{
+    if(this->OnInternetScreen()) return 2;
+    if(this->OnLanScreen()) {
+        if(this->mLanScreen->OnLanTab()) return 1;
+        if(this->mLanScreen->OnDirectConnectTab()) return 3;
+    }
+    return 0;
+}
 }

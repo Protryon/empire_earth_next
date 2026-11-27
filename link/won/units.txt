@@ -10,9 +10,7 @@
 361260 361ee7 WONLobby/LobbyStagingSupport.cpp
 3628c0 366167 WONLobby/WONLobbyPrv.cpp
 365700 3c9c36 WONLobby/CrossPromotionButton.cpp
-377670 381801 WONLobby/WONLobbyResource.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
-3bdd60 3bdfbe WONLobby/LobbyContainer.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3db150 3dc3ef WONLobby/AccountLogic.cpp
 3dc3f0 3dd0f5 WONLobby/DialogLogic.cpp
@@ -20,4 +18,3 @@
 3e5930 3e5c10 WONLobby/LobbyLogic.cpp
 3e5ed0 3e6e75 WONLobby/PingLogic.cpp
 3e6e80 3ef15e WONLobby/RoutingLogic.cpp
-3f6de0 3fa1fd WONLobby/CreditsDialog.cpp

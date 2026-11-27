@@ -27,6 +27,10 @@
 #include "rust/won_lobby/lobbycfgrd.h"
 #include "rust/won_lobby/lobbyctl.h"
 #include "rust/won_lobby/rows.h"
+#include <set>
+#include "ee/wonapi/WONLobbyResourceGlobals.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/lobbyids.h"
 
 namespace WONAPI {
 bool LobbyIAmReady();
@@ -241,4 +245,60 @@ bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction) { return C
 
 // Accepts (and ignores) the CTRLLINKID layout key; passes other keys to the container's reader
 bool GameUserListCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::GameUserList, instruction) != 0; }
+}
+
+// ---- WONLobbyResource.cpp until R6 WON GUI round 41 (the lobby's resource slots)
+using namespace WONAPI;
+// The lobby's resources: their slots, the table by id, registration, load and unload. The 469 resources are the
+// rows of ee_won's table (rust/crates/ee_won_lobby/src/resource.rs: each one's section, key and kind in the original's load
+// order, EeWonLobbyRes their names); the original's named globals are one slot per row (LOBBY_STRING(name) etc.).
+
+// the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row
+LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT];
+
+// Registers the lobby's resource loader and control ids on the given (or a new) resource table and returns it
+ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
+{
+    ResourceConfigTablePtr aTable=theTable;
+    if(theTable==NULL)
+        aTable=theTable=new ResourceConfigTable;
+    theTable->RegisterGlueResourceFunc(LobbyResource_SafeGlueResources);
+    // the controls by name, in the original's order (lobbyids.rs's rows)
+    int anId=0;
+    for(size_t i=0; const char* aName=ee_won_lobbyids_control(i,&anId); ++i)
+        theTable->RegisterControlId(aName,anId);
+    return aTable;
+}
+
+// Loads every lobby string, image and sound from its section of the resource table (ee_won's rows in order: a
+// section is looked up again where it changes, as the original's statements did)
+void LobbyResource_SafeGlueResources(ResourceConfigTable* theTable)
+{
+    ResourceConfig* aConfig = NULL;
+    for (size_t i = 0; i < EE_WON_LOBBYRES_COUNT; ++i) {
+        EeWonResource aRow;
+        if (!ee_won_resource_row(i, &aRow))
+            break;
+        LobbyResourceSlot& aSlot = gLobbyResources[i];
+        if (aRow.new_section)
+            aConfig = theTable->SafeGetConfig(aRow.section);
+        switch (aRow.kind) {
+        case EeWonResKind::String: aSlot.mString = aConfig->SafeGetString(aRow.key); break;
+        case EeWonResKind::Image: aSlot.mImage = aConfig->SafeGetImage(aRow.key); break;
+        case EeWonResKind::Sound: aSlot.mSound = aConfig->SafeGetSound(aRow.key); break;
+        }
+    }
+}
+
+// Releases every lobby image and sound and empties every lobby string (ee_won's rows in order)
+void LobbyResource_UnloadResources()
+{
+    for (size_t i = 0; i < EE_WON_LOBBYRES_COUNT; ++i) {
+        LobbyResourceSlot& aSlot = gLobbyResources[i];
+        switch (ee_won_lobbyres_kind((EeWonLobbyRes)i)) {
+        case EeWonResKind::String: aSlot.mString.erase(); break;
+        case EeWonResKind::Image: aSlot.mImage = NULL; break;
+        case EeWonResKind::Sound: aSlot.mSound = NULL; break;
+        }
+    }
 }

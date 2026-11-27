@@ -89,6 +89,9 @@
 #include "rust/won_lobby/eeglue.h"
 #include "rust/won_lobby/rows.h"
 #include "rust/won_lobby/eesound.h"
+#include <stdlib.h>
+#include "rust/won_lobby/eeresource.h"
+#include "ee/wonapi/WONLobbyGuard.h"
 
 using namespace WONAPI;
 
@@ -826,3 +829,54 @@ bool EELobbyLoadSavedGame(const char* inFile) { return Glue(GL::LoadSavedGame, (
 void EELobbyFillMapTypeCombo(ComboBox* inCombo) { Glue(GL::FillMapTypeCombo, (intptr_t)inCombo); }
 void EELobbySetDefaultGameOptions(LobbyGame* inGame) { Glue(GL::SetDefaultGameOptions, (intptr_t)inGame); }
 unsigned long EELobbyGetNumMapTypes() { return EERMGetNumberOfGenerators(); }
+
+// ---- EELobbyResource.cpp until R6 WON GUI round 41 (the EE lobby's text resources)
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyResource.cpp (file name inferred: no __FILE__;
+// it sorts after EELobbyPlayerOptionsCtrl.cpp and before the sound classes). The game lobby's text resources, in the
+// shape of WONAPI's generated resource units: 73 GUIString globals (init chains 0x69a43d..0x69b1ed, definition order
+// = table order), the loader registration, the section loader and the reset: 0x69a43d..0x69ce06 (the
+// GUIString::operator= COMDAT closes it). Every name here is a provisional name. R6 WONLobby round 5: each string's
+// section and key are ee_won's eeresource.rs rows (in this table's order); the loader and the reset run over them.
+// R6 WONLobby round 6: the 73 globals are one array of the rows' strings (row i the original's table entry i); the
+// lobby's code names a string by its global's name through its row (EE_LOBBY_STRING, EELobbyGameCode.h). Their init
+// chains (0x69a43d..0x69b1ed: four SYNTHETIC functions each) went with them. R6 WON GUI round 40: the strings and
+// the reset are eeresource.rs's (the getters inline in EELobbyGameCode.h).
+
+
+
+
+// 0x8d0ec8: the strings by id (EELobbyResource_GetString), the original's 73 globals in their order
+static const size_t kEELobbyStringCount = 73;
+
+static void EELobbyResource_Load(ResourceConfigTable* inTable);
+
+// Registers the game lobby's string loader with a resource table, creating the table when none is given
+// Not identical: the original stores the returned smart pointer copy only once, after the NULL test
+ResourceConfigTablePtr EELobbyResource_Init(ResourceConfigTable* inCollection)
+{
+    ResourceConfigTablePtr theCollection = inCollection;
+    if (inCollection == NULL) {
+        inCollection = new ResourceConfigTable;
+        theCollection = inCollection;
+    }
+    inCollection->RegisterGlueResourceFunc(EELobbyResource_Load);
+    return theCollection;
+}
+
+// the loader's and the reset's statements (R6 WON round 34: their loops are ee_won's eeresource.rs; a read that
+// throws is kept and the loader rethrows it, never through a Rust frame)
+static intptr_t EELobbyResourceHost(EeWonEeResOp inOp, void* inTable, intptr_t a, intptr_t b, intptr_t c)
+{
+    switch (inOp) {
+    case EeWonEeResOp::Config: return WON_GUARDED(static_cast<ResourceConfigTable*>(inTable)->SafeGetConfig(reinterpret_cast<const char*>(a)));
+    case EeWonEeResOp::Read: return WON_GUARDED_V(*static_cast<GUIString*>(ee_won_eeresource_string((size_t)a)) = reinterpret_cast<ResourceConfig*>(b)->SafeGetString(reinterpret_cast<const char*>(c)));
+    }
+    return 0;
+}
+
+// Loads the game options, player options, connect, file dialog, game status and lobby texts from resources (ee_won's
+// rows in order: a section is looked up where it changes, as the original's statements did)
+static void EELobbyResource_Load(ResourceConfigTable* inTable)
+{
+    WonRethrow(ee_won_eeresource_load(inTable, kEELobbyStringCount, EELobbyResourceHost));
+}

@@ -49,16 +49,17 @@ public:
 class RootScreen;
 class LobbyContainer : public ScreenContainer {
 public:
-    LobbyContainer();
-    virtual ~LobbyContainer();
+    LobbyContainer() {}
+    virtual ~LobbyContainer() {} // releases the three screens
     virtual void InitComponent(ComponentInit&);
+    // (RootScreen.cpp: the Internet and LAN screens are RootScreens)
     void ShowInternetScreen();
     void ShowLanScreen();
-    void ShowLoginScreen();
+    void ShowLoginScreen(); // with the message of the day
     bool OnInternetScreen();
     bool OnLanScreen();
-    bool OnLoginScreen();
-    int GetGameScreenType();
+    bool OnLoginScreen() { return this->mCurScreen==this->mLoginScreen.get(); }
+    int GetGameScreenType(); // 2 Internet, 1 LAN games tab, 3 direct connect tab, else 0
     SmartPtr<RootScreen> mInternetScreen; // 0x88
     SmartPtr<RootScreen> mLanScreen; // 0x8c
     SmartPtr<LoginScreen> mLoginScreen; // 0x90; 0x94 bytes
