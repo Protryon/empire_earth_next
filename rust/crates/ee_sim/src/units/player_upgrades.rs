@@ -116,7 +116,8 @@ pub fn eum(op: i32, unit: u64, a: u64) -> Option<i64> {
             let upgrade = unit_upgrade(a as usize)?;
             let at = upgrade as usize + crate::world::layout::get()?.stats_fields as usize;
             // SAFETY: the player's live upgrade's record (the C++ statement dereferenced it)
-            Some(unsafe { (*(at as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeFields)).mMaxHitPoints } as i64)
+            Some(unsafe { (*(at as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeFields)).mMaxHitPoints }
+                as i64)
         }
         EE_UNITS_EUM_SET_STATS => {
             let upgrade = unit_upgrade(unit as usize)?;

@@ -32,6 +32,7 @@ impl ShellHost for CppHost {
             #[allow(clippy::unnecessary_cast)]
             EE_SCREENS_SH_ID => ee_ui::direct::with_fields(ctl, |r| i64::from(r.mId as u32)).unwrap_or(0),
             // the tech lists' epoch of an id and gTechTree.Get(a)->mData->mID (the trees are Rust's)
+            #[allow(clippy::unnecessary_cast)]
             crate::screens::shells_tech::EE_SCREENS_SH_TECH_EPOCH => {
                 i64::from(ee_sim::tech::tech_ids::epoch_of(a as core::ffi::c_long as i32))
             }

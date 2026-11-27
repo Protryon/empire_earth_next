@@ -5,6 +5,7 @@
 //! EEGhostUnit.cpp, EEUnitHost.cpp, EEUGRust.cpp) are made here before the C++ is asked. None: the C++ answers.
 
 #![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+#![cfg_attr(test, allow(dead_code))] // the hooks are the game hosts' (not(test))
 
 use std::os::raw::c_long;
 #[cfg(not(test))]
@@ -149,8 +150,8 @@ fn research(t: usize, id: i64, unit: usize) {
 /// The complex unit host's statement `op` (EEComplexUnit.cpp `ee_units_cu_host`).
 pub(crate) fn cu(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
     use crate::units::cu_body::{
-        EE_UNITS_CU_CLASS_TECH_NODE, EE_UNITS_CU_NODE_AVAILABLE, EE_UNITS_CU_NODE_BUILD_TIME, EE_UNITS_CU_NODE_MAKES_UNIT,
-        EE_UNITS_CU_NODE_UNIT_CLASS, EE_UNITS_CU_TECH_NODE,
+        EE_UNITS_CU_CLASS_TECH_NODE, EE_UNITS_CU_NODE_AVAILABLE, EE_UNITS_CU_NODE_BUILD_TIME,
+        EE_UNITS_CU_NODE_MAKES_UNIT, EE_UNITS_CU_NODE_UNIT_CLASS, EE_UNITS_CU_TECH_NODE,
     };
     use crate::units::cu_cargo::{
         EE_UNITS_CU_CURRENT_NODE, EE_UNITS_CU_NODE_ALLOWED, EE_UNITS_CU_NODE_CLASS_INDEX, EE_UNITS_CU_NODE_KIND,
@@ -271,7 +272,8 @@ pub(crate) fn ucb(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
 }
 
 /// The fighters of the air host (EEUnitClassAir.cpp `kUcaFighters`).
-const UCA_FIGHTERS: [i64; 3] = [T::kTechInf15Watchman as i64, T::kTechInf14Guardian as i64, T::kTechInf13Sentinel as i64];
+const UCA_FIGHTERS: [i64; 3] =
+    [T::kTechInf15Watchman as i64, T::kTechInf14Guardian as i64, T::kTechInf13Sentinel as i64];
 
 /// The air host's statement `op` (EEUnitClassAir.cpp `ee_units_uca_host`), then the class host's.
 pub(crate) fn uca(op: i32, unit: u64, a: u64, b: i64, c: i64) -> Option<i64> {
@@ -323,7 +325,8 @@ pub(crate) fn ghost(op: i32, a: u64, b: i64) -> Option<i64> {
 /// The unit host's statement `op` (EEUnitHost.cpp `ee_units_uh_host`).
 pub(crate) fn uh(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
     use crate::units::uh_body::{
-        EE_UNITS_UH_NODE_HERO, EE_UNITS_UH_NODE_KIND, EE_UNITS_UH_TECH_CLASS, EE_UNITS_UH_TECH_NODE, EE_UNITS_UH_TREE_NODE,
+        EE_UNITS_UH_NODE_HERO, EE_UNITS_UH_NODE_KIND, EE_UNITS_UH_TECH_CLASS, EE_UNITS_UH_TECH_NODE,
+        EE_UNITS_UH_TREE_NODE,
     };
     Some(match op {
         EE_UNITS_UH_TECH_CLASS => class_table(node_class(node_of(a as usize, c)))? as i64,
@@ -345,10 +348,10 @@ pub(crate) fn uh(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
 /// The goal host's statement `op` (EEUGRust.cpp `GoalOp`; `i0` its first integer).
 pub(crate) fn goal(op: i32, a: u64, b: u64, i0: i64) -> Option<i64> {
     use crate::units::goal_split::{
-        EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH, EE_UNITS_GOAL_HOST_X_PLAYER_TECH, EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE,
         EE_UNITS_GOAL_HOST_X_NODE_AVAILABLE, EE_UNITS_GOAL_HOST_X_NODE_BUILD_TIME, EE_UNITS_GOAL_HOST_X_NODE_CALAMITY,
-        EE_UNITS_GOAL_HOST_X_NODE_ID, EE_UNITS_GOAL_HOST_X_NODE_KIND, EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS,
-        EE_UNITS_GOAL_HOST_X_TECH_TREE_GET,
+        EE_UNITS_GOAL_HOST_X_NODE_ID, EE_UNITS_GOAL_HOST_X_NODE_KIND, EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH,
+        EE_UNITS_GOAL_HOST_X_PLAYER_TECH, EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE,
+        EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS, EE_UNITS_GOAL_HOST_X_TECH_TREE_GET,
     };
     Some(match op {
         EE_UNITS_GOAL_HOST_X_PLAYER_TECH | EE_UNITS_GOAL_HOST_X_TECH_TREE_GET => node_of(unit_player(a)?, i0) as i64,
@@ -391,7 +394,9 @@ pub(crate) fn ub(op: i32, a: u64, c: i64) -> Option<i64> {
             let upgrade = crate::units::player_upgrades::at(a, c as usize) as usize;
             let links = upgrade + l()?.stats_links as usize;
             // SAFETY: the player's live upgrade's links (the C++ statement dereferenced it)
-            unsafe { (*(links as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeLinks)).mModel as usize as i64 }
+            unsafe {
+                (*(links as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeLinks)).mModel as usize as i64
+            }
         }
         _ => return None,
     })

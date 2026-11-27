@@ -1008,7 +1008,9 @@ fn player_tree(player: i32) -> usize {
 pub(crate) fn civh_research(player: i32, kind: i64) {
     use ee_sim::tech::nodes::EeTechTreeOp;
     // SAFETY: the player's live tree
-    unsafe { ee_sim::tech::tree_objects::walk_tree(player_tree(player), EeTechTreeOp::Research, kind as c_long as i32, 0, 0) };
+    unsafe {
+        ee_sim::tech::tree_objects::walk_tree(player_tree(player), EeTechTreeOp::Research, kind as c_long as i32, 0, 0)
+    };
 }
 
 /// `tree->Get(id)`.
@@ -1045,12 +1047,27 @@ pub(crate) fn aeh_tech_node(player: i32, t: usize) -> usize {
 /// `gWorld.mPlayers[player]->...` through the player body (ee_sim player_body.rs `EE_UNITS_PLAYER_DO_*`).
 fn player_do(player: i32, what: u32, a: u64, b: i64, f: f32) {
     // SAFETY: a live player of the world's table
-    unsafe { ee_sim::units::player_body::game::ee_units_player_body(player_handle(player as i64) as *mut c_void, what, a, b, 0, f) };
+    unsafe {
+        ee_sim::units::player_body::game::ee_units_player_body(
+            player_handle(player as i64) as *mut c_void,
+            what,
+            a,
+            b,
+            0,
+            f,
+        )
+    };
 }
 
 /// `gWorld.mPlayers[player]->PulseSight(false, radius, kind)`.
 pub(crate) fn civh_pulse_sight(player: i32, radius: f32, kind: i64) {
-    player_do(player, ee_sim::units::player_body::EE_UNITS_PLAYER_DO_PULSE_SIGHT, kind as c_long as i64 as u64, 0, radius);
+    player_do(
+        player,
+        ee_sim::units::player_body::EE_UNITS_PLAYER_DO_PULSE_SIGHT,
+        kind as c_long as i64 as u64,
+        0,
+        radius,
+    );
 }
 
 /// `gWorld.mPlayers[player]->EnableCamouflagePower()`.

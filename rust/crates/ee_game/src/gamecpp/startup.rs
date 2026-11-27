@@ -1199,7 +1199,9 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
     ] {
         h(op, 0, &[]);
     }
-    crate::tech_tree::host::ee_gamecpp_tech_unload_all(crate::tech_tree::objects::global_tree() as *mut std::ffi::c_void);
+    crate::tech_tree::host::ee_gamecpp_tech_unload_all(
+        crate::tech_tree::objects::global_tree() as *mut std::ffi::c_void
+    );
     for op in [O::CalamityManagerDestroy, O::DeleteResource, O::ComplexUnitReleasePool, O::NodePoolDumpStats] {
         h(op, 0, &[]);
     }

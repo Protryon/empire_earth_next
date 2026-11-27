@@ -37,7 +37,7 @@ pub(crate) struct Seax;
 
 impl SeaxHost for Seax {
     fn x(&mut self, op: u32, a: &mut SeaxArgs) -> isize {
-        if let Some(r) = crate::screens::editor_tech::seax(op, a.p as usize) {
+        if let Some(r) = crate::screens::editor_tech::seax(op, a.p) {
             return r;
         }
         unsafe {
