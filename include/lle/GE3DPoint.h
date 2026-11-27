@@ -89,7 +89,6 @@ public:
     void SetX(float inX) { this->mX = inX; }
     void SetY(float inY) { this->mY = inY; }
     void SetZ(float inZ) { this->mZ = inZ; }
-    void SetXYZ(float inX, float inY, float inZ) { *this = GE3DPoint(inX, inY, inZ); }
 };
 
 #endif

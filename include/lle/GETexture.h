@@ -21,10 +21,8 @@ public:
 
     void* GetData() { return (void*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameData); }
     bool GetCreateMIPMaps() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::CreateMipMaps) != 0; }
-    float GetFrameHeight() const { return this->GetFrameSurface()->GetHeight() * this->GetFrameUVSize(); }
     GESurface* GetFrameSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameSurface); }
     const GETextureCoordinate& GetFrameTopLeftCorner() const { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
-    float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
     unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
     unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }

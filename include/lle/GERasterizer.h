@@ -38,7 +38,6 @@ public:
     long ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                         unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
         { return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers, inZBuffer, inZBufferFormat); }
-    // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
     // Sets the render target and begins the scene, waiting while the device is still drawing; 9 when the surface is lost
     long BeginScene(GESurface* inTarget, unsigned long inScreen) { return ee_dx7r_begin_scene(this->mDX7, inTarget, inScreen); }
     // Fills a rectangle of the render target with a colour (Clear) or of the Z-buffer with a depth (ClearZBuffer),
@@ -92,7 +91,6 @@ public:
     // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
     long EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
     long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
-    unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) { return 0; }   // 0 for any capability
     // The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the
     // screen's state (GetScreenState); the fog type, projection mode and v-sync only record it
     void SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
@@ -130,8 +128,6 @@ public:
     // Shows the frame (flip full screen, blit to the window's client area windowed); every 12 frames updates the frame,
     // polygon and texture-change statistics
     long ShowScene(unsigned long inScreen) { return ee_dx7r_show_scene(this->mDX7, inScreen); }
-    // sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
-
     long Activate() { return (long)ee_ge_rast_activate(this->mRust); }
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }

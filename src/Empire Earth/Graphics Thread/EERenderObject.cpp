@@ -11,7 +11,14 @@
 // inline ctors) follows the ghost-unit pass.
 #include <windows.h>
 
-#include "dx7/DX7Rasterizer.h"
+#include "lle/LowLevelEngine.h"
+#include "lle/GESurface.h"
+#include "lle/GETextureManager.h"
+#include "lle/GETexture.h"
+#include "lle/GEScreen.h"
+#include "lle/GEViewport.h"
+#include "lle/GERasterizer.h"
+#include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
