@@ -42270,3 +42270,57 @@ worktrees and the lead; batch 29 landed mid-round and was merged into the lead.
   EEDataPreLoading.cpp, EEEffectHost.cpp, EEEvent.cpp, EEScenarioHost.cpp, EESMEffect.cpp, EECPNextUnits.cpp,
   EECPNext.cpp, EEComputerPlayer.cpp, EEUIFMGStatusButton.cpp, EEDataTextFile.cpp; Rust in ee_game gamecpp,
   preload.rs, sim_driver and ee_sim scenario and ai.
+
+## The units' lane, round 14: scratch statics as Rust locals, one host per class, the formation a Rust record; seven unit files gone (ee_sim units ucp_view.rs, ucx_view.rs, uca_view.rs, ucb_view.rs, cu_view.rs us_view/ck_view, combat goal_objects.rs group_op, formations units.rs; branch rust-units14, 2026-11-26)
+
+Numbers: docs/progress/units.md ("Round 14"). port_metrics origin/rust 38bb1e104 (batch 31) -> 868b1182b: cpp_lines
+**-928**, compiled files **-7** (249 -> 242), logic **-271** (11,579 -> 11,308), classes -1, extern_c -4, unsafe +77,
+layout +4. The file target (3) is
+met (EEUnitStore, EECloakingUtilities, EEUnitAction, EEUnitClassGround, EEUnitClassKinds, EEUGRustCombat,
+EEFormation); the logic (-400) and C++ line (-1,500) targets are not.
+
+- **Logic moves with the scratch statics, not with the cases.** Round 13 deleted ~1,460 one-statement cases for -7
+  logic. This round's logic came from the multi-statement bodies around the hosts' scratch statics (a C++
+  `static std::vector<...>` or point one case filled for the next): made the Rust body's locals, or Rust cells whose
+  address the one remaining C++ case takes (`sUcpHandle`, `sUcpUnits`, `sUcxTiles`, `sUcaTile`, `sUcDbFile`,
+  TakeHit's and Kill's hit input and death sound, CanReachTile's points and blockers, GoalOp's `sGoalPoint`, which
+  now travels in the argument block). A static that a C++ callee takes by reference (`sUcChain`, `sUcLine`,
+  `sUcTiles9`, `sUcbUnits`, `sUcbTiles`) stays until that callee is Rust's.
+- **Merging the hosts of one class empties files.** A class file whose only remaining code was its host (the
+  people's, transports', air, buildings' and shots' hosts; the eum, path and tile sight hosts) goes when its cases
+  move into the class's main host: the op ranges were disjoint already, so the merge is a cut and paste checked by the
+  compiler's duplicate-case error. The files that stayed (EEUnitClassPeople/Transports/Air/Buildings) keep code outside
+  any host: shims, `ee_units_cz_host`, `ee_units_cls_host`, the gate shims.
+- **A C++ member group the Rust bodies read becomes a record in the world layout.** EEFormation's members are now
+  `EeFormationFields`, registered as `formation_fields` (`offsetof(EEFormation, mOrientation)`), and the groups', active
+  groups' and herds' formation statements and Place/Arrange are Rust's; EEFormation.cpp went. Fork B registered the
+  physics' generator (`physics_random`), the effect detail's address (`effect_detail`) and `graphic_effect_fields` the
+  same way. Two forks adding layout entries at once: fork B put its entries after `physics_saved`, not at the end,
+  and the merge with the lead's `formation_fields` (at the end) was clean. The C++ struct is the generated header,
+  so its order always follows layout.rs.
+- **A host draw keeps its trace hook.** The class hosts' random draws moved to Rust through `physics_generate()`,
+  which calls `ee_urandom_generate` rather than stepping the generator itself, so the random trace (and the oracle)
+  sees every draw. `gEffectDetail` is compared unsigned, as the C++ did.
+- **A move to Rust can leave its list plumbing dead.** After the formations moved, `AgGame::list`, `GameGroups::fill`
+  and the two push exports they fed (`ee_units_ag_push`, `ee_units_group_push`) had no caller; rustc warned (`dead_code`)
+  and the gate's clippy would have failed. A merge of several legs should build once with warnings shown before the
+  gate.
+- **The case check after scripted deletions** (scratchpad u13_casecheck.py, 14a2bd363 -> tip): 256 cases deleted, 72
+  named by no Rust arm. None of the 72 constants is referenced any more outside its own definition (so no caller can
+  send an op whose case is gone): they are cases whose whole operation went (the formations' ops, the scratch
+  statics' ops, the team ops batch 30 removed) and `EE_UNITS_CLS_CR_RANDOM` (its callers draw in Rust).
+- **A merge whose base is itself a merge.** Merging batch 31 (which carried round 13, already in this branch) gave
+  conflicts in three host files whose "merged common ancestors" section held the recursive merge's nested
+  `<<<<<<<<< Temporary merge branch` markers. In every hunk theirs equalled the base and ours had cut or rewritten
+  the lines, so each hunk resolves to ours; a resolver that keeps the HEAD side must match the 7-character markers
+  exactly, not the 9-character nested ones.
+- **The doppelganger record.** Fork A tried to give the doppelganger objects' own fields a Rust record; every oracle
+  seed crashed and the attempt was reverted before commit. Its report went with its worktree, so the cause is not
+  known; a retry should first check the record's start against the C++ object at start-up (as EEGhostUnit.cpp does
+  for `EeUnitsGhostFields`) and run the ASan build.
+- **Edits outside the lane**: EEHerd.cpp (AI Thread: the herd's formation cases), EEWorld.cpp (UpdateLandContinents),
+  EEEffectHost.cpp and EERenderObject.cpp (the unit opacity), EECPPlacement.cpp/.h (the space dock site), EERenderLists.h:
+  each now calls `ee_units_ck_body` or loses a forwarder's declaration; tools/units.py and link/exe/units.txt for the
+  deleted files.
+- **Behaviour changes**: none observed (oracle seeds 2-7 identical after each merge; captures, the saveload matrix
+  and the gates as listed in units.md).

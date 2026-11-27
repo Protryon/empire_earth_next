@@ -588,7 +588,85 @@ EEUnitHost.cpp -29, EEDoppelgangerManager.cpp -27, EEActiveGroup.cpp -21, EEUnit
 
 Gates on e7f818c6e: the builds `--sim` and the test profile 0/0; headers current (367); Rust gate PASS; oracle seeds 2-7 identical (also after merging fork A alone); captures oracle, late, units, groups (the groups' hosts changed) and transport PASS (units work); the saveload matrix (`--expect`) PASS; scenario_check 27/27; won_host_coverage PASS; xbuild wontest 185/185; gates.sh GATES PASS (tour; ai-game units [4, 34, 37], alive_computers [2, 3], classic_lua twice; lan-game). Not run (lane check set): the other capture profiles, plain saveload, sim_editor, eedata, the harness tours, the POSIX builds.
 
+## Round 14 (branch `rust-units14`, from round 13's tip 14a2bd363 with batch 30, 2026-11-26)
+
+The brief: -400 logic lines and -1,500 C++ lines (port_metrics), at least 3 lane .cpp files deleted; move bodies, not
+one-statement cases (round 13 had moved logic by -7). Two forks, two legs each (A: the complex unit's, the unit's,
+the store, cloaking, action and sight hosts; B: the unit class family's hosts, the shots and the ghost); the lead took
+the goal and combat goal hosts, the formations and the world layout entries.
+
+The method, beyond round 13's views: a host's scratch statics (the C++ `static std::vector` or point a host case
+filled for the next case) become the Rust body's locals or Rust cells handed to the remaining C++ case by address;
+the hosts of one class are merged into one (`ee_units_ucp_host`, the transports', air, buildings' and shots' hosts
+into `ee_units_uc_host`; `ee_units_eum_host` into `ee_units_eu_host`; the path host into the unit host; the tile sight
+host into the sight host), so a file whose only content was its host goes; C++ members that the Rust bodies read
+become a Rust record registered in the world layout (`EeFormationFields` as `formation_fields`) or a layout entry
+(`physics_random`, `effect_detail`, `graphic_effect_fields`, the world's unit chain and store flag).
+
+| Commit | What | |
+|---|---|---|
+| f66255ea7 (B) | EEUnitClassGround.cpp and EEUnitClassKinds.cpp deleted | 2 files |
+| de8bdc3ff (A) | EEUnitStore.cpp deleted: the store host's statements in Rust (cu_view.rs us_view; the world's unit chain and the store flag in the layout) | 1 file |
+| e8938d176 (B) | EEUnitClass.cpp's scratch statics in Rust | |
+| fc18efe81 (A) | EECloakingUtilities.cpp deleted: the ck host's reads in Rust (ck_view), its world calls in the sight host; the five forwarders' callers call `ee_units_ck_body` | 1 file |
+| 86958f93e (A) | EEUnitAction.cpp deleted: the script file and AI step hosts into the trigger host (EEUnitAI.cpp) | 1 file |
+| de53c7263 (B) | the shots' host merged into the class host | |
+| afe809ba5, e96d75d7d, 7e4fc7df5 (A, B) | CanReachTile's scratch points, pitch and blockers in Rust; EECuFind and EECuFanaticismParam Rust; the ghost host's scratch statics in Rust; EFFECT_COVERS through the class host | |
+| 88698dd63 (lead) | EEUGRustCombat.cpp deleted: the combat goals' host cases in GoalOp, TELL_GROUP and PATH_ATTEMPTS in Rust (goal_objects.rs group_op); GoalOp's shared `sGoalPoint` gone (the boarding and mining beam points travel in the argument block) | 1 file |
+| 1bbe05859 (lead) | the formation's members a Rust record (`EeFormationFields`, layout `formation_fields`): the groups', active groups' and herds' formation statements and Place/Arrange in Rust; EEFormation.cpp deleted | 1 file |
+| 40190f0ee (lead) | the unit and formation headers' members nothing names (15) | |
+| 01f291738, 0d3e0ba8a (A, leg 2) | EEComplexUnit's scratch statics in the Rust bodies, the path host merged into the unit host; TakeHit's and Kill's locals in Rust, ApplyMorale answered in Rust (EEComplexUnit::ApplyMorale gone), the eum host merged into the unit host, the tile sight host into the sight host | |
+| f1a76e4e4 (lead) | the combat goals' host's goal accessors and timers, the query host's tile node and active goal target in Rust (cg_view.rs) | |
+| a29c81c92, cdb2a3f74, e3164f964, 3d714f06d (B, leg 2) | the physics' generator, effect detail and graphic effect fields in the layout; the people's, transports', air and buildings' hosts merged into the class host (ucp_view.rs, ucx_view.rs, uca_view.rs, ucb_view.rs); `sUcpHandle`, `sUcpUnits`, `sUcxTiles`, `sUcaTile`, `sUcDbFile` Rust cells; EEAirplaneCircleSide and EEFindLandingPoint inlined at their callers | |
+| 6c4449b7b, 467ac110e, 3b5cb755e (finishing lead) | the active group's and group's list helpers and push exports left dead by the formations' move (`AgGame::list`, `GameGroups::fill`, `ee_units_ag_push`, `ee_units_group_push`, the group io's `out`); clippy and rustfmt over the lead's Rust (never gated before the finish) | |
+| 868b1182b (finishing lead) | origin/rust 38bb1e104 (batch 31, carrying round 13) merged: EEComplexUnit.cpp, EEUnit.cpp and EEUnitClass.cpp conflicted where theirs equalled the base (ours kept); EECloakingUtilities.cpp stays deleted (theirs had only dropped a dead declaration); cbindgen.toml union; PORT_LEARNINGS both sides | |
+
+Round total (port_metrics, origin/rust 38bb1e104 = batch 31, which carries round 13 -> 868b1182b; the same as 14a2bd363 ->
+3b5cb755e minus batch 30's 47e9ad712 -> 126ab1513): **cpp_lines -928** (79,339 -> 78,411), **compiled files 249 -> 242**,
+code -598, shim -327, **logic -271 (11,579 -> 11,308)**, classes 693 -> 692, extern_c -4, rust_hdrs unchanged,
+unsafe +77, layout +4, Rust lines +1,281.
+
+Targets: the file target is met (7 lane .cpp files deleted: EEUnitStore, EECloakingUtilities, EEUnitAction,
+EEUnitClassGround, EEUnitClassKinds, EEUGRustCombat, EEFormation; lane .cpp files 28 -> 21). The logic target (-400)
+is not (-271), and the C++ line target (-1,500) is not (-928): the scratch statics and the merged hosts moved logic,
+but each class file kept code outside its host (shims, `ee_units_cz_host`, `ee_units_cls_host`, the gate shims).
+
+Per file (net lines, the round's own commits): EEUnitClassPeople.cpp -139, EEUnitClassBuildings.cpp -111,
+EEUnitClassAir.cpp -98, EEComplexUnit.cpp -85, EECloakingUtilities.cpp -73 (deleted), EEUnitAction.cpp -61 (deleted),
+EEUnitStore.cpp -60 (deleted), EEUnitClassKinds.cpp -59 (deleted), EEUGRustCombat.cpp -56 (deleted), EESightRings.cpp
+-54, EEUnitClassShots.cpp -54, EEUnitClassGround.cpp -53 (deleted), EEFormation.cpp -34 (deleted),
+EEUnitClassTransports.cpp -34, EEHerd.cpp -28, EEGroup.cpp -25, EEUnit.cpp -22, EEGhostUnit.cpp -18, ee/EEFormation.h
+-17, ee/EEUnit.h -15, EEActiveGroup.cpp -14, EECombatGoals.cpp -12; EEUnitClass.cpp +158 (it took in four hosts'
+cases), EEUnitAI.cpp +23 (the action file's hosts), EEWorldLayout.cpp +14, EEUGRust.cpp +8.
+
+Not done: fork A's attempt to give the doppelganger objects a Rust record crashed every oracle seed and was
+reverted before it was committed; its report went with its worktree, so the cause is not recorded (see
+PORT_LEARNINGS).
+
+Gates on 868b1182b (the merge with batch 31; the docs commit changes no code): the builds `--sim` and the test
+profile 0/0 (no warnings); headers current (367); Rust gate PASS (it had failed on clippy and rustfmt over the
+lead's Rust until 467ac110e and 3b5cb755e); oracle seeds 2-7 identical (also on dd860446a+6c4449b7b before the
+merge); captures oracle, late, units (the unit hosts), groups (the formations, the groups' hosts), placement (the
+building and gate cases) and transport (the transports' host) PASS; the saveload matrix (`--expect`) PASS;
+scenario_check 27/27; sim_editor PASS; won_host_coverage PASS; xbuild wontest 185/185; gates.sh GATES PASS (tour;
+ai-game units [4, 38, 38], alive_computers [2, 3], classic_lua twice; lan-game). The same set passed on 6c4449b7b
+before the merge, but wontest's won_persistobj_test, which hung under load there and passed alone (a known flake).
+Not run (lane check set): missile (no combat shot changed), the other capture profiles, plain saveload, eedata,
+the harness tours, the POSIX builds. Case check (scratchpad u13_casecheck.py, origin/rust -> tip): 247 cases
+deleted, 63 named by no Rust arm; none of them is referenced any more outside its constant.
+
 ## What is left (behaviour)
+
+- **Round 14's measure**: EEUnitClass.cpp keeps `MELEE_RETARGET` (a C++ functor), `EEUnitClassNameLess` (it needs
+  `gResource`), the vectors handed to C++ callees (`sUcChain`, `sUcLine`, `sUcTiles9`, `sUcbUnits`, `sUcbTiles`: each
+  goes when its callee is Rust's), `sUcpPower`, `EESortUnique` and `gViewport`/`gOrthographicView` (IN_VIEW); the
+  People, Transports, Air and Buildings files keep shims, `ee_units_cz_host`, `ee_units_cls_host`, the air sound member
+  and the gate shims (folding those into the class host empties four more files); EEUnitClassUpgrade.cpp and
+  EEUnitClassImprovement.cpp were not reached; EEGhostUnit.cpp's `sGhostTransform` (needs the ghost's
+  `mTransformation` offset and a Rust `GeTransformation` cell), `sGhostText` and `sGhostPoints`; the doppelganger
+  objects' record (retry with a start-up offset check and the ASan build); the ignored-target vector's layout offset
+  (its save statements) and `EeDataGraphicObjectFields` in the layout (the frame and sound table cases); the shots'
+  `R_RANDOM` could use `physics_generate()`.
 
 - **Round 13's measure**: the hosts' C++ cases that call C++: GoalOp's sGoalPoint statics, calamity, sound and tech
   calls and `X_FIND_COMPLEX`/`PLAIN`; the combat world op's ignored-targets deque, rules and effects; the ghost
