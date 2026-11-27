@@ -837,6 +837,97 @@ unsafe fn hotkey_get_entity(key: isize, entity: *mut *mut c_void) -> isize {
     unsafe { input::keyboard_entity(key as core::ffi::c_ulong, entity) as isize }
 }
 
+/// The GE objects a toolkit object owns by address (`GERhombus`, `GELine`, `GEText`), made and freed here (LLE/UI
+/// round 3: their C++ shims were `new` and `delete`): a C++-layout shell of one pointer, the Rust object (the C++
+/// classes' only member, `URust`), so the C++ that draws them or calls their members reads them as its classes. Each
+/// is freed by the op that pairs with its maker, never by a C++ `delete`.
+#[cfg(not(any(test, feature = "no_cpp")))]
+pub(crate) mod ge {
+    use core::ffi::c_void;
+
+    use ee_render::ge::game_hosts::{ee_ge_game_prim_new, ee_ge_game_prim_new_line, ee_ge_game_text_new};
+    use ee_render::ge::prim::{ee_ge_prim_destroy, EeGePrim, EeGePrimKind};
+    use ee_render::ge::smallobj::{ee_ge_text_destroy, EeGeText};
+
+    #[repr(C)]
+    struct Shell<T> {
+        rust: *mut T,
+    }
+
+    /// A new shell whose object `new` makes for the shell's address (the C++ constructor's `this`).
+    fn make<T>(new: impl FnOnce(*mut c_void) -> *mut T) -> isize {
+        let s = Box::into_raw(Box::new(Shell::<T> { rust: core::ptr::null_mut() }));
+        // SAFETY: the new shell
+        unsafe { (*s).rust = new(s.cast()) };
+        s as isize
+    }
+    /// The shell `p` freed after `destroy` of its object (nothing for NULL, as `delete`).
+    ///
+    /// # Safety
+    /// `p` is NULL or a shell [`make`] made of `T`, not used again.
+    unsafe fn free<T>(p: isize, destroy: unsafe extern "C" fn(*mut T)) {
+        if p != 0 {
+            // SAFETY: the contract
+            unsafe { destroy(Box::from_raw(p as *mut Shell<T>).rust) }
+        }
+    }
+    /// `new GERhombus`.
+    pub(crate) fn rhombus_new() -> usize {
+        // SAFETY: the game's vertex host; the shell lives until rhombus_delete
+        make(|o| unsafe { ee_ge_game_prim_new(o, EeGePrimKind::Rhombus) }) as usize
+    }
+    /// `new GELine`.
+    pub(crate) fn line_new() -> usize {
+        // SAFETY: as rhombus_new's
+        make(|o| unsafe { ee_ge_game_prim_new(o, EeGePrimKind::Line) }) as usize
+    }
+    /// `new GELine(origin, origin, black, black, 1.0f)`.
+    pub(crate) fn line_new_black() -> usize {
+        let (origin, black) = ([0.0f32; 2], [0.0f32; 3]);
+        // SAFETY: as rhombus_new's; the points and colours live for the call
+        make(|o| unsafe {
+            ee_ge_game_prim_new_line(o, origin.as_ptr().cast(), origin.as_ptr().cast(), black.as_ptr().cast(), black.as_ptr().cast(), 1.0)
+        }) as usize
+    }
+    /// `delete` of a rhombus or line.
+    ///
+    /// # Safety
+    /// As [`free`]'s.
+    pub(crate) unsafe fn prim_delete(p: usize) {
+        // SAFETY: the contract
+        unsafe { free::<EeGePrim>(p as isize, ee_ge_prim_destroy) }
+    }
+    macro_rules! ops {
+        ($( $(#[$m:meta])* $name:ident => |$a:ident| $x:expr; )*) => {$(
+            $(#[$m])*
+            ///
+            /// # Safety
+            /// The host contract (`a` the object to free, made by this module).
+            #[allow(unused_unsafe, unused_variables)]
+            pub(crate) unsafe fn $name(_o: *mut c_void, $a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+                // SAFETY: the contract
+                unsafe { $x }
+            }
+        )*};
+    }
+    ops! {
+        /// `new GERhombus`.
+        rhombus_create => |a| rhombus_new() as isize;
+        /// `delete` of a rhombus `a`.
+        rhombus_delete => |a| { prim_delete(a as usize); 0 };
+        /// `new GELine(origin, origin, black, black, 1.0f)`.
+        line_create => |a| line_new_black() as isize;
+        /// `new GELine`.
+        line_create_plain => |a| line_new() as isize;
+        /// `delete` of a line `a`.
+        line_delete => |a| { prim_delete(a as usize); 0 };
+        /// `new GEText(font a)`.
+        text_create => |a| make(|o| ee_ge_game_text_new(o, a as *mut c_void));
+        /// `delete` of a text `a`.
+        text_delete => |a| { free::<EeGeText>(a, ee_ge_text_destroy); 0 };
+    }
+}
+
 /// The input system's devices and entities (ee_base's: `gISKeyboard`, `gISMouse`, `ISEntity`), which the toolkit's
 /// C++ shims called (LLE/UI round 3).
 #[cfg(not(any(test, feature = "no_cpp")))]

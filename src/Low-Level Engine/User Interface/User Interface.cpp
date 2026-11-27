@@ -258,8 +258,6 @@ EE_UI_VOID(combo_a_set_dirty) { CB->SetDirty(true); }
 EE_UI_VOID(combo_a_set_rectangle) { CB->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_CASE(combo_a_add_string) { return CB->AddString(); }
 EE_UI_VOID(combo_a_change_selection) { CB->ChangeSelection(); }
-EE_UI_CASE(combo_rhombus_create) { return (intptr_t) new GERhombus(); }
-EE_UI_VOID(combo_rhombus_delete) { delete reinterpret_cast<GERhombus*>(a); }
 #undef CB_LIST
 #undef CB_PART
 #undef CB
@@ -298,10 +296,6 @@ extern "C" long ee_uicpp_control_mouse_right_down(uintptr_t inControl) { return 
 extern "C" long ee_uicpp_control_mouse_move(uintptr_t inControl, uintptr_t inLocation)
 { return CTL(inControl)->MouseMove(*reinterpret_cast<const GE2DPoint*>(inLocation)); }
 
-// the background rhombi's new and delete (ee_ui lle_control.rs: the constructor and destructor)
-extern "C" void* ee_uicpp_rhombus_new() { return new GERhombus; }
-extern "C" void ee_uicpp_rhombus_delete(void* inRhombus) { delete static_cast<GERhombus*>(inRhombus); }
-
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
 #define ctl static_cast<UIControl*>(inObj)
 EE_UI_VOID(obj_set_dirty) { ctl->SetDirty(a != 0); }
@@ -315,8 +309,6 @@ EE_UI_VOID(obj_bitmap_reference) { theBitmap->Reference(); }
 EE_UI_VOID(obj_bitmap_release) { theBitmap->Dereference(); }
 EE_UI_CASE(obj_bitmap_texture_width) { return theBitmap->GetTexture(ctl->GetScreenIndex())->GetWidth(); }
 EE_UI_CASE(obj_string_length) { return reinterpret_cast<const UWideString*>(a)->GetLength(); }
-EE_UI_CASE(obj_text_create) { return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); }
-EE_UI_VOID(obj_text_delete) { delete theText; }
 EE_UI_CASE(obj_text_length) { return theText->GetText().GetLength(); }
 EE_UI_VOID(obj_text_extent) { *reinterpret_cast<GERectangle*>(f) = theText->GetTextExtent(); }
 EE_UI_VOID(obj_text_set_text) { theText->SetText(*reinterpret_cast<const UWideString*>(b)); }
@@ -464,8 +456,6 @@ EE_UI_CASE(tbl_text_list) { return (intptr_t)static_cast<UILBString*>(SC)->GetGE
 // clipboard, the scroll bar, the texts, lines, rhombus and polls it holds by address). The text model (edit.rs), the
 // key dispatch (edit_keys.rs) and the drawing's ranges (edit_draw.rs) are its algorithms.
 #define e static_cast<UIEditBox*>(inObj)
-#define theLine reinterpret_cast<GELine*>(a)
-#define theRhombus reinterpret_cast<GERhombus*>(a)
 #define theText reinterpret_cast<GEText*>(a)
 EE_UI_VOID(edit_button_down) { e->ButtonDown(); }
 EE_UI_VOID(edit_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
@@ -473,12 +463,7 @@ EE_UI_CASE(edit_text_font_height) { return theText->GetFont()->GetHeight(); }
 EE_UI_VOID(edit_virt_set_rectangle) { e->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(edit_virt_process_enter_key) { e->ProcessEnterKey(); }
 EE_UI_VOID(edit_text_input_cancel) { PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation()); }
-EE_UI_VOID(edit_line_delete) { delete theLine; }
-EE_UI_CASE(edit_rhombus_create) { return (intptr_t) new GERhombus(); }
-EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
 #undef theText
-#undef theRhombus
-#undef theLine
 #undef e
 
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
@@ -486,9 +471,6 @@ EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
 #define UIEB(e) static_cast<UIEditBox*>(reinterpret_cast<UIControl*>(e))
 extern "C" uintptr_t ee_uicpp_edit_scroll_bar_new(uintptr_t inEdit, float inX, float inY, float inLength)
 { return (uintptr_t) new UIScrollBar(UIEB(inEdit)->GetId(), GE2DPoint(inX, inY), inLength, 1, UIEB(inEdit)->GetForm(), UIEB(inEdit)->GetIndex(), UIEB(inEdit)->GetBorderThickness()); }
-extern "C" uintptr_t ee_uicpp_line_new_black()
-{ return (uintptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
-extern "C" uintptr_t ee_uicpp_line_new() { return (uintptr_t) new GELine(); }
 
 // C:\EEX\Low-Level Engine\User Interface\UIFileListBox.cpp
 // The original units: UIFileListBox.cpp 0x1006fae7..0x1006ff58 and UIFileComboBox.cpp 0x1006f4ef..0x1006fae7.
@@ -665,8 +647,6 @@ EE_UI_VOID(form_music_start) { theForm->GetManager()->StartMusic(UWideString((co
 EE_UI_VOID(form_manager_delete) { delete reinterpret_cast<UIFormManager*>(a); }
 EE_UI_VOID(form_virt_help_location) { theForm->SetHelpTextPopupLocation(); }
 EE_UI_CASE(form_virt_draw_background) { return theForm->DrawBackground(UIFormRect(f)); }
-EE_UI_CASE(form_rhombus_create) { return (intptr_t) new GERhombus; }
-EE_UI_VOID(form_rhombus_delete) { delete theRhombus; }
 EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor()); }
 #undef theForm
 #undef theControl
@@ -680,15 +660,9 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 // UIGraph (with UILineGraph and the post-game summary's EEUIPGSLineGraph, R6 game screens B round 3) is whole in
 // Rust (rust/crates/ee_ui/src/graphobj.rs): the members below forward to the Rust object, which calls out through
 // ee_ui_graph_host (UIControl's members, the texts, a line).
-#define g static_cast<UIGraph*>(inObj)
 #define theText reinterpret_cast<GEText*>(a)
-#define theLine reinterpret_cast<GELine*>(a)
 EE_UI_VOID(graph_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
-EE_UI_CASE(graph_line_create) { return (intptr_t) new GELine; }
-EE_UI_VOID(graph_line_delete) { delete theLine; }
-#undef theLine
 #undef theText
-#undef g
 
 // C:\EEX\Low-Level Engine\User Interface\UIHotKey.cpp
 // 0x10076f27..0x100774b9: the sPressedPoll/sHotKey init chains, then the out-of-line members (CreateHotKeys,
@@ -727,15 +701,7 @@ EE_UI_VOID(hk_delete) { delete static_cast<UIHotKey*>(reinterpret_cast<EeUiHotKe
 // The Rust list box's ops that do not depend on T (ee_ui listobj.rs; UIListBoxRust<T>::Op answers the rest):
 // UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's
 #define lst static_cast<UIControl*>(inObj)
-#define theLine reinterpret_cast<GELine*>(a)
-#define theRhombus reinterpret_cast<GERhombus*>(a)
-EE_UI_CASE(list_rhombus_create) { return (intptr_t) new GERhombus(); }
-EE_UI_VOID(list_rhombus_delete) { delete theRhombus; }
-EE_UI_CASE(list_line_create) { return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
-EE_UI_VOID(list_line_delete) { delete theLine; }
 EE_UI_CASE(list_create_scroll_bar) { return (intptr_t) new UIScrollBar(lst->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, lst->GetForm(), lst->GetIndex(), lst->GetBorderThickness()); }
-#undef theRhombus
-#undef theLine
 #undef lst
 
 // The string list's draw (ee_ui listobj.rs string_draw): its drawn text placed, given a drawn line, drawn clipped

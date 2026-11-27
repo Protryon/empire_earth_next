@@ -298,13 +298,10 @@ pub unsafe extern "C" fn ee_ui_control_construct(
     border_thickness: core::ffi::c_ulong,
     border_type: core::ffi::c_ulong,
 ) {
-    extern "C" {
-        fn ee_uicpp_rhombus_new() -> *mut c_void;
-    }
     // SAFETY: the contract; the rhombi are the record's before its state (the C++ constructor's order)
     unsafe {
-        (*rec).mBgRhombus = ee_uicpp_rhombus_new();
-        (*rec).mCopiedBgRhombus = ee_uicpp_rhombus_new();
+        (*rec).mBgRhombus = crate::lle_hosts::ge::rhombus_new() as *mut c_void;
+        (*rec).mCopiedBgRhombus = crate::lle_hosts::ge::rhombus_new() as *mut c_void;
         crate::controlobj::ee_ui_control_init(
             rec,
             cpp,
@@ -328,14 +325,11 @@ pub unsafe extern "C" fn ee_ui_control_construct(
 #[cfg(not(any(test, feature = "no_cpp")))]
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_control_destruct(rec: *mut crate::controlobj::EeUiControlFields) {
-    extern "C" {
-        fn ee_uicpp_rhombus_delete(rhombus: *mut c_void);
-    }
     // SAFETY: the contract
     unsafe {
         crate::controlobj::ee_ui_control_release(rec);
-        ee_uicpp_rhombus_delete((*rec).mBgRhombus);
-        ee_uicpp_rhombus_delete((*rec).mCopiedBgRhombus);
+        crate::lle_hosts::ge::prim_delete((*rec).mBgRhombus as usize);
+        crate::lle_hosts::ge::prim_delete((*rec).mCopiedBgRhombus as usize);
     }
 }
 

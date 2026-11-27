@@ -463,8 +463,6 @@ shims! {
     // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
     fn edit_scroll_bar_new(edit: usize, x: f32, y: f32, length: f32) -> usize = ee_uicpp_edit_scroll_bar_new;
-    fn line_new_black() -> usize = ee_uicpp_line_new_black;
-    fn line_new() -> usize = ee_uicpp_line_new;
     rust:
     // the input entities, the key slots, the texts (LLE/UI round 2: their shims were one call on a Rust object)
     fn mouse_buttons_ready() -> bool = own::mouse_buttons_ready;
@@ -548,6 +546,9 @@ shims! {
     fn edit_text(edit: usize) -> usize = crate::lle_hosts::chains::edit_text;
     // UIControl's virtuals that only toolkit classes overrode, by the control's kind (LLE/UI round 3)
     fn control_ime_close(control: usize) -> c_long = crate::lle_hosts::chains::control_ime_close;
+    // the edit box's lines (GELine: lle_hosts.rs ge)
+    fn line_new_black() -> usize = crate::lle_hosts::ge::line_new_black;
+    fn line_new() -> usize = crate::lle_hosts::ge::line_new;
     fn control_ime_open(control: usize) -> c_long = crate::lle_hosts::chains::control_ime_open;
     fn control_set_bg_opacity(control: usize, opacity: f32) = crate::lle_hosts::chains::control_set_bg_opacity;
     fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = crate::lle_hosts::chains::control_set_bg_color;

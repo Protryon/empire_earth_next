@@ -86,9 +86,9 @@ tables! {
         TextInputCancel => v ee_uicpp_edit_text_input_cancel,
         BaseReleaseKeyboard => x chains::base_release_keyboard,
         BaseMouseDoublePressed => x chains::base_mouse_double_pressed,
-        LineDelete => v ee_uicpp_edit_line_delete,
-        RhombusCreate => r ee_uicpp_edit_rhombus_create,
-        RhombusDelete => v ee_uicpp_edit_rhombus_delete,
+        LineDelete => x ge::line_delete,
+        RhombusCreate => x ge::rhombus_create,
+        RhombusDelete => x ge::rhombus_delete,
         TextSetBgColor => x own::text_set_bg_color,
         TextSetTransparent => x own::text_set_transparent,
     }
@@ -261,8 +261,8 @@ tables! {
         PollSetDelay => x polls::set_delay,
         FormVirtHelpLocation => v ee_uicpp_form_virt_help_location,
         FormVirtDrawBackground => r ee_uicpp_form_virt_draw_background,
-        RhombusCreate => r ee_uicpp_form_rhombus_create,
-        RhombusDelete => v ee_uicpp_form_rhombus_delete,
+        RhombusCreate => x ge::rhombus_create,
+        RhombusDelete => x ge::rhombus_delete,
         FormRhombusLabelColor => v ee_uicpp_form_rhombus_label_color,
     }
     /// the graph's own ops (the texts, the lines, the border)
@@ -272,8 +272,8 @@ tables! {
         TextSetTransparent => x own::text_set_transparent,
         SetBgRectangle => x chains::set_bg_rectangle,
         DrawBorder => x chains::ctl_draw_border,
-        LineCreate => r ee_uicpp_graph_line_create,
-        LineDelete => v ee_uicpp_graph_line_delete,
+        LineCreate => x ge::line_create_plain,
+        LineDelete => x ge::line_delete,
     }
     /// the hot keys' calls out (the keyboard's entities, the events, new and delete; the object the record)
     hotkey {
@@ -326,8 +326,8 @@ tables! {
     combo {
         ComboQuery => x combo_query,
         ComboAct => x combo_act,
-        RhombusCreate => r ee_uicpp_combo_rhombus_create,
-        RhombusDelete => v ee_uicpp_combo_rhombus_delete,
+        RhombusCreate => x ge::rhombus_create,
+        RhombusDelete => x ge::rhombus_delete,
         DrawCountDecrement => x chains::combo_draw_count_decrement,
     }
     /// the list boxes' ops that do not depend on T (the polls, the rhombi, the line, the scroll bar, the keys)
@@ -344,10 +344,10 @@ tables! {
         PollPoll => x polls::poll,
         PollStart => x polls::start,
         PollStop => x polls::stop,
-        RhombusCreate => r ee_uicpp_list_rhombus_create,
-        RhombusDelete => v ee_uicpp_list_rhombus_delete,
-        LineCreate => r ee_uicpp_list_line_create,
-        LineDelete => v ee_uicpp_list_line_delete,
+        RhombusCreate => x ge::rhombus_create,
+        RhombusDelete => x ge::rhombus_delete,
+        LineCreate => x ge::line_create,
+        LineDelete => x ge::line_delete,
         DrawCountDecrement => x chains::obj_base_draw_text,
         SetBgRectangle => x chains::set_bg_rectangle,
         BaseMouseDoublePressed => x chains::base_mouse_double_pressed,
@@ -403,8 +403,8 @@ tables! {
         BitmapRelease => v ee_uicpp_obj_bitmap_release,
         BitmapTextureWidth => r ee_uicpp_obj_bitmap_texture_width,
         StringLength => r ee_uicpp_obj_string_length,
-        TextCreate => r ee_uicpp_obj_text_create,
-        TextDelete => v ee_uicpp_obj_text_delete,
+        TextCreate => x ge::text_create,
+        TextDelete => x ge::text_delete,
         TextSetFont => x own::text_set_font,
         TextLength => r ee_uicpp_obj_text_length,
         TextExtent => x media_text_extent,
