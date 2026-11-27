@@ -11,7 +11,6 @@
 #include <exception>
 #include <map>
 #include <list>
-#include <stdint.h>
 #include <stdio.h>
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"

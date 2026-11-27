@@ -751,9 +751,9 @@ static void RunSide(Side& side, uint64_t seed, int steps)
         case 24: { bool r = side.orig ? o->Initialize() : call(Call::Initialize, 0, 0, 0) != 0; Log("init " + N(r)); break; }
         case 25: if (side.orig) o->Login(name, pw); else call(Call::Login, (intptr_t)name, (intptr_t)pw, 0); break;
         case 26: if (side.orig) o->GetTitanServerList(); else call(Call::GetTitanServerList, 0, 0, 0); break;
-        case 27:   // a lobby and its window
-            if (side.orig) { o->mLobby = R(2) ? new WONAPICore : NULL; o->mLobbyWindow = R(2) ? new WONLobbyWindow : NULL; }
-            else { n->O()->lobby = R(2) ? new WONAPICore : NULL; n->O()->lobby_window = R(2) ? new WONLobbyWindow : NULL; }
+        case 27:   // a lobby (the game never makes the original's lobby window, +0x24)
+            if (side.orig) o->mLobby = R(2) ? new WONAPICore : NULL;
+            else n->O()->lobby = R(2) ? new WONAPICore : NULL;
             break;
         case 28: ensureRouting(); if (side.orig) o->UpdateGameObject(); else call(Call::UpdateGameObject, 0, 0, 0); break;
         case 29: if (side.orig) o->LeaveGroups(); else call(Call::LeaveGroups, 0, 0, 0); break;

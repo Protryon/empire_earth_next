@@ -16,25 +16,9 @@ class ComponentConfig;
 class ComponentEvent;
 class LobbyGame;
 class LobbyClient;
-class LogicCompletionBase;
-// RTTI: LobbyLogic > RefCount; vtable 0x855a04 with six slots; derived members begin at 0x40.
-// AsyncOpTracker is 0x34 bytes; constructor 0x7e5930, destructor 0x7e5a40.
-class LobbyLogic : public RefCount {
-public:
-    LobbyLogic();
-    virtual ~LobbyLogic();
-    virtual void KillHook(); // slot 0x04: empty, the shared no-argument stub at 0x8142a0
-    virtual void InitComponent(ComponentConfig* inConfig); // slot 0x08: empty, the shared one-argument stub at 0x6fa500
-    virtual void Reset(); // slot 0x0c: empty, the shared no-argument stub at 0x8142a0
-    virtual void HandleControlEvent(int inControlId); // slot 0x10: empty, the shared one-argument stub at 0x6fa500
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // slot 0x14: empty, the shared one-argument stub at 0x6fa500
-    void Kill();
-    void RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion, unsigned long inTimeout);
-    void RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion, unsigned long inTimeout);
-    bool RemoveTrackedOp(AsyncOp* inOp); // 0x7e5c00; LogicCompletion uses it to untrack its operation
-    AsyncOpTracker mTracker; // 0x08, 0x34 bytes
-    bool mKilled; // 0x3c
-};
+class ShellCompletion;
+class RustLogic;
+typedef RustLogic LobbyLogic; // the original's base class (vtable 0x855a04: the five empty virtuals), RustLogic's
 // LobbyLogicMgr (0x0c bytes, no vtable): owns the logic modules and dispatches events to them. Its list and every
 // method are a Rust object since R6 WON lobby and network round 35 (rust/crates/ee_won_lobby/src/logicmgr.rs; the
 // host is LobbyLogicMgr.cpp's): these forward; a logic's exception comes back and is thrown again here.
@@ -63,18 +47,23 @@ private:
 // EeWonRouteLogic, EeWonStaging or EeWonLan); the kind's host (its unit's) reaches the C++ objects the class held
 // through the slots. NetLogic (14 pure virtuals; RoutingLogic and LanLogic) is this class too: its calls are the
 // same-named methods. The slots are destroyed as the classes' members were: the dialogs last to first, then the
-// others.
+// others. LobbyLogic, the base (the op tracker and the killed flag), is this class since R6 WON round 40.
 class LobbyRustDialog;
-class RustLogic : public LobbyLogic {
+class RustLogic : public RefCount {
 public:
     typedef void* (*Maker)(RustLogic* inSelf); // the kind's Rust object over the shell and its unit's host
     RustLogic(EeWonLogicShellKind inKind, Maker inMake);
     virtual ~RustLogic();
-    virtual void KillHook() { this->V(EeWonLogicShellV::KillHook); }
-    virtual void InitComponent(ComponentConfig* inConfig) { WonRethrow(this->V(EeWonLogicShellV::InitComponent, (intptr_t)inConfig)); }
-    virtual void Reset() { this->V(EeWonLogicShellV::Reset); }
-    virtual void HandleControlEvent(int inControlId) { this->V(EeWonLogicShellV::HandleControlEvent, inControlId); }
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // with the event's type
+    void Kill(); // killed, every tracked op killed, then the kill hook
+    // the op's completion set, the op tracked (so Kill kills it) and run (logicshell.rs's runs are these)
+    void RunTrackedOp(AsyncOp* inOp, ShellCompletion* inCompletion, unsigned long inTimeout);
+    void RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion, unsigned long inTimeout); // untracked
+    bool RemoveTrackedOp(AsyncOp* inOp) { return this->mTracker.RemoveOp(inOp); } // whether it was tracked
+    void KillHook() { this->V(EeWonLogicShellV::KillHook); }
+    void InitComponent(ComponentConfig* inConfig) { WonRethrow(this->V(EeWonLogicShellV::InitComponent, (intptr_t)inConfig)); }
+    void Reset() { this->V(EeWonLogicShellV::Reset); }
+    void HandleControlEvent(int inControlId) { this->V(EeWonLogicShellV::HandleControlEvent, inControlId); }
+    void HandleComponentEvent(ComponentEvent* inEvent); // with the event's type
     // NetLogic's (the LAN and routing kinds; nothing and 0 for another kind)
     bool HostGame(LobbyGame* inGame) { return this->V(EeWonLogicShellV::HostGame, (intptr_t)inGame) != 0; }
     bool JoinGame(LobbyGame* inGame) { return this->V(EeWonLogicShellV::JoinGame, (intptr_t)inGame) != 0; }
@@ -109,6 +98,8 @@ public:
     template <class C> void CallMessage(C inCall, const ByteBuffer* inMessage, LobbyClient* inClient)
     { this->Call(inCall, const_cast<ByteBuffer*>(inMessage), inClient, inMessage != NULL ? (intptr_t)inMessage->data() : 0, inMessage != NULL ? (intptr_t)inMessage->length() : 0); }
     template <class T> T* Slot(int inSlot) const { return static_cast<T*>(this->mSlot[inSlot].get()); }
+    AsyncOpTracker mTracker;
+    bool mKilled;
     EeWonLogicShellKind mKind;
     SmartPtr<RefCount> mSlot[3]; // the kind's other objects (its unit names them)
     std::string mText; // InitLogic's cross-promotion link (0x44)
@@ -136,12 +127,13 @@ void* LanLogicMake(RustLogic* inSelf);
 void* PingLogicMake(RustLogic* inSelf);
 // A completion of a RustLogic (LogicCompletion<T> with a member of one of the six classes, or RoutingLogic.cpp's
 // RoutingOpCompletion with its code): logicshell.rs runs LogicCompletion's test and the member's call.
-class ShellCompletion : public LogicCompletionBase {
+class ShellCompletion : public LobbyCompletionBase {
 public:
-    ShellCompletion(RustLogic* inLogic, EeWonLogicShellDone inDone, int inCode = 0) : mDone(inDone), mCode(inCode), mLogic(inLogic) {}
+    ShellCompletion(RustLogic* inLogic, EeWonLogicShellDone inDone, int inCode = 0) : mCheckTracker(false), mDone(inDone), mCode(inCode), mLogic(inLogic) {}
     virtual void Run(AsyncOp* inOp)
     { ee_won_logicshell_done(this->mLogic->mKind, this->mLogic->mRust, this->mDone, this->mCode, inOp, this->mLogic->mKilled, this->mCheckTracker, &Untrack, this->mLogic.get()); }
     static bool Untrack(void* inLogic, void* inOp) { return static_cast<RustLogic*>(inLogic)->RemoveTrackedOp(static_cast<AsyncOp*>(inOp)); }
+    bool mCheckTracker; // (the original's LogicCompletionBase +0x08: set when run tracked)
     EeWonLogicShellDone mDone;
     int mCode;
     SmartPtr<RustLogic> mLogic;

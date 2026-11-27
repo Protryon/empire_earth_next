@@ -37,22 +37,16 @@ pub enum EeWonLobbyPrvOp {
     ErrorParseHead,
     /// `p->mInitError.append(GUIString(sPrvParser->GetAbortReason()))`.
     ErrorParseReason,
-    /// `p->mConfig->mLobbyPort` (the lobby port: the Rust's member, R6 WON lobby and network round 38).
-    ConfigLobbyPort,
     /// `sPrvComponentConfig = new ContainerConfig`.
     ComponentConfigNew,
     /// `p->mLobbyContainer = new LobbyContainer`.
     LobbyContainerNew,
-    /// `ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory)`.
+    /// `ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + PrvText(a))` (the config's resource
+    /// directory: `a` its bytes and length).
     SetResourceFolder,
-    /// `sPrvDefine = p->mConfig->mDefines.begin()`.
-    DefinesBegin,
-    /// `sPrvDefine == p->mConfig->mDefines.end()`.
-    DefinesAtEnd,
-    /// `sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false)`.
+    /// `sPrvParser->AddDefine(PrvText(a), PrvText(a + 2 words), false)` (a config define: its name's and value's
+    /// bytes and lengths).
     DefineAdd,
-    /// `++sPrvDefine`.
-    DefineNext,
     /// `return WonGuard([&] { return sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser); });`.
     ReadMaster,
     /// `p->mInitError = sPrvComponentConfig->mConfigError`.
@@ -61,18 +55,6 @@ pub enum EeWonLobbyPrvOp {
     LogicMgrInit,
     /// `return WonGuard([&] { return PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }); });`.
     InitFuncRun,
-    /// `sPrvCrc = CRC16()`.
-    CrcNew,
-    /// `sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length())`.
-    CrcPutProductName,
-    /// `sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length())`.
-    CrcPutVersion,
-    /// `sPrvCrc.Get()` (a product id).
-    CrcGet,
-    /// `sPrvCrc.Reset()`.
-    CrcReset,
-    /// `sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length())`.
-    CrcPutLanVersion,
     /// `p->mChatCommandParser->InitCommands()`.
     ChatParserInitCommands,
     /// `sPrvTable = NULL`.
@@ -99,27 +81,20 @@ pub enum EeWonLobbyPrvOp {
     CommunitySet,
     /// `p->mAuthContext->SetCommunity(p->mLoginCommunity)`.
     AuthSetCommunity,
-    /// `p->mConfig->mCDKeyCheck`.
-    CdKeyCheck,
-    /// `p->mCDKey.SetProductString(p->mConfig->mProductName)`.
+    /// `p->mCDKey.SetProductString(PrvText(a))` (the config's product name: `a` its bytes and length).
     CdKeySetProduct,
     /// `p->mCDKey.LoadFromRegistry()`.
     CdKeyLoad,
     /// `p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey)`.
     AuthSetCdKey,
-    /// `p->mSuspended = false`.
-    SuspendedClear,
     /// `p->mCurGameType = (LobbyGameType)0`.
     CurGameTypeClear,
-    /// `p->mLobbyStatus = (LobbyStatus)0`.
-    LobbyStatusClear,
-    /// `p->mRunMode = (LobbyRunMode)1`.
-    RunModeOne,
     /// `p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"`.
     SysTouPath,
     /// `p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"`.
     GameTouPath,
-    /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39).
+    /// `p->mConfig = new LobbyConfig` (the game's: EELobbyConfig folded in, R6 WON lobby and network round 39); its
+    /// record (lobbyconf.rs), the lobby's from then on.
     ConfigNew,
     /// `p->mPersistentData = new LobbyPersistentData`.
     PersistentDataNew,
@@ -177,7 +152,7 @@ pub enum EeWonLobbyPrvOp {
     ResGuiInit,
     /// `sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>)`.
     AllocBrowserComponent,
-    /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>)`.
+    /// `sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<EeWonCfgKind::LobbyChat>,NewComponentOf<ChatCtrl>)`.
     AllocChatCtrl,
     /// `sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>)`.
     AllocCreateAccountCtrl,
@@ -185,11 +160,11 @@ pub enum EeWonLobbyPrvOp {
     AllocDirectConnectCtrl,
     /// `sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>)`.
     AllocFriendsListCtrl,
-    /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>)`.
+    /// `sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<EeWonCfgKind::LobbyGameBrowser>,NewComponentOf<GameBrowserCtrl>)`.
     AllocGameBrowserCtrl,
     /// `sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>)`.
     AllocGameStagingCtrl,
-    /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory)`.
+    /// `sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<EeWonCfgKind::LobbyGameUserList>,CtlFactory<Ck::UserList>)`.
     AllocGameUserListCtrl,
     /// `sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>)`.
     AllocInitFailedCtrl,
@@ -219,13 +194,13 @@ pub enum EeWonLobbyPrvOp {
     AllocQuickPlayCtrl,
     /// `sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>)`.
     AllocRoomCtrl,
-    /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>)`.
+    /// `sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<EeWonCfgKind::LobbyRoomLabel>,NewComponentOf<RoomLabelCtrl>)`.
     AllocRoomLabelCtrl,
-    /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>)`.
+    /// `sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<EeWonCfgKind::LobbyServerList>,NewComponentOf<ServerListCtrl>)`.
     AllocServerListCtrl,
     /// `sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>)`.
     AllocUpdateAccountCtrl,
-    /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory)`.
+    /// `sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<EeWonCfgKind::LobbyUserList>,CtlFactory<Ck::Users>)`.
     AllocUserListCtrl,
     /// `sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>)`.
     AllocAddFriendDialog,
@@ -235,7 +210,7 @@ pub enum EeWonLobbyPrvOp {
     AllocBadUserDialog,
     /// `sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>)`.
     AllocChooseNetworkAdapterDialog,
-    /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
+    /// `sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<EeWonCfgKind::LobbyCredits>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>)`.
     AllocCreditsDialog,
     /// `sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>)`.
     AllocCreateGameDialog,
@@ -257,9 +232,9 @@ pub enum EeWonLobbyPrvOp {
     AllocStatusDialog,
     /// `sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>)`.
     AllocTOUDialog,
-    /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>)`.
+    /// `sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<EeWonCfgKind::LobbyCrossPromotion>,NewComponentOf<CrossPromotionButton>)`.
     AllocCrossPromotionButton,
-    /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>)`.
+    /// `sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<EeWonCfgKind::LobbyImageText>,NewComponentOf<ImageTextButton>)`.
     AllocImageTextButton,
     /// `sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>)`.
     AllocMaxSplitterButton,
@@ -312,6 +287,12 @@ pub enum EeWonLobbyPrvField {
     LanProductId,
     /// `mHasSetHashFileList` (+0xa4; the login's file hashes were given, GetLobbyAuthContext's once: R6 WON round 39).
     HashFilesSet,
+    /// `mLobbyStatus` (+0x4c; LobbyRun's result, LobbyExit's status; 0 from the constructor: R6 WON lobby/net 40).
+    LobbyStatus,
+    /// `mRunMode` (+0x50; 1 from the constructor and LobbyRun).
+    RunMode,
+    /// `mSuspended` (+0x54; LobbySuspend's, cleared by LobbyRun, LobbyResume and LobbyStart).
+    Suspended,
 }
 
 /// The members of the lobby `owner` (the WONLobbyPrv they belong to). None: no lobby, when every read answers what
@@ -331,6 +312,10 @@ struct Vals {
     hash_files_set: bool,
     /// `mHashFileList` (+0xa8: the files the CRC check hashes; none: the running executable)
     hash_files: Vec<Vec<u8>>,
+    /// `mLobbyStatus`, `mRunMode`, `mSuspended` (the run state, lobbyrun.rs)
+    status: i32,
+    run_mode: i32,
+    suspended: bool,
 }
 
 impl Vals {
@@ -349,6 +334,9 @@ impl Vals {
             public_addr: EeWonIpAddr::default(),
             hash_files_set: false,
             hash_files: Vec::new(),
+            status: 0,
+            run_mode: 1,
+            suspended: false,
         }
     }
 }
@@ -381,6 +369,9 @@ pub extern "C" fn ee_won_lobbyprv_get(f: EeWonLobbyPrvField) -> i64 {
         F::ProductId => v.product_id as i64,
         F::LanProductId => v.lan_product_id as i64,
         F::HashFilesSet => v.hash_files_set as i64,
+        F::LobbyStatus => v.status as i64,
+        F::RunMode => v.run_mode as i64,
+        F::Suspended => v.suspended as i64,
     }
 }
 
@@ -403,6 +394,9 @@ pub extern "C" fn ee_won_lobbyprv_set(f: EeWonLobbyPrvField, x: i64) {
         F::ProductId => v.product_id = x as u16,
         F::LanProductId => v.lan_product_id = x as u16,
         F::HashFilesSet => v.hash_files_set = x != 0,
+        F::LobbyStatus => v.status = x as i32,
+        F::RunMode => v.run_mode = x as i32,
+        F::Suspended => v.suspended = x != 0,
     }
 }
 
@@ -520,7 +514,8 @@ pub extern "C" fn ee_won_lobbyprv_public_addr() -> *mut EeWonIpAddr {
 /// public address or the config's UseLocalIP (`use_local_ip`), else the local one; on the lobby port. An empty
 /// address without a lobby.
 #[no_mangle]
-pub extern "C" fn ee_won_lobbyprv_my_address(room_spec: i32, use_local_ip: bool) -> *mut EeWonIpAddr {
+pub extern "C" fn ee_won_lobbyprv_my_address(room_spec: i32) -> *mut EeWonIpAddr {
+    let use_local_ip = crate::lobbyconf::current().is_some_and(|c| c.use_local_ip);
     // (the lock is not held over the local address's look-up)
     let Some((public, port)) = vals().as_ref().map(|v| (v.public_addr.clone(), v.lobby_port)) else {
         return Box::into_raw(Box::default());
@@ -626,10 +621,13 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
         }
         _ => {}
     }
-    set(EeWonLobbyPrvField::LobbyPort, on(Op::ConfigLobbyPort) as i64);
+    let conf = crate::lobbyconf::current();
+    set(EeWonLobbyPrvField::LobbyPort, conf.map_or(0, |c| c.lobby_port) as i64);
     on(Op::ComponentConfigNew);
     on(Op::LobbyContainerNew);
-    on(Op::SetResourceFolder);
+    let text = |t: &[u8]| [t.as_ptr() as usize, t.len()];
+    let resource_directory = conf.map(|c| c.resource_directory.clone()).unwrap_or_default();
+    op(Op::SetResourceFolder, text(&resource_directory).as_ptr() as isize);
     // GetLobbyResourceConfigTable(input)
     op(Op::ResInit, input);
     on(Op::ResGuiInit);
@@ -637,10 +635,10 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
         on(a);
     }
     crate::srvlistctl::ee_won_lobbyctl_init_columns();
-    on(Op::DefinesBegin);
-    while on(Op::DefinesAtEnd) == 0 {
-        on(Op::DefineAdd);
-        on(Op::DefineNext);
+    for (name, value) in conf.map(|c| c.defines.clone()).unwrap_or_default() {
+        let [a, b] = text(&name);
+        let [c, d] = text(&value);
+        op(Op::DefineAdd, [a, b, c, d].as_ptr() as isize);
     }
     match on(Op::ReadMaster) {
         THROWN => return init_exit(op, true, THROWN),
@@ -661,14 +659,13 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
             return init_exit(op, true, r);
         }
     }
-    on(Op::CrcNew);
-    on(Op::CrcPutProductName);
-    on(Op::CrcPutVersion);
-    set(EeWonLobbyPrvField::ProductId, on(Op::CrcGet) as u16 as i64);
-    on(Op::CrcReset);
-    on(Op::CrcPutProductName);
-    on(Op::CrcPutLanVersion);
-    set(EeWonLobbyPrvField::LanProductId, on(Op::CrcGet) as u16 as i64);
+    // the product ids: CRC16 of the product name and the version (the LAN version)
+    let crc = |t: &[u8], r: u16| unsafe { ee_won_net::ffi::ee_won_crc16_put(r, t.as_ptr(), t.len()) };
+    let conf = crate::lobbyconf::current();
+    let ids = conf
+        .map_or((0, 0), |c| (crc(&c.version, crc(&c.product_name, 0)), crc(&c.lan_version, crc(&c.product_name, 0))));
+    set(EeWonLobbyPrvField::ProductId, ids.0 as i64);
+    set(EeWonLobbyPrvField::LanProductId, ids.1 as i64);
     on(Op::ChatParserInitCommands);
     init_exit(op, true, 1)
 }
@@ -676,10 +673,7 @@ fn init(input: isize, init_func: isize, op: &dyn Fn(Op, isize) -> isize) -> isiz
 /// The constructor's statements, in order.
 /// (the plain members' are [`Vals::new`]'s)
 const CONSTRUCT: &[Op] = &[
-    Op::SuspendedClear,
     Op::CurGameTypeClear,
-    Op::LobbyStatusClear,
-    Op::RunModeOne,
     Op::SysTouPath,
     Op::GameTouPath,
     Op::ConfigNew,
@@ -717,7 +711,10 @@ fn call(prv: usize, call: EeWonLobbyPrvCall, a: isize, b: isize, op: &dyn Fn(Op,
             // the plain members first (the original's constructor set them first)
             *vals() = Some(Vals::new(prv));
             for &o in CONSTRUCT {
-                on(o);
+                let r = on(o);
+                if o == Op::ConfigNew {
+                    crate::lobbyconf::ee_won_lobbyconf_set_current(r as *mut crate::lobbyconf::EeWonLobbyConf);
+                }
             }
             0
         }
@@ -742,10 +739,11 @@ fn call(prv: usize, call: EeWonLobbyPrvCall, a: isize, b: isize, op: &dyn Fn(Op,
             }
             op(Op::CommunitySet, a);
             on(Op::AuthSetCommunity);
-            if on(Op::CdKeyCheck) == 0 {
+            let Some(conf) = crate::lobbyconf::current().filter(|c| c.cd_key_check) else {
                 return 0;
-            }
-            on(Op::CdKeySetProduct);
+            };
+            let name = conf.product_name.clone();
+            op(Op::CdKeySetProduct, [name.as_ptr() as usize, name.len()].as_ptr() as isize);
             on(Op::CdKeyLoad);
             on(Op::AuthSetCdKey);
             0
@@ -774,7 +772,7 @@ pub unsafe extern "C" fn ee_won_lobbyprv_call(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::cell::RefCell;
 
@@ -789,15 +787,8 @@ mod tests {
     }
 
     fn ok(o: Op) -> isize {
-        matches!(
-            o,
-            Op::ParserOpenDefault
-                | Op::ParseTopLevel
-                | Op::ReadMaster
-                | Op::LogicMgrInit
-                | Op::InitFuncRun
-                | Op::DefinesAtEnd
-        ) as isize
+        matches!(o, Op::ParserOpenDefault | Op::ParseTopLevel | Op::ReadMaster | Op::LogicMgrInit | Op::InitFuncRun)
+            as isize
     }
 
     #[test]
@@ -820,7 +811,7 @@ mod tests {
     }
 
     /// the plain members are one process-wide state: the tests that make a lobby take turns
-    static LOBBY: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    pub(crate) static LOBBY: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn destroy_auth_and_the_constructor() {
@@ -828,9 +819,10 @@ mod tests {
         let (_, log) = run(EeWonLobbyPrvCall::Destroy, 0, 0, &|o| (o == Op::AuthIs) as isize);
         assert_eq!(log, ["LogicMgrKill 0", "UdpIs 0", "AuthIs 0", "AuthKill 0", "AuthClear 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::InitAuth, 7, 0, &|_| 0);
-        assert_eq!(log, ["CommunitySet 7", "AuthSetCommunity 0", "CdKeyCheck 0"]);
+        // no config: no CD key check (lobbyconf.rs)
+        assert_eq!(log, ["CommunitySet 7", "AuthSetCommunity 0"]);
         let (_, log) = run(EeWonLobbyPrvCall::Construct, 0, 0, &|_| 0);
-        assert_eq!((log.len(), log[0].as_str(), log[31].as_str()), (32, "SuspendedClear 0", "AddPingLogic 0"));
+        assert_eq!((log.len(), log[0].as_str(), log[28].as_str()), (29, "CurGameTypeClear 0", "AddPingLogic 0"));
     }
 
     #[test]
@@ -859,7 +851,7 @@ mod tests {
         assert_eq!((ee_won_lobbyprv_get(F::BehindFirewall), ee_won_lobbyprv_get(F::FirewallTestDone)), (1, 0));
         // the address: the local one on the lobby port without a valid public address
         // SAFETY: a value made here
-        let a = unsafe { Box::from_raw(ee_won_lobbyprv_my_address(0, false)) };
+        let a = unsafe { Box::from_raw(ee_won_lobbyprv_my_address(0)) };
         assert_eq!(a.port(), 8888);
         // another lobby's end leaves this one's members; this one's end drops them
         ee_won_lobbyprv_drop(other);

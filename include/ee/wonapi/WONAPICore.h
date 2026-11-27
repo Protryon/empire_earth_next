@@ -2,10 +2,6 @@
 #define EE_WONAPI_WONAPICORE_H
 #include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "ee/wonapi/WONRouting.h"
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/apicore.h"
-#include "rust/won_net/hostnative.h"
-#include "rust/won_net/sockthread.h"
 namespace WONAPI {
 // WON API core singleton (0xd0 bytes in the original: 2f2750..2f2f3f): socket, timer and pump threads;
 // WONAPICoreEx adds the setters. A Rust object since R6 WONLobby round 12 (rust/crates/ee_won_net/src/apicore.rs

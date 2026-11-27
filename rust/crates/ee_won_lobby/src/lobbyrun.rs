@@ -1,6 +1,7 @@
 //! Running the lobby (LobbyRunState.cpp, R6 WON round 32): LobbyStart, LobbyRun's modal message loop and exit
 //! status, LobbyExit, LobbySuspend and LobbyResume in Rust over one-statement C++ ops (`RunHost` in
-//! LobbyRunState.cpp), in the original's order. `gLobbyData` and its members stay the C++ lobby's.
+//! LobbyRunState.cpp), in the original's order. `gLobbyData` and its objects stay the C++ lobby's; its run state
+//! (`mLobbyStatus`, `mRunMode`, `mSuspended`) is lobbyprv.rs's since R6 WON lobby/net round 40.
 //!
 //! Reach: the LAN game opens, runs, suspends (the game starts), resumes and exits the lobby; LobbyRun's failure
 //! dialog branch (a lobby whose init failed) runs only in the unit tests.
@@ -22,16 +23,6 @@ pub enum EeWonRunOp {
     WindowRunFailureDialog,
     /// `gLobbyData.get() != NULL`.
     HasData,
-    /// `gLobbyData->mLobbyStatus = a`.
-    SetStatus,
-    /// `gLobbyData->mLobbyStatus`.
-    Status,
-    /// `gLobbyData->mRunMode = a`.
-    SetRunMode,
-    /// `gLobbyData->mRunMode`.
-    RunMode,
-    /// `gLobbyData->mSuspended = a != 0`.
-    SetSuspended,
     /// `GetLobbyWindow()`.
     LobbyWindow,
     /// `((WindowManager*)a)->MessageLoop()`.
@@ -76,6 +67,7 @@ pub enum EeWonRunCall {
     Start,
 }
 
+use crate::lobbyprv::{ee_won_lobbyprv_get as get, ee_won_lobbyprv_set as set, EeWonLobbyPrvField as F};
 use EeWonRunOp as Op;
 
 /// The lobby events the functions broadcast (WONLobbyEvents.h's ids).
@@ -110,9 +102,9 @@ fn call(call: EeWonRunCall, a: isize, op: &dyn Fn(Op, isize) -> isize) -> isize 
             if on(Op::HasData) == 0 {
                 return 0;
             }
-            op(Op::SetStatus, 0);
-            op(Op::SetRunMode, 1);
-            op(Op::SetSuspended, 0);
+            set(F::LobbyStatus, 0);
+            set(F::RunMode, 1);
+            set(F::Suspended, 0);
             let manager = on(Op::LobbyWindow);
             if manager == 0 {
                 return 0;
@@ -121,14 +113,14 @@ fn call(call: EeWonRunCall, a: isize, op: &dyn Fn(Op, isize) -> isize) -> isize 
             if on(Op::HasData) == 0 {
                 return 0;
             }
-            on(Op::Status)
+            get(F::LobbyStatus) as i32 as isize
         }
         EeWonRunCall::Exit => {
             if on(Op::HasData) == 0 {
                 return 0;
             }
-            op(Op::SetStatus, a);
-            let mode = on(Op::RunMode);
+            set(F::LobbyStatus, a as i32 as i64);
+            let mode = get(F::RunMode);
             op(Op::BroadcastLobbyEvent, EVENT_LOBBY_EXIT);
             if mode != 0 {
                 let manager = on(Op::LobbyWindow);
@@ -142,7 +134,7 @@ fn call(call: EeWonRunCall, a: isize, op: &dyn Fn(Op, isize) -> isize) -> isize 
             if on(Op::HasData) == 0 {
                 return 0;
             }
-            op(Op::SetSuspended, 1);
+            set(F::Suspended, 1);
             on(Op::MusicStop);
             on(Op::LogonSoundStop);
             if on(Op::PingsToDo) as i32 > 0 {
@@ -156,7 +148,7 @@ fn call(call: EeWonRunCall, a: isize, op: &dyn Fn(Op, isize) -> isize) -> isize 
             if on(Op::HasData) == 0 {
                 return 0;
             }
-            op(Op::SetSuspended, 0);
+            set(F::Suspended, 0);
             if on(Op::MusicOn) != 0 {
                 on(Op::MusicResume);
             }
@@ -167,7 +159,7 @@ fn call(call: EeWonRunCall, a: isize, op: &dyn Fn(Op, isize) -> isize) -> isize 
             if on(Op::HasData) == 0 {
                 return 0;
             }
-            op(Op::SetSuspended, 0);
+            set(F::Suspended, 0);
             on(Op::InitLogicInit);
             0
         }
@@ -199,23 +191,21 @@ mod tests {
             log.borrow_mut().push(format!("{o:?} {a}"));
             answer(o)
         };
+        // the run state is lobbyprv.rs's process-wide state: wait out its tests that make a lobby
+        let _turn = crate::lobbyprv::tests::LOBBY.lock().unwrap_or_else(|e| e.into_inner());
         let r = call(c, a, &op);
         (r, log.into_inner())
     }
 
     #[test]
     fn the_run_loop_and_its_status() {
-        let (r, log) = run(EeWonRunCall::Run, 0, &|o| match o {
+        // (the run state is lobbyprv.rs's: without a lobby there its reads answer 0)
+        let (_, log) = run(EeWonRunCall::Run, 0, &|o| match o {
             Op::HasData => 1,
             Op::LobbyWindow => 0x40,
-            Op::Status => 7,
             _ => 0,
         });
-        assert_eq!(r, 7);
-        assert_eq!(
-            log[1..7],
-            ["HasData 0", "SetStatus 0", "SetRunMode 1", "SetSuspended 0", "LobbyWindow 0", "MessageLoop 64"]
-        );
+        assert_eq!(log[1..], ["HasData 0", "LobbyWindow 0", "MessageLoop 64", "HasData 0"]);
         // the failed init's dialog, run only when its window shows
         let (r, log) = run(EeWonRunCall::Run, 0, &|o| {
             matches!(o, Op::InitFailedWithDialog | Op::FailureWindow | Op::WindowVisible) as isize
@@ -229,27 +219,18 @@ mod tests {
 
     #[test]
     fn exit_suspend_resume_start() {
-        let (_, log) = run(EeWonRunCall::Exit, 3, &|o| match o {
-            Op::HasData | Op::RunMode => 1,
-            Op::LobbyWindow => 0x40,
-            _ => 0,
-        });
-        assert_eq!(
-            log[1..],
-            ["SetStatus 3", "RunMode 0", "BroadcastLobbyEvent 100013", "LobbyWindow 0", "ExitMessageLoop 64"]
-        );
         let (_, log) = run(EeWonRunCall::Exit, 3, &|o| (o == Op::HasData) as isize);
-        assert_eq!(log.len(), 4);
+        assert_eq!(log[1..], ["BroadcastLobbyEvent 100013"]);
         let (_, log) = run(EeWonRunCall::Suspend, 0, &|o| match o {
             Op::HasData => 1,
             Op::PingsToDo => 2,
             _ => 0,
         });
-        assert_eq!(log[5..], ["KillPings 0", "BroadcastLobbyEvent 100059", "NetSuspend 0"]);
+        assert_eq!(log[4..], ["KillPings 0", "BroadcastLobbyEvent 100059", "NetSuspend 0"]);
         let (_, log) = run(EeWonRunCall::Resume, 0, &|o| matches!(o, Op::HasData | Op::MusicOn) as isize);
-        assert_eq!(log[1..], ["SetSuspended 0", "MusicOn 0", "MusicResume 0", "NetResume 0"]);
+        assert_eq!(log[1..], ["MusicOn 0", "MusicResume 0", "NetResume 0"]);
         let (_, log) = run(EeWonRunCall::Start, 0, &|o| (o == Op::HasData) as isize);
-        assert_eq!(log[1..], ["SetSuspended 0", "InitLogicInit 0"]);
+        assert_eq!(log[1..], ["InitLogicInit 0"]);
         assert_eq!(run(EeWonRunCall::Start, 0, &|_| 0).1, ["HasData 0"]);
     }
 }

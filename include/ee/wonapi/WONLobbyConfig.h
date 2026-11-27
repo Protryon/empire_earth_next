@@ -6,8 +6,6 @@
 #include "rust/won_net/regkey.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include <vector>
-#include "ee/wonapi/WONStringCompare.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 namespace WONAPI {
@@ -55,7 +53,6 @@ class LobbyPersistentData;
 class LobbyContainer;
 class RustLogic; class WindowEventBase;
 class ChatCommandParser;
-enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); LobbyGameType: WONLobbyGUI.h
 // the lobby's private state (0x118 bytes; constructor 0x7628c0, destructor 0x7630a0; created by 0x761fb0).
 // This revision has no BigFileList after mInitError (later SDKs add one). R6 WON lobby and network round 38: the
 // plain members (the version status, the terms-of-use times, the product ids, the lobby port, the firewall flags,
@@ -81,9 +78,7 @@ public:
     LobbyLogicMgr mLogicMgr; // 0x34..0x40
     SmartPtr<UDPManager> mUDPManager; // 0x40
     SmartPtr<WindowEventBase> mTimerEvent; // 0x44
-    LobbyStatus mLobbyStatus; // 0x4c
-    LobbyRunMode mRunMode; // 0x50
-    bool mSuspended; // 0x54
+    // (mLobbyStatus +0x4c, mRunMode +0x50 and mSuspended +0x54 are lobbyprv.rs's since R6 WON lobby/net round 40)
     SmartPtr<ServerContext> mAccountServers; // 0x58
     SmartPtr<ServerContext> mAuthServers; // 0x5c
     SmartPtr<ServerContext> mDirServers; // 0x60
@@ -100,6 +95,5 @@ public:
 };
 extern SmartPtr<WONLobbyPrv> gLobbyData;     // 0x96630c (an intrusive SmartPtr)
 // LobbyConfig::mDefaultFileName is 0x966310; declared in WONLobbyGUI.h.
-extern bool gLobbyUseLocalIP;                // 0x96634d; a config key writes it, nothing reads it
 }
 #endif

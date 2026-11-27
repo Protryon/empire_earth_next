@@ -16,7 +16,6 @@
 #include <string.h>
 #include <wchar.h>
 #include "ee/wonapi/WONConfigObject.h"
-#include "ee/wonapi/WONStringCompare.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 
 namespace WONAPI {

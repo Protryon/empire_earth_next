@@ -1205,6 +1205,9 @@ pub struct EeWonCompCfg {
     cur_res: Cell<*mut c_void>,
     parser: Cell<isize>,
     sp: Cell<*mut EeWonCfgStringParser>,
+    /// a kind's own two words (the lobby game list's header and column count: ServerListCtrlConfig's mHeader and
+    /// mNumColumns), zero at first
+    slots: std::cell::UnsafeCell<[isize; 2]>,
 }
 
 /// The integer expression's source: this config's parser and its operands.
@@ -2182,9 +2185,20 @@ pub extern "C" fn ee_won_cc_new(this_: *mut c_void, host: EeWonCcHost) -> *mut E
         cur_res: Cell::new(std::ptr::null_mut()),
         parser: Cell::new(0),
         sp: Cell::new(std::ptr::null_mut()),
+        slots: std::cell::UnsafeCell::new([0; 2]),
     }));
     register(&CONFIGS, this_, o as usize);
     o
+}
+
+/// The config's two words of its kind's own (see `EeWonCompCfg::slots`).
+///
+/// # Safety
+/// `o` came from `ee_won_cc_new` and lives while the words are used.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_cc_slots(o: *mut EeWonCompCfg) -> *mut isize {
+    // SAFETY: the contract
+    unsafe { (*o).slots.get() as *mut isize }
 }
 
 /// The config's object freed: the current group given back, then the child configs (the members' order).

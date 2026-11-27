@@ -167,8 +167,11 @@ Background ComponentConfig::ReadBackground() { return CC_GET(Background, CcK::Re
 SmartPtr<Font> ComponentConfig::ReadFont() { return CcAdopt(CC_GET(Font*, CcK::ReadFont)); }
 SmartPtr<Image> ComponentConfig::ReadImage(bool inRaw) { return CcAdopt(CC_GET(Image*, CcK::ReadImage, inRaw)); }
 SmartPtr<RawImage> ComponentConfig::GetRawImageFromStr(const std::string& s) { return (RawImage*)CcAdopt(CC_GET(Image*, CcK::ImageFromStr, CC_P(s), 1)).get(); }
-// the kind's own named values (the WON frame's paddings: cfgkind.rs), else the component's edges (compcfg.rs)
-bool ComponentConfig::GetNamedValue(const std::string& k, int& v) { return CC_GET(bool, CcK::GetNamedValue, CC_P(k), (intptr_t)&v); }
+// the kind's own named values (the WON frame's paddings: cfgkind.rs), else the component's edges (compcfg.rs); the
+// lobby game list's NUMCOLUMNS first (its reader, LobbyNetCtrlHost.cpp, asks CfgOwnNamed for the rest)
+bool LobbyCfgNamed(ComponentConfig*, const std::string&, int&);
+bool CfgOwnNamed(ComponentConfig* c, const std::string& k, int& v) { return CcGet<bool>(c->mCfg, CcK::GetNamedValue, CC_P(k), (intptr_t)&v); }
+bool ComponentConfig::GetNamedValue(const std::string& k, int& v) { return this->mKind == EeWonCfgKind::LobbyServerList ? LobbyCfgNamed(this, k, v) : CfgOwnNamed(this, k, v); }
 // the kind's predefined children (cfgkind.rs): a new config of the child's kind and the part
 bool ComponentConfig::GetPredefinedComponent(const std::string& n, ComponentConfig*& config, Component*& component)
 { return CC_GET(bool, CcK::Predefined, CcArg(CcKey(n)), (intptr_t)&config, (intptr_t)&component); }

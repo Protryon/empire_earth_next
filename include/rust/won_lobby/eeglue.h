@@ -441,15 +441,15 @@ enum class EeWonEeGlueOp : uint32_t {
   FactoryPlayer,
   /// `sEELobbyResources = EELobbyResource_Init(NULL)`.
   ResInit,
-  /// `sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl)`.
+  /// `sEELobbyResources->AddAllocator("GameOptionsCtrl", NewConfigOf<ContainerConfig>, EELobbyNewCtrl<GameOptions>)`.
   ResAllocGameOptions,
-  /// `.. ("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl)`.
+  /// `.. ("PlayerOptionsCtrl", NewConfigOf<ContainerConfig>, EELobbyNewCtrl<PlayerOptions>)`.
   ResAllocPlayerOptions,
-  /// `.. ("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton)`.
+  /// `.. ("EELobbyColorButton", NewConfigOf<EeWonCfgKind::Button>, NewComponentOf<EELobbyColorButton>)`.
   ResAllocColorButton,
-  /// `.. ("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog)`.
+  /// `.. ("EELobbyFileDialog", NewConfigOf<EeWonCfgKind::Dialog>, NewLobbyDialog<File>)`.
   ResAllocFileDialog,
-  /// `.. ("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog)`.
+  /// `.. ("EELobbyConnectDialog", NewConfigOf<EeWonCfgKind::Dialog>, NewLobbyDialog<Connect>)`.
   ResAllocConnectDialog,
   /// `sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(..))`.
   ResAddMusic,

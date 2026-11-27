@@ -33,7 +33,11 @@ ptrdiff_t ee_won_netops_xfer(EeWonEeXferOp op, ptrdiff_t a, bool *handled);
 ///
 /// # Safety
 /// As `ee_won_netops_lobby`.
-ptrdiff_t ee_won_netops_route(EeWonRouteLogicOp op, ptrdiff_t a, ptrdiff_t b, bool *handled);
+ptrdiff_t ee_won_netops_route(EeWonRouteLogicOp op,
+                              ptrdiff_t a,
+                              ptrdiff_t b,
+                              ptrdiff_t c,
+                              bool *handled);
 
 /// A take op's sink for a driver (the `Vec<u8>` the logics pass): a new one, its bytes (copied to `out` when it
 /// holds `capacity`; the length either way), freed.

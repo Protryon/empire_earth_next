@@ -5,14 +5,7 @@
 // is their statements on the C++ targets.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <stddef.h>
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 namespace WONAPI {
 static_assert(sizeof(StringParser) == sizeof(EeWonCfgStringParser), "the Rust view of a StringParser");

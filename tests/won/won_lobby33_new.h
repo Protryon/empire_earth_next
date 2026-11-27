@@ -9,8 +9,8 @@ using namespace L33World;
 static ConfigParser* sPrvParser;
 static SmartPtr<ContainerConfig> sPrvComponentConfig;
 static ResourceConfigTablePtr sPrvTable;
-static std::map<std::string, std::string, StringLessNoCase>::iterator sPrvDefine;
-static CRC16 sPrvCrc;
+// a text the Rust gives (its bytes and length)
+static std::string PrvText(intptr_t a) { const uintptr_t* t = reinterpret_cast<const uintptr_t*>(a); return std::string((const char*)t[0], (size_t)t[1]); }
 // Init's try: a config error is the init error (0); 1 when f returned
 template <class F> static intptr_t PrvConfigTry(WONLobbyPrv* p, F f)
 {
@@ -35,24 +35,14 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
     case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
     case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
-    case Op::ConfigLobbyPort: return p->mConfig->mLobbyPort;
     case Op::ComponentConfigNew: sPrvComponentConfig = new ContainerConfig; return 0;
     case Op::LobbyContainerNew: p->mLobbyContainer = new LobbyContainer; return 0;
-    case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory); return 0;
-    case Op::DefinesBegin: sPrvDefine = p->mConfig->mDefines.begin(); return 0;
-    case Op::DefinesAtEnd: return (sPrvDefine == p->mConfig->mDefines.end()) ? 1 : 0;
-    case Op::DefineAdd: sPrvParser->AddDefine(sPrvDefine->first, sPrvDefine->second, false); return 0;
-    case Op::DefineNext: ++sPrvDefine; return 0;
+    case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + PrvText(a)); return 0;
+    case Op::DefineAdd: sPrvParser->AddDefine(PrvText(a), PrvText(a + 2 * sizeof(uintptr_t)), false); return 0;
     case Op::ReadMaster: return WON_GUARDED(sPrvComponentConfig->ReadConfig_Unsafe(p->mLobbyContainer.get(), "_LobbyMaster.cfg", sPrvTable.get(), sPrvParser));
     case Op::ErrorFromConfig: p->mInitError = sPrvComponentConfig->mConfigError; return 0;
     case Op::LogicMgrInit: return WON_GUARDED(PrvConfigTry(p, [&] { p->mLogicMgr.Init(sPrvComponentConfig.get()); }));
     case Op::InitFuncRun: return WON_GUARDED(PrvConfigTry(p, [&] { reinterpret_cast<void (*)(ComponentConfig*)>(a)(sPrvComponentConfig.get()); }));
-    case Op::CrcNew: sPrvCrc = CRC16(); return 0;
-    case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
-    case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;
-    case Op::CrcGet: return sPrvCrc.Get();
-    case Op::CrcReset: sPrvCrc.Reset(); return 0;
-    case Op::CrcPutLanVersion: sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length()); return 0;
     case Op::ChatParserInitCommands: p->mChatCommandParser->InitCommands(); return 0;
     case Op::ResDone: sPrvTable = NULL; return 0;
     case Op::ComponentConfigDone: sPrvComponentConfig = NULL; return 0;
@@ -66,14 +56,10 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AuthClear: p->mAuthContext = NULL; return 0;
     case Op::CommunitySet: p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a); return 0;
     case Op::AuthSetCommunity: p->mAuthContext->SetCommunity(p->mLoginCommunity); return 0;
-    case Op::CdKeyCheck: return (p->mConfig->mCDKeyCheck) ? 1 : 0;
-    case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
+    case Op::CdKeySetProduct: p->mCDKey.SetProductString(PrvText(a)); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
-    case Op::SuspendedClear: p->mSuspended = false; return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
-    case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
-    case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
     case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;
@@ -105,13 +91,13 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::ResInit: sPrvTable = LobbyResource_Init(reinterpret_cast<ResourceConfigTable*>(a)); return 0;
     case Op::ResGuiInit: WONGUIConfig_Init(sPrvTable.get()); return 0;
     case Op::AllocBrowserComponent: sPrvTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>); return 0;
-    case Op::AllocChatCtrl: sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>); return 0;
+    case Op::AllocChatCtrl: sPrvTable->AddAllocator("ChatCtrl",NewConfigOf<EeWonCfgKind::LobbyChat>,NewComponentOf<ChatCtrl>); return 0;
     case Op::AllocCreateAccountCtrl: sPrvTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>); return 0;
     case Op::AllocDirectConnectCtrl: sPrvTable->AddAllocator("DirectConnectCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::DirectConnect>); return 0;
     case Op::AllocFriendsListCtrl: sPrvTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>); return 0;
-    case Op::AllocGameBrowserCtrl: sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>); return 0;
+    case Op::AllocGameBrowserCtrl: sPrvTable->AddAllocator("GameBrowserCtrl",NewConfigOf<EeWonCfgKind::LobbyGameBrowser>,NewComponentOf<GameBrowserCtrl>); return 0;
     case Op::AllocGameStagingCtrl: sPrvTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>); return 0;
-    case Op::AllocGameUserListCtrl: sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory); return 0;
+    case Op::AllocGameUserListCtrl: sPrvTable->AddAllocator("GameUserListCtrl",NewConfigOf<EeWonCfgKind::LobbyGameUserList>,CtlFactory<Ck::UserList>); return 0;
     case Op::AllocInitFailedCtrl: sPrvTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>); return 0;
     case Op::AllocInternetOptionsCtrl: sPrvTable->AddAllocator("InternetOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::NetOptions>); return 0;
     case Op::AllocInternetScreen: sPrvTable->AddAllocator("InternetScreen",NewConfigOf<ContainerConfig>,ScreenFactory<false>); return 0;
@@ -126,15 +112,15 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AllocMOTDCtrl: sPrvTable->AddAllocator("MOTDCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<MOTDCtrl>); return 0;
     case Op::AllocQuickPlayCtrl: sPrvTable->AddAllocator("QuickPlayCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::QuickPlay>); return 0;
     case Op::AllocRoomCtrl: sPrvTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>); return 0;
-    case Op::AllocRoomLabelCtrl: sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>); return 0;
-    case Op::AllocServerListCtrl: sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>); return 0;
+    case Op::AllocRoomLabelCtrl: sPrvTable->AddAllocator("RoomLabelCtrl",NewConfigOf<EeWonCfgKind::LobbyRoomLabel>,NewComponentOf<RoomLabelCtrl>); return 0;
+    case Op::AllocServerListCtrl: sPrvTable->AddAllocator("ServerListCtrl",NewConfigOf<EeWonCfgKind::LobbyServerList>,NewComponentOf<ServerListCtrl>); return 0;
     case Op::AllocUpdateAccountCtrl: sPrvTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>); return 0;
-    case Op::AllocUserListCtrl: sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory); return 0;
+    case Op::AllocUserListCtrl: sPrvTable->AddAllocator("UserListCtrl",NewConfigOf<EeWonCfgKind::LobbyUserList>,CtlFactory<Ck::Users>); return 0;
     case Op::AllocAddFriendDialog: sPrvTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>); return 0;
     case Op::AllocAdminActionDialog: sPrvTable->AddAllocator("AdminActionDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>); return 0;
     case Op::AllocBadUserDialog: sPrvTable->AddAllocator("BadUserDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>); return 0;
     case Op::AllocChooseNetworkAdapterDialog: sPrvTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>); return 0;
-    case Op::AllocCreditsDialog: sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>); return 0;
+    case Op::AllocCreditsDialog: sPrvTable->AddAllocator("CreditsDialog",NewConfigOf<EeWonCfgKind::LobbyCredits>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>); return 0;
     case Op::AllocCreateGameDialog: sPrvTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>); return 0;
     case Op::AllocCreateRoomDialog: sPrvTable->AddAllocator("CreateRoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>); return 0;
     case Op::AllocDirectConnectDialog: sPrvTable->AddAllocator("DirectConnectDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>); return 0;
@@ -145,8 +131,8 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AllocRoomDialog: sPrvTable->AddAllocator("RoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Room>); return 0;
     case Op::AllocStatusDialog: sPrvTable->AddAllocator("StatusDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Status>); return 0;
     case Op::AllocTOUDialog: sPrvTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>); return 0;
-    case Op::AllocCrossPromotionButton: sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>); return 0;
-    case Op::AllocImageTextButton: sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>); return 0;
+    case Op::AllocCrossPromotionButton: sPrvTable->AddAllocator("CrossPromotionButton",NewConfigOf<EeWonCfgKind::LobbyCrossPromotion>,NewComponentOf<CrossPromotionButton>); return 0;
+    case Op::AllocImageTextButton: sPrvTable->AddAllocator("ImageTextButton",NewConfigOf<EeWonCfgKind::LobbyImageText>,NewComponentOf<ImageTextButton>); return 0;
     case Op::AllocMaxSplitterButton: sPrvTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>); return 0;
     case Op::AllocGameOptionsCtrl: sPrvTable->AddAllocator("GameOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>); return 0;
     case Op::AllocPlayerOptionsCtrl: sPrvTable->AddAllocator("PlayerOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>); return 0;
@@ -288,53 +274,6 @@ static intptr_t ChatLinkHost(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
     return 0;
 }
 
-static RegKey* sConfRegistry;
-static DWORD sConfRegistryValue;
-static std::string sConfName, sConfValue;
-
-static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t cc)
-{
-    typedef EeWonLobbyConfOp Op;
-    LobbyConfig* c = static_cast<LobbyConfig*>(inConfig);
-    switch (inOp) {
-    case Op::KeyDirServer: c->KeyAdd("DirServer", c->mDirServers, NULL, true); return 0;
-    case Op::KeyRoomDirServer: c->KeyAdd("RoomDirServer", c->mRoomDirServers, NULL, true); return 0;
-    case Op::KeyAuthServers: c->KeyAdd("AuthServers", c->mAuthServers, NULL, true); return 0;
-    case Op::KeyProductName: c->KeyAdd("ProductName", c->mProductName, NULL); return 0;
-    case Op::KeyProductDirectory: c->KeyAdd("ProductDirectory", c->mProductDirectory, NULL); return 0;
-    case Op::KeyResourceDirectory: c->KeyAdd("ResourceDirectory", c->mResourceDirectory, NULL); return 0;
-    case Op::KeyVersion: c->KeyAdd("Version", c->mVersion, NULL); return 0;
-    case Op::KeyLanVersion: c->KeyAdd("LanVersion", c->mLanVersion, NULL); return 0;
-    case Op::KeyLanguage: c->KeyAdd("Language", c->mLanguage, ""); return 0;
-    case Op::KeyCrcCheck: c->KeyAdd("CRCCheck", c->mCRCCheck, true); return 0;
-    case Op::KeyCdKeyCheck: c->KeyAdd("CDKeyCheck", c->mCDKeyCheck, true); return 0;
-    case Op::KeyPublic: c->KeyAdd("Public", c->mPublic, false); return 0;
-    case Op::KeyLanBroadcastPort: c->KeyAdd("LanBroadcastPort", c->mLanBroadcastPort, 8585); return 0;
-    case Op::KeyNoPingInProgress: c->KeyAdd("NoPingInProgress", c->mNoPingInProgress, true); return 0;
-    case Op::KeyLobbyPort: c->KeyAdd("LobbyPort", c->mLobbyPort, 8888); return 0;
-    case Op::KeyCheckForInternet: c->KeyAdd("CheckForInternet", c->mCheckForInternet, true); return 0;
-    case Op::KeyPingCeiling: c->KeyAdd("PingCeiling", c->mPingCeiling, 1000); return 0;
-    case Op::KeyAllowDuplicateNames: c->KeyAdd("AllowDuplicateNames", c->mAllowDuplicateNames, true); return 0;
-    case Op::KeyAppendNumberToDefaultLanName: c->KeyAdd("AppendNumberToDefaultLanName", c->mAppendNumberToDefaultLanName, true); return 0;
-    case Op::KeyAllowJoinGameWithoutPing: c->KeyAdd("AllowJoinGameWithoutPing", c->mAllowJoinGameWithoutPing, true); return 0;
-    case Op::RegistryOpen: sConfRegistry = new RegKey(2, "SOFTWARE\\Sierra\\WONLobby", false, true); return 0;
-    case Op::RegistryValueClear: sConfRegistryValue = 0; return 0;
-    case Op::RegistryQuery: return (intptr_t)(sConfRegistry->QueryDWORD("UseLocalIP", sConfRegistryValue));
-    case Op::RegistryValue: return (intptr_t)(sConfRegistryValue);
-    case Op::SetUseLocalIp: c->mUseLocalIP = a != 0; return 0;
-    case Op::KeyUseLocalIp: c->KeyAdd("UseLocalIP", gLobbyUseLocalIP, a != 0); return 0;
-    case Op::RegistryClose: delete sConfRegistry; return 0;
-    case Op::KeyIsLobbyDefine: return (*(const std::string*)a == "LOBBYDEFINE") ? 1 : 0;
-    case Op::DefineLocalsClear: sConfName = sConfValue = std::string(); return 0;
-    case Op::DefineReadName: ((StringParser*)a)->ReadString(sConfName, true); return 0;
-    case Op::DefineReadValue: ((StringParser*)a)->ReadString(sConfValue, false); return 0;
-    case Op::DefineNameEmpty: return (sConfName.empty()) ? 1 : 0;
-    case Op::DefineStore: c->mDefines[sConfName] = sConfValue; return 0;
-    case Op::BaseHandleValue: return WON_GUARDED(c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc));
-    }
-    return 0;
-}
-
 // ---- the config readers: their bodies are lobbycfgrd.rs's (R6 WON round 33) over these statements
 
 static intptr_t CfgAddColumn(ServerListCtrl* inList, const std::string& inName) { return inList->Cfg(EeWonLobbyCtlCfg::AddColumn, (intptr_t)inName.data(), (intptr_t)inName.size()); }
@@ -363,17 +302,13 @@ static intptr_t CfgRdHostNet(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, in
     ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
     ChatCtrlConfig* cc_ = static_cast<ChatCtrlConfig*>(c);
     RoomLabelCtrlConfig* rl = static_cast<RoomLabelCtrlConfig*>(c);
-    UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
     ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
     switch (inOp) {
-    case Op::ChatBase: return WON_GUARDED(cc_->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::Base: return WON_GUARDED(c->ComponentConfig::Virtual24(*(const std::string*)a)); // the base kind's walk (round 40)
     case Op::ChatSetField: cc_->mChatCtrl->SetField((int)a, b); return 0;
-    case Op::RoomBase: return WON_GUARDED(rl->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::RoomSetPrefixRead: return WON_GUARDED_V(rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))));
     case Op::RoomSetField: rl->mRoomLabel->SetField((int)a, b); return 0;
     case Op::RoomSetFieldBoolRead: return WON_GUARDED_V(rl->mRoomLabel->SetField((int)a, c->ReadBool()));
-    case Op::UserListBase: return WON_GUARDED(ul->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::ServerBase: return WON_GUARDED(sl->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::ServerNamedBase: return WON_GUARDED(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b));
     case Op::ServerCfg: return (intptr_t)(sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b));
     case Op::ServerPushColumn: return (intptr_t)(sl->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
@@ -399,14 +334,12 @@ static intptr_t CfgRdHostCtl(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, in
     typedef EeWonLobbyCfgRdOp Op;
     ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
     GameBrowserCtrlConfig* gb = static_cast<GameBrowserCtrlConfig*>(c);
-    GameUserListCtrlConfig* gu = static_cast<GameUserListCtrlConfig*>(c);
     switch (inOp) {
-    case Op::BrowserBase: return WON_GUARDED(gb->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::Base: return WON_GUARDED(c->ComponentConfig::Virtual24(*(const std::string*)a)); // the base kind's walk (round 40)
     case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
     case Op::BrowserPathIsFile: return WON_GUARDED(URL(sCfgRdPath).GetType() == URLType_File);
     case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
     case Op::BrowserSetHome: return WON_GUARDED_V(gb->mBrowser->SetHomeLocation(sCfgRdPath));
-    case Op::GameUserListBase: return WON_GUARDED(gu->ContainerConfig::Virtual24(*(const std::string*)a));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
 }
@@ -419,10 +352,9 @@ static intptr_t CfgRdHostCross(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, 
     CrossPromotionButtonConfig* cp = static_cast<CrossPromotionButtonConfig*>(c);
     ImageTextButtonConfig* it = static_cast<ImageTextButtonConfig*>(c);
     switch (inOp) {
-    case Op::CrossBase: return WON_GUARDED(cp->ComponentConfig::Virtual24(*(const std::string*)a));
+    case Op::Base: return WON_GUARDED(c->ComponentConfig::Virtual24(*(const std::string*)a)); // the base kind's walk (round 40)
     case Op::CrossDefaultImageRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)));
     case Op::CrossDefaultBrowseRead: return WON_GUARDED_V(cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)));
-    case Op::ImageTextBase: return WON_GUARDED(it->ComponentConfig::Virtual24(*(const std::string*)a));
     case Op::ImageTextFontRead: return WON_GUARDED_V(it->mImageTextButton->mFont = c->ReadFont());
     case Op::ImageTextTextRead: return WON_GUARDED_V(it->mImageTextButton->mText = c->ReadString(false));
     case Op::ImageTextBrowseRead: return WON_GUARDED_V(it->mImageTextButton->mBrowse = c->ReadString(false));
@@ -438,7 +370,7 @@ static intptr_t CfgRdHostCredits(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a
     ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
     CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
     switch (inOp) {
-    case Op::CreditsBase: return WON_GUARDED(cr->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::Base: return WON_GUARDED(c->ComponentConfig::Virtual24(*(const std::string*)a)); // the base kind's walk (round 40)
     case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
     default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }

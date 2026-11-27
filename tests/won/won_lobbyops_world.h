@@ -258,7 +258,8 @@ static void LobbyNetSetGameInProgress(bool b) { Log("NetSetGameInProgress " + N(
 static void LobbyNetAdvertiseGame() { Log("NetAdvertiseGame"); }
 static void LobbyPingGame(LobbyGame* g, bool b) { Log("PingGame " + Id(g) + " " + N(b)); }
 static void LobbyQueryGameDetails(LobbyGame* g) { Log("QueryGameDetails " + Id(g)); }
-static LobbyConfig* GetLobbyConfig() { Log("GetLobbyConfig"); return sConfig; }
+// (not traced: the Rust reads its record of the config, R6 WON lobby/net round 40)
+static LobbyConfig* GetLobbyConfig() { return sConfig; }
 static AuthContext* GetLobbyAuthContext() { Log("GetLobbyAuthContext"); return sAuth; }
 static bool LobbyGetChatSoundEffects() { Log("GetChatSoundEffects"); return sChatSounds; }
 static void LobbyPlaySound(Sound* s) { Log("PlaySound " + (s != NULL ? s->mName : std::string("none"))); }

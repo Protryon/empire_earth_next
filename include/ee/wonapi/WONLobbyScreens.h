@@ -2,6 +2,7 @@
 #define EE_WONAPI_WONLOBBYSCREENS_H
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyRustCtrl.h"
+#include "rust/won_lobby/lobbyscreens.h"
 namespace WONAPI {
 class JoinedRoomEvent;
 class LeftRoomEvent;
@@ -44,25 +45,26 @@ public:
     virtual void Paint(Graphics& inGraphics) { this->CCall(EeWonLobbyCtlCall::Paint, (intptr_t)&inGraphics); }
 };
 
-// LobbyContainer (0x94 bytes): switches between the login, internet and LAN screens.
-// RootScreen is only forward-declared here (WONLobbyRoomServer.h includes this header).
+// LobbyContainer (0x94 bytes): switches between the login, internet and LAN screens. Since R6 WON lobby/net round 40
+// its three screens (mInternetScreen +0x88, mLanScreen +0x8c, mLoginScreen +0x90) and every method are ee_won_lobby
+// lobbyscreens.rs's (the host in WONLobbyPrv.cpp). RootScreen is only forward-declared here (WONLobbyRoomServer.h
+// includes this header).
 class RootScreen;
 class LobbyContainer : public ScreenContainer {
 public:
-    LobbyContainer() {}
-    virtual ~LobbyContainer() {} // releases the three screens
+    virtual ~LobbyContainer() { this->SC(EeWonLobbyScreensCall::Drop); }
     virtual void InitComponent(ComponentInit&);
-    // (RootScreen.cpp: the Internet and LAN screens are RootScreens)
-    void ShowInternetScreen();
-    void ShowLanScreen();
-    void ShowLoginScreen(); // with the message of the day
-    bool OnInternetScreen();
-    bool OnLanScreen();
-    bool OnLoginScreen() { return this->mCurScreen==this->mLoginScreen.get(); }
-    int GetGameScreenType(); // 2 Internet, 1 LAN games tab, 3 direct connect tab, else 0
-    SmartPtr<RootScreen> mInternetScreen; // 0x88
-    SmartPtr<RootScreen> mLanScreen; // 0x8c
-    SmartPtr<LoginScreen> mLoginScreen; // 0x90; 0x94 bytes
+    intptr_t SC(EeWonLobbyScreensCall c, intptr_t a = 0);
+    void ShowInternetScreen() { this->SC(EeWonLobbyScreensCall::ShowInternet); }
+    void ShowLanScreen() { this->SC(EeWonLobbyScreensCall::ShowLan); }
+    void ShowLoginScreen() { this->SC(EeWonLobbyScreensCall::ShowLogin); }
+    bool OnInternetScreen() { return this->SC(EeWonLobbyScreensCall::OnInternet) != 0; }
+    bool OnLanScreen() { return this->SC(EeWonLobbyScreensCall::OnLan) != 0; }
+    bool OnLoginScreen() { return this->SC(EeWonLobbyScreensCall::OnLogin) != 0; }
+    int GetGameScreenType() { return (int)this->SC(EeWonLobbyScreensCall::GameScreenType); }
+    LoginScreen* Login(); // the screens (borrowed; NULL before InitComponent)
+    RootScreen* Internet();
+    RootScreen* Lan();
 };
 
 }

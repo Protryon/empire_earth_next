@@ -801,7 +801,8 @@ pub type EeWonCfgKeyHost = Option<
 
 /// `ComponentConfig::Virtual24(key)` of a `kind` config: its kind's tables and its bases' in the original's order
 /// (cfgkind.rs); ComponentConfig's own step answers MODIFY and MAPCOMPONENT through their handlers, the rest is its
-/// table; the first step that holds the key ends the walk. 1 held, 0 not, 2 an op threw (the host rethrows).
+/// table; the first step that holds the key ends the walk. 1 held, 0 not, 2 an op threw (the host rethrows), 3 a
+/// lobby control's kind (the host asks ee_won_lobby's reader, which walks the base kind for the keys it lacks).
 ///
 /// # Safety
 /// `host` and `config` are the C++ end's; `key` holds `len` bytes (or is NULL with 0).
@@ -814,6 +815,9 @@ pub unsafe extern "C" fn ee_won_cfg_v24(
     len: usize,
 ) -> i32 {
     let Some(f) = host else { return 2 };
+    if crate::cfgkind::class(kind).order == crate::cfgkind::Order::Lobby {
+        return 3;
+    }
     let k: &[u8] = if key.is_null() || len == 0 {
         &[]
     } else {

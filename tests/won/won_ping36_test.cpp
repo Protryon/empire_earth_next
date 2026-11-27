@@ -115,6 +115,7 @@ static intptr_t Host(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, int
     case O::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case O::GameType: return (intptr_t)G(a)->mType;
+    // (the new side's RequestSend and Elapsed are the Rust body's own since R6 WON round 40: mutations 1, 2 unreached)
     case O::RequestSend:
         if (sNew) {
             if (!Mutate(1)) ee_won_udpsendrecvop_set_outgoing_bytes(PingOp(inObj)->GetUdpObject(), reinterpret_cast<const uint8_t*>(a), (size_t)b);

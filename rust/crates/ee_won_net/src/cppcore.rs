@@ -249,6 +249,11 @@ pub fn auth_ctx_of(o: *mut c_void) -> Option<*const crate::authobj::EeWonAuthCtx
     (!c.is_null()).then_some(c)
 }
 
+/// A C++ op's start time (`AsyncOp::GetStartTime()`; none for NULL or another class).
+pub fn op_start_time(o: *mut c_void) -> Option<u32> {
+    op(o).map(EeWonAsyncOp::start_time)
+}
+
 pub(crate) fn op<'a>(o: *mut c_void) -> Option<&'a EeWonAsyncOp> {
     // SAFETY: an op's Rust object lives as long as the op, which the caller holds
     unsafe { (object_of(o, EeWonCoreObject::Op) as *const EeWonAsyncOp).as_ref() }
@@ -1266,7 +1271,7 @@ fn conn_completion(conn: *mut c_void, keep_alive: bool) -> *mut c_void {
         }
     })
 }
-/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
+/// `ServerConnectionConnectOp::RunHook` (2ac2f0; [`ServConnConnect`]'s run): the connection's connect completion finishes the op with the
 /// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
 /// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
 ///
@@ -1298,6 +1303,65 @@ pub unsafe extern "C" fn ee_won_servconn_connect_op_run(
         (*c).set_connect_completion(done);
         (*c).connect_async(address, timeout as i32 as c_long);
     }
+}
+
+/// `ServerConnectionConnectOp` (2abfc0) on the Rust op base (R6 WON lobby and network round 40; the C++ class is
+/// gone): the connection (a reference, the original's `SmartPtr<ServerConnection>` +0x44) and the address (+0x48).
+/// Its run is [`ee_won_servconn_connect_op_run`] with the op's time-out; its cleanup drops the connection's connect
+/// completion (2ac380).
+pub(crate) struct ServConnConnect {
+    conn: crate::hostop::HostObj,
+    addr: Box<EeWonIpAddr>,
+}
+
+impl crate::hostop::Plan for ServConnConnect {
+    fn run(h: &crate::hostop::Host<ServConnConnect>) {
+        let (conn, addr) = {
+            let st = h.st();
+            (st.conn, &*st.addr as *const EeWonIpAddr)
+        };
+        // the address as an `IPAddr*` (its one member is its Rust value), alive with the op
+        let ip: *const EeWonIpAddr = addr;
+        let op = h.own().op as *mut c_void;
+        // SAFETY: the op's live connection and itself; the address lives in the op's members
+        unsafe {
+            ee_won_servconn_connect_op_run(conn.ptr(), op, (&ip as *const *const EeWonIpAddr).cast(), h.timeout())
+        };
+    }
+
+    fn callback(_h: &crate::hostop::Host<ServConnConnect>, _id: i32, _op: crate::hostop::HostObj) -> bool {
+        false
+    }
+
+    fn cleanup(h: &crate::hostop::Host<ServConnConnect>) {
+        let conn = h.st().conn;
+        let c = servconn(conn.ptr());
+        if !c.is_null() {
+            // SAFETY: the connection's live Rust object
+            unsafe { (*c).set_connect_completion(null_mut()) };
+        }
+    }
+
+    fn describe(&self) -> String {
+        format!("servconn connect {}", crate::hostop::hex(&self.addr.six()))
+    }
+
+    fn take_objects(&mut self) -> Vec<crate::hostop::HostObj> {
+        vec![std::mem::take(&mut self.conn)]
+    }
+}
+
+/// `new ServerConnectionConnectOp(conn, address)`: the C++ op of the Rust op (no reference yet), holding a reference
+/// to the connection and a copy of the address.
+///
+/// # Safety
+/// `conn` is a live `ServerConnection*` (its `RefCount*`), `address` a live value.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_servconn_connect_op_new(conn: *mut c_void, address: *const EeWonIpAddr) -> *mut c_void {
+    ref_add(conn);
+    // SAFETY: the contract
+    let addr = Box::new(unsafe { (*address).clone() });
+    new_host_op(crate::hostop::EeWonHostOp::boxed(ServConnConnect { conn: crate::hostop::HostObj::of(conn), addr }))
 }
 unsafe extern "C" fn n_route_connect(conn: *mut c_void, o: *mut c_void) {
     // SAFETY: a live op; it takes the completion's reference

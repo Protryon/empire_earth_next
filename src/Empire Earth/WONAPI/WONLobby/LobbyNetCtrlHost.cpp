@@ -15,7 +15,9 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyControlConfig.h"
+#include "ee/wonapi/WONLobbyImageButton.h"
+#include "ee/wonapi/WONLobbyCrossPromotion.h"
+#include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
@@ -29,6 +31,7 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONAuthContext.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_net/httpdoc.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/eeglue.h"
@@ -40,7 +43,8 @@
 #include "rust/won_net/ipobj.h"
 #include "ee/wonapi/WONLobbyGuard.h"
 #include "rust/won_lobby/lobbycfgrd.h"
-#include "rust/won_lobby/lobbytext.h"
+#include "rust/won_gui/compcfg.h"
+#include "rust/won_net/http.h"
 using namespace WONAPI;
 
 namespace WONAPI {
@@ -211,14 +215,24 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     return 0;
 }
 
-// ---- the room label's and the user list's config readers (RoomLabelCtrl.cpp's, UserListCtrl.cpp's)
+// ---- the config readers: the lobby controls' config kinds (R6 WON lobby/net round 40: ChatCtrlConfig ..
+// CreditsDialogConfig, once nine classes in four units); their bodies are lobbycfgrd.rs's (R6 WON round 33) over
+// these statements. The game list's header and column count are the config's two slots (compcfg.rs).
 
-// ---- the config readers: their bodies are lobbycfgrd.rs's (R6 WON round 33) over these statements
-
+struct LobbyListCfg { MultiListHeader* mHeader; int mNumColumns; }; // ServerListCtrlConfig's members
+static LobbyListCfg* LobbyListCfgOf(ComponentConfig* c) { return reinterpret_cast<LobbyListCfg*>(ee_won_cc_slots(c->mCfg)); }
+template<class T> static T* LobbyCfgComp(ComponentConfig* inConfig) { return static_cast<T*>(inConfig->mComponent.get()); }
+bool CfgKindV24(ComponentConfig* c, EeWonCfgKind k, const std::string& key); // the base kind's walk (WONCfgTable.inl)
+bool CfgOwnNamed(ComponentConfig* c, const std::string& k, int& v);           // the base's named values (WONCompCfg.inl)
 static intptr_t CfgAddColumn(ServerListCtrl* inList, const std::string& inName) { return inList->Cfg(EeWonLobbyCtlCfg::AddColumn, (intptr_t)inName.data(), (intptr_t)inName.size()); }
-intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+static intptr_t CreditsAddLine(LobbyRustDialog* inCredits, const GUIString& inLine, Component* inComponent, intptr_t inColor) { return inCredits->LCall(EeWonLobbyDlgCall::AddLine, (intptr_t)&inLine, (intptr_t)inComponent, (intptr_t)(uint32_t)inColor); }
+static std::string sCfgRdPath; // HOMELOCATION's path
+static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
 {
     typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    LobbyListCfg* sl = LobbyListCfgOf(c);
+    ServerListCtrl* aList = LobbyCfgComp<ServerListCtrl>(c);
     switch (inOp) {
     case Op::ReadString: return WON_GUARDED(Held(c->ReadString(false)));
     case Op::ReadColor: return WON_GUARDED(c->ReadColor());
@@ -232,28 +246,12 @@ intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a
     case Op::TextIsNoCase: return (Txt(a).CompareNoCase((const char*)b, 0) == 0) ? 1 : 0;
     case Op::Throw: return WON_GUARDED_V(throw ConfigObjectException(std::string((const char*)a)));
     case Op::ThrowWithText: return WON_GUARDED_V(throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)));
-    }
-    return 0;
-}
-static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
-{
-    typedef EeWonLobbyCfgRdOp Op;
-    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
-    ChatCtrlConfig* cc_ = static_cast<ChatCtrlConfig*>(c);
-    RoomLabelCtrlConfig* rl = static_cast<RoomLabelCtrlConfig*>(c);
-    UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
-    ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
-    ServerListCtrl* aList = LobbyCfgComp<ServerListCtrl>(c);
-    switch (inOp) {
-    case Op::ChatBase: return WON_GUARDED(cc_->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::Base: return WON_GUARDED(CfgKindV24(c, (EeWonCfgKind)b, *(const std::string*)a));
     case Op::ChatSetField: LobbyCfgComp<ChatCtrl>(c)->SetField((int)a, b); return 0;
-    case Op::RoomBase: return WON_GUARDED(rl->ContainerConfig::Virtual24(*(const std::string*)a));
     case Op::RoomSetPrefixRead: return WON_GUARDED_V(LobbyCfgComp<RoomLabelCtrl>(c)->SetField(0, Dat(c->ReadString(false))));
     case Op::RoomSetField: LobbyCfgComp<RoomLabelCtrl>(c)->SetField((int)a, b); return 0;
     case Op::RoomSetFieldBoolRead: return WON_GUARDED_V(LobbyCfgComp<RoomLabelCtrl>(c)->SetField((int)a, c->ReadBool()));
-    case Op::UserListBase: return WON_GUARDED(ul->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::ServerBase: return WON_GUARDED(sl->ContainerConfig::Virtual24(*(const std::string*)a));
-    case Op::ServerNamedBase: return WON_GUARDED(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b));
+    case Op::ServerNamedBase: return WON_GUARDED(CfgOwnNamed(c, *(const std::string*)a, *(int*)b));
     case Op::ServerCfg: return (intptr_t)(aList->Cfg((EeWonLobbyCtlCfg)a, b));
     case Op::ServerPushColumn: return (intptr_t)(aList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
     case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(aList, (std::string)Txt(a)));
@@ -267,19 +265,22 @@ static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intpt
     case Op::ListDynamicColumn: ((MultiListArea*)a)->SetDynamicSizeColumn((int)b); return 0;
     case Op::ListColumnWidth: ((MultiListArea*)a)->SetColumnWidth((int)b, (int)cc, false); return 0;
     case Op::ServerHeaderSetColumnItem: sl->mHeader->SetColumnItem(sl->mNumColumns - 1, (Component*)a); return 0;
-    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    case Op::BrowserPathRead: return WON_GUARDED_V(sCfgRdPath = (std::string)c->ReadString(false));
+    case Op::BrowserPathIsFile: return WON_GUARDED(ee_won_url_kind(reinterpret_cast<const uint8_t*>(sCfgRdPath.data()), sCfgRdPath.size()) == EE_WON_URL_FILE); // URL(path).GetType()
+    case Op::BrowserPathResolve: return WON_GUARDED_V(sCfgRdPath = ComponentConfig::GetResourceFile(sCfgRdPath));
+    case Op::BrowserSetHome: return WON_GUARDED_V(LobbyCfgComp<GameBrowserCtrl>(c)->SetHomeLocation(sCfgRdPath));
+    case Op::CrossDefaultImageRead: return WON_GUARDED_V(LobbyCfgComp<CrossPromotionButton>(c)->SetDefaultImage(c->ReadImage(false)));
+    case Op::CrossDefaultBrowseRead: return WON_GUARDED_V(LobbyCfgComp<CrossPromotionButton>(c)->SetDefaultBrowse(c->ReadString(false)));
+    case Op::ImageTextFontRead: return WON_GUARDED_V(LobbyCfgComp<ImageTextButton>(c)->mFont = c->ReadFont());
+    case Op::ImageTextTextRead: return WON_GUARDED_V(LobbyCfgComp<ImageTextButton>(c)->mText = c->ReadString(false));
+    case Op::ImageTextBrowseRead: return WON_GUARDED_V(LobbyCfgComp<ImageTextButton>(c)->mBrowse = c->ReadString(false));
+    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(LobbyCfgComp<LobbyRustDialog>(c), GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
     }
+    return 0;
 }
-static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
-
-// Reads the PREFIX, GROUPTYPE (CHAT or GAME), SHOWUSERCOUNT and SHOWSERVER layout keys
-bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey) { return CfgRd(this, EeWonLobbyCfgRdCall::RoomLabel, inKey) != 0; }
-// Accepts (and ignores) the GROUPTYPE and CTRLLINKID layout keys; passes other keys to the container's reader
-bool UserListCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::UserList, instruction) != 0; }
-
-// ChatCtrlConfig (WONLobbyControlConfig.h): GROUPTYPE (CHAT, GAME or TEAM) and the text colours, stored in the panel's
-// Rust object
-bool ChatCtrlConfig::Virtual24(const std::string& inKey) { return CfgRd(this, EeWonLobbyCfgRdCall::ChatCtrl, inKey) != 0; }
+// a lobby control kind's Virtual24 (WONCfgTable.inl) and the game list kind's GetNamedValue (WONCompCfg.inl)
+bool LobbyCfgV24(ComponentConfig* c, const std::string& k) { return WonRethrow(ee_won_lobbycfgrd_call(c, CfgRdHost, EeWonLobbyCfgRdCall::OfKind, (intptr_t)k.data(), (intptr_t)k.size(), (intptr_t)&k, (intptr_t)c->mKind)) != 0; }
+bool LobbyCfgNamed(ComponentConfig* c, const std::string& k, int& v) { return WonRethrow(ee_won_lobbycfgrd_call(c, CfgRdHost, EeWonLobbyCfgRdCall::ServerListNamed, (intptr_t)k.data(), (intptr_t)k.size(), (intptr_t)&k, (intptr_t)&v)) != 0; }
 
 
 intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -331,9 +332,9 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::GfxTextWidth: return g->GetFont()->GetStringWidth(Txt(b));
     // the statements of the cases hostops.rs answers (R6 WONLobby round 29: the ping bars, the rows' counts, the
     // summaries, the filter row, the room events, the event items, the numbers, the saved game dialog)
-    case Op::LobbyConfigGet: return (intptr_t)GetLobbyConfig();
-    case Op::ConfigPingCeiling: return reinterpret_cast<LobbyConfig*>(a)->mPingCeiling;
-    case Op::ConfigPublic: return reinterpret_cast<LobbyConfig*>(a)->mPublic ? 1 : 0;
+    case Op::LobbyConfigGet: return (intptr_t)ee_won_lobbyconf_current();
+    case Op::ConfigPingCeiling: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::PingCeiling);
+    case Op::ConfigPublic: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::Public);
     case Op::LabelSetFormatRes: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(ResText(b), Txt(c)), true);
         return 0;
     case Op::LabelSetFormat2Res: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString2(ResText(b), Txt(reinterpret_cast<const intptr_t*>(c)[0]), Txt(reinterpret_cast<const intptr_t*>(c)[1])), true);
@@ -392,16 +393,4 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     }
     return 0;
 }
-
-// ---- the game list's config reader (ServerListCtrl.cpp's)
-
-// (its statements are CfgRdHost's BaseSetComponent and ServerSetList: lobbycfgrd.rs, R6 WON round 35)
-// Answers NUMCOLUMNS with the list's column count, else asks the base config
-bool ServerListCtrlConfig::GetNamedValue(const std::string& inName, int& outValue) { return CfgRd(this, EeWonLobbyCfgRdCall::ServerListNamed, inName, (intptr_t)&outValue) != 0; }
-// Handles the LISTID, ADDCOLUMN, DEFAULTFILTER, NUMCOLUMNS and SETCOLUMNFILTERTYPE layout instructions
-bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction) { return CfgRd(this, EeWonLobbyCfgRdCall::ServerList, inInstruction) != 0; }
-// Adds a defined column (header component, width, filter combo) if it applies to the list's game type
-void ServerListCtrlConfig::HandleAddColumn() { CfgRd(this, EeWonLobbyCfgRdCall::ServerListAddColumn, std::string()); }
-// Creates the layout config with no header and no columns
-ServerListCtrlConfig::ServerListCtrlConfig() : mHeader(NULL), mNumColumns(0) {}
 }

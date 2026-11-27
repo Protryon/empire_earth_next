@@ -5,15 +5,11 @@
 #define EE_WONAPI_EELOBBYGAMECODE_H
 
 #include "ee/wonapi/WONLobbyEvents.h" // the shared LobbyEvent base (0x20 bytes)
-#include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONLobbyRustCtrl.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "rust/won_lobby/eecolor.h"
-#include "rust/won_lobby/eegame.h"
 #include "rust/won_lobby/eeresource.h"
 #include "rust/won_lobby/eexfer.h"
-#include "rust/won_lobby/lobbyctl.h"
-#include "rust/won_lobby/lobbydlg.h"
 
 namespace WONAPI {
 

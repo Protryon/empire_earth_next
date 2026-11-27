@@ -83,6 +83,8 @@ static std::string TypeName(const AsyncOp* inObject, const std::type_info& inTyp
     // (the peer authentication op is a RustServerOp made by NewPeerAuth since R6 WON lobby and network round 36: this
     // driver makes no other RustServerOp; the golden keeps the class's name)
     if (aKind == NULL && IsStandinPeerAuth(inObject)) return "PeerAuthOp";
+    // (ServerConnectionConnectOp is a RustServerOp since R6 WON lobby and network round 40: the golden keeps the name)
+    if (aKind == NULL && dynamic_cast<const RustServerOp*>(inObject) != NULL) return "ServerConnectionConnectOp";
     return aKind != NULL ? std::string(aKind) : TypeName(static_cast<const void*>(inObject), inType);
 }
 // a routing op's class name: the original's op classes by type (the ops are one RoutingOp over a Rust op since net
@@ -384,6 +386,9 @@ static void AsyncConnect()
     Log("async done");
 }
 
+// new ServerConnectionConnectOp(connection, address): a Rust op since R6 WON lobby and network round 40
+static RustServerOp* NewConnectOp(ServerConnection* inConn, const IPAddr& inAddr)
+{ return RustServerOp::MadeOp(ee_won_servconn_connect_op_new(static_cast<RefCount*>(inConn), inAddr.GetValue())); }
 static void ConnectOps()
 {
     Log("== ServerConnectionConnectOp");
@@ -394,7 +399,7 @@ static void ConnectOps()
     SmartPtr<Done> aPrevious = new Done("previous");
     c->SetConnectCompletion(aPrevious);
     // (run async and pumped: run blocking, the op would wait on the peer op's run, which the pump starts)
-    SmartPtr<ServerConnectionConnectOp> anOp = new ServerConnectionConnectOp(c, s.Addr());
+    SmartPtr<RustServerOp> anOp = NewConnectOp(c, s.Addr());
     anOp->RunAsync(4000);
     LOG2("connect op queued ", St(anOp->GetStatus()), "");
     uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
@@ -412,14 +417,14 @@ static void ConnectOps()
     PumpFor(50);
     // async: completed through its own completion
     SmartPtr<Done> anOpDone = new Done("connect op");
-    SmartPtr<ServerConnectionConnectOp> anAsync = new ServerConnectionConnectOp(c, s.Addr());
+    SmartPtr<RustServerOp> anAsync = NewConnectOp(c, s.Addr());
     anAsync->SetCompletion(anOpDone);
     anAsync->RunAsync(4000);
     PumpUntil(anOpDone, 1);
     s.Accept();
     // async on a pending connect, killed: the op finishes killed
     SmartPtr<Done> aKilledDone = new Done("killed op");
-    SmartPtr<ServerConnectionConnectOp> aKilled = new ServerConnectionConnectOp(c, IPAddr("127.0.0.1", 0));
+    SmartPtr<RustServerOp> aKilled = NewConnectOp(c, IPAddr("127.0.0.1", 0));
     aKilled->SetCompletion(aKilledDone);
     aKilled->RunAsync(4000);
     PumpFor(20);

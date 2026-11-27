@@ -705,7 +705,7 @@ void ee_won_core_add_transform(void *socket,
 /// `cpp` is a static table.
 void ee_won_servconn_bind_cpp(const EeWonServerConnCpp *cpp);
 
-/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
+/// `ServerConnectionConnectOp::RunHook` (2ac2f0; [`ServConnConnect`]'s run): the connection's connect completion finishes the op with the
 /// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
 /// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
 ///
@@ -715,6 +715,14 @@ void ee_won_servconn_connect_op_run(void *conn,
                                     void *op,
                                     const void *address,
                                     uint32_t timeout);
+
+/// `new ServerConnectionConnectOp(conn, address)`: the C++ op of the Rust op (no reference yet), holding a reference
+/// to the connection and a copy of the address.
+///
+/// # Safety
+/// `conn` is a live `ServerConnection*` (its `RefCount*`), `address` a live value.
+void *ee_won_servconn_connect_op_new(void *conn,
+                                     const EeWonIpAddr *address);
 
 /// Binds the C++ side's function (`host` its first argument) before any other call.
 ///

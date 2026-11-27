@@ -84,9 +84,9 @@ pub enum EeWonRouteLogicOp {
     ErrorDialog,
     /// `LobbyDoYesNoDialog(LOBBY_STRING(a), LOBBY_STRING(b), true)`.
     YesNo,
-    /// `GetLobbyConfig() != NULL`.
+    /// a config exists (netlogicops.rs answers it from lobbyconf.rs in the game).
     HasConfig,
-    /// `GetLobbyConfig()->mPingCeiling`, or -1 without a config.
+    /// the config's PingCeiling, or -1 without a config (answered as HasConfig).
     ConfigPingCeiling,
     /// `GetLobbyAuthContext()`.
     AuthContext,
@@ -133,7 +133,7 @@ pub enum EeWonRouteLogicOp {
     // ---- the model
     /// a server's (`a`) value: 0 `GetClients().get()`, 1 `GetConnection().get()`, 2 `GetMyClient()`, 3
     /// `GetMyClientId()`, 4 `GetName() == LobbyGetLastServerName()`, 5 `GetNumClients()`, 6
-    /// `HasAddress(GetLobbyConfig()->mLanguage)`, 7 `IsConnected()`, 8 `GetGroupCount()`, 9
+    /// `HasAddress(the config's language)` (modelobj.rs), 7 `IsConnected()`, 8 `GetGroupCount()`, 9
     /// `GetQueryingGroups()`, 10 `GetLastPing()`.
     ServerNum = 50,
     /// `((LobbyServer*)a)->FindClientByWONId(b)`.
@@ -432,7 +432,8 @@ pub enum EeWonRouteLogicOp {
     UserIdOpNew,
     /// the user id op `a`'s id (`ee_won_hostop_num(.., EE_WON_REQOP_USER_ID, 0)` as an `unsigned long`).
     OpUserId,
-    /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"}, 2)`, held.
+    /// `RustServerOp::NewGetDir(context a, std::wstring((const wchar_t*)b, c), 0x04000622, {"_C", "_L"}, 2)` (the
+    /// config's product directory), held.
     DirOpNew,
     /// `new WriteBuffer(0, true)`.
     BufNew,
@@ -686,6 +687,8 @@ pub struct EeWonRouteLogic {
     host: EeWonRouteLogicHostFn,
     /// the model's ops answered by its Rust objects (modelobj.rs; the game's logic), not the host
     model: bool,
+    /// the shell's server list and game list (their model shells; the game's logic)
+    lists: (isize, isize),
     last_server_refresh: Cell<i64>,
     suppress_idle: Cell<bool>,
     idle: Cell<bool>,
@@ -719,6 +722,7 @@ impl EeWonRouteLogic {
             obj,
             host,
             model: false,
+            lists: (0, 0),
             last_server_refresh: Cell::new(0),
             suppress_idle: Cell::new(false),
             idle: Cell::new(false),
@@ -738,13 +742,19 @@ impl EeWonRouteLogic {
             if let Some(r) = crate::lobbytext::route_op(op, self.obj as isize, g(0), g(1)) {
                 return r;
             }
-            if let Some(r) = crate::netops::route_op(op, g(0), g(1)) {
+            if let Some(r) = crate::logicshell::route_op(self.obj, op, g(0), g(1), g(2)) {
+                return r;
+            }
+            if let Some(r) = crate::netops::route_op(op, g(0), g(1), g(2)) {
+                return r;
+            }
+            if let Some(r) = crate::modelobj::route_list_op(op, self.lists.0, self.lists.1, g(0), g(1), g(2)) {
                 return r;
             }
             if let Some(r) = crate::modelobj::route_op(op, g(0), g(1), g(2), g(3)) {
                 return r;
             }
-            if let Some(r) = crate::persistobj::game_route_op(op, g(0)) {
+            if let Some(r) = crate::persistobj::game_route_op(op, g(0), g(1)) {
                 return r;
             }
             if op == Op::EventNum {
@@ -3221,9 +3231,15 @@ pub unsafe extern "C" fn ee_won_routelogic_conn_request(
 
 /// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
 #[no_mangle]
-pub extern "C" fn ee_won_routelogic_new_model(obj: *mut c_void, host: EeWonRouteLogicHostFn) -> *mut EeWonRouteLogic {
+pub extern "C" fn ee_won_routelogic_new_model(
+    obj: *mut c_void,
+    host: EeWonRouteLogicHostFn,
+    servers: *mut c_void,
+    games: *mut c_void,
+) -> *mut EeWonRouteLogic {
     let mut l = EeWonRouteLogic::new(obj, host);
     l.model = true;
+    l.lists = (servers as isize, games as isize);
     Box::into_raw(Box::new(l))
 }
 

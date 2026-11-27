@@ -246,6 +246,9 @@ impl EeWonDlgLogic {
         if let Some(r) = crate::lobbytext::dlglogic_op(op, a, b, c, d) {
             return r;
         }
+        if let Some(r) = crate::logicshell::dlg_op(self.logic, op, a, b) {
+            return r;
+        }
         if let Some(r) = crate::logicsplit::game_dlg_op(op, a, b, c, d, &|op, a, b, c, d| self.host_op(op, a, b, c, d))
         {
             return r;

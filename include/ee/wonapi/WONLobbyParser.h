@@ -4,10 +4,7 @@
 #define EE_WONAPI_WONLOBBYPARSER_H
 #include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "rust/won_lobby/chatobj.h"
-#include "rust/won_net/chat.h"
-#include "rust/won_net/ffi_parse.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONStringCompare.h"
 namespace WONAPI {
 
 

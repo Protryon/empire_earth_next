@@ -91,7 +91,7 @@ static intptr_t Xfer(EeWonEeXferOp inOp, intptr_t a, bool* outHandled)
 }
 
 // RoutingHost's deleted cases (the logic's game data type is "G" from its constructor)
-static intptr_t Route(EeWonRouteLogicOp inOp, intptr_t a, intptr_t b, bool* outHandled)
+static intptr_t Route(EeWonRouteLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, bool* outHandled)
 {
     typedef EeWonRouteLogicOp O;
     static const std::string kGameDataType = "G";
@@ -115,6 +115,10 @@ static intptr_t Route(EeWonRouteLogicOp inOp, intptr_t a, intptr_t b, bool* outH
         return aRecipients.empty() ? -1 : (intptr_t)aRecipients.front();
     }
     case O::OpSocket: return (intptr_t) static_cast<RefCount*>(static_cast<SocketOp*>(AO_a)->GetSocket());
+    // R6 WON lobby and network round 40's (the routing connection's a socket here: IsConnected is AsyncSocket's)
+    case O::RSetNum: RO_a->SetNum((int)b, (long long)c); return 0;
+    case O::ConnIsConnected: return reinterpret_cast<AsyncSocket*>(a)->IsConnected();
+    case O::StatusOpRust: return (intptr_t)UserStatusOf(AO_a);
     default: *outHandled = false; return 0;
     }
 }

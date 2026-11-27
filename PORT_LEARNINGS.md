@@ -42369,3 +42369,123 @@ worktrees and the lead; batch 29 landed mid-round and was merged into the lead.
   EEDataPreLoading.cpp, EEEffectHost.cpp, EEEvent.cpp, EEScenarioHost.cpp, EESMEffect.cpp, EECPNextUnits.cpp,
   EECPNext.cpp, EEComputerPlayer.cpp, EEUIFMGStatusButton.cpp, EEDataTextFile.cpp; Rust in ee_game gamecpp,
   preload.rs, sim_driver and ee_sim scenario and ai.
+
+## R6 WON lobby and network, round 40: LobbyConfig a Rust record, InitLogic.cpp and LobbyConfig.cpp gone, the five logic units one host unit, the logic shell's completions and runs in Rust; WONLobbyWindow, ServerConnectionConnectOp and WONLobbyControlConfig.h gone, WONLobbyPrv's run state and LobbyContainer's screens Rust's (ee_won_lobby lobbyconf.rs, logicshell.rs, lobbyscreens.rs, lobbyprv.rs, cfgkind.rs, lobbycfgrd.rs; ee_won_net cppcore.rs, cppnet.rs; branch rust-wonnet40, 2026-11-26)
+
+The round started from eff86d9af (rust-wonnet39) with four forks in two waves of two: wn40a the network list and
+wn40b the lobby list (merged 793c6c961, 1ef414c24), then batch 30 (ea5c9c2c3: WONLobbyCore.h both sides' drops,
+Ping/Routing/Prv ours with batch 30's `mEv` names), then wn40c the lobby config and wn40d the logic units, dead code
+and includes (both forked from 1ef414c24 and merged ea5c9c2c3 themselves; merged as 9cbc16ac8 and b53562020), then batch 31 (cb030cf29: cbindgen.toml union, PORT_LEARNINGS both,
+PingLogic.cpp deleted: batch 31's copy was round 39's, already in). The lead was stopped once by the usage limit; a finishing lead merged C and D and ran the checks.
+
+### What moved
+- The network (fork A):
+  - WONLobbyWindow is gone (the game never made it): its class, Close, four host cases and the Rust calls (64df1d60d).
+  - ServerConnectionConnectOp is a Rust op on the op base (cppcore.rs ServConnConnect); the C++ class is gone (da0f2a46b).
+  - The ping op's request bytes and time are its Rust body's; OpGame and OpRecord are answered in Rust: five
+    PingLogic cases gone (995d65ca3).
+  - InitLogic's DocBytes is read from the op's Rust op in the game; GetHttpDocument is gone (abb5a4acc). The C++
+    case's ByteBufferPtr died before its bytes were read; the Rust read has no such window.
+  - RoutingLogic's host shrank: nine one-call network cases (netops.rs route_op), FriendAddressValid, GroupQueryNew,
+    ConnectOpNew, UserIdOpNew (modelobj.rs), ReconnectId/SetReconnectId (persistobj.rs), the client iterator a Rust
+    cursor, the server and game list ops (modelobj.rs route_list_op), RConnection, ConnSetAuth and StatusOpServer,
+    all in the game only; LogicCompletionBase folded into ShellCompletion.
+- The lobby (fork B):
+  - The nine lobby control configs (ChatCtrlConfig .. CreditsDialogConfig) are cfgkind.rs kinds; ee_won_cfg_v24
+    answers 3 for them and ComponentConfig::Virtual24 asks lobbycfgrd.rs; WONLobbyControlConfig.h is gone (cd2f796d1).
+  - WONLobbyPrv's run state (mLobbyStatus, mRunMode, mSuspended) is lobbyprv.rs's; LobbyIsSuspended reads the
+    field; eight host cases and three members gone (bd4cd37c3).
+  - The saved game transfer's seven pass-through calls answered in Rust (eesplit.rs, 2b12dca37); the glue's six
+    allocator factories are templates (339124045); LobbyContainer's screens and methods are lobbyscreens.rs's
+    (4de75d00a); LobbyContainer.cpp and LobbyAuthContextAccess.cpp merged into WONLobbyPrv.cpp (3884ee020).
+- The config (fork C, c5b472b76):
+  - LobbyConfig's values are a Rust record, `EeWonLobbyConf` (lobbyconf.rs): the three server lists, product name
+    and directory, versions, language, resource directory, flags, ports, the LOBBYDEFINE map (ordered ignoring
+    case, like StringLessNoCase) and the transfer port. They are registered with the ConfigObject's Rust group as
+    Rust-owned values (cfgval.rs kinds RStr, RWStr, RStrList). The constructor, LOBBYDEFINE parse and PostParse are
+    Rust; lobbycfg.rs folded in. The record is "current" from WONLobbyPrv's ConfigNew until freed
+    (`lobbyconf::current()`).
+  - LobbyConfig.cpp, `GetLobbyConfig()`, `gLobbyUseLocalIP` and 25 members are gone; the C++ class keeps its
+    ctor/dtor, mDefaultFileName and the two ConfigObject hooks.
+  - Readers: WONLobbyPrv's Init/InitAuth config cases, InitLogic's CheckForInternet, HasConfig, AddAll*,
+    HasAuthConfig, DnsTestReady, VersionReady, DirQueryNew, VersionCheckNew, PingLogic's NoPingInProgress and
+    PingCeiling, RoutingLogic's HasConfig, ConfigPingCeiling, ServerNum 6, DirOpNew's directory: Rust. Nine
+    one-line reads stay in C++ through `ee_won_lobbyconf_num` (their ops are in Rust goldens by number).
+  - InitLogic.cpp is gone; its host is in WONLobbyPrv.cpp. New driver won_lobbyconf_test: the original LobbyConfig
+    over the original ConfigObject against the game's, on 3,007 random WONLobby.cfg texts, 0 mismatches.
+- The logic units (fork D):
+  - The logic shell's completions, runs and tracker are made from Rust (logicshell.rs `EeWonLogicShellCpp`, bound
+    by LobbyLogicHost.cpp's static initializer; cppnet.rs's op_set_completion, op_run_async, routeconn/queue/udp
+    completion setters, udp_recv_msg): RoutingLogic's RunOp, StatusOpRun, RunTrackedGroups, ConnSetNotice,
+    ConnSetClose, ConnSubscribeGames; PingLogic's SetDefaultRecv, RunTracked, RecvMsg, NumTracked, TrackedGame,
+    KillTracked; DialogLogic's RunOp (676da3ff5). The finishing lead added InitLogic's five RunTracked* runs
+    (f2414ccf7): the logic's compositions now call out through the shell first, so the compound cases reach them.
+  - AccountLogic.cpp, DialogLogic.cpp, LobbyLogic.cpp, PingLogic.cpp and RoutingLogic.cpp are one
+    LobbyLogicHost.cpp; LobbyLogic folded into RustLogic (`typedef RustLogic LobbyLogic`).
+  - Redundant includes dropped from the lane's units and headers; LobbyResource_GetString/GetImage/GetSound and
+    LobbyServerList::ServerAt (uncalled) gone.
+
+`port_metrics.py`, the round's own parts: fork A -101, fork B -217 (files -2), fork C -185 (files -2), fork D -356
+(files -5), the lead -5. Over origin/rust after batch 31 (38bb1e104 -> the tip, the round alone): C++ lines
+79,339 -> 78,475 (**-864**), files 249 -> 240 (-9), logic 11,579 -> 11,397 (-182), classes -13, extern_c +21,
+rust_hdrs +0, unsafe +119, layout +1. eff86d9af -> the tip (with batches 30 and 31): C++ lines 88,210 -> 78,475
+(-9,735), files 269 -> 240, logic -587. Short of the -1,500 target: the config's readers mostly had to stay as ops (goldens by number), and the remaining logic host
+cases each make a C++ object.
+
+### Problems met
+- A Rust golden replays host ops by number. Removing a config op call from a Rust core changes that golden even when
+  the C++ case is trivial: answer the op in the game-only layers that already exist (`game_logic_op` / `logic_op`,
+  routelogic's model-mode `route_op`, modelobj), or keep the op and let the C++ case read the Rust record.
+- Removing variants from a Rust op enum renumbers the rest: give the next variant an explicit discriminant so golden
+  numbering stays stable.
+- A Rust-side "current record" cleared with compare_exchange on free matches `GetLobbyConfig()` over the lobby's
+  lifetime: the logics are built after ConfigNew and destroyed before mConfig.
+- Ops a composition calls through `out` bypass the per-op game layer the direct path has: logics.rs's `out` now asks
+  logicshell.rs first, or InitLogic's runs (reached only from compounds) would stay C++.
+- Dropping a header include because another include brings it is order-sensitive in a cycle
+  (WONLobbyResourceGlobals.h <-> WONLobbyResource.h broke 40 units): only drop it when the provider comes earlier in
+  the same header, and check with compile-only. `<windows.h>` stays in every lobby unit (WONLobbyGUI.h uses DWORD).
+- Folding units with single-letter static helpers: same-signature ones can be shared, the others renamed (G: a group
+  in one unit, a game in another). A Rust helper named `run` clashed with logicshell.rs's own.
+- Merging C and D: fork C edited PingLogic.cpp and RoutingLogic.cpp, fork D deleted them into LobbyLogicHost.cpp; C's
+  seven config edits were carried into the folded unit by hand (a modify/delete conflict shows nothing of them).
+- Git Bash heredocs turned `\\n` in Python into a real newline twice; a slice delete with `s.index(b)` and no start
+  index duplicated a file when `b` occurred earlier. Clippy rejects `b"\0".as_ptr()`: use `c"".as_ptr()`.
+
+### Behaviour changes
+None intended. The shell's completions and runs are made from Rust with the same calls in the same order (a 0 timeout
+is LobbyRunOp's 60 s default, written in Rust). The UseLocalIP key still writes a bool nobody reads.
+
+### Gates
+All lane gates PASS on the merged tip (batch 31 in; the builds and game checks on cb030cf29, the rust gate on
+699b9f746, whose change is test-only):
+- `build.py --sim` (281/282 inputs) and the test profile: 0 unresolved, 0 duplicates; `rust_build.py header` current
+  (367); rust gate PASS, 6,802 tests.
+- won_host_coverage PASS; wontest 186 drivers: 184 passed under load, won_sockobj_test (two trace lines swapped) and
+  won_persistobj_test (killed after 1,200 s) failed under load and passed alone (497 lines, 0 failures; 285,432
+  checks, 0 mismatches).
+- Oracle seeds 2-7 identical; captures `oracle` and `late` PASS (WON code has no capture tags of its own); the
+  saveload matrix PASS; scenario_check 27/27.
+- The LAN game PASS (host 2809, joiner 2815); lan_capture_compare against the base exe built from eff86d9af
+  (build/wonnet40/lanBase): every lobby capture identical but the game's name (the harness's slot number) and the
+  text caret, the game's frames differ as always.
+- gates.sh GATES PASS: tour, AI game (`alive_computers [2, 3]`, units [4, 36, 37], classic_lua both), LAN game.
+- The rust gate's first run on the tip failed `lobbyrun::tests::exit_suspend_resume_start`: fork B made the run
+  state lobbyprv.rs's process-wide state, and a parallel lobbyprv.rs test that makes a lobby gave the exit run a
+  RunMode of 1. lobbyrun.rs's test helper now takes lobbyprv.rs's lobby test lock (699b9f746).
+- A TaskStop of the first check chain killed only its shell's parent: the chain kept running beside the restarted
+  one, and their two wontest runs collided (lld-link "permission denied" relinking a running driver). Kill a chain
+  by its process tree (Get-CimInstance Win32_Process, CommandLine) before restarting it.
+
+### Left
+- The nine one-line config reads (EELobbyGlueHost, LobbyDialogHost, LobbyLogicHost, LanLogicHost, LobbyModelHost,
+  LobbyNetCtrlHost, LobbyPersistentData, LobbyServiceSupport, WONLobbyPrv) could go with a game-only switch in eeglue,
+  lobbypopup, modelbuf, lobbyops and hostops.
+- InitLogic's AcceptOpRun (a slot and gLobbyAcceptTimeout) and LanLogicHost's LanRunPeerAuth (a C++ op maker) through
+  run_op; then RustLogic::RunOp/RunTrackedOp and LobbyRunOp's declaration go.
+- The logic host cases that `new` a C++ class (ConnNew, StatusOpNew, BufNew, GameWriteSummary, ConnCreateGameObject,
+  the DirList ops, Ping's ReplyNew/BufAppend/WriteSummary/ReplySend/BufFree, DnsOpNew, HttpDocNew,
+  HttpDocSetConfig): core-table makers, or one "game bytes" case with Rust building the bytes.
+- SendFileOp and its completion, TransferSetSavesPath, GlueText, EELobbyColorButton/Chooser, WONRouting.h's core-table
+  shims (from round 39's list, not reached).
+- won_lobby33_gen.py still reads LobbyConfig.cpp; won_lobbyconf_test does not vary the UseLocalIP registry value.
