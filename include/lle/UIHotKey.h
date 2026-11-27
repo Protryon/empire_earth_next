@@ -28,7 +28,6 @@ public:
     UIHotKey() : UIEntity(0) { ee_ui_hotkey_init(this, ee_ui_hotkey_host, this); }
     UIHotKey(UIForm* inForm, const UIHotKey& inHotKey) : UIEntity(0) { ee_ui_hotkey_copy(this, ee_ui_hotkey_host, const_cast<UIHotKey*>(&inHotKey), inForm, this); }
     virtual ~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
-    virtual bool FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }              // slot 0x04
     static UIHotKey* GetHotKey(unsigned long inIndex) { return static_cast<UIHotKey*>(ee_ui_hotkey_at(inIndex)); }
     void GetHotKeyName(UWideString& outName) { outName = ee_ui_hotkey_display_name(this); }
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }

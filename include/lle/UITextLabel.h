@@ -38,7 +38,6 @@ public:
     const UWideString& GetText(unsigned long inLine) const { return *reinterpret_cast<const UWideString*>(this->Call(EeUiLabelCall::Line, inLine)); }
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
     virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(EeUiLabelCall::MouseWheelTurned, inDelta); }
-    virtual void RecomputeDisplayRange() { this->Call(EeUiLabelCall::RecomputeDisplayRange); } // slot 0x8c
     bool ScrollBarExists() const { return this->Call(EeUiLabelCall::ScrollBarExists) != 0; }
     void SetAlignment(unsigned long inAlignment) { this->Call(EeUiLabelCall::SetAlignment, inAlignment); }
     void SetFitRectToText(bool inFit) { this->Call(EeUiLabelCall::SetFitRectToText, inFit); }
@@ -50,7 +49,6 @@ public:
     void SetText(const UWideString& inText) { this->SetText(inText, true); }
     void SetText(long inValue) { ee_ui_label_set_number(this->mRust, inValue); }   // _itoa's decimal
     virtual long UpdateKeyboard() { return kErrorFailed; }
-    virtual void CheckScrollBar() { this->Call(EeUiLabelCall::CheckScrollBar); } // slot 0x90
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiLabelCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiLabelCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiLabelCall::MouseMove, 0, 0, inLocation.GetX(), inLocation.GetY()); }

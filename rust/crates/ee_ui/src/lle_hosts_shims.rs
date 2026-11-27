@@ -18,10 +18,7 @@ shims! {
     r ee_uicpp_combo_a_part_copy_data;
     v ee_uicpp_combo_a_set_dirty;
     v ee_uicpp_combo_a_set_rectangle;
-    v ee_uicpp_combo_a_release_mouse;
     v ee_uicpp_combo_a_release_keyboard;
-    v ee_uicpp_combo_a_open_list;
-    v ee_uicpp_combo_a_close_list;
     r ee_uicpp_combo_a_add_string;
     v ee_uicpp_combo_a_change_selection;
     r ee_uicpp_combo_rhombus_create;
@@ -34,8 +31,6 @@ shims! {
     v ee_uicpp_bg_bitmap_set_texture;
     r ee_uicpp_bg_bitmap_texture;
     r ee_uicpp_bg_virt_load;
-    r ee_uicpp_bg_virt_stretched;
-    r ee_uicpp_bg_virt_tiled;
     r ee_uicpp_bg_virt_unload;
     r ee_uicpp_bg_window;
     v ee_uicpp_bgt_delete;
@@ -65,12 +60,9 @@ shims! {
     v ee_uicpp_ctl_help_string;
     v ee_uicpp_ctl_hide;
     v ee_uicpp_ctl_part_set_bg_color;
-    v ee_uicpp_ctl_release_mouse;
     v ee_uicpp_ctl_set_bg_opacity;
     v ee_uicpp_ctl_set_dirty;
-    v ee_uicpp_ctl_set_display_mode;
     v ee_uicpp_ctl_tabbed_to;
-    r ee_uicpp_ctl_virt_draw_border;
     r ee_uicpp_ctl_virt_mouse_down;
     v ee_uicpp_ctl_virt_set_location;
     v ee_uicpp_edit_button_down;
@@ -85,8 +77,6 @@ shims! {
     v ee_uicpp_event_bgt_file_close;
     v ee_uicpp_event_bgt_file_open;
     r ee_uicpp_event_bgt_file_read;
-    r ee_uicpp_event_ev_initialize;
-    r ee_uicpp_event_ev_uninitialize;
     v ee_uicpp_fl_combo_append;
     v ee_uicpp_fl_combo_delete_all;
     v ee_uicpp_fl_combo_delete_line;
@@ -120,15 +110,12 @@ shims! {
     r ee_uicpp_form_bg_draw;
     v ee_uicpp_form_bg_load;
     v ee_uicpp_form_bg_open;
-    v ee_uicpp_form_bg_relayout;
     v ee_uicpp_form_bg_unload;
     r ee_uicpp_form_ctl_entity_type;
     v ee_uicpp_form_ctl_hide;
     r ee_uicpp_form_ctl_ime_enabled;
     v ee_uicpp_form_ctl_release_keyboard;
-    v ee_uicpp_form_ctl_release_mouse;
     v ee_uicpp_form_ctl_set_dirty;
-    v ee_uicpp_form_ctl_set_display_mode;
     r ee_uicpp_form_ctl_tabable;
     v ee_uicpp_form_ctl_tabbed_from;
     v ee_uicpp_form_ctl_tabbed_to;
@@ -142,7 +129,6 @@ shims! {
     v ee_uicpp_form_help_set_text;
     r ee_uicpp_form_hot_key_copy;
     v ee_uicpp_form_hot_key_delete;
-    r ee_uicpp_form_hot_key_fire;
     r ee_uicpp_form_hot_key_new;
     v ee_uicpp_form_manager_delete;
     v ee_uicpp_form_music_start;
@@ -158,7 +144,6 @@ shims! {
     r ee_uicpp_form_wheel_event_new;
     r ee_uicpp_form_window_height;
     r ee_uicpp_form_window_width;
-    r ee_uicpp_graph_draw_border;
     r ee_uicpp_graph_line_create;
     v ee_uicpp_graph_line_delete;
     v ee_uicpp_graph_text_set_bytes;
@@ -174,8 +159,6 @@ shims! {
     r ee_uicpp_label_string_new;
     r ee_uicpp_label_text_font_height;
     v ee_uicpp_label_text_set_bytes;
-    v ee_uicpp_label_virt_check_scroll_bar;
-    v ee_uicpp_label_virt_recompute;
     v ee_uicpp_label_virt_set_location;
     v ee_uicpp_label_virt_set_rectangle;
     r ee_uicpp_lbs_draw_clipped;
@@ -228,10 +211,8 @@ shims! {
     v ee_uicpp_obj_part_set_location;
     v ee_uicpp_obj_part_set_rectangle;
     v ee_uicpp_obj_release_keyboard;
-    v ee_uicpp_obj_release_mouse;
     v ee_uicpp_obj_set_bg_opacity;
     v ee_uicpp_obj_set_dirty;
-    v ee_uicpp_obj_set_display_mode;
     r ee_uicpp_obj_string_length;
     r ee_uicpp_obj_tabable;
     r ee_uicpp_obj_text_create;

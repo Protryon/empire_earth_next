@@ -75,10 +75,7 @@ class LLE_API UITiledBackground : public UIBitmapBackground {
 public:
     UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription, const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible, UITiling inTiling = kTilingBoth, float inAcross = 0.0f, float inDown = 0.0f) : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm, inDrawPriority, inVisible) { this->Call(EeUiBgCall::TiledInit, inTiling, 0, UIF4(inAcross, inDown)); }
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::TiledDraw, inRectangle); }
-    // slot 0x20: draws the tiles [inFirstRow, inLastRow] x [inFirstColumn, inLastColumn] clipped to inClip
-    virtual long DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
-                                     unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
-                                     float inHeight);
+    // (slot 0x20, DrawTiledBackground, which nothing overrode: Rust's, bgobj.rs DrawTiled)
 };
 
 // C:\EEX\Low-Level Engine\User Interface\UIBackground.cpp
@@ -111,8 +108,6 @@ struct UIF8 {
 EE_UI_CASE(bg_window) { return a ? m->GetRasterizer()->GetWindow(s)->GetHeight() : m->GetRasterizer()->GetWindow(s)->GetWidth(); }
 EE_UI_CASE(bg_virt_load) { return static_cast<UIBackground*>(r)->LoadBackground(); }
 EE_UI_CASE(bg_virt_unload) { return static_cast<UIBackground*>(r)->UnloadBackground(); }
-EE_UI_CASE(bg_virt_stretched) { return static_cast<UIBitmapBackground*>(static_cast<UIBackground*>(r)) ->DrawStrectchedBackground(UIObjHost::Rect(f), UIObjHost::Rect(f + 4)); }
-EE_UI_CASE(bg_virt_tiled) { return static_cast<UITiledBackground*>(static_cast<UIBackground*>(r)) ->DrawTiledBackground(UIObjHost::Rect(f), a, b, c, d, f[4], f[5]); }
 EE_UI_CASE(bg_bitmap_new) { return (intptr_t) new GEBitmap; }
 EE_UI_VOID(bg_bitmap_release) { theBitmap->Dereference(); }
 EE_UI_CASE(bg_bitmap_texture) { return (intptr_t)theBitmap->GetTexture(s); }
@@ -128,19 +123,6 @@ typedef EeUiBgCall C;
 #define UIBGM(r) static_cast<UIForm*>(static_cast<EeUiBackgroundFields*>((void*)(r))->mForm)->GetManager()
 extern "C" uintptr_t ee_uicpp_bg_texture_load(uintptr_t inRecord, EeUiShimText inName, uintptr_t inDescription)
 { return (uintptr_t)UIBGM(inRecord)->GetRasterizer()->GetTextureManager(UIBGM(inRecord)->GetScreen())->LoadTexture(UIShimString(inName), *reinterpret_cast<const GETextureDescription*>(inDescription)); }
-
-long UIBitmapBackground::DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination)
-{
-    return (long)this->Call(C::BitmapStretched, 0, 0, UIF8(inSource, inDestination));
-}
-
-long UITiledBackground::DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
-                                            unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
-                                            float inHeight)
-{
-    return (long)this->Call(C::DrawTiled, inFirstRow, inLastRow,
-                            UIF8(inClip, UIF4::Bits((int32_t)inFirstColumn), UIF4::Bits((int32_t)inLastColumn), inWidth, inHeight));
-}
 
 // C:\EEX\Low-Level Engine\User Interface\UIBackgroundTable.cpp
 // 0x1005c34a..0x1005c84e: UIBackgroundTable's inline members first (0x1005c34a..0x1005c575), then the
@@ -279,10 +261,7 @@ EE_UI_VOID(combo_a_part_set_location) { CB_PART(b)->SetLocation(GE2DPoint(f[0], 
 EE_UI_CASE(combo_a_part_copy_data) { return CB_PART(b)->CopyData(); }
 EE_UI_VOID(combo_a_set_dirty) { CB->SetDirty(true); }
 EE_UI_VOID(combo_a_set_rectangle) { CB->SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_VOID(combo_a_release_mouse) { CB->ReleaseCapturedMouse(); }
 EE_UI_VOID(combo_a_release_keyboard) { CB->ReleaseCapturedKeyboard(); }
-EE_UI_VOID(combo_a_open_list) { CB->OpenListBox(); }
-EE_UI_VOID(combo_a_close_list) { CB->CloseListBox(); }
 EE_UI_CASE(combo_a_add_string) { return CB->AddString(); }
 EE_UI_VOID(combo_a_change_selection) { CB->ChangeSelection(); }
 EE_UI_CASE(combo_rhombus_create) { return (intptr_t) new GERhombus(); }
@@ -308,13 +287,10 @@ EE_UI_VOID(ctl_help_string) { theForm->GetManager()->GetStringTable()->GetString
 EE_UI_VOID(ctl_set_dirty) { ctl->SetDirty(a != 0); }
 EE_UI_VOID(ctl_form_ctl_set_dirty) { reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); }
 EE_UI_VOID(ctl_virt_set_location) { ctl->SetLocation(GE2DPoint(f[0], f[1])); }
-EE_UI_VOID(ctl_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
-EE_UI_VOID(ctl_release_mouse) { ctl->ReleaseCapturedMouse(); }
 EE_UI_VOID(ctl_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
 EE_UI_VOID(ctl_part_set_bg_color) { ctl->SetBgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(ctl_tabbed_to) { ctl->TabbedTo(); }
 EE_UI_VOID(ctl_draw_copied_bg) { ctl->GetRasterizer()->Draw(ctl->CopiedBgRhombus(), ctl->GetScreenIndex()); }
-EE_UI_CASE(ctl_virt_draw_border) { return ctl->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
 EE_UI_CASE(ctl_virt_mouse_down) { return ctl->MouseLButtonDown(); }
 EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0], f[0], f[0], f[0]); }
 #undef theForm
@@ -338,10 +314,8 @@ extern "C" void ee_uicpp_rhombus_delete(void* inRhombus) { delete static_cast<GE
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
 #define ctl static_cast<UIControl*>(inObj)
 EE_UI_VOID(obj_set_dirty) { ctl->SetDirty(a != 0); }
-EE_UI_VOID(obj_release_mouse) { ctl->ReleaseCapturedMouse(); }
 EE_UI_CASE(obj_tabable) { return ctl->GetTabable(); }
 EE_UI_VOID(obj_release_keyboard) { ctl->ReleaseCapturedKeyboard(); }
-EE_UI_VOID(obj_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
 EE_UI_VOID(obj_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
 #undef ctl
 // The ops on the bitmaps and texts a whole object holds by address (ee_ui obj.rs): a the object, b an argument
@@ -687,13 +661,11 @@ EE_UI_CASE(form_part_draw_text) { return theControl->DrawTextA(); }
 EE_UI_VOID(form_part_set_location) { theControl->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(form_delete_part) { delete theControl; }
 EE_UI_VOID(form_ctl_set_dirty) { theControl->SetDirty(b != 0); }
-EE_UI_VOID(form_ctl_set_display_mode) { theControl->SetDisplayMode((unsigned long)b); }
 EE_UI_VOID(form_ctl_hide) { theControl->HideControl(); }
 EE_UI_VOID(form_ctl_tabbed_from) { theControl->TabbedFrom(); }
 EE_UI_VOID(form_ctl_tabbed_to) { theControl->TabbedTo(); }
 EE_UI_CASE(form_ctl_update_keyboard) { return theControl->UpdateKeyboard(); }
 EE_UI_CASE(form_ctl_wheel_turned) { return theControl->MouseWheelTurned((long)b); }
-EE_UI_VOID(form_ctl_release_mouse) { theControl->ReleaseCapturedMouse(); }
 EE_UI_VOID(form_ctl_release_keyboard) { theControl->ReleaseCapturedKeyboard(); }
 EE_UI_VOID(form_help_set_text) { static_cast<UITextLabel*>(theControl)->SetText(sUIFormHelpString, true); }
 EE_UI_CASE(form_group_new) { return (intptr_t) new UIEntityGroup; }
@@ -704,10 +676,8 @@ EE_UI_VOID(form_bg_delete) { delete theBackground; }
 EE_UI_CASE(form_bg_draw) { return theBackground->DrawBackground(UIFormRect(f)); }
 EE_UI_VOID(form_bg_load) { theBackground->LoadBackground(); }
 EE_UI_VOID(form_bg_unload) { theBackground->UnloadBackground(); }
-EE_UI_VOID(form_bg_relayout) { theBackground->RelayoutBackground(); }
 EE_UI_CASE(form_hot_key_copy) { return (intptr_t) new UIHotKey(theForm, *theKey); }
 EE_UI_VOID(form_hot_key_delete) { delete theKey; }
-EE_UI_CASE(form_hot_key_fire) { return theKey->FireEvents(); }
 // the temporary hot key AddHotKey builds (lle_hosts.rs form_hot_key_temp): made, on this form, its key b
 EE_UI_CASE(form_hot_key_new) { return (intptr_t) new UIHotKey; }
 EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
@@ -737,7 +707,6 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 #define theText reinterpret_cast<GEText*>(a)
 #define theLine reinterpret_cast<GELine*>(a)
 EE_UI_VOID(graph_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
-EE_UI_CASE(graph_draw_border) { return g->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
 EE_UI_CASE(graph_line_create) { return (intptr_t) new GELine; }
 EE_UI_VOID(graph_line_delete) { delete theLine; }
 #undef theLine
@@ -919,8 +888,6 @@ EE_UI_VOID(mgr_sound_parameters) { SOUNDS->SetSoundParameters(INSTANCE, f[0], 0.
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
 // 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls
 // out: the event's virtuals on the record, the file's reads (UIHotKey.cpp's ee_uicpp_file_*) and the owners'
-EE_UI_CASE(event_ev_initialize) { return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->InitializeEvent(); }
-EE_UI_CASE(event_ev_uninitialize) { return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->UninitializeEvent(); }
 EE_UI_VOID(event_bgt_file_open) { ee_uicpp_file_open(inObj); }
 EE_UI_CASE(event_bgt_file_read) { return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c); }
 EE_UI_VOID(event_bgt_file_close) { ee_uicpp_file_close(inObj); }
@@ -999,8 +966,6 @@ EE_UI_VOID(label_string_assign) { *reinterpret_cast<UWideString*>(a) = *reinterp
 EE_UI_VOID(label_text_set_bytes) { reinterpret_cast<GEText*>(a)->SetText(UWideString(reinterpret_cast<const char*>(b))); }
 EE_UI_CASE(label_text_font_height) { return reinterpret_cast<GEText*>(a)->GetFont()->GetHeight(); }
 EE_UI_CASE(label_create_scroll_bar) { return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(), l->GetBorderThickness()); }
-EE_UI_VOID(label_virt_check_scroll_bar) { l->CheckScrollBar(); }
-EE_UI_VOID(label_virt_recompute) { l->RecomputeDisplayRange(); }
 EE_UI_VOID(label_virt_set_location) { l->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
 #undef l

@@ -66,14 +66,12 @@ public:
     }
     virtual long AddString() { return (long)this->Call(EeUiComboCall::AddString); }   // slot 0x88
     virtual void ChangeSelection() { this->Call(EeUiComboCall::ChangeSelection); }
-    virtual void CloseListBox() { this->Call(EeUiComboCall::CloseListBox); }
     virtual void HideControl() { this->Call(EeUiComboCall::HideControl); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiComboCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiComboCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiComboCall::MouseMove, 0, 0, UIF4(inLocation)); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    virtual void OpenListBox() { this->Call(EeUiComboCall::OpenListBox); }   // slot 0x94
     virtual void ProcessDown() { this->Call(EeUiComboCall::ProcessArrow); }   // slot 0x98 (ICF-folded with ProcessUp)
     virtual void ProcessUp() { this->Call(EeUiComboCall::ProcessArrow); }
     virtual void TabbedTo() { this->Call(EeUiComboCall::Tabbed, 1); }

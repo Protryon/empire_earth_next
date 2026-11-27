@@ -126,6 +126,18 @@ fn bg<R: Default>(bg: Cpp, g: impl FnOnce(&EeUiBackgroundFields) -> R) -> R {
     // SAFETY: a live background record
     unsafe { r.as_ref() }.map_or_else(R::default, g)
 }
+/// `this->DrawTiledBackground(rect f, a, b, c, d, f[4], f[5])` (o the background record; the one body, Rust's).
+///
+/// # Safety
+/// The host contract: `o` a live background record, `f` six floats.
+pub(crate) unsafe fn bg_tiled(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        let mut w = [*f, *f.add(1), *f.add(2), *f.add(3), f32::from_bits(c as u32), f32::from_bits(d as u32), *f.add(4), *f.add(5)];
+        crate::bgobj::ee_ui_bg_call(o as *mut EeUiBackgroundFields, crate::bgobj::EeUiBgCall::DrawTiled, ul(a), ul(b), w.as_mut_ptr())
+            as core::ffi::c_long as isize
+    }
+}
 /// The form of the background record `o` (the host's object).
 unsafe fn bg_form(o: *mut c_void) -> Cpp {
     // SAFETY: the host contract: `o` a live background record
@@ -191,6 +203,44 @@ ops! {
     ctl_tabbing_on => |o, a, b, f| bl(form_call(form_of(o), F::TabbingOn, 0, 0));
     /// `theForm->GetManager()->GetNumberOfSurfaces()`.
     ctl_form_surfaces => |o, a, b, f| ul(mgr_call(mgr(form_of(o)), M::NumberOfSurfaces, 0, 0, 0));
+    // ---- the virtuals no class overrides (LLE/UI round 3): the one body, Rust's
+    /// `ctl->SetDisplayMode(a)`.
+    ctl_set_display_mode => |o, a, b, f| ctl_call(o, C::SetDisplayMode, ul(a)) * 0;
+    /// `a->SetDisplayMode(b)` (the form's control).
+    form_ctl_set_display_mode => |o, a, b, f| ctl_call(p(a), C::SetDisplayMode, ul(b)) * 0;
+    /// `ctl->ReleaseCapturedMouse()`.
+    ctl_release_mouse => |o, a, b, f| ctl_call(o, C::ReleaseMouse, 0) * 0;
+    /// `a->ReleaseCapturedMouse()` (the form's control).
+    form_ctl_release_mouse => |o, a, b, f| ctl_call(p(a), C::ReleaseMouse, 0) * 0;
+    /// `ctl->DrawBorder(rect f, a)`: the bevelled border over the record's copied opacity and type.
+    ctl_draw_border => |o, a, b, f| {
+        let m = mgr(form_of(o));
+        let (opacity, kind) = ctl(o, |r| (r.mCopiedBorderOpacity, r.mCopiedBorderType));
+        let rect = *(f as *const UiRect);
+        let rasterizer = mgr_call(m, M::Rasterizer, 0, 0, 0) as *mut c_void;
+        let screen = mgr_call(m, M::Screen, 0, 0, 0) as c_ulong;
+        crate::lle_control::ee_ui_control_draw_border(rasterizer, screen, rect, ul(a) as c_ulong, opacity, kind) as isize
+    };
+    /// `a->RelayoutBackground()` (the form's background).
+    form_bg_relayout => |o, a, b, f| direct::background_call(p(a), crate::bgobj::EeUiBgCall::Relayout, 0, 0) * 0;
+    /// `a->FireEvents()` (the form's hot key).
+    form_hot_key_fire => |o, a, b, f| bl(hot_key_call(p(a), crate::hotkeyobj::EeUiHotKeyCall::FireEvents, 0, 0));
+    /// `this->DrawStrectchedBackground(rect f, rect f + 4)` (o the record).
+    bg_stretched => |o, a, b, f| crate::bgobj::ee_ui_bg_call(o as *mut EeUiBackgroundFields, crate::bgobj::EeUiBgCall::BitmapStretched, 0, 0, f) as core::ffi::c_long as isize;
+    /// `l->CheckScrollBar()` (o the label).
+    label_check_scroll_bar => |o, a, b, f| direct::label_call(o, crate::labelobj::EeUiLabelCall::CheckScrollBar, 0, 0).unwrap_or(0) * 0;
+    /// `l->RecomputeDisplayRange()` (o the label).
+    label_recompute => |o, a, b, f| direct::label_call(o, crate::labelobj::EeUiLabelCall::RecomputeDisplayRange, 0, 0).unwrap_or(0) * 0;
+    /// `l->ProcessHome()` (o the list box).
+    list_process_home => |o, a, b, f| direct::list_call(o, crate::listobj::EeUiListCall::ProcessHome, 0, 0).unwrap_or(0) * 0;
+    /// `l->ProcessEnd()` (o the list box).
+    list_process_end => |o, a, b, f| direct::list_call(o, crate::listobj::EeUiListCall::ProcessEnd, 0, 0).unwrap_or(0) * 0;
+    /// `CB->OpenListBox()` (o the combo box).
+    combo_a_open_list => |o, a, b, f| direct::combo_call(o, crate::comboobj::EeUiComboCall::OpenListBox, 0, 0).unwrap_or(0) * 0;
+    /// `CB->CloseListBox()` (o the combo box).
+    combo_a_close_list => |o, a, b, f| direct::combo_call(o, crate::comboobj::EeUiComboCall::CloseListBox, 0, 0).unwrap_or(0) * 0;
+    /// `CB->ReleaseCapturedMouse()` (o the combo box).
+    combo_a_release_mouse => |o, a, b, f| ctl_call(o, C::ReleaseMouse, 0) * 0;
     // ---- every whole object's (o the control)
     /// `ctl->UIControl::CopyData()`.
     obj_base_copy_data => |o, a, b, f| ctl_call(o, C::CopyData, 0) as core::ffi::c_long as isize;

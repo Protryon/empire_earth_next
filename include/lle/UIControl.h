@@ -88,7 +88,7 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual long MouseWheelTurned(long inDelta) { return kErrorFailed; }
     virtual long OpenIMECompositionString() { return kErrorFailed; }
     virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
-    virtual void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
+    void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor) { this->Call(EeUiControlCall::SetBgColor, 0, 0, UIF4(inColor)); }
     virtual void SetBgOpacity(float inOpacity) { this->Call(EeUiControlCall::SetBgOpacity, 0, 0, UIF4(inOpacity)); }
@@ -97,7 +97,7 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     void SetBorderOpacity(float inOpacity) { this->mBorderOpacity = inOpacity; }
     void SetBorderThickness(unsigned long inThickness) { this->Call(EeUiControlCall::SetBorderThickness, inThickness); }
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
-    virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
+    void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiControlCall::SetLocation, 0, 0, UIF4(inLocation)); }
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetRectangle, inRectangle); }
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
@@ -128,9 +128,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     // The base's logic (ee_ui controlobj.rs)
     void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
-    // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
-    // Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
-    virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness) { return ee_ui_control_draw_border(this->GetRasterizer(), this->GetScreenIndex(), UIRect(inRectangle), inThickness, this->mCopiedBorderOpacity, this->mCopiedBorderType); } // slot 0x84
     // Returns the form's mouse location
     const GE2DPoint& GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
     void SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetBgRectangle, inRectangle); }

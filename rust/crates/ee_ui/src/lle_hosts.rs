@@ -186,10 +186,10 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::Fire as isize => X(chains::combo_a_fire),
         x if x == A::CaptureMouse as isize => X(chains::combo_a_capture_mouse),
         x if x == A::CaptureKeyboard as isize => X(chains::combo_a_capture_keyboard),
-        x if x == A::ReleaseMouse as isize => V(ee_uicpp_combo_a_release_mouse),
+        x if x == A::ReleaseMouse as isize => X(chains::combo_a_release_mouse),
         x if x == A::ReleaseKeyboard as isize => V(ee_uicpp_combo_a_release_keyboard),
-        x if x == A::OpenList as isize => V(ee_uicpp_combo_a_open_list),
-        x if x == A::CloseList as isize => V(ee_uicpp_combo_a_close_list),
+        x if x == A::OpenList as isize => X(chains::combo_a_open_list),
+        x if x == A::CloseList as isize => X(chains::combo_a_close_list),
         x if x == A::AddString as isize => R(ee_uicpp_combo_a_add_string),
         x if x == A::ChangeSelection as isize => V(ee_uicpp_combo_a_change_selection),
         _ => None,
@@ -756,6 +756,15 @@ pub unsafe extern "C" fn ee_ui_file_combo_host(
 ) -> isize {
     // SAFETY: the contract
     unsafe { chain(&[file_shared, file_combo], o, op, a, b, c, d, f) }
+}
+
+/// The events' `InitializeEvent` and `UninitializeEvent`, which no event overrides: kErrorOK.
+///
+/// # Safety
+/// None (the host contract's signature).
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn event_virt_ok(_o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    0
 }
 
 /// The hot keys' `HkEntity`: the keyboard's entity of key `a` (`a` itself when there is none, the original's
