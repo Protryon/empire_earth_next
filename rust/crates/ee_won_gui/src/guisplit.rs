@@ -79,6 +79,17 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
             if let Some(r) = crate::wrapobj::wrap_host_op(crate::wrapobj::label_text(comp as isize), op, a) {
                 return r;
             }
+            if op == Op::CtorWrapNew {
+                if let Some(r) = crate::wrapobj::label_new_text(comp as isize) {
+                    return r;
+                }
+            }
+        }
+        if which == EeWonGuiSplitHost::Input {
+            // (the box's own members in place: R6 WON GUI round 41)
+            if let Some(r) = crate::inputobj::game_host_op(comp as isize, op, a, b) {
+                return r;
+            }
         }
         if which == EeWonGuiSplitHost::Text {
             // (the segments' members, the link and the copy: R6 WON GUI round 40; the clipboard the C++ host's)

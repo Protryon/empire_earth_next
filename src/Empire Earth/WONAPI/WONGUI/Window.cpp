@@ -191,7 +191,7 @@ static uint32_t GfxHost(void* inGraphics, EeWonGfxHook inHook, const int32_t* a,
     Graphics* g = (Graphics*)inGraphics;
     switch (inHook) {
     case H::String: g->GetFont()->DrawString(g->GetContext(), *(const GUIString*)p, (unsigned short)a[0], (unsigned short)a[1], a[2], a[3]); return 0;
-    case H::Text: ((WrappedText*)p)->Paint(*g, a[0], a[1]); return 0;
+    // (a wrapped text's paint is wrapobj.rs game_paint's: R6 WON GUI round 41)
     default: return 0;
     }
 }

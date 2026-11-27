@@ -281,6 +281,16 @@ pub(crate) fn list_field(list: isize, f: crate::guihost::EeWonGuiField) -> Optio
     Some(w as i32 as isize)
 }
 
+/// The game's text list item `item`'s text (its `mText` in place); None before the registration.
+pub(crate) fn item_text(item: isize) -> Option<Vec<u32>> {
+    let at = (*LEAF_AT.lock().ok()?)?;
+    if item == 0 || !crate::compobj::is_game() {
+        return None;
+    }
+    // SAFETY: the game's live text list item and its GUIString at the registered offset
+    Some(unsafe { crate::guistrobj::gstring_units((item as usize + at.text) as *const c_void) })
+}
+
 /// A word at `p + off` (a pointer member or a SmartPtr).
 ///
 /// # Safety

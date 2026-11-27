@@ -149,34 +149,15 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
 {
     InputBox* t = (InputBox*)inComp;
     switch (op) {
-    case Op::FontHeight: return t->mFont->GetHeight();
-    case Op::FontCharWidth: return t->mFont->GetCharacterWidth((int)a);
-    case Op::TextWidth: return t->mFont->GetStringWidth(t->mText, (unsigned short)a, (unsigned short)b);
-    case Op::TextWidthAll: return t->mFont->GetStringWidth(t->mText);
-    case Op::TextCharWidth: return t->mFont->GetCharacterWidth(t->mText[(int)a]);
-    case Op::FontStringM: return t->mFont->GetStringWidth(GUIString("M"));
-    case Op::TextStoreText: (a == 0 ? t->mText : t->mRealText) = *(const GUIString*)b; return 0;
-    case Op::InputHasFilter: return t->mInputFilter != NULL ? 1 : 0;
+    // (the font measures, the text stores, the colours, the icon and the filter's presence are inputobj.rs
+    // game_host_op's over the members in place: R6 WON GUI round 41)
     case Op::InputFilterText: return t->mInputFilter(t, *(GUIString*)a) ? 1 : 0;
-    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->GetWidth() : -1;
-    case Op::InputDisabled: return t->IsDisabled() ? 1 : 0;
-    case Op::InputUseDisabledColors: return t->mUseDisabledColors ? 1 : 0;
-    case Op::InputHasIcon: return t->mIcon.get() != NULL ? 1 : 0;
-    case Op::InputHasFocus: return t->HasFocus() ? 1 : 0;
-    case Op::InputTextColor: return (int)t->mTextColor;
-    case Op::InputDisabledTextColor: return t->mDisabledTextColor;
-    case Op::InputIconHeight: return t->mIcon->GetHeight();
-    case Op::InputSelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     case Op::InputDrawSlots: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(t->mFont.get(), &t->mText, t->mIcon.get()), WONDrawNoCall()); return 0;
     case Op::InputPaintBack: t->mBackground.Paint(*(Graphics*)a, 0, 0, ((const EeWonDrawOp*)b)->c, ((const EeWonDrawOp*)b)->d, ((const EeWonDrawOp*)b)->e, 0); return 0;
     case Op::InputPaintDisabledBack: t->mDisabledBackground.Paint(*(Graphics*)a, 0, 0, ((const EeWonDrawOp*)b)->c, ((const EeWonDrawOp*)b)->d, ((const EeWonDrawOp*)b)->e, 0); return 0;
     // the constructor's statements (guictor.rs)
     case Op::CtorFontNamed: t->mFont=t->GetNamedFont("InputBox"); return 0;
-    case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
-    case Op::CtorDisabledTextColor: t->mDisabledTextColor=(int)0x80000006; return 0;
     case Op::CtorDisabledBackground: t->mDisabledBackground.SetColor((int)0x80000001); return 0;
-    case Op::CtorUseDisabledColors: t->mUseDisabledColors=true; return 0;
-    case Op::CtorNoFilter: t->mInputFilter=NULL; return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -188,6 +169,15 @@ bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
     return ee_won_input_numeric_filter(theStr.mData->mText, theStr.length(), theInputBox->GetSelStart());
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonInputAt kInputAt = {offsetof(InputBox, mText), offsetof(InputBox, mRealText), offsetof(InputBox, mIcon),
+                                      offsetof(InputBox, mInputFilter), offsetof(InputBox, mUseDisabledColors),
+                                      offsetof(InputBox, mFont), offsetof(InputBox, mTextColor),
+                                      offsetof(InputBox, mDisabledTextColor), offsetof(InputBox, mSelColor), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+static_assert(sizeof(SmartPtr<Font>) == sizeof(void*) && sizeof(SelectionColor) == sizeof(EeWonSelColor), "inputobj.rs EeWonInputAt");
+[[maybe_unused]] static const bool sInputAt = (ee_won_input_members_register(&kInputAt), true);
 // Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the
 // rest: the 500 ms blink, the 100-entry input history, the padding)
 InputBox::InputBox()
@@ -209,7 +199,7 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
     case Op::PaintBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, (int)b, (int)c); return 0;
     case Op::LabelDrawWrapped: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, NULL, t->mWrappedText.get()), WONDrawNoCall()); return 0;
     // the constructor's statements (guictor.rs)
-    case Op::CtorWrapNew: t->mWrappedText=new WrappedText; return 0;
+    // (CtorWrapNew is wrapobj.rs label_new_text's: R6 WON GUI round 41)
     case Op::CtorFontNamed: t->mWrappedText->SetFont(t->GetNamedFont("Label")); return 0;
     case Op::CtorBackgroundNone: t->mBackground.SetColor(-1); return 0;
     default: return ComponentOp(t, op, a, b);
@@ -598,27 +588,6 @@ PopupMenu::PopupMenu()
 PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }
 
-// WrappedText (R6 WON round 38): the Rust object (wrapobj.rs) wraps the text it is handed with the font's measure
-// (the measure is wrapobj.rs's too, over platfont.rs: R6 WON GUI round 36)
-namespace WONAPI {
-WrappedText::WrappedText() : mObj(ee_won_wrap_new()) {}
-WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won_wrap_new()) {}
-// Recomputes the line breaks and the text's width and height for the font and maximum width
-void WrappedText::CalcWrap()
-{
-    ee_won_wrap_calc_font(this->mObj, this->mFont.get() != NULL ? this->mFont->mRust : NULL, this->mText.mData->mText, this->mText.length());
-}
-// Draws each wrapped line (centred if set) from the given top-left point (wrapobj.rs over guidraw.rs wrapped_text)
-void WrappedText::Paint(Graphics& g, int x, int y)
-{
-    if (this->mFont.get() == NULL)
-        return;
-    WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) {
-        return ee_won_wrap_paint_font(this->mObj, this->mFont->mRust, this->mText.mData->mText, this->mText.length(), x, y, o, n); }),
-        WONDrawSlots(this->mFont.get(), &this->mText));
-}
-}
-
 // The image and rectangle components' paints (R6 WON round 37 draw plans; ImageComponent.cpp folded in, round 38)
 namespace WONAPI {
 // Draws the image stretched to the component, once at the origin, or tiled over the component clipped to it
@@ -657,11 +626,10 @@ void RectangleComponent3D::Paint(Graphics &g)
     ee_won_gui_split_register(EeWonGuiSplitHost::Label, ee_won_guicpp_label_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::Split, ee_won_guicpp_split_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::List, ee_won_guicpp_list_call), true);
-// where wrapobj.rs reads a wrapped text's members and its holders' (R6 WON GUI round 40)
+// where wrapobj.rs reads its holders' wrapped texts (R6 WON GUI round 40; the text a Rust object since round 41)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
-static const EeWonWrapAt kWrapAt = {offsetof(WrappedText, mText), offsetof(WrappedText, mFont), offsetof(WrappedText, mObj),
-    offsetof(Label, mWrappedText), offsetof(MSButtonBase, mText), offsetof(Font, mRust)};
+static const EeWonWrapAt kWrapAt = {offsetof(Label, mWrappedText), offsetof(MSButtonBase, mText), offsetof(Font, mRust)};
 #pragma clang diagnostic pop
 [[maybe_unused]] static const bool sWrapAt = (ee_won_wrap_register(&kWrapAt), true);
 // where the Rust area reads a segment's members (gamewin.rs text_host_op, R6 WON GUI round 40)
@@ -677,14 +645,8 @@ static const EeWonSegAt kSegAt = {offsetof(TextSegment, mText), offsetof(TextSeg
 // Formatted text for text areas: expands <n>, <cN>, <fN>, <sN> and <lN> commands
 // The format's parse and its run are ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops and
 // ee_won_gui_text_append_formatted: the pending text, the colour and the font; R6 WON GUI round 36); this unit is
-// the area's four calls it makes.
+// the call (its four calls on the area are guitext.rs's game sink: R6 WON GUI round 41).
 namespace WONAPI {
-static void FmtAddText(void* area,const void* units,size_t len,int color,void* font,bool lineBreak)
-{ ((TextArea*)area)->AddSegment(GUIString(std::wstring((const wchar_t*)units,len)),color,(Font*)font,lineBreak); }
-static void FmtLineBreak(void* area) { ((TextArea*)area)->LineBreak(0); }
-static void FmtAddString(void* area,const void* string,int color,void* font) { ((TextArea*)area)->AddSegment(*(const GUIString*)string,color,(Font*)font,false); }
-static void FmtAddSegment(void* area,void* segment) { ((TextArea*)area)->AddSegment((TextSegmentBase*)segment); }
-static const EeWonFormatSink kFormatSink = { FmtAddText, FmtLineBreak, FmtAddString, FmtAddSegment };
 // Appends format text to a text area, expanding <n> line breaks, <cN>/<fN> colour and font changes and
 // <sN>/<lN> inserted strings and segments (1-based indices; "<<" is a literal '<')
 void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
@@ -693,7 +655,7 @@ void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
     bool lineBreak)
 {
     EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
-    ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
+    ee_won_gui_text_append_formatted(area,ee_won_gui_text_game_sink(),format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
 }
 }
 
@@ -757,16 +719,6 @@ static Component* NewBase(EeWonShellBaseNew k)
     }
 }
 
-// a combo box's part member = c
-static intptr_t ComboPart(ComboBox* cb, intptr_t which, intptr_t c)
-{
-    switch ((EeWonShellComboPart)which) {
-    case EeWonShellComboPart::Button: cb->mButton = static_cast<Button*>((Component*)c); return 0;
-    case EeWonShellComboPart::Edit: cb->mEdit = static_cast<InputBox*>((Component*)c); return 0;
-    case EeWonShellComboPart::ListArea: cb->mListArea = static_cast<ListArea*>((Component*)c); return 0;
-    default: cb->mListBox = static_cast<Scroller*>((Component*)c); return 0;
-    }
-}
 // an image's method (EeWonWbImage; a duplicate's reference goes to the Rust)
 static intptr_t ImageOp(intptr_t which, intptr_t b)
 {
@@ -783,7 +735,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
 {
     WONShell* s = (WONShell*)inShell;
     Component* t = s ? s->mComp : NULL; // (the skin's calls have no shell: skinobj.rs)
-    ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
     // (the MS buttons' wrapped texts are wrapobj.rs's in the game: R6 WON GUI round 40)
@@ -812,15 +763,7 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         if ((EeWonShellBaseNew)b == EeWonShellBaseNew::InputBox) static_cast<InputBox*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
         else static_cast<ListArea*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
         return 0;
-    case H::ComboPart: return ComboPart(cb, a, b);
-    case H::ComboPartOn: return ComboPart(static_cast<ComboBox*>((Component*)a), b, c);
-    case H::ComboGet:
-        switch ((EeWonShellComboPart)a) {
-        case EeWonShellComboPart::Button: return (intptr_t)static_cast<Component*>(cb->mButton.get());
-        case EeWonShellComboPart::Edit: return (intptr_t)static_cast<Component*>(cb->mEdit.get());
-        case EeWonShellComboPart::ListArea: return (intptr_t)static_cast<Component*>(cb->mListArea.get());
-        default: return (intptr_t)static_cast<Component*>(cb->mListBox.get());
-        }
+    // (a combo box's parts are comboobj.rs's in place: R6 WON GUI round 41)
     case H::Img: return ImageOp(a, b);
     case H::DrawImages: {
         WONDrawSlots aSlots;

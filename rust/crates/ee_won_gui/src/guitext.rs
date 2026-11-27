@@ -1067,6 +1067,73 @@ pub unsafe extern "C" fn ee_won_gui_add_formatted(
     }
 }
 
+/// The game's text area `area`'s Rust area (None for a driver's).
+fn game_area<'a>(area: *mut c_void) -> Option<&'a crate::textobj::EeWonText> {
+    // SAFETY: a live text area (the sinks' contract)
+    unsafe { crate::registry::get::<crate::textobj::EeWonText>(area as isize, crate::registry::EeWonGuiKind::Text) }
+}
+/// `area->AddSegment(GUIString(units, len), color, font, line_break)` in the game.
+unsafe extern "C" fn game_add_text(
+    area: *mut c_void,
+    units: *const c_void,
+    len: usize,
+    color: i32,
+    font: *mut c_void,
+    line_break: bool,
+) {
+    // SAFETY: `len` units (the sink's contract)
+    let mut t = crate::guistrobj::GText::new(&unsafe { wide(units, len, crate::guistrobj::EE_WON_GSTR_WCHAR as u32) });
+    // SAFETY: the game's live text area and its game host; the held text's slot as the GUIString
+    unsafe {
+        crate::guictor::ee_won_gui_add_segment(
+            area,
+            Some(crate::guisplit::ee_won_gui_text_game),
+            t.arg() as *const c_void,
+            color as isize,
+            font,
+            line_break,
+        )
+    };
+}
+/// `area->LineBreak(0)` in the game.
+unsafe extern "C" fn game_line_break(area: *mut c_void) {
+    if let Some(a) = game_area(area) {
+        a.call(crate::textobj::EeWonTextCall::LineBreak, 0, 0, 0);
+    }
+}
+/// `area->AddSegment(*string, color, font, false)` in the game.
+unsafe extern "C" fn game_add_string(area: *mut c_void, string: *const c_void, color: i32, font: *mut c_void) {
+    // SAFETY: the game's live text area; `string` a live GUIString (the sink's contract)
+    unsafe {
+        crate::guictor::ee_won_gui_add_segment(
+            area,
+            Some(crate::guisplit::ee_won_gui_text_game),
+            string,
+            color as isize,
+            font,
+            false,
+        )
+    };
+}
+/// `area->AddSegment(segment)` in the game.
+unsafe extern "C" fn game_add_segment(area: *mut c_void, segment: *mut c_void) {
+    if let Some(a) = game_area(area) {
+        a.call(crate::textobj::EeWonTextCall::AddSegment, segment as isize, 0, 0);
+    }
+}
+static GAME_SINK: EeWonFormatSink = EeWonFormatSink {
+    add_text: game_add_text,
+    line_break: game_line_break,
+    add_string: game_add_string,
+    add_segment: game_add_segment,
+};
+/// The game's text areas' sink for `ee_won_gui_text_append_formatted` (R6 WON GUI round 41: TextFormat.cpp's four
+/// statements, over the area's game host and its Rust area).
+#[no_mangle]
+pub extern "C" fn ee_won_gui_text_game_sink() -> *const EeWonFormatSink {
+    &GAME_SINK
+}
+
 /// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
 /// count.
 ///

@@ -168,6 +168,9 @@ impl EeWonTip {
                     | ListRightPad
                     | ListTopPad
                     | ListVertOffset
+                    | ScrollPaint
+                    | OpenPopup
+                    | ClosePopup
             )
             || !crate::compobj::is_game()
         {
@@ -218,6 +221,36 @@ impl EeWonTip {
                 ListRightPad => crate::leafpaint::list_field(list, F::RightPad)?,
                 ListTopPad => crate::leafpaint::list_field(list, F::TopPad)?,
                 ListVertOffset => crate::leafpaint::list_field(list, F::VertOffset)?,
+                // the list's ScrollPaint (its virtual: a multi-column list's, else ListArea's; R6 WON GUI round 41)
+                ScrollPaint => {
+                    use crate::registry::{get, EeWonGuiKind as Kind};
+                    if let Some(m) = get::<crate::multiobj::EeWonMulti>(list, Kind::Multi) {
+                        m.call(crate::multiobj::EeWonMultiCall::ScrollPaint, a, 0, 0);
+                    } else {
+                        get::<crate::listobj::EeWonList>(list, Kind::List)?.call(
+                            crate::listobj::EeWonListCall::ScrollPaint,
+                            a,
+                            0,
+                            0,
+                        );
+                    }
+                    0
+                }
+                // `mListArea->GetRoot()->OpenPopup(PopupParams(t, flags, mListArea, a, b))`, `->ClosePopup(t)`
+                OpenPopup => {
+                    let p = crate::wmobj::EeWonWmPopup {
+                        parent: 0,
+                        popup: me,
+                        input: 0,
+                        owner: list,
+                        flags: EE_WON_TIP_POPUP_FLAGS,
+                        x: a as i32,
+                        y: b as i32,
+                        avoid: crate::guictl::EeWonRect4::default(),
+                    };
+                    crate::gamewin::open_popup(list, p)?
+                }
+                ClosePopup => crate::gamewin::end_popup(me)?,
                 _ => {
                     kc(list, K::LocalToRoot, a, (a as usize + 4) as isize);
                     0

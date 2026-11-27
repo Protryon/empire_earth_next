@@ -508,28 +508,23 @@ private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
 
-// WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
-// object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
+// WrappedText (R6 WON round 38): a whole Rust object since R6 WON GUI round 41 (rust/crates/ee_won_gui/src/wrapobj.rs
+// EeWonWrapRc: the text, the font, the breaks, the size, the maximum width, the wrap and centre settings, CalcWrap
+// and Paint); this class is its handle, made by New() and freed at its last Release (RefCount's, by its kind).
 class WrappedText : public RefCount {
+    WrappedText() = delete;
+    intptr_t W(EeWonWbText inWhich, intptr_t c = 0) { return ee_won_wrapt_call(this, inWhich, c); }
 public:
-    GUIString mText; //08
-    SmartPtr<Font> mFont; //0c
-    EeWonWrapText* mObj;
-protected:
-    void CalcWrap(); //34a9b0
-public:
-    WrappedText(); //34a7e0
-    WrappedText(const GUIString&); // (not identified in the original exe)
-    virtual ~WrappedText() { ee_won_wrap_free(this->mObj); }
-    void SetText(const GUIString& t) { this->mText=t; this->CalcWrap(); } //34acc0
-    void SetWrap(bool w) { if(ee_won_wrap_set_wrap(this->mObj,w)) this->CalcWrap(); } //34ad20
-    void SetCentered(bool c) { ee_won_wrap_set_centered(this->mObj,c); } //34ad40
-    void SetFont(Font* f) { this->mFont=f; this->CalcWrap(); } //34ad50
-    void SetMaxWidth(int w) { if(ee_won_wrap_set_max_width(this->mObj,w)) this->CalcWrap(); } //34adb0
-    void Paint(Graphics&,int,int); //34adf0
-    int GetWidth() { return ee_won_wrap_width(this->mObj); }
-    const GUIString& GetText() { return this->mText; } // inline; returns the text at +0x08
-    int GetHeight(); // inline, defined after Font below
+    static WrappedText* New() { return (WrappedText*)ee_won_wrapt_new(); } //34a7e0
+    void SetText(const GUIString& t) { this->W(EeWonWbText::SetText, (intptr_t)&t); } //34acc0
+    void SetWrap(bool w) { this->W(EeWonWbText::SetWrap, w); } //34ad20
+    void SetCentered(bool c) { this->W(EeWonWbText::SetCentered, c); } //34ad40
+    void SetFont(Font* f) { this->W(EeWonWbText::SetFont, (intptr_t)f); } //34ad50
+    void SetMaxWidth(int w) { this->W(EeWonWbText::SetMaxWidth, w); } //34adb0
+    int GetWidth() { return (int)this->W(EeWonWbText::Width); }
+    int GetHeight() { return (int)this->W(EeWonWbText::Height); }
+    Font* GetFont() { return (Font*)this->W(EeWonWbText::Font); }
+    const GUIString& GetText() { return *(const GUIString*)this->W(EeWonWbText::Text); }
 };
 // MSButtonBase (R6 WON round 35): its colours, alignments, focus style, text pads, transparency, fit to text and
 // the text's paint (DrawButtonText) are the Rust MSButtonBase (rust/crates/ee_won_gui/src/msbtnobj.rs); the C++ keeps
@@ -542,7 +537,7 @@ public:
     virtual void Virtual08() { this->MCall(EeWonMsBtnCall::SizeChanged); } //2fea10
     virtual void GetDesiredSize(int& w,int& h) { this->MCall(EeWonMsBtnCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } //2fe8c0
     virtual void SetTextHook(const GUIString& t) { this->mText->SetText(t); this->MCall(EeWonMsBtnCall::TextSet); } //2fe880
-    virtual const GUIString& GetText() { return this->mText->mText; } //2fe850
+    virtual const GUIString& GetText() { return this->mText->GetText(); } //2fe850
     void AdjustHeightToFitText() { this->MCall(EeWonMsBtnCall::AdjustHeightToFitText); } //2fe980
     void DrawButtonText(Graphics& g,int x,int y) { this->MCall(EeWonMsBtnCall::DrawButtonText,(intptr_t)&g,x,y); } //2fea40
     void SetFont(Font* f) { this->mText->SetFont(f); }
@@ -812,7 +807,7 @@ public:
 // ComboBox (R6 WON round 28): whether the list is open, no-typing, the button while disabled and the list box's
 // configured size are the Rust ComboBox (rust/crates/ee_won_gui/src/comboobj.rs) with every method; this is the type the
 // skins (MSComboBox, WONComboBox), the configs and the lobby use, with one-line forwarders (ComboBox.cpp is its
-// host). The parts and the undo text stay members: the skins make the parts and read them.
+// host). The parts stay members, read and set in place by the Rust (round 41); the undo text is the Rust's.
 class Scroller;
 class ComboBox : public Container {
 public:
@@ -845,7 +840,6 @@ public:
     SmartPtr<Button> mButton; //88
     SmartPtr<Scroller> mListBox; //8c
     SmartPtr<ListArea> mListArea; //90
-    GUIString mUndoStr; // the text Escape restores
     EeWonComboBox* mCombo;
 private:
     intptr_t BCall(EeWonComboCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_combo_call(this->mCombo,c,a,b,cc); }
@@ -1603,7 +1597,6 @@ inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall:
 
 // FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
 // (WONLobbyConfigImages.h, R6 WON GUI round 36).
-inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
 // The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
 // original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and
 // their palettes, MSImage, DelayLoadImage, StretchImage, StretchCenterImage; the filters and the decoders too). These

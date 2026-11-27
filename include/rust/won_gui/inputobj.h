@@ -70,6 +70,25 @@ enum class EeWonInputCall : uint32_t {
 /// The Rust InputBox.
 struct EeWonInput;
 
+/// Where the game's InputBox keeps the members its host reads and writes (offsets in an `InputBox`, and `Font::mRust`;
+/// GuiHost.cpp registers them at static initialisation; R6 WON GUI round 41).
+struct EeWonInputAt {
+  /// `mText`, `mRealText` (GUIStrings: their text's pointer)
+  size_t text;
+  size_t real_text;
+  /// `mIcon` (a SmartPtr), `mInputFilter` (a function pointer), `mUseDisabledColors` (a bool), `mFont` (a SmartPtr)
+  size_t icon;
+  size_t filter;
+  size_t use_disabled_colors;
+  size_t font;
+  /// `mTextColor` (a C `unsigned long`), `mDisabledTextColor` (an int), `mSelColor` (an `EeWonSelColor`)
+  size_t text_color;
+  size_t disabled_text_color;
+  size_t sel_color;
+  /// `Font::mRust`
+  size_t font_rust;
+};
+
 extern "C" {
 
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
@@ -94,6 +113,12 @@ ptrdiff_t ee_won_input_call(const EeWonInput *input,
 /// # Safety
 /// `text` holds `len` `wchar_t`s, or `len` is 0.
 bool ee_won_input_numeric_filter(const void *text, size_t len, int32_t sel_start);
+
+/// Registers the input box's member offsets (GuiHost.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+void ee_won_input_members_register(const EeWonInputAt *at);
 
 }  // extern "C"
 
