@@ -312,7 +312,9 @@ impl EeWonBrowser {
                 // `SetComponentFlags(ComponentFlag_GrabBG, a != 0)`: Component's own
                 let k = crate::compobj::EeWonCompCall::SetFlags;
                 // SAFETY: the game's live view; the call re-enters through Component's entry
-                unsafe { crate::compobj::ee_won_comp_call(view as *mut c_void, crate::compobj::host(), k, 0x100, a, 0) };
+                unsafe {
+                    crate::compobj::ee_won_comp_call(view as *mut c_void, crate::compobj::host(), k, 0x100, a, 0)
+                };
                 0
             }
             // `ScrollArea::SetOffsets(0, 0)`: the view's scroll pane

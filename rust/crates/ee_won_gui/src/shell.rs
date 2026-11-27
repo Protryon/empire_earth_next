@@ -483,7 +483,8 @@ impl Sh {
                 // SAFETY: the op's contract: a NUL-terminated name
                 let name = unsafe { std::ffi::CStr::from_ptr(a as *const std::ffi::c_char) };
                 let n = name.to_bytes();
-                let f = crate::gamewin::wm(crate::wmobj::EeWonWmCall::GetNamedFont, n.as_ptr() as isize, n.len() as isize);
+                let f =
+                    crate::gamewin::wm(crate::wmobj::EeWonWmCall::GetNamedFont, n.as_ptr() as isize, n.len() as isize);
                 if let Some(f) = f.filter(|&f| f != 0) {
                     crate::gamewin::rf(f, true);
                 }

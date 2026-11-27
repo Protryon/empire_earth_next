@@ -72,7 +72,15 @@ pub(crate) unsafe fn set_font(slot: *mut isize, font: isize) {
 
 /// A list area's, text area's, label's or input box's (`which`) constructor statements over its own members, in
 /// place, and the list's selection background.
-pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: Op, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
+pub(crate) fn area_op(
+    which: crate::guisplit::EeWonGuiSplitHost,
+    me: isize,
+    op: Op,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> Option<isize> {
     use crate::guisplit::EeWonGuiSplitHost as W;
     if !crate::compobj::is_game() || me == 0 {
         return None;
@@ -96,7 +104,10 @@ pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: 
             // `GetSelColor().GetBackgroundColor(g)`: the selection colour's background (an unsigned long)
             let leaf = crate::leafpaint::leaf_at()?;
             // SAFETY: the game's live list, its SelectionColor at leafpaint.rs's offset
-            return Some(unsafe { (*((me as usize + leaf.list_sel) as *const crate::guidraw::EeWonSelColor)).background } as isize);
+            return Some(
+                unsafe { (*((me as usize + leaf.list_sel) as *const crate::guidraw::EeWonSelColor)).background }
+                    as isize,
+            );
         }
         (W::List | W::Text, _) => {}
         _ => return None,
@@ -131,7 +142,10 @@ pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: 
             Op::SelColor => {
                 // `*(EeWonSelColor*)a = mSelColor` (the record itself)
                 // SAFETY: as above; `a` the record the op fills
-                unsafe { *(a as *mut crate::guidraw::EeWonSelColor) = *(m(at.text_sel) as *const crate::guidraw::EeWonSelColor) };
+                unsafe {
+                    *(a as *mut crate::guidraw::EeWonSelColor) =
+                        *(m(at.text_sel) as *const crate::guidraw::EeWonSelColor)
+                };
             }
             Op::AddSegmentOf => {
                 // `AddSegment(seg)`: the area's Rust area's
@@ -144,7 +158,14 @@ pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: 
                 // text colour and font
                 use crate::guistrobj::{ee_won_gstr_new, EeWonGstrOp, GText};
                 // SAFETY: `a` a live GUIString (the op's contract): its text's pointer
-                let p = unsafe { ee_won_gstr_new(EeWonGstrOp::NewSub, *(a as *const *const c_void), i32::from(b as u16), i32::from(c as u16)) };
+                let p = unsafe {
+                    ee_won_gstr_new(
+                        EeWonGstrOp::NewSub,
+                        *(a as *const *const c_void),
+                        i32::from(b as u16),
+                        i32::from(c as u16),
+                    )
+                };
                 // SAFETY: the new text, no one else's
                 let mut g = unsafe { GText::adopt(p) };
                 // SAFETY: as above (the colour an int, the font a SmartPtr's raw pointer)
@@ -249,14 +270,16 @@ pub(crate) fn fwd_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Optio
         Op::FocusChildLost => z(ct(comp)?.call(T::DropFocusChild, 0, 0, 0)),
         Op::AddChild => z(ct(comp)?.call(T::AddChild, a, 0, 0)),
         Op::ChildAddEx => z(ct(a)?.call(T::AddChildEx, b, 0, 0)),
-        Op::CursorIs => {
-            isize::from(ct(comp)?.call(T::GetField, TF::CurrentCursor as isize, 0, 0) == crate::guihost::ee_won_gui_cursor(a))
-        }
+        Op::CursorIs => isize::from(
+            ct(comp)?.call(T::GetField, TF::CurrentCursor as isize, 0, 0) == crate::guihost::ee_won_gui_cursor(a),
+        ),
         Op::ChildSetDefaultCursor => {
             kc(a, crate::compobj::EeWonCompCall::SetDefaultCursor, crate::guihost::ee_won_gui_cursor(b));
             0
         }
-        Op::RootKeyMod => window(kc(comp, crate::compobj::EeWonCompCall::Root, 0), crate::winobj::EeWonWinField::KeyMod)?,
+        Op::RootKeyMod => {
+            window(kc(comp, crate::compobj::EeWonCompCall::Root, 0), crate::winobj::EeWonWinField::KeyMod)?
+        }
         Op::CheckDoubleClick => on(kc(comp, crate::compobj::EeWonCompCall::DoubleClick, a)),
         Op::WinMouseX => window(a, crate::winobj::EeWonWinField::MouseX)?,
         Op::WinMouseY => window(a, crate::winobj::EeWonWinField::MouseY)?,
