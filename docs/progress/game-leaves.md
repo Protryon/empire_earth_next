@@ -90,6 +90,17 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 | Map/EESightCapture.cpp (TSGT) | ee_game `sight_capture.rs` (rust/game/sight_capture.h) | ee/EESightCapture.h: `EESightScope` inline; `EESightRecord` (EEMap.cpp); the end sweep in EESim.cpp |
 | EETechCapture.cpp's node/epoch/tree states, TCST, EVHP, CALC, TRTE, EVUN, TNWK; EECivCapture.cpp's CVMG head | ee_sim tech `capture_rec.rs` | the hooks (EVHP's and CALC's point at Rust); C++ wrappers pass the Rust records and the C++ members |
 | 1,527 #include lines of 71 units (Empire Earth 591, Graphics Thread 244, Civilization Builder 221, Communications 193, Persistent 150, the rest 128) | | each unit's object symbol for symbol HEAD's (llvm-nm); EEWorld, EEPlayer, EEGlobals and five LLE emission units untouched |
+| **Round 17** (branch `rust-core17`; two forks, two passes each) | | |
+| EECalamityManager.cpp, EESMArea.cpp (whole); EERandomMap.cpp's 25 read cases; the scenario host's, objects', events', round's and effects' world reads and plain writes; the map's, players' and units' pass-through cases; the physics' world, player and unit reads | ee_sim scenario `world_views.rs` (read, event, round, answer), rmap `views.rs`; gamecpp `map.rs` (world_map, map_tile, Mp*/Tl* helpers) | only calls on C++ objects stay in the hosts |
+| EESMEffectRun's points and transformations (mPoint ... mCreateTransform) and their 19 cases | ee_sim scenario `run_state.rs` EeScenarioRunState (the class's second base) | C++ statements read it in place through `SMEGe<T>`; a static_assert pins its offset |
+| the effect and event tables (sEvents, gEventEffects); the trigger entries' first/second/operator cases | ee_sim scenario `event.rs` EvTable, `trigger_members.rs` entry_field | EEEvent is the record's class |
+| the contagion functor's CanInfect/Update/Infect/Cure/Apply members; EEContagionHelperUpdate, EEContagionHelperAddUnit (dead) | gamecpp `calamity_capture.rs` helper_update; by path | |
+| the scenario's camera statements and EEChangeUnit | the hook gamecpp `camera_io.rs` registers into ee_sim (`world_views::register_camera`), `Lookups::change_unit` | |
+| about 200 duplicate host cases (game actions, messages, session, save, physics, Empire Earth, database) | their identical twins (Rust callers renamed) | |
+| the game actions' record reads, group calls, camera and mini map cases; the message bodies' unit and player members; the session's member addresses, header versions and checksum; GetPlayerBySlot; the physics' communications facts | gamecpp `game_actions*`, `message.rs`, `net.rs`, `session_objs.rs`, `physics.rs` | |
+| EEPhysics' SendAutoSave case | gamecpp `mrecord.rs` new_record + ee_net `ee_net_sv_send_to_all_and_wait` | |
+| the seven EEGameOps record casts (UnRts, UnFields, CxFields, UcFields, PlRts, PlSaved, PlFields) | gamecpp `records.rs` | |
+| EELoadOrSave, EESelectUnitsIDs, RandomMapInitialize, SaveGameToFile, EEFamilyCount, EEDeleteMediaTable, EEParseCommandLine, EEDumpRules, EEClearRandomMapGenerators | callers call Rust directly (msg_objs.rs selection_ids) or none (dead) | the generator list's five shims are inlines in ee/EERandomMapGenerators.h (callers in WON/UI) |
 | **Round 16** (branch `rust-core16`) | | |
 | EETeam, EEVCWonder, EEVictoryCondition, EEVCWonder.cpp; gWorld/gGameState/EEPWorldHelper mTeams | ee_sim app teams_ffi.rs (the only store); ee_game gamecpp teams.rs (state and helper teams, load/save), civilization.rs (wonder victory by team index) | the mirror, C12TeamsResize/SetPlayers gone |
 | EEStatisticsHistory, EEStatisticsRecord (gWorld.mStatistics) | ee_game gamecpp stats_history.rs | the post-game summary's and game view's shims are Rust exports |
@@ -189,7 +200,16 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Next
 
-Round 16's "Left": EESimEditorAction/EESimEditorDone (no generic Rust-callback EEAction or UIEvent class); the mini
+Round 17's "Left" (PORT_LEARNINGS "The game core lane, round 17"): the scenario round's camera cases that read the
+manager's key (the key record in Rust first); EECampaignProgress's wrappers and the campaign constructors (callers in
+other lanes' files); EEFormation's vector-resizing Arrange and Place wrappers; EESMEffect.cpp's statements on C++
+objects (goals, groups, calamities, sounds, UI); EEGameOps' method cases (units, classes, calamities: their bodies
+first); shims whose callers are other lanes' (EEPointUnitOrTile*, EEGetFirstSelectedUnit, EEOrderAtCursor,
+EEReportLoadFailure, the save-file functions of the UI and campaign); GetRandom (the AI Thread's hosts call it); the
+include trim of Empire Earth.cpp, EESim.cpp and EETestFixture.cpp (POSIX `#if` branches); the generic Rust-callback
+EEAction/UIEvent class for EESimEditorAction/EESimEditorDone (not reached).
+
+Older: Round 16's "Left": EESimEditorAction/EESimEditorDone (no generic Rust-callback EEAction or UIEvent class); the mini
 map cases ee_sim reaches (units and player hosts: a hook ee_game registers into ee_sim, units lane) and the scenario
 editor's (behind goldened screens host traits); MiniMapSetViewer/Snapshot (RTSMiniMap's pixels have no Rust
 accessor); EEPhysics' SendAutoSave (a SendToAllAndWait op on the physics host); the player's host prologues (the
