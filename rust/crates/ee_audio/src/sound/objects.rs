@@ -427,14 +427,6 @@ pub unsafe extern "C" fn ee_sound_sample_set_offset(s: *mut EeSoundSample, offse
             as i32
     }
 }
-/// `GetSampleOffset` (`SPIMGetSampleOffset`).
-///
-/// # Safety
-/// `s` is a live sample.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_sample_offset(s: *mut EeSoundSample) -> u32 {
-    unsafe { mixerobj::spim(sample(s).mixer).get_sample_offset.expect("SPIMGetSampleOffset")(s.cast()) as u32 }
-}
 /// `LoadWaveData(spec)` (`SPIMLoadWaveData`).
 ///
 /// # Safety

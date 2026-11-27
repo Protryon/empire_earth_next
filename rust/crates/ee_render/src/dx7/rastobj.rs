@@ -1369,12 +1369,6 @@ pub unsafe extern "C" fn ee_dx7r_activate_rasterizer(p: *mut EeDx7Rasterizer) ->
     unsafe { EeDx7Rasterizer::activate_rasterizer(p) }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_add_valid_screen(p: *mut EeDx7Rasterizer, screen: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe { EeDx7Rasterizer::add_valid_screen(p, screen) }
-}
-
 /// `ActivateScreen`: `width`, `height` are the window's.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
@@ -1397,32 +1391,6 @@ pub unsafe extern "C" fn ee_dx7r_activate_screen(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_activate_rendering_surface(
-    p: *mut EeDx7Rasterizer,
-    screen: c_ulong,
-    manager: *mut c_void,
-    window: *mut c_void,
-    width: u32,
-    height: u32,
-) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe {
-        EeDx7Rasterizer::begin_activation(p, screen, manager, window);
-        EeDx7Rasterizer::activate_rendering_surface(p, width, height)
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_activate_the_screen(
-    p: *mut EeDx7Rasterizer,
-    screen: c_ulong,
-    secondary: *mut c_void,
-) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe { EeDx7Rasterizer::activate_the_screen(p, screen, secondary) }
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_deactivate(p: *mut EeDx7Rasterizer) -> i32 {
     // SAFETY: the caller's contract
     unsafe { EeDx7Rasterizer::deactivate(p) };
@@ -1439,16 +1407,6 @@ pub unsafe extern "C" fn ee_dx7r_begin_scene(p: *mut EeDx7Rasterizer, target: *m
 pub unsafe extern "C" fn ee_dx7r_end_scene(p: *mut EeDx7Rasterizer, screen: c_ulong) -> i32 {
     // SAFETY: the caller's contract
     unsafe { EeDx7Rasterizer::end_scene(p, screen) }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_can_do_current_state(
-    p: *mut EeDx7Rasterizer,
-    texture: *mut c_void,
-    screen: c_ulong,
-) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { EeDx7Rasterizer::can_do_current_state(p, texture, screen) }
 }
 
 /// `Clear` (`color` a `GEColor`) or, `color` NULL, `ClearZBuffer` to `z`; `rect` is left, top, right, bottom.
@@ -1527,12 +1485,6 @@ pub unsafe extern "C" fn ee_dx7r_update_light(
 ) -> i32 {
     // SAFETY: the caller's contract
     unsafe { EeDx7Rasterizer::update_light(p, index, light, screen) }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_remove_light(p: *mut EeDx7Rasterizer, index: u32, screen: c_ulong) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe { EeDx7Rasterizer::remove_light(p, index, screen) }
 }
 
 #[no_mangle]

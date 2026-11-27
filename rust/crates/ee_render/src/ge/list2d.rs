@@ -1,18 +1,18 @@
-//! The 2D draw list (the HUD 2D lane, round 1): the bitmaps, rhombi, lines, points and texts the toolkit, the HUD
+//! The 2D draw list (the HUD 2D lane, round 1): the bitmaps, rhombi, lines and texts the toolkit, the HUD
 //! and the screens draw, recorded as [`Cmd`]s on a [`Target`] (a rasterizer and its screen) and executed by the
 //! rasterizer's own draws.
 //!
 //! The objects are the Graphics Engine's (each a Rust object: `bmpobj.rs`, `prim.rs`, `smallobj.rs`), named by the
-//! C++ pointer every draw takes (`GEBitmap*`, `GERhombus*`, a `GELine`/`GEPoint` array, `GEText*`; a primitive's
+//! C++ pointer every draw takes (`GEBitmap*`, `GERhombus*`, a `GELine` array, `GEText*`; a primitive's
 //! C++ object is its Rust object's pointer alone, `cppobj.rs`), so a command made in Rust draws exactly what the C++
 //! `GERasterizer::Draw` of the same object drew:
-//! - on a DX7 rasterizer ([`ee_ge_draw2d_direct`] registers each one) the bitmap, rhombus, line and point draws are
+//! - on a DX7 rasterizer ([`ee_ge_draw2d_direct`] registers each one) the bitmap, rhombus and line draws are
 //!   `ee_dx7r_draw_*` (`dx7/draw2d.rs`), the bodies `DX7Rasterizer::Draw` forwards to;
 //! - every other draw (a text: the GX surface and the font bitmap are the C++'s; any draw on another rasterizer,
 //!   e.g. the store gate's) goes through the executor the C++ registers ([`ee_ge_draw2d_init`]), one virtual
 //!   `GERasterizer::Draw` per command.
 //!
-//! [`Shape`] is a rhombus, line or point made and owned in Rust with the C++ object's layout (its one pointer), for
+//! [`Shape`] is a rhombus or line made and owned in Rust with the C++ object's layout (its one pointer), for
 //! the draws whose C++ built a temporary primitive (the error form's buttons, a background's colour, the icon bar's
 //! marks). Nothing here is reached by a replay: the goldens' hosts never register an executor, and without one
 //! [`ready`] is false and a [`Shape`] cannot be made.
@@ -42,8 +42,6 @@ pub enum EeGeDraw2DKind {
     Rhombus,
     /// `Draw(GELine*, count, screen)`.
     Lines,
-    /// `Draw(GEPoint*, count, screen)`.
-    Points,
     /// `Draw(GEText*, clip, surface)`: `surface` null is the screen's secondary surface (`UIManager::GetDrawingSurface`).
     TextClipped,
     /// `Draw(GEText*, surface)`.
@@ -55,9 +53,9 @@ pub enum EeGeDraw2DKind {
 #[derive(Clone, Copy, Debug)]
 pub struct EeGeDraw2D {
     pub kind: EeGeDraw2DKind,
-    /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEPoint*`, `GEText*`).
+    /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEText*`).
     pub object: *mut c_void,
-    /// The lines' or points' count.
+    /// The lines' count.
     pub count: c_ulong,
     /// The text's clip (`TextClipped`).
     pub clip: GeRectangle,
@@ -137,8 +135,6 @@ pub enum Cmd {
     Rhombus(usize),
     /// A `GELine` array and its count.
     Lines(usize, u32),
-    /// A `GEPoint` array and its count.
-    Points(usize, u32),
     /// A `GEText*` clipped to the rectangle, on a surface (0: the screen's secondary surface).
     TextClipped { text: usize, clip: GeRectangle, surface: usize },
     /// A `GEText*` on a surface.
@@ -152,7 +148,6 @@ impl Cmd {
             Cmd::Bitmap(o) => (EeGeDraw2DKind::Bitmap, o, 0, zero, 0),
             Cmd::Rhombus(o) => (EeGeDraw2DKind::Rhombus, o, 0, zero, 0),
             Cmd::Lines(o, n) => (EeGeDraw2DKind::Lines, o, n, zero, 0),
-            Cmd::Points(o, n) => (EeGeDraw2DKind::Points, o, n, zero, 0),
             Cmd::TextClipped { text, clip, surface } => (EeGeDraw2DKind::TextClipped, text, 0, clip, surface),
             Cmd::Text { text, surface } => (EeGeDraw2DKind::Text, text, 0, zero, surface),
         };
@@ -166,10 +161,10 @@ impl Cmd {
     }
 }
 
-/// The DX7 rasterizer's own draw of a bitmap, rhombus, line or point command (`DX7Rasterizer::Draw`'s bodies).
+/// The DX7 rasterizer's own draw of a bitmap, rhombus or line command (`DX7Rasterizer::Draw`'s bodies).
 #[cfg(not(test))]
 fn draw_direct(dx7: usize, screen: c_ulong, cmd: &Cmd) -> Option<c_long> {
-    use crate::dx7::draw_ffi::{ee_dx7r_draw_bitmap, ee_dx7r_draw_lines, ee_dx7r_draw_points, ee_dx7r_draw_rhombus};
+    use crate::dx7::draw_ffi::{ee_dx7r_draw_bitmap, ee_dx7r_draw_lines, ee_dx7r_draw_rhombus};
     use crate::dx7::rastobj::EeDx7Rasterizer;
     let r = dx7 as *mut EeDx7Rasterizer;
     // SAFETY: a registered (live) DX7 rasterizer; the objects are live C++ GE objects (the caller's)
@@ -181,7 +176,6 @@ fn draw_direct(dx7: usize, screen: c_ulong, cmd: &Cmd) -> Option<c_long> {
             }
             Cmd::Rhombus(o) => Some(ee_dx7r_draw_rhombus(r, screen, o as *mut c_void)),
             Cmd::Lines(o, n) => Some(ee_dx7r_draw_lines(r, screen, o as *mut c_void, n as c_ulong)),
-            Cmd::Points(o, n) => Some(ee_dx7r_draw_points(r, screen, o as *mut c_void, n as c_ulong)),
             Cmd::TextClipped { .. } | Cmd::Text { .. } => None,
         }
     }
@@ -242,7 +236,7 @@ impl DrawList {
 /// A colour (`GEColor`: red, green, blue).
 pub type Color = [f32; 3];
 
-/// A rhombus, line or point made in Rust: a C++ `GERhombus`/`GELine`/`GEPoint` in layout (the Rust object's pointer
+/// A rhombus or line made in Rust: a C++ `GERhombus`/`GELine` in layout (the Rust object's pointer
 /// in a cell of its own, whose address is the C++ object's), destroyed on drop.
 pub struct Shape {
     cell: Box<*mut EeGePrim>,
@@ -529,8 +523,8 @@ mod tests {
         assert_eq!(r.object as usize, 7);
         assert_eq!(r.clip, clip);
         assert!(r.surface.is_null());
-        let r = Cmd::Points(9, 5).record();
-        assert_eq!((r.kind, r.object as usize, r.count), (EeGeDraw2DKind::Points, 9, 5));
+        let r = Cmd::Lines(9, 5).record();
+        assert_eq!((r.kind, r.object as usize, r.count), (EeGeDraw2DKind::Lines, 9, 5));
         let r = Cmd::Text { text: 3, surface: 11 }.record();
         assert_eq!((r.kind, r.surface as usize), (EeGeDraw2DKind::Text, 11));
     }

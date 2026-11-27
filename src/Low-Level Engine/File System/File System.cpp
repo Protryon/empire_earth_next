@@ -1,19 +1,24 @@
+// C:\EEX\Low-Level Engine\File System\File System.cpp and FSPath.cpp: the File System's one unit (LLE/UI round 3).
+// Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// Each original unit is a section, headed by its path and keeping its comment.
+#include <windows.h>
+#include <stddef.h>   // (used directly: kept for the POSIX build)
+#include <memory>
+
+#include "lle/LowLevelEngine.h"
+#include "lle/FSArchive.h"
+#include "lle/FSChunk.h"
+#include "lle/FSPath.h"
+
+// ======== File System/File System.cpp ========
 // C:\EEX\Low-Level Engine\File System\File System.cpp (name by analogy with Error System.cpp; it sorts before
 // FSArchive.cpp case-insensitively). It is the first unit to include the File System headers, so it emits their
 // inline members (0x4020..0x4789) in include order, then its globals, FSGetVolumeAndDirectory (no caller left: its
 // Rust, ee_fs_volume_and_directory, is FSInitialize's) and FSInitialize.
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-#include <windows.h>
-#include <stddef.h>
-#include <memory>
 
 // FSMemoryFile, FSChunk and FSArchive are inline over ee_base fs (memfile.rs, chunk.rs, archive_obj.rs); what stays
 // here is the memory file's stdio copies.
-#include "lle/LowLevelEngine.h"
-#include "lle/FSArchive.h"
-#include "lle/FSChunk.h"
-#include "lle/FSPath.h"
-#include "lle/FSPersistent.h"
 
 UString gStartupVolume(256);
 UString gStartupDirectory(256);
@@ -69,4 +74,23 @@ void FSInitialize(const UString& inPath)
 
 static_assert(sizeof(FSArchive) == sizeof(EeFsArchiveObj), "FSArchive is an EeFsArchiveObj");
 
+// ======== File System/FSPath.cpp ========
+// C:\EEX\Low-Level Engine\File System\FSPath.cpp (RTTI .?AVFSPath@@; 0x1000a843..0x1000bdb4)
+// Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// A search path of archives and directories (FindFile looks in the directories first): whole in Rust
+// (rust/crates/ee_base/src/fs path_obj.rs, path.rs). What is left here is the C++ objects the path holds, made and
+// deleted for it (one statement each), and the startup volume and directory its searches start from.
 
+const EeFsPathCalls FSPath::kCalls = {
+    [](const EeFsArchiveObj* a) -> EeFsArchiveObj* {
+        return reinterpret_cast<EeFsArchiveObj*>(&(*new FSArchive = *reinterpret_cast<const FSArchive*>(a)));
+    },
+    [](EeFsArchiveObj* a) { delete reinterpret_cast<FSArchive*>(a); },
+    [](const EeFsSpec* s) -> EeFsSpec* { return reinterpret_cast<EeFsSpec*>(new FSFileSpec(*reinterpret_cast<const FSFileSpec*>(s))); },
+    [](EeFsSpec* s) { delete reinterpret_cast<FSFileSpec*>(s); },
+    [](EeFsMemFile* m) -> EeFsSpec* { return reinterpret_cast<EeFsSpec*>(static_cast<FSFileSpec*>(new FSMemoryFile(m, true))); },
+    [](void* set) { static_cast<std::set<UString>*>(set)->clear(); },
+    [](void* set, const char* name) { static_cast<std::set<UString>*>(set)->insert(UString(name)); },
+    reinterpret_cast<const EeFsString*>(&gStartupVolume),
+    reinterpret_cast<const EeFsString*>(&gStartupDirectory),
+};

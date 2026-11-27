@@ -33,7 +33,6 @@ public:
     // (named local, then the return copy: the same code without the exe view's dtor; with one it is the only form that
     // keeps the original's temporary)
     U2DPoint<T> GetTopLeft() const { return U2DPoint<T>(this->mLeft, this->mTop); }
-    U2DPoint<T> GetBottomRight() const { return U2DPoint<T>(this->mRight, this->mBottom); }
     U2DPoint<T> GetTopRight() const { return U2DPoint<T>(this->mRight, this->mTop); }
     // exe: the rectangle's point closest to inPoint: the nearer of the closest points on the two edges at the closest
     // corner (U2DRectangle<float> only: ee_base math u2d.rs)

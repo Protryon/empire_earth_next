@@ -4,12 +4,10 @@
 use std::ffi::c_long;
 use std::ffi::c_ulong;
 
-use crate::ge::physical;
 use crate::ge::terrain::{edge_planes, GeTerrainView, GeTmRow};
 use ee_base::math::types::Ge3DLine;
 use ee_base::math::types::Ge3DPlane;
 use ee_base::math::types::Ge3DPoint;
-use ee_base::math::types::GeBoundingBox;
 use ee_base::math::types::GeVector;
 
 /// Writes `value` through `out` when there is one.
@@ -125,40 +123,3 @@ pub unsafe extern "C" fn ee_ge_terrain_intersects(
 }
 
 // ---- GEPhysicalModel's per-triangle tests ----
-
-/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
-/// the C++ wrote it (the triangle's plane was not parallel to the line).
-///
-/// # Safety
-/// The pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_physical_line_triangle(
-    line: *const Ge3DLine,
-    p1: *const Ge3DPoint,
-    p2: *const Ge3DPoint,
-    p3: *const Ge3DPoint,
-    exact: bool,
-    distance: *mut f32,
-) -> bool {
-    // SAFETY: the function's contract
-    unsafe {
-        let (hit, d) = physical::line_hits_triangle(&*line, *p1, *p2, *p3, exact);
-        put(distance, d);
-        hit
-    }
-}
-
-/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
-///
-/// # Safety
-/// The pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_physical_triangle_box(
-    p1: *const Ge3DPoint,
-    p2: *const Ge3DPoint,
-    p3: *const Ge3DPoint,
-    out: *mut GeBoundingBox,
-) {
-    // SAFETY: the function's contract
-    unsafe { *out = physical::triangle_box(*p1, *p2, *p3) };
-}

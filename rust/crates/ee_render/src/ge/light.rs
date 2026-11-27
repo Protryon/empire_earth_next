@@ -123,19 +123,6 @@ pub unsafe extern "C" fn ee_ge_light_init(l: *mut EeGeLight) {
     unsafe { l.write(EeGeLight::new()) };
 }
 
-/// `operator=(inLight)`.
-///
-/// # Safety
-/// Both are live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_light_assign(l: *mut EeGeLight, other: *const EeGeLight) {
-    // SAFETY: the caller's contract (a self-assignment copies the fields onto themselves)
-    unsafe {
-        let other = *other;
-        (*l).assign(&other);
-    }
-}
-
 /// `SetColor(inColor)`.
 ///
 /// # Safety

@@ -1,8 +1,8 @@
-//! `DX7Rasterizer Draw2D.cpp`: bitmaps, lines, points, rhombi and the text layout. C++ owns the `GEBitmap`/`GELine`/
-//! `GEPoint`/`GEText` objects and reaches them for Rust through [`Draw2DHost`] (vertex memory comes back as raw pointers,
+//! `DX7Rasterizer Draw2D.cpp`: bitmaps, lines, rhombi and the text layout. C++ owns the `GEBitmap`/`GELine`/
+//! `GEText` objects and reaches them for Rust through [`Draw2DHost`] (vertex memory comes back as raw pointers,
 //! read and written between host calls).
 //!
-//! Golden: `golden_draw.txt` (sections `bitmap_*`, `lines_*`, `points_*`, `rhombus`, `text_*`), printed by a scratch run
+//! Golden: `golden_draw.txt` (sections `bitmap_*`, `lines_*`, `rhombus`, `text_*`), printed by a scratch run
 //! of the original C++ bodies.
 #![allow(clippy::unnecessary_cast)]
 
@@ -16,7 +16,7 @@ const INDICES_QUAD: [u16; 6] = [0, 1, 2, 2, 1, 3];
 /// The line-nudge of `Draw(GELine*)` (`kLineOffset`).
 const LINE_OFFSET: f32 = 0.001;
 
-/// The per-object reads of the 2D draws. Handles are the C++ `GEBitmap*`, `GELine*` (array), `GEPoint*` (array),
+/// The per-object reads of the 2D draws. Handles are the C++ `GEBitmap*`, `GELine*` (array),
 /// `GERhombus*`, `GETexture*`.
 pub trait Draw2DHost: DrawHost {
     fn bitmap_texture(&mut self, bitmap: Handle) -> Handle;
@@ -25,8 +25,6 @@ pub trait Draw2DHost: DrawHost {
     fn line_texture(&mut self, lines: Handle) -> Handle;
     /// `GELine[index]`'s two vertices.
     fn line_vertices(&mut self, lines: Handle, index: u32) -> *mut Dx7StdColorVertex;
-    fn point_texture(&mut self, points: Handle) -> Handle;
-    fn point_vertices(&mut self, points: Handle, index: u32) -> *mut Dx7StdColorVertex;
     fn rhombus_vertices(&mut self, rhombus: Handle) -> *mut Dx7StdColorVertex;
     /// `GetFrameUVSize` and `GetFrameTopLeftCorner` of the texture.
     fn texture_frame(&mut self, texture: Handle) -> (f32, [f32; 2]);
@@ -102,36 +100,6 @@ pub fn draw_lines(h: &mut impl Draw2DHost, lines: Handle, count: u32) -> LongRes
     let start = h.vb_position();
     draw_primitive_retry(h, PT_LINELIST, start, vertex_count);
     h.advance_vb(vertex_count);
-    h.leave();
-    result
-}
-
-/// `Draw(GEPoint*, count)`: one point list, each point's UV remapped in place.
-pub fn draw_points(h: &mut impl Draw2DHost, points: Handle, count: u32) -> LongResult {
-    h.enter();
-    h.set_2d_mode();
-    let texture = h.point_texture(points);
-    let has_texture = !texture.is_null();
-    h.set_texture(texture);
-    let locked = h.lock_vb(count);
-    let mut buffer = unsafe { locked.add(h.vb_position() as usize) };
-    for i in 0..count {
-        let vertices = h.point_vertices(points, i);
-        if has_texture {
-            let (size, corner) = h.texture_frame(texture);
-            if size != 1.0 {
-                unsafe { remap_uv(vertices, size, corner) };
-            }
-        }
-        unsafe {
-            core::ptr::copy_nonoverlapping(vertices, buffer, 1);
-            buffer = buffer.add(1);
-        }
-    }
-    let result = h.unlock_vb();
-    let start = h.vb_position();
-    draw_primitive_retry(h, PT_POINTLIST, start, count);
-    h.advance_vb(count);
     h.leave();
     result
 }
@@ -359,12 +327,6 @@ mod tests {
         fn line_vertices(&mut self, l: Handle, i: u32) -> *mut Dx7StdColorVertex {
             self.objects.iter().find(|o| o.0 == l).unwrap().2[i as usize]
         }
-        fn point_texture(&mut self, p: Handle) -> Handle {
-            self.objects.iter().find(|o| o.0 == p).unwrap().1
-        }
-        fn point_vertices(&mut self, p: Handle, i: u32) -> *mut Dx7StdColorVertex {
-            self.objects.iter().find(|o| o.0 == p).unwrap().2[i as usize]
-        }
         fn rhombus_vertices(&mut self, r: Handle) -> *mut Dx7StdColorVertex {
             self.objects.iter().find(|o| o.0 == r).unwrap().2[0]
         }
@@ -467,27 +429,6 @@ mod tests {
     #[test]
     fn lines_without_texture_are_only_nudged() {
         run_lines(core::ptr::null_mut(), "lines_notex");
-    }
-
-    fn run_points(tex: Handle, section: &str) {
-        let mut h = host();
-        let mut data: Vec<_> = (0..2).map(|i| cv(200.0 + i as f32)).collect();
-        let base = data.as_mut_ptr();
-        let vptrs = (0..2).map(|k| unsafe { base.add(k) }).collect();
-        h.objects.push((handle(3), tex, vptrs));
-        let r = draw_points(&mut h, handle(3), 2);
-        finish(&mut h, r, &data);
-        assert_section(h, section);
-    }
-
-    #[test]
-    fn points_with_texture_remap_uv() {
-        run_points(handle(0x100), "points_tex");
-    }
-
-    #[test]
-    fn points_without_texture_copy_as_is() {
-        run_points(core::ptr::null_mut(), "points_notex");
     }
 
     #[test]
