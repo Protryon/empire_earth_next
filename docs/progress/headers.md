@@ -290,3 +290,16 @@ merged (126ab1513). port_metrics per part (each against its own base, so batch 3
 Captures run: oracle and late (always); units, scenario, calamity, effects and groups because the inlined call sites
 are in the units, scenario manager, calamity/area-effect and active-group code. Not run: transport (disk), space,
 missile, app, placement; plain saveload; eedata check/cppgate (no table, rule or text-compiler change).
+
+### After batch 31 (merged af73aa9de, third pass b1c062eab)
+
+Batch 31 rewrote 33 files the inlining had changed: theirs taken, the calls they make to deleted shims inlined
+again from the old specs (build/hd4/resites.py), 15 declarations they still need restored from origin/rust, then a
+third pass (148 shims, -217 lines). port_metrics origin/rust (38bb1e104) -> b1c062eab: cpp_lines -1,345, code -914,
+shim -868, logic -46, extern_c -576, unsafe -815, rust_lines -7,039.
+
+Gates on b1c062eab before C: ran out of space (other lanes' runs, 0.7 GB free at the stop): both builds 0/0 (290 / 291 /
+290 inputs), the address-of-temporary check (only the older EESMEffect.cpp site), oracle seeds 2-7 identical against
+batch 31's b31q, the Rust gate PASS, captures oracle, late, units, scenario, calamity, effects, groups PASS, the
+saveload matrix PASS, scenario_check 27/27, sim_editor and --civbuilder PASS, won_host_coverage PASS, the editor tour
+PASS. Not finished: wontest (stopped at driver 72 by "no space on device"), the random-game tour and gates.sh.
