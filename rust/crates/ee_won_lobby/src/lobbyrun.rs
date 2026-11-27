@@ -177,6 +177,8 @@ mod tests {
             log.borrow_mut().push(format!("{o:?} {a}"));
             answer(o)
         };
+        // the run state is lobbyprv.rs's process-wide state: wait out its tests that make a lobby
+        let _turn = crate::lobbyprv::tests::LOBBY.lock().unwrap_or_else(|e| e.into_inner());
         let r = call(c, a, &op);
         (r, log.into_inner())
     }

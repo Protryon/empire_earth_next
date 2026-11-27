@@ -772,7 +772,7 @@ pub unsafe extern "C" fn ee_won_lobbyprv_call(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::cell::RefCell;
 
@@ -811,7 +811,7 @@ mod tests {
     }
 
     /// the plain members are one process-wide state: the tests that make a lobby take turns
-    static LOBBY: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    pub(crate) static LOBBY: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn destroy_auth_and_the_constructor() {
