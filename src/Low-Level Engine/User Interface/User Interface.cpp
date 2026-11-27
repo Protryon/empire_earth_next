@@ -589,10 +589,6 @@ extern "C" void ee_uicpp_hot_key_set_double_pressed(uintptr_t inKey, uintptr_t i
 { HOTKEY(inKey)->SetDoublePressedEvent(EVENT(inEvent)); }
 extern "C" void ee_uicpp_event_uninitialize(uintptr_t inEvent) { EVENT(inEvent)->Uninitialize(); }
 extern "C" void ee_uicpp_event_initialize(uintptr_t inEvent) { EVENT(inEvent)->Initialize(); }
-extern "C" void ee_uicpp_control_ime_result(uintptr_t inControl, uintptr_t inText)
-{ CTL(inControl)->AddIMEResultString(*reinterpret_cast<const UWideString*>(inText)); }
-extern "C" long ee_uicpp_control_ime_change(uintptr_t inControl, uintptr_t inText, uintptr_t inAttributes, uint32_t inCursor)
-{ return CTL(inControl)->ChangeIMECompositionString(*reinterpret_cast<const UWideString*>(inText), *reinterpret_cast<const UString*>(inAttributes), inCursor); }
 extern "C" long ee_uicpp_control_translated_key(uintptr_t inControl, uintptr_t inKey, int32_t inRepeat)
 { return CTL(inControl)->UpdateTranslatedKey(reinterpret_cast<const char*>(inKey), (short)inRepeat); }
 extern "C" uintptr_t ee_uicpp_mgr_create_form(uintptr_t inM, EeUiShimText inData)
@@ -806,12 +802,6 @@ EE_UI_CASE(mgr_form_update_keyboard) { return FORM->UpdateKeyboard(); }
 EE_UI_CASE(mgr_form_update_mouse) { return FORM->UpdateMouse(); }
 EE_UI_VOID(mgr_form_delete) { delete FORM; }
 EE_UI_VOID(mgr_form_relayout) { FORM->RelayoutForm(UIManagerRect(f)); }
-#define COMPOSITION (*reinterpret_cast<const EeUiImeComposition*>(c))
-EE_UI_VOID(mgr_form_ime_result) { FORM->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); }
-EE_UI_CASE(mgr_form_ime_change) { return FORM->ChangeIMECompositionString(*static_cast<const UWideString*>(COMPOSITION.string), *static_cast<const UString*>(COMPOSITION.attributes), COMPOSITION.cursor); }
-EE_UI_CASE(mgr_form_ime_close) { return FORM->CloseIMECompositionString(); }
-EE_UI_CASE(mgr_form_ime_open) { return FORM->OpenIMECompositionString(); }
-#undef COMPOSITION
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }

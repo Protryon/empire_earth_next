@@ -155,10 +155,6 @@ shims! {
     v ee_uicpp_mgr_form_delete;
     r ee_uicpp_mgr_form_draw_polygons;
     r ee_uicpp_mgr_form_draw_text;
-    r ee_uicpp_mgr_form_ime_change;
-    r ee_uicpp_mgr_form_ime_close;
-    r ee_uicpp_mgr_form_ime_open;
-    v ee_uicpp_mgr_form_ime_result;
     v ee_uicpp_mgr_form_open;
     v ee_uicpp_mgr_form_relayout;
     r ee_uicpp_mgr_form_update_keyboard;

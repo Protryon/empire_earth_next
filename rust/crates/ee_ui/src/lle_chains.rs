@@ -633,6 +633,45 @@ pub(crate) fn control_ime_open(c: usize) -> core::ffi::c_long {
 pub(crate) fn control_ime_close(c: usize) -> core::ffi::c_long {
     virt_ime(c as Cpp, false) as core::ffi::c_long
 }
+/// A C++ `UString` or `UWideString`'s `operator const char*` (its record's buffer, after the vtable), or 0.
+///
+/// # Safety
+/// `s` is 0 or a live `UString` / `UWideString`.
+unsafe fn cpp_string_text(s: usize) -> isize {
+    if s == 0 {
+        return 0;
+    }
+    // SAFETY: the contract: the vtable pointer, then the record, its buffer first (ee_base ustring)
+    unsafe { *((s + core::mem::size_of::<usize>()) as *const *const core::ffi::c_char) as isize }
+}
+/// `c->AddIMEResultString(*text)`: the edit box's, else nothing.
+///
+/// # Safety
+/// `text` is a live `UWideString`.
+pub(crate) unsafe fn control_ime_result(c: usize, text: usize) {
+    if direct::is(Kind::Edit, c as Cpp) {
+        // SAFETY: the contract
+        let t = unsafe { cpp_string_text(text) };
+        direct::edit_call(c as Cpp, crate::editobj::EeUiEditCall::AddImeResult, t, 0);
+    }
+}
+/// `c->ChangeIMECompositionString(*text, *attributes, cursor)`: the edit box's, else kErrorFailed.
+///
+/// # Safety
+/// `text` is a live `UWideString`, `attributes` a live `UString`.
+pub(crate) unsafe fn control_ime_change(c: usize, text: usize, attributes: usize, cursor: u32) -> core::ffi::c_long {
+    let e = direct::find(Kind::Edit, c as Cpp) as *const crate::editobj::EeUiEdit;
+    if e.is_null() {
+        return 9;
+    }
+    // SAFETY: the contract; a live edit box
+    unsafe {
+        let (t, a) = (cpp_string_text(text), cpp_string_text(attributes));
+        let mut f = [0.0f32; 4];
+        crate::editobj::ee_ui_edit_call(e, crate::editobj::EeUiEditCall::ImeChange, t, cursor as c_ulong as isize, a, 0, f.as_mut_ptr())
+            as core::ffi::c_long
+    }
+}
 /// `c->SetBgOpacity(opacity)`.
 pub(crate) fn control_set_bg_opacity(c: usize, opacity: f32) {
     virt_bg(c as Cpp, false, [opacity, 0.0, 0.0, 0.0]);

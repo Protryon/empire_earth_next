@@ -36,7 +36,8 @@
 // UIControl, UIHotKey, UIEntityGroup and UITextLabel give UIForm). The game's forms derive from it and override its
 // virtuals; the Rust form calls the two it calls itself (SetHelpTextPopupLocation, DrawBackground) through the C++
 // object. GetRectangle and GetMouseLocation answer the address of the Rust object's members (GERectangle's and
-// GE2DPoint's layouts); GetMusicFileName answers a copy.
+// GE2DPoint's layouts); GetMusicFileName answers a copy. The IME passes to the control holding the keyboard are the
+// Rust form's (ee_ui lle_form.rs ee_ui_form_pass_to_keyboard), called by the Rust manager.
 class LLE_API UIForm {
 public:
     // Creates an empty form with the given control and group counts, tool tips and tabbing off
@@ -51,19 +52,10 @@ public:
     virtual ~UIForm() { ee_ui_form_free(this->mRust); }
     // Starts the form's music (or stops the music for "none"), restores the tab stop and fires the activate event
     virtual void Activate() { this->Call(EeUiFormCall::Activate); }                // slot 0x04
-    // Passes an IME result string to the control holding the keyboard
-    virtual void AddIMEResultString(const UWideString& inString) { ee_ui_form_pass_to_keyboard(this, 0, &inString, NULL, 0); }
-    // Passes the IME composition string to the control holding the keyboard; kErrorOK when none does
-    virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                            unsigned long inCursor) { return ee_ui_form_pass_to_keyboard(this, 1, &inString, &inAttributes, inCursor); }
-    // Closes the IME composition string of the control holding the keyboard; kErrorOK when none does
-    virtual long CloseIMECompositionString() { return ee_ui_form_pass_to_keyboard(this, 2, NULL, NULL, 0); }
     // Fires the deactivate event, hides the popup and help text, and releases the captured mouse and keyboard
     virtual void Deactivate() { this->Call(EeUiFormCall::Deactivate); }
     // Redraws every visible background that overlaps the rectangle; returns the last draw result
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiFormCall::DrawBackground, 0, 0, inRectangle); } // slot 0x18
-    // Opens an IME composition string in the control holding the keyboard; kErrorFailed when none does
-    virtual long OpenIMECompositionString() { return ee_ui_form_pass_to_keyboard(this, 3, NULL, NULL, 0); }
     // Lays the form out again inside a new rectangle, with its backgrounds and database controls
     virtual void RelayoutForm(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::RelayoutForm, 0, 0, inRectangle); }
     // Places the tool tip by the mouse inside the form: shifted left at the right edge, above the cursor near the bottom

@@ -413,8 +413,6 @@ shims! {
     fn hot_key_set_double_pressed(key: usize, event: usize) = ee_uicpp_hot_key_set_double_pressed;
     fn event_uninitialize(event: usize) = ee_uicpp_event_uninitialize;
     fn event_initialize(event: usize) = ee_uicpp_event_initialize;
-    fn control_ime_result(control: usize, text: usize) = ee_uicpp_control_ime_result;
-    fn control_ime_change(control: usize, text: usize, attributes: usize, cursor: u32) -> c_long = ee_uicpp_control_ime_change;
     fn control_translated_key(control: usize, key: usize, repeat: i32) -> c_long = ee_uicpp_control_translated_key;
     fn mgr_create_form(m: usize, data: EeUiShimBytes) -> usize = ee_uicpp_mgr_create_form;
     // UIControl.cpp's (lle_control.rs, mouse_ffi.rs)
@@ -503,6 +501,9 @@ shims! {
     fn lock_create(lock: EeUiShimPtrOut) -> bool = own::lock_create;
     // the forms', managers' and controls' chains of forwarders (LLE/UI round 2 pass 2: lle_chains.rs)
     fn mgr_screen(m: usize) -> u32 = crate::lle_hosts::chains::mgr_screen;
+    // UIControl's IME virtuals: the edit box's override, else the base's (LLE/UI round 3 pass 2)
+    fn control_ime_result(control: usize, text: usize) = crate::lle_hosts::chains::control_ime_result;
+    fn control_ime_change(control: usize, text: usize, attributes: usize, cursor: u32) -> c_long = crate::lle_hosts::chains::control_ime_change;
     fn form_screen(form: usize) -> u32 = crate::lle_hosts::chains::form_screen;
     fn mgr_ui_depth(m: usize) -> u32 = crate::lle_hosts::chains::mgr_ui_depth;
     fn mgr_form_by_id(m: usize, id: u32) -> usize = crate::lle_hosts::chains::mgr_form_by_id;
