@@ -21,6 +21,7 @@ pub struct EeWonAreaAt {
     pub text_link_font: usize,
     pub text_text_color: usize,
     pub text_link_color: usize,
+    pub text_sel: usize,
     pub pane_viewport: usize,
     /// `Label::mBackground`, `InputBox::mDisabledBackground` (Backgrounds: their colour is leafpaint.rs's
     /// `bg_color` in them), `TabCtrl::mContainerLayout` (a SmartPtr)
@@ -71,7 +72,7 @@ pub(crate) unsafe fn set_font(slot: *mut isize, font: isize) {
 
 /// A list area's, text area's, label's or input box's (`which`) constructor statements over its own members, in
 /// place, and the list's selection background.
-pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: Op, a: isize) -> Option<isize> {
+pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: Op, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
     use crate::guisplit::EeWonGuiSplitHost as W;
     if !crate::compobj::is_game() || me == 0 {
         return None;
@@ -126,6 +127,39 @@ pub(crate) fn area_op(which: crate::guisplit::EeWonGuiSplitHost, me: isize, op: 
                 let d = crate::gamewin::wm(crate::wmobj::EeWonWmCall::GetDefaultFont, 0, 0)?;
                 // SAFETY: as above
                 return Some(isize::from(unsafe { *m(at.text_link_font) } == d));
+            }
+            Op::SelColor => {
+                // `*(EeWonSelColor*)a = mSelColor` (the record itself)
+                // SAFETY: as above; `a` the record the op fills
+                unsafe { *(a as *mut crate::guidraw::EeWonSelColor) = *(m(at.text_sel) as *const crate::guidraw::EeWonSelColor) };
+            }
+            Op::AddSegmentOf => {
+                // `AddSegment(seg)`: the area's Rust area's
+                // SAFETY: the area's Rust area lives as long as the area
+                let t = unsafe { get::<crate::textobj::EeWonText>(me, Kind::Text) }?;
+                t.call(crate::textobj::EeWonTextCall::AddSegment, a, 0, 0);
+            }
+            Op::TextAddPart => {
+                // `AddSegment(((const GUIString*)a)->substr(b, c), d != 0)`: the part a new text, in the area's
+                // text colour and font
+                use crate::guistrobj::{ee_won_gstr_new, EeWonGstrOp, GText};
+                // SAFETY: `a` a live GUIString (the op's contract): its text's pointer
+                let p = unsafe { ee_won_gstr_new(EeWonGstrOp::NewSub, *(a as *const *const c_void), i32::from(b as u16), i32::from(c as u16)) };
+                // SAFETY: the new text, no one else's
+                let mut g = unsafe { GText::adopt(p) };
+                // SAFETY: as above (the colour an int, the font a SmartPtr's raw pointer)
+                let (color, font) = unsafe { (*(m(at.text_text_color) as *const i32), *m(at.text_font)) };
+                // SAFETY: the game's live area and its game host; the text lives for the call
+                unsafe {
+                    crate::guictor::ee_won_gui_add_segment(
+                        me as *mut c_void,
+                        Some(crate::guisplit::ee_won_gui_text_game),
+                        g.arg() as *const c_void,
+                        color as isize,
+                        font as *mut c_void,
+                        d != 0,
+                    )
+                };
             }
             Op::CtorReset => {
                 // SAFETY: the area's Rust area lives as long as the area

@@ -16,6 +16,7 @@ struct EeWonAreaAt {
   size_t text_link_font;
   size_t text_text_color;
   size_t text_link_color;
+  size_t text_sel;
   size_t pane_viewport;
   /// `Label::mBackground`, `InputBox::mDisabledBackground` (Backgrounds: their colour is leafpaint.rs's
   /// `bg_color` in them), `TabCtrl::mContainerLayout` (a SmartPtr)

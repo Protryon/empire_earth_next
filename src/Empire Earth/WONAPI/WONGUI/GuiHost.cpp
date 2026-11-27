@@ -82,22 +82,20 @@ static FontDescriptor Underlined(FontDescriptor inDescriptor)
     return inDescriptor;
 }
 
-extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
     TextArea* t = (TextArea*)inComp;
     switch (op) {
     // (the fields, ScrollTranslate and the segments' references are gamewin.rs list_host_op's in the game)
-    case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     // LinkActivated is guisplit.rs's over these two (R6 WON round 33); a segment's members, a link's state and the
     // copy's text are gamewin.rs text_host_op's in the game (R6 WON GUI round 40)
     case Op::TextDeliverLinkEvent: t->DeliverEvent(TextLinkActivatedEvent(t, Seg(a)), false); return 0;
     case Op::SegIsLink: return Seg(a)->IsLink() ? 1 : 0;
     case Op::TextDrawSeg: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(Seg(c)->mFont.get(), &Seg(c)->mText), WONDrawNoCall()); return 0;
-    // the constructor's statements (guictor.rs)
+    // the constructor's statements (guictor.rs; the others, the selection colour and the added segments and parts are
+    // gamefwd.rs area_op's in the game: R6 WON GUI round 41)
     case Op::CtorLinkFontUnderline: t->SetLinkFont(t->GetFont(Underlined(t->mFont->GetDescriptor()))); return 0;
     case Op::SegNew: return (intptr_t)new TextSegment;
-    case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
-    case Op::TextAddPart: t->AddSegment(((const GUIString*)a)->substr((unsigned short)b, (unsigned short)c), d != 0); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -569,7 +567,7 @@ static const EeWonSegAt kSegAt = {offsetof(TextSegment, mText), offsetof(TextSeg
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
 static const EeWonAreaAt kAreaAt = {offsetof(ListArea, mSortFunc), offsetof(TextArea, mFont), offsetof(TextArea, mLinkFont),
-    offsetof(TextArea, mTextColor), offsetof(TextArea, mLinkColor), offsetof(ScrollArea, mViewport), offsetof(Label, mBackground),
+    offsetof(TextArea, mTextColor), offsetof(TextArea, mLinkColor), offsetof(TextArea, mSelColor), offsetof(ScrollArea, mViewport), offsetof(Label, mBackground),
     offsetof(InputBox, mDisabledBackground), offsetof(TabCtrl, mContainerLayout)};
 #pragma clang diagnostic pop
 [[maybe_unused]] static const bool sAreaAt = (ee_won_area_members_register(&kAreaAt), true);

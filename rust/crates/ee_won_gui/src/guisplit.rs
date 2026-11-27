@@ -96,7 +96,7 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
         }
         if which != EeWonGuiSplitHost::Wm {
             // (the widgets' own fonts, colours, backgrounds and sort function in place: R6 WON GUI round 41)
-            if let Some(r) = crate::gamefwd::area_op(which, comp as isize, op, a) {
+            if let Some(r) = crate::gamefwd::area_op(which, comp as isize, op, a, b, c, d) {
                 return r;
             }
         }
