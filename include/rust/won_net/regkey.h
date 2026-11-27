@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// What `ee_won_regkey_op` does.
 constexpr static const int32_t EE_WON_REGKEY_IS_OPEN = 0;

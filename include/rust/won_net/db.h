@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dirops.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// The reply kinds (`ee_won_db_reply`).
 constexpr static const int32_t EE_WON_DB_PROXY = 0;

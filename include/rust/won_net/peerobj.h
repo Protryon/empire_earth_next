@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/elgamal.h"
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/peerauth.h"
+#include "rust/won_net/records.h"
 
 /// `IsValid()` (peer data: its `IsValid()`)
 constexpr static const int32_t EE_WON_AUTHOBJ_VALID = 1;
@@ -96,9 +94,6 @@ constexpr static const int32_t EE_WON_PEERAUTH_OTHER_USER = 6;
 
 /// the other side's certificate's `VerifyPermissions(a, b, c)`
 constexpr static const int32_t EE_WON_PEERAUTH_OTHER_PERMITS = 7;
-
-/// A reference to a certificate, a key block or peer data, as the C++ shims (`AuthBase`, `AuthPeerData`) hold it.
-struct EeWonAuthObj;
 
 /// `PeerAuthClient` (`server` false) or `PeerAuthServer`; free with [`ee_won_peerauth_free`].
 struct EeWonPeerAuth;

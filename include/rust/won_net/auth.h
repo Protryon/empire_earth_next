@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// An unpacked block. The header fields are those read before any failure, as in the C++.
-struct EeWonAuth;
+#include "rust/won_net/records.h"
 
 #endif  // EE_RUST_WON_NET_AUTH_H

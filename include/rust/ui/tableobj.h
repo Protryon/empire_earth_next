@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/controls_table.h"
 #include "rust/ui/records.h"
 
 /// The static calls ([`ee_ui_controls_tables`]).

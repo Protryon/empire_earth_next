@@ -9,6 +9,12 @@
 
 struct EeFsMemFile;
 
+/// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
+struct EeSparseArray;
+
+/// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
+struct EeOfTexture;
+
 /// `GE2DPoint` (sizeof 8).
 ///
 /// The C++ class derives from it (its members are these fields, by the C++ names).
@@ -103,6 +109,9 @@ struct EeFsChunk {
   bool decompressed;
 };
 
+/// Receives one point of a 3D interpolation.
+using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
+
 /// `GEOrientation` (sizeof 0xc).
 ///
 /// The C++ class derives from it (its members are these fields, by the C++ names).
@@ -121,6 +130,12 @@ struct EeGeBoundingBox {
   float mWidth;
   float mHeight;
   float mDepth;
+};
+
+/// A tile (`U2DPoint<long>`).
+struct EePoint {
+  int32_t x;
+  int32_t y;
 };
 
 /// `TMPoll`'s data (the original's members, in its order): a polled countdown on the counter (or the millisecond
@@ -146,6 +161,14 @@ struct EeUString {
   unsigned long length;
   /// The bytes allocated, the terminator included (`mCapacity`).
   unsigned long capacity;
+};
+
+/// A record base as the C++ compiler placed it (`EE_RECORD_BASE(Class, Record)` in `ee/EERecordBase.h`).
+struct EeRecordBase {
+  /// the class's and the record's names (NUL-terminated)
+  const char *class_;
+  const char *record;
+  uint64_t offset;
 };
 
 /// `GEColor` (sizeof 0xc): red, green, blue. The C++ class keeps its own members; a record member of this type is

@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/cfgobject.h"
-#include "rust/won_net/cfgparser.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// The object's class: a plain `ConfigObject`, a `TitleConfig` or a `CommunityConfig`.
 enum class EeWonTitleObjKind : int32_t {

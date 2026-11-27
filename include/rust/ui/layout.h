@@ -25,12 +25,4 @@ constexpr static const unsigned long PROPORTIONAL = 4;
 /// `kLayoutFromStartEdge`: the left/top edge's own point + offset (a width or height).
 constexpr static const unsigned long FROM_START_EDGE = 5;
 
-/// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
-enum class EeUiEdge {
-  Left = 0,
-  Right = 1,
-  Top = 2,
-  Bottom = 3,
-};
-
 #endif  // EE_RUST_UI_LAYOUT_H

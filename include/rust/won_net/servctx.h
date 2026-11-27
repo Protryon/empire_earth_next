@@ -6,18 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// The server list.
-struct EeWonServerList;
-
-/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
-struct EeWonAddr {
-  uint8_t sockaddr[16];
-  bool valid;
-  bool remember_host;
-  const uint8_t *host;
-  size_t host_len;
-};
+#include "rust/won_net/records.h"
 
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
 using EeWonRand = int32_t(*)(bool seed);

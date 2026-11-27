@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/cfgkind.h"
+#include "rust/won_gui/records.h"
 
 /// The host's one-statement ops over its frame (`CfgTabFrame`: the ints `i`, the strings `s`, the raw strings
 /// `rs`, the components `c`, the frame's config and its kind's typed component).

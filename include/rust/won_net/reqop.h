@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dir.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -20,9 +19,6 @@ constexpr static const int32_t EE_WON_REQOP_CUT = 2;
 
 /// `SetLastServerError(status)`, then the next server
 constexpr static const int32_t EE_WON_REQOP_SERVER_ERROR = 3;
-
-/// A Rust op held by a C++ `ServerRequestOp`.
-struct EeWonReqOp;
 
 extern "C" {
 

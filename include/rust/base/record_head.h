@@ -6,13 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A record base as the C++ compiler placed it (`EE_RECORD_BASE(Class, Record)` in `ee/EERecordBase.h`).
-struct EeRecordBase {
-  /// the class's and the record's names (NUL-terminated)
-  const char *class_;
-  const char *record;
-  uint64_t offset;
-};
+#include "rust/base/records.h"
 
 #endif  // EE_RUST_BASE_RECORD_HEAD_H

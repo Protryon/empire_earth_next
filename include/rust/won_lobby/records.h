@@ -7,6 +7,3577 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The ops (`a`..`d` as documented).
+enum class EeWonDlgLogicOp : uint32_t {
+  /// `SafeGetComponent(a, aPtr, "OkCancelDialog", "DialogLogic.cpp", 48)` into a `SmartPtr<OkCancelDialog>`: the
+  /// dialog with a reference added, or NULL.
+  FindOkCancel = 1,
+  /// `SafeGetComponent(a, aPtr, "StatusDialog", "DialogLogic.cpp", 49)`: the dialog with a reference, or NULL.
+  FindStatus,
+  /// `WindowManager::GetDefaultWindowManager()`: -1 when NULL, else its `GetPopupsInOwnWindow()` (0 or 1).
+  WmPopups,
+  /// `a->Release()` of a component (a dialog, a container).
+  ReleaseComponent,
+  /// `a->AddRef()` of a component.
+  AddRefComponent,
+  /// `a->Release()` of a window.
+  ReleaseWindow,
+  /// `a->AddRef()` of a window.
+  AddRefWindow,
+  /// `a->Release()` of an async operation.
+  ReleaseOp,
+  /// `a->AddRef()` of an async operation.
+  AddRefOp,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  OpKill,
+  /// `((AsyncOp*)a)->ForceFinish(WS_Killed)`.
+  OpForceFinishKilled,
+  /// `((AsyncOp*)a)->GetStatus()`.
+  OpGetStatus,
+  /// `this->RunOp(a, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, this), b)`.
+  RunOp,
+  /// `GetLobbyWindow()->EndDialog(-1, NULL, a)` (the status dialog).
+  EndDialog,
+  /// `GetLobbyRoot()` (not held).
+  LobbyRoot,
+  /// `LobbyGetRootWindow()` (not held).
+  RootWindow,
+  /// `a->mParent` (a component).
+  Parent,
+  /// `((Container*)a)->RemoveChild(b)`.
+  RemoveChild,
+  /// `((Window*)a)->Close()`.
+  WindowClose,
+  /// `a->Width()` (a component).
+  Width,
+  /// `a->Height()`.
+  Height,
+  /// `a->GetBounds()` into `*(int(*)[4])b`: x, y, width, height.
+  Bounds,
+  /// `CreateNativeWindow()` into a `SmartPtr<Window>`, then its `SetOneComponentWindow(true)`: the window with a
+  /// reference added.
+  NewWindow,
+  /// `a->SetParent(b); a->SetStyle(0x22); a->Create(WONRectangle(0, 0, 100, 100));
+  /// LobbyAddLogicListener(a->mRoot); a->mRoot->SetColorScheme(LobbyGetColorScheme())`.
+  SetUpPopup,
+  /// `((Window*)a)->SetClientSize(b, c)`.
+  SetClientSize,
+  /// `((Window*)a)->mRoot.get()` (not held).
+  WindowRoot,
+  /// `((Window*)a)->Center(true)`.
+  WindowCenter,
+  /// `CenterLayout::Center((Container*)a, b, true, true)`.
+  CenterLayout,
+  /// `((Container*)a)->AddChild(b)`.
+  AddChild,
+  /// `((Window*)a)->Show(true)`.
+  WindowShow,
+  /// `((Window*)a)->RunDialog(b)`: the dialog's result.
+  RunDialog,
+  /// `LobbyIsSuspended()` (0 or 1).
+  LobbySuspended,
+  /// `((StatusDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, d != 0)`.
+  StatusSetText,
+  /// `((StatusDialog*)a)->mStartTick = WONTickCount()`.
+  StatusSetStartTick,
+  /// `((StatusDialog*)a)->SetStatus(GetWONStatusString(b), false)`.
+  StatusSetStatus,
+  /// `LobbyGetLobbySoundEffects()` (0 or 1).
+  SoundEffects,
+  /// `LobbyPlaySound(LobbyGlobal_Error_Sound.get())`.
+  PlayErrorSound,
+  /// `((OkCancelDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, OK or Yes, Cancel or No)`: Yes/No when
+  /// `d != 0`.
+  OkCancelSetText,
+  /// `a->GetRootWindow()` (a component; not held).
+  RootWindowOf,
+  /// `((Container*)a)->InvalidateRect(WONRectangle(*(int(*)[4])b))`.
+  InvalidateRect,
+  /// `WindowManager::GetDefaultWindowManager()` (not held).
+  WmDefault,
+  /// `((WindowManager*)a)->GetPopupsInOwnWindow()` (0 or 1).
+  WmPopupsOf,
+  /// `a->GetBounds().x` (a component).
+  BoundsX,
+  /// `a->GetBounds().y`.
+  BoundsY,
+  /// `a->GetBounds().width`.
+  BoundsWidth,
+  /// `a->GetBounds().height`.
+  BoundsHeight,
+  /// `sDlgNewWindow = CreateNativeWindow()` (NewWindow's local).
+  NewWindowMake,
+  /// `sDlgNewWindow->SetOneComponentWindow(true)`.
+  NewWindowOneComponent,
+  /// `sDlgNewWindow.get()`.
+  NewWindowGet,
+  /// `sDlgNewWindow = NULL`.
+  NewWindowDrop,
+  /// `((Window*)a)->SetParent((Window*)b)`.
+  WindowSetParent,
+  /// `((Window*)a)->SetStyle(0x22)`.
+  WindowSetPopupStyle,
+  /// `((Window*)a)->Create(WONRectangle(0, 0, 100, 100))`.
+  WindowCreatePopup,
+  /// `LobbyAddLogicListener(((Window*)a)->mRoot.get())`.
+  WindowListenRoot,
+  /// `((Window*)a)->mRoot->SetColorScheme(LobbyGetColorScheme())`.
+  WindowRootSetScheme,
+  /// `sDlgStatusText = GetWONStatusString(a)` (StatusSetStatus's local).
+  StatusTextOf,
+  /// `((StatusDialog*)a)->SetStatus(sDlgStatusText, false)`.
+  StatusSetHeldText,
+  /// `sDlgStatusText = GUIString()`.
+  StatusTextDrop,
+  /// `sDlgButtons[a] = &gLobbyResources[b].mString` (OkCancelSetText's local).
+  ButtonTextSet,
+  /// `((OkCancelDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, sDlgButtons)`.
+  OkCancelSetHeldText,
+};
+
+/// The host's ops. `a`..`d` as documented; a read answers `isize::MIN` when it threw.
+enum class EeWonEeGameOp : uint32_t {
+  /// `a->AddRef()` (a `SmartPtr`'s reference: a client, a player, the file transfer, a `GUIStringData`).
+  AddRef = 1,
+  /// `a->Release()`.
+  Release,
+  /// `((ReadBuffer*)a)->ReadByte()` (0..255).
+  ReadByte,
+  /// `ReadShort()`, sign-extended.
+  ReadShort,
+  /// `ReadBool()` (0 or 1).
+  ReadBool,
+  /// `ReadLong()`, sign-extended.
+  ReadLong,
+  /// `ReadWString(text, 2)` as a new `GUIStringData` with one reference (the caller's).
+  ReadWString,
+  /// `Available()`.
+  Available,
+  /// `((WriteBuffer*)a)->AppendByte(b)`.
+  AppendByte,
+  /// `AppendShort(b)`.
+  AppendShort,
+  /// `AppendBool(b != 0)`.
+  AppendBool,
+  /// `AppendLong(b)`.
+  AppendLong,
+  /// `AppendWString(GUIString(b), 2)` (`b` a `GUIStringData`, 0 the empty string).
+  AppendWString,
+  /// `length()`.
+  Length,
+  /// `SetByte(b, c)`.
+  SetByte,
+  /// `new WriteBuffer(0, true)` (a game room message).
+  NewBuffer,
+  /// `LobbyBroadcastToGame(a->ToByteBuffer(true).get())`.
+  BroadcastToGame,
+  /// `LobbySendToCaptain(a->ToByteBuffer(true).get())`.
+  SendToCaptain,
+  /// `LobbySendToClient(b, a->ToByteBuffer(true).get())`.
+  SendToClient,
+  /// `delete a` (the message buffer's end of scope).
+  FreeBuffer,
+  /// `this->GetIsHost()`.
+  IsHost,
+  /// `this->GetMaxPlayers()`.
+  MaxPlayers,
+  /// `this->SetMaxPlayers(a)`.
+  SetMaxPlayers,
+  /// `this->GetGameType()`.
+  GameType,
+  /// `this->GetClients().mPtr` (a `LobbyClientList`).
+  Clients,
+  /// `((LobbyClientList*)a)->FindClient(b)`.
+  FindClient,
+  /// `LobbyGetCurrentServer()`.
+  CurrentServer,
+  /// `((LobbyServer*)a)->GetClient(b)`.
+  ServerClient,
+  /// `new LobbyClientSetIterator(a)`.
+  IterNew,
+  /// `a->HasMore()`.
+  IterHasMore,
+  /// `a->Next(&client)`: the client.
+  IterNext,
+  /// `delete a` (the iterator's end of scope).
+  IterFree,
+  /// `((LobbyClient*)a)->GetName()`'s `GUIStringData` (no reference added).
+  ClientName,
+  /// `GetClientId()`.
+  ClientId,
+  /// `GetPlayer().mPtr` (an `EELobbyPlayer`).
+  ClientPlayer,
+  /// `IsCaptain(1)`.
+  ClientIsCaptain,
+  /// `((EELobbyPlayer*)a)->GetSlot()`.
+  PlayerSlot,
+  /// `GetTeam()` (its slot's team, through that slot's game).
+  PlayerTeam,
+  /// `a->mPlayerSlot = &this->mSlots[b]; a->mSlot = b` (EELobbyPlayerSlot::SetPlayer's two stores).
+  PlayerAttach,
+  /// `a->mSlotGame = NULL` (ClearPlayer's store: the slot pointer's NULL).
+  PlayerDetach,
+  /// `GetMyLobbyPlayer()`.
+  MyPlayer,
+  /// `LobbyIAmCaptain()`.
+  IAmCaptain,
+  /// `LobbyNotifyStagingChange()`.
+  NotifyStagingChange,
+  /// `LobbyNetAdvertiseGame()`.
+  AdvertiseGame,
+  /// `LobbyResetReadyFlags()`.
+  ResetReadyFlags,
+  /// `LobbyBroadcastEvent(new EELobbySyncPlayerEvent(a), true)`.
+  SyncPlayer,
+  /// `LobbyBroadcastEvent(new EELobbySyncOptionEvent(a), true)`.
+  SyncOption,
+  /// `LobbyBroadcastEvent(new PlayerTeamChangedEvent(a, b != 0), true)`.
+  TeamChanged,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  LobbyEvent,
+  /// `LobbyKickClient(a, false)`.
+  KickClient,
+  /// `LobbyMessageBox(StartGameError, EveryoneOnSameTeam)`.
+  SameTeamBox,
+  /// `EELobbyHostGame()`.
+  HostGame,
+  /// `EELobbyCancelConnectDialog()`.
+  CancelConnectDialog,
+  /// `EELobbySetSlotConnected(a, b != 0)`.
+  SetSlotConnected,
+  /// `EELobbyIsConnectDialogRunning()`.
+  ConnectDialogRunning,
+  /// `EELobbyGetFileTransferPort()`.
+  FileTransferPort,
+  /// `EELobbyGetNumMapTypes()`.
+  NumMapTypes,
+  /// `EELobbySetDefaultGameOptions(this)`.
+  SetDefaultOptions,
+  /// `EELobbyGetVersion(version, *(uint32_t*)a)`: the version as a new `GUIStringData` with one reference (in the
+  /// game eesplit.rs's VersionTextNew, AddRef and VersionChecksum).
+  Version,
+  /// `GUIString(a) == GUIString(b)` (0: the empty string).
+  StringsEqual,
+  /// `new EELobbyFileTransfer` (no reference: the `SmartPtr` assignment follows).
+  TransferNew,
+  /// `a->SetFileInfo(GUIString(b), c, d)`.
+  TransferSetFileInfo,
+  /// `a->SetPath(EELobbyFn2988E9() + a->mName)` (the saved games' directory and the file's name).
+  TransferSetSavesPath,
+  /// `a->Serve(b)`.
+  TransferServe,
+  /// `a->mName`'s `GUIStringData` (no reference).
+  TransferName,
+  /// `a->mSize`.
+  TransferSize,
+  /// `a->mChecksum`.
+  TransferChecksum,
+  /// `a->SetHost(this->GetAddress() with port b)`.
+  TransferSetHost,
+  /// `a->Stop()`.
+  TransferStop,
+  /// `a->CloseClients()`.
+  TransferCloseClients,
+  /// `a->IsFileHere()`.
+  TransferIsFileHere,
+  /// `a->Download()`.
+  TransferDownload,
+  /// `a->mSlotGame = this` (the player's slot: the game and its number).
+  PlayerSetSlotGame,
+  /// `a->mSlotIndex = b`.
+  PlayerSetSlotIndex,
+  /// `a->mSlot = b`.
+  PlayerSetSlot,
+  /// `a->mName = GUIString(b)` (the transfer's file name).
+  TransferSetName,
+  /// `a->mRust` (the transfer's Rust object).
+  TransferRust,
+  /// `a->mHost = this->GetAddress()`.
+  TransferHostFromGame,
+  /// `a->mHost.SetPort(b)`.
+  TransferHostSetPort,
+  /// `new GUIStringData(StringToWString(std::string(gGameVersion), -1))` (EELobbyToGUIString's text; no reference).
+  VersionTextNew,
+  /// `gBinaryChecksum`.
+  VersionChecksum,
+};
+
+/// The host's ops (`obj` the transfer's shell or the send op's).
+enum class EeWonEeXferOp : uint32_t {
+  /// `EELobbyGetSavedGameInfo(a, *(uint32_t*)b, *(uint32_t*)c)` (`a` a NUL-terminated path).
+  SavedGameInfo = 1,
+  /// `(unsigned long)PlatTimeMilliseconds64()`.
+  Time,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->UpdateTransferProgress(b, c)`.
+  GameProgress,
+  /// `((AsyncOp*)a)->Succeeded()` (0 or 1).
+  Succeeded,
+  /// `static_cast<SocketOp*>(a)->GetSocket()` (no reference).
+  OpSocket,
+  /// `static_cast<AcceptOp*>(a)->GetAcceptedSocket()` (no reference).
+  AcceptedSocket,
+  /// `static_cast<RecvChunkOp*>(a)->GetRecvOp()->GetBytesRead()`.
+  BytesRead,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((AsyncSocket*)a)->Kill()`.
+  Kill,
+  /// `new QueueSocket(0)` with a reference added.
+  NewSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(b, 0)`: the status.
+  Bind,
+  /// `((QueueSocket*)a)->Listen(1000)`: the status.
+  Listen,
+  /// `a->SetRepeatCompletion(completion(OnClientAccepted)); a->SetRepeatOp(new AcceptOp(NULL))`.
+  RepeatAccept,
+  /// `a->SetCloseCompletion(completion(OnClientClosed)); a->QueueOp(new SendFileOp(path b, c bytes), -1);
+  /// a->QueueOp(new CloseOp(NULL), -1)`.
+  QueueSend,
+  /// `this->mHost.IsValid()` (0 or 1).
+  HostValid,
+  /// `a->SetCloseCompletion(completion(OnClientClosed))`; a `RecvBytesOp(0, NULL)` with the completion
+  /// `OnFileReceived`, the file path (`b`, `c` bytes) and the progress completion `OnProgress` every 10000 bytes;
+  /// `a->QueueOp(new ConnectOp(this->mHost), -1); a->QueueOp(op, -1)`.
+  QueueDownload,
+  /// `PlatFOpen(a, "rb")` (`a` a NUL-terminated path): the `FILE*` or 0.
+  Open = 40,
+  /// `fread(b, 1, c, (FILE*)a)`: the count.
+  Read,
+  /// `fclose((FILE*)a)`.
+  Close,
+  /// `GetSocket()->WaitForWrite(TimeLeft())`.
+  WaitForWrite,
+  /// `GetSocket()->Send(a, b, (int*)c)`: the status.
+  Send,
+  /// `TimeLeft()`.
+  TimeLeft,
+  /// `new QueueSocket(0)` (no reference: the Rust adds it).
+  NewQueueSocket = 60,
+  /// `((QueueSocket*)a)->SetRepeatCompletion(completion(b))` (`b` an `EeWonEeXferCall`).
+  SetRepeatCompletion,
+  /// `((QueueSocket*)a)->SetRepeatOp(new AcceptOp(NULL))`.
+  SetRepeatAccept,
+  /// `((QueueSocket*)a)->SetCloseCompletion(completion(b))`.
+  SetCloseCompletion,
+  /// `((QueueSocket*)a)->QueueOp(new SendFileOp(path b, c bytes), -1)`.
+  QueueSendFile,
+  /// `((QueueSocket*)a)->QueueOp(new CloseOp(NULL), -1)`.
+  QueueCloseOp,
+  /// `new RecvBytesOp(0, NULL)` (no reference).
+  NewRecvBytes,
+  /// `((SocketOp*)a)->SetCompletion(completion(b))`.
+  OpSetCompletion,
+  /// `((SocketOp*)a)->SetFilePath(path b, c bytes)`.
+  OpSetFilePath,
+  /// `((SocketOp*)a)->SetProgressCompletion(completion(OnProgress), 10000)`.
+  OpSetProgress,
+  /// `((QueueSocket*)a)->QueueOp(new ConnectOp(this->mHost), -1)`.
+  QueueConnect,
+  /// `((QueueSocket*)a)->QueueOp((SocketOp*)b, -1)`.
+  QueueOpOn,
+};
+
+/// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
+enum class EeWonLobbyCtlOp : uint32_t {
+  /// `dynamic_cast<T*>(ComponentConfigGet(a, slot->name))` of the slot `b`'s type, its absence reported
+  /// (`ComponentConfigMissing(name, file, line)`); no reference added (the `SmartPtr` assignment follows).
+  Find = 1,
+  /// `dynamic_cast<T*>(((ComponentConfig*)a)->Fn386860(slot->name))` of the slot `b` (no report).
+  FindOptional,
+  /// `a->AddRef()` (a `SmartPtr`'s reference).
+  AddRef,
+  /// `a->Release()`.
+  Release,
+  /// `a->mControlId = b`.
+  SetControlId,
+  /// `a->SetEnabled(b != 0)`.
+  SetEnabled,
+  /// `a->SetVisible(b != 0)`.
+  SetVisible,
+  /// `a->Invalidate()`.
+  Invalidate,
+  /// `this->SubscribeToBroadcast(a != 0)`.
+  SubscribeBroadcast,
+  /// `this->Component::HandleComponentEvent(a)`.
+  BaseEvent,
+  /// `this->Container::Paint(*(Graphics*)a)`.
+  BasePaint,
+  /// `a->GetControlId()` (the event's).
+  EventControlId,
+  /// `((SetRoomSpecFlagsEvent*)a)->mFlags`.
+  EventFlags,
+  /// `((ClientChangedEvent*)a)->mRoomSpec`.
+  EventRoomSpec,
+  /// `((LobbyChangeEvent*)a)->IsModify()` (0 or 1).
+  EventIsModify,
+  /// `((LobbyChangeEvent*)a)->IsAdd()` (0 or 1).
+  EventIsAdd,
+  /// `((LobbyChangeEvent*)a)->IsDelete()` (0 or 1).
+  EventIsDelete,
+  /// `((ClientChangedEvent*)a)->mClient.get()`.
+  ClientChangedClient,
+  /// `((PlayerChangedEvent*)a)->mClient.get()`.
+  PlayerChangedClient,
+  /// `((ListItemClickedEvent*)a)->IsSelectedItem()` (0 or 1).
+  EventIsSelectedItem,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
+  /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+  EventDoubleClick,
+  /// `((BrowserComponent*)a)->BackButtonEnabled()` (0 or 1).
+  BrowserBackEnabled,
+  /// `((BrowserComponent*)a)->ForwardButtonEnabled()` (0 or 1).
+  BrowserForwardEnabled,
+  /// `((BrowserComponent*)a)->StopButtonEnabled()` (0 or 1).
+  BrowserStopEnabled,
+  /// `((BrowserComponent*)a)->FindStr(((InputBox*)b)->GetText(), c & 1, c & 2)`.
+  BrowserFind,
+  /// `((BrowserComponent*)a)->Reset()`.
+  BrowserReset,
+  /// `((BrowserComponent*)a)->Go(this->mHomeLocation, false, 0, -1)`.
+  BrowserGoHome,
+  /// `((BrowserComponent*)a)->Back()`.
+  BrowserBack,
+  /// `((BrowserComponent*)a)->Forward()`.
+  BrowserForward,
+  /// `((BrowserComponent*)a)->Stop()`.
+  BrowserStop,
+  /// `((BrowserComponent*)a)->Refresh()`.
+  BrowserRefresh,
+  /// `((Label*)a)->SetText(((BrowserComponent*)b)->GetCurStatus(), true)`.
+  LabelSetBrowserStatus,
+  /// `((Button*)a)->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// `((Button*)a)->SetCheck(b != 0, c != 0)`.
+  ButtonSetCheck,
+  /// `((Button*)a)->SetText(the string b, true)`.
+  ButtonSetText,
+  /// `((Label*)a)->SetText(the string b, true)`.
+  LabelSetText,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((LobbyGame*)a)->GetIsHost()` (0 or 1).
+  GameIsHost,
+  /// `((LobbyGame*)a)->CanStartGame()` (0 or 1).
+  GameCanStart,
+  /// `((LobbyGame*)a)->CanReady()` (0 or 1).
+  GameCanReady,
+  /// `((LobbyGame*)a)->MatchesRoomSpec(b)` (0 or 1).
+  GameMatchesSpec,
+  /// `((LobbyGame*)a)->GetCaptainId()`.
+  GameCaptainId,
+  /// `((LobbyGame*)a)->GetClients().get()`.
+  GameClients,
+  /// `LobbyIAmReady()` (0 or 1).
+  IAmReady,
+  /// `((LobbyClientList*)a)->GetCount()`.
+  ClientsCount,
+  /// `((LobbyClientList*)a)->ClientAt(b)`.
+  ClientsAt,
+  /// `((LobbyClient*)a)->GetClientId()`.
+  ClientId,
+  /// `((LobbyClient*)a)->HasPlayer()` (0 or 1).
+  ClientHasPlayer,
+  /// `LobbyKickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `this->DeliverEvent(new ClientActionEvent(a, b, (LobbyClient*)c), false)`.
+  DeliverClientAction,
+  /// `LobbyBroadcastEvent(new SetChatInputEvent(2, ((LobbyClient*)a)->GetName(), b, false), true)`.
+  BroadcastWhisper,
+  /// `((ListArea*)a)->GetSelItem()`.
+  ListGetSel,
+  /// `((ListArea*)a)->GetNumItems()`.
+  ListNumItems,
+  /// `((ListArea*)a)->GetItem(b)`.
+  ListItem,
+  /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
+  ListRefresh,
+  /// `((ListArea*)a)->ListArea::InsertItem((ListItem*)b, -1)`.
+  ListInsert,
+  /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+  ListRemove,
+  /// `((ListArea*)a)->Clear(b != 0)`.
+  ListClear,
+  /// `((ListArea*)a)->BeginUpdate()`.
+  ListBeginUpdate,
+  /// `((ListArea*)a)->EndUpdate()`.
+  ListEndUpdate,
+  /// `new GameUserListItem((LobbyClient*)a)` with a reference added (the original's local `SmartPtr`).
+  ItemNew,
+  /// `((GameUserListItem*)a)->mClient.get()`.
+  ItemClient,
+  /// `((GameUserListItem*)a)->mClient->` the test `b` (0 or 1).
+  ItemClientIs,
+  /// `((GameUserListItem*)a)->mImage = ` the picture `b`.
+  ItemSetImage,
+  /// `dynamic_cast<Button*>((Component*)a)`.
+  ButtonOf,
+  /// `((Component*)a)->mControlId`.
+  ControlId,
+  /// `LobbyGet<a>()` (a bool as 0 or 1; the connection speed's value).
+  PrefGet,
+  /// `LobbySet<a>(b)`.
+  PrefSet,
+  /// `((ComboBox*)a)->GetSelItem()`.
+  ComboGetSel,
+  /// `((ComboBox*)a)->SetSelItem(b, c != 0)`.
+  ComboSetSel,
+  /// `((ComboBox*)a)->Clear(b != 0)`.
+  ComboClear,
+  /// `((ComboBox*)a)->SetTextAndSel(LobbyGetTabSelect(), false)`.
+  ComboShowTabSelect,
+  /// `LobbySetTabSelect(((ComboBox*)a)->mEdit->GetText())`.
+  SaveTabSelect,
+  /// `LobbySetLanName(((ComboBox*)a)->mEdit->GetText())`.
+  SaveLanName,
+  /// `LobbyGetLanNameCount()`.
+  LanNameCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetLanNameAt(b), -1)`.
+  ComboAddLanName,
+  /// `((ComboBox*)a)->SetTextAndSel(LobbyGetLanName(), true)`.
+  ComboShowLanName,
+  /// `LobbyGetLanBroadcastPort()`.
+  LanBroadcastPort,
+  /// `sprintf(port, "%d", b); ((Label*)a)->SetText(port, true)` (a 20-byte buffer).
+  LabelSetNumber,
+  /// `((Label*)a)->SetText(IPAddr::GetLocalAddr().GetHostString(true), true)`.
+  LabelSetLocalAddress,
+  /// `LobbyBroadcastLobbyEvent(a, b != 0)`.
+  BroadcastLobbyEvent,
+  /// `LobbyRestoreDefaults()`.
+  RestoreDefaults,
+  /// `LobbySetNetworkAdapter(LobbyGetNetworkAdapter())`.
+  ResetNetworkAdapter,
+  /// `LobbyResetFilters()`.
+  ResetFilters,
+  /// `LobbyGetCurrentScreen()`.
+  CurrentScreen,
+  /// `((Component*)a)->BroadcastEventDown(new LobbyEvent(b))`.
+  BroadcastDown,
+  /// `LobbyGlobal_LobbyMusic_Sound->Resume()`.
+  MusicResume,
+  /// `LobbyGlobal_LobbyMusic_Sound->Stop()`.
+  MusicStop,
+  /// `LobbyGlobal_ButtonClick_Sound->SetMuted(a != 0)`.
+  ClickSoundMute,
+  /// `LobbyGlobal_SierraLogon_Sound->Stop()`.
+  LogonSoundStop,
+  /// `LobbyRemoveLanName()`.
+  RemoveLanName,
+  /// `LobbyOnLoginScreen()` (0 or 1).
+  OnLoginScreen,
+  /// `LobbyOnLanScreen()` (0 or 1).
+  OnLanScreen,
+  /// `LobbyIsFirewallTestDone()` (0 or 1).
+  FirewallTestDone,
+  /// `LobbyIsBehindFirewall()` (0 or 1).
+  BehindFirewall,
+  /// `((ImageComponent*)a)->SetImage(` the picture `b` `.get())`.
+  IconSetImage,
+  /// `LobbyGetPublicAddress().IsValid()` (0 or 1).
+  PublicAddressValid,
+  /// `((Label*)a)->SetText(LobbyGetPublicAddress().GetHostString(true), true)`.
+  LabelSetPublicAddress,
+  /// `ComponentConfigMissing(std::string("Invalid type for ") + slot a's name, its file, 89)`.
+  ReportInvalidType,
+  /// `dynamic_cast<Button*>((Component*)a) != NULL`.
+  IsButton,
+  /// `dynamic_cast<ComboBox*>((Component*)a) != NULL`.
+  IsCombo,
+  /// `sprintf(buffer, "%d", b); ((ComboBox*)a)->AddString(buffer)` (a 50-byte buffer).
+  ComboAddNumber,
+  /// `EELobbyFillMapTypeCombo((ComboBox*)a)`.
+  FillMapTypes,
+  /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
+  ComboHasSel,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the game's
+  /// options, slots and changes were ops that bounced through the C++ forwarders).
+  GameRust,
+  /// `((Label*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string).
+  LabelSetName,
+  /// `LobbyIAmCaptain()` (0 or 1).
+  IAmCaptain,
+  /// `LobbyEvtGet(a, LobbyEvtField::Value)` (a sync event's slot or option; R6 WON lobby and network round 37).
+  EventParam,
+  /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
+  /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
+  ChooseSavedGame,
+  /// `((ComboBox*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string; round 5:
+  /// EELobbyPlayerOptionsCtrl).
+  ComboSetName,
+  /// `((ComboBox*)a)->mEdit->mTextColor = b`.
+  ComboSetTextColor,
+  /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
+  MyPlayerReady,
+  /// `GetMyLobbyPlayer()`.
+  MyPlayer,
+  /// `((EELobbyPlayer*)a)->GetSlot()`.
+  PlayerSlot,
+  /// `((LobbyClient*)a)->GetPlayer().mPtr`.
+  ClientPlayer,
+  /// `((EELobbyColorButton*)a)->SetColor(b)`.
+  ColorSetColor,
+  /// `((EELobbyColorButton*)a)->mColor`.
+  ColorGetColor,
+  /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
+  LabelSetPercent,
+  /// `ee_won_model_get(model of (LobbyModelObject*)a, b)` (answered by modelobj.rs in the game).
+  MGet = 1000,
+  /// `ee_won_model_set(model of a, b, c)`.
+  MSet,
+  /// `ee_won_model_call(model of a, b, c)` (`b` an `EeWonModelCall`).
+  MCall,
+  /// `ServerDetailsItem::CreateItem()` with a reference added (the original's local `SmartPtr`).
+  RowNew = 1010,
+  /// `((ServerDetailsItem*)a)->mGame.get()`.
+  RowGame,
+  /// `((ServerDetailsItem*)a)->mGame = (LobbyGame*)b`.
+  RowSetGame,
+  /// `a->mIPAddrStr = a->mGame->GetAddress().GetHostAndPortString(true)`.
+  RowSetAddrText,
+  /// `((ServerDetailsItem*)a)->mIPAddrStr` (a text).
+  RowAddrText,
+  /// A list row's field `b` (`EeWonLobbyCtlItemField`).
+  ItemGet,
+  /// A list row's field `b` set to `c`.
+  ItemSet,
+  /// `((ServerDetailsItem*)a)->GetDetailsHeightHook((MultiListArea*)b)`.
+  RowDetailsHeight,
+  /// `((ServerDetailsItem*)a)->PaintDetailsHook(*(Graphics*)b, (MultiListArea*)c)`.
+  RowPaintDetails,
+  /// `((Component*)a)->GetDefaultFont()`.
+  DefaultFont = 1030,
+  /// `((Component*)a)->GetDefaultFontMod(b, c)`.
+  DefaultFontMod,
+  /// `((Component*)a)->GetFontMod((Font*)b, c, 0)`.
+  FontMod,
+  /// `((ListArea*)a)->mFont.get()`.
+  ListFont,
+  /// `((Font*)a)->GetHeight()`.
+  FontHeight,
+  /// `gLobbyResources[a].mImage->mHeight` (`LOBBY_IMAGE(...)->mHeight`).
+  ResImageHeight,
+  /// `((MultiListArea*)a)->GetColumnWidth(b)`.
+  ColumnWidth,
+  /// `((ListArea*)a)->EnsureVisible((ListItem*)b)`.
+  ListEnsureVisible,
+  /// `((ListArea*)a)->GetItemPos((ListItem*)b)`.
+  ListItemPos,
+  /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+  ListSetSel,
+  /// `((ListArea*)a)->GetVertOffset()`.
+  ListVertOffset,
+  /// `((ListArea*)a)->SetVertOffset(b)`.
+  ListSetVertOffset,
+  /// `((ListArea*)a)->GetViewHeight()`.
+  ListViewHeight,
+  /// `((ListArea*)a)->GetItemPosAtYPos(b)`.
+  ListItemAtY,
+  /// `((ListArea*)a)->GetPaintWidth()`.
+  ListPaintWidth,
+  /// `((MultiListArea*)a)->GetColumnPaintContext()`.
+  ListPaintColumn,
+  /// `((MultiListArea*)a)->GetSortColumn()`.
+  ListSortColumn,
+  /// `((MultiListArea*)a)->GetSortColumnPrev()`.
+  ListSortColumnPrev,
+  /// `((ListArea*)a)->DeliverEvent(new PingGameEvent((LobbyGame*)b, true), true)`.
+  ListDeliverPing,
+  /// `((ListArea*)a)->GetTotalWidth()`.
+  ListTotalWidth,
+  /// `((ListArea*)a)->GetTextColor()`.
+  ListTextColor,
+  /// `((ListArea*)a)->ListFlagSet(b)` (0 or 1).
+  ListFlagSet,
+  /// `((Graphics*)a)->GetStandardColor(b)`.
+  GfxStandardColor = 1060,
+  /// `((ListArea*)b)->GetSelColor().GetForegroundColor(*(Graphics*)a, c)`.
+  GfxSelFore,
+  /// `((ListArea*)b)->GetSelColor().GetBackgroundColor(*(Graphics*)a)`.
+  GfxSelBack,
+  /// `((Graphics*)a)->SetColor(b)`.
+  GfxSetColor,
+  /// `((Graphics*)a)->SetFont((Font*)b)`.
+  GfxSetFont,
+  /// `((Graphics*)a)->SetSysColor(b)`.
+  GfxSetSysColor,
+  /// `((Graphics*)a)->FillRect(b's point, c's size)`.
+  GfxFillRect,
+  /// `((Graphics*)a)->Translate(b, c)`.
+  GfxTranslate,
+  /// `((Graphics*)a)->DrawImage(gLobbyResources[b].mImage.get(), c's point)`.
+  GfxDrawResImage,
+  /// `((Graphics*)a)->DrawString(GUIString(b), c's point)`.
+  GfxDrawText,
+  /// `((Graphics*)a)->DrawString(gLobbyResources[b].mString, c's point)`.
+  GfxDrawResText,
+  /// `((Graphics*)a)->mFont->GetStringWidth(GUIString(b))`.
+  GfxTextWidth,
+  /// `DrawLobbyPing((Graphics*)a, b, c, 0, 0)`.
+  GfxDrawPing,
+  /// `((Graphics*)a)->DrawLine(b's point, c's point)`.
+  GfxDrawLine,
+  /// `((Graphics*)a)->DrawImage((Image*)b, c's point)`.
+  GfxDrawImage,
+  /// `new GUIStringData(b bytes at (const char*)a)` with a reference (a temporary `GUIString`; `Release` ends it).
+  TextNew = 1080,
+  /// `GUIString(a).CompareNoCase(GUIString(b))`.
+  TextCompareNoCase,
+  /// `GUIString(a).findNoCase(GUIString(b), 0)`.
+  TextFindNoCase,
+  /// `GUIString(a).findNoCase(gLobbyResources[b].mString, 0)`.
+  TextFindRes,
+  /// `GUIString(a).length()`.
+  TextLen,
+  /// `GUIString(a)[b]` (a unit).
+  TextAt,
+  /// `std::string s = GUIString(a)`: its bytes copied to `(char*)b` (at most `c`), its length returned.
+  TextBytes,
+  /// `GUIString(a) == GUIString(b)` (0 or 1).
+  TextEquals,
+  /// `((LobbyGame*)a)->GetAddress().StringCompare(((LobbyGame*)b)->GetAddress())`.
+  GameCompareAddress,
+  /// `((ComboBox*)a)->mEdit->GetText()` (a text).
+  ComboEditText = 1100,
+  /// `LobbyGetNumPingsToDo()`.
+  PingsToDo,
+  /// `LobbyKillPings(1)`.
+  KillPings,
+  /// `this->DeliverEvent(new GameActionEvent(7, (LobbyGame*)a), false)`.
+  DeliverGameAction,
+  /// `this->DeliverEvent(new JoinGameEvent((LobbyGame*)a), false)`.
+  DeliverJoinGame,
+  /// `((GameChangedEvent*)a)->mGame.get()`.
+  EventGame,
+  /// `((SyncGameListEvent*)a)->mGames.get()`.
+  EventGames,
+  /// `((ListItemClickedEvent*)a)->mX`.
+  EventX,
+  /// `((ListItemClickedEvent*)a)->mY`.
+  EventY,
+  /// The event's `mItem.get()` (`ComboSelChangedEvent`, `ListItemClickedEvent`, `TreeItemOpenedEvent`).
+  EventItem,
+  /// `((ComboSelChangedEvent*)a)->mActiveSel` (0 or 1).
+  EventActiveSel,
+  /// `sprintf(n, "%d", b); ((Label*)a)->SetText(LobbyFormatString(ListPingSummary, n), true)`.
+  LabelSetPingSummary,
+  /// `sprintf` of `b` and `c`; `((Label*)a)->SetText(LobbyFormatString2(ListSummary, b's, c's), true)`.
+  LabelSetListSummary,
+  /// `((Button*)a)->SetText(gLobbyResources[b].mString, true)`.
+  ButtonSetRes,
+  /// `((Label*)a)->SetText(gLobbyResources[b].mString, true)`.
+  LabelSetRes,
+  /// `this->RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `this->mTimerFlags &= ~2`.
+  ClearTimerFlag,
+  /// `this->Container::TimerEvent(a)` (0 or 1).
+  BaseTimer,
+  /// `((ComboBox*)a)->InsertItem(new TextListItem(NoFilter, (Font*)b), -1)`.
+  ComboInsertNoFilter,
+  /// `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)` (a Rust row in the game: rows.rs `Filter`).
+  ComboInsertFilterRow,
+  /// `LobbyGetFilterValues(GUIString(b))`'s values, each `((ComboBox*)a)->AddString(value, -1)`.
+  ComboAddFilterValues,
+  /// `((ComboBox*)a)->mListArea->GetItem(b)`.
+  ComboItem,
+  /// `((ComboBox*)a)->mListArea->GetNumItems()`.
+  ComboCount,
+  /// `((ComboBox*)a)->mListArea->GetItemPos((ListItem*)b)`.
+  ComboItemPos,
+  /// `((TextListItem*)a)->mText == GUIString(b)` (0 or 1).
+  TextItemIs,
+  /// `((ComboBox*)a)->UpdateItem((ListItem*)b)`.
+  ComboUpdateItem,
+  /// `((ComboBox*)a)->SetText(GUIString(b), true)`.
+  ComboSetText,
+  /// `((ComboBox*)a)->AddString(GUIString(b), -1)`.
+  ComboAddString,
+  /// `((ComboBox*)a)->DeleteItem(b)`.
+  ComboDeleteItem,
+  /// `((ComboBox*)a)->mEdit->SelectRange(-1, 0)`.
+  ComboSelectEnd,
+  /// `((FilterListItem*)a)->mIsAdd` (0 or 1; the game's rows answer these in rows.rs, the drivers' worlds theirs).
+  FilterIsAdd,
+  /// `((FilterListItem*)a)->mSelPos`.
+  FilterSelPos,
+  /// `((FilterListItem*)a)->mFilterText` (a text).
+  FilterText,
+  /// `((FilterListItem*)a)->mColumnName` (a text).
+  FilterColumn,
+  /// The empty filter: `a->mText = AddRemove; a->mIsAdd = true; a->mFilterText = GUIString(""); a->mSelPos = 0`.
+  FilterClear,
+  /// `a->mSelPos = b & 0xffffffff; a->mIsAdd = b >> 32; a->mFilterText = GUIString(c)`, then the label (Add or
+  /// Remove, the text, the closing quote and parenthesis).
+  FilterSet,
+  /// `LobbyAddFilterValue(GUIString(a), GUIString(b))`.
+  AddFilterValue,
+  /// `LobbyRemoveFilterValue(GUIString(a), GUIString(b))`.
+  RemoveFilterValue,
+  /// An EE game column's handler (`EeWonEeGlueCall` `a`; `b`, `c` its arguments; a filter's text a text).
+  EeColumn,
+  /// The event `a`'s member `b` (`EeWonLobbyCtlEvField`).
+  EvGet = 1200,
+  /// The event `a`'s `mHandled` (the member `b`) set.
+  EvSetHandled,
+  /// `new ChatLink(*(const EeWonLobbyCtlLink*)a)` (the constructor of its kind) with a reference added.
+  ChatLinkNew,
+  /// The link `a`'s member `b` (`EeWonLobbyCtlLinkField`).
+  LinkGet,
+  /// The link `a`'s member `b` set to `c`.
+  LinkSet,
+  /// `LobbyAppendFormattedText` over `*(const EeWonLobbyCtlFormat*)a`.
+  ChatAddFormatted,
+  /// `gLobbyResources[a].mString` (a text, the resource's own).
+  ResText,
+  /// `((TextArea*)a)->mFont.get()`.
+  TextAreaFont,
+  /// `((TextArea*)a)->mLinkFont.get()`.
+  TextAreaLinkFont,
+  /// `((TextArea*)a)->AddSegment(GUIString(b), c, true)`.
+  TextAreaAddSegment,
+  /// `((TextArea*)a)->LineBreak(b)`.
+  TextAreaLineBreak,
+  /// `((TextArea*)a)->Reset(b != 0)`.
+  TextAreaReset,
+  /// `((InputBox*)a)->GetText()` (a text).
+  InputText,
+  /// `((InputBox*)a)->AddInputHistory(GUIString(b), true)`.
+  InputAddHistory,
+  /// `((InputBox*)a)->Clear(b != 0)`.
+  InputClear,
+  /// `((InputBox*)a)->SetText(GUIString(b), c != 0)`.
+  InputSetText,
+  /// `((InputBox*)a)->SelectRange(b, c)`.
+  InputSelectRange,
+  /// `((Component*)a)->RequestFocus()`.
+  RequestFocus,
+  /// `((Component*)a)->IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `this->IsRootVisible()` (0 or 1).
+  IsRootVisible,
+  /// `LobbyGetCurrentServer()`.
+  CurrentServer,
+  /// `GetMyLobbyClient()`.
+  MyClient,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  /// `LobbyGetRoomChatParser(a)`.
+  RoomChatParser,
+  /// `((ChatCommandParser*)a)->` GetPrefix (`b` 0), GetError (1), GetCommand (2).
+  ParserNumber,
+  /// `((ChatCommandParser*)a)->` GetTargetName (`b` 0), GetText (1): held.
+  ParserText,
+  /// `((ChatCommandParser*)a)->HandleInput(GUIString(b))` (0 or 1).
+  ParserHandleInput,
+  /// `((ChatCommandParser*)a)->GetHelp(b)`: held.
+  ParserHelp,
+  /// `((ChatCommandParser*)a)->GetClients()`.
+  ParserClients,
+  /// The prefix, `GetCommandString(b)`, ` "`, the name `c` (0: `GetTargetName()`), `" `: held.
+  ParserCommandText,
+  /// `LobbyFormatString(gLobbyResources[a].mString, ((ChatCommandParser*)b)->GetTargetName())`: held.
+  FormatTarget,
+  /// The held text `a` with `GUIString(b)` appended: held (`a`'s reference given back).
+  TextAppend,
+  /// The held text `a` with `c` bytes at `b` appended: held.
+  TextAppendBytes,
+  /// `GUIString(a).find(GUIString(b), 0)`.
+  TextFind,
+  /// `LobbyGetIgnoredNameCount()`.
+  IgnoredCount,
+  /// `LobbyGetIgnoredNameAt(a)`: held.
+  IgnoredAt,
+  /// `this->Fn2F5380(a, b)` (FireEvent).
+  FireEvent,
+  /// `this->DeliverEvent(new FriendActionEvent(a, (LobbyFriend*)b, c), false)`.
+  DeliverFriendAction,
+  /// `this->DeliverEvent(new JoinFriendsRoomEvent((LobbyFriend*)a), false)`.
+  DeliverJoinFriendsRoom,
+  /// `this->DeliverEvent(new JumpToRoomEvent(link->mText, link->mGroupId, link->mAddress), false)` of the link `a`.
+  DeliverJumpToRoom,
+  /// `this->DeliverEvent(new AcceptClientEvent((LobbyClient*)a, b != 0), false)`.
+  DeliverAcceptClient,
+  /// `((const EeWonIpAddr*)a)` valid (0 or 1; answered by ipobj.rs in the game).
+  AddrValid,
+  /// `((ListArea*)a)->InsertItem((ListItem*)b, -1)` (the virtual).
+  ListInsert2 = 1300,
+  /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, -1)`.
+  TreeInsertChild,
+  /// `((TreeArea*)a)->InsertTreeItem(NULL, (ListItem*)b, c)`.
+  TreeInsertServer,
+  /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, 0)`.
+  TreeInsertLoading,
+  /// `((TreeItem*)a)->GetWrappedItem()`.
+  TreeWrapped,
+  /// `((TreeItem*)a)->GetNumChildren()`.
+  TreeChildCount,
+  /// `((TreeItem*)a)->GetChild(b)`.
+  TreeChild,
+  /// `((TreeItem*)a)->GetParentItem()`.
+  TreeParent,
+  /// `((TreeItem*)a)->GetIndex()`.
+  TreeIndex,
+  /// `((TreeItem*)a)->IsOpen()` (0 or 1).
+  TreeIsOpen,
+  /// `((TreeArea*)a)->OpenItem((TreeItem*)b, c != 0)`.
+  TreeOpen,
+  /// `((TreeArea*)a)->RemoveAllItems((TreeItem*)b)`.
+  TreeRemoveAll,
+  /// `((TreeArea*)a)->RemoveTreeItem((TreeItem*)b)`.
+  TreeRemove,
+  /// `((TreeArea*)a)->ClearTree(b != 0)`.
+  TreeClear,
+  /// `((TreeItem*)a)->ContainsPoint(b's point)` (0 or 1).
+  TreeContainsPoint,
+  /// `new RoomListItem((LobbyServer*)a, b != 0)` (a server's row, its loading placeholder).
+  RoomItemServer,
+  /// `new RoomListItem((LobbyGroup*)a, (LobbyServer*)b)` (a room's row).
+  RoomItemGroup,
+  /// `((RoomListItem*)a)->UpdateText((LobbyServer*)b, (LobbyGroup*)c)`.
+  RoomItemUpdate,
+  /// `((RoomListItem*)a)->mAddress.GetValue()` (a borrowed `const EeWonIpAddr*`).
+  RoomItemAddr,
+  /// `((RoomListItem*)a)->mGroupId`.
+  RoomItemGroupId,
+  /// `IPAddr` `a == b` (six bytes; 0 or 1; answered by ipobj.rs in the game).
+  AddrEquals,
+  /// A copy of the address `a` (an `EeWonIpAddr` the Rust frees with `AddrFree`; ipobj.rs in the game).
+  AddrClone,
+  /// The copy `a` freed.
+  AddrFree,
+  /// `this->DeliverEvent(new JoinRoomEvent(row->mAddress, row->mGroupId), false)` of the room row `a`.
+  DeliverJoinRoom,
+  /// `this->DeliverEvent(new CreateRoomEvent(the address a, NULL: IPAddr()), false)`.
+  DeliverCreateRoom,
+  /// `this->DeliverEvent(new QueryServerGroupsEvent(the address a), false)`.
+  DeliverQueryGroups,
+  /// `LobbyGetServerList()`.
+  ServerListGet,
+  /// `LobbyGetChatGroup()`.
+  ChatGroup,
+  /// `new FriendsListItem` (no reference).
+  FriendRowNew,
+  /// `new UserListItem` (no reference).
+  UserRowNew,
+  /// `((FriendsListItem*)a)->mFriend.get()`.
+  ItemFriend,
+  /// `((FriendsListItem*)a)->mFriend = (LobbyFriend*)b`.
+  ItemSetFriend,
+  /// `((UserListItem*)a)->mClient.get()`.
+  ItemUserClient,
+  /// `((UserListItem*)a)->mClient = (LobbyClient*)b`.
+  ItemSetUserClient,
+  /// `((TextListItem*)a)->mText = GUIString(b)`.
+  ItemSetText,
+  /// `((TextListItem*)a)->mImage = gLobbyResources[b].mImage` (-1: NULL).
+  ItemSetImageRes,
+  /// `((TextListItem*)a)->mFont = (Font*)b`.
+  ItemSetFont,
+  /// `LobbyGetFriendCount()`.
+  FriendCount,
+  /// `LobbyGetFriendAt(a)`.
+  FriendAt,
+  /// `LobbyGetCurrentUser()`.
+  CurrentUser,
+  /// `((Label*)a)->SetText(LobbyFormatString(UserWelcome, ((LobbyUserInfo*)b)->mUserName), true)`.
+  LabelSetUserWelcome,
+  /// `this->DeliverEvent(new QuickPlayEvent(a), false)`.
+  DeliverQuickPlay,
+  /// `this->Dialog::HandleComponentEvent(a)`.
+  DialogBaseEvent,
+  /// `LobbyGetUserCount()`.
+  UserCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetUserNameAt(b), -1)`.
+  ComboAddUserName,
+  /// `LobbyGetUserLastUseAt(a)`.
+  UserLastUseAt,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mPublic` (0 or 1).
+  ConfigIsPublic,
+  /// `LobbyGetUserPassword(GUIString(a))`: held.
+  UserPassword,
+  /// `LobbyAddUser(GUIString(a), GUIString(b), true)`.
+  AddUser,
+  /// `((ComboBox*)a)->SetText(GUIString(b), c != 0)`.
+  ComboSetTextFlag,
+  /// `this->DeliverEvent(new LoginEvent(((InputBox*)a)->GetText(), ((Button*)b)->IsChecked(),
+  /// ((ComboBox*)c)->mEdit->GetText()), false)`.
+  DeliverLogin,
+  /// `GUIString(a).mData->ToInt(0)`.
+  TextToInt,
+  /// The create-account event of the controls `(const intptr_t*)a` (user, password, e-mail, day, month, year,
+  /// newsletter) delivered.
+  DeliverCreateAccount,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `((InputBox*)a)->SetText(GUIString(new GUIStringData(((AuthContext*)b)->GetName())), true)`.
+  InputSetAuthName,
+  /// `GUIString(new GUIStringData(((AuthContext*)a)->GetPassword()))`: held.
+  AuthPassword,
+  /// `this->DeliverEvent(new UpdateAccountEvent(((InputBox*)a)->GetText(), ((InputBox*)b)->GetText(),
+  /// ((Button*)c)->IsChecked()), false)`.
+  DeliverUpdateAccount,
+  /// `this->DeliverEvent(new GetLostPasswordEvent(((ComboBox*)a)->mEdit->GetText()), false)`.
+  DeliverLostPassword,
+  /// `this->DeliverEvent(new GetLostUserNameEvent(((InputBox*)a)->GetText()), false)`.
+  DeliverLostUserName,
+  /// `((BrowserComponent*)a)->Go(ComponentConfig::GetResourceFile("help/loginhelp.html"), false, 0, -1)`.
+  BrowserGoLoginHelp,
+  /// `((Label*)a)->SetText(GUIString(b), true)`.
+  LabelSetData,
+  /// `((Container*)a)->EnableLayoutInstructions(b, c != 0)`.
+  EnableLayout,
+  /// `((Container*)a)->Relayout()`.
+  Relayout,
+  /// `((RustServerOp*)a)->GetNum(EE_WON_HTTPDOC_TYPE) == HTTPDocType_MOTD` (0 or 1).
+  HttpDocIsMotd,
+  /// `((RustServerOp*)a)->GetBytes(EE_WON_HTTPDOC_PATH, b ? Game : Sys)`: copied to `(char*)c` (1024 bytes at
+  /// most), its length returned.
+  HttpDocPath,
+  /// `((BrowserComponent*)a)->ShowFiles(the paths at (const EeWonLobbyCtlFiles*)b, true)`.
+  BrowserShowFiles,
+  /// `((ScreenContainer*)a)->ShowScreen((Component*)b, c != 0)`.
+  ScreenShow,
+  /// `((ServerListCtrl*)a)->GetSelGame()`.
+  ListSelGame,
+  /// `this->DeliverEvent(new ChangeDirectConnectEvent(a, (LobbyGame*)b), false)`.
+  DeliverDirectConnect,
+  /// `((Label*)a)->SetText(LobbyFormatString3(GUIString(b), the texts at (const intptr_t*)c), true)`.
+  LabelSetFormat3,
+  /// `new RustTextRow((EeWonRow*)a)` when `b` is set, else `new RustRow((EeWonRow*)a)` (no reference).
+  RowShellNew,
+  /// `((RustTextRow*)a)->TextListItem::Paint(*(Graphics*)b, (ListArea*)c)`.
+  RowTextPaint,
+  /// `((RustTextRow*)a)->TextListItem::CalcDimensions((ListArea*)b)`.
+  RowTextCalc,
+  /// `((RustTextRow*)a)->TextListItem::Compare((ListItem*)b, (ListArea*)c)`.
+  RowTextCompare,
+  /// `((TextListItem*)a)->mText = gLobbyResources[b].mString`.
+  ItemSetTextRes,
+  /// `((TextListItem*)a)->mText = GUIString(b)`, then ` (%d)` of `c`'s low half appended when its high half is set.
+  ItemSetTextCount,
+  /// `((TextListItem*)a)->mText.erase()`.
+  ItemTextErase,
+  /// `((TextListItem*)a)->mImage.get()`.
+  ItemImage,
+  /// `((TextListItem*)a)->mFont.get()`.
+  ItemFont,
+  /// `((Font*)b)->GetStringWidth(t, 0, t.length())` of the item `a`'s text `t`.
+  ItemTextWidth,
+  /// `((Graphics*)b)->DrawString(((TextListItem*)a)->mText, c's point)`.
+  ItemTextDraw,
+  /// `((TextListItem*)a)->mText.CompareNoCase(((TextListItem*)b)->mText)`.
+  ItemTextCompare,
+  /// `((Image*)a)->mWidth`.
+  ImageWidth,
+  /// `((Image*)a)->mHeight`.
+  ImageHeight,
+  /// `gLobbyResources[a].mImage.get()`.
+  ResImage,
+  /// `((LobbyRustCtrl*)(ServerListCtrl*)((ListArea*)a)->mParent->mParent)->mLobbyCtl`: a game list row's control.
+  ListOwnerCtl,
+  /// `((LobbyGame*)a)->GetAddress().GetHostAndPortString(true)` (held).
+  GameAddrText,
+  /// `((ImageComponent*)a)->SetImage(gLobbyResources[b].mImage.get())` (R6 WONLobby round 17: `IconSetImage`'s
+  /// picture as its resource row in the game, rows.rs icon_res).
+  IconSetRes,
+  /// `GetLobbyConfig()`.
+  LobbyConfigGet = 1500,
+  /// `((LobbyConfig*)a)->mPingCeiling`.
+  ConfigPingCeiling,
+  /// `((LobbyConfig*)a)->mPublic`.
+  ConfigPublic,
+  /// `((TextListItem*)a)->mText.append(GUIString(b))`.
+  ItemTextAppend,
+  /// `((FilterListItem*)a)->mSelPos = b`.
+  FilterSetSelPos,
+  /// `((FilterListItem*)a)->mIsAdd = b != 0`.
+  FilterSetIsAdd,
+  /// `((FilterListItem*)a)->mFilterText = GUIString(b)`.
+  FilterSetText,
+  /// `((FilterListItem*)a)->mFilterText = GUIString("")`.
+  FilterClearText,
+  /// `((Label*)a)->SetText(LobbyFormatString(gLobbyResources[b].mString, GUIString(c)), true)`.
+  LabelSetFormatRes,
+  /// `((Label*)a)->SetText(LobbyFormatString2(gLobbyResources[b].mString, GUIString(c[0]), GUIString(c[1])), true)`
+  /// (`c` a `const intptr_t[2]`).
+  LabelSetFormat2Res,
+  /// `LobbyGetFilterCount(GUIString(a))`.
+  FilterCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetFilterValueAt(GUIString(b), c), -1)`.
+  ComboAddFilterValue,
+  /// `DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(a)), (unsigned long)b), false)`.
+  DeliverJoinRoomAt,
+  /// `DeliverEvent(CreateRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(a))), false)`.
+  DeliverCreateRoomAt,
+  /// `DeliverEvent(CreateRoomEvent(IPAddr()), false)`.
+  DeliverCreateRoomAny,
+  /// `((ComponentEvent*)a)->mType`.
+  EvType,
+  /// `((ComboSelChangedEvent*)a)->mItem.get()`.
+  EvComboItem,
+  /// `((TreeItemOpenedEvent*)a)->mItem.get()`.
+  EvTreeItem,
+  /// `((ListItemClickedEvent*)a)->mItem.get()`.
+  EvListItem,
+  /// `((Label*)a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), GUIString(b)))`.
+  LabelSetPercentText,
+  /// `EELobbyGetFileDialog()`.
+  FileDialogGet,
+  /// `((EELobbyFileDialog*)a)->ListFiles(EELobbyFn2988E9(), ".ees")`.
+  FileDialogListSaves,
+  /// `LobbyDoDialog((EELobbyFileDialog*)a)`.
+  DoDialog,
+  /// `((ListItem*)a)->mHeight` (ItemGet's fields, one op each).
+  ItemGetHeight = 1600,
+  /// `((ListItem*)a)->mTop`.
+  ItemGetTop,
+  /// `((ListItem*)a)->mWidth`.
+  ItemGetWidth,
+  /// `((ListItem*)a)->mSelected` (0 or 1).
+  ItemGetSelected,
+  /// `((ListItem*)a)->mSelectable` (0 or 1).
+  ItemGetSelectable,
+  /// `((TextListItem*)a)->mColor`.
+  ItemGetColor,
+  /// `((ListItem*)a)->mHeight = b` (ItemSet's fields).
+  ItemSetHeight,
+  /// `((ListItem*)a)->mTop = b`.
+  ItemSetTop,
+  /// `((ListItem*)a)->mWidth = b`.
+  ItemSetWidth,
+  /// `((ListItem*)a)->mSelected = b != 0`.
+  ItemSetSelected,
+  /// `((ListItem*)a)->mSelectable = b != 0`.
+  ItemSetSelectable,
+  /// `((TextListItem*)a)->mColor = b`.
+  ItemSetColor,
+  /// `dynamic_cast<ChatLink*>(((TextLinkActivatedEvent*)a)->mLink.get())` (EvGet's TlaLink).
+  EvTlaLink,
+  /// `new GUIStringData((const char*)a, b)` (no reference; TextNew's first statement).
+  TextAlloc,
+  /// `sEELobbyBytes = (std::string)GUIString(a)` (TextBytes' local).
+  BytesOfText,
+  /// `sEELobbyBytes = ((RustServerOp*)a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Sys)` (HttpDocPath's).
+  BytesOfHttpDocSys,
+  /// As BytesOfHttpDocSys with `HTTPDocOwner_Game`.
+  BytesOfHttpDocGame,
+  /// `sEELobbyBytes.length()`.
+  BytesLen,
+  /// `memcpy((char*)a, sEELobbyBytes.data(), b)`.
+  BytesCopy,
+  /// `std::string().swap(sEELobbyBytes)` (the local gone).
+  BytesDrop,
+  /// `sEELobbyText = (GUIStringData*)a` (TextAppend's local, a reference added).
+  TextTake,
+  /// `sEELobbyText = GetEmptyGUIStringData()` (ParserCommandText's local).
+  TextStartEmpty,
+  /// `sEELobbyText.append(GUIString(a))`.
+  TextAppendText,
+  /// `sEELobbyText.append(GUIString(new GUIStringData((const char*)a, b)))`.
+  TextAppendRaw,
+  /// `sEELobbyText.append(((ChatCommandParser*)a)->GetPrefix())`.
+  TextAppendParserPrefix,
+  /// `sEELobbyText.append(((ChatCommandParser*)a)->GetCommandString(b))`.
+  TextAppendParserCommand,
+  /// `sEELobbyText.append(GUIString(" \""))`.
+  TextAppendQuoteOpen,
+  /// `sEELobbyText.append(((ChatCommandParser*)a)->GetTargetName())`.
+  TextAppendParserTarget,
+  /// `sEELobbyText.append(GUIString(new GUIStringData("\" ")))`.
+  TextAppendQuoteClose,
+  /// `sEELobbyText`'s data with one reference added (the result).
+  TextHeldOut,
+  /// `sEELobbyText = GUIString()` (the local gone).
+  TextDrop,
+  /// `sEELobbyFmtStrings[a] = GUIString(b)` (ChatAddFormatted's locals; 0 empties it).
+  FmtSetString,
+  /// `sEELobbyFmtLinks[a] = (ChatLink*)b`.
+  FmtSetLink,
+  /// `sEELobbyFmtFonts[a] = (Font*)b`.
+  FmtSetFont,
+  /// `sEELobbyFmtText` (the two strings' pointers).
+  FmtTexts,
+  /// `sEELobbyFmtLinks`.
+  FmtLinks,
+  /// `LobbyAppendFormattedText(f->output, f->format, b, f->num_strings, f->colors, 9, sEELobbyFmtFonts, 3, c,
+  /// f->num_links, f->line_break != 0)` of the format `f` = `a`.
+  FmtAppend,
+  /// `sEELobbyEvent = CreateAccountEvent()` (DeliverCreateAccount's local).
+  EvCreateAccountNew,
+  /// `LobbyEvtSetStr(sEELobbyEvent.get(), a, (std::wstring)((InputBox*)b)->GetText())`.
+  EvSetWide,
+  /// `LobbyEvtSetStr(sEELobbyEvent.get(), a, (std::string)((InputBox*)b)->GetText())`.
+  EvSetNarrow,
+  /// `LobbyEvtSet(sEELobbyEvent.get(), a, b)`.
+  EvSetNum,
+  /// `this->DeliverEvent(sEELobbyEvent.get(), false)`.
+  EvDeliverHeld,
+  /// `sEELobbyEvent = NULL`.
+  EvDrop,
+  /// `sEELobbyColumnText = GUIString(a)` (EeColumn's local; 0 empties it).
+  ColumnTextSet,
+  /// `&sEELobbyColumnText`.
+  ColumnText,
+  /// `((ChatLink*)a)->mKind` (LinkGet's members, one op each).
+  LinkGetKind,
+  /// `((ChatLink*)a)->mClient.get()`.
+  LinkGetClient,
+  /// `((ChatLink*)a)->mFriend.get()`.
+  LinkGetFriend,
+  /// `((ChatLink*)a)->mNext.get()`.
+  LinkGetNext,
+  /// `((ChatLink*)a)->mPrevious`.
+  LinkGetPrevious,
+  /// `((ChatLink*)a)->mColor = b` (LinkSet's).
+  LinkSetColor,
+  /// `((ChatLink*)a)->mEnabled = b != 0`.
+  LinkSetEnabled,
+  /// `((ChatLink*)a)->mNext = (ChatLink*)b`.
+  LinkSetNext,
+  /// `((ChatLink*)a)->mPrevious = (ChatLink*)b`.
+  LinkSetPrevious,
+};
+
+/// The op codes. Arguments: `a`, `b` pointers, `c`, `d` integers (a message is `a` = its `ByteBuffer*` or NULL for
+/// one Rust built, `c` = its bytes, `d` = their length).
+enum class EeWonLobbyOp : uint32_t {
+  /// `mGame.get()`.
+  StGame = 1,
+  /// `mMyClient.get()`.
+  StMyClient,
+  /// `mMyClient = LobbyGetNetMyClient()`; returns it.
+  StSetMyClientFromNet,
+  /// `mGame = a`.
+  StSetGame,
+  /// `mJoinOp = new AsyncOp`.
+  StJoinOpNew,
+  /// `if (mJoinOp) mJoinOp->Finish(WS_Success)`.
+  StJoinOpFinish,
+  /// `LobbyRunOpWithStatus(mJoinOp, GettingGameInfo, 1, 0)`, then `mJoinOp = NULL`.
+  StJoinOpRun,
+  /// `if (mJoinOp) { mJoinOp->Kill(true); mJoinOp = NULL; }`.
+  StJoinOpKill,
+  /// `mGame->GetJoinRequest()` sent with `this->SendToCaptain`.
+  StSendJoinRequest,
+  /// `mCreateGameDialog->SetGameType(c); Reset(false); return LobbyDoDialog(dialog)`.
+  StCreateDialogRun,
+  /// `aGame = mCreateGameDialog->GetGame(); aGame->SetAddress(LobbyGetMyAddress(c)); mGame = aGame`; held.
+  StTakeDialogGame,
+  /// Logout's tail: `mCreateGameDialog->Reset(true)`, `LobbyNetLogout`, `LobbyKillPings(0)`,
+  /// `LobbyShowLoginScreen`, `LobbySaveGlobalPrefs(false)`, `LobbySaveUserPrefs(false)`, the logon sound stopped.
+  StLogoutTail,
+  /// `new ClientModeratedEvent(a, c, mGame->GetName(), d >> 1, 0, d & 1, "")` broadcast.
+  StClientModerated,
+  /// `a->AddRef()`: Rust holds it (returns `a`).
+  GameHold = 39,
+  GameRelease = 40,
+  GameIsHost,
+  GameFindClient,
+  GameType,
+  GameIsInProgress,
+  GameAreAllReady,
+  GameCanReady,
+  /// `CanStartGame() && TryStartGame()`.
+  GameCanStartAndTry,
+  GamePingReplied,
+  GameIsPinging,
+  /// `a->IsSameGame(b)`.
+  GameIsSameGame,
+  GameJoinStatus,
+  GamePing,
+  /// `LobbyGame::CreateGame(a's type)` with `CopyFrom(a)`; held.
+  GameNewCopy,
+  GamePreNetCreate,
+  GamePostNetCreate,
+  GamePreNetJoin,
+  GamePostNetJoin,
+  /// `SetIsHost(true)`, `SetCaptainId(b's id)`, `b->SetCaptain(true, true)`.
+  GameBecomeHost,
+  /// `GetClients()->AddClient(b)`, `HandleHostGame(b)`.
+  GameAddHostClient,
+  /// `ClearPlayers()`, `mMyClient = NULL`, `PreNetLeaveGame()`, `LobbyNetLeaveGame(a)`, `PostNetLeaveGame()`.
+  GameLeaveNet,
+  GameRemoveClient,
+  GameHandlePlayerJoined,
+  /// `SetInProgress(c)`, `LobbyNetSetGameInProgress(c)`, `LobbyNetAdvertiseGame()`.
+  GameSetInProgressNet,
+  /// every client with a player: `SetReady(false)` and a `PlayerChangedEvent(client, 2)`.
+  GameResetReadyFlags,
+  /// `a->GetJoinReply(*b, d)`; if not NULL sent with `this->SendToClient(d, reply)`: 1 sent, 0 none, Threw.
+  GameJoinReplySend,
+  /// `a->HandleJoinReply(*b)` or Threw.
+  GameHandleJoinReply,
+  /// `a->HandleGameMessage(c, *b, d)`: 0 or Threw.
+  GameHandleGameMessage,
+  /// `LobbyMessageBox(JoinGameErrorTitle, a->GetStatusString(c))`.
+  GameShowStatus,
+  /// `LobbyPingGame(a, true)` and a `GameChangedEvent(a, 2)`.
+  GamePingAndNotify,
+  /// `LobbyQueryGameDetails(a)`, `SetShowDetails(true)`, a `GameChangedEvent(a, 2)`.
+  GameShowDetails,
+  /// `SetShowDetails(false)`, a `GameChangedEvent(a, 2)`.
+  GameHideDetails,
+  /// `LobbyDispatchEvent(new ChangeDirectConnectEvent(1, a))`.
+  GameDirectConnect,
+  /// a `GameOptionsPopup` for `a` opened as a standard popup.
+  GameShowOptions,
+  ClientHasPlayer = 80,
+  ClientPlayer,
+  ClientIsReady,
+  ClientId,
+  /// `IsCaptain(1)`.
+  ClientIsGameCaptain,
+  /// `a->IsTeammate(b)`.
+  ClientIsTeammate,
+  ClientPlayerSetReady,
+  ClientPlayerSetPing,
+  /// a new player read from `*b` set on `a`: 1, 0 when the read failed, or Threw.
+  ClientReadPlayer,
+  /// the player-joined head for `a` and its player's bytes broadcast with `this->BroadcastToGame`.
+  ClientBroadcastJoined,
+  /// `new PlayerChangedEvent(a, c)` broadcast.
+  ClientChanged,
+  /// `new PlayerTeamChangedEvent(a, c)` broadcast.
+  ClientTeamChanged,
+  /// `b->SetPos(b->pos() + c)`.
+  BufSkip = 110,
+  /// a `ReadBuffer` over the message handed to `this->HandleMessage(.., b)`.
+  HandleBytes,
+  /// `LobbyNetSendToCaptain(message)`.
+  NetSendToCaptain,
+  /// `LobbyNetBroadcastToGame(message)`.
+  NetBroadcastToGame,
+  /// `LobbyNetSendToClient(b, message)`.
+  NetSendToClient,
+  NetKickClient,
+  NetRemoveGameAdvertisement,
+  NetHostGame,
+  NetJoinGame,
+  NetAdvertiseGame,
+  /// `static_cast<JoinGameEvent*>(a)->mGame.get()`.
+  EventJoinGame,
+  /// `static_cast<GameActionEvent*>(a)->mGame.get()`.
+  EventActionGame,
+  /// `static_cast<GameActionEvent*>(a)->mAction`.
+  EventAction,
+  BroadcastLobbyEvent = 140,
+  MessageBox,
+  YesNo,
+  /// a new AsyncOp run with status (text `c`, mode `d`, 500 ms); returns whether it was killed.
+  RunWaitOp,
+  PlaySound,
+  StagingSoundEffects,
+  ShowConfirmations,
+  FirewallTestDone,
+  BehindFirewall,
+  GameScreenType,
+  /// -1 without a lobby config, else its `mAllowJoinGameWithoutPing`.
+  AllowJoinWithoutPing,
+  Exit,
+  /// `time(NULL)`.
+  Now,
+  /// `mMyClient.get()`.
+  LanMyClient = 200,
+  /// `mMyClient = a`.
+  LanSetMyClient,
+  LanListenSocket,
+  LanServerSocket,
+  LanNetworkTimer,
+  LanDiscoveryTimer,
+  LanDiscoverySocket,
+  /// `&mDiscoveryAddress`.
+  LanDiscoveryAddress,
+  /// the lobby's auth context, if any, stops refreshing its certificate.
+  LanAuthAutoRefreshOff,
+  /// CloseConnections' sockets: the listen socket killed, the host socket closed, the network timer killed, every
+  /// pending socket closed, `mMyClient`, the socket set and the client list cleared.
+  LanCloseSockets,
+  /// `static_cast<SocketOp*>(a)->GetSocket()`.
+  LanOpSocket,
+  /// a LobbyLanSocket's client.
+  LanSocketClient,
+  /// `a->SetClient(b)`.
+  LanSocketSetClient,
+  /// `mPendingSockets.erase(a)`.
+  LanForgetSocket,
+  /// `mServerSocket->Kill()`, `mServerSocket = NULL`, `LobbyGameDisconnected(true)`.
+  LanLoseHost,
+  LanPendingCount,
+  /// the pending socket `c` in the set's order.
+  LanPendingAt,
+  LanSocketLastTime,
+  /// `a->QueueClose(c)`.
+  LanSocketClose,
+  LanStartNetworkTimer,
+  /// `GetMyLobbyGame()`.
+  LanMyGame,
+  /// a LAN join's subnet bytes: the peer's `GetSixByte()[2..4]` and ours, packed low to high.
+  LanSubnets,
+  /// whether the password (`c` UTF-16 units, `d` of them) is `a`'s.
+  LanGamePasswordIs,
+  /// a SendMsgOp of the message queued on the socket `b`.
+  LanSocketSend,
+  /// a new LobbyLanClient named `c`/`d` (UTF-16 units); held.
+  LanNewClient,
+  /// `a->SetClientId(c)`, `mClients->AddClient(a)`.
+  LanAddClient,
+  ClientHold,
+  ClientRelease,
+  /// `a`'s name, taken.
+  ClientNameTake,
+  LanClientCount,
+  /// the client `c` in the list's order.
+  LanClientAt,
+  /// `mClients->FindClient(c)`.
+  LanFindClient,
+  /// `mClients->RemoveClient(c)`; held.
+  LanRemoveClient,
+  /// `new ClientChangedEvent(a, 8, c)` broadcast.
+  LanClientChanged,
+  /// `LobbyClientLeftGame(a)`.
+  ClientLeftGame,
+  GameSetCaptainId,
+  /// `mServerSocket->SetClient(a)`, `a->SetCaptain(true, true)`.
+  LanServerClientIsCaptain,
+  /// the receive op succeeded and was not killed.
+  LanRecvOk,
+  /// the socket's last message time is now.
+  LanSocketStamp,
+  /// the receive op's message (its ByteBuffer, or 0), taken.
+  LanRecvMsgTake,
+  /// AddPendingSocket: the close and receive completions, the receive op, the time, the set.
+  LanAddPending,
+  /// a LobbyLanClient's socket.
+  LanClientSocket,
+  /// a SendMsgOp of the message queued on the client `b`'s socket.
+  LanClientSocketSend,
+  /// `mServerSocket->QueueOp(new SendMsgOp(message))`.
+  LanServerSend,
+  ClientIsIgnored,
+  /// a whisper received: the sound (if the chat sounds are on), the parser's reply name.
+  LanWhisperReceived,
+  /// `new RecvChatEvent(8, d >> 32, a, text, b)` broadcast; the text is `c` with `d & 0xffffffff` units.
+  LanRecvChat,
+  /// the staging message (the bytes from its type byte) read past the type and handed to the staging logic.
+  LanStagingRead,
+  /// ChangeLanName's dialog: Reset, LobbyDoDialog.
+  LanNameDialogRun,
+  LanNameDialogLength,
+  /// `LobbySetLanName(dialog's name)`, the lobby event 0x186d2.
+  LanNameDialogSave,
+  LanBroadcastPort,
+  /// ChangeLanPort's dialog: the game port, the port `c`, Reset, LobbyDoDialog.
+  LanPortDialogRun,
+  LanPortDialogPort,
+  /// `LobbySetLanBroadcastPort(c)`, the lobby event 0x186d2.
+  LanSetBroadcastPort,
+  /// `a->mComponent`.
+  EventComponent,
+  EventDirectIsDelete,
+  EventDirectIsAdd,
+  EventDirectGame,
+  /// a saved direct-connect game removed: the saved one, the list's, a `GameChangedEvent(a, 1)`.
+  LanDirectRemove,
+  /// HandleChangeDirectConnect's add: the dialog and the address (its DNS check), the game and its event.
+  LanDirectAdd,
+  /// a ClientOptionsPopup for `a` (room spec `c`).
+  LanShowClientOptions,
+  EventClientActionClient,
+  EventClientActionRoomSpec,
+  EventClientActionAction,
+  /// `LobbySetClientIgnored(a, c, d)`.
+  SetClientIgnored,
+  /// `new SetChatInputEvent(2, a's name, c, false)` broadcast.
+  LanSetChatInput,
+  /// `LobbyKickClient(a, false)`.
+  KickClientFromLobby,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  ParserRoomFlags,
+  ParserTarget,
+  ParserCommand,
+  ParserTextTake,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(InvalidCommand), a)`.
+  LanChatCommandError,
+  /// the LAN games cleared and synced.
+  LanClearLanGames,
+  /// every unfiltered direct-connect game pinged, the lobby event 0x186da.
+  LanPingDirectGames,
+  /// EnterLanScreen's lists: no current user, the games cleared, the saved direct-connect games, their sync.
+  LanEnterScreenLists,
+  ShowLanScreen,
+  DoCDKeyCheck,
+  KillFirewallTest,
+  /// RefreshCertificate.
+  LanRefreshCertificate,
+  /// HostGame's client: a new LobbyLanClient (id `c`, the LAN name, captain) added, the game's clients.
+  LanHostMyClient,
+  /// HostGame's listen socket bound and listening (an error dialog when not), its accept op, JoinedRoomEvent.
+  LanHostListen,
+  GameAddressPort,
+  /// the summary: the head (the message), the game's summary, sent to the address `b`.
+  LanSendSummary,
+  /// a SendBytesToOp of the message to the address `b`.
+  LanDiscoverySend,
+  /// stale LAN games removed (synced if any).
+  LanRemoveStaleGames,
+  LanStartDiscoveryTimer,
+  /// the discovery receive op is the discovery socket's and succeeded.
+  LanDiscoveryOk,
+  /// its bytes, taken.
+  LanDiscoveryTake,
+  /// HandleGameSummary from the packet past its head (port `c`).
+  LanGameSummary,
+  /// HandleGameKeepAlive (port `c`).
+  LanGameKeepAlive,
+  /// HandleGameRemoved (port `c`).
+  LanGameRemoved,
+  /// the receive op's sender address.
+  LanRecvFrom,
+  /// StartDiscovery's socket: the address, the QueueSocket, its bind (0 when bound).
+  LanOpenDiscovery,
+  /// the discovery socket's receive completion and op.
+  LanDiscoveryArm,
+  LanStopDiscovery,
+  LanClearDirectGames,
+  /// the accept op's socket (NULL when it failed or was killed).
+  LanAcceptedSocket,
+  /// a PeerAuthServerOp on the socket, tracked (30 s); nothing without an auth context.
+  LanStartPeerAuth,
+  /// `mServerSocket = new LobbyLanSocket`.
+  LanNewServerSocket,
+  GameHasPassword,
+  /// JoinGame's password: emptied.
+  LanJoinPasswordClear,
+  /// the password dialog: Reset, LobbyDoDialog, the password kept on OK.
+  LanPasswordDialogRun,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game run with status: whether it succeeded.
+  LanConnect,
+  /// `LobbyGetLanName()`, taken.
+  LanNameTake,
+  LanJoinPasswordTake,
+  /// a RecvMsgOp on the host socket run with status: -1 failed, 0 no message, 1 its bytes taken.
+  LanRecvReplyTake,
+  /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
+  /// JoinedRoomEvent.
+  LanJoinArm,
+  /// `((RefCount*)a)->AddRef()` (a socket's, a timer's).
+  RefHold = 400,
+  RefRelease,
+  /// `((QueueSocket*)a)->Kill()`.
+  LanSocketKill,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  LanTimerKill,
+  /// a new AsyncOp with the network (`c` 0) or discovery (1) timer's completion; held.
+  LanNewTimer,
+  /// `((AsyncOp*)a)->RunAsTimer(c)`.
+  LanRunTimer,
+  /// `LobbyGameDisconnected(true)`.
+  LanGameDisconnected,
+  /// `new SyncGameListEvent(a)` broadcast.
+  LanSyncGameList,
+  /// `new GameChangedEvent(a, c)` broadcast.
+  LanGameChanged,
+  /// `new LobbyLanSocket`; held.
+  LanNewSocket,
+  /// HostGame's listen socket `a` bound to the lobby port and listening (an error dialog and 0 when not), its
+  /// accept completion and op; 1.
+  LanListen,
+  /// `new JoinedRoomEvent("", a's name, 10, c, a's clients)` broadcast.
+  LanJoinedRoom,
+  /// StartDiscovery's: `*(EeWonIpAddr*)a` the broadcast address on the LAN broadcast port, a new QueueSocket(1)
+  /// (held, returned) bound to it with address reuse, its bind status at `*(intptr_t*)b`.
+  LanNewDiscovery,
+  /// the discovery socket `a`'s receive completion and op.
+  LanArmDiscovery,
+  /// the game `a`'s summary (`WriteSummary`), taken.
+  LanSummaryTake,
+  /// a SendBytesToOp of the bytes `c`/`d` to the address `(const EeWonIpAddr*)b` queued on the socket `a`.
+  LanSendTo,
+  /// the receive op `a` is the socket `b`'s and succeeded.
+  LanOpOnSocket,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game `a` on the socket `b` run with status: whether it succeeded.
+  LanConnectTo,
+  /// a RecvMsgOp on the socket `a` run with status: -1 failed, 0 no message, 1 its bytes taken into `b`.
+  LanRecvReply,
+  /// the socket `a`'s close and receive completions and its receive op.
+  LanArmSocket,
+  /// the password dialog: Reset, LobbyDoDialog.
+  LanPasswordDialog,
+  /// the password dialog's password, taken.
+  LanPasswordTake,
+  /// `LobbyPingGame(a, false)`.
+  LanPingGame,
+  /// `LobbySetCurrentUser(NULL)`.
+  LanNoCurrentUser,
+  /// `LobbyGetDirectConnectCount()`.
+  LanDirectCount,
+  /// `*(EeWonIpAddr*)a = LobbyGetDirectConnectAddressAt(c)`.
+  LanDirectAddressAt,
+  /// `a->SetName(LobbyGetDirectConnectNameAt(c))`.
+  LanDirectNameAt,
+  /// `LobbyRemoveDirectConnect(a's address)`.
+  LanRemoveSavedDirect,
+  /// AddDirectConnect's dialog and address (its DNS check): 1 with the address at `*(EeWonIpAddr*)a`, 0 when
+  /// cancelled or unresolved.
+  LanDirectAsk,
+  /// AddDirectConnect's name (the address when empty) set on the game `a` and saved with the address `b`.
+  LanDirectSave,
+  /// the summary read from the receive op `a`'s packet past its head into the game `b` (`ReadSummary`): its
+  /// result, or Threw.
+  LanReadSummary,
+  /// the receive op `a`'s sender address copied to `*(EeWonIpAddr*)b`.
+  LanRecvFromAddr,
+  /// a ClientOptionsPopup for `a` (this player's client `b`, room spec `c`).
+  LanClientOptions,
+  /// `st->mJoinOp.get() != NULL`.
+  StJoinOpIs = 600,
+  /// `st->mJoinOp.get()`.
+  StJoinOpGet,
+  /// `st->mJoinOp->Finish(WS_Success)`.
+  StJoinOpFinishSuccess,
+  /// `st->mJoinOp = NULL`.
+  StJoinOpClear,
+  /// `st->mJoinOp->Kill(true)`.
+  StJoinOpKillNow,
+  /// `LobbyRunOpWithStatus((AsyncOp*)a, title, details, 1, 0)` (`c` the two resource rows, as `MessageBox`'s).
+  RunOpWithStatusRows,
+  /// `st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, true)`.
+  StCreateDialogResetAll,
+  /// `LobbyNetLogout()`.
+  NetLogout,
+  /// `LobbyKillPings(0)`.
+  KillPings,
+  /// `LobbyShowLoginScreen()`.
+  ShowLoginScreen,
+  /// `LobbySaveGlobalPrefs(false)`.
+  SaveGlobalPrefs,
+  /// `LobbySaveUserPrefs(false)`.
+  SaveUserPrefs,
+  /// `LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop()`.
+  LogonSoundStop,
+  /// `g->ClearPlayers()`.
+  GameClearPlayers,
+  /// `st->mMyClient = NULL`.
+  StClearMyClient,
+  /// `g->PreNetLeaveGame()`.
+  GamePreNetLeave,
+  /// `LobbyNetLeaveGame(g)`.
+  NetLeaveGame,
+  /// `g->PostNetLeaveGame()`.
+  GamePostNetLeave,
+  /// `g->SetInProgress(c != 0)`.
+  GameSetInProgress,
+  /// `LobbyNetSetGameInProgress(c != 0)`.
+  NetSetGameInProgress,
+  /// `LobbyPingGame(a, true)`.
+  LanPingGameNotify,
+  /// `LobbyQueryGameDetails(a)`.
+  QueryGameDetails,
+  /// `g->SetShowDetails(c != 0)`.
+  GameSetShowDetails,
+  /// `GetLobbyConfig()`.
+  LobbyConfigGet,
+  /// `((LobbyConfig*)a)->mAllowJoinGameWithoutPing`.
+  ConfigAllowJoinWithoutPing,
+  /// `GetLobbyAuthContext()`.
+  AuthGet,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(c != 0)`.
+  AuthSetAutoRefresh,
+  /// `LobbyGetChatSoundEffects()`.
+  ChatSoundEffects,
+  /// `LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_WhisperRecv_Sound).get())`.
+  PlayWhisperSound,
+  /// `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`.
+  ParserSetInputName,
+  /// `LobbySetLanName(l->mLanNameDialog->InputText(0))`.
+  LanSetLanNameFromDialog,
+  /// `LobbySetLanBroadcastPort(c)`.
+  LanSetBroadcastPortTo,
+  /// `LobbyIsCDKeyValid()`.
+  CdKeyValid,
+  /// `LobbyMessageBox(title, details)` (`c` the two resource rows).
+  MessageBoxRows,
+  /// `((AuthContext*)a)->IsExpired(c)`.
+  AuthIsExpired,
+  /// `((AuthContext*)a)->SetUserName(std::wstring(gEmptyWideString))`.
+  AuthClearUserName,
+  /// `((AuthContext*)a)->SetPassword(std::wstring(gEmptyWideString))`.
+  AuthClearPassword,
+  /// `new GetCertOp((AuthContext*)a)` with a reference.
+  GetCertNew,
+  /// `((AsyncOp*)a)->GetStatus()` (netops).
+  OpStatusOf,
+  /// `l->RunTrackedOp(new PeerAuthServerOp((AuthContext*)b, (LobbyLanSocket*)a), HandlePeerAuthDone, 30000)`.
+  LanRunPeerAuth,
+  /// `((AsyncOp*)a)->Succeeded()` (netops).
+  OpSucceededOf,
+  /// `((AuthContext*)a)->GetPeerData()->GetFirstCommunity()`.
+  AuthCommunity,
+  /// `((PeerAuthServerOp*)a)->ClientPermits((DWORD)c)`.
+  PeerAuthPermits,
+  /// `((LobbyLanSocket*)a)->Fn2B0D90(LobbyGetLobbyPort(), 0)` (the bind's status).
+  LanBindLobbyPort,
+  /// `LobbyDoErrorDialog(gLobbyResources[c].mString, (WONStatus)d)`.
+  ErrorDialogRow,
+  /// `((AsyncSocket*)a)->Listen(c)` (netops).
+  SocketListen,
+  /// `a->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleAccept, l))`.
+  LanArmAcceptCompletion,
+  /// `a->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::Accept))`.
+  LanArmAcceptOp,
+  /// `*(EeWonIpAddr*)a = IPAddr::GetBroadcastAddr(LobbyGetLanBroadcastPort())`.
+  LanBroadcastAddrAssign,
+  /// `new QueueSocket(1)` with a reference.
+  LanNewQueueSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(LobbyGetLanBroadcastPort(), 1)` (the bind's status).
+  LanBindBroadcast,
+  /// `a->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleDiscoveryRecv, l))`.
+  LanArmDiscoveryCompletion,
+  /// `a->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::RecvFrom, NULL, NULL, NULL, 1024))`.
+  LanArmDiscoveryOp,
+  /// `new PeerAuthOp(g->GetAddress(), (AuthContext*)c, AUTH_TYPE_PERSISTENT, (LobbyLanSocket*)b, true)` with a reference.
+  LanNewPeerAuthConnect,
+  /// `new SocketOp(EeWonCoreSocketOp::Connect, (LobbyLanSocket*)b, NULL, &address)` of the game `a`'s address, with a reference.
+  LanNewConnect,
+  /// `new SocketOp(EeWonCoreSocketOp::RecvMsg, (LobbyLanSocket*)a)` with a reference.
+  LanNewRecvMsg,
+  /// `a->SetCloseCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleSocketClosed, l))`.
+  LanArmCloseCompletion,
+  /// `a->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleRecvMsg, l))`.
+  LanArmRecvCompletion,
+  /// `a->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::RecvMsg))`.
+  LanArmRecvOp,
+  /// `l->mDirectConnectDialog->InputText(0).length()`.
+  LanDirectInputLength,
+  /// `g->SetName(l->mDirectConnectDialog->InputText(c))`.
+  GameSetDirectName,
+  /// `LobbyAddDirectConnect(Addr(b), l->mDirectConnectDialog->InputText(c))`.
+  AddDirectConnectNamed,
+  /// LanLogic::HandlePeerAuthDone's checks of the op `a` (lobbyops.rs): its socket when accepted, 0 (the socket
+  /// closed, or no context).
+  LanPeerAuthDone,
+  /// `(LobbyLanSocket*)((PeerAuthServerOp*)a)->GetSocket()`.
+  PeerAuthSocket,
+  /// `new LobbyLanClient`: held.
+  LanClientAlloc = 800,
+  /// `((LobbyLanClient*)a)->SetName(the UTF-16 units c, count d)`.
+  LanClientSetName,
+  /// `mLanPortDialog->LCall(SetGamePort, LobbyGetLobbyPort())`.
+  LanPortSetGamePort,
+  /// `mLanPortDialog->LCall(SetPort, c)`.
+  LanPortSetPort,
+  /// `mLanPortDialog->LCall(Reset)`.
+  LanPortReset,
+  /// `LobbyDoDialog(mLanPortDialog)`.
+  LanPortDo,
+  /// `new AsyncOp`: held.
+  LanTimerAlloc,
+  /// `((AsyncOp*)a)->SetCompletion(the network (c 0) or discovery timer's completion)`.
+  LanTimerSetCompletion,
+  /// `mCreateGameDialog->LCall(SetGameType, c)`.
+  StCreateSetType,
+  /// `mCreateGameDialog->LCall(Reset, false)`.
+  StCreateReset,
+  /// `LobbyDoDialog(mCreateGameDialog)`.
+  StCreateDo,
+  /// `mCreateGameDialog->GetGame()`: held.
+  StDialogGameHeld,
+  /// `((LobbyGame*)a)->SetAddress(LobbyGetMyAddress(c))`.
+  GameSetMyAddress,
+  /// `LobbyGame::CreateGame(((LobbyGame*)a)->GetGameType())`: held.
+  GameCreateHeld,
+  /// `((LobbyGame*)a)->CopyFrom((LobbyGame*)b)`.
+  GameCopyFrom,
+  /// `new LobbyClientSetIterator(((LobbyGame*)a)->GetClients().get())`.
+  GameClientsIterNew = 900,
+  /// `((LobbyClientSetIterator*)a)->HasMore()`.
+  ClientsIterHasMore,
+  /// `((LobbyClientSetIterator*)a)->Next((LobbyClient**)b)`: the player.
+  ClientsIterNext,
+  /// `delete (LobbyClientSetIterator*)a`.
+  ClientsIterFree,
+  /// `((LobbyPlayer*)a)->SetReady(c)`.
+  PlayerSetReady,
+  /// `((LobbyGame*)a)->GetJoinReply(*(ReadBuffer*)b, (LobbyClient*)d)`: held, 0, or Threw.
+  GameJoinReplyHeld,
+  /// the staging logic's `SendToClient((LobbyClient*)b, (const ByteBuffer*)a)`.
+  StSendToClientBuf,
+  /// `LobbyPlayer::CreatePlayer()`: held.
+  PlayerCreateHeld,
+  /// `((LobbyPlayer*)a)->ReadFromBuffer(*(ReadBuffer*)b)`, or Threw.
+  PlayerReadFrom,
+  /// `((LobbyClient*)a)->SetPlayer((LobbyPlayer*)b)`.
+  ClientSetPlayer,
+  /// `new WriteBuffer(0, true)`.
+  WbufNew,
+  /// `((WriteBuffer*)a)->AppendBytes(the bytes c, their length d)`.
+  WbufAppend,
+  /// `((LobbyClient*)a)->GetPlayer()->WriteToBuffer(*(WriteBuffer*)b)`.
+  ClientWritePlayer,
+  /// the staging logic's `BroadcastToGame(((WriteBuffer*)a)->ToByteBuffer(true).get())`.
+  StBroadcastWbuf,
+  /// `delete (WriteBuffer*)a`.
+  WbufFree,
+  /// `LobbyRunOpWithStatus((AsyncOp*)a, the rows c's title and details, the mode d, 500)`.
+  RunOpWithStatusMode,
+  /// `((AsyncOp*)a)->IsKilled()`.
+  OpIsKilled,
+  /// the third and fourth bytes of `((LobbyLanSocket*)a)->GetDestAddr()`'s six-byte form (the fourth times 256).
+  LanPeerSubnet,
+  /// the same of `IPAddr::GetLocalAddr()`.
+  LanLocalSubnet,
+  /// `LobbyHandleStagingReadBuffer(a ReadBuffer over the bytes c, length d, (LobbyClient*)b)`.
+  LanStagingBytes,
+  /// `((LobbyGame*)a)->WriteSummary(*(WriteBuffer*)b)`.
+  GameWriteSummary,
+  /// the `WriteBuffer` `a`'s bytes appended to the sink `b`.
+  WbufSink,
+  /// `((LobbyGame*)b)->ReadSummary(a ReadBuffer over the bytes c, length d)`, or Threw.
+  LanGameReadSummary,
+  /// `mDirectConnectDialog->LCall(Reset)`.
+  LanDirectReset,
+  /// `LobbyDoDialog(mDirectConnectDialog)`.
+  LanDirectDo,
+  /// `((LobbyConfig*)a)->mLobbyPort + LobbyTestPortOffset()`.
+  ConfigLobbyPortTest,
+  /// `LobbyGetLobbyPort()`.
+  LobbyPort,
+  /// the direct-connect dialog's host text (`InputText(1)` as a narrow string) appended to the sink `b`.
+  LanDirectHostTake,
+  /// `NewDnsTestOp(mDirectConnectDialog->InputText(1))`: held.
+  LanDirectDnsHeld,
+  /// `*(EeWonIpAddr*)a = ((RustServerOp*)b)->AddrOf(EE_WON_DNSTEST_ADDR)`.
+  DnsOpAddrAssign,
+};
+
+/// The dialog kinds (each one of the original classes).
+enum class EeWonLobbyDlgKind : uint32_t {
+  LanName = 0,
+  Password = 1,
+  AddFriend = 2,
+  DirectConnect = 3,
+  LanPort = 4,
+  CreateRoom = 5,
+  CreateGame = 6,
+  AdminAction = 7,
+  /// StatusDialog (round 2): DialogLogic's status box.
+  Status = 8,
+  /// OkCancelDialog (round 2): DialogLogic's OK/Cancel and Yes/No box.
+  OkCancel = 9,
+  /// RoomDialog (round 3): no control (its RoomCtrl member was never set).
+  Room = 10,
+  /// TOUDialog (round 3): the terms of use.
+  Tou = 11,
+  /// BadUserDialog (round 3): the moderators' banned and muted users.
+  BadUser = 12,
+  /// ChooseNetworkAdapterDialog (round 3): InitLogic's adapter choice.
+  ChooseAdapter = 13,
+  /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
+  Credits = 14,
+  /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
+  Connect = 15,
+  /// EELobbyFileDialog (round 6): the game room's saved games, loaded or deleted.
+  File = 16,
+};
+
+/// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
+enum class EeWonLobbyDlgOp : uint32_t {
+  /// `SafeGetComponent(a, aPtr, b->name, b->file, b->line)` into a `SmartPtr` of `b->ty`; the control with a
+  /// reference added (or NULL).
+  Find = 1,
+  /// `a->Release()` (a held control or game).
+  Release,
+  /// `Dialog::HandleComponentEvent(a)` on the dialog.
+  BaseEvent,
+  /// `Relayout()` on the dialog.
+  Relayout,
+  /// `a->RequestFocus()`.
+  RequestFocus,
+  /// `a->SetEnabled(b != 0)`.
+  SetEnabled,
+  /// `a->SetVisible(b != 0)`.
+  SetVisible,
+  /// `a->IsVisible()` (0 or 1).
+  IsVisible,
+  /// `((InputBox*)a)->Clear(b != 0)`.
+  InputClear,
+  /// `((InputBox*)a)->GetText().length()`.
+  InputTextLength,
+  /// `((InputBox*)a)->mText.length()` (the shown text: a password box's stars).
+  InputShownLength,
+  /// `((InputBox*)a)->GetText().mData->ToInt(0)`.
+  InputToInt,
+  /// `((InputBox*)a)->mInputFilter = InputBox::NumericFilter`.
+  InputSetNumeric,
+  /// `sprintf(aBuf, "%d", b); ((InputBox*)a)->SetText(GUIString(new GUIStringData(aBuf)), c != 0)`.
+  InputSetNumber,
+  /// `((InputBox*)a)->SetText(GUIString(""), b != 0)`.
+  InputSetEmpty,
+  /// `((InputBox*)a)->SelectRange(b, c)`.
+  InputSelectRange,
+  /// `sprintf(aBuf, "%d", b); ((Label*)a)->SetText(GUIString(new GUIStringData(aBuf)), true)`.
+  LabelSetNumber,
+  /// `((Label*)a)->SetText(the string b, true)` (`EeWonLobbyDlgString`).
+  LabelSetString,
+  /// `((Button*)a)->SetText(the string b, true)`.
+  ButtonSetString,
+  /// `aTitle = the string b; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
+  /// ((Label*)a)->SetText(aTitle, true)`.
+  AdminTitle,
+  /// `((Button*)a)->IsDisabled()` (0 or 1).
+  ButtonIsDisabled,
+  /// `((Button*)a)->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// `((Button*)a)->SetCheck(b != 0, c != 0)`.
+  ButtonSetCheck,
+  /// `((ComboBox*)a)->GetSelItem()`.
+  ComboGetSel,
+  /// `((ComboBox*)a)->SetSelItem(b, c != 0)`.
+  ComboSetSel,
+  /// `LobbyGame::CreateGame((LobbyGameType)b)` with a reference added (the original's local `SmartPtr`).
+  GameCreate,
+  /// `((LobbyGame*)a)->SetName(((InputBox*)b)->GetText())`.
+  GameSetName,
+  /// `((LobbyGame*)a)->SetPassword(((InputBox*)b)->GetText())`.
+  GameSetPassword,
+  /// `((LobbyGame*)a)->SetAskToJoin(b != 0)`.
+  GameSetAskToJoin,
+  /// `((LobbyGame*)a)->SetInviteOnly(b != 0)`.
+  GameSetInviteOnly,
+  /// `((LobbyGame*)a)->SetSkill(b)`.
+  GameSetSkill,
+  /// `a->Width()`.
+  Width,
+  /// `a->Height()`.
+  Height,
+  /// `a->Left()`.
+  Left,
+  /// `a->Top()`.
+  Top,
+  /// `a->SetSize(b, c)`.
+  SetSize,
+  /// `a->SetSizeAtLeast(b, c)`.
+  SetSizeAtLeast,
+  /// `a->SetDesiredSize(b, c)`.
+  SetDesiredSize,
+  /// `a->SetDesiredWidth(b)`.
+  SetDesiredWidth,
+  /// `a->SetPos(b, c)`.
+  SetPos,
+  /// `((Label*)a)->SetVertPad(b, c)`.
+  SetVertPad,
+  /// `((Label*)a)->SetText(*(const GUIString*)b, true)`, `gEmptyGUIString` for a NULL `b`.
+  LabelSetText,
+  /// `((Button*)a)->SetText(*(const GUIString*)b, true)`.
+  ButtonSetText,
+  /// `((WONFrameComponent*)a)->GetFrameLeft()`.
+  FrameLeft,
+  /// `((WONFrameComponent*)a)->GetFrameRight()`.
+  FrameRight,
+  /// `GetLobbyRoot()->Width()`.
+  RootWidth,
+  /// `GetLobbyRoot()->Height()`.
+  RootHeight,
+  /// `((Label*)a)->mWrappedText->mFont->GetStringWidth(*(const GUIString*)b)`.
+  FontStringWidth,
+  /// `aFont->GetStringWidth(s, 0, s.length())` of the label `a`'s font and the string `b`.
+  FontStringWidthRange,
+  /// `((Label*)a)->mWrappedText->mFont->GetCharacterWidth(b)`.
+  FontCharWidth,
+  /// `((Label*)a)->mWrappedText->mFont->GetHeight()`.
+  FontHeight,
+  /// `WONTickCount()`.
+  TickCount,
+  /// `a->Invalidate()` (the dialog).
+  Invalidate,
+  /// `((Dialog*)a)->IsDragging()` (0 or 1).
+  IsDragging,
+  /// `((Dialog*)a)->SetDragging(b != 0)`.
+  SetDragging,
+  /// `&((Label*)a)->mWrappedText->mText` (the title's own text, as SetStatus passed it on).
+  TitleText,
+  /// `((Button*)a)->mControlId = b`.
+  ButtonSetControlId,
+  /// `((Component*)a)->SubscribeToBroadcast(b != 0)` (the dialog).
+  SubscribeBroadcast,
+  /// `((BrowserComponent*)a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false)`.
+  BrowserShowTou,
+  /// `((BrowserComponent*)a)->GetHTMLView()->SetOffsets(0, 0)`.
+  BrowserTop,
+  /// `((GotHTTPDocumentEvent*)a)->mOp->GetNum(EE_WON_HTTPDOC_TYPE)`.
+  HttpDocType,
+  /// `((ListArea*)a)->BeginUpdate()`.
+  ListBeginUpdate,
+  /// `((ListArea*)a)->EndUpdate()`.
+  ListEndUpdate,
+  /// `((ListArea*)a)->Clear(b != 0)`.
+  ListClear,
+  /// `for (each bad user record of (const EeWonRouteOp*)b) ((ListArea*)a)->InsertItem(new BadUserItem(record,
+  /// c != 0), -1)`.
+  BadUsersInsert,
+  /// `((BadUserDialog::IdList*)a)->clear()`.
+  IdsClear,
+  /// `((ListArea*)a)->RewindSelections()`.
+  ListRewind,
+  /// `((ListArea*)a)->HasMoreSelections()` (0 or 1).
+  ListHasMore,
+  /// `((ListArea*)a)->GetNextSelection()`.
+  ListNextSel,
+  /// `((BadUserItem*)a)->mValues[1]` (the user's WON id).
+  BadUserId,
+  /// `((BadUserDialog::IdList*)a)->push_back((unsigned long)b)`.
+  IdsPush,
+  /// `InsertItem(new NetworkAdapterListItem(0), -1); SetString(0, 0, ChooseNetworkAdapterDialog_Default_String,
+  /// NULL)` on the list `a`.
+  AdapterAddDefault,
+  /// `IPAddr::GetLocalHost()`.
+  LocalHost,
+  /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+  ListSetSel,
+  /// `((ListArea*)a)->GetNumItems()`.
+  ListNumItems,
+  /// `LobbyGetNetAddresses(aList, true)` into a new list; the list (freed by `AdaptersFree`).
+  AdaptersGet,
+  /// the number of addresses in the list `a`.
+  AdaptersCount,
+  /// the `b`-th address's `mHandle` of the list `a`.
+  AdapterHandle,
+  /// the `b`-th address's `GUIString(mName).length()` of the list `a`.
+  AdapterNameLength,
+  /// `((MultiListArea*)a)->InsertItem(new NetworkAdapterListItem(b), -1)`.
+  AdapterInsertRow,
+  /// `SetString(GetNumItems() - 1, 0, GUIString(the c-th address of the list b's mName), NULL)` on the list `a`.
+  AdapterSetName,
+  /// `SetString(GetNumItems() - 1, 0, ChooseNetworkAdapterDialog_Unknown_String, NULL)` on the list `a`.
+  AdapterSetUnknownName,
+  /// `SetString(GetNumItems() - 1, 1, IPAddr(b, 0).GetHostString(true), NULL)` on the list `a`.
+  AdapterSetAddress,
+  /// frees the list `a` (the original's local list).
+  AdaptersFree,
+  /// `((ListArea*)a)->GetSelItem()`.
+  ListGetSel,
+  /// `((NetworkAdapterListItem*)a)->mHost`.
+  AdapterHost,
+  /// `a->AddRef()` (a `SmartPtr` assignment's).
+  AddRef,
+  /// `Component* aParent = ((Component*)b)->mParent; this->Fn2F6140((Component*)a, 0x5003, (Component*)b,
+  /// aParent->Left(), aParent->Top(), 0, 0, 0)` (the scrolling text `a` in place of the credits button `b`).
+  CreditsPlace,
+  /// `this->AddChild((Component*)a)`.
+  AddChild,
+  /// `((ScrollingTextComponent*)a)->Start()`.
+  ScrollStart,
+  /// `((ScrollingTextComponent*)a)->Stop()`.
+  ScrollStop,
+  /// `((ScrollingTextComponent*)a)->Reset()`.
+  ScrollReset,
+  /// `((ScrollingTextComponent*)a)->AddLine(*(const GUIString*)b, (unsigned long)c)`.
+  ScrollAddLine,
+  /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
+  DefaultFontStringWidth,
+  /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
+  GameIsHost,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the slots'
+  /// states were ops through the C++ slot views).
+  GameRust,
+  /// `((ListArea*)a)->InsertItem(new ConnectListItem(GUIString(b), image, c & 0xff), -1)` (`b` the slot's name, a
+  /// `GUIStringData`),
+  /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
+  /// image is not the ready one.
+  ConnectInsert,
+  /// `LobbyDoDialog(this)`.
+  DoDialog,
+  /// `this->GetRootWindow()`.
+  RootWindow,
+  /// `((Window*)a)->EndDialog(b, this)`.
+  EndDialog,
+  /// `((ListArea*)a)->GetItem(b)`.
+  ListGetItem,
+  /// `((ConnectListItem*)a)->mSlot`.
+  ConnectItemSlot,
+  /// `((ConnectListItem*)a)->mImage = ` `GameUserListCtrl_Ready_Image` (`b` 0) or `ServerListCtrl_PingFailed_Image`.
+  ConnectItemSetImage,
+  /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
+  ConnectItemNotReady,
+  /// `PlatFindFirst((const char*)a, &data)` into a new find record (the find and its data); NULL when nothing
+  /// was found (the record freed).
+  FindFirst,
+  /// `GUIString(data.mName).length()` of the find record `a`.
+  FindNameLength,
+  /// `GUIString theName(data.mName); theName.resize(c); ((ListArea*)a)->InsertString(theName, -1)` (`b` the
+  /// find record).
+  FileListInsert,
+  /// `PlatFindNext(find, &data) == PLAT_FILE_OK` of the find record `a` (0 or 1).
+  FindNext,
+  /// `PlatFindClose(find)` and the find record freed.
+  FindClose,
+  /// `static_cast<TextListItem*>(a)->mText.mData->GetString()`, NUL-terminated (valid until the next op).
+  ItemText,
+  /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+  LoadSavedGame,
+  /// `this->GetRoot()`.
+  Root,
+  /// `LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true)`.
+  FileAskDelete,
+  /// `WONFile theFile((const char*)a); theFile.Delete(true)`.
+  FileDelete,
+  /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+  ListRemove,
+  /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+  EventDoubleClick,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
+  /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
+  ListRefresh,
+  /// `((Label*)a)->SetText(gLobbyResources[b].mString, true)`.
+  LabelSetRes,
+  /// `((Button*)a)->SetText(gLobbyResources[b].mString, true)`.
+  ButtonSetRes,
+  /// `aTitle = gLobbyResources[b].mString; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
+  /// ((Label*)a)->SetText(aTitle, true)`.
+  AdminTitleRes,
+  /// `((GUIStringData*)a)->Compare((GUIStringData*)b)`.
+  TextCompare,
+  /// `new GUIStringData(RecordText((const uint16_t*)a, b))` with a reference (a bad user record's text).
+  TextRecord,
+  /// `LobbyFormatString(gLobbyResources[a].mString, GUIString((GUIStringData*)b))`'s text with a reference.
+  TextFormatRes,
+  /// `new GUIString(gLobbyResources[a].mString)` (AdminTitleRes's local, freed by `TitleFree`).
+  TitleNew,
+  /// `((GUIString*)a)->append(GUIString(new GUIStringData(" ")))`.
+  TitleAppendSpace,
+  /// `((GUIString*)a)->append(((LobbyClient*)b)->GetName())`.
+  TitleAppendName,
+  /// `delete (GUIString*)a`.
+  TitleFree,
+  /// `((MultiListArea*)a)->SetString(0, 0, ChooseNetworkAdapterDialog_Default_String, NULL)`.
+  AdapterSetDefaultName,
+  /// `GUIString((const char*)a).length()` (a found file's name).
+  NameLength,
+  /// `((ListArea*)a)->InsertString(GUIString((const char*)b)` cut to `c` characters`, -1)`.
+  FileListInsertName,
+  /// `new ScrollingTextComponent` (the credits dialog's, which the object holds).
+  NewScrollText,
+};
+
+/// The host's ops. `obj` is the C++ shell (`PingLogic*`, `PingGameOp*`, `AccountLogic*`, `InitLogic*`); `a`..`d`
+/// are pointers or integers as each op says. An op that returns an object "held" gives Rust a reference it gives
+/// back with `Release`.
+enum class EeWonLogicOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 1,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `(int)((AsyncOp*)a)->GetStatus()`.
+  OpStatus,
+  /// `((AsyncOp*)a)->IsKilled()`.
+  OpKilled,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  BroadcastLobby,
+  /// `LobbyExit(a)`.
+  Exit,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `GetLobbyRoot()`.
+  Root,
+  /// `LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(a), desc, d & 1, d >> 8), true)`; the
+  /// description is `*(GUIString*)b`, or `LOBBY_STRING(c)` when `b` is NULL and `c >= 0`, else empty.
+  InitStatus,
+  /// `LobbyGetUDPManager()`.
+  UdpManager = 20,
+  /// `((UDPManager*)a)->SetDefaultCompletion(new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, obj))`.
+  SetDefaultRecv,
+  /// `static_cast<PingGameEvent*>(a)->mGame.get()`.
+  EventGame,
+  /// `static_cast<PingGameEvent*>(a)->mFlag`.
+  EventFlag,
+  /// `static_cast<UDPManagerRecvOp*>(a)->GetMsg()`: its data (NULL for none), its length in `*(size_t*)b`.
+  RecvMsg,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((LobbyGame*)a)->GetIsHost()`.
+  GameIsHost,
+  /// `((LobbyGame*)a)->GetGameType()`.
+  GameType,
+  /// `((LobbyGame*)a)->IsInProgress()`.
+  GameInProgress,
+  /// `((LobbyGame*)a)->IsPinging()`.
+  GameIsPinging,
+  /// `((LobbyGame*)a)->IsQueryingDetails()`.
+  GameQueryingDetails,
+  /// `((LobbyGame*)a)->SetPing(b)`.
+  GameSetPing,
+  /// `((LobbyGame*)a)->SetPingReplied(true)`.
+  GameSetPingReplied,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mNoPingInProgress`.
+  NoPingInProgress,
+  /// `GetLobbyConfig() != NULL ? GetLobbyConfig()->mPingCeiling : 5000`.
+  PingCeiling,
+  /// `LobbyGetConnectionSpeed()`.
+  ConnectionSpeed,
+  /// `new WriteBuffer(3, true)` (the reply).
+  ReplyNew,
+  /// `((WriteBuffer*)a)->AppendBytes(b, c)`.
+  BufAppend,
+  /// `((LobbyGame*)a)->WriteSummary(*(WriteBuffer*)b)`.
+  WriteSummary,
+  /// `((LobbyGame*)a)->WriteDetails(*(WriteBuffer*)b)`.
+  WriteDetails,
+  /// `((UDPManager*)a)->Send(((WriteBuffer*)b)->ToByteBuffer(true).get(), ((UDPManagerRecvOp*)c)->GetFromAddr())`.
+  ReplySend,
+  /// `delete (WriteBuffer*)a`.
+  BufFree,
+  /// (obj a `PingGameOp*`) a `WriteBuffer(0, true)` of `b` bytes at `a`, `SetOutgoing(ToByteBuffer(true))`,
+  /// `UDPManagerSendRecvOp::RunHook()`.
+  RequestSend,
+  /// (obj a `PingGameOp*`) `WONTickCount() - GetStartTime()`.
+  Elapsed,
+  /// `static_cast<PingGameOp*>(a)->mGame.get()`.
+  OpGame,
+  /// `static_cast<PingGameOp*>(a)->mRust`.
+  OpRecord,
+  /// `RunTrackedOp((AsyncOp*)a, new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, obj), b)`.
+  RunTracked,
+  /// `((LobbyGame*)a)->ReadSummary(reader over *(EeWonReadBuffer*)b)` (the position written back): 0 or 1.
+  ReadSummary,
+  /// `((LobbyGame*)a)->ReadDetails(reader over *(EeWonReadBuffer*)b)` (the position written back).
+  ReadDetails,
+  /// `LobbyBroadcastEvent(new GameChangedEvent((LobbyGame*)a, 2), true)`.
+  BroadcastGameChanged,
+  /// `LobbyNotifyPingChange((LobbyGame*)a)`.
+  NotifyPing,
+  /// `mTracker.GetNumTrack()`.
+  NumTracked,
+  /// `dynamic_cast<PingGameOp*>(mTracker.GetTrackedOp(a))`'s `mGame.get()`, or NULL.
+  TrackedGame,
+  /// `mTracker.KillAll()`.
+  KillTracked,
+  /// `new PingGameOp((LobbyGame*)a, b, c)` held, then `SetUDPManager((UDPManager*)d)`.
+  NewPingOp,
+  /// `LobbyGetVersionStatus()`.
+  VersionStatus = 60,
+  /// `LobbyDoYesNoDialog(VersionOutOfData title, details, true)`.
+  OutOfDateDialog,
+  /// `mCreditsDialog->ResetScrolling(); StartScrolling(); LobbyDoDialog(it); StopScrolling()`.
+  ShowCredits,
+  /// `mTOUDialog->Reset(); LobbyDoDialog(mTOUDialog)`: the result.
+  ShowTOU,
+  /// `LobbyShowCreateAccount()` (a 1), `LobbyShowLostPassword()` (2), `LobbyShowLostUsername()` (3).
+  ShowScreen,
+  /// `LobbyGetAccountServers()`.
+  AccountServers,
+  /// a `RequestPasswordEmailOp` of `((GetLostPasswordEvent*)a)->mUserName` on `b`, run behind its status box.
+  RequestPasswordEmail,
+  /// a `RequestAccountInfoEmailOp` of `((GetLostUserNameEvent*)a)->mEmail` on `b`, run behind its status box.
+  RequestInfoEmail,
+  /// `RustServerOp::NewGetAccount(a, b)` held, `SetNum(NEWSLETTER, 1)`, run behind its status box.
+  QueryAccount,
+  /// `LobbyBroadcastEvent(new QueryAccountResultEvent(a's e-mail, a's newsletter != 0), true)`.
+  BroadcastAccount,
+  /// `RustServerOp::NewUpdateAccount(a, b, event c's password and e-mail)`, its newsletter, run behind its box.
+  UpdateAccount,
+  /// `RustServerOp::NewCreateAccount(a, event b's fields)` held, run behind its status box.
+  CreateAccount,
+  /// event `a`'s user added, the terms' times set on it, the prefs saved, event 100052, the login fields set.
+  AccountCreated,
+  /// `LobbyGetRootWindow()`.
+  RootWindow,
+  /// `((Window*)a)->GetKeyMod()`.
+  KeyMod,
+  /// `((LoginEvent*)a)->mUserName`'s `wchar_t`s (its length in `*(size_t*)b`).
+  LoginName,
+  /// `event->mUserName = event->mUserName.substr(1)`.
+  LoginStripAt,
+  /// the event's user (`LobbyFindUser`) is unknown or its terms of use are older: 0 or 1.
+  UserNeedsTOU,
+  /// `((AuthContext*)a)->SetUserName(event b's name); SetPassword(event b's password)`.
+  SetCredentials,
+  /// `LobbyDoCDKeyCheck()`.
+  DoCDKeyCheck,
+  /// `LobbyIsCDKeyValid()`.
+  CDKeyValid,
+  /// `LobbyMessageBox(InvalidCDKey title, details)`.
+  InvalidCDKeyBox,
+  /// `((AuthContext*)a)->AddCommunity(L"Admin")` (b != 0) or `RemoveCommunity(L"Admin")`.
+  SetAdmin,
+  /// `new GetCertOp(a)` held, run behind the login status box.
+  GetCert,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(true)`.
+  AutoRefresh,
+  /// the event `a`'s user saved (its password when remembered), its terms' times, the prefs, the current user.
+  LoginSaveUser,
+  /// `LobbyEnterInternetScreen(a != 0)`.
+  EnterInternet,
+  /// `LobbySetVersionStatus(a)`.
+  SetVersionStatus = 100,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mCheckForInternet`.
+  CheckForInternet,
+  /// `AsyncSocket::HasInternetConnection()`.
+  HasInternet,
+  /// the account, auth, firewall and patch server lists cleared (those that exist).
+  ClearServerLists,
+  /// `LobbyLoadGlobalPrefs(); IPAddr::SetLocalHost(LobbyGetNetworkAdapter(), true)`.
+  LoadPrefs,
+  /// `LoadTOUTimes()`'s statements: the saved terms' files' times into `LobbySetTOUTimes`.
+  LoadTOUTimes,
+  /// `LobbyBindUDPPort()`.
+  BindUdp,
+  /// the login screen's three controls enabled (`b`) or not on root `a`.
+  EnableLogin,
+  /// `LobbyGetLobbyMusic()`.
+  LobbyMusic,
+  /// the lobby music: `SetLooping(true)` (a 0), `Play()` (1), `Stop()` (2).
+  Music,
+  /// the config and the directory, room directory and auth server lists all exist.
+  DnsReady,
+  /// the directory, room directory and auth server lists filled from the config's names.
+  FillDnsServers,
+  /// the room directory list has no address.
+  RoomDirEmpty,
+  /// `LobbyResetRoomDirServers()`.
+  ResetRoomDir,
+  /// the image of `RustServerOp* a` decoded and broadcast with `mCrossPromotion`.
+  PromotionImage,
+  /// `mCrossPromotion` = `b` bytes at `a`.
+  SetPromotionLink,
+  /// an HTTP get of the image URL (`b` bytes at `a`) in the global cache, completing in
+  /// `CrossPromotionImageCompletion`, added to `mHTTPSession`.
+  FetchPromotionImage,
+  /// `LobbyGetTOUTimes` into `*(int32_t*)a` (system) and `*(int32_t*)b` (game).
+  TOUTimes,
+  /// `((RustServerOp*)a)->GetNum(b, c)`.
+  OpNum,
+  /// the terms-of-use document of owner `b` of op `a` written to its file: 1 unless the writer threw.
+  SaveTOU,
+  /// `LobbyBroadcastEvent(new GotHTTPDocumentEvent(a), true)`.
+  BroadcastDocument,
+  /// `((RustServerOp*)a)->GetHttpDocument(b)`'s data; its length in `*(size_t*)c` (`usize::MAX`: no document).
+  DocBytes,
+  /// `LobbyBroadcastEvent(new SetCrossPromotionEvent(NULL, ""), true)`.
+  BroadcastNoPromotion,
+  /// the config and the account, auth, firewall and directory server lists all exist.
+  DirReady,
+  /// `!GetLobbyConfig()->mAuthServers.empty()`.
+  HasAuthConfig,
+  /// the list of target `a` (1 auth, 2 account, 3 firewall, 4 patch), if it exists, adds op `b`'s list `c`.
+  AddDirAddresses,
+  /// the auth (a 1), account (2) or patch (4) server list's number of addresses.
+  ServerCount,
+  /// `LobbyGetDirServers()->NotifyFailed(((RustServerOp*)a)->GetCurAddr())`.
+  DirNotifyFailed,
+  /// `new GUIString(LOBBY_STRING(a))`, or an empty one for `a < 0`.
+  TextNew,
+  /// `((GUIString*)a)->append(LOBBY_STRING(b))`.
+  TextAppendRes,
+  /// `((GUIString*)a)->append(GUIString(", "))`.
+  TextAppendComma,
+  /// `((GUIString*)a)->length()`.
+  TextLength,
+  /// `((GUIString*)a)->append(*(GUIString*)b)`.
+  TextAppendText,
+  /// `delete (GUIString*)a`.
+  TextFree,
+  /// `new GUIString(LobbyFormatString(LOBBY_STRING(a), GetWONStatusString(b)))`.
+  TextStatus,
+  /// the patch server list, if it exists, `NotifyFailed`s op `a`'s current address.
+  VersionNotifyFailed,
+  /// `mAcceptOp.get() == a`.
+  IsAcceptOp,
+  /// `mAcceptOp = NULL`.
+  ClearAcceptOp,
+  /// the accepted socket of `AcceptOp* a` is from `mFirewallAddress`'s host.
+  AcceptedFromFirewall,
+  /// `LobbySetBehindFirewall(a != 0)`.
+  SetBehindFirewall,
+  /// `mAcceptOp = new AcceptOp(((AcceptOp*)a)->GetSocket())`, run with `AcceptCompletion` and the accept timeout.
+  RestartAccept,
+  /// `LobbySetPublicAddress(((DetectFirewallOp*)a)->GetPublicAddr())`.
+  SetPublicAddress,
+  /// `mFirewallSocket.get() != NULL`.
+  HasFirewallSocket,
+  /// `mFirewallAddress` = op `a`'s current address; `mAcceptOp` on `mFirewallSocket`, run; the socket dropped.
+  StartAccept,
+  /// the config exists and names a directory server.
+  DnsTestReady,
+  /// a `DNSTestOp` of the config's first directory server, tracked with `DNSCompletion`.
+  RunDnsTest,
+  /// the message of the day, terms of use and advert documents requested (when the config exists).
+  StartDocuments,
+  /// `LobbyGetDirServers()`.
+  DirServers,
+  /// the multi-directory query of the auth, database, firewall and patch servers on list `a`, tracked.
+  RunDirQuery,
+  /// the patch server list and the config exist.
+  VersionReady,
+  /// the version check op on the patch servers, tracked with `VersionCompletion`.
+  RunVersionCheck,
+  /// `LobbyGetFirewallDetectServers()`.
+  FirewallServers,
+  /// `LobbyResetFirewallTest()`.
+  ResetFirewallTest,
+  /// a `DetectFirewallOp` on list `a` (the lobby port, no listen, no wait), tracked with `FirewallCompletion`.
+  RunFirewallDetect,
+  /// `mFirewallSocket = new AsyncSocket(0)`.
+  FirewallSocketNew,
+  /// `mFirewallSocket->Fn2B0D90(LobbyGetLobbyPort(), 0)`: the status.
+  FirewallBind,
+  /// `mFirewallSocket->Listen(1000)`: the status.
+  FirewallListen,
+  /// `mFirewallSocket = NULL`.
+  FirewallSocketDrop,
+  /// a running `mAcceptOp` killed, its socket closed, the member cleared.
+  KillAcceptOp,
+  /// `mHTTPSession->KillAll()`.
+  KillHttp,
+  /// `LobbyShowInternetScreen()`.
+  ShowInternet,
+  /// `mNetworkAdapterDialog->Reset(); LobbyDoDialog(it)`: the result.
+  AdapterDialog,
+  /// `LobbySetNetworkAdapter(mNetworkAdapterDialog->GetSelectedAddress())`.
+  SetAdapter,
+  /// `LobbyDoYesNoDialog(gLobbyResources[a].mString, gLobbyResources[b].mString, true)`.
+  YesNoRes = 200,
+  /// `LobbyMessageBox(gLobbyResources[a].mString, gLobbyResources[b].mString)`.
+  MessageBoxRes,
+  /// `mCreditsDialog->LCall((EeWonLobbyDlgCall)a)`.
+  CreditsLCall,
+  /// `LobbyDoDialog(mCreditsDialog)`: the result.
+  CreditsDo,
+  /// `mTOUDialog->LCall((EeWonLobbyDlgCall)a)`.
+  TouLCall,
+  /// `LobbyDoDialog(mTOUDialog)`: the result.
+  TouDo,
+  /// `LobbyShowCreateAccount()`.
+  ShowCreateAccount,
+  /// `LobbyShowLostPassword()`.
+  ShowLostPassword,
+  /// `LobbyShowLostUsername()`.
+  ShowLostUsername,
+  /// `LobbyRunOpWithStatus(op a, gLobbyResources[b], gLobbyResources[c], d & 0xff, d >> 8)`.
+  RunWithStatusRes,
+  /// `((RustServerOp*)a)->SetNum(b, c)`.
+  OpSetNum,
+  /// `new GetCertOp(a)`, held (a reference the Rust gives back).
+  GetCertNew,
+  /// `RustServerOp::NewGetAccount(a, b)`, held.
+  GetAccountNew,
+  /// `RustServerOp::NewRequest(ee_won_reqop_password_email(a, b), c)`, held.
+  PasswordEmailNew,
+  /// `RustServerOp::NewRequest(ee_won_reqop_info_email(a, b), c)`, held.
+  InfoEmailNew,
+  /// `RustServerOp::NewUpdateAccount(a, b, event c's NewPassword, its Email)`, held.
+  UpdateAccountNew,
+  /// `RustServerOp::NewCreateAccount(a, event b's members)`, held.
+  CreateAccountNew,
+  /// `((AuthContext*)a)->AddCommunity(L"Admin")`.
+  AuthAddAdmin,
+  /// `((AuthContext*)a)->RemoveCommunity(L"Admin")`.
+  AuthRemoveAdmin,
+  /// `LobbyAddUser(event a's UserName, "", false)`.
+  AddUserNamed,
+  /// `LobbyAddUser(event a's UserName, the empty GUIString, false)`.
+  AddUserNoPassword,
+  /// `LobbyAddUser(event a's UserName, its Password, false)`.
+  AddUserWithPassword,
+  /// the user `a`'s terms-of-use times set to the lobby's (`LobbyGetTOUTimes`, `LobbyUserSetTOU`).
+  UserSetTOUNow,
+  /// `LobbySaveGlobalPrefs(true)`.
+  SaveGlobalPrefsNow,
+  /// `LobbySetCurrentUser(a)`.
+  SetCurrentUser,
+  /// `LobbyBroadcastEvent(SetLoginFieldsEvent(event a's UserName, its Password, false), true)`.
+  BroadcastLoginFields,
+  /// `LobbyFindUser(GUIString(new GUIStringData(event a's UserName)))`.
+  FindUserOfEvent,
+  /// `LobbyIsTOUNewer(LobbyUserTOU(a, 0), LobbyUserTOU(a, 1))`.
+  UserTOUNewer,
+  /// `((AuthContext*)a)->SetUserName(event b's UserName)`.
+  AuthSetUserNameOf,
+  /// `((AuthContext*)a)->SetPassword(event b's Password)`.
+  AuthSetPasswordOf,
+  /// `InitList(a)` (1 auth, 2 account, 3 firewall detect, 4 patch servers).
+  InitListGet = 240,
+  /// `((ServerContext*)a)->Clear()`.
+  ServerClear,
+  /// `WONFile(LobbyGetSysTOUPath()).GetModifyTime()`.
+  SysTouModifyTime,
+  /// `WONFile(LobbyGetGameTOUPath()).GetModifyTime()`.
+  GameTouModifyTime,
+  /// `LobbySetTOUTimes(a, b)`.
+  SetTOUTimes,
+  /// the lobby music `SetLooping(true)`.
+  MusicSetLooping,
+  /// the lobby music `Play()`.
+  MusicPlay,
+  /// the lobby music `Stop()`.
+  MusicStop,
+  /// an address with `SetRememberHostString(true)` (the original's unused local).
+  RememberHostAddress,
+  /// `LobbyGetDirServers()->RemoveAllAddresses()`.
+  DirServersRemoveAll,
+  /// the config's directory servers added to `LobbyGetDirServers()`.
+  AddAllDir,
+  /// the config's room directory servers added to `LobbyGetRoomDirServers()`.
+  AddAllRoomDir,
+  /// the config's auth servers added to `LobbyGetAuthServers()`.
+  AddAllAuth,
+  /// the picture at the HTTP get op `a`'s local path decoded, held (NULL: none).
+  PromotionDecode,
+  /// `LobbyBroadcastEvent(SetCrossPromotionEvent(a, mCrossPromotion), true)`.
+  PromotionBroadcast,
+  /// `RustServerOp::NewHttpGet(std::string(a, b))`, held.
+  HttpGetNew,
+  /// the HTTP get op `a`'s cache: the global cache in the WON directory.
+  HttpGetSetCache,
+  /// the HTTP get op `a`'s completion: `CrossPromotionImageCompletion`.
+  HttpGetSetPromotionCompletion,
+  /// `mHTTPSession->AddOp(a)`.
+  SessionAddOp,
+  /// `LoginInitStatusEvent(gLobbyResources[a], *(GUIString*)b, d & 1, d >> 8)` broadcast.
+  InitStatusText,
+  /// `LoginInitStatusEvent(gLobbyResources[a], gLobbyResources[c], d & 1, d >> 8)` broadcast.
+  InitStatusRes,
+  /// `LoginInitStatusEvent(gLobbyResources[a], gEmptyGUIString, d & 1, d >> 8)` broadcast.
+  InitStatusEmpty,
+  /// `((ServerContext*)a)->AddAddressesFromDir(op b's directory list c, NULL)`.
+  ServerAddFromDir,
+  /// `((ServerContext*)a)->NotifyFailed(op b's current address)`.
+  ServerNotifyFailed,
+  /// `mAcceptOp = new SocketOp(Accept, socket op a's socket)`.
+  AcceptOpNewFrom,
+  /// `mAcceptOp = new SocketOp(Accept, mFirewallSocket)`.
+  AcceptOpNewFirewall,
+  /// `RunOp(mAcceptOp, AcceptCompletion, gLobbyAcceptTimeout)`.
+  AcceptOpRun,
+  /// `mFirewallAddress = firewall op a's current address`.
+  SetFirewallAddress,
+  /// `config != NULL`.
+  HasConfig,
+  /// `LobbyGetRoomDirServers()`.
+  RoomDirServersGet,
+  /// `new DNSTestOp(config->mDirServers.front())`, held.
+  DnsOpNew,
+  /// `RunTrackedOp(a, DNSCompletion, 0)`.
+  RunTrackedDns,
+  /// `RunTrackedOp(a, HTTPDocumentCompletion, 0)`.
+  RunTrackedDocument,
+  /// `RunTrackedOp(a, DirectoryCompletion, 0)`.
+  RunTrackedDirectory,
+  /// `RunTrackedOp(a, VersionCompletion, 0)`.
+  RunTrackedVersion,
+  /// `RunTrackedOp(a, FirewallCompletion, 0)`.
+  RunTrackedFirewall,
+  /// `RustServerOp::NewHttpDocument(config->mProductName, a)`, held.
+  HttpDocNew,
+  /// `((RustServerOp*)a)->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage)`.
+  HttpDocSetConfig,
+  /// `((RustServerOp*)a)->Set(EE_WON_HTTPDOC_SESSION, mHTTPSession)`.
+  HttpDocSetSession,
+  /// `RustServerOp::NewGetMultiDir(a, 0x04000002, the four paths, b)`, held.
+  DirQueryNew,
+  /// the version check's request (product, config, version) on the patch servers, held.
+  VersionCheckNew,
+  /// `new DetectFirewallOp(a)`, held.
+  FirewallOpNew,
+  /// `((DetectFirewallOp*)a)->SetListenPort(LobbyGetLobbyPort())`.
+  FirewallSetListenPort,
+  /// `((DetectFirewallOp*)a)->SetDoListen(b != 0)`.
+  FirewallSetDoListen,
+  /// `((DetectFirewallOp*)a)->SetWaitForConnect(b != 0)`.
+  FirewallSetWaitForConnect,
+  /// `mAcceptOp.get() != NULL`.
+  HasAcceptOp,
+  /// `mAcceptOp->Kill(true)`.
+  AcceptOpKill,
+  /// `mAcceptOp->GetSocket() != NULL`.
+  AcceptOpHasSocket,
+  /// `mAcceptOp->GetSocket()->Close()`.
+  AcceptOpCloseSocket,
+  /// `mNetworkAdapterDialog->LCall(Reset)`.
+  AdapterReset,
+  /// `LobbyDoDialog(mNetworkAdapterDialog)`: the result.
+  AdapterDo,
+};
+
+/// The host's ops. `a`..`e` are pointers or integers as each op says; `L` is the shell (`RoutingLogic*`).
+enum class EeWonRouteLogicOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 1,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `delete (GUIString*)a`.
+  TextFree,
+  /// `((GUIString*)a)->length()`.
+  TextLength,
+  /// a list `a` the host made (`kind` b: 1 data objects, 2 directory entities, 3 a client iterator) deleted.
+  ListFree,
+  /// text `a`'s (`GUIString*`, 0 the empty text) `wchar_t` unit count; its units written to `b` (`uint32_t`s)
+  /// when not 0 (WONLobby round 14: the requests [`conn_request`] makes read their texts with it).
+  TextUnits,
+  /// `L->mKilled`.
+  Killed = 10,
+  /// `(int)((AsyncOp*)a)->GetStatus()`.
+  OpStatus,
+  /// `((AsyncOp*)a)->IsKilled()`.
+  OpKilled,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  OpKill,
+  /// `((AsyncOp*)a)->Finish(WS_Success)`.
+  OpFinish,
+  /// `new AsyncOp`, held.
+  AsyncOpNew,
+  /// `L->RunOp((AsyncOp*)a, NULL, 0)`.
+  RunOp,
+  /// `LobbyRunOpWithStatus((AsyncOp*)a, LOBBY_STRING(b), LOBBY_STRING(c), d & 0xff, d >> 8)`.
+  RunWithStatus,
+  /// `time(NULL)`.
+  Now,
+  /// `WONTickCount()`.
+  Tick,
+  /// `GetLobbyWindow()->GetLastInputTick()`.
+  LastInputTick,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  BroadcastLobby,
+  /// a setting: 1 chat sounds, 2 staging sounds, 3 lobby sounds, 4 auto-ping games, 5 lobby music, 6 anonymous
+  /// to friends, 7 filter dirty words, 8 on the Internet screen, 9 the user cancelled the last status op.
+  Pref,
+  /// `LobbyPlaySound(LOBBY_SOUND(a).get())`.
+  Sound,
+  /// `LobbyMessageBox(LOBBY_STRING(a), LOBBY_STRING(b))`.
+  MessageBox,
+  /// `LobbyDoErrorDialog(LOBBY_STRING(a), (WONStatus)b)`.
+  ErrorDialog,
+  /// `LobbyDoYesNoDialog(LOBBY_STRING(a), LOBBY_STRING(b), true)`.
+  YesNo,
+  /// `GetLobbyConfig() != NULL`.
+  HasConfig,
+  /// `GetLobbyConfig()->mPingCeiling`, or -1 without a config.
+  ConfigPingCeiling,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(false)`.
+  AuthStopRefresh,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `GetMyLobbyClient()`.
+  MyClient,
+  /// `LobbyGetChatCommandParser()`.
+  Parser,
+  /// a lobby call: 1 `LobbyKillPings(NULL)`, 2 `LobbyGameDisconnected(b != 0)`, 3 `LobbyLeaveGame(b != 0)`
+  /// (its result), 4 `LobbyShowLobbyTab()`, 5 `LobbyHostGame()`, 6 `LobbyGetNumPingsToDo()`, 7 `LobbyLogout(false)`,
+  /// 8 `LobbyShowInternetScreen()`.
+  Lobby,
+  /// `LobbyHandleStagingMessage(((RoutingOp*)a)->GetData().get(), (LobbyClient*)b)`.
+  HandleStaging,
+  /// `LobbyClientLeftGame((LobbyClient*)a)`.
+  ClientLeftGame,
+  /// `LobbyClientKicked((LobbyClient*)a, b != 0)`.
+  ClientKicked,
+  /// `LobbyKickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `LobbyPingGame((LobbyGame*)a, false)`.
+  PingGame,
+  /// `LobbyJoinGame((LobbyGame*)a)`.
+  JoinGame,
+  /// `LobbySetClientBlocked((LobbyClient*)a, b != 0, 4)`.
+  SetBlocked,
+  /// `LobbySetClientIgnored((LobbyClient*)a, b != 0, 4)`.
+  SetIgnored,
+  /// `LobbySetLastRoom(((LobbyServer*)a)->GetName(), ((LobbyGroup*)b)->GetName())`.
+  SetLastRoom,
+  /// `LobbyGetReconnectId(((LobbyServer*)a)->GetAddress())`.
+  ReconnectId,
+  /// `LobbySetReconnectId(((LobbyServer*)a)->GetAddress(), b)`.
+  SetReconnectId,
+  /// `new ClientOptionsPopup` held by a `SmartPtr`, `Init(a, b, c)`, `LobbyOpenPopup(it, PopupFlag_StandardPopup,
+  /// -1, -1)`.
+  ClientOptions,
+  /// `new FriendOptionsPopup`, `Init(a, b)`, opened as `ClientOptions`.
+  FriendOptions,
+  /// a server's (`a`) value: 0 `GetClients().get()`, 1 `GetConnection().get()`, 2 `GetMyClient()`, 3
+  /// `GetMyClientId()`, 4 `GetName() == LobbyGetLastServerName()`, 5 `GetNumClients()`, 6
+  /// `HasAddress(GetLobbyConfig()->mLanguage)`, 7 `IsConnected()`, 8 `GetGroupCount()`, 9
+  /// `GetQueryingGroups()`, 10 `GetLastPing()`.
+  ServerNum = 50,
+  /// `((LobbyServer*)a)->FindClientByWONId(b)`.
+  ServerFindByWonId,
+  /// `((LobbyServer*)a)->GetGroup(b)`.
+  ServerGroup,
+  /// `((LobbyServer*)a)->GetClient(b)`.
+  ServerClient,
+  /// `((LobbyServer*)a)->GroupAt(b)`.
+  ServerGroupAt,
+  /// `((LobbyServer*)a)->AddClientToGroup((LobbyClient*)b, (unsigned char)c, (LobbyGroup*)d)`.
+  ServerAddClientToGroup,
+  /// `((LobbyServer*)a)->AddGroup(((RoutingOp*)b)->GetGroupInfo().get())`.
+  ServerAddGroup,
+  /// `((LobbyServer*)a)->AddClient(((RoutingOp*)b)->GetClientInfo().get())`.
+  ServerAddClient,
+  /// `((LobbyServer*)a)->RemoveGroup(b)`, held.
+  ServerRemoveGroup,
+  /// `((LobbyServer*)a)->RemoveClient(b)`, held.
+  ServerRemoveClient,
+  /// `((LobbyServer*)a)->RemoveClientFromGroup(b, (LobbyGroup*)c)`, held.
+  ServerRemoveClientFromGroup,
+  /// a server's (`a`) call: 1 `Disconnect()`, 2 `GetClients()->ClearInvited()`, 3 `UpdateFriends()`, 4
+  /// `ClearGroups()`, 5 `SetQueryingGroups(c != 0)`, 6 `SetLastPing(c)`, 7 `SetMyClientId(c)`, 8
+  /// `SetConnection((RoutingConnection*)c)`.
+  ServerDo,
+  /// `RoutingClientMap m; ((RoutingOp*)b)->GetClients(m); ((LobbyServer*)a)->SyncClients(m)`.
+  ServerSyncClients,
+  /// `RoutingGroupMap m; ((RoutingOp*)b)->GetGroups(m); ((LobbyServer*)a)->SyncGroups(m, c != 0)`.
+  ServerSyncGroups,
+  /// `((LobbyFriend*)a)->GetAddress() == ((LobbyServer*)b)->GetAddress()`.
+  FriendAtServer,
+  /// `L->mServerList`'s: 0 `GetCount()`, 1 `IsEmpty()`.
+  ListNum,
+  /// `L->mServerList->ServerAt(a)`.
+  ListAt,
+  /// `L->mServerList->AddressAt(a) == ((LobbyServer*)b)->GetAddress()`.
+  ListAddressIs,
+  /// a group's (`a`) value: 0 `GetId()`, 1 `IsGameGroup()`, 2 `IsPublicChatGroup()`, 3 `GetNumClients()`, 4
+  /// `IsPasswordProtected()`, 5 `IsAskToJoin()`, 6 `GetCaptainId()`, 7 `GetName().length()`, 8
+  /// `GetName() == LobbyGetLastRoomName()`, 9 `GetClients().get()`.
+  GroupNum,
+  /// `((LobbyGroup*)a)->FindClient(b)`.
+  GroupFindClient,
+  /// `((LobbyGroup*)a)->SetCaptain(b, (LobbyClient**)c)`.
+  GroupSetCaptain,
+  /// a client's (`a`) value: 0 `GetClientId()`, 1 `GetWONUserId()`, 2 `IsFriend()`, 3 `IsAnonymous()`, 4
+  /// `IsIgnored()`, 5 `IsBlocked()`, 6 `IsInChatGroup()`, 7 `GetChatGroupId()`, 8 `IsInGameGroup()`, 9
+  /// `GetGameGroupId()`, 10 `IsAway()`, 11 `IsModerator()`, 12 `IsAdmin()`, 13 `GetCDKeyId()`.
+  ClientNum,
+  /// a client's (`a`) call: 1 `SetMemberFlags((unsigned char)c, d != 0)`, 2 `SetClientFlags(c)`, 3
+  /// `SetIsFriend(c != 0)`, 4 `SetInvited(c != 0)`.
+  ClientDo,
+  /// `((LobbyClient*)a)->IsTeammate((LobbyClient*)b)`.
+  ClientIsTeammate,
+  /// a friend's (`a`) value: 0 `GetFlags()`, 1 `GetLastLocate()`, 2 `GetUserId()`, 3 `GetAnonymous()`, 4
+  /// `GetLastSearch()`, 5 `GetSearchStart()`.
+  FriendNum,
+  /// a friend's (`a`) call: 1 `SetAnonymous(c != 0)`, 2 `SetStatusFromClient((LobbyClient*)c)`, 3
+  /// `SetLocation(server c's address, its name, d)`, 4 `ClearLocation()`, 5 `StartLocate(c)`, 6
+  /// `SetLastSearch(c)`, 7 `EndLocate(c)`.
+  FriendDo,
+  /// `LobbyFindFriend(a)`.
+  FindFriend,
+  /// `LobbyAddFriend(((LobbyClient*)a)->GetName(), ((LobbyClient*)a)->GetWONUserId())`.
+  AddFriendOfClient,
+  /// `LobbyAddFriend(*(GUIString*)a, b)`.
+  AddFriendNamed,
+  /// `LobbyRemoveFriend(a)`.
+  RemoveFriend,
+  /// `LobbyGetFriendCount()`.
+  FriendCount,
+  /// `LobbyGetFriendAt(a)`.
+  FriendAt,
+  /// a game's (`a`) value: 0 `GetAskToJoin()`, 1 `GetInviteOnly()`, 2 `GetGameType()`, 3 `GetGroupId()`, 4
+  /// `GetIsHost()`, 5 `GetIsFiltered()`, 6 `GetHasPassword()`, 7 `CanJoin()`, 8 `GetPing()`, 9 `GetSkill()`.
+  GameNum,
+  /// a game's (`a`) call: 1 `SetGroupId(c)`, 2 `SetClients((LobbyClientList*)c)`, 3 `SetInvited(c != 0)`, 4
+  /// `ReadGroup((LobbyGroup*)c)`.
+  GameDo,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(((RoutingOp*)b)->GetData().get())`.
+  GameReadSummary,
+  /// `new GUIString(((LobbyGame*)a)->GetName())` (b 0) or its `GetPassword()` (b 1).
+  GameText,
+  /// `LobbyGame::CreateGame(LobbyGameType_Internet)`, held.
+  GameCreate,
+  /// `L->mGameList`'s call: 1 `Clear()`, 2 `Rewind()`, 3 `HasMore()`, 4 `Next()`, 5 `GetGame(b)`, 6
+  /// `AddGame((LobbyGame*)b)`, 7 `RemoveGame(b)` (held), 8 `GetOrCreateGame(b, (bool*)c)`.
+  GameList,
+  /// `((RoutingOp*)a)->Num(b)`.
+  RNum = 100,
+  /// `((RoutingOp*)a)->SetNum(b, c)`.
+  RSetNum,
+  /// `((RoutingOp*)a)->SetText(b, text c)`.
+  RSetText,
+  /// `((RoutingOp*)a)->DataType() == L->mGameDataType`.
+  RIsGameData,
+  /// `((RoutingOp*)a)->Recipients()`'s front, or -1 when empty.
+  RRecipient,
+  /// `((RoutingOp*)a)->mConnection.get()`.
+  RConnection,
+  /// `new RoutingOp((RoutingConnection*)a, (RoutingOpType)b)`, held.
+  RNew,
+  /// `((RoutingOp*)a)->GetDataObjects(list)` into a new list (held: `ListFree` kind 1); its size.
+  RDataObjects,
+  /// the data object `b` of list `a`: its `mLinkId`.
+  DataObjectLink,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(list b's object c's mData.get())`.
+  GameReadDataObject,
+  /// `(intptr_t)static_cast<RefCount*>(((SocketOp*)a)->GetSocket())`.
+  OpSocket,
+  /// `new RoutingConnection`, held.
+  ConnNew,
+  /// a connection's (`a`) call: 1 `SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`, 2 the twenty notification
+  /// completions (`SetOpCompletion(type, new RoutingOpCompletion(code, L))`), 3 `SetCloseCompletion(new
+  /// LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, L))`, 4 `SubscribeDataObject(0xffff,
+  /// L->mGameDataType, false, new RoutingOpCompletion(21, L))`, 5 `IsConnected()`, 6 `AbortServerShutdown(NULL)`,
+  /// 7 `BecomeModerator(b != 0, NULL)`, 8 `LeaveGroup(b, NULL)`, 9 `CancelJoinGroup(b, true, NULL)`, 10
+  /// `ReplaceDataObject(b, L->mGameDataType, gEmptyWideString, NULL)`.
+  ConnDo,
+  /// `((RoutingConnection*)a)->SendData((const ByteBuffer*)b, 0, c, NULL)`.
+  ConnSendData,
+  /// `WriteBuffer w(0, true); ((LobbyGame*)b)->WriteSummary(w); ((RoutingConnection*)a)->CreateDataObject(true,
+  /// c, L->mGameDataType, gEmptyWideString, w.ToByteBuffer(true).get(), NULL)`.
+  ConnAdvertise,
+  /// `((RoutingConnection*)a)->SetClientFlags(b, c, d, e, NULL)`.
+  ConnSetClientFlags,
+  /// `((RoutingConnection*)a)->SetGroupFlags(b, c, d, 0, 0, NULL)`.
+  ConnSetGroupFlags,
+  /// `((RoutingConnection*)a)->BanClient(b & 0xffff, b >> 16 != 0, c, text d, e, NULL)`.
+  ConnBan,
+  /// `((RoutingConnection*)a)->MuteClient(b & 0xffff, b >> 16 != 0, c, text d, e, NULL)`.
+  ConnMute,
+  /// `((RoutingConnection*)a)->BanClientByWONId(b, false, 0, std::wstring(gEmptyWideString), c, NULL)`.
+  ConnBanByWonId,
+  /// `((RoutingConnection*)a)->MuteClientByWONId(b, false, 0, std::wstring(gEmptyWideString), c, NULL)`.
+  ConnMuteByWonId,
+  /// `((RoutingConnection*)a)->AcceptClient(b, c, d != 0, gEmptyWideString, NULL)`.
+  ConnAccept,
+  /// `((RoutingConnection*)a)->InviteClient(b, c, d != 0, text e, NULL)`.
+  ConnInvite,
+  /// `((RoutingConnection*)a)->SendChat(text b, c, d, NULL)`.
+  ConnSendChat,
+  /// `((RoutingConnection*)a)->SendChatTo(text b, c, the d ids at e (uint16_t), NULL)`.
+  ConnSendChatTo,
+  /// `((RoutingConnection*)a)->SendServerAlert(text b, NULL)`.
+  ConnAlert,
+  /// `((RoutingConnection*)a)->StartServerShutdown(text b, c, NULL)`.
+  ConnStartShutdown,
+  /// `new ServerConnectionConnectOp((RoutingConnection*)a, ((LobbyServer*)b)->GetAddress())`, held.
+  ConnectOpNew,
+  /// the parser's (`a`) value: 0 `GetRoomFlags()`, 1 `GetCommand()`, 2 `GetDuration()`, 3 `GetTarget()`, 4
+  /// `GetClients()`.
+  ParserNum = 140,
+  /// `new GUIString(((ChatCommandParser*)a)->GetText())`.
+  ParserText,
+  /// `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`.
+  ParserSetInput,
+  /// `new LobbyClientIterator((LobbyClientList*)a)` (held: `ListFree` kind 3).
+  IterNew,
+  /// the iterator's `HasMore()`.
+  IterHasMore,
+  /// the iterator's `Next()`.
+  IterNext,
+  /// an event's (`a`) member: 1 the accept's `mClient.get()`, 2 its `mAccepted`, 3 the friend action's
+  /// `mFriend.get()`, 4 its `mAction`, 5 its `mValue`, 6 the jump's `mGroupId`, 7 Quick Play's `mGameType`, 8 the
+  /// client action's `GetRoomSpec()`, 9 its `GetClient()`, 10 its `GetAction()`, 11 the join room's `mGroupId`, 12
+  /// the join friend's room `mFriend.get()`, 13 `mComponent`.
+  EventNum,
+  /// `L->GetServer(event a's mAddress)` (a create room, join room or query server groups event).
+  EventServer,
+  /// `((LobbyServer*)b)->GetAddress() == ((JumpToRoomEvent*)a)->mAddress`.
+  EventAddressIs,
+  /// `((LobbyGame*)a)->GetName() == ((JumpToRoomEvent*)b)->mRoomName`.
+  GameNameIsEvent,
+  /// the friend's (`a`) `GetAddress().IsValid()`.
+  FriendAddressValid,
+  /// `L->GetServer(((LobbyFriend*)a)->GetAddress())`.
+  FriendServer,
+  /// `LobbyDoDialog(dialog a)` (1 add friend, 2 admin action, 3 bad user, 4 create room, 5 password, 6 room).
+  DialogDo,
+  /// dialog a's `Reset`: create room `Reset(b != 0)`, password `Reset()`, admin action `Reset(b, (LobbyClient*)c)`,
+  /// add friend `Reset()`.
+  DialogReset,
+  /// a dialog's text, new: 1 the create room's `GetRoomName()`, 2 its `GetPassword()`, 3 the password's
+  /// `GetPassword()`, 4 the admin action's `GetExplanation()`, 5 the add friend's `GetName()`.
+  DialogText,
+  /// a dialog's value: 1 the admin action's `GetApplyToServer()`, 2 its `GetNumSeconds()`, 3 the room dialog's
+  /// `GetParent() != NULL`.
+  DialogNum,
+  /// `GetLobbyWindow()->EndDialog(-1, NULL, L->mRoomDialog.get())`.
+  RoomDialogEnd,
+  /// `RoutingBadUserList l; ((RoutingOp*)a)->GetBadUsers(l); L->mBadUserDialog->SetUserList(l, b != 0)`.
+  BadUserSet,
+  /// `L->mBadUserDialog->GetIds(ids)`, each pushed to sink `a` by `ee_won_routelogic_push`.
+  BadUserIds,
+  /// `ClientChangedEvent((LobbyClient*)a, b, c)`.
+  EvClientChanged = 170,
+  /// `GroupChangedEvent((LobbyGroup*)a, (LobbyServer*)b, c)`.
+  EvGroupChanged,
+  /// `FriendChangedEvent((LobbyFriend*)a, b)`.
+  EvFriendChanged,
+  /// `AnnounceFriendEvent((LobbyFriend*)a, b, c)`.
+  EvAnnounceFriend,
+  /// `AnnounceClientLocationEvent((LobbyClient*)a, chat group b's name, game group c's name (empty for NULL), d)`.
+  EvAnnounceClient,
+  /// `GameChangedEvent((LobbyGame*)a, b)`.
+  EvGameChanged,
+  /// `GroupInvitationEvent(4, game a's name, its group id, (LobbyClient*)b, c != 0, op d's comment, false)`.
+  EvInvitationRecv,
+  /// `GroupInvitationEvent(4, group a's name, its id, (LobbyClient*)b, c != 0, text d, true)`.
+  EvInvitationSent,
+  /// `GroupJoinAttemptEvent(6, (LobbyClient*)a, op b's comment)`.
+  EvJoinAttempt,
+  /// `RecvChatEvent(a, b, (LobbyClient*)c, op d's text, (LobbyClient*)e)`.
+  EvRecvChat,
+  /// `AlertEvent(4, a, a == 1 ? op b's time : 0, op b's text)`.
+  EvAlert,
+  /// `ClientModeratedEvent((LobbyClient*)a, b, the name of c (a group when d & 0x100, else a server), d & 0xff,
+  /// op e's time, true, op e's comment)`.
+  EvModerated,
+  /// `LeftRoomEvent(a, b != 0, c != 0)`.
+  EvLeftRoom,
+  /// `SyncGameListEvent(L->mGameList.get())`.
+  EvSyncGameList,
+  /// `JoinedRoomEvent(server a's name, group b's name, c, server a's my client id, group b's clients)`.
+  EvJoinedRoom,
+  /// `ServerChangedEvent((LobbyServer*)a, b)`.
+  EvServerChanged,
+  /// `SetChatInputEvent(2, client a's name, b, false)`.
+  EvSetChatInput,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_NotCaptain_String)), (Component*)a)`.
+  EvNotCaptain,
+  /// `LobbyGetUDPManager()`.
+  UdpManager = 200,
+  /// `new RoutingGetUserStatusOp(L->mServerList->AddressAt(a), (UDPManager*)b)`, held.
+  StatusOpNew,
+  /// `((RoutingGetUserStatusOp*)a)->AddWONUserId(b)`.
+  StatusOpAddId,
+  /// `((RoutingGetUserStatusOp*)a)->SetFriendStatusMap(the c ids at b, each 0)`.
+  StatusOpSetMap,
+  /// `L->RunOp((AsyncOp*)a, new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete, L), 10000)`.
+  StatusOpRun,
+  /// `L->mServerList->FindServer(((RoutingGetUserStatusOp*)a)->GetDestAddr())`.
+  StatusOpServer,
+  /// `((RoutingGetUserStatusOp*)a)->GetFriendStatusMap()`, each pair pushed to sink `b` (id, status).
+  StatusOpMap,
+  /// `LobbyGetAccountServers()`.
+  AccountServers,
+  /// the add-friend lookup: `GetUserIdFromNameOp` of text `b` on servers `a`, run behind its status box; its user
+  /// id (its status in `*(int*)c`).
+  UserIdLookup,
+  /// `LobbyGetServerList()`.
+  LobbyServerList,
+  /// `((LobbyServerList*)a)->FindServer(((RustServerOp*)b)->GetAddr())`.
+  ServerListFind,
+  /// a connection-less group list op over `RustServerOp` b's replies, its groups into server a
+  /// (`SyncGroups(m, false)`).
+  SyncGroupsOfQuery,
+  /// `RustServerOp::NewGroupListReq(server a's address, 0x29)` run tracked with
+  /// `LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L)`.
+  GroupQueryRun,
+  /// `LobbyGetRoomDirServers()`, held.
+  RoomDirServers,
+  /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"})`, held, run behind
+  /// the getting-rooms status box.
+  DirOpRun,
+  /// op `a`'s `GetEntities(EE_WON_REQOP_DIR_LIST)` as a new list (held: `ListFree` kind 2); 1 if empty.
+  DirEntities,
+  /// `((ServerContext*)a)->NotifyFailed(((RustServerOp*)b)->GetCurAddr())`.
+  DirNotifyFailed,
+  /// `L->mServerList->UpdateFromDirectory(list a)`.
+  DirUpdate,
+  /// `RC(a)->SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`.
+  ConnSetAuth = 300,
+  /// `RC(a)->SetOpCompletion(b, new RoutingOpCompletion(c, L))`.
+  ConnSetNotice,
+  /// `RC(a)->SetCloseCompletion(new LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, L))`.
+  ConnSetClose,
+  /// `SubscribeDataObject(0xffff, L->mGameDataType, false, new RoutingOpCompletion(21, L))` on connection `a`.
+  ConnSubscribeGames,
+  /// `RC(a)->IsConnected()`.
+  ConnIsConnected,
+  /// `RustServerOp::NewRequest(ee_won_reqop_user_id(a, b), (ServerContext*)c)`, held.
+  UserIdOpNew,
+  /// the user id op `a`'s id (`ee_won_hostop_num(.., EE_WON_REQOP_USER_ID, 0)` as an `unsigned long`).
+  OpUserId,
+  /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"}, 2)`, held.
+  DirOpNew,
+  /// `new WriteBuffer(0, true)`.
+  BufNew,
+  /// `GM(a)->WriteSummary(*(WriteBuffer*)b)`.
+  GameWriteSummary,
+  /// `CreateDataObject(true, c, L->mGameDataType, gEmptyWideString, buffer b's bytes, NULL)` on connection `a`.
+  ConnCreateGameObject,
+  /// `delete (WriteBuffer*)a`.
+  BufFree,
+  /// `((ComponentEvent*)a)->mType`.
+  EventType,
+  /// `L->mServerList->FindServer(event a's Address)`.
+  EventFindServer,
+  /// the user status op `a`'s Rust object (`EeWonUserStatus*`).
+  StatusOpRust,
+  /// `ClientModeratedEvent(C(a), b, G(c)->GetName(), d, op e's time, true, op e's comment)` broadcast.
+  EvModeratedGroup,
+  /// `ClientModeratedEvent(C(a), b, S(c)->GetName(), d, op e's time, true, op e's comment)` broadcast.
+  EvModeratedServer,
+  /// `delete (DirEntityList*)a`.
+  DirListFree,
+  /// `delete (LobbyClientIterator*)a`.
+  IterFree,
+  /// `AlertEvent(4, a, op b's time, op b's text)` broadcast.
+  EvAlertTimed,
+  /// `AlertEvent(4, a, 0, op b's text)` broadcast.
+  EvAlertPlain,
+  /// `new DirEntityList(op a's GetEntities(EE_WON_REQOP_DIR_LIST))`.
+  DirEntitiesNew,
+  /// `((DirEntityList*)a)->empty()`.
+  DirListEmpty,
+  /// `RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29)`, held.
+  GroupQueryNew,
+  /// `L->RunTrackedOp(a, QueryServerGroupsDone, 0)`.
+  RunTrackedGroups,
+  /// `((ComponentEvent*)a)->mComponent`.
+  EventComponent,
+  /// `LobbyOnInternetScreen()`.
+  OnInternetScreen,
+  /// `LobbyUserCanceledLastStatusOp()`.
+  UserCanceledLast,
+};
+
+/// The lobby's resources by name, in the table's order: `EeWonLobbyRes::X as usize` is the row of global `X`
+/// (the C++ keeps one slot per row, `gLobbyResources`, read through `LOBBY_STRING(X)` / `LOBBY_IMAGE(X)` /
+/// `LOBBY_SOUND(X)`: the original's 469 named globals and their ids).
+enum class EeWonLobbyRes : uint32_t {
+  LobbyGlobal_Cancel_String = 0,
+  LobbyGlobal_Lan_String,
+  LobbyGlobal_No_String,
+  LobbyGlobal_OK_String,
+  LobbyGlobal_Yes_String,
+  LobbyGlobal_QuickPlay_String,
+  LobbyGlobal_Searching_Image,
+  LobbyGlobal_Firewall_Image,
+  LobbyGlobal_ButtonClick_Sound,
+  LobbyGlobal_LobbyMusic_Sound,
+  LobbyGlobal_AllReady_Sound,
+  LobbyGlobal_AllNotReady_Sound,
+  LobbyGlobal_AskToJoinRecv_Sound,
+  LobbyGlobal_Error_Sound,
+  LobbyGlobal_FriendJoined_Sound,
+  LobbyGlobal_FriendLeft_Sound,
+  LobbyGlobal_InviteRecv_Sound,
+  LobbyGlobal_PlayerJoined_Sound,
+  LobbyGlobal_SierraLogon_Sound,
+  LobbyGlobal_WhisperRecv_Sound,
+  AccountLogic_InvalidCDKeyTitle_String,
+  AccountLogic_InvalidCDKeyDetails_String,
+  AddFriendDialog_StatusTitle_String,
+  AddFriendDialog_StatusDetails_String,
+  AdminActionDialog_Warn_String,
+  AdminActionDialog_Mute_String,
+  AdminActionDialog_UnMute_String,
+  AdminActionDialog_Kick_String,
+  AdminActionDialog_Ban_String,
+  AdminActionDialog_ExplanationOpt_String,
+  AdminActionDialog_ExplanationReq_String,
+  BadUserDialog_OneDay_String,
+  BadUserDialog_OneHour_String,
+  BadUserDialog_OneMinute_String,
+  BadUserDialog_OneSecond_String,
+  BadUserDialog_XDays_String,
+  BadUserDialog_XHours_String,
+  BadUserDialog_XMinutes_String,
+  BadUserDialog_XSeconds_String,
+  BadUserDialog_Infinite_String,
+  ChatCommandLogic_Whisper_String,
+  ChatCommandLogic_Block_String,
+  ChatCommandLogic_Emote_String,
+  ChatCommandLogic_Ignore_String,
+  ChatCommandLogic_Away_String,
+  ChatCommandLogic_Invite_String,
+  ChatCommandLogic_Uninvite_String,
+  ChatCommandLogic_Reply_String,
+  ChatCommandLogic_Clear_String,
+  ChatCommandLogic_Help_String,
+  ChatCommandLogic_ShowTeam_String,
+  ChatCommandLogic_Moderator_String,
+  ChatCommandLogic_ServerMute_String,
+  ChatCommandLogic_ServerBan_String,
+  ChatCommandLogic_Mute_String,
+  ChatCommandLogic_Ban_String,
+  ChatCommandLogic_Unmute_String,
+  ChatCommandLogic_ServerUnmute_String,
+  ChatCommandLogic_Unban_String,
+  ChatCommandLogic_ServerUnban_String,
+  ChatCommandLogic_Alert_String,
+  ChatCommandLogic_Warn_String,
+  ChatCommandLogic_HelpHeader_String,
+  ChatCommandLogic_HelpHelp_String,
+  ChatCommandLogic_ShowTeamHelp_String,
+  ChatCommandLogic_WhisperHelp_String,
+  ChatCommandLogic_BlockHelp_String,
+  ChatCommandLogic_IgnoreHelp_String,
+  ChatCommandLogic_ReplyHelp_String,
+  ChatCommandLogic_EmoteHelp_String,
+  ChatCommandLogic_AwayHelp_String,
+  ChatCommandLogic_ClearHelp_String,
+  ChatCommandLogic_InviteHelp_String,
+  ChatCommandLogic_UninviteHelp_String,
+  ChatCommandLogic_MuteHelp_String,
+  ChatCommandLogic_UnmuteHelp_String,
+  ChatCommandLogic_BanHelp_String,
+  ChatCommandLogic_UnbanHelp_String,
+  ChatCommandLogic_ModeratorHelp_String,
+  ChatCommandLogic_ServerMuteHelp_String,
+  ChatCommandLogic_ServerUnmuteHelp_String,
+  ChatCommandLogic_ServerBanHelp_String,
+  ChatCommandLogic_ServerUnbanHelp_String,
+  ChatCommandLogic_AlertHelp_String,
+  ChatCommandLogic_WarnHelp_String,
+  ChatCtrl_NormalChat_String,
+  ChatCtrl_Emote_String,
+  ChatCtrl_TeamChat_String,
+  ChatCtrl_TeamEmote_String,
+  ChatCtrl_YouWhisperToYourself_String,
+  ChatCtrl_YouWhisper_String,
+  ChatCtrl_SomeoneWhispersToYou_String,
+  ChatCtrl_YouWarnSomeone_String,
+  ChatCtrl_YouWarnYourself_String,
+  ChatCtrl_SomeoneWarnsYou_String,
+  ChatCtrl_SomeoneWarnsSomeone_String,
+  ChatCtrl_EnteringRoom_String,
+  ChatCtrl_LeavingRoom_String,
+  ChatCtrl_Disconnected_String,
+  ChatCtrl_YouWereKicked_String,
+  ChatCtrl_YouWereBannedMinute_String,
+  ChatCtrl_YouWereBannedMinutes_String,
+  ChatCtrl_YouWereBannedHour_String,
+  ChatCtrl_YouWereBannedHours_String,
+  ChatCtrl_YouWereBannedDay_String,
+  ChatCtrl_YouWereBannedDays_String,
+  ChatCtrl_YouWereBannedIndefinitely_String,
+  ChatCtrl_SomeoneWasKicked_String,
+  ChatCtrl_SomeoneWasBannedMinute_String,
+  ChatCtrl_SomeoneWasBannedMinutes_String,
+  ChatCtrl_SomeoneWasBannedHour_String,
+  ChatCtrl_SomeoneWasBannedHours_String,
+  ChatCtrl_SomeoneWasBannedDay_String,
+  ChatCtrl_SomeoneWasBannedDays_String,
+  ChatCtrl_SomeoneWasBannedIndefinitely_String,
+  ChatCtrl_YouWereUnmuted_String,
+  ChatCtrl_YouWereMutedMinute_String,
+  ChatCtrl_YouWereMutedMinutes_String,
+  ChatCtrl_YouWereMutedHour_String,
+  ChatCtrl_YouWereMutedHours_String,
+  ChatCtrl_YouWereMutedDay_String,
+  ChatCtrl_YouWereMutedDays_String,
+  ChatCtrl_YouWereMutedIndefinitely_String,
+  ChatCtrl_SomeoneWasUnmuted_String,
+  ChatCtrl_SomeoneWasMutedMinute_String,
+  ChatCtrl_SomeoneWasMutedMinutes_String,
+  ChatCtrl_SomeoneWasMutedHour_String,
+  ChatCtrl_SomeoneWasMutedHours_String,
+  ChatCtrl_SomeoneWasMutedDay_String,
+  ChatCtrl_SomeoneWasMutedDays_String,
+  ChatCtrl_SomeoneWasMutedIndefinitely_String,
+  ChatCtrl_ModeratorComment_String,
+  ChatCtrl_AlertComment_String,
+  ChatCtrl_ServerAlert_String,
+  ChatCtrl_ServerShutdownStartedMinute_String,
+  ChatCtrl_ServerShutdownStartedMinutes_String,
+  ChatCtrl_ServerShutdownStartedHour_String,
+  ChatCtrl_ServerShutdownStartedHours_String,
+  ChatCtrl_ServerShutdownStartedDay_String,
+  ChatCtrl_ServerShutdownStartedDays_String,
+  ChatCtrl_ServerShutdownAborted_String,
+  ChatCtrl_SomeoneInvitesYou_String,
+  ChatCtrl_SomeoneUninvitesYou_String,
+  ChatCtrl_YouInviteSomeone_String,
+  ChatCtrl_YouUninviteSomeone_String,
+  ChatCtrl_SomeoneInvitesYouExpl_String,
+  ChatCtrl_SomeoneUninvitesYouExpl_String,
+  ChatCtrl_YouInviteSomeoneExpl_String,
+  ChatCtrl_YouUninviteSomeoneExpl_String,
+  ChatCtrl_Accept_String,
+  ChatCtrl_Reject_String,
+  ChatCtrl_SomeoneAsksToJoin_String,
+  ChatCtrl_SomeoneAsksToJoinExpl_String,
+  ChatCtrl_ClientNotOnServer_String,
+  ChatCtrl_ClientInGame_String,
+  ChatCtrl_ClientInChat_String,
+  ChatCtrl_ClientInGameAndChat_String,
+  ChatCtrl_ClientIsAnonymous_String,
+  ChatCtrl_FriendIsChatting_String,
+  ChatCtrl_FriendIsInGameStaging_String,
+  ChatCtrl_FriendIsPlaying_String,
+  ChatCtrl_FriendIsOn_String,
+  ChatCtrl_FriendIsNotOnline_String,
+  ChatCtrl_PlayerKicked_String,
+  ChatCtrl_PlayerBanned_String,
+  ChatCtrl_FriendJoined_String,
+  ChatCtrl_FriendLeft_String,
+  ChatCtrl_TeamMemberJoined_String,
+  ChatCtrl_TeamMemberLeft_String,
+  ChatCtrl_TeamMembers_String,
+  ChatCtrl_IgnoreList_String,
+  ChooseNetworkAdapterDialog_Default_String,
+  ChooseNetworkAdapterDialog_Unknown_String,
+  ClientOptionsCtrl_Whisper_String,
+  ClientOptionsCtrl_Invite_String,
+  ClientOptionsCtrl_Uninvite_String,
+  ClientOptionsCtrl_AddToFriends_String,
+  ClientOptionsCtrl_RemoveFromFriends_String,
+  ClientOptionsCtrl_ClearAFK_String,
+  ClientOptionsCtrl_SetAFK_String,
+  ClientOptionsCtrl_Ignore_String,
+  ClientOptionsCtrl_Unignore_String,
+  ClientOptionsCtrl_Block_String,
+  ClientOptionsCtrl_Unblock_String,
+  ClientOptionsCtrl_Warn_String,
+  ClientOptionsCtrl_Mute_String,
+  ClientOptionsCtrl_UnMute_String,
+  ClientOptionsCtrl_Kick_String,
+  ClientOptionsCtrl_Ban_String,
+  DirectConnectionOptionsCtrl_Connect_String,
+  DirectConnectionOptionsCtrl_Refresh_String,
+  DirectConnectionOptionsCtrl_Remove_String,
+  FriendOptionsCtrl_Locate_String,
+  FriendOptionsCtrl_RefreshList_String,
+  FriendOptionsCtrl_RemoveFromFriends_String,
+  FriendsListCtrl_Unknown_Image,
+  FriendsListCtrl_NotFound_Image,
+  FriendsListCtrl_InChat_Image,
+  FriendsListCtrl_InGame_Image,
+  GameOptionsPopup_Join_String,
+  GameOptionsPopup_Ping_String,
+  GameOptionsPopup_QueryDetails_String,
+  GameOptionsPopup_HideDetails_String,
+  GameOptionsPopup_ShowDetails_String,
+  GameOptionsPopup_Remove_String,
+  GameStagingCtrl_Ready_String,
+  GameStagingCtrl_NotReady_String,
+  GameStagingCtrl_StartGame_String,
+  GameStagingCtrl_LeaveGame_String,
+  GameStagingCtrl_DissolveGame_String,
+  GameStagingLogic_KickedTitle_String,
+  GameStagingLogic_KickedDetails_String,
+  GameStagingLogic_BannedTitle_String,
+  GameStagingLogic_BannedDetails_String,
+  GameStagingLogic_ConnectWarningTitle1_String,
+  GameStagingLogic_ConnectWarningDetails1_String,
+  GameStagingLogic_ConnectWarningTitle2_String,
+  GameStagingLogic_ConnectWarningDetails2_String,
+  GameStagingLogic_ConnectWarningTitle3_String,
+  GameStagingLogic_ConnectWarningDetails3_String,
+  GameStagingLogic_NoPingReplyError_String,
+  GameStagingLogic_GettingGameInfoTitle_String,
+  GameStagingLogic_GettingGameInfoDetails_String,
+  GameStagingLogic_JoinGameErrorTitle_String,
+  GameStagingLogic_VerifyingPingTitle_String,
+  GameStagingLogic_VerifyingPingDetails_String,
+  GameStagingLogic_DissolveGame_String,
+  GameStagingLogic_DissolveGameConfirm_String,
+  GameStagingLogic_LeaveGame_String,
+  GameStagingLogic_LeaveGameConfirm_String,
+  GameStagingLogic_NoQuickPlayGameTitle_String,
+  GameStagingLogic_NoQuickPlayGameDetails_String,
+  GameUserListCtrl_Ban_String,
+  GameUserListCtrl_Kick_String,
+  GameUserListCtrl_Ready_Image,
+  InternetQuickPlay_Welcome_String,
+  InternetQuickPlay_UserWelcome_String,
+  JoinResponse_Joined_String,
+  JoinResponse_ServerFull_String,
+  JoinResponse_InviteOnly_String,
+  JoinResponse_AskToJoin_String,
+  JoinResponse_GameInProgress_String,
+  JoinResponse_InvalidPassword_String,
+  JoinResponse_NotOnLAN_String,
+  JoinResponse_Blocked_String,
+  JoinResponse_Unknown_String,
+  LANLogic_SocketBindError_String,
+  LANLogic_SocketListenError_String,
+  LANLogic_ConnectToGameTitle_String,
+  LANLogic_ConnectToGameDetails_String,
+  LANLogic_CheckingAddressTitle_String,
+  LANLogic_CheckingAddressDetails_String,
+  LANLogic_RegisterTitle_String,
+  LANLogic_RegisterDetails_String,
+  LANLogic_JoinFailure_String,
+  LANLogic_JoinReplyError_String,
+  LANLogic_InvalidSubnet_String,
+  LobbyContainer_InitStart_String,
+  LobbyContainer_InitFailed_String,
+  LobbyContainer_CheckingVersion_String,
+  LobbyContainer_QueryingServers_String,
+  LobbyContainer_NoConnection_String,
+  LobbyContainer_DNSLookupFailed_String,
+  LobbyContainer_DirLookupFailure_String,
+  LobbyContainer_VersionCheckFailure_String,
+  LobbyContainer_InitComplete_String,
+  LobbyContainer_NoServers_String,
+  LobbyContainer_AuthServers_String,
+  LobbyContainer_AccountServers_String,
+  LobbyContainer_VersionServers_String,
+  LobbyContainer_CreateAccountTitle_String,
+  LobbyContainer_CreateAccountDetails_String,
+  LobbyContainer_RetrievePasswordTitle_String,
+  LobbyContainer_RetrievePasswordDetails_String,
+  LobbyContainer_RetrieveUsernameTitle_String,
+  LobbyContainer_RetrieveUsernameDetails_String,
+  LobbyContainer_QueryAccountTitle_String,
+  LobbyContainer_QueryAccountDetails_String,
+  LobbyContainer_UpdateAccountTitle_String,
+  LobbyContainer_UpdateAccountDetails_String,
+  LobbyContainer_LoginTitle_String,
+  LobbyContainer_LoginDetails_String,
+  LobbyContainer_GettingRoomsTitle_String,
+  LobbyContainer_GettingRoomsDetails_String,
+  LobbyContainer_VersionOutOfDataTitle_String,
+  LobbyContainer_VersionOutOfDataDetails_String,
+  LobbyGameStatus_Success_String,
+  LobbyGameStatus_GameFull_String,
+  LobbyGameStatus_GameInProgress_String,
+  LobbyGameStatus_UnpackFailure_String,
+  LobbyGameStatus_NotInvited_String,
+  LobbyGameStatus_CaptainRejectedYou_String,
+  LobbyGameStatus_InvalidPassword_String,
+  LobbyGameStatus_DuplicateName_String,
+  LobbyOptions_DefaultName_String,
+  LobbyOptions_CheckingAddress_String,
+  LobbyOptions_AddressUnavailable_String,
+  RoomCtrl_QueryingServer_String,
+  RoomCtrl_Password_Image,
+  RoomLabelCtrl_LabelPrefix_String,
+  RoomLabelCtrl_LabelServer_String,
+  RoomLabelCtrl_LabelUser_String,
+  RoomLabelCtrl_LabelUsers_String,
+  RoomLabelCtrl_LabelDisconnected_String,
+  RoutingLogic_GetClientListTitle_String,
+  RoutingLogic_GetClientListDetails_String,
+  RoutingLogic_GetGroupListTitle_String,
+  RoutingLogic_GetGroupListDetails_String,
+  RoutingLogic_GameDissolvedTitle_String,
+  RoutingLogic_GameDissolvedDetails_String,
+  RoutingLogic_NoServersTitle_String,
+  RoutingLogic_NoServersDetails_String,
+  RoutingLogic_TooManyFriendsTitle_String,
+  RoutingLogic_TooManyFriendsDetails_String,
+  RoutingLogic_AlreadyJoinedTitle_String,
+  RoutingLogic_AlreadyInGame_String,
+  RoutingLogic_AlreadyInRoom_String,
+  RoutingLogic_JoinGroupTitle_String,
+  RoutingLogic_JoinGroupDetails_String,
+  RoutingLogic_ConnectTitle_String,
+  RoutingLogic_ConnectDetails_String,
+  RoutingLogic_RegisterTitle_String,
+  RoutingLogic_RegisterDetails_String,
+  RoutingLogic_QueryGroupsTitle_String,
+  RoutingLogic_QueryGroupsDetails_String,
+  RoutingLogic_CreateGroupTitle_String,
+  RoutingLogic_CreateGroupDetails_String,
+  RoutingLogic_GetBadUsersTitle_String,
+  RoutingLogic_GetBadUsersDetails_String,
+  RoutingLogic_DisconnectedTitle_String,
+  RoutingLogic_DisconnectedDetails_String,
+  RoutingLogic_AskingCaptainTitle_String,
+  RoutingLogic_AskingCaptainDetails_String,
+  RoutingLogic_CollectingPingsTitle_String,
+  RoutingLogic_CollectingPingsDetails_String,
+  RoutingLogic_GettingGameListTitle_String,
+  RoutingLogic_GettingGameListDetails_String,
+  RoutingLogic_MuteClientTitle_String,
+  RoutingLogic_UnmuteClientTitle_String,
+  RoutingLogic_BanClientTitle_String,
+  RoutingLogic_KickClientTitle_String,
+  RoutingLogic_ModerateDetails_String,
+  RoutingLogic_FriendNotFoundTitle_String,
+  RoutingLogic_FriendNotFoundDetails_String,
+  RoutingLogic_ClientNotFound_String,
+  RoutingLogic_ClientAmbiguous_String,
+  RoutingLogic_InvalidCommand_String,
+  RoutingLogic_RequireName_String,
+  RoutingLogic_BadTimeSpec_String,
+  RoutingLogic_Error_String,
+  RoutingLogic_NotCaptain_String,
+  ServerListCtrl_Pinging_String,
+  ServerListCtrl_PingFailed_String,
+  ServerListCtrl_Querying_String,
+  ServerListCtrl_QueryFailed_String,
+  ServerListCtrl_ListSummary_String,
+  ServerListCtrl_ListPingSummary_String,
+  ServerListCtrl_RefreshList_String,
+  ServerListCtrl_StopRefresh_String,
+  ServerListCtrl_NoFilter_String,
+  ServerListCtrl_AddRemove_String,
+  ServerListCtrl_Add_String,
+  ServerListCtrl_Remove_String,
+  ServerListCtrl_FullFilter_String,
+  ServerListCtrl_NotFullFilter_String,
+  ServerListCtrl_OpenFilter_String,
+  ServerListCtrl_PingFailed_Image,
+  ServerListCtrl_GameExpanded_Image,
+  ServerListCtrl_GameNotExpanded_Image,
+  ServerListCtrl_GameAreInvited_Image,
+  ServerListCtrl_GameNone_Image,
+  ServerListCtrl_GameAskToJoin_Image,
+  ServerListCtrl_GameHasPassword_Image,
+  ServerListCtrl_GameNotInvited_Image,
+  ServerListCtrl_GameInProgress_Image,
+  ServerListCtrl_SkillOpen_Image,
+  ServerListCtrl_SkillNovice_Image,
+  ServerListCtrl_SkillIntermediate_Image,
+  ServerListCtrl_SkillAdvanced_Image,
+  ServerListCtrl_SkillExpert_Image,
+  ServerOptionsCtrl_Connect_String,
+  ServerOptionsCtrl_RefreshServer_String,
+  ServerOptionsCtrl_HideDetails_String,
+  ServerOptionsCtrl_ShowDetails_String,
+  ServerOptionsCtrl_ResfreshList_String,
+  StagingLogic_DisconnectedTitle_String,
+  StagingLogic_DisconnectedDetails_String,
+  StagingLogic_BannedTitle_String,
+  StagingLogic_BannedDetails_String,
+  StagingLogic_KickedTitle_String,
+  StagingLogic_KickedDetails_String,
+  UserListCtrl_Ignore_String,
+  UserListCtrl_Unignore_String,
+  UserListCtrl_Normal_Image,
+  UserListCtrl_Away_Image,
+  UserListCtrl_Admin_Image,
+  UserListCtrl_Moderator_Image,
+  UserListCtrl_Captain_Image,
+  UserListCtrl_Muted_Image,
+  UserListCtrl_Ignored_Image,
+  UserListCtrl_Blocked_Image,
+  WONStatus_Success_String,
+  WONStatus_Killed_String,
+  WONStatus_TimedOut_String,
+  WONStatus_InvalidAddress_String,
+  WONStatus_GeneralFailure_String,
+  WONStatus_AuthFailure_String,
+  WONStatus_FTPFailure_String,
+  WONStatus_HTTPFailure_String,
+  WONStatus_MOTDFailure_String,
+  WONStatus_RoutingFailure_String,
+  WONStatus_GameSpyFailure_String,
+  WONStatus_DirFailure_String,
+  WONStatus_ChatFailure_String,
+  WONStatus_DatabaseFailure_String,
+  WONStatus_NotAllowed_String,
+  WONStatus_NotAuthorized_String,
+  WONStatus_BehindFirewall_String,
+  WONStatus_ExpiredCertificate_String,
+  WONStatus_InvalidCDKey_String,
+  WONStatus_CDKeyBanned_String,
+  WONStatus_CDKeyInUse_String,
+  WONStatus_CRCFailed_String,
+  WONStatus_UserExists_String,
+  WONStatus_UserNotFound_String,
+  WONStatus_BadPassword_String,
+  WONStatus_InvalidUserName_String,
+  WONStatus_BadCommunity_String,
+  WONStatus_NotInCommunity_String,
+  WONStatus_UserSeqInUse_String,
+  WONStatus_BlankNamesNotAllowed_String,
+  WONStatus_CaptainRejectedYou_String,
+  WONStatus_ClientAlreadyBanned_String,
+  WONStatus_ClientAlreadyInGroup_String,
+  WONStatus_ClientAlreadyMuted_String,
+  WONStatus_ClientBanned_String,
+  WONStatus_ClientDoesNotExist_String,
+  WONStatus_ClientNotBanned_String,
+  WONStatus_ClientNotInGroup_String,
+  WONStatus_ClientNotInvited_String,
+  WONStatus_ClientNotMuted_String,
+  WONStatus_ConnectFailure_String,
+  WONStatus_GroupAlreadyClaimed_String,
+  WONStatus_GroupAlreadyExists_String,
+  WONStatus_GroupClosed_String,
+  WONStatus_GroupDeleted_String,
+  WONStatus_GroupDoesNotExist_String,
+  WONStatus_GroupFull_String,
+  WONStatus_GuestNamesReserved_String,
+  WONStatus_InvalidPassword_String,
+  WONStatus_MustBeAdmin_String,
+  WONStatus_MustBeCaptain_String,
+  WONStatus_MustBeCaptainOrModerator_String,
+  WONStatus_MustBeModerator_String,
+  WONStatus_ServerFull_String,
+  WONStatus_GroupNameExceedsMaximum_String,
+  WONStatus_JoinCanceled_String,
+  WONStatus_Throttled_String,
+  WONStatus_KeyNotUsed_String,
+  WONStatus_EMailPasswordDuplication_String,
+  WONStatus_AccountCreateDisabled_String,
+  WONStatus_AgeNotOldEnough_String,
+  WONStatus_ItemHasDependencies_String,
+  WONStatus_OutOfDate_String,
+  WONStatus_OutOfDateNoUpdate_String,
+  WONStatus_ValidNotLatest_String,
+  WONStatus_DataAlreadyExists_String,
+  WONStatus_DBError_String,
+  WONStatus_ConnRefused_String,
+};
+
+/// A link to make (`new ChatLink(...)`, its constructor by `kind`: 3 a client, 0 a room, 4 a friend, 5 a friend's
+/// location, 1 Accept, 2 Reject).
+struct EeWonLobbyCtlLink {
+  int32_t kind;
+  /// the client (3, 1, 2) or the friend (4, 5)
+  ptrdiff_t obj;
+  /// the text (0, 5, 1, 2): a `GUIStringData*`
+  ptrdiff_t text;
+  /// the room's id (0)
+  int32_t id;
+  /// the server (0: a `LobbyServer*`, NULL none) or the address (5: a `const EeWonIpAddr*`)
+  ptrdiff_t addr;
+  ptrdiff_t font;
+  int32_t color;
+};
+
+/// The host: `(logic, op, a, b, c, d) -> result`; `logic` is the C++ DialogLogic.
+using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
+                                         EeWonDlgLogicOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c,
+                                         ptrdiff_t d);
+
+/// The host: `(game, op, a, b, c, d) -> result`.
+using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
+                                       EeWonEeGameOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c,
+                                       ptrdiff_t d);
+
+/// The host: `(object, op, a, b, c) -> result`.
+using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
+                                       EeWonEeXferOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c);
+
+/// The host: `(control, op, a, b, c) -> result`.
+using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
+                                         EeWonLobbyCtlOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
+/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
+using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
+                                      EeWonLobbyOp op,
+                                      void *a,
+                                      void *b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
+/// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
+using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
+                                         EeWonLobbyDlgOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
+/// The host: `(obj, op, a, b, c, d) -> result`.
+using EeWonLogicHostFn = ptrdiff_t(*)(void *obj,
+                                      EeWonLogicOp op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
 /// A walk over a client list as the original's map iterator walked (`LobbyClientIterator`,
 /// `LobbyClientSetIterator`): the next client after the last one returned.
 struct EeWonModelCursor {
@@ -15,5 +3586,13 @@ struct EeWonModelCursor {
   bool ready;
   uint16_t last;
 };
+
+using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
+                                           EeWonRouteLogicOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c,
+                                           ptrdiff_t d,
+                                           ptrdiff_t e);
 
 #endif  // EE_RUST_WON_LOBBY_RECORDS_H

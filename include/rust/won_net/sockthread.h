@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/apicore.h"
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;

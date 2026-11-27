@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/lobbydlg.h"
-#include "rust/won_net/hostop.h"
+#include "rust/won_lobby/records.h"
+#include "rust/won_net/records.h"
 
 /// Which logic a shell is (its Rust object's type).
 enum class EeWonLogicShellKind : uint32_t {

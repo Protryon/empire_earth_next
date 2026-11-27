@@ -919,6 +919,20 @@ enum class EeUiOp : uint32_t {
   StringListDrawClipped = 907,
 };
 
+/// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
+enum class EeUiEdge {
+  Left = 0,
+  Right = 1,
+  Top = 2,
+  Bottom = 3,
+};
+
+/// The Rust UIListBox.
+struct EeUiList;
+
+/// The Rust UIManager.
+struct EeUiManager;
+
 /// The trigger events (`std::map<unsigned long, UIEvent*>`): event id -> the event (referenced), in id order.
 struct EeUiTriggers;
 
@@ -1108,6 +1122,58 @@ struct EeUiBitmapFields {
   void *mBitmap;
   /// The bitmap as of the last `CopyData` (referenced), drawn.
   void *mCopiedBitmap;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
+/// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the
+/// increment button's location (the decrement button sits at `at`).
+struct EeUiScrollBarLayout {
+  EeUiRect rect;
+  EeUiRect slider;
+  EeUiPoint increment;
+};
+
+/// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
+struct EeUiControlsTableFields {
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  /// `mUnknown100`: the record's unused id, copied and never read.
+  long unknown100;
+  long id;
+  long form_id;
+  unsigned long group;
+  unsigned long control_type;
+  long form_index;
+  long border_thickness;
+  unsigned long string_table_id;
+  unsigned long font_table_index;
+  long blink_rate;
+  long string_table_begin;
+  long string_table_end;
+  long text_alignment;
+  long max_chars;
+  long start_current_selection;
+  long start_range;
+  long end_range;
+  long current_range;
+  long page_size;
+  bool is_visible;
+  bool start_checked;
+  bool list_box_always_dirty;
+  bool sort_list_box;
+  bool focused_has_alpha;
+  bool pressed_has_alpha;
+  bool normal_has_alpha;
+  bool always_dirty;
+  bool fit_rect_to_text;
+  bool scale_to_control;
+  bool loop_movie;
 };
 
 #endif  // EE_RUST_UI_RECORDS_H

@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/gfxobj.h"
-#include "rust/won_gui/platfont.h"
 #include "rust/won_gui/records.h"
 
 extern "C" {

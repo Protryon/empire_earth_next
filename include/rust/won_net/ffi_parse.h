@@ -6,10 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+#include "rust/won_net/records.h"
 
 extern "C" {
 

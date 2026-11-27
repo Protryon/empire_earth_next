@@ -6,12 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/records.h"
 
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
-
-/// `RoutingConnection`'s op list, completions and steps.
-struct EeWonRouteConn;
 
 /// What the routing connection object calls back in the C++. One static table serves every connection. Every
 /// object is passed as its `RefCount*`.

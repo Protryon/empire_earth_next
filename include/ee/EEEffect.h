@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 
 class EEUnit;
 class EEGraphicEffect;

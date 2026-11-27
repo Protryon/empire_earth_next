@@ -6,10 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
-
-/// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
-struct EeWonSocketOp;
+#include "rust/won_net/records.h"
 
 extern "C" {
 

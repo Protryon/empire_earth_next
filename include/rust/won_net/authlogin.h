@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/buffer.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// `SetUserName(text)`
 constexpr static const int32_t EE_WON_AUTH_LOGIN_NAME = 1;
@@ -56,9 +55,6 @@ constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_NICKNAME = 15;
 
 /// `ClearNicknames()`
 constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES = 16;
-
-/// The login data (opaque): `AuthContext::mLogin`, its own lock.
-struct EeWonAuthLogin;
 
 extern "C" {
 

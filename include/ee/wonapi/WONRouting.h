@@ -50,6 +50,7 @@
 #include "rust/won_net/udpmgr.h"
 #include "rust/won_net/udpops.h"
 #include "rust/won_net/userstatus.h"
+#include "rust/won_net/servctx.h"
 
 namespace WONAPI {
 

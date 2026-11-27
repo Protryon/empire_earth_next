@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/records.h"
 
 /// A DirEntity's member that `ee_won_dir_entity_fill` sets (R6 WON round 33: DirEntityReplyParser.cpp's
 /// DirMakeEntity's decisions are Rust's, each assignment one case of the C++ setter).
@@ -54,53 +55,6 @@ struct EeWonDirReply {
   bool has_sequence;
   uint8_t sequence;
 };
-
-/// A data object across the C ABI.
-struct EeWonDirDataObject {
-  const uint8_t *data_type;
-  size_t data_type_len;
-  bool has_data;
-  const uint8_t *data;
-  size_t data_len;
-};
-
-/// An ACL permission across the C ABI (the raw values).
-struct EeWonDirAcl {
-  uint8_t kind;
-  int32_t user;
-  int32_t community;
-  int16_t trust;
-};
-
-/// An entity across the C ABI; valid only during the sink's call. `fields` is the `read` bits.
-struct EeWonDirEntity {
-  uint32_t fields;
-  uint8_t kind;
-  const uint16_t *path;
-  size_t path_len;
-  const uint16_t *name;
-  size_t name_len;
-  const uint16_t *display_name;
-  size_t display_name_len;
-  const uint8_t *net_addr;
-  size_t net_addr_len;
-  bool req_unique;
-  int32_t lifespan;
-  int32_t created;
-  int32_t touched;
-  int32_t crc;
-  int32_t create_ip;
-  int32_t touch_ip;
-  int32_t create_id;
-  int32_t touch_id;
-  const EeWonDirDataObject *objects;
-  size_t object_count;
-  const EeWonDirAcl *acls;
-  size_t acl_count;
-};
-
-/// Receives an entity; valid only during the call.
-using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
 
 /// The C++ setter: `(entity, member, number, pointer, count)`.
 using EeWonDirSetFn = void(*)(void *entity, EeWonDirSet member, int64_t num, const void *p, size_t n);

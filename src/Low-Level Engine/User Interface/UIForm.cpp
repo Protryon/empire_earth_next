@@ -25,6 +25,8 @@
 #include "lle/UIHotKey.h"
 #include "lle/UIControlsTable.h"
 #include "lle/UIEMouseWheelScroll.h"
+#include "rust/ui/form_state.h"
+#include "rust/ui/managerobj.h"
 
 // (the original's unreferenced key string, kUIFormKey, whose init chain 0x10070706 was its only user, is gone)
 

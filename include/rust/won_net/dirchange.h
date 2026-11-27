@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dirops.h"
-#include "rust/won_net/reqop.h"
+#include "rust/won_net/records.h"
 
 /// `DIR_UF_UNIQUEDISPLAYNAME`
 constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;

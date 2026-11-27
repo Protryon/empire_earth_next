@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
-#include "rust/won_gui/listobj.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (`PopupMenu`'s virtuals and methods).
 enum class EeWonMenuCall : uint32_t {

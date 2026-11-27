@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 constexpr static const int32_t EE_WON_ADMIN_INSERT_MASTER_KEY = 1;
 
@@ -65,13 +65,6 @@ constexpr static const uint8_t EE_WON_ADMIN_END = 1;
 
 /// the read failed here
 constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
-
-/// A member handed over.
-struct EeWonAdminValue {
-  int64_t num;
-  const uint8_t *data;
-  size_t len;
-};
 
 /// One value read: a number, or a string's range in the reply (`whole` false: its length was read but not its
 /// bytes, so the original erased the member).

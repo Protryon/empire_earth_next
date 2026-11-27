@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/sim/records.h"
-#include "rust/sim/units.h"
 
 /// id -> text, len: the string resource
 constexpr static const int32_t EE_APP_CHEAT_OP_STRING = 1;
@@ -95,27 +94,8 @@ constexpr static const int32_t EE_APP_STORM_OP_RANDOM = 13;
 /// the environment manager's colour back to the storm colour
 constexpr static const int32_t EE_APP_STORM_OP_RESET_COLOR = 14;
 
-/// The cheat table (`mCodes`, `mIsSinglePlayerOnly`).
-struct EeAppCheats;
-
 /// A unit set.
 struct EeUnitSet;
-
-/// The map's numbers the bodies read (`RTSMap`'s and `EEMap`'s plain members, names kept).
-struct EeAppMapDims {
-  /// `mSize`: the square's side in tiles
-  long size;
-  /// `mL195610` and `mL195614`: the diamond's two side lengths
-  long l195610;
-  long l195614;
-  /// `mF1955F4`: the tile height (`GetF1955F4`)
-  float f1955f4;
-  /// `mU195650`: the base terrain; `mU19565C`: the cliff terrain
-  long base_terrain;
-  long cliff_terrain;
-  /// `mU19561C`: the player count
-  unsigned long players;
-};
 
 /// A unit's reference count changed by `delta` (the C++'s `Reference` / `Dereference`, applied at once).
 using EeAppActiveRefsFn = void(*)(uint32_t, int32_t);

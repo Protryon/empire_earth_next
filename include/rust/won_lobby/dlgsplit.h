@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/lobbydlg.h"
-#include "rust/won_net/routeop.h"
+#include "rust/won_lobby/records.h"
+#include "rust/won_net/records.h"
 
 extern "C" {
 

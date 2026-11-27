@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/sim/records.h"
 
 /// the sender (`gWorld.GetPlayerBySlot` of the message's originating slot)
 constexpr static const uint32_t EE_NETMSG_OP_SENDER = 1;
@@ -1726,14 +1727,6 @@ constexpr static const size_t MAX_IDS = 63;
 
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
-
-/// One member of a message (see the module comment).
-struct EeNetMsgSlot {
-  uint8_t *data;
-  uint32_t size;
-  uint32_t count;
-  uint32_t offset;
-};
 
 /// One world call: the message (`EEMRecord*`), two objects (a player, a group, a unit: their addresses), integers
 /// and floats; the operation's answer is the host's return value (an object's address, a fact).

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/imgdec.h"
+#include "rust/won_gui/records.h"
 
 /// The offset of `mRust` (the `EeWonImage*`) in an image handle (RefCount's vtable pointer and its 32-bit count,
 /// padded): every host's handle class lays it out there (the game's `Image`, a driver's own).

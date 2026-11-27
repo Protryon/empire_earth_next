@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// Which method (`ee_won_skin_layout`'s `kind`).
 enum class EeWonSkinLayKind : uint32_t {

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/records.h"
 
 extern "C" {
 

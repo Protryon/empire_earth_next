@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include "rust/base/records.h"
 #include "rust/game/records.h"
-#include "rust/render/ge.h"
+#include "rust/render/records.h"
 
 /// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
 /// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
@@ -15700,14 +15700,6 @@ struct EeScreensBuildGateFields {
   int32_t mDirection;
   int32_t mPlayer;
   bool mEditor;
-};
-
-/// One member of a record message (`EEMRecordValue`): an integer, a float or a point.
-struct EeScreensGaValue {
-  /// `EE_SCREENS_GA_VALUE_*`.
-  uint32_t kind;
-  int64_t i;
-  float f[2];
 };
 
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).

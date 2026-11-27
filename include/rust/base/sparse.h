@@ -6,15 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
-struct EeSparseArray;
-
-/// A tile (`U2DPoint<long>`).
-struct EePoint {
-  int32_t x;
-  int32_t y;
-};
+#include "rust/base/records.h"
 
 /// A C++ `std::vector<U2DPoint<long>>` or `std::vector<long>` resized to `count` points or numbers: its data, as
 /// `long`s (a point is two).

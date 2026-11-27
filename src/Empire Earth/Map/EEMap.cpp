@@ -33,6 +33,7 @@
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEAppCapture.h"
 #include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/platcursor.h"
+#include "rust/won_gui/records.h"
 
 /// What a cursor asks of the C++ (`a` a `Cursor*` unless said).
 enum class EeWonCursorOp {

@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/lobbyctl.h"
-#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/records.h"
 
 /// An event's class (one per original class, in WONLobbyEvents.h's order).
 enum class EeWonLobbyEvtKind : uint32_t {

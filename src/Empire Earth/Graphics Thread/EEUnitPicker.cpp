@@ -22,6 +22,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEROWater.h"
 #include "ee/EEUnitPicker.h"
+#include "rust/render/gfx.h"
 
 // The picker's decisions are ee_gfx pick.rs (RUST_PLAN R4.4): the ray, the tolerances, the pick scales and the large
 // test, the hits' ranking, GetUnitPickPriority, AddUnit's admission, the frustum's sphere and vertex tests (its named

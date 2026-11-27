@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
 #include "rust/base/records.h"
 #include "rust/render/records.h"
 

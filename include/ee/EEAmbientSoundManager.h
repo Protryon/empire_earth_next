@@ -8,6 +8,7 @@
 #include <vector>
 #include "rust/game/records.h"
 #include "rust/game/gamecpp.h"
+#include "rust/game/app.h"
 
 class EEAmbientSound;
 class FSFile;

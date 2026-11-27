@@ -6,43 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ipobj.h"
-#include "rust/won_net/peerobj.h"
+#include "rust/won_net/records.h"
 
 /// `AuthContext`'s sessions and certificate flow.
 struct EeWonAuthFlow;
-
-/// `LightGetCertOp`'s member: the peer data `GetCertCallback` hands the waiting op (`SetPeerData`), read by its
-/// owner when the op completes (`GetPeerData`). Shared (an `Arc`) by the owner and the context's refresh set; the
-/// op's run (its `AsyncOp` base) is a C++ object beside it.
-struct EeWonLightCert;
-
-/// The C++ side: `context` is the `AuthContext`; every object is a `RefCount*`.
-struct EeWonAuthFlowHooks {
-  void *context;
-  /// `RefCount::AddRef`
-  void (*add_ref)(void*);
-  /// `RefCount::Release`
-  void (*release)(void*);
-  /// `AsyncOp::Kill(true)`
-  void (*op_kill)(void*);
-  /// `AsyncOp::IsKilled`
-  bool (*op_killed)(void*);
-  /// `AsyncOp::GetStatus`
-  long (*op_status)(void*);
-  /// `AsyncOp::RunAsync`
-  void (*op_run_async)(void*, long);
-  /// `AsyncOp::Run(mode, timeout)`
-  long (*op_run)(void*, long, unsigned long);
-  /// `AsyncOp::Finish`
-  void (*op_finish)(void*, long);
-  /// a new `AsyncOp` (one reference) whose completion is `StaticAutoRefreshCallback` on the context
-  void *(*new_timer)(void*);
-  /// a new `GetCertOp` on the context (one reference), its completion `StaticGetCertCallback` when asked
-  void *(*new_cert_op)(void*, bool);
-  /// `GetCertOp::GetPeerData`: a new reference to its peer data, or NULL
-  EeWonAuthObj *(*cert_peer_data)(void*);
-};
 
 extern "C" {
 

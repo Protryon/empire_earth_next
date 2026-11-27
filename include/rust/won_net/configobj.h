@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// What an upper-cased token is in a group.
 enum class EeWonCfgToken {

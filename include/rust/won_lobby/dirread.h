@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dirlist.h"
+#include "rust/won_net/records.h"
 
 /// The host's statements (`obj` the list or a server, `a`, `b` as each says).
 enum class EeWonDirReadOp {

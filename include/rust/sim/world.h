@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/record_head.h"
-#include "rust/data/tables.h"
+#include "rust/base/records.h"
+#include "rust/data/records.h"
 #include "rust/sim/records.h"
 
 /// The class's 29 effects and 6 related classes in the constructor's order (the record's: EEUnitClass.cpp's member

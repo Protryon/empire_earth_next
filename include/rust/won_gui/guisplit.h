@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The C++ host a game host answers the rest with (`ee_won_gui_split_register`).
 enum class EeWonGuiSplitHost : uint32_t {

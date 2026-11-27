@@ -43,6 +43,7 @@
 #include "ee/EEUnit.h"
 #include <list>
 #include <string>
+#include "rust/sim/app.h"
 // (gDefaultPlayerColors, the 16 slots' default colours: gamecpp globals.rs)
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)

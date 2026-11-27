@@ -6,27 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
-
-/// The manager's inward calls.
-enum class EeWonLayoutMgrCall : uint32_t {
-  /// `ExecuteInstructions((Component*)a)` (the container).
-  Execute = 1,
-  /// `AddInstruction(a)` (`a` the `ChildLayoutInstructionBase*`, `b` its `EeWonLayout*`).
-  AddInstruction,
-  /// `AddLayoutPoint((LayoutPoint*)a)` (as a `Component*`).
-  AddLayoutPoint,
-  /// `RemoveComponent((Component*)a)`.
-  RemoveComponent,
-  Clear,
-  /// `EnableInstructions(a, b != 0)`.
-  EnableInstructions,
-  /// `Container::AddChildLayout(a, c)` on the container `d` (`a` the instruction, `b` its `EeWonLayout*`, `c` the
-  /// group id).
-  AddChildLayout,
-  /// The number of instructions (a test read).
-  Count,
-};
+#include "rust/won_gui/records.h"
 
 /// The instruction classes.
 enum class EeWonLayoutKind : uint32_t {

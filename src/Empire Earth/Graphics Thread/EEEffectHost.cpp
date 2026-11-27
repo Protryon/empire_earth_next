@@ -50,6 +50,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "rust/game/preload_media.h"
 #include "rust/sim/units.h"
+#include "rust/render/gfx.h"
 
 // The effects' meshes built in Rust (rust/crates/ee_render/src/gfx mesh.rs: the farm's, the volcano's) are stored
 // into a model's vertex and polygon arrays. Each record says which values its builder set; only those are stored

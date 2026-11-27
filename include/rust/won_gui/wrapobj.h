@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guidraw.h"
-#include "rust/won_gui/platfont.h"
 #include "rust/won_gui/records.h"
 
 /// The Rust WrappedText (the original's members but the text and font).

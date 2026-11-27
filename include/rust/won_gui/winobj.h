@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/fontmap.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// `Window::WindowState`.
 constexpr static const int32_t EE_WON_WIN_OPEN = 0;
@@ -162,9 +161,6 @@ enum class EeWonWinField : uint32_t {
   /// the number of child windows
   ChildCount,
 };
-
-/// The Rust Window.
-struct EeWonWindow;
 
 extern "C" {
 

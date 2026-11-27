@@ -6,11 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
-};
+#include "rust/ui/records.h"
 
 #endif  // EE_RUST_UI_RECT_H

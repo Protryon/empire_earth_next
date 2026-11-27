@@ -164,22 +164,6 @@ struct EeWonSimpleButtonPaint {
   int32_t height;
 };
 
-/// One line break of a wrapped text (`WrappedText::BreakInfo`).
-struct EeWonLineBreak {
-  uint16_t break_pos;
-  uint16_t next_start;
-  uint16_t width;
-};
-
-/// Text measures the C++ answers (the original's font calls at the points the plan reaches them):
-/// `string_width(ctx, offset, length)` is `Font::GetStringWidth(text, offset, length)`, `char_width(ctx, index)`
-/// is `Font::GetCharacterWidth(text[index])`, or of 'M' for a negative index.
-struct EeWonTextMeasure {
-  void *ctx;
-  int32_t (*string_width)(void*, int32_t, int32_t);
-  int32_t (*char_width)(void*, int32_t);
-};
-
 /// A row's or line's place, as the list callback answers it (`top`, `height`; a text line's `x` too).
 struct EeWonRowPlace {
   int32_t x;

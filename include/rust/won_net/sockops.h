@@ -6,11 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/ipobj.h"
-#include "rust/won_net/ops.h"
-#include "rust/won_net/sockop.h"
+#include "rust/won_net/records.h"
 
 extern "C" {
 

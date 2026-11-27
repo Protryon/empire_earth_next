@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// The window's fonts.
-struct EeWonFontMap;
+#include "rust/won_gui/records.h"
 
 extern "C" {
 

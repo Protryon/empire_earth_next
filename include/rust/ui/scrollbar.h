@@ -6,16 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/records.h"
-#include "rust/ui/rect.h"
-
-/// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the
-/// increment button's location (the decrement button sits at `at`).
-struct EeUiScrollBarLayout {
-  EeUiRect rect;
-  EeUiRect slider;
-  EeUiPoint increment;
-};
 
 /// `UIScrollBar`'s members in their C++ order (from `mIncrementButton` on). The pointers are C++'s.
 struct ScrollBarFields {

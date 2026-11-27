@@ -6,85 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// The host's ops (`obj` the transfer's shell or the send op's).
-enum class EeWonEeXferOp : uint32_t {
-  /// `EELobbyGetSavedGameInfo(a, *(uint32_t*)b, *(uint32_t*)c)` (`a` a NUL-terminated path).
-  SavedGameInfo = 1,
-  /// `(unsigned long)PlatTimeMilliseconds64()`.
-  Time,
-  /// `GetMyLobbyGame()`.
-  MyGame,
-  /// `((EELobbyGame*)a)->UpdateTransferProgress(b, c)`.
-  GameProgress,
-  /// `((AsyncOp*)a)->Succeeded()` (0 or 1).
-  Succeeded,
-  /// `static_cast<SocketOp*>(a)->GetSocket()` (no reference).
-  OpSocket,
-  /// `static_cast<AcceptOp*>(a)->GetAcceptedSocket()` (no reference).
-  AcceptedSocket,
-  /// `static_cast<RecvChunkOp*>(a)->GetRecvOp()->GetBytesRead()`.
-  BytesRead,
-  /// `((RefCount*)a)->AddRef()`.
-  AddRef,
-  /// `((RefCount*)a)->Release()`.
-  Release,
-  /// `((AsyncSocket*)a)->Kill()`.
-  Kill,
-  /// `new QueueSocket(0)` with a reference added.
-  NewSocket,
-  /// `((QueueSocket*)a)->Fn2B0D90(b, 0)`: the status.
-  Bind,
-  /// `((QueueSocket*)a)->Listen(1000)`: the status.
-  Listen,
-  /// `a->SetRepeatCompletion(completion(OnClientAccepted)); a->SetRepeatOp(new AcceptOp(NULL))`.
-  RepeatAccept,
-  /// `a->SetCloseCompletion(completion(OnClientClosed)); a->QueueOp(new SendFileOp(path b, c bytes), -1);
-  /// a->QueueOp(new CloseOp(NULL), -1)`.
-  QueueSend,
-  /// `this->mHost.IsValid()` (0 or 1).
-  HostValid,
-  /// `a->SetCloseCompletion(completion(OnClientClosed))`; a `RecvBytesOp(0, NULL)` with the completion
-  /// `OnFileReceived`, the file path (`b`, `c` bytes) and the progress completion `OnProgress` every 10000 bytes;
-  /// `a->QueueOp(new ConnectOp(this->mHost), -1); a->QueueOp(op, -1)`.
-  QueueDownload,
-  /// `PlatFOpen(a, "rb")` (`a` a NUL-terminated path): the `FILE*` or 0.
-  Open = 40,
-  /// `fread(b, 1, c, (FILE*)a)`: the count.
-  Read,
-  /// `fclose((FILE*)a)`.
-  Close,
-  /// `GetSocket()->WaitForWrite(TimeLeft())`.
-  WaitForWrite,
-  /// `GetSocket()->Send(a, b, (int*)c)`: the status.
-  Send,
-  /// `TimeLeft()`.
-  TimeLeft,
-  /// `new QueueSocket(0)` (no reference: the Rust adds it).
-  NewQueueSocket = 60,
-  /// `((QueueSocket*)a)->SetRepeatCompletion(completion(b))` (`b` an `EeWonEeXferCall`).
-  SetRepeatCompletion,
-  /// `((QueueSocket*)a)->SetRepeatOp(new AcceptOp(NULL))`.
-  SetRepeatAccept,
-  /// `((QueueSocket*)a)->SetCloseCompletion(completion(b))`.
-  SetCloseCompletion,
-  /// `((QueueSocket*)a)->QueueOp(new SendFileOp(path b, c bytes), -1)`.
-  QueueSendFile,
-  /// `((QueueSocket*)a)->QueueOp(new CloseOp(NULL), -1)`.
-  QueueCloseOp,
-  /// `new RecvBytesOp(0, NULL)` (no reference).
-  NewRecvBytes,
-  /// `((SocketOp*)a)->SetCompletion(completion(b))`.
-  OpSetCompletion,
-  /// `((SocketOp*)a)->SetFilePath(path b, c bytes)`.
-  OpSetFilePath,
-  /// `((SocketOp*)a)->SetProgressCompletion(completion(OnProgress), 10000)`.
-  OpSetProgress,
-  /// `((QueueSocket*)a)->QueueOp(new ConnectOp(this->mHost), -1)`.
-  QueueConnect,
-  /// `((QueueSocket*)a)->QueueOp((SocketOp*)b, -1)`.
-  QueueOpOn,
-};
+#include "rust/won_lobby/records.h"
 
 /// The transfer's inward calls.
 enum class EeWonEeXferCall : uint32_t {
@@ -127,13 +49,6 @@ struct EeWonEeXfer;
 
 /// One send op: the path, the open file, the chunk and its read position.
 struct EeWonEeXferSend;
-
-/// The host: `(object, op, a, b, c) -> result`.
-using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
-                                       EeWonEeXferOp op,
-                                       ptrdiff_t a,
-                                       ptrdiff_t b,
-                                       ptrdiff_t c);
 
 extern "C" {
 

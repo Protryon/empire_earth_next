@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// What the window asks of its C++ shell (`me`).
 enum class EeWonPlatWinOp : int32_t {
@@ -126,9 +127,6 @@ enum class EeWonPlatWinCall : int32_t {
   /// FollowPixelScale: `a` the manager's new pixel scale's bits.
   FollowPixelScale = 23,
 };
-
-/// The window's own state.
-struct EeWonPlatWin;
 
 using EeWonPlatWinHost = ptrdiff_t(*)(void *me,
                                       EeWonPlatWinOp op,

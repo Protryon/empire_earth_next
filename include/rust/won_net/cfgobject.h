@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// The host's ops. `o` is a C++ `ConfigObject*`, `v` a `ConfigValueBase*`, `p` a C++ `ConfigParser*`; texts are
 /// a pointer and a length; `x` is the C++ entry's exception record. A virtual's op answers -1 when it threw (the
@@ -66,9 +66,6 @@ enum class EeWonCfgoOp : int32_t {
   /// the record x's text to the sink a with context b, then the record cleared; the answer its flag
   TakeExc,
 };
-
-/// The config group (0x54 bytes in the original; opaque to the C++).
-struct EeWonCfgObject;
 
 /// The host: `(op, o, a, b, c, d, x)`.
 using EeWonCfgoHost = ptrdiff_t(*)(EeWonCfgoOp op,

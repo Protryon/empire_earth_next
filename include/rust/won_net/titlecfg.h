@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
 enum class EeWonTitleInstr {

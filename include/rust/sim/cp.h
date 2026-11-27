@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/sim/records.h"
-#include "rust/sim/units.h"
 
 /// The kinds of favourite (`ChooseFavoriteLandType` .. `ChooseFavoriteSpaceType`).
 constexpr static const int32_t EE_CP_FAVORITE_LAND = 0;

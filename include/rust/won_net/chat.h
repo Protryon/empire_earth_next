@@ -6,19 +6,13 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi_parse.h"
+#include "rust/won_net/records.h"
 
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
-
-/// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
-struct EeWonChatText {
-  const void *text;
-  size_t length;
-};
 
 /// The parse's result for the C++ to apply; `*_set` false leaves that member alone.
 struct EeWonChatOutcome {

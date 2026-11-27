@@ -6,11 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/platwin.h"
-#include "rust/won_gui/platwm.h"
-#include "rust/won_gui/rootobj.h"
-#include "rust/won_gui/winobj.h"
-#include "rust/won_gui/wmobj.h"
+#include "rust/won_gui/records.h"
 
 extern "C" {
 

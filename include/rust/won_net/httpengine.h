@@ -6,14 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-
-/// `HTTPConnection`.
-struct EeWonHttpConn;
-
-/// `HTTPSession`: the connections by host, `StringLessNoCase`'s order (the upper-cased bytes, signed, then the
-/// length; a host equal but for case finds the first one's connection).
-struct EeWonHttpSession;
+#include "rust/won_net/records.h"
 
 /// The connection's C++ side: `context` is the `HTTPConnection`.
 struct EeWonHttpConnHooks {

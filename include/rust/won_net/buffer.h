@@ -8,12 +8,6 @@
 #include <stddef.h>
 #include "rust/won_net/records.h"
 
-/// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
-struct EeWonByteBuffer;
-
-/// `WriteBuffer`'s state.
-struct EeWonWriteBuffer;
-
 extern "C" {
 
 /// `ByteBuffer(data, length, false)`: a copy.

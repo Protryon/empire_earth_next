@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/render/ge.h"
+#include "rust/render/records.h"
 
 /// The scope's three constructors: a tile's call, a circle or step (the float arguments), the whole map
 constexpr static const uint32_t EE_APP_SIGHT_TILE = 0;

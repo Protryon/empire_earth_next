@@ -8,8 +8,8 @@
 #include <stddef.h>
 #include "rust/base/records.h"
 #include "rust/game/records.h"
-#include "rust/render/ge.h"
-#include "rust/sim/app.h"
+#include "rust/render/records.h"
+#include "rust/sim/records.h"
 
 /// -> n: the sounds' count; slot -> sound: the slot's record
 constexpr static const int32_t EE_APP_AMBIENT_OP_SOUNDS = 1;
@@ -278,63 +278,8 @@ struct EeAppAmbientRecord {
   int32_t interval_seconds;
 };
 
-/// One host operation's arguments and answers.
-struct EeAppAmbientIo {
-  /// the sound's slot
-  uint32_t slot;
-  /// a count, a time
-  uint32_t n;
-  bool flag;
-  /// a second answer (`LoadSound`'s loop flag: `has` set when it was loaded now)
-  bool has;
-  float volume;
-  float pan;
-  float pitch;
-  /// the slot's record
-  EeAppAmbientSoundFields *sound;
-};
-
 /// The host: `(ctx, op, io)`.
 using EeAppAmbientFn = void(*)(void*, int32_t, EeAppAmbientIo*);
-
-/// The terrain mesh's four edge planes (ee_gfx camera.rs's `EeGfxEdgePlanes`, repeated so that the C header does not
-/// need ee_gfx's).
-struct EeAppCameraPlanes {
-  EeGe3DPlane front;
-  EeGe3DPlane back;
-  EeGe3DPlane left;
-  EeGe3DPlane right;
-};
-
-/// `EECameraKey`'s layout (ee/EECameraKey.h, 0xa4 bytes): the view and offset turns, the offset, the focus, the hold
-/// time, the speed (1 / duration) and the jump flag.
-struct EeAppCameraKey {
-  EeGeTransformation mT00;
-  EeGeTransformation mT40;
-  EeGe3DPoint mOffset;
-  EeGe3DPoint mFocus;
-  float mWait;
-  float mRate;
-  bool mChanged;
-};
-
-/// One host operation's arguments and answers.
-struct EeAppCameraIo {
-  /// a unit id (in and out), or a key's index
-  uint32_t id;
-  /// a followed unit's slot (`EE_APP_CAMERA_UNIT_A`/`B`)
-  uint32_t slot;
-  /// a query's yes or no; a unit's state bits, a key count, the switches in `id`
-  bool flag;
-  float x;
-  float y;
-  float z;
-  EeGe3DPoint point;
-  EeGeTransformation t;
-  EeGe3DLine line;
-  EeAppCameraPlanes planes;
-  EeAppCameraKey key;
-};
 
 /// The host: `(ctx, op, io)`.
 using EeAppCameraFn = int32_t(*)(void*, int32_t, EeAppCameraIo*);
@@ -403,20 +348,6 @@ struct EeAppSaveIo {
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0).
 using EeAppSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeAppSaveIo*);
-
-/// One host operation's arguments and answers.
-struct EeAppMapIo {
-  long x;
-  long y;
-  long a;
-  long b;
-  long c;
-  bool flag;
-  /// the point and radius of `TILES_NEAR`
-  float f[3];
-  /// `TILES_NEAR`'s answer: `a` tiles of two `long`s (the C++ keeps them until its next call)
-  const long *tiles;
-};
 
 /// The host: `(ctx, op, io)`.
 using EeAppMapFn = void(*)(void*, int32_t, EeAppMapIo*);

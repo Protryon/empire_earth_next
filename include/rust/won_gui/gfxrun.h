@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/gfxobj.h"
-#include "rust/won_gui/mspaint.h"
 #include "rust/won_gui/records.h"
 
 /// What a plan's operations name (WONGUIDraw.h's WONDrawSlots): four `Image*`, the `Font*`, the `GUIString*` and the

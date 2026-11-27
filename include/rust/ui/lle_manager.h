@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/managerobj.h"
 #include "rust/ui/records.h"
 
 extern "C" {

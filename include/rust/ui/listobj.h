@@ -107,9 +107,6 @@ enum class EeUiListCall : uint32_t {
   DrawCount = 47,
 };
 
-/// The Rust UIListBox.
-struct EeUiList;
-
 /// A line type's C++ members (`UILineOps<T>::kOps`, lle/UIListBox.h): the list's lines are `new`ed `T`s.
 struct EeUiLineOps {
   /// `new T` (a slot of the drawn copy).

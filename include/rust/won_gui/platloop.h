@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/platwm.h"
-#include "rust/won_gui/wmobj.h"
+#include "rust/won_gui/records.h"
 
 /// The platform's calls of one event pass.
 struct EeWonPlatLoopFns {

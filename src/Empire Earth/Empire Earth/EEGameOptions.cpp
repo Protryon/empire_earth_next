@@ -17,6 +17,7 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // ee_game gamecpp options.rs's EoSlotEmpty)
 
 #include "ee/EEStartingResources.h"
+#include "rust/game/app.h"
 
 // Creates an empty, closed player slot with no name, colour, team or starting citizens
 EEGameOptionsPlayer::EEGameOptionsPlayer()

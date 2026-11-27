@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/udpops.h"
+#include "rust/won_net/records.h"
 
 /// The op's map (ids as the C++ `unsigned long`s they are: 64-bit on LP64 systems, sent as their low 32 bits).
 struct EeWonUserStatus;

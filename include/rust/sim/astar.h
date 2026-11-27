@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/sparse.h"
+#include "rust/base/records.h"
 #include "rust/sim/records.h"
 
 /// A tile of an area of its own (`0x36`).
@@ -823,9 +823,6 @@ struct EeAStarFloodState {
   EeAStarPathAreaFill path_area;
   EeAStarPathSectorFill sector;
 };
-
-/// A unit as the view names it (`EEComplexUnit*`, opaque here).
-using EeAStarUnit = void*;
 
 /// A continent at a tile (`EEAIAStarContinentInfo`).
 struct EeAStarContinentInfo {

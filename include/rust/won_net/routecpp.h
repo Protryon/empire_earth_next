@@ -6,11 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/admin.h"
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/routeconn.h"
-#include "rust/won_net/routeop.h"
-#include "rust/won_net/smartroute.h"
+#include "rust/won_net/records.h"
 
 /// `CreateGroup(group, name, password, max players, group flags, join flags, async flags)`
 constexpr static const int32_t EE_WON_RTQ_CREATE_GROUP = 0;

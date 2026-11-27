@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include "rust/base/records.h"
 #include "rust/data/records.h"
-#include "rust/sim/astar.h"
 #include "rust/sim/records.h"
 
 /// `EEUnitClass::ActionChanged` (every class's `HandleActionChanged`)
@@ -16794,21 +16793,6 @@ struct EeUnitsWaypoints;
 /// `UpdateFanaticismColor`'s function statics: the effect's two colours, the colour, the time last computed
 /// (the original's file static `sU563238`).
 struct FanaticismColors;
-
-/// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
-/// count) or reads (`cap` entries).
-struct EeUnitsWorldIo {
-  int64_t a;
-  int64_t b;
-  float f;
-  int64_t v[8];
-  float m[16];
-  uint64_t *list;
-  size_t cap;
-};
-
-/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
-using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {

@@ -415,14 +415,27 @@ fn dir_of(header: &str) -> Option<&str> {
     header.split_once('/').map(|(dir, _)| dir)
 }
 
-/// Moves the records (and every type they name) to their crates' records headers.
+/// Moves the records (and every type they name) to their crates' records headers, and with them every type another
+/// module's header names: a function header then includes only records headers, so a change to one module's
+/// functions rebuilds only the units that include that module's header. `all`: the types, then the functions.
 fn assign_records(
-    types: &[Item],
+    all: &[&Item],
+    n_types: usize,
     owner: &mut [String],
     roots: &BTreeMap<String, BTreeSet<String>>,
 ) -> Result<(), String> {
+    let types = &all[..n_types];
     let index: HashMap<&str, usize> = types.iter().enumerate().map(|(i, t)| (t.name.as_str(), i)).collect();
     let mut todo: Vec<usize> = Vec::new();
+    for (i, item) in all.iter().enumerate() {
+        for word in identifiers(&code_text(&item.lines)) {
+            if let Some(&at) = index.get(word) {
+                if at != i && owner[at] != owner[i] && dir_of(&owner[at]).is_some() {
+                    todo.push(at);
+                }
+            }
+        }
+    }
     for (dir, names) in roots {
         for name in names {
             let at = types
@@ -629,7 +642,8 @@ pub fn split(
     let parsed = parse(single)?;
     let all: Vec<&Item> = parsed.types.iter().chain(&parsed.functions).collect();
     let mut owner = owners(&all, defs, renames);
-    assign_records(&parsed.types, &mut owner[..parsed.types.len()], roots)?;
+    let before = owner.clone();
+    assign_records(&all, parsed.types.len(), &mut owner, roots)?;
     let by_name: HashMap<&str, &str> = all.iter().zip(&owner).map(|(i, o)| (i.name.as_str(), o.as_str())).collect();
     let mut seen = BTreeSet::new();
     for item in &all {
@@ -646,6 +660,16 @@ pub fn split(
                     entry.insert(other);
                 }
             }
+        }
+    }
+    // a module whose every item went to its records header keeps a header that includes it, so its includers stay
+    for header in &before {
+        if deps.contains_key(header.as_str()) || is_records(header) {
+            continue;
+        }
+        let Some(dir) = dir_of(header) else { continue };
+        if let Some(records) = owner.iter().find(|o| dir_of(o) == Some(dir) && is_records(o)) {
+            deps.entry(header.as_str()).or_default().insert(records.as_str());
         }
     }
     check_acyclic(&deps)?;
@@ -983,7 +1007,7 @@ pub struct G { pub x: u8 }
         let units = &headers["sim/units"];
         assert!(units.contains("#include \"rust/sim/records.h\""));
         assert!(units.contains("struct EeUnitsArgs") && units.contains("void ee_units_go("));
-        assert!(!headers.contains_key("base/math"), "its one type is a record's");
+        assert!(!headers["base/math"].contains("struct"), "its one type is a record's");
     }
 
     #[test]
@@ -996,6 +1020,22 @@ pub struct G { pub x: u8 }
         let roots = [("sim".to_string(), ["EeNoSuch".to_string()].into_iter().collect())].into_iter().collect();
         let err = split(SINGLE, &defs(), &HashMap::new(), &roots, "// note").unwrap_err();
         assert!(err.contains("EeNoSuch"), "{err}");
+    }
+
+    #[test]
+    fn a_type_another_module_names_goes_to_the_records_header_and_an_emptied_module_keeps_a_header() {
+        let single = SINGLE.replace(
+            "void ee_units_go(EeUnitsFields *f, EeUnitsArgs a);\n",
+            "void ee_units_go(EeUnitsFields *f, EeUnitsArgs a);\n\nvoid ee_app_go(EeUnitsArgs a);\n",
+        );
+        let mut defs = defs();
+        scan_text("sim/app", "pub extern \"C\" fn ee_app_go(a: EeUnitsArgs) {}", &mut defs);
+        let renames = [("Ge3DPoint".to_string(), "EeGe3DPoint".to_string())].into_iter().collect();
+        let headers = split(&single, &defs, &renames, &BTreeMap::new(), "// note").unwrap();
+        assert!(headers["sim/records"].contains("struct EeUnitsArgs"), "{:?}", headers.keys());
+        assert!(headers["sim/app"].contains("#include \"rust/sim/records.h\""));
+        assert!(!headers["sim/app"].contains("rust/sim/units.h"), "a function header includes only records headers");
+        assert!(headers["base/math"].contains("#include \"rust/base/records.h\""), "its one type went to records");
     }
 
     #[test]

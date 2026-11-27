@@ -8,9 +8,6 @@
 #include <stddef.h>
 #include "rust/won_gui/records.h"
 
-/// The Rust PlatGUIFont.
-struct EeWonPlatFont;
-
 extern "C" {
 
 /// `new PlatGUIFont(context, descriptor)`'s font: `face` the descriptor's face (NUL-terminated).

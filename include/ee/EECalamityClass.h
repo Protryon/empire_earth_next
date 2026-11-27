@@ -11,6 +11,7 @@
 
 #include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
+#include "rust/sim/tech.h"
 
 class EECalamity;
 class EEContagionFunctor;

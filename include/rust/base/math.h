@@ -11,9 +11,6 @@
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
 using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
 
-/// Receives one point of a 3D interpolation.
-using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
-
 /// Receives one rectangle of a split.
 using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
 

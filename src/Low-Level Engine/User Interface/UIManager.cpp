@@ -30,6 +30,7 @@
 #include "lle/UIControlsTable.h"
 #include "rust/ui/eventobj.h"
 #include "rust/ui/hotkeyobj.h"
+#include "rust/ui/managerobj.h"
 
 // The Rust manager's calls out (EeUiOp, obj.rs): a is the form, event, bitmap, texture, lock, sound instance or
 // other object the op names; rectangles and points travel in f. The cases of more than one call are Rust's (ee_ui

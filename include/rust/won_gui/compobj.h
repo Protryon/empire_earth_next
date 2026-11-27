@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const int32_t EE_WON_COMP_FLAG_INVISIBLE = 1;

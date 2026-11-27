@@ -5,6 +5,7 @@
 // Only what the 2D effects read; the rest is PLACEHOLDER (layout not decoded). Requires ee/EEMedia.h.
 #ifndef EE_EEGRAPHICOBJECT_H
 #define EE_EEGRAPHICOBJECT_H
+#include "rust/render/gfx.h"
 class FSFile;
 struct EeGfxGraphicTags;
 

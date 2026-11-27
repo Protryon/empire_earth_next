@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dirops.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 

@@ -102,9 +102,6 @@ enum class EeUiManagerCall : uint32_t {
   UiLock = 61,
 };
 
-/// The Rust UIManager.
-struct EeUiManager;
-
 /// `ChangeIMECompositionString`'s arguments (the C++ `UWideString`, `UString` and cursor), handed on to the top
 /// form's.
 struct EeUiImeComposition {
