@@ -25,7 +25,6 @@ public:
     virtual ~UITextLabel() { ee_ui_label_free(this->mRust); }
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
     virtual long CopyData() { return (long)this->Call(EeUiLabelCall::CopyData); }
-    void DeleteArray() { this->Call(EeUiLabelCall::DeleteArray); }
     void DeleteLine(unsigned long inLine) { this->Call(EeUiLabelCall::DeleteLine, inLine); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiLabelCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiLabelCall::DrawText); }
@@ -35,7 +34,6 @@ public:
     const UIScrollBar* GetScrollBar() const { return reinterpret_cast<const UIScrollBar*>(this->Call(EeUiLabelCall::ScrollBar)); } // NULL while it is marked removed
     virtual bool GetTabable() const { return false; }
     const UWideString& GetText(unsigned long inLine) const { return *reinterpret_cast<const UWideString*>(this->Call(EeUiLabelCall::Line, inLine)); }
-    long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
     bool ScrollBarExists() const { return this->Call(EeUiLabelCall::ScrollBarExists) != 0; }
     void SetAlignment(unsigned long inAlignment) { this->Call(EeUiLabelCall::SetAlignment, inAlignment); }
     void SetFitRectToText(bool inFit) { this->Call(EeUiLabelCall::SetFitRectToText, inFit); }

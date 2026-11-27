@@ -332,22 +332,29 @@ unsafe fn mgr_form_rect_call(o: *mut c_void, a: isize, b: isize, c: isize, d: is
     0
 }
 
-/// The manager's IME calls on form `a` (`b` a manager_media.rs `ImeCall`, `c` its argument) -> the form's result.
+/// The manager's IME calls on form `a` (`b` a manager_media.rs `ImeCall`, `c` its argument) -> the form's result
+/// (`UIForm::AddIMEResultString`, `ChangeIMECompositionString`, `CloseIMECompositionString`, `OpenIMECompositionString`).
 ///
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn mgr_form_ime(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
-    // SAFETY: the contract
+unsafe fn mgr_form_ime(_o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+    // the form's IME members (no class overrides them): its pass to the control holding the keyboard
+    let form = a as *mut c_void;
+    let none = core::ptr::null();
+    // SAFETY: the contract: `a` is a live form; `c` the result string or the composition
     unsafe {
         match b {
             0 => {
-                ee_uicpp_mgr_form_ime_result(o, a, b, c, d, f);
+                crate::lle_form::ee_ui_form_pass_to_keyboard(form, 0, c as *const c_void, none, 0);
                 0
             }
-            1 => ee_uicpp_mgr_form_ime_change(o, a, b, c, d, f),
-            2 => ee_uicpp_mgr_form_ime_close(o, a, b, c, d, f),
-            _ => ee_uicpp_mgr_form_ime_open(o, a, b, c, d, f),
+            1 => {
+                let k = &*(c as *const crate::managerobj::EeUiImeComposition);
+                crate::lle_form::ee_ui_form_pass_to_keyboard(form, 1, k.string, k.attributes, k.cursor as u32) as isize
+            }
+            2 => crate::lle_form::ee_ui_form_pass_to_keyboard(form, 2, none, none, 0) as isize,
+            _ => crate::lle_form::ee_ui_form_pass_to_keyboard(form, 3, none, none, 0) as isize,
         }
     }
 }

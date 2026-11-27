@@ -222,6 +222,8 @@ macro_rules! shim_call {
 
 #[cfg(not(test))]
 use crate::screens::civ_direct;
+#[cfg(not(test))]
+use crate::screens::scr_direct;
 
 macro_rules! shims {
     ($( fn $name:ident ( $($arg:ident : $ty:ty),* ) $(-> $ret:ty)? = $($sym:ident)::+ ; )*) => {
@@ -262,7 +264,7 @@ macro_rules! shims {
 shims! {
     // EEScreens.cpp's (game_calls.rs)
     fn slider_event_new(form: usize, label: u32) -> usize = ee_screenscpp_slider_event_new;
-    fn control_set_range_trigger(form: usize, control: u32, event: usize) = ee_screenscpp_control_set_range_trigger;
+    fn control_set_range_trigger(form: usize, control: u32, event: usize) = scr_direct::control_set_range_trigger;
     fn slider_event_add_string(event: usize, text: EeScreensShimText) = ee_screenscpp_slider_event_add_string;
     fn event_dereference(event: usize) = ee_screenscpp_event_dereference;
     fn set_game_view(left: f32, top: f32, right: f32, bottom: f32) = ee_screenscpp_set_game_view;
@@ -298,16 +300,16 @@ shims! {
     fn sound_set_latency(milliseconds: u32) = ee_screenscpp_sound_set_latency;
     fn load_sound(file: EeScreensShimText, sample: EeScreensShimULongOut, id: EeScreensShimULongOut) = ee_screenscpp_load_sound;
     fn sound_register_one_shot(sample: u32, id: u32) = ee_screenscpp_sound_register_one_shot;
-    fn form_background(form: usize, id: u32) -> usize = ee_screenscpp_form_background;
+    fn form_background(form: usize, id: u32) -> usize = scr_direct::form_background;
     fn intro_get_map(spec: usize) = ee_screenscpp_intro_get_map;
     fn background_texture_file(background: usize, out: EeScreensShimOut) = ee_screenscpp_background_texture_file;
-    fn form_remove_background(form: usize, background: usize) = ee_screenscpp_form_remove_background;
+    fn form_remove_background(form: usize, background: usize) = scr_direct::form_remove_background;
     fn intro_open_map() -> bool = ee_screenscpp_intro_open_map;
-    fn form_lock_background(form: usize) = ee_screenscpp_form_lock_background;
+    fn form_lock_background(form: usize) = scr_direct::form_lock_background;
     fn map_background_new(id: u32, file: EeScreensShimText, description: usize, form: usize, priority: u32) -> usize = ee_screenscpp_map_background_new;
     fn background_open(background: usize) = ee_screenscpp_background_open;
     fn background_load(background: usize) = ee_screenscpp_background_load;
-    fn form_unlock_background(form: usize) = ee_screenscpp_form_unlock_background;
+    fn form_unlock_background(form: usize) = scr_direct::form_unlock_background;
     fn options_write_lock() = ee_screenscpp_options_write_lock;
     fn options_write_unlock() = ee_screenscpp_options_write_unlock;
     fn options_read_lock() = ee_screenscpp_options_read_lock;
@@ -337,8 +339,8 @@ shims! {
     fn set_difficulty_level(level: i32) = ee_screenscpp_set_difficulty_level;
     fn set_difficulty_level2(level: i32) = ee_screenscpp_set_difficulty_level2;
     fn options_set_difficulty(level: i32) = ee_screenscpp_options_set_difficulty;
-    fn combo_text_colour(form: usize, control: u32, red: f32, green: f32, blue: f32) = ee_screenscpp_combo_text_colour;
-    fn label_text_colour(form: usize, control: u32, red: f32, green: f32, blue: f32) = ee_screenscpp_label_text_colour;
+    fn combo_text_colour(form: usize, control: u32, red: f32, green: f32, blue: f32) = scr_direct::combo_text_colour;
+    fn label_text_colour(form: usize, control: u32, red: f32, green: f32, blue: f32) = scr_direct::label_text_colour;
     fn remove_player_new(slot: u8) -> usize = ee_screenscpp_remove_player_new;
     fn post_action(action: usize) = ee_screenscpp_post_action;
     fn action_dereference(action: usize) = ee_screenscpp_action_dereference;
@@ -369,23 +371,23 @@ shims! {
     fn physics_post(message: u32) = ee_screenscpp_physics_post;
     fn post_enter_scenario_editor() -> i32 = ee_screenscpp_post_enter_scenario_editor;
     fn user_pause_new() -> usize = ee_screenscpp_user_pause_new;
-    fn form_music(form: u32, out: EeScreensShimOut) = ee_screenscpp_form_music;
-    fn form_set_music(form: u32, text: EeScreensShimText) = ee_screenscpp_form_set_music;
-    fn manager_pop() = ee_screenscpp_manager_pop;
-    fn manager_swap(form: u32) = ee_screenscpp_manager_swap;
+    fn form_music(form: u32, out: EeScreensShimOut) = scr_direct::form_music;
+    fn form_set_music(form: u32, text: EeScreensShimText) = scr_direct::form_set_music;
+    fn manager_pop() = scr_direct::manager_pop;
+    fn manager_swap(form: u32) = scr_direct::manager_swap;
     fn save_main_game_form() = ee_screenscpp_save_main_game_form;
     // EEScreens.cpp's texts (game_texts.rs)
-    fn pdcs_selection(selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_pdcs_selection;
-    fn pdcs_line(selection: u32, out: EeScreensShimOut) = ee_screenscpp_pdcs_line;
+    fn pdcs_selection(selection: EeScreensShimULongOut) -> i32 = scr_direct::pdcs_selection;
+    fn pdcs_line(selection: u32, out: EeScreensShimOut) = scr_direct::pdcs_line;
     fn display_rasterizer_count() -> u32 = ee_screenscpp_display_rasterizer_count;
     fn display_rasterizer_name(index: u32, out: EeScreensShimOut) = ee_screenscpp_display_rasterizer_name;
     fn display_screen_count(rasterizer: u32) -> u32 = ee_screenscpp_display_screen_count;
     fn display_screen_name(rasterizer: u32, screen: u32, out: EeScreensShimOut) = ee_screenscpp_display_screen_name;
     fn rasterizer_count() -> u32 = ee_screenscpp_rasterizer_count;
     fn rasterizer_name(index: u32, out: EeScreensShimOut) = ee_screenscpp_rasterizer_name;
-    fn form_control(form: usize, control: u32) -> usize = ee_screenscpp_form_control;
-    fn check_box_label(check: usize) -> usize = ee_screenscpp_check_box_label;
-    fn label_text(label: usize, out: EeScreensShimOut) = ee_screenscpp_label_text;
+    fn form_control(form: usize, control: u32) -> usize = scr_direct::form_control;
+    fn check_box_label(check: usize) -> usize = scr_direct::check_box_label;
+    fn label_text(label: usize, out: EeScreensShimOut) = scr_direct::label_text_out;
     fn archive_new() -> usize = ee_screenscpp_archive_new;
     fn archive_set(archive: usize, spec: usize) = ee_screenscpp_archive_set;
     fn data_add_archive(archive: usize) = ee_screenscpp_data_add_archive;
@@ -403,7 +405,7 @@ shims! {
     fn intro_set_file(spec: usize) = ee_screenscpp_intro_set_file;
     fn parse_cheat(text: EeScreensShimText, code: EeScreensShimLongOut, parameter: EeScreensShimLongOut) = ee_screenscpp_parse_cheat;
     fn send_cheat(code: i64, parameter: i64) = ee_screenscpp_send_cheat;
-    fn button_font(form: usize, control: u32) -> usize = ee_screenscpp_button_font;
+    fn button_font(form: usize, control: u32) -> usize = scr_direct::button_font;
     fn button_set_text(form: usize, control: u32, text: EeScreensShimText, font: usize) = ee_screenscpp_button_set_text;
     fn last_auto_save(out: EeScreensShimOut) = ee_screenscpp_last_auto_save;
     fn last_quick_save(out: EeScreensShimOut) = ee_screenscpp_last_quick_save;
@@ -411,9 +413,9 @@ shims! {
     fn spec_set_file(spec: usize, file: EeScreensShimText) = ee_screenscpp_spec_set_file;
     fn post_load_saved_game(spec: usize) = ee_screenscpp_post_load_saved_game;
     fn display_message(text: EeScreensShimText, flag: bool) = ee_screenscpp_display_message;
-    fn manager_form_control(form: u32, control: u32) -> usize = ee_screenscpp_manager_form_control;
-    fn label_delete_array(label: usize) = ee_screenscpp_label_delete_array;
-    fn label_append_text(label: usize, text: EeScreensShimText) = ee_screenscpp_label_append_text;
+    fn manager_form_control(form: u32, control: u32) -> usize = scr_direct::manager_form_control;
+    fn label_delete_array(label: usize) = scr_direct::label_delete_array;
+    fn label_append_text(label: usize, text: EeScreensShimText) = scr_direct::label_append_text;
     fn campaign_extension(out: EeScreensShimOut) = ee_screenscpp_campaign_extension;
     fn campaign_error_reset() = ee_screenscpp_campaign_error_reset;
     fn campaign_load(file: EeScreensShimText) -> bool = ee_screenscpp_campaign_load;
@@ -423,9 +425,9 @@ shims! {
     fn spec_set_volume_startup(spec: usize) = ee_screenscpp_spec_set_volume_startup;
     fn spec_set_directory_startup(spec: usize, directory: EeScreensShimText) = ee_screenscpp_spec_set_directory_startup;
     fn path_add_directory(path: usize, spec: usize) = ee_screenscpp_path_add_directory;
-    fn file_list_add_extension(list: usize, extension: EeScreensShimText) = ee_screenscpp_file_list_add_extension;
-    fn file_list_set_paths(list: usize, path: usize) = ee_screenscpp_file_list_set_paths;
-    fn file_list_create(list: usize) = ee_screenscpp_file_list_create;
+    fn file_list_add_extension(list: usize, extension: EeScreensShimText) = scr_direct::file_list_add_extension;
+    fn file_list_set_paths(list: usize, path: usize) = scr_direct::file_list_set_paths;
+    fn file_list_create(list: usize) = scr_direct::file_list_create;
     fn file_list_find(list: usize, name: EeScreensShimText, index: EeScreensShimULongOut) -> bool = ee_screenscpp_file_list_find;
     fn list_select(list: usize, index: u32) = ee_screenscpp_list_select;
     fn list_scroll_to(list: usize, index: u32) = ee_screenscpp_list_scroll_to;
@@ -445,8 +447,8 @@ shims! {
     fn lobby_header_delete() = ee_screenscpp_lobby_header_delete;
     fn lobby_header_new() = ee_screenscpp_lobby_header_new;
     fn lobby_file_clear() = ee_screenscpp_lobby_file_clear;
-    fn debug_sound_label(id: u32) -> usize = ee_screenscpp_debug_sound_label;
-    fn label_set_text(label: usize, text: EeScreensShimText) = ee_screenscpp_label_set_text;
+    fn debug_sound_label(id: u32) -> usize = scr_direct::debug_sound_label;
+    fn label_set_text(label: usize, text: EeScreensShimText) = scr_direct::label_set_text_in;
     fn pgs_send(host: EeScreensShimText, port: u32, payload: EeScreensShimText) = ee_screenscpp_pgs_send;
     fn pdcs_name_reset() = ee_screenscpp_pdcs_name_reset;
     fn pdcs_upgrades_clear() = ee_screenscpp_pdcs_upgrades_clear;
@@ -461,10 +463,10 @@ shims! {
     fn mini_map_refresh() = ee_screenscpp_mini_map_refresh;
     fn set_camera_following(following: bool) = ee_screenscpp_set_camera_following;
     fn hot_key_new() -> usize = ee_screenscpp_hot_key_new;
-    fn hot_key_set_key(key: usize, code: u32) = ee_screenscpp_hot_key_set_key;
-    fn hot_key_set_just_pressed(key: usize, event: usize) = ee_screenscpp_hot_key_set_just_pressed;
-    fn chat_set_enter_trigger(form: usize, event: usize) = ee_screenscpp_chat_set_enter_trigger;
-    fn form_add_hot_key(form: usize, key: usize) = ee_screenscpp_form_add_hot_key;
+    fn hot_key_set_key(key: usize, code: u32) = scr_direct::hot_key_set_key;
+    fn hot_key_set_just_pressed(key: usize, event: usize) = scr_direct::hot_key_set_just_pressed;
+    fn chat_set_enter_trigger(form: usize, event: usize) = scr_direct::chat_set_enter_trigger;
+    fn form_add_hot_key(form: usize, key: usize) = scr_direct::form_add_hot_key;
     fn hot_key_delete(key: usize) = ee_screenscpp_hot_key_delete;
     fn ghosts_lock_enter() = ee_screenscpp_ghosts_lock_enter;
     fn world_clear_ghosts() = ee_screenscpp_world_clear_ghosts;
@@ -494,25 +496,25 @@ shims! {
     fn unit_class_command(unit: usize, index: u32) -> u32 = ee_screenscpp_unit_class_command;
     fn formation_new(kind: i32) -> usize = ee_screenscpp_formation_new;
     fn send_change_formation(kind: i32) = ee_screenscpp_send_change_formation;
-    fn main_form_group_disable(group: u32) = ee_screenscpp_main_form_group_disable;
-    fn main_form_background_visible(id: u32, visible: bool) = ee_screenscpp_main_form_background_visible;
+    fn main_form_group_disable(group: u32) = scr_direct::main_form_group_disable;
+    fn main_form_background_visible(id: u32, visible: bool) = scr_direct::main_form_background_visible;
     fn formation_set_b5c(formation: usize) = ee_screenscpp_formation_set_b5c;
     fn selected_group_set_formation(formation: usize) = ee_screenscpp_selected_group_set_formation;
     fn formation_dereference(formation: usize) = ee_screenscpp_formation_dereference;
     fn bitmap_set_corners(form: usize, control: u32, tlu: f32, tlv: f32, tru: f32, trv: f32, bru: f32, brv: f32, blu: f32, blv: f32) = ee_screenscpp_bitmap_set_corners;
     fn button_text_player_colour(form: usize, control: u32, player: u32) = ee_screenscpp_button_text_player_colour;
     fn label_text_player_colour(form: usize, control: u32, player: u32) = ee_screenscpp_label_text_player_colour;
-    fn control_id(control: usize) -> u32 = ee_screenscpp_control_id;
-    fn control_index(control: usize) -> u32 = ee_screenscpp_control_index;
-    fn control_border(control: usize) -> u32 = ee_screenscpp_control_border;
+    fn control_id(control: usize) -> u32 = scr_direct::control_id;
+    fn control_index(control: usize) -> u32 = scr_direct::control_index;
+    fn control_border(control: usize) -> u32 = scr_direct::control_border;
     fn pgs_status_bar_new(id: u32, form: usize, index: u32, border: u32) -> usize = ee_screenscpp_pgs_status_bar_new;
     fn status_bar_clear_text(bar: usize) = ee_screenscpp_status_bar_clear_text;
-    fn form_add_control(form: usize, control: usize, group: u32) = ee_screenscpp_form_add_control;
-    fn control_string_id(form: usize, control: u32) -> u32 = ee_screenscpp_control_string_id;
-    fn control_set_string_id(form: usize, control: u32, id: u32) = ee_screenscpp_control_set_string_id;
+    fn form_add_control(form: usize, control: usize, group: u32) = scr_direct::form_add_control;
+    fn control_string_id(form: usize, control: u32) -> u32 = scr_direct::control_string_id;
+    fn control_set_string_id(form: usize, control: u32, id: u32) = scr_direct::control_set_string_id;
     fn bar_copy_text_style(form: usize, from: u32, to: u32) = ee_screenscpp_bar_copy_text_style;
-    fn form_ui_bit_depth(form: usize) -> u32 = ee_screenscpp_form_ui_bit_depth;
-    fn form_screen(form: usize) -> u32 = ee_screenscpp_form_screen;
+    fn form_ui_bit_depth(form: usize) -> u32 = scr_direct::form_ui_bit_depth;
+    fn form_screen(form: usize) -> u32 = scr_direct::form_screen;
     fn texture_load(name: EeScreensShimText, description: usize) -> usize = ee_screenscpp_texture_load;
     fn texture_alpha_modulate(texture: usize) = ee_screenscpp_texture_alpha_modulate;
     fn texture_color_modulate(texture: usize) = ee_screenscpp_texture_color_modulate;
@@ -528,7 +530,7 @@ shims! {
     fn bitmap_dereference(bitmap: usize) = ee_screenscpp_bitmap_dereference;
     fn spec_first_file(search: usize, pattern: EeScreensShimText, found: usize) -> i32 = ee_screenscpp_spec_first_file;
     fn spec_next_file(search: usize, found: usize) -> i32 = ee_screenscpp_spec_next_file;
-    fn form_remove_control(form: usize, control: usize, flag: u32) = ee_screenscpp_form_remove_control;
+    fn form_remove_control(form: usize, control: usize, flag: u32) = scr_direct::form_remove_control;
     fn control_delete(control: usize) = ee_screenscpp_control_delete;
     fn pgs_campaign_first_from_civ() = ee_screenscpp_pgs_campaign_first_from_civ;
     fn pgs_campaign_description() = ee_screenscpp_pgs_campaign_description;
@@ -540,12 +542,12 @@ shims! {
     fn pgs_campaign_set_description(text: EeScreensShimText) = ee_screenscpp_pgs_campaign_set_description;
     fn lobby_options_read_lock() = ee_screenscpp_lobby_options_read_lock;
     fn lobby_options_read_unlock() = ee_screenscpp_lobby_options_read_unlock;
-    fn background_left(background: usize) -> f32 = ee_screenscpp_background_left;
-    fn background_top(background: usize) -> f32 = ee_screenscpp_background_top;
-    fn background_right(background: usize) -> f32 = ee_screenscpp_background_right;
-    fn background_set_rect(background: usize, left: f32, top: f32, right: f32, bottom: f32) = ee_screenscpp_background_set_rect;
-    fn background_set_visible(background: usize, visible: bool) = ee_screenscpp_background_set_visible;
-    fn cb_list_set_auto_select(list: usize, value: bool) = ee_screenscpp_cb_list_set_auto_select;
+    fn background_left(background: usize) -> f32 = scr_direct::background_left;
+    fn background_top(background: usize) -> f32 = scr_direct::background_top;
+    fn background_right(background: usize) -> f32 = scr_direct::background_right;
+    fn background_set_rect(background: usize, left: f32, top: f32, right: f32, bottom: f32) = scr_direct::background_set_rect;
+    fn background_set_visible(background: usize, visible: bool) = scr_direct::background_set_visible;
+    fn cb_list_set_auto_select(list: usize, value: bool) = scr_direct::cb_list_set_auto_select;
     fn cb_list_set_show_points(list: usize, value: bool) = civ_direct::cb_list_set_show_points;
     fn cb_list_set_select_upgrades_only(list: usize, value: bool) = civ_direct::cb_list_set_select_upgrades_only;
     fn cb_list_set_sort(list: usize, value: bool) = civ_direct::cb_list_set_sort;
@@ -558,11 +560,11 @@ shims! {
     fn send_to_server(message: usize) = ee_screenscpp_send_to_server;
     fn message_execute(message: usize) = ee_screenscpp_message_execute;
     fn message_dereference(message: usize) = ee_screenscpp_message_dereference;
-    fn combo_add_extension(form: usize, control: u32, extension: EeScreensShimText) = ee_screenscpp_combo_add_extension;
-    fn combo_set_paths(form: usize, control: u32, path: usize) = ee_screenscpp_combo_set_paths;
-    fn combo_create(form: usize, control: u32) = ee_screenscpp_combo_create;
-    fn combo_insert_line(form: usize, control: u32, text: EeScreensShimText, index: u32) = ee_screenscpp_combo_insert_line;
-    fn combo_select(form: usize, control: u32, index: u32) = ee_screenscpp_combo_select;
+    fn combo_add_extension(form: usize, control: u32, extension: EeScreensShimText) = scr_direct::combo_add_extension;
+    fn combo_set_paths(form: usize, control: u32, path: usize) = scr_direct::combo_set_paths;
+    fn combo_create(form: usize, control: u32) = scr_direct::combo_create;
+    fn combo_insert_line(form: usize, control: u32, text: EeScreensShimText, index: u32) = scr_direct::combo_insert_line;
+    fn combo_select(form: usize, control: u32, index: u32) = scr_direct::combo_select;
     fn lobby_copy_exists() -> bool = ee_screenscpp_lobby_copy_exists;
     fn lobby_copy_new() = ee_screenscpp_lobby_copy_new;
     fn lobby_copy_from_options() = ee_screenscpp_lobby_copy_from_options;
@@ -1496,7 +1498,7 @@ shims! {
     fn gv_speed_step() -> f32 = ee_screenscpp_gv_speed_step;
     fn gv_speed_low() -> f32 = ee_screenscpp_gv_speed_low;
     fn gv_speed_high() -> f32 = ee_screenscpp_gv_speed_high;
-    fn gv_main_form() -> bool = ee_screenscpp_gv_main_form;
+    fn gv_main_form() -> bool = scr_direct::gv_main_form;
     fn gv_hot_key_mode() -> u32 = ee_screenscpp_gv_hot_key_mode;
     fn gv_red(player: u32) -> f32 = ee_screenscpp_gv_red;
     fn gv_green(player: u32) -> f32 = ee_screenscpp_gv_green;
@@ -1744,7 +1746,7 @@ shims! {
     fn sc_hk_update_selection() = ee_screenscpp_sc_hk_update_selection;
     fn sc_hk_reset_saved() = ee_screenscpp_sc_hk_reset_saved;
     fn sc_hk_group_button(form: usize, control: u32) = ee_screenscpp_sc_hk_group_button;
-    fn sc_ch_mouse_inside(form: usize) -> bool = ee_screenscpp_sc_ch_mouse_inside;
+    fn sc_ch_mouse_inside(form: usize) -> bool = scr_direct::sc_ch_mouse_inside;
     fn sc_cl_unpause() = ee_screenscpp_sc_cl_unpause;
     fn sc_mg_clear_gate_ghosts(form: usize) = ee_screenscpp_sc_mg_clear_gate_ghosts;
     fn sc_mg_set_ui_state(form: usize, state: i32) = ee_screenscpp_sc_mg_set_ui_state;
@@ -1772,8 +1774,8 @@ shims! {
     fn sc_cam_changed() = ee_screenscpp_sc_cam_changed;
     fn sc_cam_set_zoom(zoom: f32) = ee_screenscpp_sc_cam_set_zoom;
     fn sc_cam_cos(angle: f32) -> f32 = ee_screenscpp_sc_cam_cos;
-    fn sc_ds_button_number(form: usize, control: u32) -> u32 = ee_screenscpp_sc_ds_button_number;
-    fn sc_ds_label_number(form: usize, control: u32) -> u32 = ee_screenscpp_sc_ds_label_number;
+    fn sc_ds_button_number(form: usize, control: u32) -> u32 = scr_direct::sc_ds_button_number;
+    fn sc_ds_label_number(form: usize, control: u32) -> u32 = scr_direct::sc_ds_label_number;
     fn sc_pgs_set_page(page: i32) = ee_screenscpp_sc_pgs_set_page;
     fn sc_pgs_set_r(index: u32, value: f32) = ee_screenscpp_sc_pgs_set_r;
     fn sc_pgs_apply_r(form: usize, control: u32) = ee_screenscpp_sc_pgs_apply_r;
@@ -1784,10 +1786,10 @@ shims! {
     fn sc_pdcs_fill(form: usize, control: u32) = ee_screenscpp_sc_pdcs_fill;
     // (the shim sweep: Rust called directly, by its symbol)
     fn world_pause(pause: bool) -> core::ffi::c_long = ee_gamecpp_world_pause;
-    fn sc_pdcs_control(index: u32) -> usize = ee_screenscpp_sc_pdcs_control;
+    fn sc_pdcs_control(index: u32) -> usize = scr_direct::sc_pdcs_control;
     fn sc_pdcs_clear_stats() = ee_screenscpp_sc_pdcs_clear_stats;
     fn sc_pdcs_set_upgrades() = ee_screenscpp_sc_pdcs_set_upgrades;
-    fn sc_pdcs_hide_label() = ee_screenscpp_sc_pdcs_hide_label;
+    fn sc_pdcs_hide_label() = scr_direct::sc_pdcs_hide_label;
     fn sc_pdcs_reset() = ee_screenscpp_sc_pdcs_reset;
     fn sc_dsu_clear() = ee_screenscpp_sc_dsu_clear;
     fn sc_dsu_unit_clear() = ee_screenscpp_sc_dsu_unit_clear;
@@ -1805,8 +1807,8 @@ shims! {
     fn sc_dsu_sound10() = ee_screenscpp_sc_dsu_sound10;
     fn sc_dsu_has_sound() -> bool = ee_screenscpp_sc_dsu_has_sound;
     fn sc_dsu_volume(volume: f32) = ee_screenscpp_sc_dsu_volume;
-    fn sc_ce_is_edit(form: usize, control: u32) -> bool = ee_screenscpp_sc_ce_is_edit;
-    fn sc_ce_is_label(form: usize, control: u32) -> bool = ee_screenscpp_sc_ce_is_label;
+    fn sc_ce_is_edit(form: usize, control: u32) -> bool = scr_direct::sc_ce_is_edit;
+    fn sc_ce_is_label(form: usize, control: u32) -> bool = scr_direct::sc_ce_is_label;
     fn sc_ce_is_list(form: usize, control: u32) -> bool = ee_screenscpp_sc_ce_is_list;
     fn sc_ce_is_combo(form: usize, control: u32) -> bool = ee_screenscpp_sc_ce_is_combo;
     fn sc_won_net_clear() = ee_screenscpp_sc_won_net_clear;
@@ -1827,7 +1829,7 @@ shims! {
     fn tp_message(text: EeScreensShimText, close: bool) = ee_screenscpp_tp_message;
     fn tp_mg_chat_log(text: EeScreensShimText) = ee_screenscpp_tp_mg_chat_log;
     fn tp_ch_chat(text: EeScreensShimText) = ee_screenscpp_tp_ch_chat;
-    fn tp_cl_append(text: EeScreensShimText) = ee_screenscpp_tp_cl_append;
+    fn tp_cl_append(text: EeScreensShimText) = scr_direct::tp_cl_append;
     fn tp_campaign_name(text: EeScreensShimText) = ee_screenscpp_tp_campaign_name;
     fn tp_campaign_description(text: EeScreensShimText) = ee_screenscpp_tp_campaign_description;
     fn tp_campaign_first(text: EeScreensShimText) = ee_screenscpp_tp_campaign_first;
@@ -1844,13 +1846,13 @@ shims! {
     fn tp_ui_manager() -> usize = ee_screenscpp_tp_ui_manager;
     fn tp_go_question(manager: usize, yes: u32, text: EeScreensShimText) = ee_screenscpp_tp_go_question;
     fn tp_pgs_bar(form: usize, control: u32, text: EeScreensShimText) = ee_screenscpp_tp_pgs_bar;
-    fn tp_csel_form() = ee_screenscpp_tp_csel_form;
+    fn tp_csel_form() = scr_direct::tp_csel_form;
     fn tp_pgs_campaign_get() = ee_screenscpp_tp_pgs_campaign_get;
     fn tp_pgs_file_name(text: EeScreensShimText) = ee_screenscpp_tp_pgs_file_name;
     fn tp_pgs_error_clear() = ee_screenscpp_tp_pgs_error_clear;
     fn tp_pgs_campaign_load() -> u32 = ee_screenscpp_tp_pgs_campaign_load;
     fn tp_pgs_campaign_name(text: EeScreensShimText) = ee_screenscpp_tp_pgs_campaign_name;
-    fn tp_pdcs_label(text: EeScreensShimText) = ee_screenscpp_tp_pdcs_label;
+    fn tp_pdcs_label(text: EeScreensShimText) = scr_direct::tp_pdcs_label;
     fn tp_ce_question(manager: usize, form: usize, index: u32, text: EeScreensShimText) = ee_screenscpp_tp_ce_question;
     fn tp_ce_lines_clear() = ee_screenscpp_tp_ce_lines_clear;
     fn tp_ce_lines_add(text: EeScreensShimText) = ee_screenscpp_tp_ce_lines_add;
@@ -1899,7 +1901,7 @@ shims! {
     fn rc_resize_menu() = ee_screenscpp_rc_resize_menu;
     fn rc_srand_time() = ee_screenscpp_rc_srand_time;
     fn rc_rand() -> u32 = ee_screenscpp_rc_rand;
-    fn rc_ui_music_volume(volume: f32) = ee_screenscpp_rc_ui_music_volume;
+    fn rc_ui_music_volume(volume: f32) = scr_direct::rc_ui_music_volume;
     fn rc_music_start() = ee_screenscpp_rc_music_start;
     fn rc_music_stop() = ee_screenscpp_rc_music_stop;
     fn rc_mouse_sensitivity(value: f32) = ee_screenscpp_rc_mouse_sensitivity;
@@ -2128,7 +2130,7 @@ shims! {
     fn sci_map_null(m: usize) = ee_screenscpp_sci_map_null;
     fn sci_file_null(m: usize) = ee_screenscpp_sci_file_null;
     fn sci_sound_null(m: usize) = ee_screenscpp_sci_sound_null;
-    fn sci_form() -> usize = ee_screenscpp_sci_form;
+    fn sci_form() -> usize = scr_direct::sci_form;
     fn sci_form_manager(form: usize) -> usize = ee_screenscpp_sci_form_manager;
     fn sci_new() -> usize = ee_screenscpp_sci_new;
     fn sci_form_set_manager(form: usize, m: usize) = ee_screenscpp_sci_form_set_manager;
@@ -2145,8 +2147,8 @@ shims! {
     fn sci_has_instructions(m: usize) -> bool = ee_screenscpp_sci_has_instructions;
     fn sci_has_hints(m: usize) -> bool = ee_screenscpp_sci_has_hints;
     fn sci_has_history(m: usize) -> bool = ee_screenscpp_sci_has_history;
-    fn sci_main_form() -> usize = ee_screenscpp_sci_main_form;
-    fn sci_main_control(form: usize, control: u32) -> usize = ee_screenscpp_sci_main_control;
+    fn sci_main_form() -> usize = scr_direct::sci_main_form;
+    fn sci_main_control(form: usize, control: u32) -> usize = scr_direct::sci_main_control;
     fn sci_set_info_blinking(form: usize, blinking: bool) = ee_screenscpp_sci_set_info_blinking;
     fn sci_button_blinking(button: usize, blinking: bool) = ee_screenscpp_sci_button_blinking;
     fn sci_button_shown(button: usize) = ee_screenscpp_sci_button_shown;
@@ -2334,9 +2336,9 @@ shims! {
     fn hk_target_y() -> f32 = ee_screenscpp_hk_target_y;
     fn hk_units_clear() = ee_screenscpp_hk_units_clear;
     fn hk_units_push(unit: u64) = ee_screenscpp_hk_units_push;
-    fn sel_control(form: usize, control: u32) -> usize = ee_screenscpp_sel_control;
-    fn sel_list(control: usize, selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_sel_list;
-    fn sel_combo(control: usize, selection: EeScreensShimULongOut) -> i32 = ee_screenscpp_sel_combo;
+    fn sel_control(form: usize, control: u32) -> usize = scr_direct::sel_control;
+    fn sel_list(control: usize, selection: EeScreensShimULongOut) -> i32 = scr_direct::sel_list;
+    fn sel_combo(control: usize, selection: EeScreensShimULongOut) -> i32 = scr_direct::sel_combo;
     // EEScreens.cpp's chat log file (chat_log_ffi.rs)
     fn cl_read_ulong(file: usize, value: EeScreensShimULongOut) -> i32 = ee_screenscpp_cl_read_ulong;
     fn cl_read_string(file: usize) -> i32 = ee_screenscpp_cl_read_string;
@@ -2357,7 +2359,7 @@ shims! {
     fn cbh_control(form: usize, index: u32) -> usize = civ_direct::cbh_control;
     fn cbh_as_edit(control: usize) -> usize = civ_direct::cbh_as_edit;
     fn cbh_as_label(control: usize) -> usize = civ_direct::cbh_as_label;
-    fn cbh_as_file_list(control: usize) -> usize = ee_screenscpp_cbh_as_file_list;
+    fn cbh_as_file_list(control: usize) -> usize = scr_direct::cbh_as_file_list;
     fn cbh_as_list(control: usize) -> usize = ee_screenscpp_cbh_as_list;
     fn cbh_edit_text(edit: usize, out: EeScreensShimOut) = civ_direct::cbh_edit_text;
     fn cbh_edit_set_text(edit: usize, text: EeScreensShimText) = civ_direct::cbh_edit_set_text;
@@ -2375,12 +2377,12 @@ shims! {
     fn cbh_spec_directory() = ee_screenscpp_cbh_spec_directory;
     fn cbh_path_add() = ee_screenscpp_cbh_path_add;
     fn cbh_fl_set_paths(list: usize) = ee_screenscpp_cbh_fl_set_paths;
-    fn cbh_fl_add_extension(list: usize) = ee_screenscpp_cbh_fl_add_extension;
-    fn cbh_fl_create_entries(list: usize) = ee_screenscpp_cbh_fl_create_entries;
+    fn cbh_fl_add_extension(list: usize) = scr_direct::cbh_fl_add_extension;
+    fn cbh_fl_create_entries(list: usize) = scr_direct::cbh_fl_create_entries;
     fn cbh_path_release() = ee_screenscpp_cbh_path_release;
-    fn cbh_fl_selection(list: usize, index: EeScreensShimULongOut) -> i32 = ee_screenscpp_cbh_fl_selection;
-    fn cbh_fl_line(list: usize, line: u32, out: EeScreensShimOut) = ee_screenscpp_cbh_fl_line;
-    fn cbh_fl_delete(list: usize) -> i32 = ee_screenscpp_cbh_fl_delete;
+    fn cbh_fl_selection(list: usize, index: EeScreensShimULongOut) -> i32 = scr_direct::cbh_fl_selection;
+    fn cbh_fl_line(list: usize, line: u32, out: EeScreensShimOut) = scr_direct::cbh_fl_line;
+    fn cbh_fl_delete(list: usize) -> i32 = scr_direct::cbh_fl_delete;
     fn cbh_screen_event(code: u32) -> usize = ee_screenscpp_cbh_screen_event;
     fn cbh_form_set_open_event(form: usize, event: usize) = civ_direct::cbh_form_set_open_event;
     fn cbh_form_set_close_event(form: usize, event: usize) = civ_direct::cbh_form_set_close_event;
@@ -2429,9 +2431,9 @@ shims! {
     fn cbh_question(text: EeScreensShimText, form: usize, answer: u32) = ee_screenscpp_cbh_question;
     fn cbh_set_blink_flag(value: bool) = ee_screenscpp_cbh_set_blink_flag;
     fn cbh_main_builder_button(form: usize) -> usize = ee_screenscpp_cbh_main_builder_button;
-    fn cbh_main_alert_button() -> usize = ee_screenscpp_cbh_main_alert_button;
+    fn cbh_main_alert_button() -> usize = scr_direct::cbh_main_alert_button;
     fn cbh_main_game_form_id() -> u32 = civ_direct::cbh_main_game_form_id;
-    fn cbh_button_blink(button: usize, value: bool) = ee_screenscpp_cbh_button_blink;
+    fn cbh_button_blink(button: usize, value: bool) = scr_direct::cbh_button_blink;
     fn cbh_f_volume() = ee_screenscpp_cbh_f_volume;
     fn cbh_f_directory(text: EeScreensShimText) = ee_screenscpp_cbh_f_directory;
     fn cbh_f_name(text: EeScreensShimText) = ee_screenscpp_cbh_f_name;
@@ -2682,7 +2684,7 @@ shims! {
     fn civf_purchased(ctx: usize) -> bool = ee_screenscpp_civf_purchased;
     fn civf_custom_civs() -> bool = civ_direct::civf_custom_civs;
     fn civf_scenario_game() -> bool = civ_direct::civf_scenario_game;
-    fn civf_in_scenario_editor() -> bool = ee_screenscpp_civf_in_scenario_editor;
+    fn civf_in_scenario_editor() -> bool = scr_direct::civf_in_scenario_editor;
     fn civf_can_afford_all(ctx: usize) -> bool = ee_screenscpp_civf_can_afford_all;
     fn civf_grant_new(ctx: usize, points: i64) -> usize = ee_screenscpp_civf_grant_new;
     fn civf_multiplayer() -> bool = civ_direct::civf_multiplayer;
@@ -3052,7 +3054,7 @@ shims! {
     fn cbb_scroll_bg_opacity(list: usize, opacity: f32) = civ_direct::cbb_scroll_bg_opacity;
     fn cbb_lines_count(lines: usize) -> usize = ee_screenscpp_cbb_lines_count;
     fn cbb_line(lines: usize, index: usize, out: EeScreensShimOut) = ee_screenscpp_cbb_line;
-    fn cbb_base_copy_data(list: usize) -> i64 = ee_screenscpp_cbb_base_copy_data;
+    fn cbb_base_copy_data(list: usize) -> i64 = scr_direct::cbb_base_copy_data;
     fn cbb_selection(list: usize) -> u64 = civ_direct::cbb_selection;
     fn cbb_copied_no_selection(list: usize) = civ_direct::cbb_copied_no_selection;
     fn cbb_copy_header(list: usize) = civ_direct::cbb_copy_header;
@@ -3138,7 +3140,7 @@ shims! {
     fn mff_error_leave(form: usize) = ee_screenscpp_mff_error_leave;
     // the free UI helpers' (ui_helpers.rs; EEScreens.cpp, EEUIManager.cpp)
     fn uh_translate(text: EeScreensShimText, id: u32, reference: bool) = ee_screenscpp_uh_translate;
-    fn uh_form(id: u32) -> usize = ee_screenscpp_uh_form;
+    fn uh_form(id: u32) -> usize = scr_direct::uh_form;
     fn uh_comms_started() -> bool = ee_screenscpp_uh_comms_started;
     fn uh_comms_multiplayer() -> bool = ee_screenscpp_uh_comms_multiplayer;
     fn uh_has_scenario() -> bool = ee_screenscpp_uh_has_scenario;

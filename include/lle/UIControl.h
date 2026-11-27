@@ -36,9 +36,6 @@
 
 class LLE_API UIControl : public UIEntity, public EeUiControlFields {
 public:   // (public: the toolkit's shims, UIControl.cpp)
-    virtual void AddIMEResultString(const UWideString& inString) {}   // slot 0x04
-    virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                            unsigned long inCursor) { return kErrorFailed; }
     static bool ControlKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Control); }
     virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
     // Draws the copied background (when it has an opacity) and the border (ee_ui controlobj.rs)
