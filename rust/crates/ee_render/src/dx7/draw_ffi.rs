@@ -203,7 +203,7 @@ unsafe fn model_array(p: *mut EeGeModel, which: EeGeModPtr, index: u32) -> usize
     unsafe { *(ee_ge_mod_ptr(p, which) as *const usize).add(index as usize) }
 }
 
-/// Element `index` of a `GELine`/`GEPoint` array: each element is one pointer, its Rust object (ee_ge prim.rs).
+/// Element `index` of a `GELine` array: each element is one pointer, its Rust object (ee_ge prim.rs).
 ///
 /// # Safety
 /// `array` holds more than `index` elements.
@@ -225,12 +225,6 @@ impl Draw2DHost for Host {
     }
     fn line_vertices(&mut self, lines: Handle, index: u32) -> *mut Dx7StdColorVertex {
         unsafe { cppobj::vertices(ee_ge_prim_vertices(prim_at(lines, index)) as usize) as *mut Dx7StdColorVertex }
-    }
-    fn point_texture(&mut self, points: Handle) -> Handle {
-        unsafe { ee_ge_prim_texture(prim_at(points, 0), self.screen) }
-    }
-    fn point_vertices(&mut self, points: Handle, index: u32) -> *mut Dx7StdColorVertex {
-        unsafe { cppobj::vertices(ee_ge_prim_vertices(prim_at(points, index)) as usize) as *mut Dx7StdColorVertex }
     }
     fn rhombus_vertices(&mut self, rhombus: Handle) -> *mut Dx7StdColorVertex {
         unsafe { cppobj::vertices(ee_ge_prim_vertices(prim_at(rhombus, 0)) as usize) as *mut Dx7StdColorVertex }
@@ -410,27 +404,6 @@ pub unsafe extern "C" fn ee_dx7r_draw_lines(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_draw_points(
-    rast: *mut EeDx7Rasterizer,
-    screen: c_ulong,
-    points: Handle,
-    count: c_ulong,
-) -> c_long {
-    let mut h = unsafe { Host::new(rast, screen) };
-    let r = draw2d::draw_points(&mut h, points, count as u32);
-    if digest2d::enabled() {
-        let texture = h.point_texture(points);
-        let mut s = format!("points s{screen} r{r} n{count}");
-        for i in 0..count as u32 {
-            unsafe { digest2d::vertices(&mut s, h.point_vertices(points, i), 1) };
-        }
-        digest2d::texture(&mut s, digest_texture(&mut h, texture));
-        digest2d::command(&s);
-    }
-    r
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_draw_rhombus(rast: *mut EeDx7Rasterizer, screen: c_ulong, rhombus: Handle) -> c_long {
     let mut h = unsafe { Host::new(rast, screen) };
     let r = draw2d::draw_rhombus(&mut h, rhombus);
@@ -475,18 +448,6 @@ pub unsafe extern "C" fn ee_dx7r_draw_model(
     orthographic: bool,
 ) -> c_long {
     draw_model::draw_model(&mut unsafe { Host::new(rast, screen) }, model, detail, orthographic)
-}
-
-/// `DrawModelHierarchy` from outside the recursion (no parent transform).
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_draw_model_hierarchy(
-    rast: *mut EeDx7Rasterizer,
-    screen: c_ulong,
-    model: Handle,
-    detail: f32,
-    orthographic: bool,
-) -> c_long {
-    draw_model::draw_model_hierarchy(&mut unsafe { Host::new(rast, screen) }, model, detail, orthographic, None)
 }
 
 /// `Draw3DLine`: `points` is `count` `(x, y, z, advance)` records.

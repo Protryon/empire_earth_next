@@ -24,8 +24,6 @@ struct Inner {
     fields: ConductorFields,
     /// The folder the score files are read from, NUL-terminated.
     folder: Vec<u8>,
-    /// `SetNotificationCallback`'s callbacks (dmusic reports no event: never called).
-    callbacks: [*mut c_void; 6],
     mixer: *mut EeSoundMixer,
     loader: *mut c_void,
 }
@@ -141,7 +139,6 @@ impl EeSoundConductor {
                 table: Conductor::new(),
                 fields: ConductorFields::new(),
                 folder: vec![0],
-                callbacks: [null_mut(); 6],
                 mixer: null_mut(),
                 loader: null_mut(),
             }),
@@ -430,19 +427,6 @@ pub unsafe extern "C" fn ee_sound_conductor_unload_score(c: *const EeSoundConduc
 #[no_mangle]
 pub unsafe extern "C" fn ee_sound_conductor_fields(c: *const EeSoundConductor) -> ConductorFields {
     unsafe { &*c }.fields()
-}
-
-/// `SetNotificationCallback` (kept for the interface: dmusic reports no event).
-///
-/// # Safety
-/// `c` is a live conductor, `event` < 6.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_conductor_set_callback(
-    c: *const EeSoundConductor,
-    event: u32,
-    callback: *mut c_void,
-) {
-    unsafe { (*(*c).inner.get()).callbacks[event as usize] = callback };
 }
 
 #[cfg(test)]

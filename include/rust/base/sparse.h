@@ -58,12 +58,6 @@ void ee_sparse_free(EeSparseArray *s);
 /// `s` a live set.
 int32_t ee_sparse_size(const EeSparseArray *s);
 
-/// `Clear()`.
-///
-/// # Safety
-/// `s` a live set.
-void ee_sparse_clear(EeSparseArray *s);
-
 /// `Contains(point)`.
 ///
 /// # Safety
@@ -103,12 +97,6 @@ const EePoint *ee_sparse_points(EeSparseArray *s,
 /// # Safety
 /// `s` a live set.
 EePoint ee_sparse_get(const EeSparseArray *s, int32_t index);
-
-/// `CountContainerNodes()`.
-///
-/// # Safety
-/// `s` a live set.
-int32_t ee_sparse_run_count(const EeSparseArray *s);
 
 /// `GetClosestPoint(point)`.
 ///

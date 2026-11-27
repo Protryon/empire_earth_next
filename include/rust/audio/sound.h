@@ -185,12 +185,6 @@ int32_t ee_sound_conductor_unload_score(const EeSoundConductor *c, int32_t id);
 /// `c` is a live conductor.
 EeConductorFields ee_sound_conductor_fields(const EeSoundConductor *c);
 
-/// `SetNotificationCallback` (kept for the interface: dmusic reports no event).
-///
-/// # Safety
-/// `c` is a live conductor, `event` < 6.
-void ee_sound_conductor_set_callback(const EeSoundConductor *c, uint32_t event, void *callback);
-
 /// `SESoundManager::Create` (the constructor): the pool's lock, the path (referenced), the state (every category
 /// at 100%; the mixer's channel count when `channel_count` is 0), the lock, the events, the scavenger thread.
 ///
@@ -464,12 +458,6 @@ bool ee_sound_manager_muted(const EeSoundManager *m);
 /// # Safety
 /// `m` is a live manager.
 void ee_sound_manager_set_muted(const EeSoundManager *m, bool muted);
-
-/// The manager's mixer (`GetMasterVolume`, `SetMasterVolume`, `GetMaxChannels`, ... are the mixer's).
-///
-/// # Safety
-/// `m` is a live manager.
-EeSoundMixer *ee_sound_manager_mixer(const EeSoundManager *m);
 
 /// `GetHighestTimerDelay`, `GetMaxChannels` (the mixer's).
 ///
@@ -753,12 +741,6 @@ int32_t ee_sound_sample_set_pitch(EeSoundSample *s, float v);
 /// `s` is a live sample.
 int32_t ee_sound_sample_set_offset(EeSoundSample *s, uint32_t offset);
 
-/// `GetSampleOffset` (`SPIMGetSampleOffset`).
-///
-/// # Safety
-/// `s` is a live sample.
-uint32_t ee_sound_sample_offset(EeSoundSample *s);
-
 /// `LoadWaveData(spec)` (`SPIMLoadWaveData`).
 ///
 /// # Safety
@@ -845,12 +827,6 @@ bool ee_music_step(void *ctx,
 /// # Safety
 /// `ctx` is the live `EEMusicManager*`.
 void ee_music_request_intensity(void *ctx, uint32_t intensity);
-
-/// `DoPause`, `DoSetIntensity`, `DoStart`, `DoStop`, `NextSong`: 0..4.
-///
-/// # Safety
-/// `ctx` is the live `EEMusicManager*`, called from its thread.
-void ee_music_do(void *ctx, uint32_t what);
 
 /// `Update`.
 ///

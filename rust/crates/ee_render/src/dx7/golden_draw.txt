@@ -102,34 +102,6 @@ ret 11
   arr 41c80000 c1380000
   arr 41c90000 c1390000
 pos 6 polys 0
-=== points_tex
-enter
-set2d
-settex T1
-lock 2
-unlock
-drawprim 1 VB 0 2
-  v 4349199a 434a3333 434b4ccd 3dcccccd 3e4ccccd 3e99999a 801122fb 414c0000 c0b40000
-  v 434a199a 434b3333 434c4ccd 3dcccccd 3e4ccccd 3e99999a 801122fc 414d0000 c0b50000
-leave
-ret 11
-  arr 414c0000 c0b40000
-  arr 414d0000 c0b50000
-pos 2 polys 0
-=== points_notex
-enter
-set2d
-settex NULL
-lock 2
-unlock
-drawprim 1 VB 0 2
-  v 4349199a 434a3333 434b4ccd 3dcccccd 3e4ccccd 3e99999a 801122fb 41c80000 c1380000
-  v 434a199a 434b3333 434c4ccd 3dcccccd 3e4ccccd 3e99999a 801122fc 41c90000 c1390000
-leave
-ret 11
-  arr 41c80000 c1380000
-  arr 41c90000 c1390000
-pos 2 polys 0
 === rhombus
 enter
 set2d

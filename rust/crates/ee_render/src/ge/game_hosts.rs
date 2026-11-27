@@ -1,5 +1,5 @@
 //! The game's constructors of the GE objects whose inline C++ constructors name their host (lle/GEBitmap.h,
-//! GELine.h, GEPoint.h, GERhombus.h, GEText.h, GEMaterial.h, GEFont.h): the same objects over the game's two hosts,
+//! GELine.h, GERhombus.h, GEText.h, GEMaterial.h, GEFont.h): the same objects over the game's two hosts,
 //! `GEVertexHost` and `GEObjectHost` (GEBitmap.cpp, C linkage), which this module names, so no unit that constructs
 //! one names a symbol of GEBitmap.cpp (tools/cpp_deps.py: the UI's units drew 40 edges to it for the hosts alone).
 //! The hosted constructors stay for the tests' own hosts.
@@ -10,7 +10,7 @@ use std::os::raw::c_ulong;
 use ee_base::math::types::Ge2DPoint;
 
 use crate::ge::bmpobj::{ee_ge_bmp_new, EeGeBitmap, EeGeBmpOp};
-use crate::ge::prim::{ee_ge_prim_new, ee_ge_prim_new_line, ee_ge_prim_new_point, EeGePrim, EeGePrimKind};
+use crate::ge::prim::{ee_ge_prim_new, ee_ge_prim_new_line, EeGePrim, EeGePrimKind};
 use crate::ge::smallobj::{ee_ge_font_new, ee_ge_mat_new, ee_ge_text_new, EeGeFont, EeGeMat, EeGeObjOp, EeGeText};
 
 #[cfg(not(test))]
@@ -68,21 +68,6 @@ pub unsafe extern "C" fn ee_ge_game_prim_new_line(
     unsafe { ee_ge_prim_new_line(GEVertexHost, owner, start, end, start_color, end_color, opacity) }
 }
 
-/// `GEPoint(point, colour, opacity)` over the game's vertex host.
-///
-/// # Safety
-/// As [`ee_ge_game_bmp_new`]; the pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_game_prim_new_point(
-    owner: *mut c_void,
-    point: *const Ge2DPoint,
-    color: *const c_void,
-    opacity: f32,
-) -> *mut EeGePrim {
-    // SAFETY: as above
-    unsafe { ee_ge_prim_new_point(GEVertexHost, owner, point, color, opacity) }
-}
-
 /// `GEText(font)` over the game's object host.
 ///
 /// # Safety
@@ -125,11 +110,10 @@ mod tests {
     // names the game's host and nothing else
     #[test]
     fn the_game_constructors_exist() {
-        let f: [usize; 7] = [
+        let f: [usize; 6] = [
             super::ee_ge_game_bmp_new as *const () as usize,
             super::ee_ge_game_prim_new as *const () as usize,
             super::ee_ge_game_prim_new_line as *const () as usize,
-            super::ee_ge_game_prim_new_point as *const () as usize,
             super::ee_ge_game_text_new as *const () as usize,
             super::ee_ge_game_mat_new as *const () as usize,
             super::ee_ge_game_font_new as *const () as usize,

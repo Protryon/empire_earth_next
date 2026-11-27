@@ -94,16 +94,6 @@ pub unsafe extern "C" fn ee_sparse_size(s: *const EeSparseArray) -> i32 {
     unsafe { &*s }.set.size()
 }
 
-/// `Clear()`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_clear(s: *mut EeSparseArray) {
-    // SAFETY: the caller's contract
-    unsafe { &mut *s }.set.clear();
-}
-
 /// `Contains(point)`.
 ///
 /// # Safety
@@ -189,16 +179,6 @@ pub unsafe extern "C" fn ee_sparse_points(
 pub unsafe extern "C" fn ee_sparse_get(s: *const EeSparseArray, index: i32) -> EePoint {
     // SAFETY: the caller's contract
     unsafe { &*s }.set.get(index)
-}
-
-/// `CountContainerNodes()`.
-///
-/// # Safety
-/// `s` a live set.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sparse_run_count(s: *const EeSparseArray) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe { &*s }.set.run_count()
 }
 
 /// `GetClosestPoint(point)`.

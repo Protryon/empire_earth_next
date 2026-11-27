@@ -197,22 +197,6 @@ pub unsafe extern "C" fn ee_music_request_intensity(ctx: *mut c_void, intensity:
     music::request_intensity(&mut CppHost { ctx }, intensity)
 }
 
-/// `DoPause`, `DoSetIntensity`, `DoStart`, `DoStop`, `NextSong`: 0..4.
-///
-/// # Safety
-/// `ctx` is the live `EEMusicManager*`, called from its thread.
-#[no_mangle]
-pub unsafe extern "C" fn ee_music_do(ctx: *mut c_void, what: u32) {
-    let h = &mut CppHost { ctx };
-    match what {
-        0 => music::do_pause(h),
-        1 => music::do_set_intensity(h),
-        2 => music::do_start(h),
-        3 => music::do_stop(h),
-        _ => music::next_song(h),
-    }
-}
-
 /// `Update`.
 ///
 /// # Safety
