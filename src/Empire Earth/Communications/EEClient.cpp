@@ -10,7 +10,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEClient.h"
-#include "ee/EEServer.h"
 
 #include <list>
 #include <string>

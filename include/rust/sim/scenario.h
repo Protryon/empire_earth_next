@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/math.h"
 #include "rust/sim/astar.h"
 
 /// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
@@ -4349,6 +4350,36 @@ constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_CREATED = 3003;
 /// `inRun->mObject->SetUnits(inRun->mCreatedUnits)`.
 constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_SET_UNITS = 3004;
 
+/// `ResetPath()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_RESET_PATH = 0;
+
+/// `ClearUnitA()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_CLEAR_A = 1;
+
+/// `ClearUnitB()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_CLEAR_B = 2;
+
+/// `mTurnYaw = 0.0f`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_TURN_RESET = 3;
+
+/// `SetMode(a)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_MODE = 4;
+
+/// `SetChanged()`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_CHANGED = 5;
+
+/// `Update(0.0f)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_UPDATE = 6;
+
+/// `mMode`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_MODE = 7;
+
+/// `GetZoom()` (`mZoom`), its bits.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_ZOOM = 8;
+
+/// `SetZoom(a's float)`.
+constexpr static const uint32_t EE_SCENARIO_CAMERA_SET_ZOOM = 9;
+
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
 struct EeScenarioTiles;
 
@@ -4451,6 +4482,58 @@ struct EeScenarioObjectFields {
   bool mIsSelectOnMap;
   bool mIsDynamic;
   bool mIsAttributePercent;
+};
+
+/// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
+/// every target; provisional names from the tech tree's readers).
+struct EeScenarioEvEffect {
+  int32_t mUnused1;
+  int32_t mUnusedID;
+  /// +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
+  float mValue;
+  /// +0x0c the offset added to the base
+  float mOffset;
+  /// +0x10 the factor of the value
+  float mFactor;
+  /// +0x14 a gUnitClassTable index (< EEUnitClassCount())
+  int32_t mUnitClass;
+  /// +0x18 a unit class (kind 0x13: its media)
+  int32_t mNewUnitClass;
+  int32_t mUnitSet;
+  /// +0x20
+  int32_t mKind;
+  /// +0x24 an EEMedia index (kind 6)
+  int32_t mMediaIndex;
+  /// +0x28 a tech tree id (kind 9)
+  int32_t mTechnology;
+  /// +0x2c (kind 2: 0x28 = an area effect)
+  int32_t mAttribute;
+  /// +0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)
+  int32_t mSoundID;
+  /// +0x34 an EEButtonObject index (kind 1)
+  int32_t mButton;
+  /// +0x38 an EEAEManager index (kind 2)
+  int32_t mAreaEffect;
+  int32_t mTerrainType;
+  int32_t mUnused2;
+  /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
+  unsigned char mRunOnLoad;
+  unsigned char mUnused3;
+  uint16_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnused6;
+  int32_t mUnused7;
+  /// (sizeof 0x58)
+  int32_t mUnused8;
+};
+
+/// An event (`EEEvent`, ee/EEEvent.h's class over this record): its effect indices (4 bytes each in the file) and id.
+struct EeScenarioEvent {
+  /// the effect indices (null for none)
+  int32_t *mEffects;
+  /// their count
+  unsigned long mNumEffects;
+  unsigned long mID;
 };
 
 /// The C ABI's host: a context and the read callback.
@@ -4679,6 +4762,24 @@ struct EeScenarioListHost {
   void *(*op)(void *ctx, uint32_t op, uint32_t list, size_t index, void *element, const char *text);
 };
 
+/// The run's values (`EESMEffectRun`'s second base): the calamity's point, the camera move's end and start, the task
+/// placement's point, the unit's transformation and the terrain's roll and pitch, the facing's transformation and
+/// point, the ground's transformation, Create Units' location and transformation.
+struct EeScenarioRunState {
+  EeGe3DPoint mPoint;
+  EeGe3DPoint mEnd;
+  EeGe3DPoint mStart;
+  EeGe2DPoint mPlace;
+  EeGeTransformation mTransformation;
+  float mRoll;
+  float mPitch;
+  EeGeTransformation mFace;
+  EeGe3DPoint mFacePoint;
+  EeGeTransformation mGround;
+  EeGe2DPoint mCreateLocation;
+  EeGeTransformation mCreateTransform;
+};
+
 /// SMTE's trigger state before (`EESMCaptureTriggerState`): on, fired, the condition start time.
 struct EeScenarioCapTriggerBefore {
   bool mIsOn;
@@ -4750,49 +4851,6 @@ struct EeScenarioListContext {
 struct EeScenarioTextContext {
   void *manager;
   void *file;
-};
-
-/// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
-/// every target; provisional names from the tech tree's readers).
-struct EeScenarioEvEffect {
-  int32_t mUnused1;
-  int32_t mUnusedID;
-  /// +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
-  float mValue;
-  /// +0x0c the offset added to the base
-  float mOffset;
-  /// +0x10 the factor of the value
-  float mFactor;
-  /// +0x14 a gUnitClassTable index (< EEUnitClassCount())
-  int32_t mUnitClass;
-  /// +0x18 a unit class (kind 0x13: its media)
-  int32_t mNewUnitClass;
-  int32_t mUnitSet;
-  /// +0x20
-  int32_t mKind;
-  /// +0x24 an EEMedia index (kind 6)
-  int32_t mMediaIndex;
-  /// +0x28 a tech tree id (kind 9)
-  int32_t mTechnology;
-  /// +0x2c (kind 2: 0x28 = an area effect)
-  int32_t mAttribute;
-  /// +0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)
-  int32_t mSoundID;
-  /// +0x34 an EEButtonObject index (kind 1)
-  int32_t mButton;
-  /// +0x38 an EEAEManager index (kind 2)
-  int32_t mAreaEffect;
-  int32_t mTerrainType;
-  int32_t mUnused2;
-  /// +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
-  unsigned char mRunOnLoad;
-  unsigned char mUnused3;
-  uint16_t mUnused4;
-  int32_t mUnused5;
-  int32_t mUnused6;
-  int32_t mUnused7;
-  /// (sizeof 0x58)
-  int32_t mUnused8;
 };
 
 /// One condition entry of a trigger (`EESMTConditionWrapper`, ee/EESMTrigger.h's typedef of this record; the C++ news
@@ -5079,6 +5137,12 @@ extern void ee_scenariocpp_host_tiles(void *ctx,
                                       EeScenarioTiles *list);
 
 extern const EeScenarioObjectFields *ee_scenariocpp_host_object(void *ctx, int32_t index);
+
+/// `EEEvent::GetEventEffect(index)`: the effect record `index` (null past the table).
+EeScenarioEvEffect *ee_scenario_ev_effect_at(unsigned long index);
+
+/// `EEEvent::Get(id)`: the event of id `id` (null off the table).
+EeScenarioEvent *ee_scenario_ev_event(long id);
 
 /// `EEEvent::Trigger`: runs every effect of event `event` for a player (a given player's own index wins); the last
 /// effect's result.
@@ -5574,6 +5638,9 @@ void ee_scenario_object_changed(const EeScenarioListHost *host,
 /// # Safety
 /// `xy` must point to `2 * count` longs (or be anything when `count` is 0).
 uint64_t ee_scenario_tiles_hash(const long *xy, size_t count);
+
+/// A new run's values (`EESMEffectRun`'s constructor).
+EeScenarioRunState ee_scenario_run_state_new();
 
 /// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
 extern int64_t ee_scenariocpp_capture(uint32_t op, const void *p, int64_t a, int64_t b);

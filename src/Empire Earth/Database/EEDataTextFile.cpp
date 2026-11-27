@@ -94,8 +94,6 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DxFindFile: return ((FSPath*)p)->FindFile(UString((const char*)a[0]), *(FSFileSpec**)a[1]);
     case O::DxOpen: return XSPEC->Open(kFileAccessRead);
     case O::DxLength: return XSPEC->GetLength(*(unsigned long*)a[0]);
-    case O::DxClose: XSPEC->Close();
-        break;
     case O::DxDelete: delete XSPEC;
         break;
     case O::DxMessage: PlatMessageShow((const char*)a[0], (const char*)a[1], PLAT_MESSAGE_ERROR);
@@ -116,15 +114,12 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DtTerrainResize: EETerrainTable::sTable.resize((unsigned long)a[0], NULL);
         break;
-    case O::DtTerrainCount: return (int64_t)EETerrainTable::sTable.size();
     case O::DtTerrainAt: return P64(EETerrainTable::sTable[a[0]]);
     case O::DtTerrainSet: EETerrainTable::sTable[a[0]] = (EETerrainTable*)a[1];
         break;
-    case O::DtTerrainGet: return P64(EETerrainTable::Get((long)a[0]));
     case O::DtDefaultTerrain: return P64(&gDefaultTerrain);
     case O::DtFirstCliffTerrain: return P64(&gFirstCliffTerrain);
     case O::DtTerrainFirstTexture: return P64(&TT->mFirstTexture);
-    case O::DtTerrainTextureSetId: return TT->mTextureSetID;
     case O::DtTerrainTextures: return P64(&TT->mTextures);
     case O::DtTerrainPreview: return P64(&TT->mPreviewTexture);
     case O::DtTerrainLoadTextureName: TT->mTextureName.Load(*(FSFile*)a[0]);
@@ -145,7 +140,6 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DtTerrainDeleteTextures: delete[] std::exchange(TT->mTextures, nullptr);
         break;
     case O::DtTerrainLoadTexture: return P64(gTextureManager->LoadTexture(UString((const char*)a[0]), GETextureDescription{1, 0, gTexturePixelDepth, gTerrainMIPLevelsToDrop, false, false, TT->mHasAlpha, true}));
-    case O::DtTrilinearFilter: return gTrilinearFilter;
     case O::DtTexSetFrame: ((GETexture*)p)->SetFrame((unsigned long)a[0]);
         break;
     case O::DtTexDereference: ((GETexture*)p)->Dereference();
@@ -174,7 +168,6 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     // (EECore10OpB3) the buttons' C++ calls and members (gamecpp db_media.rs; p the button, the texture or the bitmap): one statement each
     case O::DbtFields: return P64(static_cast<EeDataButtonFields*>(BTN));
     case O::DbtUse: return P64(static_cast<EeDataMediaUse*>(BTN));
-    case O::DbtLock: return P64(sDatabaseLock.mLock);
     case O::DbtNew: return P64(new EEButtonObject);
     case O::DbtDelete: delete BTN;
         break;
@@ -235,18 +228,9 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // (EECore10OpB9) the colour table's C++ calls (gamecpp db_media.rs; p the surface or the colour): one statement each; the end of
     // lane B's chain
-    case O::DcCreateSurface: return gRasterizer->GetScreen(gScreenIndex)->CreateSurface(*(GESurfaceDescription*)a[0], (GESurface**)a[1]);
     case O::DcVerify: ESVERIFY_AT(a[0] != 0, a[1]);
         break;
-    case O::DcFindFile: return gTextureManager->GetTexturePath()->FindFile(UString((const char*)a[0]), *(FSFileSpec**)a[1]);
     case O::DcSurfaceLoad: return SURF->Load(*(FSFileSpec*)a[0], kImageFilePNG);
-    case O::DcLock: SURF->Lock();
-        break;
-    case O::DcUnlock: SURF->Unlock();
-        break;
-    case O::DcDereference: SURF->Dereference();
-        break;
-    case O::DcMemory: return P64(SURF->GetMemoryAddress());
     case O::DcBytesPerRow: return (int64_t)SURF->GetBytesPerRow();
     case O::DcWidth: return (int64_t)SURF->GetWidth();
     case O::DcHeight: return (int64_t)SURF->GetHeight();

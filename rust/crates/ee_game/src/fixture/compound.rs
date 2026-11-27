@@ -420,7 +420,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             let town = go(Op::FxNearestTown, c.h, &[]) as u64;
             let route = if town != 0 { go(Op::FxTownPatrolGroup, town, &[]) as u64 } else { 0 };
             let point = if route != 0 {
-                let (x, y) = (gc_go(gc::O::DkTileX, c.h, &[]), gc_go(gc::O::DkTileY, c.h, &[]));
+                let (x, y) = (gc_go(gc::O::PkUnitTileX, c.h, &[]), gc_go(gc::O::DkTileY, c.h, &[]));
                 // SAFETY: a live patrol group (the world's lock is the caller's)
                 let p = unsafe {
                     ee_sim::units::patrol_group::ee_units_pg_nearest(route as usize as *mut _, x as i32, y as i32)

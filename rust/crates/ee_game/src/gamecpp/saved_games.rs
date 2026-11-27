@@ -90,7 +90,7 @@ fn folder(log: P, search: P, file: P, directory: &CStr, pattern: &CStr) {
             continue; // keep the original when its conversion failed
         }
         at(file, directory);
-        h(O::UsgSetFile, file, &[pa(name.as_ptr() as P)]);
+        h(O::FileSpecSetFileC, file, &[pa(name.as_ptr() as P)]);
         h(O::UsgDelete, file, &[]);
     }
 }
@@ -98,7 +98,7 @@ fn folder(log: P, search: P, file: P, directory: &CStr, pattern: &CStr) {
 /// EEUpdateSavedGames: under the world's write lock, with the plane models made and a local server started.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_update_saved_games() {
-    h(O::UsgWorldWriteLock, 0, &[]);
+    h(O::WorldWriteLock, 0, &[]);
     super::startup::create_plane_models();
     h(O::EntryDeleteCommunicationsKeep, 0, &[]);
     h(O::EntryNewServer, 0, &[]);
@@ -106,11 +106,11 @@ pub extern "C" fn ee_gamecpp_update_saved_games() {
     let mut time = EeTimeOfDay { mMonth: 0, mDay: 0, mYear: 0, mHour: 0, mMinute: 0, mSecond: 0 };
     // SAFETY: a local the call fills
     unsafe { ee_time_of_day(&mut time) };
-    let log = Owned::new(O::FileSpecNew, O::FileSpecDelete);
-    let search = Owned::new(O::FileSpecNew, O::FileSpecDelete);
-    let file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
+    let log = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
+    let search = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
+    let file = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
     at(log.0, c"");
-    h(O::UsgSetFile, log.0, &[pa(c"saved game conversion.log".as_ptr() as P)]);
+    h(O::FileSpecSetFileC, log.0, &[pa(c"saved game conversion.log".as_ptr() as P)]);
     h(O::UsgDelete, log.0, &[]);
     h(O::UsgCreate, log.0, &[]);
     if h(O::UsgFOpenWrite, log.0, &[]) == 0 {
@@ -118,9 +118,9 @@ pub extern "C" fn ee_gamecpp_update_saved_games() {
         folder(log.0, search.0, file.0, c"Data\\Saved Games\\", c"*.ees");
         folder(log.0, search.0, file.0, c"Data\\Scenarios\\", c"*.scn");
         puts(log.0, b"Conversion completed!\n");
-        h(O::UsgClose, log.0, &[]);
+        h(O::TkFileClose, log.0, &[]);
     }
-    h(O::UsgWorldWriteUnlock, 0, &[]);
+    h(O::WorldWriteUnlock, 0, &[]);
 }
 
 #[cfg(test)]

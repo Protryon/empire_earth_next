@@ -50,6 +50,5 @@ public:
 };
 
 // a helper's AddUnit and Update (its functor's numbers, its calamity class's immunity flag)
-void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime);
 
 #endif

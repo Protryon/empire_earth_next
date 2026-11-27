@@ -10,6 +10,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::netmsg::session::*;
 
+use super::message::prts;
 use super::session_objs::{
     ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert, EeGamecppClientTail,
     EeGamecppServerTail,
@@ -32,6 +33,17 @@ use crate::app::game_options::EeAppOptionsPlayerFields;
 /// `kSlotServer`, `kSlotNone` (NEMessageID.h).
 pub const SS_SLOT_SERVER: i64 = 0xfe;
 pub const SS_SLOT_NONE: i64 = 0xff;
+/// The strings the session's lines show (ee/EEStringIDs.h; cpp_consts_tests.rs checks them): `IDS_MSG_GAME`,
+/// `IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT`, `IDS_SECONDS`.
+pub const SS_IDS_MSG_GAME: i64 = 31813;
+pub const SS_IDS_HOST_IS_NOT_RESPONDING: i64 = 30621;
+pub const SS_IDS_SECONDS: i64 = 30379;
+
+/// The lobby's game options' plain members (`gWorld.mLobbyOptions`).
+fn lobby_options<'a>() -> &'a crate::app::game_options::EeAppOptionsFields {
+    // SAFETY: the world's lobby options record, read before the next C++ call
+    unsafe { &*super::rec(O::LobbyOptions, 0) }
+}
 
 fn rw_bool(at: &mut bool, set: bool, v: i64) -> i64 {
     if set {
@@ -204,11 +216,11 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
             return 0;
         }
         EE_NETMSG_SESS_LOCK_OPTIONS_WRITE => {
-            h(if on { O::SsOptionsWriteLock } else { O::SsOptionsWriteUnlock }, f, &[]);
+            h(if on { O::EntryOptionsWriteLock } else { O::EntryOptionsWriteUnlock }, f, &[]);
             return 0;
         }
         EE_NETMSG_SESS_LOCK_WORLD_WRITE => {
-            h(if on { O::SsWorldWriteLock } else { O::SsWorldWriteUnlock }, f, &[]);
+            h(if on { O::WorldWriteLock } else { O::WorldWriteUnlock }, f, &[]);
             return 0;
         }
         EE_NETMSG_SESS_LOCK_PING => {
@@ -236,13 +248,13 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
 fn fact(f: P, v: &[i64; 8]) -> i64 {
     let op = match v[0] {
         EE_NETMSG_SESS_FACT_MULTIPLAYER_GAME => O::SsMultiplayerGame,
-        EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER => O::SsOptionsMultiplayer,
-        EE_NETMSG_SESS_FACT_LOAD_TYPE => O::SsLoadType,
+        EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER => return lobby_options().mIsMultiplayer as i64,
+        EE_NETMSG_SESS_FACT_LOAD_TYPE => return lobby_options().mLoadType as i64,
         EE_NETMSG_SESS_FACT_GAME_STATE => return n(f).sv_get(EeNetSvGet::GameState) as u8 as i64,
         EE_NETMSG_SESS_FACT_DEFAULT_COLOR => return super::globals::get!(gDefaultPlayerColors)[v[1] as usize] as i64,
         EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT => O::SsCitizensDefault,
         EE_NETMSG_SESS_FACT_VERSION_MATCH => return h(O::SsVersionMatch, session_objs::frame(f).version, &[]),
-        EE_NETMSG_SESS_FACT_BINARY_CHECKSUM => O::SsBinaryChecksum,
+        EE_NETMSG_SESS_FACT_BINARY_CHECKSUM => return super::globals::get!(gBinaryChecksum) as i64,
         EE_NETMSG_SESS_FACT_CURRENT_CT => return n(f).current_ct() as i64,
         EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS => return net::global().get(EeNetCommsField::CtsProcessed) as i64,
         EE_NETMSG_SESS_FACT_HUMANS => return net::global().get(EeNetCommsField::NumHumanPlayers) as u8 as i64,
@@ -255,10 +267,10 @@ fn fact(f: P, v: &[i64; 8]) -> i64 {
             return ee_net::net::ffi_client::ee_net_cl_my_send_to_slot(n(f).client) as i64;
         }
         EE_NETMSG_SESS_FACT_NUM_PLAYERS => return n(f).sv_get(EeNetSvGet::NumberOfPlayers) as u8 as i64,
-        EE_NETMSG_SESS_FACT_WORLD_PLAYERS => O::SsWorldPlayers,
+        EE_NETMSG_SESS_FACT_WORLD_PLAYERS => return super::message::num_players() as i64,
         EE_NETMSG_SESS_FACT_TIME => O::SsTime,
-        EE_NETMSG_SESS_FACT_WON => O::SsWon,
-        EE_NETMSG_SESS_FACT_SCREEN_ACTIVE => O::SsScreenActive,
+        EE_NETMSG_SESS_FACT_WON => return super::globals::have!(gWonNet) as i64,
+        EE_NETMSG_SESS_FACT_SCREEN_ACTIVE => return *super::message::wm::<bool>(O::WGameScreenActive) as i64,
         EE_NETMSG_SESS_FACT_ENGINE_CHOICES => return crate::cp_engine::ee_cp_engine_choice_count() as c_ulong as i64,
         EE_NETMSG_SESS_FACT_FORM_IS_CURRENT => {
             // the form looked up first (v2 0) or the current form first
@@ -348,7 +360,7 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
             let message = if slot == SS_SLOT_SERVER {
                 hp(O::SsSlotInfoServer, comms_of(f), &[index, session_objs::frame(f).protocol as i64])
             } else {
-                let address = Owned::new(O::SsNewString, O::SsDeleteString);
+                let address = Owned::new(O::StrNew, O::StrFree);
                 if slot != SS_SLOT_NONE {
                     h(O::SsClientAddress, comms_of(f), &[slot, address.0 as i64]);
                 }
@@ -365,9 +377,9 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
 fn message(f: P, v: &[i64; 8]) -> i64 {
     let m = v[1];
     match v[0] {
-        EE_NETMSG_SESS_MSG_TYPE => h(O::SsMsgType, f, &[m]),
-        EE_NETMSG_SESS_MSG_ORIGIN => h(O::SsMsgOrigin, f, &[m]),
-        EE_NETMSG_SESS_MSG_FOR_SLOT => h(O::SsMsgForSlot, f, &[m]),
+        EE_NETMSG_SESS_MSG_TYPE => h(O::LcMsgType, m as P, &[]),
+        EE_NETMSG_SESS_MSG_ORIGIN => h(O::LcMsgOrigSlot, m as P, &[]),
+        EE_NETMSG_SESS_MSG_FOR_SLOT => h(O::LcMsgForSlot, m as P, &[]),
         EE_NETMSG_SESS_MSG_NE_VALUE => h(O::SsMsgNeValue, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_RECORD => h(O::SsMsgRecord, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_INPUT_COUNT => h(O::SsMsgInputCount, f, &[m]),
@@ -377,7 +389,7 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
             input as i64
         }
         EE_NETMSG_SESS_MSG_REFERENCE => h(O::SsMsgReference, f, &[m]),
-        EE_NETMSG_SESS_MSG_DEREFERENCE => h(O::SsMsgDereference, f, &[m]),
+        EE_NETMSG_SESS_MSG_DEREFERENCE => h(O::LcMsgDereference, m as P, &[]),
         EE_NETMSG_SESS_MSG_EXECUTE => h(O::SsMsgExecute, f, &[m]),
         EE_NETMSG_SESS_MSG_SET_FAST_ID => h(O::SsMsgSetFastId, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_IS_GAME => h(O::SsMsgIsGame, f, &[m]),
@@ -398,7 +410,7 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_MSG_SEND_ALL => {
             h(O::SsMsgSetOriginServer, f, &[m]);
             ee_net::net::ffi_server::ee_net_sv_send_message_to_all(n(f).server, m as P as *mut c_void, false);
-            h(O::SsMsgDereference, f, &[m])
+            h(O::LcMsgDereference, m as P, &[])
         }
         _ => {
             session_objs::take_connection_request(session_objs::frame_server(f), m as P);
@@ -408,21 +420,21 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
 }
 
 /// An action posted to the UI thread, then the poster's reference dropped (EESessionPost).
-fn post(f: P, action: P) {
-    h(O::SsPostAction, f, &[action as i64]);
-    h(O::SsActionDereference, f, &[action as i64]);
+fn post(action: P) {
+    h(O::EntryPostAction, action, &[]);
+    h(O::EntryDereferenceAction, action, &[]);
 }
 
 /// A string resource shown in the UI manager's message box (`cancel`: the cancel-game callback).
 fn display(f: P, text: i64, cancel: bool, flag: bool) {
-    let s = Owned::new(O::SsNewString, O::SsDeleteString);
-    h(O::SsGetString, f, &[text, s.0 as i64]);
+    let s = Owned::new(O::StrNew, O::StrFree);
+    h(O::ResString, s.0, &[text]);
     h(O::SsDisplayMessage, f, &[s.0 as i64, cancel as i64, flag as i64]);
 }
 
 /// Back to the game list (the lobby service's leave).
 fn won_leave(f: P) {
-    h(O::SsWonClearGameList, f, &[]);
+    h(O::WonNetClearGameList, f, &[]);
     h(O::SsWonRejoinRoom, f, &[]);
 }
 
@@ -431,33 +443,32 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_UI_LOBBY_PLAYER => {
             h(O::SsLobbyUpdatePlayer, f, &[v[1]]);
         }
-        EE_NETMSG_SESS_UI_ACTION_REMOVE => post(f, hp(O::SsNewRemovePlayer, f, &[v[1], v[2]])),
-        EE_NETMSG_SESS_UI_ACTION_BOOT => post(f, hp(O::SsNewBootClient, f, &[v[1]])),
-        EE_NETMSG_SESS_UI_ACTION_MIGRATION => post(f, hp(O::SsNewServerMigration, f, &[])),
+        EE_NETMSG_SESS_UI_ACTION_REMOVE => post(hp(O::SsNewRemovePlayer, f, &[v[1], v[2]])),
+        EE_NETMSG_SESS_UI_ACTION_BOOT => post(hp(O::SsNewBootClient, f, &[v[1]])),
+        EE_NETMSG_SESS_UI_ACTION_MIGRATION => post(hp(O::SsNewServerMigration, f, &[])),
         EE_NETMSG_SESS_UI_PAUSE_EVENT => {
             let event = hp(O::SsNewPauseEvent, f, &[]);
-            h(O::SsPostEvent, f, &[event as i64]);
-            h(O::SsEventDereference, f, &[event as i64]);
+            h(O::UiPostEvent, event, &[]);
+            h(O::EntryDereferenceEvent, event, &[]);
         }
         EE_NETMSG_SESS_UI_DISPLAY => display(f, v[1], v[2] != 0, v[3] != 0),
         EE_NETMSG_SESS_UI_CHAT_PLAYER => {
             // the game's line about player v2 (string v1 formats its name)
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            let format = Owned::new(O::SsNewString, O::SsDeleteString);
-            let name = Owned::new(O::SsNewString, O::SsDeleteString);
-            h(O::SsGetString, f, &[v[1], format.0 as i64]);
+            let text = Owned::new(O::StrNew, O::StrFree);
+            let format = Owned::new(O::StrNew, O::StrFree);
+            let name = Owned::new(O::StrNew, O::StrFree);
+            h(O::ResString, format.0, &[v[1]]);
             h(O::SsSprintfName, f, &[text.0 as i64, format.0 as i64, v[2]]);
-            let ids = h(O::SsIdsMsgGame, f, &[]);
-            h(O::SsGetString, f, &[ids, name.0 as i64]);
-            h(O::SsChatGameLine, f, &[name.0 as i64, text.0 as i64]);
+            h(O::ResString, name.0, &[SS_IDS_MSG_GAME]);
+            h(O::UiAddChatGameLine, text.0, &[name.0 as i64]);
         }
         EE_NETMSG_SESS_UI_CHAT_TEXT => {
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            h(O::SsGetString, f, &[v[1], text.0 as i64]);
-            h(O::SsChatText, f, &[text.0 as i64, v[2]]);
+            let text = Owned::new(O::StrNew, O::StrFree);
+            h(O::ResString, text.0, &[v[1]]);
+            h(O::UiAddChat, text.0, &[v[2]]);
         }
         EE_NETMSG_SESS_UI_CLOSE_FORM => {
-            h(O::SsCloseForm, f, &[]);
+            h(O::UiCloseForm, f, &[]);
         }
         EE_NETMSG_SESS_UI_OPEN_FORM => {
             h(O::SsOpenForm, f, &[v[1]]);
@@ -486,25 +497,25 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
         }
         EE_NETMSG_SESS_UI_RETRY => {
             // the connecting box with the retries
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            let format = Owned::new(O::SsNewString, O::SsDeleteString);
-            h(O::SsGetString, f, &[v[1], format.0 as i64]);
+            let text = Owned::new(O::StrNew, O::StrFree);
+            let format = Owned::new(O::StrNew, O::StrFree);
+            h(O::ResString, format.0, &[v[1]]);
             h(O::SsSprintfRetry, comms_of(f), &[text.0 as i64, format.0 as i64]);
             h(O::SsDisplayMessage, f, &[text.0 as i64, 0, 0]);
         }
         EE_NETMSG_SESS_UI_LEAVE => {
             // back to the game list, the reason shown (with the host's version and ours) or the boot posted, then
             // disconnected
-            let text = Owned::new(O::SsNewString, O::SsDeleteString);
-            let format = Owned::new(O::SsNewString, O::SsDeleteString);
-            if h(O::SsWon, f, &[]) != 0 {
+            let text = Owned::new(O::StrNew, O::StrFree);
+            let format = Owned::new(O::StrNew, O::StrFree);
+            if super::globals::have!(gWonNet) {
                 won_leave(f);
             }
             if v[2] == EE_NETMSG_SESS_LEAVE_BOOT {
-                post(f, hp(O::SsNewBootClient, f, &[v[1]]));
+                post(hp(O::SsNewBootClient, f, &[v[1]]));
             } else if v[2] != EE_NETMSG_SESS_LEAVE_QUIET {
-                h(O::SsCloseForm, f, &[]);
-                h(O::SsGetString, f, &[v[1], format.0 as i64]);
+                h(O::UiCloseForm, f, &[]);
+                h(O::ResString, format.0, &[v[1]]);
                 let versions = v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS;
                 if versions {
                     h(O::SsSprintfVersions, f, &[text.0 as i64, format.0 as i64, v[3]]);
@@ -566,14 +577,20 @@ fn sound(f: P, v: &[i64; 8]) {
 fn world(f: P, v: &[i64; 8]) -> i64 {
     let pl = v[1] as P;
     match v[0] {
-        EE_NETMSG_SESS_WORLD_PLAYER => h(O::SsWorldPlayer, f, &[v[1]]),
-        EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT => h(O::SsWorldPlayerBySlot, f, &[v[1]]),
-        EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::SsPlIsHuman, pl, &[]),
-        EE_NETMSG_SESS_WORLD_SLOT => h(O::SsPlSlot, pl, &[]),
+        EE_NETMSG_SESS_WORLD_PLAYER => h(O::WorldPlayer, 0, &[v[1]]),
+        EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT => super::message::player_by_slot(v[1]) as i64,
+        EE_NETMSG_SESS_WORLD_IS_HUMAN => h(O::TbIsHuman, pl, &[]),
+        EE_NETMSG_SESS_WORLD_SLOT => prts(pl).mSlot as i64,
         EE_NETMSG_SESS_WORLD_HAS_HUMAN => h(O::SsPlHasHuman, pl, &[]),
-        EE_NETMSG_SESS_WORLD_ID => h(O::SsPlId, pl, &[]),
-        EE_NETMSG_SESS_WORLD_SET_SLOT => h(O::SsPlSetSlot, pl, &[v[2]]),
-        EE_NETMSG_SESS_WORLD_SET_FIREWALL => h(O::SsPlSetFirewall, pl, &[v[2]]),
+        EE_NETMSG_SESS_WORLD_ID => prts(pl).mPlayerID as i64,
+        EE_NETMSG_SESS_WORLD_SET_SLOT => {
+            prts(pl).mSlot = v[2] as u8;
+            0
+        }
+        EE_NETMSG_SESS_WORLD_SET_FIREWALL => {
+            super::message::pfields(pl).mBehindFirewall = v[2] != 0;
+            0
+        }
         EE_NETMSG_SESS_WORLD_NAME_FROM_MSG => h(O::SsPlNameFromMsg, pl, &[v[2]]),
         EE_NETMSG_SESS_WORLD_RECONNECT => h(O::SsWorldReconnect, f, &[v[1], v[2]]),
         EE_NETMSG_SESS_WORLD_REMOVE => h(O::SsWorldRemove, f, &[v[1]]),
@@ -581,12 +598,23 @@ fn world(f: P, v: &[i64; 8]) -> i64 {
     }
 }
 
+/// A header's versions set to the game's (`kSaveGameMajorVersion`, `kSaveGameMinorVersion`).
+fn set_header_versions(header: P) {
+    let (major, minor) = (h(O::FwSaveMajor, 0, &[]) as c_ulong, h(O::FwSaveMinor, 0, &[]) as c_ulong);
+    let v = hp(O::PsHdrVersions, header, &[]) as *mut c_ulong;
+    // SAFETY: the live header's mMajorVersion, mMinorVersion
+    unsafe {
+        *v = major;
+        *v.add(1) = minor;
+    }
+}
+
 /// Load type v1's file (the map type) sent to lobby slot v2's client (a saved game or a scenario).
 fn xfer_game_file(f: P, load_type: i64, slot: i64) {
     let mut file: P = 0;
     if h(O::SsOpenSaveGame, f, &[(load_type == 2) as i64, ptr(&mut file)]) != 0 {
-        let header = Owned::new(O::SsNewHeader, O::SsDeleteHeader);
-        h(O::SsHeaderSetVersions, f, &[header.0 as i64]);
+        let header = Owned::new(O::PsHeaderNew, O::PsHeaderDelete);
+        set_header_versions(header.0);
         let loaded =
             super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as *mut c_void) == 0;
         if loaded && h(O::SsMultiplayerGame, f, &[]) == 0 {
@@ -633,8 +661,8 @@ fn comms(f: P, v: &[i64; 8]) {
             sv::ee_net_sv_unregister_slot(n(f).server, SS_SLOT_SERVER as u8);
             sv::ee_net_sv_register_slot(n(f).server, SS_SLOT_SERVER as u8);
             if net::present() {
-                h(O::SsCommsDelete, f, &[]);
-                h(O::SsCommsNewClient, f, &[]);
+                h(O::EntryDeleteCommunicationsKeep, f, &[]);
+                h(O::EntryNewClient, f, &[]);
                 ee_net::net::ffi_client::ee_net_cl_start_threads(net::global().client);
             }
         }
@@ -663,12 +691,12 @@ fn start(f: P, v: &[i64; 8]) {
         h(O::SsProtocolStatus, f, &[protocol as i64]);
     } else if v[0] == EE_NETMSG_SESS_START_RESUME {
         super::globals::graphics_post_resume();
-        while h(O::SsGfxPaused, f, &[]) != 0 {
+        while h(O::GfxIsPaused, f, &[]) != 0 {
             ee_base::plat_core::time::PlatSleep(1);
         }
     } else {
         h(O::SsPhysicsPostStart, f, &[]);
-        while h(O::SsTimerRunning, f, &[]) == 0 {
+        while h(O::PhysTimerRunning, f, &[]) == 0 {
             ee_base::plat_core::time::PlatSleep(1);
         }
         h(O::SsMainGameUiState0, f, &[]);
@@ -680,7 +708,7 @@ fn start(f: P, v: &[i64; 8]) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_client_slot_update(slot: u8, player: &EeAppOptionsPlayerFields) {
     if player.mSlot == 0 && player.mType == 3 {
-        post(0, hp(O::ClNewBootDefault, 0, &[]));
+        post(hp(O::ClNewBootDefault, 0, &[]));
     } else {
         h(O::SsLobbyUpdatePlayer, 0, &[slot as i64]);
     }
@@ -695,9 +723,9 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
     if h(O::ClNameLength, 0, &[name]) < 5 {
         return std::ptr::null_mut();
     }
-    let extension = Owned::new(O::SsNewString, O::SsDeleteString);
+    let extension = Owned::new(O::StrNew, O::StrFree);
     h(O::ClExtension, 0, &[name, extension.0 as i64]);
-    let file = hp(O::ClNewFileSpec, 0, &[]) as i64;
+    let file = hp(O::FileSpecNew, 0, &[]) as i64;
     h(O::ClFileSetVolume, 0, &[file]);
     let folder = if h(O::ClExtIsSaved, 0, &[extension.0 as i64]) != 0 {
         0
@@ -713,10 +741,11 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
     h(O::ClFileSetFile, 0, &[file, name]);
     let ok = if h(O::ClFileOpenRead, 0, &[file]) != 0 {
         h(O::ClFileClose, 0, &[file]);
-        let header = Owned::new(O::SsNewHeader, O::SsDeleteHeader);
-        h(O::SsHeaderSetVersions, 0, &[header.0 as i64]);
+        let header = Owned::new(O::PsHeaderNew, O::PsHeaderDelete);
+        set_header_versions(header.0);
         super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as P as *mut c_void);
-        if h(O::ClHeaderChecksum, 0, &[header.0 as i64]) as c_ulong == size {
+        // SAFETY: the live header's mL4E4, mNumPlayers, mChecksum
+        if unsafe { *(hp(O::PsHdrNumbers, header.0, &[]) as *const c_ulong).add(2) } == size {
             false
         } else {
             h(O::ClFileDeleteOnDisk, 0, &[file]);
@@ -737,16 +766,14 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
 /// responding (%d seconds)").
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_client_timeout_warning(remaining: c_ulong) {
-    let text = Owned::new(O::SsNewString, O::SsDeleteString);
-    let seconds = Owned::new(O::SsNewString, O::SsDeleteString);
-    let format = Owned::new(O::SsNewString, O::SsDeleteString);
-    let ids = h(O::ClIdsNotResponding, 0, &[]);
-    h(O::SsGetString, 0, &[ids, text.0 as i64]);
-    let ids = h(O::ClIdsSeconds, 0, &[]);
-    h(O::SsGetString, 0, &[ids, seconds.0 as i64]);
+    let text = Owned::new(O::StrNew, O::StrFree);
+    let seconds = Owned::new(O::StrNew, O::StrFree);
+    let format = Owned::new(O::StrNew, O::StrFree);
+    h(O::ResString, text.0, &[SS_IDS_HOST_IS_NOT_RESPONDING]);
+    h(O::ResString, seconds.0, &[SS_IDS_SECONDS]);
     h(O::ClTimeoutFormat, 0, &[format.0 as i64, text.0 as i64, seconds.0 as i64]);
     h(O::ClSprintfSeconds, 0, &[text.0 as i64, format.0 as i64, (remaining / 1000) as i64]);
-    h(O::SsChatText, 0, &[text.0 as i64, 1]);
+    h(O::UiAddChat, text.0, &[1]);
 }
 
 /// The session host (ee_sim `EeNetSessHostFn`; `call` an `EeNetSessCall`: the frame and the values).

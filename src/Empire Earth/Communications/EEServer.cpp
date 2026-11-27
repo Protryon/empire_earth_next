@@ -25,7 +25,6 @@
 #include <mbstring.h>
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
-#include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEWonNet.h"
@@ -36,11 +35,8 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEServer.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
-#include "rust/game/gamecpp.h"
-#include "ee/EEUnit.h"
 #include <list>
 #include <string>
 // (gDefaultPlayerColors, the 16 slots' default colours: gamecpp globals.rs)
@@ -294,17 +290,12 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::C11RequestChecksum: return (long long)REQ->Get<uint32_t>(3);
     // a lobby slot's player (p)
-    case O::C11PlayerNew: return P64(new EEGameOptionsPlayer);
     case O::C11PlayerDelete: delete GOP;
         break;
     case O::C11PlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(GOP));
     case O::C11PlayerNameCopy: GOP->mName = ((EEGameOptionsPlayer*)a[0])->mName;
         break;
     case O::C11PlayerNameFromRequest: GOP->mName = REQ->GetString((uint32_t)a[1]);
-        break;
-    case O::C11OptionsReadLock: gWorld.mLobbyOptions.mLock->ReadLock();
-        break;
-    case O::C11OptionsReadUnlock: gWorld.mLobbyOptions.mLock->ReadUnlock();
         break;
     case O::C11OptionsPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(&gWorld.mLobbyOptions.mPlayers[a[0]]));
     // the sounds and the UI
@@ -316,14 +307,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     // p the session's communications object (the server or client), a register (an EEGameOptionsPlayer) for the
     // SsReg ops, or unused, one statement each
     // the locks
-    case O::SsOptionsWriteLock: gWorld.mLobbyOptions.mLock->WriteLock();
-        break;
-    case O::SsOptionsWriteUnlock: gWorld.mLobbyOptions.mLock->WriteUnlock();
-        break;
-    case O::SsWorldWriteLock: gWorld.mLock->WriteLock();
-        break;
-    case O::SsWorldWriteUnlock: gWorld.mLock->WriteUnlock();
-        break;
     case O::SsSearchLock: return P64(SS->mSearchForSlotLock);
     case O::SsAttemptLock: return P64(SS->mAttemptToRemovePlayerLock);
     case O::SsServerFastLock: return P64(SS->mFastSelectionLock);
@@ -338,23 +321,13 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the facts
     case O::SsMultiplayerGame: return EEIsMultiplayerGame(true);
-    case O::SsOptionsMultiplayer: return gWorld.mLobbyOptions.mIsMultiplayer;
-    case O::SsLoadType: return gWorld.mLobbyOptions.mLoadType;
     case O::SsCitizensDefault: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     case O::SsVersionMatch: return !(*(const UWideString*)p != gGameVersion);
-    case O::SsBinaryChecksum: return gBinaryChecksum;
-    case O::SsWorldPlayers: return (long long)gWorld.mNumPlayers;
     case O::SsTime: return (long long)TMGetTime();
-    case O::SsWon: return gWonNet != NULL;
-    case O::SsScreenActive: return gWorld.mGameScreenActive;
     case O::SsFormById: return P64(gUIManager->GetFormByID(a[0]));
     case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
     case O::SsPlayerSendToSlot: return SS->GetPlayerSendToSlot((unsigned char)a[0]);
-    // the server's and client's members (their addresses)
-    case O::SsSHasLeft: return P64(&SS->mHasLeftGame);
-    case O::SsCHasLeft: return P64(&SC->mHasLeftGame);
-    case O::SsCFastId: return P64(&SC->mFastSelectionID);
     // the lobby slot registers (p the register, a0 the other register or the argument)
     case O::SsRegLoadOptions: REG0 = gWorld.mLobbyOptions.mPlayers[a[0]];
         break;
@@ -384,9 +357,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsMsgSetOriginServer: MSG->SetOriginatingSlot(kSlotServer);
         break;
     case O::SsNewRecord0: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0])));
-    case O::SsNewString: return P64(new UWideString);
-    case O::SsDeleteString: delete (UWideString*)p;
-        break;
     case O::SsClientAddress: SS->GetClientAddress((unsigned char)a[0], WSTR(1));
         break;
     case O::SsSlotInfoServer: return P64(static_cast<NEMessage*>(new EEMRecord(kMessagePlayerSlotInfo, {(unsigned char)a[0], kSlotServer, SS->mBehindFirewall[kSlotServer], EEGetLocalAddress((NEProtocol*)a[1], gGamePreferences.mSettings.GetNetworkAdapter())})));
@@ -395,9 +365,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsConnectionCheckResponse: ((NESynchronousCommunications*)p)->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)a[0]}), kSlotNone);
         break;
     // the messages (a0)
-    case O::SsMsgType: return MSG->GetType();
-    case O::SsMsgOrigin: return MSG->GetOriginatingSlot();
-    case O::SsMsgForSlot: return MSG->GetForSpecificSlot();
     case O::SsMsgNeValue: return (long long)static_cast<NEMRecord*>(MSG)->Value((uint32_t)a[1]);
     case O::SsMsgRecord: memcpy((void*)a[1], static_cast<EEMRecord*>(MSG)->mRecord, sizeof(static_cast<EEMRecord*>(MSG)->mRecord));
         break;
@@ -405,8 +372,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsMsgInput: static_cast<NEMRecord*>(MSG)->GetPlayerInput((unsigned long)a[1], *(NEMessage**)a[2]);
         break;
     case O::SsMsgReference: MSG->Reference();
-        break;
-    case O::SsMsgDereference: MSG->Dereference();
         break;
     case O::SsMsgExecute: MSG->Execute();
         break;
@@ -421,27 +386,10 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsNewRemovePlayer: return P64(static_cast<EEAction*>(new EEARemovePlayer((unsigned char)a[0], a[1] != 0)));
     case O::SsNewBootClient: return P64(static_cast<EEAction*>(new EEABootClientFromCanceledGame((long)a[0])));
     case O::SsNewServerMigration: return P64(static_cast<EEAction*>(new EEAServerMigration));
-    case O::SsPostAction: gUserInterface->PostAction((EEAction*)a[0]);
-        break;
-    case O::SsActionDereference: ((EEAction*)a[0])->Dereference();
-        break;
     case O::SsNewPauseEvent: return P64(EECreateScreenEvent(EE_SCREENS_MG_PAUSE));
-    case O::SsPostEvent: gUserInterface->PostEvent((UIEvent*)a[0], NULL);
-        break;
-    case O::SsEventDereference: ((UIEvent*)a[0])->Dereference();
-        break;
-    case O::SsGetString: gResource->GetString((long)a[0], WSTR(1));
-        break;
     case O::SsDisplayMessage: gUIManager->DisplayMessage(WSTR(0), true, NULL, a[1] != 0 ? (EEUIFErrorCallback)CancelGameCallback : NULL, a[2] != 0);
         break;
     case O::SsSprintfName: sprintf(WSTR(0), WSTR(1), (const char*)((EEPlayer*)a[2])->mName);
-        break;
-    case O::SsIdsMsgGame: return IDS_MSG_GAME;
-    case O::SsChatGameLine: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), WSTR(0), WSTR(1), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-        break;
-    case O::SsChatText: gUserInterface->AddChatLogEntry(WSTR(0), (long)a[1]);
-        break;
-    case O::SsCloseForm: gUserInterface->CloseForm(NULL);
         break;
     case O::SsOpenForm: gUserInterface->OpenForm(gUIManager->GetFormByID(a[0]));
         break;
@@ -476,8 +424,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsWonInfoPlayers: return P64(&((EEWonNetGameInfo*)a[0])->mPlayers);
     case O::SsWonJoined: gWonNet->PlayerJoined();
         break;
-    case O::SsWonClearGameList: gWonNet->ClearGameList();
-        break;
     case O::SsWonRejoinRoom: gWonNet->RejoinRoom(false);
         break;
     // the sounds (sSample: the server's last)
@@ -487,16 +433,7 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsLoadSound: EELoadSound(UString(a[0] != 0 ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, *(unsigned long*)a[1], *(unsigned long*)a[2], 1);
         break;
     // the world (p: an EEPlayer* for the Pl ops)
-    case O::SsWorldPlayer: return P64(gWorld.mPlayers[a[0]]);
-    case O::SsWorldPlayerBySlot: return P64(gWorld.GetPlayerBySlot((unsigned char)a[0]));
-    case O::SsPlIsHuman: return ((EEPlayer*)p)->IsHuman();
-    case O::SsPlSlot: return ((EEPlayer*)p)->mSlot;
     case O::SsPlHasHuman: return ((EEPlayer*)p)->mHumanPlayer != NULL;
-    case O::SsPlId: return (long long)((EEPlayer*)p)->mPlayerID;
-    case O::SsPlSetSlot: ((EEPlayer*)p)->mSlot = (unsigned char)a[0];
-        break;
-    case O::SsPlSetFirewall: ((EEPlayer*)p)->mBehindFirewall = a[0] != 0;
-        break;
     case O::SsPlNameFromMsg: static_cast<EEHumanPlayer*>((EEPlayer*)p)->SetName(((EEMRecord*)a[0])->mString);
         break;
     case O::SsWorldReconnect: gWorld.GetPlayer((unsigned long)a[0])->mSlot = (unsigned char)a[1];
@@ -507,16 +444,7 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the communications
     case O::SsOpenSaveGame: return EEOpenSaveGameFile((const char*)gWorld.mLobbyOptions.mMapType, a[0] != 0 ? "Saved Games\\" : "Scenarios\\", *(FSFileSpec**)a[1]) == kErrorOK;
-    case O::SsNewHeader: return P64(new EEPSaveGameHeader);
-    case O::SsDeleteHeader: delete (EEPSaveGameHeader*)p;
-        break;
-    case O::SsHeaderSetVersions: ((EEPSaveGameHeader*)a[0])->mMajorVersion = kSaveGameMajorVersion, ((EEPSaveGameHeader*)a[0])->mMinorVersion = kSaveGameMinorVersion;
-        break;
     case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, (unsigned char)a[2], *(unsigned long*)a[3], false);
-        break;
-    case O::SsCommsDelete: delete gCommunications;
-        break;
-    case O::SsCommsNewClient: gCommunications = new EEClient;
         break;
     // the game start
     case O::SsStartTimeFromMsg: gWorld.mStartTime = ((NEMRecord*)a[0])->Get<uint32_t>(0);
@@ -527,10 +455,8 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsProtocolStatus: ((NEProtocol*)a[0])->GetStatus(UWideString(""), 0xffff0000);
         break;
-    case O::SsGfxPaused: return gGraphics->mIsPaused;
     case O::SsPhysicsPostStart: gPhysics->mThread->Post(0x404, NULL, NULL, true);
         break;
-    case O::SsTimerRunning: return gPhysics->mTimerRunning;
     case O::SsMainGameUiState0: gUIManager->GetMainGameForm()->SetUIState(0);
         break;
     // (EECore11OpC3) the C++ calls and members of the client's bodies in Rust (gamecpp session_objs.rs; EEServer.cpp's EECore11OpC2
@@ -549,7 +475,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::ClExtIsSaved: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gSavedGameExtension)) == 0;
     case O::ClExtIsScenario: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gScenarioExtension)) == 0;
     case O::ClExtIsCampaign: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gCampaignExtension)) == 0;
-    case O::ClNewFileSpec: return P64(new FSFileSpec);
     case O::ClFileSetVolume: FILESPEC->SetVolume(gStartupVolume);
         break;
     case O::ClFileSetDirectory: FILESPEC->SetDirectory(gStartupDirectory + "data\\" + (a[1] == 0 ? "Saved Games\\" : a[1] == 1 ? "Scenarios\\" : "Campaigns\\"));
@@ -564,9 +489,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::ClFileDeleteOnDisk: FILESPEC->Delete();
         break;
     case O::ClFileCreateWrite: return FILESPEC->Create() == kErrorOK && FILESPEC->Open(kFileAccessWrite) == kErrorOK;
-    case O::ClHeaderChecksum: return (long long)((EEPSaveGameHeader*)a[0])->mChecksum;
-    case O::ClIdsNotResponding: return IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT;
-    case O::ClIdsSeconds: return IDS_SECONDS;
     case O::ClTimeoutFormat: WSTR(0) = WSTR(1) + UWideString("  (%d ") + WSTR(2) + UWideString(")");
         break;
     case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);

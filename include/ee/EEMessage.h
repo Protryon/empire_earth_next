@@ -147,12 +147,8 @@ public:
 EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions);
 EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer);
 // round 5: the box selection (0x4e, 0x4f, 0x50; the old EEMSelectUnits constructor): the local player's units of
-// inUnitType in inRectangle (EEUnitPicker), compressed; and its units decoded (the compressed blob's ids)
+// inUnitType in inRectangle (EEUnitPicker), compressed
 EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType);
-void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnitIDs);
-// round 5: the old EEMLoadOrSaveGame::LoadOrSave (EEPhysics::ServeLoadSaveRequests runs each queued request): saves
-// the game under the request's name; returns its tick
-long EELoadOrSave(EEMRecord* inRequest);
 
 // The lobby slot fields EEMPlayerInformation updates (mField; Execute): 0 type, 1 ping, 2 colour, 3 team,
 // 4 starting citizens, 5 ready; port: 6 a computer slot's engine (ee/EECPEngine.h). The lobby redraws the row with

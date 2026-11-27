@@ -40,6 +40,28 @@ pub unsafe extern "C" fn ee_gamecpp_camera_new(camera: *mut c_void, rec: *mut Ee
     FIELDS.store(rec as usize, Ordering::Relaxed);
     set_unit(EE_APP_CAMERA_UNIT_A, EE_APP_CAMERA_NO_UNIT);
     set_unit(EE_APP_CAMERA_UNIT_B, EE_APP_CAMERA_NO_UNIT);
+    ee_sim::scenario::world_views::register_camera(scenario_camera);
+}
+
+/// The scenario's camera statements (ee_sim scenario world_views.rs `EE_SCENARIO_CAMERA_*`), on the world's camera.
+fn scenario_camera(op: u32, a: i64) -> i64 {
+    use ee_sim::scenario::world_views::*;
+    match op {
+        EE_SCENARIO_CAMERA_RESET_PATH => reset_path(),
+        EE_SCENARIO_CAMERA_CLEAR_A => clear_unit_a(),
+        EE_SCENARIO_CAMERA_CLEAR_B => clear_unit_b(),
+        // SAFETY: the world's camera's record
+        EE_SCENARIO_CAMERA_TURN_RESET => unsafe { (*fields()).mTurnYaw = 0.0 },
+        EE_SCENARIO_CAMERA_SET_MODE => set_mode(a as c_long),
+        EE_SCENARIO_CAMERA_SET_CHANGED => set_changed(),
+        EE_SCENARIO_CAMERA_UPDATE => update(0.0),
+        // SAFETY: as above
+        EE_SCENARIO_CAMERA_MODE => return unsafe { (*fields()).mMode } as i64,
+        EE_SCENARIO_CAMERA_ZOOM => return zoom().to_bits() as i64,
+        EE_SCENARIO_CAMERA_SET_ZOOM => set_zoom(f32::from_bits(a as u32)),
+        _ => {}
+    }
+    0
 }
 
 /// The world's camera's record.
@@ -99,6 +121,16 @@ pub fn set_zoom(zoom: f32) {
     unsafe { ee_app_camera_set_zoom(fields(), cam(), ee_gamecpp_camera_host, zoom) }
 }
 
+/// `SetMode`.
+pub fn set_mode(mode: c_long) {
+    unsafe { ee_app_camera_set_mode(fields(), cam(), ee_gamecpp_camera_host, mode) }
+}
+
+/// `Scroll`.
+pub fn scroll(dx: f32, dy: f32) {
+    unsafe { ee_app_camera_scroll(fields(), cam(), ee_gamecpp_camera_host, dx, dy) }
+}
+
 /// `Update`.
 pub fn update(elapsed: f32) {
     unsafe { super::camera_host::ee_gamecpp_camera_update(cam(), elapsed) }
@@ -120,7 +152,7 @@ pub fn set_location(location: *const Ge3DPoint, immediate: bool, follow_terrain:
 fn unit_id(unit: P) -> u32 {
     if unit != 0 {
         // SAFETY: the live unit's record
-        unsafe { crate::rts::units::ee_rts_unit_handle_id(super::rec(O::UnRts, unit)) }
+        unsafe { crate::rts::units::ee_rts_unit_handle_id(crate::gamecpp::records::un_rts(unit)) }
     } else {
         EE_APP_CAMERA_NO_UNIT
     }
@@ -225,10 +257,10 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             set_unit(io.slot, io.id);
         }
         EE_APP_CAMERA_OP_REFERENCE => {
-            h(O::EcReference, unit, &[]);
+            h(O::CgUnitReference, unit, &[]);
         }
         EE_APP_CAMERA_OP_DEREFERENCE => {
-            h(O::EcDereference, unit, &[]);
+            h(O::CgUnitDereference, unit, &[]);
         }
         EE_APP_CAMERA_OP_UNIT_STATE => {
             io.id = if unit == 0 {
@@ -236,7 +268,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             } else {
                 unit_state(
                     true,
-                    h(O::EcHitPoints, unit, &[]) as c_long,
+                    h(O::RoUnitHitPointsValue, unit, &[]) as c_long,
                     h(O::EcTileXRaw, unit, &[]) as c_long,
                     h(O::DkTileY, unit, &[]) as c_long,
                 )
@@ -257,14 +289,14 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             }
         }
         EE_APP_CAMERA_OP_FOLLOW_RATE => {
-            io.flag = complex != 0 && !on(O::EcInCinematic);
+            io.flag = complex != 0 && !on(O::RrCinematic);
             if io.flag {
-                io.x = hd(O::EcVelocity, complex, &[], &[]) * hd(O::EcGameSpeed, 0, &[], &[]);
+                io.x = hd(O::EcVelocity, complex, &[], &[]) * hd(O::FwWorldSpeed, 0, &[], &[]);
             }
         }
         EE_APP_CAMERA_OP_HIDDEN => {
             io.flag = unit != 0
-                && hp(O::UnPlayer, unit, &[]) != hp(O::EcCurrentPlayer, 0, &[])
+                && hp(O::UnPlayer, unit, &[]) != hp(O::WorldCurrentPlayer, 0, &[])
                 && h(O::EcIsSeen, unit, &[]) == 0;
         }
         EE_APP_CAMERA_OP_KEY_COUNT => io.id = keys().len() as u32,
@@ -278,8 +310,8 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             io.id = switches(
                 crate::gamecpp::globals::get!(gFreeCamera),
                 on(O::EcFarRearClipping),
-                on(O::EcInCinematic),
-                on(O::EcOrthographic),
+                on(O::RrCinematic),
+                on(O::RoOrthographic),
                 on(O::EcHasMap),
             );
         }
@@ -303,8 +335,8 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             io.flag = h(O::EcLocationOnLine, 0, &[cptr(&io.line), ptr(&mut io.point)]) != 0;
         }
         EE_APP_CAMERA_OP_VIEWPORT => {
-            io.x = hd(O::EcViewportXCenter, 0, &[], &[]);
-            io.y = hd(O::EcViewportYCenter, 0, &[], &[]);
+            io.x = hd(O::MpViewXCenter, 0, &[], &[]);
+            io.y = hd(O::MpViewYCenter, 0, &[], &[]);
             io.z = hd(O::EcViewportHalfHeight, 0, &[], &[]);
         }
         EE_APP_CAMERA_OP_VIEWPORT_CAMERA => {
@@ -312,7 +344,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
             io.point.y = hd(O::EcViewportCameraY, 0, &[], &[]);
             io.point.z = hd(O::EcViewportCameraZ, 0, &[], &[]);
         }
-        EE_APP_CAMERA_OP_FRONT_CLIPPING => io.x = hd(O::DkFrontClipping, 0, &[], &[]),
+        EE_APP_CAMERA_OP_FRONT_CLIPPING => io.x = hd(O::MpViewFrontClip, 0, &[], &[]),
         EE_APP_CAMERA_OP_SET_CLIPPING => {
             hf(O::EcSetFrontClipping, 0, &[], &[io.x]);
             hf(O::EcSetRearClipping, 0, &[], &[io.y]);

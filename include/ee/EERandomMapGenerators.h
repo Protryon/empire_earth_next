@@ -5,12 +5,15 @@
 #ifndef EE_EERANDOMMAPGENERATORS_H
 #define EE_EERANDOMMAPGENERATORS_H
 
-unsigned long EERMGetNumberOfGenerators();                          // 0x286714 (size of the vector)
-UWideString EERMGetGeneratorDisplayName(unsigned long inIndex);  // 0x28672f (entry +0x14, a UWideString; by value: Rust's)
-UWideString EERMGetGeneratorName(unsigned long inIndex);     // 0x2867a8 (entry +0x00)
+#include "rust/sim/rmap.h"   // the list is ee_sim rmap object.rs' (initialize_generators)
+
+inline unsigned long EERMGetNumberOfGenerators() { return ee_rmap_generator_count(); }   // 0x286714 (size of the vector)
+// 0x28672f (entry +0x14, a UWideString; by value: Rust's)
+inline UWideString EERMGetGeneratorDisplayName(unsigned long inIndex) { return UWideString(ee_rmap_generator_text(inIndex, true)); }
+inline UWideString EERMGetGeneratorName(unsigned long inIndex) { return UWideString(ee_rmap_generator_text(inIndex, false)); }   // 0x2867a8 (entry +0x00)
 // 0x2867b6: the index of the generator named inName (entry +0x00); 3 when there is none
-long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex);
+inline long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex) { return ee_rmap_find_generator(inName, &outIndex); }
 // 0x286741: the display name (entry +0x14) of the generator named inName, else inName
-UWideString EERMGetGeneratorDisplayName(const UWideString& inName);
+inline UWideString EERMGetGeneratorDisplayName(const UWideString& inName) { return UWideString(ee_rmap_generator_display(inName)); }
 
 #endif

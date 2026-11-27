@@ -841,7 +841,7 @@ pub fn mem_position(file: usize) -> c_long {
 
 /// `length` bytes of a memory file's data from `start`.
 pub fn mem_bytes(file: usize, start: usize, length: c_ulong) -> Vec<u8> {
-    let data = gc::h(gc::O::MemFileData, file, &[]) as usize;
+    let data = gc::h(gc::O::FxMemoryData, file, &[]) as usize;
     if data == 0 || length == 0 {
         return Vec::new();
     }

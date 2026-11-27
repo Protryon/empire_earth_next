@@ -113,7 +113,7 @@ pub fn save_digest(out: &mut Vec<String>) {
 /// the save's list).
 pub fn file_digest(name: &str, out: &mut Vec<String>) {
     let spec = x::scenario_spec(name);
-    if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0 {
+    if gc::h(gc::O::DxOpen, spec, &[]) != 0 {
         out.push("  missing".into());
         gc::h(gc::O::DxDelete, spec, &[]);
         return;
@@ -124,7 +124,7 @@ pub fn file_digest(name: &str, out: &mut Vec<String>) {
     gc::h(gc::O::FileClose, spec, &[]);
     let done = |out: &mut Vec<String>, line: &str| {
         out.push(line.into());
-        gc::h(gc::O::SsDeleteHeader, header, &[]);
+        gc::h(gc::O::PsHeaderDelete, header, &[]);
         h(O::MemFree, memory, &[]);
         gc::h(gc::O::DxDelete, spec, &[]);
     };
@@ -342,7 +342,7 @@ pub fn text_elements(out: &mut Vec<String>) {
         ));
     }
     let mut s = "  players".to_string();
-    for p in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
+    for p in 0..gc::map::num_players() {
         let player = crate::tech_tree::objects::world_player(p);
         s += &format!(" |{}", if player != 0 { ht(O::PlayerName, player, 0) } else { "-".into() });
     }
@@ -846,7 +846,7 @@ pub fn players_digest(out: &mut Vec<String>) {
             t.mStartEpoch,
             t.mEndEpoch,
             caps.join(","),
-            gc::h(gc::O::MpPlSharedLos, q, &[]),
+            (gc::map::shared_los(q) as i64),
             h(O::PlayerPurchasedUpgrades, q, &[]) as u64,
             format_g(x::hd(O::PlayerAvailablePoints, q, 0))
         );
@@ -857,7 +857,7 @@ pub fn players_digest(out: &mut Vec<String>) {
                 h(O::OptionsPlayerB36, 0, &[p as i64 - 1])
             );
         }
-        let c = gc::h(gc::O::PlComputerPlayer, q, &[]) as usize;
+        let c = gc::h(gc::O::EgComputer, q, &[]) as usize;
         if c != 0 {
             const FLAGS: [O; 8] = [
                 O::ComputerActive,

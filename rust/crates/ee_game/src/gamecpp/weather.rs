@@ -277,7 +277,7 @@ pub extern "C" fn ee_gamecpp_storm_load(storm: *mut c_void, file: *mut c_void) -
     h(O::DsPointLoad, point(O::DsGoal, s) as *mut _ as P, &[pa(f.0)]);
     h(O::DsRectLoad, a, &[pa(f.0)]);
     let mut handle: u32 = 0;
-    r = h(O::DsReadHandle, f.0, &[ptr(&mut handle)]);
+    r = h(O::FwReadU32, f.0, &[ptr(&mut handle)]);
     *effect(s) = handle as P;
     let k = fields(s);
     if r == 0
@@ -398,13 +398,13 @@ impl StormHost for Host {
         }
     }
     fn game_speed(&mut self) -> f32 {
-        hd(O::EcGameSpeed, 0, &[], &[])
+        hd(O::FwWorldSpeed, 0, &[], &[])
     }
     fn random_range(&mut self, min: f32, max: f32) -> f32 {
         hd(O::PhysRandomRange, 0, &[], &[min, max])
     }
     fn random(&mut self) -> f32 {
-        hd(O::PhysGenerate, 0, &[], &[])
+        hd(O::C11CgRandom, 0, &[], &[])
     }
     fn reset_color(&mut self) {
         h(O::DsResetColor, self.0, &[]);
@@ -549,7 +549,7 @@ pub extern "C" fn ee_gamecpp_env_step(manager: *mut c_void, time: c_ulong) {
         *state = 0;
     }
     let interval = *em::<c_long>(O::DeInterval, m);
-    let next = um::lrintf(hd(O::EcGameSpeed, 0, &[], &[]) * interval as f32) as c_long;
+    let next = um::lrintf(hd(O::FwWorldSpeed, 0, &[], &[]) * interval as f32) as c_long;
     *em::<c_ulong>(O::DeNextStep, m) = (next as c_ulong).wrapping_add(time);
 }
 
@@ -569,7 +569,7 @@ fn update_storms(m: P, time: c_ulong) {
     }
     let max = *em::<c_long>(O::DeMaxStorms, m) as c_ulong;
     if (storms(m) as u64) < max as u64 && hd(O::PhysRandomRange, 0, &[], &[0.0001, 1.0]) <= 0.2 {
-        hd(O::PhysGenerate, 0, &[], &[]);
+        hd(O::C11CgRandom, 0, &[], &[]);
         h(O::GfxEffectGet, 0, &[EFFECT_RAIN]);
     }
 }

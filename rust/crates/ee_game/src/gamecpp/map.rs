@@ -24,7 +24,7 @@ use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
 use ee_sim::units::tile_sight_host::{ee_units_map_words_free, ee_units_map_words_new, ee_units_map_words_resize};
 use ee_sim::units::uu_ffi::ee_units_uu_get_tiles_near_point;
 use ee_sim::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
-use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
+use ee_sim::world::view::{MapView, PlayerView, UnitView, WorldRead, WorldView};
 
 use crate::app::map_ffi::{
     ee_app_map_checksum, ee_app_map_edit, ee_app_map_sight, EeAppMapHost, EeAppMapIo, EE_APP_MAP_OP_CLIFF,
@@ -35,7 +35,7 @@ use crate::app::map_ffi::{
 use crate::app::world_capture::{ee_app_capture_map_checksum, ee_app_capture_slope};
 use crate::sight_capture::ee_app_sight_record;
 
-use super::{cptr, h, hd, hf, hp, pa, position, ptr, rec, Owned, O, P};
+use super::{cptr, h, hd, hf, hp, pa, position, ptr, Owned, O, P};
 
 /// `kUnitTypeCameraObject` (static_assert'd in EEEffectHost.cpp).
 const MP_TYPE_CAMERA_OBJECT: c_ulong = 0x167;
@@ -46,12 +46,146 @@ const MP_QUARTER_TURN: f32 = 1.570_796_4;
 
 fn rts<'a>(m: P) -> &'a mut EeUnitsRtsMapFields {
     // SAFETY: a live map's record
-    unsafe { &mut *rec::<EeUnitsRtsMapFields>(O::MpRts, m) }
+    unsafe { &mut *super::map::map_rts(m) }
 }
 
 fn fields<'a>(m: P) -> &'a mut EeUnitsMapFields {
     // SAFETY: a live map's record
-    unsafe { &mut *rec::<EeUnitsMapFields>(O::MpFields, m) }
+    unsafe { &mut *super::map::map_fields(m) }
+}
+
+/// `gWorld.mMap` (0 before the world has one), from the world views.
+pub(crate) fn world_map() -> P {
+    // SAFETY: a read of the world's member (the C++'s read of it, from whichever thread read it)
+    let t = unsafe { WorldRead::begin() };
+    WorldView::global(&t).and_then(|w| w.map()).map_or(0, |m| m.handle() as P)
+}
+
+/// `gWorld.mNumPlayers`.
+pub(crate) fn num_players() -> i64 {
+    // SAFETY: as above
+    let t = unsafe { WorldRead::begin() };
+    WorldView::global(&t).map_or(0, |w| w.num_players() as i64)
+}
+
+/// `gWorld.mPlayers[gWorld.mCurrentPlayer]` (0: none).
+pub(crate) fn local_player() -> P {
+    // SAFETY: as above
+    let t = unsafe { WorldRead::begin() };
+    WorldView::global(&t).and_then(|w| w.current_player()).map_or(0, |p| p.handle() as P)
+}
+
+/// The player `player`'s `mSharedLOS`.
+pub(crate) fn shared_los(player: P) -> bool {
+    // SAFETY: a live player
+    let t = unsafe { WorldRead::begin() };
+    unsafe { PlayerView::of(&t, player as u64) }.is_some_and(|p| p.shared_los())
+}
+
+/// The map `m`'s records (`static_cast<EeUnitsRtsMapFields*>`, `<EeUnitsMapFields*>`).
+pub(crate) fn map_rts(m: P) -> *mut EeUnitsRtsMapFields {
+    // SAFETY: a live map
+    let t = unsafe { WorldRead::begin() };
+    unsafe { MapView::of(&t, m as u64) }.map_or(std::ptr::null_mut(), |v| v.rts().ptr() as *mut EeUnitsRtsMapFields)
+}
+
+pub(crate) fn map_fields(m: P) -> *mut EeUnitsMapFields {
+    // SAFETY: as above
+    let t = unsafe { WorldRead::begin() };
+    unsafe { MapView::of(&t, m as u64) }.map_or(std::ptr::null_mut(), |v| v.fields().ptr() as *mut EeUnitsMapFields)
+}
+
+/// The map `m`'s `GetTile((unsigned long)x, (unsigned long)y)` (0: off the map).
+pub(crate) fn map_tile(m: P, x: i64, y: i64) -> P {
+    // SAFETY: as above
+    let t = unsafe { WorldRead::begin() };
+    unsafe { MapView::of(&t, m as u64) }
+        .and_then(|v| v.tile(x as c_ulong as i64, y as c_ulong as i64))
+        .map_or(0, |k| k.handle() as P)
+}
+
+/// The unit `unit`'s `GetUnitClass()` (0: none).
+pub(crate) fn unit_class(unit: P) -> P {
+    // SAFETY: a live unit
+    let t = unsafe { WorldRead::begin() };
+    unsafe { UnitView::of(&t, unit as u64) }.and_then(|u| u.class()).map_or(0, |k| k.handle() as P)
+}
+
+/// A tile's unit node's `mUnit` and `mNext` (an `RTSTileUnitNode`, at the layout's offsets).
+pub(crate) fn node_unit(node: P) -> P {
+    // SAFETY: a live node's pointer member
+    unsafe { *((node + ee_sim::world::layout::layout().unit_node_unit as usize) as *const P) }
+}
+
+pub(crate) fn node_next(node: P) -> P {
+    // SAFETY: as above
+    unsafe { *((node + ee_sim::world::layout::layout().unit_node_next as usize) as *const P) }
+}
+
+/// `gWorld.GetUnit(id)` (0: none).
+pub(crate) fn world_unit(id: i64) -> P {
+    #[cfg(not(test))]
+    {
+        let world = ee_sim::world::layout::layout().world_address as usize as *mut c_void;
+        // SAFETY: the registered world, live
+        unsafe { crate::rts::world::ffi::ee_rts_world_unit(world, id as c_ulong) as P }
+    }
+    #[cfg(test)]
+    {
+        let _ = id;
+        0
+    }
+}
+
+/// The map's and the tiles' members at the layout's offsets (EEWorldLayout.cpp): `mTileArray`, `mVisibilityWords`,
+/// `mTiles[i]`, `&mTileArray[i]`; a tile's `mHeight`, `mVisibility`, `mTerrainType`.
+fn at(object: P, offset: u64) -> *mut P {
+    (object + offset as usize) as *mut P
+}
+
+fn lay() -> &'static ee_sim::world::EeWorldLayout {
+    ee_sim::world::layout::layout()
+}
+
+pub(crate) fn map_tile_array(m: P) -> P {
+    // SAFETY: a live map's pointer member
+    unsafe { *at(m, lay().map_tile_array) }
+}
+
+pub(crate) fn map_words(m: P) -> P {
+    // SAFETY: as above
+    unsafe { *at(m, lay().map_visibility_words) }
+}
+
+pub(crate) fn map_tile_at(m: P, i: i64) -> P {
+    map_tile_array(m) + i as usize * lay().tile_stride as usize
+}
+
+pub(crate) fn map_rts_tile(m: P, i: i64) -> P {
+    // SAFETY: the map's tile pointer array, i below mSize * mSize
+    unsafe { *((*at(m, lay().map_tiles) + i as usize * std::mem::size_of::<P>()) as *const P) }
+}
+
+pub(crate) fn tile_set_height(t: P, height: f32) {
+    // SAFETY: a live tile's float member
+    unsafe { *(at(t, lay().tile_height) as *mut f32) = height };
+}
+
+pub(crate) fn tile_set_visibility(t: P, m: P, word: i64) {
+    // SAFETY: a live tile's pointer member, into the map's words
+    unsafe { *at(t, lay().tile_visibility) = map_words(m) + word as usize * 4 };
+}
+
+pub(crate) fn tile_set_terrain_type(t: P, kind: c_long) {
+    // SAFETY: a live tile's long member
+    unsafe { *(at(t, lay().tile_terrain_type) as *mut c_long) = kind };
+}
+
+/// The tile `t`'s `GetVisibility(player)`.
+pub(crate) fn tile_visibility(t: P, player: usize) -> c_ulong {
+    // SAFETY: a live tile
+    let r = unsafe { WorldRead::begin() };
+    unsafe { ee_sim::world::view::TileView::of(&r, t as u64) }.map_or(0, |k| k.visibility(player) as c_ulong)
 }
 
 /// The visibility words of a tile: two players a word.
@@ -111,7 +245,7 @@ pub(crate) fn ground_point(m: P, at: &Ge3DPoint) -> Ge3DPoint {
 
 /// The world's map's ground point under `at` (`gWorld.mMap->GetGroundPoint`).
 pub(crate) fn world_ground_point(at: &Ge3DPoint) -> Ge3DPoint {
-    ground_point(hp(O::MpWorldMap, 0, &[]), at)
+    ground_point(super::map::world_map(), at)
 }
 
 /// The unit and effect region tables made again for the map's size.
@@ -147,7 +281,7 @@ pub extern "C" fn ee_gamecpp_map_destroy(map: *mut c_void) {
     h(O::MpEffectRegionsFree, m, &[]);
     h(O::MpDeleteTiles, m, &[]);
     // SAFETY: the map's words (Rust's)
-    unsafe { ee_units_map_words_free(hp(O::MpWords, m, &[]) as *mut u32) };
+    unsafe { ee_units_map_words_free(map_words(m) as *mut u32) };
     let water = h(O::MpGlobalWaterSet, m, &[]);
     h(O::MpTerrainUnload, m, &[water]);
     let n = (rts(m).mSize.wrapping_add(1)) as c_ulong;
@@ -168,9 +302,9 @@ pub extern "C" fn ee_gamecpp_map_create_tile(map: *mut c_void, height: f32) -> *
     let m = map as P;
     let players = rts(m).mU19561C;
     let next = fields(m).mNextTile;
-    let tile = hp(O::MpTileAt, m, &[next as i64]);
-    hf(O::MpTileSetHeight, tile, &[], &[height]);
-    h(O::MpTileSetVisibility, m, &[pa(tile), words_per_tile(players).wrapping_mul(next) as i64]);
+    let tile = map_tile_at(m, next as i64);
+    tile_set_height(tile, height);
+    tile_set_visibility(tile, m, words_per_tile(players).wrapping_mul(next) as i64);
     fields(m).mNextTile = next.wrapping_add(1);
     tile as *mut c_void
 }
@@ -180,10 +314,10 @@ pub extern "C" fn ee_gamecpp_map_create_tile(map: *mut c_void, height: f32) -> *
 pub extern "C" fn ee_gamecpp_map_reserve_tiles(map: *mut c_void, count: c_ulong) {
     let m = map as P;
     let words = words_per_tile(rts(m).mU19561C);
-    if hp(O::MpTileArray, m, &[]) != 0 {
+    if map_tile_array(m) != 0 {
         h(O::MpDeleteTiles, m, &[]);
         // SAFETY: the map's words (Rust's)
-        unsafe { ee_units_map_words_free(hp(O::MpWords, m, &[]) as *mut u32) };
+        unsafe { ee_units_map_words_free(map_words(m) as *mut u32) };
         h(O::MpSetTiles, m, &[0]);
         h(O::MpSetWords, m, &[0]);
     }
@@ -200,7 +334,7 @@ pub extern "C" fn ee_gamecpp_map_set_player_count(map: *mut c_void, players: c_u
     let m = map as P;
     let old = words_per_tile(rts(m).mU19561C);
     let new = words_per_tile(players);
-    let words = hp(O::MpWords, m, &[]) as *mut u32;
+    let words = map_words(m) as *mut u32;
     let tiles = tile_count(&dims(m));
     // SAFETY: the map's own words
     let w = unsafe { ee_units_map_words_resize(m as u64, words, tiles as u64, old as u64, new as u64) };
@@ -222,7 +356,7 @@ pub extern "C" fn ee_gamecpp_map_place_on_ground(unit: *mut c_void) {
         return;
     }
     // SAFETY: the class's record
-    let kind = unsafe { (*rec::<EeUnitsUnitClassFields>(O::UcFields, hp(O::MpUnitGetClass, cx, &[]))).mUnitType };
+    let kind = unsafe { (*crate::gamecpp::records::uc_fields(super::map::unit_class(cx))).mUnitType };
     if kind != MP_TYPE_CAMERA_OBJECT {
         let mut t = GeTransformation::IDENTITY;
         h(O::CxLocation, cx, &[ptr(&mut t)]);
@@ -294,14 +428,14 @@ pub extern "C" fn ee_gamecpp_map_tile_at(
     }
     // SAFETY: the caller's coordinates
     let (tx, ty) = unsafe { (*x, *y) };
-    hp(O::MpGetTile, m, &[tx as i64, ty as i64]) as *mut c_void
+    super::map::map_tile(m, tx as i64, ty as i64) as *mut c_void
 }
 
 /// EEMap::GetTileLocation: the ground point at a tile's centre; false without the tile.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_map_tile_location(map: *mut c_void, x: c_long, y: c_long, out: *mut Ge3DPoint) -> bool {
     let m = map as P;
-    if hp(O::MpGetTile, m, &[x as i64, y as i64]) == 0 {
+    if super::map::map_tile(m, x as i64, y as i64) == 0 {
         return false;
     }
     let px = x as f32 + 0.5;
@@ -388,8 +522,8 @@ pub extern "C" fn ee_gamecpp_map_load_tile(
     let m = map as P;
     let next = fields(m).mNextTile;
     let players = rts(m).mU19561C;
-    let tile = hp(O::MpTileAt, m, &[next as i64]);
-    h(O::MpTileSetVisibility, m, &[pa(tile), words_per_tile(players).wrapping_mul(next) as i64]);
+    let tile = map_tile_at(m, next as i64);
+    tile_set_visibility(tile, m, words_per_tile(players).wrapping_mul(next) as i64);
     fields(m).mNextTile = next.wrapping_add(1);
     if major == 0 && minor <= 0x2e {
         let mut terrain: c_ulong = 0;
@@ -416,7 +550,7 @@ pub extern "C" fn ee_gamecpp_map_dump(map: *mut c_void, file: *mut c_void) {
     let size = rts(m).mSize;
     for y in 0..size {
         for x in 0..size {
-            let tile = hp(O::MpGetTile, m, &[x as i64, y as i64]);
+            let tile = super::map::map_tile(m, x as i64, y as i64);
             if tile == 0 {
                 continue;
             }
@@ -492,7 +626,7 @@ pub extern "C" fn ee_gamecpp_map_register_terrain_sets(map: *mut c_void) {
 pub extern "C" fn ee_gamecpp_map_save_tile(map: *mut c_void, file: *mut c_void, x: c_long, y: c_long) -> i32 {
     let m = map as P;
     let size = rts(m).mSize;
-    let tile = hp(O::MpRtsTile, m, &[size.wrapping_mul(y).wrapping_add(x) as i64]);
+    let tile = map_rts_tile(m, size.wrapping_mul(y).wrapping_add(x) as i64);
     if tile == 0 {
         return 0;
     }
@@ -593,14 +727,14 @@ pub extern "C" fn ee_gamecpp_map_host_cliff(io: *mut EeAppMapIo) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_map_host_local_sees(player: *mut c_void, io: *mut EeAppMapIo) {
     let pl = player as P;
-    let local = hp(O::MpLocalPlayer, 0, &[]);
+    let local = super::map::local_player();
     // SAFETY: the host's io
     let flag = unsafe { (*io).flag };
     let sees = local == pl
         || (flag
             && h(O::MpPlAlliedWith, local, &[pa(pl)]) != 0
-            && h(O::MpPlSharedLos, local, &[]) != 0
-            && h(O::MpPlSharedLos, pl, &[]) != 0);
+            && (super::map::shared_los(local) as i64) != 0
+            && (super::map::shared_los(pl) as i64) != 0);
     // SAFETY: as above
     unsafe { (*io).flag = sees };
 }
@@ -658,13 +792,13 @@ pub extern "C" fn ee_gamecpp_map_sight_record(
     value: c_ulong,
     args: *const f32,
 ) {
-    let m = hp(O::MpWorldMap, 0, &[]);
+    let m = super::map::world_map();
     if m == 0 {
         return;
     }
-    let array = hp(O::MpTileArray, m, &[]) as u64;
+    let array = map_tile_array(m) as u64;
     let count = fields(m).mTileArrayCount as u64;
-    let size = h(O::MpTileSize, 0, &[]) as u64;
+    let size = lay().tile_stride;
     let index = tile_index(tile, array, count, size);
     let mesh = hp(O::MpMeshRust, m, &[]);
     // SAFETY: the caller's arguments, the world's map
@@ -699,12 +833,12 @@ unsafe extern "C" fn map_host_op(context: *mut c_void, op: i32, io: *mut EeAppMa
     let (x, y) = unsafe { ((*io).x, (*io).y) };
     match op {
         EE_APP_MAP_OP_TILE => {
-            let tile = hp(O::MpGetTile, m, &[x as i64, y as i64]);
+            let tile = super::map::map_tile(m, x as i64, y as i64);
             // SAFETY: as above
             unsafe { (*io).flag = tile != 0 };
         }
         EE_APP_MAP_OP_TERRAIN_TYPE => {
-            let kind = h(O::FxTileTerrainType, hp(O::MpGetTile, m, &[x as i64, y as i64]), &[]);
+            let kind = h(O::FxTileTerrainType, super::map::map_tile(m, x as i64, y as i64), &[]);
             // SAFETY: as above
             unsafe { (*io).a = kind as c_long };
         }
@@ -724,7 +858,7 @@ unsafe extern "C" fn map_host_op(context: *mut c_void, op: i32, io: *mut EeAppMa
         }
         EE_APP_MAP_OP_CLIFF => ee_gamecpp_map_host_cliff(io),
         EE_APP_MAP_OP_TILE_CHECKSUM => {
-            let tile = hp(O::MpGetTile, m, &[x as i64, y as i64]);
+            let tile = super::map::map_tile(m, x as i64, y as i64);
             let sum =
                 super::tile::ee_gamecpp_tile_checksum(tile as *const std::ffi::c_void, rts(m).mU19561C as c_ulong);
             // SAFETY: as above
@@ -802,7 +936,7 @@ pub extern "C" fn ee_gamecpp_map_checksum(map: *mut c_void) -> c_long {
     let m = map as P;
     let before = fields(m).mChecksumCursor;
     // SAFETY: the map's record (read and written by the checksum in place, as the C++ passed it)
-    let cursor = unsafe { &mut (*rec::<EeUnitsMapFields>(O::MpFields, m)).mChecksumCursor as *mut c_ulong };
+    let cursor = unsafe { &mut (*super::map::map_fields(m)).mChecksumCursor as *mut c_ulong };
     let mut ctx = MapContext { map: m, player: 0, tiles: None };
     let host = map_host(&mut ctx);
     // SAFETY: the host over the live context, the record's cursor

@@ -157,7 +157,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkFilePosition: return TFILE->GetPosition(*(long*)a[0]);
     case O::TkFileClose: TFILE->Close();
         break;
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);   // the end of the chain
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnComplex, 1);   // the end of the chain
     }
     return 0;
 }

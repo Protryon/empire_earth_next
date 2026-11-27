@@ -31,7 +31,7 @@ use super::map::{
     ee_gamecpp_map_save_tile, ee_gamecpp_map_screen_line, ee_gamecpp_map_set_terrain_type, ee_gamecpp_map_sight,
     ee_gamecpp_map_sight_record,
 };
-use super::{cptr, h, hf, hp, pa, ptr, rec, O, P};
+use super::{cptr, h, hf, hp, pa, ptr, O, P};
 
 /// ee/EEAppCapture.h's MAPC kinds (static_assert'd in EEMap.cpp).
 const MX_MAPC_UPDATE_CLIFFS: u32 = 1;
@@ -53,12 +53,12 @@ const MX_EDIT_PAINT_RECT: u32 = 5;
 
 fn rts<'a>(m: P) -> &'a mut EeUnitsRtsMapFields {
     // SAFETY: a live map's record
-    unsafe { &mut *rec::<EeUnitsRtsMapFields>(O::MpRts, m) }
+    unsafe { &mut *super::map::map_rts(m) }
 }
 
 fn fields<'a>(m: P) -> &'a mut EeUnitsMapFields {
     // SAFETY: a live map's record
-    unsafe { &mut *rec::<EeUnitsMapFields>(O::MpFields, m) }
+    unsafe { &mut *super::map::map_fields(m) }
 }
 
 // ---- the MAPC scope (ee/EEAppCapture.h EEAppMapScope: Enter at its start, Leave at its end)

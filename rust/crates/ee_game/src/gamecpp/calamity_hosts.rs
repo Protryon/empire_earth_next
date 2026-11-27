@@ -14,9 +14,8 @@ use std::os::raw::{c_long, c_ulong};
 use ee_base::math::types::Ge3DPoint;
 use ee_base::math::um;
 use ee_sim::tech::contagion_store::{ee_contagion_unit_list_push, EeContagionUnitList};
-use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields};
 
-use super::{cptr, h, hp, ptr, rec, Owned, O, P};
+use super::{cptr, h, hp, ptr, Owned, O, P};
 
 /// `kContagionNew` (static_assert'd in EEContagionManager.cpp).
 const CG_CONTAGION_NEW: i64 = 4;
@@ -35,7 +34,7 @@ pub extern "C" fn ee_gamecpp_contagion_mark(unit: u64, calamity: u64, set: u64) 
     let flags = h(O::CgClassFlags, calamity as P, &[]) as c_ulong;
     if cx != 0 {
         // SAFETY: the complex unit's record
-        let f = unsafe { &mut (*rec::<EeUnitsComplexUnitFields>(O::CxFields, cx)).mCalamityFlags };
+        let f = unsafe { &mut (*crate::gamecpp::records::cx_fields(cx)).mCalamityFlags };
         *f = if set != 0 { *f | flags } else { *f & !flags };
     }
     0
@@ -57,7 +56,7 @@ pub extern "C" fn ee_gamecpp_contagion_near(unit: u64, radius: f32, list: *mut c
     let cx = unit as P;
     let mut at = Ge3DPoint::default();
     h(O::UnPosition, cx, &[ptr(&mut at)]);
-    if hp(O::CxContainer, cx, &[]) != 0 {
+    if hp(O::EcContainer, cx, &[]) != 0 {
         return 0;
     }
     let area = near_area(at, radius);
@@ -81,7 +80,7 @@ pub extern "C" fn ee_gamecpp_contagion_immune(unit: u64) -> i64 {
         return 0;
     }
     // SAFETY: the unit's record
-    let id = unsafe { (*rec::<EeUnitsRtsUnitFields>(O::UnRts, unit as P)).mUnitID };
+    let id = unsafe { (*crate::gamecpp::records::un_rts(unit as P)).mUnitID };
     crate::gamecpp::calamity_capture::ee_gamecpp_capture_contagion_event(
         CG_CONTAGION_NEW as c_long,
         id as c_long,

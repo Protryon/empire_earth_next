@@ -483,7 +483,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PrefReverbEnabled: return SETTINGS.mReverbEnabled;
     case O::WindowResize: gGameWindow->Resize((unsigned long)a[0], (unsigned long)a[1]);
         break;
-    case O::WindowWidth: return gGameWindow->GetWidth();
     case O::WindowHeight: return gGameWindow->GetHeight();
     case O::WindowClientOrigin: *(GE2DPoint*)a[0] = gGameWindow->GetClientOrigin();
         break;
@@ -511,9 +510,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::SceneFlagsClear: gB529066 = false, gCameraFollowing = false, gB529068 = false;
         break;
-    case O::DisplayRasterizersClear: gDisplayRasterizers.clear();
-        break;
-    case O::RasterizerCount: return GERasterizer::GetRasterizerCount();
     case O::RasterizerSelect: gRasterizer = GERasterizer::GetRasterizer((unsigned long)a[0]);
         break;
     case O::RasterizerIsPreferred: return gRasterizer->GetName() == SETTINGS.mRasterizerName;
@@ -627,7 +623,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::TexturesRemoveAll: gTextureManager->RemoveAllTextures();
         break;
     case O::TexturesRefreshAll: return gTextureManager->RefreshAllTextures();
-    case O::EffectTextureCount: return (int64_t)gU4E8EF0.size();
     case O::EffectTextureDereference: gU4E8EF0[a[0]]->Dereference();
         break;
     case O::UStrNew: return P64(new UString);
@@ -720,8 +715,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GfxShutdown: gGraphics->Shutdown();
         break;
     case O::GfxDelete: delete std::exchange(gGraphics, nullptr);
-        break;
-    case O::GfxPostReleaseScene: gGraphics->PostReleaseScene();
         break;
     case O::GfxPostMessage50AAndWait: gGraphics->PostMessage50AAndWait();
         break;
@@ -906,8 +899,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::NodePoolDumpStats: UList<EEComplexUnit*>::sNodePool.DumpStats(false);
         break;
     // the game objects
-    case O::RandomMapInitialize: EERandomMap::Initialize(EEStartupDirectorySpec());
-        break;
     case O::LobbyOptionsSetDefaults: gWorld.mLobbyOptions.SetDefaults();
         break;
     case O::WorldOptionsSetDefaults: gWorld.mGameOptions.SetDefaults();
@@ -970,11 +961,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EntrySpecVecSize: return (int64_t)SPECS->size();
     case O::EntrySpecVecGet: *(FSFileSpec*)a[1] = (*SPECS)[(size_t)a[0]];
         break;
-    case O::EntrySpecOpenRead: return SPEC->Open(kFileAccessRead);
-    case O::EntrySpecLength: return SPEC->GetLength(*(unsigned long*)a[0]);
-    case O::EntrySpecRead: return SPEC->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
-    case O::EntrySpecClose: SPEC->Close();
-        break;
     case O::EntrySpecFullPath: *(UString*)a[0] = SPEC->GetVolume() + SPEC->GetDirectory() + SPEC->GetFile();
         break;
     case O::EntryUStrData: return P64((const char*)USTR);
@@ -995,8 +981,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RunInstanceMutex: return EECreateInstanceMutex();
     // round 12, fork D (gamecpp window_pump.rs)
     case O::C12GameWindowSize: return gGameWindow == NULL ? 0 : a[0] == 0 ? gGameWindow->GetWidth() : gGameWindow->GetHeight();
-    case O::C12DebugText: ESDebugOut("%s", (const char*)a[0]);
-        break;
     case O::C12WonNetCffdd: ((EEWonNet*)p)->FnCFFDD(0);
         break;
     case O::C12WonNetCfff2: ((EEWonNet*)p)->FnCFFF2();
@@ -1020,10 +1004,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RunNewResource: return (gResource = new UResourceFile((HINSTANCE)a[0])) != NULL;   // the language resources are linked into the exe
     case O::RunPreferencesLoad: return gGamePreferences.Load();
     case O::RunUserInterface: return gUserInterface->Run((void*)&(const UString&)UString((const char*)a[0]));
-    case O::RunReleaseDataPath: gDataPath->Dereference();
-        break;
-    case O::RunReleaseCivilizationPath: gCivilizationDataPath->Dereference();
-        break;
     default: return EEGraphicsOp(inOp, p, a, f);
     }
     return 0;

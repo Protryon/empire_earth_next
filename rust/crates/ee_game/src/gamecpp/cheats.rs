@@ -11,7 +11,6 @@ use std::ffi::{c_char, c_long, c_ulong, c_void, CStr, CString};
 
 use ee_base::math::types::Ge3DPoint;
 use ee_sim::app::cheats::{CheatAction, CheatHost, EeAppCheats};
-use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
 use ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
@@ -27,12 +26,12 @@ const EPOCH_PREHISTORIC: c_long = 0;
 
 fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: a live unit's record, used before the next C++ call
-    unsafe { &mut *rec(O::UnFields, u) }
+    unsafe { &mut *crate::gamecpp::records::un_fields(u) }
 }
 
 fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: as uf
-    unsafe { &mut *rec(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 fn stats<'a>(u: P) -> &'a EeUnitsUnitClassUpgradeFields {
@@ -42,7 +41,7 @@ fn stats<'a>(u: P) -> &'a EeUnitsUnitClassUpgradeFields {
 
 fn class_of<'a>(u: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: the unit's class record, as uf
-    unsafe { &*rec(O::UcFields, hp(O::UnClass, u, &[])) }
+    unsafe { &*crate::gamecpp::records::uc_fields(hp(O::UnClass, u, &[])) }
 }
 
 /// The units of a player's list, each one's next read after the body ran.
@@ -99,7 +98,7 @@ fn kill(pl: P, all: bool) {
 fn research_all(pl: P) {
     let classes = h(O::DcClassCount, 0, &[]) as c_long;
     for i in 0..classes {
-        let class = hp(O::UcAt, 0, &[i as i64]);
+        let class = crate::tech_tree::objects::class_at(i as i64);
         if class == 0 {
             continue;
         }
@@ -180,7 +179,7 @@ fn action(action: CheatAction, player: c_ulong) {
         }),
         CheatAction::ToggleInstantBuild => {
             // SAFETY: the player's record
-            let f = unsafe { &mut *rec::<EeUnitsPlayerFields>(O::PlFields, pl) };
+            let f = unsafe { &mut *crate::gamecpp::records::pl_fields(pl) };
             f.mInstantBuild = !f.mInstantBuild;
         }
         CheatAction::EndGame { win } => {
@@ -188,11 +187,11 @@ fn action(action: CheatAction, player: c_ulong) {
             h(O::DcEndGame, 0, &[(if win { local } else { !local }) as i64]);
         }
         CheatAction::AddResource(resource, amount) => {
-            h(O::DcAddResource, pl, &[resource as i64, amount as i64]);
+            h(O::PlAddResource, pl, &[resource as i64, amount as i64]);
         }
         CheatAction::ClearResource(resource) => {
             // SAFETY: the player's record
-            let f = unsafe { &mut *rec::<EeUnitsPlayerSaved>(O::PlSaved, pl) };
+            let f = unsafe { &mut *crate::gamecpp::records::pl_saved(pl) };
             f.mResourceCaps[resource as usize] = 0;
         }
     }

@@ -11,7 +11,6 @@ use ee_sim::app::statistics_ffi::{
 use ee_sim::units::player_stats::{
     EeUnitsPlayerStats, EeUnitsStatsRecordTail, EE_UNITS_STATS_EDITOR, EE_UNITS_STATS_LOADING, EE_UNITS_STATS_SHUTDOWN,
 };
-use ee_sim::world::player_fields::EeUnitsPlayerSaved;
 
 use crate::app::game_options::{EeAppOptionsFields, EeAppOptionsPlayerFields};
 
@@ -30,7 +29,7 @@ pub fn world_stats_suffix(suffix: c_long) -> String {
 
 // the statistics' C++ calls (statistics.rs's host): the physics random draw, a player's statistics Set and resources
 unsafe extern "C" fn random(_: *mut c_void, low: f32, high: f32) -> f32 {
-    hd(O::WsRandom, 0, &[], &[low, high])
+    hd(O::PhysRandomRange, 0, &[], &[low, high])
 }
 
 unsafe extern "C" fn set(_: *mut c_void, slot: u32, series: c_long, value: c_long) {
@@ -52,7 +51,7 @@ fn record_flags(w: P) -> u32 {
         EE_UNITS_STATS_SHUTDOWN
     } else if unsafe { *rec::<bool>(O::WLoadingSavedGame, w) } {
         EE_UNITS_STATS_LOADING
-    } else if h(O::UiInScenarioEditor, 0, &[]) != 0 && !unsafe { *rec::<bool>(O::WGameScreenActive, w) } {
+    } else if h(O::EoInScenarioEditor, 0, &[]) != 0 && !unsafe { *rec::<bool>(O::WGameScreenActive, w) } {
         EE_UNITS_STATS_EDITOR
     } else {
         0
@@ -66,7 +65,7 @@ fn record_of(w: P, o: &EeAppStatsRecord, history_end_time: c_long) -> StatsRecor
     // SAFETY: the player's saved numbers and colour, copied; its live series
     let (saved, color, series) = unsafe {
         (
-            *rec::<EeUnitsPlayerSaved>(O::PlSaved, pl),
+            *crate::gamecpp::records::pl_saved(pl),
             [hd(O::EgColorRed, pl, &[], &[]), hd(O::EgColorGreen, pl, &[], &[]), hd(O::EgColorBlue, pl, &[], &[])],
             (*rec::<EeUnitsPlayerStats>(O::EwStatsSeries, statistics)).clone(),
         )
@@ -101,7 +100,7 @@ fn record_of(w: P, o: &EeAppStatsRecord, history_end_time: c_long) -> StatsRecor
             epoch_score: o.epoch_score as c_ulong,
             military_score: o.military_score as c_ulong,
             tech_score: o.tech_score as c_ulong,
-            slot: h(O::PlGetSlot, pl, &[]) as u8,
+            slot: super::message::prts(pl).mSlot,
             is_local: o.is_local,
             is_human: o.is_human,
         },
