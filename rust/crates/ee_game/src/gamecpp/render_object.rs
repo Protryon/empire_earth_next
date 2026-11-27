@@ -851,7 +851,7 @@ impl FillHost for GameFill {
     fn label(&mut self, out: *mut EeGfxFillUnit, player: u64) {
         let player = player as P;
         h(O::RoSetLabelUnit, out as P, &[]);
-        if h(O::PlIsHuman, player, &[]) == 0 && h(O::RoCivilizationUnchanged, player, &[]) == 0 {
+        if h(O::TbIsHuman, player, &[]) == 0 && h(O::RoCivilizationUnchanged, player, &[]) == 0 {
             h(O::RoLabelCivilizationName, player, &[]);
         } else {
             h(O::RoLabelPlayerName, player, &[]);
@@ -1358,7 +1358,7 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
         let [y, first, last] = mesh_visible_row(mesh, row);
         for x in first..=last {
             let tile = hp(O::MapTile, 0, &[x as i64, y as i64]);
-            if h(O::TileVisibleTo, tile, &[pa(player)]) == 0 && !free_camera {
+            if h(O::FxTileVisibleTo, tile, &[pa(player)]) == 0 && !free_camera {
                 continue;
             }
             let mut node = hp(O::RoTileFirstNode, tile, &[]);
@@ -1525,7 +1525,7 @@ pub extern "C" fn ee_gamecpp_ro_world_key() -> u64 {
             let tile = hp(O::MapTile, 0, &[x as i64, y as i64]);
             key.add(x as u32);
             key.add(y as u32);
-            let visible = h(O::TileVisibleTo, tile, &[pa(player)]) != 0;
+            let visible = h(O::FxTileVisibleTo, tile, &[pa(player)]) != 0;
             let seen = h(O::RoTileSeenBy, tile, &[pa(player)]) != 0;
             key.add(visible as u32 | (seen as u32) << 1);
             key.add(h(O::RoTileDoppelgangerCount, tile, &[]) as u32);

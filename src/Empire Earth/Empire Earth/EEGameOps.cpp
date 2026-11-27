@@ -40,7 +40,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EESaveGameFiles.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
@@ -67,9 +66,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     typedef EeGameCpp O;
     switch (inOp) {
     // the units
-    case O::UnRts: return P64(static_cast<EeUnitsRtsUnitFields*>(UN));
-    case O::UnFields: return P64(static_cast<EeUnitsUnitFields*>(UN));
-    case O::CxFields: return P64(static_cast<EeUnitsComplexUnitFields*>(CX));
     case O::UnComplex: return P64(UN->mComplexUnit);
     case O::UnGetComplex: return P64(UN->GetComplexUnit());
     case O::UnPlayer: return P64(UN->mPlayer);
@@ -161,8 +157,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxAreaEffectsRemove: CX->mAreaEffects.Remove(a[0]);
         break;
-    case O::CxGoalState: return P64(CX->mGoalState);
-    case O::GoalKind: return ((EEUnitGoal*)p)->mKind;
     case O::UpdateUnitTile: EEUpdateUnitTile(&TR(0), CX, (long*)a[1], (long*)a[2]);
         break;
     case O::CombatFindDrop: return P64(EECombatFindDropLocation(CX, (EEUnit*)a[0], PT(1)));
@@ -171,8 +165,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NewCastCalamity: return P64(EEUGRust::NewCastCalamity(CX, (EEUnit*)a[0], (long)a[1], (long)a[2], (long)a[3], a[4] != 0));
     case O::NewLocation: return P64(EEUGRust::NewLocation(&PT(0), a[1] != 0, a[2] != 0, a[3] != 0, f[0], a[4] != 0, (unsigned char)a[5]));
     // the unit classes
-    case O::UcFields: return P64(static_cast<EeUnitsUnitClassFields*>(UC));
-    case O::UcAt: return P64(gUnitClassTable[a[0]]);
     case O::UcActionChanged: UC->ActionChanged((EEComplexUnit*)a[0]);
         break;
     case O::UcIsLandBuilding: return UC->IsLandBuilding();
@@ -185,9 +177,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::UcLastLinked: return P64(UC->GetLastLinked((EEComplexUnit*)a[0]));
     case O::UcMoraleEffect: return P64(UC->mMoraleEffect);
     // the players
-    case O::PlRts: return P64(static_cast<EeUnitsRtsPlayerFields*>(PL));
-    case O::PlSaved: return P64(static_cast<EeUnitsPlayerSaved*>(PL));
-    case O::PlFields: return P64(static_cast<EeUnitsPlayerFields*>(PL));
     case O::PlTechnology: return P64(PL->mTechnologies->Get((long)a[0]));
     case O::PlCanAfford: return PL->CanAfford((EETechnology*)a[0], (long)a[1], (long)a[2]);
     case O::PlPay: PL->Pay((EETechnology*)a[0], (long)a[1], f[0]);
@@ -275,8 +264,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::HostTiles: return P64(&HO->mTiles);
     case O::HostScratch: return P64(&HO->mScratch);
-    case O::VecTilesClear: ((std::vector<EETileCoordinate>*)p)->clear();
-        break;
     case O::VecUnitsClear: ((std::vector<EEUnit*>*)p)->clear();
         break;
     case O::SortTilesNear: std::sort(((std::vector<EETileCoordinate>*)p)->begin(), ((std::vector<EETileCoordinate>*)p)->end(), EETileDistanceLess((long)a[0], (long)a[1]));
@@ -369,28 +356,14 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::EffFinishDamaged: ((EEEffect*)p)->mRecord->damaged.finished = true;   // the damage controller (0x3e, on EEE2DRust)
         break;
     case O::GfxEffectGet: return P64(EEGraphicEffect::Get((long)a[0]));
-    case O::GfxEffectReference: ((EEGraphicEffect*)p)->Reference();
-        break;
-    case O::GfxEffectDereference: ((EEGraphicEffect*)p)->Dereference();
-        break;
-    case O::GfxEffectLoadPtr: ((EEGraphicEffect*)p)->Load(a[0] != 0);
-        break;
-    case O::GfxEffectUnloadPtr: ((EEGraphicEffect*)p)->Unload();
-        break;
     case O::GfxEffectDuration: return (uint32_t)((EEGraphicEffect*)p)->mDuration;
     case O::GfxEffectTime1: return (uint32_t)((EEGraphicEffect*)p)->mTime1;
     case O::SoundObjectGet: return P64(EESoundObject::Get((long)a[0]));
-    case O::SoundObjectLoadPtr: ((EESoundObject*)p)->LoadMedia();
-        break;
-    case O::SoundObjectUnloadPtr: ((EESoundObject*)p)->UnloadMedia();
-        break;
     case O::SoundUnloadSample: gSoundManager->Unload(((EESoundObject*)p)->GetSampleID());
         break;
     case O::SoundStop: gSoundManager->Stop((SESMInstanceNode*)p, a[0] != 0);
         break;
     case O::NodeReference: ((SESMInstanceNode*)p)->Reference();
-        break;
-    case O::SoParams: EEComputeSoundParameters(f[0], PT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], f[1]);
         break;
     case O::SoSetParams: gSoundManager->SetSoundParameters((SESMInstanceNode*)p, f[0], f[1], f[2]);
         break;
@@ -402,8 +375,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::PickUnitAtMouse: return P64(gUnitPicker.PickUnit(gMouse->mPosition, 0));
     case O::WorldUnit: return P64(::gWorld.GetUnit((unsigned long)a[0]));
     case O::WorldTileBlocked: return ::gWorld.IsTileBlocked((unsigned long)a[0], (unsigned long)a[1]);
-    case O::TileVisibleTo: return ((EEMapTile*)p)->IsVisibleTo((EEPlayer*)a[0]);
-    case O::TileTerrainType: return ((EEMapTile*)p)->mTerrainType;
     case O::TileFree: return EEIsTileFree(NULL, (unsigned long)a[0], (unsigned long)a[1]);
     case O::AeHas2: return gAEManager.HasAreaEffect2((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
     case O::MapAreaOnMap: return ::gWorld.mMap->IsAreaOnMap((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2]);
@@ -415,16 +386,11 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::FileClose: ((FSFileSpec*)p)->Close();
         break;
     case O::FileReadULong: return ((FSFileSpec*)p)->Read(*(unsigned long*)a[0]);
-    case O::FileReadBytes: return ((FSFileSpec*)p)->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
-    case O::FilePuts: fputs((const char*)a[0], (FILE*)p);
-        break;
     // the calamity capture's (calamity_capture.rs, TEST ONLY)
     case O::SoundObjectIndex: return std::find(gSoundObjects.begin(), gSoundObjects.end(), (EESoundObject*)p) - gSoundObjects.begin();
     case O::CalamityManager: return P64(EECalamityManager::GetInstance());
     case O::MemFilePosition: return ((FSMemoryFile*)p)->GetPosition(*(long*)a[0]);
-    case O::MemFileData: return P64(((FSMemoryFile*)p)->GetData());
     case O::MemFileNewDefault: return P64(new FSMemoryFile);
-    case O::SaveMinorVersion: return kSaveGameMinorVersion;
     case O::CalSave: return CL->Save(0, (unsigned long)a[0], *(FSMemoryFile*)a[1]);
     case O::CalLoad: return CL->Load(0, (unsigned long)a[0], *(FSMemoryFile*)a[1]);
     case O::CalNewEmpty: return P64(new EECalamity);
@@ -455,7 +421,6 @@ extern "C" double ee_gamecpp_f(EeGameCpp inOp, uintptr_t p, const int64_t* a, co
     case O::MeshZ: return ::gWorld.mMap->mTerrainMesh.GetMeshZ(f[0], f[1]);
     case O::MeshGetZ: return ::gWorld.mMap->mTerrainMesh.GetZ((long)a[0], (long)a[1]);
     case O::PhysGetRandom: return gPhysics->GetRandom();
-    case O::PhysGenerate: return gPhysics->mRandom.Generate();
     case O::PhysRandomRange: return gPhysics->GetRandom(f[0], f[1]);
     case O::AeRadius: return ((EEAreaEffect*)p)->GetRadius();
     case O::SoVolume: return ((EESoundObject*)p)->GetVolume();

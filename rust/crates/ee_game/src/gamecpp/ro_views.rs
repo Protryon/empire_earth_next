@@ -29,8 +29,6 @@ use ee_render::gfx::ro_terrain::{
 };
 use ee_render::gfx::shadows::{ee_gfx_ground_shadows_render, EeGfxShadow, EeGfxShadowScene, EeGfxUnitShadow};
 
-use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
-
 use super::globals;
 use super::rast::{
     frame_viewport, mesh_of, rast, view_rectangle, world_mesh, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA,
@@ -38,7 +36,7 @@ use super::rast::{
 };
 use super::render_object::ee_gamecpp_ro_lighting;
 use super::ro_units::{lists_view, raster, RU_UNIT_PANEL_ACTIVE};
-use super::{h, hd, hp, ptr, rec, O, P};
+use super::{h, hd, hp, ptr, O, P};
 
 /// The panel corners of the UI's z-buffer clears (.rdata 0x441c00..: the unit panel's right, the panels' top, the
 /// right panel's left, as fractions of the game window).
@@ -272,7 +270,7 @@ pub extern "C" fn ee_gamecpp_te_frame_starting(ro: *mut c_void) {
     // the fog of war: all seen for see-all or the free camera
     let current = hp(O::WorldCurrentPlayer, 0, &[]);
     // SAFETY: the current player's record
-    let sees_all = unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, current)).mSeesAll };
+    let sees_all = unsafe { (*crate::gamecpp::records::pl_rts(current)).mSeesAll };
     let all_seen = sees_all || globals::get!(gFreeCamera);
     // SAFETY: the world's map's mesh
     unsafe { ee_ge_tm_update_fog_of_war(world_mesh().cast_mut(), all_seen) };

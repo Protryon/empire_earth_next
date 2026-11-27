@@ -100,12 +100,6 @@ long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
 // (0x14cbc7 TrimAutoSaves: ee/EESaveLoad.h)
 
-// Saves the game under the request's name (the old EEMLoadOrSave::LoadOrSave; Rust: gamecpp message.rs)
-long EELoadOrSave(EEMRecord* m)
-{
-    return ee_gamecpp_msg_load_or_save(m);
-}
-
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
 // compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
 // on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1
@@ -114,12 +108,6 @@ long EELoadOrSave(EEMRecord* m)
 EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
 {
     return (EEMRecord*)ee_gamecpp_msg_select_units(&inRectangle, inUnitType, inType);   // gamecpp msg_objs.rs
-}
-
-// Decodes a box selection's compact buffer into unit ids, replacing the list
-void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
-{
-    ee_gamecpp_msg_select_ids(inMessage, &outUnits);   // gamecpp msg_objs.rs
 }
 
 // inline (header-declared; its COMDAT 0x4c7486 follows its first user EEMSetRallyGoal::Execute): the unit can
@@ -314,8 +302,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PlIncrementEpic: PL->IncrementEpic();
         break;
-    case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
-        break;
     case O::PlCountQueuedImprovements: return PL->CountQueuedImprovements((unsigned long)a[0], (long)a[1]);
     case O::PlRemoveQueuedImprovement: PL->RemoveQueuedImprovement((long)a[0], (long)a[1], a[2] != 0);
         break;
@@ -336,7 +322,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::FormationDereference: ((EEFormation*)p)->Dereference();
         break;
     // the units, their classes and goals
-    case O::CxQueueSize: return (int64_t)CX->mGoalQueues[a[0]].mGoals.size();
     case O::CxQueueBack: return P64(CX->mGoalQueues[a[0]].mGoals.back());
     case O::CxQueueAddTime: CX->mGoalQueues[a[0]].AddTime((unsigned long)a[1]);
         break;
@@ -488,8 +473,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11MsgListSize: return (int64_t)MSG->mList.size();
     case O::C11MsgSetRectangle: MSG->Set<GERectangle>(3, *(const GERectangle*)a[0]);
         break;
-    case O::C11LongsAssign: ((std::vector<long>*)p)->assign((const int32_t*)a[0], (const int32_t*)a[0] + a[1]);
-        break;
     // (EECore10OpC) lane C's chain link (round 10): the C++ calls and members of gamecpp msg_capture.rs and mrecord.rs (p a message),
     // then EECivCapture.cpp's, then lane D's link: one statement each
     case O::LcMsgType: return MCMSG->GetType();
@@ -502,8 +485,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::LcBytesDelete: delete[] (unsigned char*)p;
         break;
     case O::LcMsgCodecSlots: return (int64_t)EEGameMessageCast(MCMSG)->GetCodecSlots((EeNetMsgSlot*)a[0], *(uint32_t*)a[1]);
-    case O::LcMsgSelectIDs: EESelectUnitsIDs(static_cast<EEMRecord*>(EEGameMessageCast(MCMSG)), *(std::vector<long>*)a[0]);
-        break;
     case O::LcMsgBuildGame: return P64(EEMessage::BuildEEMessage((unsigned char*)a[0]));
     case O::LcMsgBuildEngine: return P64(NEMessage::BuildNEMessage((unsigned char*)a[0]));
     case O::LcMsgDereference: MCMSG->Dereference();

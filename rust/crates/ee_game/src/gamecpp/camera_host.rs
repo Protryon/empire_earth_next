@@ -33,7 +33,7 @@ pub extern "C" fn ee_gamecpp_camera_unit_point(unit: *mut c_void, out: *mut c_vo
     let u = unit as P;
     let cx = hp(O::UnComplex, u, &[]);
     if cx != 0 {
-        let scale = hd(O::DkModelScale, cx, &[], &[]);
+        let scale = hd(O::RrPhysicalScale, cx, &[], &[]);
         let mut offset = Ge3DPoint::default();
         h(O::DkModelCenter, cx, &[ptr(&mut offset)]);
         offset.x = offset.x * scale;
@@ -41,7 +41,7 @@ pub extern "C" fn ee_gamecpp_camera_unit_point(unit: *mut c_void, out: *mut c_vo
         offset.z = hd(O::DkModelHeight, cx, &[], &[]) * hd(O::DkCameraFocus, cx, &[], &[]) * scale;
         h(O::DkLocationApply, cx, &[cptr(&offset), out as usize as i64]);
     } else {
-        let x = h(O::DkTileX, u, &[]) as c_long as f32 + 0.5;
+        let x = h(O::PkUnitTileX, u, &[]) as c_long as f32 + 0.5;
         let y = 0.5 + h(O::DkTileY, u, &[]) as c_long as f32;
         let z = hd(O::MeshZ, 0, &[], &[x, y]) + 0.3;
         // SAFETY: the caller's GE3DPoint
@@ -138,8 +138,8 @@ pub extern "C" fn ee_gamecpp_capture_camera(camera: *mut c_void, phase: u32, ela
         r.f32(k.mRate);
         r.u32(k.mChanged as u32);
     }
-    r.f32(hd(O::DkFrontClipping, 0, &[], &[]));
-    r.f32(hd(O::DkRearClipping, 0, &[], &[]));
+    r.f32(hd(O::MpViewFrontClip, 0, &[], &[]));
+    r.f32(hd(O::MpViewRearClip, 0, &[], &[]));
     r.commit();
 }
 

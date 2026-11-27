@@ -390,7 +390,7 @@ pub fn step(w: &[String]) -> Step {
                         "  unit {} type={} player={i} tile={},{}",
                         gc::h(gc::O::RoUnitId, u, &[]) as c_ulong,
                         super::sim_ops::h(super::sim_ops::EeSimDriverSim::DmUnitTypeRaw, u, &[]) as c_long,
-                        gc::h(gc::O::DkTileX, u, &[]) as c_long,
+                        gc::h(gc::O::PkUnitTileX, u, &[]) as c_long,
                         gc::h(gc::O::DkTileY, u, &[]) as c_long
                     ));
                     u = gc::h(gc::O::UnNext, u, &[]) as usize;

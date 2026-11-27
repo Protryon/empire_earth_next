@@ -286,24 +286,19 @@ pub extern "C" fn ee_gamecpp_startup_attack_players(player: c_long, flag: u8) {
     let players = unsafe { *super::rec::<c_ulong>(O::WNumPlayers, hp(O::WorldAddr, 0, &[])) };
     let pid = |p: P| -> c_ulong {
         // SAFETY: a live player's record
-        unsafe { (*super::rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, p)).mPlayerID }
+        unsafe { (*crate::gamecpp::records::pl_rts(p)).mPlayerID }
     };
     for i in 1..players {
         let other = hp(O::WorldPlayer, 0, &[i as i64]);
         if other == 0 {
             continue;
         }
-        let computer = hp(O::PlComputerPlayer, other, &[]);
+        let computer = hp(O::EgComputer, other, &[]);
         // SAFETY: as pid
-        let observer = unsafe {
-            (*super::rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, other)).mObserverMode
-        };
+        let observer = unsafe { (*crate::gamecpp::records::pl_rts(other)).mObserverMode };
         if computer != 0 && !observer {
             // SAFETY: the player's saved numbers
-            let enemy = unsafe {
-                (*super::rec::<ee_sim::world::player_fields::EeUnitsPlayerSaved>(O::PlSaved, pl)).mEnemies
-                    [pid(computer) as usize]
-            };
+            let enemy = unsafe { (*crate::gamecpp::records::pl_saved(pl)).mEnemies[pid(computer) as usize] };
             let is_enemy = computer != pl && enemy != 0;
             if !is_enemy {
                 allies.push(computer);
@@ -491,8 +486,8 @@ pub extern "C" fn ee_gamecpp_startup_set_data_paths() {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_data_paths() {
     let archive = Owned::new(O::ArchiveNew, O::ArchiveDelete);
-    let archive_file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
-    let directory = Owned::new(O::FileSpecNew, O::FileSpecDelete);
+    let archive_file = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
+    let directory = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
     let data = hp(O::NewFsPath, 0, &[]);
     let civilizations = hp(O::NewFsPath, 0, &[]);
     h(O::FileSpecSetVolumeStartup, archive_file.0, &[]);
@@ -605,7 +600,7 @@ pub extern "C" fn ee_gamecpp_startup_video_mode(width: c_ulong, height: c_ulong,
     let mut origin = [0f32; 2];
     h(O::WindowClientOrigin, 0, &[ptr(&mut origin)]);
     let end = [
-        origin[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32,
+        origin[0] + h(O::RuWindowWidth, 0, &[]) as c_ulong as f32,
         origin[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32,
     ];
     if h(O::RastPrimaryPresent, 0, &[screen]) != 0 {
@@ -635,7 +630,7 @@ pub extern "C" fn ee_gamecpp_startup_stop_sounds() {
 pub extern "C" fn ee_gamecpp_startup_clear_game() {
     pause_graphics();
     stop_physics_timer();
-    h(O::GfxPostReleaseScene, 0, &[]);
+    h(O::GraphicsReleaseScene, 0, &[]);
     h(O::GfxPostMessage50AAndWait, 0, &[]);
     h(O::PreloadWaitForQueue, 0, &[]);
     if super::net::present() {
@@ -681,7 +676,7 @@ pub extern "C" fn ee_gamecpp_startup_menu_screen() {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_graphics_shutdown() {
     h(O::ModelsRemoveAll, 0, &[]);
-    for i in 0..h(O::EffectTextureCount, 0, &[]) {
+    for i in 0..h(O::RoCliffTexturesCount, 0, &[]) {
         h(O::EffectTextureDereference, 0, &[i]);
     }
     h(O::TexturesRemoveAll, 0, &[]);
@@ -691,7 +686,7 @@ pub extern "C" fn ee_gamecpp_startup_graphics_shutdown() {
         // SAFETY: the font global's storage
         h(O::FontDereference, unsafe { *font_slot(k) } as P, &[]);
     }
-    h(O::DisplayRasterizersClear, 0, &[]);
+    h(O::DuDevicesClear, 0, &[]);
     h(O::DeleteGameWindow, 0, &[]);
     super::effect_host::ee_gamecpp_fx_batch_delete();
     h(O::RastDeactivate, 0, &[]);
@@ -768,7 +763,7 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     h(O::WindowClientOrigin, 0, &[ptr(&mut origin)]);
     let screen = screen();
     let window_end = |o: &[f32; 2]| {
-        [o[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32, o[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32]
+        [o[0] + h(O::RuWindowWidth, 0, &[]) as c_ulong as f32, o[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32]
     };
     let old_end = window_end(&origin);
     let precision = fp::ee_util_fp_precision();
@@ -838,7 +833,7 @@ pub extern "C" fn ee_gamecpp_startup_display() -> bool {
     let r = h(O::GeInitialize, 0, &[]);
     verify(r == KESE_OK, 3369);
     super::utilities::ee_gamecpp_enumerate_display_devices();
-    let count = h(O::RasterizerCount, 0, &[]) as c_ulong;
+    let count = h(O::DuRasterizerCount, 0, &[]) as c_ulong;
     let mut k: c_ulong = 0;
     while k < count {
         h(O::RasterizerSelect, 0, &[k as i64]);
@@ -847,7 +842,7 @@ pub extern "C" fn ee_gamecpp_startup_display() -> bool {
         }
         k += 1;
     }
-    if k < h(O::RasterizerCount, 0, &[]) as c_ulong {
+    if k < h(O::DuRasterizerCount, 0, &[]) as c_ulong {
         h(O::RasterizerSelect, 0, &[k as i64]);
     } else {
         h(O::RasterizerSelect, 0, &[0]);
@@ -983,7 +978,7 @@ fn load_table(k: usize, load: O, line: i64) {
     verify(file != 0, line + 1);
     let r = h(load, file, &[]);
     verify(r == KESE_OK, line + 3);
-    h(O::FileSpecDelete, file, &[]);
+    h(O::FxFileSpecDelete, file, &[]);
 }
 
 /// The db tables in start-up order with the original's lines: the first group, then (after the events) the second,
@@ -1036,8 +1031,8 @@ pub extern "C" fn ee_gamecpp_startup_database() {
     verify(effects != 0, 0x3e6);
     let r = i64::from(ee_sim::scenario::event::ee_scenario_ev_load(events as *mut c_void, effects as *mut c_void));
     verify(r == KESE_OK, 0x3e8);
-    h(O::FileSpecDelete, events, &[]);
-    h(O::FileSpecDelete, effects, &[]);
+    h(O::FxFileSpecDelete, events, &[]);
+    h(O::FxFileSpecDelete, effects, &[]);
     for (load, line) in TABLES_2 {
         load_table(k, load, line);
         k += 1;
@@ -1050,7 +1045,7 @@ pub extern "C" fn ee_gamecpp_startup_database() {
     }
     let r = h(O::UiInitialize, 0, &[]);
     verify(r == KESE_OK, 0x47a);
-    let directory = Owned::new(O::FileSpecNew, O::FileSpecDelete);
+    let directory = Owned::new(O::FileSpecNew, O::FxFileSpecDelete);
     // the user folders: data\Campaigns, data\Saved Games, data\Scenarios, Users, Users\default, its civilizations
     for (k, volume) in [(1usize, true), (2, true), (3, false), (4, false), (5, false)] {
         if volume {
@@ -1073,10 +1068,10 @@ pub extern "C" fn ee_gamecpp_startup_database() {
     verify(r == KESE_OK, 0x4b3);
     verify(file != 0, 0x4b4);
     h(O::AmbientLoad, file, &[]);
-    h(O::FileSpecDelete, file, &[]);
+    h(O::FxFileSpecDelete, file, &[]);
     let alarm = hp(O::SoundObjectGet, 0, &[SOUND_HOT_KEY_ALARM]);
     if alarm != 0 {
-        h(O::SoundObjectLoadPtr, hp(O::SoundObjectGet, 0, &[SOUND_HOT_KEY_ALARM]), &[]);
+        h(O::FxSoundObjectLoad, hp(O::SoundObjectGet, 0, &[SOUND_HOT_KEY_ALARM]), &[]);
     }
     h(O::GfxEffectsSortMedia, 0, &[]);
     // (EEFn0FCA98, which returns 0, is checked here: 0x4c1)
@@ -1167,7 +1162,7 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
     h(O::ReleaseUnitClasses, 0, &[]);
     let alarm = hp(O::SoundObjectGet, 0, &[962]);
     if alarm != 0 {
-        h(O::SoundObjectUnloadPtr, hp(O::SoundObjectGet, 0, &[962]), &[]);
+        h(O::FxSoundObjectUnload, hp(O::SoundObjectGet, 0, &[962]), &[]);
     }
     h(O::AnimalsUnload, 0, &[]);
     h(O::AmbientClearSounds, 0, &[]);

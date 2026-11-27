@@ -46,7 +46,7 @@ use super::effect_host::{
     ee_gamecpp_fx_storm_step_toward, ee_gamecpp_fx_tile_seen, ee_gamecpp_fx_volcano_build,
     ee_gamecpp_fx_wall_gate_posts, ee_gamecpp_fx_wall_piece, ee_gamecpp_fx_weapon_point,
 };
-use super::{cptr, h, hd, hf, hp, ptr, rec, O, P};
+use super::{cptr, h, hd, hf, hp, ptr, O, P};
 
 // ---- the layout (ee_gfx effect_reads.rs EeGfxObjectLayout)
 
@@ -213,7 +213,7 @@ fn ask_complex(ask: *mut c_void) -> P {
 }
 fn complex_fields<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: a live complex unit's record
-    unsafe { &mut *rec::<EeUnitsComplexUnitFields>(O::CxFields, cx) }
+    unsafe { &mut *crate::gamecpp::records::cx_fields(cx) }
 }
 
 extern "C" fn farm_set_variant(ask: *mut c_void, variant: i32) {

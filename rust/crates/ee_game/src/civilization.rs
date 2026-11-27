@@ -16,8 +16,6 @@ use ee_sim::app::teams_ffi;
 use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX};
 use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
 
-use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
-
 use crate::gamecpp::persistent::Pf;
 use crate::gamecpp::{h, hp, pa, rec, Owned, O, P};
 
@@ -172,7 +170,7 @@ pub extern "C" fn ee_gamecpp_civ_save(civilization: *mut c_void, file: *mut c_vo
 /// A player's index (`mPlayerID`).
 fn player_id(player: *mut c_void) -> c_long {
     // SAFETY: a live player's record
-    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, player as P)).mPlayerID as c_long }
+    unsafe { (*crate::gamecpp::records::pl_rts(player as P)).mPlayerID as c_long }
 }
 
 /// `gGameOptions.mAllowCustomCivs` (the lobby's options: off, every upgrade is affordable).
@@ -368,7 +366,7 @@ pub extern "C" fn ee_gamecpp_wonder_countdown(team: usize, out: *mut c_ulong) ->
 /// `EETeam::GetVictoryState` (`EEVCWonder`'s): 1 (won) when the team's countdown has run out, outside cinematics.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_wonder_state(team: usize) -> c_long {
-    if h(O::DwInCinematic, 0, &[]) != 0 {
+    if h(O::RrCinematic, 0, &[]) != 0 {
         return 0;
     }
     let mut value: c_ulong = 0;

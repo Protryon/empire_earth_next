@@ -128,7 +128,6 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DsRectSave: return ((U2DRectangle<long>*)p)->Save(*(FSFile*)a[0]);
     case O::DsPointLoad: return ((U2DPoint<long>*)p)->Load(*(FSFile*)a[0]);
     case O::DsPointSave: return ((U2DPoint<long>*)p)->Save(*(FSFile*)a[0]);
-    case O::DsReadHandle: return ((FSFile*)p)->Read(*(uint32_t*)a[0]);
     default: return EECore10OpD7(inOp, p, a, f);
     }
     return 0;

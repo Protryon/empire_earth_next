@@ -16,9 +16,7 @@ use ee_render::ge::viewport::GeViewport;
 use ee_render::gfx::effects::EeGfxColor;
 use ee_render::gfx::ffi::{ee_gfx_minimap_transforms, ee_gfx_minimap_view};
 use ee_sim::units::uu_ffi::ee_units_uu_cloaked_enemy;
-use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
-use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
 use crate::app::minimap::{EeAppMiniMap, EeAppMiniMapItem};
 use crate::app::minimap_ffi::{
@@ -65,12 +63,12 @@ fn rust(mm: P) -> *mut EeAppMiniMap {
 
 fn class_fields<'a>(uc: P) -> &'a EeUnitsUnitClassFields {
     // SAFETY: a live unit class's record
-    unsafe { &*rec::<EeUnitsUnitClassFields>(O::UcFields, uc) }
+    unsafe { &*crate::gamecpp::records::uc_fields(uc) }
 }
 
 fn player_id(pl: P) -> c_ulong {
     // SAFETY: a live player's record
-    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+    unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID }
 }
 
 /// A resource whose dot hides the units' dots after it: a forage bush, iron, gold or stone.
@@ -101,8 +99,7 @@ fn building_item(d: P, wall: bool) -> EeAppMiniMapItem {
     item.wall = wall;
     if wall {
         // SAFETY: the complex unit's record
-        item.facing =
-            unsafe { (*rec::<EeUnitsComplexUnitFields>(O::CxFields, hp(O::UnComplex, unit, &[]))).mFacing } as c_long;
+        item.facing = unsafe { (*crate::gamecpp::records::cx_fields(hp(O::UnComplex, unit, &[]))).mFacing } as c_long;
     }
     item
 }
@@ -112,7 +109,7 @@ fn building_item(d: P, wall: bool) -> EeAppMiniMapItem {
 fn unit_item(u: P) -> EeAppMiniMapItem {
     let c = *class_fields(hp(O::UnClass, u, &[]));
     // SAFETY: the unit's record
-    let resource = unsafe { (*rec::<EeUnitsUnitFields>(O::UnFields, u)).mResourceType } as c_long;
+    let resource = unsafe { (*crate::gamecpp::records::un_fields(u)).mResourceType } as c_long;
     let cx = hp(O::UnComplex, u, &[]);
     let pl = hp(O::UnPlayer, u, &[]);
     let mut item = EeAppMiniMapItem {
@@ -131,7 +128,7 @@ fn unit_item(u: P) -> EeAppMiniMapItem {
     item.tile_size = c.mTileSize;
     item.unit = true;
     // SAFETY: the unit's record
-    let r = unsafe { *rec::<EeUnitsRtsUnitFields>(O::UnRts, u) };
+    let r = unsafe { *crate::gamecpp::records::un_rts(u) };
     item.x = r.mTileX;
     item.y = r.mTileY;
     item
@@ -162,7 +159,7 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
             io.seen = h(O::FxTileSeenBy, tile, &[pa(player)]) != 0 || h(O::FxFreeCamera, 0, &[]) != 0;
             io.visible = !io.seen && h(O::FxTileVisibleTo, tile, &[pa(player)]) != 0;
             // SAFETY: the player's record
-            let sees_all = unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, player)).mSeesAll };
+            let sees_all = unsafe { (*crate::gamecpp::records::pl_rts(player)).mSeesAll };
             io.all = sees_all || h(O::FxFreeCamera, 0, &[]) != 0;
             io.visibility = super::map::tile_visibility(tile, player_id(player) as usize);
         }
@@ -187,10 +184,7 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
                     let unit = super::map::node_unit(node);
                     // SAFETY: the unit's records
                     let (hit_points, r) = unsafe {
-                        (
-                            (*rec::<EeUnitsUnitFields>(O::UnFields, unit)).mHitPoints,
-                            *rec::<EeUnitsRtsUnitFields>(O::UnRts, unit),
-                        )
+                        ((*crate::gamecpp::records::un_fields(unit)).mHitPoints, *crate::gamecpp::records::un_rts(unit))
                     };
                     if hit_points != 0
                         && r.mTileX == io.x

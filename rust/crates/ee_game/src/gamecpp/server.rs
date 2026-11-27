@@ -220,7 +220,7 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
             return 0;
         }
         EE_NETMSG_SESS_LOCK_WORLD_WRITE => {
-            h(if on { O::UsgWorldWriteLock } else { O::UsgWorldWriteUnlock }, f, &[]);
+            h(if on { O::WorldWriteLock } else { O::WorldWriteUnlock }, f, &[]);
             return 0;
         }
         EE_NETMSG_SESS_LOCK_PING => {
@@ -600,7 +600,7 @@ fn world(f: P, v: &[i64; 8]) -> i64 {
 
 /// A header's versions set to the game's (`kSaveGameMajorVersion`, `kSaveGameMinorVersion`).
 fn set_header_versions(header: P) {
-    let (major, minor) = (h(O::FwSaveMajor, 0, &[]) as c_ulong, h(O::SaveMinorVersion, 0, &[]) as c_ulong);
+    let (major, minor) = (h(O::FwSaveMajor, 0, &[]) as c_ulong, h(O::FwSaveMinor, 0, &[]) as c_ulong);
     let v = hp(O::PsHdrVersions, header, &[]) as *mut c_ulong;
     // SAFETY: the live header's mMajorVersion, mMinorVersion
     unsafe {

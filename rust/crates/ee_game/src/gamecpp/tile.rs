@@ -10,9 +10,7 @@
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
-use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
-
-use super::{h, hd, hp, pa, ptr, rec, O, P};
+use super::{h, hd, hp, pa, ptr, O, P};
 
 /// `kTerrainDeepWater`, `kTerrainShallowWater`, `kTerrainSpace` (static_assert'd in EEEffectHost.cpp and
 /// EEMiniMap.cpp).
@@ -29,7 +27,7 @@ fn images(tile: P) -> Vec<P> {
 /// A building image's unit's id.
 fn image_unit_id(d: P) -> c_ulong {
     // SAFETY: the unit's record
-    unsafe { (*rec::<EeUnitsRtsUnitFields>(O::UnRts, hp(O::MmDoppUnit, d, &[]))).mUnitID }
+    unsafe { (*crate::gamecpp::records::un_rts(hp(O::MmDoppUnit, d, &[]))).mUnitID }
 }
 
 /// EETile::GetChecksum: the tile's base checksum plus the unit ids of its building images.

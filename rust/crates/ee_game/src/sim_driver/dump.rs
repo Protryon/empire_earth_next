@@ -272,7 +272,7 @@ fn dump_players(o: &mut Out) {
                     s.push_str(&format!(
                         "{}@{},{} ",
                         lu(gc::h(gc::O::RoUnitId, point, &[])),
-                        ld(gc::h(gc::O::DkTileX, point, &[])),
+                        ld(gc::h(gc::O::PkUnitTileX, point, &[])),
                         ld(gc::h(gc::O::DkTileY, point, &[]))
                     ));
                 }
@@ -300,12 +300,14 @@ fn dump_players(o: &mut Out) {
 
 /// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`).
 fn unit_fields(u: usize) -> *const EeUnitsUnitFields {
-    gc::h(gc::O::UnFields, u, &[]) as usize as *const EeUnitsUnitFields
+    // SAFETY: a live unit of the world (the record's address only)
+    unsafe { gc::records::un_fields(u) }
 }
 
 /// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
 fn cx_fields(c: usize) -> *const EeUnitsComplexUnitFields {
-    gc::h(gc::O::CxFields, c, &[]) as usize as *const EeUnitsComplexUnitFields
+    // SAFETY: as unit_fields
+    unsafe { gc::records::cx_fields(c) }
 }
 
 /// A unit's id (0: none).
@@ -325,7 +327,7 @@ fn dump_unit(o: &mut Out, u: usize) {
         ld(h(O::DmUnitTypeRaw, u, &[])),
         ld(player),
         f(O::DmUnitHp, u, &[]),
-        ld(gc::h(gc::O::DkTileX, u, &[])),
+        ld(gc::h(gc::O::PkUnitTileX, u, &[])),
         ld(gc::h(gc::O::DkTileY, u, &[]))
     );
     let c = gc::h(gc::O::FxDynComplex, u, &[]) as usize;

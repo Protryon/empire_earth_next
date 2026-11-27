@@ -20,7 +20,7 @@ use std::sync::Mutex;
 use ee_sim::world::{PlayerView, UnitView, WorldRead, WorldView};
 
 use crate::gamecpp::global_objects as gobj;
-use crate::gamecpp::{h, hd, hp, rec, O, P};
+use crate::gamecpp::{h, hd, hp, O, P};
 
 /// A text from a C++ call that writes it into a buffer of 1024 bytes (`snprintf`).
 fn text_from(op: O, p: P) -> String {
@@ -255,7 +255,7 @@ fn open(l: &mut Log) {
         let Some(p) = world.player(i) else { continue };
         let pl = p.handle() as P;
         let ai = hp(O::EgComputer, pl, &[]);
-        let kind = if h(O::EgIsHuman, pl, &[]) != 0 {
+        let kind = if h(O::TbIsHuman, pl, &[]) != 0 {
             "human"
         } else if ai != 0 {
             "computer"
@@ -267,7 +267,7 @@ fn open(l: &mut Log) {
         // color: the dbcolortable row (tools/game_log.py names it from the data); rgb its colour
         write(&format!(
             "EE-GAME 0 p{i} player kind={kind} name={} color={} rgb={:.2}/{:.2}/{:.2} civ={} personality={} cheats={} engine={}\n",
-            narrow(&wide_text(hp(O::EgName, pl, &[]))),
+            narrow(&wide_text(hp(O::PlName, pl, &[]))),
             h(O::EgColorIndex, pl, &[]) as c_ulong,
             hd(O::EgColorRed, pl, &[], &[]),
             hd(O::EgColorGreen, pl, &[], &[]),
@@ -406,7 +406,7 @@ fn sample(l: &mut Log, world: &WorldView, time: u64) {
 /// A player's id.
 fn player_id(pl: P) -> c_ulong {
     // SAFETY: the player's record, read at once
-    unsafe { (*rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID }
+    unsafe { (*crate::gamecpp::records::pl_rts(pl)).mPlayerID }
 }
 
 /// A gather goal's resource's type (0: none).
@@ -416,7 +416,7 @@ fn gather_type(goal: P) -> u64 {
         return 0;
     }
     // SAFETY: the resource's record, read at once
-    unsafe { (*rec::<ee_sim::world::unit_fields::EeUnitsUnitFields>(O::UnFields, r)).mResourceType as u64 }
+    unsafe { (*crate::gamecpp::records::un_fields(r)).mResourceType as u64 }
 }
 
 /// Who took a unit: 0 a human's unit, 1 a computer player's, 2 none or the world's (player 0).
@@ -425,7 +425,7 @@ fn killer(unit: P) -> usize {
     let owner = if attacker != 0 { hp(O::UnPlayer, attacker, &[]) } else { 0 };
     if owner == 0 || player_id(owner) == 0 {
         2
-    } else if h(O::EgIsHuman, owner, &[]) != 0 {
+    } else if h(O::TbIsHuman, owner, &[]) != 0 {
         0
     } else {
         1

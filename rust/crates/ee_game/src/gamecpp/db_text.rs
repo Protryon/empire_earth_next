@@ -74,7 +74,7 @@ fn read_whole_file(spec: P) -> Option<Vec<u8>> {
                 == DX_OK
                 && read == length);
     }
-    h(O::DxClose, spec, &[]);
+    h(O::TkFileClose, spec, &[]);
     ok.then_some(data)
 }
 
