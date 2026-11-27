@@ -415,8 +415,6 @@ shims! {
     fn event_initialize(event: usize) = ee_uicpp_event_initialize;
     fn control_ime_result(control: usize, text: usize) = ee_uicpp_control_ime_result;
     fn control_ime_change(control: usize, text: usize, attributes: usize, cursor: u32) -> c_long = ee_uicpp_control_ime_change;
-    fn control_ime_close(control: usize) -> c_long = ee_uicpp_control_ime_close;
-    fn control_ime_open(control: usize) -> c_long = ee_uicpp_control_ime_open;
     fn control_translated_key(control: usize, key: usize, repeat: i32) -> c_long = ee_uicpp_control_translated_key;
     fn mgr_create_form(m: usize, data: EeUiShimBytes) -> usize = ee_uicpp_mgr_create_form;
     // UIControl.cpp's (lle_control.rs, mouse_ffi.rs)
@@ -462,8 +460,6 @@ shims! {
     fn list_line_count(list: usize) -> u32 = ee_uicpp_list_line_count;
     fn combo_set_rust(combo: usize, rust: usize) = ee_uicpp_combo_set_rust;
     fn list_change_selection(list: usize, index: u32, a: bool, b: bool) = ee_uicpp_list_change_selection;
-    fn control_set_bg_opacity(control: usize, opacity: f32) = ee_uicpp_control_set_bg_opacity;
-    fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = ee_uicpp_control_set_bg_color;
     // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
     fn edit_scroll_bar_new(edit: usize, x: f32, y: f32, length: f32) -> usize = ee_uicpp_edit_scroll_bar_new;
@@ -550,6 +546,11 @@ shims! {
     fn radio_set_up_checked(control: usize, bitmap: usize) = crate::lle_hosts::chains::radio_set_up_checked;
     fn label_text(label: usize) -> usize = crate::lle_hosts::chains::label_text;
     fn edit_text(edit: usize) -> usize = crate::lle_hosts::chains::edit_text;
+    // UIControl's virtuals that only toolkit classes overrode, by the control's kind (LLE/UI round 3)
+    fn control_ime_close(control: usize) -> c_long = crate::lle_hosts::chains::control_ime_close;
+    fn control_ime_open(control: usize) -> c_long = crate::lle_hosts::chains::control_ime_open;
+    fn control_set_bg_opacity(control: usize, opacity: f32) = crate::lle_hosts::chains::control_set_bg_opacity;
+    fn control_set_bg_color(control: usize, red: f32, green: f32, blue: f32) = crate::lle_hosts::chains::control_set_bg_color;
 }
 
 /// The calls of `shims!`'s `rust:` part: what their C++ shims called, Rust's own (the input entities are ee_base's

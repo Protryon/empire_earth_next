@@ -10,7 +10,6 @@ shims! {
     r ee_uicpp_combo_a_part_mouse_down;
     r ee_uicpp_combo_a_part_mouse_up;
     r ee_uicpp_combo_a_part_mouse_move;
-    r ee_uicpp_combo_a_list_wheel;
     r ee_uicpp_combo_a_part_update_keyboard;
     r ee_uicpp_combo_a_part_translated_key;
     v ee_uicpp_combo_a_part_set_rectangle;
@@ -18,7 +17,6 @@ shims! {
     r ee_uicpp_combo_a_part_copy_data;
     v ee_uicpp_combo_a_set_dirty;
     v ee_uicpp_combo_a_set_rectangle;
-    v ee_uicpp_combo_a_release_keyboard;
     r ee_uicpp_combo_a_add_string;
     v ee_uicpp_combo_a_change_selection;
     r ee_uicpp_combo_rhombus_create;
@@ -58,9 +56,6 @@ shims! {
     v ee_uicpp_ctl_draw_copied_bg;
     v ee_uicpp_ctl_form_ctl_set_dirty;
     v ee_uicpp_ctl_help_string;
-    v ee_uicpp_ctl_hide;
-    v ee_uicpp_ctl_part_set_bg_color;
-    v ee_uicpp_ctl_set_bg_opacity;
     v ee_uicpp_ctl_set_dirty;
     v ee_uicpp_ctl_tabbed_to;
     r ee_uicpp_ctl_virt_mouse_down;
@@ -112,16 +107,12 @@ shims! {
     v ee_uicpp_form_bg_open;
     v ee_uicpp_form_bg_unload;
     r ee_uicpp_form_ctl_entity_type;
-    v ee_uicpp_form_ctl_hide;
-    r ee_uicpp_form_ctl_ime_enabled;
-    v ee_uicpp_form_ctl_release_keyboard;
     v ee_uicpp_form_ctl_set_dirty;
     r ee_uicpp_form_ctl_tabable;
     v ee_uicpp_form_ctl_tabbed_from;
     v ee_uicpp_form_ctl_tabbed_to;
     r ee_uicpp_form_ctl_type;
     r ee_uicpp_form_ctl_update_keyboard;
-    r ee_uicpp_form_ctl_wheel_turned;
     v ee_uicpp_form_delete_part;
     r ee_uicpp_form_event_process;
     v ee_uicpp_form_group_delete;
@@ -147,7 +138,6 @@ shims! {
     r ee_uicpp_graph_line_create;
     v ee_uicpp_graph_line_delete;
     v ee_uicpp_graph_text_set_bytes;
-    v ee_uicpp_group_hide;
     r ee_uicpp_group_is_button;
     v ee_uicpp_group_set_dirty;
     v ee_uicpp_hk_delete;
@@ -170,7 +160,6 @@ shims! {
     r ee_uicpp_list_rhombus_create;
     v ee_uicpp_list_rhombus_delete;
     v ee_uicpp_mgr_bitmap_release;
-    r ee_uicpp_mgr_ctl_ime;
     v ee_uicpp_mgr_event_process;
     v ee_uicpp_mgr_form_activate;
     v ee_uicpp_mgr_form_close;
@@ -206,12 +195,8 @@ shims! {
     r ee_uicpp_obj_part_mouse_down;
     r ee_uicpp_obj_part_mouse_move;
     r ee_uicpp_obj_part_mouse_up;
-    v ee_uicpp_obj_part_set_bg_color;
-    v ee_uicpp_obj_part_set_bg_opacity;
     v ee_uicpp_obj_part_set_location;
     v ee_uicpp_obj_part_set_rectangle;
-    v ee_uicpp_obj_release_keyboard;
-    v ee_uicpp_obj_set_bg_opacity;
     v ee_uicpp_obj_set_dirty;
     r ee_uicpp_obj_string_length;
     r ee_uicpp_obj_tabable;
@@ -272,9 +257,6 @@ shims! {
     v ee_uicpp_tbl_set_list_selected_bg;
     v ee_uicpp_tbl_set_list_selection;
     v ee_uicpp_tbl_set_status_text;
-    v ee_uicpp_tbl_set_bg_color;
-    v ee_uicpp_tbl_set_bg_opacity;
     v ee_uicpp_tbl_set_set_rectangle;
-    v ee_uicpp_tbl_set_change_font;
     r ee_uicpp_tbl_text_list;
 }

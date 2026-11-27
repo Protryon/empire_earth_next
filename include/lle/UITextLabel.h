@@ -24,7 +24,6 @@ public:
     UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness), mRust(ee_ui_label_new(this, ee_ui_label_host, UIF4(inRectangle), inFont, inLabelType, inBorderThickness)) { this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText); }
     virtual ~UITextLabel() { ee_ui_label_free(this->mRust); }
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
-    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiLabelCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiLabelCall::CopyData); }
     void DeleteArray() { this->Call(EeUiLabelCall::DeleteArray); }
     void DeleteLine(unsigned long inLine) { this->Call(EeUiLabelCall::DeleteLine, inLine); }
@@ -37,7 +36,6 @@ public:
     virtual bool GetTabable() const { return false; }
     const UWideString& GetText(unsigned long inLine) const { return *reinterpret_cast<const UWideString*>(this->Call(EeUiLabelCall::Line, inLine)); }
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
-    virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(EeUiLabelCall::MouseWheelTurned, inDelta); }
     bool ScrollBarExists() const { return this->Call(EeUiLabelCall::ScrollBarExists) != 0; }
     void SetAlignment(unsigned long inAlignment) { this->Call(EeUiLabelCall::SetAlignment, inAlignment); }
     void SetFitRectToText(bool inFit) { this->Call(EeUiLabelCall::SetFitRectToText, inFit); }

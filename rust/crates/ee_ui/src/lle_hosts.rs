@@ -170,7 +170,7 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::PartMouseDown as isize => R(ee_uicpp_combo_a_part_mouse_down),
         x if x == A::PartMouseUp as isize => R(ee_uicpp_combo_a_part_mouse_up),
         x if x == A::PartMouseMove as isize => R(ee_uicpp_combo_a_part_mouse_move),
-        x if x == A::ListWheel as isize => R(ee_uicpp_combo_a_list_wheel),
+        x if x == A::ListWheel as isize => X(chains::combo_a_list_wheel),
         x if x == A::PartUpdateKeyboard as isize => R(ee_uicpp_combo_a_part_update_keyboard),
         x if x == A::PartTranslatedKey as isize => R(ee_uicpp_combo_a_part_translated_key),
         x if x == A::PartSetRectangle as isize => V(ee_uicpp_combo_a_part_set_rectangle),
@@ -187,7 +187,7 @@ unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *
         x if x == A::CaptureMouse as isize => X(chains::combo_a_capture_mouse),
         x if x == A::CaptureKeyboard as isize => X(chains::combo_a_capture_keyboard),
         x if x == A::ReleaseMouse as isize => X(chains::combo_a_release_mouse),
-        x if x == A::ReleaseKeyboard as isize => V(ee_uicpp_combo_a_release_keyboard),
+        x if x == A::ReleaseKeyboard as isize => X(chains::ctl_release_keyboard),
         x if x == A::OpenList as isize => X(chains::combo_a_open_list),
         x if x == A::CloseList as isize => X(chains::combo_a_close_list),
         x if x == A::AddString as isize => R(ee_uicpp_combo_a_add_string),
@@ -597,6 +597,24 @@ pub unsafe extern "C" fn ee_ui_scroll_bar_host(
 ) -> isize {
     // SAFETY: the contract
     unsafe { chain(&[base, part, scroll_bar], o, op, a, b, c, d, f) }
+}
+
+/// `UIControl::SetBgOpacity`, `SetBgColor` and `ReleaseCapturedKeyboard` for their C++ callers (only toolkit classes
+/// overrode them; LLE/UI round 3): `which` 0 the opacity `f[0]`, 1 the colour `f[0..3]`, 2 the keyboard's release.
+/// The override of the control's kind (lle_chains.rs `virt_bg`, `virt_release_keyboard`), else UIControl's.
+///
+/// # Safety
+/// `control` a live control, `f` four floats.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_control_virt(control: *mut c_void, which: u32, f: *const f32) {
+    // SAFETY: the contract
+    let v = unsafe { [*f, *f.add(1), *f.add(2), *f.add(3)] };
+    match which {
+        0 => chains::virt_bg(control, false, v),
+        1 => chains::virt_bg(control, true, v),
+        _ => chains::virt_release_keyboard(control),
+    }
 }
 
 /// The list boxes' ops that do not depend on T (`UIListBoxRust<T>::Op`'s default).
@@ -1074,11 +1092,11 @@ const SET: [Option<SetFn>; 45] = [
     Some(SetFn::R(chains::tbl_set_label_align)),
     Some(SetFn::R(chains::tbl_set_label_scroll_opacity)),
     Some(SetFn::R(chains::tbl_set_label_fit)),
-    Some(SetFn::C(ee_uicpp_tbl_set_bg_color)),
-    Some(SetFn::C(ee_uicpp_tbl_set_bg_opacity)),
+    Some(SetFn::R(chains::part_set_bg_color)),
+    Some(SetFn::R(chains::part_set_bg_opacity)),
     Some(SetFn::R(chains::tbl_set_always_dirty)),
     Some(SetFn::C(ee_uicpp_tbl_set_set_rectangle)),
-    Some(SetFn::C(ee_uicpp_tbl_set_change_font)),
+    Some(SetFn::R(chains::table_change_font)),
     Some(SetFn::R(chains::tbl_set_set_trigger)),
 ];
 

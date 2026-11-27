@@ -563,6 +563,126 @@ pub(crate) fn hot_key_call(k: Cpp, call: crate::hotkeyobj::EeUiHotKeyCall, a: is
     unsafe { crate::hotkeyobj::ee_ui_hotkey_call(r, call, a, b) }
 }
 
+// ---- UIControl's virtuals that only toolkit classes overrode (LLE/UI round 3): the override of the control's kind
+// (direct.rs finds each Rust object by the C++ pointer), else UIControl's body
+
+/// `c->SetBgOpacity(v[0])` (`color` false) or `c->SetBgColor(v[0..3])`: nothing for a combo box, the scroll bar's,
+/// else UIControl's.
+pub(crate) fn virt_bg(c: Cpp, color: bool, mut v: [f32; 4]) {
+    if direct::is(Kind::Combo, c) {
+        return;
+    }
+    if direct::is(Kind::ScrollBar, c) {
+        let o = direct::find(Kind::ScrollBar, c) as *const crate::scrollbarobj::EeUiScrollBar;
+        let call = if color { B::SetBgColor } else { B::SetBgOpacity };
+        // SAFETY: a live scroll bar
+        unsafe { crate::scrollbarobj::ee_ui_scroll_bar_call(o, call, 0, 0, v.as_mut_ptr()) };
+        return;
+    }
+    direct::control_call_f(c, if color { C::SetBgColor } else { C::SetBgOpacity }, 0, 0, &mut v);
+}
+/// `c->ReleaseCapturedKeyboard()`: the edit box's, else UIControl's.
+pub(crate) fn virt_release_keyboard(c: Cpp) {
+    if direct::is(Kind::Edit, c) {
+        direct::edit_call(c, crate::editobj::EeUiEditCall::ReleaseKeyboard, 0, 0);
+    } else {
+        ctl_call(c, C::ReleaseKeyboard, 0);
+    }
+}
+/// `c->HideControl()`: the combo box's, else nothing.
+fn virt_hide(c: Cpp) {
+    if direct::is(Kind::Combo, c) {
+        direct::combo_call(c, crate::comboobj::EeUiComboCall::HideControl, 0, 0);
+    }
+}
+/// `c->GetIMEEnabled()`: the edit box's, else false.
+fn virt_ime_enabled(c: Cpp) -> isize {
+    if direct::is(Kind::Edit, c) { bl(direct::edit_call(c, crate::editobj::EeUiEditCall::ImeEnabled, 0, 0).unwrap_or(0)) } else { 0 }
+}
+/// `c->OpenIMECompositionString()` (`open`) or `CloseIMECompositionString()`: the edit box's, else kErrorFailed.
+fn virt_ime(c: Cpp, open: bool) -> isize {
+    use crate::editobj::EeUiEditCall as E;
+    if !direct::is(Kind::Edit, c) {
+        return 9;
+    }
+    direct::edit_call(c, if open { E::ImeOpen } else { E::ImeClose }, 0, 0).unwrap_or(0) as core::ffi::c_long as isize
+}
+/// `c->OpenIMECompositionString()`.
+pub(crate) fn control_ime_open(c: usize) -> core::ffi::c_long {
+    virt_ime(c as Cpp, true) as core::ffi::c_long
+}
+/// `c->CloseIMECompositionString()`.
+pub(crate) fn control_ime_close(c: usize) -> core::ffi::c_long {
+    virt_ime(c as Cpp, false) as core::ffi::c_long
+}
+/// `c->SetBgOpacity(opacity)`.
+pub(crate) fn control_set_bg_opacity(c: usize, opacity: f32) {
+    virt_bg(c as Cpp, false, [opacity, 0.0, 0.0, 0.0]);
+}
+/// `c->SetBgColor(GEColor(red, green, blue))`.
+pub(crate) fn control_set_bg_color(c: usize, red: f32, green: f32, blue: f32) {
+    virt_bg(c as Cpp, true, [red, green, blue, 0.0]);
+}
+/// `c->ChangeFont(font)`: the button's, edit box's, status bar's or label's, else nothing.
+fn virt_change_font(c: Cpp, font: isize) {
+    if direct::is(Kind::Button, c) {
+        direct::button_call(c, crate::buttonobj::EeUiButtonCall::ChangeFont, font, 0);
+    } else if direct::is(Kind::Edit, c) {
+        direct::edit_call(c, crate::editobj::EeUiEditCall::ChangeFont, font, 0);
+    } else if direct::is(Kind::StatusBar, c) {
+        direct::status_call(c, crate::statusobj::EeUiStatusBarCall::ChangeFont, font, 0, &mut [0.0; 4]);
+    } else if direct::is(Kind::Label, c) {
+        direct::label_call(c, crate::labelobj::EeUiLabelCall::ChangeFont, font, 0);
+    }
+}
+/// `c->MouseWheelTurned(delta)`: the combo box's, list box's or label's, else kErrorFailed.
+fn virt_wheel(c: Cpp, delta: isize) -> isize {
+    let d = delta as core::ffi::c_long as isize;
+    let r = if direct::is(Kind::Combo, c) {
+        direct::combo_call(c, crate::comboobj::EeUiComboCall::MouseWheelTurned, d, 0)
+    } else if direct::is(Kind::List, c) {
+        direct::list_call(c, crate::listobj::EeUiListCall::MouseWheelTurned, d, 0)
+    } else if direct::is(Kind::Label, c) {
+        direct::label_call(c, crate::labelobj::EeUiLabelCall::MouseWheelTurned, d, 0)
+    } else {
+        Some(9)
+    };
+    lg(r.unwrap_or(0))
+}
+
+ops! {
+    /// `ctl->SetBgOpacity(f[0])`.
+    ctl_set_bg_opacity => |o, a, b, f| { virt_bg(o, false, f4(f)); 0 };
+    /// `ctl->SetBgColor(f[0..3])`.
+    ctl_set_bg_color => |o, a, b, f| { virt_bg(o, true, [*f, *f.add(1), *f.add(2), 0.0]); 0 };
+    /// `a->SetBgOpacity(f[0])` (a part, a table's control).
+    part_set_bg_opacity => |o, a, b, f| { virt_bg(p(a), false, [*f, 0.0, 0.0, 0.0]); 0 };
+    /// `a->SetBgColor(f[0..3])` (a part, a table's control).
+    part_set_bg_color => |o, a, b, f| { virt_bg(p(a), true, [*f, *f.add(1), *f.add(2), 0.0]); 0 };
+    /// `ctl->ReleaseCapturedKeyboard()`.
+    ctl_release_keyboard => |o, a, b, f| { virt_release_keyboard(o); 0 };
+    /// `a->ReleaseCapturedKeyboard()` (the form's control).
+    form_ctl_release_keyboard => |o, a, b, f| { virt_release_keyboard(p(a)); 0 };
+    /// `ctl->HideControl()`.
+    ctl_hide => |o, a, b, f| { virt_hide(o); 0 };
+    /// `a->HideControl()` (the form's or group's control).
+    part_hide => |o, a, b, f| { virt_hide(p(a)); 0 };
+    /// `a->GetIMEEnabled()` (the form's or manager's control).
+    part_ime_enabled => |o, a, b, f| virt_ime_enabled(p(a));
+    /// `a->MouseWheelTurned(b)` (the form's control).
+    part_wheel_turned => |o, a, b, f| virt_wheel(p(a), b);
+    /// `CB->GetList()->MouseWheelTurned(b)` (o the combo box).
+    combo_a_list_wheel => |o, a, b, f| virt_wheel(direct::combo_list(o), b);
+}
+/// `a->ChangeFont(c)` (a table's control).
+///
+/// # Safety
+/// The host contract.
+pub(crate) unsafe fn table_change_font(_o: *mut c_void, a: isize, _b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+    virt_change_font(p(a), c);
+    0
+}
+
 // ---- the scroll bars (a `UIScrollBar*`) and sliders (a `UISlider*`) the controls own
 
 use crate::scrollbarobj::EeUiScrollBarCall as B;

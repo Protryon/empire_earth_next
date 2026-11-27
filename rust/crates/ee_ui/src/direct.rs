@@ -124,6 +124,12 @@ pub fn forget(kind: Kind, obj: *const c_void) {
     }
 }
 
+/// Whether the C++ object `cpp` has a Rust object of `kind` (no lookup check line: a dispatch by kind asks it of
+/// every control).
+pub fn is(kind: Kind, cpp: *const c_void) -> bool {
+    !cpp.is_null() && registry().by_cpp.contains_key(&(cpp as usize, kind))
+}
+
 /// The Rust object of `kind` the C++ object `cpp` has, or NULL.
 pub fn find(kind: Kind, cpp: *const c_void) -> *mut c_void {
     if cpp.is_null() {

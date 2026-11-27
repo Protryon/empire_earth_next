@@ -21,6 +21,7 @@
 #include "lle/ISEntity.h"
 #include "rust/ui/mouse_ffi.h"
 #include "rust/ui/lle_control.h"
+#include "rust/ui/lle_hosts.h"
 #include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
 #include "lle/UIObjHost.h"
@@ -39,8 +40,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual void AddIMEResultString(const UWideString& inString) {}   // slot 0x04
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor) { return kErrorFailed; }
-    virtual void ChangeFont(GEFont* inFont) {}
-    virtual long CloseIMECompositionString() { return kErrorFailed; }
     static bool ControlKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Control); }
     virtual long CopyData() { return (long)this->Call(EeUiControlCall::CopyData); }
     // Draws the copied background (when it has an opacity) and the border (ee_ui controlobj.rs)
@@ -61,7 +60,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual bool GetHelpString(UWideString& outString) const { return this->Call(EeUiControlCall::HelpString, (intptr_t)&outString) != 0; }
     UIHotKey* GetHotKey() const { return static_cast<UIHotKey*>(this->mHotKey); }
     unsigned long GetId() const { return this->mId; }
-    virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
     bool GetLeftMouseButtonDown() const { return this->Call(EeUiControlCall::LeftButtonDown) != 0; }
     // Returns the UI manager's rasterizer
@@ -77,7 +75,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     UIEvent* GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(EeUiControlCall::TriggerEvent, inEvent); }
     virtual unsigned long GetType() const { return this->mControlType; }
     unsigned long GetWidth() const { return UMFloor(this->GetRectangle().GetWidth() + 1.0f); }
-    virtual void HideControl() {}
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
     // The left button down, then MouseLButtonDown (ee_ui controlobj.rs)
@@ -85,13 +82,12 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual long MouseMove(const GE2DPoint& inLocation) = 0;  // slot 0x40
     virtual long MouseRButtonDown() = 0;
     virtual long MouseRButtonUp() = 0;
-    virtual long MouseWheelTurned(long inDelta) { return kErrorFailed; }
-    virtual long OpenIMECompositionString() { return kErrorFailed; }
-    virtual void ReleaseCapturedKeyboard() { this->Call(EeUiControlCall::ReleaseKeyboard); }
+    // (the three below: the override of the control's kind, else the base's; ee_ui lle_chains.rs)
+    void ReleaseCapturedKeyboard() { ee_ui_control_virt(this, 2, UIF4()); }
     void ReleaseCapturedMouse() { this->Call(EeUiControlCall::ReleaseMouse); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
-    virtual void SetBgColor(const GEColor& inColor) { this->Call(EeUiControlCall::SetBgColor, 0, 0, UIF4(inColor)); }
-    virtual void SetBgOpacity(float inOpacity) { this->Call(EeUiControlCall::SetBgOpacity, 0, 0, UIF4(inOpacity)); }
+    void SetBgColor(const GEColor& inColor) { ee_ui_control_virt(this, 1, UIF4(inColor)); }
+    void SetBgOpacity(float inOpacity) { ee_ui_control_virt(this, 0, UIF4(inOpacity)); }
     // every control's border colours (ee_ui lle_control.rs; black and white until set)
     static void SetBorderColors(const GEColor& inDark, const GEColor& inLight) { ee_ui_set_border_colors(UIF4(inDark), UIF4(inLight)); }
     void SetBorderOpacity(float inOpacity) { this->mBorderOpacity = inOpacity; }

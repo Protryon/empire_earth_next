@@ -104,7 +104,6 @@ public:
     {
         ee_ui_list_insert(this->mRust, &inLine, inIndex, const_cast<P*>(&inSort), UILineOps<T>::template Less<P>);
     }
-    virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(UIListBoxCall::MouseWheelTurned, inDelta); }
     bool ScrollBarExists() { return this->Call(UIListBoxCall::ScrollBar) != 0; }
     void SetAutoSelect(bool inAutoSelect) { this->Call(UIListBoxCall::SetAutoSelect, inAutoSelect); }
     void SetFocusedRectColor(const GEColor& inColor)

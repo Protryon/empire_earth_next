@@ -44,9 +44,6 @@ public:
 #endif
     unsigned long GetTextBoxType() const { return (unsigned long)this->Call(EeUiComboCall::TextBoxType); }
     void InsertLine(const UWideString& inLine, unsigned long inIndex) { this->Call(EeUiComboCall::InsertLine, (intptr_t)(const char*)inLine, inIndex); }
-    virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(EeUiComboCall::MouseWheelTurned, inDelta); }
-    virtual void SetBgColor(const GEColor& inColor) {}
-    virtual void SetBgOpacity(float inOpacity) {}
     void SetCurrentSelection(unsigned long inIndex) { this->Call(EeUiComboCall::SetCurrentSelection, inIndex); }
     void SetListBoxAlwaysDirty(bool inAlwaysDirty) { this->Call(EeUiComboCall::SetListBoxAlwaysDirty, inAlwaysDirty); }
     void SetListBoxFocusedRectColor(const GEColor& inColor) { this->GetList()->SetFocusedRectColor(inColor); }
@@ -66,7 +63,6 @@ public:
     }
     virtual long AddString() { return (long)this->Call(EeUiComboCall::AddString); }   // slot 0x88
     virtual void ChangeSelection() { this->Call(EeUiComboCall::ChangeSelection); }
-    virtual void HideControl() { this->Call(EeUiComboCall::HideControl); }
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiComboCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiComboCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiComboCall::MouseMove, 0, 0, UIF4(inLocation)); }
