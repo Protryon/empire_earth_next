@@ -645,14 +645,8 @@ static const EeWonSegAt kSegAt = {offsetof(TextSegment, mText), offsetof(TextSeg
 // Formatted text for text areas: expands <n>, <cN>, <fN>, <sN> and <lN> commands
 // The format's parse and its run are ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops and
 // ee_won_gui_text_append_formatted: the pending text, the colour and the font; R6 WON GUI round 36); this unit is
-// the area's four calls it makes.
+// the call (its four calls on the area are guitext.rs's game sink: R6 WON GUI round 41).
 namespace WONAPI {
-static void FmtAddText(void* area,const void* units,size_t len,int color,void* font,bool lineBreak)
-{ ((TextArea*)area)->AddSegment(GUIString(std::wstring((const wchar_t*)units,len)),color,(Font*)font,lineBreak); }
-static void FmtLineBreak(void* area) { ((TextArea*)area)->LineBreak(0); }
-static void FmtAddString(void* area,const void* string,int color,void* font) { ((TextArea*)area)->AddSegment(*(const GUIString*)string,color,(Font*)font,false); }
-static void FmtAddSegment(void* area,void* segment) { ((TextArea*)area)->AddSegment((TextSegmentBase*)segment); }
-static const EeWonFormatSink kFormatSink = { FmtAddText, FmtLineBreak, FmtAddString, FmtAddSegment };
 // Appends format text to a text area, expanding <n> line breaks, <cN>/<fN> colour and font changes and
 // <sN>/<lN> inserted strings and segments (1-based indices; "<<" is a literal '<')
 void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
@@ -661,7 +655,7 @@ void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
     bool lineBreak)
 {
     EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
-    ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
+    ee_won_gui_text_append_formatted(area,ee_won_gui_text_game_sink(),format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
 }
 }
 
