@@ -140,8 +140,6 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_LIST_START_LINE: static_cast<UILBString*>(c)->SetStartingDisplayLine((unsigned long)a); break;
     case EE_SCREENS_SH_LIST_SELECT_SCROLL: static_cast<UILBString*>(c)->ChangeSelectionIndex((unsigned long)a, false, true); break;
     case EE_SCREENS_SH_FORM_CONTROL: return (int64_t)c->GetForm()->GetControlById((unsigned long)a);
-    case EE_SCREENS_SH_TECH_EPOCH: return EETechTreeEpochOf((long)a);
-    case EE_SCREENS_SH_TECH_DATA_ID: return gTechTree.Get((long)a)->mData->mID;
     // the unit tab's (EEUIFSELBUnitList, EEUIFSELBCargoList, EEUIFSEBRotation)
     case EE_SCREENS_SH_UNIT_SELECT_TYPE: static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT); break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
@@ -340,14 +338,6 @@ extern "C" bool ee_screenscpp_sh_radio_checked(uintptr_t inControl)
 { return dynamic_cast<UIRadioButton*>(C(inControl))->GetIsChecked(); }
 extern "C" bool ee_screenscpp_sh_check_checked(uintptr_t inControl)
 { return static_cast<UICheckBox*>(C(inControl))->GetIsChecked(); }
-extern "C" int64_t ee_screenscpp_sh_tech_name_id(int64_t inTechnology)
-{ return (int64_t)gTechTree.Get((long)inTechnology)->mData->mNameID; }
-extern "C" int64_t ee_screenscpp_sh_tech_class_name_id(int64_t inTechnology)
-{ return (int64_t)gUnitClassTable[gTechTree.Get((long)inTechnology)->mData->mUnitClass]->mNameStringID; }
-extern "C" uintptr_t ee_screenscpp_sh_player_tree(uint32_t inSelection)
-{ return (uintptr_t)gWorld.mPlayers[inSelection + 1]->GetTechTree(); }
-extern "C" int64_t ee_screenscpp_sh_tree_data_id(uintptr_t inTree, int64_t inTechnology)
-{ return (int64_t)TREE(inTree)->Get((long)inTechnology)->mData->mID; }
 extern "C" int64_t ee_screenscpp_sh_tree_depends(uintptr_t inTree, int64_t inTechnology, int64_t inOn)
 { return (int64_t)TREE(inTree)->Get((long)inTechnology)->DependsOn((long)inOn); }
 extern "C" void ee_screenscpp_sh_tree_set_obsoleted(uintptr_t inTree, int64_t inTechnology, bool inObsoleted)

@@ -13,8 +13,6 @@ mod sys {
         pub fn ee_screenscpp_group_conversions() -> i32;
         pub fn ee_screenscpp_group_conversions_max() -> i32;
         pub fn ee_screenscpp_group_wonders_to_win() -> i32;
-        pub fn ee_screenscpp_group_start_epoch() -> i32;
-        pub fn ee_screenscpp_group_end_epoch() -> i32;
         pub fn ee_screenscpp_group_epoch_title(epoch: i32) -> i32;
         pub fn ee_screenscpp_group_has_player() -> bool;
     }
@@ -32,8 +30,8 @@ impl GroupHost for Host {
                 EE_SCREENS_GROUP_VALUE_CONVERSIONS_MAX => sys::ee_screenscpp_group_conversions_max(),
                 EE_SCREENS_GROUP_VALUE_WONDERS_TO_WIN => sys::ee_screenscpp_group_wonders_to_win(),
                 EE_SCREENS_GROUP_VALUE_EPOCH_TITLE => sys::ee_screenscpp_group_epoch_title(shown_epoch(
-                    sys::ee_screenscpp_group_start_epoch(),
-                    sys::ee_screenscpp_group_end_epoch(),
+                    crate::screens::tech_direct::group_start_epoch(),
+                    crate::screens::tech_direct::group_end_epoch(),
                 )),
                 EE_SCREENS_GROUP_VALUE_HAS_PLAYER => sys::ee_screenscpp_group_has_player() as i32,
                 _ => 0,

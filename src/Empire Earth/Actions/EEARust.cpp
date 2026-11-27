@@ -226,9 +226,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_FX_LOCAL: gWorld.mEffectManager->GetEffect(*reinterpret_cast<EEEffectHandle*>(&i[2]))->SetLocalTo(i[1]); return 0;
     // the current player's technologies
     case GA_K(TECH, K_CAN_PRODUCE): return GA_PL->CanProduce(i[1], 0x20, 1, true, 3, NULL);
-    case EE_SCREENS_GAH_K_CLASS: return (intptr_t)gUnitClassTable[GA_PL->mTechnologies->Get(i[1])->mData->mUnitClass];
     case EE_SCREENS_GAH_K_CLASS_TILE_SIZE: return static_cast<EEUnitClass*>(p)->GetTileSize();
-    case GA_K(TECH, K_NODE_CONTAINS): return GA_PL->mTechnologies->Get(i[1])->Contains(i[2]);
     // the calamity class p at the point f0..f2 (in and out)
     case EE_SCREENS_GAH_A_SCREEN_TO_WORLD: gWorld.ScreenToWorld(GE2DPoint(f[0], f[1]), *reinterpret_cast<GE3DPoint*>(f + 3)); return 0;
     case EE_SCREENS_GAH_A_TRANSFORM: GETransformation(gWorld.mTransformation).Apply(*reinterpret_cast<GE3DPoint*>(f + 3), GA_F3); return 0;

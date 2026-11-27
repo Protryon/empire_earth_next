@@ -244,7 +244,6 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEUNX_TYPE_AT: return (int32_t)(long)EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_UL_TYPE_AT, (unsigned long)i[0]);
     case EE_SCREENS_SEUNX_CLASS_EXISTS: return gUnitClassTable[i[0]] != NULL;
     case EE_SCREENS_SEUNX_CLASS_TECH: return (int32_t)gUnitClassTable[i[0]]->mTechnology;
-    case EE_SCREENS_SEUNX_TREE_NODE: EESEOutSlot(p) = static_cast<EEPlayer*>(p[1])->GetTechTree()->Get(i[0]); return 0;
     case EE_SCREENS_SEUNX_CLASS: EESEOutSlot(p) = gUnitClassTable[i[0]]; return 0;
     case EE_SCREENS_SEUNX_PLAYER_ID: return (int32_t)static_cast<EEPlayer*>(p[1])->GetPlayerID();
     case EE_SCREENS_SEUNX_GAIA_PLACEABLE: return static_cast<EEUnitClass*>(p[1])->mIsGaiaPlaceable;

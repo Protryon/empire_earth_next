@@ -207,7 +207,6 @@ extern "C" int64_t ee_scenariocpp_world_class(void*, uint32_t inOp, const int64_
 {
     switch (inOp) {
     case EE_SCENARIO_WK_PLAYER: return SMEPtr(SMEPlayer(a[0]));
-    case EE_SCENARIO_WK_UPGRADE: return SMEPtr(SMEPlayerOf(a[0])->GetUpgrade((long)a[1]));
     case EE_SCENARIO_WK_UPGRADE_FIELDS: return SMEPtr(static_cast<EeUnitsUnitClassUpgradeFields*>(SMEUpgradeOf(a[0])));
     case EE_SCENARIO_WK_CLASS: return SMEPtr(SMEUpgradeOf(a[0])->mUnitClass);
     case EE_SCENARIO_WK_CLASS_FIELDS: return SMEPtr(static_cast<EeUnitsUnitClassFields*>(SMEClassOf(a[0])));
@@ -302,8 +301,6 @@ extern "C" int64_t ee_scenariocpp_world_create(EESMEffectRun* inRun, uint32_t in
     case EE_SCENARIO_WC_CLASS: return SMEPtr(gUnitClassTable[a[0]]);
     case EE_SCENARIO_WC_OBJECT_UNIT_CLASS: return SMEPtr(gWorld.GetUnit(inRun->mObject->mUnits[(unsigned long)a[0]])->GetUnitClass());
     case EE_SCENARIO_WC_FIND_PLACEMENT: return inRun->mObject->FindPlacement((unsigned long)a[0], inRun->mCreateLocation, true);
-    case EE_SCENARIO_WC_TECH_NODE: return SMEPtr(gWorld.GetPlayer((unsigned long)a[0])->GetTechTree()->Get(SMEClassOf(a[1])->GetTechnology()));
-    case EE_SCENARIO_WC_TECH_KIND: return gWorld.GetPlayer((unsigned long)a[0])->GetTechTree()->Get(SMEClassOf(a[1])->GetTechnology())->mData->mKind;
     case EE_SCENARIO_WC_LOCATION_X: return EESMBits(inRun->mCreateLocation.mX);
     case EE_SCENARIO_WC_LOCATION_Y: return EESMBits(inRun->mCreateLocation.mY);
     case EE_SCENARIO_WC_LOCATION_SET: inRun->mCreateLocation = GE2DPoint(EESMFloat(a[0]), EESMFloat(a[1]));
@@ -521,7 +518,6 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_FADE_OUT: gGraphics->PostFadeOut(3000);
         return 0;
-    case EE_SCENARIO_WX_TECH_CLASS_EXISTS: return gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass] != NULL;
     case EE_SCENARIO_WX_TECH_REPLACE_QUEUED:
         EEReplaceQueuedTechnology(SMEPlayer(a[0]), gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass], 100000);
         return 0;

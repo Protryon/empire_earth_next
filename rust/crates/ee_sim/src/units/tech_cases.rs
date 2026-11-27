@@ -5,6 +5,7 @@
 //! EEGhostUnit.cpp, EEUnitHost.cpp, EEUGRust.cpp) are made here before the C++ is asked. None: the C++ answers.
 
 #![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+#![cfg_attr(test, allow(dead_code))] // the hooks are the game hosts' (not(test))
 
 use std::os::raw::c_long;
 #[cfg(not(test))]
@@ -149,8 +150,8 @@ fn research(t: usize, id: i64, unit: usize) {
 /// The complex unit host's statement `op` (EEComplexUnit.cpp `ee_units_cu_host`).
 pub(crate) fn cu(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
     use crate::units::cu_body::{
-        EE_UNITS_CU_CLASS_TECH_NODE, EE_UNITS_CU_NODE_AVAILABLE, EE_UNITS_CU_NODE_BUILD_TIME, EE_UNITS_CU_NODE_MAKES_UNIT,
-        EE_UNITS_CU_NODE_UNIT_CLASS, EE_UNITS_CU_TECH_NODE,
+        EE_UNITS_CU_CLASS_TECH_NODE, EE_UNITS_CU_NODE_AVAILABLE, EE_UNITS_CU_NODE_BUILD_TIME,
+        EE_UNITS_CU_NODE_MAKES_UNIT, EE_UNITS_CU_NODE_UNIT_CLASS, EE_UNITS_CU_TECH_NODE,
     };
     use crate::units::cu_cargo::{
         EE_UNITS_CU_CURRENT_NODE, EE_UNITS_CU_NODE_ALLOWED, EE_UNITS_CU_NODE_CLASS_INDEX, EE_UNITS_CU_NODE_KIND,
@@ -188,8 +189,31 @@ pub(crate) fn cu(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
         }
         EE_UNITS_CU_NODE_ALLOWED => i64::from(node(a as usize).mIsAllowed),
         EE_UNITS_CU_NODE_KIND => data(a as usize).mKind as i64,
+        // unit a's GetPlayer()->GetUpgrade(its class's unit type) (player_upgrades.rs)
+        crate::units::cu_life::EE_UNITS_CU_UNIT_UPGRADE => {
+            let ty = class_unit_type(unit_class(a)?)?;
+            crate::units::player_upgrades::at(unit_player(a)? as u64, ty as c_long as usize) as i64
+        }
+        // the unit's GetPlayer()->GetUpgrade(b)->mBuildTimeScale (its bits)
+        crate::units::cu_body::EE_UNITS_CU_BUILD_TIME_SCALE => {
+            let upgrade = crate::units::player_upgrades::at(unit_player(unit)? as u64, b as c_long as usize);
+            i64::from(upgrade_fields(upgrade as usize)?.mBuildTimeScale.to_bits())
+        }
+        // player a's GetUpgrade(the unit's class's unit type)->mAreaEffectTemplates[b]
+        crate::units::cu_life::EE_UNITS_CU_UPGRADE_AREA_TEMPLATE => {
+            let ty = class_unit_type(unit_class(unit)?)?;
+            let upgrade = crate::units::player_upgrades::at(a, ty as c_long as usize);
+            upgrade_fields(upgrade as usize)?.mAreaEffectTemplates[b as usize] as i64
+        }
         _ => return None,
     })
+}
+
+/// An upgrade's record (`EeUnitsUnitClassUpgradeFields`).
+fn upgrade_fields<'a>(upgrade: usize) -> Option<&'a crate::world::stats_fields::EeUnitsUnitClassUpgradeFields> {
+    let at = upgrade + l()?.stats_fields as usize;
+    // SAFETY: a player's live upgrade (the C++ statement dereferenced it)
+    Some(unsafe { &*(at as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeFields) })
 }
 
 /// The class host's statement `op` (EEUnitClass.cpp `ee_units_uc_host`; every class kind's host passes these on to
@@ -248,7 +272,8 @@ pub(crate) fn ucb(op: i32, unit: u64, a: u64, b: i64) -> Option<i64> {
 }
 
 /// The fighters of the air host (EEUnitClassAir.cpp `kUcaFighters`).
-const UCA_FIGHTERS: [i64; 3] = [T::kTechInf15Watchman as i64, T::kTechInf14Guardian as i64, T::kTechInf13Sentinel as i64];
+const UCA_FIGHTERS: [i64; 3] =
+    [T::kTechInf15Watchman as i64, T::kTechInf14Guardian as i64, T::kTechInf13Sentinel as i64];
 
 /// The air host's statement `op` (EEUnitClassAir.cpp `ee_units_uca_host`), then the class host's.
 pub(crate) fn uca(op: i32, unit: u64, a: u64, b: i64, c: i64) -> Option<i64> {
@@ -300,7 +325,8 @@ pub(crate) fn ghost(op: i32, a: u64, b: i64) -> Option<i64> {
 /// The unit host's statement `op` (EEUnitHost.cpp `ee_units_uh_host`).
 pub(crate) fn uh(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
     use crate::units::uh_body::{
-        EE_UNITS_UH_NODE_HERO, EE_UNITS_UH_NODE_KIND, EE_UNITS_UH_TECH_CLASS, EE_UNITS_UH_TECH_NODE, EE_UNITS_UH_TREE_NODE,
+        EE_UNITS_UH_NODE_HERO, EE_UNITS_UH_NODE_KIND, EE_UNITS_UH_TECH_CLASS, EE_UNITS_UH_TECH_NODE,
+        EE_UNITS_UH_TREE_NODE,
     };
     Some(match op {
         EE_UNITS_UH_TECH_CLASS => class_table(node_class(node_of(a as usize, c)))? as i64,
@@ -322,10 +348,10 @@ pub(crate) fn uh(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
 /// The goal host's statement `op` (EEUGRust.cpp `GoalOp`; `i0` its first integer).
 pub(crate) fn goal(op: i32, a: u64, b: u64, i0: i64) -> Option<i64> {
     use crate::units::goal_split::{
-        EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH, EE_UNITS_GOAL_HOST_X_PLAYER_TECH, EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE,
         EE_UNITS_GOAL_HOST_X_NODE_AVAILABLE, EE_UNITS_GOAL_HOST_X_NODE_BUILD_TIME, EE_UNITS_GOAL_HOST_X_NODE_CALAMITY,
-        EE_UNITS_GOAL_HOST_X_NODE_ID, EE_UNITS_GOAL_HOST_X_NODE_KIND, EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS,
-        EE_UNITS_GOAL_HOST_X_TECH_TREE_GET,
+        EE_UNITS_GOAL_HOST_X_NODE_ID, EE_UNITS_GOAL_HOST_X_NODE_KIND, EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH,
+        EE_UNITS_GOAL_HOST_X_PLAYER_TECH, EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE,
+        EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS, EE_UNITS_GOAL_HOST_X_TECH_TREE_GET,
     };
     Some(match op {
         EE_UNITS_GOAL_HOST_X_PLAYER_TECH | EE_UNITS_GOAL_HOST_X_TECH_TREE_GET => node_of(unit_player(a)?, i0) as i64,
@@ -363,6 +389,15 @@ pub(crate) fn ub(op: i32, a: u64, c: i64) -> Option<i64> {
         EE_UNITS_UB_TECH_AVAILABLE => i64::from(available(node_of(a as usize, c))),
         EE_UNITS_UB_TECHNOLOGY => node_of(a as usize, c) as i64,
         EE_UNITS_UB_UNIT_TECHNOLOGY => node_of(unit_player(a)?, c) as i64,
+        // player a's mUnitClassUpgrades[c]->mModel (player_upgrades.rs; the upgrade's links record)
+        crate::units::uu_body::EE_UNITS_UB_UPGRADE_MODEL => {
+            let upgrade = crate::units::player_upgrades::at(a, c as usize) as usize;
+            let links = upgrade + l()?.stats_links as usize;
+            // SAFETY: the player's live upgrade's links (the C++ statement dereferenced it)
+            unsafe {
+                (*(links as *const crate::world::stats_fields::EeUnitsUnitClassUpgradeLinks)).mModel as usize as i64
+            }
+        }
         _ => return None,
     })
 }

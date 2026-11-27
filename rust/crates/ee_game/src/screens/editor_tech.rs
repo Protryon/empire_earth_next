@@ -4,10 +4,13 @@
 //! answers.
 
 #![cfg_attr(test, allow(dead_code))]
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
 
 use crate::screens::editor_players::EE_SCREENS_SEPL_OP_EPOCH_RANGE;
 use crate::screens::editor_seax::EE_SCREENS_SEAX_PLAYER_START_EPOCH;
-use crate::screens::editor_sepl::{EE_SCREENS_SEPX_CURRENT_EPOCH, EE_SCREENS_SEPX_END_EPOCH, EE_SCREENS_SEPX_START_EPOCH};
+use crate::screens::editor_sepl::{
+    EE_SCREENS_SEPX_CURRENT_EPOCH, EE_SCREENS_SEPX_END_EPOCH, EE_SCREENS_SEPX_START_EPOCH,
+};
 use crate::tech_tree::objects as to;
 use ee_sim::tech::nodes::{EeTechTreeFields, EeTechTreeOp};
 

@@ -177,10 +177,6 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     case EE_AI_UNITS_HOST_DETACH:
         me->DetachUnitFromAI((EEComplexUnit*)(uintptr_t)a);
         return 0;
-    case EE_AI_UNITS_HOST_UPGRADE_COUNT:
-        return (int64_t)((EEPlayer*)(uintptr_t)a)->mUnitClassUpgrades.size();
-    case EE_AI_UNITS_HOST_UPGRADE_AT:
-        return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mUnitClassUpgrades[(size_t)b];
     case EE_AI_UNITS_HOST_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_HUMAN:

@@ -83,7 +83,6 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_CLASS: return R(gUnitClassTable[a[0]]);
     case EE_SCENARIO_EV_CLASS_FIELDS: return R(static_cast<EeUnitsUnitClassFields*>(P(EEUnitClass, 0)));
     case EE_SCENARIO_EV_CLASS_COUNT: return (int64_t)EEUnitClassCount();
-    case EE_SCENARIO_EV_GET_UPGRADE: return R(P(EEPlayer, 0)->GetUpgrade(a[1]));
     case EE_SCENARIO_EV_UPGRADE_FIELDS: return R(static_cast<EeUnitsUnitClassUpgradeFields*>(P(EEUnitClassUpgrade, 0)));
     case EE_SCENARIO_EV_UPGRADE_CLASS: return R(P(EEUnitClassUpgrade, 0)->mUnitClass);
     case EE_SCENARIO_EV_FIRST_UNIT: return R(P(EEPlayer, 0)->mFirstUnit);

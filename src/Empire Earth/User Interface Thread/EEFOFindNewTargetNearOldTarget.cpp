@@ -977,7 +977,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return 0;
     case EE_UNITS_UB_TILE_SIZE: return UbObj<EEUnitClass>(inA)->mTileSize;
     case EE_UNITS_UB_TABLE_MODEL: return UUHandle(gUnitClassTable[inC]->mModel);
-    case EE_UNITS_UB_UPGRADE_MODEL: return UUHandle(UbObj<EEPlayer>(inA)->mUnitClassUpgrades[inC]->mModel);
     // EEFindTargetNear's, EEFindNearbyTarget's, EECanBallisticHit's, EECanPriestConvert's
     case EE_UNITS_UB_RANGE: return (int64_t)UFloatBits(UUUnit(inA)->mStats->GetRange());
     case EE_UNITS_UB_LINE_OF_SIGHT: return (int64_t)UFloatBits(UbObj<EEComplexUnit>(inA)->GetLineOfSight());

@@ -64,8 +64,6 @@ extern "C" uintptr_t ee_screenscpp_pt_unit_complex(uintptr_t inP)
 { return (uintptr_t)PT(inP)->mUnit->GetComplexUnit(); }
 extern "C" int64_t ee_screenscpp_pt_researched(uintptr_t inUnit)
 { return PT_CU(inUnit)->GetPlayer()->GetResearchedImprovement(PT_CU(inUnit)->GetUnitClass()->GetUnitType()); }
-extern "C" uintptr_t ee_screenscpp_pt_node(int64_t inId)
-{ return (uintptr_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inId); }
 extern "C" bool ee_screenscpp_pt_node_makes_unit(uintptr_t inNode) { return PT_N(inNode)->mData->mMakesUnit; }
 extern "C" uintptr_t ee_screenscpp_pt_node_upgrade(uintptr_t inP, uintptr_t inNode)
 { return (uintptr_t)PT(inP)->mUnit->GetPlayer()->mUnitClassUpgrades[PT_N(inNode)->mData->mUnitClass]; }

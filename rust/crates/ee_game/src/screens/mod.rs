@@ -234,13 +234,13 @@ pub mod editor_selt;
 mod editor_selt_ffi;
 pub mod editor_sepl;
 pub mod editor_seplx;
-pub mod editor_tech;
 pub mod editor_setnx;
 pub mod editor_seunx;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
 pub mod editor_tabsx;
+pub mod editor_tech;
 pub mod editor_terrain;
 #[cfg(not(test))]
 mod editor_terrain_ffi;
@@ -442,6 +442,8 @@ pub(crate) mod select_units_ops;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
+#[cfg(not(test))]
+pub(crate) mod tech_direct;
 pub(crate) mod texts_calls;
 mod toolkit;
 pub(crate) mod ui_calls;

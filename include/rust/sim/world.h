@@ -832,6 +832,8 @@ struct EeWorldLayout {
   /// `EEAIArea` in `EETown` (ee_cp's town bodies take it: player_native.rs) and in `EEHerd`
   uint64_t town_area;
   uint64_t herd_area;
+  /// `EEPlayer::mCivilization` (an `EECivilization`: `EeGameCivFields`, then its two `std::vector<EECivUpgrade>`)
+  uint64_t player_civilization;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

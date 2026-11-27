@@ -148,10 +148,6 @@ extern "C" void ee_screenscpp_cbh_print_text(EeScreensShimText inText)
 { sprintf(EEScratch<UWideString>(kScratchCBString), EEScratch<UWideString>(kScratchCBFormat), (const char*)EEShimString(inText)); }
 extern "C" void ee_screenscpp_cbh_quote(EeScreensShimText inText, void* inOut)
 { EEShimOutC(inOut, EEDataText::QuoteText(std::string((const char*)inText.ptr, inText.len)).c_str()); }
-extern "C" uint32_t ee_screenscpp_cbh_civ_purchased_count(uintptr_t inCiv)
-{ return (uint32_t)((EECivilization*)inCiv)->GetPurchasedUpgrades().size(); }
-extern "C" uint32_t ee_screenscpp_cbh_civ_purchased(uintptr_t inCiv, uint32_t inIndex)
-{ return ((EECivilization*)inCiv)->GetPurchasedUpgrades()[inIndex]; }
 extern "C" void ee_screenscpp_cbh_civ_name(uintptr_t inCiv, void* inOut)
 { EEShimOut(inOut, ((EECivilization*)inCiv)->mName); }
 extern "C" void ee_screenscpp_cbh_upgrades_clear() { EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades).clear(); }
@@ -164,11 +160,6 @@ extern "C" void ee_screenscpp_cbh_send_server(uintptr_t inMessage)
 { gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotServer); }
 extern "C" void ee_screenscpp_cbh_message_execute(uintptr_t inMessage) { ((NEMessage*)inMessage)->Execute(); }
 extern "C" void ee_screenscpp_cbh_message_release(uintptr_t inMessage) { ((NEMessage*)inMessage)->Dereference(); }
-extern "C" int32_t ee_screenscpp_cbh_pause() { return gWorld.PauseGame(); }
-extern "C" int32_t ee_screenscpp_cbh_unpause() { return gWorld.UnpauseGame(); }
-extern "C" uintptr_t ee_screenscpp_cbh_player_civ(uintptr_t inPlayer)
-{ return (uintptr_t)&((EEPlayer*)inPlayer)->mCivilization; }
-extern "C" bool ee_screenscpp_cbh_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(EEScratch<UWideString>(kScratchCBString)); }
 extern "C" void ee_screenscpp_cbh_message(EeScreensShimText inText)
 { gUIManager->DisplayMessage(EEShimText(inText), 1, NULL, NULL, true); }
@@ -272,8 +263,6 @@ extern "C" int64_t ee_screenscpp_cbb_base_copy_data(uintptr_t inList)
 // 12: the records are Rust's (ee_game screens civ_capture.rs) over the one-statement shims below.
 #define CP(p) ((EEPlayer*)(p))
 #define CV(c) ((EECivilization*)(c))
-extern "C" uintptr_t ee_screenscpp_civc_class_upgrade(uintptr_t inPlayer, int64_t inKind)
-{ return (uintptr_t)CP(inPlayer)->mUnitClassUpgrades[(long)inKind]; }
 extern "C" int64_t ee_screenscpp_civc_civ_load(EeScreensShimText inFile)
 { return EELoadCivilization(EEShimString(inFile), EEGetCivilizationDirectory(false), EEScratch<UWideString>(kScratchCivcName), EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded)); }
 extern "C" void ee_screenscpp_civc_loaded_clear() { EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded).clear(); }
@@ -284,15 +273,6 @@ extern "C" uintptr_t ee_screenscpp_civc_loaded_count() { return EEScratch<std::v
 extern "C" uint32_t ee_screenscpp_civc_loaded_at(uintptr_t inIndex) { return EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded)[inIndex]; }
 extern "C" bool ee_screenscpp_civc_is_user_directory(EeScreensShimText inDirectory)
 { return EEShimString(inDirectory).Equals(EEGetCivilizationDirectory(true)); }
-extern "C" uintptr_t ee_screenscpp_civc_civ(uintptr_t inPlayer) { return (uintptr_t)&CP(inPlayer)->mCivilization; }
-extern "C" uintptr_t ee_screenscpp_civc_civ_purchased_count(uintptr_t inCiv)
-{ return CV(inCiv)->mPurchasedUpgrades.size(); }
-extern "C" uint32_t ee_screenscpp_civc_civ_purchased_at(uintptr_t inCiv, uintptr_t inIndex)
-{ return CV(inCiv)->mPurchasedUpgrades[inIndex]; }
-extern "C" uintptr_t ee_screenscpp_civc_civ_deferred_count(uintptr_t inCiv)
-{ return CV(inCiv)->mDeferredUpgrades.size(); }
-extern "C" uint32_t ee_screenscpp_civc_civ_deferred_at(uintptr_t inCiv, uintptr_t inIndex)
-{ return CV(inCiv)->mDeferredUpgrades[inIndex]; }
 extern "C" void ee_screenscpp_civc_civ_name(uintptr_t inCiv, void* inOut)
 { EEShimOutC(inOut, (const char*)CV(inCiv)->mName); }
 
@@ -481,8 +461,6 @@ EECivilizationManager::EECivilizationManager()
 #define CIVH_P(p) (::gWorld.mPlayers[p])
 #define CIVH_U(u) ((EEUnitClassUpgrade*)(u))
 #define CIVH_K(k) ((EEUnitClass*)(k))
-extern "C" uintptr_t ee_screenscpp_civh_upgrade(int32_t inPlayer, int64_t inKind)
-{ return (uintptr_t)CIVH_P(inPlayer)->mUnitClassUpgrades[(long)inKind]; }
 extern "C" void ee_screenscpp_civh_put_range(uintptr_t inUp, float inV) { CIVH_U(inUp)->SetRange(inV); }
 extern "C" void ee_screenscpp_civh_put_max_velocity(uintptr_t inUp, float inV) { CIVH_U(inUp)->SetMaxVelocity(inV); }
 extern "C" float ee_screenscpp_civh_variant_factor(int64_t inKind)
@@ -497,13 +475,6 @@ extern "C" void ee_screenscpp_civh_recompute_area_effects(int32_t inPlayer)
 { CIVH_P(inPlayer)->SuggestRecomputeAllAreaEffects(); }
 extern "C" void ee_screenscpp_civh_show_selection_areas(int32_t inPlayer)
 { CIVH_P(inPlayer)->mSelectedGroup->ShowSelectionAreas(); }
-extern "C" void ee_screenscpp_civh_research(int32_t inPlayer, int64_t inKind)
-{ CIVH_P(inPlayer)->GetTechTree()->Research((long)inKind, NULL); }
-extern "C" uintptr_t ee_screenscpp_civh_node(int32_t inPlayer, int64_t inKind)
-{ return (uintptr_t)CIVH_P(inPlayer)->GetTechTree()->Get((long)inKind); }
-extern "C" void ee_screenscpp_civh_node_research(uintptr_t inNode) { ((EETechTreeNode*)inNode)->ResearchNode(NULL); }
-extern "C" void ee_screenscpp_civh_node_set_obsolete(uintptr_t inNode)
-{ ((EETechTreeNode*)inNode)->SetObsolete(true, false); }
 extern "C" uintptr_t ee_screenscpp_civh_sound(int64_t inKind) { return (uintptr_t)EESoundObject::Get((long)inKind); }
 extern "C" void ee_screenscpp_civh_sound_load(uintptr_t inSound) { ((EESoundObject*)inSound)->LoadMedia(); }
 extern "C" void ee_screenscpp_civh_add_sound(int32_t inPlayer, uintptr_t inSound)
@@ -512,9 +483,6 @@ extern "C" uintptr_t ee_screenscpp_civh_effect(int64_t inKind) { return (uintptr
 extern "C" void ee_screenscpp_civh_effect_load(uintptr_t inEffect) { ((EEGraphicEffect*)inEffect)->LoadMedia(); }
 extern "C" void ee_screenscpp_civh_add_effect(int32_t inPlayer, uintptr_t inEffect)
 { CIVH_P(inPlayer)->AddLoadedMedia((EEGraphicEffect*)inEffect); }
-extern "C" void ee_screenscpp_civh_pulse_sight(int32_t inPlayer, float inRadius, int64_t inKind)
-{ CIVH_P(inPlayer)->PulseSight(false, inRadius, (long)inKind); }
-extern "C" void ee_screenscpp_civh_camouflage(int32_t inPlayer) { CIVH_P(inPlayer)->EnableCamouflagePower(); }
 
 // ------------------------------------------------------------------------------------------------ the powers
 
@@ -534,10 +502,6 @@ extern "C" void ee_screenscpp_civm_civs_clear(uintptr_t inList)
 { ((std::vector<EECivilizationEntry>*)inList)->clear(); }
 extern "C" void ee_screenscpp_civm_civs_push(uintptr_t inList, uintptr_t inEntry)
 { ((std::vector<EECivilizationEntry>*)inList)->push_back(*(const EECivilizationEntry*)inEntry); }
-extern "C" uintptr_t ee_screenscpp_civm_purchased_count(uintptr_t inPlayer)
-{ return ((EEPlayer*)inPlayer)->mCivilization.GetPurchasedUpgrades().size(); }
-extern "C" uintptr_t ee_screenscpp_civm_purchased_data(uintptr_t inPlayer)
-{ return (uintptr_t)((EEPlayer*)inPlayer)->mCivilization.GetPurchasedUpgrades().data(); }
 
 long EECivPowersManager::GetName(long inID, UWideString& outName)
 {

@@ -58,6 +58,13 @@ fn statement(op: u32, p: [usize; 3], a: [i64; 4]) -> i64 {
             post_text(EE_SCREENS_SEW_TEXT_IMPORT, info_new(info.spec, info.validate))
         }
         EE_SCREENS_SELTX_TEXT_VERSION => EE_SCREENS_SELT_TEXT_VERSION,
+        // player p1's mTechnologies->Get(a0)->LoadMedia(p1) / UnloadMedia(p1) (the tree is Rust's: tech_tree objects.rs)
+        EE_SCREENS_SELTX_TECH_LOAD_MEDIA | EE_SCREENS_SELTX_TECH_UNLOAD_MEDIA => {
+            use crate::tech_tree::objects::{ee_gamecpp_tech_obj_media, get, player_tree};
+            let node = get(player_tree(p[1]), a[0] as c_ulong as c_long);
+            ee_gamecpp_tech_obj_media(node as *mut c_void, p[1] as *mut c_void, op == EE_SCREENS_SELTX_TECH_LOAD_MEDIA);
+            0
+        }
         EE_SCREENS_SELTX_WRITE_HEADER => cpp(op, [p[0], p[1], p[2]], [EE_SCREENS_SELT_TEXT_VERSION, a[1], a[2], a[3]]),
         _ => cpp(op, p, a),
     }

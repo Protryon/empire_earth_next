@@ -247,6 +247,8 @@ pub struct EeWorldLayout {
     /// `EEAIArea` in `EETown` (ee_cp's town bodies take it: player_native.rs) and in `EEHerd`
     pub town_area: u64,
     pub herd_area: u64,
+    /// `EEPlayer::mCivilization` (an `EECivilization`: `EeGameCivFields`, then its two `std::vector<EECivUpgrade>`)
+    pub player_civilization: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

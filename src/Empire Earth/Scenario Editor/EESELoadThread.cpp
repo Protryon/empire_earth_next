@@ -121,10 +121,6 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_UNLOAD_ALL_MEDIA: P(p)->UnloadAllClassMedia();
         return 0;
-    case EE_SCREENS_SELTX_TECH_LOAD_MEDIA: P(p)->mTechnologies->Get((unsigned long)a[0])->LoadMedia(P(p));
-        return 0;
-    case EE_SCREENS_SELTX_TECH_UNLOAD_MEDIA: P(p)->mTechnologies->Get((unsigned long)a[0])->UnloadMedia(P(p));
-        return 0;
     case EE_SCREENS_SELTX_TERRAIN: return H(EETerrainTable::Get((unsigned long)a[0]));
     case EE_SCREENS_SELTX_MAP_EXISTS: return gWorld.mMap != NULL;
     case EE_SCREENS_SELTX_TERRAIN_NAME_ID: return EETerrainTable::Get((unsigned long)a[0])->mNameID;

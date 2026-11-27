@@ -188,6 +188,7 @@ void EEWorldLayoutRegister()
     theLayout.herd_area = BaseOffset<EEHerd, EEAIArea>();
     theLayout.player_name_text = offsetof(EEPlayer, mName) + offsetof(UWideString, mState);
     theLayout.player_civ_name_text = offsetof(EEPlayer, mCivilization) + offsetof(EECivilization, mName) + offsetof(UWideString, mState);
+    theLayout.player_civilization = offsetof(EEPlayer, mCivilization);   // player/tech round 4 (civ_direct.rs)
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

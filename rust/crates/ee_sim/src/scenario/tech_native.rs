@@ -8,8 +8,8 @@
 use std::os::raw::c_long;
 
 use crate::scenario::event::{
-    EE_SCENARIO_EV_IS_LATEST, EE_SCENARIO_EV_UPGRADE, EE_SCENARIO_EV_NODE_DELAY, EE_SCENARIO_EV_NODE_KIND, EE_SCENARIO_EV_NODE_UNIT_CLASS,
-    EE_SCENARIO_EV_RESEARCH_NODE, EE_SCENARIO_EV_TREE_NODE, EE_SCENARIO_EV_TREE_SET_MEDIA,
+    EE_SCENARIO_EV_IS_LATEST, EE_SCENARIO_EV_NODE_DELAY, EE_SCENARIO_EV_NODE_KIND, EE_SCENARIO_EV_NODE_UNIT_CLASS,
+    EE_SCENARIO_EV_RESEARCH_NODE, EE_SCENARIO_EV_TREE_NODE, EE_SCENARIO_EV_TREE_SET_MEDIA, EE_SCENARIO_EV_UPGRADE,
 };
 use crate::scenario::host::EE_SCENARIO_READ_EPOCH;
 use crate::scenario::read_compose::{
@@ -62,6 +62,10 @@ pub fn event(op: u32, a: &[i64; 4]) -> Option<i64> {
         EE_SCENARIO_EV_TREE_NODE => get(player_tree(p), a[1]) as i64,
         // the player's upgrade of a unit class (player_upgrades.rs: the vector read in place)
         EE_SCENARIO_EV_UPGRADE => crate::units::player_upgrades::at(p as u64, a[1] as usize) as i64,
+        // GetUpgrade(a1) (the same read)
+        crate::scenario::event::EE_SCENARIO_EV_GET_UPGRADE => {
+            crate::units::player_upgrades::at(p as u64, a[1] as c_long as usize) as i64
+        }
         EE_SCENARIO_EV_NODE_UNIT_CLASS => data_of(p).mUnitClass as i64,
         EE_SCENARIO_EV_NODE_KIND => data_of(p).mKind as i64,
         EE_SCENARIO_EV_NODE_DELAY => {
@@ -122,6 +126,19 @@ pub fn world(op: u32, args: &[i64], effect_tech: &mut dyn FnMut() -> i64) -> Opt
             return Some(i64::from(args[1] != 0));
         }
         EE_SCENARIO_RX_NODE_AVAILABLE => return Some(walk(a0 as usize, EeTechNodeOp::IsAvailable, 0, false)),
+        // player a0's GetUpgrade(a1) (player_upgrades.rs: the vector read in place)
+        crate::scenario::ca_compose::EE_SCENARIO_WK_UPGRADE => {
+            return Some(crate::units::player_upgrades::at(a0 as u64, args[1] as c_long as usize) as i64);
+        }
+        // gWorld.GetPlayer(a0)->GetTechTree()->Get(class a1's GetTechnology()): the node, its kind
+        EE_SCENARIO_WC_TECH_NODE | EE_SCENARIO_WC_TECH_KIND => {
+            let l = crate::world::layout::get()?;
+            let at = args[1] as usize + l.unit_class_fields as usize;
+            // SAFETY: a live class's record (the C++ statement dereferenced it)
+            let tech = unsafe { (*(at as *const crate::world::unit_class_fields::EeUnitsUnitClassFields)).mTechnology };
+            let n = get(player_tree(to::world_player(a0 as c_long as i64)), tech as i64);
+            return Some(if op == EE_SCENARIO_WC_TECH_NODE { n as i64 } else { data_of(n).mKind as i64 });
+        }
         _ => {}
     }
     // the effect run's statements on player a0's tree (SMEPlayer: gWorld.GetPlayer) and the effect's technology
@@ -139,6 +156,7 @@ pub fn world(op: u32, args: &[i64], effect_tech: &mut dyn FnMut() -> i64) -> Opt
         EE_SCENARIO_WX_TECH_KIND,
         EE_SCENARIO_WX_TREE_WONDERS_ZERO,
         EE_SCENARIO_WX_TECH_RESEARCH,
+        EE_SCENARIO_WX_TECH_CLASS_EXISTS,
     ];
     if !tree_ops.contains(&op) {
         return None;
@@ -191,6 +209,13 @@ pub fn world(op: u32, args: &[i64], effect_tech: &mut dyn FnMut() -> i64) -> Opt
             1
         }
         EE_SCENARIO_WX_TECH_KIND => data_of(n()).mKind as i64,
+        // gUnitClassTable[the node's mData->mUnitClass] != NULL (unchecked, as the C++'s operator[])
+        EE_SCENARIO_WX_TECH_CLASS_EXISTS => {
+            let table = crate::world::layout::get()?.unit_class_table as usize;
+            let i = data_of(n()).mUnitClass as i64 as usize;
+            // SAFETY: the registered vector's begin and its element i
+            i64::from(unsafe { *((*(table as *const usize) + i * std::mem::size_of::<usize>()) as *const usize) } != 0)
+        }
         _ => {
             // EE_SCENARIO_WX_TECH_RESEARCH
             walk_tree(t, EeTechTreeOp::Research, tech as i32, 0);
