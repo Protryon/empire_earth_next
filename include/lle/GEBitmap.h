@@ -55,8 +55,6 @@ public:
         { SetTextureCoordinates(const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
 #endif
     void SetXYScale(float inXScale, float inYScale) { ee_ge_bmp_set_xy_scale(this->mRust, inXScale, inYScale); }
-    void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
-        { ee_ge_bmp_set_values(this->mRust, true, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     EeGeBitmap* GetRust() const { return this->mRust; }
     virtual ~GEBitmap() { ee_ge_bmp_destroy(this->mRust); }   // the vertex array deleted, every screen's texture released
     static const EeGeRectangle* R(const GERectangle& inRectangle) { return reinterpret_cast<const EeGeRectangle*>(&inRectangle); }

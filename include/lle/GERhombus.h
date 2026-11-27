@@ -27,8 +27,6 @@ public:
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_prim_set_opacities(this->mRust, 4, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     void SetRectangle(const GERectangle& inRectangle) { ee_ge_prim_place(this->mRust, (const EeGeRectangle*)&inRectangle, 0.0f); }
-    void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
-        { ee_ge_prim_set_z(this->mRust, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     URust<EeGePrim> mRust;                        // the rhombus (ee_ge prim.rs)
 };
 
