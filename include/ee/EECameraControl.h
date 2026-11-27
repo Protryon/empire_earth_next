@@ -7,17 +7,11 @@
 #include <vector>
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
-#include "rust/game/gamecpp.h"
+#include "rust/game/records.h"
 
 class GE3DPoint;
 class EEUnit;
 class EECameraKey;                          // 0xa4-byte camera keys (provisional name; also EEScenarioManager+8)
-// the camera's Rust mirrors of the GE value classes (they share their storage: EECameraControl.cpp's static_assert),
-// its followed units' ids and its host (ee_app camera_ffi.rs; the context is the camera)
-template <class R, class T> inline const R* EECameraRust(const T& inValue) { return reinterpret_cast<const R*>(&inValue); }
-template <class R, class T> inline R* EECameraRust(T& inValue) { return reinterpret_cast<R*>(&inValue); }
-inline uint32_t EECameraID(EEUnit* inUnit) { return inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)EE_APP_CAMERA_NO_UNIT; }
-#define EE_CAMERA_HOST this, this, ee_gamecpp_camera_host
 
 // The camera is whole in Rust (rust/crates/ee_game/src/app camera.rs): the plain members below the methods are the record
 // EeAppCameraFields (rust/ee_app.h) the class derives from, in the original's order and names (mQ014, mQ024 the
@@ -30,13 +24,13 @@ public:
     virtual ~EECameraControl();             // slot 0 (0x12779f)
     // 0x128129: the location inStep of the way from +0x40 to +0x78 (the earthquake passes mFraction and shakes the
     // result; provisional name)
-    void GetLocation(float inStep, GE3DPoint& outLocation) { ee_app_camera_point(this, 1, inStep, EECameraRust<EeGe3DPoint>(outLocation)); }
+    void GetLocation(float inStep, GE3DPoint& outLocation);
     // 0x128996: the camera follows inUnitA/inUnitB (EEACenterCamera::Virtual4 passes the unit twice, (-10000, 0, 0),
     // false and zeros; provisional name and argument meanings)
     void MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration, EEUnit* inUnitB,
                   GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw, float inTurnPitch);
     // 0x129a34 (EEMLoadMainScreen passes 1.0; provisional name)
-    void Update(float inElapsedTime) { ee_gamecpp_camera_update(this, inElapsedTime); }
+    void Update(float inElapsedTime);
     // inline (the grab scroll copies it to a temporary before its GetValue call, 0x1d9a5c)
     float GetZoom() const { return this->mZoom; }
     // port: the end offset as the C++ value class (the scenario's camera keys, the test fixture)
@@ -44,39 +38,39 @@ public:
     // 0x12934f: SetZoom(1.0f)
     void ResetZoom() { this->SetZoom(1.0f); }
     // 0x128722 (the mouse revolve event; provisional name)
-    void Revolve(const GE3DPoint& inAngles) { ee_app_camera_revolve(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
+    void Revolve(const GE3DPoint& inAngles);
     // 0x12887d (the mouse rotate event; provisional name)
-    void Rotate(const GE3DPoint& inAngles) { ee_app_camera_rotate(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
+    void Rotate(const GE3DPoint& inAngles);
     // 0x129844: moves the camera to inLocation (copied); the hot-key unit selection passes (theCenter, false, true)
-    void SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain) { ee_app_camera_set_location(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inLocation), inIsImmediate, inFollowTerrain); }
+    void SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain);
     // 0x1299c0: mMode = inMode, then SetZoom(mZoom)
-    void SetMode(long inMode) { ee_app_camera_set_mode(EE_CAMERA_HOST, inMode); }
+    void SetMode(long inMode);
     // 0x1299ed: dereferences and clears mUnitA (provisional name)
-    void ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST); }
+    void ClearUnitA();
     // 0x129a04: the same for mUnitB, then resets mIsFollowingUnitB/mF0C4.. (provisional name)
-    void ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST); }
+    void ClearUnitB();
     // 0x128ea5 (the edge-scroll action EEAScroll; provisional name)
-    void Scroll(float inDX, float inDY) { ee_app_camera_scroll(EE_CAMERA_HOST, inDX, inDY); }
+    void Scroll(float inDX, float inDY);
     // 0x129eb2: 0 (near) .. 1 (far)
-    void SetZoom(float inZoom) { ee_app_camera_set_zoom(EE_CAMERA_HOST, inZoom); }
+    void SetZoom(float inZoom);
     // EEScenarioManager::EndCinematic 0x1b1ae4 restores the camera from its saved EECameraKey with these (provisional
     // names by address; arguments from `ret 8` and the pushes)
-    void ResetPath() { ee_app_camera_reset_path(EE_CAMERA_HOST); }
+    void ResetPath();
     // GetLocation's siblings (`ret 8`; StartCinematic 0x1b1eee saves the camera with mFraction as the step)
-    void GetOffset(float inStep, GE3DPoint& outPoint) { ee_app_camera_point(this, 0, inStep, EECameraRust<EeGe3DPoint>(outPoint)); }
-    void GetViewTurn(float inStep, GETransformation& outTransformation) { ee_app_camera_turn(this, 0, inStep, EECameraRust<EeGeTransformation>(outTransformation)); }
-    void GetOffsetTurn(float inStep, GETransformation& outTransformation) { ee_app_camera_turn(this, 1, inStep, EECameraRust<EeGeTransformation>(outTransformation)); }
+    void GetOffset(float inStep, GE3DPoint& outPoint);
+    void GetViewTurn(float inStep, GETransformation& outTransformation);
+    void GetOffsetTurn(float inStep, GETransformation& outTransformation);
     // 0x129547 (key +0x80)
-    void SetOffset(const GE3DPoint& inPoint, bool inFlag) { ee_app_camera_set_offset(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inPoint), inFlag); }
+    void SetOffset(const GE3DPoint& inPoint, bool inFlag);
     // 0x1295fd (key +0x00)
-    void SetViewTurn(const GETransformation& inTransformation, bool inFlag) { ee_app_camera_set_view_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag); }
+    void SetViewTurn(const GETransformation& inTransformation, bool inFlag);
     // 0x1296b6 (key +0x40)
-    void SetOffsetTurn(const GETransformation& inTransformation, bool inFlag) { ee_app_camera_set_offset_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag); }
+    void SetOffsetTurn(const GETransformation& inTransformation, bool inFlag);
     // the rest of the camera unit (provisional names)
     EECameraControl();
-    void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation) { ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation)); }
+    void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation);
     // 0x1286fa: plays the key list
-    void StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
+    void StartPath();
 
     // +0x004 the path keys (std::vector<EECameraKey>, 0xa4-byte POD elements): Rust's (gamecpp camera_io.rs KEYS)
     // +0x0d0, +0x0d4 the followed units (mUnitA, mUnitB: referenced; by id): Rust's (gamecpp camera_io.rs UNITS)

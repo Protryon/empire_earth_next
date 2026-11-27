@@ -39,6 +39,10 @@ pub mod png;
 /// The crate ee_random before the restructure.
 pub mod random;
 // the one-statement C++ shims' trait maker (cpp_shims!) and their recording fake
+/// Where a record base sits in its C++ class, computed over the class's head (the start-up check `ee/EERecordBase.h`).
+pub mod record_head;
+/// The records C++ classes derive from or embed (include/rust/base/records.h, declaring no function).
+pub mod records;
 pub mod shim;
 /// The sparse point set (`U2DSparseArrayPointContainer`; was ee_sim::astar's sparse.rs).
 pub mod sparse;

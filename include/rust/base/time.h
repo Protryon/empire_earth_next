@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/records.h"
 
 /// `TMTimer`'s results (lle/LowLevelEngineCore.h).
 constexpr static const int EE_TIME_OK = 0;
@@ -26,21 +27,6 @@ struct EeTimeOfDay {
   unsigned long mHour;
   unsigned long mMinute;
   unsigned long mSecond;
-};
-
-/// `TMPoll`'s data (the original's members, in its order): a polled countdown on the counter (or the millisecond
-/// clock without one).
-struct EeTimePoll {
-  /// Counter ticks (or milliseconds) at the start of the current period.
-  int64_t start_time;
-  /// The time already elapsed in the period when paused (0: not paused).
-  int64_t pause_remaining;
-  /// 0: milliseconds, 1: microseconds.
-  uint32_t time_unit;
-  uint32_t time_delay;
-  /// The system has a high-resolution counter.
-  bool use_counter;
-  bool running;
 };
 
 extern "C" {

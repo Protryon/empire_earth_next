@@ -46,6 +46,7 @@ class EESoundObject;
 #include "ee/EEUnitClassImprovement.h"
 #include "ee/EEUnitKind.h"               // EEClassBody (EEUnitClass::IsBuilding, Virtual70)
 #include "ee/EEUnitUpdate.h"             // EEUnitClassActionChanged (EEUnitClass::HandleActionChanged)
+#include "rust/sim/records.h"
 #include "rust/sim/cp.h"                 // ee_cp_distance_squared_to_unit (DistanceSquaredToUnit)
 #include "rust/sim/combat.h"             // EE_COMBAT_SHOT_* (the shots' steps)
 

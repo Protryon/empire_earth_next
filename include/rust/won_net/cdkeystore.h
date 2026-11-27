@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// The CDKey's calls (`ee_won_cdkey_obj_call`).
 enum class EeWonCdKeyCall {

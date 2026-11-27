@@ -4,6 +4,7 @@
 #ifndef EE_EEUIFMGMAINGROUP_H
 #define EE_EEUIFMGMAINGROUP_H
 
+#include "rust/game/records.h"
 #include "rust/game/screens.h"   // EeScreensMainGroupFields
 
 class EEUnit;

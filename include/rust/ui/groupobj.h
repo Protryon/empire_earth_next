@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// UIEntityGroup's inward calls.
 enum class EeUiEntityGroupCall : uint32_t {

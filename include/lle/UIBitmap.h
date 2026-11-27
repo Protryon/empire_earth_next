@@ -8,6 +8,7 @@
 #define LLE_UIBITMAP_H
 
 #include "lle/UIControl.h"
+#include "rust/ui/records.h"
 #include "rust/ui/lle_hosts.h"
 #include "rust/ui/mediaobj.h"
 

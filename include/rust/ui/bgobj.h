@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/layout.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (each C++ class's methods forward here with their own call).
 enum class EeUiBgCall : uint32_t {
@@ -64,57 +62,6 @@ enum class EeUiBgCall : uint32_t {
   FullUnload = 25,
   /// `UITiledBackground`'s constructor: its tiling `a`, the counts across and down in `f[0]`, `f[1]`.
   TiledInit = 26,
-};
-
-/// `GETextureDescription` (`lle/GETextureManager.h`), copied with the background.
-struct EeUiTextureDescription {
-  unsigned long mSurfaceVolatility;
-  unsigned long mFrameFormat;
-  unsigned long mPixelDepth;
-  long mNumMipLevelsToDrop;
-  bool mIs3DRenderable;
-  bool mIsTransparencyEnabled;
-  bool mHasAlpha;
-  bool mCreateMIPMaps;
-  bool mUseTexturePack;
-};
-
-/// The backgrounds' members (`include/lle/UIBackground.h` and its subclasses'), the C++ classes' base.
-struct EeUiBackgroundFields {
-  /// The C++ background (the host's object).
-  void *mCpp;
-  /// The host of the calls out.
-  EeUiHostFn mHost;
-  EeUiLayout mLayout;
-  EeUiRect mRectangle;
-  /// `UITextureBackground`'s: the texture's rectangle.
-  EeUiRect mTextureRectangle;
-  /// `UITextureBackground`'s.
-  EeUiTextureDescription mTextureDescription;
-  unsigned long mBackgroundID;
-  unsigned long mDrawPriority;
-  /// The form (`UIForm*`).
-  void *mForm;
-  /// The texture file's name (`UITextureBackground::mTextureFileName`, `UIFullBackground::mFileName`): NUL-terminated
-  /// bytes, owned (`mNameSize` with the NUL), NULL before [`ee_ui_bg_texture`].
-  uint8_t *mName;
-  size_t mNameSize;
-  /// `UIBitmapBackground`'s bitmap (`GEBitmap*`).
-  void *mBitmap;
-  /// `UIBFull`'s and `UIFullBackground`'s tile bitmaps, row major (owned, `mBitmapCount` of them; NULL for none).
-  void **mBitmaps;
-  size_t mBitmapCount;
-  unsigned long mColumns;
-  unsigned long mRows;
-  /// `UIFullBackground`'s: the screen size the grid was designed for.
-  unsigned long mDesignedWidth;
-  unsigned long mDesignedHeight;
-  /// `UITiledBackground`'s tiling: 0 both ways, 1 left to right, 2 top to bottom, 3 stretched
-  /// (`mHorizontalCount` x `mVerticalCount` tiles).
-  unsigned long mTiling;
-  float mHorizontalCount;
-  float mVerticalCount;
-  bool mIsVisible;
 };
 
 extern "C" {

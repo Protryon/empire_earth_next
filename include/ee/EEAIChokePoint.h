@@ -5,6 +5,7 @@
 #define EE_EEAICHOKEPOINT_H
 #include <stdint.h>
 #include "ee/EEAIArea.h"
+#include "rust/sim/records.h"
 
 // Port: the members are the Rust record EeAStarChokeRecord (ee_sim::astar area_kinds.rs), the private base: +0x68 the
 // serials of the areas it joins (EEAIContinentManager 0x24b31), +0x78 its mChokePoints index (also

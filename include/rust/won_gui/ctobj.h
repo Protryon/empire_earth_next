@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
-#include "rust/won_gui/layoutobj.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (the C++ shell's virtuals and methods; `a`, `b`, `c` as each says).
 enum class EeWonCtCall : uint32_t {
@@ -109,9 +108,6 @@ enum class EeWonCtField : uint32_t {
   /// a viewport's scroll area (0 for a plain container).
   ViewportArea,
 };
-
-/// The Rust Container.
-struct EeWonContainer;
 
 extern "C" {
 

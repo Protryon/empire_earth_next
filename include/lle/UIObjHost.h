@@ -4,7 +4,7 @@
 #ifndef LLE_UIOBJHOST_H
 #define LLE_UIOBJHOST_H
 #include <string.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 #include "rust/ui/rect.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEColor.h"

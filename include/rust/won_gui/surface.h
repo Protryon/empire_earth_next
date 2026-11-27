@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// `SurfaceFormat`.
 constexpr static const int32_t EE_WON_SURFACE_32 = 0;
@@ -65,9 +66,6 @@ enum class EeWonSurfaceDraw : uint32_t {
   /// `ClearClipRect()`.
   ClearClipRect,
 };
-
-/// The Rust surface.
-struct EeWonSurface;
 
 extern "C" {
 

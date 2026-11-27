@@ -42684,3 +42684,33 @@ saveload matrix, scenario_check, sim_editor, gates.sh). Two forks in two rounds 
   random-game tours PASS, won_host_coverage PASS, wontest 185/185 (won_ping36 passed alone after one timing line),
   gates.sh GATES PASS. Not run: transport, space, missile, app, placement captures, plain saveload, a POSIX build
   (the Linux game build needs a sysroot this machine lacks).
+
+## The game headers lane, round 5: records headers per crate, C++ value classes in records, the record-base head check, function headers off the class headers (xtask split.rs records; ee_base record_head.rs; ee_sim world heads.rs; ee/EERecordBase.h; branch rust-headers5, 2026-11-27)
+
+- **A records module needs no moved code**: `records.rs` lists the records with `pub use` of their definitions;
+  split.rs reads the capitalized names of its `use` declarations (and what it defines) and moves the C declarations.
+  Other lanes keep editing the records where they are; a typo is a compile error (the `pub use`), a record cbindgen
+  does not emit is a split error naming it. A `pub use` through a private module is E0603: use the parent's
+  re-export (build/hd5/fixpriv.py drops the private segment).
+- **Function headers that include function headers** were the rebuild cascade, not the class headers: a function of
+  rust/sim/app.h naming a units type made app.h include units.h, and 30 headers include gamecpp.h. Moving every type
+  another module names to its crate's records header made each function header include only records headers
+  (rust/sim/app.h: 149 -> 47 units). Units that used a module's functions through another module's header then fail
+  to compile: `tools/rust_includes.py FILE...` adds the narrow include (it missed three files whose include chain it
+  misread; those took one by hand). Running it on every file instead touches 60+ unrelated files: run it on the
+  failing ones only (build/hd5/fixinc.py reads the build's FAILED logs).
+- **A module emptied into records keeps a stub header** (it includes its records header), or every includer of
+  `rust/ui/obj.h`, `rust/won_net/md5.h` (tests/won) would need an edit in the same commit.
+- **The lle math headers are not self-contained one by one**: GE3DPoint.h needs GEVector complete, UMFastMath.h
+  needs LLE_API. A records header that declares a GE3DPoint member includes lle/LowLevelEngineCore.h and the
+  geometry chain in LowLevelEngine.h's order (split.rs `CPP_VALUE_CHAIN`).
+- **Record-base heads**: a class's own vtable pointer comes first when it has no polymorphic base (MSVC and
+  Itanium); `UReferenceCounter` is {vptr, unsigned long} = 16 bytes on both (LP64's 8-byte long fills the padding);
+  records are POD, so no ABI reuses their tail padding. A base class with C++ members (RTSUnit's for EEUnit) has no
+  head until its members are records.
+- **Out-of-lining by text** (build/hd5/outline.py): a token scanner with brace matching finds a class's member
+  definitions; `operator=` must not count as an initializer's `=` (it swallowed the next three members), a body
+  with a preprocessor line inside is skipped, a return type named in the class gets `Class::`. Moved bodies keep
+  their text; one-line bodies stay one line.
+- **Bash tool heredocs halve backslashes** (`\\n` arrives as `\n`): write Python or Rust with escapes through the
+  Write/Edit tools, not a heredoc.

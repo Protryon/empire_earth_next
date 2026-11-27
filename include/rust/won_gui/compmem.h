@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guilayout.h"
+#include "rust/won_gui/records.h"
 
 /// The block's offset in a C++ `Component` (RefCount's vtable pointer and its 32-bit count, padded).
 constexpr static const size_t EE_WON_COMP_MEMBERS_AT = 16;

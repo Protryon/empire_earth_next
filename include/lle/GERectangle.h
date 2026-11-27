@@ -7,6 +7,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GERectangle : public EeGeRectangle {   // the Rust record (mBottom, mLeft, mRight, mTop; rust/base/math.h)
 public:

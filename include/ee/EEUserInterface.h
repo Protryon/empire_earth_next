@@ -11,6 +11,8 @@
 #ifndef EE_EEUSERINTERFACE_H
 #define EE_EEUSERINTERFACE_H
 
+#include "rust/game/records.h"
+#include "rust/data/tables.h"   // ee_data_world_entry
 #include "rust/game/screens.h"   // EeScreensUserInterfaceFields, the posts, the actions
 #include "ee/EEWorldConstants.h"
 #include "ee/EESMDialogMessage.h"

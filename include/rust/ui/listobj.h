@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ template's forwarders).
 enum class EeUiListCall : uint32_t {
@@ -106,9 +106,6 @@ enum class EeUiListCall : uint32_t {
   /// `GetDrawCount()` (`mDrawLineCount`).
   DrawCount = 47,
 };
-
-/// The Rust UIListBox.
-struct EeUiList;
 
 /// A line type's C++ members (`UILineOps<T>::kOps`, lle/UIListBox.h): the list's lines are `new`ed `T`s.
 struct EeUiLineOps {

@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
-#include "rust/won_gui/rootobj.h"
+#include "rust/won_gui/records.h"
 
 /// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;

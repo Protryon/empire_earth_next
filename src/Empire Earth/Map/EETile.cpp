@@ -55,3 +55,20 @@ void EETile::SetUnitListPoolSize(unsigned long inChunkSize, unsigned long inMaxC
 
 // (their cases: EEMap.cpp's EECore9OpB2)
 // (its constants are checked against the headers by gamecpp cpp_consts_tests.rs)
+
+// out of line from ee/EEMap.h (its Rust function headers stay out of it)
+long EETile::GetChecksum(unsigned long inPlayerCount) const { return ee_gamecpp_tile_checksum(this, inPlayerCount); }
+
+long EETile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile, unsigned long inPlayerCount)
+{ return ee_gamecpp_tile_load(this, inMajorVersion, inMinorVersion, &inFile, inPlayerCount); }
+
+void EETile::Dump(FILE* inFile, unsigned long inPlayerCount) const
+{ ee_gamecpp_tile_dump(this, inFile, inPlayerCount); }
+
+long EETile::Save(FSFile& outFile, unsigned long inPlayerCount)
+{ return ee_gamecpp_tile_save(this, &outFile, inPlayerCount); }
+
+void EETile::SetTerrainType(long inTerrainType, const EETileLocation& inLocation, RTSMap* inMap)
+{ ee_gamecpp_tile_set_terrain_type(this, inTerrainType, inLocation.mX, inLocation.mY, inMap); }
+
+void EETile::RemoveDoppelganger(EEDoppelganger* inDoppelganger) { ee_gamecpp_tile_remove_image(this, inDoppelganger); }

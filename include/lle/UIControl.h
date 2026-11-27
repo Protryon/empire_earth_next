@@ -16,6 +16,8 @@
 #include <map>
 
 #include "lle/ISEntity.h"
+#include "rust/ui/records.h"
+#include "rust/ui/controlobj.h"   // EeUiControlCall, ee_ui_control_call
 #include "rust/ui/mouse_ffi.h"
 #include "lle/UIEntity.h"
 #include "lle/UIManager.h"

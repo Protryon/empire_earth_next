@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/png.h"
-#include "rust/render/ge.h"
+#include "rust/base/records.h"
+#include "rust/render/records.h"
 
 /// The calls the lookups make on the path and its files. `obj` the path or a file (`FSFileSpec*`).
 enum class EeOfFileOp : uint32_t {

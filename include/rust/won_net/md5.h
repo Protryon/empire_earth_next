@@ -6,14 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
-struct EeWonMd5 {
-  /// the `md-5` crate's `Md5Core`
-  uint64_t core[3];
-  /// bytes hashed so far
-  uint64_t count;
-  uint8_t pending[64];
-};
+#include "rust/won_net/records.h"
 
 #endif  // EE_RUST_WON_NET_MD5_H

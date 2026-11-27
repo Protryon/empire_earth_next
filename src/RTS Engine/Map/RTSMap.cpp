@@ -15,6 +15,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "rust/sim/units.h"
+#include "rust/game/rts.h"
 
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)
@@ -185,3 +186,11 @@ void ee_rtsmapcpp_colors_clear(RTSMap* inMap) { inMap->mVertexColors.clear(); }
 bool ee_rtsmapcpp_mesh_valid_point(RTSMap* inMap, long inX, long inY) { return inMap->mTerrainMesh.GetIsValidPoint(inX, inY); }
 void ee_rtsmapcpp_mesh_set_color(RTSMap* inMap, long inX, long inY, unsigned char inIndex) { inMap->mTerrainMesh.SetColorFromColorTableIndex(inX, inY, inIndex); }
 }
+
+// out of line from ee/EEMap.h (its Rust function headers stay out of it)
+RTSMap::RTSMap(float inF1955F4) { ee_rts_map_construct(this, inF1955F4); }
+RTSMap::~RTSMap() { ee_rts_map_destruct(this); }
+
+void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles)
+{ ee_rts_map_create(this, inWidth, inHeight, inPlayerCount, inCreateTiles); }
+

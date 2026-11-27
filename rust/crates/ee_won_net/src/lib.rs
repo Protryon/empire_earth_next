@@ -88,6 +88,8 @@ pub mod perftimer;
 pub mod plaintext;
 pub mod qsock;
 pub mod random;
+/// The records C++ classes derive from or embed (include/rust/won_net/records.h, declaring no function).
+pub mod records;
 pub mod regauth;
 pub mod regkey;
 pub mod reqdir;

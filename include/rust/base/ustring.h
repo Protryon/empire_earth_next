@@ -6,28 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A `UWideString`'s state, held by value in the C++ class (after its vtable pointer).
-struct EeUWideString {
-  /// The buffer (`mString`): `capacity` bytes, at least 1.
-  char *string;
-  /// The bytes of the characters (`mByteLength`, `GetTCHARLength`).
-  unsigned long byte_length;
-  /// The characters (`mLength`, `GetLength`).
-  unsigned long length;
-  /// The bytes allocated (`mCapacity`).
-  unsigned long capacity;
-};
-
-/// A `UString`'s state, held by value in the C++ class (after its vtable pointer).
-struct EeUString {
-  /// The buffer (`mString`): `capacity` bytes, at least 1.
-  char *string;
-  /// The bytes before the terminator (`mLength`).
-  unsigned long length;
-  /// The bytes allocated, the terminator included (`mCapacity`).
-  unsigned long capacity;
-};
+#include "rust/base/records.h"
 
 /// Receives `ee_ustring_tokens`' calls (`UString::PushToken`): first with `s` NULL (clear the vector), then once
 /// per token with the string and the token's first and last bytes.

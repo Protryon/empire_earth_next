@@ -6,6 +6,7 @@
 #ifndef EE_EEUIFMGSTATUSBUTTON_H
 #define EE_EEUIFMGSTATUSBUTTON_H
 
+#include "rust/game/records.h"
 #include "rust/game/screens.h"   // EeScreensStatusButtonFields
 
 #include "lle/UIButton.h"

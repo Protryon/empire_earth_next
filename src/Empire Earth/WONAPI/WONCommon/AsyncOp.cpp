@@ -4,6 +4,8 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "platform/PlatFile.h"
+#include "rust/won_net/apicore.h"
+#include "rust/won_net/hostop.h"
 // The socket error codes WON reports are Winsock's, the platform layer's numbering everywhere (checked by
 // ee_won_net status_codes.rs's the_socket_errors_are_winsocks_numbering)
 namespace WONAPI {

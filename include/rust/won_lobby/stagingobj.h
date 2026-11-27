@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/records.h"
 
 /// The inward calls (StagingLogic's methods the lobby calls). `a`, `b` pointers, `c`, `d` integers; a message is
 /// `a` its `ByteBuffer*`, `c` its bytes, `d` their length.

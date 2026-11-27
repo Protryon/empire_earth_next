@@ -12,6 +12,7 @@
 #include "ee/EESMMediaStrings.h"
 
 #include "ee/EESMDialogMessage.h"
+#include "rust/sim/records.h"
 
 class EESMArea;
 class FSFileSpec;

@@ -4,6 +4,7 @@
 #ifndef EE_EECIVILIZATION_H
 #define EE_EECIVILIZATION_H
 #include "ee/EECivUpgrade.h"
+#include "rust/game/records.h"
 #include "rust/sim/tech.h"             // ee_tech_civ_base_cost, _extra_cost, _count_in_category
 #include "rust/game/civilization.h"     // ee_gamecpp_civ_*: the bodies (ee_game civilization.rs)
 

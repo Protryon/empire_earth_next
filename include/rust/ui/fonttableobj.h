@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The statics ([`ee_ui_font_tables`]).
 enum class EeUiFontsCall : uint32_t {

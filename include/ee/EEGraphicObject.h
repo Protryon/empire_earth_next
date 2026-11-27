@@ -5,12 +5,15 @@
 // Only what the 2D effects read; the rest is PLACEHOLDER (layout not decoded). Requires ee/EEMedia.h.
 #ifndef EE_EEGRAPHICOBJECT_H
 #define EE_EEGRAPHICOBJECT_H
+#include "rust/render/gfx.h"
 class FSFile;
 struct EeGfxGraphicTags;
 
 #include <vector>
 #include "ee/EEMedia.h"
+#include "rust/data/records.h"
 #include "rust/data/media.h"
+#include "rust/data/tables.h"   // ee_data_graphic_object_default
 
 class GETexture;
 class GETransformation;

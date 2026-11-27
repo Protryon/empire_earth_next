@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/admin.h"
-#include "rust/won_net/reqop.h"
+#include "rust/won_net/records.h"
 
 constexpr static const int32_t EE_WON_ADMINOP_INSERT_MASTER_KEY = 1;
 

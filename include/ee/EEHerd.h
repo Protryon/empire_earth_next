@@ -11,6 +11,7 @@
 #define EE_EEHERD_H
 
 #include <vector>
+#include "rust/sim/records.h"
 #include "rust/sim/cp.h"             // EeHerdFields
 #include "ee/EEAIArea.h"
 

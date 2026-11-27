@@ -6,7 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
+#include "rust/base/records.h"
+#include "rust/sim/records.h"
 
 /// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
 /// `SetNextAttackTime(gPhysics->mGameTime)`.
@@ -4385,102 +4386,12 @@ struct EeScenarioTiles;
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
 
-struct EeScenarioManagerFields {
-  long mGameResult;
-  /// The camera zoom `StartCinematic` saves.
-  float mSavedZoom;
-  float mStartX;
-  float mStartY;
-  /// The scenario clock (ms).
-  float mTime;
-  /// The time since the last trigger round (ms).
-  float mTriggerTimer;
-  float mCinematicStartTime;
-  long mSavedCameraMode;
-  unsigned long mNextTriggerID;
-  unsigned long mNextConditionID;
-  unsigned long mNextEffectID;
-  unsigned long mNextObjectID;
-  unsigned long mNextAreaID;
-  /// Set by `Reset`: new pending effects are not recorded until `ApplyPendingEffects` has run.
-  bool mB234;
-  bool mIsMovingCamera;
-  bool mShowDebugIDs;
-  bool mIsShowingDialog;
-  bool mIsEndingCinematic;
-};
-
 /// The C ABI's round host: the manager's numbers and queue, and the operation callback.
 struct EeScenarioRoundHost {
   void *ctx;
   EeScenarioManagerFields *fields;
   EeScenarioTimedQueue *queue;
   int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
-};
-
-/// `EESMDialogMessage`'s numbers, in the class's order (the text and the sound stay members of the C++ class).
-struct EeScenarioMessageFields {
-  long mScrollSpeed;
-  unsigned long mUnitType;
-  unsigned long mDuration;
-  unsigned long mUnitID;
-  bool mIsCinematic;
-};
-
-/// `U2DPoint<long>`.
-struct EeScenarioAreaPoint {
-  long mX;
-  long mY;
-};
-
-/// `GERectangle` (its members' order).
-struct EeScenarioAreaRect {
-  float mBottom;
-  float mLeft;
-  float mRight;
-  float mTop;
-};
-
-/// `EESMArea`'s numbers.
-struct EeScenarioAreaFields {
-  EeScenarioAreaPoint mAnchor;
-  EeScenarioAreaRect mRect;
-  /// The cached centre tile (-10000 while unset).
-  EeScenarioAreaPoint mCenterTile;
-  unsigned long mSelectMode;
-  unsigned long mTilesTime;
-  unsigned long mID;
-  bool mHasRectangle;
-  bool mHasAnchor;
-};
-
-/// `EESMObject`'s numbers, in the class's order.
-struct EeScenarioObjectFields {
-  unsigned long mOwner;
-  unsigned long mFamily;
-  unsigned long mClass;
-  unsigned long mMinCount;
-  unsigned long mMaxCount;
-  unsigned long mArea;
-  unsigned long mNearMode;
-  unsigned long mNearObject;
-  unsigned long mParent;
-  unsigned long mAttribute;
-  unsigned long mAttributeMin;
-  unsigned long mAttributeMax;
-  unsigned long mVisibleByPlayer;
-  unsigned long mState;
-  unsigned long mSelectedByPlayer;
-  unsigned long mL64;
-  unsigned long mInAreaCheck;
-  unsigned long mNearCheck;
-  unsigned long mHasAttributeCheck;
-  unsigned long mVisibleByCheck;
-  unsigned long mHasStateCheck;
-  unsigned long mSelectedByCheck;
-  bool mIsSelectOnMap;
-  bool mIsDynamic;
-  bool mIsAttributePercent;
 };
 
 /// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
@@ -4558,111 +4469,10 @@ struct EeScenarioHost {
   const EeScenarioObjectFields *(*object)(void *ctx, int32_t index);
 };
 
-/// `EESMCondition`'s numbers, in the class's order.
-struct EeScenarioConditionFields {
-  unsigned long mType;
-  unsigned long mOperator;
-  unsigned long mDifficulty;
-  unsigned long mDiplomacy;
-  unsigned long mAttribute;
-  unsigned long mOtherAttribute;
-  long mTechnology;
-  unsigned long mAmount;
-  unsigned long mObjectIndex;
-  unsigned long mPlayer;
-  unsigned long mOtherPlayer;
-  unsigned long mMinTime;
-  unsigned long mMaxTime;
-  unsigned long mHour;
-  unsigned long mTrigger;
-  unsigned long mID;
-  bool mIsTriggerOn;
-  bool mHasTriggerFired;
-  bool mUsesDifficulty;
-  bool mUsesElapsedTime;
-  bool mUsesHour;
-  bool mUsesPlayerAttribute;
-};
-
 /// The C ABI's stream: a context and the I/O callback (`value` the field or local the operation reads or writes).
 struct EeScenarioStream {
   void *ctx;
   int32_t (*io)(void *ctx, uint32_t op, uint32_t slot, unsigned long index, void *value);
-};
-
-/// `EESMEffect`'s numbers, in the class's order.
-struct EeScenarioEffectFields {
-  unsigned long mPlayerAttribute;
-  unsigned long mDiplomacy;
-  unsigned long mULD0;
-  unsigned long mMessagePlayer;
-  unsigned long mNewOwner;
-  unsigned long mPlayer;
-  unsigned long mDiplomacyPlayer;
-  unsigned long mAIAction;
-  unsigned long mAIAttribute;
-  unsigned long mAIToggle;
-  unsigned long mMediaAction;
-  unsigned long mULF4;
-  unsigned long mPlayerAction;
-  unsigned long mTriggerState;
-  unsigned long mType;
-  unsigned long mObjectAction;
-  unsigned long mAttributeMode;
-  long mTechnology;
-  float mFloatValue;
-  long mIntValue1;
-  long mIntValue2;
-  long mAttributePlayer;
-  unsigned long mTargetArea;
-  unsigned long mTargetObject;
-  unsigned long mPlacedEffect;
-  unsigned long mPlaceArea;
-  unsigned long mPlaceObject;
-  unsigned long mDaylightHour;
-  unsigned long mCycleTime;
-  unsigned long mGameAction;
-  unsigned long mDuration;
-  unsigned long mTextObject;
-  unsigned long mAttribute;
-  unsigned long mAttributeAmount;
-  unsigned long mAttributeUnitType;
-  unsigned long mAttributeUnit;
-  unsigned long mObject;
-  unsigned long mStance;
-  unsigned long mTaskAction;
-  unsigned long mTaskArea;
-  unsigned long mTaskObject;
-  unsigned long mCivPoints;
-  unsigned long mPlayerAttributeMode;
-  unsigned long mPlayerAttributeAmount;
-  unsigned long mLocationArea;
-  unsigned long mLocationObject;
-  unsigned long mTrigger;
-  unsigned long mID;
-  bool mIsOn;
-  bool mUsesTargetArea;
-  bool mIsAttack;
-  bool mUsesFavorites;
-  bool mIsAddTarget;
-  bool mB18D;
-  bool mIsClearText;
-  bool mUsesLocationArea;
-  bool mUsesPercent;
-  bool mIsAddTechnology;
-  bool mUsesPlaceArea;
-  bool mB193;
-};
-
-/// `EESMTrigger`'s numbers, in the class's order (its condition and effect entries stay the C++'s).
-struct EeScenarioTriggerFields {
-  unsigned long mConditionDuration;
-  unsigned long mConditionStartTime;
-  unsigned long mID;
-  bool mIsOn;
-  bool mHasFired;
-  bool mIsLooping;
-  bool mIsInCinematic;
 };
 
 /// `EESMArea`'s saved values (a copy the C++ fills from its members and stores back): the anchor tile, the

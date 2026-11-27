@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guictl.h"
-#include "rust/won_gui/guihost.h"
-#include "rust/won_gui/winobj.h"
+#include "rust/won_gui/records.h"
 
 /// A component event's handler in its record (R6 WON GUI round 39): its `Deliver` (broadcast through the manager, or
 /// bubbled up from the component) is guisplit.rs's.
@@ -299,14 +297,6 @@ enum class EeWonWmEvent : uint32_t {
   Release,
 };
 
-/// The Rust WindowManager.
-///
-/// Every method runs on the GUI thread but PostEvent and PeekNextEvent, which other threads call (the original
-/// locked `mDataCrit` there): they touch only `events` (a `Mutex`, never held across a call out) and
-/// `cur_depth` (an atomic: the message loop's depth PostEvent reads), and make the event's `Hold` and the
-/// `Signal` ops, which the C++ answers on any thread.
-struct EeWonWm;
-
 /// A mouse event's fields FindMouseWindow and CheckPopupClick read and change (`MouseEvent`'s `mWindow`, `mx`,
 /// `my`, `mButtonOrAmount`).
 struct EeWonWmMouse {
@@ -326,15 +316,6 @@ struct EeWonWmPopup {
   int32_t x;
   int32_t y;
   EeWonRect4 avoid;
-};
-
-/// A window event's record (the C++ `WindowEventBase::mRec`, R6 WON GUI round 38): the input record first (its kind
-/// the event's type; the rest an input event's), the window the event is for, and an input event's handler (the
-/// `EeWonWinCall` its original class's `Deliver` ran on the window; 0 for any other event, whose `Deliver` is C++).
-struct EeWonWmEventRec {
-  EeWonWinEvent ev;
-  ptrdiff_t window;
-  uint32_t handler;
 };
 
 extern "C" {

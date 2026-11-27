@@ -6,26 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/gfxobj.h"
-#include "rust/won_gui/gfxplat.h"
-#include "rust/won_gui/guidraw.h"
-#include "rust/won_gui/mspaint.h"
-
-/// The game's Graphics (the C++ `Graphics` is this record since R6 WON GUI round 39, made, attached and freed here:
-/// [`new_graphics`], [`free_graphics`]): the translation, colour and clip, the clip stack, the borrowed colour
-/// scheme, the surface, and the display context and font (each held, as the original's SmartPtr members held them).
-struct EeWonGraphics {
-  EeWonGfxState st;
-  /// the clip stack (owned)
-  EeWonGfx *gfx;
-  /// the `ColorScheme*` (borrowed; NULL: none)
-  const void *scheme;
-  EeWonGfxPlat plat;
-  /// the `DisplayContext*` (held; 0: none)
-  ptrdiff_t context;
-  /// the `Font*` (held; 0: none)
-  ptrdiff_t font;
-};
+#include "rust/won_gui/records.h"
 
 /// What a plan's operations name (WONGUIDraw.h's WONDrawSlots): four `Image*`, the `Font*`, the `GUIString*` and the
 /// `WrappedText*`.

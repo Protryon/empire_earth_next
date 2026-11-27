@@ -6,12 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
-struct EeWonOpTiming {
-  int32_t run_mode;
-  uint32_t start;
-  uint32_t timeout;
-};
+#include "rust/won_net/records.h"
 
 #endif  // EE_RUST_WON_NET_OPS_H

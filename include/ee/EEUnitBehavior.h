@@ -6,6 +6,7 @@
 #define EE_EEUNITBEHAVIOR_H
 
 #include "ee/EEDbList.h"
+#include "rust/data/records.h"
 
 // the flags are EeDataUnitBehaviorFields (rust/crates/ee_data tables.rs: the record, its copy and the list), the base
 class EEUnitBehavior : public EeDataUnitBehaviorFields {

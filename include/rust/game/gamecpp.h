@@ -6,14 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/game/app.h"
-#include "rust/game/screens.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/app.h"
-#include "rust/sim/netmsg.h"
-#include "rust/sim/tech.h"
-#include "rust/sim/units.h"
+#include "rust/base/records.h"
+#include "rust/game/records.h"
+#include "rust/render/records.h"
+#include "rust/sim/records.h"
 
 /// `kSlotServer`, `kSlotNone` (rust/net/msgid.h).
 constexpr static const int64_t SS_SLOT_SERVER = 254;

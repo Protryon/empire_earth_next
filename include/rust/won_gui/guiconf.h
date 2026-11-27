@@ -10,20 +10,11 @@
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
 
-/// BrowserComponentConfig::Virtual24(instruction) in BrowserComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_VIRTUAL24_INSTRUCTION = 1;
-
 /// BrowserComponentConfig::Virtual24(value) in BrowserComponentConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_BROWSERCOMPONENTCONFIG_VIRTUAL24_VALUE = 2;
 
 /// ButtonConfig::HandleButtonFlags(flag) in ButtonConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_BUTTONCONFIG_HANDLEBUTTONFLAGS_FLAG = 3;
-
-/// ButtonConfig::Virtual24(inInstruction) in ButtonConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_BUTTONCONFIG_VIRTUAL24_ININSTRUCTION = 4;
-
-/// ComboBoxConfig::Virtual24(key) in ComboBoxConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_COMBOBOXCONFIG_VIRTUAL24_KEY = 5;
 
 /// ComboBoxConfig::GetPredefinedComponent(name) in ComboBoxConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_COMBOBOXCONFIG_GETPREDEFINEDCOMPONENT_NAME = 6;
@@ -52,9 +43,6 @@ constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_GETCOMPONENTCONF
 /// ComponentConfig::HandleValueInstruction(key) in ComponentConfigResource.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_HANDLEVALUEINSTRUCTION_KEY = 14;
 
-/// ComponentConfig::Virtual24(key) in ComponentConfigResource.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY = 15;
-
 /// ComponentConfig::Virtual24(name) in ComponentConfigResource.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_VIRTUAL24_NAME = 16;
 
@@ -67,53 +55,23 @@ constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READCURSOR_TYPE 
 /// ComponentConfig::ReadSelectionColor(type) in ComponentConfigValueReaders.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_COMPONENTCONFIG_READSELECTIONCOLOR_TYPE = 19;
 
-/// PercentLayoutConfig::Virtual24(instruction) in ComponentLayoutConfigs.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_PERCENTLAYOUTCONFIG_VIRTUAL24_INSTRUCTION = 20;
-
-/// ColorSchemeConfig::Virtual24(instruction) in ComponentLayoutConfigs.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_COLORSCHEMECONFIG_VIRTUAL24_INSTRUCTION = 21;
-
 /// ContainerConfig::HandleInstruction(type) in ContainerConfigGroups.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_CONTAINERCONFIG_HANDLEINSTRUCTION_TYPE = 22;
-
-/// ContainerConfig::Virtual24(theInstruction) in ContainerConfigInstructions.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION = 23;
 
 /// ContainerConfig::HandleNoOverlapLayout(aStr) in ContainerConfigLayouts.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR = 24;
 
-/// DialogConfig::Virtual24(instruction) in DialogConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_DIALOGCONFIG_VIRTUAL24_INSTRUCTION = 25;
-
 /// FontConfig::GetNamedValue(name) in FontConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_FONTCONFIG_GETNAMEDVALUE_NAME = 26;
-
-/// FontConfig::Virtual24(instruction) in FontConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION = 27;
 
 /// FontConfig::Virtual24(flag) in FontConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG = 28;
 
-/// ImageButtonConfig::Virtual24(instruction) in ImageButtonConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_IMAGEBUTTONCONFIG_VIRTUAL24_INSTRUCTION = 29;
-
 /// ImageConfig::GetNamedValue(inName) in ImageConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME = 30;
 
-/// ImageConfig::Virtual24(inInstruction) in ImageConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION = 31;
-
 /// ImageFilterConfig::HandleFilter(name) in ImageConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_IMAGEFILTERCONFIG_HANDLEFILTER_NAME = 32;
-
-/// ImageFilterConfig::Virtual24(inInstruction) in ImageConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION = 33;
-
-/// InputBoxConfig::Virtual24(inInstruction) in InputBoxConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_INPUTBOXCONFIG_VIRTUAL24_ININSTRUCTION = 34;
-
-/// LabelConfig::Virtual24(instruction) in LabelConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION = 35;
 
 /// ListAreaConfig::ReadSortType(name) in ListAreaConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_LISTAREACONFIG_READSORTTYPE_NAME = 36;
@@ -121,68 +79,17 @@ constexpr static const int32_t EE_WON_CFG_NAMES_LISTAREACONFIG_READSORTTYPE_NAME
 /// ListAreaConfig::ReadListFlags(name) in ListAreaConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_LISTAREACONFIG_READLISTFLAGS_NAME = 37;
 
-/// ListAreaConfig::Virtual24(inInstruction) in ListAreaConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_LISTAREACONFIG_VIRTUAL24_ININSTRUCTION = 38;
-
-/// MSButtonConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSBUTTONCONFIG_VIRTUAL24_KEY = 39;
-
-/// MSArrowButtonConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSARROWBUTTONCONFIG_VIRTUAL24_KEY = 40;
-
 /// MSArrowButtonConfig::Virtual24(direction) in MSComponentConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_MSARROWBUTTONCONFIG_VIRTUAL24_DIRECTION = 41;
-
-/// MSTabButtonConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSTABBUTTONCONFIG_VIRTUAL24_KEY = 42;
-
-/// MS3DFrameConfig::Virtual24(key) in MSComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MS3DFRAMECONFIG_VIRTUAL24_KEY = 43;
-
-/// MSComboBoxConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSCOMBOBOXCONFIG_VIRTUAL24_KEY = 44;
-
-/// MSScrollbarConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSSCROLLBARCONFIG_VIRTUAL24_KEY = 45;
-
-/// MSEtchedFrameGroupConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSETCHEDFRAMEGROUPCONFIG_VIRTUAL24_KEY = 46;
-
-/// MSTabCtrlConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSTABCTRLCONFIG_VIRTUAL24_KEY = 47;
-
-/// MSScrollContainerConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSSCROLLCONTAINERCONFIG_VIRTUAL24_KEY = 48;
-
-/// MSHeaderControlConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSHEADERCONTROLCONFIG_VIRTUAL24_KEY = 49;
-
-/// MSListCtrlConfig::Virtual24(key) in MSExtraConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MSLISTCTRLCONFIG_VIRTUAL24_KEY = 50;
-
-/// MultiListAreaConfig::Virtual24(instruction) in MultiListBoxConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MULTILISTAREACONFIG_VIRTUAL24_INSTRUCTION = 51;
 
 /// MultiListAreaConfig::Virtual24(name) in MultiListBoxConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_MULTILISTAREACONFIG_VIRTUAL24_NAME = 52;
 
-/// MultiListHeaderConfig::Virtual24(instruction) in MultiListBoxConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_MULTILISTHEADERCONFIG_VIRTUAL24_INSTRUCTION = 53;
-
 /// ResourceConfig::HandleValueInstruction(key) in ResourceConfigDispatch.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_RESOURCECONFIG_HANDLEVALUEINSTRUCTION_KEY = 54;
 
-/// ScrollAreaConfig::Virtual24(instruction) in ResourceTableQueries.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLAREACONFIG_VIRTUAL24_INSTRUCTION = 55;
-
-/// ScrollerConfig::Virtual24(instruction) in ResourceTableQueries.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION = 56;
-
 /// ScrollbarScrollerConfig::GetScrollbarCondition(condition) in ResourceTableQueries.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_SCROLLBARSCROLLERCONFIG_GETSCROLLBARCONDITION_CONDITION = 57;
-
-/// ScrollbarScrollerConfig::Virtual24(instruction) in ResourceTableQueries.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION = 58;
 
 /// ButtonScrollerConfig::GetScrollButtonCondition(aStr) in ResourceTableQueries.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_BUTTONSCROLLERCONFIG_GETSCROLLBUTTONCONDITION_ASTR = 59;
@@ -190,23 +97,8 @@ constexpr static const int32_t EE_WON_CFG_NAMES_BUTTONSCROLLERCONFIG_GETSCROLLBU
 /// ButtonScrollerConfig::Virtual24(theInstruction) in ResourceTableQueries.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BUTTONSCROLLERCONFIG_VIRTUAL24_THEINSTRUCTION = 60;
 
-/// ScrollbarConfig::Virtual24(instruction) in ScrollbarConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLBARCONFIG_VIRTUAL24_INSTRUCTION = 61;
-
 /// ScrollbarConfig::GetPredefinedComponent(name) in ScrollbarConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_SCROLLBARCONFIG_GETPREDEFINEDCOMPONENT_NAME = 62;
-
-/// RectangleComponentConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_RECTANGLECOMPONENTCONFIG_VIRTUAL24_KEY = 63;
-
-/// RectangleComponent3DConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_RECTANGLECOMPONENT3DCONFIG_VIRTUAL24_KEY = 64;
-
-/// ImageComponentConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_IMAGECOMPONENTCONFIG_VIRTUAL24_KEY = 65;
-
-/// ScreenContainerConfig::Virtual24(key) in SimpleComponentConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_SCREENCONTAINERCONFIG_VIRTUAL24_KEY = 66;
 
 /// SplitterConfig::ReadQuadrant(aStr) in SplitterConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_SPLITTERCONFIG_READQUADRANT_ASTR = 67;
@@ -214,71 +106,23 @@ constexpr static const int32_t EE_WON_CFG_NAMES_SPLITTERCONFIG_READQUADRANT_ASTR
 /// SplitterConfig::ReadSplitterType(aStr) in SplitterConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_SPLITTERCONFIG_READSPLITTERTYPE_ASTR = 68;
 
-/// SplitterConfig::Virtual24(theInstruction) in SplitterConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_SPLITTERCONFIG_VIRTUAL24_THEINSTRUCTION = 69;
-
-/// StretchImageConfig::Virtual24(instruction) in StretchImageConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION = 70;
-
-/// StretchCenterImageConfig::Virtual24(instruction) in StretchImageConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION = 71;
-
-/// TabCtrlConfig::Virtual24(key) in TabCtrlConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_TABCTRLCONFIG_VIRTUAL24_KEY = 72;
-
 /// TabCtrlConfig::GetPredefinedComponent(name) in TabCtrlConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_TABCTRLCONFIG_GETPREDEFINEDCOMPONENT_NAME = 73;
-
-/// TextAreaConfig::Virtual24(key) in TextAreaConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_TEXTAREACONFIG_VIRTUAL24_KEY = 74;
 
 /// TextAreaConfig::Virtual24(flag) in TextAreaConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_TEXTAREACONFIG_VIRTUAL24_FLAG = 75;
 
-/// TreeAreaConfig::Virtual24(instruction) in TreeAreaConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_TREEAREACONFIG_VIRTUAL24_INSTRUCTION = 76;
-
 /// WONSimpleButtonConfig::HandleButtonState(aStateStr) in WONButtonConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_WONSIMPLEBUTTONCONFIG_HANDLEBUTTONSTATE_ASTATESTR = 77;
-
-/// WONSimpleButtonConfig::Virtual24(theInstruction) in WONButtonConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONSIMPLEBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION = 78;
 
 /// WONButtonConfig::HandleSetButtonState(aStateStr) in WONButtonConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_WONBUTTONCONFIG_HANDLESETBUTTONSTATE_ASTATESTR = 79;
 
-/// WONButtonConfig::Virtual24(theInstruction) in WONButtonConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION = 80;
-
-/// WONFrameComponentConfig::Virtual24(key) in WONFrameConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONFRAMECOMPONENTCONFIG_VIRTUAL24_KEY = 81;
-
 /// WONFrameComponentConfig::GetNamedValue(key) in WONFrameConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_WONFRAMECOMPONENTCONFIG_GETNAMEDVALUE_KEY = 82;
 
-/// WONComboBoxConfig::Virtual24(key) in WONFrameValueConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONCOMBOBOXCONFIG_VIRTUAL24_KEY = 83;
-
-/// WONTabCtrlConfig::Virtual24(key) in WONFrameValueConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONTABCTRLCONFIG_VIRTUAL24_KEY = 84;
-
-/// WONScrollContainerConfig::Virtual24(key) in WONFrameValueConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONSCROLLCONTAINERCONFIG_VIRTUAL24_KEY = 85;
-
-/// WONScrollbarConfig::Virtual24(key) in WONListConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONSCROLLBARCONFIG_VIRTUAL24_KEY = 86;
-
-/// WONHeaderControlConfig::Virtual24(key) in WONListConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONHEADERCONTROLCONFIG_VIRTUAL24_KEY = 87;
-
-/// WONListCtrlConfig::Virtual24(key) in WONListConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONLISTCTRLCONFIG_VIRTUAL24_KEY = 88;
-
 /// WONSkinConfig::ReadVert(text) in WONSkinConfig.cpp: names (ignoring case).
 constexpr static const int32_t EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT = 89;
-
-/// WONSkinConfig::Virtual24(theInstruction) in WONSkinConfig.cpp: instruction keys (exact).
-constexpr static const int32_t EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION = 90;
 
 /// ChatCtrlConfig::Virtual24(inKey) in ChatCtrl.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY = 91;

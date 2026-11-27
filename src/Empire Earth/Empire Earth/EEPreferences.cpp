@@ -7,6 +7,7 @@
 #include "gx/GX.h"
 
 #include <vector>
+#include "rust/game/gamecpp.h"
 
 // (gx/GX.h: out of line, for EEScreens.cpp and Empire Earth.cpp, which declare it without the header)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight)
@@ -18,6 +19,7 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
+#include "rust/game/app.h"
 // the settings are kept in config.yaml (platform/PlatConfig.h; the original kept them in the registry key
 // HKCU\Software\Mad Doc Software\EE-AOC and its "Game Options" subkey)
 

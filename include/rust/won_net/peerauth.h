@@ -6,11 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/blowfish.h"
-#include "rust/won_net/ffi.h"
-
-/// `AuthSession` (0x10cc bytes in the original): the session's type, id, key, sequence numbers and last use.
-struct EeWonAuthSession;
+#include "rust/won_net/records.h"
 
 /// The members of a `PeerAuthClient` or `PeerAuthServer` the handshake reads and writes (the server has no
 /// `use_client_secret` and `client_key_size`).

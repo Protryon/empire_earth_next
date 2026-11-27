@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/shell.h"
+#include "rust/won_gui/records.h"
 
 /// A getter of the skin (`ee_won_skin_get`; `a` its argument).
 enum class EeWonSkinGet : uint32_t {

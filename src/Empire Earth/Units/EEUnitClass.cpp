@@ -61,6 +61,7 @@
 #include "rust/sim/combat.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
+#include "rust/sim/world.h"
 
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 

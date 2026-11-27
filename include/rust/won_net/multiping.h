@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/servctx.h"
+#include "rust/won_net/records.h"
 
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;

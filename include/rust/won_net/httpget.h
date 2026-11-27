@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `SetLocalPath` / `GetLocalPath()` (bytes)
 constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;

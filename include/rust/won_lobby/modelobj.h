@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_lobby/records.h"
 
 /// A model object's class.
 enum class EeWonModelKind : uint32_t {
@@ -342,15 +343,6 @@ struct EeWonModel;
 
 /// The host: `ModelHost(op, a, b, c)`.
 using EeWonModelHost = ptrdiff_t(*)(EeWonModelOp op, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
-
-/// A walk over a client list as the original's map iterator walked (`LobbyClientIterator`,
-/// `LobbyClientSetIterator`): the next client after the last one returned.
-struct EeWonModelCursor {
-  bool started;
-  /// the set iterator's: a client with a player is found and not yet returned
-  bool ready;
-  uint16_t last;
-};
 
 extern "C" {
 

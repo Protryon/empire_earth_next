@@ -6,11 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/records.h"
 
 /// `FSArchive`'s tables.
 struct EeFsArchive;
-
-struct EeFsMemFile;
 
 /// The search path.
 struct EeFsPath;
@@ -110,19 +109,6 @@ struct EeFsCppCalls {
   long (*tag)(void *p);
   /// `delete p`.
   void (*delete_)(void *p);
-};
-
-/// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
-/// `data` is the payload; the C++ destructor frees it through `ee_fs_chunk_free`.
-struct EeFsChunk {
-  EeFsMemFile *data;
-  int32_t tag;
-  uint32_t chunk_size;
-  uint32_t major;
-  uint32_t minor;
-  bool data_loaded;
-  bool header_loaded;
-  bool decompressed;
 };
 
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and

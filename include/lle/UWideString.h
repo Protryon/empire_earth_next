@@ -6,6 +6,7 @@
 #ifndef LLE_UWIDESTRING_H
 #define LLE_UWIDESTRING_H
 #include "platform/PlatString.h"
+#include "rust/base/records.h"
 #include "rust/base/ustring.h"
 #include "lle/UString.h"           // UFormat
 

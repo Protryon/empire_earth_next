@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/config.h"
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/ffi_parse.h"
+#include "rust/won_net/records.h"
 
 /// A parser's plain member, for `ee_won_cfgp_field` / `ee_won_cfgp_set_field`.
 enum class EeWonCfgpField : int32_t {
@@ -39,9 +37,6 @@ enum class EeWonCfgpText : int32_t {
   /// `mFileNameAndPath`
   FileName = 3,
 };
-
-/// The parser (0x88 bytes in the original; opaque to the C++).
-struct EeWonCfgParser;
 
 extern "C" {
 

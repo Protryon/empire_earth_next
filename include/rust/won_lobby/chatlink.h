@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/chatctl.h"
+#include "rust/won_lobby/records.h"
 
 /// The host's ops: each one C++ statement.
 enum class EeWonChatLinkOp : uint32_t {

@@ -6,10 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dir.h"
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/ipobj.h"
-#include "rust/won_net/servctx.h"
+#include "rust/won_net/records.h"
 
 /// Which text of an entity `ee_won_dirlist_text` gives.
 enum class EeWonDirText {
@@ -20,9 +17,6 @@ enum class EeWonDirText {
   /// `mPath`
   Path,
 };
-
-/// A directory listing: the entities in the reply's order.
-struct EeWonDirList;
 
 /// Receives UTF-16 units (the C++'s `WonWideSink`).
 using EeWonDirUnitsSink = void(*)(void *context, const uint16_t *units, size_t count);

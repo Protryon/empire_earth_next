@@ -6,18 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// One pointer shape.
 struct EeWonPlatCursor;
-
-/// The platform's cursor calls (platform/PlatWindow.h), as the C++ shell hands them: PlatCursorSetSystem,
-/// PlatCursorCreate, PlatCursorSet, PlatCursorDestroy.
-struct EeWonPlatCursorFns {
-  void (*set_system)(uint32_t cursor);
-  void *(*create)(const uint32_t *bgra, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
-  void (*set)(void *cursor);
-  void (*destroy)(void *cursor);
-};
 
 extern "C" {
 

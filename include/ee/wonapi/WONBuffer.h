@@ -9,6 +9,7 @@
 #include <string.h>
 #include <string>
 #include "ee/EEWonNet.h"
+#include "rust/won_net/buffer.h"
 namespace WONAPI {
 
 // WON's wide text is UTF-16 on the wire and in its files (wchar_t of the original Windows build). wchar_t is UTF-32

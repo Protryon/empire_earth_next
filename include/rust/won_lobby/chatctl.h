@@ -22,22 +22,6 @@ enum class EeWonLobbyCtlLinkField : uint32_t {
   Previous,
 };
 
-/// A link to make (`new ChatLink(...)`, its constructor by `kind`: 3 a client, 0 a room, 4 a friend, 5 a friend's
-/// location, 1 Accept, 2 Reject).
-struct EeWonLobbyCtlLink {
-  int32_t kind;
-  /// the client (3, 1, 2) or the friend (4, 5)
-  ptrdiff_t obj;
-  /// the text (0, 5, 1, 2): a `GUIStringData*`
-  ptrdiff_t text;
-  /// the room's id (0)
-  int32_t id;
-  /// the server (0: a `LobbyServer*`, NULL none) or the address (5: a `const EeWonIpAddr*`)
-  ptrdiff_t addr;
-  ptrdiff_t font;
-  int32_t color;
-};
-
 /// `LobbyAppendFormattedText(output, format, strings, colors, fonts, links, line break)`'s arguments.
 struct EeWonLobbyCtlFormat {
   ptrdiff_t output;

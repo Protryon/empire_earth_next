@@ -7,6 +7,7 @@
 #ifndef EE_EEUIMANAGER_H
 #define EE_EEUIMANAGER_H
 
+#include "rust/game/records.h"
 #include "rust/game/screens.h"   // EeScreensUiManagerFields (ee_screens ui_objects.rs)
 #include "ee/EEGameUI.h"
 #include "lle/UIManager.h"

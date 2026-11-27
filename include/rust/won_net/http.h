@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// `URL`'s types (`URLType`).
 constexpr static const int32_t EE_WON_URL_NONE = 0;

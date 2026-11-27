@@ -10,6 +10,7 @@
 #define EE_EECALAMITY_H
 
 #include "lle/U2DPoint.h"
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
 #include "lle/FSRestorable.h"
 class EECalamityClass;

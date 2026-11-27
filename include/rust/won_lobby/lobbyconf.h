@@ -6,10 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/cfgval.h"
-#include "rust/won_net/cfgobject.h"
-#include "rust/won_net/cfgparser.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_lobby/records.h"
+#include "rust/won_net/records.h"
 
 /// The scalar values (a getter's and the drivers' setter's names).
 enum class EeWonLobbyConfNum : uint32_t {

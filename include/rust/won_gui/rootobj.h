@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/ctobj.h"
-#include "rust/won_gui/guictl.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonRootCall : uint32_t {
@@ -58,20 +56,6 @@ enum class EeWonRootField : uint32_t {
   AllowDrag,
   /// the number of queued backgrounds
   BgCount,
-};
-
-/// The Rust RootContainer.
-struct EeWonRoot;
-
-/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
-/// map's `int` key), its image's place, its clip rectangle and its image.
-struct EeWonRootGrab {
-  int32_t need;
-  int32_t order;
-  int32_t x;
-  int32_t y;
-  EeWonRect4 clip;
-  ptrdiff_t image;
 };
 
 extern "C" {

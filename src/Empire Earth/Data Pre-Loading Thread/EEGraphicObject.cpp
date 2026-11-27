@@ -14,6 +14,7 @@
 
 #include "ee/EEMedia.h"
 #include "EEDatabase.h"
+#include "rust/render/gfx.h"
 
 std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount read it)
 

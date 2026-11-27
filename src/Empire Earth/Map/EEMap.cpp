@@ -33,6 +33,7 @@
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEAppCapture.h"
 #include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
@@ -319,3 +320,50 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     return 0;
 }
 
+
+// out of line from ee/EEMap.h (its Rust function headers stay out of it)
+
+long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{ return ee_gamecpp_mx_load(this, &inFile, inMajorVersion, inMinorVersion); }
+
+long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{ return ee_gamecpp_mx_save(this, &outFile, inMajorVersion, inMinorVersion); }
+
+EEMap::~EEMap() { ee_gamecpp_map_destroy(this); }
+void EEMap::UpdateWater(long inX, long inY) { ee_gamecpp_mx_update_water(this, inX, inY); }
+EEMapTile* EEMap::CreateTile(float inHeight) { return (EEMapTile*)ee_gamecpp_map_create_tile(this, inHeight); }
+void EEMap::ReserveTiles(unsigned long inCount) { ee_gamecpp_map_reserve_tiles(this, inCount); }
+
+EEMapTile* EEMap::LoadTile(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile, long inX, long inY)
+{ return (EEMapTile*)ee_gamecpp_map_load_tile(this, inMajorVersion, inMinorVersion, &inFile, inX, inY); }
+
+bool EEMap::GetTileLocation(long inX, long inY, GE3DPoint& outLocation)
+{ return ee_gamecpp_map_tile_location(this, inX, inY, reinterpret_cast<EeGe3DPoint*>(&outLocation)); }
+
+EETile* EEMap::GetTileAt(const GE2DPoint& inPoint, long& outX, long& outY)
+{ return (EETile*)ee_gamecpp_map_tile_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY); }
+
+EETile* EEMap::GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, bool inHitWaterSurface)
+{ return (EETile*)ee_gamecpp_mx_location_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DPoint*>(&outLocation), inHitWaterSurface); }
+
+EETile* EEMap::PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, bool inHitWaterSurface)
+{ return (EETile*)ee_gamecpp_mx_pick_tile(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY, inHitWaterSurface); }
+
+void EEMap::GetScreenLine(const GE2DPoint& inPoint, GE3DLine& outLine)
+{ ee_gamecpp_map_screen_line(reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DLine*>(&outLine)); }
+
+float EEMap::GetTerrainPitch(const GETransformation& inLocation)
+{ return ee_gamecpp_map_terrain_pitch(this, reinterpret_cast<const EeGeTransformation*>(&inLocation)); }
+
+float EEMap::GetTerrainRoll(const GETransformation& inLocation)
+{ return ee_gamecpp_map_terrain_roll(this, reinterpret_cast<const EeGeTransformation*>(&inLocation)); }
+
+unsigned long EEMap::GetTileCount() { return ee_gamecpp_map_tile_count(this); }
+
+void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
+{ ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false); }
+
+void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
+{ ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true); }
+
+void EEMap::DumpOutOfSynch(FILE* inFile) { ee_gamecpp_map_dump(this, inFile); }

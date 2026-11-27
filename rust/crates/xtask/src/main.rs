@@ -54,7 +54,8 @@ fn generate(root: &Path) -> Result<(String, BTreeMap<String, String>), String> {
     let renames: HashMap<String, String> = config.export.rename.clone().into_iter().collect();
     let single = normalized(&generate_single(root, config)?);
     let defs = split::scan(&root.join("rust/crates"), &crates);
-    let headers = split::split(&single, &defs, &renames, HEADER_NOTE)?;
+    let roots = split::record_roots(&root.join("rust/crates"), &crates, &renames);
+    let headers = split::split(&single, &defs, &renames, &roots, HEADER_NOTE)?;
     Ok((single, headers))
 }
 
@@ -160,6 +161,27 @@ mod tests {
     #[test]
     fn a_directory_outside_a_checkout_has_no_root() {
         assert_eq!(find_root(Path::new("/")), None);
+    }
+
+    /// Every checked-in `*/records.h` declares no function and includes only other records headers (and the C++
+    /// value classes' headers, split.rs `CPP_VALUES`), so a class header that includes only records headers is not
+    /// rebuilt by a change to a function.
+    #[test]
+    fn the_records_headers_declare_no_function() {
+        let dir = repo_root().join("include/rust");
+        let headers: Vec<PathBuf> =
+            generated_headers(&dir).into_iter().filter(|p| p.file_name().is_some_and(|n| n == "records.h")).collect();
+        assert!(headers.len() >= 3, "the records headers of sim, game, data at least: {headers:?}");
+        for path in headers {
+            let text = normalized(&std::fs::read_to_string(&path).unwrap());
+            let parsed = split::parse(&text).unwrap();
+            assert!(parsed.functions.is_empty(), "{} declares functions", path.display());
+            assert!(!text.contains("extern \"C\""), "{}", path.display());
+            for line in text.lines().filter(|l| l.starts_with("#include \"")) {
+                let records = line.starts_with("#include \"rust/") && line.ends_with("/records.h\"");
+                assert!(records || line.starts_with("#include \"lle/"), "{} includes {line}", path.display());
+            }
+        }
     }
 
     #[test]

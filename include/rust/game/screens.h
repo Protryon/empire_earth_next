@@ -6,8 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
+#include "rust/base/records.h"
+#include "rust/game/records.h"
+#include "rust/render/records.h"
 
 /// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
 /// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
@@ -15617,14 +15618,8 @@ struct EeScreensSeTriggerTab;
 /// The unit tab (opaque to C++).
 struct EeScreensSeUnit;
 
-/// A paint action's record (opaque to C++; the action's record holds it: `game_actions.rs`).
-struct EeScreensSeaPaint;
-
 /// An `EESEERust`'s event (opaque to C++).
 struct EeScreensSeeEvent;
-
-/// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
-struct EeScreensSewAction;
 
 /// A shell's Rust half (opaque to C++): its control and its kind.
 struct EeScreensShell;
@@ -15674,165 +15669,11 @@ struct EeScreensSeBrushGroup {
   bool centered;
 };
 
-/// An action's plain members (the C++ class's second base; the names are the original members').
-struct EeScreensGaFields {
-  /// The kind (`EE_SCREENS_GA_*`).
-  uint32_t mKind;
-  /// The message built and not sent yet (`EEMessage*`: the click, lasso, build and calamity).
-  void *mMessage;
-  /// The calamity's class (`EECalamityClass*`).
-  void *mCalamityClass;
-  /// The quick save's memory file (`FSMemoryFile*`, the host's).
-  void *mFile;
-  /// The editor paint's record (`EESEAPaintRust`'s: `editor_actions.rs`).
-  EeScreensSeaPaint *mPaint;
-  /// The editor's whole action (`EESEARust`'s: `editor_whole.rs`).
-  EeScreensSewAction *mAction;
-  /// The build's and the calamity's technology.
-  int32_t mTechnology;
-  int32_t mTargetID;
-  int32_t mCasterID;
-  /// The calamity's target tile.
-  int32_t mX;
-  int32_t mY;
-  /// The calamity's last check (nonzero: castable).
-  int32_t mValid;
-  /// The camera's target (`GE3DPoint`) and the camera object followed (-1: the point).
-  float mLocation[3];
-  int32_t mUnitID;
-  /// The mini map's click: 0 centre the camera, 1 send the group; the key modifiers at the click.
-  int32_t mMode;
-  uint32_t mModifiers;
-  /// The edge scroll's last poll.
-  uint32_t mElapsed;
-  /// The cancelled game's message string (0: none).
-  int32_t mStringID;
-  /// The improvement and its unit (by id: `EEUnitHandle`, referenced while the action lives).
-  int32_t mImprovement;
-  uint32_t mUnit;
-  /// The join's mode (0 host, 1 join a detected game, 2/3 connect to an address, 4 the WON host).
-  int32_t mJoinMode;
-  /// The build's queue flag (`EEMBuildUnit`'s).
-  uint8_t mIsQueued;
-  bool mScrollLeft;
-  bool mScrollRight;
-  bool mScrollUp;
-  bool mScrollDown;
-  bool mAccelerate;
-  /// The booted player's slot and its flags.
-  uint8_t mPlayer;
-  bool mB0D;
-  bool mIsExiting;
-  /// The cancelled game keeps the current form.
-  bool mNoPop;
-  /// The improvement raised (else lowered); in a game (else the scenario editor).
-  bool mRaise;
-  bool mIsInGame;
-  /// The saved game's flag.
-  bool mFlag;
-  /// The chat line is the local player's.
-  bool mFromLocalPlayer;
-  /// The quick save/load: load (else save); a save also written to disk.
-  bool mIsLoad;
-  bool mWriteToFile;
-};
-
-/// `EEUICPing`'s members (its protected base) but the bars.
-struct EeScreensPingFields {
-  /// The lit bars less one (`SetPing`'s quality times 5).
-  uint32_t mNumBars;
-};
-
-/// `GERectangle` in its member order (the records' rectangles are read as `GERectangle`s by the C++).
-struct EeScreensRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
-/// `GE2DPoint`.
-struct EeScreensPoint {
-  float x;
-  float y;
-};
-
-/// `EEUICSelectUnits`' members (its protected base) but the lines and the actions.
-struct EeScreensSelectUnitsFields {
-  /// The box as of the last `CopyData`, clipped to the game view.
-  EeScreensRect mRA0;
-  /// The press (rounded).
-  EeScreensPoint mDragStart;
-  /// The mouse (rounded, clamped to the game view).
-  EeScreensPoint mDragEnd;
-  /// The drag went far enough from the press.
-  bool mDragging;
-  /// The box is drawn.
-  bool mD1;
-  /// The trigger tab's control (`EESEUICTriggerSelectUnits`; port addition: the subclass's overrides are this).
-  bool mTrigger;
-  /// The trigger tab's: the right button is down (its press and release drive the left's).
-  bool mRightButton;
-};
-
-/// `GE3DPoint`.
-struct EeScreensPoint3 {
-  float x;
-  float y;
-  float z;
-};
-
-/// `EEUICCommandUnits`' members (its protected base) but the click action, the model and the texture.
-struct EeScreensCommandUnitsFields {
-  /// The press (rounded).
-  EeScreensPoint mDownLocation;
-  /// The map point under the press.
-  EeScreensPoint3 mPosition;
-  float mFacing;
-  /// `mFacing` as of the last `CopyData`.
-  float mDrawnFacing;
-  /// A selected unit takes a facing.
-  bool mCanFace;
-  /// The drag went past the threshold (or the release set a facing).
-  bool mHasFacing;
-  /// `mHasFacing` as of the last `CopyData`.
-  bool mDrawnHasFacing;
-  /// The scenario editor's control (`EESEUICCommandUnits`; port addition: the subclass's overrides are this).
-  bool mEditor;
-};
-
 /// One loaded icon of the status box (the original's `EEUIFMGStatusBox::sIconBitmaps[50]`, 0x14 bytes each): its
 /// cell in the icon textures and its `GEBitmap*`.
 struct EeScreensIconBitmap {
   EeGeRectangle mRectangle;
   void *mBitmap;
-};
-
-/// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
-struct EeScreensMainFormFields {
-  /// the keyboard and mouse modes of each interface state (`EE_SCREENS_MF_MODE_*`; 2: the cinematic's keys)
-  long mKeyboardModes[22];
-  long mMouseModes[22];
-  /// the interface state (5: gate, 6: wall, 0x11: no scrolling)
-  long mUIState;
-  /// the background media (-1: none)
-  long mMediaID;
-  /// the enabled entity group and the index into the panel groups
-  long mEntityGroup;
-  unsigned long mCurrentGroup;
-  /// the poll's elapsed time
-  unsigned long mElapsed;
-  unsigned long mHotKeyMode;
-  long mClockMode;
-  bool mEntityGroupSet;
-  /// the error log's strings changed
-  bool mStringsChanged;
-  bool mIsCursorLocked;
-  bool mRefreshGroup;
-  bool mB5F0;
-  bool mB5F1;
-  bool mInfoBlinking;
-  bool mIsButtonBlinking;
 };
 
 /// `EEUIBuildWall` (the C++ name is a typedef of this record; UI lane round 16: the class and its vtable gone): placing
@@ -15859,113 +15700,6 @@ struct EeScreensBuildGateFields {
   int32_t mDirection;
   int32_t mPlayer;
   bool mEditor;
-};
-
-/// `EEUIFMGStatusBox`'s members (ee/EEUIFMGStatusBox.h) as the record the class is (its only base, at offset 0:
-/// the box's pointer is the record's): the attributes shown, the main game form's controls it fills (`UIControl*`s),
-/// its form, the counts (the UI cluster lane, round 1).
-struct EeScreensStatusBoxFields {
-  /// (= -1) the icon index of each attribute shown
-  long mAttributes[14];
-  /// the main game form's controls 0x45..0x4d and 0x20..0x28
-  void *mIcons[9];
-  void *mLabels[9];
-  /// the constructor's form
-  void *mForm;
-  /// controls 0x1e, 0x1f, 0x2a (the portrait), 0x2b, 0x64, 0x29
-  void *mC84;
-  void *mC88;
-  void *mC8C;
-  void *mC90;
-  void *mC94;
-  void *mC98;
-  long mAttributeCount;
-  /// the next free icon
-  long mArmorAttributeCount;
-  bool mIsResourceShown;
-  /// controls 0x33, 0x32 (the third and fourth bars)
-  void *mCA8;
-  void *mCAC;
-};
-
-/// `EEUIFMGStatusButton`'s plain members (ee/EEUIFMGStatusButton.h), in the class's order (the UI cluster lane,
-/// round 1); its C++ objects (the button object, the icon, the dither, the queue text, `mU104`) stay members.
-struct EeScreensStatusButtonFields {
-  /// `TMGetTime()` of the last "cannot" chat line
-  unsigned long mLastErrorTime;
-  /// the technology (the main group matches the queued items' key)
-  long mTechnology;
-  unsigned long mUnitType;
-  /// (= 40)
-  float mF134;
-  float mF138;
-  unsigned long mUnitID;
-  /// the main group's queue counts
-  long mCount;
-  /// the `EEButtonObject` index
-  unsigned long mButton;
-  /// an `EEButtonObject` command (else a tech tree node)
-  bool mIsCommand;
-  bool mShowCount;
-  bool mAvailable;
-  bool mDrawIcon;
-};
-
-/// `EEUIFMGMainGroup`'s plain members (ee/EEUIFMGMainGroup.h, the original's +0x0c `mMode` .. +0x25 `mReset`), a
-/// Rust record the C++ class derives from as `EeScreensMainFormFields` is the form's.
-struct EeScreensMainGroupFields {
-  /// the mode: 0, 3, 4 (the market's unit type 0x321); 1, 2 tested
-  long mMode;
-  /// the shown unit's hit points, id and the previous id
-  long mHitPoints;
-  unsigned long mUnitID;
-  unsigned long mPreviousID;
-  long mL1C;
-  /// the unit class's `mL294`
-  long mL20;
-  /// a unit is shown; the group was reset (`Reset`)
-  bool mHasUnit;
-  bool mReset;
-};
-
-/// `EEUIManager`'s own members (ee/EEUIManager.h), in the class's order (the original's +0x12c..+0x13d).
-struct EeScreensUiManagerFields {
-  /// `EEUIFMainGame*`: `GetFormByID(11)` in the constructor
-  void *mMainGameForm;
-  /// `EEUIFScenarioEditor*`: made by `CreateScenarioEditor`, deleted by `DeleteScenarioEditor`
-  void *mScenarioEditorForm;
-  unsigned long mU134;
-  unsigned long mU138;
-  /// set by `StartScenarioEditor`, cleared by the main menu's events
-  bool mInScenarioEditor;
-  bool mB13D;
-};
-
-/// `EEUserInterface`'s members (ee/EEUserInterface.h), in the class's order (the original's +0x40..+0x5f).
-struct EeScreensUserInterfaceFields {
-  /// `TSThread*`: the constructing thread; every post goes to it
-  void *mThread;
-  /// `TSEvent*`: set by the thread message 0x?? (`EE_SCREENS_UI_OP_QUEUE_DONE`)
-  void *mMessageQueueDone;
-  /// `TMGetTime()` at construction; the game's start and saved games set it
-  unsigned long mRandomSeed;
-  /// the load percentage's player (`EEMLoadPercent`)
-  long mLocalPlayer;
-  bool mB05C;
-  /// a byte: the message handler truncates a long into it
-  uint8_t mIsUpdating;
-  /// `PostMessage424Once`'s guard (the handler clears it)
-  bool mIconBarUpdatePosted;
-  /// set by the handler; the loop exits on it
-  bool mIsQuitting;
-};
-
-/// One member of a record message (`EEMRecordValue`): an integer, a float or a point.
-struct EeScreensGaValue {
-  /// `EE_SCREENS_GA_VALUE_*`.
-  uint32_t kind;
-  int64_t i;
-  float f[2];
 };
 
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
@@ -16322,82 +16056,6 @@ struct EeScreensSefmButton {
   float rect[4];
 };
 
-/// `EEUIFMainGame`'s C++ objects (ee/EEUIFMainGame.h; UI lane round 15), as untyped pointers the C++ casts at
-/// its uses: the unit information background, the wheel zoom and grab scroll events, the error strings' lock, the
-/// unit hack, the 200 ms poll and the mouse actions (scroll, click, lasso, build, calamity). The panel groups stay
-/// the class's (the game's other lanes read them typed).
-struct EeScreensMainFormObjects {
-  /// the background 0x64 (Open)
-  void *mUnitInfoBackground;
-  /// a `UIEvent*` (EE_SCREENS_CAM_WHEEL_ZOOM)
-  void *mWheelZoom;
-  /// a `UIEvent*`: the middle button's pressed and unpressed event (EECreateGrabScroll)
-  void *mGrabScroll;
-  /// a `TSCriticalSection*` guarding the error strings
-  void *mErrorCriticalSection;
-  /// an `EEUIFMGUnitHack*`
-  void *mUnitHack;
-  /// a `TMPoll*` (200 ms)
-  void *mPoll;
-  /// the actions: `EEAScroll*`, `EEAMouseClick*`, `EEALasso*`, `EEABuild*`, `EEACalamity*`
-  void *mScroll;
-  void *mMouseClick;
-  void *mLasso;
-  void *mBuild;
-  void *mCalamity;
-};
-
-/// The improvement button's call record's pointers (the C++ `EEUIBUpgradeCall` derives from it; its held text and
-/// reason follow): the `EEUIBUpgrade*`, the out text (a `UWideString*`: the tooltip, the refusal's reason, the new
-/// cost), the mouse location (a `const GE2DPoint*`).
-struct EeScreensUpgradeCallObjects {
-  void *mButton;
-  void *mOut;
-  const void *mLocation;
-};
-
-/// The UI manager's call record's pointers (the C++ `EEUIManagerCall` derives from it; StartScenarioEditor's two
-/// names follow): the `EEUIManager*`, UpdateMouse's location (a `const GE2DPoint*`).
-struct EeScreensManagerCallObjects {
-  void *mManager;
-  const void *mMouse;
-};
-
-/// The status box's call record's pointers (the C++ `EEUIFMGStatusBoxCall` derives from it; the held text and
-/// LoadIcons' description follow, hud_direct.rs `BoxCallHead`): the box (an `EEUIFMGStatusBox*`, its record
-/// first), the unit (Fill, Refresh), the complex unit (UpdateQueuedCounts), LoadIcons' four `GETexture*`s.
-struct EeScreensStatusBoxCallObjects {
-  void *mBox;
-  void *mUnit;
-  void *mComplex;
-  void *mTextures[4];
-};
-
-/// The main game form's call record's pointers and numbers (the C++ `EEUIFMGFormCall` derives from it, UI lane
-/// round 15; its three strings follow): the form (first: main_form_ffi.rs reads it), the picked unit, the chat
-/// line's colour and flags, the dialog message, the start modes' tech tree node, unit, caster and calamity, the old
-/// and new media, the mouse modes' first selected unit and tile, the placement whose Update runs, the command
-/// button and its help string's result (a `UWideString*`).
-struct EeScreensFormCallObjects {
-  void *mForm;
-  void *mPicked;
-  const void *mColor;
-  unsigned long mFlags;
-  const void *mMessage;
-  void *mNode;
-  void *mUnit;
-  void *mCaster;
-  void *mCalamity;
-  void *mOldMedia;
-  void *mMedia;
-  void *mFirst;
-  void *mTile;
-  void *mWall;
-  void *mGate;
-  void *mButton;
-  void *mOut;
-};
-
 /// The cursor's reads for one `UpdateCursorKind` (the C++'s `EeScreensCursorRead`, EEUIFMainGame.cpp's shims read
 /// it): the form, the local player, its selected group, the group's first unit and the picked target.
 ///
@@ -16407,129 +16065,6 @@ struct EeScreensCursorRead {
   void *mGroup;
   void *mFirst;
   void *mTarget;
-};
-
-/// `EEUIBUpgrade`'s members (ee/EEUIBUpgrade.h).
-struct EeScreensUpgradeFields {
-  /// the improvement (0x10: help string only, 0xc: no cost)
-  long mAttribute;
-  /// a `UITextLabel*`
-  void *mCostLabel;
-  /// `TMGetTime` of the last "cannot" chat line
-  unsigned long mLastMessageTime;
-  /// the level last shown
-  long mLevel;
-  long mNumQueued;
-  /// the button is on the scenario editor's form
-  bool mScenarioEditor;
-  /// `GetDisabled()` as of the last UpdateCost
-  bool mDisabled;
-};
-
-/// `EEUIFMGStatusBar`'s members (ee/EEUIFMGStatusBar.h): its parts (a `UIBitmap*` icon, two `UITextLabel*` value
-/// labels, a `UIStatusBar*`, two `GEBitmap*`s the destructor dereferences, the queued count's `GEText*`) and flags.
-struct EeScreensStatusBarFields {
-  void *mIcon;
-  void *mValue;
-  void *mValue2;
-  void *mBar;
-  void *mBitmap140;
-  void *mBitmap144;
-  void *mCount;
-  /// the icon is moved by (1, 1)
-  bool mPressed;
-  bool mShowCount;
-  /// `mEnabled` as of the last CopyData (DrawPolygons)
-  bool mCopiedEnabled;
-  bool mEnabled;
-};
-
-/// `EEUIMiniMap`'s members but its origin and lines (ee/EEUIMiniMap.h): the `EEAMiniMap*` action, the view
-/// edges drawn, the flare.
-struct EeScreensMiniMapFields {
-  void *mAction;
-  bool mDrawLine0;
-  bool mDrawLine1;
-  bool mDrawLine2;
-  bool mDrawLine3;
-  /// gMiniMap's flare is on (and the camera is not free)
-  bool mShowFlare;
-  /// toggles the flare colour each CopyData
-  bool mFlareBlink;
-};
-
-/// `EEUISCIFormManager`'s flags (ee/EEUISCIFormManager.h).
-struct EeScreensSciFormFields {
-  /// (Clear)
-  bool mBA0;
-  /// the in-game LoadScenario clears it; SIE Back closes the form
-  bool mIsInGame;
-  /// and sets this one; SIE Start posts the saved game
-  bool mIsLoadingFromGame;
-  /// the CSSE StartScenario sets it: a campaign scenario
-  bool mIsCampaign;
-  /// SIE Open sets it, Briefing scrolls to the end and clears it
-  bool mScrollBriefingToEnd;
-};
-
-/// `EEUICPortrait`'s members but its unit (ee/EEUICPortrait.h): the level's `GEText*`, the face's `GEBitmap*`,
-/// the unit class's `EEButtonObject*` (loaded while shown), the level, the bars and the level shown.
-struct EeScreensPortraitFields {
-  void *mText;
-  void *mPortrait;
-  void *mButton;
-  unsigned long mLevel;
-  bool mShowFirstBar;
-  bool mShowSecondBar;
-  bool mShowLevel;
-};
-
-/// `EEUIFMGAttribute`'s members (ee/EEUIFMGAttribute.h): the level's `GEText*`, the level shown.
-struct EeScreensAttributeFields {
-  void *mLevelText;
-  /// `mL128 > 0` as of the last CopyData
-  bool mShowLevel;
-};
-
-/// `EEUIFMGStatusButton`'s C++ objects (ee/EEUIFMGStatusButton.h): the `EEButtonObject*`, the dither and icon
-/// `GEBitmap*`s, the queue count's `GEText*`.
-struct EeScreensStatusButtonObjects {
-  void *mButtonObject;
-  /// textures\Dither over a disabled button
-  void *mDither;
-  void *mIcon;
-  void *mBuildQueue;
-};
-
-/// `EEUIBGenericBackground`'s numbers (ee/EEUIBGenericBackground.h): the opacity, the scale, the frame flags.
-struct EeScreensBackgroundFields {
-  float mOpacity;
-  /// EEUIFError::Open: the game window's width / 1024 and height / 768
-  float mScaleX;
-  float mScaleY;
-  /// (3 from EEUIFError)
-  unsigned long mFrameFlags;
-};
-
-/// `EEUIFMGUnitHack`'s members (ee/EEUIFMGUnitHack.h): its `EEUIFMainGame*` and its Rust record.
-struct EeScreensUnitHackFields {
-  void *mForm;
-  void *mRecord;
-};
-
-/// The box selection's and the right-drag command's C++ objects (ee/EEUICSelectUnits.h, EEUICCommandUnits.h):
-/// the `EEAMouseClick*` (the click; the command's listener), the `EEALasso*`, the arrow's `GEModel*` and
-/// `GETexture*`.
-struct EeScreensSelectUnitsObjects {
-  void *mClick;
-  void *mLasso;
-};
-
-/// The right-drag command's: its listener, the arrow's model and texture.
-struct EeScreensCommandUnitsObjects {
-  void *mListener;
-  void *mModel;
-  void *mTexture;
 };
 
 /// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,

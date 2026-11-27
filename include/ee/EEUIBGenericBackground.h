@@ -5,6 +5,7 @@
 // lle/UIBitmapBackground.h.
 #ifndef EE_EEUIBGENERICBACKGROUND_H
 #define EE_EEUIBGENERICBACKGROUND_H
+#include "rust/game/records.h"
 #include "rust/game/screens.h"
 #include "lle/UIBitmapBackground.h"
 

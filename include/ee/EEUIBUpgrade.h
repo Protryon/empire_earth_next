@@ -5,6 +5,7 @@
 // lle/UIButton.h.
 #ifndef EE_EEUIBUPGRADE_H
 #define EE_EEUIBUPGRADE_H
+#include "rust/game/records.h"
 #include "rust/game/screens.h"
 #include "lle/UIButton.h"
 

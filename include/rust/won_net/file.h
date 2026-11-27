@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/records.h"
 
 /// No error.
 constexpr static const int32_t WON_FILE_OK = 0;
@@ -27,17 +28,6 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
-
-/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
-/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
-struct EeWonFileReader {
-  void *file;
-  const uint8_t *buffer;
-  unsigned long length;
-  unsigned long position;
-  bool own_buffer;
-  bool memory_mode;
-};
 
 /// `FileWriter`'s state.
 struct EeWonFileWriter {

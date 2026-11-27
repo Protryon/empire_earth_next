@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/reqop.h"
+#include "rust/won_net/records.h"
 
 /// The current server's address (`GetCurAddr()`, six bytes): `ee_won_hostop_bytes`
 constexpr static const int32_t EE_WON_REQHOST_CUR_ADDR = -1;

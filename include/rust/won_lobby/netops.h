@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/eexfer.h"
-#include "rust/won_lobby/lobbyhost.h"
-#include "rust/won_lobby/routelogic.h"
+#include "rust/won_lobby/records.h"
 
 extern "C" {
 

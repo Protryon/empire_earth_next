@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ shim's methods).
 enum class EeUiEditCall : uint32_t {

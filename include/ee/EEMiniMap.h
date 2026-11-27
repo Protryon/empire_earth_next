@@ -7,6 +7,7 @@
 #include <vector>
 #include "rust/game/gamecpp.h"
 #include "rust/game/rts.h"
+#include "rust/game/app.h"
 
 class GEScreen;
 class EEPlayer;

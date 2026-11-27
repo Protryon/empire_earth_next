@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/eegame.h"
-#include "rust/won_lobby/eexfer.h"
+#include "rust/won_lobby/records.h"
 
 extern "C" {
 

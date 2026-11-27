@@ -12,6 +12,7 @@
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEUIBuildWall.h"
 #include "lle/UIForm.h"
+#include "rust/game/records.h"
 
 class EEUIFMGMainGroup;
 class EEUIFMGStatusButton;

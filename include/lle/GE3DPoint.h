@@ -6,6 +6,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 // C:\EEX\Low-Level Engine\Graphics Engine\GEVector.h (RECONSTRUCTION). GEVector.cpp (__FILE__ anchor, ~0x10036755)
 // held the quantized-vector code and the magnitudes (Rust: ee_base vector.rs; lle/GERust.h).

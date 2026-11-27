@@ -5,6 +5,7 @@
 #ifndef EE_EESOUNDOBJECT_H
 #define EE_EESOUNDOBJECT_H
 
+#include "rust/data/records.h"
 #include "rust/data/tables.h"
 #include "rust/data/media.h"
 #include "rust/game/preload_media.h"

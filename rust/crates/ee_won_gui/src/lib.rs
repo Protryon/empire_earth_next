@@ -73,6 +73,8 @@ pub mod platimg;
 pub mod platloop;
 pub mod platwin;
 pub mod platwm;
+/// The records C++ classes derive from or embed (include/rust/won_gui/records.h, declaring no function).
+pub mod records;
 pub mod registry;
 pub mod rootobj;
 pub mod rowobj;

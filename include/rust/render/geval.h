@@ -6,7 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
+#include "rust/base/records.h"
+#include "rust/render/records.h"
 
 /// A vertex field of `ee_ge_va_get` / `ee_ge_va_set` (three floats, two for `Uv`, one for `Opacity`).
 enum class EeGeVaField : uint32_t {
@@ -22,44 +23,6 @@ struct EeGePolygonArray;
 
 /// A `GEVertexArray`'s Rust array: type 0 standard (`GXVERTEX`), 1 coloured (`GXVERTEX_STD_COLOR`).
 struct EeGeVertexArray;
-
-/// `GEViewport` (sizeof 0x288): the C++ class derives from it (lle/GEViewport.h), so C++ names its fields.
-struct EeGeViewport {
-  EeGeRectangle mOrthographicRectangle;
-  EeGeRectangle mViewRectangle;
-  EeGe3DPlane mFrontPlane;
-  EeGe3DPlane mRearPlane;
-  EeGe3DPlane mLeftPlane;
-  EeGe3DPlane mRightPlane;
-  EeGe3DPlane mTopPlane;
-  EeGe3DPlane mBottomPlane;
-  EeGeTransformation mCamera;
-  EeGeTransformation mCameraInverse;
-  EeGeTransformation mOrthographicDenormalization;
-  EeGeTransformation mPerspectiveDenormalization;
-  EeGeTransformation mOrthographicProjection;
-  EeGeTransformation mPerspectiveProjection;
-  EeGeVector mCameraLookAtVector;
-  float mOrthographicScale;
-  float mOrthographicDepthScale;
-  float mOrthographicDepthOffset;
-  float mPerspectiveScale;
-  float mPerspectiveDepthScale;
-  float mPerspectiveDepthOffset;
-  float mAspectRatio;
-  float mAspectRatioMultiplier;
-  float mFieldOfView;
-  float mFieldOfViewMultiplier;
-  float mFrontClippingDistance;
-  float mHalfHeight;
-  float mHalfWidth;
-  float mRearClippingDistance;
-  float mXCenter;
-  float mYCenter;
-  float mYClippingPlane;
-  float mNearDepth;
-  float mFarDepth;
-};
 
 extern "C" {
 

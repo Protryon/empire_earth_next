@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/chat.h"
+#include "rust/won_net/records.h"
 
 /// A number of the parser.
 enum class EeWonChatParserNumber {

@@ -11,6 +11,7 @@
 
 #include "ee/EEPhysics.h"
 #include "ee/EEGraphicObject.h"
+#include "rust/render/gfx.h"
 
 
 // The name tests, the speed and the update are ee_gfx effect_orbit.rs' (the prefixes "orbital_cw_" and "orbital_ccw_",

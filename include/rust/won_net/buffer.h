@@ -6,20 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
-struct EeWonByteBuffer;
-
-/// `WriteBuffer`'s state.
-struct EeWonWriteBuffer;
-
-/// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
-struct EeWonReadBuffer {
-  /// the read position
-  long pos;
-  const uint8_t *data;
-  long length;
-};
+#include "rust/won_net/records.h"
 
 extern "C" {
 

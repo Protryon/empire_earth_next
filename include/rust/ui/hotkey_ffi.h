@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/hotkeyobj.h"
+#include "rust/ui/records.h"
 
 extern "C" {
 

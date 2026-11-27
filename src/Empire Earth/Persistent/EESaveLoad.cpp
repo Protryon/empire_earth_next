@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
+#include "rust/game/gamecpp.h"
 
 // the last save/load error message (0x531c70; EESaveLoad's functions pass it as their error out-parameter, and the
 // game and the scenario editor read it; provisional name)

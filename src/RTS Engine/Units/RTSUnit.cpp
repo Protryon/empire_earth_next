@@ -61,3 +61,14 @@ void ee_rtsucpp_sight_off(RTSUnit* inUnit) { inUnit->SightOffHere(); }
 void ee_rtsucpp_unit_invalidate(RTSUnit* inUnit) { inUnit->Invalidate(); }
 void ee_rtsucpp_unit_repair_pointers(RTSUnit* inUnit, unsigned long inFirst, unsigned long inSecond) { inUnit->RepairPointers(inFirst, inSecond); }
 }
+
+// out of line from ee/RTSUnit.h (its Rust function headers stay out of it)
+void RTSUnit::Invalidate() { ee_rts_unit_invalidate(this); }
+void RTSUnit::Describe(UWideString& ioString) { ioString += ee_rts_unit_describe(this, false); }
+void RTSUnit::DescribeLong(UWideString& ioString) { ioString += ee_rts_unit_describe(this, true); }
+void RTSUnit::Clear() { ee_rts_unit_clear(this); }
+void RTSUnit::FreeNode() { ee_rts_unit_free_node(this); }
+RTSUnit::RTSUnit() { ee_rts_unit_construct(this); }
+void RTSUnit::Initialize(long inLinked) { ee_rts_unit_initialize(this, inLinked); }
+void RTSUnit::Reset() { ee_rts_unit_reset(this); }
+void RTSUnit::Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }

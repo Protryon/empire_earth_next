@@ -303,3 +303,147 @@ Gates on b1c062eab before C: ran out of space (other lanes' runs, 0.7 GB free at
 batch 31's b31q, the Rust gate PASS, captures oracle, late, units, scenario, calamity, effects, groups PASS, the
 saveload matrix PASS, scenario_check 27/27, sim_editor and --civbuilder PASS, won_host_coverage PASS, the editor tour
 PASS. Not finished: wontest (stopped at driver 72 by "no space on device"), the random-game tour and gates.sh.
+
+## Round 5 (branch rust-headers5, 2026-11-27): the records pass's tooling, function headers off the class headers
+
+State: items 1-4 of the brief landed; target -500 C++ lines not met (the out-of-lining adds definitions: see
+Measures). No forks (disk). Base: 14ec12ad7 (round 4 after batch 31; origin/rust 38bb1e104 in it).
+
+### Commits lanes should merge for the records headers early
+
+- (a) records headers + the no-functions test, (b) the math-type renames and (c) the record-base offset check are one
+  commit, 230aa3b95 (split.rs, the nine records.rs, the xtask test, CPP_VALUES with the GeColor/U2DPoint mirrors and
+  the EeAppCameraFields proof, record_head.rs + heads.rs + ee/EERecordBase.h + EEWorldLayoutRegister's list).
+- e8c872fb4: function headers include only records headers (a type another module names goes to records; an emptied
+  module keeps a stub header). bb448d58c and d59859c2d: the union test's fix and a clippy fix (the Rust gate).
+- To take everything: merge d59859c2d (the branch tip before the docs). Everything sits on round 4 (14ec12ad7), which
+  is not in origin/rust yet: merging it brings round 4 too (batch 33's job; `git merge-tree` of the tip with
+  rust-batch33 shows round 4's 66 conflicts with batch 32 plus EEPlayer.h/EEPlayer.cpp/EEUnit.h, and EETechTree.cpp,
+  which player/tech 4 deleted while this round appended the tech tree classes' out-of-line bodies to it: they move to
+  whichever .cpp holds the tech tree now).
+- Game core 18 (b32b8fa72) has its own `ee_sim/src/records.rs` that defines its records (EeRtsWorldFields, ...): the
+  same module and file name. The merge is an add/add conflict on that file and on `pub mod records;` in ee_sim's
+  lib.rs: keep both (their definitions, this round's `pub use` list); split.rs takes a records.rs's definitions as
+  records as well, so nothing else changes.
+- After a merge: `python -I tools/rust_build.py header` (a lane's new types land in the right header by themselves),
+  then add a missing `#include "rust/<crate>/<module>.h"` where a unit used a module's functions through another
+  module's header (`python -I tools/rust_includes.py FILE...` on the failing files only; on all files it touches
+  60+ unrelated ones, and in tests/won it adds headers that clash with the drivers' own enums).
+
+### What moved
+
+- **Records headers** (census/PLAN.md decision 2). `rust/crates/<crate>/src/records.rs` lists (`pub use`) the
+  records C++ classes derive from or embed, or defines them; xtask split.rs (`record_roots`, `assign_records`) puts
+  them, every type they name, and every type another module's header names into
+  `include/rust/<crate>/records.h` (base, data, game, render, sim, ui, won_gui, won_lobby, won_net). A records header
+  declares no function and includes only records headers (and the lle math headers below); split.rs refuses
+  anything else and the xtask test `the_records_headers_declare_no_function` checks the checked-in ones. A function
+  header (`rust/sim/units.h`, ...) includes only records headers. A module whose every item moved keeps a header
+  that includes its records header (ui/obj.h, base/png.h, won_net/md5.h, ...).
+  - 105 class headers that derive from or embed a record include its records header (build/hd5/addinc.py).
+  - Records added beyond the bases and members: EEProductionEntry, EEComplexUnitAttacker (EEComplexUnit's
+    containers), and the types EEPlayer.h names in members and declarations (EeUnitsPlayerEvents, ...Groups,
+    ...Lists, ...Stats, ...StatPoint, ...SaveIo, ...Refs, ...OffMapInfo, EeUnitsAtc, EeUnitsPatrolGroup,
+    EeRtsUnitBucket).
+- **C++ value classes in records** (decision 1): split.rs `CPP_VALUES` maps a Rust math mirror to its C++ class
+  (`EeGe3DPoint` -> `GE3DPoint`, GEVector, GE3DLine, GE3DPlane, GE2DPoint, GETransformation, GEOrientation,
+  GEQuaternion, GEBoundingBox, GERectangle, and the new mirrors `GeColor` -> `GEColor`, `U2DPointLong` ->
+  `U2DPoint<long>`, `U2DPointFloat` -> `U2DPoint<float>` in ee_base math types.rs). In a records header (not base's
+  or render's: the lle math headers include those) a member of a mirror's type is declared with the class, the
+  header includes `lle/LowLevelEngineCore.h` and the lle geometry chain (`CPP_VALUE_CHAIN`, the order
+  LowLevelEngine.h uses: the classes need each other) and static_asserts sizeof and alignof equal. Proof:
+  EeAppCameraFields' members are GE3DPoint/GEQuaternion/GETransformation; EECameraControl.cpp passes `CAM->mView`
+  as the GETransformation it is (no cast).
+- **Record bases** (decision 3): `ee_base::record_head!` declares a class's head (`head { vptr: VTablePointer }` or
+  `head { counter: UReferenceCounterHead }`, then `records { a: RecA, b: RecB }`): a `#[repr(C)]` struct whose
+  field offsets are the records' offsets in the class, with `BASES`; `record_head::check` compares the C++'s list.
+  `ee/EERecordBase.h`: `EERecordBaseOffset<Class, Record>()` and `EE_RECORD_BASE(Class, Record)`.
+  ee_sim world heads.rs declares RTSUnit, EEUnitClass, EEUnitClassUpgrade, EEPlayer, RTSMap, EETechTreeNode and
+  EETechTree; `EEWorldLayoutRegister` hands the 11 record bases to `ee_world_record_bases_check` at start-up (oracle
+  seeds 2-7 identical with it on). A lane can now read such a record at `offset_of!(Head, field)` and drop its layout
+  entry; the classes whose bases follow a C++ class with members (EEUnit, EEComplexUnit, EEMap, EEComputerPlayer,
+  EEPhysics, EETown) get a head once that class's members are records.
+- **Hot headers** (item 4; build/hd5/outline.py moves the member bodies that name a header's declarations to the
+  class's .cpp, the declaration with its defaults and comments staying):
+  - EEPlayer.h: 139 bodies (EEPlayer.cpp; the tech tree classes' to EETechTree.cpp), EESaveIsPrimitive,
+    EETechHost; no rust/sim/units.h, rust/game/rts.h, rust/game/tech_tree.h.
+  - RTSUnit.h (9, RTSUnit.cpp), EEMap.h (34: RTSTile.cpp, EETile.cpp, RTSMap.cpp, EEMap.cpp), RTSWorld.h (11),
+    EEWorld.h (18), EECameraControl.h (18, with its three helpers), EEGameOptions.h (5), EEVoting.h: no function
+    headers.
+  - Units rebuilt by a touch of a header (static include closure over the 245 exe units, build/hd5/incmeasure.py):
+
+    | header | before | after |
+    |---|---|---|
+    | rust/sim/units.h | 159 | 111 |
+    | rust/sim/app.h | 149 | 47 |
+    | rust/game/tech_tree.h | 98 | 12 |
+    | rust/game/rts.h | 145 | 108 |
+    | rust/game/gamecpp.h | 156 | 148 |
+
+### Measures (port_metrics 14ec12ad7 -> bb448d58c)
+
+| cpp_lines | cpp_files | code | shim | logic | classes | extern_c | rust_hdrs | unsafe | layout | rust_lines |
+|---|---|---|---|---|---|---|---|---|---|---|
+| +711 | 0 | +365 | +107 | +258 | 0 | +2 | +10 | +6 | +6 | +895 |
+
+The C++ grew: 223 member bodies moved out of headers each gain an out-of-class signature (`Ret Class::Name(...)`), and
+105 class headers gained a records include. Logic +258 is the same bodies counted again in the .cpp files (the
+metric counts a multi-statement body as logic wherever it is; the header lost only their declarations' bodies).
+rust_hdrs +10: the nine records headers and base/record_head.h (emptied stubs counted as headers).
+
+### Gates (on bb448d58c / the clippy fix after it; base 14ec12ad7, origin/rust 38bb1e104 in it; batch 32 not merged)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | 0 unresolved, 0 duplicates (EE-AOC 290, EE-SIM 291, test 290 inputs) |
+| `rust_build.py header` / `gate` | current (376 headers) / PASS on d59859c2d (the first run found a clippy closure) |
+| oracle seeds 2-7 (against round 4's hd4m) | identical (twice: after the heads check, after the function-header split) |
+| captures oracle, late, units, groups | PASS (598, 598, 510, 6 digests) |
+| saveload matrix | PASS |
+| scenario_check | 27/27 |
+| won_host_coverage, xbuild wontest | PASS (after reading enums from records headers too), 185/185 exit 0 |
+| gates.sh | GATES PASS: tour; ai-game time-cap units [4, 38, 39], alive_computers [2, 3], classic_lua x 2; lan-game |
+
+Captures: oracle and late (always), units (EEUnit/RTSUnit/EEPlayer/EEMap bodies moved), groups (EEGroup's and
+EEActiveGroup's bodies moved). Not run: calamity, effects, scenario, transport, space, missile, app, placement (no
+logic changed; the moved bodies are the same calls), sim_editor (no editor code), eedata (no table or rule), POSIX
+census (no Linux sysroot here; the address-of-temporary check does not apply: no new call sites).
+
+### Left
+
+- EEUnit.h (238 bodies naming cp.h, combat.h, units.h) and the unit headers that include rust/sim/units.h:
+  EEUnitVectorItem.h (14), EEUnitAction.h (1), EEUnitClassImprovement.h (2), EEUnitGoal.h (66), EEUnitKind.h
+  (constants: list them in sim's records.rs), EEUnitStore.h, EEUnitUpdate.h and EEPhysics.h (name nothing of it:
+  the include just goes). Then rust/sim/units.h's 111 units fall to its real users. build/hd5/outline.py does it.
+- rust/game/gamecpp.h is still included by 30 headers (148 units).
+- The record-base heads of the classes whose first base has C++ members (EEUnit, EEComplexUnit, EEMap,
+  EEComputerPlayer, EEPhysics, EETown) wait for those members to become records; the layout entries the seven heads
+  cover can go now (pt3's pilot drops the player ones).
+- Round 4's left list (item 5) untouched.
+
+### How to add a record (the data records pass; common.md points here)
+
+1. **Define the record in Rust**, `#[repr(C)]`, fields under the C++ member names (`/// cbindgen:field-names=[...]`
+   or `mName` fields), wherever its crate keeps it (e.g. `ee_sim::world::player_fields`).
+2. **List it in its crate's `records.rs`** (`rust/crates/<crate>/src/records.rs`): `pub use <path>::{EeFooFields};`
+   (or define it there). The header split (xtask split.rs) then puts its C declaration, and that of every type it
+   names (enums, nested records, other crates' records), into `include/rust/<crate dir>/records.h` instead of its
+   module's header. `cargo run -p xtask -- cbindgen` (`python -I tools/rust_build.py header`) fails when a listed
+   name is not in the generated header (not `#[repr(C)]`, not reachable: add it to `[export] include` in
+   rust/cbindgen.toml) or when a record would name a type no one crate owns.
+3. **The class header includes only the records header**: `#include "rust/sim/records.h"` and derives from (or
+   embeds) the record; C++ keeps direct field access. No accessor functions. A records header declares no function
+   and includes only other records headers (and the C++ value classes' headers, below); the split refuses anything
+   else and the xtask test `the_records_headers_declare_no_function` checks the checked-in ones.
+4. **Math values**: a record member of a Rust math mirror (`Ge3DPoint`, `GeVector`, `GeTransformation`,
+   `GeOrientation`, `GeQuaternion`, `GeRectangle`, `GeBoundingBox`, `Ge3DLine`, `Ge3DPlane`, `Ge2DPoint`, and the new
+   `GeColor`, `U2DPointLong`, `U2DPointFloat` in ee_base math types.rs) is declared in the records header with the
+   C++ class (`GE3DPoint mPos;`, `GEColor`, `U2DPoint<long>`), the header includes the class's lle header and
+   static_asserts one size and alignment (split.rs `CPP_VALUES`; not in base's and render's records headers, which
+   the lle classes' own headers include). C++ uses the member as the class directly.
+5. **The record's offset in its class**: when everything before the record in the class is a vtable pointer, records
+   or such classes, declare the class's head (`ee_base::record_head!`, e.g. ee_sim world heads.rs) and read the record
+   at `offset_of!(Head, field)` instead of a layout entry; add `EE_RECORD_BASE(Class, Record)` to the list in
+   `EEWorldLayoutRegister` (`ee/EERecordBase.h`), which `ee_world_record_bases_check` compares with every head at
+   start-up (a head the C++ does not check is an error too). Then drop the layout entry.
+6. Regenerate the headers, build both profiles, and run the lane checks.

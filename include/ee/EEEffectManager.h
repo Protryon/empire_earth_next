@@ -12,6 +12,7 @@
 #include "lle/FSRestorable.h"
 #include "lle/U2DPoint.h"
 #include "ee/EEEffect.h"
+#include "rust/render/gfx.h"
 
 class EEGraphicEffect;
 class EEUnit;

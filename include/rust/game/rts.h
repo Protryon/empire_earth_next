@@ -6,61 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/sim/world.h"
-
-/// `RTSPhysics`' plain members (`ee/EEPhysics.h`), in the class's order: a base of the class.
-struct EeRtsPhysicsFields {
-  /// saved, otherwise unused (= 0)
-  unsigned long mL28;
-  /// the timer runs (= false)
-  bool mTimerRunning;
-  /// seconds per tick (= 1)
-  float mSpeed;
-  /// the timer's interval in milliseconds (= 1000)
-  unsigned long mTimerInterval;
-  /// (= 1)
-  unsigned long mTicksPerSecond;
-  /// the ticks run since the timer started
-  unsigned long mTicksRun;
-  /// the ticks the loop still owes
-  unsigned long mTicksOwed;
-  /// the constructor's ticks per second
-  unsigned long mDefaultTicksPerSecond;
-  /// the thread is to end (message 0x401)
-  bool mStopThread;
-  /// (= true before the thread starts)
-  bool mSlowPlayback;
-};
-
-/// `RTSGraphics`' plain members (`ee/RTSGraphics.h`), in the class's order: a base of the class.
-struct EeRtsGraphicsFields {
-  /// the rasterizer's screen
-  unsigned long mScreen;
-  /// message 0x40e: the overdraw display mode
-  bool mShowOverdraw;
-  long mL50;
-  /// message 0x408 (clearing it redraws the UI)
-  bool mB54;
-  /// (= true; volatile)
-  bool mIsPaused;
-  /// PostResume waits for it to clear (volatile)
-  bool mIsPausePending;
-  /// PostPause waits for it to clear (volatile)
-  bool mIsResumePending;
-  /// message 0x401: the thread ends
-  bool mIsQuitting;
-  bool mIsWindowed;
-  /// message 0x40a
-  bool mIsSlowPlayback;
-  /// RenderLobby: the lobby frame packed into the frame surface
-  uint32_t mLobbySerial;
-  /// RenderLobby: the back buffer's size last given to the lobby
-  unsigned long mLobbySecondaryWidth;
-  unsigned long mLobbySecondaryHeight;
-  /// RenderLobby: `TMGetTime` of the last ShowScene
-  unsigned long mLobbyShownTime;
-};
+#include "rust/base/records.h"
+#include "rust/sim/records.h"
 
 /// `EELobbyLockFrame`'s outputs.
 struct EeRtsLobbyFrame {
@@ -73,23 +20,6 @@ struct EeRtsLobbyFrame {
   uint32_t serial;
 };
 
-/// `RTSMouse`' plain members (`ee/RTSMouse.h`), in the class's order: a base of the class.
-struct EeRtsMouseFields {
-  float mSensitivity;
-  /// the desktop's height (unsigned: Update divides by it)
-  unsigned long mDesktopHeight;
-  unsigned long mDesktopWidth;
-  long mWheel;
-  /// the pointer picture (volatile)
-  long mPointer;
-  /// the overlay picture (= 8; volatile)
-  long mOverlay;
-  /// the local player's shift mode (volatile)
-  bool mShiftMode;
-  bool mBA2;
-  bool mIsFrozen;
-};
-
 /// `GEVideoMode`.
 struct EeRtsVideoMode {
   unsigned long width;
@@ -97,12 +27,6 @@ struct EeRtsVideoMode {
   unsigned long refresh_rate;
   unsigned long bit_count;
   unsigned long pixel_format;
-};
-
-/// `RTSUnitBucket`: the first unit of the bucket's chain and its count.
-struct EeRtsUnitBucket {
-  size_t first;
-  unsigned long count;
 };
 
 /// `RTSMapVertexColors`: a rectangle of colour-table indices (x in [left, right), y in [bottom, top), row-major).

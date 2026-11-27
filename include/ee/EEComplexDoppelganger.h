@@ -7,6 +7,7 @@
 #define EE_EECOMPLEXDOPPELGANGER_H
 
 #include "ee/EEDoppelganger.h"
+#include "rust/sim/records.h"
 
 class EEComplexDoppelganger : public EEDoppelganger, public EeUnitsComplexDopFields {
 public:

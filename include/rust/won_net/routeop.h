@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `mGroupId` (u16)
 constexpr static const int32_t EE_WON_RTF_GROUP_ID = 0;
@@ -168,12 +167,6 @@ constexpr static const int32_t EE_WON_RTR_BAD_USER = 6;
 /// the client joined server notice's client
 constexpr static const int32_t EE_WON_RTR_OP_CLIENT = 7;
 
-/// A routing op, as the C++ `RoutingOp` holds it.
-/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none); the third a firewall
-/// check's listening socket (the deleted `RoutingDetectFirewallOp::mListenSocket`: a `BlockingSocket*` as its
-/// `RefCount*` with a reference, 0 for none; routecpp.rs, R6 WON lobby and network round 36).
-struct EeWonRouteOp;
-
 /// Receives one recipient id.
 using EeWonRouteIdSink = void(*)(void *context, uint16_t id);
 
@@ -186,40 +179,6 @@ struct EeWonRouteOpRead {
   /// `CheckLeaveGroup` leaves `leave_group` (a `RoutingLeaveGroupOp` run async)
   bool leave;
   uint16_t leave_group;
-};
-
-/// A record copied out (`ee_won_routeop_records`): the fields of its kind are set; texts are UTF-16 units and the
-/// pointers are valid only during the sink's call.
-struct EeWonRouteRecord {
-  /// `EE_WON_RTR_*`
-  int32_t kind;
-  /// its map's key
-  uint16_t key;
-  uint16_t id;
-  uint32_t flags;
-  uint32_t user_id;
-  uint32_t address;
-  uint16_t trust;
-  uint16_t parent;
-  uint16_t captain;
-  uint16_t max_clients;
-  uint32_t async_flags;
-  uint16_t observers;
-  uint16_t max_players;
-  uint8_t member_flags;
-  const uint16_t *name;
-  size_t name_len;
-  const uint8_t *data_type;
-  size_t data_type_len;
-  const uint8_t *data;
-  size_t data_len;
-  bool has_data;
-  uint32_t expiration;
-  uint32_t moderator_id;
-  const uint16_t *moderator_name;
-  size_t moderator_name_len;
-  const uint16_t *comment;
-  size_t comment_len;
 };
 
 /// Receives one record; valid only during the call.

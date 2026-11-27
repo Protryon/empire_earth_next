@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// the op's peer data object as the op holds it (a hostauth.rs handle in the game, a stand-in's number in the drivers;
 /// 0 before a login): `ee_won_hostop_num`

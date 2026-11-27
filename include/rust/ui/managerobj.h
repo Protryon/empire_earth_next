@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ shim's methods). Rectangles and points travel in `f`.
 enum class EeUiManagerCall : uint32_t {
@@ -101,9 +101,6 @@ enum class EeUiManagerCall : uint32_t {
   /// The UI lock (`TSCriticalSection*`; the harness's bridge try-enters it).
   UiLock = 61,
 };
-
-/// The Rust UIManager.
-struct EeUiManager;
 
 /// `ChangeIMECompositionString`'s arguments (the C++ `UWideString`, `UString` and cursor), handed on to the top
 /// form's.

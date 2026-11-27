@@ -226,6 +226,10 @@ CHECKS = [
 
 def enum_values(header, name):
     text = (HDR / header).read_text(encoding="utf-8")
+    # a type another module's header names lives in its crate's records header (xtask split.rs)
+    records = (HDR / header).with_name("records.h")
+    if records.exists():
+        text += records.read_text(encoding="utf-8")
     m = re.search(r"enum class " + name + r"\b[^{]*\{(.*?)\n\};", text, re.S)
     if not m:
         return None

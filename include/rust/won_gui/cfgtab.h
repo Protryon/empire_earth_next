@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/cfgset.h"
-#include "rust/won_gui/guiconf.h"
+#include "rust/won_gui/records.h"
 
 constexpr static const int32_t EE_WON_CFG_T_BUTTON = EE_WON_CFG_KEYS_BUTTONCONFIG_VIRTUAL24_ININSTRUCTION;
 

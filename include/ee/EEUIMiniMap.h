@@ -10,6 +10,7 @@
 #define EE_EEUIMINIMAP_H
 
 #include "ee/EEUIRustControl.h"
+#include "rust/game/records.h"
 
 class EEMiniMap;
 

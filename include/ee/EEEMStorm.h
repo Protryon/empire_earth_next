@@ -8,8 +8,10 @@
 #define EE_EEEMSTORM_H
 
 #include <vector>
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
 #include "lle/U2DRectangle.h"
+#include "rust/sim/app.h"
 
 class EEEnvironmentManager;
 class FSFile;

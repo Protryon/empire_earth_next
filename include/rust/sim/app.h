@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/sim/units.h"
+#include "rust/sim/records.h"
 
 /// id -> text, len: the string resource
 constexpr static const int32_t EE_APP_CHEAT_OP_STRING = 1;
@@ -94,27 +94,8 @@ constexpr static const int32_t EE_APP_STORM_OP_RANDOM = 13;
 /// the environment manager's colour back to the storm colour
 constexpr static const int32_t EE_APP_STORM_OP_RESET_COLOR = 14;
 
-/// The cheat table (`mCodes`, `mIsSinglePlayerOnly`).
-struct EeAppCheats;
-
 /// A unit set.
 struct EeUnitSet;
-
-/// The map's numbers the bodies read (`RTSMap`'s and `EEMap`'s plain members, names kept).
-struct EeAppMapDims {
-  /// `mSize`: the square's side in tiles
-  long size;
-  /// `mL195610` and `mL195614`: the diamond's two side lengths
-  long l195610;
-  long l195614;
-  /// `mF1955F4`: the tile height (`GetF1955F4`)
-  float f1955f4;
-  /// `mU195650`: the base terrain; `mU19565C`: the cliff terrain
-  long base_terrain;
-  long cliff_terrain;
-  /// `mU19561C`: the player count
-  unsigned long players;
-};
 
 /// A unit's reference count changed by `delta` (the C++'s `Reference` / `Dereference`, applied at once).
 using EeAppActiveRefsFn = void(*)(uint32_t, int32_t);
@@ -187,25 +168,6 @@ struct EeAppStatsRecord {
   long play_time;
 };
 
-/// The storm's plain members (names and order the C++ class's).
-struct EeAppStormFields {
-  /// = 1; clamped to [0, 2]
-  float mTargetIntensity;
-  /// = 1; the weather effect's intensity follows it
-  float mIntensity;
-  /// = 0.02: the fade's relative step
-  float mStep;
-  /// the kind (1..4)
-  long mType;
-  /// = 1; the step's state (2 routing, 3 moving, 4 pausing, 5 dying, 6 over, 7 lingering, 8 to route again)
-  long mState;
-  unsigned long mNextMoveTime;
-  /// = -1
-  unsigned long mEndTime;
-  /// a hurricane or a blizzard
-  bool mIsSevere;
-};
-
 /// One host operation's arguments and answers.
 struct EeAppStormIo {
   bool flag;
@@ -232,16 +194,6 @@ struct EeAppTeamsWorld {
 
 /// A unit-type callback (`EEUnitSetFunctor::Execute` through its C++ trampoline): false stops the walk.
 using EeUnitSetVisit = bool(*)(void *functor, uint32_t unit_type);
-
-/// `EEVoting`'s members (the class's base; zero when made).
-struct EeAppVoting {
-  /// the proposed edict (0: none)
-  int16_t mEdict;
-  int16_t mU06;
-  bool mB08;
-  bool mB09;
-  bool mB0A;
-};
 
 extern "C" {
 

@@ -5,6 +5,7 @@
 // Requires the engine declarations of: GETransformation.
 #ifndef EE_EEGHOSTUNIT_H
 #define EE_EEGHOSTUNIT_H
+#include "rust/sim/records.h"
 #include "rust/sim/units.h"             // the inline bodies' Rust calls
 
 // vtable 0x446ef4; bases EEGhostUnit; sizeof 0x334; ctor 0x20360e; ??_G 0x20368b; dtor 0x2036a7

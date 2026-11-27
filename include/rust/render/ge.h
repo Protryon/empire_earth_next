@@ -6,9 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/render/geval.h"
-#include "rust/sim/world.h"
+#include "rust/base/records.h"
+#include "rust/render/records.h"
+#include "rust/sim/records.h"
 
 /// The glyph atlas textures' pixel format (`kPixelFormatA4R4G4B4`).
 constexpr static const unsigned long GE_FONT_ATLAS_FORMAT = 2;
@@ -871,12 +871,6 @@ enum class EeGeTexStage : uint32_t {
   TextureAddressingMode,
 };
 
-/// A model as `GEModel::StoreLoaded` takes it.
-struct EeGeCemModel;
-
-/// The bitmap.
-struct EeGeBitmap;
-
 /// The font.
 struct EeGeFont;
 
@@ -895,15 +889,6 @@ struct EeGeModelManager;
 /// The primitive.
 struct EeGePrim;
 
-/// The rasterizer.
-struct EeGeRasterizer;
-
-/// The terrain mesh.
-struct EeGeTerrainMesh;
-
-/// The text.
-struct EeGeText;
-
 /// The texture.
 struct EeGeTexture;
 
@@ -915,13 +900,6 @@ struct EeGeTextureSet;
 
 /// The window.
 struct EeGeWin;
-
-/// `GEColor`: red, green, blue.
-struct EeGeRastColor {
-  float red;
-  float green;
-  float blue;
-};
 
 /// The host: `owner` is the C++ bitmap of the object calling.
 using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
@@ -957,27 +935,6 @@ struct EeGeTextOps {
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
 };
 
-/// `GELight`'s members in the C++'s order (sizeof 0x74).
-struct EeGeLight {
-  float color[3];
-  float computed_color[3];
-  float location[3];
-  float model_space_location[3];
-  float direction[3];
-  float model_space_direction[3];
-  float attenuation0;
-  float attenuation1;
-  float attenuation2;
-  float intensity;
-  float range;
-  float range_inverse;
-  float range_squared;
-  float model_space_range;
-  float model_space_range_inverse;
-  float model_space_range_squared;
-  unsigned long style;
-};
-
 /// One command as the executor reads it.
 struct EeGeDraw2D {
   EeGeDraw2DKind kind;
@@ -1009,19 +966,6 @@ using EeGeManHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
 
-/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
-struct EeGeSharedFrame {
-  uint32_t frame;
-  int32_t offset;
-};
-
-/// The shared frames a model load hands its file and its store (`GEModelManager::LoadModel`): `count` entries in the
-/// frames' order (the original's `std::map<unsigned long, long>`; `frames` NULL when there are none).
-struct EeGeSharedFrames {
-  const EeGeSharedFrame *frames;
-  size_t count;
-};
-
 /// The map's tiles and water for the edits: the map (`EEMap*`) and its mesh's Rust object, then the C++'s calls.
 struct EeGeMapHost {
   void *map;
@@ -1051,46 +995,6 @@ using EeGeModHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t a,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
-
-/// A material's ranges at one LOD: `GetVertexStartingIndex()`, `GetPolygonStartingIndex(lod)`,
-/// `GetPolygonRangeLength(lod)`.
-struct EeGePhysicalMaterial {
-  unsigned long vertex_start;
-  unsigned long polygon_start;
-  unsigned long polygon_length;
-};
-
-/// The callback table over `GEModel*` handles (`const GEModel*` as `*const c_void`).
-struct EeGePhysicalModels {
-  bool (*has_parent)(const void *model);
-  void (*internal_transform)(const void *model, unsigned long frame, EeGeTransformation *out);
-  void (*center)(const void *model, EeGe3DPoint *out);
-  float (*radius)(const void *model, unsigned long frame);
-  void (*bbox)(const void *model, unsigned long frame, EeGeBoundingBox *out);
-  unsigned long (*material_count)(const void *model);
-  void (*material)(const void *model,
-                   unsigned long index,
-                   unsigned long lod,
-                   EeGePhysicalMaterial *out);
-  void (*triangle)(const void *model,
-                   unsigned long frame,
-                   unsigned long lod,
-                   unsigned long polygon,
-                   unsigned long vertex_start,
-                   EeGe3DPoint *out);
-  unsigned long (*sub_model_count)(const void *model);
-  const void *(*sub_model)(const void *model, unsigned long index);
-  unsigned long (*lod_count)(const void *model);
-  unsigned long (*polygon_count)(const void *model, unsigned long lod);
-  /// `GEPhysicalModel theModel(model, location, scale); theModel.SetFrame(frame);
-  /// theModel.Intersects(line, lod, distance, true)`.
-  bool (*retry_line)(const void *model,
-                     const EeGeTransformation *location,
-                     unsigned long frame,
-                     float scale,
-                     const EeGe3DLine *line,
-                     unsigned long lod);
-};
 
 /// The host: `owner` is the C++ rasterizer of the object calling.
 using EeGeRastHostFn = ptrdiff_t(*)(void *owner, EeGeRastOp op, void *obj, ptrdiff_t a, ptrdiff_t b);

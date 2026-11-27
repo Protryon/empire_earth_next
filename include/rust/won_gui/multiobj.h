@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
-#include "rust/won_gui/listobj.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
 enum class EeWonMultiCall : uint32_t {

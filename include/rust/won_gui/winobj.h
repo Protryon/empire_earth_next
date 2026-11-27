@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/fontmap.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// `Window::WindowState`.
 constexpr static const int32_t EE_WON_WIN_OPEN = 0;
@@ -161,26 +160,6 @@ enum class EeWonWinField : uint32_t {
   IsShowing,
   /// the number of child windows
   ChildCount,
-};
-
-/// The Rust Window.
-struct EeWonWindow;
-
-/// An input event's fields: the C++ `InputEvent`'s own record (`mEv`; `KeyEvent`, `MouseEvent` and `SizeEvent` fill
-/// theirs, the other fields 0).
-struct EeWonWinEvent {
-  /// the `WindowEventType`
-  int32_t kind;
-  int32_t x;
-  int32_t y;
-  int32_t key_mod;
-  /// a mouse event's button or wheel amount
-  int32_t button;
-  /// a key event's key
-  int32_t key;
-  /// a size event's
-  int32_t width;
-  int32_t height;
 };
 
 extern "C" {

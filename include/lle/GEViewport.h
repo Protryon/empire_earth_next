@@ -5,6 +5,7 @@
 
 #include <vector>
 #include "lle/GERectangle.h"   // by-value members
+#include "rust/render/records.h"
 
 class GEViewport : public EeGeViewport {   // sizeof 0x288 (implicit copy ctor 0xe992); the record is Rust's
 public:

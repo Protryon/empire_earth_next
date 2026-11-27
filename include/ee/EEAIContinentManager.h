@@ -20,6 +20,7 @@
 
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIListView.h"
+#include "rust/sim/records.h"
 #include "rust/sim/astar.h"         // EeAStarCmRecord
 
 class EEUnit;

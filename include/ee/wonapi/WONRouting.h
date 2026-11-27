@@ -39,6 +39,11 @@
 #include "rust/won_net/udpmgr.h"
 #include "rust/won_net/udpops.h"
 #include "rust/won_net/userstatus.h"
+#include "rust/won_net/servctx.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/httpengine.h"
+#include "rust/won_net/routeop.h"
+#include "rust/won_net/smartroute.h"
 
 namespace WONAPI {
 

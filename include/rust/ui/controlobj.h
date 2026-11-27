@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ class's methods that forward here).
 enum class EeUiControlCall : uint32_t {
@@ -61,49 +60,6 @@ enum class EeUiControlCall : uint32_t {
   MouseDoublePressed = 23,
   /// `GetBgOpacity()` -> `f[0]`.
   BgOpacity = 24,
-};
-
-/// The trigger events (`std::map<unsigned long, UIEvent*>`): event id -> the event (referenced), in id order.
-struct EeUiTriggers;
-
-/// `UIControl`'s members (`include/lle/UIControl.h`), the C++ class's base.
-struct EeUiControlFields {
-  /// The C++ control (the host's object; `this` in the comparisons with the form's controls and captures).
-  void *mCpp;
-  /// The host of the calls out.
-  EeUiHostFn mHost;
-  /// The trigger events (owned; made by [`ee_ui_control_init`], freed by [`ee_ui_control_release`]).
-  EeUiTriggers *mTriggerEvents;
-  /// The background (`GERhombus*`, the C++ constructor's).
-  void *mBgRhombus;
-  /// The background as of the last `CopyData` (`GERhombus*`).
-  void *mCopiedBgRhombus;
-  /// The form (`UIForm*`).
-  void *mForm;
-  /// The hot key (`UIHotKey*`).
-  void *mHotKey;
-  EeUiRect mRectangle;
-  /// `mRectangle` as of the last `CopyData`.
-  EeUiRect mCopiedDrawRectangle;
-  /// `kDisplayModeHidden` 0, `kDisplayModeShown` 1.
-  unsigned long mDisplayMode;
-  unsigned long mControlType;
-  unsigned long mBorderType;
-  unsigned long mCopiedBorderType;
-  unsigned long mIndex;
-  unsigned long mId;
-  unsigned long mDrawCount;
-  unsigned long mBorderThickness;
-  unsigned long mStringTableID;
-  float mBorderOpacity;
-  float mCopiedBorderOpacity;
-  bool mIsDirty;
-  bool mLeftButtonDown;
-  bool mRightButtonDown;
-  bool mCopiedHasBgOpacity;
-  bool mUnknown9C;
-  bool mHasBgOpacity;
-  bool mAlwaysDirty;
 };
 
 extern "C" {

@@ -7,6 +7,7 @@
 #define EE_EEUICPING_H
 
 #include "ee/EEUIRustControl.h"
+#include "rust/game/records.h"
 
 class EEUICPing : public EEUIRustControl, protected EeScreensPingFields {
 public:

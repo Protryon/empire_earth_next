@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
 struct EeWonTextLineM {

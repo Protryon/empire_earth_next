@@ -8,7 +8,7 @@
 #ifndef EE_EEGAMEOPTIONS_H
 #define EE_EEGAMEOPTIONS_H
 
-#include "rust/game/gamecpp.h"
+#include "rust/game/records.h"
 
 class FSFile;
 class TSReadWriteLock;
@@ -46,21 +46,21 @@ class EEGameOptions : public EeAppOptionsFields {
 public:
     // Creates default game options (random epochs, normal speed and map size, unit limit 50, three wonders to win)
     // with sixteen empty player slots (ee_game gamecpp options.rs; the limits, the strings and the slots)
-    EEGameOptions() { ee_gamecpp_options_init(this); }
+    EEGameOptions();
     // Creates a copy of other game options, with its own lock (the copy keeps the defaults' mB407: operator= leaves it)
     // 0x12f818 (also asserts on CreateReadWriteLock: user-written)
-    EEGameOptions(const EEGameOptions& inOther) { ee_gamecpp_options_copy(this, &inOther); }
+    EEGameOptions(const EEGameOptions& inOther);
     ~EEGameOptions();                       // 0x12f892 (out of line: the lobby's GameType calls it)
     EEGameOptions& operator=(const EEGameOptions& inOther);
     // Reads the game options and the sixteen slots from a saved game (ee_app game_options.rs load); returns the first
     // read error
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_options_load(this, inMajorVersion, inMinorVersion, &inFile); }
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     // Writes the sixteen player slots and the game options to a saved game (ee_app game_options.rs save); returns the
     // first write error
-    long Save(FSFile& outFile) { return ee_gamecpp_options_save(this, &outFile); }
+    long Save(FSFile& outFile);
     // Returns whether civilizations may be bought: not in the scenario editor and not in a scenario game
     // 0x12fc0c: !gUIManager+0x13c && !mIsScenarioGame (EEMCivUpgradesPurchased; provisional name)
-    bool CanBuyCivilization() { return ee_gamecpp_options_can_buy_civilization(this); }
+    bool CanBuyCivilization();
     // inline const accessors (EEMFullGameOptions 0xbe6c6 expands all 19; provisional names)
     const UWideString& GetMapType() const { return this->mMapType; }
     long GetGameSpeed() const { return this->mGameSpeed; }

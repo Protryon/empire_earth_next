@@ -6,10 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/auth.h"
-#include "rust/won_net/blowfish.h"
-#include "rust/won_net/elgamal.h"
-#include "rust/won_net/md5.h"
+#include "rust/won_net/records.h"
 
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
@@ -41,15 +38,6 @@ enum class EeWonCert2Query : uint32_t {
   /// the first community's trust
   FirstCommunityTrust = 2,
 };
-
-/// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
-using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
-
-/// Receives UTF-16 units; valid only during the call.
-using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
 /// An auth block's header and validity.
 struct EeWonAuthHeader {

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guistrobj.h"
+#include "rust/won_gui/records.h"
 
 extern "C" {
 
