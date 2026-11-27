@@ -675,6 +675,9 @@ pub(crate) mod game {
             if let Some(v) = crate::units::tech_cases::ghost(op, a, b) {
                 return v;
             }
+            if let Some(v) = crate::units::ghost_view::ghost_view(op, ghost, a, b, c) {
+                return v;
+            }
             // SAFETY: the ghosts are the world's, under its ghost lock or the caller's own
             unsafe { ee_units_ghost_host(op, ghost as usize as *mut c_void, a, b, c) }
         }

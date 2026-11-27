@@ -1402,7 +1402,9 @@ pub enum EeWonPingOpCall {
 
 impl EeWonPingOp {
     fn op(&self, op: Op, a: isize, b: isize) -> isize {
-        host_call(self.host, self.obj.get(), op, a, b, 0, 0)
+        // the game's references are Rust's (netlogicops.rs prv_op), as the logic's own ops
+        crate::netlogicops::game_prv_op(op, a, b, 0)
+            .unwrap_or_else(|| host_call(self.host, self.obj.get(), op, a, b, 0, 0))
     }
 
     fn run_hook(&self, game: isize) {

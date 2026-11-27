@@ -38,7 +38,6 @@ public:
     virtual long UnloadMedia() { return ee_preload_sound_unload_media(this); }
     // 0xda680 (db\dbsounds.dat)
     static long LoadTable(FSFile* inFile) { return ee_preload_load_sounds(inFile); }
-    static void UnloadTable() { ee_preload_unload_sounds(); }
     // 0xda787 (fprintf to the spec's stream; EEWorld::DumpMedia)
     static void Dump(FSFileSpec& inFile) { ee_preload_dump_sounds(&inFile); }
     bool GetLooping() const { return this->mLooping; }

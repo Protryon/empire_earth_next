@@ -93,7 +93,6 @@ extern float gViewportYCenter;
 extern UWideString& gWonPlayerName;          // 0x53077c (the WON player name)
 extern UString gDefaultCampaignUser;        // 0x52a170 ("default"; defined below, its init chain mid-file)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-void EEStopAllSounds();
 void EEDumpGraphicObjectTable(FSFileSpec& inFile);
 void EEDumpLeakedUnits(FSFileSpec& inFile);
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);

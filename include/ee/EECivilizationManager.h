@@ -57,7 +57,6 @@ public:
     }   // (the original's vector's [])
     // an upgrade id is (category << 16) | level (EECivUpgrade); the categories are those of dbcivilization (any
     // number; the original's table had 0x23 entries of 0x258 bytes) plus the special powers category
-    long GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }    // 0x281873 (the category entry's +0x74: the upgrade's cost)
     bool GetCategoryNameID(unsigned long inCategory, long* outNameID)
     {
         return ee_screens_civm_category_name_id((uint32_t)inCategory, outNameID);
@@ -66,10 +65,6 @@ public:
     {
         return this->GetCategoryLevel(inUpgrade >> kCivUpgradeLevelBits, inUpgrade & kCivUpgradeLevelMask, outValue, outBonus);
     }
-    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
-    {
-        return ee_tech_civ_count_in_category(inUpgrade, inList->data(), inList->size());
-    }  // 0x28189e (how many of inList share inUpgrade's category)
     void SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex)
     {
         ee_screens_civm_split(inUpgrade, outCategory, outIndex);
@@ -78,23 +73,12 @@ public:
     {
         return ee_tech_civ_category_level((uint32_t)inCategory, (uint32_t)inIndex, outValue, outBonus);
     }
-    bool GetCategory(unsigned long inCategory, EECivilizationCategoryEntry** outEntry)
-    {
-        return ee_screens_civm_category((uint32_t)inCategory, (void**)outEntry);
-    }   // 0x281d79 (the record in place)
     unsigned long MakePowerUpgrade(unsigned long inIndex) { return ee_tech_civ_power_upgrade((uint32_t)inIndex); }   // 0x281db1 (the powers' category Load appends; ecx unused)
     // an attribute level's name (civbuilder.yaml name) and whether it applies a civ power; the level of the
     // attribute that applies a power (by power id; the original: the id itself)
     static long LevelNameID(unsigned long inLevel) { return ee_tech_civ_level_name_id((uint32_t)inLevel); }
     static bool IsPowerLevel(unsigned long inLevel) { return ee_tech_civ_is_power_level((uint32_t)inLevel); }
     static unsigned long PowerLevel(unsigned long inPowerID) { return ee_tech_civ_power_level((uint32_t)inPowerID); }
-    // the legacy (category << 6) | level form (.civ files, premade checksums): false when it does not fit
-    static EECivUpgrade FromLegacy(unsigned long inLegacy) { return ee_tech_civ_from_legacy((uint32_t)inLegacy); }
-    static bool ToLegacy(EECivUpgrade inUpgrade, unsigned long& outLegacy)
-    {
-        return ee_screens_civm_to_legacy(inUpgrade, &outLegacy);
-    }
-    // (provisional names)
     // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
     bool ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
     {

@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <string>
-#include "lle/UString.h"
-#include "lle/UWideString.h"
 #include "rust/game/screens.h"   // ee_screens_scratch, EeScreensScratch
 #include <new>
 #include <type_traits>
@@ -27,8 +25,6 @@ inline UString EEShimString(EeScreensShimText inText) { return UString(std::stri
 inline void EEShimOut(void* inOut, const UWideString& inText) { ee_screens_shim_out(inOut, (const uint8_t*)(const char*)inText, inText.GetTCHARLength()); }
 inline void EEShimOutC(void* inOut, const char* inText) { ee_screens_shim_out(inOut, (const uint8_t*)inText, strlen(inText)); }
 inline void EEShimOut(void* inOut, const UString& inText) { EEShimOutC(inOut, (const char*)inText); }
-// a float handed over as its bits in an integer's low 32
-inline float EEShimBitsFloat(int64_t inBits) { return __builtin_bit_cast(float, (uint32_t)inBits); }
 
 // The C++ object a shim keeps between calls (a former file static): slot inSlot of the Rust-owned table (ee_game
 // screens scratch.rs), made by T's default constructor at its first use (a plain type is its zeros, as a static's)

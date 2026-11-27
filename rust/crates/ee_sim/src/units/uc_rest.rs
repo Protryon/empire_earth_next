@@ -829,6 +829,11 @@ pub(crate) mod game {
                 return v;
             }
             if self.buildings {
+                if let Some(v) =
+                    crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Buildings, op, class, unit, a, b, c, f)
+                {
+                    return v;
+                }
                 // SAFETY: the body runs inside the C++ member that handed over its live class and unit
                 unsafe {
                     crate::units::ucb_release::game::ee_units_ucb_host(

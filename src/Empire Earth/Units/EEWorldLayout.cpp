@@ -2,11 +2,6 @@
 // member offsets as this build's compiler placed them (offsetof and the base casts: nothing hard-coded per ABI),
 // registered once by the world's constructor. It replaced the unit store's slots (EEUnitStore.cpp, rounds 27-28).
 #include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <vector>
-#include <map>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GETerrainMesh.h"
@@ -19,7 +14,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPhysics.h"
-#include <algorithm>
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"

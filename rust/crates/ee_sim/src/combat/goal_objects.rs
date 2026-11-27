@@ -87,6 +87,14 @@ pub struct TableHost<'a>(pub &'a EeCombatGoalTable);
 impl TableHost<'_> {
     /// An operation of ee_units' common host with its whole block (`a`, `b` the handles).
     pub fn call(&mut self, code: i32, a: u64, b: u64, io: &mut EeCombatGoalIo) -> i64 {
+        #[cfg(not(test))]
+        {
+            // SAFETY: ee_units' block (the same fields in the same order, its #[repr(C)] twin)
+            let block = unsafe { &mut *(io as *mut EeCombatGoalIo).cast::<crate::units::rust_goal::EeUnitsGoalIo>() };
+            if let Some(v) = crate::units::goal_view::goal_view(code, a, b, block) {
+                return v;
+            }
+        }
         // SAFETY: the C++ host answers over its own context for the duration of the call
         unsafe { (self.0.op)(self.0.context, code, a, b, io) }
     }

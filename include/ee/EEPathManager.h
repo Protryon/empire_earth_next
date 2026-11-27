@@ -12,8 +12,6 @@
 #include <deque>
 #include <initializer_list>
 #include <stdint.h>
-#include "lle/U2DPoint.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEAIListView.h"      // EEAIClearList
 #include "rust/sim/astar.h"         // the manager (pm.rs)
 #include <stdio.h>                      // FILE
@@ -33,7 +31,6 @@ class GE3DPoint;
 class EEAIPathSubSector;
 struct EePathManager;                   // rust/sim/astar.h
 
-
 // a path list FindPath fills
 inline void EEPathPushTile(void* inList, int32_t inX, int32_t inY)
     { static_cast<std::vector<U2DPoint<long> >*>(inList)->push_back(U2DPoint<long>(inX, inY)); }
@@ -47,24 +44,11 @@ public:
     void DumpOutOfSynch(FILE* inFile) { ee_path_manager_dump_file(this->mRust, 1, inFile); }
     // TEST ONLY (EE-SIM's state dumps): the searches in progress, pending requests, timers
     void DumpSim(FILE* inFile) { ee_path_manager_dump_file(this->mRust, 0, inFile); }
-    // port (save version 0.256, EEPWorldHelper): the request history, the region maps and the timers, which the
-    // original did not save (a load started with none: other search budgets, no stranded units, other prune times)
-    // (the save's FSFile through ee_base's CppFile: pm.rs; a load is put back at the loaded game's first tick)
-    void SaveRunningState(FSFile& outFile) { ee_path_manager_file(this->mRust, 0, false, &outFile); }
-    long LoadRunningState(FSFile& inFile) { return ee_path_manager_file(this->mRust, 0, true, &inFile); }
-    // port (save version 0.276, EESaveHasPathSearches): the units' tile searches in progress as they are, machine,
-    // goal and storage. The original saved none: each unit asked its path again from the load
-    // (RequestPendingPaths), so the path came later or another one. LoadSearches takes the units it holds out of
-    // the pending ones and puts the searches back at the loaded game's first tick, before the queue's others
-    void SaveSearches(FSFile& outFile) { ee_path_manager_file(this->mRust, 1, false, &outFile); }
-    long LoadSearches(FSFile& inFile) { return ee_path_manager_file(this->mRust, 1, true, &inFile); }
     // port (save version 0.278, EESaveHasGraphSearches): the graph searches in progress as they are: node, machine,
     // goal, modifier, request and storage. The original saved none: their owners (attack sub groups, units) asked
     // again at the loaded game's first tick. LoadGraphSearches takes their units out of the pending ones; at the
     // first tick the searches go back to the queue's front and each request to the owner that waited for it
     // (EEAwaitAutoPathRequest: ee_sim::astar request.rs)
-    void SaveGraphSearches(FSFile& outFile) { ee_path_manager_file(this->mRust, 2, false, &outFile); }
-    long LoadGraphSearches(FSFile& inFile) { return ee_path_manager_file(this->mRust, 2, true, &inFile); }
     void AddPending(unsigned long inUnitID, const EETileCoordinate& inTile)   // a loaded unit asks its path at StartGame
         { this->Call(17, 0, 0, {(int64_t)inUnitID, inTile.mX, inTile.mY}); }
     void Update() { this->Call(1); }    // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)

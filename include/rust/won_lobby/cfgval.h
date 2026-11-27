@@ -141,14 +141,6 @@ EeWonCfgVal *ee_won_cfgval_int_list_list(void *target,
                                          bool wide,
                                          bool additive);
 
-/// `StringParser(text).ReadValue(*(std::list<std::string>*)target)`: the items read onto the list (WONLobbyPrv's hash
-/// file list).
-///
-/// # Safety
-/// `text` is a NUL-terminated narrow text; `target` a live list.
-bool ee_won_cfgval_read_strings(const uint8_t *text,
-                                void *target);
-
 /// A call on a value (`v`: one made above).
 ///
 /// # Safety

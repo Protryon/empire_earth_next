@@ -4,7 +4,6 @@
 #define EE_EECHEATCODES_H
 
 #include "rust/game/gamecpp.h"
-#include "rust/sim/app.h"
 struct EeAppCheats;   // rust/ee_app.h
 
 class EECheatCodes {                        // RTTI, vtable 0x441ee4 (one slot), sizeof 0x1c, ctor 0x12a54a

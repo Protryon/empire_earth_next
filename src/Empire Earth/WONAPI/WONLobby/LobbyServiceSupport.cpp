@@ -12,18 +12,17 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
-#include "ee/wonapi/WONLobbyAccountLogic.h"
-#include "ee/wonapi/WONLobbyDialogLogic.h"
 #include "ee/wonapi/WONLobbyLan.h"
-#include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyStaging.h"
-#include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "ee/wonapi/WONLobbyDialogs.h"
+#include "ee/wonapi/WONLobbyModel.h"
+#include "ee/wonapi/WONLobbyEvents.h"
 #include "rust/won_lobby/lobbyprv.h"
 namespace WONAPI {
 // (SDK GetDefaultTimeout)
@@ -56,17 +55,17 @@ void LobbyPlaySound(Sound* sound)
 // Pings the game to measure its latency; inForce sends the ping now even when the ping queue is full
 void LobbyPingGame(LobbyGame* game,bool force)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mPingLogic->PingGame(game,false,force);
+    if(gLobbyData.get()!=NULL) gLobbyData->mPingLogic->Call(EeWonLogicCall::PingGame,(intptr_t)game,false,force);
 }
 // Asks the game's host for the game's details
 void LobbyQueryGameDetails(LobbyGame* game)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mPingLogic->PingGame(game,true,true);
+    if(gLobbyData.get()!=NULL) gLobbyData->mPingLogic->Call(EeWonLogicCall::PingGame,(intptr_t)game,true,true);
 }
 // Cancels every queued and running game ping, marking those games ping unknown
 void LobbyKillPings(int unused)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mPingLogic->KillPings(unused);
+    if(gLobbyData.get()!=NULL) gLobbyData->mPingLogic->Call(EeWonLogicCall::PingKill);
 }
 // Returns the lobby's chat command parser, or NULL without a lobby
 ChatCommandParser* LobbyGetChatCommandParser()
@@ -122,7 +121,7 @@ const std::string& LobbyGetSysTOUPath() { return gLobbyData.get()!=NULL?gLobbyDa
 const std::string& LobbyGetGameTOUPath() { return gLobbyData.get()!=NULL?gLobbyData->mGameTOUPath:GetEmptyStr(); }
 // (SDK LobbyMisc::GetNumPingsToDo)
 // Returns the number of game pings still to send
-int LobbyGetNumPingsToDo() { return gLobbyData.get()!=NULL?gLobbyData->mPingLogic->GetNumPingsToDo():0; }
+int LobbyGetNumPingsToDo() { return gLobbyData.get()!=NULL?(int)gLobbyData->mPingLogic->Call(EeWonLogicCall::PingNumToDo):0; }
 // (SDK LobbyDialog::UserCanceledLastStatusOp)
 // Returns whether the player cancelled the last operation run behind a status dialog
 bool LobbyUserCanceledLastStatusOp() { return gLobbyData.get()!=NULL?gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::Field, 0)!=0:false; }

@@ -10,14 +10,8 @@
 class EEAIHill : public EEAIArea, private EeAStarHillRecord {
 public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
-    static EEAIHill* New() { return (EEAIHill*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::Hills); }
-    static void Delete(EEAIHill* inObject) { ee_astar_object_delete(EeAStarCmTable::Hills, (uint64_t)(uintptr_t)inObject); }
     EeAStarHillRecord* Record() { return this; }
     const EeAStarHillRecord* Record() const { return this; }
-    unsigned short GetContinentID() const { return this->continent_id; }
-    void SetContinentID(unsigned short inID) { this->continent_id = inID; }
-    unsigned short GetID() const { return this->id; }
-    void SetID(unsigned short inID) { this->id = inID; }
 
 private:
     EEAIHill();

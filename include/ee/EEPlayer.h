@@ -13,10 +13,8 @@
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
 #include "rust/sim/units.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
-#include "rust/sim/tech.h"              // EeTechNodeFields, EeTechTreeFields (the tech tree's records)
 #include "rust/game/rts.h"              // RTSPlayer's bodies (ee_game rts units.rs)
 #include "rust/game/tech_tree.h"        // the tech tree classes' bodies (ee_game tech_tree)
-#include "rust/sim/units.h"
 class FSFile;
 // New (R5b.4, round 28): the Rust saves' file primitives (ee_units player_save.rs's READ_ULONG .. WRITE_BOOL and the
 // unsigned short's two, shared by the player's, the physics', the map's and the units' hosts; EEPlayer.cpp); -1 for
@@ -119,10 +117,7 @@ public:
     EEGroup() = delete;
     EEGroup(const EEGroup&) = delete;
     ~EEGroup() = delete;
-    void Reference() { ee_units_group_reference(this); }
-    void Dereference() { ee_units_group_dereference(this); }
     void Add(EEComplexUnit* inUnit) { ee_units_group_do(this, 0, inUnit); }
-    void Remove(long inPathID) { ee_units_group_cancel_path(this, inPathID); }   // the path request's cancel
     bool Contains(EEComplexUnit* inUnit) { return ee_units_group_contains(this, inUnit); }
     EEComplexUnit* GetUnit(long inIndex) { return static_cast<EEComplexUnit*>(ee_units_group_unit(this, inIndex)); }
     unsigned long GetNumUnits() { return ee_units_group_len(this); }
@@ -130,10 +125,8 @@ public:
         { return ee_units_group_file(this, false, &inFile, &EESaveFilePrimitive); }
     void Clear() { ee_units_group_do(this, 2, NULL); }
     void RemoveUnit(EEComplexUnit* inUnit) { ee_units_group_do(this, 1, inUnit); }
-    long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)ee_units_group_get(this, 7, 0); }
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
         { return ee_units_group_file(this, true, &outFile, &EESaveFilePrimitive); }
-    void Validate() { ee_units_group_do(this, 3, NULL); }
     EEComplexUnit* GetFirstUnit() { return this->GetUnit(0); }   // NULL when empty
     void SetFormation(EEFormation* inFormation) { ee_units_group_set_formation(this, inFormation); }
     EEFormation* GetFormation() const { return static_cast<EEFormation*>(this->mFormation); }
@@ -155,13 +148,10 @@ public:
 // The player's current selection (RTTI EESelectedGroup > EEGroup): EEPlayer's Reset makes two
 class EESelectedGroup : public EEGroup {
 public:
-    static EESelectedGroup* New(EEPlayer* inPlayer)
-        { return static_cast<EESelectedGroup*>(static_cast<EEGroup*>(ee_units_group_new(1, inPlayer, 0))); }
     EESelectedGroup& CopySelection(EESelectedGroup* inGroup) { ee_units_group_with(this, 2, inGroup); return *this; }
     // a saved group's units, remembering the group when asked (EEMSavedGroupSelect: true)
     void SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup) { ee_units_group_with(this, inRememberGroup ? 4 : 5, inGroup); }
     void AddUnit(EEComplexUnit* inUnit, bool inNeedsSort) { ee_units_group_do(this, inNeedsSort ? 11 : 12, inUnit); }
-    void SortUnits() { ee_units_group_do(this, 6, NULL); }
     void ShowSelectionAreas() { ee_units_group_do(this, 7, NULL); }
     unsigned short GetContinent() { return (unsigned short)ee_units_group_get(this, 5, 0); }
     EEGroup* GetSavedGroup() const { return static_cast<EEGroup*>(this->mSavedGroup); }
@@ -179,9 +169,7 @@ public:
     static EEActiveGroup* New(EEPlayer* inPlayer)
         { return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(ee_units_group_new(2, inPlayer, 0))); }
     void AddMember(EEComplexUnit* inUnit, bool inRemoveFromOld) { ee_units_group_do(this, inRemoveFromOld ? 13 : 14, inUnit); }
-    void ComputeValues() { ee_units_ag_compute_values(H(this)); }
     // the selected group's units for one slot; inSort 0: SortUnits first, 1: sorted slowest first afterwards
-    void Fill(EESelectedGroup* inGroup, long inSort, long inSlot) { ee_units_group_fill(this, inGroup, inSort, inSlot); }
     void Finish() { ee_units_group_do(this, 15, NULL); }   // the goal dropped, into the player's finished groups
     bool IsReserved(const GE3DPoint& inLocation) { return ee_units_ag_reserved(H(this), (const float(*)[3])&inLocation.mX, 0) != 0; }  // 0x1efaf0: a mU3C location at (or near) inLocation
     // 0x1ef86c (EEMessage 0xbc48f: a calamity's casters for inTarget; the others attack it)
@@ -191,13 +179,7 @@ public:
     void Plan() { ee_units_ag_plan(H(this)); }  // 0x1edcc0 (after SetGoal)
     // a unit's stat, or the group's when it moves together (EEActiveGroup.cpp)
     float GetMaxVelocity(EEComplexUnit* inUnit);
-    float GetAcceleration(EEComplexUnit* inUnit);
-    float GetMaxAngularVelocity(EEComplexUnit* inUnit);
-    float GetAngularAcceleration(EEComplexUnit* inUnit);
     float GetInverseMaxVelocity(EEComplexUnit* inUnit);
-    float GetInverseAcceleration(EEComplexUnit* inUnit);
-    float GetInverseAngularAcceleration(EEComplexUnit* inUnit);
-    void SpreadAroundResource(EEUnit* inTarget) { ee_units_ag_spread_around_resource(H(this), H(inTarget)); }  // 0x1eefbe (EEMGatherResource)
     void SpreadAroundTile(long inTileX, long inTileY) { ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 0); }  // 0x1ef2d4 (EEMDropoffResource: the drop-off's tile)
     void SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY) { ee_units_ag_spread_around_unit(H(this), H(inTarget), (int32_t)inTileX, (int32_t)inTileY); }  // 0x1eecb2 (EEMAttackUnit: the target and its tile)
     void KeepMobileUnits() { ee_units_ag_keep_mobile(H(this)); }
@@ -247,8 +229,6 @@ public:
     void GetCostString(UWideString& outString, long inUnitClass, float inScale) { ee_gamecpp_tech_cost_string(this, inUnitClass, inScale, &outString); }
     bool Contains(long inUnitClass) { return ee_tech_node_classes_contains(this->mData, inUnitClass); }   // 0x1cf6e5
     bool DependsOn(long inID) { return this->Walk(EeTechNodeOp::DependsOn, inID) != 0; }   // 0x1cf79a (recursive)
-    // one prerequisite met (an epoch or one of the four techs); with all met the node becomes available (TNPR)
-    void SetPrerequisite(long inID) { this->Walk(EeTechNodeOp::SetPrerequisite, inID); }
     void MakeAvailable() { this->Walk(EeTechNodeOp::MakeAvailable); }   // with every prerequisite met
     // whether it makes a building or mine whose media this game needs (TNMT, TEST ONLY)
     bool NeedsUnitMedia() { return ee_gamecpp_tech_needs_unit_media(this, true); }
@@ -365,7 +345,6 @@ public:
         ee_units_stats_copy(this->mStats, inStatistics.mStats);
         return *this;
     }
-    void CompactEpochHistory() { ee_units_stats_compact(this->mStats); }   // EEWorld::RecordStatistics
     void SetName(UWideString inName) { this->mName = inName; }
     EEStatisticsSeries GetSeries(unsigned long inSeries)   // a copy (the post-game summary, the scores)
     {
@@ -517,10 +496,8 @@ public:
     // 0x1655f6: inUnit's entry in the player's +0x7c0 vector, 0 if none (the teleport sets its +0x14 to 4)
     // (provisional name)
     EEWUnitsOffMapInfo* GetOffMapInfo(EEComplexUnit* inUnit) { return ee_units_off_map_info(this->mLists, (int64_t)(uintptr_t)(void*)inUnit); }  // (the lists' record of inUnit, 0 none)
-    void SelectUnits(std::vector<long>& inUnitIDs) { ee_units_selection(this, 6, NULL, 0, inUnitIDs.data(), inUnitIDs.size(), false, false); }   // 0x16a658 (EEMSelectUnits::Execute; provisional name)
     // selection by the EEM* messages (EEMessage.cpp Executes; provisional names)
     void IncrementEpic() { this->mTechnologies->Walk(EeTechTreeOp::AdvanceEpoch); }
-    void SelectUnit(unsigned long inUnitID, bool inArg1, bool inNewGroup) { ee_units_selection(this, 2, NULL, (int64_t)inUnitID, NULL, 0, inArg1, inNewGroup); }
     void UnselectAllUnits() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_UNSELECT_ALL, 0, 0, 0, 0.0f); }
     void ReloadTechTree(bool inFlag) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_RELOAD_TECH_TREE, 0, inFlag, 0); }       // 0x1697ff (EESELoadThread Handle403; provisional name)
     void LoadAllClassMedia() { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_LOAD_ALL_CLASS_MEDIA, 0, 0, 0); }               // 0x167bff (Handle406, before its loop; provisional name)
@@ -539,7 +516,6 @@ public:
     bool CanImprove(long inUnitType, long inImprovement, UWideString* outReason) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_IMPROVE, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outReason) != 0; }
     // 0x165813 (both ctors call it after the vptr store; hides RTSPlayer::Reset): new selection and control groups,
     // upgrades, tech tree and air traffic, zeroed counters and default settings, then the player effects
-    void Reset() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_RESET, 0, 0, 0, 0.0f); }
     const UWideString& GetName() { return this->mName; }           // 0x167eda (&mName, out of line; Reset's; provisional name)
     void UpdateFreeUnitPower() { EEPlayerUnits(this, 12); } // original Player unit-class update, no arguments
     void PulseSight(bool inByID, float inSight, long inID) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_PULSE_SIGHT, (uint64_t)(int64_t)inID, inByID, 0, inSight); } // original169b26, three arguments/ret12 // 0x163138 (ret 4; RepairPointers: each unit's complex unit; provisional name)
@@ -596,7 +572,6 @@ public:
     void RemoveOffMapUnit(RTSUnit* inUnit) { ee_units_off_map(this->mLists, 1, (int64_t)(uintptr_t)(void*)inUnit, 0, 0, 0); }  // 0x168e30 (its EEWUnitsOffMapInfo out of mUnitsOffMap, deleted)
     void SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMap) { ee_units_player_diplomacy(EEPlayerRefs(this), 0, inOther, (unsigned long)inStance, inMap != NULL); }  // 0x16ab41 (the diplomatic stance towards inOther; EEWorld::SetDiplomaticStance; provisional name)
     void RefreshTerrainVisibility() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_REFRESH_TERRAIN, 0, 0, 0, 0.0f); }        // 0x16aec0 (EEWorld::RestartUnits on player 0; provisional name)
-    void DumpMedia(FSFileSpec& inFile) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_DUMP_MEDIA, (uint64_t)(uintptr_t)&inFile, 0, 0); }     // 0x16436a (EEWorld::DumpMedia; provisional name)
     void SetCivilizationPoints(long inEpoch) { this->mCivilization.SetPointsAndMax(inEpoch); }  // 0x16ab2f (mCivilization.SetEpoch)
     void SetEpoch(long inEpoch) { this->mTechnologies->SetEpoch(inEpoch); }            // 0x16addc (the tech tree's SetEpoch)
     void SetSharedLOS(bool inFlag, EEMap* inArg) { ee_units_player_diplomacy(EEPlayerRefs(this), 3, NULL, 0, inFlag); } // 0x16ae5f (ret 8; sets mSharedLOS around the units' slots +0x24/+0x0c)
@@ -637,7 +612,6 @@ public:
     {
         ee_units_player_set_color(reinterpret_cast<float(*)[3]>(&this->mColor), reinterpret_cast<float(*)[3]>(&this->mShadeColor), reinterpret_cast<const float(*)[3]>(&inColor));
     }
-    void InsertUnit(RTSUnit* inUnit) { ee_rts_player_insert_unit(this, inUnit); }       // 0x16f49e (the unit list and the id buckets; Virtual28's)
     void KillUnit(RTSUnit* inUnit, bool inForce) { ee_rts_player_kill_unit(this, inUnit, inForce); }  // 0x16f6ae (marks inUnit->mB28, pushes it)
     long SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_rts_player_save_units(this, inMajorVersion, inMinorVersion, &outFile); }   // 0x16f7b1 (Save's)
     // Layout (no gaps; sizeof 0x468): the ctor 0x16f12e (vectors, the name, the bucket loop of 0x80, two GEColors
@@ -703,7 +677,6 @@ public:
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
 };
 typedef EEPlayer RTSPlayer;
-
 
 // EEWorld::ApplyShareBonus (false) and RemoveShareBonus (true): the share bonus of every player by its wonder powers and
 // stances (ee_units player_units.rs; EEPlayer.cpp). The player lane, round 2: EEPlayer's mWonderTypeCounts and

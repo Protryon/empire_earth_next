@@ -10,3 +10,8 @@ const ByteBuffer* GetOutgoing() const
 int GetAttemptCount() const { return ee_won_udpsendrecvop_attempts(this->mUdp); }
 int GetNumRetransmits() const { return ee_won_udpsendrecvop_retry_limit(this->mUdp); }
 unsigned long GetMsgTimeout() const { return ee_won_udpsendrecvop_timeout(this->mUdp); }
+// (R6 WON round 39)
+void SetUDPManager(UDPManager* theManager) { ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+// the reply wait
+UDPManagerRecvOp* GetRecvOp() const
+{ return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(ee_won_udpsendrecvop_recv_op(this->mUdp)))); }

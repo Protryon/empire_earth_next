@@ -99,7 +99,7 @@ AI_CHEATS = tuple(SCHEMA['enums']['ai_cheat']['names'])
 
 
 def gameoptions(ids, spec):
-    s = _consts('EEStringIDs.h', 'IDS_')
+    s = _consts('../../rust/crates/ee_base/src/string_ids.rs', 'IDS_')
     sizes = [('tiny', 42), ('small', 58), ('medium', 75), ('large', 105), ('huge', 160), ('gigantic', 220)]
     out = [HEAD.format(name='gameoptions', format=spec['format'],
                        what='The lobby\'s option lists and limits; an option is its entry\'s position.')]
@@ -191,7 +191,7 @@ POWER_IDS = ['flaming_arrows', 'slavery', 'priest_tower', 'crusaders', 'fanatici
 
 def civbuilder(ids, spec):
     pw = _consts('../rust/sim/tech_consts.h', 'kCivPower')
-    s = _consts('EEStringIDs.h', 'IDS_')
+    s = _consts('../../rust/crates/ee_base/src/string_ids.rs', 'IDS_')
     out = [HEAD.format(name='civbuilder', format=spec['format'],
                        what='What each civilization builder attribute raises.')]
     out.append("""# An upgrade is a category (dbcivilization) and a level; the level is an attribute here, the category's

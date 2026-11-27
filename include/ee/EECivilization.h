@@ -42,15 +42,6 @@ public:
         ee_gamecpp_civ_add_upgrades(this, &inUpgrades, inPlayer, inFlag);
     }
 
-    // (provisional names): 0x12c6bc/0x12c6fe/0x12c5d9/0x12c70f never touch this (forwarders to
-    // gCivilizationManager; the civilization builder calls them through its civilization)
-    long GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }   // per upgrade already bought in its category
-    // the upgrades of inUpgrade's category in inList (by default the purchased upgrades)
-    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
-    {
-        return ee_tech_civ_count_in_category(inUpgrade, this->List(inList).data(), this->List(inList).size());
-    }
-    std::vector<EECivUpgrade>& List(std::vector<EECivUpgrade>* inList) { return inList != NULL ? *inList : this->mPurchasedUpgrades; }
     // 0x12c74c, ret12/status: the purchased upgrades, points, flags and name (old versions: a narrow name); the first
     // read error
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)

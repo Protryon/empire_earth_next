@@ -38,38 +38,13 @@ public:
     virtual void PlaySound() { ee_gamecpp_calamity_play_sound(this); }
 
     // 0xad267: stops mSound (provisional name)
-    void StopSound() { ee_gamecpp_calamity_stop_sound(this, false); }
-    void ReleaseSound() { ee_gamecpp_calamity_release_sound(this, false); }
-    void ReleaseSecondarySound() { ee_gamecpp_calamity_release_sound(this, true); }
     void Reset() { ee_gamecpp_calamity_reset(this); }
-    // 0xad5bb: the whole discrete updates in mTimeElapsedSinceLastUpdate (keeps the remainder) (provisional name)
-    unsigned long GetDiscreteUpdates() { return ee_gamecpp_calamity_discrete_updates(this); }
     // 0xad5fc: mTargetUnit (0 and false if none)
     bool GetTargetUnit(EEUnit*& outUnit) { return (outUnit = this->mTargetUnit) != NULL; }
-    // 0xadab3 (keeps a reference) (provisional name)
-    void SetCasterUnit(EEUnit* inUnit) { ee_gamecpp_calamity_set_unit(this, inUnit, false); }
-    // 0xadae7: stops the old one, keeps a reference (provisional name)
-    void SetSound(SESMInstanceNode* inSound) { ee_gamecpp_calamity_set_sound(this, inSound, false); }
-    void SetSecondarySound(SESMInstanceNode* inSound) { ee_gamecpp_calamity_set_sound(this, inSound, true); }
-    // 0xadb1b (keeps a reference) (provisional name)
-    void SetTargetUnit(EEUnit* inUnit) { ee_gamecpp_calamity_set_unit(this, inUnit, true); }
     // out of line in another unit (0xdfd80; EECalamity.cpp calls it): stops mSecondarySound (provisional name)
-    void StopSecondarySound() { ee_gamecpp_calamity_stop_sound(this, true); }
-    void SetEffectHandle(const EEEffectHandle& inHandle) { this->mEffectHandle = inHandle; }
     float GetTimeAlive() const { return this->mTimeAlive; }  // inline (compared as an FP value, not a memory operand)
-    unsigned long GetPlayerNumber() const { return this->mPlayerNumber; }  // inline (provisional name; Update 0xb0a60: with IsCarried, theUnits[i] op+ refused as in the original, 57 -> 68)
-    long GetIntPlaceHolder1() const { return this->mIntPlaceHolder1; }  // inline (provisional name; Update 0xb0a60 68 -> 69)
-    float GetHeight() const { return this->mHeight; }  // inline (the hurricane's Start loads it as an FP value)
-    // inline: a nested GE3DPoint::operator= the budget refuses first (the logic bomb's Update and the meteor storm call
-    // __imp_??4GE3DPoint here, their smaller Starts expand it)
-    void GetTargetLocation(GE3DPoint& outLocation) const { outLocation = this->mTargetLocation; }
     // inline (inferred); its nested GERectangle::operator= is refused in CreateSourceEffect (0xb0409 79.8 -> 93.5)
     void SetRectangle(const GERectangle& inRectangle) { this->mRectangle = inRectangle; }
-    // inline: the meteor storm's Update loads them as FP values (`fld [5c]; fld st1; fcompp`)
-    float GetFloatPlaceHolder1() const { return this->mFloatPlaceHolder1; }
-    void SetFloatPlaceHolder2(float inValue) { this->mFloatPlaceHolder2 = inValue; }
-    // inline: the cloaking calamity loads the caster into a register before its dynamic_cast (0xaf920)
-    EEUnit* GetCasterUnit() const { return this->mCasterUnit; }
 
     GERectangle mRectangle;                 // +0x04 (saved first, no key; provisional name)
     GE3DPoint mTargetLocation;              // +0x14

@@ -638,8 +638,14 @@ pub(crate) mod game {
             if let Some(v) = crate::units::tech_cases::uh(op, a, b, c) {
                 return v;
             }
-            // SAFETY: one statement over the world's live objects (the decision runs on the simulation thread)
-            unsafe { ee_units_uh_host(op, a, b, c, d, f.as_mut_ptr()) }
+            // SAFETY: one statement over the world's live objects (the decision runs on the simulation thread; the
+            // plain record reads and stores first: cu_view.rs)
+            unsafe {
+                if let Some(v) = crate::units::cu_view::uh_view(op, a, b, c, d, f) {
+                    return v;
+                }
+                ee_units_uh_host(op, a, b, c, d, f.as_mut_ptr())
+            }
         }
         fn pg_nearest(&mut self, group: u64, x: i32, y: i32) -> u64 {
             // SAFETY: a town's live patrol group

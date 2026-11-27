@@ -167,6 +167,9 @@ mod game {
 
     impl GtHost for Game {
         fn gt(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::goal_view::gt_view(op, a, b, c, d) {
+                return v;
+            }
             // SAFETY: the body runs inside the goal host that handed over its live units
             unsafe { ee_units_gt_host(op, a, b, c, d, f) }
         }

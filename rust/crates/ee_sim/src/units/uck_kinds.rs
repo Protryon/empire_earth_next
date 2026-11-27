@@ -375,6 +375,11 @@ pub(crate) mod game {
             if let Some(v) = crate::units::tech_cases::uc(op, unit, a) {
                 return v;
             }
+            if let Some(v) =
+                crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Kinds, op, class, unit, a, b, c, f)
+            {
+                return v;
+            }
             // SAFETY: the dispatcher runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_uck_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

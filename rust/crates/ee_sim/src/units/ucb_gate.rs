@@ -568,6 +568,11 @@ pub(crate) mod game {
             if let Some(v) = crate::units::tech_cases::ucb(op, unit, a, b) {
                 return v;
             }
+            if let Some(v) =
+                crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Buildings, op, class, unit, a, b, c, f)
+            {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ function that handed over its live objects
             unsafe { ee_units_ucb_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

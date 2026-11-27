@@ -112,19 +112,16 @@ bool EEFOLocationScreenEnsureContinentAndPathOverlay::Screen(const U2DPoint<long
     return ee_units_lf_location_screen(UUHandle(this), inTile.mX, inTile.mY) != 0;   // uu_fill.rs
 }
 
-
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
 {
     ee_units_ub_body(EE_UNITS_UB_DO_WORK_FARM, UUHandle(inTarget), UUHandle(inUnit), 0, 0, 0);   // uu_body.rs
 }
-
 
 // Shows the wall ghosts for a wall line of a technology and player
 void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer)
 {
     ee_units_ub_body(EE_UNITS_UB_DO_PREVIEW_WALL, UUHandle(&inTiles), 0, inTechnology, inPlayer, 0);   // uu_body.rs
 }
-
 
 // (0x63efa1, EEGetSeabedUnder: ee_units uu_world.rs seabed_under)
 
@@ -143,7 +140,6 @@ void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume,
                                  ::gWorld.mTransformation.GetZ(), outPitch);   // uu_adapt.rs (UUTL kind 83)
 }
 
-
 // (0x642489, EEGetUnitAngle, and the escape point's sort by it, EEUUAngleLess: ee_units uu_world.rs unit_angle)
 
 // Tells whether a priest can convert the target
@@ -157,13 +153,6 @@ bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile)
 {
     return ee_units_cgq_is_attack_reachable(UUHandle(inUnit), UUHandle(inTarget), &outTile->mX, &outTile->mY);   // cg_query.rs (CBXR)
-}
-
-// Turns wall pieces with three or more neighbours into plain junction pieces
-void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer,
-                    EEMap* inMap)
-{
-    ee_units_uu_make_wall_junctions_of(&inUnits, &inTiles, UUHandle(inPlayer), UUHandle(inMap));   // uu_adapt.rs
 }
 
 // (The target search of 0x243d43, EEUUTargetSearch with its filter 0x24ffca and scoring 0x25000c, and the tile
@@ -307,7 +296,6 @@ EEComplexUnit* EEReplaceUnit(EEComplexUnit* inUnit, unsigned long inPlayer, EEUn
     return static_cast<EEComplexUnit*>(UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_REPLACE_UNIT, UUHandle(inUnit), UUHandle(inClass), (int64_t)inPlayer, 0, 0)));
 }
 
-
 // (0x6450f1, EEClearUnderBuilding: ee_units uu_world.rs clear_under_building)
 
 // Tells whether an enemy the unit may target is within its reach
@@ -338,7 +326,6 @@ EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
     return static_cast<EEComplexUnit*>(UUUnit(ee_units_ub_body(EE_UNITS_UB_DO_WAITING_GATHERER, UUHandle(inUnit), 0, 0, 0, 0)));
 }
 
-
 // (0x647125, EEGetEnemiesAround: ee_units uu_world.rs enemies_around)
 
 // (0x647316, EECanReach: ee_combat's can_reach, called by leaves.rs in_contact_range)
@@ -355,7 +342,6 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
     return ee_units_cgq_in_contact_range(UUHandle(inUnit), UUHandle(inTarget), inDistanceSquared);   // cg_query.rs
 }
 
-
 // (the U2DPoint<long> twin of 0x648ecc is gone: one tile type)
 
 // Returns a random number in [min, max]
@@ -364,27 +350,6 @@ long EEGetRandomInt(long inMin, long inMax, URandom& inRandom) { return ee_urand
 
 // (the U2DPoint<long> twin of 0x64b556 is gone: one tile type)
 
-// Returns the path distance from a unit to a tile (10000 when unreachable) and the path's first tile
-float EEGetPathLengthTo(EEComplexUnit* inUnit, EETileCoordinate& ioTile, unsigned long inLimit, bool inWalls)
-{
-    return ee_units_uu_path_length_at(UUHandle(static_cast<EEUnit*>(inUnit)), &ioTile.mX, &ioTile.mY, (uint32_t)inLimit, inWalls);   // uu_adapt.rs
-}
-
-// Tells whether a tile lies on the diamond map's edge
-bool RTSMap::IsEdgeTile(const EETileLocation& inTile)
-{
-    return inTile.mX + inTile.mY == this->mL195608 || inTile.mY - inTile.mX == this->mL195610 || inTile.mX + inTile.mY == this->mL19560C
-        || inTile.mX - inTile.mY == this->mL195610;
-}
-
-
-
-// Returns the tile two tiles away in a direction (1..8)
-void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile)
-{
-    ee_units_uu_slot_tile_at(inTile.mX, inTile.mY, inDirection, &outTile.mX, &outTile.mY);   // uu_adapt.rs
-}
-
 // Picks the wall piece (straight, corner or slope) for every tile of a wall line from its neighbours and the
 // terrain heights
 void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>& outCorners, EEMap* inMap)
@@ -392,7 +357,6 @@ void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>&
     outCorners.resize(inTiles.size());
     ee_units_uu_pick_wall_pieces(UUHandle(inMap), &inTiles, outCorners.data());
 }
-
 
 // Tells whether a wall blocks a tile line (diagonal steps between two pieces count); reports the last free tile
 // Whether a wall blocks the line from (inX1, inY1) to (inX2, inY2) (diagonal steps between two pieces count);
@@ -526,7 +490,6 @@ extern "C" int32_t ee_units_uu_host_raised_corners(uint64_t inMap, int32_t inX, 
 }
 extern "C" float ee_units_uu_host_mesh_z(uint64_t inMap, int32_t inX, int32_t inY) { return ((EEMap*)(uintptr_t)inMap)->mTerrainMesh.GetZ(inX, inY); }
 extern "C" float ee_units_uu_host_mesh_ground(float inX, float inY) { return ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(inX, inY); }
-
 
 extern "C" uint8_t ee_units_uu_host_passable_by(uint64_t inUnit, uint64_t inBy)
 {
@@ -725,9 +688,6 @@ extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_
     return 0.0f;
 }
 
-
-
-
 // (a tile vector's reads: uu_host.rs tiles_of, in place)
 extern "C" void ee_units_uu_host_tiles_set(void* outTiles, const long (*inTiles)[2], uint32_t inCount)
 {
@@ -744,7 +704,6 @@ extern "C" void ee_units_uu_host_units_set(void* outUnits, const uint64_t* inUni
 {
     ((std::vector<EEUnit*>*)outUnits)->assign(reinterpret_cast<EEUnit* const*>(inUnits), reinterpret_cast<EEUnit* const*>(inUnits) + inCount);
 }
-
 
 // Makes the units on the footprint of a unit of inClass placed at inTile (or of inUnit) step aside for it
 void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, const U2DPoint<long>& inTile, bool inArg)

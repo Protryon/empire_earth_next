@@ -8,7 +8,6 @@
 // of a tile. What stays here: the forwarders (with the TEST ONLY TSGT scope) and the world calls Rust makes through
 // ee_units_tile_sight_host.
 #include <windows.h>
-#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GETerrainMesh.h"

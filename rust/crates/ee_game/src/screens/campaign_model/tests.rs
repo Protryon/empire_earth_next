@@ -1,15 +1,9 @@
 use super::*;
 
-/// The string ids equal `ee/EEStringIDs.h`'s.
+/// The string ids equal the language table's (`ee_base::string_ids`).
 #[test]
 fn string_ids() {
-    let header = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EEStringIDs.h"))
-        .expect("EEStringIDs.h");
-    let id = |name: &str| -> u32 {
-        let line =
-            header.lines().find(|l| l.split_whitespace().nth(1) == Some(name)).unwrap_or_else(|| panic!("{name}"));
-        line.split_whitespace().nth(2).unwrap().parse().unwrap()
-    };
+    let id = |name: &str| -> u32 { ee_base::string_ids::by_name(name).unwrap_or_else(|| panic!("{name}")) };
     assert_eq!(id("IDS_CAMPAIGN_MUST_HAVE_AT_LEAST"), IDS_CAMPAIGN_MUST_HAVE_AT_LEAST);
     assert_eq!(id("IDS_YOU_MUST_ENTER_NAME_FOR_YOUR_CAMPAIGN"), IDS_YOU_MUST_ENTER_NAME_FOR_YOUR_CAMPAIGN);
     assert_eq!(id("IDS_EECAMPAIGN"), IDS_EECAMPAIGN);

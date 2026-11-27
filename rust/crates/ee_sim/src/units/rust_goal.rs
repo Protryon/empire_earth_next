@@ -684,6 +684,10 @@ impl OpHost<'_> {
         if let Some(v) = crate::units::tech_cases::goal(op, a, b, io.i[0]) {
             return v;
         }
+        #[cfg(not(test))]
+        if let Some(v) = crate::units::goal_view::goal_view(op, a, b, io) {
+            return v;
+        }
         // SAFETY: the table's contract: `context` and `op` are live for the FFI call that handed out the table
         unsafe { (self.0.op)(self.0.context, op, a, b, io) }
     }

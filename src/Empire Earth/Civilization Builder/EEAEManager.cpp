@@ -26,7 +26,6 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
 #include "rust/game/screens.h"   // CollectEffects, FindEffect (area_effect_manager.rs)
 #include <memory>
@@ -40,7 +39,6 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EERules.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EEAIContinentManager.h"
 #include "rust/sim/units.h"
 #include "rust/game/screens.h"   // the host (area_effect_host.rs)

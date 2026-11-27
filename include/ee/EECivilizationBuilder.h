@@ -12,7 +12,6 @@ class UString;
 
 
 inline long CivBuilderEditCivilization() { return ee_screens_cb_edit_civilization(); }   // 0x280faf (pauses, then opens the builder for the current player)
-inline long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload) { return ee_screens_cb_create_civilization(inCivilization, inReload); }
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite);  // 0x28015d (the edited civilization as inName)
 inline void CivBuilderEditCurrentCivilization() { ee_screens_cb_edit_current(); }   // 0x280bb1 (the current player's civilization edited)
 inline void CivBuilderFreeCivilization() { ee_screens_cb_free_civilization(); }   // the edited civilization deleted (delete gEditableCivilization)

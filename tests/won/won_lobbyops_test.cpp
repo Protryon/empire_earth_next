@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_lobby/lanlogic.h"
 #include "rust/won_lobby/lanobj.h"

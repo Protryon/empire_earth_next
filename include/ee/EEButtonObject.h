@@ -10,7 +10,6 @@ class FSFileSpec;
 class GETexture;
 class UIHotKey;
 
-#include "rust/data/tables.h"
 #include "rust/data/media.h"
 #include "rust/game/gamecpp.h"
 
@@ -37,9 +36,6 @@ public:
     // returns the load error
     // 0xd5690: reference, loading the texture on the first one
     long Acquire() { return ee_gamecpp_db_button_acquire(this); }
-    // Loads the button's texture (a mip level dropped at 800 pixels wide or less, alpha for ids below 50) and computes
-    // its cell's texture offset; returns 3 when the texture is missing
-    long LoadTexture() { return ee_gamecpp_db_button_load_texture(this); }
     // Loads the button image entries (file name, cell row and column, id, hot key, position) from db\dbButtons.dat;
     // stops at the first read error and returns it
     // 0xd5500 (db\dbButtons.dat)
@@ -48,10 +44,6 @@ public:
     static void Unload() { ee_gamecpp_db_button_unload(); }
     // Writes each button image with a non-zero reference count to a media dump file
     static void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_gamecpp_db_button_dump(&inFile); }
-    // Reloads the textures of every referenced button image (a mip level dropped at 800 pixels wide or less, as on the
-    // first load); returns the first error
-    // 0xd5c31 (ReloadTexture of every referenced button)
-    static long Reload() { return ee_gamecpp_db_button_reload(); }
     // 0xd584e (ret 0xc): sets inBitmap to this button's cell for inRectangle (EEUIBSavedGroup::SetUnit; provisional
     // name)
     // Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle; a button without a texture (or

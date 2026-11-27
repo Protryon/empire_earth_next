@@ -547,6 +547,28 @@ pub unsafe extern "C" fn ee_won_auth_login_hash_exe(
     unsafe { login(l) }.hash_files(&c, &[file], open_c)
 }
 
+/// The lobby's CRC check (GetLobbyAuthContext): the community's hash files, or the running executable
+/// (`ee_won_auth_login_hash_exe`) when there are none; the original's SetHashFileList(community, files) or
+/// SetHashFile(community).
+///
+/// # Safety
+/// `l` is a login; `community` holds `count` characters of `wchar_size` bytes.
+pub unsafe fn hash_files_or_exe(
+    l: *const EeWonAuthLogin,
+    community: *const c_void,
+    wchar_size: u32,
+    count: usize,
+    files: &[Vec<u8>],
+) -> bool {
+    if files.is_empty() {
+        // SAFETY: the caller's
+        return unsafe { ee_won_auth_login_hash_exe(l, community, wchar_size, count) };
+    }
+    // SAFETY: the caller's text and login
+    let c = unsafe { crate::ffi::wide_units(community, wchar_size, count) };
+    unsafe { login(l) }.hash_files(&c, files, open_c)
+}
+
 /// The members, one line (`Login::describe`, the drivers' form).
 ///
 /// # Safety

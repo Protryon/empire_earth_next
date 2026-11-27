@@ -51,7 +51,6 @@ public:
     long RepairPointers(long inMajorVersion, long inMinorVersion) { return ee_cp_herd_repair_pointers(static_cast<void*>(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }
 
     EEAnimal* GetAnimal() const { return reinterpret_cast<EEAnimal*>((uintptr_t)this->mAnimal); }
-    EEPlayer* GetPlayer() const { return reinterpret_cast<EEPlayer*>((uintptr_t)this->mPlayer); }
 };
 
 #endif

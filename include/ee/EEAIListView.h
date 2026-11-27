@@ -15,9 +15,7 @@ public:
     // the list a Rust accessor answers: inGet(inArgs..., &count) -> its data (any element type of T's layout)
     template <class F, class... A> EEAIListView(F inGet, A... inArgs) : mSize(0) { this->mData = reinterpret_cast<const T*>(inGet(inArgs..., &this->mSize)); }
     const T* begin() const { return this->mData; }
-    const T* end() const { return this->mData + this->mSize; }
     size_t size() const { return this->mSize; }
-    bool empty() const { return this->mSize == 0; }
     const T& operator[](size_t inIndex) const { return this->mData[inIndex]; }
     operator std::vector<T>() const { return std::vector<T>(this->begin(), this->end()); }
 
@@ -41,10 +39,7 @@ public:
     };
     EEAIHandleView(const uint64_t* inData, size_t inSize) : mData(inData), mSize(inSize) {}
     template <class F, class... A> EEAIHandleView(F inGet, A... inArgs) : mSize(0) { this->mData = inGet(inArgs..., &this->mSize); }
-    Iterator begin() const { return Iterator(this->mData); }
-    Iterator end() const { return Iterator(this->mData + this->mSize); }
     size_t size() const { return this->mSize; }
-    bool empty() const { return this->mSize == 0; }
     T* operator[](size_t inIndex) const { return (T*)(uintptr_t)this->mData[inIndex]; }
 
 private:

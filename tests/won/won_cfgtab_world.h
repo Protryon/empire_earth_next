@@ -224,6 +224,7 @@ enum StandardCursor { StandardCursor_Arrow, StandardCursor_Hand, StandardCursor_
 struct Cursor : Obj {
     Cursor(int i) : Obj(i) {}
     static void SetStandardCursor(StandardCursor t, Cursor* c) { tr("Cursor::SetStandardCursor(" + P((long long)t) + "," + P((long long)(c ? c->id : -1)) + ")"); }
+    static Cursor* GetStandardCursor(StandardCursor) { return NULL; } // (the game's CfgTabPut: never reached over the world)
 };
 struct ComponentCursor : Cursor { ComponentCursor(Component* c) : Cursor(c->id) {} };
 struct Window {
@@ -350,10 +351,13 @@ template<class T> T SafeConfigGetComponent(Component* c, const char* name)
 
 // The reads: a cursor over the value text. A token runs to the next comma (or whitespace for a flag); a token
 // starting with '!' makes a read throw.
+struct CcFrame { std::exception_ptr mErr; std::string mMsg; }; // WONCompCfg.inl's (the table frame keeps one)
+template<class T> static SmartPtr<T> CcAdopt(T* p) { return p; } // (CfgTabPut's: never reached over the world)
 static std::map<std::string, Component*> sComps;
 static Component* gComp;
 struct ComponentConfig : Owned {
     std::string mText; size_t mPos;
+    void* mCfg = NULL; // no Rust object: the reader asks the host for every read (the game's config has its compcfg.rs object)
     ComponentConfig() : mPos(0) {}
     virtual ~ComponentConfig() {}
     virtual bool Virtual24(const std::string& key);
@@ -592,7 +596,7 @@ struct WONSkinConfig : ComponentConfig { V24; KIND(WonSkin); bool ReadVert(); vo
 #undef V24
 #undef BASE
 #undef KIND
-// WONSkinConfig's BUTTONCLICKSOUND as the port calls it (ConfigTableHost.cpp's in the game)
+// WONSkinConfig's BUTTONCLICKSOUND as the port calls it (ComponentConfigHost.cpp's in the game)
 static void CfgSkinClickSound(ComponentConfig* c) { static_cast<WONSkinConfig*>(c)->HandleButtonClickSound(); }
 // The configs by name, for the driver.
 #define EE_CFGTAB_CONFIGS(X) X(ButtonConfig) X(MSButtonConfig) X(MSArrowButtonConfig) X(MSTabButtonConfig) X(MS3DFrameConfig) \

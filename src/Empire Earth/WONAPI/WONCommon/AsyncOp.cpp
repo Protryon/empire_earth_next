@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include <string.h>
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"

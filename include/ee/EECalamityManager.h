@@ -66,7 +66,6 @@ public:
     // 0xae869: takes over loaded calamities (games older than 0.30 drop their plagues, leprosy and fire)
     void Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, std::vector<EECalamity*>& inCalamities) { ee_gamecpp_calamity_restore(this, inMajorVersion, inMinorVersion, &inCalamities); }
     // 0xae8bc (kept only if its class starts it)
-    void AddCalamity(EECalamity* inCalamity) { ee_gamecpp_calamity_add(this, inCalamity); }
     void DestroyCalamityClasses(bool inShutdown) { ee_gamecpp_calamity_destroy_classes(this); }
     // 0xae966 (the class's Virtual34)
     void UnloadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum) { ee_gamecpp_calamity_class_media(this, inPlayer, inClassEnum, false); }

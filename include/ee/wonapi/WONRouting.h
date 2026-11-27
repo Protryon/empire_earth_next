@@ -5,15 +5,13 @@
 #ifndef EE_WONAPI_WONROUTING_H
 #define EE_WONAPI_WONROUTING_H
 
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "ee/wonapi/WONDriver.h"
 #include <time.h>
 #include <stdlib.h>
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
-#include "ee/wonapi/WONElGamal.h"
-#include "ee/wonapi/WONBlowfish.h"
-#include "ee/wonapi/WONAuthPeerData.h" //complete type needed by GetCertOp's users
+#include EE_WON_DRV(Routing_crypto) // the drivers' crypto and peer data shims (no game user since R6 WON round 39)
 #include "ee/wonapi/WONStringCompare.h"
 #include <stdio.h> //FILE* member (RecvBytesOp::mFile)
 #include <stdint.h>
@@ -115,15 +113,11 @@ public:
     void SetMode(AsyncRunMode inMode) { ee_won_asyncop_set_mode(this->mOp,static_cast<int32_t>(inMode)); }
     // finishes even a finished op, unless its completion is pending (29f2f0)
     void ForceFinish(WONStatus inStatus) { ee_won_asyncop_force_finish(this->mOp,inStatus); }
-    // an idle op as a pure timer firing after the timeout (29f610)
-    void RunAsTimer(unsigned long inTimeout) { ee_won_asyncop_run_as_timer(this->mOp,static_cast<uint32_t>(inTimeout)); }
     // finishes a running op, its completion queued for async runs (29f220)
     void Finish(WONStatus inStatus) { ee_won_asyncop_finish(this->mOp,inStatus); }
     void RunAsync(long inTimeout) { this->Run(1,inTimeout); }
     // marks the op killed and, when asked, finishes it killed (0x29f1e0)
     void Kill(bool inFlag) { ee_won_asyncop_kill(this->mOp,inFlag); }
-    // whether an async run starts at once instead of being queued (0x29f1d0)
-    void SetRunAsyncImmediately(bool inFlag) { ee_won_asyncop_set_run_async_immediately(this->mOp,inFlag); }
     // a pending completion: the timer entry dropped, the cleanup hook run, the completion called (29f3a0)
     void Complete() { ee_won_asyncop_complete(this->mOp); }
     // the time before the time-out; 0 for async runs or once it passed (0x29f700)
@@ -162,31 +156,17 @@ public:
     static int TimeLeft(DWORD theTotalTime, DWORD theStartTime)
     { return static_cast<int>(ee_won_real_time_left(theStartTime, theTotalTime)); }
     #include EE_WON_DRV(Routing_AsyncSocket) // the drivers' members
-    bool IsOpen() { return ee_won_asyncsocket_is_open(this->mSock); }
-    void SetType(SocketType theType) { ee_won_asyncsocket_set_type(this->mSock, theType); }
-    static WONStatus StopWinsock() { return ee_won_socket_stop(); }
     // an up network adapter with an IPv4 address neither 0.0.0.0 nor loopback (the original asked wininet)
     static bool HasInternetConnection() { return ee_won_has_internet_connection(); }
-    WONStatus SetBroadcast(bool on) { return ee_won_asyncsocket_set_broadcast(this->mSock, on); }
     // a fresh non-blocking handle (broadcast for UDP, no linger for TCP), the open hook run
     WONStatus Open() { return ee_won_asyncsocket_open(this->mSock); }
-    // a signed count; the sender on success, assigned as a new address of its platform address (sockobj.rs)
-    WONStatus RecvFrom(void* outData, int inLength, IPAddr* outAddress, int* outReceived)
-    { return ee_won_asyncsocket_recv_from_ip(this->mSock, outData, inLength, outAddress != NULL ? const_cast<EeWonIpAddr*>(outAddress->GetValue()) : NULL, outReceived); }
     // closes a stream socket; dissolves a datagram socket's association
     void Disconnect() { ee_won_asyncsocket_disconnect(this->mSock); }
     WONStatus Bind(const IPAddr& inAddress, bool inReuse) // opened first; address reuse optional
     { return ee_won_asyncsocket_bind(this->mSock, inAddress.GetSockAddrIn().mAddress, inAddress.GetSockAddrIn().mPort, inReuse); }
-    // connects: an existing stream connection dropped, opened and bound to the local host if needed
-    WONStatus Fn2B0E60(const IPAddr& inAddress)
-    { return ee_won_asyncsocket_connect_to(this->mSock, inAddress.GetValue(), static_cast<uint32_t>(IPAddr::GetLocalHost())); }
     // a new socket of the same type (the virtual Duplicate) with the accepted handle (cppcore.rs n_accept)
     WONStatus Accept(SmartPtr<AsyncSocket>& outSocket) { return ee_won_asyncsocket_accept_to(static_cast<RefCount*>(this), AcceptSink, &outSocket); }
     static void AcceptSink(void* inPtr, void* inSocket) { *static_cast<SmartPtr<AsyncSocket>*>(inPtr) = static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)); }
-    // success, the socket error or WS_TimedOut
-    WONStatus WaitForConnect(unsigned long inWaitTime)
-    { return ee_won_asyncsocket_wait_for_connect(this->mSock, static_cast<uint32_t>(inWaitTime)); }
-    void WaitForAccept(unsigned long inTimeout) { this->WaitForRead(inTimeout); }
     // binds to the local host address on the port (the SDK's second parameter is bool)
     WONStatus Fn2B0D90(unsigned short inPort, bool inReuse) { return this->Bind(IPAddr(IPAddr::GetLocalHost(), inPort), inReuse); }
     WONStatus Listen(int inBacklog) { return ee_won_asyncsocket_listen(this->mSock, inBacklog); }
@@ -198,24 +178,16 @@ public:
     // after the socket thread is told and the close hook run
     void Close() { ee_won_asyncsocket_close(this->mSock); }
     void Kill() { ee_won_asyncsocket_kill(this->mSock); } // the close and kill hooks; separate from the SDK's Kill
-    unsigned short GetLocalPort() { return ee_won_asyncsocket_local_port(this->mSock); } // or 0
     void SetLengthFieldSize(unsigned char inSize) { ee_won_asyncsocket_set_length_field_size(this->mSock, inSize); }
     bool IsConnected() { return ee_won_asyncsocket_is_connected(this->mSock); }
     // a copy taken under the lock (the original returned a reference to the member)
     IPAddr GetDestAddr() { return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock)); }
-    void WaitForRead(unsigned long inWaitTime) { ee_won_asyncsocket_wait(this->mSock, PLAT_SOCKET_WAIT_READ, static_cast<uint32_t>(inWaitTime)); }
     // Winsock's numbering; would-block and in-progress are WS_TimedOut, any other recorded
     bool IsValid() { return ee_won_asyncsocket_is_valid(this->mSock); }
-    WONStatus SendTo(const void* inData, int inLength, const IPAddr& inAddress) // opened first if needed; fails on stream sockets
-    { return ee_won_asyncsocket_send_to(this->mSock, inData, inLength, inAddress.GetSockAddrIn().mAddress, inAddress.GetSockAddrIn().mPort); }
-    // Shutdown when the peer closed, WS_TimedOut on a short stream read
-    WONStatus Recv(void* outData, int inLength, int* outReceived)
-    { return ee_won_asyncsocket_recv(this->mSock, outData, inLength, outReceived); }
 
     // the socket's lock (the original's mDataCrit, a recursive mutex the Rust object owns), which the subclasses
     // (QueueSocket, the routing and server connections) take around their own state too: AutoCrit takes it
     PlatMutex* GetDataLock() const { return static_cast<PlatMutex*>(ee_won_asyncsocket_mutex(this->mSock)); }
-    void SetDestAddr(const IPAddr& inAddr) { ee_won_asyncsocket_set_dest_addr(this->mSock,inAddr.GetValue()); }
     EeWonAsyncSocket* GetSocketObject() const { return this->mSock; }
 private:
     // A Rust object since round 14 (rust/crates/ee_won_net/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
@@ -236,6 +208,7 @@ private:
 // own (the lobby's SendFileOp) has no kind and its virtual Continue.
 class SocketOp : public AsyncOp {
 public:
+    #include EE_WON_DRV(Routing_SocketOp) // the drivers' members
     // the op's socket (a reference held)
     AsyncSocket* GetSocket() { return static_cast<AsyncSocket*>(ee_won_socketop_socket(this->mSockOp)); }
     void SetSocket(AsyncSocket* theSocket) { ee_won_socketop_set_socket(this->mSockOp,theSocket); }
@@ -262,7 +235,6 @@ public:
     virtual AsyncOp* Duplicate()
     { return static_cast<AsyncOp*>(static_cast<RefCount*>(ee_won_socketop_duplicate(this->mSockOp))); }
 
-    bool IsInSocketThread() const { return ee_won_socketop_in_socket_thread(this->mSockOp); }
     void SetWaitForEvent(int i,bool inFlag) { ee_won_socketop_set_wait_for_event(this->mSockOp,i,inFlag); }
     EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
     int GetKind() const { return ee_won_socketop_class(this->mSockOp); } // an EeWonCoreSocketOp, -1 for none
@@ -352,6 +324,7 @@ public:
 // erases 0x2b8160/0x2b81b0 and RecvCallback's dispatch). The original's mAutoRecv (+0x38) was never read: gone
 class UDPManager : public RefCount {
 public:
+    #include EE_WON_DRV(Routing_UDPManager) // the drivers' members
     UDPManager() : mManager(ee_won_udpmanager_new(static_cast<void*>(this), WonCore())) {}
     virtual ~UDPManager() { ee_won_udpmanager_free(this->mManager); } // closes nothing (the original's 2b77b0)
     // rebinds to a local port (optionally broadcast) and receives datagrams repeatedly
@@ -361,10 +334,8 @@ public:
     void Send(const ByteBuffer* inData, const IPAddr& inAddress) // provisional name (the SDK has SendBytesTo)
     { ee_won_udpmanager_send(this->mManager, const_cast<RefCount*>(static_cast<const RefCount*>(inData)), inAddress.GetValue()); }
     void Close() { ee_won_udpmanager_close(this->mManager); }
-    void SetAutoRecv(bool inAutoRecv) { ee_won_udpmanager_set_auto_recv(this->mManager, inAutoRecv); }
     void QueueOp(AsyncOp* inOp, unsigned long inTimeout) // a UDPManagerRecvOp
     { ee_won_udpmanager_queue_op(this->mManager, static_cast<RefCount*>(inOp), static_cast<uint32_t>(inTimeout)); }
-    void CleanOps() { ee_won_udpmanager_clean_ops(this->mManager); }
     // the socket (NULL when unbound)
     QueueSocket* GetSocket() const
     { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udpmanager_socket(this->mManager)))); }
@@ -381,8 +352,6 @@ public:
     explicit UDPManagerRecvOp(const EeWonIpAddr* inAddr = NULL) : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), inAddr)) {}
     virtual ~UDPManagerRecvOp() { ee_won_udprecvop_free(this->mUdp); } // the original's was implicit (2b6930)
     #include EE_WON_DRV(Routing_UDPManagerRecvOp) // the drivers' members
-    void SetUDPManager(UDPManager* theManager) { ee_won_udprecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
-    void SetSocket(QueueSocket* theSocket) { ee_won_udprecvop_set_socket(this->mUdp, static_cast<RefCount*>(theSocket)); }
     // a copy (the original returned a reference to the member)
     IPAddr GetFromAddr() const { return IPAddr::FromValue(ee_won_udprecvop_address(this->mUdp)); }
     const ByteBuffer* GetMsg() const
@@ -399,8 +368,6 @@ public:
         MessageVerifier aVerifier = reinterpret_cast<MessageVerifier>(ee_won_udprecvop_verifier(this->mUdp));
         return aVerifier ? aVerifier(inMessage, ee_won_udprecvop_verifier_context(this->mUdp)) : 0;
     }
-    void SetMessageVerifier(MessageVerifier inVerifier, void* inContext)
-    { ee_won_udprecvop_set_verifier(this->mUdp, reinterpret_cast<void*>(inVerifier), inContext); }
 private:
     EeWonUdpRecvOp* mUdp;
 };
@@ -420,16 +387,12 @@ public:
     UDPManagerSendRecvOp(EeWonUdpBody inBody, const IPAddr& inAddr, UDPManager* inManager)
         : mUdp(ee_won_udpsendrecvop_new_body(static_cast<RefCount*>(this), WonCore(), inBody, inAddr.GetValue(), static_cast<RefCount*>(inManager))) {}
     virtual ~UDPManagerSendRecvOp() { ee_won_udpsendrecvop_free(this->mUdp); } // the original's was implicit (2b7140)
-    void SetUDPManager(UDPManager* theManager) { ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
     #include EE_WON_DRV(Routing_UDPManagerSendRecvOp) // the drivers' members
     void SetDestAddr(const IPAddr& theAddr) { ee_won_udpsendrecvop_set_address(this->mUdp, theAddr.GetValue()); }
     IPAddr GetDestAddr() const { return IPAddr::FromValue(ee_won_udpsendrecvop_address(this->mUdp)); } // a copy
     // the op's own socket (none with a manager)
     QueueSocket* GetSocket() const
     { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udpsendrecvop_socket(this->mUdp)))); }
-    // the reply wait
-    UDPManagerRecvOp* GetRecvOp() const
-    { return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(ee_won_udpsendrecvop_recv_op(this->mUdp)))); }
     virtual void RunHook() { ee_won_udpsendrecvop_run(this->mUdp); }
     virtual void CleanupHook() { ee_won_udpsendrecvop_cleanup(this->mUdp); }
     virtual WONStatus CheckResponse(ReadBuffer&) { return 0; } //2ad870: any response (folded with others)
@@ -441,7 +404,8 @@ private:
 
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
-// vtables 0x84c49c / 0x84c4ac; provisional member names)
+// vtables 0x84c49c / 0x84c4ac; provisional member names). The templates LobbyCompletion<T> and LogicCompletion<T>
+// have no game user since R6 WON round 39 (PingLogic's two are the logic shell's: ShellCompletion)
 class LobbyCompletionBase : public CompletionBase<AsyncOpPtr> {
 public:
     LobbyCompletionBase() throw() {}
@@ -449,37 +413,11 @@ public:
     virtual void Run(AsyncOp* inOp) {}      // +0x08
 };
 
-template <class T> class LobbyCompletion : public LobbyCompletionBase {
-public:
-    typedef void (T::*Callback)(AsyncOp* inOp);
-    LobbyCompletion(Callback inCallback, T* inObject) : mCallback(inCallback), mObject(inObject) {}
-    virtual void Run(AsyncOp* inOp) { (this->mObject.mPtr->*mCallback)(inOp); }
-
-    Callback mCallback;                     // +0x08
-    SmartPtr<T> mObject;                    // +0x0c
-};
-
-
 // RTTI LogicCompletionBase4558cc derives LobbyCompletionBase; distinct flag-bearing subclass.
 class LogicCompletionBase : public LobbyCompletionBase {
 public:
     LogicCompletionBase() : mCheckTracker(false) {}
     bool mCheckTracker;                    // +0x08; original3df809 and3e5b6e
-};
-
-template <class T> class LogicCompletion : public LogicCompletionBase {
-public:
-    typedef void (T::*Callback)(AsyncOp* inOp);
-    LogicCompletion(Callback inCallback, T* inObject) : mCallback(inCallback), mObject(inObject) {}
-    // unless the logic was killed or (checked) the op was not its tracked one (opobj.rs decides, R6 WON round 33)
-    virtual void Run(AsyncOp* inOp)
-    {
-        if (ee_won_logic_completion_runs(this->mObject->mKilled, this->mCheckTracker, &Untrack, this->mObject.mPtr, inOp))
-            (this->mObject.mPtr->*mCallback)(inOp);
-    }
-    static bool Untrack(void* inLogic, void* inOp) { return static_cast<T*>(inLogic)->RemoveTrackedOp(static_cast<AsyncOp*>(inOp)); }
-    Callback mCallback;                    // +0x0c
-    SmartPtr<T> mObject;                    // +0x10; original allocation0x14
 };
 
 // A Rust object a C++ reference holds (R6 WON round 34): HTTPConnection (RTTI 44d3a4 > RefCount; ctor 2d2c80, dtor
@@ -582,7 +520,6 @@ public:
     void RemoveAllAddresses() { this->Clear(); } //2acc00
     unsigned long GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }
     #include EE_WON_DRV(Routing_ServerContext) // the drivers' members
-    bool RemoveAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 2, inAddress.GetValue()); }
 
 private:
     static size_t WideLength(const wchar_t* inText) { return inText != NULL ? wcslen(inText) : 0; }
@@ -815,6 +752,7 @@ public:
 // A request helper's values in parameter order: numbers, texts (UTF-16), data types, a buffer (or none), recipients
 class RoutingRequestValues {
 public:
+    #include EE_WON_DRV(Routing_RoutingRequestValues) // the drivers' members
     // the values are a Rust builder's (rust/crates/ee_won_net/src/routereq.rs, R6 WON round 34)
     RoutingRequestValues() : mReq(ee_won_routereq_new()) {}
     ~RoutingRequestValues() { ee_won_routereq_free(this->mReq); }
@@ -828,7 +766,6 @@ public:
     { ee_won_routereq_ids(this->mReq, std::vector<uint16_t>(inIds.begin(), inIds.end()).data(), inIds.size()); return *this; }
     void Run(RefCount* inConn, int inKind, CompletionBase<AsyncOpPtr>* inCompletion)
     { ee_won_routereq_run(this->mReq, inConn, inKind, static_cast<RefCount*>(inCompletion)); }
-    const EeWonRouteReq* GetReq() const { return this->mReq; }
 private:
     RoutingRequestValues(const RoutingRequestValues&);
     RoutingRequestValues& operator=(const RoutingRequestValues&);

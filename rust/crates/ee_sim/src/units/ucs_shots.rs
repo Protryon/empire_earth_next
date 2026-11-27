@@ -351,6 +351,11 @@ pub(crate) mod game {
             if let Some(v) = crate::units::player_upgrades::ucs(op, unit, f) {
                 return v;
             }
+            if let Some(v) =
+                crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Shots, op, class, unit, a, b, c, f)
+            {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
             unsafe { ee_units_ucs_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }

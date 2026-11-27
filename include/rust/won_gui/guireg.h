@@ -144,8 +144,8 @@ enum class EeWonGuiReg : uint32_t {
   WONFrameComponent,
 };
 
-/// The host: the entry's config factory (`config` true) or component factory, as a function pointer.
-using EeWonGuiRegHostFn = ptrdiff_t(*)(EeWonGuiReg entry, bool config);
+/// The host: the component factory of an entry whose component is a C++ class, as a function pointer.
+using EeWonGuiRegHostFn = ptrdiff_t(*)(EeWonGuiReg entry);
 
 extern "C" {
 

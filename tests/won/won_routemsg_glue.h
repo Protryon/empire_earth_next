@@ -10,7 +10,7 @@
 #include <map>
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
-#include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/status_codes.h"
 #include "rust/won_net/dirops.h"
 #include "rust/won_net/reqlast.h"
 #include "rust/won_net/routemsg.h"

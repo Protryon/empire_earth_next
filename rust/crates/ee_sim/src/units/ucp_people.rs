@@ -697,7 +697,7 @@ pub fn run<H: UcHost + UcpRust + ?Sized>(h: &mut H, what: i32, class: u64, unit:
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
@@ -720,6 +720,11 @@ mod game {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
             if let Some(v) = crate::units::tech_cases::ucp(op, unit, a, b) {
+                return v;
+            }
+            if let Some(v) =
+                crate::units::uc_view::uc_view(crate::units::uc_view::Kind::People, op, class, unit, a, b, c, f)
+            {
                 return v;
             }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit

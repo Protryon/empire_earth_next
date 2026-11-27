@@ -8,8 +8,6 @@
 
 #include <vector>
 
-#include "rust/sim/tech.h"
-#include "lle/U2DPoint.h"
 
 class EECalamity;
 class EECalamityClass;

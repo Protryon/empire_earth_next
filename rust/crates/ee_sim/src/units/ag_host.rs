@@ -183,6 +183,9 @@ impl AgGame {
         if let Some(v) = crate::units::tech_cases::ag(op, a, b) {
             return v;
         }
+        if let Some(v) = crate::units::dm_group_view::ag_plain(op, a, b, c) {
+            return v;
+        }
         // SAFETY: the C++ switch reads live objects the bodies hand it
         unsafe { ee_units_ag_host(op, a, b, c, d, io) }
     }

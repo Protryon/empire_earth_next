@@ -380,8 +380,14 @@ pub(crate) mod game {
             if let Some(v) = crate::units::player_upgrades::eum(op, unit, a) {
                 return v;
             }
-            // SAFETY: the body runs inside the C++ member that handed over its unit
-            unsafe { ee_units_eum_host(op, unit as usize as *mut c_void, a, b, c) }
+            // SAFETY: the body runs inside the C++ member that handed over its unit (the plain record reads and
+            // stores first: cu_view.rs)
+            unsafe {
+                if let Some(v) = crate::units::cu_view::eum_view(op, unit, a, b) {
+                    return v;
+                }
+                ee_units_eum_host(op, unit as usize as *mut c_void, a, b, c)
+            }
         }
     }
 

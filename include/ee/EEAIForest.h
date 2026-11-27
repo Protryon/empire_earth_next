@@ -11,21 +11,14 @@
 class EEAIForest : public EEAIArea, private EeAStarForestRecord {
 public:
     // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
-    static EEAIForest* New() { return (EEAIForest*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::Forests); }
-    static void Delete(EEAIForest* inObject) { ee_astar_object_delete(EeAStarCmTable::Forests, (uint64_t)(uintptr_t)inObject); }
     bool RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount) { return ee_astar_forest_regrow((uint64_t)(uintptr_t)this, inTile.mX, inTile.mY, inRadius, inCount); }
     // +0x28 0x29e17: EEAIArea's, then the removed tile's resource kind (EEAIHasResourceUnit) leaves its count
-    bool RemoveTile(const U2DPoint<long>& inPoint)   // (Rust: ee_sim::astar cm_host.rs)
-        { return ee_astar_area_remove_tile_of((uint64_t)(uintptr_t)this, inPoint.mX, inPoint.mY); }
     EeAStarForestRecord* Record() { return this; }
     const EeAStarForestRecord* Record() const { return this; }
     long GetResourceKind() const { return this->resource_kind; }
     unsigned long GetNextRenewal() const { return this->next_renewal; }
     void SetNextRenewal(unsigned long inTime) { this->next_renewal = inTime; }
-    unsigned short GetContinentID() const { return this->continent_id; }
-    void SetContinentID(unsigned short inID) { this->continent_id = inID; }
     unsigned short GetID() const { return this->id; }
-    void SetID(unsigned short inID) { this->id = inID; }
 
 private:
     EEAIForest();
