@@ -223,9 +223,9 @@ macro_rules! shim_call {
 #[cfg(not(test))]
 use crate::screens::civ_direct;
 #[cfg(not(test))]
-use crate::screens::tech_direct;
-#[cfg(not(test))]
 use crate::screens::scr_direct;
+#[cfg(not(test))]
+use crate::screens::tech_direct;
 #[cfg(not(test))]
 use crate::screens::uit_direct;
 
