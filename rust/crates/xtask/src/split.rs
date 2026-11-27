@@ -815,7 +815,7 @@ pub fn union_of(headers: &BTreeMap<String, String>) -> Result<Vec<Item>, String>
         let parsed = parse(text)?;
         for mut item in parsed.types.into_iter().chain(parsed.functions) {
             if is_records(header) {
-                for line in item.lines.iter_mut() {
+                for line in item.lines.iter_mut().filter(|l| !is_comment(l)) {
                     for (mirror, class, _) in CPP_VALUES {
                         *line = replace_word(line, class, mirror);
                     }
