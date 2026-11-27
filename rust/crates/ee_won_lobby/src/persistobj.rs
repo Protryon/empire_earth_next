@@ -282,7 +282,11 @@ impl EeWonPersist {
         // the click sound's mute (R6 WON GUI round 41: soundobj.rs's)
         if ee_won_gui::compobj::is_game() {
             let mute = isize::from(!self.prefs.flag(F::LobbySoundEffects));
-            crate::eesound::res_sound(EeWonLobbyRes::LobbyGlobal_ButtonClick_Sound, ee_won_gui::soundobj::EeWonSoundCall::SetMuted, mute);
+            crate::eesound::res_sound(
+                EeWonLobbyRes::LobbyGlobal_ButtonClick_Sound,
+                ee_won_gui::soundobj::EeWonSoundCall::SetMuted,
+                mute,
+            );
             return;
         }
         self.op(EeWonPersistOp::MuteClick, isize::from(!self.prefs.flag(F::LobbySoundEffects)), 0, 0);

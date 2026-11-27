@@ -284,7 +284,6 @@ fn snd(row: crate::resource::EeWonLobbyRes, call: ee_won_gui::soundobj::EeWonSou
     crate::eesound::res_sound(row, call, a)
 }
 
-
 /// The controls' text and event ops (lobbyctl.rs and rows.rs, in the game; `None`: the host's).
 pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     if !is_game() {

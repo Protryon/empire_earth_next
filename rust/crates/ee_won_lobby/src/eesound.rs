@@ -202,7 +202,9 @@ static HOST: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::ne
 fn game_host() -> EeWonEeSoundHostFn {
     let h = HOST.load(std::sync::atomic::Ordering::Acquire);
     // SAFETY: 0 or the host function `ee_won_eesound_register` stored
-    (h != 0).then(|| unsafe { std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, EeWonEeSoundOp, isize) -> isize>(h) })
+    (h != 0).then(|| unsafe {
+        std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, EeWonEeSoundOp, isize) -> isize>(h)
+    })
 }
 
 /// The game's host of the sounds' ops (EELobbyGlueHost.cpp, at static initialisation).
@@ -252,7 +254,11 @@ fn decode_effect(path: &[u8]) -> Option<Box<dyn ee_won_gui::soundobj::SoundHook>
 }
 
 /// `LOBBY_SOUND(row)->call(a)`: a call on one of the lobby's resource sounds (nothing when it has none).
-pub(crate) fn res_sound(row: crate::resource::EeWonLobbyRes, call: ee_won_gui::soundobj::EeWonSoundCall, a: isize) -> isize {
+pub(crate) fn res_sound(
+    row: crate::resource::EeWonLobbyRes,
+    call: ee_won_gui::soundobj::EeWonSoundCall,
+    a: isize,
+) -> isize {
     let s = crate::resource::sound(row as usize) as *const ee_won_gui::soundobj::EeWonSound;
     // SAFETY: the slot's live sound (or null)
     unsafe { ee_won_gui::soundobj::ee_won_sound_call(s, call, a) }
