@@ -1598,12 +1598,6 @@ EeGeFont *ee_ge_game_font_new(void *owner,
 /// `l` is valid for a write.
 void ee_ge_light_init(EeGeLight *l);
 
-/// `operator=(inLight)`.
-///
-/// # Safety
-/// Both are live.
-void ee_ge_light_assign(EeGeLight *l, const EeGeLight *other);
-
 /// `SetColor(inColor)`.
 ///
 /// # Safety
