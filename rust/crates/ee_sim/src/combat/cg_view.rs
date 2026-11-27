@@ -118,7 +118,9 @@ pub(crate) fn cg_plain(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32;
             use crate::units::goal_calls::ee_units_goal_set_path_attempts;
             use crate::units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS;
             // SAFETY: `a` is the live goal
-            unsafe { ee_units_goal_set_path_attempts(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, a as usize as *mut _, b as c_long) };
+            unsafe {
+                ee_units_goal_set_path_attempts(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, a as usize as *mut _, b as c_long)
+            };
             0
         }
         EE_UNITS_CG_RELOAD_TIMER => {
@@ -190,7 +192,9 @@ pub(crate) fn query_plain_handle(code: i32, object: u64) -> Option<u64> {
                 *at(node as u64, slot) as u64
             }
         }
-        crate::combat::leaves::EE_COMBAT_H_ACTIVE_GOAL_TARGET => crate::combat::goal_attack::ee_combat_attack_of(o()?.active_goal_handle()).target,
+        crate::combat::leaves::EE_COMBAT_H_ACTIVE_GOAL_TARGET => {
+            crate::combat::goal_attack::ee_combat_attack_of(o()?.active_goal_handle()).target
+        }
         _ => return None,
     })
 }

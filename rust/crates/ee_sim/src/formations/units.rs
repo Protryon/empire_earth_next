@@ -159,7 +159,8 @@ pub unsafe fn formation_place(formation: u64, units: &[u64]) -> Vec<EeFormationU
     // SAFETY: the caller's contract
     let f = unsafe { formation_fields(formation) };
     let frame = frame_of(&GeTransformation { m: f.mOrientation }, f.mCenter, f.mHeading);
-    let mut out = vec![EeFormationUnitSlot { position: [0.0; 3], unit: std::ptr::null_mut(), heading: 0.0 }; units.len()];
+    let mut out =
+        vec![EeFormationUnitSlot { position: [0.0; 3], unit: std::ptr::null_mut(), heading: 0.0 }; units.len()];
     // SAFETY: the caller's contract; `out` holds one slot per unit
     unsafe { place_into(f.mType as i32, f.mMinRadius, &frame, units, out.as_mut_ptr()) };
     out

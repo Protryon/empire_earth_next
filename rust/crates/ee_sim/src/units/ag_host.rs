@@ -6,10 +6,10 @@
 
 use std::ffi::c_void;
 
+use crate::formations::units::{formation_arrange, formation_fields};
 use crate::units::ag::{self, AgHost, EeUnitsAgGroup, EeUnitsAgUnit, LocationFields, NewLocation, Rect, Slot};
 use crate::units::group_host::GameGroups;
 use crate::units::group_obj as go;
-use crate::formations::units::{formation_arrange, formation_fields};
 use ee_base::math::transform::RotationOrder;
 use ee_base::math::types::GeTransformation;
 

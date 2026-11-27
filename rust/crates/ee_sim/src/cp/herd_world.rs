@@ -305,8 +305,11 @@ mod game {
         let place = || {
             // the input units placed: the units (Place leaves them as they came) into list2, the slots into list
             // SAFETY: the operation's input units
-            let units: Vec<u64> =
-                if input_len == 0 { Vec::new() } else { unsafe { std::slice::from_raw_parts(input, input_len) }.to_vec() };
+            let units: Vec<u64> = if input_len == 0 {
+                Vec::new()
+            } else {
+                unsafe { std::slice::from_raw_parts(input, input_len) }.to_vec()
+            };
             // SAFETY: the live formation and units
             let slots = unsafe { crate::formations::units::formation_place(f, &units) };
             for &u in &units {

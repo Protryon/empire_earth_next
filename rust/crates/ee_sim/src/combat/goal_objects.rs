@@ -366,8 +366,8 @@ impl TableHost<'_> {
                     return Some(0);
                 }
                 let mut io = EeCombatGoalIo::default();
-                for k in 0..3 {
-                    io.f[k] = f32::from_bits(a[k] as u32);
+                for (f, v) in io.f.iter_mut().zip(a.iter()).take(3) {
+                    *f = f32::from_bits(*v as u32);
                 }
                 self.call(crate::units::goal_split::EE_UNITS_GOAL_HOST_X_TELL_GROUP, unit, 0, &mut io);
                 Some(1)
