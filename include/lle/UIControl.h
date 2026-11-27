@@ -2,7 +2,7 @@
 // UIControl.cpp holds the ctor, dtor and the out-of-line members; the inline members are emitted first by
 // UIBackground.cpp (0x10058f73..0x100594ef, declaration order). Virtual slot order from the vtable (0x10098a74,
 // 34 slots; the pure slots named from the UIButton/UIDualButton overrides). sizeof 0xa0 (??_E stride 0x100594a5).
-// Requires lle/UIEntity.h, lle/GEColor.h, lle/GERhombus.h.
+// Requires lle/GEColor.h, lle/GERhombus.h (UIEntity: lle/UIObjHost.h).
 //
 // The members are EeUiControlFields (rust/crates/ee_ui/src/controlobj.rs, R6 ui round 19), the class's private base:
 // the record's field names are the members', the inline getters read them in place, and the base's logic (the
@@ -23,7 +23,6 @@
 #include "rust/ui/lle_control.h"
 #include "rust/ui/lle_hosts.h"
 #include "rust/ui/ids.h"
-#include "lle/UIEntity.h"
 #include "lle/UIObjHost.h"
 #include "lle/UReferenceCounter.h"
 #include "lle/UIForm.h"
@@ -138,6 +137,6 @@ public:   // (public: the toolkit's shims, UIControl.cpp)
     intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const { return this->Call(inCall, 0, 0, UIF4(inRectangle)); }
 };
 
-#include "lle/UIMultiByte.h"
+#include "platform/PlatString.h"   // GetMultiByteChar
 
 #endif
