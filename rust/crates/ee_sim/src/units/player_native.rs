@@ -310,6 +310,11 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                     ((u64::from(pt.x as u32) << 32) | u64::from(pt.y as u32)) as i64
                 });
             }
+            // complex unit `a`'s mActiveGroup (an EEActiveGroup is its EeUnitsGroup: no vtable before it)
+            crate::units::player_rest::EE_UNITS_PLAYER_BODY_ACTIVE_GROUP => {
+                let t = crate::world::WorldRead::begin();
+                return Some(crate::world::UnitView::of(&t, a)?.active_group_handle() as i64);
+            }
             EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT => {
                 let t = crate::world::WorldRead::begin();
                 let s = crate::world::UnitView::of(&t, a)?.stats()?;
@@ -831,6 +836,11 @@ pub unsafe fn tick(op: i32, p: u64, index: u32, io: &mut crate::units::player_sa
             EE_UNITS_PLAYER_TICK_X_HEAL_AMOUNT => io.i = world_long(W::kWorldWonderHealAmount as i64),
             EE_UNITS_PLAYER_TICK_X_HEAL_STEP => io.i = world_long(W::kWorldWonderHealEpochStep as i64),
             EE_UNITS_PLAYER_TICK_X_HEAL_FACTOR => io.f = world_float(W::kWorldWonderHealEpochFactor as i64),
+            // gPhysics->GetTickTime()
+            EE_UNITS_PLAYER_TICK_TICK_TIME => {
+                let t = WorldRead::begin();
+                io.f = (*crate::world::WorldView::global(&t)?.physics()?.ptr()).mTickTime;
+            }
             EE_UNITS_PLAYER_TICK_GAME_TIME | EE_UNITS_PLAYER_TICK_TICK_MS => {
                 let t = WorldRead::begin();
                 let w = crate::world::WorldView::global(&t)?;
