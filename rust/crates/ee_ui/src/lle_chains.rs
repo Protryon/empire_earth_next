@@ -133,9 +133,23 @@ fn bg<R: Default>(bg: Cpp, g: impl FnOnce(&EeUiBackgroundFields) -> R) -> R {
 pub(crate) unsafe fn bg_tiled(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
     // SAFETY: the contract
     unsafe {
-        let mut w = [*f, *f.add(1), *f.add(2), *f.add(3), f32::from_bits(c as u32), f32::from_bits(d as u32), *f.add(4), *f.add(5)];
-        crate::bgobj::ee_ui_bg_call(o as *mut EeUiBackgroundFields, crate::bgobj::EeUiBgCall::DrawTiled, ul(a), ul(b), w.as_mut_ptr())
-            as core::ffi::c_long as isize
+        let mut w = [
+            *f,
+            *f.add(1),
+            *f.add(2),
+            *f.add(3),
+            f32::from_bits(c as u32),
+            f32::from_bits(d as u32),
+            *f.add(4),
+            *f.add(5),
+        ];
+        crate::bgobj::ee_ui_bg_call(
+            o as *mut EeUiBackgroundFields,
+            crate::bgobj::EeUiBgCall::DrawTiled,
+            ul(a),
+            ul(b),
+            w.as_mut_ptr(),
+        ) as core::ffi::c_long as isize
     }
 }
 /// The form of the background record `o` (the host's object).
@@ -597,7 +611,11 @@ fn virt_hide(c: Cpp) {
 }
 /// `c->GetIMEEnabled()`: the edit box's, else false.
 fn virt_ime_enabled(c: Cpp) -> isize {
-    if direct::is(Kind::Edit, c) { bl(direct::edit_call(c, crate::editobj::EeUiEditCall::ImeEnabled, 0, 0).unwrap_or(0)) } else { 0 }
+    if direct::is(Kind::Edit, c) {
+        bl(direct::edit_call(c, crate::editobj::EeUiEditCall::ImeEnabled, 0, 0).unwrap_or(0))
+    } else {
+        0
+    }
 }
 /// `c->OpenIMECompositionString()` (`open`) or `CloseIMECompositionString()`: the edit box's, else kErrorFailed.
 fn virt_ime(c: Cpp, open: bool) -> isize {
@@ -678,7 +696,14 @@ ops! {
 ///
 /// # Safety
 /// The host contract.
-pub(crate) unsafe fn table_change_font(_o: *mut c_void, a: isize, _b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+pub(crate) unsafe fn table_change_font(
+    _o: *mut c_void,
+    a: isize,
+    _b: isize,
+    c: isize,
+    _d: isize,
+    _f: *mut f32,
+) -> isize {
     virt_change_font(p(a), c);
     0
 }

@@ -636,7 +636,9 @@ mod own {
     /// `gISMouse->GetEntity(button, UIControl::Key(LeftMouse + which))`.
     pub(super) fn mouse_button_fetch(which: u32, button: u32) {
         // SAFETY: as control_key_fetch's
-        unsafe { crate::lle_hosts::input::mouse_entity(button as c_ulong, key_slot_at(EeUiKey::LeftMouse as u32 + which)) };
+        unsafe {
+            crate::lle_hosts::input::mouse_entity(button as c_ulong, key_slot_at(EeUiKey::LeftMouse as u32 + which))
+        };
     }
     /// `gISKeyboard->GetEntity(kKeyTab, UIControl::Key(Tab))`.
     pub(super) fn form_fetch_tab_key() {

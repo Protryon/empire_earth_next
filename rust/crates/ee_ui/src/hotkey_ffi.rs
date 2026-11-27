@@ -44,8 +44,13 @@ pub unsafe extern "C" fn ee_ui_hotkey_display_name(rec: *const crate::hotkeyobj:
         static NAME: core::cell::RefCell<Vec<u8>> = const { core::cell::RefCell::new(Vec::new()) };
     }
     // SAFETY: the contract; each entity's name lives as long as the entity
-    let name_of =
-        |e: *mut core::ffi::c_void| if e.is_null() { None } else { unsafe { c_bytes(ee_base::input::ffi::ee_input_entity_name(e.cast())) } };
+    let name_of = |e: *mut core::ffi::c_void| {
+        if e.is_null() {
+            None
+        } else {
+            unsafe { c_bytes(ee_base::input::ffi::ee_input_entity_name(e.cast())) }
+        }
+    };
     // SAFETY: the contract
     let (modifiers, key) = unsafe { ((*rec).mModifiers, (*rec).mKey) };
     let mut name = hotkey::hot_key_name(

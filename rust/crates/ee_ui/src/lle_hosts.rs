@@ -886,7 +886,14 @@ pub(crate) mod ge {
         let (origin, black) = ([0.0f32; 2], [0.0f32; 3]);
         // SAFETY: as rhombus_new's; the points and colours live for the call
         make(|o| unsafe {
-            ee_ge_game_prim_new_line(o, origin.as_ptr().cast(), origin.as_ptr().cast(), black.as_ptr().cast(), black.as_ptr().cast(), 1.0)
+            ee_ge_game_prim_new_line(
+                o,
+                origin.as_ptr().cast(),
+                origin.as_ptr().cast(),
+                black.as_ptr().cast(),
+                black.as_ptr().cast(),
+                1.0,
+            )
         }) as usize
     }
     /// `delete` of a rhombus or line.
