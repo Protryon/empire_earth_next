@@ -79,10 +79,25 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
             if let Some(r) = crate::wrapobj::wrap_host_op(crate::wrapobj::label_text(comp as isize), op, a) {
                 return r;
             }
+            // the constructor's `mWrappedText->SetFont(GetNamedFont("Label"))` (R6 WON GUI round 41)
+            if op == Op::CtorFontNamed && crate::compobj::is_game() {
+                let w = crate::wrapobj::label_text(comp as isize);
+                if let Some(r) = crate::gamefwd::named_font("Label")
+                    .and_then(|f| crate::wrapobj::game_wrap_op(w?, crate::guihost::EeWonWbText::SetFont, f))
+                {
+                    return r;
+                }
+            }
             if op == Op::CtorWrapNew {
                 if let Some(r) = crate::wrapobj::label_new_text(comp as isize) {
                     return r;
                 }
+            }
+        }
+        if which != EeWonGuiSplitHost::Wm {
+            // (the widgets' own fonts, colours, backgrounds and sort function in place: R6 WON GUI round 41)
+            if let Some(r) = crate::gamefwd::area_op(which, comp as isize, op, a, b, c, d) {
+                return r;
             }
         }
         if which == EeWonGuiSplitHost::Input {

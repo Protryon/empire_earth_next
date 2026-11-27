@@ -273,7 +273,7 @@ pub(crate) fn plat_manager_of(window: isize) -> Option<*const EeWonPlatWm> {
     parts(window)?;
     Some(manager().map_or(std::ptr::null(), |m| m.1))
 }
-fn wm(c: EeWonWmCall, a: isize, b: isize) -> Option<isize> {
+pub(crate) fn wm(c: EeWonWmCall, a: isize, b: isize) -> Option<isize> {
     let (w, _) = manager()?;
     // SAFETY: the manager's live Rust manager (the bind's contract)
     Some(unsafe { crate::wmobj::ee_won_wm_call(w, c, a, b, 0, 0) })
@@ -301,7 +301,7 @@ fn win(p: &Parts, c: C, a: isize, b: isize) -> isize {
     // SAFETY: the window's live Rust window (the bind's contract)
     unsafe { (*p.win).call(c, a, b) }
 }
-fn field(p: &Parts, f: F) -> isize {
+pub(crate) fn field(p: &Parts, f: F) -> isize {
     win(p, C::GetField, f as isize, 0)
 }
 /// a void call's answer (the C++ case's `return 0`)
@@ -701,6 +701,10 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             return Some(0);
         }
         _ => {}
+    }
+    // the hosts' one-statement forwards to the widgets' Rust objects (R6 WON GUI round 41)
+    if let Some(r) = crate::gamefwd::fwd_op(comp, op, a, b, c) {
+        return Some(r);
     }
     if !matches!(
         op,

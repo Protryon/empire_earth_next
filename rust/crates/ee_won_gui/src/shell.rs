@@ -441,6 +441,64 @@ impl Sh {
             EeWonShellHostOp::ComboPart => crate::comboobj::game_set_part(self.comp, crate::comboobj::shell_part(a), b),
             EeWonShellHostOp::ComboPartOn => crate::comboobj::game_set_part(a, crate::comboobj::shell_part(b), c),
             EeWonShellHostOp::ComboGet => crate::comboobj::game_part(self.comp, crate::comboobj::shell_part(a)),
+            // an image's size and duplicate (R6 WON GUI round 41: GuiHost.cpp's ImageOp went)
+            EeWonShellHostOp::Img if crate::compobj::is_game() => {
+                crate::gamewin::wonbtn_op(crate::guihost::EeWonGuiOp::WbImage, a, b, 0)
+            }
+            // a WONButton's calls on its Rust button (`wb`, `wb_state` and `wb_copy` make them directly when the
+            // registry has it; GuiHost.cpp's cases went, R6 WON GUI round 41)
+            EeWonShellHostOp::WonBtn | EeWonShellHostOp::WonBtnState | EeWonShellHostOp::WonBtnCopy
+                if crate::compobj::is_game() =>
+            {
+                game_wonbtn(op, a, b, c)
+            }
+            // `((Label*)a)->SetText(*(const GUIString*)b)`: its wrapped text's, then the label's own
+            EeWonShellHostOp::LabelSetText if crate::compobj::is_game() => {
+                let w = crate::wrapobj::label_text(a);
+                // SAFETY: the game's live label holds its Rust label
+                let l = unsafe { registry::get::<crate::labelobj::EeWonLabel>(a, EeWonGuiKind::Label) };
+                match (w, l) {
+                    (Some(w), Some(l)) => {
+                        crate::wrapobj::game_wrap_op(w, T::SetText, b);
+                        l.call(crate::labelobj::EeWonLabelCall::TextSet, 1, 0, 0);
+                        Some(0)
+                    }
+                    _ => None,
+                }
+            }
+            // `MultiListHeader::GetSortTypeForButton(comp)` over the game's answers (gamewin.rs common_op)
+            EeWonShellHostOp::SortType if crate::compobj::is_game() => {
+                let out = |op: crate::guihost::EeWonGuiOp, a: isize, b: isize, c: isize, _: isize| {
+                    crate::gamewin::common_op(0, op, a, b, c).unwrap_or(0)
+                };
+                Some(crate::guisplit::sort_type_for_button(self.comp, &out) as isize)
+            }
+            // a tab control's container layout point (`mContainerLayout`, read in place)
+            EeWonShellHostOp::TabLayoutPoint if crate::compobj::is_game() => {
+                // SAFETY: the game's live tab control, its SmartPtr member at the registered offset
+                crate::gamefwd::member(self.comp, |at| at.tab_container_layout).map(|p| unsafe { *(p as *const isize) })
+            }
+            // a named font, held (`a` the NUL-terminated name)
+            EeWonShellHostOp::GetNamedFont if crate::compobj::is_game() && a != 0 => {
+                // SAFETY: the op's contract: a NUL-terminated name
+                let name = unsafe { std::ffi::CStr::from_ptr(a as *const std::ffi::c_char) };
+                let n = name.to_bytes();
+                let f =
+                    crate::gamewin::wm(crate::wmobj::EeWonWmCall::GetNamedFont, n.as_ptr() as isize, n.len() as isize);
+                if let Some(f) = f.filter(|&f| f != 0) {
+                    crate::gamewin::rf(f, true);
+                }
+                f
+            }
+            // the MSButton font on an input box or a list (`b` its class)
+            EeWonShellHostOp::NamedFont if crate::compobj::is_game() => {
+                if b == crate::shell::EeWonShellBaseNew::InputBox as isize {
+                    crate::gamewin::wm(crate::wmobj::EeWonWmCall::GetNamedFont, b"MSButton".as_ptr() as isize, 8)
+                        .and_then(|f| crate::inputobj::game_set_font(a, f))
+                } else {
+                    crate::gamefwd::list_set_named_font(a, "MSButton")
+                }
+            }
             _ => crate::gamewin::msgbox_op(op, a, b, c),
         };
         if let Some(r) = r {
@@ -452,6 +510,36 @@ impl Sh {
             None => 0,
         }
     }
+}
+
+/// A WONButton's call (`b` the call, `c` its four arguments), state (`b` its five) or copy (from `b`) on the game's
+/// button `a`'s Rust button. None without one.
+fn game_wonbtn(op: EeWonShellHostOp, a: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::wonbtnobj::{EeWonWbCall, EeWonWonButton};
+    // SAFETY: the game's live button holds its Rust button
+    let w = unsafe { registry::get::<EeWonWonButton>(a, EeWonGuiKind::WonButton) }?;
+    Some(match op {
+        EeWonShellHostOp::WonBtn => {
+            // SAFETY: `b` an EeWonWbCall, `c` four words (the op's contract)
+            let (k, x) = unsafe { (std::mem::transmute::<u32, EeWonWbCall>(b as u32), *(c as *const [isize; 4])) };
+            w.call(k, x[0], x[1], x[2], x[3])
+        }
+        EeWonShellHostOp::WonBtnState => {
+            // SAFETY: `b` five words (the op's contract)
+            let x = unsafe { *(b as *const [isize; 5]) };
+            w.set_button_state(x[0] as i32, x[1], x[2] as i32, x[3], x[4] != 0);
+            0
+        }
+        _ => {
+            // SAFETY: as above, the other button
+            let f = unsafe { registry::get::<EeWonWonButton>(b, EeWonGuiKind::WonButton) }?;
+            w.copy_attributes(f, b);
+            0
+        }
+    })
+}
+
+impl Sh {
     /// The base class's virtual `v`.
     pub fn base(&self, v: EeWonShellVirt, a: isize, b: isize, c: isize) -> isize {
         self.host(EeWonShellHostOp::Base, v as isize, a, b, c)

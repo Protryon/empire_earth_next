@@ -212,7 +212,9 @@ CHECKS = [
               # R6 WON GUI round 40: the text area's segments, its link and its copy, in the game
               [(RS / "ee_won_gui" / "src" / "gamewin.rs", "text_host_op")] +
               # R6 WON GUI round 41: the input box's own members, in the game
-              [(RS / "ee_won_gui" / "src" / "inputobj.rs", "game_host_op")],
+              [(RS / "ee_won_gui" / "src" / "inputobj.rs", "game_host_op")] +
+              # R6 WON GUI round 41: the hosts' forwards to the widgets' Rust objects and the areas' members, in the game
+              [(RS / "ee_won_gui" / "src" / "gamefwd.rs", fn) for fn in ("fwd_op", "area_op")],
          allowed={}),
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
     # the front end's UI-thread action (R6 WON lobby and network round 37: wonaction.rs; ee/EEAWonNetHost.inl)

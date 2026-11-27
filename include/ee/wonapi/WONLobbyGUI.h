@@ -351,8 +351,6 @@ public:
     void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); }
     void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); }
     bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
-    Component* GetFocusChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FocusChild); }
-    Cursor* GetCurrentCursor() { return (Cursor*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::CurrentCursor); }
     bool IsModal() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::ModalCount)>0; }
     Component* GetFrontChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FrontChild); }
     // Component::GetNextSibling's walk (0x2f5230)
@@ -627,7 +625,6 @@ public:
     void SetSelText(const GUIString& t,bool send=true) { this->CallText(EeWonInputCall::SetSelText,t,send); }
     void SetMaxChars(int n) { this->Call(EeWonInputCall::SetMaxChars,n); }
     void SetLeftPad(int n) { this->Call(EeWonInputCall::SetLeftPad,n); }
-    int GetSelStart() { return (int)this->Call(EeWonInputCall::SelStart); }
     virtual void Virtual08() { this->Call(EeWonInputCall::SizeChanged); } // SizeChanged
     virtual void GetDesiredSize(int& w,int& h) { this->Call(EeWonInputCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
     virtual void GotFocus() { this->Call(EeWonInputCall::GotFocus); }
@@ -1397,7 +1394,6 @@ public:
     void PlatformSetTopMost(bool t) { this->Rust(EeWonPlatWinCall::SetTopMost, t); }
     void PlatformClose() { this->Rust(EeWonPlatWinCall::Close); }
     void Create(const WONRectangle& r) { this->Rust(EeWonPlatWinCall::Create, (intptr_t)&r); } // (four ints)
-    void BaseCreate(int w, int h) { ee_won_win_create(this->mWinObj.p, w, h); } // the default icon, the parent, the root's size, the manager
     void SetPosSize(int x, int y, int w, int h) { this->Rust(EeWonPlatWinCall::SetPosSize, x, y, w, h); }
     void GetRect(WONRectangle& r, bool inClientArea) { this->Rust(EeWonPlatWinCall::GetRect, (intptr_t)&r, inClientArea); }
     void GetClientRect(WONRectangle& r) { this->GetRect(r, true); }
@@ -1777,7 +1773,6 @@ public:
     int GetLeftPad() { return this->GetField(EeWonGuiField::LeftPad); }
     int GetRightPad() { return this->GetField(EeWonGuiField::RightPad); }
     int GetTopPad() { return this->GetField(EeWonGuiField::TopPad); }
-    void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
     int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
     int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
@@ -2054,7 +2049,6 @@ public:
     void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); }
     void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); }
     void SetSortColumn(int c,ListSortType t) { this->HCall(EeWonMHeadCall::SetSortColumn,c,t); }
-    static ListSortType GetSortTypeForButton(Component*);
     int GetColumnIndex(Component* c) { return (int)this->HCall(EeWonMHeadCall::ColumnIndex,(intptr_t)c); }
     ListSortType GetSortType(int c) { return (ListSortType)this->HCall(EeWonMHeadCall::SortType,c); }
     bool DrawSortArrow() { return this->HCall(EeWonMHeadCall::DrawSortArrow)!=0; }
@@ -2120,7 +2114,6 @@ protected:
     virtual void MouseUp(int x,int y,int b) { this->Call(EeWonSplitCall::MouseUp,x,y,b); }
     virtual void MouseDrag(int x,int y) { this->Call(EeWonSplitCall::MouseDrag,x,y); }
     virtual void HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonSplitCall::HandleEvent,(intptr_t)e); }
-    friend intptr_t SplitterHostCall(Splitter*,EeWonGuiOp,intptr_t,intptr_t,intptr_t);
 private:
     intptr_t Call(EeWonSplitCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_split_call(this->mRust,c,a,b,cc); }
 };

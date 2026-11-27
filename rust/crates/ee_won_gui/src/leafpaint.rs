@@ -252,6 +252,11 @@ pub struct EeWonLeafAt {
 }
 static LEAF_AT: std::sync::Mutex<Option<EeWonLeafAt>> = std::sync::Mutex::new(None);
 
+/// The registered offsets (None before GuiHost.cpp's registration, so in a driver's world).
+pub(crate) fn leaf_at() -> Option<EeWonLeafAt> {
+    *LEAF_AT.lock().ok()?
+}
+
 /// Registers the text items' member offsets (Button.cpp at static initialisation).
 ///
 /// # Safety

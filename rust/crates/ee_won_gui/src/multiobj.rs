@@ -1174,7 +1174,9 @@ pub unsafe extern "C" fn ee_won_multi_call(
 /// A new Rust MultiListItem for the C++ row `component`; `host` gives the cells' references.
 #[no_mangle]
 pub extern "C" fn ee_won_mrow_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonMRow {
-    Box::into_raw(Box::new(EeWonMRow::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonMRow::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::MRow, made as *const c_void);
+    made
 }
 
 /// # Safety
@@ -1182,6 +1184,7 @@ pub extern "C" fn ee_won_mrow_new(component: *mut c_void, host: EeWonGuiHostFn) 
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_mrow_free(row: *mut EeWonMRow) {
     if !row.is_null() {
+        crate::registry::unregister(row as *const c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(row) });
     }
