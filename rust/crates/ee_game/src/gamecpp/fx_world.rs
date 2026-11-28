@@ -434,12 +434,6 @@ fn file(context: *mut c_void) -> EeGfxEffectFile {
     }
 }
 
-/// `EEEffectFile`: an `FSFile` as the effects' file.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_fw_file(file_: *mut c_void) -> EeGfxEffectFile {
-    file(file_)
-}
-
 /// EEEffectManager::Load: the manager's effects from the file.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_fw_load(

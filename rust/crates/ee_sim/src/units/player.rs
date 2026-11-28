@@ -827,6 +827,8 @@ pub struct EeUnitsPlayerRefs {
 pub(crate) struct FnHost {
     player: *mut c_void,
     f: EeUnitsPlayerFn,
+    /// the player's statistics (its refs' `stats`: EEPlayer's virtuals in Rust, player_native.rs)
+    stats: *const EeUnitsPlayerStats,
 }
 
 impl PlayerHost for FnHost {
@@ -837,19 +839,28 @@ impl PlayerHost for FnHost {
             return v;
         }
         // the player's own Rust bodies and the plain reads (player_native.rs); SAFETY: as above
-        #[cfg(not(test))]
-        if let Some(v) = unsafe { crate::units::player_native::player(op, self.player as u64, io) } {
+        if let Some(v) = crate::units::player_upgrades::player(op, self.player as u64, io) {
             return v;
         }
-        let (player, f) = (self.player, self.f);
+        #[cfg(not(test))]
+        if let Some(v) =
+            unsafe { crate::units::player_native::player(op, self.player as u64, io, (self.f, self.stats)) }
+        {
+            return v;
+        }
+        #[cfg_attr(test, allow(unused_variables))]
+        let (player, f, stats) = (self.player, self.f, self.stats);
         // the compound operations' statements: the views' answers first, then the C++ (SAFETY: as above, and the
         // C++ callback's contract)
         let mut call = |op: i32, io: &mut EeUnitsPlayerIo| match unsafe {
             crate::units::player_views::answer(player as u64, op, io)
         } {
             Some(v) => v,
+            None if let Some(v) = crate::units::player_upgrades::player(op, player as u64, io) => v,
             #[cfg(not(test))]
-            None if let Some(v) = unsafe { crate::units::player_native::player(op, player as u64, io) } => v,
+            None if let Some(v) = unsafe { crate::units::player_native::player(op, player as u64, io, (f, stats)) } => {
+                v
+            }
             // the containers' operations on the players' lists (player_lists.rs)
             None => crate::units::player_lists::answer_player(player as u64, op, &io.i)
                 .unwrap_or_else(|| unsafe { f(player, op, io) }),
@@ -872,62 +883,8 @@ impl PlayerHost for FnHost {
 pub(crate) unsafe fn with<R>(refs: *const EeUnitsPlayerRefs, body: impl FnOnce(&mut Player<FnHost>) -> R) -> R {
     // SAFETY: the caller's contract
     let r = unsafe { *refs };
-    let mut h = FnHost { player: r.player, f: r.host };
+    let mut h = FnHost { player: r.player, f: r.host, stats: r.stats };
     body(&mut Player { h: &mut h, saved: r.saved, fields: r.fields, stats: r.stats })
-}
-
-/// The cost decisions: `what` 0 `CanAffordScaled(node, a, f, b)`, 1 `CanAffordSingleResource(node, a, b)`, 2
-/// `EEPlayer::CanAfford(node, a, b)`, 3 `CanAffordTechnology(a, f, reason)`, 4 `EEPlayer::Pay(node, a, f)`, 5
-/// `RefundTechnology(node, a, f)`.
-///
-/// # Safety
-/// As [`with`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_player_cost(
-    refs: *const EeUnitsPlayerRefs,
-    what: u32,
-    node: *mut c_void,
-    a: c_long,
-    b: c_long,
-    f: f32,
-    reason: *mut c_void,
-) -> bool {
-    let node = node as i64;
-    // SAFETY: the caller's contract
-    unsafe {
-        with(refs, |p| match what {
-            0 => p.can_afford_scaled(node, a, f, b),
-            1 => p.can_afford_single(node, a, b),
-            2 => p.can_afford(node, a, b),
-            3 => p.can_afford_technology(a, f, reason as i64),
-            4 => {
-                p.pay(node, a, f);
-                false
-            }
-            _ => {
-                p.refund_technology(node, a, f);
-                false
-            }
-        })
-    }
-}
-
-/// `EEPlayer::CanProduce` (see [`Player::can_produce`]).
-///
-/// # Safety
-/// As [`with`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_player_can_produce(
-    refs: *const EeUnitsPlayerRefs,
-    tech: c_long,
-    unit_class: c_long,
-    count: c_long,
-    check_cost: bool,
-    wonder_mode: c_long,
-    reason: *mut c_void,
-) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { with(refs, |p| p.can_produce(tech, unit_class, count, check_cost, wonder_mode, reason as i64)) }
 }
 
 /// The improvement decisions on unit type `unit_type` and improvement `improvement`: `what` 0

@@ -3,7 +3,7 @@ use crate::units::goal_split::UnitRead;
 use std::collections::BTreeMap;
 
 /// A recording host: each statement asked (op, a, b, i[0], f[0..3]), its answer from `answers` keyed by (op, i[0])
-/// (0 by default); X_GOAL_POINT_OUT writes `point`.
+/// (0 by default); X_BOARDING_FIND writes `point` into f[3..6].
 #[derive(Default)]
 struct Mock {
     log: Vec<(i32, u64, u64, i64, [f32; 3])>,
@@ -24,8 +24,9 @@ impl Mock {
 impl GoalSplitHost for Mock {
     fn raw(&mut self, op: i32, a: u64, b: u64, io: &mut EeUnitsGoalIo) -> i64 {
         self.log.push((op, a, b, io.i[0], [io.f[0], io.f[1], io.f[2]]));
-        if op == EE_UNITS_GOAL_HOST_X_GOAL_POINT_OUT {
-            io.f[..3].copy_from_slice(&self.point);
+        if op == EE_UNITS_GOAL_HOST_X_BOARDING_FIND {
+            assert_eq!(&io.f[3..6], &[4.0, 5.0, 6.0]);
+            io.f[3..6].copy_from_slice(&self.point);
         }
         *self.answers.get(&(op, io.i[0])).unwrap_or(&0)
     }
@@ -55,9 +56,7 @@ fn boarding_hands_the_out_point_in_and_back() {
     io.f[..6].copy_from_slice(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     assert_eq!(split_more(&mut h, EE_UNITS_GOAL_HOST_BOARDING, 10, 11, &mut io), Some(0));
     assert_eq!(&io.f[..6], &[1.0, 2.0, 3.0, 7.0, 8.0, 9.0]);
-    assert_eq!(h.log[0], (EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT, 0, 0, 0, [4.0, 5.0, 6.0]));
-    assert_eq!(h.log[1], (EE_UNITS_GOAL_HOST_X_BOARDING_FIND, 10, 11, 0, [1.0, 2.0, 3.0]));
-    assert_eq!(h.log[2].0, EE_UNITS_GOAL_HOST_X_GOAL_POINT_OUT);
+    assert_eq!(h.log, vec![(EE_UNITS_GOAL_HOST_X_BOARDING_FIND, 10, 11, 0, [1.0, 2.0, 3.0])]);
 }
 
 #[test]
@@ -105,9 +104,9 @@ fn resource_searches_take_the_handed_units() {
 fn the_mining_beam_starts_at_the_resource() {
     let mut h = Mock::default();
     split_more(&mut h, EE_UNITS_GOAL_HOST_MINING_BEAM, 1, 6, &mut EeUnitsGoalIo::default());
-    assert_eq!(h.log[0], (EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT, 0, 0, 0, [6.0, 2.0, 3.0]));
+    assert_eq!(h.log[1], (EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT, 1, 0, 0, [6.0, 2.0, 3.0]));
     assert_eq!(
-        &h.ops()[1..],
+        h.ops(),
         &[
             EE_UNITS_GOAL_HOST_X_RESET_EFFECT,
             EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT,

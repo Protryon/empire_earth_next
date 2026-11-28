@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/sim/units.h"
+#include "rust/sim/records.h"
 
 /// The kinds of favourite (`ChooseFavoriteLandType` .. `ChooseFavoriteSpaceType`).
 constexpr static const int32_t EE_CP_FAVORITE_LAND = 0;
@@ -218,20 +218,9 @@ constexpr static const int32_t EE_CP_HERD_UNIT_WAYPOINTS = 64;
 
 constexpr static const int32_t EE_CP_HERD_UNIT_MODEL = 65;
 
-/// `EEFormation::Create(6)`; the formation `b`'s `mCenter = (f0, f1, f2)`, `SetCenter(..)`, `SetMinRadius(f0)`,
-/// `mMinRadius = f0`, `Place` of the `input` units (the units after it into `list2`, the slots into `list`),
-/// `Dereference()`
+/// `EEFormation::Create(6)`; the formation `b`'s `Dereference()` (67..71, its members and Place: the formation's
+/// Rust record, formations/units.rs, units round 14)
 constexpr static const int32_t EE_CP_HERD_FORM_NEW = 66;
-
-constexpr static const int32_t EE_CP_HERD_FORM_CENTER = 67;
-
-constexpr static const int32_t EE_CP_HERD_FORM_SET_CENTER = 68;
-
-constexpr static const int32_t EE_CP_HERD_FORM_SET_MIN_RADIUS = 69;
-
-constexpr static const int32_t EE_CP_HERD_FORM_MIN_RADIUS = 70;
-
-constexpr static const int32_t EE_CP_HERD_FORM_PLACE = 71;
 
 constexpr static const int32_t EE_CP_HERD_FORM_DEREF = 72;
 
@@ -851,309 +840,6 @@ struct EeCpPlaceScope;
 /// The class's own data (the C++ object owns it: `EECPPlacement::mRust`).
 struct EeCpPlacement;
 
-/// The herd's lists (Rust's): the units (`mUnits`, unit handles in the original's order), the looks by unit id
-/// (`mMedia`, `EEMedia*`), a loaded game's area tiles (from Load to RepairPointers; the original's side table).
-struct EeHerdLists;
-
-/// `EEComputerPlayer`'s plain members, `mLBD4` (+0xbd4) to `mAttackStarted` (+0xf56), in the class's order.
-struct EeCpFields {
-  /// (unsigned: Load)
-  unsigned long mLBD4;
-  /// +0xbd8 0 or 2 (GetResearchFrequencyModifier; CheckBuildingCounts picks +0xe14/+0xe24/+0xe1c by it) (provisional name; unsigned: Load)
-  unsigned long mDifficulty;
-  unsigned long mFavoriteLandType;
-  unsigned long mFavoriteSeaType;
-  unsigned long mFavoriteAirType;
-  unsigned long mFavoriteSpaceType;
-  float mUnitCostMedium;
-  /// +0xbf0 (fld at 0x47346f)
-  float mComputerAggression;
-  float mCarrierChance;
-  float mCarrierPopPercentage;
-  float mAttackFrequencyPerEpoch;
-  float mSpecializedUnitPercentage;
-  float mRPSSelectionNonIslands;
-  float mRPSSelectionIslands;
-  float mSpecializedUnitChance;
-  /// +0xc10 (EECPDefenseCommander 0x783e7: the aid chance)
-  float mTownGuardPercentage;
-  /// +0xc14 (fld at 0x4734d2)
-  float mCitizenPercentage;
-  float mDMEarlyAttackScale;
-  float mEpochCatchUpEasy;
-  float mEpochCatchUpHard;
-  float mEpochCatchUpDeathmatch;
-  /// +0xc28
-  float mGuardContinentPercentage;
-  /// +0xc2c
-  float mGuardChokepointAirPercentage;
-  /// +0xc30
-  float mGuardChokepointPercentage;
-  /// +0xc34
-  float mGuardHighGroundPercentage;
-  float mFC38;
-  float mFC3C;
-  float mFC40;
-  float mFC44;
-  float mFC48;
-  float mFC4C;
-  float mFC50;
-  float mFC54;
-  float mFC58;
-  /// +0xc5c
-  float mGuardTownPercentage;
-  /// +0xc60
-  float mGuardTownLandPercentage;
-  float mGuardWaterwayPercentage;
-  float mHeroChance;
-  float mHeroPopPercentage;
-  /// +0xc70 (EECPDefenseCommander 0x799fa: the defense share)
-  float mDefensiveUnitCap;
-  /// (float: Load/Init)
-  float mSiegeWeaponPercentage;
-  /// (float: Load/Init)
-  float mMaxAttackResponseRange;
-  /// (float: Load/Init)
-  float mMilitaryPopPercentage;
-  /// +0xc80 (EECPDefenseCommander 0x785cb: the allies' threat limit)
-  float mAidThreatThreshold;
-  /// (float: Load/Init)
-  float mPriestPopPercentage;
-  /// (float: Load/Init)
-  float mPriestChance;
-  /// (float: Load/Init)
-  float mProphetPopPercentage;
-  /// (float: Load/Init)
-  float mProphetChance;
-  /// (float: Load/Init)
-  float mEnableInterval;
-  /// +0xc98 (EECPIntelligencePlayerFile::Update: the worker-count weight) (provisional name)
-  float mWorkerCountWeight;
-  /// +0xc9c (Update: the military-count weight) (provisional name)
-  float mMilitaryCountWeight;
-  /// (float: Load/Init)
-  float mNavalUnitWeight;
-  /// (float: Load/Init)
-  float mAirUnitWeight;
-  /// +0xca8 (float: EECPResourceCenter::FindBuildSite 0x48bee3 flds it)
-  float mTowerSpacing;
-  /// (float: Load/Init)
-  float mDMAttackFrequencyModifierEasy;
-  /// (float: Load/Init)
-  float mDMAttackFrequencyModifierMedium;
-  /// (float: Load/Init)
-  float mDMAttackFrequencyModifierHard;
-  /// (float: Load/Init)
-  float mDMInitialAttackModifierEasy;
-  /// (float: Load/Init)
-  float mDMInitialAttackModifierMedium;
-  /// (float: Load/Init)
-  float mDMInitialAttackModifierHard;
-  long mLCC4;
-  long mLCC8;
-  long mLCCC;
-  long mLCD0;
-  long mLCD4;
-  /// +0xcd8 (EECPPlayerInteractionManager's ctor 0x895de copies it)
-  long mSeed;
-  long mShipsToMaintainDMEasy;
-  long mShipsToMaintainDMMedium;
-  long mShipsToMaintainDMHard;
-  long mShipsToMaintainEasy;
-  long mShipsToMaintainMedium;
-  long mShipsToMaintainHard;
-  long mShipMaintenanceTimer;
-  /// +0xcf8 (EECPMilitaryAidPackage 0x84e42: the aid delay against a human, by mDifficulty) (provisional name)
-  long mAssistAlliesDelayEasy;
-  /// +0xcfc
-  long mAssistAlliesDelayMedium;
-  /// +0xd00
-  long mAssistAlliesDelayHard;
-  long mPopulationCap;
-  long mCarrierMaxPerGroup;
-  /// +0xd0c (EECPExplorationManager::Update: the wanted explorers of kind 2 when +0xf55)
-  long mNumAirExplorers;
-  long mAttackEnemyChance;
-  long mAttackToClaimResourceChance;
-  long mAttackForRevengeChance;
-  long mAttackGroupSizeMax;
-  long mAttackGroupSizeMin;
-  long mAttackFrequencyModifierEasy;
-  long mAttackFrequencyModifierHard;
-  long mAttackFrequencyCeiling;
-  long mAttackFrequencyFloor;
-  long mAttackFrequencyMax;
-  long mAttackFrequencyMin;
-  long mInitialAttackDelayPerEpoch;
-  long mAttackDelayModifierEasy;
-  long mAttackDelayModifierHard;
-  long mLD48;
-  long mLD4C;
-  long mLD50;
-  long mLD54;
-  long mAttackDelayCeiling;
-  long mAttackDelayFloor;
-  /// +0xd60 (EECPDefenseCommander 0x78866: minutes before the citizens' raid)
-  long mInitialAttackDelayMax;
-  long mInitialAttackDelayMin;
-  long mAttackGroupModifierEasy;
-  long mAttackGroupModifierMedium;
-  long mAttackGroupModifierHard;
-  /// +0xd74 (EECPDefenseCommander 0x78866: the building count limit)
-  long mBonzaiAttackLevel;
-  long mLD78;
-  long mLD7C;
-  long mUnitCostReductionEasy;
-  long mUnitCostReductionHard;
-  long mDefenseGroupSizeMax;
-  long mDefenseGroupSizeMin;
-  long mEpochFrequencyMax;
-  long mEpochFrequencyMin;
-  long mEpochFrequencyModifierEasy;
-  long mEpochFrequencyModifierHard;
-  long mEpochCatchUpMin;
-  long mEpochCatchUpMax;
-  long mExpansionTimerEasy;
-  long mExpansionTimerMedium;
-  long mExpansionTimerHard;
-  long mHeroMaxPerGroup;
-  long mNumImprovedAttributes;
-  long mNumImprovedUnitTypes;
-  long mReplenishDelayMax;
-  long mReplenishDelayMin;
-  long mNumLandExplorers;
-  long mNumChokePointsToGuard;
-  long mAntiAirMax;
-  long mAirportMax;
-  long mArcheryRangeMax;
-  long mBarracksMax;
-  long mDockMax;
-  long mGranaryMax;
-  long mHospitalMax;
-  long mCyberFactoryMax;
-  long mCyberLabMax;
-  long mNavalYardMax;
-  long mSiegeFactoryMax;
-  long mSpaceDockMax;
-  long mStableMax;
-  long mTankFactoryMax;
-  long mTempleMax;
-  long mTowerMax;
-  long mUniversityMax;
-  long mMinMilitaryBuildingsEasy;
-  long mMinMilitaryBuildingsEasyDM;
-  long mMinMilitaryBuildingsMedium;
-  long mMinMilitaryBuildingsMediumDM;
-  long mMinMilitaryBuildingsHard;
-  long mMinMilitaryBuildingsHardDM;
-  long mPopLimitAdjustmentEasy;
-  long mPopLimitAdjustmentMedium;
-  long mPopLimitAdjustmentHard;
-  long mPriestMaxPerGroup;
-  long mProphetMaxPerGroup;
-  /// +0xe40 (EECPResearchManager::SetNextTime 0x8b1fb scales it by GetResearchFrequencyModifier)
-  long mResearchFrequency;
-  long mResearchFrequencyModifierEasy;
-  long mResearchFrequencyModifierHard;
-  long mDropOffDistance;
-  long mExtraResources;
-  long mNumSeaExplorers;
-  long mTownCenterUpgradeTimer;
-  long mMaxEnabledManagers;
-  long mManagerAttackWait;
-  long mManagerEpochAdvanceWait;
-  long mEnableStockProduction;
-  long mEnableStockResource;
-  long mEnableStockCivilization;
-  long mEnableStockExploration;
-  long mEnableStockDefense;
-  long mEnableStockBuild;
-  long mLE80;
-  long mEnableStockResearch;
-  long mEnableStockCombat;
-  long mUnitsPerAntiAirBuilding;
-  long mUnitsPerAirport;
-  long mUnitsPerArcheryRange;
-  long mUnitsPerBarracks;
-  long mUnitsPerDock;
-  long mUnitsPerGranary;
-  long mUnitsPerHospital;
-  long mUnitsPerCyberFactory;
-  long mUnitsPerCyberLab;
-  long mUnitsPerNavalYard;
-  long mUnitsPerSiegeFactory;
-  long mUnitsPerSpaceDock;
-  long mUnitsPerStable;
-  long mUnitsPerTankFactory;
-  long mUnitsPerTemple;
-  long mUnitsPerTower;
-  long mUnitsPerUniversity;
-  long mCapitolUpgradeTimer;
-  long mMaxFlameThrowers;
-  /// +0xed8
-  long mTownGuardUpdateEasy;
-  /// +0xedc
-  long mTownGuardUpdateMedium;
-  /// +0xee0
-  long mTownGuardUpdateHard;
-  /// +0xee4
-  long mDMTownGuardUpdateEasy;
-  /// +0xee8
-  long mDMTownGuardUpdateMedium;
-  /// +0xeec
-  long mDMTownGuardUpdateHard;
-  long mDefensiveUnitUpdateEasy;
-  long mDefensiveUnitUpdateMedium;
-  long mDefensiveUnitUpdateHard;
-  long mDMDefensiveUnitUpdateEasy;
-  long mDMDefensiveUnitUpdateMedium;
-  long mDMDefensiveUnitUpdateHard;
-  long mIslandExpansionTimerEasy;
-  long mIslandExpansionTimerMedium;
-  long mIslandExpansionTimerHard;
-  long mLF14;
-  long mLF18;
-  long mLF1C;
-  long mLF20;
-  long mLF24;
-  /// (unsigned: Load)
-  unsigned long mNextAttackTime;
-  /// (unsigned: Load)
-  unsigned long mNextEnableTime;
-  long mLastDamagedTime;
-  long mNextPopulationTime;
-  /// (unsigned: Load)
-  unsigned long mNextExpansionTime;
-  /// (unsigned: Load)
-  unsigned long mDMEarlyAttackTime;
-  /// (unsigned: Load)
-  unsigned long mNextIslandExpansionTime;
-  bool mCanAttack;
-  /// +0xf45 (set: Update skips the managers)
-  bool mIsStarted;
-  bool mIsEnableTimeSet;
-  bool mCitizenDamaged;
-  bool mBuildingDamaged;
-  /// +0xf49 (Update is only called while set; provisional name)
-  bool mActive;
-  bool mUsesFishing;
-  bool mIsCheating;
-  bool mCanBuild;
-  bool mCanExplore;
-  bool mBF4E;
-  bool mCanGather;
-  bool mCanDefend;
-  bool mIsCitizenPercentageSet;
-  bool mIgnoreOthers;
-  bool mReplaceOnLoad;
-  bool mRegroupPending;
-  bool mAttackStarted;
-  /// new (the AI Thread cluster, round 2): the lists (`cp::lists::EeCpLists`: the resource centres, the favourite
-  /// types' history, the units to kill, the danger zones), made after `Init`; after the original's members, so the
-  /// record's digests (CPEV: up to `mAttackStarted`) and its saved fields are as they were
-  uint64_t mLists;
-};
-
 /// One record of the behaviour table (`EECPBehavior`, ee/EECPBehavior.h: 56 bytes).
 struct EeCpBehavior {
   int32_t unused1;
@@ -1256,69 +942,6 @@ struct EeHerdIo {
   /// the lists an operation pushes onto (`ee_cp_herd_push`: four values a row)
   void *list;
   void *list2;
-};
-
-/// `U2DRectangle<long>` (its layout: bottom, left, right, top).
-struct EeHerdRect {
-  long mBottom;
-  long mLeft;
-  long mRight;
-  long mTop;
-};
-
-/// `U2DPoint<long>`.
-struct EeHerdPoint {
-  long mX;
-  long mY;
-};
-
-/// `EEHerd`'s members (+0x68 .. +0xf9 in the original; the media map is in [`EeHerdLists`]).
-struct EeHerdFields {
-  /// +0x84 the territory
-  EeHerdRect mBounds2;
-  /// +0x94
-  EeHerdPoint mP94;
-  /// +0x9c the target's tile
-  EeHerdPoint mCenter;
-  /// +0xa4 `EEAnimal*` (a load's saved index until RepairPointers)
-  uint64_t mAnimal;
-  /// +0xa8 `UReferenceCounter*`: a path request (cancelled through the path manager)
-  uint64_t mPathRequest;
-  /// +0xac `EEPlayer*` (a load's saved id until RepairPointers)
-  uint64_t mPlayer;
-  /// +0xb0 the leader (a unit handle: its id)
-  uint32_t mLeader;
-  /// +0xb4 the target (a unit handle)
-  uint32_t mTarget;
-  float mFB8;
-  /// +0xbc the animal index (the units' class `mAnimalID`)
-  unsigned long mAnimalID;
-  /// +0xc0 an area serial (`gContinentManager.GetArea`)
-  unsigned long mGrazeAreaID;
-  /// +0xc4 (0, 2, 3, 4, 7, 9, 0xa, 0xb)
-  unsigned long mState;
-  unsigned long mLC8;
-  /// +0xcc the next birth
-  unsigned long mBirthTimer;
-  unsigned long mFollowTime;
-  /// +0xd4 the next update
-  unsigned long mNextUpdateTime;
-  unsigned long mLD8;
-  unsigned long mChaseTime;
-  unsigned long mHuntTime;
-  unsigned long mLE4;
-  /// +0xe8 the animal's herd radius squared (the joining range)
-  long mRadiusSquared;
-  /// +0xec the young ones
-  long mNumYoung;
-  /// +0xf0 the most units
-  long mMaxUnits;
-  uint16_t mContinent;
-  uint16_t mID;
-  bool mBreeds;
-  bool mIsActive;
-  /// the lists (owned; `ee_cp_herd_init` makes them, `ee_cp_herd_free` drops them)
-  EeHerdLists *mLists;
 };
 
 /// A favourite types' history entry: (unit type, epoch).
@@ -1428,27 +1051,6 @@ struct TownIo {
   void *list;
 };
 
-/// `EETown`'s counters, continent, reach and flags (+0x70 .. +0x99 in the original).
-struct EeTownFields {
-  /// +0x70 the town's continent (the first tile's)
-  uint16_t mContinent;
-  /// +0x74 the town id (the constructor's)
-  long mTownID;
-  /// +0x78 the buildings' influence (walls a tenth)
-  unsigned long mValue;
-  long mNumWalls;
-  /// +0x80 the buildings that count (not walls or wonders)
-  long mL80;
-  long mNumWonders;
-  long mNumDocks;
-  long mNumAirports;
-  long mNumUnits;
-  /// +0x94 the reach (squared tiles) a building may stand from the hull and join
-  long mReach;
-  bool mNearWater;
-  bool mNearMapEdge;
-};
-
 /// `EECPPlacement` (ee/EECPPlacement.h, a view of this record; the original's build manager, of which only the town
 /// centre tile, the player and the Rust placement are left): made by `Init`, freed by the destructor.
 struct EeCpPlacementObj {
@@ -1470,26 +1072,6 @@ int32_t ee_cp_skip_legacy_combat(void *file,
                                  EeUnitsPlayerSaveFn host,
                                  uint32_t major,
                                  uint32_t minor);
-
-/// Steps over a retail file's civilization manager block and its resource, build, research, unit and wall managers;
-/// `town_center` (x, y) gets the build manager's town centre tile, read in place.
-///
-/// # Safety
-/// As [`ee_cp_skip_legacy_combat`]; `town_center` points to two `int32_t`s.
-int32_t ee_cp_skip_legacy_civilization(void *file,
-                                       EeUnitsPlayerSaveFn host,
-                                       uint32_t major,
-                                       uint32_t minor,
-                                       int32_t *town_center);
-
-/// Steps over a retail file's exploration manager block.
-///
-/// # Safety
-/// As [`ee_cp_skip_legacy_combat`].
-int32_t ee_cp_skip_legacy_exploration(void *file,
-                                      EeUnitsPlayerSaveFn host,
-                                      uint32_t major,
-                                      uint32_t minor);
 
 /// `EEComputerPlayer::Init`'s values (both constructors).
 ///
@@ -1526,42 +1108,6 @@ int32_t ee_cp_save(void *ctx,
                    uint32_t game_time,
                    int32_t result);
 
-/// `GetAttackDelayModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_attack_delay_modifier(const EeCpFields *p);
-
-/// `GetAttackFrequencyModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_attack_frequency_modifier(const EeCpFields *p);
-
-/// `GetUnitCostModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_unit_cost_modifier(const EeCpFields *p);
-
-/// `GetDMAttackFrequencyModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_dm_attack_frequency_modifier(const EeCpFields *p);
-
-/// `GetDMInitialAttackModifier`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_dm_initial_attack_modifier(const EeCpFields *p);
-
-/// `GetPopLimitAdjustment`.
-///
-/// # Safety
-/// `p` is a computer player's record.
-float ee_cp_pop_limit_adjustment(const EeCpFields *p);
-
 /// `GetIslandExpansionTimer`.
 ///
 /// # Safety
@@ -1573,16 +1119,6 @@ unsigned long ee_cp_island_expansion_timer(const EeCpFields *p);
 /// # Safety
 /// `p` is a computer player's record.
 long ee_cp_scale_cost(const EeCpFields *p, long cost);
-
-/// The scenario effects' setters (`what`: 0 `SetDMAttackFrequencyModifier`, 1 `SetDMInitialAttackModifier`, 2
-/// `SetIslandExpansionTimer` with `value` a whole number of ms) for the player's difficulty.
-///
-/// # Safety
-/// `p` is a computer player's record.
-void ee_cp_set_by_difficulty(EeCpFields *p,
-                             uint32_t what,
-                             float value,
-                             unsigned long timer);
 
 /// `SetNextAttackTime`.
 ///
@@ -1616,16 +1152,6 @@ EeCpInfluence *ee_cp_influence_new(uint32_t map_size,
 /// # Safety
 /// `t` is null or a table of [`ee_cp_influence_new`], not used after.
 void ee_cp_influence_free(EeCpInfluence *t);
-
-/// `GetValue` (`what` 0) or `GetOthersValue` (1) of region (x, y).
-///
-/// # Safety
-/// `t` is a live table.
-long ee_cp_influence_value(const EeCpInfluence *t,
-                           uint32_t what,
-                           uint32_t player,
-                           uint32_t x,
-                           uint32_t y);
 
 /// `SumValue` (`what` 0) or `SumOthersValue` (1) over the regions of `r`.
 ///
@@ -1810,18 +1336,6 @@ int32_t ee_cp_herd_save(void *herd,
 /// As [`ee_cp_herd_construct_default`].
 long ee_cp_herd_repair_pointers(void *herd, EeHerdFields *f, uint32_t major, uint32_t minor);
 
-/// The units' count (`mUnits.size()`).
-///
-/// # Safety
-/// `f` is a live record.
-size_t ee_cp_herd_unit_count(const EeHerdFields *f);
-
-/// Unit `i`'s handle (`mUnits[i]`: a unit id).
-///
-/// # Safety
-/// `f` is a live record; `i` below the count.
-uint32_t ee_cp_herd_unit_handle(const EeHerdFields *f, size_t i);
-
 /// The history's length.
 ///
 /// # Safety
@@ -1960,156 +1474,6 @@ EeCpPlacement *ee_cp_placement_new();
 /// `p` is null or came from [`ee_cp_placement_new`] and is not used after.
 void ee_cp_placement_free(EeCpPlacement *p);
 
-/// `HasUnitNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_unit_near(const EeCpPlaceCtx *ctx,
-                         int32_t unit_type,
-                         int32_t x,
-                         int32_t y,
-                         float squared);
-
-/// `HasAntiAirNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_anti_air_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y);
-
-/// `HasTownCenterNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_town_center_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float distance);
-
-/// `HasGateNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_gate_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float radius);
-
-/// `HasTowerNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_tower_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float squared);
-
-/// `HasWallNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_wall_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float squared);
-
-/// `HasEnemyNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_enemy_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y);
-
-/// `CollectSiteTiles`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-void ee_cp_collect_site_tiles(const EeCpPlaceCtx *ctx, int32_t kind);
-
-/// `FindAirportSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_airport_site(const EeCpPlaceCtx *ctx, int32_t *out);
-
-/// `FindAntiAirSiteNear`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_anti_air_site_near(const EeCpPlaceCtx *ctx, uint64_t unit, int32_t *out);
-
-/// `FindAntiAirSiteAround`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_anti_air_site_around(const EeCpPlaceCtx *ctx,
-                                     int32_t x,
-                                     int32_t y,
-                                     int32_t size,
-                                     int32_t *out);
-
-/// `FindAntiAirSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_anti_air_site(const EeCpPlaceCtx *ctx, int32_t *out);
-
-/// `FindCenterSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_center_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
-
-/// `FindGranarySite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_granary_site(const EeCpPlaceCtx *ctx, int32_t *out);
-
-/// `FindProductionSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_production_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
-
-/// `FindShoreSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_shore_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
-
-/// `FindSpaceSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_space_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
-
-/// `FindTowerSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_tower_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
-
-/// `FindWonderSite`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_wonder_site(const EeCpPlaceCtx *ctx, int32_t class_, uint32_t size, int32_t *out);
-
-/// `FindSite` (`out`: the tile in and out)
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_find_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
-
-/// `IsNearAirportEnd`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_is_near_airport_end(const EeCpPlaceCtx *ctx,
-                               int32_t x,
-                               int32_t y,
-                               int32_t size,
-                               float distance);
-
-/// `HasBuilderFor`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_has_builder_for(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, int32_t class_);
-
-/// `SetTownCenter`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-void ee_cp_set_town_center(const EeCpPlaceCtx *ctx, uint64_t unit);
-
 /// `UnitAdded`
 ///
 /// # Safety
@@ -2127,21 +1491,6 @@ void ee_cp_placement_reset(const EeCpPlaceCtx *ctx);
 /// # Safety
 /// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
 int32_t ee_cp_placement_restore(const EeCpPlaceCtx *ctx);
-
-/// `CanBuildAt`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_can_build_at(const EeCpPlaceCtx *ctx,
-                        uint16_t continent,
-                        int32_t class_,
-                        int32_t x,
-                        int32_t y,
-                        int32_t size,
-                        bool margin,
-                        bool strict,
-                        int32_t from_x,
-                        int32_t from_y);
 
 /// `EECPCountOwn`
 ///
@@ -2164,23 +1513,11 @@ EeCpPlaceResult ee_cp_next_place_search(const EeCpPlaceCtx *ctx,
                                         size_t count,
                                         int32_t site);
 
-/// `EECPAntiAirClass` of the player's epoch.
-int32_t ee_cp_anti_air_class(int32_t epoch);
-
-/// `EECPFishingBoatClass`
-int32_t ee_cp_fishing_boat_class(int32_t epoch);
-
 /// `EECPGateClass`
 int32_t ee_cp_gate_class(int32_t epoch);
 
-/// `EECPTowerClass`
-int32_t ee_cp_tower_class(int32_t epoch);
-
 /// `EECPWallClass`
 int32_t ee_cp_wall_class(int32_t epoch);
-
-/// `EECPIsSiteClass`
-bool ee_cp_is_site_class(int32_t class_);
 
 /// The player's lists made (`EEComputerPlayer::Init`, after `ee_cp_init`).
 ///
@@ -2361,12 +1698,6 @@ void ee_cp_pl_set_combat_state(uint64_t player, unsigned long state);
 /// As [`ee_cp_pl_set_combat_state`].
 void ee_cp_pl_set_citizen_percentage(uint64_t player, float value);
 
-/// `SetNextIslandExpansionTime`: the difficulty's island timer (minutes) from now.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_set_next_island_expansion_time(uint64_t player);
-
 /// `SetNextAttackTime`.
 ///
 /// # Safety
@@ -2396,18 +1727,6 @@ void ee_cp_pl_add_resource(uint64_t player, long index, long amount);
 /// # Safety
 /// As [`ee_cp_pl_set_combat_state`].
 void ee_cp_pl_take_resource(uint64_t player, long index, long amount);
-
-/// `WorkOutPopulation`.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_work_out_population(uint64_t player);
-
-/// `Regroup`, `UpdateGroups` (`which` 0, 1).
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_regroup(uint64_t player, uint32_t which);
 
 /// `RefreshResourceCenters`: a regroup when there is no centre, else the groups updated; a regroup again when none
 /// is left (RefreshTownGroups is empty since stage 5).
@@ -2538,13 +1857,6 @@ void ee_cp_pl_pay(uint64_t player,
 void ee_cp_pl_unit_goal_done(uint64_t player,
                              uint64_t unit);
 
-/// `EnterEpoch`: the epoch's kind-7 technologies, the four favourites again and, outside a load, the retired units.
-///
-/// # Safety
-/// As [`ee_cp_pl_set_combat_state`].
-void ee_cp_pl_enter_epoch(uint64_t player,
-                          long epoch);
-
 /// `EpochReached`: the reached epoch's SOL count starts over, a real epoch entered, then the player's.
 ///
 /// # Safety
@@ -2652,18 +1964,6 @@ bool ee_cp_town_remove_unit(void *town, void *area, EeTownFields *f, uint64_t un
 /// # Safety
 /// As [`ee_cp_town_add_unit`].
 bool ee_cp_town_can_take(void *town, void *area, EeTownFields *f, uint64_t unit);
-
-/// `EETown::AddTile`.
-///
-/// # Safety
-/// As `with`.
-bool ee_cp_town_add_tile(void *town, void *area, EeTownFields *f, int64_t x, int64_t y);
-
-/// `EETown::RemoveHullTile`.
-///
-/// # Safety
-/// As `with`.
-bool ee_cp_town_remove_hull_tile(void *town, void *area, EeTownFields *f, int64_t x, int64_t y);
 
 /// `EETown::Merge` of the town `other` (its record `o`).
 ///

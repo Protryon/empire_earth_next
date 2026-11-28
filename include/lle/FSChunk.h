@@ -4,6 +4,7 @@
 #ifndef LLE_FSCHUNK_H
 #define LLE_FSCHUNK_H
 
+#include "rust/base/records.h"
 #include "rust/base/fs.h"                   // EeFsChunk (rust/crates/ee_base/src/fs/chunk.rs), embedded below
 #include "lle/FSMemoryFile.h"
 #include "lle/FSRestorable.h"

@@ -19,14 +19,10 @@ class LLE_API UIStatusBar : public UIControl {
 public:
     UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeStatusBar, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_status_bar_new(this, ee_ui_status_bar_host, inBorderThickness); }
     virtual ~UIStatusBar() { ee_ui_status_bar_free(this->mRust); }
-    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiStatusBarCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiStatusBarCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiStatusBarCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiStatusBarCall::DrawText); }
-    long GetCurrentRangeValue() const { return (long)this->Call(EeUiStatusBarCall::CurrentRangeValue); }
     GEText* GetGEText() { return reinterpret_cast<GEText*>(this->Call(EeUiStatusBarCall::Text)); }
-    long GetMaxRange() const { return (long)this->Call(EeUiStatusBarCall::MaxRange); }
-    unsigned long GetRange() const { return (unsigned long)this->Call(EeUiStatusBarCall::Range); }
     virtual bool GetTabable() const { return false; }
     void SetCurrentRangeValue(long inValue) { this->Call(EeUiStatusBarCall::SetCurrentRangeValue, inValue); }
     void SetFocusedTextColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }

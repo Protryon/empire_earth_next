@@ -5,7 +5,7 @@
 //! `UpdateOrbitals`, `DistanceSquared3D`; the people's `FindNextResource`, `EEHelicopterPriestPathToGoal`,
 //! `HelicopterPriestUnitCreated`, the basic priest's media; the buildings' `EruptVolcano` and the gates' part
 //! links; the air's `EEIsTileFree`. Each C++ statement one `EE_UNITS_UC_*` case of `ee_units_uc_host`
-//! (EEUnitClass.cpp; `EruptVolcano`'s through `ee_units_ucb_host`, where its assert names its file), in the
+//! (EEUnitClass.cpp; `EruptVolcano`'s through `ee_units_uc_host`, where its assert names its file), in the
 //! original's order.
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -820,6 +820,14 @@ pub(crate) mod game {
     impl UcHost for GameR {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            let tech = if self.buildings {
+                crate::units::tech_cases::ucb(op, unit, a, b)
+            } else {
+                crate::units::tech_cases::uc(op, unit, a)
+            };
+            if let Some(v) = tech {
+                return v;
+            }
             if self.buildings {
                 if let Some(v) =
                     crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Buildings, op, class, unit, a, b, c, f)
@@ -828,7 +836,7 @@ pub(crate) mod game {
                 }
                 // SAFETY: the body runs inside the C++ member that handed over its live class and unit
                 unsafe {
-                    crate::units::ucb_release::game::ee_units_ucb_host(
+                    crate::units::uc_body::game::ee_units_uc_host(
                         op,
                         class as usize as *mut c_void,
                         unit as usize as *mut c_void,

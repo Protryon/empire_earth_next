@@ -777,15 +777,6 @@ pub unsafe extern "C" fn ee_combat_shot_step(
     crate::combat::cg_query::ee_combat_host_read_leave(slot);
 }
 
-/// `EEUGHealUnit::Work` over its reads.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_heal_work(input: *const EeCombatHealWorkIn) -> EeCombatHealWorkOut {
-    heal_work(unsafe { &*input })
-}
-
 #[cfg(test)]
 #[path = "shots_tests.rs"]
 mod tests;

@@ -12,6 +12,7 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::astar::pm::{FileIn, FileOut, Item, RequestRecord};
 use crate::astar::request;
+use crate::formations::units::{formation_fields, formation_place};
 use crate::units::group_obj::{
     self as go, EeUnitsGroup, EeUnitsPlayerGroups, FormationState, GroupHost, GroupUnit, PathWaits, SavedGroup,
     SavedPaths, G,
@@ -40,8 +41,6 @@ pub struct EeUnitsGroupIo {
     pub len: usize,
     /// a second list it reads
     pub list2: *const c_void,
-    /// the list it fills (`ee_units_group_push`)
-    pub out: *mut c_void,
 }
 
 impl Default for EeUnitsGroupIo {
@@ -57,25 +56,8 @@ impl Default for EeUnitsGroupIo {
             list: std::ptr::null(),
             len: 0,
             list2: std::ptr::null(),
-            out: std::ptr::null_mut(),
         }
     }
-}
-
-/// The list an operation fills.
-#[derive(Default)]
-pub struct EeUnitsGroupList {
-    items: Vec<(i64, i64, [f32; 3])>,
-}
-
-/// Pushes an item onto an operation's list.
-///
-/// # Safety
-/// `list` is the `out` of a running operation; `p` is three floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_push(list: *mut c_void, a: i64, b: i64, p: *const [f32; 3]) {
-    // SAFETY: the caller's contract
-    unsafe { (*(list as *mut EeUnitsGroupList)).items.push((a, b, if p.is_null() { [0.0; 3] } else { *p })) }
 }
 
 // ---- the operations (`ee_units_group_host`'s `op`; `a`, `b` objects, `c`, `d` values)
@@ -91,14 +73,6 @@ pub const EE_UNITS_GROUP_OP_FORMATION_NEW: i32 = 4;
 pub const EE_UNITS_GROUP_OP_FORMATION_REFERENCE: i32 = 5;
 /// formation `a`'s `Dereference()`
 pub const EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE: i32 = 6;
-/// formation `a`'s `mType`
-pub const EE_UNITS_GROUP_OP_FORMATION_KIND: i32 = 7;
-/// formation `a`'s `mCenter` into `io.p`
-pub const EE_UNITS_GROUP_OP_FORMATION_CENTER: i32 = 8;
-/// formation `a`'s `mCenter = io.p`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: i32 = 9;
-/// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
-pub const EE_UNITS_GROUP_OP_FORMATION_PLACE: i32 = 10;
 // (13 was terrain_flags: Rust since the paths lane's round 2)
 /// `gContinentManager.GetContinentID(a)`
 pub const EE_UNITS_GROUP_OP_CONTINENT_OF: i32 = 14;
@@ -164,18 +138,6 @@ pub const EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: i32 = 56;
 /// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
 pub const EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: i32 = 57;
 // the compound statements as one-statement operations (the groups lane, round 2)
-/// formation `a`'s `mOrientation` (16 floats) into `list`
-pub const EE_UNITS_GROUP_OP_FORMATION_ORIENTATION: i32 = 60;
-/// formation `a`'s `mOrientation` from `list`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION: i32 = 61;
-/// formation `a`'s `mHeading` into `f`
-pub const EE_UNITS_GROUP_OP_FORMATION_HEADING: i32 = 62;
-/// formation `a`'s `mHeading = f`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_HEADING: i32 = 63;
-/// formation `a`'s `mB5C`
-pub const EE_UNITS_GROUP_OP_FORMATION_B5C: i32 = 64;
-/// formation `a`'s `mB5C = c != 0`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_B5C: i32 = 65;
 /// the path subsector at (c, d)'s location's x
 pub const EE_UNITS_GROUP_OP_SUBSECTOR_X: i32 = 66;
 /// its y
@@ -209,12 +171,6 @@ impl GameGroups {
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64) -> i64 {
         let mut io = EeUnitsGroupIo::default();
         self.io(op, a, b, c, d, &mut io)
-    }
-    fn fill(&mut self, op: i32, a: u64, c: i64, io: &mut EeUnitsGroupIo) -> Vec<(i64, i64, [f32; 3])> {
-        let mut list = EeUnitsGroupList::default();
-        io.out = std::ptr::addr_of_mut!(list).cast();
-        self.io(op, a, 0, c, 0, io);
-        list.items
     }
 }
 
@@ -313,39 +269,41 @@ impl GroupHost for GameGroups {
     fn formation_dereference(&mut self, formation: u64) {
         self.op(EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE, formation, 0, 0, 0);
     }
+    // the formation's members: its Rust record (formations/units.rs; units round 14)
     fn formation_kind(&mut self, formation: u64) -> i64 {
-        self.op(EE_UNITS_GROUP_OP_FORMATION_KIND, formation, 0, 0, 0)
+        // SAFETY: a live formation
+        unsafe { formation_fields(formation) }.mType as i64
     }
     fn formation_center(&mut self, formation: u64) -> [f32; 3] {
-        let mut io = EeUnitsGroupIo::default();
-        self.io(EE_UNITS_GROUP_OP_FORMATION_CENTER, formation, 0, 0, 0, &mut io);
-        io.p
+        // SAFETY: as above
+        unsafe { formation_fields(formation) }.mCenter
     }
     fn set_formation_center(&mut self, formation: u64, center: [f32; 3]) {
-        let mut io = EeUnitsGroupIo { p: center, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_CENTER, formation, 0, 0, 0, &mut io);
+        // SAFETY: as above
+        unsafe { formation_fields(formation) }.mCenter = center;
     }
     fn formation_place(&mut self, formation: u64, units: &[u64]) -> Vec<[f32; 3]> {
-        let mut io = EeUnitsGroupIo { list: units.as_ptr().cast(), len: units.len(), ..Default::default() };
-        self.fill(EE_UNITS_GROUP_OP_FORMATION_PLACE, formation, 0, &mut io).into_iter().map(|(_, _, p)| p).collect()
+        // SAFETY: a live formation and the group's live units
+        unsafe { formation_place(formation, units) }.into_iter().map(|s| s.position).collect()
     }
     fn formation_state(&mut self, formation: u64) -> FormationState {
-        let mut s = FormationState::default();
-        let mut io = EeUnitsGroupIo { list: s.orientation.as_mut_ptr().cast(), len: 16, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_ORIENTATION, formation, 0, 0, 0, &mut io);
-        s.center = self.formation_center(formation);
-        self.io(EE_UNITS_GROUP_OP_FORMATION_HEADING, formation, 0, 0, 0, &mut io);
-        s.heading = io.f;
-        s.b5c = self.op(EE_UNITS_GROUP_OP_FORMATION_B5C, formation, 0, 0, 0) != 0;
-        s
+        // SAFETY: as above
+        let f = unsafe { formation_fields(formation) };
+        let mut orientation = [0.0f32; 16];
+        for (k, v) in f.mOrientation.iter().flatten().enumerate() {
+            orientation[k] = *v;
+        }
+        FormationState { orientation, center: f.mCenter, heading: f.mHeading, b5c: f.mB5C }
     }
     fn set_formation_state(&mut self, formation: u64, s: &FormationState) {
-        let mut io = EeUnitsGroupIo { list: s.orientation.as_ptr().cast(), len: 16, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION, formation, 0, 0, 0, &mut io);
-        self.set_formation_center(formation, s.center);
-        let mut io = EeUnitsGroupIo { f: s.heading, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_HEADING, formation, 0, 0, 0, &mut io);
-        self.op(EE_UNITS_GROUP_OP_FORMATION_SET_B5C, formation, 0, i64::from(s.b5c), 0);
+        // SAFETY: as above
+        let f = unsafe { formation_fields(formation) };
+        for (k, v) in f.mOrientation.iter_mut().flatten().enumerate() {
+            *v = s.orientation[k];
+        }
+        f.mCenter = s.center;
+        f.mHeading = s.heading;
+        f.mB5C = s.b5c;
     }
     fn terrain_flags(&mut self, unit: u64) -> [u8; 17] {
         // the unit's class's GetTerrainFlags (gather_spot.rs)
@@ -590,7 +548,8 @@ impl crate::units::selection::UpgradesHost for GameGroups {
         self.op(EE_UNITS_GROUP_OP_CLASS_COUNT, 0, 0, 0, 0) as u64
     }
     fn upgrade(&mut self, player: u64, class: u64) -> u64 {
-        self.op(EE_UNITS_GROUP_OP_UPGRADE, player, 0, class as i64, 0) as u64
+        // GetUpgrade(class) (player_upgrades.rs: the vector read in place)
+        crate::units::player_upgrades::at(player, class as i64 as c_long as usize)
     }
     fn upgrade_values(&mut self, upgrade: u64) -> (c_long, c_long, c_long, i64) {
         // SAFETY: a live upgrade
@@ -801,16 +760,6 @@ pub unsafe extern "C" fn ee_units_group_reference(g: *mut EeUnitsGroup) {
     unsafe { go::reference(g) }
 }
 
-/// `Dereference()`.
-///
-/// # Safety
-/// As [`ee_units_group_reference`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_dereference(g: *mut EeUnitsGroup) {
-    // SAFETY: the caller's contract
-    unsafe { go::dereference(&mut GameGroups, g) }
-}
-
 /// `GetNumUnits()`.
 ///
 /// # Safety
@@ -938,16 +887,6 @@ pub unsafe extern "C" fn ee_units_group_set_formation(g: *mut EeUnitsGroup, form
     unsafe { go::set_formation(&mut GameGroups, g, formation as u64) }
 }
 
-/// `Remove(id)` and `CancelPathRequest(id)`.
-///
-/// # Safety
-/// As [`ee_units_group_reference`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_cancel_path(g: *mut EeUnitsGroup, id: c_long) {
-    // SAFETY: the caller's contract
-    unsafe { go::cancel_path_request(&mut GameGroups, g, id as i64) }
-}
-
 /// `GetBounds(out)`: `out` the rectangle's bottom, left, right, top.
 ///
 /// # Safety
@@ -990,21 +929,6 @@ pub unsafe extern "C" fn ee_units_group_file(
     }
 }
 
-/// `Fill(selection, sort, slot)`.
-///
-/// # Safety
-/// `g` a live active group, `selection` a live selection.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_fill(
-    g: *mut EeUnitsGroup,
-    selection: *mut EeUnitsGroup,
-    sort: c_long,
-    slot: c_long,
-) {
-    // SAFETY: the caller's contract
-    unsafe { go::fill(&mut GameGroups, g, selection, sort as i64, slot as i64) }
-}
-
 /// `SetGoal(goal, queued)`.
 ///
 /// # Safety
@@ -1015,26 +939,6 @@ pub unsafe extern "C" fn ee_units_group_set_goal(g: *mut EeUnitsGroup, goal: *mu
     unsafe { go::set_goal(&mut GameGroups, g, goal as u64, queued) }
 }
 
-/// `RequestPaths(units)`: the `n` units at `units`.
-///
-/// # Safety
-/// `g` a live active group with a goal; `units` `n` live complex units.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_request_paths(
-    g: *mut EeUnitsGroup,
-    units: *const *mut c_void,
-    n: usize,
-) -> bool {
-    // SAFETY: the caller's contract
-    let list: Vec<u64> = if n == 0 {
-        Vec::new()
-    } else {
-        unsafe { std::slice::from_raw_parts(units, n) }.iter().map(|&u| u as u64).collect()
-    };
-    // SAFETY: as above
-    unsafe { go::request_paths(&mut GameGroups, g, &list) }
-}
-
 /// `TellGroup(unit, location)`.
 ///
 /// # Safety
@@ -1043,15 +947,6 @@ pub unsafe extern "C" fn ee_units_group_request_paths(
 pub unsafe extern "C" fn ee_units_group_tell(g: *mut EeUnitsGroup, unit: *mut c_void, location: *const [f32; 3]) {
     // SAFETY: the caller's contract
     unsafe { go::tell_group(&mut GameGroups, g, unit as u64, *location) }
-}
-
-/// `EEPlayer::GetActiveGroupOf(unit)`.
-///
-/// # Safety
-/// `player` a live player.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_group_active_of(player: *mut c_void, unit: *mut c_void) -> *mut EeUnitsGroup {
-    go::active_group_of(&mut GameGroups, player as u64, unit as u64) as usize as *mut EeUnitsGroup
 }
 
 /// The player's groups (`op`): 0 the running groups emptied, released and cleared (`~EEPlayer`, `Reset`, `Clear`), 1

@@ -33,17 +33,6 @@ fn world() -> EeAppTeamsWorld {
     EeAppTeamsWorld { ctx: std::ptr::null_mut(), present, observer, enemy }
 }
 
-/// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_world_teams_add(_w: *mut c_void, players: *const c_ulong, n: usize) {
-    let players: Vec<u32> = if n == 0 {
-        Vec::new()
-    } else {
-        unsafe { std::slice::from_raw_parts(players, n) }.iter().map(|p| *p as u32).collect()
-    };
-    unsafe { teams::ee_app_teams_add(players.as_ptr(), players.len(), &world()) };
-}
-
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_world_teams_ally(_w: *mut c_void, a: u32, b: u32) {

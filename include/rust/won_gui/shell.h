@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// The C++ shell class a kind's widget is (its base class).
 enum class EeWonShellBase : uint32_t {
@@ -110,109 +111,6 @@ enum class EeWonShellKind : uint32_t {
   /// `WONButton` (R6 WONLobby round 24): the C++ shell `WONButton` itself, its own state the Rust WONButton
   /// (wonbtnobj.rs) the shell runs; the kind overrides nothing.
   WonButton,
-};
-
-/// A call out of a kind (the C++ host's op).
-enum class EeWonShellHostOp : uint32_t {
-  /// the base class's virtual `a` (`EeWonShellVirt`) with `b`, `c`, `d` (the shell's `BaseCall`).
-  Base = 1,
-  /// `WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b)`.
-  Draw,
-  /// Component's call `a` (`EeWonCompCall`) with `b`, `c`, `d` (the game: compobj.rs).
-  Comp,
-  /// Button's call `a` (`EeWonBtnCall`) with `b`, `c`, `d` (the game: the registered btnobj.rs object).
-  Btn,
-  /// MSButtonBase's call `a` (`EeWonMsBtnCall`) with `b`, `c`, `d` (the game: the registered msbtnobj.rs object).
-  MsBtn,
-  /// MSButtonBase's `mText->SetText(*(const GUIString*)a)`.
-  WrapSetText,
-  /// MSButtonBase's `mText->GetWidth()`.
-  WrapWidth,
-  /// `MultiListHeader::GetSortTypeForButton(this)`.
-  SortType,
-  /// a Rust widget object's call on another component (`a` it; `b` the object's kind << 16 | the call; `c`, `d`)
-  /// (the game: the registered object).
-  Call,
-  /// `WONShellNew(a, b, c, d)`: a new widget of the kind `a` (a `Component*`, not yet held).
-  New,
-  /// a new widget of the base class `a` (`EeWonShellBaseNew`).
-  NewBase,
-  /// `((Component*)a)->AddRef()` when `b` > 0, else its `Release()`.
-  Ref,
-  /// the shell's own `Virtual08()` (through its vtable).
-  SelfVirt,
-  /// the skin layout host's op `a` with `b`, `c`, `d` (`ee_won_guicpp_skin_call`).
-  SkinCall,
-  /// `Fn2F6140((Component*)a, b, (Component*)c, d[0..5])`: the child's layout against a reference.
-  Layout,
-  /// a tab control's `mContainerLayout`.
-  TabLayoutPoint,
-  /// `((Label*)a)->SetText(*(const GUIString*)b)`.
-  LabelSetText,
-  /// `a`'s `SetFont(GetNamedFont("MSButton"))`, `b` its class (`EeWonShellBaseNew`: an input box or a list).
-  NamedFont,
-  /// a combo box's part `a` (`EeWonShellComboPart`) = `(Component*)b`.
-  ComboPart,
-  /// `((MSButtonBase*)a)->mText->GetWidth()`.
-  WrapWidthOf,
-  /// `((MSButtonBase*)a)->SetWrap(b != 0)`.
-  SetWrap,
-  /// `(new SameSizeLayout(a, true, true))->Add(b)->Add(c)`, executed on the shell's container.
-  SameSize,
-  /// `CenterLayout(this, a, true, false)` with `b` and `c` (when not 0) added, added to the shell's child layouts.
-  CenterLayout,
-  /// an image's method `a` (`EeWonWbImage`) on `(Image*)b` (a duplicate comes back held).
-  Img,
-  /// `WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b)` with the four images at `c` as the slots.
-  DrawImages,
-  /// WONButton's call: `ee_won_wonbtn_call(((WONButton*)a)->mWb, b, c[0..4])`.
-  WonBtn,
-  /// `((WONButton*)a)->SetButtonState(c[0], (Image*)c[1], c[2], (Font*)c[3], c[4] != 0)`.
-  WonBtnState,
-  /// `((WONButton*)a)->CopyAttributes((WONButton*)b)`.
-  WonBtnCopy,
-  /// `((Button*)a)->CopyAttributes((Button*)b)`.
-  BtnCopy,
-  /// `((Button*)a)->SetClickSound((Sound*)b)`.
-  ClickSound,
-  /// `((WrappedText*)a)->GetWidth()`.
-  TextWidth,
-  /// the shell's combo box part `a` (`EeWonShellComboPart`).
-  ComboGet,
-  /// the combo box `a`'s part `b` = `(Component*)c`.
-  ComboPartOn,
-  /// `((Component*)a)->GetDesiredSize(w, h)` (virtual) into the two ints at `b`.
-  VDesiredSize,
-  /// a new `ImageComponent` stretching `(Image*)a` (not held).
-  NewStretchImage,
-  /// `new WONMSSkin::MSImage(a, b, c, d)` (not held).
-  NewMsImage,
-  /// `GetNamedFont(a)` (a NUL-terminated name), held.
-  GetNamedFont,
-  /// `((RefCount*)a)->AddRef()` when `b` > 0, else its `Release()` (an image or a font).
-  RefObj,
-  /// `WONShellNew(EeWonShellKind::MsMessageBox, a)` (not held).
-  MsgBoxNew,
-  /// `CreateNativeWindow()` (not held).
-  MsgWinNew,
-  /// `((Window*)a)->SetParent((Window*)b)`.
-  MsgWinParent,
-  /// `((Window*)a)->SetTitle(*(const GUIString*)b)`.
-  MsgWinTitle,
-  /// `((Window*)a)->SetStyle(b)`.
-  MsgWinStyle,
-  /// `((Window*)a)->Create(WONRectangle(0, 0, b, c))`.
-  MsgWinCreate,
-  /// `((Window*)a)->AddComponent((Component*)b)`.
-  MsgWinAdd,
-  /// `WONShell::Op((Component*)a, (EeWonShellOp)b)`.
-  MsgShellOp,
-  /// `((Component*)a)->RequestFocus()`.
-  MsgFocus,
-  /// `((Window*)a)->RunDialog((Component*)b)`.
-  MsgRunDialog,
-  /// `((Window*)a)->Close()`.
-  MsgWinClose,
 };
 
 /// A virtual a shell overrides (its bit in the kind's mask). The arguments are the C++ ones as `isize` (a pointer
@@ -361,14 +259,6 @@ enum class EeWonShellComboPart : uint32_t {
 
 /// A shell's Rust state: its view and its kind.
 struct EeWonShell;
-
-/// The C++ host: `(shell, op, a, b, c, d) -> result`, `shell` the C++ `WONShell*` the kind belongs to.
-using EeWonShellHostFn = ptrdiff_t(*)(void *shell,
-                                      EeWonShellHostOp op,
-                                      ptrdiff_t a,
-                                      ptrdiff_t b,
-                                      ptrdiff_t c,
-                                      ptrdiff_t d);
 
 extern "C" {
 

@@ -73,9 +73,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
 // EEUC* class in alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's
 // factory); slots +0xe4, +0x24, +0xf0, +0xf8, +0x74, +0x78, +0xa0, +0xb8 in address order.
 
-// New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
-// (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
-void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_PATH, inClass, inUnit, 0, 0, 0); }  // ucx_transports.rs
 
 // ---- EEUCFortress.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The fortress (a land
 // transport that garrisons; unit type 0x313 is the teleporter): 0x21013b..0x21048f (after
@@ -85,38 +82,4 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 // 0x4c8fa4 (.data, a word): the faith a teleporter spends per full unload (provisional name)
 unsigned short gFortressUnloadCost = 100;
 
-// the boarding location's tiles (ucx_transports.rs)
-static std::vector<EETileCoordinate> sUcxTiles;
 
-template <class T> static T* EEUcxObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
-
-// The C++ of the transports' Rust bodies (ee_units ucx_transports.rs; EE_UNITS_UCX_*): one statement of the original
-// bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
-extern "C" int64_t ee_units_ucx_host(int32_t inOp, void* inClass, void* inUnit, uint64_t inA, int64_t inB, int64_t inC,
-                                     float (*ioF)[4])
-{
-    EEUnitClass* theClass = static_cast<EEUnitClass*>(inClass);
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
-    EEComplexUnit* theOther = EEUcxObject<EEComplexUnit>(inA);
-    EEUnit* theSimple = EEUcxObject<EEUnit>(inA);
-    float* f = *ioF;
-    switch (inOp) {
-    case EE_UNITS_UCX_TILES_CLEAR: sUcxTiles.clear(); return 0;
-    case EE_UNITS_UCX_TILES_AROUND: ee_units_uu_tiles_around((uint64_t)(uintptr_t)theUnit, inA, 1, 0, 0, &sUcxTiles); return 0;
-    case EE_UNITS_UCX_PICK_TILE_NEAR: return ee_units_uu_pick_tile_near(&sUcxTiles, (uint64_t)(uintptr_t)theUnit, inA, 0, EEUcxObject<float[3]>((uint64_t)inB));
-    case EE_UNITS_UCX_SET_POINT: *EEUcxObject<GE3DPoint>((uint64_t)inB) = GE3DPoint(f[0], f[1], f[2]); return 0;
-    case EE_UNITS_UCX_SET_RESOURCE_TYPE: theSimple->SetResourceType(theClass->mResourceType); return 0;
-    case EE_UNITS_UCX_SET_RESOURCE_AMOUNT: theSimple->SetResourceAmount(theClass->mResourceAmount); return 0;
-    case EE_UNITS_UCX_COMPLEX_FIELD_OF: return (uint64_t)(uintptr_t)theSimple->mComplexUnit;
-    case EE_UNITS_UCX_CARGO_OF: return (uint64_t)(uintptr_t)theOther->GetCargo((unsigned long)inB);
-    case EE_UNITS_UCX_HEIGHT_AT: f[0] = theClass->GetHeightAt(theUnit, GE3DPoint(f[0], f[1], f[2])); return 0;
-    case EE_UNITS_UCX_TILE_ADD: EEUcxObject<EEMapTile>(inA)->mUnits = EEUcxObject<EEMapTile>(inA)->AddUnit(EEUcxObject<EEUnit>((uint64_t)inB), EEUcxObject<EEMapTile>(inA)->mUnits); return 0;
-    case EE_UNITS_UCX_TILE_REMOVE: EEUcxObject<EEMapTile>(inA)->RemoveUnit(EEUcxObject<EEUnit>((uint64_t)inB)); return 0;
-    case EE_UNITS_UCX_TOTAL_POPULATION: return theUnit->mPlayer->GetTotalPopulation(false, false);
-    case EE_UNITS_UCX_UNLOAD_COST: return gFortressUnloadCost;
-    case EE_UNITS_UCX_SET_POWER: theUnit->SetPower((long)inB); return 0;
-    case EE_UNITS_UCX_UNLOAD_EVENT: theUnit->mPlayer->mEvents.AddEvent(U2DPoint<long>((long)inB, (long)inC), 2, theUnit->GetPlayer(), 0x274e, false); return 0;
-    case EE_UNITS_UCX_DESTINATION: EEUcxObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
-    default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
-    }
-}

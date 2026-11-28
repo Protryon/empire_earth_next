@@ -264,6 +264,10 @@ impl EeWonPersist {
         unsafe { units(p as *const c_void, n, self.ws) }
     }
     fn res(&self, r: EeWonLobbyRes) -> Vec<u32> {
+        // the game's resource strings read in place (R6 WON GUI round 40); a driver's world answers the op
+        if ee_won_gui::compobj::is_game() {
+            return crate::resource::text(r as usize);
+        }
         self.op_units(EeWonPersistOp::ResText, r as isize)
     }
     fn now(&self) -> i64 {
@@ -275,6 +279,16 @@ impl EeWonPersist {
         }
     }
     fn mute_click(&self) {
+        // the click sound's mute (R6 WON GUI round 41: soundobj.rs's)
+        if ee_won_gui::compobj::is_game() {
+            let mute = isize::from(!self.prefs.flag(F::LobbySoundEffects));
+            crate::eesound::res_sound(
+                EeWonLobbyRes::LobbyGlobal_ButtonClick_Sound,
+                ee_won_gui::soundobj::EeWonSoundCall::SetMuted,
+                mute,
+            );
+            return;
+        }
         self.op(EeWonPersistOp::MuteClick, isize::from(!self.prefs.flag(F::LobbySoundEffects)), 0, 0);
     }
 
@@ -1396,8 +1410,86 @@ pub(crate) fn ctl_op(p: *mut EeWonPersist, op: crate::lobbyctl::EeWonLobbyCtlOp,
         O::CurrentUser => lobby_call(C::CurrentUser, 0, 0),
         O::UserCount => lobby_call(C::UserCount, 0, 0),
         O::UserLastUseAt => lobby_call(C::UserLastUseAt, a as i64, 0),
+        // the texts' calls (R6 WON GUI round 40: the texts are Rust's): a held text out, the texts in
+        O::IgnoredAt => text_out(p, C::IgnoredAt, a as i64),
+        O::UserPassword => {
+            let user = text_call(p, C::FindUser, a, 0, 0, std::ptr::null_mut()) as *const EeWonPersistUser;
+            if user.is_null() {
+                crate::lobbytext::held_units(&[])
+            } else {
+                let mut n = 0usize;
+                // SAFETY: a saved user's record (alive while saved)
+                let u = unsafe { ee_won_persist_user_text(user, 1, &mut n) };
+                // SAFETY: its `n` units
+                crate::lobbytext::held_units(if n != 0 { unsafe { std::slice::from_raw_parts(u, n) } } else { &[] })
+            }
+        }
+        O::AddUser => {
+            text_call(p, C::AddUser, a, b, 1, std::ptr::null_mut());
+            0
+        }
+        O::FilterCount => text_call(p, C::FilterCount, a, 0, 0, std::ptr::null_mut()),
         _ => return None,
     })
+}
+
+/// A call on the lobby's object with two wide texts' bytes (`wchar_t` units), in the game only (AccountLogic's saved
+/// users of a lobby event's name and password: lobbytext.rs).
+pub(crate) fn game_text_call(call: EeWonPersistCall, t1: &[u8], t2: &[u8], a: i64) -> Option<isize> {
+    if !in_game() {
+        return None;
+    }
+    let w = ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR;
+    let t = |b: &[u8]| EeWonPersistText { text: b.as_ptr().cast(), count: b.len() / w, unit_size: w as u32 };
+    // SAFETY: the lobby's object or NULL; the texts live for the call
+    Some(unsafe { ee_won_persist_call(lobby(), call, t(t1), t(t2), a, 0, std::ptr::null_mut()) })
+}
+
+/// `LobbyPC1(call, Txt(t), a)` on the lobby's object, in the game only.
+pub(crate) fn game_call_text(call: EeWonPersistCall, t: isize, a: i64) -> Option<isize> {
+    game_call_texts(call, t, 0, a)
+}
+/// `LobbyPC2(call, Txt(t1), Txt(t2), a)` on the lobby's object, in the game only.
+pub(crate) fn game_call_texts(call: EeWonPersistCall, t1: isize, t2: isize, a: i64) -> Option<isize> {
+    if !in_game() {
+        return None;
+    }
+    // SAFETY: the lobby's object or NULL; the texts live for the call
+    Some(unsafe { ee_won_persist_call(lobby(), call, text_in(t1), text_in(t2), a, 0, std::ptr::null_mut()) })
+}
+
+/// A text argument as the call's text (`LobbyPersistIn(Txt(t))`; NULL: the empty text).
+fn text_in(t: isize) -> EeWonPersistText {
+    if t == 0 {
+        return EeWonPersistText {
+            text: std::ptr::null(),
+            count: 0,
+            unit_size: ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR as u32,
+        };
+    }
+    // SAFETY: a live text
+    let b = unsafe { &(*(t as *const ee_won_gui::guistrobj::EeWonGstr)).buf };
+    EeWonPersistText {
+        text: b.text,
+        count: b.length as usize,
+        unit_size: ee_won_gui::guistrobj::EE_WON_GSTR_WCHAR as u32,
+    }
+}
+
+/// `LobbyPC2(c, Txt(t1), Txt(t2), a)` (`out` the text answer's count, or NULL).
+fn text_call(p: *mut EeWonPersist, call: EeWonPersistCall, t1: isize, t2: isize, a: i64, out: *mut usize) -> isize {
+    // SAFETY: a live object or NULL; the texts live for the call
+    unsafe { ee_won_persist_call(p, call, text_in(t1), text_in(t2), a, 0, out) }
+}
+
+/// `LobbyPCText(c, a)` as a held text.
+fn text_out(p: *mut EeWonPersist, call: EeWonPersistCall, a: i64) -> isize {
+    let mut n = 0usize;
+    let none = EeWonPersistText { text: std::ptr::null(), count: 0, unit_size: 4 };
+    // SAFETY: a live object or NULL
+    let u = unsafe { ee_won_persist_call(p, call, none, none, a, 0, &mut n) } as *const u32;
+    // SAFETY: the answer's `n` units
+    crate::lobbytext::held_units(if n != 0 && !u.is_null() { unsafe { std::slice::from_raw_parts(u, n) } } else { &[] })
 }
 
 /// RoutingLogic's ops over the saved settings (RoutingLogic.cpp's cases), for the game's logic.

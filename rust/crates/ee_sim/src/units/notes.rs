@@ -171,12 +171,6 @@ pub fn host_op(code: i32, first_action: i32, a: i64, b: i64) {
     }
 }
 
-/// `EEUnitStepNoting()`
-#[no_mangle]
-pub extern "C" fn ee_units_note_noting() -> bool {
-    noting()
-}
-
 /// `EEUnitStepNote(kind, id, words, count)`
 ///
 /// # Safety
@@ -191,36 +185,10 @@ pub unsafe extern "C" fn ee_units_note_step(kind: u32, id: u32, words: *const u3
     step(kind, id, w);
 }
 
-/// `EEUnitStateNote(kind, id, words, count)`
-///
-/// # Safety
-/// `words` points to `count` words (or `count` is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_note_state(kind: u32, id: u32, words: *const u32, count: u32) {
-    if !noting() {
-        return;
-    }
-    // SAFETY: the caller's contract
-    let w = if count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(words, count as usize) } };
-    state(kind, id, w);
-}
-
-/// `EEUnitUpdateNote(op, a, b)`
-#[no_mangle]
-pub extern "C" fn ee_units_note_update(op: i32, a: i64, b: i64) {
-    update(op, a, b);
-}
-
 /// `EEUnitUpdateCommit(id)`: after a unit's step
 #[no_mangle]
 pub extern "C" fn ee_units_note_update_commit(id: u32) {
     with(|n| n.update_commit(id));
-}
-
-/// `EEUnitActionNote(op, a, b)`
-#[no_mangle]
-pub extern "C" fn ee_units_note_action(op: i32, a: i64, b: i64) {
-    action(op, a, b);
 }
 
 /// `EEUnitActionScope(id)`: an `ActionChanged` begins

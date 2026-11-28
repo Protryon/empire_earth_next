@@ -11,7 +11,7 @@
 // `c_long`/`c_ulong` are 32 bits on Windows, 64 on LP64: their casts are needed on one or the other
 #![allow(clippy::unnecessary_cast)]
 
-use std::ffi::{c_long, c_void};
+use std::ffi::c_long;
 
 use crate::astar::cm::{EeAStarCmRecord, EeAStarCmTable};
 use crate::astar::cm_io::{self, EeAStarCmIo};
@@ -329,20 +329,6 @@ pub unsafe extern "C" fn ee_astar_cm_area_at(r: *const EeAStarCmRecord, kind: i3
     }
 }
 
-/// `GetContinent(tile, kind)`.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_region_id_at(
-    r: *const EeAStarCmRecord,
-    x: c_long,
-    y: c_long,
-    kind: c_long,
-) -> u16 {
-    region_id_at(&*r, x, y, kind)
-}
-
 /// `EEAIContinent::GetPathAreaAt` (`object` a continent) or `EEAIPathSector::GetPathAreaAt` (a sector).
 ///
 /// # Safety
@@ -360,85 +346,6 @@ pub unsafe extern "C" fn ee_astar_cm_object_path_area_at(
     } else {
         continent_path_area_at(&*r, object, x, y)
     }
-}
-
-/// `InSameArea`.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`; `tiles` holds `count` points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_in_same_area(
-    r: *const EeAStarCmRecord,
-    tiles: *const EeHullPoint,
-    count: usize,
-    kind: c_long,
-) -> bool {
-    let tiles = if count == 0 { &[][..] } else { std::slice::from_raw_parts(tiles, count) };
-    in_same_area(&*r, tiles, kind)
-}
-
-/// `AreConnected` (the continents' addresses).
-///
-/// # Safety
-/// `first`, `second` live continents or 0.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_are_connected(first: u64, second: u64, flags: i32) -> bool {
-    are_connected(first, second, flags)
-}
-
-/// `GetLargestContinent`.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_largest_continent(r: *const EeAStarCmRecord, kind: i8) -> u16 {
-    largest_continent(&*r, kind)
-}
-
-/// `GetRandomArea` (`continent` true: `GetRandomContinent(kind)`, else of area type `kind` on `on_continent`).
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`; `random` a live `URandom*`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_random_area(
-    r: *const EeAStarCmRecord,
-    continent: bool,
-    kind: c_long,
-    random: *mut c_void,
-    on_continent: u16,
-) -> u64 {
-    if continent {
-        random_continent(&*r, kind as u8, random as u64)
-    } else {
-        random_area(&*r, kind, random as u64, on_continent)
-    }
-}
-
-/// `GetChokePoints(id)` into `out` (room for `capacity`); their count (more than `capacity`: call again).
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`; `out` holds `capacity` handles.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_choke_points(
-    r: *const EeAStarCmRecord,
-    id: u16,
-    out: *mut u64,
-    capacity: usize,
-) -> usize {
-    let list = choke_points(&*r, id);
-    if list.len() <= capacity && !list.is_empty() {
-        std::ptr::copy_nonoverlapping(list.as_ptr(), out, list.len());
-    }
-    list.len()
-}
-
-/// `RemoveForestTile` at tile (x, y), `empty` whether no wood with resources is left on it.
-///
-/// # Safety
-/// As `ee_astar_cm_area_at`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_remove_forest_tile(r: *mut EeAStarCmRecord, x: c_long, y: c_long, empty: bool) {
-    remove_forest_tile(&mut *r, x, y, empty);
 }
 
 #[cfg(test)]

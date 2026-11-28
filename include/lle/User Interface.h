@@ -9,10 +9,8 @@
 #include "lle/LLEForward.h"
 #include "rust/ui/bgtableobj.h"
 
-// registers the user interface's shutdown hook (ee_ui bgtableobj.rs); always kErrorOK
-inline long UIInitialize() { return ee_ui_initialize(); }
 
-// UIEditBox.cpp (0x1006a9a5; not exported): the multi-byte character at inString
-#include "lle/UIMultiByte.h"
+// UIEditBox.cpp (0x1006a9a5; not exported): the multi-byte character at inString, GetMultiByteChar
+#include "platform/PlatString.h"
 
 #endif

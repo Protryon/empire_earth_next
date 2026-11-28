@@ -6,14 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A rectangle (x, y, width, height).
-struct EeWonRect4 {
-  int32_t x;
-  int32_t y;
-  int32_t w;
-  int32_t h;
-};
+#include "rust/won_gui/records.h"
 
 /// Whether item `i` (below the count) matches, read from the C++ list.
 using EeWonMatchOf = bool(*)(const void *ctx, size_t i);

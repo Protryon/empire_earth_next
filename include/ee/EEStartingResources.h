@@ -5,6 +5,7 @@
 #define EE_EESTARTINGRESOURCES_H
 
 #include "ee/EEDbList.h"
+#include "rust/data/records.h"
 
 class FSFileSpec;
 

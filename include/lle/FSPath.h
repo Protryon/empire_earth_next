@@ -38,8 +38,6 @@ public:
     bool GetFileArchiveStatus(const UString& inName, bool& outArchived) { return ee_fs_path_archive_status(this->mRust, inName, &outArchived); }
     bool GetFileArchiveStatus(const UWideString& inName, bool& outArchived) { return ee_fs_path_archive_status(this->mRust, inName, &outArchived); }
     long ListFiles(const UString& inPattern, std::set<UString>& outFiles) { return ee_fs_path_list_files(this->mRust, inPattern, &outFiles); }
-    long RemoveArchive(unsigned long inIndex) { return ee_fs_path_remove(this->mRust, false, inIndex); }
-    long RemoveDirectory(unsigned long inIndex) { return ee_fs_path_remove(this->mRust, true, inIndex); }   // (RemoveDirectoryA)
 
     virtual ~FSPath() { ee_fs_path_free(this->mRust); }
 

@@ -10,10 +10,9 @@
 #include <vector>
 #include <type_traits>
 
-#include "lle/U2DPoint.h"                  // EEMSendFlare's inline ctor
 #include "ee/EEMessageID.h"
 #include "rust/game/gamecpp.h"
-#include "rust/sim/netmsg.h"
+#include "lle/NEMessage.h"
 
 class EEGameOptions;
 class GE2DPoint;

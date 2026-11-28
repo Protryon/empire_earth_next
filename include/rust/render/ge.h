@@ -6,9 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/render/geval.h"
-#include "rust/sim/world.h"
+#include "rust/base/records.h"
+#include "rust/render/records.h"
+#include "rust/sim/records.h"
 
 /// The glyph atlas textures' pixel format (`kPixelFormatA4R4G4B4`).
 constexpr static const unsigned long GE_FONT_ATLAS_FORMAT = 2;
@@ -237,10 +237,8 @@ enum class EeGeObjOp : uint32_t {
 enum class EeGePrimKind : uint32_t {
   /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
   Line = 1,
-  /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
-  Point,
   /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
-  Rhombus,
+  Rhombus = 3,
 };
 
 /// What a command draws.
@@ -251,8 +249,6 @@ enum class EeGeDraw2DKind : uint32_t {
   Rhombus,
   /// `Draw(GELine*, count, screen)`.
   Lines,
-  /// `Draw(GEPoint*, count, screen)`.
-  Points,
   /// `Draw(GEText*, clip, surface)`: `surface` null is the screen's secondary surface (`UIManager::GetDrawingSurface`).
   TextClipped,
   /// `Draw(GEText*, surface)`.
@@ -871,12 +867,6 @@ enum class EeGeTexStage : uint32_t {
   TextureAddressingMode,
 };
 
-/// A model as `GEModel::StoreLoaded` takes it.
-struct EeGeCemModel;
-
-/// The bitmap.
-struct EeGeBitmap;
-
 /// The font.
 struct EeGeFont;
 
@@ -895,15 +885,6 @@ struct EeGeModelManager;
 /// The primitive.
 struct EeGePrim;
 
-/// The rasterizer.
-struct EeGeRasterizer;
-
-/// The terrain mesh.
-struct EeGeTerrainMesh;
-
-/// The text.
-struct EeGeText;
-
 /// The texture.
 struct EeGeTexture;
 
@@ -915,13 +896,6 @@ struct EeGeTextureSet;
 
 /// The window.
 struct EeGeWin;
-
-/// `GEColor`: red, green, blue.
-struct EeGeRastColor {
-  float red;
-  float green;
-  float blue;
-};
 
 /// The host: `owner` is the C++ bitmap of the object calling.
 using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
@@ -957,33 +931,12 @@ struct EeGeTextOps {
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
 };
 
-/// `GELight`'s members in the C++'s order (sizeof 0x74).
-struct EeGeLight {
-  float color[3];
-  float computed_color[3];
-  float location[3];
-  float model_space_location[3];
-  float direction[3];
-  float model_space_direction[3];
-  float attenuation0;
-  float attenuation1;
-  float attenuation2;
-  float intensity;
-  float range;
-  float range_inverse;
-  float range_squared;
-  float model_space_range;
-  float model_space_range_inverse;
-  float model_space_range_squared;
-  unsigned long style;
-};
-
 /// One command as the executor reads it.
 struct EeGeDraw2D {
   EeGeDraw2DKind kind;
-  /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEPoint*`, `GEText*`).
+  /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEText*`).
   void *object;
-  /// The lines' or points' count.
+  /// The lines' count.
   unsigned long count;
   /// The text's clip (`TextClipped`).
   EeGeRectangle clip;
@@ -1008,19 +961,6 @@ using EeGeManHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t a,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
-
-/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
-struct EeGeSharedFrame {
-  uint32_t frame;
-  int32_t offset;
-};
-
-/// The shared frames a model load hands its file and its store (`GEModelManager::LoadModel`): `count` entries in the
-/// frames' order (the original's `std::map<unsigned long, long>`; `frames` NULL when there are none).
-struct EeGeSharedFrames {
-  const EeGeSharedFrame *frames;
-  size_t count;
-};
 
 /// The map's tiles and water for the edits: the map (`EEMap*`) and its mesh's Rust object, then the C++'s calls.
 struct EeGeMapHost {
@@ -1051,46 +991,6 @@ using EeGeModHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t a,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
-
-/// A material's ranges at one LOD: `GetVertexStartingIndex()`, `GetPolygonStartingIndex(lod)`,
-/// `GetPolygonRangeLength(lod)`.
-struct EeGePhysicalMaterial {
-  unsigned long vertex_start;
-  unsigned long polygon_start;
-  unsigned long polygon_length;
-};
-
-/// The callback table over `GEModel*` handles (`const GEModel*` as `*const c_void`).
-struct EeGePhysicalModels {
-  bool (*has_parent)(const void *model);
-  void (*internal_transform)(const void *model, unsigned long frame, EeGeTransformation *out);
-  void (*center)(const void *model, EeGe3DPoint *out);
-  float (*radius)(const void *model, unsigned long frame);
-  void (*bbox)(const void *model, unsigned long frame, EeGeBoundingBox *out);
-  unsigned long (*material_count)(const void *model);
-  void (*material)(const void *model,
-                   unsigned long index,
-                   unsigned long lod,
-                   EeGePhysicalMaterial *out);
-  void (*triangle)(const void *model,
-                   unsigned long frame,
-                   unsigned long lod,
-                   unsigned long polygon,
-                   unsigned long vertex_start,
-                   EeGe3DPoint *out);
-  unsigned long (*sub_model_count)(const void *model);
-  const void *(*sub_model)(const void *model, unsigned long index);
-  unsigned long (*lod_count)(const void *model);
-  unsigned long (*polygon_count)(const void *model, unsigned long lod);
-  /// `GEPhysicalModel theModel(model, location, scale); theModel.SetFrame(frame);
-  /// theModel.Intersects(line, lod, distance, true)`.
-  bool (*retry_line)(const void *model,
-                     const EeGeTransformation *location,
-                     unsigned long frame,
-                     float scale,
-                     const EeGe3DLine *line,
-                     unsigned long lod);
-};
 
 /// The host: `owner` is the C++ rasterizer of the object calling.
 using EeGeRastHostFn = ptrdiff_t(*)(void *owner, EeGeRastOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
@@ -1536,27 +1436,6 @@ bool ee_ge_terrain_intersects(const EeGeTerrainView *view,
                               const EeGe3DLine *line,
                               float *distance);
 
-/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
-/// the C++ wrote it (the triangle's plane was not parallel to the line).
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_physical_line_triangle(const EeGe3DLine *line,
-                                  const EeGe3DPoint *p1,
-                                  const EeGe3DPoint *p2,
-                                  const EeGe3DPoint *p3,
-                                  bool exact,
-                                  float *distance);
-
-/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
-                                 const EeGe3DPoint *p2,
-                                 const EeGe3DPoint *p3,
-                                 EeGeBoundingBox *out);
-
 /// `GEText::ComputeTextExtent` with the font (`PlatFont*`, not NULL), its cell height and the text's character count.
 ///
 /// # Safety
@@ -1595,15 +1474,6 @@ EeGePrim *ee_ge_game_prim_new_line(void *owner,
                                    const void *end_color,
                                    float opacity);
 
-/// `GEPoint(point, colour, opacity)` over the game's vertex host.
-///
-/// # Safety
-/// As [`ee_ge_game_bmp_new`]; the pointers are valid.
-EeGePrim *ee_ge_game_prim_new_point(void *owner,
-                                    const EeGe2DPoint *point,
-                                    const void *color,
-                                    float opacity);
-
 /// `GEText(font)` over the game's object host.
 ///
 /// # Safety
@@ -1631,12 +1501,6 @@ EeGeFont *ee_ge_game_font_new(void *owner,
 /// # Safety
 /// `l` is valid for a write.
 void ee_ge_light_init(EeGeLight *l);
-
-/// `operator=(inLight)`.
-///
-/// # Safety
-/// Both are live.
-void ee_ge_light_assign(EeGeLight *l, const EeGeLight *other);
 
 /// `SetColor(inColor)`.
 ///
@@ -1674,12 +1538,6 @@ long ee_ge_draw2d_fill(void *rasterizer,
                        const float *color,
                        float opacity);
 
-/// `GETextureStem`: the length of a texture's cache name within `name`.
-///
-/// # Safety
-/// `name` is NUL-terminated.
-size_t ee_ge_texture_stem(const char *name);
-
 /// `GETextureManager::SetTexturePack`.
 ///
 /// # Safety
@@ -1695,62 +1553,11 @@ void ee_ge_texpack_set(const char *directory, long scale_shift, long mip_levels_
 bool ee_ge_texpack_name(const char *name,
                         void *out);
 
-/// Whether the pack is on (`sTexturePackEnabled`).
-bool ee_ge_texpack_enabled();
-
 /// `GetTexturePackLogicalShift`.
 long ee_ge_texpack_logical_shift();
 
 /// `GetTexturePackMipLevelsToDrop`.
 long ee_ge_texpack_mip_levels_to_drop();
-
-/// `LoadTexture`'s MIP decisions: the levels to drop and whether to build MIP levels; returns the pack's extra drop.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-long ee_ge_texpack_load_plan(bool create_mipmaps,
-                             long drop,
-                             bool from_pack,
-                             long *out_drop,
-                             bool *out_mipmaps);
-
-/// `SetTexturePackSizes`' arithmetic: the texture's new `mNumMipLevelsToDrop` and its logical shift.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-void ee_ge_texpack_sizes(unsigned long drop,
-                         long mip_levels,
-                         unsigned long *out_drop,
-                         unsigned long *out_shift);
-
-/// The surface description a texture description asks for: depth, format and `mNoAlpha`.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-void ee_ge_texture_surface_format(unsigned long pixel_depth,
-                                  bool has_alpha,
-                                  unsigned long *out_depth,
-                                  unsigned long *out_format,
-                                  bool *out_no_alpha);
-
-/// A manager's removal decision at reference count `count`: whether to remove and release; the result code.
-///
-/// # Safety
-/// `out_remove` is valid for a write.
-long ee_ge_manager_remove_decision(unsigned long count,
-                                   bool *out_remove);
-
-/// The next made texture's name (`MakeTexture`), into `out`.
-///
-/// # Safety
-/// `out` holds `capacity` bytes.
-size_t ee_ge_texman_made_name(char *out, size_t capacity);
-
-/// The next created model's name (`CreateModel`) from the caller's, into `out`.
-///
-/// # Safety
-/// `name` is NUL-terminated; `out` holds `capacity` bytes.
-size_t ee_ge_modman_created_name(const char *name, char *out, size_t capacity);
 
 /// `GEModelManager::GEModelManager(path)`: the object of the C++ manager `owner`.
 ///
@@ -1805,12 +1612,6 @@ void ee_ge_modman_dump(EeGeModelManager *p, void *file);
 /// `p` is live.
 unsigned long ee_ge_modman_footprint(EeGeModelManager *p);
 
-/// `GetModelCount`.
-///
-/// # Safety
-/// `p` is live.
-unsigned long ee_ge_modman_count(EeGeModelManager *p);
-
 /// `LoadModel(name, shared)`: `shared` the frames the model shares (the original's `std::map<unsigned long, long>`).
 ///
 /// # Safety
@@ -1836,12 +1637,6 @@ long ee_ge_modman_remove(EeGeModelManager *p, void *model);
 /// # Safety
 /// `p` is live.
 void ee_ge_modman_set_path(EeGeModelManager *p, void *path);
-
-/// `VerifyModels`.
-///
-/// # Safety
-/// `p` is live.
-void ee_ge_modman_verify(EeGeModelManager *p);
 
 /// `RTSMap::Raise`; `bounds` is left, right, top, bottom (read and written), `fields` the map's record.
 ///
@@ -1979,12 +1774,6 @@ long ee_ge_mod_store_loaded(EeGeModel *p,
                             const EeGeCemModel *model,
                             const EeGeSharedFrames *shared);
 
-/// `LoadTexturesForScreen(description, screen)`.
-///
-/// # Safety
-/// `p` is live; `description` a `GETextureDescription`.
-long ee_ge_mod_load_textures(EeGeModel *p, const void *description, unsigned long screen);
-
 /// `ComputeBoundingVolumes`.
 ///
 /// # Safety
@@ -2037,12 +1826,6 @@ unsigned long ee_ge_mod_polygon_count_of_hierarchy(EeGeModel *p, unsigned long l
 /// `p` is live.
 void ee_ge_mod_prepare_transforms(EeGeModel *p);
 
-/// `RemoveScale`.
-///
-/// # Safety
-/// `p` is live.
-void ee_ge_mod_remove_scale(EeGeModel *p);
-
 /// `SetFractionalFramePosition`.
 ///
 /// # Safety
@@ -2084,12 +1867,6 @@ void ee_ge_mod_set_texture(EeGeModel *p, void *texture, unsigned long screen);
 /// # Safety
 /// `p` is live.
 unsigned long ee_ge_mod_size_of(EeGeModel *p);
-
-/// `SortTagPoints`.
-///
-/// # Safety
-/// `p` is live.
-void ee_ge_mod_sort_tag_points(EeGeModel *p);
 
 /// `Verify`.
 ///
@@ -2251,16 +2028,6 @@ EeGePrim *ee_ge_prim_new_line(EeGeBmpHostFn host,
                               const void *end_color,
                               float opacity);
 
-/// `GEPoint(point, colour, opacity)` (the colour as `const GEColor*`).
-///
-/// # Safety
-/// As `ee_ge_prim_new`; the pointers are valid.
-EeGePrim *ee_ge_prim_new_point(EeGeBmpHostFn host,
-                               void *owner,
-                               const EeGe2DPoint *point,
-                               const void *color,
-                               float opacity);
-
 /// The destructors.
 ///
 /// # Safety
@@ -2367,12 +2134,6 @@ void ee_ge_prim_opacities(EeGePrim *p,
 /// # Safety
 /// `p` is live with at least `count` vertices.
 void ee_ge_prim_set_opacities(EeGePrim *p, unsigned long count, float a, float b, float c, float d);
-
-/// A rhombus's `SetZPerVertex(a, b, c, d)`.
-///
-/// # Safety
-/// `p` is a live rhombus.
-void ee_ge_prim_set_z(EeGePrim *p, float a, float b, float c, float d);
 
 /// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
 ///
@@ -3107,12 +2868,6 @@ void ee_ge_tex_set_stage_texture(EeGeTexture *p, void *texture);
 /// `p` is live.
 void ee_ge_tex_set_frame(EeGeTexture *p, unsigned long frame);
 
-/// `SetSurface(surface)`.
-///
-/// # Safety
-/// `p` is live; `surface` a surface.
-long ee_ge_tex_set_surface(EeGeTexture *p, void *surface);
-
 /// `Promote`.
 ///
 /// # Safety
@@ -3218,31 +2973,6 @@ uint8_t ee_ge_unpack_green(unsigned long format, unsigned long color);
 
 /// `GEUnpackBlue`.
 uint8_t ee_ge_unpack_blue(unsigned long format, unsigned long color);
-
-/// `GEUnpackAlpha`.
-uint8_t ee_ge_unpack_alpha(unsigned long format, unsigned long color);
-
-/// `GETextureSet`'s slot of tile (x, y): the texture column and row.
-///
-/// # Safety
-/// `out_x` and `out_y` are valid for writes.
-void ee_ge_texture_set_slot(unsigned long x,
-                            unsigned long y,
-                            unsigned long coverage,
-                            unsigned long width,
-                            unsigned long height,
-                            unsigned long *out_x,
-                            unsigned long *out_y);
-
-/// `GETextureSet::GetTextureCoordinate`.
-///
-/// # Safety
-/// `u` and `v` are valid for writes.
-void ee_ge_texture_set_coordinate(unsigned long x,
-                                  unsigned long y,
-                                  unsigned long coverage,
-                                  float *u,
-                                  float *v);
 
 /// `GEMaterial::SizeOf` from the C++'s sizes.
 unsigned long ee_ge_material_size_of(size_t object_size,

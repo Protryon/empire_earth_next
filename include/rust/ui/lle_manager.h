@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/managerobj.h"
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 extern "C" {
 
@@ -40,9 +39,6 @@ ptrdiff_t ee_ui_event_host(void *obj,
 /// # Safety
 /// `manager`, `path` and `directory` (a `const UString*`) are the C++ caller's live objects.
 void ee_ui_manager_load_database(void *manager, void *path, const void *directory);
-
-/// `UIManager::RemoveDatabase` (the C++ member's body).
-void ee_ui_manager_remove_database();
 
 /// The constructor's body after the Rust manager is made: `Init` (its ops read the manager through the C++
 /// forwarders, so `mRust` must be set), then the shared mouse buttons looked up.

@@ -78,8 +78,6 @@ public:
     virtual void CloseSearchHandle() {}                                         // +0xd8 (folded 0x0c16a)
 
     const unsigned char* GetData() const { return ee_fs_mem_data(this->mState); }
-    // shrinks the buffer to the written length and rewinds; kErrorNotOpen when closed
-    long Compact() { return ee_fs_mem_compact(this->mState); }
     // compresses the contents in place (only above 12 bytes) and closes the file; an incompressible result (0x16)
     // keeps the data and succeeds
     long Compress(unsigned long inLevel, unsigned long& outLength)

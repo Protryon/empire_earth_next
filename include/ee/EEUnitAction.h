@@ -15,8 +15,6 @@ class EEUnitAction {
 public:
     uint32_t mType;                         // the action id (5000 is the idle action)
 
-    // 0x22c75a ("" for an unknown id)
-    static const char* GetActionName(unsigned long inAction) { return ee_units_script_action_name((uint32_t)inAction); }
     static void* GetScript(const UString& inName) { return reinterpret_cast<void*>(static_cast<uintptr_t>(ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength()))); }  // 0x22c7e0 (the script's handle; ee_units_script_find)
 
 private:

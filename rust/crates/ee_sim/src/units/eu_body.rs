@@ -84,9 +84,9 @@ pub const EE_UNITS_EU_HAS_DEATH_EFFECT: i32 = 133;
 pub const EE_UNITS_EU_DEATH_EFFECT: i32 = 134;
 /// `mStats->mDeathSound != NULL`
 pub const EE_UNITS_EU_HAS_DEATH_SOUND: i32 = 135;
-/// `mUnitClass->GetSoundParameters(this, mStats->mDeathSound, the volume, pan, pitch)` (kept for the next)
+/// `mUnitClass->GetSoundParameters(this, mStats->mDeathSound, the floats a: volume, pan, pitch)`
 pub const EE_UNITS_EU_DEATH_SOUND_PARAMETERS: i32 = 136;
-/// `gSoundManager->Play(the death sound's mSampleID, the volume, pan, pitch, its mLooping, NULL)`
+/// `gSoundManager->Play(the death sound's mSampleID, the floats a, its mLooping, NULL)`
 pub const EE_UNITS_EU_DEATH_SOUND_PLAY: i32 = 137;
 /// `mResourceAmount = b`
 pub const EE_UNITS_EU_SET_RESOURCE_AMOUNT: i32 = 138;
@@ -291,8 +291,10 @@ pub fn kill<H: EuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
             s.q(EE_UNITS_EU_DEATH_EFFECT);
         }
         if s.yes(EE_UNITS_EU_HAS_DEATH_SOUND) {
-            s.q(EE_UNITS_EU_DEATH_SOUND_PARAMETERS);
-            s.q(EE_UNITS_EU_DEATH_SOUND_PLAY);
+            // volume, pan, pitch (units round 14: the body's, was a C++ scratch static)
+            let mut sound = [0.0f32; 3];
+            s.qa(EE_UNITS_EU_DEATH_SOUND_PARAMETERS, sound.as_mut_ptr() as usize as u64);
+            s.qa(EE_UNITS_EU_DEATH_SOUND_PLAY, sound.as_ptr() as usize as u64);
         }
     }
     let category = s.q(EE_UNITS_EU_CATEGORY);

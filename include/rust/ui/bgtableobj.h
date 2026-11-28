@@ -6,32 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/button.h"
-#include "rust/ui/layout.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
-
-/// `UIBackgroundTable`'s members (`include/lle/UIBackgroundTable.h`), the C++ class's base.
-struct EeUiBgTableFields {
-  EeUiLayout mLayout;
-  EeUiRect mTextureRect;
-  EeUiColor mColor;
-  float mTileWidthPercent;
-  float mTileHeightPercent;
-  float mOpacity;
-  long mID;
-  unsigned long mBackgroundID;
-  unsigned long mFormID;
-  unsigned long mBackgroundType;
-  long mNumCols;
-  long mNumRows;
-  unsigned long mDrawPriority;
-  bool mVisible;
-  bool mHasAlpha;
-  bool mAttribute1;
-  bool mAttribute2;
-  bool mAttribute3;
-};
+#include "rust/ui/records.h"
 
 extern "C" {
 
@@ -40,12 +15,6 @@ extern "C" {
 /// # Safety
 /// `file` is a live `FSFileSpec`.
 long ee_ui_bgtable_create(void *file, EeUiHostFn host);
-
-/// `UIBackgroundTable`'s constructor over its record.
-///
-/// # Safety
-/// `rec` is the C++ entry's base.
-void ee_ui_bgtable_init(EeUiBgTableFields *rec);
 
 /// `UIBackgroundTable::DeleteAll()`: each entry deleted (`BgtDelete`) in order, the array emptied.
 void ee_ui_bgtable_delete_all(EeUiHostFn host);

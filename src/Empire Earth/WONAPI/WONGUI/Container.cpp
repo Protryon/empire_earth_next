@@ -22,7 +22,6 @@
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guilayout.h"
 #include "rust/won_gui/gamewin.h"
-#include "ee/wonapi/EELobbySound.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -124,33 +123,15 @@ Container::~Container() { ee_won_ct_free(this->mCt); this->mCt = NULL; }
 }
 
 // ---- RootContainer.cpp until R6 WON GUI round 39
-// RootContainer (R6 WON round 29): the Rust RootContainer's calls out (rust/crates/ee_won_gui/src/rootobj.rs, EeWonGuiOp's
-// root ops; the container's fall back to Container.cpp's), its constructor and destructor. The original's
-// RootContainer.cpp (the invalid rectangle, the queued backgrounds, the cursor's component, the window drag) is the
-// Rust object.
-
-typedef EeWonGuiOp Op;
-
-extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
-{
-    RootContainer* t = static_cast<RootContainer*>((Component*)inComp);
-    switch (op) {
-    case Op::RootCursorComponent:
-        // (no cursor: no component; the original's MouseMove read through a NULL current cursor)
-        if (a == 0) { *(int*)b = *(int*)c = 0; return 0; }
-        return (intptr_t)((Cursor*)a)->GetComponent(*(int*)b, *(int*)c);
-    // (the window's state, rectangle and place, the mouse child, the colour scheme, the cursor component's place,
-    // order and showing are gamewin.rs root_op's in the game: R6 WON GUI round 38; the grabbers' and the images'
-    // round 39)
-    default: return ContainerHostCall(t, op, a, b, c, d);
-    }
-}
+// RootContainer (R6 WON round 29): the Rust RootContainer (rust/crates/ee_won_gui/src/rootobj.rs: the invalid
+// rectangle, the queued backgrounds, the cursor's component, the window drag), its constructor and destructor. Its
+// own calls out are gamewin.rs root_op's (R6 WON GUI rounds 38-40); the container's are Container.cpp's.
 
 // Creates the top-level container of a window: arrow cursor, window dragging allowed, tab focus kept inside (the Rust
 // root: no invalid rectangle, no cursor component, no drag, no background)
 RootContainer::RootContainer(Window *theWindow)
 {
-	this->mRootObj = ee_won_root_new(static_cast<Component*>(this), ee_won_guicpp_root_call, this->mCt);
+	this->mRootObj = ee_won_root_new(static_cast<Component*>(this), ee_won_guicpp_ct_call, this->mCt);
 	this->mWindow = theWindow;
 	this->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_Arrow));
 	this->SetComponentFlags(0x8 | 0x40000,true);
@@ -198,8 +179,8 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
 #define EE_COMP_AT(m, f) (offsetof(Component, m) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, f))
     static_assert(EE_COMP_AT(mParent, parent) && EE_COMP_AT(mBounds, bounds) && EE_COMP_AT(mComponentBits, bits) &&
               EE_COMP_AT(mControlId, control_id) && EE_COMP_AT(mFocusId, focus_id) &&
-              EE_COMP_AT(mInvalidState, invalid) && EE_COMP_AT(mTimerFlags, timer) && EE_COMP_AT(mExtraStuff, extra) && EE_COMP_AT(mCt, ct),
-              "compmem.rs's block");
+              EE_COMP_AT(mInvalidState, invalid) && EE_COMP_AT(mTimerFlags, timer) && EE_COMP_AT(mExtraStuff, extra) && EE_COMP_AT(mCt, ct) &&
+              offsetof(Cursor, mRust) == EE_WON_CURSOR_RUST_AT, "compmem.rs's block, a cursor's Rust cursor (gamewin.rs)");
 #undef EE_COMP_AT
 #pragma clang diagnostic pop
     typedef EeWonComp K;
@@ -234,7 +215,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     case K::AsRoot: return (intptr_t)dynamic_cast<RootContainer*>(t);
     case K::RootWin: return (intptr_t)((RootContainer*)b)->mWindow;
     case K::RootAddBG: ((RootContainer*)b)->AddBG((BackgroundGrabber*)c); return 0;
-    case K::WQueue: w->QueueEvent((ComponentEvent*)c); return 0;
     case K::WOpenTip: {
         const intptr_t* a = (const intptr_t*)c;
         PopupParams params((Component*)a[0], PopupFlag_StandardTip, (Component*)a[1], (int)a[2], (int)a[3]);
@@ -261,6 +241,7 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     case K::IdIn: return ((const ControlIdSet*)b)->find((long)c) != ((const ControlIdSet*)b)->end();
     case K::VSetVisible: t->SetVisible(c != 0); return 0;
     case K::VMouseChild: return (intptr_t)t->GetMouseChild();
+    case K::VMouseWheel: t->MouseWheel((int)c); return 0;
     default: return 0;
     }
 }
@@ -274,65 +255,4 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
 // the Rust objects' references to the game's RefCount objects (gamewin.rs rf: every host's Hold and Release)
 static void RefOf(void* p, int32_t hold) { if (hold) ((RefCount*)p)->AddRef(); else ((RefCount*)p)->Release(); }
 [[maybe_unused]] static const bool sRefHost = (ee_won_gui_ref_register(RefOf), true);
-}
-
-// ---- Sound.cpp until R6 WON GUI round 39
-namespace WONAPI {
-// Creates an empty sound descriptor with no flags (emitted at 0x00729810)
-SoundDescriptor::SoundDescriptor() : mSoundFlags(0) {}
-// Creates a sound descriptor for a file path with the given flags (emitted at 0x00729830)
-SoundDescriptor::SoundDescriptor(const std::string& path,long flags) : mSoundFlags(flags), mPath(path) {}
-// Sets or clears the given sound flags
-void SoundDescriptor::SetSoundFlags(int flags,bool on)
-{
-    if(on) this->mSoundFlags|=flags;
-    else this->mSoundFlags&=~flags;
-}
-// Creates a sound from a copy of the descriptor, not looping (emitted at 0x007299c0)
-Sound::Sound(const SoundDescriptor& descriptor) : mDescriptor(descriptor), mIsLooping(false) {}
-// Plays the sound unless it is muted
-void Sound::Play()
-{
-    if(!this->GetMuted()) this->PlayHook();
-}
-// Mutes or unmutes the sound (flag 4); muting stops it
-void Sound::SetMuted(bool muted)
-{
-    if(muted==this->GetMuted()) return;
-    this->mDescriptor.SetSoundFlags(4,muted);
-    if(muted) this->Stop();
-}
-}
-
-// Stop and Resume forward to the playback hooks
-void WONAPI::Sound::Stop()
-{
-    this->StopHook();
-}
-void WONAPI::Sound::Resume()
-{
-    this->ResumeHook();
-}
-
-// Returns true when the sound's muted flag (4) is set
-bool WONAPI::Sound::GetMuted()
-{
-    return (this->mDescriptor.mSoundFlags&4)?true:false;
-}
-
-namespace WONAPI {
-
-SoundDescriptor::SoundDescriptor(const char *thePath) : mSoundFlags(0), mPath(thePath) {}
-
-void Sound::Rewind()
-{
-	this->RewindHook();
-}
-}
-
-// the sound decoder base (SoundDecoder.cpp until R6 WON GUI round 37): decodes a descriptor through the virtual Decode
-namespace WONAPI {
-SoundDecoder::SoundDecoder() {}
-SoundDecoder::~SoundDecoder() {} // (emitted at 0x00728590)
-SoundPtr SoundDecoder::DecodeDescriptor(const SoundDescriptor& inDescriptor) { return this->Decode(inDescriptor); }
 }

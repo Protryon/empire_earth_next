@@ -89,6 +89,20 @@ pub enum EeWonBrowserOp {
     Invalidate,
 }
 
+/// a void call's answer (the C++ case's `return 0`)
+fn z(_: isize) -> isize {
+    0
+}
+
+/// Where the game's BrowserComponent keeps its view (`mHTMLView`, a SmartPtr; 0 before GuiHost.cpp registers it).
+static VIEW_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Registers the view's offset (GuiHost.cpp at static initialisation).
+#[no_mangle]
+pub extern "C" fn ee_won_browser_view_register(offset: usize) {
+    VIEW_AT.store(offset, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// The host: `me` the C++ object, `op`, two arguments.
 pub type EeWonBrowserHostFn =
     Option<unsafe extern "C" fn(me: *mut c_void, op: EeWonBrowserOp, a: isize, b: isize) -> isize>;
@@ -119,6 +133,17 @@ pub struct EeWonBrowser {
     host: EeWonBrowserHostFn,
     wchar_size: u32,
     st: RefCell<State>,
+    /// the game's scroller (the C++ member `mScroller` until R6 WON GUI round 40), held; 0 for none
+    scroller: std::cell::Cell<isize>,
+}
+
+impl Drop for EeWonBrowser {
+    fn drop(&mut self) {
+        let s = self.scroller.replace(0);
+        if s != 0 {
+            crate::gamewin::rf(s, false);
+        }
+    }
 }
 
 /// A page file's bytes (`PlatFOpen(path, "rb")`, read in 4,096-byte pieces to the end); None when it cannot be
@@ -200,6 +225,7 @@ impl EeWonBrowser {
             host,
             wchar_size,
             st: RefCell::new(State { font_size: EE_WON_BROWSER_FONT_MEDIUM, ..State::default() }),
+            scroller: std::cell::Cell::new(0),
         };
         b.op(EeWonBrowserOp::NewView, 0, 0);
         b.op(EeWonBrowserOp::ViewNoScrollOnBottom, 0, 0);
@@ -207,11 +233,123 @@ impl EeWonBrowser {
     }
 
     fn op(&self, o: EeWonBrowserOp, a: isize, b: isize) -> isize {
+        if let Some(r) = self.game_op(o, a, b) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object; no borrow of the state is live across a call
             Some(h) => unsafe { h(self.me, o, a, b) },
             None => 0,
         }
+    }
+
+    /// The game's answers (R6 WON GUI round 40): the scroller held here, the references the game's, the component's
+    /// Invalidate its own (no class overrides it). None in a driver's world and for the others.
+    fn game_op(&self, o: EeWonBrowserOp, a: isize, b: isize) -> Option<isize> {
+        use EeWonBrowserOp as B;
+        if !crate::compobj::is_game() {
+            return None;
+        }
+        if let Some(r) = self.view_op(o, a, b) {
+            return Some(r);
+        }
+        if !matches!(o, B::ScrollerAssign | B::HasScroller | B::Ref | B::Unref | B::Invalidate) {
+            return None;
+        }
+        Some(match o {
+            B::ScrollerAssign => {
+                if a != 0 {
+                    crate::gamewin::rf(a, true);
+                }
+                let old = self.scroller.replace(a);
+                if old != 0 {
+                    crate::gamewin::rf(old, false);
+                }
+                0
+            }
+            B::HasScroller => isize::from(self.scroller.get() != 0),
+            B::Ref => crate::gamewin::rf(a, true)?,
+            B::Unref => crate::gamewin::rf(a, false)?,
+            _ => {
+                let k = crate::compobj::EeWonCompCall::Invalidate;
+                // SAFETY: the game's live browser component; the call re-enters through Component's entry
+                unsafe { crate::compobj::ee_won_comp_call(self.me, crate::compobj::host(), k, 0, 0, 0) };
+                0
+            }
+        })
+    }
+
+    /// The game's calls on the view (`mHTMLView`, read in place) and on the scroller `a` (R6 WON GUI round 41:
+    /// GuiHost.cpp's cases went): each the method's own Rust object, found by the widget in the registry.
+    fn view_op(&self, o: EeWonBrowserOp, a: isize, b: isize) -> Option<isize> {
+        use crate::registry::{get, EeWonGuiKind as K};
+        use crate::scrollerobj::{EeWonScroller, EeWonScrollerCall as S};
+        use crate::textobj::{EeWonText, EeWonTextCall as T};
+        use EeWonBrowserOp as B;
+        let off = VIEW_AT.load(std::sync::atomic::Ordering::Relaxed);
+        if off == 0 || self.me.is_null() {
+            return None;
+        }
+        // SAFETY: the game's live browser, its view SmartPtr at the registered offset
+        let view = unsafe { *((self.me as usize + off) as *const isize) };
+        // SAFETY (the look-ups): the game's live widgets hold their Rust objects
+        let text = || unsafe { get::<EeWonText>(view, K::Text) };
+        // SAFETY: as above
+        let scroller = || unsafe { get::<EeWonScroller>(a, K::Scroller) };
+        Some(match o {
+            B::ViewNoScrollOnBottom => z(text()?.call(T::SetTextFlags, 4, 0, 0)),
+            B::ViewClear => z(text()?.call(T::Reset, 0, 0, 0)),
+            B::ScrollerHasView => isize::from(scroller()?.call(S::GetScrollArea, 0, 0, 0) == view),
+            B::ScrollerSetView => z(scroller()?.call(S::SetScrollArea, view, 0, 0)),
+            // `ScrollbarCondition_Conditional` both ways
+            B::ScrollbarsConditional => z(scroller()?.call(S::SetScrollbarConditions, 2, 2, 0)),
+            B::AddChild => {
+                // SAFETY: as above
+                let ct = unsafe { get::<crate::ctobj::EeWonContainer>(self.me as isize, K::Container) }?;
+                z(ct.call(crate::ctobj::EeWonCtCall::AddChild, a, 0, 0))
+            }
+            B::ViewGrabBg => {
+                // `SetComponentFlags(ComponentFlag_GrabBG, a != 0)`: Component's own
+                let k = crate::compobj::EeWonCompCall::SetFlags;
+                // SAFETY: the game's live view; the call re-enters through Component's entry
+                unsafe {
+                    crate::compobj::ee_won_comp_call(view as *mut c_void, crate::compobj::host(), k, 0x100, a, 0)
+                };
+                0
+            }
+            // `ScrollArea::SetOffsets(0, 0)`: the view's scroll pane
+            B::ViewTop => {
+                // SAFETY: as above
+                let p = unsafe { get::<crate::paneobj::EeWonScrollPane>(view, K::Pane) }?;
+                z(p.call(crate::paneobj::EeWonPaneCall::SetOffsets, 0, 0, 0))
+            }
+            // `AddFormatedText(GUIString(units), false)` (the original's local GUIString, Rust's)
+            B::ViewAddText => {
+                let n = usize::try_from(b).ok()?;
+                let units: Vec<u32> = if self.wchar_size == 2 {
+                    // SAFETY: `b` u16 units at `a` (the op's contract)
+                    unsafe { std::slice::from_raw_parts(a as *const u16, n) }.iter().map(|&c| u32::from(c)).collect()
+                } else {
+                    // SAFETY: `b` u32 units at `a`
+                    unsafe { std::slice::from_raw_parts(a as *const u32, n) }.to_vec()
+                };
+                let mut g = crate::guistrobj::GText::new(&units);
+                // SAFETY: the game's live text area and its game host; the text lives for the call
+                unsafe {
+                    crate::guitext::ee_won_gui_add_formatted(
+                        view as *mut c_void,
+                        Some(crate::guisplit::ee_won_gui_text_game),
+                        g.arg() as *const c_void,
+                        a as *const c_void,
+                        n as u16,
+                        self.wchar_size,
+                        false,
+                    )
+                };
+                0
+            }
+            _ => return None,
+        })
     }
 
     /// `SetScroller`: the scroller held, around the view, sized to it and added as a child.

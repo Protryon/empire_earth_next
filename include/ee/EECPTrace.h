@@ -35,8 +35,6 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
 #define EE_CP_TRACE(player, event, ...) \
     do { if (gCPTraceOn) EECPTraceOut((player), (event), __VA_ARGS__); } while (0)
 
-// the computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; not a trace: always on)
-inline unsigned long EECPOutOfSynchChecksum() { return ee_ai_out_of_synch_checksum(); }
 // TEST ONLY (EE-SIM's state dumps): its parts per player and the computer players' own timers, one line each
 void EECPOutOfSynchDump(FILE* inFile);
 

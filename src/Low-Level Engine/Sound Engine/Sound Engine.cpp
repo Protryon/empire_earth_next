@@ -1,11 +1,17 @@
-// C:\EEX\Low-Level Engine\Sound Engine\Sound Engine.cpp (file name by analogy with Error System.cpp / Thread System.cpp)
-// Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// C:\EEX\Low-Level Engine\Sound Engine\Sound Engine.cpp and Mixer\Mixer.cpp (the mixer plug-in's unit, built with
+// the engine's flags since LLE/UI round 3): the Sound Engine's one unit. Unit flags (docs/CALIBRATION.md "lle"):
+// -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS. Each original unit is a section, headed by its path and keeping its comment.
 #include <windows.h>
+#include <stdio.h>   // (used directly: kept for the POSIX build)
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SEMixer.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+
+// ======== Sound Engine/Sound Engine.cpp ========
+// C:\EEX\Low-Level Engine\Sound Engine\Sound Engine.cpp (file name by analogy with Error System.cpp / Thread System.cpp)
+// Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 // The sound classes (SESoundManager, SESample, SESMInstanceNode, SEMixer, SEScore, SEConductor) are inline forwarders
 // over rust/crates/ee_audio/src/sound; this unit keeps the start-up and the C++ the Rust objects call back.
@@ -30,4 +36,23 @@ void* ee_soundcpp_find_file(void* inPath, const char* inName)
     return theFileSpec;
 }
 void ee_soundcpp_file_delete(void* inFile) { delete static_cast<FSFileSpec*>(inFile); }
+}
+
+// ======== Sound Engine/Mixer/Mixer.cpp ========
+// Low-Level Engine\Sound Engine\Mixer\Mixer.cpp
+// The sound mixer plug-in (' snd'). Whole in Rust (rust/crates/ee_audio/src/mixer: ffi.rs the SPIM entry points, the
+// device choice, the loader and the entry table the engine looks names up in; plugin.rs the table's names; LLE round
+// 8 moved the last C++ bodies there). This file keeps the plug-in's name (a UString) and the one-statement shims the
+// loader calls on the C++ file objects (ee_mixercpp_*).
+
+static UString gMixerName("Mixer");
+
+const UString& SEMixerPlugInName() { return gMixerName; }
+
+extern "C" {
+void* ee_mixercpp_memory_file(FSFileSpec* inSpec) { return dynamic_cast<FSMemoryFile*>(inSpec); }
+long ee_mixercpp_memory_length(FSMemoryFile* inFile, unsigned long* outLength) { return inFile->GetLength(*outLength); }
+const unsigned char* ee_mixercpp_memory_data(FSMemoryFile* inFile) { return inFile->GetData(); }
+void ee_mixercpp_spec_path(FSFileSpec* inSpec, char* outPath, size_t inCapacity) { snprintf(outPath, inCapacity, "%s", (const char*)(inSpec->GetVolume() + inSpec->GetDirectory() + inSpec->GetFile())); }
+const char* ee_mixercpp_spec_file(FSFileSpec* inSpec) { return inSpec->GetFile(); }
 }

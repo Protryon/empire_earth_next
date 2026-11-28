@@ -499,84 +499,6 @@ pub unsafe extern "C" fn ee_astar_cm_table_set(r: *mut EeAStarCmRecord, table: E
     }
 }
 
-/// `table.push_back(object)`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_table_push(r: *mut EeAStarCmRecord, table: EeAStarCmTable, object: u64) {
-    (*r).tables_mut().tables[table as usize].push(object);
-}
-
-/// The serial table (sorted by serial); `count` gets its size. Valid until it changes.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_areas(r: *const EeAStarCmRecord, count: *mut usize) -> *const EeAStarCmArea {
-    let a = &(*r).tables().areas;
-    *count = a.len();
-    if a.is_empty() {
-        std::ptr::null()
-    } else {
-        a.as_ptr()
-    }
-}
-
-/// `AddArea`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_add_area(r: *mut EeAStarCmRecord, serial: c_ulong, area: u64) {
-    (*r).tables_mut().add_area(serial, area);
-}
-
-/// `RemoveArea`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_remove_area(r: *mut EeAStarCmRecord, serial: c_ulong) -> bool {
-    (*r).tables_mut().remove_area(serial)
-}
-
-/// `GetArea`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_area(r: *const EeAStarCmRecord, serial: c_ulong) -> u64 {
-    (*r).tables().area(serial)
-}
-
-/// Empties the serial table.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_clear_areas(r: *mut EeAStarCmRecord) {
-    (*r).tables_mut().areas.clear();
-}
-
-/// `AddSectorTiles`' insert of one tile under sector `id`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_add_sector_tile(r: *mut EeAStarCmRecord, id: u16, tile: EeHullPoint) {
-    (*r).tables_mut().add_sector_tile(id, tile);
-}
-
-/// `RemoveSectorTiles`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_remove_sector_tiles(r: *mut EeAStarCmRecord, id: u16) {
-    (*r).tables_mut().remove_sector_tiles(id);
-}
-
 /// The pending sectors' count (`mSectorTiles.size()`).
 ///
 /// # Safety
@@ -586,31 +508,6 @@ pub unsafe extern "C" fn ee_astar_cm_sector_tiles_count(r: *const EeAStarCmRecor
     (*r).tables().sector_tiles.len()
 }
 
-/// The `index`-th pending sector in id order: its id, and its tiles (`count` gets their number). NULL past the end.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `id` and `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_sector_tiles(
-    r: *const EeAStarCmRecord,
-    index: usize,
-    id: *mut u16,
-    count: *mut usize,
-) -> *const EeHullPoint {
-    match (*r).tables().sector_tiles.get(index) {
-        Some(s) => {
-            *id = s.id;
-            *count = s.tiles.len();
-            s.tiles.as_ptr()
-        }
-        None => {
-            *id = 0;
-            *count = 0;
-            std::ptr::null()
-        }
-    }
-}
-
 /// Empties the pending sector tiles.
 ///
 /// # Safety
@@ -618,25 +515,6 @@ pub unsafe extern "C" fn ee_astar_cm_sector_tiles(
 #[no_mangle]
 pub unsafe extern "C" fn ee_astar_cm_clear_sector_tiles(r: *mut EeAStarCmRecord) {
     (*r).tables_mut().sector_tiles.clear();
-}
-
-/// A shore list; `count` gets its size. Valid until it changes.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_shore(
-    r: *const EeAStarCmRecord,
-    list: EeAStarCmShore,
-    count: *mut usize,
-) -> *const EeHullPoint {
-    let s = &(*r).tables().shore[list as usize];
-    *count = s.len();
-    if s.is_empty() {
-        std::ptr::null()
-    } else {
-        s.as_ptr()
-    }
 }
 
 /// Replaces a shore list with `count` tiles.
@@ -666,25 +544,6 @@ pub unsafe extern "C" fn ee_astar_cm_is_shore(r: *const EeAStarCmRecord, x: c_lo
     (*r).tables().is_shore(EeHullPoint { x, y })
 }
 
-/// A free id list; `count` gets its size.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `count` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_free_ids(
-    r: *const EeAStarCmRecord,
-    list: EeAStarCmFree,
-    count: *mut usize,
-) -> *const u16 {
-    let f = &(*r).tables().free[list as usize];
-    *count = f.len();
-    if f.is_empty() {
-        std::ptr::null()
-    } else {
-        f.as_ptr()
-    }
-}
-
 /// Appends `count` ids to a free id list (`insert(end, ...)` / `push_back`); `clear` empties it first.
 ///
 /// # Safety
@@ -706,47 +565,6 @@ pub unsafe extern "C" fn ee_astar_cm_add_free_ids(
     }
 }
 
-/// `NewSubSectorID`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_new_sub_sector_id(r: *mut EeAStarCmRecord) -> u16 {
-    (*r).new_sub_sector_id()
-}
-
-/// `NewPathAreaID`.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_new_path_area_id(r: *mut EeAStarCmRecord) -> u16 {
-    (*r).new_path_area_id()
-}
-
-/// A grid of `count` zeroed entries (`allocate`), or none (`!allocate`); the record's pointer follows.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_set_grid(
-    r: *mut EeAStarCmRecord,
-    grid: EeAStarCmGrid,
-    allocate: bool,
-    count: usize,
-) {
-    (*r).set_grid(grid, if allocate { Some(count) } else { None });
-}
-
-/// A grid's entry count (0: none).
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_grid_len(r: *const EeAStarCmRecord, grid: EeAStarCmGrid) -> usize {
-    (*r).grid_len(grid)
-}
-
 /// `Reset`'s part on the record and tables: the counters, the serial table, the pending tiles, the shore lists
 /// and the free path area ids (the C++ deletes the objects first and empties the object tables).
 ///
@@ -765,15 +583,6 @@ pub unsafe extern "C" fn ee_astar_cm_reset(r: *mut EeAStarCmRecord) {
     t.free[EeAStarCmFree::PathAreas as usize].clear();
 }
 
-/// `EEAIPathSectorRegionInformation::Init` (`map_size` the map's tiles per side).
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_init_sectors(r: *mut EeAStarCmRecord, map_size: c_long, sector_size: c_long) {
-    (*r).init_sectors(map_size, sector_size);
-}
-
 /// `DeletePathSectors`' part after the sectors are deleted: the last sub sector id, its free ids, the sector grid.
 ///
 /// # Safety
@@ -785,33 +594,6 @@ pub unsafe extern "C" fn ee_astar_cm_sectors_deleted(r: *mut EeAStarCmRecord) {
     r.last_sub_sector_id = 0;
     r.tables_mut().free[EeAStarCmFree::SubSectors as usize].clear();
     r.reset_sectors();
-}
-
-/// The path sector table's index of (x, y) (`GetPathSector`), -1 off the map.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_sector_index(r: *const EeAStarCmRecord, x: c_long, y: c_long) -> isize {
-    (*r).sector_index(x, y).map_or(-1, |i| i as isize)
-}
-
-/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: the ids into `out` (room for `flags_width`); their count.
-///
-/// # Safety
-/// `r` from `ee_astar_cm_init`; `out` holds `flags_width` ids.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_adjacent_ids(
-    r: *const EeAStarCmRecord,
-    id: u16,
-    with_self: bool,
-    out: *mut u16,
-) -> usize {
-    let ids = (*r).adjacent_ids(id, with_self);
-    if !ids.is_empty() {
-        std::ptr::copy_nonoverlapping(ids.as_ptr(), out, ids.len());
-    }
-    ids.len()
 }
 
 #[cfg(test)]

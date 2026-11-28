@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "rust/game/gamecpp.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
@@ -16,6 +17,7 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // ee_game gamecpp options.rs's EoSlotEmpty)
 
 #include "ee/EEStartingResources.h"
+#include "rust/game/app.h"
 
 // Creates an empty, closed player slot with no name, colour, team or starting citizens
 EEGameOptionsPlayer::EEGameOptionsPlayer()
@@ -50,3 +52,13 @@ unsigned long EEGetNumberOfResourceLevels()
 {
     return EEStartingResources::sTable.size();
 }
+
+// out of line from ee/EEGameOptions.h (its Rust function headers stay out of it)
+EEGameOptions::EEGameOptions() { ee_gamecpp_options_init(this); }
+EEGameOptions::EEGameOptions(const EEGameOptions& inOther) { ee_gamecpp_options_copy(this, &inOther); }
+
+long EEGameOptions::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{ return ee_gamecpp_options_load(this, inMajorVersion, inMinorVersion, &inFile); }
+
+long EEGameOptions::Save(FSFile& outFile) { return ee_gamecpp_options_save(this, &outFile); }
+bool EEGameOptions::CanBuyCivilization() { return ee_gamecpp_options_can_buy_civilization(this); }

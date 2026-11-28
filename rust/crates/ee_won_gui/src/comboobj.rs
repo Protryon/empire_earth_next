@@ -110,6 +110,60 @@ struct State {
     show_button_when_disabled: bool,
     width: i32,
     height: i32,
+    /// the text Escape restores (the C++ `mUndoStr` until R6 WON GUI round 41; the game's only: a driver's host
+    /// keeps its own)
+    undo: Vec<u32>,
+}
+
+/// Where the game's ComboBox keeps its parts (offsets of `mEdit`, `mButton`, `mListBox`, `mListArea`, each a
+/// SmartPtr: the part's pointer, in `PART_*` order; Button.cpp registers them at static initialisation; 0 in a
+/// driver's world).
+static PARTS_AT: [std::sync::atomic::AtomicUsize; 4] = [const { std::sync::atomic::AtomicUsize::new(0) }; 4];
+
+/// The ComboBox's part offsets (R6 WON GUI round 41: its parts are read and set in place in the game).
+#[no_mangle]
+pub extern "C" fn ee_won_combo_parts_register(edit: usize, button: usize, list_box: usize, list_area: usize) {
+    for (slot, at) in PARTS_AT.iter().zip([edit, button, list_box, list_area]) {
+        slot.store(at, std::sync::atomic::Ordering::Release);
+    }
+}
+
+/// The slot of the game's combo box `combo`'s part `k` (`PART_*`), None in a driver's world.
+fn part_slot(combo: isize, k: isize) -> Option<*mut isize> {
+    let at = PARTS_AT.get(usize::try_from(k).ok()?)?.load(std::sync::atomic::Ordering::Acquire);
+    (at != 0 && combo != 0 && crate::compobj::is_game()).then_some((combo as usize + at) as *mut isize)
+}
+
+/// The game's combo box `combo`'s part `k` (`PART_*`: a `Component*`, 0 for none), None in a driver's world.
+pub(crate) fn game_part(combo: isize, k: isize) -> Option<isize> {
+    // SAFETY: a live combo box's SmartPtr member at its registered offset
+    part_slot(combo, k).map(|p| unsafe { *p })
+}
+
+/// The game's combo box `combo`'s part `k` = `c` (a SmartPtr assignment: `c` held, the old part given back).
+pub(crate) fn game_set_part(combo: isize, k: isize, c: isize) -> Option<isize> {
+    let p = part_slot(combo, k)?;
+    if c != 0 {
+        crate::gamewin::rf(c, true);
+    }
+    // SAFETY: as game_part
+    let old = unsafe { std::ptr::replace(p, c) };
+    if old != 0 {
+        crate::gamewin::rf(old, false);
+    }
+    Some(0)
+}
+
+/// The combo box part (`PART_*`) of a shell's or a skin layout's part (`EeWonShellComboPart`, whose first three
+/// equal `EeWonSkinPart`'s).
+pub(crate) fn shell_part(which: isize) -> isize {
+    use crate::shell::EeWonShellComboPart as Cp;
+    match which {
+        x if x == Cp::Button as isize => PART_BUTTON,
+        x if x == Cp::Edit as isize => PART_EDIT,
+        x if x == Cp::ListArea as isize => PART_LIST_AREA,
+        _ => PART_LIST_BOX,
+    }
 }
 
 /// The Rust ComboBox.
@@ -134,6 +188,7 @@ impl EeWonComboBox {
                 show_button_when_disabled: true,
                 width: 200,
                 height: 150,
+                undo: Vec::new(),
             }),
         }
     }
@@ -148,6 +203,9 @@ impl EeWonComboBox {
             return r;
         }
         if let Some(r) = self.game_list_op(op, a, b) {
+            return r;
+        }
+        if let Some(r) = self.game_combo_op(op, a, b) {
             return r;
         }
         match self.host {
@@ -209,6 +267,123 @@ impl EeWonComboBox {
             Op::ComboItemPos | Op::ComboItemCount => r as i32 as isize,
             _ => 0,
         })
+    }
+    /// The game's own ops on the parts, the input box and the popup (R6 WON GUI round 41: ComboBox.cpp's host cases
+    /// went): the parts in place, the input box's Rust object, the item's text in place, the undo text held here.
+    /// None in a driver's world and for the other ops.
+    fn game_combo_op(&self, op: Op, a: isize, b: isize) -> Option<isize> {
+        use crate::guistrobj::gstring_units;
+        use crate::leafpaint::item_text;
+        if !crate::compobj::is_game() {
+            return None;
+        }
+        let me = self.me();
+        match op {
+            Op::ComboPart => game_part(me, a),
+            Op::ComboSetListBox => game_set_part(me, PART_LIST_BOX, a),
+            Op::ComboDropItem => crate::gamewin::rf(a, true).and_then(|_| crate::gamewin::rf(a, false)),
+            Op::ComboEditClear => self.edit(|i| {
+                i.set_text(&[], a != 0);
+                0
+            }),
+            Op::ComboEditItemText => {
+                let t = item_text(a)?;
+                self.edit(|i| {
+                    i.set_text(&t, true);
+                    0
+                })
+            }
+            Op::ComboEditSetText => {
+                // SAFETY: a live GUIString (the op's contract)
+                let t = unsafe { gstring_units(a as *const c_void) };
+                self.edit(|i| {
+                    i.set_text(&t, b != 0);
+                    0
+                })
+            }
+            Op::ComboEditUndo => {
+                let t = self.st.borrow().undo.clone();
+                self.edit(|i| {
+                    i.set_text(&t, true);
+                    0
+                })
+            }
+            Op::ComboUndoSave => {
+                let t = self.edit(|i| i.real_text())?;
+                self.st.borrow_mut().undo = t;
+                Some(0)
+            }
+            Op::ComboEditSelect => self.edit(|i| {
+                i.select_range(a as i32, b as i32);
+                0
+            }),
+            Op::ComboEditAllowSelection => self.edit(|i| {
+                i.set_allow_selection(a != 0);
+                0
+            }),
+            Op::ComboItemTextLength => item_text(a).map(|t| t.len() as isize),
+            Op::ComboItemTextIs => {
+                let t = item_text(a)?;
+                // (b 0: the edit's)
+                let o = if b == 0 {
+                    self.edit(|i| i.real_text())?
+                } else {
+                    // SAFETY: a live GUIString (the op's contract)
+                    unsafe { gstring_units(b as *const c_void) }
+                };
+                Some(isize::from(t == o))
+            }
+            Op::ComboBoxArea => {
+                use crate::scrollerobj::{EeWonScroller, EeWonScrollerCall as S};
+                // SAFETY: the game's live scroller (the op's contract)
+                let s = unsafe { crate::registry::get::<EeWonScroller>(a, crate::registry::EeWonGuiKind::Scroller) }?;
+                Some(s.call(S::GetScrollArea, 0, 0, 0))
+            }
+            Op::ComboRelayout => {
+                self.ct().relayout();
+                Some(0)
+            }
+            Op::ComboUnlisten => {
+                let list_box = self.part(PART_LIST_BOX);
+                // SAFETY: the game's live list box; the call re-enters through Component's entry
+                unsafe { comp_call(list_box, crate::compobj::EeWonCompCall::AddListener, 0, 0) };
+                Some(0)
+            }
+            Op::ClosePopup => crate::gamewin::end_popup(a),
+            Op::ComboOpenPopup => {
+                let h = crate::compmem::height(me);
+                let (mut x, mut y) = (0i32, h);
+                // SAFETY: the game's live combo box; two live ints
+                unsafe {
+                    comp_call(
+                        me,
+                        crate::compobj::EeWonCompCall::LocalToRoot,
+                        &mut x as *mut i32 as isize,
+                        &mut y as *mut i32 as isize,
+                    )
+                };
+                let p = crate::wmobj::EeWonWmPopup {
+                    parent: 0,
+                    popup: self.part(PART_LIST_BOX),
+                    input: me,
+                    owner: me,
+                    flags: 0x2347,
+                    x,
+                    y,
+                    avoid: crate::guictl::EeWonRect4 { x: 0, y: y - h, w: 0, h },
+                };
+                crate::gamewin::open_popup(me, p)
+            }
+            _ => None,
+        }
+    }
+    /// `f` on the input box's Rust object (None without one).
+    fn edit<R>(&self, f: impl FnOnce(&crate::inputobj::EeWonInput) -> R) -> Option<R> {
+        let e = self.part(PART_EDIT);
+        // SAFETY: the game's live input box (the combo box holds it)
+        let i =
+            unsafe { crate::registry::get::<crate::inputobj::EeWonInput>(e, crate::registry::EeWonGuiKind::Input) }?;
+        Some(f(i))
     }
     fn ct(&self) -> &EeWonContainer {
         // SAFETY: the base's Rust object outlives this one (made before it, freed after it)
@@ -600,6 +775,15 @@ impl EeWonComboBox {
         }
         0
     }
+}
+
+/// A Component call on the game's component `c` (its Rust part, through Component's entry).
+///
+/// # Safety
+/// `c` is a live game component; the call's arguments as documented.
+unsafe fn comp_call(c: isize, k: crate::compobj::EeWonCompCall, a: isize, b: isize) -> isize {
+    // SAFETY: the contract
+    unsafe { crate::compobj::ee_won_comp_call(c as *mut c_void, crate::compobj::host(), k, a, b, 0) }
 }
 
 /// A new Rust ComboBox for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.

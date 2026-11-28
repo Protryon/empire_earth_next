@@ -21,34 +21,6 @@ pub struct EeScreensChatLogHead {
 
 static CHAT_LOG: Mutex<ChatLog> = Mutex::new(ChatLog::new());
 
-unsafe fn bytes<'a>(text: *const u8, length: usize) -> &'a [u8] {
-    if text.is_null() || length == 0 {
-        &[]
-    } else {
-        core::slice::from_raw_parts(text, length)
-    }
-}
-
-/// `EEUIECLEFormManager::AddEntry`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_log_add(
-    head: *const EeScreensChatLogHead,
-    name: *const u8,
-    name_length: usize,
-    text: *const u8,
-    text_length: usize,
-) {
-    let head = *head;
-    let entry = ChatLogEntry {
-        colour: head.colour,
-        name: bytes(name, name_length).to_vec(),
-        text: bytes(text, text_length).to_vec(),
-        kind: head.kind,
-        time: head.time,
-    };
-    CHAT_LOG.lock().unwrap().add(entry);
-}
-
 /// `EEUIECLEFormManager::Clear`.
 #[no_mangle]
 pub extern "C" fn ee_screens_chat_log_clear() {
@@ -59,25 +31,6 @@ pub extern "C" fn ee_screens_chat_log_clear() {
 #[no_mangle]
 pub extern "C" fn ee_screens_chat_log_count() -> u32 {
     CHAT_LOG.lock().unwrap().entries.len() as u32
-}
-
-/// Entry `index`'s fixed fields into `out`; false (nothing written) past the last.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_log_entry(index: u32, out: *mut EeScreensChatLogHead) -> bool {
-    let log = CHAT_LOG.lock().unwrap();
-    let Some(e) = log.entries.get(index as usize) else { return false };
-    *out = EeScreensChatLogHead { colour: e.colour, kind: e.kind, time: e.time };
-    true
-}
-
-/// Entry `index`'s name (`which` 0) or text (1) into `out` (up to `capacity` bytes); its length in bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_log_text(index: u32, which: u32, out: *mut u8, capacity: usize) -> usize {
-    let log = CHAT_LOG.lock().unwrap();
-    let Some(e) = log.entries.get(index as usize) else { return 0 };
-    let text = if which == 0 { &e.name } else { &e.text };
-    core::ptr::copy_nonoverlapping(text.as_ptr(), out, text.len().min(capacity));
-    text.len()
 }
 
 /// Entry `index`'s sender (`which` 0) or text (1); empty past the last.

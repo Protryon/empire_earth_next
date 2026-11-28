@@ -72,6 +72,12 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
+#include "rust/game/civilization.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/sim/ai.h"
+#include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -88,7 +94,6 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 void EEDumpGraphicObjectTable(FSFileSpec& inFile);
 void EEDumpLeakedUnits(FSFileSpec& inFile);
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);
-void EEUpdateLandContinents();
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
 
 // Takes a player out of the game: marks them out, drops them from their teams, reveals the map to them (except a lost
@@ -180,11 +185,6 @@ void EEWorld::RecordStatistics()
     ee_gamecpp_world_record_statistics((uintptr_t)this);
 }
 
-// Applies the queued unit activations and deactivations to the list of units updated every tick
-void EEWorld::UpdateActiveUnits()
-{
-    ee_gamecpp_world_update_active();   // (gamecpp world.rs: QueueBornDeactivations, then the lists' update)
-}
 
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
 void EEWorld::RemoveShareBonus()
@@ -231,7 +231,7 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
         // New (gameoptions.yaml defeat_without_recovery): the means to train a citizen
         EEPlayer* thePlayer = gWorld.mPlayers[inA];
         EETechTreeNode* theCitizen = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->Get(kTechCitizen) : NULL;
-        return theCitizen == NULL || thePlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
+        return theCitizen == NULL || thePlayer->Dispatch(EE_UNITS_PLAYER_CAN_AFFORD, theCitizen, kUnitTypeCitizen, 1, true) != 0;
     }
     }
     return 0;
@@ -392,7 +392,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StOptions: return P64(static_cast<EeAppOptionsFields*>(&ST->mGameOptions));
     case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gWorld.mLobbyOptions));
     case O::LobbyCampaignNameLength: return gWorld.mLobbyOptions.mCampaignName.GetLength();
-    case O::LobbyCampaignMapName: return gWorld.mLobbyOptions.GetCampaignMapName(*(UWideString*)p);
+    case O::LobbyCampaignMapName: return ee_gamecpp_options_campaign_map_name(&gWorld.mLobbyOptions, (UWideString*)p);
     case O::StIsLoadedGame: return P64(&ST->mIsLoadedGame);
     case O::StInScenarioEditor: return P64(&ST->mInScenarioEditor);
     case O::StRandomSeed: return P64(&ST->mRandomSeed);
@@ -428,7 +428,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::PlAddPendingUnits: PL->AddPendingUnits(a[0] != 0, a[1] != 0);
         break;
     case O::PlNumPending: return PL->GetNumPendingUnits();
-    case O::PlPendingAt: return P64(PL->GetPendingUnit((unsigned long)a[0]));
+    case O::PlPendingAt: return P64(static_cast<RTSUnit*>(ee_rts_player_pending_unit(PL, (unsigned long)a[0])));
     case O::PlSaveTo: PL->EEPlayer::Save((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
         break;
     case O::PlLoadFrom: PL->EEPlayer::Load((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
@@ -438,6 +438,8 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::PlUpgradeLoadMedia: PL->mUnitClassUpgrades[a[0]]->LoadMedia(PL, (long)a[1]);
         break;
     case O::PlUpgradeUnloadMedia: PL->mUnitClassUpgrades[a[0]]->UnloadMedia(PL);
+        break;
+    case O::PlLoadButtons: PL->LoadUnitClassButtons((long)a[0]);
         break;
     case O::PlUnloadClassMedia: PL->UnloadUnitClassMedia((unsigned long)a[0]);
         break;
@@ -452,9 +454,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::PlColorIsPlayerColor: return EEGetPlayerColor((unsigned long)a[0]) == PL->mColor;
     case O::PlSetPlayerColor: PL->SetColor(EEGetPlayerColor((unsigned long)a[0]));
         break;
-    case O::PlCivApplyDeferred: PL->mCivilization.ApplyDeferred(PL, ((EEGameState*)a[0])->mMajorVersion, ((EEGameState*)a[0])->mMinorVersion);
+    case O::PlCivApplyDeferred: ee_gamecpp_civ_apply_deferred(&PL->mCivilization, PL);
         break;
-    case O::PlCivApplyLevel21: PL->mCivilization.ApplyLevel21ToWorld();
+    case O::PlCivApplyLevel21: ee_gamecpp_civ_apply_level21(&PL->mCivilization);
         break;
     case O::PlCivSetName: PL->mCivilization.SetName(*(UWideString*)a[0]);
         break;
@@ -466,6 +468,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlRestartTowns: PL->RestartTowns();
         break;
+    case O::PlIsHuman: return PL->IsHuman();
     case O::HumanGetName: *(UWideString*)a[0] = static_cast<EEHumanPlayer*>(PL)->GetName();
         break;
     case O::HumanSetName: static_cast<EEHumanPlayer*>(PL)->SetName(*(UWideString*)a[0]);
@@ -505,18 +508,18 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::UnLink: ((RTSUnit*)p)->Link((RTSUnit*)a[0]);
         break;
-    case O::UnUnlink: ((RTSUnit*)p)->Unlink();
+    case O::UnUnlink: ee_rts_unit_unlink(((RTSUnit*)p));
         break;
-    case O::RtsUpdateTile: ((RTSUnit*)p)->UpdateTile((EEMap*)a[0]);
+    case O::RtsUpdateTile: ee_rts_unit_update_tile(((RTSUnit*)p), (EEMap*)a[0]);
         break;
     case O::DummyHead: return P64(RTSDummyHead((RTSUnit*)p));
-    case O::CxClearCollisionState: CX->ClearCollisionState();
+    case O::CxClearCollisionState: ee_units_cu_clear_collision_state(CX);
         break;
-    case O::CxMakeAreaEffects: CX->MakeAreaEffects();
+    case O::CxMakeAreaEffects: ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, CX, 0, 0, 0);
         break;
-    case O::CxClearContacts: CX->ClearContacts();
+    case O::CxClearContacts: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_CONTACTS, CX, 0, 0, 0);
         break;
-    case O::CxFindContacts: CX->FindContacts();
+    case O::CxFindContacts: ee_units_cu_body(EE_UNITS_CU_DO_FIND_CONTACTS, CX, 0, 0, 0);
         break;
     case O::CxPreviousPart: return P64(CX->mPreviousPart);
     case O::RefUnitDereference: ((RTSUnit*)p)->Dereference();
@@ -598,16 +601,16 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WonNetPresent: return gWonNet != NULL;
     case O::WonNetClearGameList: gWonNet->ClearGameList();
         break;
-    case O::CivBuilderFree: CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
+    case O::CivBuilderFree: ee_screens_cb_free_civilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
         break;
     case O::SimNoHumanDefeat: return gPlatSimNoHumanDefeat;
     case O::SimNoHumanDefeatHit: gPlatSimNoHumanDefeatHits++;
         break;
-    case O::ScenarioEndCinematic: gWorld.mScenarioManager->EndCinematic();
+    case O::ScenarioEndCinematic: ee_scenario_en_round(gWorld.mScenarioManager, EE_SCENARIO_MN_END_CINEMATIC, NULL, 0, 0);
         break;
     case O::ScenarioPrepare: gWorld.mScenarioManager->Prepare();
         break;
-    case O::ScenarioApplyPendingEffects: gWorld.mScenarioManager->ApplyPendingEffects();
+    case O::ScenarioApplyPendingEffects: ee_scenario_en_round(gWorld.mScenarioManager, EE_SCENARIO_MN_APPLY_PENDING, NULL, 0, 0);
         break;
     case O::CommNumHumanPlayers: return gCommunications->GetNumHumanPlayers();
     case O::CommSetPlayerNumber: gCommunications->SetPlayerNumber((unsigned long)a[0]);
@@ -628,9 +631,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::ContinentBuildRegions: gContinentManager.BuildRegions((EEMap*)a[0]);
         break;
-    case O::UpdateLandContinents: EEUpdateLandContinents();
+    case O::UpdateLandContinents: ee_units_ck_body(EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS, 0, 0, 0, 0);
         break;
-    case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
+    case O::AiCollectComputerPlayers: ee_ai_collect_computer_players();
         break;
     case O::GraphicsReleaseScene: gGraphics->PostReleaseScene();
         break;
@@ -720,3 +723,30 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     }
     return 0.0;
 }
+
+// out of line from ee/EEWorld.h (its Rust function headers stay out of it)
+void EEWorld::Clear() { ee_gamecpp_world_clear(this); }
+void EEWorld::Reset() { ee_gamecpp_world_reset(this); }
+void EEWorld::SetNumPlayers(unsigned long inNumPlayers) { ee_gamecpp_world_set_count(this, false, inNumPlayers); }
+void EEWorld::SetPopulationLimit(unsigned long inLimit) { ee_gamecpp_world_set_count(this, true, inLimit); }
+void EEWorld::PlaceQueuedUnits() { ee_gamecpp_world_place_queued(this); }
+void EEWorld::ReleaseResourceUser(EEUnit* inUnit) { ee_gamecpp_world_resource_users(this, inUnit, -1); }
+void EEWorld::AddResourceUser(EEUnit* inUnit) { ee_gamecpp_world_resource_users(this, inUnit, 1); }
+
+void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
+{ ee_gamecpp_world_screen_to_world((const float(*)[2])&inPoint.mX, (float(*)[3])&outPoint.mX); }
+
+EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
+{ return (EEPlayer*)ee_gamecpp_world_player_by_slot(this, inSlot); }
+
+void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance)
+{ ee_gamecpp_world_set_stance(this, inPlayerID, inOther, inStance); }
+
+long EEWorld::PauseGame() { return ee_gamecpp_world_pause(true); }
+void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer) { ee_gamecpp_world_remove_disconnected(this, inPlayer); }
+long EEWorld::UnpauseGame() { return ee_gamecpp_world_pause(false); }
+void EEWorld::StartGame(EEGameState* inState, bool inLocked) { ee_gamecpp_world_start_game(this, inState, inLocked); }
+EEGhostUnit* EEWorld::GetGhostUnit(size_t inIndex) { return (EEGhostUnit*)ee_app_ghost_at(inIndex); }
+void EEWorld::ActivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_activate(inUnit); }
+void EEWorld::DeactivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_deactivate(inUnit); }
+unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit) { return ee_gamecpp_world_resource_users(this, inUnit, 0); }

@@ -5,7 +5,7 @@
 
 #![allow(clippy::unnecessary_cast)] // c_long is 32 bits on Windows, 64 elsewhere
 
-use core::ffi::{c_long, c_void};
+use core::ffi::c_long;
 
 pub use crate::units::goal_calls::vector_pointers;
 
@@ -240,26 +240,6 @@ pub unsafe extern "C" fn ee_units_uu_doppler_pitch_of(
     unsafe { crate::units::uu_ffi::ee_units_uu_doppler_pitch(unit, volume, velocity, &location, &[cx, cy, cz], pitch) }
 }
 
-/// `EEMakeWallJunctions(units, tiles, player, map)` (`units` the `std::vector<EEComplexUnit*>`).
-///
-/// # Safety
-/// The vectors live; the handles live.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_make_wall_junctions_of(
-    units: *const c_void,
-    placed: *const c_void,
-    player: u64,
-    map: u64,
-) {
-    // SAFETY: the caller's contract
-    unsafe {
-        let list = vector_pointers(units);
-        let p = if list.is_empty() { core::ptr::null() } else { list.as_ptr() };
-        crate::units::uu_ffi::ee_units_uu_make_wall_junctions(p, list.len() as u32, placed, player, map);
-    }
-}
-
 /// `EEFindFreeFarm`
 /// # Safety
 /// As above.
@@ -305,56 +285,6 @@ pub unsafe extern "C" fn ee_units_uu_next_tile(
     }
 }
 
-/// `EEGetSlotTile(inTile, direction, outTile)`
-/// # Safety
-/// As above.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_slot_tile_at(
-    x: c_long,
-    y: c_long,
-    direction: c_long,
-    out_x: *mut c_long,
-    out_y: *mut c_long,
-) {
-    let mut t = [0i32; 2];
-    game::Game.slot_tile(x as i32, y as i32, direction as i32, &mut t);
-    unsafe {
-        *out_x = t[0] as c_long;
-        *out_y = t[1] as c_long;
-    }
-}
-
-/// `EEGetPathLengthTo`
-/// # Safety
-/// As above.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_path_length_at(
-    unit: u64,
-    io_x: *mut c_long,
-    io_y: *mut c_long,
-    limit: u32,
-    walls: bool,
-) -> f32 {
-    path_length(&mut game::Game, unit, unsafe { (&mut *io_x, &mut *io_y) }, limit, walls)
-}
-
-/// `EEIsTileTopAbove` (the wall always written; `wall` an `EEUnit**`)
-/// # Safety
-/// As above.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_tile_top_above_at(
-    x: c_long,
-    y: c_long,
-    height: f32,
-    wall: *mut u64,
-    bare: bool,
-) -> bool {
-    game::Game.tile_top_above(x as i32, y as i32, height, bare, unsafe { &mut *wall })
-}
-
 /// `EEIsLineBlocked` (`wall` an `EEUnit**`)
 /// # Safety
 /// As above.
@@ -371,27 +301,6 @@ pub unsafe extern "C" fn ee_units_uu_line_blocked_at(
     out_y: *mut c_long,
 ) -> bool {
     line_blocked(&mut game::Game, [x1, y1], [x2, y2], unsafe { &mut *wall }, unsafe { (&mut *out_x, &mut *out_y) })
-}
-
-/// `EECanPlaceUnitOnTile`
-/// # Safety
-/// As above.
-#[cfg(not(test))]
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_units_uu_can_place_on_tile_at(
-    player: u64,
-    unit: u64,
-    unit_type: c_long,
-    x: c_long,
-    y: c_long,
-    skip_player_checks: bool,
-    ignore_owner: c_long,
-    flag: *mut bool,
-) -> bool {
-    can_place_on_tile(&mut game::Game, player, unit, unit_type, [x, y], skip_player_checks, ignore_owner, unsafe {
-        &mut *flag
-    })
 }
 
 /// `EECanPlace` (`free_camera` the C++'s `gFreeCamera`)
@@ -485,10 +394,10 @@ mod tests {
         let items: Vec<usize> = vec![0x10, 0x20, 0x30];
         let words = [items.as_ptr() as usize, items.as_ptr() as usize + 3 * std::mem::size_of::<usize>(), 0];
         // SAFETY: a vector-shaped local
-        assert_eq!(unsafe { vector_pointers(words.as_ptr() as *const c_void) }, [0x10, 0x20, 0x30]);
+        assert_eq!(unsafe { vector_pointers(words.as_ptr() as *const core::ffi::c_void) }, [0x10, 0x20, 0x30]);
         let empty = [0usize; 3];
         // SAFETY: as above
-        assert!(unsafe { vector_pointers(empty.as_ptr() as *const c_void) }.is_empty());
+        assert!(unsafe { vector_pointers(empty.as_ptr() as *const core::ffi::c_void) }.is_empty());
     }
 
     #[test]

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// An entry across the C ABI: the fields, then the four strings (remote location, file name, type, entity tag).
 struct EeWonCacheEntry {

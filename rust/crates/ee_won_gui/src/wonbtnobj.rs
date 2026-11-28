@@ -177,7 +177,7 @@ impl EeWonWonButton {
         if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, b, c) {
             return r;
         }
-        if let Some(r) = crate::gamewin::wonbtn_op(op, a, b) {
+        if let Some(r) = crate::gamewin::wonbtn_op(op, a, b, c) {
             return r;
         }
         match self.host {
@@ -518,7 +518,7 @@ impl EeWonWonButton {
                     }
                 }
                 if src.text != 0 {
-                    let font = self.text(Wt::Font, src.text, 0);
+                    let font = self.text(Wt::GetFont, src.text, 0);
                     let t = *self.st.borrow_mut().fonts.entry(font).or_insert(0);
                     self.set_cell_text(i, j, t);
                 }

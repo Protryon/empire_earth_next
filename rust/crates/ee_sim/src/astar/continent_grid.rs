@@ -88,7 +88,7 @@ pub struct ContinentGrid {
 pub const NO_TILE: i32 = -1;
 
 /// The land test of `AddTileValue`: a neighbour that is not deep water, shallow water, cliff or space.
-fn is_land(terrain: i32) -> bool {
+pub(crate) fn is_land(terrain: i32) -> bool {
     terrain != TERRAIN_DEEP_WATER
         && terrain != TERRAIN_SHALLOW_WATER
         && terrain != TERRAIN_CLIFF

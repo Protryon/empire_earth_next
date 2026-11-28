@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `SetFile`, `SetRemoteFile`, `SetComment` (the bytes)
 constexpr static const int32_t EE_WON_FILEPUSH_FILE = 1;

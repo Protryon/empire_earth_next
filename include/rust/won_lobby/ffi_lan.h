@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// A game-channel message read: `kind` is the type byte (0 when the read failed: nothing to do), the ids and
 /// flags per type; the text (a name, a password's companion or a chat line) goes to the sinks.

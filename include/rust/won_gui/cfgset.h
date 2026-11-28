@@ -63,32 +63,6 @@ enum class EeWonCfgFun : int32_t {
   Scroller,
 };
 
-/// A value of the host's frame (`EeWonCfgTabHost::arg`).
-enum class EeWonCfgArg : int32_t {
-  /// `i[slot]`.
-  Int = 0,
-  /// The ints' count (`ni`).
-  IntCount = 1,
-  /// `&s[slot]` (a `GUIString*`).
-  StrPtr = 2,
-  /// `f[slot].get()` (a `Font*`).
-  Font = 3,
-  /// The fonts' count (`nf`).
-  FontCount = 4,
-  /// `m[slot].get()` (an `Image*`).
-  Image = 5,
-  /// `c[slot]` (a `Component*`).
-  Comp = 6,
-  /// The configured component (`mConfig->mComponent.get()`).
-  Component = 7,
-  /// `s[slot].mData->mText` (its units).
-  StrUnits = 8,
-  /// `s[slot].length()`.
-  StrLen = 9,
-  /// The components' count (`nc`).
-  CompCount = 10,
-};
-
 /// One forward call: `fun(object, op, args...)`.
 struct EeWonCfgSetCall {
   EeWonCfgFun fun;

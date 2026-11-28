@@ -7,9 +7,10 @@
 #ifndef EE_EEUIMANAGER_H
 #define EE_EEUIMANAGER_H
 
+#include "rust/game/records.h"
 #include "rust/game/screens.h"   // EeScreensUiManagerFields (ee_screens ui_objects.rs)
 #include "ee/EEGameUI.h"
-#include "rust/ui/formobj.h"
+#include "lle/UIManager.h"
 
 class EEUIFMainGame;
 class EEUIFScenarioEditor;
@@ -102,8 +103,6 @@ public:
     {
         EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
     }
-    // Creates the scenario editor form on first use
-    void CreateScenarioEditor() { ee_screens_um_create_editor((uintptr_t)this); }            // 0x273e7d (creates the editor form at +0x130 once)
     // 0x274db5: a new EEUIFError (0x1bc bytes) showing inMessage with one button (0x261788). Parameter names are
     // provisional
     void DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inCallback,

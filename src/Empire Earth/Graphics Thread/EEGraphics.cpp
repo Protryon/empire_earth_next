@@ -19,6 +19,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGraphics.h"
+#include "rust/game/rts.h"
 // the two file-scope objects of the chains at 0x50972b and 0x509738 (a bool; three deques and a bool): nothing read
 // them, so the port has neither
 
@@ -76,11 +77,11 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
         break;
-    case O::MouseBeginFrame: gMouse->BeginFrame();
+    case O::MouseBeginFrame: ee_rts_mouse_begin_frame(static_cast<RTSMouse*>(gMouse));
         break;
     case O::MouseLoadScreenIndex: gMouse->Load(gRasterizer->GetScreen(gScreenIndex));
         break;
-    case O::MouseEndFrame: gMouse->EndFrame();
+    case O::MouseEndFrame: ee_rts_mouse_end_frame(static_cast<RTSMouse*>(gMouse));
         break;
     case O::TakeJpgScreenshots: return gTakeJPGScreenshots;
     case O::CaptureIsPostGame: return CAPTURE->mIsPostGame;

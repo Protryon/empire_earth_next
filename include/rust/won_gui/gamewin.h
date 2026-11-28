@@ -6,11 +6,20 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/platwin.h"
-#include "rust/won_gui/platwm.h"
-#include "rust/won_gui/rootobj.h"
-#include "rust/won_gui/winobj.h"
-#include "rust/won_gui/wmobj.h"
+#include "rust/won_gui/records.h"
+
+/// Where the game's text segments keep their members (offsets in a `TextSegment`, a `TextLink`'s past it, and a
+/// `Font`'s platform font; WONLobbyTextAreaConfig.h, registered by GuiHost.cpp at static initialisation).
+struct EeWonSegAt {
+  size_t text;
+  size_t color;
+  size_t font;
+  size_t line_break;
+  size_t pressed;
+  size_t down_color;
+  size_t normal_color;
+  size_t font_rust;
+};
 
 extern "C" {
 
@@ -24,17 +33,34 @@ void ee_won_win_bind(void *window,
                      void *root,
                      const EeWonRoot *root_obj);
 
+/// The test fixture's input event `ev` for the game window `window` and the handler (its `new MouseEvent` and
+/// `new KeyEvent`); nothing for a window no game binds.
+///
+/// # Safety
+/// `ev` points at a record.
+void ee_won_win_queue_input(void *window,
+                            EeWonWinCall handler,
+                            const EeWonWinEvent *ev);
+
 /// The game's reference function: `f(object, 1)` takes a reference to a `RefCount` object, `f(object, 0)` gives one
 /// back (the object deleted with its last).
 void ee_won_gui_ref_register(void (*f)(void *object, int32_t hold));
 
-/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
+/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone) and the
+/// game's image host.
 ///
 /// # Safety
 /// The parts are the manager's live objects until it binds them again.
 void ee_won_wm_bind(void *manager,
                     const EeWonWm *wm,
-                    const EeWonPlatWm *plat);
+                    const EeWonPlatWm *plat,
+                    EeWonImageHostFn images);
+
+/// Registers the text segments' member offsets (GuiHost.cpp).
+///
+/// # Safety
+/// `at` points at the offsets.
+void ee_won_text_seg_register(const EeWonSegAt *at);
 
 }  // extern "C"
 

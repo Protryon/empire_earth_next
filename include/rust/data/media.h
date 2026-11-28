@@ -6,13 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A use count and its loading flag (the classes' `mMediaCount` and `mIsLoading`: the classes' base).
-struct EeDataMediaUse {
-  unsigned long mMediaCount;
-  /// Nonzero while the first user loads (other threads poll it).
-  uint8_t mIsLoading;
-};
+#include "rust/data/records.h"
 
 /// The unit's lock and the platform's sleep.
 struct EeDataMediaLock {
@@ -48,14 +42,6 @@ long ee_data_media_acquire(EeDataMediaUse *usage,
 void ee_data_media_release(EeDataMediaUse *usage,
                            const EeDataMediaLock *lock,
                            const EeDataMediaStep *unload);
-
-/// [`locked`] for the C++.
-///
-/// # Safety
-/// As [`ee_data_media_acquire`].
-void ee_data_media_locked(EeDataMediaUse *usage,
-                          const EeDataMediaLock *lock,
-                          const EeDataMediaStep *step);
 
 }  // extern "C"
 

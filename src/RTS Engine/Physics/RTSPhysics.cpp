@@ -7,7 +7,6 @@
 #include <deque>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/TMTimer.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
 
@@ -28,8 +27,8 @@ void** ee_rtsphyscpp_tick_slot(RTSPhysics* inPhysics) { return reinterpret_cast<
 void** ee_rtsphyscpp_lock_slot(RTSPhysics* inPhysics) { return reinterpret_cast<void**>(&inPhysics->mServerMessageQueueLock); }
 void ee_rtsphyscpp_set_graphics(RTSPhysics* inPhysics, RTSGraphics* inGraphics) { inPhysics->mGraphics = inGraphics; }
 void* ee_rtsphyscpp_render_now(RTSPhysics* inPhysics) { return inPhysics->mGraphics->mRenderNow; }
-void ee_rtsphyscpp_set_timer(RTSPhysics* inPhysics, TMTimer* inTimer) { inPhysics->mTimer = inTimer; }
-void* ee_rtsphyscpp_timer(RTSPhysics* inPhysics) { return inPhysics->mTimer->Rust(); }
+void ee_rtsphyscpp_set_timer(RTSPhysics* inPhysics, EeTimeTimer* inTimer) { inPhysics->mTimer = inTimer; }
+void* ee_rtsphyscpp_timer(RTSPhysics* inPhysics) { return inPhysics->mTimer; }
 const char* ee_rtsphyscpp_thread_name() { return gPhysicsThreadName; }
 uint32_t ee_rtsphyscpp_random_seed(RTSPhysics* inPhysics) { return inPhysics->mRandom.GetSeed(); }
 void ee_rtsphyscpp_set_random_seed(RTSPhysics* inPhysics, uint32_t inSeed) { inPhysics->mRandom.SetSeed(inSeed); }

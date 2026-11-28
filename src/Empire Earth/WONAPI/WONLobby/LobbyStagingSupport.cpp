@@ -50,10 +50,6 @@ static intptr_t NetHost(EeWonNetDispOp inOp, intptr_t a, intptr_t b, intptr_t c)
     }
     return 0;
 }
-// Returns the network logic for a game type: LAN for LAN and direct-connect games, routing for Internet
-NetLogic* LobbyGetNetLogic(LobbyGameType type) { return (NetLogic*)ee_won_netdisp_call(NetHost, EeWonNetDispCall::NetLogic, (intptr_t)type, 0); }
-// Returns the network logic for the current game type
-NetLogic* LobbyGetCurNetLogic() { return (NetLogic*)ee_won_netdisp_call(NetHost, EeWonNetDispCall::CurNetLogic, 0, 0); }
 // Makes the game's type current and hosts it on that network; returns whether hosting succeeded
 bool LobbyNetHostGame(LobbyGame* game) { return ee_won_netdisp_call(NetHost, EeWonNetDispCall::HostGame, (intptr_t)game, 0) != 0; }
 // Makes the game's type current and joins it on that network; returns whether joining succeeded

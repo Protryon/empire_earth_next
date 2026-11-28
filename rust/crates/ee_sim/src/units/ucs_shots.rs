@@ -1,7 +1,7 @@
 //! The shots' unit bodies over their C++ statements (the units' lane, round 7; were EEUnitClassShots.cpp):
 //! `ProjectileUnitCreated`, `MissileUnitCreated`, `ProjectileLaunchProjectile` (the ballistic pitch stays a C++
 //! statement), `BombLaunchProjectile`, `MissileLaunchProjectile`, `ProjectileUpdateEffects`, `BombUpdate`,
-//! `LaunchStoredMissile`, `EEIsOnTargetTiles`. Each C++ statement one `EE_UNITS_UCS_*` case of `ee_units_ucs_host`
+//! `LaunchStoredMissile`, `EEIsOnTargetTiles`. Each C++ statement one `EE_UNITS_UCS_*` case of `ee_units_uc_host`
 //! (EEUnitClassShots.cpp; the class host's statements, `EE_UNITS_UC_*`, reach EEUnitClass.cpp's through it), in the
 //! original's order; the transformations and their math are ee_base's, as the C++ inlines called them.
 
@@ -326,32 +326,27 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-    extern "C" {
-        /// the shots' host (EEUnitClassShots.cpp; ucs_impact.rs's too)
-        pub(crate) fn ee_units_ucs_host(
-            op: i32,
-            class: *mut c_void,
-            unit: *mut c_void,
-            a: u64,
-            b: i64,
-            c: i64,
-            f: *mut [f32; 4],
-        ) -> i64;
-    }
+    pub(crate) use crate::units::uc_body::game::ee_units_uc_host;
 
-    /// The shots' host (`ee_units_ucs_host`; the class host's statements pass through it).
+    /// The shots' host (`ee_units_uc_host`; the class host's statements pass through it).
     struct GameS;
 
     impl UcHost for GameS {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::uc(op, unit, a) {
+                return v;
+            }
+            if let Some(v) = crate::units::player_upgrades::ucs(op, unit, f) {
+                return v;
+            }
             if let Some(v) =
                 crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Shots, op, class, unit, a, b, c, f)
             {
                 return v;
             }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_ucs_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

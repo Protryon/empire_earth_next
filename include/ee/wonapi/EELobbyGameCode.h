@@ -8,6 +8,7 @@
 #include "ee/wonapi/WONLobbyRustCtrl.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "rust/won_lobby/eecolor.h"
+#include "rust/won_lobby/eeresource.h"
 #include "rust/won_lobby/eexfer.h"
 
 namespace WONAPI {
@@ -102,10 +103,10 @@ WONAPI::LobbyRustDialog* EELobbyGetFileDialog(); // the File kind
 
 // EELobbyResource.cpp
 WONAPI::ResourceConfigTablePtr EELobbyResource_Init(WONAPI::ResourceConfigTable* inCollection);
-WONAPI::GUIString& EELobbyResource_GetString(int inID);
-void EELobbyResource_Destroy();
-// a lobby string by its original global's name (its row in ee_won eeresource.rs)
-WONAPI::GUIString& EELobbyResource_Named(const char* inName);
+// the strings (eeresource.rs's, each one GUIString): by table index, by the original global's name (its row)
+inline WONAPI::GUIString& EELobbyResource_GetString(int inID) { return *static_cast<WONAPI::GUIString*>(ee_won_eeresource_string((size_t)inID)); }
+inline void EELobbyResource_Destroy() { ee_won_eeresource_destroy(); }
+inline WONAPI::GUIString& EELobbyResource_Named(const char* inName) { return *static_cast<WONAPI::GUIString*>(ee_won_eeresource_named(inName)); }
 #define EE_LOBBY_STRING(name) EELobbyResource_Named(#name)
 
 // the 0x297ee7 unit

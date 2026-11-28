@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/records.h"
 
 /// `TMTimer`'s results (lle/LowLevelEngineCore.h).
 constexpr static const int EE_TIME_OK = 0;
@@ -27,24 +28,6 @@ struct EeTimeOfDay {
   unsigned long mMinute;
   unsigned long mSecond;
 };
-
-/// `TMPoll`'s data (the original's members, in its order): a polled countdown on the counter (or the millisecond
-/// clock without one).
-struct EeTimePoll {
-  /// Counter ticks (or milliseconds) at the start of the current period.
-  int64_t start_time;
-  /// The time already elapsed in the period when paused (0: not paused).
-  int64_t pause_remaining;
-  /// 0: milliseconds, 1: microseconds.
-  uint32_t time_unit;
-  uint32_t time_delay;
-  /// The system has a high-resolution counter.
-  bool use_counter;
-  bool running;
-};
-
-/// A user callback of a callback timer.
-using EeTimeCallback = void(*)(void*);
 
 extern "C" {
 
@@ -68,9 +51,6 @@ void ee_time_shutdown(bool _forced);
 /// `TMGetTime`: milliseconds (32 bits on every data model), or the time pinned on this thread.
 uint32_t ee_time_get();
 
-/// `TMGetMicroTime`.
-int64_t ee_time_get_micro();
-
 /// Pins `TMGetTime` on the calling thread to `time` (-1: the clock again). TEST ONLY: EE-SIM's scripted editor.
 void ee_time_pin(int64_t time);
 
@@ -85,10 +65,6 @@ void ee_time_of_day(EeTimeOfDay *out);
 /// # Safety
 /// `poll` is writable.
 void ee_time_poll_init(EeTimePoll *poll, uint32_t delay, uint32_t unit, bool start);
-
-/// # Safety
-/// `poll` is a live poll.
-bool ee_time_poll_is_paused(const EeTimePoll *poll);
 
 /// # Safety
 /// `poll` is a live poll.
@@ -131,10 +107,6 @@ EeTimeTimer *ee_time_timer_new(uint32_t interval, uint32_t unit, bool repeating)
 /// `timer` came from [`ee_time_timer_new`] and is not used again.
 void ee_time_timer_free(EeTimeTimer *timer);
 
-/// # Safety
-/// `timer` is a live timer.
-int ee_time_timer_set_callback(const EeTimeTimer *timer, EeTimeCallback callback, void *parameter);
-
 /// `SetEvent`: `event` is the event's platform handle (`TSEvent::mHandle`; NULL for none).
 ///
 /// # Safety
@@ -147,10 +119,6 @@ int ee_time_timer_set_interval(const EeTimeTimer *timer, uint32_t interval, uint
 
 /// # Safety
 /// `timer` is a live timer.
-int ee_time_timer_set_repeating(const EeTimeTimer *timer, bool repeating);
-
-/// # Safety
-/// `timer` is a live timer.
 int ee_time_timer_set_type(const EeTimeTimer *timer, uint32_t timer_type);
 
 /// # Safety
@@ -160,14 +128,6 @@ int ee_time_timer_start(const EeTimeTimer *timer);
 /// # Safety
 /// `timer` is a live timer.
 int ee_time_timer_stop(const EeTimeTimer *timer);
-
-/// `Stop(outElapsed, outRemaining)`: the outputs are written only on success.
-///
-/// # Safety
-/// `timer` is a live timer; the outputs are writable.
-int ee_time_timer_stop_elapsed(const EeTimeTimer *timer,
-                               unsigned long *elapsed,
-                               unsigned long *remaining);
 
 }  // extern "C"
 

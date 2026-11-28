@@ -42,9 +42,5 @@ class UString;
 // D9): a missing text table, a table with no text form or a text that does not compile stops the game with its message.
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
 
-// Reads the rules documents (ee/EERules.h: db\combat.yaml ... and epochs.yaml's media) from the path into
-// EEGetRules(), through the same Content as the db tables (references by id). A missing document keeps the
-// defaults; a broken one stops the game with its message. EEInitializeDatabase calls it first.
-void EELoadRules(FSPath* inPath);
 
 #endif

@@ -113,27 +113,6 @@ pub unsafe extern "C" fn ee_screens_aes_restore(state: *const c_void) {
     unsafe { crate::screens::area_effect_running::restore(&mut crate::screens::game_cpp::Ffi, state) }
 }
 
-/// `EEAreaEffectTemplate::Load(on_demand)` and `Unload` on the template (`area_effect_lists.rs`).
-#[no_mangle]
-pub extern "C" fn ee_screens_ael_template_load(template: *mut c_void, on_demand: bool) {
-    crate::screens::area_effect_lists::template_load(&mut crate::screens::game_cpp::Ffi, template as usize, on_demand)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_screens_ael_template_unload(template: *mut c_void) {
-    crate::screens::area_effect_lists::template_unload(&mut crate::screens::game_cpp::Ffi, template as usize)
-}
-
-/// `EEUnitAreaEffectList::AddAreaEffect(effect)` on the list.
-#[no_mangle]
-pub extern "C" fn ee_screens_ael_add(list: *mut c_void, effect: *mut c_void) {
-    crate::screens::area_effect_lists::add_area_effect(
-        &mut crate::screens::game_cpp::Ffi,
-        list as usize,
-        effect as usize,
-    )
-}
-
 /// `EEUnitAreaEffectList::ApplyModifiers(kind, value, out, unit)` on the list (`value` and `out` the caller's longs).
 #[no_mangle]
 pub extern "C" fn ee_screens_ael_apply_modifiers(
@@ -320,29 +299,6 @@ pub extern "C" fn ee_screens_cbl_tabbed_to(list: *mut c_void) {
     civ_list::tabbed_to(&mut Host, list as usize)
 }
 
-/// `GetSelectedUpgrade` -> 0 and the upgrade, bonus and cost (each written as the original wrote them), or the
-/// error.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_cbl_selected_upgrade(
-    list: *mut c_void,
-    upgrade: *mut u32,
-    bonus: *mut u32,
-    cost: *mut u32,
-) -> c_long {
-    let init = unsafe { (*upgrade, *bonus, *cost) };
-    match civ_list::selected_upgrade(&mut Host, list as usize, init) {
-        Ok((u, b, c)) => {
-            unsafe {
-                *upgrade = u;
-                *bonus = b;
-                *cost = c;
-            }
-            0
-        }
-        Err(e) => e,
-    }
-}
-
 unsafe fn upgrades<'a>(upgrades: *const u32, count: usize) -> &'a [u32] {
     if upgrades.is_null() || count == 0 {
         &[]
@@ -351,20 +307,8 @@ unsafe fn upgrades<'a>(upgrades: *const u32, count: usize) -> &'a [u32] {
     }
 }
 
-/// `SetUpgradesExcept`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_cbl_set_upgrades_except(list: *mut c_void, excluded: *const u32, count: usize) {
-    civ_list::set_upgrades_except(&mut Host, list as usize, unsafe { upgrades(excluded, count) })
-}
-
 /// `SetCivilizationUpgrades`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_cbl_set_civilization_upgrades(list: *mut c_void, ids: *const u32, count: usize) {
     civ_list::set_civilization_upgrades(&mut Host, list as usize, unsafe { upgrades(ids, count) })
-}
-
-/// `ReformatUpgrades`.
-#[no_mangle]
-pub extern "C" fn ee_screens_cbl_reformat(list: *mut c_void, buy: bool) {
-    civ_list::reformat(&mut Host, list as usize, buy)
 }

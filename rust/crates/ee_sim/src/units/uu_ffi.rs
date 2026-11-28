@@ -17,7 +17,7 @@ use crate::units::uu_note::Note;
 use crate::units::uu_place;
 use crate::units::uu_reads;
 use crate::units::uu_spots;
-use crate::units::uu_tiles::{self, EeUnitsUuSteps, EeUnitsUuWallPiece, Tile};
+use crate::units::uu_tiles::{self, Tile};
 use crate::units::uu_world::{self, EeUnitsUuSoundView, UuWorld};
 use crate::world::{UnitView, WorldRead};
 
@@ -39,12 +39,6 @@ fn foot_of(unit: u64) -> (i64, i64, i64) {
         });
         (x, y, size)
     })
-}
-
-/// `EEGetSubTileSteps`.
-#[no_mangle]
-pub extern "C" fn ee_units_uu_sub_tile_steps(size: f32, length: i32, dx: i32, dy: i32, square: u8) -> EeUnitsUuSteps {
-    uu_tiles::sub_tile_steps(size, length, dx, dy, square != 0)
 }
 
 /// `EEGetSquareRing` (19; `square`: `EEGetSideTiles`, 20).
@@ -119,20 +113,6 @@ pub unsafe extern "C" fn ee_units_uu_tiles_in_radius(x: i32, y: i32, radius: u32
     }
 }
 
-/// `EEGetTilesNearPoint`'s tiles (appended to `io`), not noted (the app capture's own reads).
-///
-/// # Safety
-/// As [`ee_units_uu_square_ring`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_tiles_near_point(x: f32, y: f32, distance: f32, io: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe {
-        let mut tiles = tiles_of(io);
-        uu_tiles::tiles_near_point(x, y, distance, &mut tiles);
-        set_tiles(io, &tiles);
-    }
-}
-
 /// `EEGetTilesNearPoint` (34) (appended to `io`).
 ///
 /// # Safety
@@ -170,12 +150,6 @@ pub unsafe extern "C" fn ee_units_uu_drop_tiles(which: i32, io: *mut c_void) {
         set_tiles(io, &tiles);
         n.t(&tiles);
     }
-}
-
-/// `EETurnDirection`.
-#[no_mangle]
-pub extern "C" fn ee_units_uu_turn_direction(direction: i32, steps: i32, clockwise: u8) -> i32 {
-    uu_tiles::turn_direction(direction, steps, clockwise != 0)
 }
 
 /// `EEGetNextTile` (30).
@@ -240,12 +214,6 @@ pub unsafe extern "C" fn ee_units_uu_slot_tile(x: i32, y: i32, direction: i32, o
     // SAFETY: the caller's contract
     unsafe { *out = t };
     n.i(t[0].into()).i(t[1].into());
-}
-
-/// `EEOrientWallPiece`'s frame set and yaw.
-#[no_mangle]
-pub extern "C" fn ee_units_uu_wall_piece(corner: i32) -> EeUnitsUuWallPiece {
-    uu_tiles::wall_piece(corner)
 }
 
 /// `EEOrientWallPiece(transformation, corner, raised)`: the piece's frame set; a turning piece faces its yaw
@@ -353,51 +321,6 @@ pub unsafe extern "C" fn ee_units_uu_ring_corners(
     unsafe { set_tiles(out, &tiles) };
 }
 
-/// `EERemoveEdgeTiles`.
-///
-/// # Safety
-/// As [`ee_units_uu_square_ring`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_remove_edge_tiles(io: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe {
-        let mut tiles = tiles_of(io);
-        uu::remove_edge_tiles(&mut Game, &mut tiles);
-        set_tiles(io, &tiles);
-    }
-}
-
-/// `EEGetRingTiles` (`out` replaced).
-///
-/// # Safety
-/// As [`ee_units_uu_square_ring`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_ring_tiles(x: i32, y: i32, size: i32, ring: i32, corners: i32, out: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe { set_tiles(out, &uu::ring_tiles(&mut Game, x, y, size, ring, corners)) }
-}
-
-/// `EEGetSortedRingTiles` (6) (`out` replaced).
-///
-/// # Safety
-/// As [`ee_units_uu_square_ring`]; `from` holds three floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_sorted_ring_tiles(
-    from: *const [f32; 3],
-    x: i32,
-    y: i32,
-    size: i32,
-    range: i32,
-    corners: i32,
-    out: *mut c_void,
-) {
-    // SAFETY: the caller's contract
-    unsafe {
-        let tiles = sorted_ring_tiles(*from, x, y, size, range, corners);
-        set_tiles(out, &tiles);
-    }
-}
-
 /// `EEGetSortedRingTiles` (6), noted: the tiles.
 pub(crate) fn sorted_ring_tiles(from: [f32; 3], x: i32, y: i32, size: i32, range: i32, corners: i32) -> Vec<Tile> {
     let n = Note::begin(6);
@@ -466,24 +389,30 @@ pub unsafe extern "C" fn ee_units_uu_units_in_rectangle(
     bottom: f32,
     io: *mut c_void,
 ) -> i32 {
-    let n = Note::begin(38);
     // SAFETY: the caller's contract
     unsafe {
         let mut units = units_of(io);
-        n.f(left).f(top).f(right).f(bottom).us(&units);
-        let floor = ee_base::math::um::floor;
-        let (r, b, l, t) = (floor(right), floor(bottom), floor(left), floor(top));
-        let mut tiles = Vec::new();
-        for x in l..=r {
-            for y in t..=b {
-                tiles.push([x, y]);
-            }
-        }
-        let count = uu::units_on_tiles(&mut Game, &tiles, &mut units);
+        let count = units_in_rectangle(left, top, right, bottom, &mut units);
         set_units(io, &units);
-        n.i(count.into()).us(&units);
         count
     }
+}
+
+/// [`ee_units_uu_units_in_rectangle`] into a Rust list (appended).
+pub(crate) fn units_in_rectangle(left: f32, top: f32, right: f32, bottom: f32, units: &mut Vec<u64>) -> i32 {
+    let n = Note::begin(38);
+    n.f(left).f(top).f(right).f(bottom).us(units);
+    let floor = ee_base::math::um::floor;
+    let (r, b, l, t) = (floor(right), floor(bottom), floor(left), floor(top));
+    let mut tiles = Vec::new();
+    for x in l..=r {
+        for y in t..=b {
+            tiles.push([x, y]);
+        }
+    }
+    let count = uu::units_on_tiles(&mut Game, &tiles, units);
+    n.i(count.into()).us(units);
+    count
 }
 
 /// `EEGetWallUnitsOfTypeOnTiles` (43): appended to `io`; their number.
@@ -617,41 +546,6 @@ pub unsafe extern "C" fn ee_units_uu_find_free_farm(unit: u64, free_only: u8, ri
         let complex = with_unit(farm, |f| f.complex_unit_handle());
         n.u(complex).i((*ring).into());
         complex
-    }
-}
-
-/// `EEGetWallLine` (37) (`out` replaced).
-///
-/// # Safety
-/// As [`ee_units_uu_square_ring`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_wall_line(x1: i32, y1: i32, x2: i32, y2: i32, out: *mut c_void) {
-    let n = Note::begin(37);
-    n.i(x1.into()).i(y1.into()).i(x2.into()).i(y2.into());
-    let tiles = uu::wall_line(&mut Game, [x1, y1], [x2, y2]);
-    // SAFETY: the caller's contract
-    unsafe { set_tiles(out, &tiles) };
-    n.t(&tiles);
-}
-
-/// `EEExtendWallLine` (into `io`).
-///
-/// # Safety
-/// `tiles` and `io` live tile vectors, `player` a live player.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_extend_wall_line(
-    tiles: *const c_void,
-    player: u64,
-    unit_type: u32,
-    io: *mut c_void,
-) -> i32 {
-    // SAFETY: the caller's contract
-    unsafe {
-        let line = tiles_of(tiles);
-        let mut out = tiles_of(io);
-        let n = uu::extend_wall_line(&mut Game, &line, player, unit_type, &mut out);
-        set_tiles(io, &out);
-        n
     }
 }
 
@@ -1143,33 +1037,6 @@ pub unsafe extern "C" fn ee_units_uu_seabed(which: i32, unit: u64, at: *const [f
     z
 }
 
-/// `EEGetUnitTiles` (53) (appended to `io`).
-///
-/// # Safety
-/// `unit` is a live unit; `io` a live tile vector.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_unit_tiles_margin(unit: u64, margin: f32, io: *mut c_void) {
-    let n = Note::begin(53);
-    // SAFETY: the caller's contract
-    unsafe {
-        let mut tiles = tiles_of(io);
-        n.u(unit).f(margin).t(&tiles);
-        uu_world::unit_tiles(&mut Game, unit, &mut tiles, margin);
-        set_tiles(io, &tiles);
-        n.t(&tiles);
-    }
-}
-
-/// `EEGetSelectionBounds` (`bounds`: left, top, right, bottom).
-///
-/// # Safety
-/// `units` is a live unit vector; `bounds` holds four floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_selection_bounds(units: *const c_void, bounds: *mut [f32; 4], filter: i32) {
-    // SAFETY: the caller's contract
-    unsafe { uu_world::selection_bounds(&mut Game, &units_of(units), &mut *bounds, filter) }
-}
-
 /// `EEGetUnitRadius` (`which` 0, 55: two complex units) and `EEGetAngleFromNorth` (1, 56: `from` and `to`).
 ///
 /// # Safety
@@ -1253,16 +1120,6 @@ pub unsafe extern "C" fn ee_units_uu_escape_point(unit: u64, io: *mut [f32; 2]) 
     let r = uu_world::escape_point(&mut Game, unit, io);
     n.b(r).f(io[0]).f(io[1]);
     u8::from(r)
-}
-
-/// `EEGetEnemiesAround` (`out` replaced).
-///
-/// # Safety
-/// `unit` is a live complex unit; `out` a live unit vector.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_enemies_around(unit: u64, out: *mut c_void) {
-    // SAFETY: the caller's contract
-    unsafe { set_units(out, &uu_world::enemies_around(&mut Game, unit)) }
 }
 
 /// `EEAddToFootprintTiles` (`which` 0, 66), `EERemoveFromFootprintTiles` (1, 67), `EEAddBuildingRegion` (2, 69),
@@ -1552,12 +1409,6 @@ pub extern "C" fn ee_units_uu_is_unit_movable(unit: u64) -> u8 {
         let speed: f32 = crate::world_field!(class.fields(), mMaxVelocity);
         uu_reads::is_unit_movable(u.hit_points(), class.category(), speed)
     }))
-}
-
-/// `EEIsSameResearch`.
-#[no_mangle]
-pub extern "C" fn ee_units_uu_is_same_research(first: i32, second: i32) -> u8 {
-    u8::from(uu_reads::is_same_research(first, second))
 }
 
 /// `EEGetResourceIndex`.

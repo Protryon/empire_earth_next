@@ -24,6 +24,7 @@
 #include "rust/won_lobby/srvlistctl.h"
 #include "rust/won_lobby/chatctl.h"
 #include "rust/won_net/ipobj.h"
+#include "rust/won_net/ffi.h"   // ee_won_crc16_put (the CRC the prv world computes)
 #include "rust/won_gui/guiconf.h"
 
 namespace L33World {

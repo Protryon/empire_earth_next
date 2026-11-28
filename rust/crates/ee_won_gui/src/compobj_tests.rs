@@ -383,7 +383,7 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, k: isize, b: isize, 
         }
         K::IdIn => with(|w| w.ids.contains(&(c as i64)) as isize),
         // (the other Rust objects' calls on a component: compobj itself never makes them)
-        K::VSetVisible | K::VMouseChild => unreachable!("compobj makes no {k:?}"),
+        K::VSetVisible | K::VMouseChild | K::VMouseWheel => unreachable!("compobj makes no {k:?}"),
         // the game's own extra data (EeWonCompExtraData): the references it takes and gives back, its grabber
         K::RefHold => {
             t(format!("hold {b}"));

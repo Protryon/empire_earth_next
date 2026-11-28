@@ -4,7 +4,7 @@
 #ifndef LLE_UIOBJHOST_H
 #define LLE_UIOBJHOST_H
 #include <string.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 #include "rust/ui/rect.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEColor.h"
@@ -14,6 +14,23 @@
 // controls' headers include this one)
 #include "lle/LLEForward.h"
 struct UIDbDataForms;
+
+// C:\EEX\Low-Level Engine\User Interface\UIEntity.h (RECONSTRUCTION; port: here, in the header both its includers,
+// lle/UIControl.h and UIHotKey.h, include). Base of every UI element (controls and the UIEntityGroup members). No
+// UIEntity.cpp in the stretch: the members are inline, emitted first by UIBackground.cpp (0x10058e86..0x10058f03).
+// sizeof 8 (??_E stride, 0x10058eb4).
+class LLE_API UIEntity {
+public:
+    unsigned long GetType() const { return this->mType; }  // exported 0x10004380 (ICF)
+    // port: no element is copied (every control and hot key holds a Rust object)
+    UIEntity(const UIEntity&) = delete;
+    UIEntity& operator=(const UIEntity&) = delete;
+    // 0x10058e86: the vptr is stored before mType (assigned in the body)
+    UIEntity(unsigned long inType) { this->mType = inType; }
+    virtual ~UIEntity() {}
+
+    unsigned long mType;                    // +0x04
+};
 
 // Four floats for a Rust call (ee_ui obj.rs's buffer: a point's x and y, a colour's red, green and blue, a
 // rectangle's bottom, left, right and top), alive for the call's full expression

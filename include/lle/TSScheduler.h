@@ -11,8 +11,6 @@
 #include "platform/PlatThread.h"
 #include "rust/base/ts.h"
 
-// The Thread System's other classes, each in its own header in the original (folded here in LLE/UI round 2)
-
 // C:\EEX\Low-Level Engine\Thread System\TSEvent.h (RECONSTRUCTION; TSEvent.cpp 0x53cee..0x53d8b,
 // TSScheduler::CreateEvent operator new(8)). A platform event, manual or automatic reset. Whole in Rust
 // (rust/crates/ee_base/src/ts, LLE lane round 3): the class has no data; a TSEvent* is the Rust event TSScheduler made, and
@@ -30,11 +28,6 @@ public:
     long Set() { return ee_ts_event_set(this->Rust()); }
     long Clear() { return ee_ts_event_clear(this->Rust()); }
     long Wait(unsigned long inTimeout) { return ee_ts_event_wait(this->Rust(), (uint32_t)inTimeout); }
-    // Waits until one of the events is set (at most PLAT_WAIT_MAX) -> its index (the lowest when several are),
-    // kTSWaitTimeout or kTSWaitFailed (PlatGetLastError); the threads' message loops wait on several at once.
-    static long WaitAny(TSEvent* const* inEvents, unsigned long inCount, unsigned long inTimeout)
-        { return ee_ts_event_wait_any(reinterpret_cast<const EeTsEvent* const*>(inEvents), (uint32_t)inCount, (uint32_t)inTimeout); }
-    bool GetIsManuallyReset() { return ee_ts_event_is_manual(this->Rust()); }
     operator void*() const { return ee_ts_event_handle(this->Rust()); }
     // the platform event (TMTimer's event timers set it)
     PlatEvent* GetHandle() const { return static_cast<PlatEvent*>(ee_ts_event_handle(this->Rust())); }
@@ -48,7 +41,6 @@ public:
 // made, and every member forwards.
 class LLE_API TSReadWriteLock : URustView {
 public:
-    long GetReadLockCount() const { return ee_ts_lock_read_count(this->Rust()); }
     void ReadLock() { ee_ts_lock_read(this->Rust()); }
     void ReadUnlock() { ee_ts_lock_read_unlock(this->Rust()); }
     void WriteLock() { ee_ts_lock_write(this->Rust()); }
@@ -83,21 +75,8 @@ public:
     {
         return ee_ts_thread_receive(this->Rust(), &outMessage, &outParameter1, &outParameter2);
     }
-    long Resume() { return ee_ts_thread_resume(this->Rust()); }
-    long Suspend() { return ee_ts_thread_suspend(this->Rust()); }
-    long Terminate() { return ee_ts_thread_terminate(this->Rust()); }
     // stores the name (the debugger's thread name is a no-op in this build; nothing reads the name back)
     void SetName(const char* inName) { ee_ts_thread_set_name(this->Rust(), inName); }
-    static void SetThreadName(unsigned long inThreadID, const char* inName) {}
-    bool IsSuspended() const { return ee_ts_thread_is_suspended(this->Rust()); }
-    bool IsTerminated() { return this->GetExitCode() != PLAT_THREAD_STILL_ACTIVE; }
-    void LockMessageQueue() { ee_ts_section_enter(ee_ts_thread_message_lock(this->Rust())); }
-    void UnlockMessageQueue() { ee_ts_section_leave(ee_ts_thread_message_lock(this->Rust())); }
-    static void Yield(unsigned long inMilliseconds) { PlatSleep(inMilliseconds); }
-    // The window events' pump (platform/PlatWindow.h): Receive on inThreadID (the thread that runs the window system)
-    // dispatches one window event per call once its posted messages are drained, as the original's PeekMessage
-    // dispatched window messages. inPump returns true when it dispatched one.
-    static void SetEventPump(bool (*inPump)(), unsigned long inThreadID) { ee_ts_set_event_pump(inPump, (uint32_t)inThreadID); }
     // Dispatches the window events waiting now (on the event thread; elsewhere nothing): what Win32 sent a new window
     // during its creation (activation, focus) is handled before the game knows the window, as it was
     static void DispatchWindowEvents() { ee_ts_dispatch_window_events(); }
@@ -139,8 +118,6 @@ public:
     static long DestroyThread(TSThread* inThread) { return ee_ts_thread_free(reinterpret_cast<EeTsThread*>(inThread)); }
     // the calling thread's registered object, or NULL
     static TSThread* GetCurrentThread() { return reinterpret_cast<TSThread*>(ee_ts_thread_current()); }
-    // the calling thread's registry index, or -1 if it is not registered
-    static unsigned long GetCurrentThreadIndex() { return ee_ts_thread_current_index(); }
 };
 
 #endif

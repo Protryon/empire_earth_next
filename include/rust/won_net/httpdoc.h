@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `HTTPDocType_MOTD`, `_TOU`, `_ADV`
 constexpr static const int32_t EE_WON_HTTPDOC_MOTD = 0;

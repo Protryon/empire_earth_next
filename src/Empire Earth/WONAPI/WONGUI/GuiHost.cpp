@@ -20,9 +20,11 @@
 #include <algorithm>
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/barobj.h"
+#include "rust/won_gui/gamefwd.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guictor.h"
 #include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/gamewin.h" // ee_won_text_seg_register
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/guitext.h"
@@ -57,9 +59,6 @@ typedef EeWonGuiField Fd;
 // the standard cursor a host op names (guihost.rs over cursorobj.rs's table; NULL for none)
 static Cursor* CursorOf(intptr_t inCursor) { return (Cursor*)ee_won_gui_cursor(inCursor); }
 
-// QueueSubMenu's local PopupParams (borrowed pointers)
-static PopupParams sHostParams(NULL, 0, NULL);
-
 // a component's services, the same for every component object (the members', Component's own calls and the
 // container's are gamewin.rs common_op's in the game: R6 WON GUI round 37)
 static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
@@ -83,49 +82,20 @@ static FontDescriptor Underlined(FontDescriptor inDescriptor)
     return inDescriptor;
 }
 
-extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
     TextArea* t = (TextArea*)inComp;
     switch (op) {
     // (the fields, ScrollTranslate and the segments' references are gamewin.rs list_host_op's in the game)
-    case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
-    // LinkActivated is guisplit.rs's over these two (R6 WON round 33)
-    case Op::TextSetLinkParam: t->mLinkParam = Seg(a)->GetLinkParam(); return 0;
+    // LinkActivated is guisplit.rs's over these two (R6 WON round 33); a segment's members, a link's state and the
+    // copy's text are gamewin.rs text_host_op's in the game (R6 WON GUI round 40)
     case Op::TextDeliverLinkEvent: t->DeliverEvent(TextLinkActivatedEvent(t, Seg(a)), false); return 0;
-    case Op::SelTextAppend: t->mSelText.append(Seg(a)->mText, (unsigned short)b, (unsigned short)c); return 0;
-    case Op::SelTextBreak: t->mSelText.append("\r\n"); return 0;
-    case Op::SelTextCopy: Clipboard::Set(t->mSelText); t->mSelText.erase(); return 0;
-    case Op::SegLineBreak: return Seg(a)->mLineBreak ? 1 : 0;
-    case Op::SegLength: return Seg(a)->mText.length();
-    case Op::SegFontStringWidth: return Seg(a)->mFont->GetStringWidth(Seg(a)->mText);
-    case Op::SegFontHeight: return Seg(a)->mFont->GetHeight();
-    case Op::SegFontAscent: return Seg(a)->mFont->GetAscent();
-    case Op::SegStringWidth: return Seg(a)->mFont->GetStringWidth(Seg(a)->mText, (unsigned short)b, (unsigned short)c);
-    case Op::SegCharWidth: return Seg(a)->mFont->GetCharacterWidth(Seg(a)->mText[(int)b]);
-    case Op::SegTextTake:
-        ee_won_gui_sink_units((void*)b, Seg(a)->mText.mData->mText, Seg(a)->mText.length(), sizeof(wchar_t));
-        return 0;
     case Op::SegIsLink: return Seg(a)->IsLink() ? 1 : 0;
-    case Op::SegPressed: Seg(a)->Pressed(); return 0;
-    case Op::SegReleased: return Seg(a)->Released() ? 1 : 0;
-    case Op::SegColor: return Seg(a)->mColor;
     case Op::TextDrawSeg: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(Seg(c)->mFont.get(), &Seg(c)->mText), WONDrawNoCall()); return 0;
-    // the constructor's statements (guictor.rs)
-    case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
-    case Op::CtorFontNamed: t->SetFont(t->GetNamedFont("TextArea")); return 0;
-    case Op::CtorLinkColor: t->mLinkColor=0x0000ff; return 0;
-    case Op::CtorLinkFontNamed: t->SetLinkFont(t->GetNamedFont("TextAreaLink")); return 0;
-    case Op::CtorLinkFontIsDefault: return t->mLinkFont.get()==t->GetRoot()->GetWindowManager()->GetDefaultFont();
+    // the constructor's statements (guictor.rs; the others, the selection colour and the added segments and parts are
+    // gamefwd.rs area_op's in the game: R6 WON GUI round 41)
     case Op::CtorLinkFontUnderline: t->SetLinkFont(t->GetFont(Underlined(t->mFont->GetDescriptor()))); return 0;
-    case Op::CtorPads: t->SetPads((int)a,(int)a,(int)a,(int)a); return 0;
-    case Op::CtorReset: t->Reset(false); return 0;
     case Op::SegNew: return (intptr_t)new TextSegment;
-    case Op::SegSetText: Seg(a)->mText.mData=((const GUIString*)b)->mData; return 0;
-    case Op::SegSetColor: Seg(a)->mColor=(int)b; return 0;
-    case Op::SegSetFont: Seg(a)->mFont=(Font*)b; return 0;
-    case Op::SegSetLineBreak: Seg(a)->mLineBreak=b!=0; return 0;
-    case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
-    case Op::TextAddPart: t->AddSegment(((const GUIString*)a)->substr((unsigned short)b, (unsigned short)c), d != 0); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -149,19 +119,19 @@ void TextArea::AddSegment(const GUIString& text,bool lineBreak)
 // Appends a text segment in the given colour and the area's font (the body at 0x00713c80)
 void TextArea::AddSegment(const GUIString& text,int color,bool lineBreak)
 {
-    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, this->mFont.get(), lineBreak);
+    ee_won_gui_add_segment(this, ee_won_gui_text_game, &text, color, this->mFont.get(), lineBreak);
 }
 // Appends a text segment in the given colour and font (the body at 0x00713da0)
 void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBreak)
 {
-    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, font, lineBreak);
+    ee_won_gui_add_segment(this, ee_won_gui_text_game, &text, color, font, lineBreak);
 }
 
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
 // only when lineBreak is set
 void TextArea::AddFormatedText(const GUIString& text,bool lineBreak)
 {
-    ee_won_gui_add_formatted(this,ee_won_guicpp_text_call,&text,text.mData->mText,text.length(),sizeof(wchar_t),lineBreak);
+    ee_won_gui_add_formatted(this,ee_won_gui_text_game,&text,text.mData->mText,text.length(),sizeof(wchar_t),lineBreak);
 }
 }
 
@@ -171,34 +141,13 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
 {
     InputBox* t = (InputBox*)inComp;
     switch (op) {
-    case Op::FontHeight: return t->mFont->GetHeight();
-    case Op::FontCharWidth: return t->mFont->GetCharacterWidth((int)a);
-    case Op::TextWidth: return t->mFont->GetStringWidth(t->mText, (unsigned short)a, (unsigned short)b);
-    case Op::TextWidthAll: return t->mFont->GetStringWidth(t->mText);
-    case Op::TextCharWidth: return t->mFont->GetCharacterWidth(t->mText[(int)a]);
-    case Op::FontStringM: return t->mFont->GetStringWidth(GUIString("M"));
-    case Op::TextStoreText: (a == 0 ? t->mText : t->mRealText) = *(const GUIString*)b; return 0;
-    case Op::InputHasFilter: return t->mInputFilter != NULL ? 1 : 0;
+    // (the font measures, the text stores, the colours, the icon and the filter's presence are inputobj.rs
+    // game_host_op's over the members in place: R6 WON GUI round 41)
     case Op::InputFilterText: return t->mInputFilter(t, *(GUIString*)a) ? 1 : 0;
-    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->GetWidth() : -1;
-    case Op::InputDisabled: return t->IsDisabled() ? 1 : 0;
-    case Op::InputUseDisabledColors: return t->mUseDisabledColors ? 1 : 0;
-    case Op::InputHasIcon: return t->mIcon.get() != NULL ? 1 : 0;
-    case Op::InputHasFocus: return t->HasFocus() ? 1 : 0;
-    case Op::InputTextColor: return (int)t->mTextColor;
-    case Op::InputDisabledTextColor: return t->mDisabledTextColor;
-    case Op::InputIconHeight: return t->mIcon->GetHeight();
-    case Op::InputSelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     case Op::InputDrawSlots: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(t->mFont.get(), &t->mText, t->mIcon.get()), WONDrawNoCall()); return 0;
     case Op::InputPaintBack: t->mBackground.Paint(*(Graphics*)a, 0, 0, ((const EeWonDrawOp*)b)->c, ((const EeWonDrawOp*)b)->d, ((const EeWonDrawOp*)b)->e, 0); return 0;
     case Op::InputPaintDisabledBack: t->mDisabledBackground.Paint(*(Graphics*)a, 0, 0, ((const EeWonDrawOp*)b)->c, ((const EeWonDrawOp*)b)->d, ((const EeWonDrawOp*)b)->e, 0); return 0;
     // the constructor's statements (guictor.rs)
-    case Op::CtorFontNamed: t->mFont=t->GetNamedFont("InputBox"); return 0;
-    case Op::CtorTextColor: t->mTextColor=0x8000000e; return 0;
-    case Op::CtorDisabledTextColor: t->mDisabledTextColor=(int)0x80000006; return 0;
-    case Op::CtorDisabledBackground: t->mDisabledBackground.SetColor((int)0x80000001); return 0;
-    case Op::CtorUseDisabledColors: t->mUseDisabledColors=true; return 0;
-    case Op::CtorNoFilter: t->mInputFilter=NULL; return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -207,9 +156,18 @@ namespace WONAPI {
 // Input filter that accepts only digits, with a leading minus sign allowed at the start of the box
 bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
 {
-    return ee_won_input_numeric_filter(theStr.mData->mText, theStr.length(), theInputBox->GetSelStart());
+    return ee_won_input_numeric_filter(theStr.mData->mText, theStr.length(), (int)ee_won_input_call(theInputBox->mRust, EeWonInputCall::SelStart, 0, 0, 0));
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonInputAt kInputAt = {offsetof(InputBox, mText), offsetof(InputBox, mRealText), offsetof(InputBox, mIcon),
+                                      offsetof(InputBox, mInputFilter), offsetof(InputBox, mUseDisabledColors),
+                                      offsetof(InputBox, mFont), offsetof(InputBox, mTextColor),
+                                      offsetof(InputBox, mDisabledTextColor), offsetof(InputBox, mSelColor), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+static_assert(sizeof(SmartPtr<Font>) == sizeof(void*) && sizeof(SelectionColor) == sizeof(EeWonSelColor), "inputobj.rs EeWonInputAt");
+[[maybe_unused]] static const bool sInputAt = (ee_won_input_members_register(&kInputAt), true);
 // Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the
 // rest: the 500 ms blink, the 100-entry input history, the padding)
 InputBox::InputBox()
@@ -227,17 +185,11 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
 {
     Label* t = (Label*)inComp;
     switch (op) {
-    case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
-    case Op::WrapSetCentered: t->mWrappedText->SetCentered(a != 0); return 0;
-    case Op::WrapSetWrap: t->mWrappedText->SetWrap(a != 0); return 0;
-    case Op::WrapWidth: return t->mWrappedText->GetWidth();
-    case Op::WrapHeight: return t->mWrappedText->GetHeight();
+    // (the wrapped text's methods are wrapobj.rs's in the game: R6 WON GUI round 40)
     case Op::PaintBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, (int)b, (int)c); return 0;
     case Op::LabelDrawWrapped: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, NULL, t->mWrappedText.get()), WONDrawNoCall()); return 0;
     // the constructor's statements (guictor.rs)
-    case Op::CtorWrapNew: t->mWrappedText=new WrappedText; return 0;
-    case Op::CtorFontNamed: t->mWrappedText->SetFont(t->GetNamedFont("Label")); return 0;
-    case Op::CtorBackgroundNone: t->mBackground.SetColor(-1); return 0;
+    // (CtorWrapNew is wrapobj.rs label_new_text's: R6 WON GUI round 41)
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -258,35 +210,19 @@ Label::~Label() { ee_won_label_free(this->mRust); }
 
 extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 static Component* Comp(intptr_t a) { return (Component*)a; }
-static Button* Btn(intptr_t a) { return (Button*)a; }
 
 // a container's children (`a` a child `Component*`), the same for the splitter and the scroll bar
 static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (op) {
     // (the children's references, size and parent are gamewin.rs common_op's in the game: R6 WON GUI round 38)
-    case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
-    case Op::AddChild: t->AddChild(Comp(a)); return 0;
     case Op::NewComponent: return (intptr_t)new Component;
     case Op::ChildLayoutDrag: ((Container*)Comp(a))->Fn2F6140(Comp(b), 3, (Container*)Comp(a), 0, 0, 0, 0, 0); return 0;
-    case Op::ChildAddEx: ((Container*)Comp(a))->AddChildEx(Comp(b), 0); return 0;
-    case Op::AsHeader: return (intptr_t)dynamic_cast<MultiListHeader*>((Container*)a);
-    case Op::HeaderDrawsArrow: return ((MultiListHeader*)a)->DrawSortArrow() ? 1 : 0;
-    case Op::HeaderSortTypeOf: return ((MultiListHeader*)a)->GetSortType(((MultiListHeader*)a)->GetColumnIndex(Comp(b)));
     default: return ComponentOp(t, op, a, b);
     }
 }
 
 namespace WONAPI {
-intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
-{
-    switch (op) {
-    case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
-    case Op::ButtonIsChecked: return Btn(a)->IsChecked() ? 1 : 0;
-    default: return ContainerOp(t, op, a, b, c);
-    }
-}
-
 // Creates an empty clipping splitter (the Rust splitter holds the split at 50% / 50% and no minimum pane sizes)
 Splitter::Splitter()
 {
@@ -299,7 +235,7 @@ Splitter::~Splitter() { ee_won_split_free(this->mRust); }
 
 extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    return SplitterHostCall((Splitter*)inComp, op, a, b, c);
+    return ContainerOp((Splitter*)inComp, op, a, b, c); // (the buttons' calls are gamefwd.rs's: R6 WON GUI round 41)
 }
 
 // ---- the scroll bar
@@ -309,7 +245,6 @@ extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t
     Scrollbar* t = (Scrollbar*)inComp;
     switch (op) {
     case Op::NewButton: return (intptr_t)static_cast<Component*>(new Button);
-    case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -332,14 +267,9 @@ extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, int
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::VirtSizeChanged: t->Virtual08(); return 0;
     case Op::VirtNotifyScrollChange: t->NotifyScrollChange(a != 0); return 0;
-    case Op::HasFocusChild: return t->GetFocusChild() != NULL ? 1 : 0;
-    case Op::BarOf: return (intptr_t)static_cast<Scrollbar*>(Comp(a))->mRust;
     case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
-    case Op::AreaGet: return area->GetField((Fd)b);
-    case Op::AreaSet: area->SetField((Fd)b, (int)c); return 0;
     case Op::AreaAdjustPosition: area->AdjustPosition(b != 0); return 0;
     case Op::AreaMouseWheel: return area->MouseWheel((int)b) ? 1 : 0;
-    case Op::AreaSetScroller: area->SetScroller(t); return 0;
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -364,19 +294,13 @@ extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::VirtSizeChanged: t->Virtual08(); return 0;
     case Op::VirtScrollSizeChanged: t->ScrollSizeChanged(); return 0;
     case Op::VirtScrollPaint: t->ScrollPaint(*(Graphics*)a); return 0;
-    case Op::GetViewport: return (intptr_t)static_cast<Component*>(t->GetViewport());
     case Op::PaneBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, t->Width(), t->Height(), (int)b, (int)c); return 0;
     case Op::ScrollerNotify: static_cast<Scroller*>(Comp(a))->NotifyScrollChange(b != 0); return 0;
-    case Op::ScrollerSetArea: static_cast<Scroller*>(Comp(a))->SetScrollArea(t); return 0;
     case Op::ScrollerAsBars:
         return (intptr_t)static_cast<Component*>(dynamic_cast<ScrollbarScroller*>(static_cast<Scroller*>(Comp(a))));
     case Op::NewScrollbarScroller: return (intptr_t)static_cast<Component*>(new ScrollbarScroller);
-    case Op::ScrollerSetScrollbar:
-        static_cast<ScrollbarScroller*>(Comp(a))->SetScrollbar(static_cast<Scrollbar*>(Comp(b)));
-        return 0;
     // the constructor's statements (guictor.rs)
     case Op::CtorViewportNew: t->mViewport=new ScrollAreaViewport(t); return 0;
-    case Op::CtorAddViewport: t->AddChild(t->mViewport.get()); return 0;
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -407,19 +331,10 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::VirtSort: return t->Sort() ? 1 : 0;
     case Op::VirtNotifyMouseItemGone: t->NotifyMouseItemGone(); return 0;
     case Op::VirtListSelChangedHook: t->ListSelChangedHook(); return 0;
-    case Op::FocusChildLost: t->DropFocusChild(); return 0;
-    case Op::RootKeyMod: return t->GetRoot()->GetKeyMod();
     case Op::SetCursorDefault: t->SetCursor(t->GetDefaultCursor()); return 0;
-    case Op::GetViewport: return (intptr_t)t->GetViewport();
     // PointerOutside, TipShow, TipHide, QueueSubMenu and QueueMouseUp are guisplit.rs's over these (R6 WON round 33)
-    case Op::WinMouseX: return ((Window*)a)->GetMouseX();
-    case Op::WinMouseY: return ((Window*)a)->GetMouseY();
     case Op::TipNew: t->mItemToolTip = new ListAreaToolTip(t); return 0;
     case Op::TipDo: t->mItemToolTip->DoTip(Item(a)); return 0;
-    case Op::ParamsMake: sHostParams = PopupParams((PopupMenu*)a, (int)b, t, (int)c, (int)d); return 0;
-    case Op::ParamsAvoid: sHostParams.mAvoidRect = WONRectangle(((const EeWonRect4*)a)->x, ((const EeWonRect4*)a)->y, ((const EeWonRect4*)a)->w, ((const EeWonRect4*)a)->h); return 0;
-    case Op::QueueDoPopup: t->GetRoot()->QueueEvent(new DoPopupEvent(sHostParams)); return 0;
-    case Op::WinQueueMouseUp: ((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)b, (int)c, ((Window*)a)->GetKeyMod(), (int)d)); return 0;
     case Op::DeliverItemClicked: {
         const EeWonItemClick* k = (const EeWonItemClick*)b;
         t->DeliverEvent(ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),
@@ -447,39 +362,15 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::ItemCompare: return Item(a)->Compare(Item(b), t);
     case Op::CallSortFunc: return ((ListArea::SortFunc)a)(t, Item(b), Item(c));
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
-    case Op::SelBackground: return (intptr_t)t->GetSelColor().GetBackgroundColor(*(Graphics*)a);
     case Op::NewViewport: return (intptr_t)new ScrollAreaViewport(t);
-    case Op::ViewportAddChild: t->GetViewport()->AddChild((ScrollAreaViewport*)a); return 0;
-    case Op::HeaderNotify: ((MultiListHeader*)a)->NotifyColumnChange(); return 0;
-    case Op::HeaderSetSortColumn: ((MultiListHeader*)a)->SetSortColumn((int)b, (ListSortType)c); return 0;
-    case Op::RowCell: return (intptr_t)((MultiListItem*)a)->GetItem((int)b);
-    case Op::RowSetCell: ((MultiListItem*)a)->SetItem(Item(b), (int)c); return 0;
     // the tree list and its rows (treeobj.rs)
-    case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::NewTreeItemRaw: return (intptr_t)new TreeItem;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
-    case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
     case Op::DeliverTreeOpened: t->DeliverEvent(TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
     // the popup menu (menuobj.rs)
-    case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
-    case Op::MenuSelItem: return (intptr_t)((PopupMenu*)a)->GetSelItem();
-    case Op::MenuSetSelAt: ((PopupMenu*)a)->SetSelItem((int)b); return 0;
     case Op::MenuItemOf: return (intptr_t)dynamic_cast<MenuItem*>(Item(a));
-    case Op::MenuItemSub: return (intptr_t)((MenuItem*)a)->mSubMenu.get();
-    case Op::MenuItemDisabled: return ((MenuItem*)a)->mDisabled ? 1 : 0;
-    case Op::MenuReset: ((PopupMenu*)a)->Reset(); return 0;
-    case Op::MenuTryKeyDown: return ((PopupMenu*)a)->TryKeyDown((int)b) ? 1 : 0;
     // the constructors' statements (guictor.rs: the list area's, the multi-column list's, the menu's)
-    case Op::CtorTextColor: t->mTextColor=(int)0x8000000e; return 0;
-    case Op::CtorFontNamed: t->mFont=t->GetNamedFont("ListArea"); return 0;
-    case Op::CtorPads: t->SetPads((int)a,(int)a,(int)a,(int)a); return 0;
-    case Op::CtorNoSortFunc: t->mSortFunc=NULL; return 0;
-    case Op::CtorMultiColumns: static_cast<MultiListArea*>(t)->SetNumColumns((int)a); return 0;
-    case Op::CtorMenuFont: static_cast<PopupMenu*>(t)->SetFont(t->GetNamedFont("Menu")); return 0;
-    case Op::CtorMenuListFlags: static_cast<PopupMenu*>(t)->SetListFlags(0x806,true); return 0;
     case Op::CtorMenuBackground: static_cast<PopupMenu*>(t)->SetBackground(WONShellNew(EeWonShellKind::MsPopup)); return 0;
-    case Op::CtorMenuTextColor: t->mTextColor=0x8000000c; return 0;
-    case Op::CtorMenuBorderPadding: static_cast<PopupMenu*>(t)->SetBorderPadding(4,4,4,4); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -535,11 +426,8 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
 {
     MultiListHeader* t = (MultiListHeader*)inComp;
     switch (op) {
-    case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
     case Op::RemoveChild: t->RemoveChild(Comp(a)); return 0;
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
-    case Op::CursorIs: return t->GetCurrentCursor() == CursorOf(a) ? 1 : 0;
-    case Op::CtorHeaderArea: t->SetMultiListArea((MultiListArea*)a); return 0; // the constructor's (guictor.rs)
     default: return ContainerOp(t, op, a, b, c);
     }
 }
@@ -578,11 +466,6 @@ MultiListHeader::MultiListHeader(MultiListArea* area)
 }
 // Destroys the header: the Rust header goes (its buttons are the container's children)
 MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
-// Returns the sort arrow a header button should draw, found through its enclosing header (none without one)
-ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
-{
-    return (ListSortType)ee_won_gui_sort_type_for_button(ee_won_guicpp_mhead_call, button);
-}
 }
 
 // ---- the tree list and its rows (treeobj.rs)
@@ -591,7 +474,6 @@ ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
 extern "C" intptr_t ee_won_guicpp_tnode_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
     switch (op) {
-    case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
     case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
     default: return 0;
@@ -626,27 +508,6 @@ PopupMenu::PopupMenu()
 }
 // Destroys the menu: the Rust menu gives the submenu's item and the submenu back
 PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
-}
-
-// WrappedText (R6 WON round 38): the Rust object (wrapobj.rs) wraps the text it is handed with the font's measure
-// (the measure is wrapobj.rs's too, over platfont.rs: R6 WON GUI round 36)
-namespace WONAPI {
-WrappedText::WrappedText() : mObj(ee_won_wrap_new()) {}
-WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won_wrap_new()) {}
-// Recomputes the line breaks and the text's width and height for the font and maximum width
-void WrappedText::CalcWrap()
-{
-    ee_won_wrap_calc_font(this->mObj, this->mFont.get() != NULL ? this->mFont->mRust : NULL, this->mText.mData->mText, this->mText.length());
-}
-// Draws each wrapped line (centred if set) from the given top-left point (wrapobj.rs over guidraw.rs wrapped_text)
-void WrappedText::Paint(Graphics& g, int x, int y)
-{
-    if (this->mFont.get() == NULL)
-        return;
-    WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) {
-        return ee_won_wrap_paint_font(this->mObj, this->mFont->mRust, this->mText.mData->mText, this->mText.length(), x, y, o, n); }),
-        WONDrawSlots(this->mFont.get(), &this->mText));
-}
 }
 
 // The image and rectangle components' paints (R6 WON round 37 draw plans; ImageComponent.cpp folded in, round 38)
@@ -687,19 +548,36 @@ void RectangleComponent3D::Paint(Graphics &g)
     ee_won_gui_split_register(EeWonGuiSplitHost::Label, ee_won_guicpp_label_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::Split, ee_won_guicpp_split_call),
     ee_won_gui_split_register(EeWonGuiSplitHost::List, ee_won_guicpp_list_call), true);
+// where wrapobj.rs reads its holders' wrapped texts (R6 WON GUI round 40; the text a Rust object since round 41)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonWrapAt kWrapAt = {offsetof(Label, mWrappedText), offsetof(MSButtonBase, mText), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+[[maybe_unused]] static const bool sWrapAt = (ee_won_wrap_register(&kWrapAt), true);
+// where the Rust area reads a segment's members (gamewin.rs text_host_op, R6 WON GUI round 40)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonSegAt kSegAt = {offsetof(TextSegment, mText), offsetof(TextSegment, mColor), offsetof(TextSegment, mFont),
+    offsetof(TextSegment, mLineBreak), offsetof(TextLink, mPressed), offsetof(TextLink, mDownColor),
+    offsetof(TextLink, mNormalColor), offsetof(Font, mRust)};
+#pragma clang diagnostic pop
+[[maybe_unused]] static const bool sSegAt = (ee_won_text_seg_register(&kSegAt), true);
+// where gamefwd.rs writes the list's sort function and the text area's fonts and colours and reads a scroll area's
+// viewport (R6 WON GUI round 41)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static const EeWonAreaAt kAreaAt = {offsetof(ListArea, mSortFunc), offsetof(TextArea, mFont), offsetof(TextArea, mLinkFont),
+    offsetof(TextArea, mTextColor), offsetof(TextArea, mLinkColor), offsetof(TextArea, mSelColor), offsetof(ScrollArea, mViewport), offsetof(Label, mBackground),
+    offsetof(InputBox, mDisabledBackground), offsetof(TabCtrl, mContainerLayout)};
+#pragma clang diagnostic pop
+[[maybe_unused]] static const bool sAreaAt = (ee_won_area_members_register(&kAreaAt), true);
 
 // ---- TextFormat.cpp until R6 WON GUI round 39
 // Formatted text for text areas: expands <n>, <cN>, <fN>, <sN> and <lN> commands
 // The format's parse and its run are ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops and
 // ee_won_gui_text_append_formatted: the pending text, the colour and the font; R6 WON GUI round 36); this unit is
-// the area's four calls it makes.
+// the call (its four calls on the area are guitext.rs's game sink: R6 WON GUI round 41).
 namespace WONAPI {
-static void FmtAddText(void* area,const void* units,size_t len,int color,void* font,bool lineBreak)
-{ ((TextArea*)area)->AddSegment(GUIString(std::wstring((const wchar_t*)units,len)),color,(Font*)font,lineBreak); }
-static void FmtLineBreak(void* area) { ((TextArea*)area)->LineBreak(0); }
-static void FmtAddString(void* area,const void* string,int color,void* font) { ((TextArea*)area)->AddSegment(*(const GUIString*)string,color,(Font*)font,false); }
-static void FmtAddSegment(void* area,void* segment) { ((TextArea*)area)->AddSegment((TextSegmentBase*)segment); }
-static const EeWonFormatSink kFormatSink = { FmtAddText, FmtLineBreak, FmtAddString, FmtAddSegment };
 // Appends format text to a text area, expanding <n> line breaks, <cN>/<fN> colour and font changes and
 // <sN>/<lN> inserted strings and segments (1-based indices; "<<" is a literal '<')
 void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
@@ -708,37 +586,8 @@ void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
     bool lineBreak)
 {
     EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
-    ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
+    ee_won_gui_text_append_formatted(area,ee_won_gui_text_game_sink(),format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
 }
-}
-
-// ---- TextLinkState.cpp until R6 WON GUI round 37
-// Text link segments: construction and pressed state
-namespace WONAPI {
-// Creates an unpressed link that turns red while pressed (emitted at 0x007114f0)
-TextLink::TextLink() : mPressed(false), mDownColor(0xff0000) {}
-// Returns the parameter delivered when the link is activated
-const GUIString& TextLink::GetLinkParam() { return this->mLinkParam; }
-// Marks the link pressed and switches it to its pressed colour, remembering the normal colour
-void TextLink::Pressed()
-{
-    this->mPressed=true;
-    this->mNormalColor=this->mColor;
-    this->mColor=this->mDownColor;
-}
-// Restores the normal colour of a pressed link; returns whether it was pressed
-bool TextLink::Released()
-{
-    if(this->mPressed) {
-        this->mColor=this->mNormalColor;
-        this->mPressed=false;
-        return true;
-    }
-    return false;
-}
-// Returns true: a text link is a link (the linker folds this body into the identical one at
-// 0x006f30d0)
-bool TextLink::IsLink() { return true; }
 }
 
 // ---- BrowserComponent.cpp until R6 WON GUI round 39
@@ -757,31 +606,25 @@ extern "C" intptr_t ee_won_guicpp_browser_call(void* inMe, EeWonBrowserOp op, in
     Scroller* s = (Scroller*)a;
     switch (op) {
     case Bo::NewView: t->mHTMLView = new TextArea; return 0;
-    case Bo::ViewNoScrollOnBottom: t->mHTMLView->SetTextFlags(TextFlag_ScrollOnBottom, false); return 0;
-    case Bo::ScrollerAssign: t->mScroller = s; return 0;
-    case Bo::ScrollerHasView: return s->GetScrollArea() == t->mHTMLView.get() ? 1 : 0;
-    case Bo::ScrollerSetView: s->SetScrollArea(t->mHTMLView.get()); return 0;
     case Bo::SameSize: t->Fn2F6140(s, 3, t, 0, 0, 0, 0, 0); return 0; // CLI_SameSize = 3
-    case Bo::AddChild: t->AddChild(s); return 0;
-    case Bo::HasScroller: return t->mScroller.get() != NULL ? 1 : 0;
     case Bo::NewScrollContainer:
         return (intptr_t)static_cast<Scroller*>(static_cast<ScrollbarScroller*>(WONShellNew(EeWonShellKind::MsScrollContainer, (intptr_t)static_cast<ScrollArea*>(t->mHTMLView.get()))));
-    case Bo::Ref: s->AddRef(); return 0;
-    case Bo::Unref: s->Release(); return 0;
-    case Bo::ScrollbarsConditional: static_cast<ScrollbarScroller*>(s)->SetScrollbarConditions(ScrollbarCondition_Conditional, ScrollbarCondition_Conditional); return 0;
     case Bo::BaseAddedToParent: t->Container::AddedToParent(); return 0;
     case Bo::ViewNoBackground: t->mHTMLView->SetBackground(Background(-1, -1)); return 0;
-    case Bo::ViewGrabBg: t->mHTMLView->SetComponentFlags(ComponentFlag_GrabBG, a != 0); return 0;
-    case Bo::ViewClear: t->mHTMLView->Clear(); return 0;
-    case Bo::ViewAddText: t->mHTMLView->AddFormatedText(GUIString(std::wstring((const wchar_t*)a, (size_t)b)), false); return 0;
-    case Bo::ViewTop: t->mHTMLView->SetOffsets(0, 0); return 0;
-    case Bo::Invalidate: t->Invalidate(); return 0;
+    // (the scroller, the references and Invalidate are browserobj.rs's: R6 WON GUI round 40; the view's and the
+    // scroller's calls, round 41)
+    default: return 0;
     }
     return 0;
 }
 
 namespace WONAPI {
 // Creates the view: an empty, word-wrapped, read-only text area (the Rust record's constructor)
+// where browserobj.rs reads the view (R6 WON GUI round 41)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+[[maybe_unused]] static const bool sViewAt = (ee_won_browser_view_register(offsetof(BrowserComponent, mHTMLView)), true);
+#pragma clang diagnostic pop
 BrowserComponent::BrowserComponent() { this->mRust = ee_won_browser_new(this, ee_won_guicpp_browser_call, sizeof(wchar_t)); }
 BrowserComponent::~BrowserComponent() { ee_won_browser_free(this->mRust); }
 }
@@ -805,39 +648,13 @@ static Component* NewBase(EeWonShellBaseNew k)
     }
 }
 
-// a combo box's part member = c
-static intptr_t ComboPart(ComboBox* cb, intptr_t which, intptr_t c)
-{
-    switch ((EeWonShellComboPart)which) {
-    case EeWonShellComboPart::Button: cb->mButton = static_cast<Button*>((Component*)c); return 0;
-    case EeWonShellComboPart::Edit: cb->mEdit = static_cast<InputBox*>((Component*)c); return 0;
-    case EeWonShellComboPart::ListArea: cb->mListArea = static_cast<ListArea*>((Component*)c); return 0;
-    default: cb->mListBox = static_cast<Scroller*>((Component*)c); return 0;
-    }
-}
-// an image's method (EeWonWbImage; a duplicate's reference goes to the Rust)
-static intptr_t ImageOp(intptr_t which, intptr_t b)
-{
-    Image* i = (Image*)b;
-    switch ((EeWonWbImage)which) {
-    case EeWonWbImage::Width: return i->GetWidth();
-    case EeWonWbImage::Height: return i->GetHeight();
-    case EeWonWbImage::Duplicate: { SmartPtr<Image> d = i->Duplicate(); Image* p = d.get(); if (p) p->AddRef(); return (intptr_t)p; }
-    default: return 0;
-    }
-}
-
 extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHostOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WONShell* s = (WONShell*)inShell;
     Component* t = s ? s->mComp : NULL; // (the skin's calls have no shell: skinobj.rs)
-    ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
-    case H::WrapSetText: static_cast<MSButtonBase*>(t)->mText->SetText(*(const GUIString*)a); return 0;
-    case H::WrapWidth: return static_cast<MSButtonBase*>(t)->mText->GetWidth();
-    case H::WrapWidthOf: return static_cast<MSButtonBase*>((Component*)a)->mText->GetWidth();
-    case H::SetWrap: static_cast<MSButtonBase*>((Component*)a)->SetWrap(b != 0); return 0;
+    // (the MS buttons' wrapped texts are wrapobj.rs's in the game: R6 WON GUI round 40)
     case H::SameSize: {
         SmartPtr<ChildLayoutInstructionBase> l = new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize, NULL, NULL, 0, 0, 0, true, true);
         for (intptr_t x : {a, b, c}) l->AddComponent((Component*)x);
@@ -851,28 +668,14 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         static_cast<Container*>(t)->AddChildLayout(l.get());
         return 0;
     }
-    case H::SortType: return (intptr_t)MultiListHeader::GetSortTypeForButton(t);
     case H::New: return (intptr_t)WONShellNew((EeWonShellKind)a, b, c, d);
     case H::NewBase: return (intptr_t)NewBase((EeWonShellBaseNew)a);
     case H::SelfVirt: t->Virtual08(); return 0;
     case H::SkinCall: return ee_won_guicpp_skin_call(t, EeWonGuiOp::SkinLay, a, b, c, d);
     case H::Layout: { const int* r = (const int*)d; static_cast<Container*>(t)->Fn2F6140((Component*)a, (int)b, (Component*)c, r[0], r[1], r[2], r[3], r[4]); return 0; }
-    case H::TabLayoutPoint: return (intptr_t)static_cast<Component*>(static_cast<TabCtrl*>(t)->mContainerLayout.get());
-    case H::LabelSetText: static_cast<Label*>((Component*)a)->SetText(*(const GUIString*)b); return 0;
-    case H::NamedFont: // the MSButton font on an input box or a list
-        if ((EeWonShellBaseNew)b == EeWonShellBaseNew::InputBox) static_cast<InputBox*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
-        else static_cast<ListArea*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
-        return 0;
-    case H::ComboPart: return ComboPart(cb, a, b);
-    case H::ComboPartOn: return ComboPart(static_cast<ComboBox*>((Component*)a), b, c);
-    case H::ComboGet:
-        switch ((EeWonShellComboPart)a) {
-        case EeWonShellComboPart::Button: return (intptr_t)static_cast<Component*>(cb->mButton.get());
-        case EeWonShellComboPart::Edit: return (intptr_t)static_cast<Component*>(cb->mEdit.get());
-        case EeWonShellComboPart::ListArea: return (intptr_t)static_cast<Component*>(cb->mListArea.get());
-        default: return (intptr_t)static_cast<Component*>(cb->mListBox.get());
-        }
-    case H::Img: return ImageOp(a, b);
+    // (a combo box's parts are comboobj.rs's in place: R6 WON GUI round 41)
+    // (an image's size and duplicate, the named fonts, the WONButtons' calls and a label's text are shell.rs's in the
+    // game: R6 WON GUI round 41)
     case H::DrawImages: {
         WONDrawSlots aSlots;
         for (int i = 0; i < 4; i++) aSlots.mImages[i] = ((Image* const*)c)[i];
@@ -880,20 +683,11 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
         return 0;
     }
-    case H::WonBtn: { const intptr_t* x = (const intptr_t*)c; return ee_won_wonbtn_call(static_cast<WONButton*>((Component*)a)->mWb, (EeWonWbCall)b, x[0], x[1], x[2], x[3]); }
-    case H::WonBtnState: { const intptr_t* x = (const intptr_t*)b; static_cast<WONButton*>((Component*)a)->SetButtonState((int)x[0], (Image*)x[1], (int)x[2], (Font*)x[3], x[4] != 0); return 0; }
-    case H::WonBtnCopy: static_cast<WONButton*>((Component*)a)->CopyAttributes(static_cast<WONButton*>((Component*)b)); return 0;
     case H::BtnCopy: static_cast<Button*>((Component*)a)->CopyAttributes(static_cast<Button*>((Component*)b)); return 0;
     case H::ClickSound: static_cast<Button*>((Component*)a)->SetClickSound((Sound*)b); return 0;
-    case H::TextWidth: return ((WrappedText*)a)->GetWidth();
     case H::VDesiredSize: { int* wh = (int*)b; ((Component*)a)->GetDesiredSize(wh[0], wh[1]); return 0; }
     case H::NewStretchImage: { ImageComponent* i = new ImageComponent; i->mStretch = true; i->SetImage((Image*)a); return (intptr_t)static_cast<Component*>(i); }
     case H::NewMsImage: return (intptr_t)WONNewMsImage((unsigned char)a, (unsigned char)b, (int)c, (int)d);
-    case H::GetNamedFont: {
-        Font* f = WindowManager::GetDefaultWindowManager()->GetNamedFont(std::string((const char*)a));
-        if (f) f->AddRef();
-        return (intptr_t)f;
-    }
     // MSMessageBox::Msg's making of the box and its window and its kind op (shell_msgbox.rs ee_won_msgbox_run; the
     // window's calls and the focus are gamewin.rs msgbox_op's since R6 WON GUI round 38)
     case H::MsgBoxNew: return (intptr_t)WONShellNew(EeWonShellKind::MsMessageBox, a);

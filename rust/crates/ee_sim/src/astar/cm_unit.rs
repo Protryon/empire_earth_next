@@ -318,27 +318,6 @@ pub unsafe extern "C" fn ee_astar_cm_can_get_to(unit: u64, x: c_long, y: c_long)
     unsafe { can_get_to_unit(unit, x, y) }
 }
 
-/// `EEAIContinentManager::AreConnectedForUnit(unit, first, second)`.
-///
-/// # Safety
-/// `unit` 0 or a live unit; the continents live areas or 0.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_connected_for_unit(unit: u64, first: u64, second: u64) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { connected_for_unit(unit, first, second) }
-}
-
-/// `EEComplexUnit::GetFootprintContinent(kind)`.
-///
-/// # Safety
-/// `unit` a live complex unit.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_footprint_continent(unit: u64, kind: c_long) -> u16 {
-    footprint_region(unit, kind)
-}
-
 #[cfg(test)]
 #[path = "cm_unit_tests.rs"]
 mod tests;

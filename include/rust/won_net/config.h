@@ -6,25 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/ffi_parse.h"
-#include "rust/won_net/file.h"
+#include "rust/won_net/records.h"
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
-
-/// A saved state across the C ABI: the file position, name and line, and the pushback's units.
-struct EeWonConfigState {
-  long pos;
-  const uint8_t *path;
-  size_t path_len;
-  int32_t line;
-  const uint16_t *back;
-  size_t back_len;
-};
-
-/// Receives a saved state; valid only during the call.
-using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
 
 /// A parser's members the C++ keeps, for one call.
 struct EeWonConfigIo {

@@ -87,8 +87,6 @@ inline EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY
 }
 // Returns the best target for a unit around a tile when the influence table shows enemies within its reach
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale);
-// 0x148992 (cdecl): inPoint in camera space (outScreen) and its depth provisional name and meaning
-void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth);
 // Replaces a queued technology on every living unit of a player whose class makes it
 inline void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology)
 {

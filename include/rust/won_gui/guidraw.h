@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// `Graphics::SetColor(a)` (the colour's bits).
 constexpr static const int32_t EE_WON_DRAW_SET_COLOR = 1;
@@ -68,19 +69,6 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
-
-/// One draw operation (`kind` and up to eight arguments; their meaning is the kind's).
-struct EeWonDrawOp {
-  int32_t kind;
-  int32_t a;
-  int32_t b;
-  int32_t c;
-  int32_t d;
-  int32_t e;
-  int32_t f;
-  int32_t g;
-  int32_t h;
-};
 
 /// The filter's inputs (`StretchImageFilter`'s members and the source image's size).
 struct EeWonStretchFilter {
@@ -174,22 +162,6 @@ struct EeWonSimpleButtonPaint {
   int32_t image_height[4];
   int32_t width;
   int32_t height;
-};
-
-/// One line break of a wrapped text (`WrappedText::BreakInfo`).
-struct EeWonLineBreak {
-  uint16_t break_pos;
-  uint16_t next_start;
-  uint16_t width;
-};
-
-/// Text measures the C++ answers (the original's font calls at the points the plan reaches them):
-/// `string_width(ctx, offset, length)` is `Font::GetStringWidth(text, offset, length)`, `char_width(ctx, index)`
-/// is `Font::GetCharacterWidth(text[index])`, or of 'M' for a negative index.
-struct EeWonTextMeasure {
-  void *ctx;
-  int32_t (*string_width)(void*, int32_t, int32_t);
-  int32_t (*char_width)(void*, int32_t);
 };
 
 /// A row's or line's place, as the list callback answers it (`top`, `height`; a text line's `x` too).

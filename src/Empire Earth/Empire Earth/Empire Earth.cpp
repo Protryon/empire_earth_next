@@ -9,6 +9,7 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 #include "platform/PlatSim.h"      // gPlatSimMode (the POSIX main)
+#include "rust/game/sim_driver.h"
 // TEST ONLY: the UI fixture (EETestFixture.cpp registers its configure step here, at static initialization: this unit
 // names no symbol of the test drivers, so they stay out of its dependencies) and the headless simulation's driver
 // (ee_game fixture and sim_driver, called directly)
@@ -43,7 +44,7 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/TMTimer.h"
+#include "rust/base/time.h"
 #include "lle/FSChunk.h"          // FSPersistentList
 #include "ee/EEMap.h"
 #include "ee/EEScenarioManager.h"
@@ -215,15 +216,6 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 #include <typeinfo>
 #include "ee/EEUnit.h"
 
-// Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
-// Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
-// original game's loose data (tools/open_data.py). The original searched four places: this install's Data\data.ssa
-// and Data\, then the original Empire Earth's (its install path from the registry); the original game is no longer
-// needed. A Data\data.ssa is still mounted when present (an install copy), behind the folder as before.
-void EEShowSinglePlayerScreen()
-{
-    ee_gamecpp_startup_data_paths();
-}
 
 // Creates the game state, empty
 EEGameState::EEGameState()
@@ -247,11 +239,6 @@ void EESetGameViewRectangle(const GERectangle& inRectangle)
     ee_gamecpp_startup_game_view(reinterpret_cast<const EeGeRectangle*>(&inRectangle));
 }
 
-// Points the texture, model and sound managers at the data search path
-void EESetDataPaths()
-{
-    ee_gamecpp_startup_set_data_paths();
-}
 
 #ifdef _WIN32
 static HANDLE sInstanceMutex;
@@ -411,6 +398,13 @@ void EEReportLeakingUnits();
 // ------------------------------------------------------------------------- the start-up's C++ (gamecpp startup.rs)
 
 #include <utility>
+#include "rust/audio/sound.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/physics.h"
+#include "rust/game/preload.h"
+#include "rust/game/rts.h"
+#include "rust/game/screens.h"
+#include "rust/ui/bgtableobj.h"
 
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
@@ -716,9 +710,9 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::GfxDelete: delete std::exchange(gGraphics, nullptr);
         break;
-    case O::GfxPostMessage50AAndWait: gGraphics->PostMessage50AAndWait();
+    case O::GfxPostMessage50AAndWait: ee_gamecpp_gfx_post_50a_and_wait(gGraphics);
         break;
-    case O::GfxSetSecondarySurface: gGraphics->SetSurface(gRasterizer->GetSecondarySurface(SCREEN_ID));
+    case O::GfxSetSecondarySurface: ee_rts_graphics_set_surface(gGraphics, gRasterizer->GetSecondarySurface(SCREEN_ID));
         break;
     case O::NewDataPreLoading: gDataPreLoading = new EEDataPreLoading(0);
         break;
@@ -726,16 +720,16 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PreloadDelete: delete std::exchange(gDataPreLoading, nullptr);
         break;
-    case O::PreloadWaitForQueue: gDataPreLoading->WaitForMessageQueue();
+    case O::PreloadWaitForQueue: (long)ee_preload_wait_for_queue(gDataPreLoading);
         break;
-    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, (TMTimer*)p);
+    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, (EeTimeTimer*)p);
         break;
     case O::PhysShutdown: ee_gamecpp_startup_quit_thread(gPhysics->mThread, gPhysics->mThreadDone);
         break;
     case O::PhysDelete: delete std::exchange(gPhysics, nullptr);
         break;
     case O::PhysTimerRunning: return gPhysics->mTimerRunning;
-    case O::PhysPostInit: gPhysics->PostInit();
+    case O::PhysPostInit: ee_physics_post(gPhysics, 0x509);
         break;
     case O::CommDelete: delete gCommunications;
         break;
@@ -760,8 +754,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::IsKeyboardSuspend: gISKeyboard->Suspend();
         break;
     // the sound
-    case O::MixerGet: return SEMixer::GetMixer(0, gConductor);
-    case O::MixerUse: return SEMixer::UseMixer(gConductor);
+    case O::MixerGet: return (long)ee_sound_mixer_get((uint32_t)0, reinterpret_cast<EeSoundMixer**>(&gConductor));
+    case O::MixerUse: return (long)ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(gConductor));
     case O::ConductorSetChannelGroups: return gConductor->GetConductor().SetChannelGroupCount((unsigned long)a[0]);
     case O::ConductorSetState: return gConductor->GetConductor().SetConductorState((long)a[0]);
     case O::ConductorSetReverb: gConductor->GetConductor().SetReverb((long)a[0]);
@@ -810,7 +804,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::AmbientClearSounds: gAmbientSoundManager.ClearSounds();
         break;
     // the database
-    case O::LoadRules: EELoadRules(gDataPath);
+    case O::LoadRules: ee_gamecpp_db_load_rules(gDataPath);
         break;
     case O::TerrainColorsLoad: return EETerrainColorTable::Load();
     case O::DbLoadStartingResources: return EEStartingResources::Load(SPEC);
@@ -832,14 +826,14 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DbLoadCivPowers: return gCivPowersManager.Load(SPEC);
     case O::DbLoadCivilization: return gCivilizationManager.Load(SPEC);
     case O::DbLoadWeaponToHit: return EEToHitTable::Load(SPEC);
-    case O::DbLoadCalamity: return EECalamityManager::GetInstance()->LoadCalamityClasses(SPEC);
+    case O::DbLoadCalamity: return ee_gamecpp_calamity_load_classes(EECalamityManager::GetInstance(), SPEC);
     case O::DbLoadUnitSet: return gUnitSetManager.Load(SPEC);
     case O::DbLoadAreaEffect: return gAEManager.Load(SPEC);
     case O::DbLoadUpgrade: return EEUCUpgradeTable::Load(SPEC);
     case O::DbLoadCPBehavior: return EECPBehavior::Load(SPEC);
     case O::DbLoadGameVariant: return EEGameVariant::Load(SPEC);
-    case O::DbLoadPremadeCivs: return gCivilizationManager.LoadPremadeCivilizations(SPEC);
-    case O::UiInitialize: return UIInitialize();
+    case O::DbLoadPremadeCivs: return ee_screens_civm_load((uintptr_t)static_cast<FSFile*>(SPEC), 1);
+    case O::UiInitialize: return ee_ui_initialize();
     case O::GfxEffectsSortMedia: EEGraphicEffect::SortMediaByKind();
         break;
     case O::TileSetUnitListPool: EETile::SetUnitListPoolSize((unsigned long)a[0], (unsigned long)a[1]);
@@ -860,7 +854,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::AnimalsUnload: EEAnimal::Unload();
         break;
-    case O::CalamityClassesDestroy: EECalamityManager::GetInstance()->DestroyCalamityClasses(a[0] != 0);
+    case O::CalamityClassesDestroy: ee_gamecpp_calamity_destroy_classes(EECalamityManager::GetInstance());
         break;
     case O::DatabaseObjectsClear: gDatabaseObjects.Clear();
         break;
@@ -899,9 +893,9 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::NodePoolDumpStats: UList<EEComplexUnit*>::sNodePool.DumpStats(false);
         break;
     // the game objects
-    case O::LobbyOptionsSetDefaults: gWorld.mLobbyOptions.SetDefaults();
+    case O::LobbyOptionsSetDefaults: ee_gamecpp_options_set_defaults(&gWorld.mLobbyOptions);
         break;
-    case O::WorldOptionsSetDefaults: gWorld.mGameOptions.SetDefaults();
+    case O::WorldOptionsSetDefaults: ee_gamecpp_options_set_defaults(&gWorld.mGameOptions);
         break;
     case O::InitPhysicsModels: EEInitPhysicsModels();
         break;
@@ -938,8 +932,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DeleteCheatCodes: delete std::exchange(gCheatCodes, nullptr);
         break;
-    case O::NewGameTimer: return P64(new TMTimer(0, 0, true));
-    case O::DeleteGameTimer: delete (TMTimer*)p;
+    case O::NewGameTimer: return P64(ee_time_timer_new(0, 0, true));
+    case O::DeleteGameTimer: ee_time_timer_free((EeTimeTimer*)p);
         break;
     case O::ContinentsShutdown: EEAIContinentManager::Shutdown();
         break;

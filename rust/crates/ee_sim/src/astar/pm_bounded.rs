@@ -527,16 +527,6 @@ pub fn find_bounded_path(
     (reached, out)
 }
 
-/// Appends `count` points to a Rust point list (a host operation's list in `h1`).
-///
-/// # Safety
-/// `list` a live `Vec<EePathPoint>` from this module, `points` readable for `count` points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_path_points_append(list: *mut std::ffi::c_void, points: *const EePathPoint, count: u32) {
-    let v = &mut *(list as *mut Vec<EePathPoint>);
-    v.extend_from_slice(std::slice::from_raw_parts(points, count as usize));
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

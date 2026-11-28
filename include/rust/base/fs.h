@@ -6,11 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/records.h"
 
 /// `FSArchive`'s tables.
 struct EeFsArchive;
-
-struct EeFsMemFile;
 
 /// The search path.
 struct EeFsPath;
@@ -110,19 +109,6 @@ struct EeFsCppCalls {
   long (*tag)(void *p);
   /// `delete p`.
   void (*delete_)(void *p);
-};
-
-/// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
-/// `data` is the payload; the C++ destructor frees it through `ee_fs_chunk_free`.
-struct EeFsChunk {
-  EeFsMemFile *data;
-  int32_t tag;
-  uint32_t chunk_size;
-  uint32_t major;
-  uint32_t minor;
-  bool data_loaded;
-  bool header_loaded;
-  bool decompressed;
 };
 
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
@@ -373,12 +359,6 @@ int32_t ee_fs_mem_compact(EeFsMemFile *file);
 /// `file` is live, `out_length` valid for a write.
 int32_t ee_fs_mem_compress(EeFsMemFile *file, uint32_t level, uint32_t *out_length);
 
-/// `Decompress`.
-///
-/// # Safety
-/// `file` is live, `out_length` valid for a write.
-int32_t ee_fs_mem_decompress(EeFsMemFile *file, uint32_t *out_length);
-
 /// `Delete`.
 ///
 /// # Safety
@@ -454,12 +434,6 @@ int32_t ee_fs_mem_write(EeFsMemFile *file,
 /// # Safety
 /// `file` is live.
 int32_t ee_fs_mem_set_position(EeFsMemFile *file, int64_t offset, uint32_t origin);
-
-/// Whether the file is open (`mIsOpen`, read by the facade).
-///
-/// # Safety
-/// `file` is live.
-bool ee_fs_mem_is_open(const EeFsMemFile *file);
 
 /// Sets the open flag (`FOpen`, which owns the temporary file, drives it).
 ///
@@ -655,17 +629,6 @@ void ee_fs_archive_list(const EeFsArchive *archive,
                         const char *pattern,
                         EeFsTextSink sink,
                         void *context);
-
-/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
-/// [`ee_fs_archive_list`]; always `kErrorOK`.
-///
-/// # Safety
-/// As [`ee_fs_archive_list`]; `sink` takes a null text.
-int32_t ee_fs_archive_list_files(const EeFsArchive *archive,
-                                 const char *pattern,
-                                 bool clear,
-                                 EeFsTextSink sink,
-                                 void *context);
 
 /// Visits the FAT in order (the `Create` check loop, `ExtractAll`).
 ///

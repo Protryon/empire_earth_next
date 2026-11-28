@@ -72,8 +72,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
                        # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
                        "Empire Earth/Communications/EEMRecord.cpp",
-                       # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
-                       "Empire Earth/Units/EEUnitStore.cpp",
                        # the world's layout for Rust's views (ee/EEWorldLayout.h; ee_sim world layout.rs)
                        "Empire Earth/Units/EEWorldLayout.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
@@ -81,22 +79,16 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)
                        "Empire Earth/Units/EEUnitUpdate.cpp",
                        # the unit classes' kinds (the EEUC* classes until R5b.4 round 32)
-                       "Empire Earth/Units/EEUnitClassKinds.cpp",
                        "Empire Earth/Units/EEUnitClassAir.cpp",
                        "Empire Earth/Units/EEUnitClassBuildings.cpp",
                        "Empire Earth/Units/EEUnitClassTransports.cpp",
                        "Empire Earth/Units/EEUnitClassShots.cpp",
                        "Empire Earth/Units/EEUnitClassPeople.cpp",
-                       "Empire Earth/Units/EEUnitClassGround.cpp",
                        # the goals whose class moved whole to Rust: EEUGPatrol's range 0x227de8..0x2283bc,
                        # EEUGCastCalamity's 0x220986..0x2213dd, EEUGExplore's 0x2213dd..0x221d98,
                        # EEUGUnloadTransport's 0x2283bc..0x228c4c, the load goals' 0x22585a..0x227621
                        # (ee/EEUGRust.h; ee_units rust_goal.rs)
                        "Empire Earth/Units/EEUGRust.cpp",
-                       # the combat lane's goals on EEUGRust: EEUGAttackGround's and EEUGAttackUnit's ranges
-                       # 0x21ce6c..0x21e0c1, EEUGHealUnit's 0x22528d..0x22585a (ee_combat goal_objects.rs,
-                       # goal_attack.rs, goal_heal.rs)
-                       "Empire Earth/Units/EEUGRustCombat.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)
                        "Empire Earth/Units/EECombatGoals.cpp",

@@ -9,9 +9,10 @@
 #include <map>
 #include <stdint.h>
 #include <vector>
-#include "ee/EEAIListView.h"
+#include "rust/sim/records.h"
 #include "rust/sim/astar.h"         // EeAStarSubSectorRecord
 #include "ee/EECPASGFlags.h"
+#include "lle/U2DSparseArray.h"
 
 class EEAIPathSector;
 class EEComplexUnit;

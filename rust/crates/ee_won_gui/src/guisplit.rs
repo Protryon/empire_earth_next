@@ -74,8 +74,48 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
                 return r;
             }
         }
+        if which == EeWonGuiSplitHost::Label {
+            // (the wrapped text's methods: wrapobj.rs, R6 WON GUI round 40)
+            if let Some(r) = crate::wrapobj::wrap_host_op(crate::wrapobj::label_text(comp as isize), op, a) {
+                return r;
+            }
+            // the constructor's `mWrappedText->SetFont(GetNamedFont("Label"))` (R6 WON GUI round 41)
+            if op == Op::CtorFontNamed && crate::compobj::is_game() {
+                let w = crate::wrapobj::label_text(comp as isize);
+                if let Some(r) = crate::gamefwd::named_font("Label")
+                    .and_then(|f| crate::wrapobj::game_wrap_op(w?, crate::guihost::EeWonWbText::SetFont, f))
+                {
+                    return r;
+                }
+            }
+            if op == Op::CtorWrapNew {
+                if let Some(r) = crate::wrapobj::label_new_text(comp as isize) {
+                    return r;
+                }
+            }
+        }
+        if which != EeWonGuiSplitHost::Wm {
+            // (the widgets' own fonts, colours, backgrounds and sort function in place: R6 WON GUI round 41)
+            if let Some(r) = crate::gamefwd::area_op(which, comp as isize, op, a, b, c, d) {
+                return r;
+            }
+        }
+        if which == EeWonGuiSplitHost::Input {
+            // (the box's own members in place: R6 WON GUI round 41)
+            if let Some(r) = crate::inputobj::game_host_op(comp as isize, op, a, b) {
+                return r;
+            }
+        }
+        if which == EeWonGuiSplitHost::Text {
+            // (the segments' members, the link and the copy: R6 WON GUI round 40; the clipboard the C++ host's)
+            // SAFETY: as above
+            let area = |op: Op, a: isize| unsafe { host(comp, op, a, 0, 0, 0) };
+            if let Some(r) = crate::gamewin::text_host_op(op, a, b, c, &area) {
+                return r;
+            }
+        }
         if matches!(which, EeWonGuiSplitHost::List | EeWonGuiSplitHost::Text) {
-            if let Some(r) = crate::gamewin::list_host_op(comp as isize, op, a, b) {
+            if let Some(r) = crate::gamewin::list_host_op(comp as isize, op, a, b, c, d) {
                 return r;
             }
         }
@@ -449,13 +489,19 @@ fn wm_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
             let r = rec_at(b);
             // SAFETY: the live event's record
             let (window, handler) = if r.is_null() { (0, 0) } else { unsafe { ((*r).window, (*r).handler) } };
-            match handler {
+            let r = match handler {
                 x if x == C::HandleMouseEvent as u32 => handle(window, C::HandleMouseEvent, b),
                 x if x == C::HandleKeyEvent as u32 => handle(window, C::HandleKeyEvent, b),
                 x if x == C::HandleInputEvent as u32 => handle(window, C::HandleInputEvent, b),
                 crate::wmobj::EE_WON_WM_HANDLER_COMPONENT => crate::gamewin::deliver_component_event(b),
+                crate::wmobj::EE_WON_WM_HANDLER_POPUP => crate::gamewin::deliver_popup(b),
+                // SAFETY: a user event's handler is only in a user event's record (wmobj.rs)
+                crate::wmobj::EE_WON_WM_HANDLER_USER => unsafe { crate::wmobj::deliver_user(b) },
                 _ => None,
-            }
+            };
+            // (a Rust-made event, only the game's, has no C++ Deliver: one whose window went is dropped)
+            // SAFETY: the game's live event
+            r.or_else(|| (crate::compobj::is_game() && unsafe { crate::wmobj::is_rust_event(b) }).then_some(0))
         }
         Op::WmWin if a == EeWonWmWin::HandleMouse as isize => handle(b, C::HandleMouseEvent, c),
         Op::WmWin if a == EeWonWmWin::HandleKey as isize => handle(b, C::HandleKeyEvent, c),

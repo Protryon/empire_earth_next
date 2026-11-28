@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `GetSession()` (an `AuthSession*`, borrowed; NULL: none)
 constexpr static const int32_t EE_WON_PEEROP_SESSION = 1;

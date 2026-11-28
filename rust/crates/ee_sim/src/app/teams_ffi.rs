@@ -62,18 +62,6 @@ unsafe fn calls(w: *const EeAppTeamsWorld) -> (impl Fn(u32) -> bool, impl Fn(u32
     )
 }
 
-/// `EEWorld::AddTeam` of `n` players.
-///
-/// # Safety
-/// `players` holds `n` ids; `w` as [`calls`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_teams_add(players: *const u32, n: usize, w: *const EeAppTeamsWorld) {
-    // SAFETY: the caller's contract
-    let (players, (present, _, enemy)) =
-        unsafe { (if n == 0 { &[][..] } else { std::slice::from_raw_parts(players, n) }, calls(w)) };
-    with_teams(|t| teams::add_team(t, players, &present, &enemy));
-}
-
 /// `EEWorld::AddAlliance`.
 ///
 /// # Safety

@@ -212,16 +212,6 @@ pub unsafe extern "C" fn ee_ui_bgtable_create(file: *mut c_void, host: EeUiHostF
     background_table::create(&mut Tables(Host { obj: file, f: host }))
 }
 
-/// `UIBackgroundTable`'s constructor over its record.
-///
-/// # Safety
-/// `rec` is the C++ entry's base.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_bgtable_init(rec: *mut EeUiBgTableFields) {
-    // SAFETY: the contract
-    unsafe { rec.write(empty()) }
-}
-
 /// `UIBackgroundTable::DeleteAll()`: each entry deleted (`BgtDelete`) in order, the array emptied.
 #[no_mangle]
 pub extern "C" fn ee_ui_bgtable_delete_all(host: EeUiHostFn) {

@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/ctobj.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls of the C++ `TabBar` shell.
 enum class EeWonTabBarCall : uint32_t {

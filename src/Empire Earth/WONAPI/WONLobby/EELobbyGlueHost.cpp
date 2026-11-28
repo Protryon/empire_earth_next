@@ -84,13 +84,15 @@
 #include "ee/RTSGraphics.h"
 #include "platform/PlatWindow.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/eecolor.h"
 #include "rust/won_lobby/eeglue.h"
 #include "rust/won_lobby/rows.h"
 #include "rust/won_lobby/eesound.h"
+#include <stdlib.h>
+#include "rust/won_lobby/eeresource.h"
+#include "ee/wonapi/WONLobbyGuard.h"
 
 using namespace WONAPI;
 
@@ -177,7 +179,8 @@ static intptr_t ColorHost(void*, EeWonEeColorOp inOp, intptr_t a, intptr_t b, in
 
 // ---- the classes the lobby's factories make
 
-// ---- the lobby's sounds (EELobbySound.cpp: ee_won eesound.rs objects; each op one call on the game's managers)
+// ---- the lobby's sounds (EELobbySound.cpp: ee_won_gui soundobj.rs objects with ee_won_lobby eesound.rs hooks; each op
+// one call on the game's managers)
 
 static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
 {
@@ -195,26 +198,7 @@ static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
     return 0;
 }
 
-EELobbyMusic::EELobbyMusic(const SoundDescriptor& inDescriptor)
-    : Sound(inDescriptor), mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Music, EELobbySoundHost, 0)) {}
-EELobbyMusic::~EELobbyMusic() { ee_won_eesound_free(this->mRust); }
-void EELobbyMusic::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
-void EELobbyMusic::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
-void EELobbyMusic::ResumeHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Resume, 0); }
-EELobbySound::EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID)
-    : Sound(inDescriptor),
-      mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Effect, EELobbySoundHost, (uint32_t)inSampleID)) {}
-EELobbySound::~EELobbySound() { ee_won_eesound_free(this->mRust); }
-void EELobbySound::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
-void EELobbySound::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
-// Loads a lobby sound file into the engine's sound manager; returns NULL without a sound manager
-SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
-{
-    int64_t aSample = ee_won_eesound_load(EELobbySoundHost, reinterpret_cast<const uint8_t*>(inDescriptor.mPath.c_str()));
-    if (aSample < 0)
-        return NULL;
-    return new EELobbySound(inDescriptor, (unsigned long)aSample);
-}
+[[maybe_unused]] static const bool sEELobbySoundHost = (ee_won_eesound_register(EELobbySoundHost), true);
 
 // Creates the lobby config with the EEFileTransferPort key (default 8889)
 
@@ -246,19 +230,7 @@ template <EeWonLobbyCtlKind K> static Component* EELobbyNewCtrl() { return new L
 static void EELobbyGetComponents(ComponentConfig* inConfig) { Glue(GL::GetComponents, (intptr_t)inConfig); }
 static void EELobbySendConnectStatus(int inConnected) { Glue(GL::SendConnectStatus, inConnected); }
 
-// a lobby text (eeglue.rs's EeWonEeGlueText) as a GUIString
-static GUIString GlueText(intptr_t inKind, intptr_t inValue)
-{
-    char aBuffer[50];
-    switch ((EeWonEeGlueText)inKind) {
-    case EeWonEeGlueText::Resource: return EELobbyResource_GetString((int)inValue);
-    case EeWonEeGlueText::Number: sprintf(aBuffer, "%ld", (long)inValue); return GUIString(aBuffer);
-    case EeWonEeGlueText::MapType: return EELobbyToGUIString(EERMGetGeneratorDisplayName((unsigned long)inValue));
-    case EeWonEeGlueText::Data: return EELobbyStr(inValue);
-    case EeWonEeGlueText::Empty: break;
-    }
-    return gEmptyGUIString;
-}
+// (the lobby's texts, eeglue.rs's EeWonEeGlueText, are gluesplit.rs's but a map type's name: R6 WON GUI round 40)
 
 // a saved game's header, options and file (EELobbyGetSavedGameInfo's and EELobbyLoadSavedGame's locals)
 struct EELobbySavedGame {
@@ -449,18 +421,14 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetColor: g->SetColor((unsigned long)b); return 0;
-    case Op::DrawText: g->DrawString(GlueText(b, c), (int)d, (int)e); return 0;
     case Op::FontHeight: return g->GetFont()->GetHeight();
     case Op::ListFontHeight: return reinterpret_cast<MultiListArea*>(a)->mFont->GetHeight();
-    case Op::TextFind: return GlueText(b, c).findNoCase(*reinterpret_cast<const GUIString*>(d), 0);
-    case Op::TextCompareNoCase: return GlueText(a, b).CompareNoCase(GlueText(c, d));
     // the column's handlers are srvlistctl.rs's calls into this glue (LobbyNetCtrlHost.cpp's EeColumn)
     case Op::SetColumnHandlers: ee_won_lobbyctl_ee_column((int)a); return 0;
-    case Op::AddGameOption: LobbyAddGameOption(a ? "MapType" : "Epoch", GlueText(b, c), true); return 0;
     case Op::NumMapTypes: return (intptr_t)EERMGetNumberOfGenerators();
     case Op::SetProductName: LobbySetProductName(L"EEAOC", NULL); return 0;
     case Op::ComboClear: reinterpret_cast<ComboBox*>(a)->Clear(true); return 0;
-    case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(GlueText((intptr_t)EeWonEeGlueText::MapType, b)); return 0;
+    case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(EELobbyToGUIString(EERMGetGeneratorDisplayName((unsigned long)b))); return 0;
     case Op::LobbyClose: EELobbyClose(); return 0;
     case Op::ResourceDestroy: EELobbyResource_Destroy(); return 0;
     case Op::Config: return (intptr_t)ee_won_lobbyconf_current();
@@ -470,7 +438,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
     case Op::PostSendConnectStatus:
-        reinterpret_cast<WindowManager*>(a)->PostEvent(new UserEvent(EELobbySendConnectStatus, (int)b), true);
+        reinterpret_cast<WindowManager*>(a)->PostEvent(NewUserEvent(EELobbySendConnectStatus, (int)b), true);
         return 0;
     case Op::SaveOpen: return aSave->mSpec.Open(1) == keseOK ? 1 : 0;
     case Op::SaveClose: aSave->mSpec.Close(); return 0;
@@ -534,8 +502,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::RootAddJpg: JPGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
         return 0;
     case Op::RootAddPng: PNGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
-        return 0;
-    case Op::RootSoundDecoder: gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder);
         return 0;
     case Op::SecondarySurface: return (intptr_t)gRasterizer->GetSecondarySurface(gScreenIndex);
     case Op::RootSetSurfaceSize: gEELobbyRootWindow->SetSurfaceSize(kEELobbySurfaceWidth, kEELobbySurfaceHeight);
@@ -732,7 +698,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::GameAddressRef: return (intptr_t)&sEELocalAddress;
     // the statements of the cases gluesplit.rs composes (R6 WON round 32)
-    case Op::TextHeld: return HeldData(GlueText(a, b));
+    case Op::MapTypeTextHeld: return HeldData(EELobbyToGUIString(EERMGetGeneratorDisplayName((unsigned long)a)));
     case Op::GfxTextWidthHeld: return g->GetFont()->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
     case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
     case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
@@ -743,7 +709,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", NewConfigOf<EeWonCfgKind::Dialog>, NewLobbyDialog<EeWonLobbyDlgKind::File>); return 0;
     case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", NewConfigOf<EeWonCfgKind::Dialog>, NewLobbyDialog<EeWonLobbyDlgKind::Connect>); return 0;
     // EELobbyAddResources: the LobbyGlobal section with the lobby music
-    case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2))); return 0;
+    case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", (Sound*)ee_won_eesound_music()); return 0;
     case Op::ResAddLoader: LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents); return 0;
     case Op::ResDone: sEELobbyResources = NULL; return 0;
     case Op::PlayerColorGet: sEELobbyColor = EEGetPlayerColor((long)a); return 0;
@@ -772,8 +738,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::UiLockCopy: gUIManager->LockUIForCopyData(); return 0;
     case Op::WorldWriteLock: gWorld.mLock->WriteLock(); return 0;
     // StringUnits' (gluesplit.rs composes it, R6 WON round 33)
-    case Op::StringLength: return (intptr_t)reinterpret_cast<GUIStringData*>(a)->mLength;
-    case Op::StringUnitAt: return (intptr_t)(uint32_t)reinterpret_cast<GUIStringData*>(a)->mText[b];
     case Op::ActionNew: return (intptr_t) new EEALobbyAction(reinterpret_cast<void (*)()>(a));
     case Op::UiPostAction: gUserInterface->PostAction(reinterpret_cast<EEALobbyAction*>(a)); return 0;
     case Op::ActionDereference: reinterpret_cast<EEALobbyAction*>(a)->Dereference(); return 0;
@@ -849,7 +813,6 @@ void EELobbyInit()
 void EELobbyShutdown() { Glue(GL::Shutdown); }
 unsigned short EELobbyGetFileTransferPort() { return (unsigned short)Glue(GL::FileTransferPort); }
 LobbyRustDialog* EELobbyGetFileDialog() { return reinterpret_cast<LobbyRustDialog*>(Glue(GL::FileDialog)); }
-bool EELobbyRunConnectDialog() { return Glue(GL::RunConnectDialog) != 0; }
 void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected) { Glue(GL::SetSlotConnected, inSlot, inConnected); }
 void EELobbyCancelConnectDialog() { Glue(GL::CancelConnectDialog); }
 void EELobbyPostConnectStatus(bool inConnected) { Glue(GL::PostConnectStatus, inConnected); }
@@ -862,3 +825,54 @@ bool EELobbyLoadSavedGame(const char* inFile) { return Glue(GL::LoadSavedGame, (
 void EELobbyFillMapTypeCombo(ComboBox* inCombo) { Glue(GL::FillMapTypeCombo, (intptr_t)inCombo); }
 void EELobbySetDefaultGameOptions(LobbyGame* inGame) { Glue(GL::SetDefaultGameOptions, (intptr_t)inGame); }
 unsigned long EELobbyGetNumMapTypes() { return EERMGetNumberOfGenerators(); }
+
+// ---- EELobbyResource.cpp until R6 WON GUI round 41 (the EE lobby's text resources)
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyResource.cpp (file name inferred: no __FILE__;
+// it sorts after EELobbyPlayerOptionsCtrl.cpp and before the sound classes). The game lobby's text resources, in the
+// shape of WONAPI's generated resource units: 73 GUIString globals (init chains 0x69a43d..0x69b1ed, definition order
+// = table order), the loader registration, the section loader and the reset: 0x69a43d..0x69ce06 (the
+// GUIString::operator= COMDAT closes it). Every name here is a provisional name. R6 WONLobby round 5: each string's
+// section and key are ee_won's eeresource.rs rows (in this table's order); the loader and the reset run over them.
+// R6 WONLobby round 6: the 73 globals are one array of the rows' strings (row i the original's table entry i); the
+// lobby's code names a string by its global's name through its row (EE_LOBBY_STRING, EELobbyGameCode.h). Their init
+// chains (0x69a43d..0x69b1ed: four SYNTHETIC functions each) went with them. R6 WON GUI round 40: the strings and
+// the reset are eeresource.rs's (the getters inline in EELobbyGameCode.h).
+
+
+
+
+// 0x8d0ec8: the strings by id (EELobbyResource_GetString), the original's 73 globals in their order
+static const size_t kEELobbyStringCount = 73;
+
+static void EELobbyResource_Load(ResourceConfigTable* inTable);
+
+// Registers the game lobby's string loader with a resource table, creating the table when none is given
+// Not identical: the original stores the returned smart pointer copy only once, after the NULL test
+ResourceConfigTablePtr EELobbyResource_Init(ResourceConfigTable* inCollection)
+{
+    ResourceConfigTablePtr theCollection = inCollection;
+    if (inCollection == NULL) {
+        inCollection = new ResourceConfigTable;
+        theCollection = inCollection;
+    }
+    inCollection->RegisterGlueResourceFunc(EELobbyResource_Load);
+    return theCollection;
+}
+
+// the loader's and the reset's statements (R6 WON round 34: their loops are ee_won's eeresource.rs; a read that
+// throws is kept and the loader rethrows it, never through a Rust frame)
+static intptr_t EELobbyResourceHost(EeWonEeResOp inOp, void* inTable, intptr_t a, intptr_t b, intptr_t c)
+{
+    switch (inOp) {
+    case EeWonEeResOp::Config: return WON_GUARDED(static_cast<ResourceConfigTable*>(inTable)->SafeGetConfig(reinterpret_cast<const char*>(a)));
+    case EeWonEeResOp::Read: return WON_GUARDED_V(*static_cast<GUIString*>(ee_won_eeresource_string((size_t)a)) = reinterpret_cast<ResourceConfig*>(b)->SafeGetString(reinterpret_cast<const char*>(c)));
+    }
+    return 0;
+}
+
+// Loads the game options, player options, connect, file dialog, game status and lobby texts from resources (ee_won's
+// rows in order: a section is looked up where it changes, as the original's statements did)
+static void EELobbyResource_Load(ResourceConfigTable* inTable)
+{
+    WonRethrow(ee_won_eeresource_load(inTable, kEELobbyStringCount, EELobbyResourceHost));
+}

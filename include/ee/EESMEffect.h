@@ -9,6 +9,7 @@
 #define EE_EESMEFFECT_H
 
 #include <vector>
+#include "rust/sim/records.h"
 #include "rust/sim/scenario.h"
 
 // the numbers (mPlayerAttribute .. mB193, their order and types) are EeScenarioEffectFields (ee_scenario fields.rs):

@@ -21,7 +21,5 @@ public:
     EEGameState* mState;                    // +0x00
 };
 
-// 0x14a014 (cdecl): whether inFile ends in gScenarioExtension (case-insensitive)
-bool EEIsScenarioFile(const UString& inFile);
 
 #endif

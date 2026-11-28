@@ -16,6 +16,7 @@
 #include "ee/EEVectorIO.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
+#include "ee/EECalamityUpdate.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
@@ -26,6 +27,11 @@
 #include "ee/RTSWorld.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
+#include "rust/game/gamecpp.h"
+
+// the effect generations' save key (FSLoadVector's; was EECalamity.cpp's EECalamity::mEffectGenerationStringID, the
+// one of the original's 21 keys 0xacb75..0xad0f4 ever read)
+static const UString sEffectGenerationStringID("EffectGenerationStringID");
 
 
 // Destroys the functor, releasing the fire's burning effect
@@ -90,7 +96,7 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CgUnitsAt: return P64((*(std::vector<EEComplexUnit*>*)p)[a[0]]);
     case O::CgUnitsInArea: EEGetUnitsInRectangle(*(const EETileArea*)a[0], *(std::vector<EEComplexUnit*>*)p, EEAnyUnit(), true);
         break;
-    case O::CgCalamityIndex: return EECalamityManager::GetInstance()->GetCalamityIndex((EECalamity*)p, *(long*)a[0]);
+    case O::CgCalamityIndex: return ee_gamecpp_calamity_index(EECalamityManager::GetInstance(), (EECalamity*)p, false, (long*)a[0]);
     case O::CgWriteClassId: return ((FSFile*)a[0])->Write((unsigned long)((EECalamity*)p)->mClass->mID);
     case O::CgFileReadLong: return ((FSFile*)p)->Read(*(long*)a[0]);
     case O::CgFileWriteLong: return ((FSFile*)p)->Write((long)a[0]);
@@ -106,8 +112,8 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CalTargetSave: return CAL->mTargetLocation.Save(FSF);
     case O::C11CalShakeLoad: return CAL->mShakeLocation.Load(FSF);
     case O::C11CalShakeSave: return CAL->mShakeLocation.Save(FSF);
-    case O::C11CalGenerationLoad: return FSLoadVector(FSF, CAL->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-    case O::C11CalGenerationSave: return FSSaveVector(FSF, CAL->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+    case O::C11CalGenerationLoad: return FSLoadVector(FSF, CAL->mEffectGeneration, sEffectGenerationStringID);
+    case O::C11CalGenerationSave: return FSSaveVector(FSF, CAL->mEffectGeneration, sEffectGenerationStringID);
     case O::C11CalTargetId: return CAL->mTargetUnit != NULL ? CAL->mTargetUnit->GetUnitID() : -1;
     case O::C11CalCasterId: return CAL->mCasterUnit != NULL ? CAL->mCasterUnit->GetUnitID() : -1;
     case O::C11CalHandleRead: return FSF.Read(CAL->mEffectHandle.mValue);
@@ -120,6 +126,11 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CgText: fputs((const char*)a[0], (FILE*)p);
         break;
     case O::C11CgUnknown: ESVERIFY_AT(false, 1);
+        break;
+    // a class's run (gamecpp calamity_io.rs class_run): its host made and deleted around it (were EETechTree.cpp's); p the
+    // class, a0 the calamity, a1 and a2 the sounds
+    case O::C11CalHostNew: return (int64_t)(intptr_t)(new EECalamityUpdateHost{(EECalamityClass*)p, (EECalamity*)a[0], {(EESoundObject*)a[1], (EESoundObject*)a[2]}, {}, NULL, {}, {}});
+    case O::C11CalHostDelete: delete (EECalamityUpdateHost*)p;
         break;
     default: return EEPWorldOp(inOp, p, a, f);
     }

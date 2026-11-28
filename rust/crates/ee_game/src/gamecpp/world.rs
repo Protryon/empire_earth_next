@@ -289,7 +289,7 @@ fn load_unit_media(pl: P, button_player_of_unit: bool) {
         let class = unit_class(u);
         if h(O::UcIsLandBuilding, class, &[]) != 0 && cf(complex(u)).mIsBuilt == true {
             let owner = if button_player_of_unit { hp(O::UnPlayer, u, &[]) } else { pl };
-            h(O::TkClassButtonsLoad, owner, &[ucf(unit_class(u)).mUnitType as i64]);
+            h(O::PlLoadButtons, owner, &[ucf(unit_class(u)).mUnitType as i64]);
         }
         u = next_unit(u);
     }
@@ -1007,7 +1007,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         h(O::TechApplySaved, tree, &[]);
         let mut k: i64 = 0;
         while k < h(O::DcClassCount, 0, &[]) {
-            let upgrade = hp(O::DcPlayerUpgrade, pl, &[k]);
+            let upgrade = ee_sim::units::player_upgrades::at(pl as u64, k as usize) as P;
             if upgrade == 0 {
                 k += 1;
                 continue;
@@ -1464,11 +1464,11 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
     }
     let pl = player(world, index);
     let own_slot = prts(pl).mSlot;
-    if h(O::TbIsHuman, pl, &[]) != 0 {
+    if h(O::PlIsHuman, pl, &[]) != 0 {
         h(O::HumanGetName, pl, &[pa(old_name)]);
     }
     prts(pl).mSlot = new_slot;
-    if h(O::TbIsHuman, pl, &[]) != 0 {
+    if h(O::PlIsHuman, pl, &[]) != 0 {
         h(O::HumanSetName, pl, &[name as i64]);
     }
     if prts(pl).mSlot == prts(hp(O::WCurrentPlayerPtr, world, &[])).mSlot {
@@ -1500,7 +1500,7 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
     } else {
         h(O::ClientFastSelect, 0, &[id]);
     }
-    if h(O::TbIsHuman, old, &[]) != 0 {
+    if h(O::PlIsHuman, old, &[]) != 0 {
         h(O::HumanSetName, old, &[pa(old_name)]);
     }
     h(O::StrFree, old_name, &[]);

@@ -29,6 +29,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEHerd.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/sim/units.h"
 
 const UString EEHerd::sData("EEHerd-SaveLoadData");
 // 0x4e5e40, right after sData (0x4e5e30 + 0x10) in the original's initialised .data, value 0; its only use clears it
@@ -50,16 +51,6 @@ bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
         EEAnimal::Find(inUnit->mUnitClass->mUnitType) && inUnit->mTileX != -10000 && inUnit->mTileY != -10000;
 }
 
-
-void EEHerd::GetUnits(std::vector<EEComplexUnit*>& outUnits)
-{
-    for (size_t i = 0, n = ee_cp_herd_unit_count(this); i < n; i++) {
-        EEComplexUnit* theUnit;
-        EEUnitHandleResolve(ee_cp_herd_unit_handle(this, i), theUnit);
-        outUnits.push_back(theUnit);
-    }
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The herd's host (ee_sim::cp herd.rs EE_CP_HERD_*, herd_world.rs): `a`, `b` units (EEComplexUnit*), herds, animals,
 // goals, formations or media; one statement each (the unit's record, the formations, CanStandOn, the goals, the birth
@@ -71,13 +62,6 @@ static uint64_t EEHerdHandle(const void* inObject) { return (uint64_t)(uintptr_t
 
 // a point as one word (x high, y low; ee_sim::cp town_world.rs unpack)
 static int64_t EEHerdPack(const U2DPoint<long>& inPoint) { return (int64_t)(((uint64_t)(uint32_t)inPoint.mX << 32) | (uint32_t)inPoint.mY); }
-
-static uint32_t EEHerdBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof(theBits));
-    return theBits;
-}
 
 // The area operations of the random point (EETown::GetRandomPoint 0xac203, the herd's by ICF; ee_sim::cp herd.rs
 // random_area_point) the Rust records do not answer: the draws, the base point, the map's tile
@@ -125,27 +109,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_UNIT_WAYPOINTS: return (int64_t)theUnit->mWaypoints.size();
     case EE_CP_HERD_UNIT_MODEL: return (int64_t)EEHerdHandle((EEMedia*)theUnit->mStats->mModel);
     case EE_CP_HERD_FORM_NEW: return (int64_t)EEHerdHandle(EEFormation::Create(6));
-    case EE_CP_HERD_FORM_CENTER: theFormation->mCenter = GE3DPoint(io->f[0], io->f[1], io->f[2]);
-        return 0;
-    case EE_CP_HERD_FORM_SET_CENTER: theFormation->SetCenter(GE3DPoint(io->f[0], io->f[1], io->f[2]));
-        return 0;
-    case EE_CP_HERD_FORM_SET_MIN_RADIUS: theFormation->SetMinRadius(io->f[0]);
-        return 0;
-    case EE_CP_HERD_FORM_MIN_RADIUS: theFormation->mMinRadius = io->f[0];
-        return 0;
-    case EE_CP_HERD_FORM_PLACE: {   // the input units placed: the units after Place into list2, the slots into list
-        std::vector<EEComplexUnit*> theUnits;
-        for (size_t i = 0; i < io->input_len; i++)
-            theUnits.push_back(EEHerdUnit(io->input[i]));
-        std::vector<EEFormationSlot> theSlots;
-        theFormation->Place(theUnits, theSlots);
-        for (size_t i = 0; i < theUnits.size(); i++)
-            ee_cp_herd_push(io->list2, (int64_t)EEHerdHandle(theUnits[i]), 0, 0, 0);
-        for (size_t i = 0; i < theSlots.size(); i++)
-            ee_cp_herd_push(io->list, EEHerdBits(theSlots[i].mPosition.mX), EEHerdBits(theSlots[i].mPosition.mY),
-                            EEHerdBits(theSlots[i].mPosition.mZ), EEHerdBits(theSlots[i].mHeading));
-        return 0;
-    }
     case EE_CP_HERD_FORM_DEREF: theFormation->Dereference();
         return 0;
     case EE_CP_HERD_PASSABLE_BY: return reinterpret_cast<EEUnit*>((uintptr_t)inB)->IsPassableBy(theUnit) ? 1 : 0;
@@ -182,7 +145,7 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_TO_COMPLEX: return (int64_t)EEHerdHandle(dynamic_cast<EEComplexUnit*>(reinterpret_cast<EEUnit*>((uintptr_t)inA)));
     case EE_CP_HERD_SET_TARGET_SEARCH: theUnit->SetTargetSearchTimer((long)v[0]);
         return 0;
-    case EE_CP_HERD_HOLD_UNIT: theUnit->HoldUnit(EEHerdUnit(inB));
+    case EE_CP_HERD_HOLD_UNIT: ee_units_cu_small(EE_UNITS_CU_S_DO_HOLD_UNIT, theUnit, EEHerdUnit(inB), 0);
         return 0;
     case EE_CP_HERD_MEDIA_LOAD: reinterpret_cast<EEMedia*>((uintptr_t)inA)->LoadMedia();
         return 0;

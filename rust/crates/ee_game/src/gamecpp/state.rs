@@ -397,7 +397,7 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
             }
             player_index = k + 1;
             let pl = player_at(st, player_index);
-            if h(O::TbIsHuman, pl, &[]) != 0 {
+            if h(O::PlIsHuman, pl, &[]) != 0 {
                 h(O::PlSetNameFromSlot, pl, &[pa(l.slot.0)]);
             } else {
                 h(O::PlSetNameFromSlot, pl, &[pa(l.slot.0)]);
@@ -518,7 +518,7 @@ fn create_new(st: P, opt: P, l: &Locals) {
         let pl = player_at(st, i);
         psaved(pl).mChatType = 0;
         for ally in player_list(pl as u64, EE_UNITS_LISTS_ALLIES) {
-            if h(O::TbIsHuman, ally as P, &[]) != 0 {
+            if h(O::PlIsHuman, ally as P, &[]) != 0 {
                 psaved(pl).mChatType = 1;
                 break;
             }

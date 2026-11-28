@@ -8,9 +8,10 @@
 #define EE_EEEMSTORM_H
 
 #include <vector>
-#include "ee/EETileCoordinate.h"
-#include "rust/sim/app.h"   // EeAppStormFields (ee_app storm.rs)
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
+#include "lle/U2DRectangle.h"
+#include "rust/sim/app.h"
 
 class EEEnvironmentManager;
 class FSFile;

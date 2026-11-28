@@ -40,6 +40,8 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
+#include "rust/game/screens.h"
+#include "rust/sim/units.h"
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
@@ -84,24 +86,24 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxSetTransformation: CX->SetTransformation(TR(0), a[1] != 0);
         break;
-    case O::CxClearBuildTargets: CX->ClearBuildTargets();
+    case O::CxClearBuildTargets: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, CX, 0, 0, 0);
         break;
     case O::CxNumGoalQueues: return CX->GetNumGoalQueues();
-    case O::CxClearGoalQueue: CX->ClearGoalQueue((unsigned long)a[0]);
+    case O::CxClearGoalQueue: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, CX, (unsigned long)a[0], 0, 0);
         break;
-    case O::CxClearGoals: CX->ClearGoals((long)a[0]);
+    case O::CxClearGoals: ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, CX, (long)a[0], 0, 0);
         break;
     case O::CxSetDisabled: CX->SetDisabled(a[0] != 0, (long)a[1]);
         break;
     case O::CxStartAction: CX->StartAction((long)a[0]);
         break;
-    case O::CxHalt: CX->Halt();
+    case O::CxHalt: ee_units_cu_body(EE_UNITS_CU_DO_HALT, CX, 0, 0, 0);
         break;
     case O::CxSetBuilt: CX->SetBuilt((long)a[0], (long)a[1], (long)a[2]);
         break;
     case O::CxSetIsTinted: CX->SetIsTinted(a[0] != 0);
         break;
-    case O::CxTakeOffMap: CX->TakeOffMap();
+    case O::CxTakeOffMap: ee_units_cu_body(EE_UNITS_CU_DO_TAKE_OFF_MAP, CX, 0, 0, 0);
         break;
     case O::CxSetHitPoints: CX->SetHitPoints((long)a[0]);
         break;
@@ -109,11 +111,11 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxGetEffect: return CX->GetEffect((long)a[0], *(EEGraphicEffect**)a[1]);
     case O::CxIsCarried: return CX->IsCarried();
-    case O::CxOutermostCarrier: return P64(CX->GetOutermostCarrier());
+    case O::CxOutermostCarrier: return P64((EEComplexUnit*)ee_units_cu_outermost_carrier(CX));
     case O::CxWaypointCount: return (int64_t)CX->mWaypoints.size();
     case O::CxNextWaypoint: return CX->NextWaypoint();
     case O::CxGetPathStart: return CX->GetPathStart(PT(0), *(float*)a[1]);
-    case O::CxDropPath: CX->DropPath();
+    case O::CxDropPath: ee_units_waypoints_drop((uint64_t)(uintptr_t)CX);
         break;
     case O::CxSet2DPosition: CX->Set2DPosition(*(const U2DPoint<float>*)a[0]);
         break;
@@ -139,9 +141,9 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxSetOrientation: CX->mOrientation = GEOrientation(f[0], f[1], f[2]);
         break;
-    case O::CxPlayEffect: CX->PlayEffect((long)a[0]);
+    case O::CxPlayEffect: ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, CX, (long)a[0], 0, 0);
         break;
-    case O::PlayUnitEffect: EEPlayUnitEffect(CX, (long)a[0]);
+    case O::PlayUnitEffect: ee_units_ucp_call(EE_UNITS_UCP_DO_PLAY_UNIT_EFFECT, NULL, CX, 0, (long)a[0]);
         break;
     case O::CxSightOffHere: CX->SightOffHere();
         break;
@@ -200,7 +202,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ContagionDestroyVerify: ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper((long)a[0]), a[1]);
         break;
     case O::AeHas: return gAEManager.HasAreaEffect((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
-    case O::AeCreate: return P64(gAEManager.CreateAreaEffect((unsigned long)a[0], (EEComplexUnit*)a[1]));
+    case O::AeCreate: return P64((EEAreaEffect*)ee_screens_aem_create((uintptr_t)&gAEManager, (unsigned long)a[0], (uintptr_t)((EEComplexUnit*)a[1])));
     case O::RefDereference: ((UReferenceCounter*)(EEAreaEffect*)p)->Dereference();
         break;
     case O::UnitSetContains: return gUnitSetManager.Contains((long)a[0], (unsigned long)a[1]);
@@ -366,7 +368,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SoSetParams: gSoundManager->SetSoundParameters((SESMInstanceNode*)p, f[0], f[1], f[2]);
         break;
     case O::SoPlayOnce: return gSoundManager->Play(((EESoundObject*)p)->GetSampleID(), f[0], f[1], f[2], false, NULL);
-    case O::PlLoadClassMedia: PL->LoadUnitClassMedia((long)a[0]);
+    case O::PlLoadClassMedia: ee_units_player_rest(PL, EE_UNITS_PLAYER_REST_MEDIA_CHECK, (uint64_t)((long)a[0]), 0, 0);
         break;
     case O::PlSetClassMedia: PL->SetUnitClassMedia((long)a[0], (long)a[1]);
         break;
@@ -412,7 +414,7 @@ extern "C" double ee_gamecpp_f(EeGameCpp inOp, uintptr_t p, const int64_t* a, co
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::CxEffectHeight: return CX->GetEffectHeight(a[0] != 0);
+    case O::CxEffectHeight: return ee_units_cu_more(EE_UNITS_CUM_DO_EFFECT_HEIGHT, CX, a[0] != 0, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);
     case O::CxMaxVelocity: return CX->GetMaxVelocity();
     case O::UcHeightAt: return UC->GetHeightAt((EEComplexUnit*)a[0], PT(1));
     case O::TileHeight: return ((EEMapTile*)p)->mHeight;
@@ -420,7 +422,7 @@ extern "C" double ee_gamecpp_f(EeGameCpp inOp, uintptr_t p, const int64_t* a, co
     case O::MeshGetZ: return ::gWorld.mMap->mTerrainMesh.GetZ((long)a[0], (long)a[1]);
     case O::PhysGetRandom: return gPhysics->GetRandom();
     case O::PhysRandomRange: return gPhysics->GetRandom(f[0], f[1]);
-    case O::AeRadius: return ((EEAreaEffect*)p)->GetRadius();
+    case O::AeRadius: return ee_screens_ae_radius((uintptr_t)((EEAreaEffect*)p));
     case O::SoVolume: return ((EESoundObject*)p)->GetVolume();
     case O::GeModelRadius: return ((GEModel*)p)->GetBoundingRadius((unsigned long)a[0]);
     case O::GfxEffectSize: return ((EEGraphicEffect*)p)->GetSize();

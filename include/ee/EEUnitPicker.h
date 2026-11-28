@@ -36,10 +36,6 @@ public:
     EEUnit* PickUnit(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, true); }
     // port (R5a.3): PickUnit without the reference, for the frame's capture (the world's lock is held throughout)
     EEUnit* PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources) { return (EEUnit*)ee_gamecpp_picker_pick(this, &inPoint.mX, inPreferResources, false); }
-    // 0x119ea2: the ids of inPlayer's units inside inRectangle (EEMSelectUnits' ctor; provisional name)
-    void PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType, std::vector<unsigned long>& outUnitIDs) { ee_gamecpp_pz_box(this, &inRectangle, false, inPlayer, inType, &outUnitIDs); }
-    // 0x119d63: the ids of the units inside inRectangle (the editor's lasso) (provisional name)
-    void PickUnitsInRectangle(const GERectangle& inRectangle, long inType, std::vector<unsigned long>& outUnitIDs) { ee_gamecpp_pz_box(this, &inRectangle, true, NULL, inType, &outUnitIDs); }
     void Reset() { ee_gamecpp_picker_reset(this); }  // 0x119f7c: Clear, the main viewport, the camera mode (provisional name)
     // 0x119ffb: one drawn unit (EEROUnits) (provisional name)
     void AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize) { ee_gamecpp_picker_add_unit(this, inUnit, reinterpret_cast<const float*>(&inTransformation), inPixelSize); }

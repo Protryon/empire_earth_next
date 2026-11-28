@@ -365,59 +365,6 @@ pub struct EeCombatImpactHost {
     pub can_move: unsafe extern "C" fn(ctx: *mut c_void) -> i32,
 }
 
-struct CHost<'a>(&'a EeCombatImpactHost);
-
-impl ImpactHost for CHost<'_> {
-    fn ground_z(&mut self, p: [f32; 3]) -> f32 {
-        // SAFETY: the table's contract
-        unsafe { (self.0.ground_z)(self.0.ctx, p[0], p[1], p[2]) }
-    }
-    fn tile_height(&mut self) -> f32 {
-        // SAFETY: the table's contract
-        unsafe { (self.0.tile_height)(self.0.ctx) }
-    }
-    fn target(&mut self) -> EeCombatImpactTarget {
-        let mut t = EeCombatImpactTarget::default();
-        // SAFETY: the table's contract; `t` is a valid record
-        unsafe { (self.0.target)(self.0.ctx, &mut t) };
-        t
-    }
-    fn goal_location(&mut self) -> [f32; 3] {
-        let mut p = [0.0f32; 3];
-        // SAFETY: the table's contract; `p` holds three floats
-        unsafe { (self.0.goal_location)(self.0.ctx, p.as_mut_ptr()) };
-        p
-    }
-    fn on_target_tiles(&mut self) -> bool {
-        // SAFETY: the table's contract
-        unsafe { (self.0.on_target_tiles)(self.0.ctx) != 0 }
-    }
-    fn same_tile(&mut self, x: f32, y: f32) -> bool {
-        // SAFETY: the table's contract
-        unsafe { (self.0.same_tile)(self.0.ctx, x, y) != 0 }
-    }
-    fn can_move(&mut self) -> bool {
-        // SAFETY: the table's contract
-        unsafe { (self.0.can_move)(self.0.ctx) != 0 }
-    }
-}
-
-/// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
-///
-/// # Safety
-/// `input` must point to a valid record and `host` to a valid table whose functions may be called with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_impact(
-    input: *mut EeCombatImpactIn,
-    host: *const EeCombatImpactHost,
-) -> EeCombatImpactOut {
-    // a copy: no Rust reference to the C++'s record lives across the host's calls
-    let mut record = unsafe { *input };
-    let out = impact(&mut record, &mut CHost(unsafe { &*host }));
-    unsafe { *input = record };
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

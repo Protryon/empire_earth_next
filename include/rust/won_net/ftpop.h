@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `SetLocalPath`, `SetRemotePath`, `SetUserName`, `SetPassword` (the bytes)
 constexpr static const int32_t EE_WON_FTPGET_LOCAL_PATH = 1;

@@ -31,13 +31,6 @@ struct EeFormationSlot {
   uint32_t unit;
 };
 
-/// `EEFormationSlot` (ee/EEFormation.h): the position, the unit (an `EEComplexUnit*`) and the heading.
-struct EeFormationUnitSlot {
-  EeFormationVec3 position;
-  void *unit;
-  float heading;
-};
-
 extern "C" {
 
 /// `EEFormation::Place` of the formation type `kind` (0-7) over the units' outer collision radii (`count` of them,
@@ -61,34 +54,6 @@ uint32_t ee_formation_shape_words(int32_t kind,
                                   float min_radius,
                                   uint32_t *tag,
                                   uint32_t *words);
-
-/// `EEFormation::Place`: the formation's slots for `count` units (`EEComplexUnit*`s), one written per unit into
-/// `out` (the caller sized its vector: a circle appends, the other types replace), and the capture's record of
-/// the call. An empty circle writes and records nothing.
-///
-/// # Safety
-/// `orientation` (`mOrientation.mMatrix`) and `center` are the formation's members; `units` is valid for `count` reads of live complex
-/// units and `out` for `count` writes when `count` is not 0; the caller holds the world.
-void ee_formation_place_units(int32_t kind,
-                              float min_radius,
-                              const float (*orientation)[4][4],
-                              const EeFormationVec3 *center,
-                              float heading,
-                              void *const *units,
-                              size_t count,
-                              EeFormationUnitSlot *out);
-
-/// `EEFormation::Arrange`: `Place` over the group's units, in the group's order.
-///
-/// # Safety
-/// As [`ee_formation_place_units`]; `group` is a live `EEGroup` and `out` valid for one write per unit of it.
-void ee_formation_arrange_group(int32_t kind,
-                                float min_radius,
-                                const float (*orientation)[4][4],
-                                const EeFormationVec3 *center,
-                                float heading,
-                                const void *group,
-                                EeFormationUnitSlot *out);
 
 }  // extern "C"
 

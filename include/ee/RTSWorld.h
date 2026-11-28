@@ -8,7 +8,6 @@
 
 #include <vector>
 #include "ee/RTSDummyHeader.h"
-#include "rust/game/rts.h"
 
 class ESChecksum;
 class EEMap;
@@ -19,34 +18,33 @@ class TSReadWriteLock;
 
 class RTSWorld {
 public:
-    RTSWorld() { ee_rts_world_construct(this); }
+    RTSWorld();
     // RTSWorld.cpp's non-virtual members (provisional names unless stated)
     // 0x148024: index in mPlayers[0..mNumPlayers), -1 if none
     unsigned long GetNumPlayers() const { return this->mNumPlayers; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
     EEPlayer* GetPlayer(unsigned long inIndex) const { return this->mPlayers[inIndex]; }  // (likewise)
     // 0x14804f: the top byte of the id is the player
-    RTSUnit* GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_world_unit(this, inUnitID)); }
+    RTSUnit* GetUnit(unsigned long inUnitID);
     // 0x148072 (no arguments; EESELoadThread Handle403 under the write lock; provisional name)
-    void FlushQueuedPlacements() { ee_rts_world_flush_queued_placements(this); }
+    void FlushQueuedPlacements();
     // 0x1480ad: references the unit, push_back into mU004
-    void AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter)
-        { ee_rts_world_add_unit_entry(this, inUnit, inInsertAfter); }
+    void AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter);
     // 0x1481c9: deletes the old player unless it is the same
-    void SetPlayer(long inIndex, EEPlayer* inPlayer) { ee_rts_world_set_player(this, inIndex, inPlayer); }
+    void SetPlayer(long inIndex, EEPlayer* inPlayer);
     // +0x00 (??_G 0x147e9a; dtor 0x147eb6)
-    virtual ~RTSWorld() { ee_rts_world_destruct(this); }
+    virtual ~RTSWorld();
     // +0x04 0x147eee (EEWorld inherits it; the per-player limit mPlayerPopulationLimit)
-    virtual void UpdatePlayerPopulationLimit(bool inRecount) { ee_rts_world_update_population_limit(this, inRecount); }
+    virtual void UpdatePlayerPopulationLimit(bool inRecount);
     // +0x08 0x147f71 (deletes the players and the map)
-    virtual void Clear() { ee_rts_world_clear(this); }
+    virtual void Clear();
     // +0x0c 0x147faf ("RTSWorld", mNumPlayers)
-    virtual void GetChecksum(ESChecksum& ioChecksum) { ee_rts_world_checksum(this, &ioChecksum); }
+    virtual void GetChecksum(ESChecksum& ioChecksum);
     // +0x10 0x1480d1
-    virtual void Reset() { ee_rts_world_reset(this); }
+    virtual void Reset();
     virtual void ResortUnit(RTSUnit* inUnit) = 0;   // +0x14 (EEWorld 0x13c105: a placed unit changed column)
     virtual void SetCameraTransformation(const GETransformation& inTransformation);  // +0x18 0x14810b (the camera: mTransformation, mLine)
     // +0x1c 0x1481ee (then Virtual04(true))
-    virtual void SetNumPlayers(unsigned long inNumPlayers) { ee_rts_world_set_num_players(this, inNumPlayers); }
+    virtual void SetNumPlayers(unsigned long inNumPlayers);
     // inline (its refused copy, COMDAT 0x11428f `mov eax, [ecx+0xbc]`, closes EEROTerrain.cpp: the coloured
     // rectangles' erase; provisional name)
     EEMap* GetMap() { return this->mMap; }

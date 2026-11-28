@@ -71,8 +71,8 @@ pub(crate) fn fetch_keys<C: Cpp + ?Sized>(c: &mut C) {
 
 /// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
 /// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The
-/// first 24 are [`CONTROL_KEYS`]' order (`ee_uicpp_control_key_fetch`'s slot); the mouse three are
-/// `ee_uicpp_mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
+/// first 24 are [`CONTROL_KEYS`]' order (`control_key_fetch`'s slot); the mouse three are
+/// `mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeUiKey {
@@ -117,6 +117,11 @@ static KEYS: [AtomicUsize; KEY_COUNT] = [NO_KEY; KEY_COUNT];
 #[no_mangle]
 pub extern "C" fn ee_ui_key_slot(key: EeUiKey) -> *mut *mut c_void {
     KEYS[key as usize].as_ptr().cast()
+}
+
+/// The slot of the key numbered `i` in [`EeUiKey`]'s order ([`ee_ui_key_slot`]'s; none past the last: the first).
+pub(crate) fn key_slot_at(i: u32) -> *mut *mut c_void {
+    KEYS.get(i as usize).unwrap_or(&KEYS[0]).as_ptr().cast()
 }
 
 /// `key`'s entity (0 until looked up).
@@ -293,13 +298,10 @@ pub unsafe extern "C" fn ee_ui_control_construct(
     border_thickness: core::ffi::c_ulong,
     border_type: core::ffi::c_ulong,
 ) {
-    extern "C" {
-        fn ee_uicpp_rhombus_new() -> *mut c_void;
-    }
     // SAFETY: the contract; the rhombi are the record's before its state (the C++ constructor's order)
     unsafe {
-        (*rec).mBgRhombus = ee_uicpp_rhombus_new();
-        (*rec).mCopiedBgRhombus = ee_uicpp_rhombus_new();
+        (*rec).mBgRhombus = crate::lle_hosts::ge::rhombus_new() as *mut c_void;
+        (*rec).mCopiedBgRhombus = crate::lle_hosts::ge::rhombus_new() as *mut c_void;
         crate::controlobj::ee_ui_control_init(
             rec,
             cpp,
@@ -323,14 +325,11 @@ pub unsafe extern "C" fn ee_ui_control_construct(
 #[cfg(not(any(test, feature = "no_cpp")))]
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_control_destruct(rec: *mut crate::controlobj::EeUiControlFields) {
-    extern "C" {
-        fn ee_uicpp_rhombus_delete(rhombus: *mut c_void);
-    }
     // SAFETY: the contract
     unsafe {
         crate::controlobj::ee_ui_control_release(rec);
-        ee_uicpp_rhombus_delete((*rec).mBgRhombus);
-        ee_uicpp_rhombus_delete((*rec).mCopiedBgRhombus);
+        crate::lle_hosts::ge::prim_delete((*rec).mBgRhombus as usize);
+        crate::lle_hosts::ge::prim_delete((*rec).mCopiedBgRhombus as usize);
     }
 }
 

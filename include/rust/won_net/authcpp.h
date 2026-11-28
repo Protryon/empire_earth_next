@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/authobj.h"
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 extern "C" {
 

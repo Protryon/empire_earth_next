@@ -6,12 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/authflow.h"
-#include "rust/won_net/authlogin.h"
-#include "rust/won_net/peerobj.h"
-
-/// `AuthContext`: the members in the original's destruction order (the flow, the login data, the server list).
-struct EeWonAuthCtx;
+#include "rust/won_net/records.h"
 
 extern "C" {
 

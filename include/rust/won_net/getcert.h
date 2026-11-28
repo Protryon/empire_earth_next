@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/blowfish.h"
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;

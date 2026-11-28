@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// The read failed here: the original threw `ReadBufferException` (`at`: the reader's position).
 constexpr static const uint8_t EE_WON_PATCH_CUT = 255;

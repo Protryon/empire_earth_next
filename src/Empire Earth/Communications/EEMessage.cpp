@@ -95,6 +95,9 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 
 #include "ee/EESaveLoad.h"
 #include <vector>
+#include "rust/game/game_log.h"
+#include "rust/sim/app.h"
+#include "rust/sim/units.h"
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
@@ -175,17 +178,6 @@ void EEMRecord::Execute()
     EENetMsgExecute(this, 0);
 }
 
-// (moved from EEClient.cpp in game messages round 6, unchanged: the command messages' local markers; EEClient.cpp
-// keeps the client)
-// Shows the local command markers of a group order (move, attack, target, unload) on the goal the units just
-// queued, else on the first unit whose last goal fits
-// NEAR: the original refuses vector::operator[]'s begin()/operator+ in the first loop (more inline pressure than
-// ours), mL29C compares unsigned (jb; EEUnit.h has long)
-// effects 0xb8 move, 0xb9 attack, 0xba target, 0xbb unload
-void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlayerID, long inCommand, long inGoalQueue)
-{
-    ee_gamecpp_msg_group_command(inGroup, inTarget, inPlayerID, inCommand, inGoalQueue);
-}
 
 // ------------------------------------------------------------------------- the message bodies' C++ (gamecpp message.rs)
 
@@ -275,12 +267,14 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::UiAddChatMsgLine: gUserInterface->AddChatLogEntry(((EEPlayer*)a[0])->mColor, ((EEPlayer*)a[0])->mName, WSTR + ((EEMRecord*)a[1])->mString, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
         break;
-    case O::GameLogChat: EEGameLogChat((unsigned long)a[0], (const char*)MSG->mString);
+    case O::GameLogChat: ee_game_log_chat((unsigned long)a[0], (const char*)MSG->mString);
         break;
     // the players
     case O::PlName: return P64(&PL->mName);
     case O::PlActiveGroup: return P64(PL->mActiveGroup);
     case O::PlSavedGroupAt: return P64(PL->mGroups[a[0]]);
+    case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
+        break;
     case O::PlAddEvent: PL->mEvents.AddEvent(U2DPoint<long>((long)a[0], (long)a[1]), (long)a[2], (EEPlayer*)a[3], (long)a[4], a[5] != 0);
         break;
     case O::PlFlareReceived: PL->FlareReceived((EEPlayer*)a[0], U2DPoint<long>((long)a[1], (long)a[2]));
@@ -305,7 +299,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PlCountQueuedImprovements: return PL->CountQueuedImprovements((unsigned long)a[0], (long)a[1]);
     case O::PlRemoveQueuedImprovement: PL->RemoveQueuedImprovement((long)a[0], (long)a[1], a[2] != 0);
         break;
-    case O::PlayForLocalSelectionSound: EEPlayForLocalPlayer(PL, ((EEComplexUnit*)a[0])->mStats->GetSelectionSound(-1));
+    case O::PlayForLocalSelectionSound: ee_gamecpp_play_for_local(PL, ((EEComplexUnit*)a[0])->mStats->GetSelectionSound(-1));
         break;
     case O::CheatApply: gCheatCodes->ApplyCheatCode((long)a[0], (unsigned long)a[1], (long)a[2]);
         break;
@@ -342,7 +336,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GoalAsUnload: return P64(EEUnloadGoalCast(GOAL));
     case O::UnloadGoalTransport: return P64(((EEUGRust*)p)->GetUnloadTransport());
     case O::UnTreeTechnology: return P64(UN->GetPlayer()->GetTechTree()->Get(UN->GetUnitClass()->GetTechnology()));
-    case O::UcUnloadFailedText: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(UC)->GetUnloadFailedTextID();
+    case O::UcUnloadFailedText: return (long)ee_units_uck_dispatch(EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID, EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(UC), NULL, 0, 0, 0, NULL);
     case O::UcAsGate: return P64(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UC));
     case O::GateSecondPart: return P64(UC->GetSecondPart((EEComplexUnit*)a[0]));
     case O::GateFourthPart: return P64(UC->GetFourthPart((EEComplexUnit*)a[0]));
@@ -363,7 +357,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the world, the physics, the graphics, the communications
     case O::BuildGate: EEBuildGate(*(EETileCoordinate*)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
-    case O::VotingPropose: gWorld.mVoting.Propose((unsigned short)a[0], 15);
+    case O::VotingPropose: ee_app_voting_propose(&gWorld.mVoting, (unsigned short)a[0], 15);
         break;
     case O::PhysClearF84: gPhysics->mF84 = 0.0f;
         break;
@@ -465,7 +459,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // a box selection (p the record; the picked ids a C++ vector)
     case O::C11UlongsCount: return (int64_t)((std::vector<unsigned long>*)p)->size();
     case O::C11UlongsAt: return (int64_t)(*(std::vector<unsigned long>*)p)[a[0]];
-    case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);
+    case O::C11PickUnits: ee_gamecpp_pz_box(&gUnitPicker, (const GERectangle*)a[0], false, gWorld.GetCurrentPlayer(), (long)a[1], (std::vector<unsigned long>*)p);
         break;
     case O::C11MsgListAssign: MSG->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
         break;

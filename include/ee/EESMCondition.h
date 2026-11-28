@@ -9,6 +9,7 @@
 #ifndef EE_EESMCONDITION_H
 #define EE_EESMCONDITION_H
 
+#include "rust/sim/records.h"
 #include "rust/sim/scenario.h"
 
 // the numbers (mType .. mUsesPlayerAttribute) are EeScenarioConditionFields (ee_scenario fields.rs)

@@ -122,32 +122,12 @@ pub unsafe extern "C" fn ee_astar_cm_sector_at(r: *const EeAStarCmRecord, x: c_l
     sector_at(rec(r), x, y)
 }
 
-/// `GetPathSector(unit)`: the sector at the unit's tile.
-///
-/// # Safety
-/// `r` a live record; `unit` 0 or a live unit.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_unit_sector_at(r: *const EeAStarCmRecord, unit: u64) -> u64 {
-    let (x, y) = unit_tile(unit);
-    sector_at(rec(r), x, y)
-}
-
 /// `GetPathSubSectorID(x, y)`: the grid's id, `FindPathSubSectorID` without it, 0 off the map.
 ///
 /// # Safety
 /// `r` a live record.
 #[no_mangle]
 pub unsafe extern "C" fn ee_astar_cm_sub_sector_id_at(r: *const EeAStarCmRecord, x: c_long, y: c_long) -> u16 {
-    cm_io::sub_sector_id_at(rec(r), x, y)
-}
-
-/// `GetPathSubSectorID(unit)`: the id at the unit's tile (0 off the grid).
-///
-/// # Safety
-/// `r` a live record; `unit` 0 or a live unit.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_unit_sub_sector_id(r: *const EeAStarCmRecord, unit: u64) -> u16 {
-    let (x, y) = unit_tile(unit);
     cm_io::sub_sector_id_at(rec(r), x, y)
 }
 
@@ -217,30 +197,6 @@ pub unsafe extern "C" fn ee_astar_cmq_choke_points_into(
         (before, count_before)
     };
     cm_queries::ee_astar_cmq_choke_points(r, id, clear, before, count_before, list, push);
-}
-
-/// `GetTilesNextTo(x, y, out, id)`: the answer, `out` cleared and given the tiles (at most eight).
-///
-/// # Safety
-/// `r` a live record; the callbacks the C++ list's.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cmq_tiles_next_to_into(
-    r: *const EeAStarCmRecord,
-    x: c_long,
-    y: c_long,
-    id: u16,
-    list: *mut c_void,
-    clear_list: extern "C" fn(*mut c_void),
-    push: extern "C" fn(*mut c_void, c_long, c_long),
-) -> bool {
-    let mut tiles = [EePoint::default(); 8];
-    let mut n = 0usize;
-    let result = cm_queries::ee_astar_cmq_tiles_next_to(r, x, y, id, tiles.as_mut_ptr(), &mut n);
-    clear_list(list);
-    for t in &tiles[..n] {
-        push(list, t.x as c_long, t.y as c_long);
-    }
-    result
 }
 
 /// `EEAIContinent::GetShoreInRegions(ids, out, kind)`: `clear(list)`, then the tiles found pushed.

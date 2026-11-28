@@ -10,6 +10,7 @@
 
 #include "ee/EECivUpgrade.h"
 #include "rust/game/screens.h"
+#include "lle/UILBString.h"
 
 
 class EECBUIListBox : public UILBString {

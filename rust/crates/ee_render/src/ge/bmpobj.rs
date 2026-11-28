@@ -131,7 +131,7 @@ pub(crate) unsafe fn direct_op(op: EeGeBmpOp, obj: usize) -> Option<isize> {
         return None;
     }
     use crate::ge::rastobj::{ee_ge_rast_active, ee_ge_rast_get, EeGeRastVal, EeGeRasterizer};
-    use crate::ge::texobj_tex::{ee_ge_tex_get, EeGeTexVal, EeGeTexture};
+    use crate::ge::texobj_tex::{ee_ge_tex_frame_uv_size, ee_ge_tex_get, EeGeTexVal, EeGeTexture};
     // SAFETY (each call and read): the caller's contract
     unsafe {
         Some(match op {
@@ -145,6 +145,17 @@ pub(crate) unsafe fn direct_op(op: EeGeBmpOp, obj: usize) -> Option<isize> {
             }
             EeGeBmpOp::TexDropLevels => {
                 ee_ge_tex_get(cppobj::counted::<EeGeTexture>(obj), EeGeTexVal::NumMipLevelsToDrop) as c_ulong as isize
+            }
+            // a texture's logical size (its surface's) and its frame's (the frame surface's times the UV size)
+            EeGeBmpOp::TexWidth | EeGeBmpOp::TexHeight => {
+                let surface = ee_ge_tex_get(cppobj::counted::<EeGeTexture>(obj), EeGeTexVal::Surface) as usize;
+                cppobj::surface_logical_size(surface, op == EeGeBmpOp::TexHeight) as isize
+            }
+            EeGeBmpOp::TexFrameWidth | EeGeBmpOp::TexFrameHeight => {
+                let tex = cppobj::counted::<EeGeTexture>(obj);
+                let surface = ee_ge_tex_get(tex, EeGeTexVal::FrameSurface) as usize;
+                let size = cppobj::surface_logical_size(surface, op == EeGeBmpOp::TexFrameHeight) as f32;
+                (size * ee_ge_tex_frame_uv_size(tex)).to_bits() as isize
             }
             _ => return None,
         })

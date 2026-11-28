@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The inward calls (the C++ class's methods that forward here).
 enum class EeUiHotKeyCall : uint32_t {
@@ -26,27 +26,6 @@ enum class EeUiHotKeyCall : uint32_t {
   CountKeys = 7,
   /// `FireEvents()`.
   FireEvents = 8,
-};
-
-/// `UIHotKey`'s members (`include/lle/UIHotKey.h`), the C++ class's base.
-struct EeUiHotKeyFields {
-  /// The host of the calls out (its object is the record).
-  EeUiHostFn mHost;
-  /// The key (`ISEntity*`).
-  void *mKey;
-  /// The modifiers (`ISEntity*`, NULL for none).
-  void *mModifiers[3];
-  /// The events (`UIEvent*`, referenced).
-  void *mDoublePressedEvent;
-  void *mJustPressedEvent;
-  void *mJustUnpressedEvent;
-  void *mPressedEvent;
-  /// The form (`UIForm*`).
-  void *mForm;
-  unsigned long mModifierState;
-  unsigned long mKeyCount;
-  bool mEnabled;
-  bool mAlwaysFire;
 };
 
 extern "C" {

@@ -6,29 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// The core (`WONAPICore`'s members).
 struct EeWonApiCore;
-
-/// The C++ calls of the core: the socket thread's (a `SocketThread*`), its deletion and the default one.
-struct EeWonApiHooks {
-  /// `new SocketThreadSimple`
-  void *(*socket_new)();
-  /// `delete thread` (virtual)
-  void (*socket_delete)(void *thread);
-  /// `SetSingleThreaded(on)`, `NeedThread()`, `Start()`, `Stop(wait)`, `WaitForStop()`, `PurgeOps()`
-  void (*socket_set_single)(void *thread, bool on);
-  bool (*socket_need_thread)(void *thread);
-  void (*socket_start)(void *thread);
-  void (*socket_stop)(void *thread, bool wait);
-  void (*socket_wait_for_stop)(void *thread);
-  void (*socket_purge)(void *thread);
-  /// `Pump(wait)`, `AddSocketOp(op)`, `RemoveSocketOp(op)` (an op as its `SocketOp*`)
-  void (*socket_pump)(void *thread, uint32_t wait);
-  void (*socket_add)(void *thread, void *op);
-  void (*socket_remove)(void *thread, void *op);
-};
 
 extern "C" {
 

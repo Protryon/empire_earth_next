@@ -68,6 +68,8 @@ pub enum Kind {
     Table,
     /// `UIHotKey`'s record ([`EeUiHotKeyFields`](crate::hotkeyobj::EeUiHotKeyFields)).
     HotKey,
+    /// `UIFileListBox`'s and `UIFileComboBox`'s [`EeUiFileList`](crate::filelistobj::EeUiFileList) (their own `mRust`).
+    FileList,
 }
 
 /// The C++ pointer of a toolkit object (`UIForm*`, `UIControl*`, ...).
@@ -122,6 +124,12 @@ pub fn forget(kind: Kind, obj: *const c_void) {
     if kind == Kind::Manager && r.manager == cpp {
         r.manager = 0;
     }
+}
+
+/// Whether the C++ object `cpp` has a Rust object of `kind` (no lookup check line: a dispatch by kind asks it of
+/// every control).
+pub fn is(kind: Kind, cpp: *const c_void) -> bool {
+    !cpp.is_null() && registry().by_cpp.contains_key(&(cpp as usize, kind))
 }
 
 /// The Rust object of `kind` the C++ object `cpp` has, or NULL.

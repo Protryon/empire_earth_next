@@ -4,34 +4,8 @@
 
 use std::ffi::c_void;
 
-use crate::combat::decide::*;
 use crate::combat::store;
 use crate::combat::walks::*;
-
-/// # Safety
-/// `input` must point to a valid record.
-unsafe fn read<'a, T>(input: *const T) -> &'a T {
-    // SAFETY: the caller's contract
-    unsafe { &*input }
-}
-
-/// `EECanConvert`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_can_convert(input: *const EeCombatCanConvertIn) -> EeCombatCanConvertOut {
-    can_convert(unsafe { read(input) })
-}
-
-/// `EECanHeal`.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_can_heal(input: *const EeCombatCanHealIn) -> i32 {
-    can_heal(unsafe { read(input) })
-}
 
 // ---- the line of fire
 
@@ -80,19 +54,6 @@ impl LineHost for EeCombatLineHost {
         // SAFETY: as above
         unsafe { (self.tile_top_above)(self.ctx, x, y, height, bare as i32) != 0 }
     }
-}
-
-/// `EEIsLineToUnitBlocked`.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_line_blocked(
-    input: *const EeCombatLineIn,
-    host: *const EeCombatLineHost,
-) -> EeCombatLineOut {
-    let mut host = unsafe { *host };
-    line_blocked(unsafe { read(input) }, &mut host)
 }
 
 // (splash damage: damage.rs walks `area_victims` over the world host since the tenth round)

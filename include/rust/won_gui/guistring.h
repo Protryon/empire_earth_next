@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// The search or compare `ee_won_guistring_op` runs.
 enum class EeWonGuiStringOp {

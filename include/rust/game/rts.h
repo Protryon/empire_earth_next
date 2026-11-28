@@ -6,61 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/sim/world.h"
-
-/// `RTSPhysics`' plain members (`ee/EEPhysics.h`), in the class's order: a base of the class.
-struct EeRtsPhysicsFields {
-  /// saved, otherwise unused (= 0)
-  unsigned long mL28;
-  /// the timer runs (= false)
-  bool mTimerRunning;
-  /// seconds per tick (= 1)
-  float mSpeed;
-  /// the timer's interval in milliseconds (= 1000)
-  unsigned long mTimerInterval;
-  /// (= 1)
-  unsigned long mTicksPerSecond;
-  /// the ticks run since the timer started
-  unsigned long mTicksRun;
-  /// the ticks the loop still owes
-  unsigned long mTicksOwed;
-  /// the constructor's ticks per second
-  unsigned long mDefaultTicksPerSecond;
-  /// the thread is to end (message 0x401)
-  bool mStopThread;
-  /// (= true before the thread starts)
-  bool mSlowPlayback;
-};
-
-/// `RTSGraphics`' plain members (`ee/RTSGraphics.h`), in the class's order: a base of the class.
-struct EeRtsGraphicsFields {
-  /// the rasterizer's screen
-  unsigned long mScreen;
-  /// message 0x40e: the overdraw display mode
-  bool mShowOverdraw;
-  long mL50;
-  /// message 0x408 (clearing it redraws the UI)
-  bool mB54;
-  /// (= true; volatile)
-  bool mIsPaused;
-  /// PostResume waits for it to clear (volatile)
-  bool mIsPausePending;
-  /// PostPause waits for it to clear (volatile)
-  bool mIsResumePending;
-  /// message 0x401: the thread ends
-  bool mIsQuitting;
-  bool mIsWindowed;
-  /// message 0x40a
-  bool mIsSlowPlayback;
-  /// RenderLobby: the lobby frame packed into the frame surface
-  uint32_t mLobbySerial;
-  /// RenderLobby: the back buffer's size last given to the lobby
-  unsigned long mLobbySecondaryWidth;
-  unsigned long mLobbySecondaryHeight;
-  /// RenderLobby: `TMGetTime` of the last ShowScene
-  unsigned long mLobbyShownTime;
-};
+#include "rust/base/records.h"
+#include "rust/sim/records.h"
 
 /// `EELobbyLockFrame`'s outputs.
 struct EeRtsLobbyFrame {
@@ -73,23 +20,6 @@ struct EeRtsLobbyFrame {
   uint32_t serial;
 };
 
-/// `RTSMouse`' plain members (`ee/RTSMouse.h`), in the class's order: a base of the class.
-struct EeRtsMouseFields {
-  float mSensitivity;
-  /// the desktop's height (unsigned: Update divides by it)
-  unsigned long mDesktopHeight;
-  unsigned long mDesktopWidth;
-  long mWheel;
-  /// the pointer picture (volatile)
-  long mPointer;
-  /// the overlay picture (= 8; volatile)
-  long mOverlay;
-  /// the local player's shift mode (volatile)
-  bool mShiftMode;
-  bool mBA2;
-  bool mIsFrozen;
-};
-
 /// `GEVideoMode`.
 struct EeRtsVideoMode {
   unsigned long width;
@@ -97,12 +27,6 @@ struct EeRtsVideoMode {
   unsigned long refresh_rate;
   unsigned long bit_count;
   unsigned long pixel_format;
-};
-
-/// `RTSUnitBucket`: the first unit of the bucket's chain and its count.
-struct EeRtsUnitBucket {
-  size_t first;
-  unsigned long count;
 };
 
 /// `RTSMapVertexColors`: a rectangle of colour-table indices (x in [left, right), y in [bottom, top), row-major).
@@ -170,12 +94,6 @@ void ee_rts_graphics_render(void *graphics, bool draw_mouse, bool show_scene);
 /// `graphics` is the live object.
 void ee_rts_graphics_objects_pass(void *graphics,
                                   uint32_t which);
-
-/// `RTSGraphics::RenderLobby`.
-///
-/// # Safety
-/// `graphics` is the live object.
-void ee_rts_graphics_render_lobby(void *graphics);
 
 /// `RTSGraphics::PostPause`.
 ///
@@ -256,12 +174,6 @@ void ee_rts_mouse_construct(void *mouse);
 /// `mouse` is the C++ object being destroyed.
 void ee_rts_mouse_destruct(void *mouse);
 
-/// `RTSMouse::LoadPointer`.
-///
-/// # Safety
-/// `file` a C string, `screen` a live screen, `slot` a surface slot.
-long ee_rts_mouse_load_pointer(const char *file, void *screen, void **slot);
-
 /// `RTSMouse::Load`.
 ///
 /// # Safety
@@ -306,12 +218,6 @@ void ee_rts_mouse_pointer_destruct(void *pointer);
 /// # Safety
 /// `pointer` is the live object.
 unsigned long ee_rts_mouse_pointer_main(void *pointer);
-
-/// `RTSMousePointer::HandleMessage`.
-///
-/// # Safety
-/// `pointer` is the live object.
-void ee_rts_mouse_pointer_handle_message(void *pointer, unsigned long message, void *first);
 
 /// `RTSPhysics::RTSPhysics`.
 ///
@@ -433,12 +339,6 @@ void ee_rts_unit_reset(void *unit);
 /// `RTSUnit::Clear`.
 void ee_rts_unit_clear(void *unit);
 
-/// `RTSUnit::RemoveFromList`.
-void ee_rts_unit_remove_from_list(void *unit);
-
-/// `RTSUnit::InsertAfter`.
-void ee_rts_unit_insert_after(void *unit, void *after);
-
 /// `RTSUnit::Link`.
 void ee_rts_unit_link(void *unit, void *after);
 
@@ -460,12 +360,6 @@ void ee_rts_unit_check_list(const void *head, const char *where_);
 /// `RTSPlayer::Reset`.
 void ee_rts_player_reset(void *player);
 
-/// `RTSPlayer::AddPendingUnits`.
-void ee_rts_player_add_pending_units(void *player, bool keep_id, bool release);
-
-/// `RTSPlayer::ReleasePendingUnits`.
-void ee_rts_player_release_pending_units(void *player);
-
 /// `EEPlayer::AddPendingUnits`: the pending groups appended to the running ones (`groups`, the player's
 /// `mGroupLists`: ee_sim group_obj.rs), then `RTSPlayer`'s.
 ///
@@ -484,9 +378,6 @@ void ee_rts_eeplayer_release_pending_units(void *player, void *groups);
 
 /// `RTSPlayer::AddUnit`.
 void ee_rts_player_add_unit(void *player, void *unit, bool keep_id);
-
-/// `RTSPlayer::InsertUnit`.
-void ee_rts_player_insert_unit(void *player, void *unit);
 
 /// `RTSPlayer::RemoveKilledUnits`.
 void ee_rts_player_remove_killed_units(void *player);
@@ -544,12 +435,6 @@ void ee_rts_world_reset(void *world);
 /// # Safety
 /// `world` is the live object, `checksum` an `ESChecksum*`.
 void ee_rts_world_checksum(void *world, void *checksum);
-
-/// `RTSWorld::GetPlayerIndex`.
-///
-/// # Safety
-/// `world` is the live object.
-long ee_rts_world_player_index(void *world, void *player);
 
 /// `RTSWorld::GetUnit`.
 ///

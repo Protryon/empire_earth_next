@@ -294,17 +294,6 @@ mod game {
         )
     }
 
-    /// `EEUnitClass::GetTerrainFlags(unit, flags)`: `out` the 17 flags (`EECPASGFlags::mFlags`).
-    ///
-    /// # Safety
-    /// `class` a live class, `unit` 0 or a live unit, `out` 17 writable flags.
-    #[no_mangle]
-    pub unsafe extern "C" fn ee_units_terrain_flags(class: u64, unit: u64, out: *mut bool) {
-        let f = class_terrain_flags(class, unit);
-        // SAFETY: the caller's contract
-        unsafe { std::ptr::copy_nonoverlapping(f.as_ptr(), out, 17) };
-    }
-
     /// The goal host's `GATHER_SPOT`.
     pub fn game_find_spot(unit: u64, resource: u64) -> Option<[f32; 3]> {
         // SAFETY: inside the goal's call: the world is held

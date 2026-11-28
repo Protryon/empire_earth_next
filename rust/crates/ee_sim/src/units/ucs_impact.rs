@@ -2,7 +2,7 @@
 //! `ProjectileCheckGroundImpact`, `ProjectileCheckWaterImpact`, `MissileCheckGroundImpact`, `MissileCheckWaterImpact`,
 //! `TorpedoCheckGroundImpact` and their `EECombatImpact`: the record's reads, ee_combat impact.rs's test with its lazy
 //! reads as statements, the CBGI/CBWI capture (a C++ statement in place) and the goal, placement and shell hole
-//! after it. Each C++ statement is one `EE_UNITS_UCS_*` case of `ee_units_ucs_host` (EEUnitClassShots.cpp; the
+//! after it. Each C++ statement is one `EE_UNITS_UCS_*` case of `ee_units_uc_host` (EEUnitClass.cpp, EEUnitClassShots.cpp's until units round 14; the
 //! class host's statements pass through to EEUnitClass.cpp's).
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -265,7 +265,7 @@ pub fn run<H: UcHost + ?Sized>(h: &mut H, what: i32, class: u64, unit: u64) -> b
 #[cfg(not(test))]
 pub(crate) mod game {
     use super::*;
-    use crate::units::ucs_shots::game::ee_units_ucs_host;
+    use crate::units::uc_body::game::ee_units_uc_host;
     use std::os::raw::c_void;
 
     struct GameI;
@@ -273,13 +273,19 @@ pub(crate) mod game {
     impl UcHost for GameI {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::uc(op, unit, a) {
+                return v;
+            }
+            if let Some(v) = crate::units::player_upgrades::ucs(op, unit, f) {
+                return v;
+            }
             if let Some(v) =
                 crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Shots, op, class, unit, a, b, c, f)
             {
                 return v;
             }
             // SAFETY: the test runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_ucs_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

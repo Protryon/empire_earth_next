@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include "rust/game/records.h"
 #include "rust/game/rts.h"            // EeRtsGraphicsFields (RTSGraphics' plain members)
 
 class FSFileSpec;
@@ -64,8 +65,6 @@ public:
     void PostClearRenderObjects() { this->mThread->Post(0x406, NULL, NULL, true); }
     // 0x11a999: posts 0x401 and waits for mThreadDone
     void Shutdown() { ee_rts_graphics_shutdown(this); }
-    // 0x11a9bd (Post's result: EEUserInterface 0x2784d9 tests eax): waits for mIsResumePending, sets mIsPausePending, posts 0x402 (pause: mIsPaused = true) (provisional name)
-    long PostPause() { return ee_rts_graphics_post_pause(this); }
     // 0x11aa38: posts 0x404
     void PostPushRenderObject(RTSRenderObject* inObject) { this->mThread->Post(0x404, inObject, NULL, true); }
     // 0x11aa51: posts 0x40a (provisional name)
@@ -77,8 +76,6 @@ public:
     void PostSetFlag54(bool inFlag) { this->mThread->Post(0x408, (void*)inFlag, NULL, true); }
     // 0x11aaa2: waits for mIsPausePending, sets mIsResumePending, posts 0x403 (resume: mIsPaused = false) (provisional name)
     void PostResume() { ee_rts_graphics_post_resume(this); }
-    // 0x11aae4: mU34, and mU38 the last attached surface before type 3
-    void SetSurface(GESurface* inSurface) { ee_rts_graphics_set_surface(this, inSurface); }
 
     TSThread* mThread;                      // +0x04 (named by the ctor's asserts)
     GERasterizer* mRasterizer;              // +0x08

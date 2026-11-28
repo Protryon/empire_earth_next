@@ -25,7 +25,6 @@ public:
         return ee_ui_slider_change_process(this->mRust, static_cast<UIControl*>(static_cast<UISlider*>(inEntity)));
     }
     void SetModifier(float inModifier) { ee_ui_slider_change_set(this->mRust, 0, inModifier, 0); }
-    void SetOffset(long inOffset) { ee_ui_slider_change_set(this->mRust, 1, 0.0f, inOffset); }
     EeUiSliderChange* mRust;                // the map, the label, the offset, the modifier (slider_change.rs)
 };
 

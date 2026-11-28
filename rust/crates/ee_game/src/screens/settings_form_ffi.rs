@@ -200,9 +200,3 @@ impl SettingsHost for Form {
         crate::screens::display_modes::game_size(&mut crate::screens::game_cpp::Ffi, percent, windowed)
     }
 }
-
-/// The settings form's event code for a control event id, 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_settings_event_for(id: c_ulong) -> u32 {
-    crate::screens::settings_form::event_for_control(id)
-}

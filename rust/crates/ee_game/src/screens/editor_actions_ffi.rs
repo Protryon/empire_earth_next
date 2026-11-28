@@ -6,8 +6,8 @@
 use core::ffi::c_void;
 
 use crate::screens::editor_actions::{
-    apply_click, apply_lasso, click_execute, lasso_in_rectangle, lasso_select, rotate_selection, EeScreensSeaPaint,
-    SePaint, SePaintKind, SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
+    apply_click, apply_lasso, click_execute, lasso_in_rectangle, rotate_selection, EeScreensSeaPaint, SePaint,
+    SePaintKind, SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
 };
 use crate::screens::editor_seax;
 use crate::screens::editor_seax_ffi::{self, Seax};
@@ -132,17 +132,6 @@ pub extern "C" fn ee_screens_seu_lasso_message(message: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_screens_seu_lasso_in_rectangle(action: *mut c_void, rectangle: *const c_void) {
     lasso_in_rectangle(&mut Selection, action as usize, rectangle as usize);
-}
-
-/// `EESEALasso::SelectUnits`.
-#[no_mangle]
-pub extern "C" fn ee_screens_seu_lasso_select(
-    rectangle: *const c_void,
-    unit_type: i32,
-    deselect: u8,
-    deselect_only: u8,
-) {
-    lasso_select(&mut Selection, rectangle as usize, unit_type, deselect != 0, deselect_only != 0);
 }
 
 /// `EESEARotateUnits::Virtual4`.

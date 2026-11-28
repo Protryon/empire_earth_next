@@ -739,6 +739,9 @@ impl EeWonRouteLogic {
     fn h(&self, op: Op, args: &[isize]) -> isize {
         let g = |i: usize| args.get(i).copied().unwrap_or(0);
         if self.model {
+            if let Some(r) = crate::lobbytext::route_op(op, self.obj as isize, g(0), g(1)) {
+                return r;
+            }
             if let Some(r) = crate::logicshell::route_op(self.obj, op, g(0), g(1), g(2)) {
                 return r;
             }

@@ -126,6 +126,32 @@ fn bg<R: Default>(bg: Cpp, g: impl FnOnce(&EeUiBackgroundFields) -> R) -> R {
     // SAFETY: a live background record
     unsafe { r.as_ref() }.map_or_else(R::default, g)
 }
+/// `this->DrawTiledBackground(rect f, a, b, c, d, f[4], f[5])` (o the background record; the one body, Rust's).
+///
+/// # Safety
+/// The host contract: `o` a live background record, `f` six floats.
+pub(crate) unsafe fn bg_tiled(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        let mut w = [
+            *f,
+            *f.add(1),
+            *f.add(2),
+            *f.add(3),
+            f32::from_bits(c as u32),
+            f32::from_bits(d as u32),
+            *f.add(4),
+            *f.add(5),
+        ];
+        crate::bgobj::ee_ui_bg_call(
+            o as *mut EeUiBackgroundFields,
+            crate::bgobj::EeUiBgCall::DrawTiled,
+            ul(a),
+            ul(b),
+            w.as_mut_ptr(),
+        ) as core::ffi::c_long as isize
+    }
+}
 /// The form of the background record `o` (the host's object).
 unsafe fn bg_form(o: *mut c_void) -> Cpp {
     // SAFETY: the host contract: `o` a live background record
@@ -191,6 +217,44 @@ ops! {
     ctl_tabbing_on => |o, a, b, f| bl(form_call(form_of(o), F::TabbingOn, 0, 0));
     /// `theForm->GetManager()->GetNumberOfSurfaces()`.
     ctl_form_surfaces => |o, a, b, f| ul(mgr_call(mgr(form_of(o)), M::NumberOfSurfaces, 0, 0, 0));
+    // ---- the virtuals no class overrides (LLE/UI round 3): the one body, Rust's
+    /// `ctl->SetDisplayMode(a)`.
+    ctl_set_display_mode => |o, a, b, f| ctl_call(o, C::SetDisplayMode, ul(a)) * 0;
+    /// `a->SetDisplayMode(b)` (the form's control).
+    form_ctl_set_display_mode => |o, a, b, f| ctl_call(p(a), C::SetDisplayMode, ul(b)) * 0;
+    /// `ctl->ReleaseCapturedMouse()`.
+    ctl_release_mouse => |o, a, b, f| ctl_call(o, C::ReleaseMouse, 0) * 0;
+    /// `a->ReleaseCapturedMouse()` (the form's control).
+    form_ctl_release_mouse => |o, a, b, f| ctl_call(p(a), C::ReleaseMouse, 0) * 0;
+    /// `ctl->DrawBorder(rect f, a)`: the bevelled border over the record's copied opacity and type.
+    ctl_draw_border => |o, a, b, f| {
+        let m = mgr(form_of(o));
+        let (opacity, kind) = ctl(o, |r| (r.mCopiedBorderOpacity, r.mCopiedBorderType));
+        let rect = *(f as *const UiRect);
+        let rasterizer = mgr_call(m, M::Rasterizer, 0, 0, 0) as *mut c_void;
+        let screen = mgr_call(m, M::Screen, 0, 0, 0) as c_ulong;
+        crate::lle_control::ee_ui_control_draw_border(rasterizer, screen, rect, ul(a) as c_ulong, opacity, kind) as isize
+    };
+    /// `a->RelayoutBackground()` (the form's background).
+    form_bg_relayout => |o, a, b, f| direct::background_call(p(a), crate::bgobj::EeUiBgCall::Relayout, 0, 0) * 0;
+    /// `a->FireEvents()` (the form's hot key).
+    form_hot_key_fire => |o, a, b, f| bl(hot_key_call(p(a), crate::hotkeyobj::EeUiHotKeyCall::FireEvents, 0, 0));
+    /// `this->DrawStrectchedBackground(rect f, rect f + 4)` (o the record).
+    bg_stretched => |o, a, b, f| crate::bgobj::ee_ui_bg_call(o as *mut EeUiBackgroundFields, crate::bgobj::EeUiBgCall::BitmapStretched, 0, 0, f) as core::ffi::c_long as isize;
+    /// `l->CheckScrollBar()` (o the label).
+    label_check_scroll_bar => |o, a, b, f| direct::label_call(o, crate::labelobj::EeUiLabelCall::CheckScrollBar, 0, 0).unwrap_or(0) * 0;
+    /// `l->RecomputeDisplayRange()` (o the label).
+    label_recompute => |o, a, b, f| direct::label_call(o, crate::labelobj::EeUiLabelCall::RecomputeDisplayRange, 0, 0).unwrap_or(0) * 0;
+    /// `l->ProcessHome()` (o the list box).
+    list_process_home => |o, a, b, f| direct::list_call(o, crate::listobj::EeUiListCall::ProcessHome, 0, 0).unwrap_or(0) * 0;
+    /// `l->ProcessEnd()` (o the list box).
+    list_process_end => |o, a, b, f| direct::list_call(o, crate::listobj::EeUiListCall::ProcessEnd, 0, 0).unwrap_or(0) * 0;
+    /// `CB->OpenListBox()` (o the combo box).
+    combo_a_open_list => |o, a, b, f| direct::combo_call(o, crate::comboobj::EeUiComboCall::OpenListBox, 0, 0).unwrap_or(0) * 0;
+    /// `CB->CloseListBox()` (o the combo box).
+    combo_a_close_list => |o, a, b, f| direct::combo_call(o, crate::comboobj::EeUiComboCall::CloseListBox, 0, 0).unwrap_or(0) * 0;
+    /// `CB->ReleaseCapturedMouse()` (o the combo box).
+    combo_a_release_mouse => |o, a, b, f| ctl_call(o, C::ReleaseMouse, 0) * 0;
     // ---- every whole object's (o the control)
     /// `ctl->UIControl::CopyData()`.
     obj_base_copy_data => |o, a, b, f| ctl_call(o, C::CopyData, 0) as core::ffi::c_long as isize;
@@ -511,6 +575,183 @@ pub(crate) fn hot_key_call(k: Cpp, call: crate::hotkeyobj::EeUiHotKeyCall, a: is
     }
     // SAFETY: a live hot key record
     unsafe { crate::hotkeyobj::ee_ui_hotkey_call(r, call, a, b) }
+}
+
+// ---- UIControl's virtuals that only toolkit classes overrode (LLE/UI round 3): the override of the control's kind
+// (direct.rs finds each Rust object by the C++ pointer), else UIControl's body
+
+/// `c->SetBgOpacity(v[0])` (`color` false) or `c->SetBgColor(v[0..3])`: nothing for a combo box, the scroll bar's,
+/// else UIControl's.
+pub(crate) fn virt_bg(c: Cpp, color: bool, mut v: [f32; 4]) {
+    if direct::is(Kind::Combo, c) {
+        return;
+    }
+    if direct::is(Kind::ScrollBar, c) {
+        let o = direct::find(Kind::ScrollBar, c) as *const crate::scrollbarobj::EeUiScrollBar;
+        let call = if color { B::SetBgColor } else { B::SetBgOpacity };
+        // SAFETY: a live scroll bar
+        unsafe { crate::scrollbarobj::ee_ui_scroll_bar_call(o, call, 0, 0, v.as_mut_ptr()) };
+        return;
+    }
+    direct::control_call_f(c, if color { C::SetBgColor } else { C::SetBgOpacity }, 0, 0, &mut v);
+}
+/// `c->ReleaseCapturedKeyboard()`: the edit box's, else UIControl's.
+pub(crate) fn virt_release_keyboard(c: Cpp) {
+    if direct::is(Kind::Edit, c) {
+        direct::edit_call(c, crate::editobj::EeUiEditCall::ReleaseKeyboard, 0, 0);
+    } else {
+        ctl_call(c, C::ReleaseKeyboard, 0);
+    }
+}
+/// `c->HideControl()`: the combo box's, else nothing.
+fn virt_hide(c: Cpp) {
+    if direct::is(Kind::Combo, c) {
+        direct::combo_call(c, crate::comboobj::EeUiComboCall::HideControl, 0, 0);
+    }
+}
+/// `c->GetIMEEnabled()`: the edit box's, else false.
+fn virt_ime_enabled(c: Cpp) -> isize {
+    if direct::is(Kind::Edit, c) {
+        bl(direct::edit_call(c, crate::editobj::EeUiEditCall::ImeEnabled, 0, 0).unwrap_or(0))
+    } else {
+        0
+    }
+}
+/// `c->OpenIMECompositionString()` (`open`) or `CloseIMECompositionString()`: the edit box's, else kErrorFailed.
+fn virt_ime(c: Cpp, open: bool) -> isize {
+    use crate::editobj::EeUiEditCall as E;
+    if !direct::is(Kind::Edit, c) {
+        return 9;
+    }
+    direct::edit_call(c, if open { E::ImeOpen } else { E::ImeClose }, 0, 0).unwrap_or(0) as core::ffi::c_long as isize
+}
+/// `c->OpenIMECompositionString()`.
+pub(crate) fn control_ime_open(c: usize) -> core::ffi::c_long {
+    virt_ime(c as Cpp, true) as core::ffi::c_long
+}
+/// `c->CloseIMECompositionString()`.
+pub(crate) fn control_ime_close(c: usize) -> core::ffi::c_long {
+    virt_ime(c as Cpp, false) as core::ffi::c_long
+}
+/// A C++ `UString` or `UWideString`'s `operator const char*` (its record's buffer, after the vtable), or 0.
+///
+/// # Safety
+/// `s` is 0 or a live `UString` / `UWideString`.
+unsafe fn cpp_string_text(s: usize) -> isize {
+    if s == 0 {
+        return 0;
+    }
+    // SAFETY: the contract: the vtable pointer, then the record, its buffer first (ee_base ustring)
+    unsafe { *((s + core::mem::size_of::<usize>()) as *const *const core::ffi::c_char) as isize }
+}
+/// `c->AddIMEResultString(*text)`: the edit box's, else nothing.
+///
+/// # Safety
+/// `text` is a live `UWideString`.
+pub(crate) unsafe fn control_ime_result(c: usize, text: usize) {
+    if direct::is(Kind::Edit, c as Cpp) {
+        // SAFETY: the contract
+        let t = unsafe { cpp_string_text(text) };
+        direct::edit_call(c as Cpp, crate::editobj::EeUiEditCall::AddImeResult, t, 0);
+    }
+}
+/// `c->ChangeIMECompositionString(*text, *attributes, cursor)`: the edit box's, else kErrorFailed.
+///
+/// # Safety
+/// `text` is a live `UWideString`, `attributes` a live `UString`.
+pub(crate) unsafe fn control_ime_change(c: usize, text: usize, attributes: usize, cursor: u32) -> core::ffi::c_long {
+    let e = direct::find(Kind::Edit, c as Cpp) as *const crate::editobj::EeUiEdit;
+    if e.is_null() {
+        return 9;
+    }
+    // SAFETY: the contract; a live edit box
+    unsafe {
+        let (t, a) = (cpp_string_text(text), cpp_string_text(attributes));
+        let mut f = [0.0f32; 4];
+        crate::editobj::ee_ui_edit_call(
+            e,
+            crate::editobj::EeUiEditCall::ImeChange,
+            t,
+            cursor as c_ulong as isize,
+            a,
+            0,
+            f.as_mut_ptr(),
+        ) as core::ffi::c_long
+    }
+}
+/// `c->SetBgOpacity(opacity)`.
+pub(crate) fn control_set_bg_opacity(c: usize, opacity: f32) {
+    virt_bg(c as Cpp, false, [opacity, 0.0, 0.0, 0.0]);
+}
+/// `c->SetBgColor(GEColor(red, green, blue))`.
+pub(crate) fn control_set_bg_color(c: usize, red: f32, green: f32, blue: f32) {
+    virt_bg(c as Cpp, true, [red, green, blue, 0.0]);
+}
+/// `c->ChangeFont(font)`: the button's, edit box's, status bar's or label's, else nothing.
+fn virt_change_font(c: Cpp, font: isize) {
+    if direct::is(Kind::Button, c) {
+        direct::button_call(c, crate::buttonobj::EeUiButtonCall::ChangeFont, font, 0);
+    } else if direct::is(Kind::Edit, c) {
+        direct::edit_call(c, crate::editobj::EeUiEditCall::ChangeFont, font, 0);
+    } else if direct::is(Kind::StatusBar, c) {
+        direct::status_call(c, crate::statusobj::EeUiStatusBarCall::ChangeFont, font, 0, &mut [0.0; 4]);
+    } else if direct::is(Kind::Label, c) {
+        direct::label_call(c, crate::labelobj::EeUiLabelCall::ChangeFont, font, 0);
+    }
+}
+/// `c->MouseWheelTurned(delta)`: the combo box's, list box's or label's, else kErrorFailed.
+fn virt_wheel(c: Cpp, delta: isize) -> isize {
+    let d = delta as core::ffi::c_long as isize;
+    let r = if direct::is(Kind::Combo, c) {
+        direct::combo_call(c, crate::comboobj::EeUiComboCall::MouseWheelTurned, d, 0)
+    } else if direct::is(Kind::List, c) {
+        direct::list_call(c, crate::listobj::EeUiListCall::MouseWheelTurned, d, 0)
+    } else if direct::is(Kind::Label, c) {
+        direct::label_call(c, crate::labelobj::EeUiLabelCall::MouseWheelTurned, d, 0)
+    } else {
+        Some(9)
+    };
+    lg(r.unwrap_or(0))
+}
+
+ops! {
+    /// `ctl->SetBgOpacity(f[0])`.
+    ctl_set_bg_opacity => |o, a, b, f| { virt_bg(o, false, f4(f)); 0 };
+    /// `ctl->SetBgColor(f[0..3])`.
+    ctl_set_bg_color => |o, a, b, f| { virt_bg(o, true, [*f, *f.add(1), *f.add(2), 0.0]); 0 };
+    /// `a->SetBgOpacity(f[0])` (a part, a table's control).
+    part_set_bg_opacity => |o, a, b, f| { virt_bg(p(a), false, [*f, 0.0, 0.0, 0.0]); 0 };
+    /// `a->SetBgColor(f[0..3])` (a part, a table's control).
+    part_set_bg_color => |o, a, b, f| { virt_bg(p(a), true, [*f, *f.add(1), *f.add(2), 0.0]); 0 };
+    /// `ctl->ReleaseCapturedKeyboard()`.
+    ctl_release_keyboard => |o, a, b, f| { virt_release_keyboard(o); 0 };
+    /// `a->ReleaseCapturedKeyboard()` (the form's control).
+    form_ctl_release_keyboard => |o, a, b, f| { virt_release_keyboard(p(a)); 0 };
+    /// `ctl->HideControl()`.
+    ctl_hide => |o, a, b, f| { virt_hide(o); 0 };
+    /// `a->HideControl()` (the form's or group's control).
+    part_hide => |o, a, b, f| { virt_hide(p(a)); 0 };
+    /// `a->GetIMEEnabled()` (the form's or manager's control).
+    part_ime_enabled => |o, a, b, f| virt_ime_enabled(p(a));
+    /// `a->MouseWheelTurned(b)` (the form's control).
+    part_wheel_turned => |o, a, b, f| virt_wheel(p(a), b);
+    /// `CB->GetList()->MouseWheelTurned(b)` (o the combo box).
+    combo_a_list_wheel => |o, a, b, f| virt_wheel(direct::combo_list(o), b);
+}
+/// `a->ChangeFont(c)` (a table's control).
+///
+/// # Safety
+/// The host contract.
+pub(crate) unsafe fn table_change_font(
+    _o: *mut c_void,
+    a: isize,
+    _b: isize,
+    c: isize,
+    _d: isize,
+    _f: *mut f32,
+) -> isize {
+    virt_change_font(p(a), c);
+    0
 }
 
 // ---- the scroll bars (a `UIScrollBar*`) and sliders (a `UISlider*`) the controls own

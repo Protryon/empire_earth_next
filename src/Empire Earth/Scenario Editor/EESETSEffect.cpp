@@ -34,6 +34,9 @@
 #include "ee/EEUnit.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEScreenEvent.h"
+#include "rust/game/tech_tree.h"
+#include "rust/sim/scenario.h"
+#include "rust/sim/tech.h"
 
 
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
@@ -152,7 +155,7 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
     EESMEffect* theEffect = static_cast<EESMEffect*>(p[1]);
     switch (inOp) {
     case EE_SCREENS_SEET_OP_GET_NAMES:
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_EFFECTS, *static_cast<std::vector<UWideString>*>(p[1]));
+        ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_NAMES, (unsigned long)(EE_SCENARIO_NAMES_USER_EFFECTS), 0, 0, &(*static_cast<std::vector<UWideString>*>(p[1])));
         return 0;
     case EE_SCREENS_SEET_OP_OBJECT_COUNT: return (int32_t)theEffect->mObjects.size();
     case EE_SCREENS_SEET_OP_OBJECT: return (int32_t)theEffect->mObjects[(size_t)i[2]];
@@ -166,7 +169,7 @@ extern "C" int32_t ee_screenscpp_sect(uint32_t inOp, void* const* p, int32_t* i,
 {
     switch (inOp) {
     case EE_SCREENS_SEET_OP_GET_NAMES:
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_CONDITIONS, *static_cast<std::vector<UWideString>*>(p[1]));
+        ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_NAMES, (unsigned long)(EE_SCENARIO_NAMES_USER_CONDITIONS), 0, 0, &(*static_cast<std::vector<UWideString>*>(p[1])));
         return 0;
     }
     return SeetOp(inOp, SeetC{p[0], true}, p, i, f);
@@ -192,7 +195,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_COMBO_FONT_530: static_cast<UIComboBox*>(p[0])->GetGEText()->SetFont(gU531930); return 0;
     case EE_SCREENS_SEETX_COMBO_LIST_FONT_530: static_cast<UIComboBox*>(p[0])->GetListBox()->GetGEText()->SetFont(gU531930); return 0;
     case EE_SCREENS_SEETX_NAMES_CLEAR: sSeetNames[i[0]].clear(); return 0;
-    case EE_SCREENS_SEETX_NAMES_GET: gWorld.mScenarioManager->GetNames((unsigned long)i[1], sSeetNames[i[0]]); return 0;
+    case EE_SCREENS_SEETX_NAMES_GET: ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_NAMES, (unsigned long)i[1], 0, 0, &(sSeetNames[i[0]])); return 0;
     case EE_SCREENS_SEETX_NAMES_COUNT: return (int32_t)sSeetNames[i[0]].size();
     case EE_SCREENS_SEETX_NAMES_AT: return EESEWrite(p[2], i[3], sSeetNames[i[0]][(size_t)i[1]]);
     case EE_SCREENS_SEETX_COMBO_APPEND_NAMES: static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeetNames[i[0]]); return 0;
@@ -237,8 +240,8 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_CLASS_TYPE: return (int32_t)static_cast<EEUnitClass*>(p[0])->mUnitType;
     case EE_SCREENS_SEETX_CLASS_DOMAINS: return (int32_t)static_cast<EEUnitClass*>(p[0])->mDomains;
     case EE_SCREENS_SEETX_TECHS_CLEAR: sSeetTechs.clear(); return 0;
-    case EE_SCREENS_SEETX_TECHS_NODE_IDS: gTechTree.GetNodeIDs(sSeetTechs); return 0;
-    case EE_SCREENS_SEETX_EPOCH_COUNT: return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEETX_TECHS_NODE_IDS: ee_gamecpp_tech_node_ids(&gTechTree, true, 0, &sSeetTechs); return 0;
+    case EE_SCREENS_SEETX_EPOCH_COUNT: return (int32_t)(long)ee_tech_epoch_count();
     case EE_SCREENS_SEETX_TECHS_PUSH: sSeetTechs.push_back((long)(unsigned long)(uint32_t)i[0]); return 0;
     case EE_SCREENS_SEETX_TECHS_COUNT: return (int32_t)sSeetTechs.size();
     case EE_SCREENS_SEETX_TECHS_AT: return (int32_t)sSeetTechs[(size_t)i[0]];
@@ -279,8 +282,8 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_SET_OBJECTS:
         static_cast<EESMEffect*>(p[0])->mObjects.assign(static_cast<const uint32_t*>(p[1]), static_cast<const uint32_t*>(p[1]) + i[0]);
         return 0;
-    case EE_SCREENS_SEETX_SM_SORT: gWorld.mScenarioManager->SortList((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEETX_SM_MOVE: gWorld.mScenarioManager->MoveEntry((unsigned long)i[0], (unsigned long)(uint32_t)i[1], i[2] != 0); return 0;
+    case EE_SCREENS_SEETX_SM_SORT: ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_SORT, (unsigned long)i[0], 0, 0, NULL); return 0;
+    case EE_SCREENS_SEETX_SM_MOVE: ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_MOVE, (unsigned long)i[0], (unsigned long)(uint32_t)i[1], i[2] != 0, NULL); return 0;
     case EE_SCREENS_SEETX_SM_DELETE: gWorld.mScenarioManager->DeleteEntry((unsigned long)i[0], (unsigned long)(uint32_t)i[1]); return 0;
     case EE_SCREENS_SEETX_SM_DUPLICATE: gWorld.mScenarioManager->DuplicateEntry((unsigned long)i[0], (unsigned long)(uint32_t)i[1]); return 0;
     case EE_SCREENS_SEETX_SM_NEW: gWorld.mScenarioManager->NewEntry((unsigned long)i[0]); return 0;

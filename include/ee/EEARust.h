@@ -12,6 +12,7 @@
 #include <vector>
 #include "ee/EEAction.h"
 #include "lle/TMPoll.h"
+#include "rust/game/records.h"
 #include "rust/game/screens.h"
 
 class EEMessage;
@@ -41,14 +42,7 @@ public:
     {
         ee_screens_ga_select_in_rectangle(this, &inRectangle);
     }
-    // the mouse click's plain click (inModifiers & 1: add to the selection)
-    void SelectAtMouse(unsigned long inModifiers) { ee_screens_ga_select_at_mouse(this, (uint32_t)inModifiers); }
     void SetMessage(EEMessage* inMessage) { this->mMessage = inMessage; }
-    // the lasso's message over inRectangle (inFlags 2: add and remove, 1: add; the path point type: the patrol group)
-    void SelectUnits(const GERectangle& inRectangle, long inFlags, unsigned long inUnitType, long inPatrolGroup)
-    {
-        ee_screens_ga_select_units(this, &inRectangle, (int32_t)inFlags, (uint32_t)inUnitType, (int32_t)inPatrolGroup);
-    }
     // the build's placements of mTechnology
     void Build(const GE2DPoint& inLocation) { ee_screens_ga_build(this, inLocation.GetX(), inLocation.GetY()); }
     void BuildGate(const GE2DPoint& inLocation, long inSide)
@@ -227,10 +221,6 @@ public:
 class EESEAPaint : public EEARust {
 public:
     EESEAPaint() : EEARust(EE_SCREENS_GA_EDITOR_PAINT) {}
-    bool SetArea(long inLeft, long inTop, long inRight, long inBottom)
-    {
-        return ee_screens_ga_paint_set_area(this, (int32_t)inLeft, (int32_t)inTop, (int32_t)inRight, (int32_t)inBottom);
-    }
 };
 class EESEAPaintRust : public EESEAPaint {
 public:

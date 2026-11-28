@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/routeconn.h"
-#include "rust/won_net/routeop.h"
+#include "rust/won_net/records.h"
 
 /// No request.
 constexpr static const int32_t EE_WON_SMART_ACT_NONE = 0;
@@ -81,9 +79,6 @@ enum class EeWonSmartLocked : uint32_t {
   /// `ee_won_smart_set(r, a, b)`.
   Set,
 };
-
-/// The model (opaque): `SmartRoutingConnection::mModel`.
-struct EeWonSmartRoute;
 
 /// A record's copy for `ClientInfo` / `GroupInfo` / `MemberInfo` (`name` points into the object until its next
 /// call).

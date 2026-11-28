@@ -5,9 +5,11 @@
 #ifndef EE_EESOUNDOBJECT_H
 #define EE_EESOUNDOBJECT_H
 
+#include "rust/data/records.h"
 #include "rust/data/tables.h"
 #include "rust/data/media.h"
 #include "rust/game/preload_media.h"
+#include "ee/EEMedia.h"
 
 class EESoundObject;
 class FSFile;
@@ -55,6 +57,5 @@ public:
 };
 
 // dbsounds' sounds by table index (EESoundID): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
-#include "rust/sim/game_ids.h"
 
 #endif

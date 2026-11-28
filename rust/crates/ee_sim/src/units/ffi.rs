@@ -1,6 +1,6 @@
 //! The C ABI behind `RTSRegisterUnit` / `RTSUnregisterUnit` / `RTSResolveUnitID` (`src/RTS Engine/Units/RTSUnit.cpp`).
 //! One process-wide registry; the C++ keeps the "no id" value (0xffffffff) out of it.
-//! And the unit store's (`include/ee/EEUnitStore.h`, `src/Empire Earth/Units/EEUnitStore.cpp`; see `store`).
+//! And the unit store's (`include/ee/EEUnitStore.h`; see `store`).
 
 use crate::units::order::with_order;
 use crate::units::store::{with_store, EeUnitRecord, EeUnitStoreCheck};

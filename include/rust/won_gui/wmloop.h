@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/wmobj.h"
+#include "rust/won_gui/records.h"
 
 /// Which set `ee_won_wm_set_at` reads.
 enum class EeWonWmSet : uint32_t {

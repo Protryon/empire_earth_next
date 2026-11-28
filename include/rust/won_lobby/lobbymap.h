@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ipobj.h"
+#include "rust/won_net/records.h"
 
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {

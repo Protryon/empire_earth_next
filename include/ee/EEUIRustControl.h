@@ -9,6 +9,7 @@
 #define EE_EEUIRUSTCONTROL_H
 
 #include "rust/game/screens.h"
+#include "lle/UIControl.h"
 
 class EEUIRustControl : public UIControl {
 public:

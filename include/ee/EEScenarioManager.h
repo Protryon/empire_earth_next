@@ -12,6 +12,7 @@
 #include "ee/EESMMediaStrings.h"
 
 #include "ee/EESMDialogMessage.h"
+#include "rust/sim/records.h"
 
 class EESMArea;
 class FSFileSpec;
@@ -66,12 +67,6 @@ public:
     // Replaces a unit ID with another in every scenario object
     // +0x48 0x1b31e8 (mObjects +0x18; EEPhysics 0x153430)
     virtual void ReplaceUnit(long inOldUnit, long inNewUnit) { ee_scenario_en_round(this, EE_SCENARIO_MN_REPLACE_UNIT, NULL, inOldUnit, inNewUnit); }
-    // Ends a cinematic: delays the other timed effects and trigger timers by its length + 3 s, drops its unrun effects
-    // and dialog messages, delays the wonder timers and restores the camera saved by StartCinematic
-    // Called by EEMEndCinematic::Execute 0xbdf7d
-    // NEAR: the two discarded expressions per pending entry (a compiled-out trace) and the inline budget of begin()
-    // 0x1b1ae4 (no arguments; EEMEndCinematic::Execute 0xbdf7d)
-    void EndCinematic() { ee_scenario_en_round(this, EE_SCENARIO_MN_END_CINEMATIC, NULL, 0, 0); }
     // Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
     // voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused (ee_scenario
     // round.rs show_dialog)
@@ -83,15 +78,6 @@ public:
     // round.rs update)
     // 0x1b20e6 (EEPhysics 0x153265: the per-tick clock and trigger update)
     void Update() { ee_scenario_en_manager(this, EE_SCENARIO_MN_UPDATE); }
-    // Writes the trigger text file (EESEIAExport): the media strings, then the effect, condition and player name
-    // entries; 9 on a write error
-    // 0x1b23dc (EESEIAExport 0x16ffd0; `ret 4`)
-    long ExportText(FSFileSpec& inFile) { return ee_scenario_en_text(this, &inFile, true, 0, false); }
-    // the trigger text import (EESEIAImport 0x170439; provisional name; `ret 0xc`; ee_scenario text.rs with
-    // ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers 0x1b463b, 0x1b46bf, 0x1b4796)
-    // Reads a trigger text file (EESEIAImport) of "{id_Kind:name}" lines, each followed by its text; with inValidate
-    // lists the bad entries first (mImportErrors), then applies them; 9 on a bad entry
-    long ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate) { return ee_scenario_en_text(this, &inFile, false, inKind, inValidate); }
     // 0x1b33d7 / 0x1b396b: fill outNames with the scenario's area / object names (EESEEvents' combo helper;
     // provisional names)
     // inline (COMDAT 0x17cadf, emitted by EESETriggerScreen.cpp): condition inIndex, 0 past the end
@@ -108,21 +94,9 @@ public:
     // reset)
     // 0x1afbb1 (the ctor and Load 0x1b4081)
     void Reset() { ee_scenario_en_manager(this, EE_SCENARIO_MN_RESET); }
-    // the editor's list operations and name lists (EE_SCENARIO_LIST_*, EE_SCENARIO_NAMES_*; ee_scenario lists.rs)
-    // The editor's Sort, New, MoveUp/MoveDown, Delete and Duplicate of a list (EE_SCENARIO_LIST_*: 0x1b00c1..0x1b0674,
-    // 0x1b074c..0x1b0b65, 0x1b0beb..0x1b0e71 and 0x1b3e75..0x1b4017, 0x1b0ec6..0x1b10ed, 0x1b120d..0x1b1978), the name
-    // lists, the id searches and EESMObject's changes (ee_scenario entry.rs over lists.rs)
-    void SortList(unsigned long inList) { ee_scenario_en_list(this, EE_SCENARIO_LS_SORT, inList, 0, 0, NULL); }
     void* NewEntry(unsigned long inList) { return (void*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_NEW, inList, 0, 0, NULL); }
-    void MoveEntry(unsigned long inList, unsigned long inIndex, bool inUp) { ee_scenario_en_list(this, EE_SCENARIO_LS_MOVE, inList, inIndex, inUp, NULL); }
     bool DeleteEntry(unsigned long inList, unsigned long inIndex) { return ee_scenario_en_list(this, EE_SCENARIO_LS_DELETE, inList, inIndex, 0, NULL) != 0; }
     void* DuplicateEntry(unsigned long inList, unsigned long inIndex) { return (void*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_DUPLICATE, inList, inIndex, 0, NULL); }
-    // The name list of one kind (the editor's lists)
-    void GetNames(unsigned long inWhich, std::vector<UWideString>& outNames) { ee_scenario_en_list(this, EE_SCENARIO_LS_NAMES, inWhich, 0, 0, &outNames); }
-    // Records a copy of an applied effect whose change a saved game must replay on load (ignored until
-    // ApplyPendingEffects has run)
-    // 0x1b000d (not while mB234)
-    void AddV134Effect(const EESMEffect& inEffect) { ee_scenario_en_round(this, EE_SCENARIO_MN_ADD_PENDING, &inEffect, 0, 0); }
     // Schedules an effect (by index) to run at the given scenario time, keeping the timed effects sorted by time
     // 0x1b005b (EESMTrigger 0x1c9c84)
     void AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic) { ee_scenario_timed_add(this->mTimedEffects, inEffect, inTime, inIsInCinematic); }
@@ -134,15 +108,9 @@ public:
     EESMEffect* FindEffectByID(long inID) { return (EESMEffect*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_FIND, EE_SCENARIO_LIST_EFFECTS, inID, 0, NULL); }
     // 0x1b32a8 (mL64)
     EESMObject* FindObjectByID(long inID) { return (EESMObject*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_FIND, EE_SCENARIO_LIST_OBJECTS, inID, 0, NULL); }
-    // 0x1b32e4 (-1 if none; EESMObject::SetName)
-    long GetObjectIndex(EESMObject* inObject) { return (long)ee_scenario_en_list(this, EE_SCENARIO_LS_INDEX_OF, EE_SCENARIO_LIST_OBJECTS, 0, 0, inObject); }
     // the editor's name lists ("[id]" prefixes while mShowDebugIDs; provisional names)
     unsigned long GetNumTimedEffects() { return (unsigned long)ee_scenario_timed_count(this->mTimedEffects); }
     EeScenarioTimedEntry GetTimedEntry(unsigned long inIndex) { return ee_scenario_timed_at(this->mTimedEffects, inIndex); }
-    // Replays every pending effect of a loaded game, makes the triggers evaluate on the next tick and starts recording
-    // new pending effects
-    // 0x1b286d (EEWorld 0x13a0e6; runs every mPendingEffects effect, clears mB234)
-    void ApplyPendingEffects() { ee_scenario_en_round(this, EE_SCENARIO_MN_APPLY_PENDING, NULL, 0, 0); }
     // inline (COMDATs 0x17da08 / 0x188edd / 0x18ef8a, emitted by the editor's area / object / trigger screens;
     // GetCondition's shape; provisional names)
     EESMArea* GetArea(unsigned long inIndex) { return EESMAt(this->mAreas, inIndex); }

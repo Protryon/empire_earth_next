@@ -6,12 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A cipher's key. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
-struct EeWonBlowfish {
-  uint8_t key[56];
-  uint32_t key_len;
-  uint32_t valid;
-};
+#include "rust/won_net/records.h"
 
 #endif  // EE_RUST_WON_NET_BLOWFISH_H

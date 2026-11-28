@@ -50,12 +50,10 @@ pub const EE_UNITS_CU_ADD_DEAD_STATISTIC: i32 = 19;
 pub const EE_UNITS_CU_STATS_LOWER: i32 = 20;
 /// `gCivPowersManager.HasPower(GetPlayer(), kCivPowerInsurance)`
 pub const EE_UNITS_CU_HAS_INSURANCE: i32 = 21;
-/// `gCivPowersManager.GetPower(kCivPowerInsurance, the power)` (the power kept for the next two)
+/// `gCivPowersManager.GetPower(kCivPowerInsurance, *(EECivPower*)b)` (the body's record; answered in Rust: cu_view.rs)
 pub const EE_UNITS_CU_GET_INSURANCE: i32 = 22;
-/// `gUnitSetManager.Contains(GetUnitClass()->GetUnitType(), the power's mUnitSet)`
+/// `gUnitSetManager.Contains(GetUnitClass()->GetUnitType(), b)` (the power's `mUnitSet`)
 pub const EE_UNITS_CU_INSURANCE_COVERS: i32 = 23;
-/// the power's `mAmount` (its bits)
-pub const EE_UNITS_CU_INSURANCE_AMOUNT: i32 = 24;
 /// `mIsBuilt`
 pub const EE_UNITS_CU_IS_BUILT: i32 = 25;
 /// `PayInsurance(float of the bits b)`
@@ -504,16 +502,18 @@ pub fn kill<H: CuHost + ?Sized>(h: &mut H, unit: u64, killed: bool, keep_researc
             }
         }
     }
+    // the insurance power's record (units round 14: the body's, was a C++ scratch static)
+    let mut power = crate::tech::civ::EeTechCivPower::default();
     if refund
         && killed
         && !suppress
         && s(h, EE_UNITS_CU_HAS_INSURANCE, unit) != 0
-        && s(h, EE_UNITS_CU_GET_INSURANCE, unit) != 0
-        && s(h, EE_UNITS_CU_INSURANCE_COVERS, unit) != 0
+        && sb(h, EE_UNITS_CU_GET_INSURANCE, unit, &mut power as *mut crate::tech::civ::EeTechCivPower as usize as i64)
+            != 0
+        && sb(h, EE_UNITS_CU_INSURANCE_COVERS, unit, i64::from(power.mUnitSet)) != 0
         && (s(h, EE_UNITS_CU_UNIT_TYPE, unit) != UNIT_TYPE_FARM || s(h, EE_UNITS_CU_IS_BUILT, unit) != 0)
     {
-        let amount = s(h, EE_UNITS_CU_INSURANCE_AMOUNT, unit);
-        sb(h, EE_UNITS_CU_PAY_INSURANCE, unit, amount);
+        sb(h, EE_UNITS_CU_PAY_INSURANCE, unit, i64::from(power.mAmount.to_bits()));
     }
     let attacker = s(h, EE_UNITS_CU_LAST_ATTACKER, unit) as u64;
     if attacker != 0 {
@@ -1029,7 +1029,7 @@ pub mod game {
     use std::os::raw::c_void;
 
     extern "C" {
-        fn ee_units_cu_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64, f: *mut [f32; 4]) -> i64;
+        pub(crate) fn ee_units_cu_host(op: i32, unit: *mut c_void, a: u64, b: i64, c: i64, f: *mut [f32; 4]) -> i64;
     }
 
     /// the game's host (the other cu_* modules' extern functions use it too)
@@ -1059,11 +1059,45 @@ pub mod game {
         }
     }
 
+    use crate::units::cu_cargo::{EE_UNITS_CU_BUILD_QUEUE_FIND, EE_UNITS_CU_CITIZEN_AT};
+    use crate::units::cu_life::{
+        EE_UNITS_CU_FANATICISM_FIELDS, EE_UNITS_CU_FANATICISM_PARAM, EE_UNITS_CU_FANATICISM_PERIOD,
+    };
+
     impl CuHost for Game {
         fn cu(&mut self, op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::cu(op, unit, a, b) {
+                return v;
+            }
             // SAFETY: the body runs inside the C++ member that handed over its live unit (the plain record reads
             // and stores first: cu_view.rs)
             unsafe {
+                let host = |op: i32, b: i64| ee_units_cu_host(op, unit as usize as *mut c_void, 0, b, 0, &mut [0.0; 4]);
+                match op {
+                    // units round 14: std::find over mCitizenBuildQueue (was EECuFind)
+                    EE_UNITS_CU_BUILD_QUEUE_FIND => {
+                        let n = host(EE_UNITS_CU_BUILD_TARGET_COUNT, 0);
+                        return (0..n).find(|&i| host(EE_UNITS_CU_CITIZEN_AT, i) as u64 == a).unwrap_or(-1);
+                    }
+                    // the fanaticism effect's period and colour parameters 1..6 (was EECuFanaticismParam)
+                    EE_UNITS_CU_FANATICISM_PERIOD | EE_UNITS_CU_FANATICISM_PARAM => {
+                        let fields = host(EE_UNITS_CU_FANATICISM_FIELDS, 0) as usize;
+                        let e = &*(fields as *const ee_data::tables::EeDataGraphicEffectFields);
+                        if op == EE_UNITS_CU_FANATICISM_PERIOD {
+                            return e.mIntParam1 as i64;
+                        }
+                        let p = match b {
+                            1 => e.mParam1,
+                            2 => e.mParam2,
+                            3 => e.mParam3,
+                            4 => e.mParam4,
+                            5 => e.mParam5,
+                            _ => e.mParam6,
+                        };
+                        return i64::from(p.to_bits());
+                    }
+                    _ => {}
+                }
                 if let Some(v) = crate::units::cu_view::cu_view(op, unit, a, b, c, f) {
                     return v;
                 }

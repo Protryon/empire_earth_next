@@ -298,8 +298,8 @@ fn unit_box() -> GeBoundingBox {
     GeBoundingBox::new(Ge3DPoint::default(), Ge3DPoint::new(1.0, 1.0, 1.0))
 }
 
-/// The model's calls that are one call of a Rust object: the active rasterizer and its screen id (a `GERasterizer`'s
-/// first member is its Rust object) and a texture's stage filters (`cppobj.rs`). Made here rather than through the
+/// The model's calls that are one call of a Rust object: the active rasterizer, its screen id and a screen's texture
+/// manager (a `GERasterizer`'s first member is its Rust object) and a texture's stage filters (`cppobj.rs`). Made here rather than through the
 /// C++ host (a test's fake host answers them instead).
 ///
 /// # Safety
@@ -315,6 +315,15 @@ unsafe fn direct_op(op: EeGeModOp, obj: usize, a: isize) -> Option<isize> {
         // SAFETY: a live GERasterizer
         EeGeModOp::RasterScreenId => {
             return Some(unsafe { ee_ge_rast_get(cppobj::plain::<EeGeRasterizer>(obj), EeGeRastVal::ScreenId) })
+        }
+        // `GetScreen(a)->GetTextureManager()`: the screen record's C++ screen, whose first member is its manager
+        // (cppobj.rs CppScreen)
+        EeGeModOp::RasterTextureManager => {
+            // SAFETY: a live GERasterizer with screen `a`
+            return Some(unsafe {
+                let state = crate::ge::rastobj::ee_ge_rast_screen(cppobj::plain::<EeGeRasterizer>(obj), a as c_ulong);
+                (*((*state).screen as *const cppobj::CppScreen)).texture_manager as isize
+            });
         }
         EeGeModOp::TexMinFilter => F::MinFilterMode,
         EeGeModOp::TexMagFilter => F::MagFilterMode,
@@ -1522,20 +1531,6 @@ pub unsafe extern "C" fn ee_ge_mod_store_loaded(
     }
 }
 
-/// `LoadTexturesForScreen(description, screen)`.
-///
-/// # Safety
-/// `p` is live; `description` a `GETextureDescription`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_mod_load_textures(
-    p: *mut EeGeModel,
-    description: *const c_void,
-    screen: c_ulong,
-) -> c_long {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModel::load_textures(p, description as usize, screen) }
-}
-
 /// `ComputeBoundingVolumes`.
 ///
 /// # Safety
@@ -1643,16 +1638,6 @@ pub unsafe extern "C" fn ee_ge_mod_prepare_transforms(p: *mut EeGeModel) {
     unsafe { EeGeModel::prepare_transforms(p) }
 }
 
-/// `RemoveScale`.
-///
-/// # Safety
-/// `p` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_mod_remove_scale(p: *mut EeGeModel) {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModel::remove_scale(p) }
-}
-
 /// `SetFractionalFramePosition`.
 ///
 /// # Safety
@@ -1721,16 +1706,6 @@ pub unsafe extern "C" fn ee_ge_mod_set_texture(p: *mut EeGeModel, texture: *mut 
 pub unsafe extern "C" fn ee_ge_mod_size_of(p: *mut EeGeModel) -> c_ulong {
     // SAFETY: the caller's contract
     unsafe { EeGeModel::size_of(p) }
-}
-
-/// `SortTagPoints`.
-///
-/// # Safety
-/// `p` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_mod_sort_tag_points(p: *mut EeGeModel) {
-    // SAFETY: the caller's contract
-    unsafe { EeGeModel::sort_tag_points(p) }
 }
 
 /// `Verify`.

@@ -21,22 +21,17 @@ public:
 
     void* GetData() { return (void*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameData); }
     bool GetCreateMIPMaps() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::CreateMipMaps) != 0; }
-    float GetFrameHeight() const { return this->GetFrameSurface()->GetHeight() * this->GetFrameUVSize(); }
     GESurface* GetFrameSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameSurface); }
     const GETextureCoordinate& GetFrameTopLeftCorner() const { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
-    float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
-    unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
     unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }
     bool HasChanged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::HasChanged) != 0; }
-    void SetData(void* inData) { ee_ge_tex_set(this->mRust, EeGeTexVal::FrameData, (intptr_t)inData); }
 
     unsigned long GetFrame() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::Frame); }
     unsigned long GetFrameCount() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameCount); }
     float GetFrameUVSize() const { return ee_ge_tex_frame_uv_size(this->mRust); }
     unsigned long GetMipLevelCount() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::MipLevelCount); }
     unsigned long GetNumMipLevelsToDrop() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::NumMipLevelsToDrop); }
-    GEScreen* GetScreen() const { return (GEScreen*)ee_ge_tex_get(this->mRust, EeGeTexVal::Screen); }
     const GETStage* GetStage() const { return (const GETStage*)ee_ge_tex_stage(this->mRust); }
     GESurface* GetSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::Surface); }
 
@@ -59,8 +54,6 @@ public:
     {
         ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::TextureAddressingMode, inMode);
     }
-    // Replaces the texture's surface (new rasterizer handle, promotion cleared); already-exists error if unchanged
-    long SetSurface(GESurface* inSurface) { return ee_ge_tex_set_surface(this->mRust, inSurface); }
     // Unlocks the texture's surface
     long Unlock() { return ee_ge_tex_unlock(this->mRust); }
     // ??1GETexture@@MAE@XZ (protected: released through Dereference): its extra animation frames, its rasterizer
@@ -88,8 +81,6 @@ public:
     bool GetOwnIsPromoted() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsPromoted) != 0; }
     bool GetIsFromTexturePack() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FromPack) != 0; }
     long GetTexturePackMipLevels() const { return (long)ee_ge_tex_get(this->mRust, EeGeTexVal::PackMipLevels); }
-    // port: the logical shift of every frame's surface (GESurface::GetLogicalShift; a texture pack's texture)
-    void SetLogicalShift(unsigned long inShift) { ee_ge_tex_set_logical_shift(this->mRust, inShift); }
     // port: the calls the Rust texture makes on other objects (EeGeTexOp)
     static intptr_t Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 

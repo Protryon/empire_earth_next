@@ -11,14 +11,14 @@
 #include "lle/GERhombus.h"
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEUIBuildWall.h"
-#include "rust/ui/formobj.h"
+#include "lle/UIForm.h"
+#include "rust/game/records.h"
 
 class EEUIFMGMainGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
 class EEUIFMainGame;
 class EESMDialogMessage;
-#include "rust/game/screens.h"   // EeScreensMainFormFields, EeScreensMainFormIo
 
 // One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the Rust record's
 // form, picked unit, chat line's colour and flags, dialog message, start modes' objects, media, mouse modes' first
@@ -150,7 +150,6 @@ public:
     void StartFlare() { this->StartMode(3, 0); }
     void StartPatrol() { this->StartMode(4, 0); }
     void StartMode(uint32_t inMode, long inTechnology) { ee_screens_main_form_start(EEUIFMGFormCall(this).Ptr(), inMode, inTechnology); }
-    void UpdateCursorKind() { ee_screens_update_cursor_kind(this); }   // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
     // the members that are Rust's whole (EE_SCREENS_MF_DO_*, with their argument: the original's

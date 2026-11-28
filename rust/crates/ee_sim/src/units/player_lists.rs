@@ -356,6 +356,11 @@ fn ffi_call(op: i32, value: u64) -> u64 {
         match op {
             EE_UNITS_LISTS_HOST_PG_REFERENCE => ee_units_pg_reference(g),
             EE_UNITS_LISTS_HOST_PG_DEREFERENCE => ee_units_pg_dereference(g),
+            // the unit's `GetUnitID()` (its record's `mUnitID`)
+            EE_UNITS_LISTS_HOST_UNIT_ID => {
+                let at = value as usize + crate::world::layout::layout().rts_unit_fields as usize;
+                return (*(at as *const crate::world::unit_fields::EeUnitsRtsUnitFields)).mUnitID as u64;
+            }
             _ => return ee_units_lists_host(op, value),
         }
     }
@@ -511,16 +516,6 @@ pub unsafe extern "C" fn ee_units_lists_add(l: *mut EeUnitsPlayerLists, list: u3
     unsafe { &mut *l }.add(&mut Ffi, list, value)
 }
 
-/// [`EeUnitsPlayerLists::remove`]
-///
-/// # Safety
-/// `l` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_lists_remove(l: *mut EeUnitsPlayerLists, list: u32, value: u64) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { &mut *l }.remove(list, value)
-}
-
 /// [`EeUnitsPlayerLists::has`]
 ///
 /// # Safety
@@ -549,16 +544,6 @@ pub unsafe extern "C" fn ee_units_lists_len(l: *const EeUnitsPlayerLists, list: 
 pub unsafe extern "C" fn ee_units_lists_at(l: *const EeUnitsPlayerLists, list: u32, i: usize) -> u64 {
     // SAFETY: the caller's contract
     unsafe { &*l }.lists.get(list as usize).and_then(|v| v.get(i)).copied().unwrap_or(0)
-}
-
-/// [`EeUnitsPlayerLists::clear`]
-///
-/// # Safety
-/// `l` is live; with `release`, its entries are live units.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_lists_clear(l: *mut EeUnitsPlayerLists, list: u32, release: bool) {
-    // SAFETY: the caller's contract; a dereference never reaches the lists (the list was taken first)
-    unsafe { &mut *l }.clear(&mut Ffi, list, release)
 }
 
 /// The off-map records: `what` 0 `AddOffMapUnit(unit)` at (`x`, `y`) and `time`, 1 `RemoveOffMapUnit(unit)`, 2 the

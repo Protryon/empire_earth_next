@@ -1570,11 +1570,6 @@ pub extern "C" fn ee_physics_clear_server_messages(p: *mut c_void) {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_physics_auto_save(p: *mut c_void) {
-    auto_save(this(p))
-}
-
-#[no_mangle]
 pub extern "C" fn ee_physics_flush_world(p: *mut c_void) {
     flush_world(this(p))
 }
@@ -1670,21 +1665,6 @@ pub extern "C" fn ee_physics_queue_message(p: *mut c_void, message: *mut c_void)
 }
 
 #[no_mangle]
-pub extern "C" fn ee_physics_swap_unit(old: *mut c_void, new: *mut c_void) {
-    swap_unit(old as P, new as P)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_process_unit_swaps(p: *mut c_void) {
-    process_unit_swaps(this(p))
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_drain_input(p: *mut c_void) {
-    drain_input(this(p))
-}
-
-#[no_mangle]
 pub extern "C" fn ee_physics_report_statistics(p: *mut c_void) {
     report_statistics(this(p))
 }
@@ -1704,31 +1684,6 @@ pub extern "C" fn ee_physics_update_timing(p: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_physics_queue_unit_swap(p: *mut c_void, old: *mut c_void, new: *mut c_void) {
     queue_unit_swap(this(p), old as P, new as P)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_update_area_effects_clock(p: *mut c_void) {
-    update_area_effects_clock(this(p))
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_update_civ_timer(p: *mut c_void) {
-    update_civ_timer(this(p))
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_serve_load_save_requests(p: *mut c_void) {
-    serve_load_save_requests(this(p))
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_check_shift_mode(p: *mut c_void) {
-    check_shift_mode(this(p))
-}
-
-#[no_mangle]
-pub extern "C" fn ee_physics_update_weather(p: *mut c_void) {
-    update_weather(this(p))
 }
 
 #[cfg(test)]

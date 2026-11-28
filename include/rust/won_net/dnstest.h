@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// The resolved address's six bytes (port, then address; `GetHostAddr()`), empty before the op finished.
 constexpr static const int32_t EE_WON_DNSTEST_ADDR = 1;

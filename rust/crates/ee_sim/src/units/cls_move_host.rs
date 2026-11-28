@@ -19,7 +19,7 @@ use crate::units::uu_tiles::Tile;
 use crate::units::uu_world;
 
 // ---- the host operations (`ee_units_cls_host`'s `op`, after cls_host.rs's)
-/// `gWorld.mMap->GetClosestTile(io.p, ...)`
+/// `gWorld.mMap->GetClosestTile(io.p, ...)` (`io.list`: the tile's x and y, two `long`s)
 pub const EE_UNITS_CLS_MV_CLOSEST_TILE: i32 = 39;
 /// `EEGetPursuerOf(unit a)`
 pub const EE_UNITS_CLS_MV_PURSUER: i32 = 40;
@@ -167,7 +167,10 @@ impl MoveHost for ClsGame {
         out
     }
     fn closest_tile_height(&mut self, p: Ge3DPoint) -> Option<f32> {
-        let tile = self.mv_p(EE_UNITS_CLS_MV_CLOSEST_TILE, 0, 0, 0, p).0 as u64;
+        // the closest tile's x and y (not read) into a local pair (io.list)
+        let mut xy: [std::os::raw::c_long; 2] = [0; 2];
+        let mut io = EeUnitsClsIo { p: [p.x, p.y, p.z], list: xy.as_mut_ptr().cast(), ..Default::default() };
+        let tile = self.call(EE_UNITS_CLS_MV_CLOSEST_TILE, 0, 0, 0, 0, &mut io) as u64;
         (tile != 0).then(|| self.0.tile_height(tile))
     }
     fn passable_by(&mut self, obj: u64, by: u64) -> bool {

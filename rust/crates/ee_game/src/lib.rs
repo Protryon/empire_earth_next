@@ -9,6 +9,8 @@
 use std::ffi::c_char;
 
 // the RTS Engine's bodies over one-statement C++ shims (LLE round 8: src/RTS Engine)
+/// The records C++ classes derive from or embed (include/rust/game/records.h, declaring no function).
+pub mod records;
 pub mod rts;
 // the Low-Level Engine's bodies over one-statement C++ shims (LLE round 8)
 pub mod lle;
@@ -95,7 +97,7 @@ use ee_won_lobby as _;
 use ee_won_net as _;
 
 // the unit registry behind EEUnitHandle<T> and the unit store (ee_units/src/ffi.rs), called by RTSUnit.cpp and
-// EEUnitStore.cpp; its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary
+// EEComplexUnit.cpp (EEUnitStoreMoved); its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary
 #[cfg(not(test))]
 use ee_sim as _;
 
@@ -208,7 +210,7 @@ pub unsafe extern "C" fn ee_combat_store_player_of(
     }
 }
 
-/// The store's C++ fills the bridges fall back on (EEUnitStore.cpp; declared nowhere else: cbindgen must not).
+/// The store's C++ fills the bridges fall back on (ee_sim us_fill.rs; declared nowhere else: cbindgen must not).
 /// cbindgen:ignore
 #[cfg(not(test))]
 mod host {
@@ -299,6 +301,14 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     // the random map's loading progress on the loading screen (ee_sim rmap object.rs)
     #[cfg(not(test))]
     ee_sim::rmap::object::register_load_progress(screens::ui_objects::ui_set_load_progress);
+    // the players' trees: made, freed, copied from gTechTree and saved here (ee_sim tech tree_objects.rs)
+    ee_sim::tech::tree_objects::register_tree_bodies(ee_sim::tech::tree_objects::TreeBodies {
+        new: tech_tree::objects::player_tree_new,
+        delete: tech_tree::objects::player_tree_delete,
+        copy_global: tech_tree::objects::player_tree_copy_global,
+        file: tech_tree::objects::player_tree_file,
+        save_version: tech_tree::objects::save_version,
+    });
 }
 
 /// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or

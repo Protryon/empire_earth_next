@@ -321,6 +321,7 @@ impl EeUiControlsTable {
     }
 
     /// The default constructor: an empty bitmap description (no font, files or layout).
+    #[cfg(test)]
     pub(crate) fn blank(host: Host) -> Box<Self> {
         let zero = UiRect::new(0.0, 0.0, 0.0, 0.0);
         let black = UiColor { red: 0.0, green: 0.0, blue: 0.0 };
@@ -1137,15 +1138,6 @@ pub unsafe extern "C" fn ee_ui_controls_tables(
     }
 }
 
-/// The default constructor's table for the C++ table `obj`.
-///
-/// # Safety
-/// `obj` is the C++ table the host answers for.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_controls_table_new(obj: *mut c_void, host: EeUiHostFn) -> *mut EeUiControlsTable {
-    Box::into_raw(EeUiControlsTable::blank(Host { obj, f: host }))
-}
-
 /// Frees a table (the C++ destructor): the font it holds released first.
 ///
 /// # Safety
@@ -1186,12 +1178,6 @@ pub unsafe extern "C" fn ee_ui_controls_table_call(
 ) -> isize {
     // SAFETY: the contract; a shared reference: the calls out re-enter through the getters
     unsafe { (*table).call(call, a, b, f) }
-}
-
-/// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
-#[no_mangle]
-pub extern "C" fn ee_ui_controls_table_string_count(begin: c_long, end: c_long) -> c_ulong {
-    ct::string_count(begin, end)
 }
 
 /// The drivers' digest of a constructor's record (FNV-1a over its fields as 32-bit words, in declaration order).

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// The classic dialog frame: a 3-pixel border and an 18-pixel caption.
 constexpr static const int32_t FRAME_BORDER = 3;
@@ -103,9 +104,6 @@ enum class EeWonPlatWmCall : uint32_t {
   /// the destructor's: every window in the z order unregistered, the order emptied.
   UnregisterAll,
 };
-
-/// The Rust PlatWindowManager.
-struct EeWonPlatWm;
 
 /// The host: `(manager, op, a, b, c, d) -> result`.
 using EeWonPlatWmHost = ptrdiff_t(*)(void *me,

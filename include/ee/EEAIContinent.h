@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "ee/EEAIArea.h"
-#include "ee/EEAIListView.h"
+#include "rust/sim/records.h"
 
 class EEAIPathArea;
 

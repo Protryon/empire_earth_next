@@ -1,6 +1,6 @@
 //! The unit store's C++ fills (the units' lane, round 9; were EEUnitStore.cpp): `Fill` (a unit's record as its
 //! object is now), the update order's reset from the world's list and a player's table. Every C++ statement of the
-//! originals is one operation of the store's host ([`UsHost::us`], `ee_units_us_host`: its `EE_UNITS_US_*` and the
+//! originals is one operation of the store's host ([`UsHost::us`], cu_view.rs `us_view`: its `EE_UNITS_US_*` and the
 //! `EE_UNITS_US_F_*` below), in the original's order.
 
 use crate::units::kinds::{EE_OBJECT_COMPLEX_UNIT, EE_OBJECT_UNIT};

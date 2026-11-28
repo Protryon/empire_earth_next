@@ -6,6 +6,9 @@
 #ifndef EE_EEPSAVEGAMEHEADER_H
 #define EE_EEPSAVEGAMEHEADER_H
 
+#include "lle/FSRestorable.h"
+#include "ee/EEGameOptions.h"
+#include "ee/EESMMediaStrings.h"
 #include "rust/game/gamecpp.h"
 class EEPSaveGameHeader : public FSRestorable {
 public:

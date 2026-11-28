@@ -79,8 +79,6 @@ public:
     void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::SetupFont, (intptr_t)inManager, inScaleToWindow, const_cast<float*>(&inRectangle.mBottom)); }
     // Sets text to transparent in the description's text colour (ee_ui lle_hosts.rs)
     void SetupGEText(GEText* inText) const { ee_ui_table_setup_text(const_cast<UIControlsTable*>(this), inText); }
-    // Fills a list with the description's string-table range (empty when the range is unset)
-    void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const { ee_ui_table_setup_strings(this, inManager, &outStrings); }
     UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}
     const EeUiControlsTableData& D() const { return *ee_ui_controls_table_data(this->mRust); }
     const EeUiControlsTableFields& F() const { return this->D().fields; }

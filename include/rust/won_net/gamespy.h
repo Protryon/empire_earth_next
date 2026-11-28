@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `qr_init`'s errors (the SDK's `E_GOA_*`).
 constexpr static const int32_t E_GOA_WSOCKERROR = 1;

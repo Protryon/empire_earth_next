@@ -33,6 +33,8 @@
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EECommunications.h"
 #include "ee/EEScenarioHost.h"
+#include "rust/game/app.h"
+#include "rust/sim/units.h"
 
 bool gScenarioSimDialogs = false;
 
@@ -102,7 +104,7 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
         return 0;
     case EE_SCENARIO_ROUND_MESSAGE_ERASE: theManager->mMessages.erase(theManager->mMessages.begin() + (size_t)inA);
         return 0;
-    case EE_SCENARIO_ROUND_DELAY_WONDERS: gWorld.GetPlayer((unsigned long)inA)->DelayWonderTimers((long)inB);
+    case EE_SCENARIO_ROUND_DELAY_WONDERS: ee_units_player_rest(gWorld.GetPlayer((unsigned long)inA), EE_UNITS_PLAYER_REST_DELAY_WONDER_TIMERS, 0, (long)inB, 0);
         return 0;
     case EE_SCENARIO_ROUND_PLAYER_HUMAN: return gWorld.GetPlayer((unsigned long)inA)->IsHuman();
     case EE_SCENARIO_ROUND_UNSELECT: gWorld.GetPlayer((unsigned long)inA)->UnselectAllUnits();

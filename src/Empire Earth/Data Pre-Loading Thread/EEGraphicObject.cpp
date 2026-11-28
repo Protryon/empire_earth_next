@@ -14,6 +14,7 @@
 
 #include "ee/EEMedia.h"
 #include "EEDatabase.h"
+#include "rust/render/gfx.h"
 
 std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount read it)
 
@@ -111,11 +112,4 @@ static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation) && sizeof(G
 void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint)
 {
     ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), NULL, GERust(outPoint));
-}
-
-void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
-                          GE3DPoint& outPoint)
-{
-    ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), GERust(inPart),
-                     GERust(outPoint));
 }

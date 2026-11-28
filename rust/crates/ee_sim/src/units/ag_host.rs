@@ -6,9 +6,12 @@
 
 use std::ffi::c_void;
 
+use crate::formations::units::{formation_arrange, formation_fields};
 use crate::units::ag::{self, AgHost, EeUnitsAgGroup, EeUnitsAgUnit, LocationFields, NewLocation, Rect, Slot};
 use crate::units::group_host::GameGroups;
 use crate::units::group_obj as go;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::GeTransformation;
 
 /// One host operation's values.
 #[repr(C)]
@@ -25,7 +28,7 @@ pub struct EeUnitsAgIo {
     pub q: [f32; 3],
     pub unit: EeUnitsAgUnit,
     pub group: EeUnitsAgGroup,
-    /// the list the operation pushes onto (`ee_units_ag_push`), or the values it reads
+    /// the values the operation reads
     pub list: *mut c_void,
 }
 
@@ -46,12 +49,6 @@ impl Default for EeUnitsAgIo {
     }
 }
 
-/// The list a host operation fills.
-#[derive(Default)]
-pub struct EeUnitsAgListHandle {
-    items: Vec<(u64, [f32; 3], f32)>,
-}
-
 // ---- the host operations (`ee_units_ag_host`'s `op`; `a`, `b` objects, `c`, `d` values)
 /// group `a`'s state into `io.group`
 pub const EE_UNITS_AG_GROUP: i32 = 1;
@@ -61,15 +58,6 @@ pub const EE_UNITS_AG_GROUP_UNIT: i32 = 2;
 pub const EE_UNITS_AG_MOVES_TOGETHER: i32 = 5;
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 pub const EE_UNITS_AG_SEND: i32 = 8;
-/// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
-/// heading)
-pub const EE_UNITS_AG_ARRANGE: i32 = 9;
-/// group `a`'s formation: `mCenter = io.p` (units round 12)
-pub const EE_UNITS_AG_FORMATION_CENTER: i32 = 13000;
-/// group `a`'s formation: `mHeading = io.f`
-pub const EE_UNITS_AG_FORMATION_HEADING: i32 = 13001;
-/// group `a`'s formation: `mOrientation.SetOrientationYPR(io.f, 0, 0)`
-pub const EE_UNITS_AG_FORMATION_ORIENT: i32 = 13002;
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 pub const EE_UNITS_AG_WORLD_SPHERE: i32 = 15;
 /// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
@@ -165,21 +153,14 @@ extern "C" {
 }
 use crate::combat::cg_query::rust_calls::ee_units_eu_nearest_footprint_tile;
 
-/// Pushes an item onto a host operation's list.
-///
-/// # Safety
-/// `list` is the `EeUnitsAgIo::list` of a running operation that pushes; `p` is three floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_ag_push(list: *mut EeUnitsAgListHandle, obj: u64, p: *const [f32; 3], w: f32) {
-    // SAFETY: the caller's contract
-    unsafe { (*list).items.push((obj, *p, w)) }
-}
-
 /// The game's world for the active group bodies.
 pub struct AgGame;
 
 impl AgGame {
     fn io(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsAgIo) -> i64 {
+        if let Some(v) = crate::units::tech_cases::ag(op, a, b) {
+            return v;
+        }
         if let Some(v) = crate::units::dm_group_view::ag_plain(op, a, b, c) {
             return v;
         }
@@ -189,12 +170,6 @@ impl AgGame {
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64) -> i64 {
         let mut io = EeUnitsAgIo::default();
         self.io(op, a, b, c, d, &mut io)
-    }
-    fn list(&mut self, op: i32, a: u64, c: i64, d: i64, io: &mut EeUnitsAgIo) -> Vec<(u64, [f32; 3], f32)> {
-        let mut handle = EeUnitsAgListHandle::default();
-        io.list = std::ptr::addr_of_mut!(handle).cast();
-        self.io(op, a, 0, c, d, io);
-        handle.items
     }
 }
 
@@ -251,14 +226,21 @@ impl AgHost for AgGame {
     }
     fn arrange(&mut self, g: u64, center: [f32; 3], yaw: Option<f32>) -> Vec<Slot> {
         // the original's statements in order: the centre, with a yaw the heading and the orientation, then Arrange
-        let mut io = EeUnitsAgIo { p: center, f: yaw.unwrap_or(0.0), ..Default::default() };
-        self.io(EE_UNITS_AG_FORMATION_CENTER, g, 0, 0, 0, &mut io);
-        if yaw.is_some() {
-            self.io(EE_UNITS_AG_FORMATION_HEADING, g, 0, 0, 0, &mut io);
-            self.io(EE_UNITS_AG_FORMATION_ORIENT, g, 0, 0, 0, &mut io);
+        // (the formation's members: its Rust record, formations/units.rs; units round 14)
+        // SAFETY: a live group
+        let formation = unsafe { (*(g as go::G)).mFormation } as u64;
+        // SAFETY: the group's live formation
+        let f = unsafe { formation_fields(formation) };
+        f.mCenter = center;
+        if let Some(yaw) = yaw {
+            f.mHeading = yaw;
+            let mut t = GeTransformation { m: f.mOrientation };
+            t.set_orientation(RotationOrder::Ypr, yaw, 0.0, 0.0);
+            f.mOrientation = t.m;
         }
-        let items = self.list(EE_UNITS_AG_ARRANGE, g, 0, 0, &mut io);
-        items.into_iter().map(|(unit, position, heading)| Slot { position, unit, heading }).collect()
+        // SAFETY: the group's live formation and units
+        let slots = unsafe { formation_arrange(formation, g) };
+        slots.into_iter().map(|s| Slot { position: s.position, unit: s.unit as u64, heading: s.heading }).collect()
     }
     fn new_group(&mut self, g: u64) -> u64 {
         // SAFETY: as above
@@ -642,18 +624,6 @@ fn goal_b1c(goal: u64) -> bool {
 #[no_mangle]
 pub extern "C" fn ee_units_ag_plan(group: u64) {
     ag::plan(&mut AgGame, group)
-}
-
-/// `EEActiveGroup::LayOutFormation`.
-#[no_mangle]
-pub extern "C" fn ee_units_ag_lay_out_formation(group: u64) {
-    ag::lay_out_formation(&mut AgGame, group)
-}
-
-/// `EEActiveGroup::ComputeValues`.
-#[no_mangle]
-pub extern "C" fn ee_units_ag_compute_values(group: u64) {
-    ag::compute_values(&mut AgGame, group)
 }
 
 /// `EEActiveGroup::KeepAttackers`.

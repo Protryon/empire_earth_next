@@ -10,6 +10,7 @@
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEMap.h"
+#include "rust/game/rts.h"
 
 // Creates a tile at the given height with no units and terrain type 0
 RTSTile::RTSTile(float inHeight)
@@ -33,3 +34,18 @@ long ee_rtstcpp_read_bytes(FSFile* inFile, unsigned char* outData, unsigned long
 long ee_rtstcpp_write_bytes(FSFile* inFile, const unsigned char* inData, unsigned long inLength, unsigned long* outWritten) { return inFile->Write(reinterpret_cast<const char*>(inData), inLength, *outWritten); }
 void ee_rtstcpp_puts(FILE* inFile, const char* inText) { fputs(inText, inFile); }
 }
+
+// out of line from ee/EEMap.h (its Rust function headers stay out of it)
+long RTSTile::GetChecksum(unsigned long inPlayerCount) const { return ee_rts_tile_checksum(this, inPlayerCount); }
+
+long RTSTile::Load(unsigned long, unsigned long, FSFile& inFile, unsigned long inPlayerCount)
+{ return ee_rts_tile_load(this, &inFile, inPlayerCount); }
+
+void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const { ee_rts_tile_dump(this, inFile, inPlayerCount); }
+
+long RTSTile::Save(FSFile& outFile, unsigned long inPlayerCount)
+{ return ee_rts_tile_save(this, &outFile, inPlayerCount); }
+
+void RTSTile::RemoveAllUnits() { ee_rts_tile_remove_all_units(this); }
+void RTSTile::RemoveUnit(EEUnit* inUnit) { ee_rts_tile_remove_unit(this, inUnit); }
+bool RTSTile::HasUnit(EEUnit* inUnit) { return ee_rts_tile_has_unit(this, inUnit); }

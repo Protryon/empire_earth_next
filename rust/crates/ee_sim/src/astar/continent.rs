@@ -168,39 +168,6 @@ impl EeAStarContinentRecord {
 
 // ---- the C interface (EEAIContinent's ctor, dtor, list upkeep and views) ----
 
-/// The adjacent continents and their count; valid until they next change.
-///
-/// # Safety
-/// `r` a live record, `count` valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_continent_neighbors(
-    r: *const EeAStarContinentRecord,
-    count: *mut usize,
-) -> *const u64 {
-    // SAFETY: the caller's contract
-    view(unsafe { (*r).lists().map(|l| l.neighbors.as_slice()) }, count)
-}
-
-/// `mNeighbors.push_back(continent)`.
-///
-/// # Safety
-/// `r` a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_continent_add_neighbor(r: *mut EeAStarContinentRecord, continent: u64) {
-    // SAFETY: the caller's contract
-    unsafe { (*r).lists_mut().neighbors.push(continent) };
-}
-
-/// `mNeighbors.clear()`.
-///
-/// # Safety
-/// `r` a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_continent_clear_neighbors(r: *mut EeAStarContinentRecord) {
-    // SAFETY: the caller's contract
-    unsafe { (*r).lists_mut().neighbors.clear() };
-}
-
 /// The record of a new continent: no lists, counts zero, category 0, id 0 (the ctor 0x41d846).
 ///
 /// # Safety

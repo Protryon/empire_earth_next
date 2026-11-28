@@ -15,7 +15,6 @@
 
 class EESimCaptureRecord {
 public:
-    static bool Active() { return ee_app_capture_active(); }   // EE_SIM_CAPTURE is set and the file opened
 };
 
 #endif

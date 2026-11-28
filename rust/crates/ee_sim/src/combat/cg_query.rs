@@ -1001,17 +1001,6 @@ pub unsafe extern "C" fn ee_units_cgq_heal_in_range(healer: u64, target: u64) ->
     q.heal_in_range(healer, target)
 }
 
-/// `EECombatIsEnemyWithinRange(unit)`
-/// # Safety
-/// As above.
-#[cfg(not(test))]
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_units_cgq_enemy_in_range(unit: u64) -> bool {
-    let q = &mut game::Game;
-    q.enemy_in_range(unit)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

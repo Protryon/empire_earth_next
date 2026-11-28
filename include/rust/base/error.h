@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/ustring.h"
+#include "rust/base/records.h"
 
 /// A checksum set (`ESChecksum`).
 struct EeErrorChecksum;

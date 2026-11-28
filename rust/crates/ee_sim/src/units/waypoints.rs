@@ -36,27 +36,27 @@ pub struct EeUnitsWaypoints {
 /// `GetPathStart`'s and the others' "no path" answer.
 pub const EE_UNITS_WAYPOINTS_NONE: i32 = 7;
 
-// ---- `ee_units_wp_host`'s operations (EEComplexUnit.cpp: the C++ calls of the path bodies, one statement each;
-// `unit` the unit, `arg` a goal or a value)
+// ---- the path bodies' C++ calls (EEComplexUnit.cpp: statements of `ee_units_cu_host` since units round 14, one
+// each; `unit` the unit, `arg` (the host's `a`) a goal or a value)
 /// `SetGoal(arg, 1, 0)`, `mGoalQueues[0].Insert(1, arg)`, `RefreshGoals()`, `RefreshActiveGoal()`
-pub const EE_UNITS_WP_SET_GOAL: i32 = 0;
-pub const EE_UNITS_WP_INSERT_GOAL: i32 = 1;
-pub const EE_UNITS_WP_REFRESH_GOALS: i32 = 2;
-pub const EE_UNITS_WP_REFRESH_ACTIVE_GOAL: i32 = 3;
+pub const EE_UNITS_WP_SET_GOAL: i32 = 15000;
+pub const EE_UNITS_WP_INSERT_GOAL: i32 = 15001;
+pub const EE_UNITS_WP_REFRESH_GOALS: i32 = 15002;
+pub const EE_UNITS_WP_REFRESH_ACTIVE_GOAL: i32 = 15003;
 /// `StartAction(arg)`, the class's `ActionChanged(unit)`
-pub const EE_UNITS_WP_START_ACTION: i32 = 4;
-pub const EE_UNITS_WP_ACTION_CHANGED: i32 = 5;
+pub const EE_UNITS_WP_START_ACTION: i32 = 15004;
+pub const EE_UNITS_WP_ACTION_CHANGED: i32 = 15005;
 /// the first goal queue's length and last goal
-pub const EE_UNITS_WP_QUEUE_LENGTH: i32 = 6;
-pub const EE_UNITS_WP_QUEUE_BACK: i32 = 7;
+pub const EE_UNITS_WP_QUEUE_LENGTH: i32 = 15006;
+pub const EE_UNITS_WP_QUEUE_BACK: i32 = 15007;
 /// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `gEEAIRegionSize`
-pub const EE_UNITS_WP_IS_HUMAN: i32 = 8;
-pub const EE_UNITS_WP_CLEAR_BOUNDED: i32 = 9;
+pub const EE_UNITS_WP_IS_HUMAN: i32 = 15008;
+pub const EE_UNITS_WP_CLEAR_BOUNDED: i32 = 15009;
 // (10 was RefreshPath: refresh_path)
-pub const EE_UNITS_WP_REGION_SIZE: i32 = 11;
+pub const EE_UNITS_WP_REGION_SIZE: i32 = 15011;
 /// `EELocationGoalPoint(arg)` into the point; the world map's closest tile to the point (x | y << 32)
-pub const EE_UNITS_WP_GOAL_POINT: i32 = 12;
-pub const EE_UNITS_WP_CLOSEST_TILE: i32 = 13;
+pub const EE_UNITS_WP_GOAL_POINT: i32 = 15012;
+pub const EE_UNITS_WP_CLOSEST_TILE: i32 = 15013;
 
 /// `kGoalHealUnit`; `kMovementSea`; `kPathSpeedScale` (0x446dbc)
 #[cfg_attr(test, allow(dead_code))]
@@ -214,9 +214,14 @@ mod game {
     use crate::world::{UnitView, WorldRead, WorldView};
     use std::os::raw::c_long;
 
-    extern "C" {
-        /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
-        fn ee_units_wp_host(op: i32, unit: u64, arg: u64, point: *mut f32) -> i64;
+    /// the path bodies' C++ calls (`EE_UNITS_WP_*`: statements of the unit host, EEComplexUnit.cpp)
+    unsafe fn ee_units_wp_host(op: i32, unit: u64, arg: u64, point: *mut f32) -> i64 {
+        let mut f = [0.0f32; 4];
+        let f = if point.is_null() { &mut f as *mut [f32; 4] } else { point.cast::<[f32; 4]>() };
+        // SAFETY: the caller's contract (a live unit; `point` null or the statement's buffer)
+        unsafe {
+            crate::units::cu_body::game::ee_units_cu_host(op, unit as usize as *mut std::ffi::c_void, arg, 0, 0, f)
+        }
     }
 
     fn token() -> WorldRead {
@@ -406,11 +411,17 @@ mod game {
                 WorldView::global(&t).and_then(|w| w.map()).is_some_and(|m| m.tile(wx, wy).is_some())
             };
             if !on {
-                let mut q = *p;
-                // SAFETY: three floats
-                let packed = unsafe { ee_units_wp_host(EE_UNITS_WP_CLOSEST_TILE, unit, 0, q.as_mut_ptr()) };
-                wx = i64::from(packed as u32 as i32);
-                wy = i64::from((packed >> 32) as u32 as i32);
+                // the point's copy, then the tile (two `long`s, 0 until found)
+                #[repr(C)]
+                struct Closest {
+                    p: [f32; 4],
+                    xy: [std::os::raw::c_long; 2],
+                }
+                let mut q = Closest { p: [p[0], p[1], p[2], 0.0], xy: [0, 0] };
+                // SAFETY: the record's floats and longs
+                unsafe { ee_units_wp_host(EE_UNITS_WP_CLOSEST_TILE, unit, 0, q.p.as_mut_ptr()) };
+                wx = i64::from(q.xy[0] as u32 as i32);
+                wy = i64::from(q.xy[1] as u32 as i32);
             }
             if wx == x && wy == y {
                 return Some(i);
@@ -886,17 +897,6 @@ pub unsafe extern "C" fn ee_units_waypoints_second(list: *const EeUnitsWaypoints
     }
 }
 
-/// `AddWaypoint(at, snap)` of the complex unit `unit`.
-///
-/// # Safety
-/// `unit` is a live complex unit, `at` three floats.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_add(unit: u64, at: *const f32, snap: bool) {
-    // SAFETY: the caller's contract
-    unsafe { add(unit, [*at, *at.add(1), *at.add(2)], snap) }
-}
-
 /// `NextWaypoint()` of the complex unit `unit`: 0, or 7 without one.
 ///
 /// # Safety
@@ -917,51 +917,6 @@ pub unsafe extern "C" fn ee_units_waypoints_next(unit: u64) -> i32 {
 pub unsafe extern "C" fn ee_units_waypoints_drop(unit: u64) {
     // SAFETY: the caller's contract
     unsafe { drop_path(unit) }
-}
-
-/// `SnapLastWaypoint()` of the complex unit `unit`.
-///
-/// # Safety
-/// `unit` is a live complex unit.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_snap(unit: u64) {
-    // SAFETY: the caller's contract
-    unsafe { snap_last(unit) }
-}
-
-/// `TakePath(path, smooth)` of the complex unit `unit` (`points` the path, changed in place to the adjusted one:
-/// its new count returned; room for `count`).
-///
-/// # Safety
-/// `unit` is a live complex unit, `points` `count` points.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_take_path(
-    unit: u64,
-    points: *mut [f32; 3],
-    count: u32,
-    smooth: bool,
-) -> u32 {
-    // SAFETY: the caller's contract
-    let mut path =
-        if count == 0 { Vec::new() } else { unsafe { std::slice::from_raw_parts(points, count as usize) }.to_vec() };
-    unsafe { take_path(unit, &mut path, smooth) };
-    let n = path.len().min(count as usize);
-    // SAFETY: room for `count`
-    unsafe { std::ptr::copy_nonoverlapping(path.as_ptr(), points, n) };
-    n as u32
-}
-
-/// `ShouldMoveToNextAutoWaypoint()` of complex unit `unit`.
-///
-/// # Safety
-/// `unit` is a live complex unit.
-#[cfg(not(test))]
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_waypoints_next_auto(unit: u64) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { next_auto(unit) }
 }
 
 /// `SetGroupPathGoals(path)` of complex unit `unit` (`points` `count` x, y, z points).

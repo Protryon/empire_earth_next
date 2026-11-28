@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
-#include "rust/won_gui/listobj.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls of the tree (`TreeArea`'s virtuals and methods; rows are `TreeItem*`s).
 enum class EeWonTreeCall : uint32_t {

@@ -9,11 +9,8 @@ use crate::units::rust_goal::*;
 use std::ffi::c_void;
 
 // ---- the statements (`GoalOp`'s cases)
-/// the shared point `= GE3DPoint(f[0], f[1], f[2])`
-pub const EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT: i32 = 800;
-/// `f[0..3] = ` the shared point
-pub const EE_UNITS_GOAL_HOST_X_GOAL_POINT_OUT: i32 = 801;
-/// container `b`'s transport class's `FindBoardingLocation(a, b, GE3DPoint(f[0..3]), the shared point)`
+/// container `b`'s transport class's `FindBoardingLocation(a, b, GE3DPoint(f[0..3]), ` the point at `f[3..6])`
+/// (800 and 801, the shared point's store and read, are gone: the points travel in `f`, round 14)
 pub const EE_UNITS_GOAL_HOST_X_BOARDING_FIND: i32 = 802;
 /// the shared unit list's `clear()`
 pub const EE_UNITS_GOAL_HOST_X_UNITS_CLEAR: i32 = 803;
@@ -37,7 +34,7 @@ pub const EE_UNITS_GOAL_HOST_X_TILES_COUNT: i32 = 811;
 pub const EE_UNITS_GOAL_HOST_X_TILE_X: i32 = 812;
 /// the tile list's `[i[0]].GetY()`
 pub const EE_UNITS_GOAL_HOST_X_TILE_Y: i32 = 813;
-/// `gWorld.GetEffectManager()->CreateEffect(a, ` the shared point`, ` the mining beam `, &` the shared effect `, 0)`
+/// `gWorld.GetEffectManager()->CreateEffect(a, GE3DPoint(f[0..3]), ` the mining beam `, &` the shared effect `, 0)`
 pub const EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT: i32 = 814;
 /// `a->mFireEffect = ` the shared effect
 pub const EE_UNITS_GOAL_HOST_X_SET_FIRE_EFFECT: i32 = 815;
@@ -46,12 +43,6 @@ pub const EE_UNITS_GOAL_HOST_X_RESET_EFFECT: i32 = 816;
 
 fn op0<H: GoalSplitHost + ?Sized>(h: &mut H, op: i32, a: u64, b: u64) -> i64 {
     h.raw(op, a, b, &mut EeUnitsGoalIo::default())
-}
-
-fn point_in<H: GoalSplitHost + ?Sized>(h: &mut H, p: [f32; 3]) {
-    let mut io = EeUnitsGoalIo::default();
-    io.f[..3].copy_from_slice(&p);
-    h.raw(EE_UNITS_GOAL_HOST_X_SET_GOAL_POINT, 0, 0, &mut io);
 }
 
 /// The shared unit list from the operation's handles (`UnitsIn`).
@@ -83,15 +74,11 @@ pub fn split_more<H: GoalSplitHost + ?Sized>(
 ) -> Option<i64> {
     Some(match op {
         EE_UNITS_GOAL_HOST_BOARDING => {
-            // FindBoardingLocation(unit, container, f[0..3], out f[3..6])
-            let out = [io.f[3], io.f[4], io.f[5]];
-            point_in(h, out);
+            // FindBoardingLocation(unit, container, f[0..3], out f[3..6]): the out point starts as the one handed
             let mut q = EeUnitsGoalIo::default();
-            q.f[..3].copy_from_slice(&io.f[..3]);
+            q.f[..6].copy_from_slice(&io.f[..6]);
             h.raw(EE_UNITS_GOAL_HOST_X_BOARDING_FIND, a, b, &mut q);
-            let mut r = EeUnitsGoalIo::default();
-            h.raw(EE_UNITS_GOAL_HOST_X_GOAL_POINT_OUT, 0, 0, &mut r);
-            io.f[3..6].copy_from_slice(&r.f[..3]);
+            io.f[3..6].copy_from_slice(&q.f[3..6]);
             0
         }
         EE_UNITS_GOAL_HOST_SURROUNDING_TILES => {
@@ -124,9 +111,10 @@ pub fn split_more<H: GoalSplitHost + ?Sized>(
         EE_UNITS_GOAL_HOST_MINING_BEAM => {
             // the beam from the unit to the resource's position, kept as the unit's fire effect
             let at = h.position(b);
-            point_in(h, at);
             op0(h, EE_UNITS_GOAL_HOST_X_RESET_EFFECT, 0, 0);
-            op0(h, EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT, a, 0);
+            let mut q = EeUnitsGoalIo::default();
+            q.f[..3].copy_from_slice(&at);
+            h.raw(EE_UNITS_GOAL_HOST_X_MINING_BEAM_EFFECT, a, 0, &mut q);
             op0(h, EE_UNITS_GOAL_HOST_X_SET_FIRE_EFFECT, a, 0);
             0
         }

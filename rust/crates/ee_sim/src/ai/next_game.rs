@@ -2642,28 +2642,6 @@ pub unsafe extern "C" fn ee_ai_next_has_room(me: *mut c_void, unit: u64) -> bool
     has_room(&g, &u)
 }
 
-/// `EECPNextDropReady` (`unit` 0: at the tile (x, y), for food when `food`, `slack` tiles further) or
-/// `EECPNextUnitDropReady` (the unit's own tile and resource, `kNextDropSlack` further).
-///
-/// # Safety
-/// `me` is a live computer player, `unit` 0 or a live unit.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ai_next_drop_ready(
-    me: *mut c_void,
-    unit: u64,
-    x: c_long,
-    y: c_long,
-    food: bool,
-    slack: c_long,
-) -> bool {
-    let t = WorldRead::begin();
-    let Some(g) = G::new(&t, me) else { return false };
-    if unit != 0 {
-        return g.unit(unit).is_some_and(|u| unit_drop_ready(&g, &u));
-    }
-    drop_in(&ready_drops(&g, food), x, y, slack)
-}
-
 // the reflexes (EECPReflexes.cpp before)
 #[path = "next_reflex.rs"]
 pub mod reflex;

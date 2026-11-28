@@ -6,7 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_gui/records.h"
+#include "rust/won_net/records.h"
 
 /// The edit `ee_won_gstr` runs (each the original's method; `a`, `b`, `c` its arguments, `other` its other string
 /// or its units).
@@ -65,23 +66,6 @@ enum class EeWonGstrRead {
   CompareNarrowNoCase,
   /// `ToInt(a)`.
   ToInt,
-};
-
-/// The C++ `GUIStringData`'s members as one block (`mText`, `mLength`, `mCapacity`, in that order).
-struct EeWonGuiStrBuf {
-  /// `wchar_t* mText`: units of `wchar_size` bytes, NULL before the first reservation.
-  void *text;
-  uint16_t length;
-  uint16_t capacity;
-};
-
-/// A lobby text, the C++ `GUIStringData`: a C++ `RefCount` without a vtable (NULL: `RefCount::Release` gives the
-/// last reference's text to [`ee_won_gstr_free`]), its reference count (atomic; a new text has none, the first
-/// `SmartPtr` adds one) and its block.
-struct EeWonGstr {
-  const void *vtable;
-  int32_t refs;
-  EeWonGuiStrBuf buf;
 };
 
 extern "C" {

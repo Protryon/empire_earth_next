@@ -6,62 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
-
-/// A data object.
-struct EeWonDirObject {
-  EeWonDirBytes data_type;
-  EeWonDirBytes data;
-};
-
-/// A data object change.
-struct EeWonDirMod {
-  uint16_t offset;
-  bool insert;
-  EeWonDirObject object;
-};
-
-/// A query: the path as UTF-16 LE bytes.
-struct EeWonDirQuery {
-  uint32_t flags;
-  EeWonDirBytes path;
-  const EeWonDirBytes *types;
-  size_t type_count;
-};
-
-/// A request's fields (strings as UTF-16 LE bytes, the arrays as pointer and count).
-struct EeWonDirRequest {
-  int32_t op;
-  bool is_service;
-  uint32_t flags;
-  EeWonDirBytes path;
-  EeWonDirBytes name;
-  EeWonDirBytes display_name;
-  EeWonDirBytes net_addr;
-  EeWonDirBytes new_name;
-  EeWonDirBytes new_display_name;
-  EeWonDirBytes new_net_addr;
-  uint32_t lifespan;
-  bool is_unique;
-  uint8_t mode;
-  uint8_t find_flags;
-  const EeWonDirObject *objects;
-  size_t object_count;
-  const EeWonDirMod *mods;
-  size_t mod_count;
-  const EeWonDirBytes *types;
-  size_t type_count;
-  const EeWonDirQuery *queries;
-  size_t query_count;
-  EeWonDirBytes product;
-};
+#include "rust/won_net/records.h"
 
 /// A status reply for the C++.
 struct EeWonDirStatusReply {

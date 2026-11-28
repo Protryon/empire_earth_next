@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 extern "C" {
 
@@ -81,6 +81,16 @@ ptrdiff_t ee_ui_scroll_bar_host(void *o,
                                 ptrdiff_t c,
                                 ptrdiff_t d,
                                 float *f);
+
+/// `UIControl::SetBgOpacity`, `SetBgColor` and `ReleaseCapturedKeyboard` for their C++ callers (only toolkit classes
+/// overrode them; LLE/UI round 3): `which` 0 the opacity `f[0]`, 1 the colour `f[0..3]`, 2 the keyboard's release.
+/// The override of the control's kind (lle_chains.rs `virt_bg`, `virt_release_keyboard`), else UIControl's.
+///
+/// # Safety
+/// `control` a live control, `f` four floats.
+void ee_ui_control_virt(void *control,
+                        uint32_t which,
+                        const float *f);
 
 /// The list boxes' ops that do not depend on T (`UIListBoxRust<T>::Op`'s default).
 ///

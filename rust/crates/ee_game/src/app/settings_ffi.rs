@@ -1,13 +1,12 @@
 //! The settings' C ABI (include/rust/ee_app.h): config.yaml through ee_plat_core's `PlatConfig*` (what `UConfig`
 //! called); the rows' reads and writes are gamecpp preferences.rs's.
 
-use crate::app::game_options::EeAppOptionsFields;
-use crate::app::settings::{self, Config, EeAppSettingsFields};
+use crate::app::settings::{Config, EeAppSettingsFields};
 use ee_base::plat_core::config::{
     PlatConfigGetInt, PlatConfigGetString, PlatConfigSetBool, PlatConfigSetInt, PlatConfigSetString,
 };
 use std::ffi::CString;
-use std::os::raw::{c_char, c_long};
+use std::os::raw::c_char;
 
 /// `UConfig::GetValue(UWideString)`'s buffer.
 const STRING_BUFFER: usize = 1024;
@@ -56,27 +55,4 @@ impl Config for PlatConfig {
 #[no_mangle]
 pub unsafe extern "C" fn ee_app_settings_default(out: *mut EeAppSettingsFields) {
     unsafe { *out = EeAppSettingsFields::default() };
-}
-
-/// The last game options' defaults (`EEDefaultSettings`'s literals, but the map type).
-///
-/// # Safety
-/// `out` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_settings_last_options_default(out: *mut EeAppOptionsFields, epochs: c_long) {
-    unsafe { settings::last_options_default(&mut *out, epochs) };
-}
-
-/// `Load`'s rest after the rows (settings.rs `after_load`); true when the texture resolution was replaced and is to be
-/// written back.
-///
-/// # Safety
-/// live records.
-#[no_mangle]
-pub unsafe extern "C" fn ee_app_settings_after_load(
-    settings: *mut EeAppSettingsFields,
-    defaults: *const EeAppSettingsFields,
-    korean: bool,
-) -> bool {
-    unsafe { settings::after_load(&mut *settings, &*defaults, korean) }
 }

@@ -23,6 +23,8 @@ pub mod game_ids;
 pub mod message_ids;
 /// The crate ee_netmsg before the restructure.
 pub mod netmsg;
+/// The records C++ classes derive from or embed (include/rust/sim/records.h, declaring no function).
+pub mod records;
 /// The crate ee_rmap before the restructure.
 pub mod rmap;
 /// The random map's named constants (script tokens, object kinds, map characteristics) for the C++ headers.

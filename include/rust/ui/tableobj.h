@@ -6,11 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/button.h"
-#include "rust/ui/controls_table.h"
-#include "rust/ui/layout.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The static calls ([`ee_ui_controls_tables`]).
 enum class EeUiTablesCall : uint32_t {
@@ -203,12 +199,6 @@ ptrdiff_t ee_ui_controls_tables(EeUiTablesCall call,
                                 EeUiHostFn host,
                                 float *f);
 
-/// The default constructor's table for the C++ table `obj`.
-///
-/// # Safety
-/// `obj` is the C++ table the host answers for.
-EeUiControlsTable *ee_ui_controls_table_new(void *obj, EeUiHostFn host);
-
 /// Frees a table (the C++ destructor): the font it holds released first.
 ///
 /// # Safety
@@ -230,10 +220,6 @@ ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
                                     ptrdiff_t a,
                                     ptrdiff_t b,
                                     float *f);
-
-/// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
-unsigned long ee_ui_controls_table_string_count(long begin,
-                                                long end);
 
 }  // extern "C"
 

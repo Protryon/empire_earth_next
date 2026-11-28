@@ -6,83 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/records.h"
 
 /// `Own` in a [`v24_steps`] list: ComponentConfig's own MODIFY, MAPCOMPONENT, else its table.
 constexpr static const int32_t STEP_OWN = -1;
-
-/// A component config's original class.
-enum class EeWonCfgKind : int32_t {
-  Component = 0,
-  Container,
-  Dialog,
-  Button,
-  ImageButton,
-  Label,
-  InputBox,
-  ScrollArea,
-  ListArea,
-  MultiListArea,
-  TreeArea,
-  TextArea,
-  MultiListHeader,
-  Scroller,
-  ScrollbarScroller,
-  Scrollbar,
-  TabCtrl,
-  ComboBox,
-  Splitter,
-  Browser,
-  Rectangle,
-  Rectangle3D,
-  ImageComponent,
-  ScreenContainer,
-  MsButton,
-  MsArrowButton,
-  MsTabButton,
-  Ms3DFrame,
-  MsComboBox,
-  MsScrollbar,
-  MsEtchedFrameGroup,
-  MsTabCtrl,
-  MsScrollContainer,
-  MsHeaderControl,
-  MsListCtrl,
-  WonSimpleButton,
-  WonButton,
-  WonScrollbar,
-  WonScrollContainer,
-  WonHeaderControl,
-  WonListCtrl,
-  WonComboBox,
-  WonTabCtrl,
-  WonFrameComponent,
-  WonSkin,
-  Font,
-  Image,
-  StretchImage,
-  StretchCenterImage,
-  ImageFilter,
-  PercentLayout,
-  ColorScheme,
-  /// ChatCtrlConfig (a container's)
-  LobbyChat,
-  /// RoomLabelCtrlConfig (a container's)
-  LobbyRoomLabel,
-  /// UserListCtrlConfig (a container's)
-  LobbyUserList,
-  /// ServerListCtrlConfig (a container's; its header and column count in the config's [`crate::compcfg`] slots)
-  LobbyServerList,
-  /// GameBrowserCtrlConfig (a container's)
-  LobbyGameBrowser,
-  /// GameUserListCtrlConfig (a container's)
-  LobbyGameUserList,
-  /// CrossPromotionButtonConfig (an image button's)
-  LobbyCrossPromotion,
-  /// ImageTextButtonConfig (an image button's)
-  LobbyImageText,
-  /// CreditsDialogConfig (a dialog's)
-  LobbyCredits,
-};
 
 /// A part of the component that a predefined child names (the C++ host reads it from the component).
 enum class EeWonCfgPart : int32_t {

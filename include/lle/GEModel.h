@@ -78,7 +78,6 @@ public:
     void SetGraphicsPostModelTransform(const GETransformation& inTransform)
         { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Post, 0, (const EeGeTransformation*)&inTransform); }
     void SetGraphicsScale(float inScale) { ee_ge_mod_set_graphics_scale(this->mRust, inScale); }
-    void SetOpacity(float inOpacity) { ee_ge_mod_set_opacity(this->mRust, inOpacity); }
 
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
     // retired under D9; GEModelManager::LoadModel stores a glTF's model with ee_ge_mod_store_loaded)
@@ -107,7 +106,6 @@ public:
     virtual ~GEModel() { ee_ge_mod_destroy(this->mRust); }
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
-    void SetSubModel(GEModel* inModel, unsigned long inIndex) { ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex); }
     // what the friends read (the store gate's digest), as accessors
     unsigned long GetVertexCount() const { return this->Val(EeGeModVal::VertexCount); }
     unsigned long GetSharedFrameCount() const { return this->Val(EeGeModVal::SharedFrameCount); }

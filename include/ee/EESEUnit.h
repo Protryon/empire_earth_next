@@ -9,6 +9,7 @@
 #include "lle/GERhombus.h"
 #include "ee/EEUIBuildWall.h"
 #include "ee/EEUIBuildGate.h"
+#include "lle/GEColor.h"
 
 class UIForm;
 

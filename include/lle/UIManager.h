@@ -6,16 +6,12 @@
 // members are the Rust manager's now (see the class). Requires lle/UIForm.h (CreateForm).
 #ifndef LLE_UIMANAGER_H
 #define LLE_UIMANAGER_H
-#include "lle/LLEForward.h"
 
 #include <stdint.h>
 
 #include "lle/UIEvent.h"
+#include "lle/UIForm.h"
 #include "rust/ui/managerobj.h"
-#include "rust/ui/lle_manager.h"
-#include "rust/ui/lle_control.h"
-#include "rust/ui/obj.h"
-#include "lle/UIObjHost.h"
 
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
@@ -47,14 +43,11 @@ public:
     // Passes an IME result string to the top form, under the UI lock
     void AddIMEResultString(const UWideString& inString) { this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString); }
     // Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
-    virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                            unsigned long inCursor)
+    long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes, unsigned long inCursor)
     {
         return ee_ui_manager_change_composition(this->mRust, &(const EeUiImeComposition&)EeUiImeComposition{&inString, &inAttributes, inCursor});
     }
     void ChangeRasterizer(GERasterizer* inRasterizer) { this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer); }
-    // Tells the top form the IME composition string closed, under the UI lock; returns its result
-    virtual long CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
     // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
     long CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
     virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable) { return NULL; }
@@ -74,7 +67,6 @@ public:
     GEBitmap* GetCheckOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 11)); }
     GEBitmap* GetCheckOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 13)); }
     UIForm* GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
-    GEFont* GetFont(unsigned long inIndex) const { return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex)); }
     // Returns the form with the given ID (NULL: none)
     UIForm* GetFormByID(unsigned long inID) const
     {
@@ -112,8 +104,6 @@ public:
     // Loads the UI database (fonts, forms, backgrounds, controls, control and form events, hot keys) from a directory
     void LoadDatabase(FSPath* inPath, const UString& inDirectory) { ee_ui_manager_load_database(this, inPath, &inDirectory); }
     void LockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 0); }
-    // Tells the top form an IME composition string opened, under the UI lock; returns its result
-    virtual long OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
     // Closes the top form, re-shows the forms it covered, redraws its area and activates the form below; returns OK
     long Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
     // Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
@@ -126,7 +116,6 @@ public:
     void RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long)) { this->Call(EeUiManagerCall::RegisterFormCallback, (intptr_t)inCallback); }
     // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
     void RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
-    void SetFont(unsigned long inIndex, GEFont* inFont) { this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont); }
     // Swaps the left and right mouse buttons when the left-handed setting changes
     static void SetMouseLeftHanded(bool inLeftHanded) { ee_ui_manager_set_mouse_left_handed(inLeftHanded); }
     // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
@@ -137,7 +126,7 @@ public:
     void StartMusic(const UWideString& inFileName) { this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName); }
     void UnlockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 1); }
     // Runs one UI update: keyboard, mouse, queued events, then any pending music stop or start; returns the mouse result
-    virtual long UpdateUI(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x28
+    long UpdateUI(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY()); }
     // Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
     long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat); }
     // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced

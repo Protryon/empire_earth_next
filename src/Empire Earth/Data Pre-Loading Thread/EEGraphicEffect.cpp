@@ -9,6 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
+#include "rust/render/gfx.h"
 
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three
 // init chains) and the loads are ee_gfx geffect_table.rs'
@@ -38,16 +39,6 @@ unsigned long EEGraphicEffect::GetCount()
     return ee_gfx_geffect_count();
 }
 
-unsigned long EEGraphicEffect::IndexOf(const EEGraphicEffect* inEffect)
-{
-    return ee_gfx_geffect_index_of(inEffect);
-}
-
-// Returns the effect's graphic, or a random graphic of its kind when it has none of its own (preload_media.rs)
-EEMedia* EEGraphicEffect::GetMedia()
-{
-    return static_cast<EEMedia*>(ee_preload_effect_media(this));
-}
 
 // Files every loaded graphic object under its kind (kinds below 0x48) for kind-only effects
 void EEGraphicEffect::SortMediaByKind()

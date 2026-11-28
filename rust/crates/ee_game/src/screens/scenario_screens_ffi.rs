@@ -53,9 +53,3 @@ impl ScenarioHost for Form {
         .1
     }
 }
-
-/// The scenario intro form's event code for a control event id; 0 for another form's.
-#[no_mangle]
-pub extern "C" fn ee_screens_scenario_intro_event_for(id: c_ulong) -> u32 {
-    scenario_intro_event_for(id as u32)
-}

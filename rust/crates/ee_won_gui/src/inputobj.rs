@@ -887,6 +887,160 @@ pub unsafe extern "C" fn ee_won_input_numeric_filter(text: *const c_void, len: u
     numeric_filter(&unsafe { units_in(text as isize, len as isize) }, sel_start)
 }
 
+/// Where the game's InputBox keeps the members its host reads and writes (offsets in an `InputBox`, and `Font::mRust`;
+/// GuiHost.cpp registers them at static initialisation; R6 WON GUI round 41).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeWonInputAt {
+    /// `mText`, `mRealText` (GUIStrings: their text's pointer)
+    pub text: usize,
+    pub real_text: usize,
+    /// `mIcon` (a SmartPtr), `mInputFilter` (a function pointer), `mUseDisabledColors` (a bool), `mFont` (a SmartPtr)
+    pub icon: usize,
+    pub filter: usize,
+    pub use_disabled_colors: usize,
+    pub font: usize,
+    /// `mTextColor` (a C `unsigned long`), `mDisabledTextColor` (an int), `mSelColor` (an `EeWonSelColor`)
+    pub text_color: usize,
+    pub disabled_text_color: usize,
+    pub sel_color: usize,
+    /// `Font::mRust`
+    pub font_rust: usize,
+}
+static INPUT_AT: std::sync::Mutex<Option<EeWonInputAt>> = std::sync::Mutex::new(None);
+
+/// Registers the input box's member offsets (GuiHost.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_input_members_register(at: *const EeWonInputAt) {
+    if let Ok(mut s) = INPUT_AT.lock() {
+        // SAFETY: the contract
+        *s = Some(unsafe { *at });
+    }
+}
+
+/// The game's input box `me`'s `SetFont(font)` (its font member in place; the shells' MSButton font). None in a
+/// driver's world.
+pub(crate) fn game_set_font(me: isize, font: isize) -> Option<isize> {
+    if !crate::compobj::is_game() || me == 0 {
+        return None;
+    }
+    let at = (*INPUT_AT.lock().ok()?)?;
+    // SAFETY: the game's live input box, its font member at the registered offset
+    unsafe { crate::gamefwd::set_font((me as usize + at.font) as *mut isize, font) };
+    Some(0)
+}
+
+/// The game's input box `me`'s host ops over its own members, read and written in place (R6 WON GUI round 41: the
+/// C++ host's font measures, text stores, colours, icon and constructor cases went). None in a driver's world and
+/// for the other ops.
+pub(crate) fn game_host_op(me: isize, op: Op, a: isize, b: isize) -> Option<isize> {
+    use crate::guistrobj::{EeWonGstr, EeWonGuiStrBuf, EE_WON_GSTR_DATA_AT, EE_WON_GSTR_WCHAR};
+    use crate::platfont::{ee_won_plat_font_char_width, ee_won_plat_font_metric, ee_won_plat_font_width};
+    if !crate::compobj::is_game() || me == 0 {
+        return None;
+    }
+    let at = (*INPUT_AT.lock().ok()?)?;
+    let m = |off: usize| (me as usize + off) as *mut u8;
+    // SAFETY (the reads and writes below): the game's live input box `me` (the host's), each member at its
+    // registered offset; its font and icon are live (its SmartPtrs hold them)
+    let word = |off: usize| unsafe { *(m(off) as *const isize) };
+    // SAFETY: as above
+    let font = || unsafe { *((word(at.font) as usize + at.font_rust) as *const *const crate::platfont::EeWonPlatFont) };
+    // SAFETY: as above: the shown text's block
+    let shown = || unsafe { &*((word(at.text) as usize + EE_WON_GSTR_DATA_AT) as *const EeWonGuiStrBuf) };
+    // SAFETY: as above: the icon a live image handle or NULL
+    let icon = || unsafe { crate::imgobj::image_of(word(at.icon)) };
+    Some(match op {
+        // SAFETY: as above
+        Op::FontHeight => (unsafe { ee_won_plat_font_metric(font(), 0) }) as isize,
+        // SAFETY: as above
+        Op::FontCharWidth => (unsafe { ee_won_plat_font_char_width(font(), a as i32) }) as isize,
+        Op::TextWidth | Op::TextWidthAll => {
+            let t = shown();
+            let (o, n) = if op == Op::TextWidth { (a as u16 as usize, b as u16) } else { (0, t.length) };
+            if n == 0 {
+                0
+            } else {
+                // SAFETY: as above: units `o .. o + n` of the shown text (the caller's range)
+                (unsafe { ee_won_plat_font_width(font(), (t.text as *const u8).add(o * EE_WON_GSTR_WCHAR).cast(), n) })
+                    as isize
+            }
+        }
+        // SAFETY: as above
+        Op::TextCharWidth => {
+            (unsafe { ee_won_plat_font_char_width(font(), shown().unit(a as usize, EE_WON_GSTR_WCHAR) as i32) })
+                as isize
+        }
+        Op::FontStringM => {
+            let unit: [u32; 1] = [u32::from(b'M')];
+            let mut wide = [0u8; 4];
+            if EE_WON_GSTR_WCHAR == 2 {
+                wide[..2].copy_from_slice(&(unit[0] as u16).to_ne_bytes());
+            } else {
+                wide.copy_from_slice(&unit[0].to_ne_bytes());
+            }
+            // SAFETY: as above; one unit
+            (unsafe { ee_won_plat_font_width(font(), wide.as_ptr().cast(), 1) }) as isize
+        }
+        Op::TextStoreText => {
+            // `(a == 0 ? mText : mRealText) = *(const GUIString*)b`: the new text held, the old given back
+            let slot = m(if a == 0 { at.text } else { at.real_text }) as *mut *const EeWonGstr;
+            // SAFETY: as above; `b` a live GUIString (the op's contract)
+            unsafe {
+                let new = *(b as *const *const EeWonGstr);
+                crate::guistrobj::gstr_ref(new);
+                let old = std::ptr::replace(slot, new);
+                crate::guistrobj::gstr_release(old);
+            }
+            0
+        }
+        Op::InputHasFilter => isize::from(word(at.filter) != 0),
+        Op::IconWidth => icon().map_or(-1, |i| i.width() as isize),
+        Op::InputIconHeight => icon().map_or(0, |i| i.height() as isize),
+        Op::InputHasIcon => isize::from(word(at.icon) != 0),
+        Op::InputDisabled => isize::from(crate::compmem::is_disabled(me)),
+        Op::InputHasFocus => isize::from(crate::compmem::has_focus(me)),
+        // SAFETY: as above
+        Op::InputUseDisabledColors => isize::from(unsafe { *m(at.use_disabled_colors) } != 0),
+        // SAFETY: as above (`(int)mTextColor`)
+        Op::InputTextColor => (unsafe { *(m(at.text_color) as *const std::ffi::c_ulong) }) as i32 as isize,
+        // SAFETY: as above
+        Op::InputDisabledTextColor => (unsafe { *(m(at.disabled_text_color) as *const i32) }) as isize,
+        Op::InputSelColor => {
+            // SAFETY: as above; `a` the record the op fills
+            unsafe {
+                *(a as *mut crate::guidraw::EeWonSelColor) = *(m(at.sel_color) as *const crate::guidraw::EeWonSelColor)
+            };
+            0
+        }
+        // the constructor's statements (guictor.rs)
+        Op::CtorTextColor => {
+            // SAFETY: as above
+            unsafe { *(m(at.text_color) as *mut std::ffi::c_ulong) = 0x8000000e };
+            0
+        }
+        Op::CtorDisabledTextColor => {
+            // SAFETY: as above
+            unsafe { *(m(at.disabled_text_color) as *mut i32) = 0x80000006u32 as i32 };
+            0
+        }
+        Op::CtorUseDisabledColors => {
+            // SAFETY: as above
+            unsafe { *m(at.use_disabled_colors) = 1 };
+            0
+        }
+        Op::CtorNoFilter => {
+            // SAFETY: as above
+            unsafe { *(m(at.filter) as *mut isize) = 0 };
+            0
+        }
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 #[path = "inputobj_tests.rs"]
 mod tests;

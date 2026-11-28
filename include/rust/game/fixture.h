@@ -346,13 +346,6 @@ void ee_fixture_sink_text(EeFixtureSink *sink, const char *text);
 /// `sink` is the call's sink.
 void ee_fixture_sink_id(EeFixtureSink *sink, int64_t id);
 
-/// An input message before (`phase` 0) and after (1) it executes (EEPhysics::DrainInput, the world's write lock
-/// held); `local`: the local player sent it.
-void ee_fixture_message(uint64_t message,
-                        uint64_t kind,
-                        bool local,
-                        int32_t phase);
-
 /// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
 void ee_fixture_lobby_work(int _param);
 

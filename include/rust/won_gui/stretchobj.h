@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/records.h"
 
 /// A setting (`ee_won_stretch_get`).
 enum class EeWonStretchField : uint32_t {

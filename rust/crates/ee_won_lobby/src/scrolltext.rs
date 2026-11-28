@@ -137,6 +137,17 @@ impl EeWonScrollText {
 
     #[allow(clippy::too_many_arguments)]
     fn op(&self, op: Op, a: isize, b: isize, x: i32, y: i32, w: i32, h: i32) -> isize {
+        // the game's lines are heap GUIStrings made and freed in Rust (R6 WON GUI round 40: lobbytext.rs)
+        if ee_won_gui::compobj::is_game() {
+            match op {
+                Op::LineNew => return crate::lobbytext::gstring_new(crate::lobbytext::of(a)),
+                Op::LineFree => {
+                    crate::lobbytext::gstring_free(a);
+                    return 0;
+                }
+                _ => {}
+            }
+        }
         match self.host {
             // SAFETY: the host is the C++ component's (or a test's), called with the component it was given for
             Some(f) => unsafe { f(self.comp, op, a, b, x, y, w, h) },

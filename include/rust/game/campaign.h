@@ -239,16 +239,6 @@ long ee_campaign_progress_restore(EeCampaignProgress *p,
                                   const char *scenario,
                                   unsigned long checksum);
 
-/// `SaveCompletedScenario` (C strings).
-///
-/// # Safety
-/// As `ee_campaign_progress_load`.
-long ee_campaign_progress_save(EeCampaignProgress *p,
-                               const char *user,
-                               const char *campaign,
-                               const char *scenario,
-                               unsigned long checksum);
-
 }  // extern "C"
 
 #endif  // EE_RUST_GAME_CAMPAIGN_H

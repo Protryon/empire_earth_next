@@ -3,6 +3,7 @@
 #ifndef LLE_GEQUATERNION_H
 #define LLE_GEQUATERNION_H
 #include "lle/GERust.h"
+#include "rust/base/records.h"
 
 class GEQuaternion : public EeGeQuaternion {   // the Rust record (mX, mY, mZ, mW; rust/base/math.h)
 public:
@@ -23,7 +24,6 @@ public:
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
-    void Normalize() { ee_ge_quat_normalize(GERust(*this)); }   // to unit length
 };
 
 #endif

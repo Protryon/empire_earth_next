@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/ffi.h"
+#include "rust/won_net/records.h"
 
 /// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
 enum class EeWonStageRoute {

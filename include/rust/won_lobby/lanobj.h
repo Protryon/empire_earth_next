@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/records.h"
 
 /// The inward calls (LanLogic's virtual slots and its completions). `a`, `b` pointers, `c`, `d` integers; a
 /// message is `a` its `ByteBuffer*`, `c` its bytes, `d` their length.

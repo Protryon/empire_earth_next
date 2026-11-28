@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/sim/astar.h"
+#include "rust/base/records.h"
+#include "rust/sim/records.h"
 
 /// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
 /// `SetNextAttackTime(gPhysics->mGameTime)`.
@@ -4386,102 +4386,12 @@ struct EeScenarioTiles;
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
 
-struct EeScenarioManagerFields {
-  long mGameResult;
-  /// The camera zoom `StartCinematic` saves.
-  float mSavedZoom;
-  float mStartX;
-  float mStartY;
-  /// The scenario clock (ms).
-  float mTime;
-  /// The time since the last trigger round (ms).
-  float mTriggerTimer;
-  float mCinematicStartTime;
-  long mSavedCameraMode;
-  unsigned long mNextTriggerID;
-  unsigned long mNextConditionID;
-  unsigned long mNextEffectID;
-  unsigned long mNextObjectID;
-  unsigned long mNextAreaID;
-  /// Set by `Reset`: new pending effects are not recorded until `ApplyPendingEffects` has run.
-  bool mB234;
-  bool mIsMovingCamera;
-  bool mShowDebugIDs;
-  bool mIsShowingDialog;
-  bool mIsEndingCinematic;
-};
-
 /// The C ABI's round host: the manager's numbers and queue, and the operation callback.
 struct EeScenarioRoundHost {
   void *ctx;
   EeScenarioManagerFields *fields;
   EeScenarioTimedQueue *queue;
   int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
-};
-
-/// `EESMDialogMessage`'s numbers, in the class's order (the text and the sound stay members of the C++ class).
-struct EeScenarioMessageFields {
-  long mScrollSpeed;
-  unsigned long mUnitType;
-  unsigned long mDuration;
-  unsigned long mUnitID;
-  bool mIsCinematic;
-};
-
-/// `U2DPoint<long>`.
-struct EeScenarioAreaPoint {
-  long mX;
-  long mY;
-};
-
-/// `GERectangle` (its members' order).
-struct EeScenarioAreaRect {
-  float mBottom;
-  float mLeft;
-  float mRight;
-  float mTop;
-};
-
-/// `EESMArea`'s numbers.
-struct EeScenarioAreaFields {
-  EeScenarioAreaPoint mAnchor;
-  EeScenarioAreaRect mRect;
-  /// The cached centre tile (-10000 while unset).
-  EeScenarioAreaPoint mCenterTile;
-  unsigned long mSelectMode;
-  unsigned long mTilesTime;
-  unsigned long mID;
-  bool mHasRectangle;
-  bool mHasAnchor;
-};
-
-/// `EESMObject`'s numbers, in the class's order.
-struct EeScenarioObjectFields {
-  unsigned long mOwner;
-  unsigned long mFamily;
-  unsigned long mClass;
-  unsigned long mMinCount;
-  unsigned long mMaxCount;
-  unsigned long mArea;
-  unsigned long mNearMode;
-  unsigned long mNearObject;
-  unsigned long mParent;
-  unsigned long mAttribute;
-  unsigned long mAttributeMin;
-  unsigned long mAttributeMax;
-  unsigned long mVisibleByPlayer;
-  unsigned long mState;
-  unsigned long mSelectedByPlayer;
-  unsigned long mL64;
-  unsigned long mInAreaCheck;
-  unsigned long mNearCheck;
-  unsigned long mHasAttributeCheck;
-  unsigned long mVisibleByCheck;
-  unsigned long mHasStateCheck;
-  unsigned long mSelectedByCheck;
-  bool mIsSelectOnMap;
-  bool mIsDynamic;
-  bool mIsAttributePercent;
 };
 
 /// One effect of an event (`EEEventEffect`, ee/EEEvent.h's typedef of this record: a dbeffects row of 88 bytes on
@@ -4559,164 +4469,10 @@ struct EeScenarioHost {
   const EeScenarioObjectFields *(*object)(void *ctx, int32_t index);
 };
 
-/// `EESMCondition`'s numbers, in the class's order.
-struct EeScenarioConditionFields {
-  unsigned long mType;
-  unsigned long mOperator;
-  unsigned long mDifficulty;
-  unsigned long mDiplomacy;
-  unsigned long mAttribute;
-  unsigned long mOtherAttribute;
-  long mTechnology;
-  unsigned long mAmount;
-  unsigned long mObjectIndex;
-  unsigned long mPlayer;
-  unsigned long mOtherPlayer;
-  unsigned long mMinTime;
-  unsigned long mMaxTime;
-  unsigned long mHour;
-  unsigned long mTrigger;
-  unsigned long mID;
-  bool mIsTriggerOn;
-  bool mHasTriggerFired;
-  bool mUsesDifficulty;
-  bool mUsesElapsedTime;
-  bool mUsesHour;
-  bool mUsesPlayerAttribute;
-};
-
-/// A trigger's state (in and out).
-struct EeScenarioTriggerState {
-  bool is_on;
-  bool has_fired;
-  bool is_looping;
-  bool is_in_cinematic;
-  uint32_t condition_duration;
-  uint32_t condition_start_time;
-};
-
-/// One condition entry (`EESMTConditionWrapper`): the condition index, the operator after it, the negation.
-struct EeScenarioConditionEntry {
-  uint32_t condition;
-  int32_t op;
-  bool is_not;
-};
-
-/// One effect entry (`EESMTEffectWrapper`): the operator after it, the delay in seconds, the effect index.
-struct EeScenarioEffectEntry {
-  int32_t op;
-  uint32_t delay;
-  uint32_t effect;
-};
-
-/// One timed effect the trigger schedules (`AddTimedEffect(effect, time, the trigger's cinematic flag)`).
-struct EeScenarioTimedEffect {
-  uint32_t effect;
-  uint32_t time;
-};
-
-/// An area's settings and its cached centre (`EESMArea`'s plain members).
-struct EeScenarioAreaRecord {
-  uint32_t select_mode;
-  int32_t anchor_x;
-  int32_t anchor_y;
-  float left;
-  float top;
-  float right;
-  float bottom;
-  /// `mCenterTile` (in and out: the cache, -10000 while unset)
-  int32_t center_x;
-  int32_t center_y;
-};
-
-/// `EESMEffect`'s numbers, in the class's order.
-struct EeScenarioEffectFields {
-  unsigned long mPlayerAttribute;
-  unsigned long mDiplomacy;
-  unsigned long mULD0;
-  unsigned long mMessagePlayer;
-  unsigned long mNewOwner;
-  unsigned long mPlayer;
-  unsigned long mDiplomacyPlayer;
-  unsigned long mAIAction;
-  unsigned long mAIAttribute;
-  unsigned long mAIToggle;
-  unsigned long mMediaAction;
-  unsigned long mULF4;
-  unsigned long mPlayerAction;
-  unsigned long mTriggerState;
-  unsigned long mType;
-  unsigned long mObjectAction;
-  unsigned long mAttributeMode;
-  long mTechnology;
-  float mFloatValue;
-  long mIntValue1;
-  long mIntValue2;
-  long mAttributePlayer;
-  unsigned long mTargetArea;
-  unsigned long mTargetObject;
-  unsigned long mPlacedEffect;
-  unsigned long mPlaceArea;
-  unsigned long mPlaceObject;
-  unsigned long mDaylightHour;
-  unsigned long mCycleTime;
-  unsigned long mGameAction;
-  unsigned long mDuration;
-  unsigned long mTextObject;
-  unsigned long mAttribute;
-  unsigned long mAttributeAmount;
-  unsigned long mAttributeUnitType;
-  unsigned long mAttributeUnit;
-  unsigned long mObject;
-  unsigned long mStance;
-  unsigned long mTaskAction;
-  unsigned long mTaskArea;
-  unsigned long mTaskObject;
-  unsigned long mCivPoints;
-  unsigned long mPlayerAttributeMode;
-  unsigned long mPlayerAttributeAmount;
-  unsigned long mLocationArea;
-  unsigned long mLocationObject;
-  unsigned long mTrigger;
-  unsigned long mID;
-  bool mIsOn;
-  bool mUsesTargetArea;
-  bool mIsAttack;
-  bool mUsesFavorites;
-  bool mIsAddTarget;
-  bool mB18D;
-  bool mIsClearText;
-  bool mUsesLocationArea;
-  bool mUsesPercent;
-  bool mIsAddTechnology;
-  bool mUsesPlaceArea;
-  bool mB193;
-};
-
 /// The C ABI's stream: a context and the I/O callback (`value` the field or local the operation reads or writes).
 struct EeScenarioStream {
   void *ctx;
   int32_t (*io)(void *ctx, uint32_t op, uint32_t slot, unsigned long index, void *value);
-};
-
-/// One store on a computer player: `field` the position of the field in its kind's list (`EE_SM_AI_LONGS`,
-/// `EE_SM_AI_FLOATS`, `EE_SM_AI_BUILDINGS`, `EE_SM_AI_CALLS` of the C++, now ai_store.rs: the modules below in order).
-struct EeScenarioAiWrite {
-  uint32_t kind;
-  uint32_t field;
-  long long_value;
-  float float_value;
-};
-
-/// `EESMTrigger`'s numbers, in the class's order (its condition and effect entries stay the C++'s).
-struct EeScenarioTriggerFields {
-  unsigned long mConditionDuration;
-  unsigned long mConditionStartTime;
-  unsigned long mID;
-  bool mIsOn;
-  bool mHasFired;
-  bool mIsLooping;
-  bool mIsInCinematic;
 };
 
 /// `EESMArea`'s saved values (a copy the C++ fills from its members and stores back): the anchor tile, the
@@ -4751,6 +4507,20 @@ struct EeScenarioTimedEntry {
   unsigned long mTime;
   bool mIsInCinematic;
   bool mHasRun;
+};
+
+/// An area's settings and its cached centre (`EESMArea`'s plain members).
+struct EeScenarioAreaRecord {
+  uint32_t select_mode;
+  int32_t anchor_x;
+  int32_t anchor_y;
+  float left;
+  float top;
+  float right;
+  float bottom;
+  /// `mCenterTile` (in and out: the cache, -10000 while unset)
+  int32_t center_x;
+  int32_t center_y;
 };
 
 /// The C++ host of the lists (`EESMListOp` in EEScenarioManager.cpp): the manager's numbers and timed effects, and
@@ -5110,14 +4880,6 @@ void ee_scenario_en_area_tiles(void *a,
 /// `EESMArea::Load` / `Save` (the name, the text, the numbers through the save's copy).
 int32_t ee_scenario_en_area_io(void *a, void *file, bool save);
 
-/// [`region_inputs`] for the C++: the count of areas, and (when `capacity` holds them) each area's input and id.
-///
-/// # Safety
-/// `inputs` and `ids` point to `capacity` entries (or `capacity` is 0).
-size_t ee_scenario_area_region_inputs(EeScenarioArea *inputs,
-                                      long *ids,
-                                      size_t capacity);
-
 extern int64_t ee_scenariocpp_entry(uint32_t op, void *p, int64_t a, int64_t b);
 
 extern void ee_scenariocpp_host_players(void *ctx,
@@ -5160,9 +4922,6 @@ bool ee_scenario_ev_pathfinding(void *player, long terrain, bool enabled, long u
 
 extern int64_t ee_scenariocpp_event(uint32_t op, const int64_t *a);
 
-/// `EESMCondition::Compare`.
-bool ee_scenario_compare(uint32_t value, uint32_t op, uint32_t target);
-
 /// `EESMCondition::Evaluate` of the condition's numbers.
 ///
 /// # Safety
@@ -5170,82 +4929,12 @@ bool ee_scenario_compare(uint32_t value, uint32_t op, uint32_t target);
 bool ee_scenario_condition_evaluate(const EeScenarioHost *host,
                                     const EeScenarioConditionFields *condition);
 
-/// `EESMCondition::GetPlayerValue`.
-///
-/// # Safety
-/// `host` must be valid for the call.
-uint32_t ee_scenario_player_value(const EeScenarioHost *host, int32_t player, uint32_t kind);
-
-/// `EEScenarioManager::ChoosePlayer`: the chosen player (-1: none or a group); the players into `out_players` (room
-/// for [`EE_SCENARIO_MAX_PLAYERS`]), their number into `out_count`; `listed`: whether the caller takes them (the
-/// capture record's).
-///
-/// # Safety
-/// `host` must be valid for the call, `out_players` for `EE_SCENARIO_MAX_PLAYERS` writes, `out_count` for one.
-int32_t ee_scenario_choose_player(const EeScenarioHost *host,
-                                  int32_t kind,
-                                  bool single,
-                                  bool listed,
-                                  int32_t *out_players,
-                                  size_t *out_count);
-
-/// `EESMTrigger::Evaluate(inTime)`: updates `state`; the effects to schedule (`AddTimedEffect` in order, with the
-/// trigger's cinematic flag) into `out` (room for `effect_count`), their number into `out_count`.
-///
-/// # Safety
-/// `host` must be valid for the call, `state` for a read and a write, `conditions` and `effects` for their counts of
-/// reads (either may be null when its count is 0), `out` for `effect_count` writes, `out_count` for one.
-void ee_scenario_trigger_evaluate(const EeScenarioHost *host,
-                                  EeScenarioTriggerState *state,
-                                  bool in_world_cinematic,
-                                  const EeScenarioConditionEntry *conditions,
-                                  size_t condition_count,
-                                  const EeScenarioEffectEntry *effects,
-                                  size_t effect_count,
-                                  float time,
-                                  EeScenarioTimedEffect *out,
-                                  size_t *out_count);
-
-/// `EESMArea::ContainsTile`.
-///
-/// # Safety
-/// `host` and `area` must be valid for the call.
-bool ee_scenario_area_contains_tile(const EeScenarioHost *host,
-                                    const EeScenarioAreaRecord *area,
-                                    int32_t x,
-                                    int32_t y);
-
-/// `EESMArea::ContainsUnit` of the host's unit (not called for no unit).
-///
-/// # Safety
-/// `host` and `area` must be valid for the call.
-bool ee_scenario_area_contains_unit(const EeScenarioHost *host, const EeScenarioAreaRecord *area);
-
-/// `EESMArea::GetCenterTile`: the centre into `out` (x, y); `area`'s cached centre updated.
-///
-/// # Safety
-/// `host` must be valid for the call, `area` for a read and a write, `out` for two writes.
-void ee_scenario_area_center_tile(const EeScenarioHost *host,
-                                  EeScenarioAreaRecord *area,
-                                  int32_t (*out)[2]);
-
-/// `EESMObject::AcceptsClass`.
-///
-/// # Safety
-/// `host` and `filter` must be valid for the call.
-bool ee_scenario_object_accepts_class(const EeScenarioHost *host,
-                                      const EeScenarioObjectFields *filter,
-                                      uint32_t class_);
-
 /// `EESMObject::PickUnitType`.
 ///
 /// # Safety
 /// `host` and `filter` must be valid for the call.
 int32_t ee_scenario_object_pick_unit_type(const EeScenarioHost *host,
                                           const EeScenarioObjectFields *filter);
-
-/// `EESMEffect::Reset`'s numbers.
-EeScenarioEffectFields ee_scenario_effect_defaults();
 
 /// `EESMCondition`'s constructor's numbers.
 EeScenarioConditionFields ee_scenario_condition_defaults();
@@ -5301,15 +4990,6 @@ int32_t ee_scenario_object_load(const EeScenarioStream *stream,
 int32_t ee_scenario_object_save(const EeScenarioStream *stream,
                                 const EeScenarioObjectFields *fields,
                                 unsigned long minor);
-
-/// `EESMEffect::SetAIVariable`'s stores for the effect's behaviour, in order, into `out` (room for
-/// [`EE_SCENARIO_AI_MAX_WRITES`]), their number into `out_count`; whether the applied effect is kept for a saved game.
-///
-/// # Safety
-/// `fields` must be valid for a read, `out` for `EE_SCENARIO_AI_MAX_WRITES` writes, `out_count` for one.
-bool ee_scenario_ai_variable(const EeScenarioEffectFields *fields,
-                             EeScenarioAiWrite *out,
-                             size_t *out_count);
 
 /// `EESMTrigger::Load`: the first error.
 ///
@@ -5378,21 +5058,6 @@ void ee_scenario_timed_add(EeScenarioTimedQueue *queue,
                            unsigned long time,
                            bool cinematic);
 
-/// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_set_has_run(EeScenarioTimedQueue *queue,
-                                   bool found,
-                                   unsigned long effect,
-                                   bool flag);
-
-/// `EndCinematic`'s timed part (`shift` = `(long)elapsed + 3000`).
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_end_cinematic(EeScenarioTimedQueue *queue, long shift);
-
 /// `EEScenarioManager::Reset`'s numbers and the queue emptied.
 ///
 /// # Safety
@@ -5429,14 +5094,6 @@ void ee_scenario_manager_update(const EeScenarioRoundHost *host);
 /// # Safety
 /// As [`ee_scenario_manager_update`].
 void ee_scenario_show_dialog(const EeScenarioRoundHost *host);
-
-/// `EEScenarioManager::MoveCameraToStart`'s step (round.rs `camera_step`): `at` the camera's focus (x, y), moved.
-///
-/// # Safety
-/// `fields` must be the live manager's numbers and `at` two floats, for the call.
-bool ee_scenario_camera_step(EeScenarioManagerFields *fields,
-                             float (*at)[2],
-                             float step);
 
 /// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
 ///
@@ -5489,13 +5146,6 @@ uint32_t ee_scenario_find_placement(const EeScenarioHost *host,
                                     uint32_t unit_type,
                                     bool try_random,
                                     float (*location)[2]);
-
-/// `EESMArea::GetTiles`' rebuild of the area's cache (area.rs tiles): each tile through `EE_SCENARIO_WRITE_TILE`.
-///
-/// # Safety
-/// `host` and `area` must be valid for the call.
-void ee_scenario_area_tiles(const EeScenarioHost *host,
-                            const EeScenarioAreaRecord *area);
 
 /// `EESMEffect::CreateUnits` over object `object` with its numbers `fields` (create.rs): whether it created units;
 /// each unit through `EE_SCENARIO_WRITE_CREATE_UNIT`.
@@ -5696,9 +5346,6 @@ void ee_scenario_cap_effect(const void *effect,
                             bool cinematic,
                             uint32_t seed,
                             EeScenarioCapVersion version);
-
-/// SMEW alone.
-void ee_scenario_cap_effect_world(const void *effect, EeScenarioCapVersion version);
 
 /// SMSV (`manager` the `EEScenarioManager*`).
 void ee_scenario_cap_saved(const void *manager,

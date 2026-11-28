@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/buffer.h"
-#include "rust/won_net/hostop.h"
-#include "rust/won_net/ipobj.h"
+#include "rust/won_net/records.h"
 
 /// `RoutingGetUserStatusOp` (userstatus.rs): `ctx` an `EeWonUserStatus*`.
 constexpr static const int32_t EE_WON_UDP_BODY_USER_STATUS = 1;
@@ -21,27 +19,6 @@ constexpr static const int64_t EE_WON_UDP_BODY_THREW = INT64_MIN;
 
 /// `UDPManagerRecvOp`'s state and steps.
 struct EeWonUdpRecvOp;
-
-/// `UDPManagerSendRecvOp`'s state and steps.
-struct EeWonUdpSendRecvOp;
-
-/// What a C++ subclass of `UDPManagerSendRecvOp` added, in Rust (R6 WON lobby and network round 36: PingGameOp and
-/// RoutingGetUserStatusOp, both deleted): its members (`ctx`), the start of its `RunHook` (the request datagram set
-/// before the base's run), its `CheckResponse` and its destructor, and the constructor's settings. `op` is the C++
-/// op (`RefCount*`).
-struct EeWonUdpBody {
-  /// which body (`EE_WON_UDP_BODY_*`; 0: none)
-  int32_t kind;
-  void *ctx;
-  void (*run)(void *ctx, void *op, const EeWonUdpSendRecvOp *r);
-  /// the status, or [`EE_WON_UDP_BODY_THREW`] for a read past the reply's end (the C++ threw a
-  /// `ReadBufferException`, which the reply wait's check caught)
-  int64_t (*check)(void *ctx, void *op, EeWonReadBuffer *reader);
-  void (*free)(void *ctx);
-  /// `SetNumRetransmits`, `SetMsgTimeout`
-  int32_t retry_limit;
-  uint32_t timeout;
-};
 
 extern "C" {
 

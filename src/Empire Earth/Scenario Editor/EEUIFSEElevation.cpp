@@ -20,6 +20,7 @@
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIShell.h"
+#include "rust/game/screens.h"
 
 // ---- the tab's host (editor_elevation.rs: the ops from 900)
 
@@ -61,7 +62,7 @@ extern "C" int32_t ee_screenscpp_seelx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEELX_VIEW_HOLDS: return gViewport.GetViewRectangle().Contains(GE2DPoint(f[0], f[1]));
     case EE_SCREENS_SEELX_HIGHLIGHT_SHOWN: SeelxBrushes(p)->mIsHighlightShown = i[0] != 0;
         return 0;
-    case EE_SCREENS_SEELX_SET_HIGHLIGHT: SeelxBrushes(p)->SetHighlight(f[0], f[1], i[0] != 0);
+    case EE_SCREENS_SEELX_SET_HIGHLIGHT: ee_screens_sebr_group_highlight(reinterpret_cast<EeScreensSeBrushGroup*>(SeelxBrushes(p)), f[0], f[1], i[0] != 0);
         return 0;
     case EE_SCREENS_SEELX_POINT: EEPointUnitOrTile(GE2DPoint(f[0], f[1]), sSeelxTile, sSeelxPoint, false);
         return 0;

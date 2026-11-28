@@ -6,16 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guidraw.h"
-
-/// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
-struct EeWonRawPixels {
-  int32_t kind;
-  uint8_t *data;
-  int32_t width;
-  int32_t height;
-  int32_t pitch;
-};
+#include "rust/won_gui/records.h"
 
 extern "C" {
 

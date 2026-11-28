@@ -31,10 +31,9 @@ from ee import CLANG, MODULE_FLAGS   # noqa: E402
 # (module, unit): together they include every class the harness and the exe's member table read
 UNITS = [
     ("lle", "Low-Level Engine/User Interface/User Interface.cpp"),
-    ("lle", "Low-Level Engine/Graphics Engine/GERasterizer.cpp"),
+    ("lle", "Low-Level Engine/Graphics Engine/Graphics Engine.cpp"),
     ("lle", "Low-Level Engine/Input System/Input System.cpp"),
-    ("lle", "Low-Level Engine/Network Engine/NESynchronousServer.cpp"),
-    ("dx7hrtnl", "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Rasterizer.cpp"),
+    ("lle", "Low-Level Engine/Network Engine/Network Engine.cpp"),
     ("exe", "Empire Earth/Empire Earth/Empire Earth.cpp"),
     ("exe", "Empire Earth/Empire Earth/EEWorld.cpp"),
     ("exe", "Empire Earth/Physics Thread/EEPhysics.cpp"),

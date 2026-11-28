@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/records.h"
 
 /// A status's text: the resource string, and whether it is a general text formatted with the status's
 /// description.

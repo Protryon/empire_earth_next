@@ -2,7 +2,7 @@
 //! EEUnitClassGround.cpp): `AmbientAddToTile`/`AmbientRemoveFromTile`, `ResourceAddToTile`,
 //! `ResourceSimpleUnitCreated`, `LandUnitCreated`, `LandCallParatroopPlane` (its path cls_move.rs's, as `PathToward`
 //! called it), `NavalUnitCreated`, `NavalHasArrived`, `UpdateResourceUnit`. Each C++ statement one `EE_UNITS_UCG_*`
-//! case of `ee_units_ucg_host` (EEUnitClassGround.cpp; the class host's statements, `EE_UNITS_UC_*`, reach
+//! case of `ee_units_uc_host` (EEUnitClassGround.cpp; the class host's statements, `EE_UNITS_UC_*`, reach
 //! EEUnitClass.cpp's through it), in the original's order.
 
 // `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
@@ -270,31 +270,24 @@ pub(crate) mod game {
     use super::*;
     use std::os::raw::c_void;
 
-    extern "C" {
-        fn ee_units_ucg_host(
-            op: i32,
-            class: *mut c_void,
-            unit: *mut c_void,
-            a: u64,
-            b: i64,
-            c: i64,
-            f: *mut [f32; 4],
-        ) -> i64;
-    }
+    use crate::units::uc_body::game::ee_units_uc_host;
 
-    /// The ground classes' host (`ee_units_ucg_host`; the class host's statements pass through it).
+    /// The ground classes' host (`ee_units_uc_host`; the class host's statements pass through it).
     pub(crate) struct GameG;
 
     impl UcHost for GameG {
         #[allow(clippy::too_many_arguments)]
         fn uc(&mut self, op: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32; 4]) -> i64 {
+            if let Some(v) = crate::units::tech_cases::uc(op, unit, a) {
+                return v;
+            }
             if let Some(v) =
                 crate::units::uc_view::uc_view(crate::units::uc_view::Kind::Ground, op, class, unit, a, b, c, f)
             {
                 return v;
             }
             // SAFETY: the body runs inside the C++ member that handed over its live class and unit
-            unsafe { ee_units_ucg_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
+            unsafe { ee_units_uc_host(op, class as usize as *mut c_void, unit as usize as *mut c_void, a, b, c, f) }
         }
     }
 

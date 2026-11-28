@@ -91,16 +91,6 @@ pub const EE_UNITS_PLAYER_BODY_HULL_POINT: i32 = 239;
 /// town `a`'s `mPatrolGroup = b`
 pub const EE_UNITS_PLAYER_BODY_TOWN_SET_PATROL: i32 = 240;
 
-/// `ClearFootprint`'s: `new std::vector<EEUnit*>`, `new std::vector<EETileCoordinate>`, their `delete`, sizes, the
-/// unit `b` (an `RTSUnit` address) and the tile `b` (packed as the closest point)
-pub const EE_UNITS_PLAYER_BODY_UNITS_NEW: i32 = 260;
-pub const EE_UNITS_PLAYER_BODY_TILES_NEW: i32 = 261;
-pub const EE_UNITS_PLAYER_BODY_UNITS_DELETE: i32 = 262;
-pub const EE_UNITS_PLAYER_BODY_TILES_DELETE: i32 = 263;
-pub const EE_UNITS_PLAYER_BODY_UNITS_SIZE: i32 = 264;
-pub const EE_UNITS_PLAYER_BODY_TILES_SIZE: i32 = 265;
-pub const EE_UNITS_PLAYER_BODY_UNITS_AT: i32 = 266;
-pub const EE_UNITS_PLAYER_BODY_TILES_AT: i32 = 267;
 /// `gUnitSetManager.Contains(b, c)`
 pub const EE_UNITS_PLAYER_BODY_SET_MANAGER_CONTAINS: i32 = 268;
 /// complex unit `a`'s `mWaypoints.size()`, `NextWaypoint()`, `GetPathStart(*(GE3DPoint*)b, *(float*)c)`
@@ -109,8 +99,6 @@ pub const EE_UNITS_PLAYER_BODY_NEXT_WAYPOINT: i32 = 270;
 pub const EE_UNITS_PLAYER_BODY_PATH_START: i32 = 271;
 /// complex unit `a` moved to the point `*(float(*)[3])b` keeping its orientation (`SetTransformation(.., true)`)
 pub const EE_UNITS_PLAYER_BODY_MOVE_TO: i32 = 272;
-/// `std::sort` of the tiles `a` by `EETileDistanceLess(b, c)`
-pub const EE_UNITS_PLAYER_BODY_SORT_TILES: i32 = 273;
 /// the map's tile (b, c) is there with no units on it
 pub const EE_UNITS_PLAYER_BODY_TILE_EMPTY: i32 = 274;
 /// the terrain mesh's `GetIsValidTile(b, c)`, its `GetMeshZ` of the two floats at `a` (the result's bits)
@@ -136,13 +124,7 @@ pub const EE_UNITS_PLAYER_BODY_UNLOAD_CLASS_MEDIA: i32 = 288;
 pub const EE_UNITS_PLAYER_BODY_CLASS_NAME: i32 = 289;
 /// `delete` herd `a` (the areas' delete: `EEDeletePointers`)
 pub const EE_UNITS_PLAYER_BODY_HERD_DELETE: i32 = 292;
-/// herd `a`'s `GetUnits(*(std::vector<EEComplexUnit*>*)b)`; `new`/`delete`/size/entry of such a vector; complex unit
-/// `a`'s `Kill(b, 0, 0)`
-pub const EE_UNITS_PLAYER_BODY_HERD_UNITS: i32 = 294;
-pub const EE_UNITS_PLAYER_BODY_COMPLEXES_NEW: i32 = 295;
-pub const EE_UNITS_PLAYER_BODY_COMPLEXES_DELETE: i32 = 296;
-pub const EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE: i32 = 297;
-pub const EE_UNITS_PLAYER_BODY_COMPLEXES_AT: i32 = 298;
+/// complex unit `a`'s `Kill(b, 0, 0)`
 pub const EE_UNITS_PLAYER_BODY_KILL_KILLED: i32 = 299;
 /// `DumpMedia(*(FSFileSpec*)a)`'s: the header line, `mUnitClassUpgrades.size()`, `mUnitClassUpgrades[b]`, upgrade
 /// `b`'s `DumpMediaCount(file a)`, the text `b` (a C string)
@@ -151,17 +133,8 @@ pub const EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS: i32 = 301;
 pub const EE_UNITS_PLAYER_BODY_UPGRADE_AT: i32 = 302;
 pub const EE_UNITS_PLAYER_BODY_DUMP_COUNT: i32 = 303;
 pub const EE_UNITS_PLAYER_BODY_DUMP_TEXT: i32 = 304;
-/// the result line's texts: `new UWideString`, `delete (UWideString*)a`, `gResource->GetString(b, *(UWideString*)a)`
-pub const EE_UNITS_PLAYER_BODY_TEXT_NEW: i32 = 307;
-pub const EE_UNITS_PLAYER_BODY_TEXT_DELETE: i32 = 308;
-pub const EE_UNITS_PLAYER_BODY_TEXT_RESOURCE: i32 = 309;
-/// `sprintf(*(UWideString*)a, *(UWideString*)b, (const char*)*(UWideString*)c)`
-pub const EE_UNITS_PLAYER_BODY_TEXT_FORMAT: i32 = 310;
-/// `*(UWideString*)a = mName`; `sprintf(*(UWideString*)a, "%s - (%s)", mCivilization.mName, mName)`
-pub const EE_UNITS_PLAYER_BODY_TEXT_NAME: i32 = 311;
-pub const EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME: i32 = 312;
-/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), *(UWideString*)a, *(UWideString*)b,
-/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)`
+/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), UWideString(a), UWideString(b),
+/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)` (`a`, `b` NUL-terminated texts)
 pub const EE_UNITS_PLAYER_BODY_CHAT_RESULT: i32 = 313;
 
 /// IDS_MSG_GAME, IDS_PLAYER_HAS_BEEN_DEFEATED, IDS_PLAYER_IS_VICTORIOUS (ee/EEStringIDs.h)
@@ -253,8 +226,10 @@ pub trait RestHost {
     fn location_z(&mut self, u: u64) -> f32;
     /// the unit utilities (uu_ffi.rs, with their captures' notes): `EEUnitsInRectangle` into the vector `units`,
     /// `EEBlockRing(0, ..)` into the vector `tiles`, `EECanStandOn`, `EEIsUnitMovable`
-    fn units_in_rectangle(&mut self, bounds: [f32; 4], units: u64);
-    fn block_ring(&mut self, x: c_long, y: c_long, size: c_long, tiles: u64);
+    fn units_in_rectangle(&mut self, bounds: [f32; 4], units: &mut Vec<u64>);
+    fn block_ring(&mut self, x: c_long, y: c_long, size: c_long, tiles: &mut Vec<[i32; 2]>);
+    /// herd `herd`'s units (`EEHerd::GetUnits`: its unit handles resolved, in order)
+    fn herd_units(&mut self, herd: u64) -> Vec<u64>;
     fn can_stand_on(&mut self, x: c_long, y: c_long, unit: u64) -> bool;
     fn movable(&mut self, unit: u64) -> bool;
     /// the unit classes of the tech tree's nodes whose unit media are loaded (each epoch's nodes in id order), its
@@ -269,6 +244,8 @@ pub trait RestHost {
     /// unit `u`'s `mPlayer`
     fn unit_player(&mut self, u: u64) -> u64;
     fn c_string(&mut self, text: u64) -> Vec<u8>;
+    /// the player's `mName` and its civilization's `mName` (`EEPlayer::mCivilization`)
+    fn names(&mut self, p: u64) -> (Vec<u8>, Vec<u8>);
 }
 
 fn unpack(v: i64) -> (c_long, c_long) {
@@ -496,22 +473,44 @@ pub fn set_game_result<H: RestHost + ?Sized>(h: &mut H, p: u64, state: c_long) {
 /// The chat log's line of a player's victory or defeat ("--GAME--", the reason with the player's name; a computer
 /// player's civilization before its name), white, shown twice the chat log's display time.
 pub fn announce_result<H: RestHost + ?Sized>(h: &mut H, p: u64, victory: bool) {
-    let mut text = || h.body(EE_UNITS_PLAYER_BODY_TEXT_NEW, p, 0, 0, 0) as u64;
-    let (line, reason, title, name) = (text(), text(), text(), text());
     let id = if victory { IDS_PLAYER_IS_VICTORIOUS } else { IDS_PLAYER_HAS_BEEN_DEFEATED };
-    h.body(EE_UNITS_PLAYER_BODY_TEXT_RESOURCE, p, reason, id, 0);
-    h.body(EE_UNITS_PLAYER_BODY_TEXT_RESOURCE, p, title, IDS_MSG_GAME, 0);
-    let named = if h.body(EE_UNITS_PLAYER_BODY_IS_HUMAN, p, 0, 0, 0) != 0 {
-        EE_UNITS_PLAYER_BODY_TEXT_NAME
-    } else {
-        EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME
+    // gResource->GetString: a missing string leaves the text empty
+    let resource = |id: i64| {
+        let mut t = ee_base::util::strings::resource_string_for_get(id as u16).unwrap_or_default();
+        t.pop();
+        t
     };
-    h.body(named, p, name, 0, 0);
-    h.body(EE_UNITS_PLAYER_BODY_TEXT_FORMAT, p, line, reason as i64, name as i64);
-    h.body(EE_UNITS_PLAYER_BODY_CHAT_RESULT, p, title, line as i64, 0);
-    for t in [line, reason, title, name] {
-        h.body(EE_UNITS_PLAYER_BODY_TEXT_DELETE, p, t, 0, 0);
+    let (reason, mut title) = (resource(id), resource(IDS_MSG_GAME));
+    let human = h.body(EE_UNITS_PLAYER_BODY_IS_HUMAN, p, 0, 0, 0) != 0;
+    let (player, civ) = h.names(p);
+    let name = if human { player } else { [&civ[..], b" - (", &player[..], b")"].concat() };
+    let mut line = format_s(&reason, &name);
+    title.push(0);
+    line.push(0);
+    h.body(EE_UNITS_PLAYER_BODY_CHAT_RESULT, p, title.as_ptr() as u64, line.as_ptr() as i64, 0);
+}
+
+/// `sprintf(out, format, text)` for a format of `%s` and `%%` conversions (each `%s` takes `text`).
+pub fn format_s(format: &[u8], text: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(format.len() + text.len());
+    let mut i = 0;
+    while i < format.len() {
+        match (format[i], format.get(i + 1)) {
+            (b'%', Some(b's')) => {
+                out.extend_from_slice(text);
+                i += 2;
+            }
+            (b'%', Some(b'%')) => {
+                out.push(b'%');
+                i += 2;
+            }
+            (c, _) => {
+                out.push(c);
+                i += 1;
+            }
+        }
     }
+    out
 }
 
 /// `AdoptTownPatrol(town)`: a town patrol no other town holds, with a point on one of the town's hull vertices,
@@ -562,12 +561,10 @@ pub fn clear_footprint<H: RestHost + ?Sized>(h: &mut H, p: u64, building: u64) {
     let right = (size - 1).wrapping_add(x);
     // the GERectangle: bottom, left, right, top
     let (bottom, top, left, right_f) = ((size - 1).wrapping_add(y) as f32, y as f32, x as f32, right as f32);
-    let units = h.body(EE_UNITS_PLAYER_BODY_UNITS_NEW, p, 0, 0, 0) as u64;
-    let tiles = h.body(EE_UNITS_PLAYER_BODY_TILES_NEW, p, 0, 0, 0) as u64;
-    h.units_in_rectangle([left, top, right_f, bottom], units);
-    let count = h.body(EE_UNITS_PLAYER_BODY_UNITS_SIZE, p, units, 0, 0);
-    for i in 0..count {
-        let u = h.body(EE_UNITS_PLAYER_BODY_UNITS_AT, p, units, i, 0) as u64;
+    let mut units = Vec::new();
+    let mut tiles = Vec::new();
+    h.units_in_rectangle([left, top, right_f, bottom], &mut units);
+    for u in units {
         let unit = h.complex_of(u);
         if unit == 0 || unit == building || !h.movable(unit) {
             continue;
@@ -593,11 +590,15 @@ pub fn clear_footprint<H: RestHost + ?Sized>(h: &mut H, p: u64, building: u64) {
         if moved {
             continue;
         }
-        h.block_ring(x, y, size, tiles);
-        h.body(EE_UNITS_PLAYER_BODY_SORT_TILES, p, tiles, right as i64, y as i64);
-        let n = h.body(EE_UNITS_PLAYER_BODY_TILES_SIZE, p, tiles, 0, 0);
-        for j in 0..n {
-            let (tx, ty) = unpack(h.body(EE_UNITS_PLAYER_BODY_TILES_AT, p, tiles, j, 0));
+        h.block_ring(x, y, size, &mut tiles);
+        // std::sort by EETileDistanceLess(right, y) (MSVC's: the ties' order is its)
+        let d = |t: &[i32; 2]| {
+            let (dy, dx) = ((y as i32).wrapping_sub(t[1]), (right as i32).wrapping_sub(t[0]));
+            dx.wrapping_mul(dx).wrapping_add(dy.wrapping_mul(dy))
+        };
+        crate::units::msvc_sort::sort_by(&mut tiles, |a, b| d(a) < d(b));
+        for &[tx, ty] in &tiles {
+            let (tx, ty) = (tx as c_long, ty as c_long);
             if h.body(EE_UNITS_PLAYER_BODY_TILE_EMPTY, p, 0, tx as i64, ty as i64) == 0 || !h.can_stand_on(tx, ty, unit)
             {
                 continue;
@@ -614,8 +615,6 @@ pub fn clear_footprint<H: RestHost + ?Sized>(h: &mut H, p: u64, building: u64) {
             h.body(EE_UNITS_PLAYER_BODY_ACTION_CHANGED, p, unit, 0, 0);
         }
     }
-    h.body(EE_UNITS_PLAYER_BODY_UNITS_DELETE, p, units, 0, 0);
-    h.body(EE_UNITS_PLAYER_BODY_TILES_DELETE, p, tiles, 0, 0);
 }
 
 /// `ReloadTechTree(flag)`: the tree saved into a memory file, made again from the database's with the upgrades,
@@ -713,14 +712,9 @@ pub fn set_cloaked_chain<H: CloakHost + ?Sized>(h: &mut H, unit: u64, value: boo
 
 /// `KillHerdUnits(herd, killed)`: the herd's units, the last first, killed.
 pub fn kill_herd_units<H: RestHost + ?Sized>(h: &mut H, p: u64, herd: u64, killed: bool) {
-    let units = h.body(EE_UNITS_PLAYER_BODY_COMPLEXES_NEW, p, 0, 0, 0) as u64;
-    h.body(EE_UNITS_PLAYER_BODY_HERD_UNITS, p, herd, units as i64, 0);
-    let n = h.body(EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE, p, units, 0, 0);
-    for i in (0..n).rev() {
-        let u = h.body(EE_UNITS_PLAYER_BODY_COMPLEXES_AT, p, units, i, 0) as u64;
+    for u in h.herd_units(herd).into_iter().rev() {
         h.body(EE_UNITS_PLAYER_BODY_KILL_KILLED, p, u, i64::from(killed), 0);
     }
-    h.body(EE_UNITS_PLAYER_BODY_COMPLEXES_DELETE, p, units, 0, 0);
 }
 
 /// `DumpMedia(file)`: the player's line, each upgrade's media counts, the media warnings.
@@ -911,15 +905,19 @@ pub mod game {
         fn location_z(&mut self, u: u64) -> f32 {
             unit(u, |v| v.location()[2], 0.0)
         }
-        // SAFETY (the unit utilities'): the vectors the body made, the live units
-        fn units_in_rectangle(&mut self, b: [f32; 4], units: u64) {
-            unsafe {
-                crate::units::uu_ffi::ee_units_uu_units_in_rectangle(b[0], b[1], b[2], b[3], units as *mut c_void)
-            };
+        fn units_in_rectangle(&mut self, b: [f32; 4], units: &mut Vec<u64>) {
+            crate::units::uu_ffi::units_in_rectangle(b[0], b[1], b[2], b[3], units);
         }
-        fn block_ring(&mut self, x: c_long, y: c_long, size: c_long, tiles: u64) {
+        fn block_ring(&mut self, x: c_long, y: c_long, size: c_long, tiles: &mut Vec<[i32; 2]>) {
             let (x, y, size) = (x as i32, y as i32, size as i32);
-            unsafe { crate::units::uu_ffi::ee_units_uu_block_ring(0, x, y, size, size, tiles as *mut c_void, 0, 1) };
+            crate::units::uu_ffi::block_ring(0, x, y, size, size, tiles, false, true);
+        }
+        fn herd_units(&mut self, herd: u64) -> Vec<u64> {
+            // SAFETY: the player's live herd and its lists
+            let f =
+                unsafe { &*((herd as usize + layout().herd_fields as usize) as *const crate::cp::herd::EeHerdFields) };
+            let handles = unsafe { &(*f.mLists).units };
+            handles.iter().map(|&id| crate::units::goal_spec::resolve(id)).collect()
         }
         fn can_stand_on(&mut self, x: c_long, y: c_long, u: u64) -> bool {
             crate::units::uu_ffi::ee_units_uu_can_stand_on(x as i32, y as i32, u) != 0
@@ -960,6 +958,15 @@ pub mod game {
             // SAFETY: the live player
             let t = unsafe { WorldRead::begin() };
             unsafe { PlayerView::of(&t, p) }.map_or(0, |v| v.id())
+        }
+        fn names(&mut self, p: u64) -> (Vec<u8>, Vec<u8>) {
+            let l = layout();
+            let text = |at: u64| {
+                // SAFETY: the live player's UWideString record (its buffer NUL-terminated)
+                let s = unsafe { &*((p as usize + at as usize) as *const ee_base::ustring::EeUWideString) };
+                unsafe { std::ffi::CStr::from_ptr(s.string) }.to_bytes().to_vec()
+            };
+            (text(l.player_name_text), text(l.player_civ_name_text))
         }
         fn c_string(&mut self, text: u64) -> Vec<u8> {
             if text == 0 {

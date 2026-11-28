@@ -47,6 +47,8 @@
 #include "ee/EETown.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
+#include "rust/base/random.h"
+#include "rust/sim/units.h"
 
 extern long& gEEAIRegionSize;
 
@@ -62,13 +64,13 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
         return 0;
     case EE_ASTAR_CM_BUILD_MAP: gContinentManager.BuildRegions(gWorld.mMap);
         return 0;
-    case EE_ASTAR_CM_REGISTER: io->i[1] == 0 ? gWorld.mPlayers[(size_t)io->i[0]]->RegisterHerds() : gWorld.mPlayers[(size_t)io->i[0]]->RegisterTowns();
+    case EE_ASTAR_CM_REGISTER: io->i[1] == 0 ? ee_units_player_rest(gWorld.mPlayers[(size_t)io->i[0]], EE_UNITS_PLAYER_REST_REGISTER, 0, 1, 0) : ee_units_player_rest(gWorld.mPlayers[(size_t)io->i[0]], EE_UNITS_PLAYER_REST_REGISTER, 0, 0, 0);
         return 0;
     case EE_ASTAR_CM_DEBUG_OUT: ESDebugOut("%s", (const char*)(uintptr_t)io->h[0]);
         return 0;
     case EE_ASTAR_CM_REGION_SIZE: return gEEAIRegionSize;
     case EE_ASTAR_CM_SET_REGION_SIZE: gEEAIRegionSize = (long)io->i[0]; return 0;
-    case EE_ASTAR_CM_RANDOM: return EEGetRandomInt(0, (long)io->i[0], *(URandom*)(uintptr_t)io->h[0]);
+    case EE_ASTAR_CM_RANDOM: return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&(*(URandom*)(uintptr_t)io->h[0])), 0, (long)io->i[0]);
     case EE_ASTAR_CM_RANDOM_RANGE: return gPhysics->GetRandom((long)io->i[0], (long)io->i[1]);
     case EE_ASTAR_CM_PHYSICS_RANDOM: return (int64_t)(uintptr_t)&gPhysics->mRandom;
     case EE_ASTAR_CM_REGROW_UNIT: return (int64_t)(uintptr_t)static_cast<RTSUnit*>(gUnitClassTable[kUnitTypeResEagle]->CreateUnit((long)io->i[0], (long)io->i[1], 0, false, NULL)->mComplexUnit);

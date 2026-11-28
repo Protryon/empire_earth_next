@@ -36,54 +36,6 @@ pub unsafe extern "C" fn ee_ge_viewport_init(
     unsafe { *out = GeViewport::new(*view, *orthographic, *camera, front, rear, field_of_view) };
 }
 
-/// `GEViewport::ComputeOrthographicMatrix`.
-///
-/// # Safety
-/// `v` is a live viewport.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_viewport_orthographic_matrix(v: *mut GeViewport) {
-    // SAFETY: the function's contract
-    unsafe { (*v).compute_orthographic_matrix() };
-}
-
-/// `GEViewport::ComputePerspectiveMatrix`.
-///
-/// # Safety
-/// `v` is a live viewport.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_viewport_perspective_matrix(v: *mut GeViewport) {
-    // SAFETY: the function's contract
-    unsafe { (*v).compute_perspective_matrix() };
-}
-
-/// `GEViewport::ComputePlanes`.
-///
-/// # Safety
-/// `v` is a live viewport.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_viewport_planes(v: *mut GeViewport) {
-    // SAFETY: the function's contract
-    unsafe { (*v).compute_planes() };
-}
-
-/// `GEViewport::GetFrustrumWorldPoints(rectangle, points, orthographic)`: the eight corners into `out`.
-///
-/// # Safety
-/// `v` and `rectangle` are valid; `out` holds eight points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_viewport_frustum_points(
-    v: *const GeViewport,
-    rectangle: *const GeRectangle,
-    orthographic: bool,
-    out: *mut Ge3DPoint,
-) {
-    // SAFETY: the function's contract
-    unsafe {
-        let points = (*v).frustum_world_points(&*rectangle, orthographic);
-        std::ptr::copy_nonoverlapping(points.as_ptr(), out, 8);
-    }
-}
-
 /// `GEViewport::GetFrustrumWorldPlanes(rectangle, planes, orthographic)`: the six planes into `out`.
 ///
 /// # Safety

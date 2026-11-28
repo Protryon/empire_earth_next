@@ -26,7 +26,6 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h" // the page view's text area
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyWONSkinConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
 #include "ee/wonapi/WONGUIShell.h"

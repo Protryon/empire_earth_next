@@ -9,6 +9,7 @@
 #include "rust/won_net/wonfile.h"
 #include "rust/won_lobby/eegame.h"     // LobbyGame's EE game (WONLobbyModelObj.h, included inside the namespace)
 #include "ee/wonapi/WONLobbyGuard.h"    // and its WonRethrow
+#include "ee/wonapi/WONDriver.h"        // EE_WON_DRV
 #include <stdexcept>
 #include <set>
 #include <map>
@@ -178,19 +179,13 @@ public:
     WONFile(const WONFile& inFile) : mFile(ee_won_file_clone(inFile.mFile)) {}
     WONFile& operator=(const WONFile& inFile) { ee_won_file_assign(this->mFile, inFile.mFile); return *this; }
     ~WONFile() { ee_won_file_free(this->mFile); }
-    bool NormalizePath() { return this->Num(EE_WON_FILE_NORMALIZE) != 0; } // false for an empty path
-    std::string GetRelativePath(const WONFile& inSub) { return this->Text(EE_WON_FILE_RELATIVE, inSub.mFile); }
+#include EE_WON_DRV(Resource_WONFile) // the drivers' members
     static const char PATH_SEP = '\\';
     void Reset() { this->Num(EE_WON_FILE_RESET); }
-    bool SetReadOnly(bool inReadOnly) { return this->Num(EE_WON_FILE_SET_READ_ONLY, inReadOnly) != 0; }
     bool Exists() { return this->Num(EE_WON_FILE_EXISTS) != 0; }
     std::string GetFilePath() { return this->Text(EE_WON_FILE_PATH); }
-    std::string GetFileDirectory() { return this->Text(EE_WON_FILE_DIRECTORY); }
-    std::string GetFileExtension() { return this->Text(EE_WON_FILE_EXTENSION); }
-    std::string GetFullPath() { return this->Text(EE_WON_FILE_FULL_PATH); }
     void SetFilePath(const std::string& inPath) { ee_won_file_op(this->mFile, EE_WON_FILE_SET_PATH, 0, B(inPath), inPath.size()); }
     std::string GetFileName() { return this->Text(EE_WON_FILE_NAME); }
-    std::string GetFileNameNoExtension() { return this->Text(EE_WON_FILE_NAME_NO_EXTENSION); } // the member as it is
     long GetModifyTime() { return static_cast<long>(this->Num(EE_WON_FILE_MODIFY_TIME)); }
     unsigned long GetSize() { return static_cast<unsigned long>(this->Num(EE_WON_FILE_SIZE)); }
     bool Delete(bool inEvenIfReadOnly) { return this->Num(EE_WON_FILE_DELETE, inEvenIfReadOnly) != 0; }

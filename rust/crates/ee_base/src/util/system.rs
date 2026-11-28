@@ -6,7 +6,7 @@
 //! the C++ vector allowed). With `terminate`, the process ends through the C runtime's `exit(0)` (forced, running
 //! the `atexit` handlers) or `abort()`, as the original: not Rust's `process::exit`/`abort`.
 
-use std::ffi::{c_long, c_ulong};
+use std::ffi::c_long;
 #[cfg(not(test))]
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(not(test))]
@@ -109,12 +109,6 @@ pub extern "C" fn ee_util_shutdown_in_progress() -> bool {
     return IN_PROGRESS.load(Ordering::SeqCst);
     #[cfg(test)]
     IN_PROGRESS.get()
-}
-
-/// `UGetOSType`.
-#[no_mangle]
-pub extern "C" fn ee_util_os_type() -> c_ulong {
-    os_type(crate::plat_core::message::PlatSystemVersion()) as c_ulong
 }
 
 /// `UGetOSLanguage`.

@@ -40,6 +40,7 @@ pub mod lobbypopup;
 pub mod lobbyprv;
 pub mod lobbyrun;
 pub mod lobbyscreens;
+pub mod lobbytext;
 pub mod logics;
 pub mod model;
 pub mod modelbuf;
@@ -51,6 +52,8 @@ pub mod netops;
 pub mod persist;
 pub mod persistobj;
 pub mod prefsobj;
+/// The records C++ classes derive from or embed (include/rust/won_lobby/records.h, declaring no function).
+pub mod records;
 pub mod resource;
 pub mod rootscreen;
 pub mod routelogic;

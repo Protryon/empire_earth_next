@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/hostop.h"
+#include "rust/won_net/records.h"
 
 /// `mSocket` (an object: a `BlockingSocket*`, a reference held)
 constexpr static const int32_t EE_WON_HOSTBASE_SOCKET = 0;

@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/obj.h"
+#include "rust/ui/records.h"
 
 /// The index of the shown graph in [`EeUiGraph::graph_at`] (the summary's numbering: 0..30 stored, 31 shown,
 /// 32..39 the form manager's).

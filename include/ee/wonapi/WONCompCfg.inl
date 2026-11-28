@@ -106,11 +106,8 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
     case O::DecodeRaw: return CC_G(CcGive(Window::GetDefaultWindow()->DecodeImageRaw(CcStr(a, b).c_str())));
     case O::DecodeDelay: return CC_G(CcGive(WindowManager::GetDefaultWindowManager()->DecodeDelayImage(CcStr(a, b).c_str())));
     case O::FontGet: return CC_G(CcGive(Window::GetDefaultWindow()->GetFont(FontDescriptor(CcStr(a, b), (int)d, (int)e))));
-    case O::SoundDescNew: return (intptr_t)new SoundDescriptor;
-    case O::SoundDescFlags: ((SoundDescriptor*)c)->SetSoundFlags((int)a, true); return 0;
-    case O::SoundDescPath: ((SoundDescriptor*)c)->mPath = CcStr(a, b); return 0;
-    case O::SoundDecode: return CC_G(CcGive(WindowManager::GetDefaultWindowManager()->DecodeSound(*(SoundDescriptor*)c)));
-    case O::SoundDescFree: delete (SoundDescriptor*)c; return 0;
+    // (the game's sounds are soundobj.rs's, R6 WON GUI round 41; the drivers' descriptor cases:)
+#include EE_WON_DRV(CompCfg_Sound)
     case O::BgReset: *(Background*)c = Background(); return 0;
     case O::BgImage: ((Background*)c)->mImage = (Image*)a; return 0;
     case O::BgColor: ((Background*)c)->mColor = (int)a; return 0;

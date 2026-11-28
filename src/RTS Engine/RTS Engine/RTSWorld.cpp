@@ -12,6 +12,8 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSUnit.h"
+#include "rust/base/math.h"
+#include "rust/game/rts.h"
 
 // Sets the camera, deriving its view line, yaw and pitch, and reports the change
 void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
@@ -23,8 +25,8 @@ void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
     inTransformation.Apply(theForward, theDirection);
     this->mLine.SetStart(thePosition);
     this->mLine.SetDirection(theDirection);
-    this->mCameraYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    this->mCameraPitch = UMArcCos(-theDirection.GetZ()) - 1.5707964f;
+    this->mCameraYaw = ee_ge_um_arctan2(-theDirection.GetX(), theDirection.GetY());
+    this->mCameraPitch = ee_ge_um_arccos(-theDirection.GetZ()) - 1.5707964f;
     this->CameraChanged(inTransformation);
 }
 
@@ -55,3 +57,19 @@ void ee_rtswcpp_place_queued_units(RTSWorld* inWorld) { inWorld->PlaceQueuedUnit
 void ee_rtswcpp_unit_reference(RTSUnit* inUnit) { inUnit->Reference(); }
 void ee_rtswcpp_unit_dereference(RTSUnit* inUnit) { inUnit->Dereference(); }
 }
+
+// out of line from ee/RTSWorld.h (its Rust function headers stay out of it)
+RTSWorld::RTSWorld() { ee_rts_world_construct(this); }
+RTSUnit* RTSWorld::GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_world_unit(this, inUnitID)); }
+void RTSWorld::FlushQueuedPlacements() { ee_rts_world_flush_queued_placements(this); }
+
+void RTSWorld::AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter)
+{ ee_rts_world_add_unit_entry(this, inUnit, inInsertAfter); }
+
+void RTSWorld::SetPlayer(long inIndex, EEPlayer* inPlayer) { ee_rts_world_set_player(this, inIndex, inPlayer); }
+RTSWorld::~RTSWorld() { ee_rts_world_destruct(this); }
+void RTSWorld::UpdatePlayerPopulationLimit(bool inRecount) { ee_rts_world_update_population_limit(this, inRecount); }
+void RTSWorld::Clear() { ee_rts_world_clear(this); }
+void RTSWorld::GetChecksum(ESChecksum& ioChecksum) { ee_rts_world_checksum(this, &ioChecksum); }
+void RTSWorld::Reset() { ee_rts_world_reset(this); }
+void RTSWorld::SetNumPlayers(unsigned long inNumPlayers) { ee_rts_world_set_num_players(this, inNumPlayers); }

@@ -23,8 +23,8 @@ class UITextLabel;
 
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
-#include "rust/won_net/dirlist.h"
 #include "rust/won_gui/guistrobj.h" // RefCount::Release's texts
+#include "rust/won_net/dirlist.h"
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
 

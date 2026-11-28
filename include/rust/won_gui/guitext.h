@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
 struct EeWonTextLineM {
@@ -47,17 +47,6 @@ struct EeWonTextPart {
   bool line_break;
 };
 
-/// One step of `LobbyAppendFormattedText`: `kind` 0 appends units [a, a + b) to the pending text, 1 appends
-/// '<', 2 adds the pending text as a segment in the current colour and font and empties it, 3 a line break,
-/// 4 the colour becomes colour `a`, 5 the font becomes font `a` (when not NULL), 6 adds string `a` as a segment
-/// (when not NULL), 7 adds segment `a` (when not NULL), 8 adds the pending text as the last segment, breaking
-/// the line when `b` is 1.
-struct EeWonFormatOp {
-  int32_t kind;
-  int32_t a;
-  int32_t b;
-};
-
 /// What `LobbyAppendFormattedText` asks of its text area (TextFormat.cpp's four statements): a segment of text
 /// units in a colour and font, a line break, one of the caller's strings as a segment, one of its segments.
 struct EeWonFormatSink {
@@ -74,6 +63,17 @@ struct EeWonFormatSink {
   void (*add_string)(void *area, const void *string, int32_t color, void *font);
   /// `area->AddSegment(segment)`.
   void (*add_segment)(void *area, void *segment);
+};
+
+/// One step of `LobbyAppendFormattedText`: `kind` 0 appends units [a, a + b) to the pending text, 1 appends
+/// '<', 2 adds the pending text as a segment in the current colour and font and empties it, 3 a line break,
+/// 4 the colour becomes colour `a`, 5 the font becomes font `a` (when not NULL), 6 adds string `a` as a segment
+/// (when not NULL), 7 adds segment `a` (when not NULL), 8 adds the pending text as the last segment, breaking
+/// the line when `b` is 1.
+struct EeWonFormatOp {
+  int32_t kind;
+  int32_t a;
+  int32_t b;
 };
 
 /// What a format's `<sN>`, `<cN>`, `<fN>` and `<lN>` name: the caller's strings (`GUIString*`), colours, fonts
@@ -298,6 +298,10 @@ void ee_won_gui_add_formatted(void *component,
                               uint16_t len,
                               uint32_t wchar_size,
                               bool line_break);
+
+/// The game's text areas' sink for `ee_won_gui_text_append_formatted` (R6 WON GUI round 41: TextFormat.cpp's four
+/// statements, over the area's game host and its Rust area).
+const EeWonFormatSink *ee_won_gui_text_game_sink();
 
 /// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
 /// count.

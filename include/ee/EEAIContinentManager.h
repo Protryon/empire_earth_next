@@ -20,6 +20,7 @@
 
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIListView.h"
+#include "rust/sim/records.h"
 #include "rust/sim/astar.h"         // EeAStarCmRecord
 
 class EEUnit;
@@ -91,10 +92,6 @@ public:
     // inline twin of GetContinentByID: its undone COMDAT folds with 0x26fdd; at a low share its const operator[] goes out of line
     EEAIContinent* GetContinentFromID(unsigned short inID) const { return this->GetContinents()[inID]; }
     EEAIContinent* GetContinentByID(unsigned short inID) const { return this->GetContinents()[inID]; }
-    // 0x22872 (ret 0xc): whether inFirst and inSecond are connected under inFlags (1/2/8: the +0x112/+0x116/+0x10e ids)
-    // (provisional name)
-    bool AreConnected(EEAIContinent* inFirst, EEAIContinent* inSecond, long inFlags)
-        { return ee_astar_cmq_are_connected((uint64_t)(uintptr_t)inFirst, (uint64_t)(uintptr_t)inSecond, inFlags); }
     // area lookups by a tile (bodies read; names and the exact return classes inferred): the continent at the tile
     // (GetContinentAt), then the first of its id list (+0x7c chokes, +0x8c forests, +0xac hills) whose area holds
     // the tile
@@ -153,8 +150,6 @@ public:
 
 // (cdecl; provisional names)
 // (0x1ed2c EEAIGetTileKind, 0x1eea9 EEAIGetTileWallID, 0x1f65f GetResourceWeight: Rust, ee_sim::astar cm_host.rs)
-// (0x1c949 EEAIBuildChokePoints, the terrain pass before PruneChokePoints: Rust, cm_passes.rs)
-long EEGetRandomInt(long inMin, long inMax, URandom& inRandom);  // 0x2491c9 (a random index in [inMin, inMax]; body elsewhere) (provisional name)
 extern long& gEEAIRegionSize;                            // 0x52fd80 (0x20b48 sets it by map size: 8..0x12) (provisional name)
 
 #endif

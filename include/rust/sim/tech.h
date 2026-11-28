@@ -6,7 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/data/ffi.h"
+#include "rust/data/records.h"
+#include "rust/sim/records.h"
 
 /// `kAreaEffectHealing` (ee/EEAreaEffectKindIDs.h).
 constexpr static const long EE_AREA_EFFECT_HEALING = 1;
@@ -705,181 +706,6 @@ constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
 
-/// The host calls (`EeCalamityCall::op`). Each names what the C++ does and what it answers.
-enum class EeCalamityOp : int32_t {
-  /// The contagion helper `index`'s `Update(x)` (if it exists).
-  HelperUpdate = 1,
-  /// `UpdateSound(calamity, sound index (0 the class's sound, 1 its secondary), volume x, falloff y, primary
-  /// node when value is 1)`.
-  Sound = 2,
-  /// `EEGetUnitsNear((x, y, z), w)`: value its result, id the list's size; the host keeps the list for the unit calls.
-  UnitsNear = 3,
-  /// The caster's continent (`kAIPathNonSpace`): value.
-  CasterContinent = 4,
-  /// Unit `index` of the list for the earthquake: flags bit 0 a land building, bit 1 alive; value its continent.
-  QuakeUnit = 5,
-  /// Unit `index`'s immunity (effect kind 3): true when it has one (the host plays its effect).
-  Immune = 6,
-  /// Unit `index` is carried: ok, and key the outermost carrier.
-  Carried = 7,
-  /// Unit `index` takes `value` damage from the caster (x 0) or the storm (x 1), for the calamity's player,
-  /// mode 2 when blocked by immunity else 3.
-  TakeHit = 8,
-  /// The earthquake's cracks.
-  Cracks = 9,
-  /// The distance from the camera to the target in the view plane: x.
-  CameraDistance = 10,
-  /// `gPhysics->GetRandom()`: x.
-  Random = 11,
-  /// The local player's camera shake at angle x by amplitude y (once per player and update).
-  Shake = 12,
-  /// The calamity has a target unit: ok.
-  TargetExists = 13,
-  /// The hurricane's `CreateStorm`.
-  CreateStorm = 14,
-  /// The class's `PlaySound(calamity)`.
-  PlayClassSound = 15,
-  /// The storm unit made undeletable: its location x, y, z.
-  StormPrepare = 16,
-  /// Unit `index` of the list for the hurricane: flags bit 0 the storm itself, bit 1 the storm's player, bit 2
-  /// an enemy of it, bit 3 in the class's unit set, bit 4 alive, bit 5 nature's; x the distance squared to the
-  /// storm, y its radius against the storm.
-  StormUnit = 17,
-  /// The hurricane's strike effect on unit `index`.
-  Strike = 18,
-  /// The meteor storm's `LaunchMeteor`.
-  LaunchMeteor = 19,
-  /// `gPhysics->mRandom.Generate()`: x.
-  RandomGenerate = 20,
-  /// `gPhysics->GetRandom(x, y)`: x.
-  RandomRange = 21,
-  /// The volcano's `CreateVolcano` and its two effects: value the last effect's result.
-  CreateVolcano = 22,
-  /// The target unit's hit points: value.
-  TargetHitPoints = 23,
-  /// The time warp's departure: the unit tinted, its departure effect and sound.
-  WarpTint = 24,
-  /// The time warp's placed effect where the unit leaves.
-  WarpAwayEffect = 25,
-  /// `gEffectManager->DestroyEffect(value)`.
-  DestroyEffect = 26,
-  /// The time warp's `Depart`.
-  WarpDepart = 27,
-  /// The time warp's `Return`.
-  WarpReturn = 28,
-  /// The target unit is tinted: ok.
-  TargetTinted = 29,
-  /// The time warp's colour blink.
-  WarpBlink = 30,
-  /// The caster's hit points: value.
-  CasterHitPoints = 31,
-  /// The calamity has a caster: ok.
-  CasterExists = 32,
-  /// The teleport's `HoldCaster`.
-  Hold = 33,
-  /// The teleport's `Teleport`.
-  Teleport = 34,
-  /// The logic bomb's placed mark at the target.
-  LogicBombMark = 35,
-  /// The logic bomb's disabling of its target.
-  LogicBombDisable = 36,
-  /// The target unit exists, is complex and has no hit points: ok.
-  TargetDead = 37,
-  /// A contagion helper for the class's functor at the calamity: value its id.
-  CreateHelper = 38,
-  /// The class's `ApplyEffect(calamity)`.
-  ApplyEffect = 39,
-  /// The terrain mesh's height at (x, y): x.
-  MeshZ = 40,
-  /// The class's second graphic effect placed at (x, y, z): id its handle.
-  PlacedEffect = 41,
-  /// The morale's start on its target (effect, counter, sound).
-  Morale = 42,
-  /// The target unit exists and is alive: ok.
-  TargetAlive = 43,
-  /// The special attack's order to the caster.
-  SpecialAttack = 44,
-  /// The special location's order to the caster.
-  SpecialLocation = 45,
-  /// The caster's player index (`EEWorld::GetPlayerIndex`): value.
-  CasterPlayerIndex = 46,
-  /// The caster's power: value.
-  CasterPower = 47,
-  /// The tile exists: ok.
-  TileExists = 48,
-  /// The tile is visible to the caster's player: ok.
-  TileVisible = 49,
-  /// An area effect of kind 3 at the tile against player `value`: ok.
-  AreaEffect = 50,
-  /// The unit with the target's id (`gWorld.GetUnit`): ok when there is one.
-  TargetLookup = 51,
-  /// The class's `IsValidLocation(caster, tile)`: ok.
-  ValidLocation = 52,
-  /// The class's `IsValidTarget(caster, the looked-up unit)`: ok.
-  ValidTarget = 53,
-  /// The target's flags (`EE_CALAMITY_TARGET_*`).
-  TargetView = 54,
-  /// `EEMap::IsAreaOnMap(tile, value)`: ok.
-  AreaOnMap = 55,
-  /// The terrain mesh's `GetIsValidTile(tile)`: ok.
-  ValidTile = 56,
-  /// The terrain mesh is a space map: ok.
-  SpaceMap = 57,
-  /// The tile's continent (`kAIPathNonSpace`): value.
-  TileContinent = 58,
-  /// `EEWorld::IsTileBlocked(tile)`: ok.
-  TileBlocked = 59,
-  /// The tile's terrain type: ok when the tile exists, value the type.
-  TerrainType = 60,
-  /// The class's unit class's inner collision sphere: x.
-  InnerSphere = 61,
-  /// Unit `index` of the list is a living hurricane or anti-matter storm: ok.
-  NearStorm = 62,
-  /// The class's unit class's tile size: value.
-  TileSize = 63,
-  /// `EEMap::IsEdgeTile(tile)`: ok.
-  EdgeTile = 64,
-  /// `EEIsTileUnblocked` for the class's unit class at the tile (the caster's player, else nature's): ok.
-  TileUnblocked = 65,
-  /// The caster is a radio man: ok.
-  CasterIsRadioMan = 66,
-  /// `EEIsTileFree(tile)`: ok.
-  TileFree = 67,
-  /// `StopSound` (index 0) or `StopSecondarySound` (index 1).
-  StopSound = 68,
-  /// `ESVERIFY_AT(DestroyContagionHelper(index), value)`.
-  DestroyHelper = 69,
-  /// A contagion helper for the class's functor at the calamity, no unit: value its id, ok when it exists.
-  StartHelper = 70,
-  /// The class's sound started for the calamity: at its volume (value 0) or with the volume, pan and pitch
-  /// `EEComputeSoundParameters` gives at (x, y, z) (value 1).
-  StartSound = 71,
-  /// The calamity's height (`mHeight`) set to x.
-  SetHeight = 72,
-  /// The target unit killed, deselected and cleared.
-  KillTarget = 73,
-  /// The caster's `SightOffHere`.
-  CasterSightOff = 74,
-  /// The caster's sight: x.
-  CasterSight = 75,
-  /// The caster's sight set to x, then `SightOnHere`.
-  CasterSightOn = 76,
-  /// The target unit is protected (`IsProtected`): ok.
-  TargetProtected = 77,
-  /// The terrain type of the tile (index, index2): ok when the tile exists, value the type.
-  TileTerrain = 78,
-  /// The target unit exists, is complex and alive: ok.
-  TargetComplexAlive = 79,
-  /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
-  ClassStep = 80,
-  /// The target unit's address in key (0: none), for the world views' reads (calamity_views.rs).
-  TargetHandle = 81,
-  /// The caster's address in key (0: none): the calamity's caster, or the cast test's unit.
-  CasterHandle = 82,
-  /// `&gWorld` in key.
-  WorldHandle = 83,
-};
-
 /// Which `CanCastAt` runs (`EeCalamityCast::mode`).
 enum class EeCalamityCastMode : int32_t {
   /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
@@ -1043,162 +869,6 @@ struct EeContagionManager;
 /// A near-unit list the C++ fills (`EE_CONTAGION_WORLD_NEAR`).
 struct EeContagionUnitList;
 
-/// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
-/// `mSavedSOLs`), applied by `ApplySavedState`.
-struct EeTechTreeSaved;
-
-/// The calamity's members an update reads and writes (`EECalamity`).
-struct EeCalamityState {
-  float time_alive;
-  float float1;
-  float float2;
-  int32_t int1;
-  int32_t int2;
-  float target[3];
-  float epicenter_factor;
-  uint32_t effect_handle;
-  bool bool1;
-  bool bool2;
-  uint8_t pad[2];
-};
-
-/// One host call.
-struct EeCalamityCall {
-  EeCalamityOp op;
-  int32_t index;
-  int32_t value;
-  /// A second index (the casts' tile y).
-  int32_t index2;
-  float x;
-  float y;
-  float z;
-  float w;
-};
-
-/// The host's answer.
-struct EeCalamityReply {
-  bool ok;
-  uint8_t pad[3];
-  uint32_t flags;
-  int32_t value;
-  uint32_t id;
-  uint64_t key;
-  float x;
-  float y;
-  float z;
-  float w;
-};
-
-/// What the C++ knows of the class's effects and sounds when it asks: which are set
-/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
-/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
-struct EeCalamityClassMedia {
-  uint32_t present;
-  uint32_t duration[4];
-  float size[4];
-  uint32_t time1[4];
-  float quake_damage_factor;
-};
-
-/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`, the C++
-/// name of this record; 236 bytes on every target). Gap-free, from the file itself (36 records of 0xec bytes): the
-/// name, then floats, ids and flags. Field names are provisional unless a reader names them.
-struct EeCalamityData {
-  /// +0x00 ("Undefined", "Global Warming", ... "Special Location")
-  uint8_t mLabel[100];
-  /// +0x64 (line of sight: the bonus)
-  float mFloatParam1;
-  /// +0x68 (plague: functor argument)
-  float mFloatParam2;
-  /// +0x6c (earthquake Initialize 0xb0765)
-  float mQuakeMinimumStrength;
-  /// +0x70 (earthquake Initialize)
-  float mQuakeStrength;
-  /// +0x74 (0 in every record)
-  float mUnused1;
-  /// +0x78 -> EECalamityClass +0x1c (rounded)
-  float mRange;
-  /// +0x7c (128..: the record's id)
-  int32_t mUnusedDatabaseID;
-  /// +0x80 -> +0x18 (an enum, as the class member it fills)
-  int32_t mID;
-  /// +0x84 -> +0x08
-  int32_t mClassEnum;
-  /// +0x88
-  int32_t mUnusedTargetKind;
-  /// +0x8c -> +0x04 (as float)
-  int32_t mLifeTime;
-  /// +0x90 (1 in every record)
-  int32_t mUnused2;
-  /// +0x94 EEGraphicEffect table index (area effects: +0x28)
-  int32_t mGraphicEffectID1;
-  /// +0x98 (area effects: +0x2c)
-  int32_t mGraphicEffectID2;
-  /// +0x9c (mind control: +0x30)
-  int32_t mGraphicEffectID3;
-  /// +0xa0 (time warp: +0x34)
-  int32_t mGraphicEffectID4;
-  /// +0xa4 (0 in every record)
-  int32_t mUnused3;
-  /// +0xa8 (0)
-  int32_t mUnused4;
-  /// +0xac (0)
-  int32_t mUnused5;
-  /// +0xb0 (drop object: the unit class to drop)
-  int32_t mUnitClassIndex;
-  /// +0xb4 (area effects: +0x44)
-  int32_t mIntParam1;
-  /// +0xb8 (area effects: +0x3c)
-  int32_t mIntParam2;
-  /// +0xbc (area effects: functor argument)
-  int32_t mIntParam3;
-  /// +0xc0 (fire: functor argument)
-  int32_t mIntParam4;
-  /// +0xc4 (earthquake Initialize)
-  int32_t mIntParam5;
-  /// +0xc8 (hurricane: the map area its location needs)
-  int32_t mIntParam6;
-  /// +0xcc (1 in 31 of 36 records)
-  bool mUnused6;
-  /// +0xcd (extra damage: functor argument)
-  bool mBoolParam1;
-  /// +0xce (0 in every record)
-  bool mUnused7;
-  /// +0xcf (0)
-  bool mUnused8;
-  /// +0xd0 -> +0x26
-  bool mIsCastByAllSelected;
-  /// +0xd1 -> +0x25
-  bool mIsBlockedByImmunity;
-  /// +0xd4 EESoundObject table index (area effects: +0x34)
-  int32_t mSoundID;
-  /// +0xd8 (plague: its second sound)
-  int32_t mSecondarySoundID;
-  /// +0xdc -> +0x20
-  int32_t mCost;
-  /// +0xe0 -> +0x10
-  uint32_t mUnitSet;
-  /// +0xe4 -> +0x14
-  int32_t mNameID;
-  /// +0xe8 -> +0x24
-  bool mUnusedClassFlag;
-};
-
-/// An area effect's numbers (`EEAreaEffect` and its kinds' members; its location, template and owner unit are C++
-/// members).
-struct EeAreaEffectFields {
-  /// The template's kind when the effect was made: the original's class.
-  long mKind;
-  /// The owner's player id.
-  long mPlayer;
-  /// The morale from buildings' cap (the template's maximum level plus the game variant's morale bonus).
-  long mMax;
-  /// The morale from buildings' count of buildings.
-  long mCount;
-  /// The morale from buildings' recount flag.
-  bool mDirty;
-};
-
 /// One of a unit's own effects: its location and, for a morale from buildings, its recount flag and count.
 struct EeAreaEffectSavedOwn {
   float mX;
@@ -1220,75 +890,15 @@ struct EeCalamityIoFfi {
   long (*call)(void *ctx, uint32_t op, void *value);
 };
 
-/// A calamity class's numbers (`EECalamityClass` derives from it). The base members first, in their order.
-struct EeCalamityClassFields {
-  float mLifeTime;
-  long mClassEnum;
-  /// Each class's calamity flag bit (set on the units it holds).
-  unsigned long mClassFlags;
-  unsigned long mUnitSet;
-  long mNameID;
-  /// The record's id (`EECalamityKind`).
-  long mID;
-  long mRange;
-  long mCost;
-  bool mB24;
-  bool mIsBlockedByImmunity;
-  bool mIsCastByAllSelected;
-  bool mOverWater;
-  bool mPositive;
-  bool mFunctorFlag;
-  /// The earthquake's, the hurricane's, the leprosy's, the plague's and the fire's damage.
-  long mDamage;
-  /// The earthquake's and the hurricane's tick time.
-  long mTickTime;
-  long mShake;
-  long mCrackCount;
-  long mArea;
-  /// The hurricane's, the volcano's, the meteor storm's and the drop object's unit class.
-  long mUnitClassIndex;
-  /// The time warp's and the teleport's `EEFindPlacement` range.
-  long mPlacementRange;
-  long mDepartTime;
-  long mAwayTime;
-  long mHoldTime;
-  /// The morale's effect duration.
-  long mEffectDuration;
-  /// The area effects' and the leprosy's first effect's duration.
-  unsigned long mEffect1Duration;
-  long mEffect2Time;
-  unsigned long mEffectTime2;
-  unsigned long mEffectTime3;
-  /// The area effects' and the leprosy's radius in tiles (their `mRadius`).
-  unsigned long mRadiusTiles;
-  /// The area effect's damage factor.
-  long mDamageFactor;
-  long mBurn;
-  /// The functors' spread, update or damage time (a local of the classes' `Initialize`).
-  long mSpreadTime;
-  long mL3C;
-  long mL40;
-  long mL48;
-  /// The teleport's share of the caster's hit points (its `mDamageFactor`).
-  float mDamageShare;
-  float mDuration;
-  /// The earthquake's, the hurricane's, the fire's, the meteor storm's (and the plague functor's) radius.
-  float mRadius;
-  float mShakeInterval;
-  float mVolume;
-  float mQuakeVolume;
-  float mMinimumFactor;
-  float mQuakeMinimumFactor;
-  float mSpeed;
-  float mSourceSpeed;
-  float mFalloff;
-  /// The fire's (and the plague functor's) chance.
-  float mChance;
-  float mMaximumRadius;
-  float mMinimumRadius;
-  float mMinimumInterval;
-  float mMaximumInterval;
-  float mSightBonus;
+/// What the C++ knows of the class's effects and sounds when it asks: which are set
+/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
+/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
+struct EeCalamityClassMedia {
+  uint32_t present;
+  uint32_t duration[4];
+  float size[4];
+  uint32_t time1[4];
+  float quake_damage_factor;
 };
 
 /// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
@@ -1387,121 +997,6 @@ struct EeCalamityCast {
   bool over_water;
 };
 
-/// An active calamity's plain members (`EECalamity` derives from it).
-struct EeCalamityFields {
-  /// 1.0 after `Reset`.
-  float mEpicenterFactor;
-  float mFloatPlaceHolder1;
-  float mFloatPlaceHolder2;
-  float mHeight;
-  float mTimeAlive;
-  float mDiscreteUpdateTime;
-  float mTimeElapsedSinceLastUpdate;
-  /// The area effect classes keep their contagion helper id here.
-  long mIntPlaceHolder1;
-  long mIntPlaceHolder2;
-  unsigned long mTargetUnitID;
-  /// The caster unit's id.
-  unsigned long mOriginatingUnitID;
-  unsigned long mPlayerNumber;
-  bool mBoolPlaceHolder1;
-  bool mBoolPlaceHolder2;
-  bool mInitialized;
-  bool mHasTargetLocation;
-  bool mHasTargetUnit;
-};
-
-/// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
-struct EeTechNodeDataFields {
-  /// the costs by resource (`Load` zeroes all seven, then copies five)
-  long mCosts[7];
-  long mCostResource;
-  long mRequiredStatistic;
-  /// past the end of the unit classes (`GetUnitClass`)
-  long mDefaultUnitClass;
-  /// a calamity's `EECalamityEnum` (the cast-calamity goal)
-  unsigned long mCalamity;
-  /// 3 repeatable, 4 a wonder, 5 never researched
-  long mKind;
-  /// an epoch's: its position; a node's: from 1000
-  long mID;
-  long mResearchedEvent;
-  long mObsoleteEvent;
-  long mBuildTime;
-  long mPrerequisite1;
-  long mPrerequisite2;
-  long mPrerequisite3;
-  long mPrerequisite4;
-  /// the `gUnitClassTable` index of what it builds
-  long mUnitClass;
-  long mRequiredStatisticValue;
-  long mNameID;
-  long mHotKey;
-  bool mMakesUnit;
-  bool mCountsTowardEpoch;
-  bool mShowInEditor;
-  bool mObsoletedByDefault;
-  bool mAvailableWithEpoch;
-  bool mResearchedWithEpoch;
-  /// the unit classes and their cost tables (an [`EeTechClassTable`], Rust's; 0 before the load makes it)
-  size_t mClassTable;
-};
-
-/// A node's and an epoch's members (ee/EEPlayer.h: `EETechTreeNode` derives from it and adds none; the nodes and
-/// epochs are made and freed by Rust: tree_objects.rs).
-struct EeTechNodeFields {
-  bool mIsResearched;
-  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
-  bool mIsObsolete;
-  bool mIsAvailable;
-  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
-  uint8_t mPrerequisiteFlags;
-  bool mIsAllowed;
-  bool mScenEditorObsoleted;
-  bool mIsUnitMediaLoaded;
-  /// an epoch's: off between a saved game's load and its applied state
-  bool mIsCountingSOL;
-  /// the epoch it belongs to
-  long mEpoch;
-  long mObsoleteEpoch;
-  /// `ResearchNode` counts it down
-  long mResearchDelay;
-  long mRequiredSOL;
-  long mFirstNodeID;
-  long mCurrentSOL;
-  long mNextEpoch;
-  /// the title string (epochs.yaml; 0: 30145 + the epoch)
-  long mTitleID;
-  /// the node data (shared by a tree's copies; made by the load, freed by `Unload`)
-  EeTechNodeDataFields *mData;
-  /// the tree it belongs to
-  class EETechTree *mTree;
-  /// `EEButtonObject::Get` of the record's button
-  class EEButtonObject *mButton;
-  /// an epoch's nodes and loaded unit classes (an [`crate::tech::tree_objects::EeTechEpochLists`]); 0: a node
-  size_t mLists;
-};
-
-/// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
-struct EeTechTreeFields {
-  long mCurrentEpoch;
-  long mStartEpoch;
-  long mEndEpoch;
-  long mEpochsBeforeWonders;
-  long mMediaID;
-  /// the epoch name the interface shows (a string id)
-  long mEpochNameID;
-  bool mIsLoaded;
-  /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
-  EeTechTreeSaved *mSaved;
-  /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
-  long mPlayerIndex;
-  /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
-  class EEPlayer *mPlayer;
-  /// the epochs, one per epoch of the tech tree file (a `Vec` of nodes: tree_objects.rs; 0 before the first)
-  size_t mEpochs;
-};
-
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
 struct EeTechCivLevel {
   float mValue;
@@ -1577,59 +1072,6 @@ struct EeTechCivPower {
   int32_t mUnitType;
 };
 
-/// A class upgrade's stats a level changes (`up_*`; the C++ `long`s as i64) and its class's base values (`class_*`).
-struct EeTechCivStats {
-  float up_attack;
-  int64_t up_reload_time;
-  float up_armor[6];
-  float up_range;
-  float up_line_of_sight;
-  float up_max_velocity;
-  int64_t up_flight_time;
-  float up_area_effect;
-  int64_t up_gather_times[7];
-  float up_build_time_scale;
-  int64_t up_repair_rate;
-  float up_area_effect_scale;
-  float up_cost_scale;
-  int64_t class_attack;
-  int64_t class_reload_time;
-  int64_t class_armor[6];
-  float class_range;
-  float class_line_of_sight;
-  float class_max_velocity;
-  int64_t class_flight_time;
-  float class_area_effect;
-  int64_t class_gather_times[7];
-  int64_t class_repair_rate;
-  float class_area_effect_scale;
-  /// the class's `mCategory` as the C++ `long`
-  int64_t class_category;
-};
-
-/// One host call: `player` the player's index (`gWorld.mPlayers`); `stats` what [`EE_TECH_CIV_OP_PUT`] writes.
-struct EeTechCivCall {
-  uint32_t op;
-  int32_t player;
-  int64_t a;
-  int64_t b;
-  float real;
-  EeTechCivStats stats;
-};
-
-/// The host's answer.
-struct EeTechCivReply {
-  int64_t value;
-  float real;
-  EeTechCivStats stats;
-};
-
-/// The C++ host: a callback.
-struct EeTechCivHost {
-  void *ctx;
-  void (*call)(void *ctx, const EeTechCivCall *call, EeTechCivReply *reply);
-};
-
 /// What [`read_file`] gave, for the C++: the result, the name (when set) and the error (when any) as owned bytes
 /// the C++ frees with [`ee_tech_civ_file_free`], the upgrades.
 struct EeTechCivFileRead {
@@ -1663,48 +1105,6 @@ struct EeTechCivFileReply {
 struct EeTechCivFileHost {
   void *ctx;
   void (*call)(void *ctx, const EeTechCivFileCall *call, EeTechCivFileReply *reply);
-};
-
-/// A C++ apply step: `EECivilizationManager::ApplyUpgrade(upgrade, player)`.
-using EeTechCivApply = bool(*)(void *context, EeTechCivUpgrade upgrade);
-
-/// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
-/// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
-/// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
-struct EeContagionFunctorFields {
-  /// The functor's kind (`EE_CALAMITY_FUNCTOR_*`).
-  uint32_t mKind;
-  /// The spread radius (the fire's, the plague's).
-  float mRadius;
-  /// The spread chance (the fire's, the plague's).
-  float mChance;
-  /// The fire's burn: hundredths of the unit's maximum hit points burnt at once.
-  long mBurn;
-  /// The damage per discrete update (the area effects': the factor of the unit's attack stat).
-  long mDamage;
-  /// The discrete update time (the fire's and the leprosy's spread time, the plague's damage time, the area
-  /// effects' update time).
-  unsigned long mSpreadTime;
-  /// The unit set it can infect.
-  unsigned long mUnitSet;
-  /// `TakeHit`'s mode: 2 when the class is blocked by immunity, else 3.
-  long mMode;
-  /// The calamity's discrete updates of this helper update (`Update`).
-  unsigned long mUpdates;
-  /// The extra damage's flag: the pulse cannon effect, else the battle cry.
-  bool mFlag;
-};
-
-/// The functor's answers an update reads (all plain getters, read once before it).
-struct EeContagionParams {
-  /// `GetSpreadTime()`.
-  uint32_t spread_time;
-  /// `GetChance()`.
-  float chance;
-  /// `GetRadius()`.
-  float radius;
-  /// `EE_CONTAGION_*` bits.
-  uint32_t flags;
 };
 
 /// What `Apply` does to a unit ([`apply_damage`]): whether it hits and the damage.
@@ -1990,43 +1390,6 @@ struct EeAreaEffectData {
   bool mUnusedFlag4;
   bool mUnusedFlag5;
   uint8_t mPad[3];
-};
-
-/// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
-/// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
-struct EeAreaEffectTemplateFields {
-  /// The kind (`EE_AREA_EFFECT_*`): which effect `CreateAreaEffect` makes.
-  long mKind;
-  /// The area's shape: 1 a square, 2 a circle.
-  long mShape;
-  /// The players it affects: 1 the owner, 2 its allies, 3 its enemies, 4 everyone.
-  long mMode;
-  /// The radius in tiles, scaled by the owner unit's area-effect scale (0 or less: everywhere).
-  float mRadius;
-  float mColorAlpha;
-  long mID;
-  /// The unit set it covers (`EEUnitSetManager`; 4: no continent test).
-  long mUnitSet;
-  /// The cloaking's strength; the morale from buildings' cap before the variant's bonus.
-  long mMaxLevel;
-  /// The healing's hit points per second, the morale's level.
-  long mLevel;
-  long mL44;
-  long mL48;
-  long mL4C;
-  float mRed;
-  float mGreen;
-  float mBlue;
-  float mAlpha;
-  float mF60;
-  bool mB64;
-  bool mB65;
-  bool mB66;
-  bool mB67;
-  bool mB68;
-  float mColorRed;
-  float mColorGreen;
-  float mColorBlue;
 };
 
 /// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).
@@ -2466,12 +1829,6 @@ EeTechCivPower *ee_tech_civ_power_record(int32_t id);
 /// `purchased` names `count` upgrades or is null.
 bool ee_tech_civ_has_power(const EeTechCivUpgrade *purchased, size_t count, int32_t id);
 
-/// `ApplyUpgrade` over the C++ host ([`apply_upgrade`]).
-///
-/// # Safety
-/// `host` names a live host whose callback answers every op.
-bool ee_tech_civ_apply_upgrade(EeTechCivHost *host, EeTechCivUpgrade upgrade, int32_t player);
-
 /// `EELoadCivilization`'s bytes ([`read_file`]): `file` the file's name (`<name>.civ`, NUL-terminated).
 ///
 /// # Safety
@@ -2525,35 +1882,6 @@ bool ee_tech_civ_can_afford_all(const EeTechCivUpgrade *purchased,
                                 unsigned long available,
                                 bool allow_custom);
 
-/// [`reapply`]: the deferred upgrades into `deferred` (room for `count`), their number into `deferred_count`.
-///
-/// # Safety
-/// `purchased` names `count` upgrades; `deferred` has room for `count`; `deferred_count` is writable.
-bool ee_tech_civ_reapply(const EeTechCivUpgrade *purchased,
-                         size_t count,
-                         EeTechCivApply apply,
-                         void *context,
-                         EeTechCivUpgrade *deferred,
-                         size_t *deferred_count);
-
-/// [`apply_all`].
-///
-/// # Safety
-/// `upgrades` names `count` upgrades.
-bool ee_tech_civ_apply_all(const EeTechCivUpgrade *upgrades,
-                           size_t count,
-                           EeTechCivApply apply,
-                           void *context);
-
-/// `ApplyLevel21ToWorld`: applies every purchased upgrade of the deferred index (results ignored).
-///
-/// # Safety
-/// `purchased` names `count` upgrades.
-void ee_tech_civ_apply_deferred_kind(const EeTechCivUpgrade *purchased,
-                                     size_t count,
-                                     EeTechCivApply apply,
-                                     void *context);
-
 /// [`init`] into `*out`.
 ///
 /// # Safety
@@ -2561,13 +1889,6 @@ void ee_tech_civ_apply_deferred_kind(const EeTechCivUpgrade *purchased,
 void ee_contagion_functor_init(EeContagionFunctorFields *out,
                                const EeCalamityClassFields *class_,
                                uint32_t kind);
-
-/// [`params`].
-///
-/// # Safety
-/// `f` valid for reads.
-EeContagionParams ee_contagion_functor_params(const EeContagionFunctorFields *f,
-                                              bool blocked_by_immunity);
 
 /// [`discrete_time`].
 ///

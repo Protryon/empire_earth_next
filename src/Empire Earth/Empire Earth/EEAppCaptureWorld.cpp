@@ -17,12 +17,15 @@
 #include "ee/EEPlayer.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
+#include "rust/sim/app.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/app.h"
 
 // MAPS, MAPC: Rust (ee_game app map_capture.rs)
 static void EEAppCaptureSightImpl(unsigned int inKind, EEPlayer* inPlayer, float inX, float inY, float inRadius,
                                   bool inShared)
 {
-    if (EESimCaptureRecord::Active() && gWorld.mMap != NULL)
+    if (ee_app_capture_active() && gWorld.mMap != NULL)
         ee_app_capture_sight(inKind, inPlayer != NULL ? (uint32_t)inPlayer->mPlayerID : 0xffffffffu, inX, inY, inRadius,
                              inShared, gWorld.mMap->mTerrainMesh.GetRust());
 }

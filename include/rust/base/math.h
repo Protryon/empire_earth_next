@@ -6,101 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// `GE2DPoint` (sizeof 8).
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGe2DPoint {
-  float mX;
-  float mY;
-};
-
-/// `GEQuaternion` (sizeof 0x10).
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGeQuaternion {
-  float mX;
-  float mY;
-  float mZ;
-  float mW;
-};
-
-/// `GE3DPoint` (sizeof 0xc).
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGe3DPoint {
-  float mX;
-  float mY;
-  float mZ;
-};
-
-/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGeTransformation {
-  float mMatrix[4][4];
-};
-
-/// `GEVector` (sizeof 0xc).
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGeVector {
-  float mX;
-  float mY;
-  float mZ;
-};
-
-/// `GE3DLine` (sizeof 0x18): start, direction.
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGe3DLine {
-  EeGe3DPoint mStart;
-  EeGeVector mDirection;
-};
-
-/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGe3DPlane {
-  EeGe3DPoint mPoint;
-  EeGeVector mNormal;
-};
-
-/// `GERectangle` (sizeof 0x10), in the C++'s member order.
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGeRectangle {
-  float mBottom;
-  float mLeft;
-  float mRight;
-  float mTop;
-};
+#include "rust/base/records.h"
 
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
 using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
-
-/// Receives one point of a 3D interpolation.
-using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
-
-/// `GEOrientation` (sizeof 0xc).
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGeOrientation {
-  float mYaw;
-  float mPitch;
-  float mRoll;
-};
-
-/// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
-///
-/// The C++ class derives from it (its members are these fields, by the C++ names).
-struct EeGeBoundingBox {
-  EeGe3DPoint mBottomLeftFront;
-  EeGe3DPoint mTopRightBack;
-  float mWidth;
-  float mHeight;
-  float mDepth;
-};
 
 /// Receives one rectangle of a split.
 using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
@@ -523,15 +432,6 @@ void ee_u2d_line_tiles(const long (*from)[2],
                        float step,
                        void *out,
                        EeU2DAssignTiles assign);
-
-/// `U2DRectangle<float>::GetClosestPoint(inPoint)` (the rectangle's members in their order: bottom, left, right,
-/// top).
-///
-/// # Safety
-/// `rect` points at four floats, `point` and `out` at two.
-void ee_u2d_rect_closest_point(const float (*rect)[4],
-                               const float (*point)[2],
-                               float (*out)[2]);
 
 /// `U2DRectangle<T>::Load` (`write` false) and `Save` over a C++ `FSFile*` whose `GetIsOpen()` is `open`; `rect`
 /// is the rectangle (four `long`s, or with `float` four floats).

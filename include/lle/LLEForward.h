@@ -16,7 +16,6 @@ class GEBitmap;
 class GEBoundingBox;
 class GEColor;
 class GEFont;
-class GELight;
 class GELine;
 class GEMaterial;
 class GEModel;

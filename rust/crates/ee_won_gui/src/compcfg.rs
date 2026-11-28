@@ -1001,6 +1001,16 @@ pub fn safe_read_sound(cx: &Cx, sp: Sp) -> R<*mut c_void> {
         path = sp.read_string(false);
     }
     let file = resource_file(&path);
+    // the game's sounds are soundobj.rs's (R6 WON GUI round 41): `DecodeSound` with one reference
+    if crate::compobj::is_game() {
+        let s = crate::soundobj::decode(if has_flags { flags as i32 } else { 0 }, &file);
+        if s.is_null() {
+            return msg(&[b"Failed to decode sound: ", &file]);
+        }
+        // SAFETY: the new sound (a RefCount head like a text's)
+        unsafe { crate::guistrobj::gstr_ref(s as *const crate::guistrobj::EeWonGstr) };
+        return Ok(s as *mut c_void);
+    }
     // the original's local SoundDescriptor: its flags (when the value had them), its path, the decode
     let desc = cx.call(EeWonCcOp::SoundDescNew, std::ptr::null_mut(), 0, 0, 0, 0) as *mut c_void;
     if has_flags {

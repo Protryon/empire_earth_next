@@ -6,8 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
+#include "rust/base/records.h"
+#include "rust/game/records.h"
+#include "rust/render/records.h"
 
 /// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
 /// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
@@ -15617,14 +15618,8 @@ struct EeScreensSeTriggerTab;
 /// The unit tab (opaque to C++).
 struct EeScreensSeUnit;
 
-/// A paint action's record (opaque to C++; the action's record holds it: `game_actions.rs`).
-struct EeScreensSeaPaint;
-
 /// An `EESEERust`'s event (opaque to C++).
 struct EeScreensSeeEvent;
-
-/// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
-struct EeScreensSewAction;
 
 /// A shell's Rust half (opaque to C++): its control and its kind.
 struct EeScreensShell;
@@ -15656,59 +15651,6 @@ struct EeScreensChatEntry {
   char *text;
 };
 
-/// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
-/// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
-struct EeScreensCommandMode {
-  long ui_state;
-  bool lock_cursor;
-  unsigned long pointer;
-};
-
-/// What `EEUIFMGMainGroup::ShowCommands` reads before it lays the panel out: whether it shows at all (a built,
-/// living, commandable complex unit of the local human, non-observing player, no targeting mode on) and what the
-/// mode's buttons need.
-struct EeScreensPanelView {
-  bool unit;
-  bool complex;
-  bool built;
-  bool alive;
-  bool commandable;
-  /// The unit's owner is the local player (not observing).
-  bool owned;
-  bool cancel_hidden;
-  bool player;
-  bool human;
-  /// The main group's mode: 1 and 3 the commands, 2 and 3 the research, 2 the stop button, 4 the market.
-  long mode;
-  /// The fanaticism power and a fanatic-capable unit; the just-in-time power and a rally point; its state.
-  bool fanatic;
-  bool jit;
-  bool jit_on;
-  /// The button objects' positions: go fanatic (0x28), JIT on and off (0x29, 0x2a), the eight trades.
-  long fanatic_position;
-  long jit_positions[2];
-  long trade_positions[8];
-  /// The class's nine command slots.
-  unsigned long commands[9];
-};
-
-/// One research technology of the class: its button object's position and id, its node's kind, and whether it is
-/// shown (a position in 0..10000, available, allowed or already queued).
-struct EeScreensPanelResearch {
-  long position;
-  long command;
-  long kind;
-  bool eligible;
-};
-
-/// One button the panel shows, in the order the original shows them.
-struct EeScreensPanelButton {
-  uint32_t kind;
-  unsigned long button;
-  uint32_t research;
-  unsigned long control;
-};
-
 /// The effect types (opaque to C++; the effect screen's `EffectTypes`, whose address their events carry).
 using EeScreensSeEffects = EffectTypes;
 
@@ -15727,165 +15669,11 @@ struct EeScreensSeBrushGroup {
   bool centered;
 };
 
-/// An action's plain members (the C++ class's second base; the names are the original members').
-struct EeScreensGaFields {
-  /// The kind (`EE_SCREENS_GA_*`).
-  uint32_t mKind;
-  /// The message built and not sent yet (`EEMessage*`: the click, lasso, build and calamity).
-  void *mMessage;
-  /// The calamity's class (`EECalamityClass*`).
-  void *mCalamityClass;
-  /// The quick save's memory file (`FSMemoryFile*`, the host's).
-  void *mFile;
-  /// The editor paint's record (`EESEAPaintRust`'s: `editor_actions.rs`).
-  EeScreensSeaPaint *mPaint;
-  /// The editor's whole action (`EESEARust`'s: `editor_whole.rs`).
-  EeScreensSewAction *mAction;
-  /// The build's and the calamity's technology.
-  int32_t mTechnology;
-  int32_t mTargetID;
-  int32_t mCasterID;
-  /// The calamity's target tile.
-  int32_t mX;
-  int32_t mY;
-  /// The calamity's last check (nonzero: castable).
-  int32_t mValid;
-  /// The camera's target (`GE3DPoint`) and the camera object followed (-1: the point).
-  float mLocation[3];
-  int32_t mUnitID;
-  /// The mini map's click: 0 centre the camera, 1 send the group; the key modifiers at the click.
-  int32_t mMode;
-  uint32_t mModifiers;
-  /// The edge scroll's last poll.
-  uint32_t mElapsed;
-  /// The cancelled game's message string (0: none).
-  int32_t mStringID;
-  /// The improvement and its unit (by id: `EEUnitHandle`, referenced while the action lives).
-  int32_t mImprovement;
-  uint32_t mUnit;
-  /// The join's mode (0 host, 1 join a detected game, 2/3 connect to an address, 4 the WON host).
-  int32_t mJoinMode;
-  /// The build's queue flag (`EEMBuildUnit`'s).
-  uint8_t mIsQueued;
-  bool mScrollLeft;
-  bool mScrollRight;
-  bool mScrollUp;
-  bool mScrollDown;
-  bool mAccelerate;
-  /// The booted player's slot and its flags.
-  uint8_t mPlayer;
-  bool mB0D;
-  bool mIsExiting;
-  /// The cancelled game keeps the current form.
-  bool mNoPop;
-  /// The improvement raised (else lowered); in a game (else the scenario editor).
-  bool mRaise;
-  bool mIsInGame;
-  /// The saved game's flag.
-  bool mFlag;
-  /// The chat line is the local player's.
-  bool mFromLocalPlayer;
-  /// The quick save/load: load (else save); a save also written to disk.
-  bool mIsLoad;
-  bool mWriteToFile;
-};
-
-/// `EEUICPing`'s members (its protected base) but the bars.
-struct EeScreensPingFields {
-  /// The lit bars less one (`SetPing`'s quality times 5).
-  uint32_t mNumBars;
-};
-
-/// `GERectangle` in its member order (the records' rectangles are read as `GERectangle`s by the C++).
-struct EeScreensRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
-/// `GE2DPoint`.
-struct EeScreensPoint {
-  float x;
-  float y;
-};
-
-/// `EEUICSelectUnits`' members (its protected base) but the lines and the actions.
-struct EeScreensSelectUnitsFields {
-  /// The box as of the last `CopyData`, clipped to the game view.
-  EeScreensRect mRA0;
-  /// The press (rounded).
-  EeScreensPoint mDragStart;
-  /// The mouse (rounded, clamped to the game view).
-  EeScreensPoint mDragEnd;
-  /// The drag went far enough from the press.
-  bool mDragging;
-  /// The box is drawn.
-  bool mD1;
-  /// The trigger tab's control (`EESEUICTriggerSelectUnits`; port addition: the subclass's overrides are this).
-  bool mTrigger;
-  /// The trigger tab's: the right button is down (its press and release drive the left's).
-  bool mRightButton;
-};
-
-/// `GE3DPoint`.
-struct EeScreensPoint3 {
-  float x;
-  float y;
-  float z;
-};
-
-/// `EEUICCommandUnits`' members (its protected base) but the click action, the model and the texture.
-struct EeScreensCommandUnitsFields {
-  /// The press (rounded).
-  EeScreensPoint mDownLocation;
-  /// The map point under the press.
-  EeScreensPoint3 mPosition;
-  float mFacing;
-  /// `mFacing` as of the last `CopyData`.
-  float mDrawnFacing;
-  /// A selected unit takes a facing.
-  bool mCanFace;
-  /// The drag went past the threshold (or the release set a facing).
-  bool mHasFacing;
-  /// `mHasFacing` as of the last `CopyData`.
-  bool mDrawnHasFacing;
-  /// The scenario editor's control (`EESEUICCommandUnits`; port addition: the subclass's overrides are this).
-  bool mEditor;
-};
-
 /// One loaded icon of the status box (the original's `EEUIFMGStatusBox::sIconBitmaps[50]`, 0x14 bytes each): its
 /// cell in the icon textures and its `GEBitmap*`.
 struct EeScreensIconBitmap {
   EeGeRectangle mRectangle;
   void *mBitmap;
-};
-
-/// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
-struct EeScreensMainFormFields {
-  /// the keyboard and mouse modes of each interface state (`EE_SCREENS_MF_MODE_*`; 2: the cinematic's keys)
-  long mKeyboardModes[22];
-  long mMouseModes[22];
-  /// the interface state (5: gate, 6: wall, 0x11: no scrolling)
-  long mUIState;
-  /// the background media (-1: none)
-  long mMediaID;
-  /// the enabled entity group and the index into the panel groups
-  long mEntityGroup;
-  unsigned long mCurrentGroup;
-  /// the poll's elapsed time
-  unsigned long mElapsed;
-  unsigned long mHotKeyMode;
-  long mClockMode;
-  bool mEntityGroupSet;
-  /// the error log's strings changed
-  bool mStringsChanged;
-  bool mIsCursorLocked;
-  bool mRefreshGroup;
-  bool mB5F0;
-  bool mB5F1;
-  bool mInfoBlinking;
-  bool mIsButtonBlinking;
 };
 
 /// `EEUIBuildWall` (the C++ name is a typedef of this record; UI lane round 16: the class and its vtable gone): placing
@@ -15912,161 +15700,6 @@ struct EeScreensBuildGateFields {
   int32_t mDirection;
   int32_t mPlayer;
   bool mEditor;
-};
-
-/// `EEUIFMGStatusBox`'s members (ee/EEUIFMGStatusBox.h) as the record the class is (its only base, at offset 0:
-/// the box's pointer is the record's): the attributes shown, the main game form's controls it fills (`UIControl*`s),
-/// its form, the counts (the UI cluster lane, round 1).
-struct EeScreensStatusBoxFields {
-  /// (= -1) the icon index of each attribute shown
-  long mAttributes[14];
-  /// the main game form's controls 0x45..0x4d and 0x20..0x28
-  void *mIcons[9];
-  void *mLabels[9];
-  /// the constructor's form
-  void *mForm;
-  /// controls 0x1e, 0x1f, 0x2a (the portrait), 0x2b, 0x64, 0x29
-  void *mC84;
-  void *mC88;
-  void *mC8C;
-  void *mC90;
-  void *mC94;
-  void *mC98;
-  long mAttributeCount;
-  /// the next free icon
-  long mArmorAttributeCount;
-  bool mIsResourceShown;
-  /// controls 0x33, 0x32 (the third and fourth bars)
-  void *mCA8;
-  void *mCAC;
-};
-
-/// `EEUIFMGStatusButton`'s plain members (ee/EEUIFMGStatusButton.h), in the class's order (the UI cluster lane,
-/// round 1); its C++ objects (the button object, the icon, the dither, the queue text, `mU104`) stay members.
-struct EeScreensStatusButtonFields {
-  /// `TMGetTime()` of the last "cannot" chat line
-  unsigned long mLastErrorTime;
-  /// the technology (the main group matches the queued items' key)
-  long mTechnology;
-  unsigned long mUnitType;
-  /// (= 40)
-  float mF134;
-  float mF138;
-  unsigned long mUnitID;
-  /// the main group's queue counts
-  long mCount;
-  /// the `EEButtonObject` index
-  unsigned long mButton;
-  /// an `EEButtonObject` command (else a tech tree node)
-  bool mIsCommand;
-  bool mShowCount;
-  bool mAvailable;
-  bool mDrawIcon;
-};
-
-/// `EEUIFMGMainGroup`'s plain members (ee/EEUIFMGMainGroup.h, the original's +0x0c `mMode` .. +0x25 `mReset`), a
-/// Rust record the C++ class derives from as `EeScreensMainFormFields` is the form's.
-struct EeScreensMainGroupFields {
-  /// the mode: 0, 3, 4 (the market's unit type 0x321); 1, 2 tested
-  long mMode;
-  /// the shown unit's hit points, id and the previous id
-  long mHitPoints;
-  unsigned long mUnitID;
-  unsigned long mPreviousID;
-  long mL1C;
-  /// the unit class's `mL294`
-  long mL20;
-  /// a unit is shown; the group was reset (`Reset`)
-  bool mHasUnit;
-  bool mReset;
-};
-
-/// `CopyData`'s record: what the C++ read (in), what it applies (out).
-struct EeScreensMiniMapCopy {
-  float rect[4];
-  uint32_t window_width;
-  uint32_t window_height;
-  float corners[4][2];
-  float origin[2];
-  float flare_point[2];
-  float map_to_pixel[6];
-  uint32_t flare_texture_height;
-  uint32_t flare_texture_width;
-  float flare_location[2];
-  float flare_width;
-  uint8_t flare_on;
-  uint8_t free_camera;
-  /// in and out: `mShowFlare`, `mFlareBlink`
-  uint8_t show_flare;
-  uint8_t flare_blink;
-  uint8_t flare_color;
-  uint8_t redraw_all;
-  uint8_t set_flare;
-  uint8_t reserved;
-  float map_scale[2];
-  float world_scale[2];
-  float flare_new_location[2];
-  float flare_scale[2];
-  float lines[4][2][2];
-};
-
-/// `DrawPolygons`' plan: its steps (`count` of `steps`) and the clip rectangle (left, top, right, bottom).
-struct EeScreensMiniMapDraw {
-  uint8_t steps[16];
-  uint32_t count;
-  float clip[4];
-};
-
-/// `Update`'s record: the map's width (`mL195614`), height (`mL195610`) and size, the mini map's map-to-pixel
-/// matrix (in); the units texture's coordinate extent and the map's bounds in mini-map units (left, top, right,
-/// bottom) (out).
-struct EeScreensMiniMapUpdate {
-  int32_t width;
-  int32_t height;
-  int32_t size;
-  float map_to_pixel[6];
-  float extent;
-  float bounds[4];
-};
-
-/// `EEUIManager`'s own members (ee/EEUIManager.h), in the class's order (the original's +0x12c..+0x13d).
-struct EeScreensUiManagerFields {
-  /// `EEUIFMainGame*`: `GetFormByID(11)` in the constructor
-  void *mMainGameForm;
-  /// `EEUIFScenarioEditor*`: made by `CreateScenarioEditor`, deleted by `DeleteScenarioEditor`
-  void *mScenarioEditorForm;
-  unsigned long mU134;
-  unsigned long mU138;
-  /// set by `StartScenarioEditor`, cleared by the main menu's events
-  bool mInScenarioEditor;
-  bool mB13D;
-};
-
-/// `EEUserInterface`'s members (ee/EEUserInterface.h), in the class's order (the original's +0x40..+0x5f).
-struct EeScreensUserInterfaceFields {
-  /// `TSThread*`: the constructing thread; every post goes to it
-  void *mThread;
-  /// `TSEvent*`: set by the thread message 0x?? (`EE_SCREENS_UI_OP_QUEUE_DONE`)
-  void *mMessageQueueDone;
-  /// `TMGetTime()` at construction; the game's start and saved games set it
-  unsigned long mRandomSeed;
-  /// the load percentage's player (`EEMLoadPercent`)
-  long mLocalPlayer;
-  bool mB05C;
-  /// a byte: the message handler truncates a long into it
-  uint8_t mIsUpdating;
-  /// `PostMessage424Once`'s guard (the handler clears it)
-  bool mIconBarUpdatePosted;
-  /// set by the handler; the loop exits on it
-  bool mIsQuitting;
-};
-
-/// One member of a record message (`EEMRecordValue`): an integer, a float or a point.
-struct EeScreensGaValue {
-  /// `EE_SCREENS_GA_VALUE_*`.
-  uint32_t kind;
-  int64_t i;
-  float f[2];
 };
 
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
@@ -16423,82 +16056,6 @@ struct EeScreensSefmButton {
   float rect[4];
 };
 
-/// `EEUIFMainGame`'s C++ objects (ee/EEUIFMainGame.h; UI lane round 15), as untyped pointers the C++ casts at
-/// its uses: the unit information background, the wheel zoom and grab scroll events, the error strings' lock, the
-/// unit hack, the 200 ms poll and the mouse actions (scroll, click, lasso, build, calamity). The panel groups stay
-/// the class's (the game's other lanes read them typed).
-struct EeScreensMainFormObjects {
-  /// the background 0x64 (Open)
-  void *mUnitInfoBackground;
-  /// a `UIEvent*` (EE_SCREENS_CAM_WHEEL_ZOOM)
-  void *mWheelZoom;
-  /// a `UIEvent*`: the middle button's pressed and unpressed event (EECreateGrabScroll)
-  void *mGrabScroll;
-  /// a `TSCriticalSection*` guarding the error strings
-  void *mErrorCriticalSection;
-  /// an `EEUIFMGUnitHack*`
-  void *mUnitHack;
-  /// a `TMPoll*` (200 ms)
-  void *mPoll;
-  /// the actions: `EEAScroll*`, `EEAMouseClick*`, `EEALasso*`, `EEABuild*`, `EEACalamity*`
-  void *mScroll;
-  void *mMouseClick;
-  void *mLasso;
-  void *mBuild;
-  void *mCalamity;
-};
-
-/// The improvement button's call record's pointers (the C++ `EEUIBUpgradeCall` derives from it; its held text and
-/// reason follow): the `EEUIBUpgrade*`, the out text (a `UWideString*`: the tooltip, the refusal's reason, the new
-/// cost), the mouse location (a `const GE2DPoint*`).
-struct EeScreensUpgradeCallObjects {
-  void *mButton;
-  void *mOut;
-  const void *mLocation;
-};
-
-/// The UI manager's call record's pointers (the C++ `EEUIManagerCall` derives from it; StartScenarioEditor's two
-/// names follow): the `EEUIManager*`, UpdateMouse's location (a `const GE2DPoint*`).
-struct EeScreensManagerCallObjects {
-  void *mManager;
-  const void *mMouse;
-};
-
-/// The status box's call record's pointers (the C++ `EEUIFMGStatusBoxCall` derives from it; the held text and
-/// LoadIcons' description follow, hud_direct.rs `BoxCallHead`): the box (an `EEUIFMGStatusBox*`, its record
-/// first), the unit (Fill, Refresh), the complex unit (UpdateQueuedCounts), LoadIcons' four `GETexture*`s.
-struct EeScreensStatusBoxCallObjects {
-  void *mBox;
-  void *mUnit;
-  void *mComplex;
-  void *mTextures[4];
-};
-
-/// The main game form's call record's pointers and numbers (the C++ `EEUIFMGFormCall` derives from it, UI lane
-/// round 15; its three strings follow): the form (first: main_form_ffi.rs reads it), the picked unit, the chat
-/// line's colour and flags, the dialog message, the start modes' tech tree node, unit, caster and calamity, the old
-/// and new media, the mouse modes' first selected unit and tile, the placement whose Update runs, the command
-/// button and its help string's result (a `UWideString*`).
-struct EeScreensFormCallObjects {
-  void *mForm;
-  void *mPicked;
-  const void *mColor;
-  unsigned long mFlags;
-  const void *mMessage;
-  void *mNode;
-  void *mUnit;
-  void *mCaster;
-  void *mCalamity;
-  void *mOldMedia;
-  void *mMedia;
-  void *mFirst;
-  void *mTile;
-  void *mWall;
-  void *mGate;
-  void *mButton;
-  void *mOut;
-};
-
 /// The cursor's reads for one `UpdateCursorKind` (the C++'s `EeScreensCursorRead`, EEUIFMainGame.cpp's shims read
 /// it): the form, the local player, its selected group, the group's first unit and the picked target.
 ///
@@ -16508,129 +16065,6 @@ struct EeScreensCursorRead {
   void *mGroup;
   void *mFirst;
   void *mTarget;
-};
-
-/// `EEUIBUpgrade`'s members (ee/EEUIBUpgrade.h).
-struct EeScreensUpgradeFields {
-  /// the improvement (0x10: help string only, 0xc: no cost)
-  long mAttribute;
-  /// a `UITextLabel*`
-  void *mCostLabel;
-  /// `TMGetTime` of the last "cannot" chat line
-  unsigned long mLastMessageTime;
-  /// the level last shown
-  long mLevel;
-  long mNumQueued;
-  /// the button is on the scenario editor's form
-  bool mScenarioEditor;
-  /// `GetDisabled()` as of the last UpdateCost
-  bool mDisabled;
-};
-
-/// `EEUIFMGStatusBar`'s members (ee/EEUIFMGStatusBar.h): its parts (a `UIBitmap*` icon, two `UITextLabel*` value
-/// labels, a `UIStatusBar*`, two `GEBitmap*`s the destructor dereferences, the queued count's `GEText*`) and flags.
-struct EeScreensStatusBarFields {
-  void *mIcon;
-  void *mValue;
-  void *mValue2;
-  void *mBar;
-  void *mBitmap140;
-  void *mBitmap144;
-  void *mCount;
-  /// the icon is moved by (1, 1)
-  bool mPressed;
-  bool mShowCount;
-  /// `mEnabled` as of the last CopyData (DrawPolygons)
-  bool mCopiedEnabled;
-  bool mEnabled;
-};
-
-/// `EEUIMiniMap`'s members but its origin and lines (ee/EEUIMiniMap.h): the `EEAMiniMap*` action, the view
-/// edges drawn, the flare.
-struct EeScreensMiniMapFields {
-  void *mAction;
-  bool mDrawLine0;
-  bool mDrawLine1;
-  bool mDrawLine2;
-  bool mDrawLine3;
-  /// gMiniMap's flare is on (and the camera is not free)
-  bool mShowFlare;
-  /// toggles the flare colour each CopyData
-  bool mFlareBlink;
-};
-
-/// `EEUISCIFormManager`'s flags (ee/EEUISCIFormManager.h).
-struct EeScreensSciFormFields {
-  /// (Clear)
-  bool mBA0;
-  /// the in-game LoadScenario clears it; SIE Back closes the form
-  bool mIsInGame;
-  /// and sets this one; SIE Start posts the saved game
-  bool mIsLoadingFromGame;
-  /// the CSSE StartScenario sets it: a campaign scenario
-  bool mIsCampaign;
-  /// SIE Open sets it, Briefing scrolls to the end and clears it
-  bool mScrollBriefingToEnd;
-};
-
-/// `EEUICPortrait`'s members but its unit (ee/EEUICPortrait.h): the level's `GEText*`, the face's `GEBitmap*`,
-/// the unit class's `EEButtonObject*` (loaded while shown), the level, the bars and the level shown.
-struct EeScreensPortraitFields {
-  void *mText;
-  void *mPortrait;
-  void *mButton;
-  unsigned long mLevel;
-  bool mShowFirstBar;
-  bool mShowSecondBar;
-  bool mShowLevel;
-};
-
-/// `EEUIFMGAttribute`'s members (ee/EEUIFMGAttribute.h): the level's `GEText*`, the level shown.
-struct EeScreensAttributeFields {
-  void *mLevelText;
-  /// `mL128 > 0` as of the last CopyData
-  bool mShowLevel;
-};
-
-/// `EEUIFMGStatusButton`'s C++ objects (ee/EEUIFMGStatusButton.h): the `EEButtonObject*`, the dither and icon
-/// `GEBitmap*`s, the queue count's `GEText*`.
-struct EeScreensStatusButtonObjects {
-  void *mButtonObject;
-  /// textures\Dither over a disabled button
-  void *mDither;
-  void *mIcon;
-  void *mBuildQueue;
-};
-
-/// `EEUIBGenericBackground`'s numbers (ee/EEUIBGenericBackground.h): the opacity, the scale, the frame flags.
-struct EeScreensBackgroundFields {
-  float mOpacity;
-  /// EEUIFError::Open: the game window's width / 1024 and height / 768
-  float mScaleX;
-  float mScaleY;
-  /// (3 from EEUIFError)
-  unsigned long mFrameFlags;
-};
-
-/// `EEUIFMGUnitHack`'s members (ee/EEUIFMGUnitHack.h): its `EEUIFMainGame*` and its Rust record.
-struct EeScreensUnitHackFields {
-  void *mForm;
-  void *mRecord;
-};
-
-/// The box selection's and the right-drag command's C++ objects (ee/EEUICSelectUnits.h, EEUICCommandUnits.h):
-/// the `EEAMouseClick*` (the click; the command's listener), the `EEALasso*`, the arrow's `GEModel*` and
-/// `GETexture*`.
-struct EeScreensSelectUnitsObjects {
-  void *mClick;
-  void *mLasso;
-};
-
-/// The right-drag command's: its listener, the arrow's model and texture.
-struct EeScreensCommandUnitsObjects {
-  void *mListener;
-  void *mModel;
-  void *mTexture;
 };
 
 /// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
@@ -16680,44 +16114,11 @@ void ee_screens_actions_clear(uint32_t queue);
 /// mouse move event it saved released, not grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
 void ee_screens_camera_grab_reset(uint32_t form);
 
-/// The campaign editor's event code for a control event id, 0 for another form's.
-uint32_t ee_screens_campaign_editor_event_for(unsigned long id);
-
-/// The model's ops for a caller without the events (the golden driver): `kind` 0 a call (`which` the op, `a` its
-/// argument), 1 a text (written to `out` up to `capacity`; its length), 2 a put; `usize::MAX` for an op it does
-/// not own.
-///
-/// # Safety
-/// `text` holds `length` bytes, `out` `capacity`.
-size_t ee_screens_campaign_model(uint32_t kind,
-                                 uint32_t which,
-                                 uint32_t a,
-                                 const uint8_t *text_in,
-                                 size_t length,
-                                 uint8_t *out,
-                                 size_t capacity);
-
-/// `EEUIECLEFormManager::AddEntry`.
-void ee_screens_chat_log_add(const EeScreensChatLogHead *head,
-                             const uint8_t *name,
-                             size_t name_length,
-                             const uint8_t *text,
-                             size_t text_length);
-
 /// `EEUIECLEFormManager::Clear`.
 void ee_screens_chat_log_clear();
 
 /// `EEUIECLEFormManager::GetEntryCount`.
 uint32_t ee_screens_chat_log_count();
-
-/// Entry `index`'s fixed fields into `out`; false (nothing written) past the last.
-bool ee_screens_chat_log_entry(uint32_t index, EeScreensChatLogHead *out);
-
-/// Entry `index`'s name (`which` 0) or text (1) into `out` (up to `capacity` bytes); its length in bytes.
-size_t ee_screens_chat_log_text(uint32_t index,
-                                uint32_t which,
-                                uint8_t *out,
-                                size_t capacity);
 
 /// `EEUIECLEFormManager::Load` from the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_load(void *file);
@@ -16792,14 +16193,6 @@ long ee_screens_aes_load(void *file);
 /// `state` is a live `EeAreaEffectRunning`.
 void ee_screens_aes_restore(const void *state);
 
-/// `EEAreaEffectTemplate::Load(on_demand)` and `Unload` on the template (`area_effect_lists.rs`).
-void ee_screens_ael_template_load(void *template_, bool on_demand);
-
-void ee_screens_ael_template_unload(void *template_);
-
-/// `EEUnitAreaEffectList::AddAreaEffect(effect)` on the list.
-void ee_screens_ael_add(void *list, void *effect);
-
 /// `EEUnitAreaEffectList::ApplyModifiers(kind, value, out, unit)` on the list (`value` and `out` the caller's longs).
 void ee_screens_ael_apply_modifiers(void *list,
                                     long kind,
@@ -16873,37 +16266,8 @@ long ee_screens_cbl_draw_text(void *list);
 /// `TabbedTo`.
 void ee_screens_cbl_tabbed_to(void *list);
 
-/// `GetSelectedUpgrade` -> 0 and the upgrade, bonus and cost (each written as the original wrote them), or the
-/// error.
-long ee_screens_cbl_selected_upgrade(void *list,
-                                     uint32_t *upgrade,
-                                     uint32_t *bonus,
-                                     uint32_t *cost);
-
-/// `SetUpgradesExcept`.
-void ee_screens_cbl_set_upgrades_except(void *list, const uint32_t *excluded, size_t count);
-
 /// `SetCivilizationUpgrades`.
 void ee_screens_cbl_set_civilization_upgrades(void *list, const uint32_t *ids, size_t count);
-
-/// `ReformatUpgrades`.
-void ee_screens_cbl_reformat(void *list, bool buy);
-
-/// The targeting mode of command `button`: false when it starts none.
-bool ee_screens_command_mode(unsigned long button, EeScreensCommandMode *out);
-
-/// The panel's gate before the player's `IsHuman` (every other condition).
-bool ee_screens_panel_gate(const EeScreensPanelView *view);
-
-/// Whether the panel shows any button.
-bool ee_screens_panel_shown(const EeScreensPanelView *view);
-
-/// `ShowCommands`' buttons in order into `out` (room for `capacity`); returns how many.
-size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
-                                const EeScreensPanelResearch *research,
-                                size_t count,
-                                EeScreensPanelButton *out,
-                                size_t capacity);
 
 /// `EEScreenEvent::ProcessEvent`: the event `event` with its arguments on `form` from `entity`; a screen event's
 /// code without arguments goes on to `ee_screens_event`.
@@ -16922,9 +16286,6 @@ int32_t ee_screens_cursor_kind(void *ctx);
 /// # Safety
 /// `form` is the live main game form; the world has its local player.
 void ee_screens_update_cursor_kind(void *form);
-
-/// The debug sound panel's event code for a control event id, 0 for another form's.
-uint32_t ee_screens_debug_sound_event_for(unsigned long id);
 
 /// A paint action's record: the terrain paint (a terrain, b texture), the elevation paint (a the level) or the
 /// bulldozer. Freed by `ee_screens_sea_paint_free` (the action's destructor).
@@ -16967,12 +16328,6 @@ void ee_screens_seu_lasso_message(void *message);
 /// (`action`, an `EEAction*`) posted.
 void ee_screens_seu_lasso_in_rectangle(void *action,
                                        const void *rectangle);
-
-/// `EESEALasso::SelectUnits`.
-void ee_screens_seu_lasso_select(const void *rectangle,
-                                 int32_t unit_type,
-                                 uint8_t deselect,
-                                 uint8_t deselect_only);
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
@@ -17300,9 +16655,6 @@ void ee_screens_selt_destroy(void *thread);
 /// `EESELoadThread::Main(thread)` (the thread procedure).
 unsigned long ee_screens_selt_main(void *thread);
 
-/// `EESELoadThread::HandleMessage(message, p1, p2)`.
-void ee_screens_selt_message(void *thread, unsigned long message, void *p1, void *p2);
-
 /// The text actions' `Virtual4` (`action` its [`EeScreensSeltInfo`]): the export (`import` false) or the import.
 void ee_screens_seia_run(void *action,
                          bool import_text);
@@ -17520,17 +16872,6 @@ void ee_screens_sebr_build(void *group,
                            float y,
                            uint32_t *index,
                            size_t *out);
-
-/// `EEUIFSEBrushGroup::SetHighlight`'s square (left, top, right, bottom into `out`) around (`x`, `y`) for the brush
-/// `size`, `centred` or not.
-///
-/// # Safety
-/// `out` points at four floats.
-void ee_screens_sebr_highlight(float x,
-                               float y,
-                               uint32_t size,
-                               bool centred,
-                               float *out);
 
 /// `EESETriggerJump`'s decision ([`trigger_jump`]): -1 for none, else the screen << 32 | the entry.
 int64_t ee_screens_trigger_jump(unsigned long kind,
@@ -17908,16 +17249,6 @@ EeScreensSeeEvent *ee_screens_see_new_objects(uint32_t kind, void *a, void *b, v
 /// `event` comes from `ee_screens_see_new` (or is NULL) and is not used after.
 void ee_screens_see_free(EeScreensSeeEvent *event);
 
-/// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
-/// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the
-/// manager's scenario editor flag (the save and load forms' kind).
-uint32_t ee_screens_control_event_for(unsigned long id,
-                                      bool screen_active,
-                                      bool in_editor);
-
-/// `EEUIManager`'s form-event factory: the event code for a form event id, 0 for none.
-uint32_t ee_screens_form_event_for(unsigned long id);
-
 /// `EEUIBGenericBackground::DrawBackground`: the background (its `GERectangle`, frame scale and flags) drawn within
 /// `clip` (a `GERectangle`); the panel's draw result.
 long ee_screens_frame_draw(void *background,
@@ -18182,9 +17513,6 @@ void ee_screens_lobby_set_option(uint32_t option,
 /// `EEUIFMainGame::CopyData` over the host's call record: `UIForm::CopyData`'s result.
 int64_t ee_screens_main_form_copy_data(void *call);
 
-/// `EEUIFMainGame::RefreshStatus` over the host's call record.
-void ee_screens_main_form_refresh_status(void *call);
-
 /// `EEUIFMainGame::DisplayChatLine` of the host's call record's colour, name, text and flags.
 void ee_screens_main_form_chat_line(void *call);
 
@@ -18201,9 +17529,6 @@ void ee_screens_main_form_construct(void *call);
 /// `call` is the constructor's live call record.
 void ee_screens_main_form_new(void *call,
                               EeScreensMainFormFields *fields);
-
-/// `EEUIFMainGame::SetHotKeyMode(mode)`.
-void ee_screens_main_form_hot_key_mode(void *call, int64_t mode);
 
 /// `EEUIFMainGame::SetUIState(state)`.
 void ee_screens_main_form_ui_state(void *call, int64_t state);
@@ -18225,13 +17550,6 @@ void ee_screens_main_form_start(void *call,
 int64_t ee_screens_main_form_member(void *call,
                                     uint32_t which,
                                     int64_t a);
-
-/// `EEUIFMainGame::UpdateMouse`'s mode: the mode `mode` (`EE_SCREENS_MF_MODE_*`) at the mouse (x, y); the mode's
-/// answer.
-int64_t ee_screens_main_form_mouse(void *call,
-                                   int64_t mode,
-                                   float x,
-                                   float y);
 
 /// `EEUIBuildWall::Update(x, y)` over the host's call record (its placement held) and the wall's members.
 ///
@@ -18313,9 +17631,6 @@ int64_t ee_screens_mm_draw_polygons(size_t map);
 /// `EEUIMiniMap::MouseRButtonDown`.
 int64_t ee_screens_mm_mouse_r_down(size_t map);
 
-/// `EEUIMiniMap::CenterCamera`.
-void ee_screens_mm_center_camera(size_t map);
-
 /// `EEUIMiniMap::SetLocation`.
 void ee_screens_mm_set_location(size_t map, float x, float y);
 
@@ -18326,30 +17641,6 @@ void ee_screens_mm_update(size_t minimap);
 long ee_screens_event(uint32_t event,
                       void *form,
                       void *entity);
-
-/// The menus' event code for a control event id, 0 for another form's.
-uint32_t ee_screens_menus_event_for(unsigned long id);
-
-/// `EEUIMiniMap::CopyData`'s numbers over the record the C++ read (`copy`'s in fields; its out fields written).
-///
-/// # Safety
-/// `copy` points to a valid record.
-void ee_screens_mini_map_copy_data(EeScreensMiniMapCopy *copy);
-
-/// `EEUIMiniMap::DrawPolygons`' plan: the flare shown or not, the lines' draw flags (bit i: line i) and the
-/// copied draw rectangle.
-EeScreensMiniMapDraw ee_screens_mini_map_draw_plan(bool show_flare,
-                                                   uint32_t draw_lines,
-                                                   float left,
-                                                   float top,
-                                                   float right,
-                                                   float bottom);
-
-/// `EEUIMiniMap::Update`'s numbers over the record the C++ read.
-///
-/// # Safety
-/// `update` points to a valid record.
-void ee_screens_mini_map_update(EeScreensMiniMapUpdate *update);
 
 /// `EEUIMiniMap::MouseLButtonUp` on the control `map`: its result.
 int64_t ee_screens_mini_map_mouse_l_up(void *map);
@@ -18477,9 +17768,6 @@ int64_t ee_screens_portrait_draw_text(void *portrait);
 /// `EEUICPortrait::MouseMove` -> 0.
 int64_t ee_screens_portrait_mouse_move(void *portrait);
 
-/// The post-game summary's event code for a control event id, 0 for another form's.
-uint32_t ee_screens_post_game_event_for(unsigned long id);
-
 /// The summary's line graph's value format (`EEUIPGSLineGraph::FormatXValues` for `axis` 0, the game's time,
 /// `FormatYValues` for 1) into `out` (`capacity` bytes); its length in bytes (ee_ui graphobj.rs's format).
 size_t ee_screens_pgs_format(int axis,
@@ -18498,21 +17786,6 @@ void ee_screens_save_post(void *action);
 const void *ee_screens_question_answer(uint32_t table,
                                        uint32_t index);
 
-/// The save/load form's event code for a control event id (the screen active and the editor on when the form is
-/// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
-uint32_t ee_screens_save_load_event_for(unsigned long id,
-                                        bool screen_active,
-                                        bool in_editor);
-
-/// The single player load form's event code for a control event id; 0 for another form's.
-uint32_t ee_screens_sp_load_event_for(unsigned long id);
-
-/// The scenario load form's event code for a control event id; 0 for another form's.
-uint32_t ee_screens_scenario_load_event_for(unsigned long id);
-
-/// The scenario intro form's event code for a control event id; 0 for another form's.
-uint32_t ee_screens_scenario_intro_event_for(unsigned long id);
-
 /// Slot `slot`'s object (`size` bytes aligned to `align`), made on its first use by `make` (none: the zeros).
 ///
 /// # Safety
@@ -18522,9 +17795,6 @@ void *ee_screens_scratch(EeScreensScratch slot,
                          size_t size,
                          size_t align,
                          void (*make)(void*));
-
-/// The settings form's event code for a control event id, 0 for another form's.
-uint32_t ee_screens_settings_event_for(unsigned long id);
 
 void ee_screens_mfb_create_group(size_t form, uint32_t index);
 
@@ -18703,8 +17973,6 @@ int64_t ee_screens_ae_level(size_t effect);
 
 float ee_screens_ae_radius(size_t effect);
 
-float ee_screens_ae_scale(size_t effect);
-
 /// `IsImmunity` (`aem_is_immunity`).
 bool ee_screens_ae_is_immunity(size_t effect);
 
@@ -18726,8 +17994,6 @@ void ee_screens_ae_tick(size_t effect, size_t unit, float elapsed);
 /// `ShowOn(unit)` (`ael_show_on`).
 void ee_screens_ae_show_on(size_t effect, size_t unit);
 
-void ee_screens_ae_set_unit(size_t effect, size_t unit);
-
 /// `IsInRange(point)` (`aem_in_range`).
 bool ee_screens_ae_in_range(size_t effect, float x, float y);
 
@@ -18742,18 +18008,6 @@ bool ee_screens_ae_affects_player_reversed(size_t effect, int64_t player, uint64
 void ee_screens_aet_construct(size_t template_);
 
 void ee_screens_aet_destroy(size_t template_);
-
-/// `AffectsPlayer(player, other)` / `AffectsPlayerReversed` (`reversed`) of a template.
-bool ee_screens_aet_affects(size_t template_, int32_t player, int32_t other, bool reversed);
-
-/// `IsWithin(center, point, scale, unit)` of a template.
-bool ee_screens_aet_is_within(size_t template_,
-                              float center_x,
-                              float center_y,
-                              float point_x,
-                              float point_y,
-                              float scale,
-                              size_t unit);
 
 /// `Init(data)` of a template (`data` an `EEAreaEffectData*`, the record's layout).
 bool ee_screens_aet_init(size_t template_, size_t data);
@@ -18816,22 +18070,8 @@ bool ee_screens_civm_has_power(size_t player, long id);
 /// `SplitAttribute(upgrade, category, index)`: each out written when given.
 void ee_screens_civm_split(uint32_t upgrade, unsigned long *category, unsigned long *index);
 
-/// `MatchesPremadeCivilization(file, name, upgrades, name_id)` (`characters` the name's `GetLength()`).
-bool ee_screens_civm_matches(const char *file,
-                             const char *name,
-                             uint32_t characters,
-                             const uint32_t *upgrades,
-                             size_t count,
-                             long *name_id);
-
-/// `GetCategory(category, out)`: the record in place, `out` left alone without one.
-bool ee_screens_civm_category(uint32_t category, void **out);
-
 /// `GetCategoryNameID(category, out)`.
 bool ee_screens_civm_category_name_id(uint32_t category, long *out);
-
-/// `ToLegacy(upgrade, out)`.
-bool ee_screens_civm_to_legacy(uint32_t upgrade, unsigned long *out);
 
 /// `EELoadCivilization(name, directory, out name, out upgrades)` (`civ_load.rs`; the `UString*`s, the
 /// `UWideString*` and the `std::vector<EECivUpgrade>*`) -> its result.
@@ -18851,12 +18091,6 @@ size_t ee_screens_sci_get();
 
 /// `EEUISCIFormManager::OpenMap`.
 bool ee_screens_sci_open_map(size_t m);
-
-/// `EEUISCIFormManager::OpenScenario`.
-bool ee_screens_sci_open_scenario(size_t m);
-
-/// `EEUISCIFormManager::OpenSound`.
-bool ee_screens_sci_open_sound(size_t m);
 
 /// `EEUISCIFormManager::GetMap` (`spec` the `FSFileSpec*` out).
 bool ee_screens_sci_get_map(size_t m, size_t spec);
@@ -18901,9 +18135,6 @@ void ee_screens_sbt_construct(size_t button, size_t manager, size_t rectangle, s
 /// `~EEUIFMGStatusButton`'s body.
 void ee_screens_sbt_destroy(size_t button);
 
-/// `EEUIFMGStatusButton::ReleaseButton`.
-void ee_screens_sbt_release(size_t button);
-
 /// `EEUIFMGStatusButton::DrawPolygons`.
 int64_t ee_screens_sbt_draw_polygons(size_t button);
 
@@ -18913,17 +18144,8 @@ int64_t ee_screens_sbt_draw_text(size_t button);
 /// `EEUIFMGStatusButton::HotKeyUp`.
 void ee_screens_sbt_hot_key_up(size_t button);
 
-/// `EEUIFMGStatusButton::SetCommandButton`.
-void ee_screens_sbt_set_command(size_t button, uint32_t index);
-
-/// `EEUIFMGStatusButton::SetTechButton`.
-void ee_screens_sbt_set_tech(size_t button, int64_t technology, uint32_t kind, uint32_t id);
-
 /// `EEUIFMGStatusButton::SetLocation`.
 void ee_screens_sbt_set_location(size_t button, float x, float y);
-
-/// `EEUIManager::Fn26FA6A` (`set`) / `Fn26FA55`.
-void ee_screens_sbt_main_group_refill(bool set);
 
 /// `EEUserInterface::ChangeRasterizer`.
 void ee_screens_ui_change_rasterizer(long rasterizer, long screen);
@@ -19074,6 +18296,8 @@ void ee_screens_ui_post_icon_bar_once(EeScreensUserInterfaceFields *rec);
 /// several humans also `EEMLoadPercent(mLocalPlayer, percent)` at every new 20 percent step.
 void ee_screens_ui_set_load_progress(const EeScreensUserInterfaceFields *rec,
                                      float fraction);
+
+extern ptrdiff_t ee_screenscpp_rec_offset(uint32_t kind);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,

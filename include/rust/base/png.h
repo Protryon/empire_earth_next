@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
-struct EeOfTexture;
+#include "rust/base/records.h"
 
 #endif  // EE_RUST_BASE_PNG_H

@@ -56,8 +56,6 @@ public:
     void PostFadeOut(unsigned long inValue) { this->mThread->Post(0x507, reinterpret_cast<void*>(inValue), NULL, true); }
     void PostLetterboxIn(unsigned long inValue) { this->mThread->Post(0x508, reinterpret_cast<void*>(inValue), NULL, true); }
     void PostLetterboxOut(unsigned long inValue) { this->mThread->Post(0x509, reinterpret_cast<void*>(inValue), NULL, true); }
-    // 0x10a91e: Post(0x50a, 0, 0, true), then waits on +0x6c when it worked
-    long PostMessage50AAndWait() { return ee_gamecpp_gfx_post_50a_and_wait(this); }
 
     // Members from the ctor 0x10977e: GERectangle's inline ctor (top, left, bottom, right =
     // +0x68, +0x60, +0x5c, +0x64), then after the vptr `mov dword ptr [+0x70], 0` (a plain long would be `and`:

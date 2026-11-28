@@ -6,14 +6,12 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/controlobj.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
+#include "rust/ui/records.h"
 
 /// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
 /// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The
-/// first 24 are [`CONTROL_KEYS`]' order (`ee_uicpp_control_key_fetch`'s slot); the mouse three are
-/// `ee_uicpp_mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
+/// first 24 are [`CONTROL_KEYS`]' order (`control_key_fetch`'s slot); the mouse three are
+/// `mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
 enum class EeUiKey : uint32_t {
   Space = 0,
   Enter,

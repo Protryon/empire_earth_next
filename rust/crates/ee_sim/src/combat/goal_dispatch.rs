@@ -1,7 +1,7 @@
 //! The combat goals on the core lane's generic `EEUGRust` (R5b.2, the twelfth round): ee_units' `ee_units_rust_goal`
 //! hands the kinds it does not own to [`rust_goal`] (registered by ee_rust at start-up), with the same operation
 //! numbers (`EE_UNITS_GOAL_*`) and the same C++ host (`EeUnitsGoalHost`, mirrored as `EeCombatGoalTable`; the combat
-//! goals' own operations are its cases from 1000, EEUGRustCombat.cpp). Here each operation of the attack on the ground
+//! goals' own operations are its cases from 1000, EEUGRust.cpp's GoalOp). Here each operation of the attack on the ground
 //! (`kGoalAttackGround`), on a unit (`kGoalAttackUnit`) and of the heal goal (`kGoalHealUnit`) runs its body
 //! (goal_objects.rs, goal_attack.rs, goal_heal.rs) and the texts are formatted (the debug line and text, the
 //! out-of-synch dump, appended through the host).
@@ -45,7 +45,7 @@ pub(crate) const HOST_UNIT_ID: i32 = 3;
 pub(crate) const HOST_UNIT_TILE: i32 = 4;
 pub(crate) const HOST_HIT_POINTS: i32 = 64;
 
-// the combat goals' own operations (EEUGRustCombat.cpp's accessors call them): `io.f` the point
+// the combat goals' own operations (EEUGRust.cpp's GoalOp call them): `io.f` the point
 /// a new attack on the ground at `io.f`
 pub const EE_COMBAT_GOAL_NEW_GROUND: i32 = 200;
 /// a new attack: `a` the attacker, `b` the target, `io.i[0]` the convert flag; `io.i[0]` 2: the load's empty one

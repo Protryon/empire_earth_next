@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/dirlist.h"
+#include "rust/won_net/records.h"
 
 /// The host's statements (`obj` the list or a server, `a`, `b` as each says).
 enum class EeWonDirReadOp {
@@ -26,7 +26,7 @@ enum class EeWonDirReadOp {
   ServerAddressAdd,
 };
 
-/// The host: `(op, obj, a, b)`.
+/// The host: `(op, obj, a, b)`; NULL in the game, whose statements are the model's own calls ([`game_op`]).
 using EeWonDirReadHost = ptrdiff_t(*)(EeWonDirReadOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
 extern "C" {

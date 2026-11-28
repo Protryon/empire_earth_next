@@ -25,6 +25,7 @@
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUIShell.h"
+#include "rust/game/gamecpp.h"
 
 // The terrain name order (0x1aee71): the localized terrain names compared without case (editor_setnx.rs
 // terrain_less). It has no state and returns via ret 8 (provisional name).
@@ -146,8 +147,8 @@ extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETNX_BITMAP_RELEASE: static_cast<GEBitmap*>(p[1])->Dereference(); return 0;
     case EE_SCREENS_SETNX_UIBITMAP_ADD: EESEForm(p)->AddControl(static_cast<UIBitmap*>(p[2]), 3); return 0;
     case EE_SCREENS_SETNX_UIBITMAP_CONTROL: EESEOutSlot(p) = static_cast<UIControl*>(static_cast<UIBitmap*>(p[1])); return 0;
-    case EE_SCREENS_SETNX_LOAD_PREVIEWS: EELoadTerrainPreviews(); return 0;
-    case EE_SCREENS_SETNX_RELEASE_PREVIEWS: EEReleaseTerrainPreviews(); return 0;
+    case EE_SCREENS_SETNX_LOAD_PREVIEWS: ee_gamecpp_db_terrain_previews(true); return 0;
+    case EE_SCREENS_SETNX_RELEASE_PREVIEWS: ee_gamecpp_db_terrain_previews(false); return 0;
     case EE_SCREENS_SETNX_COLORS_SELECTION: return (int32_t)SetnxColors(p[1])->GetCurrentSelection(*static_cast<unsigned long*>(p[2]));
     case EE_SCREENS_SETNX_TYPES_SELECTION: return (int32_t)SetnxTypes(p[1])->GetCurrentSelection(*static_cast<unsigned long*>(p[2]));
     case EE_SCREENS_SETNX_LINE_TEXTURE: EESEOutSlot(p) = SetnxTypes(p[1])->GetData((unsigned long)i[0]).mTexture; return 0;

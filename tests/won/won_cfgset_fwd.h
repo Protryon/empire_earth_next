@@ -103,6 +103,8 @@ struct OrigWONButton : WONButton {
     void SetScaleImage(bool v) { this->WSet(EeWonWbField::ScaleImage,v); }
     void SetFocusStyle(unsigned char v) { this->WSet(EeWonWbField::FocusStyle,v); }
     void SetTransparent(bool t) { this->WCall(EeWonWbCall::SetTransparent,t); }
+    // (the game header lost it: uncalled there since R6 WON GUI round 41)
+    void SetButtonState(int s,Image* i,int c,Font* f,bool checked=false) { ee_won_wonbtn_set_state(this->mWb,s,i,c,f,checked); }
 };
 template<> struct OrigOf<WONButton> { typedef OrigWONButton type; };
 struct OrigSplitter : Splitter {

@@ -6,19 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
-};
+#include "rust/ui/records.h"
 
 #endif  // EE_RUST_UI_RECT_H

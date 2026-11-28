@@ -12,7 +12,7 @@
 // the C ABI's `long`/`unsigned long` are 32-bit on Windows and 64-bit on LP64: the casts are not no-ops there
 #![allow(clippy::unnecessary_cast)]
 
-use std::ffi::{c_char, c_ulong, c_void, CStr};
+use std::ffi::{c_char, c_void, CStr};
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicPtr, AtomicU32, Ordering};
 use std::sync::Mutex;
@@ -415,25 +415,6 @@ pub unsafe extern "C" fn ee_sound_sample_set_pan(s: *mut EeSoundSample, v: f32) 
 #[no_mangle]
 pub unsafe extern "C" fn ee_sound_sample_set_pitch(s: *mut EeSoundSample, v: f32) -> i32 {
     unsafe { mixerobj::spim(sample(s).mixer).set_sample_pitch.expect("SPIMSetSamplePitch")(s.cast(), v) as i32 }
-}
-/// `SetOffset` (`SPIMSetSampleOffset`).
-///
-/// # Safety
-/// `s` is a live sample.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_sample_set_offset(s: *mut EeSoundSample, offset: u32) -> i32 {
-    unsafe {
-        mixerobj::spim(sample(s).mixer).set_sample_offset.expect("SPIMSetSampleOffset")(s.cast(), offset as c_ulong)
-            as i32
-    }
-}
-/// `GetSampleOffset` (`SPIMGetSampleOffset`).
-///
-/// # Safety
-/// `s` is a live sample.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_sample_offset(s: *mut EeSoundSample) -> u32 {
-    unsafe { mixerobj::spim(sample(s).mixer).get_sample_offset.expect("SPIMGetSampleOffset")(s.cast()) as u32 }
 }
 /// `LoadWaveData(spec)` (`SPIMLoadWaveData`).
 ///

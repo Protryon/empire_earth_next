@@ -94,18 +94,6 @@ pub unsafe extern "C" fn ee_fs_mem_compress(file: *mut EeFsMemFile, level: u32, 
     result
 }
 
-/// `Decompress`.
-///
-/// # Safety
-/// `file` is live, `out_length` valid for a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_decompress(file: *mut EeFsMemFile, out_length: *mut u32) -> i32 {
-    // SAFETY: the function's contract
-    let (result, length) = unsafe { (*file).decompress() };
-    unsafe { *out_length = length };
-    result
-}
-
 /// `Delete`.
 ///
 /// # Safety
@@ -258,16 +246,6 @@ pub unsafe extern "C" fn ee_fs_mem_write(
 pub unsafe extern "C" fn ee_fs_mem_set_position(file: *mut EeFsMemFile, offset: i64, origin: u32) -> i32 {
     // SAFETY: the function's contract
     unsafe { (*file).set_position(offset, origin) }
-}
-
-/// Whether the file is open (`mIsOpen`, read by the facade).
-///
-/// # Safety
-/// `file` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fs_mem_is_open(file: *const EeFsMemFile) -> bool {
-    // SAFETY: the function's contract
-    unsafe { (*file).is_open() }
 }
 
 /// Sets the open flag (`FOpen`, which owns the temporary file, drives it).
@@ -645,28 +623,6 @@ pub unsafe extern "C" fn ee_fs_archive_list(
     for name in unsafe { (*archive).list_matching(c_bytes(pattern)) } {
         give_text(sink, context, &name);
     }
-}
-
-/// `ListFiles(pattern, files, clear)`: with `clear` a null text to `sink` first (the C++ clears its set), then
-/// [`ee_fs_archive_list`]; always `kErrorOK`.
-///
-/// # Safety
-/// As [`ee_fs_archive_list`]; `sink` takes a null text.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fs_archive_list_files(
-    archive: *const Archive,
-    pattern: *const c_char,
-    clear: bool,
-    sink: EeFsTextSink,
-    context: *mut c_void,
-) -> i32 {
-    if clear {
-        // SAFETY: the function's contract
-        unsafe { sink(context, std::ptr::null()) };
-    }
-    // SAFETY: the function's contract
-    unsafe { ee_fs_archive_list(archive, pattern, sink, context) };
-    status::OK
 }
 
 /// Visits a FAT entry; `name` is valid during the call.

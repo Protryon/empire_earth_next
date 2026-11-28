@@ -5,9 +5,10 @@
 // ee/EEUIBUpgrade.h.
 #ifndef EE_EEUIFMGSTATUSBAR_H
 #define EE_EEUIFMGSTATUSBAR_H
-#include "rust/game/screens.h"
 
-#include "lle/LLEForward.h"
+#include "ee/EEUIBUpgrade.h"
+#include "lle/UITextLabel.h"
+#include "rust/game/records.h"
 
 class EEUIFMGStatusBar : public EEUIBUpgrade, public EeScreensStatusBarFields {
 public:

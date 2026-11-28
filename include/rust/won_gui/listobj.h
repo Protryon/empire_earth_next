@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (the C++ shell's virtuals and methods). Items are `ListItem*`s.
 enum class EeWonListCall : uint32_t {
@@ -98,9 +98,6 @@ enum class EeWonListCall : uint32_t {
   /// `mPaintWidth = a`.
   SetPaintWidth,
 };
-
-/// The Rust ListArea.
-struct EeWonList;
 
 /// A click the list delivers (`ListItemClickedEvent`'s arguments besides the item; `DeliverItemClicked`'s `b`).
 struct EeWonItemClick {

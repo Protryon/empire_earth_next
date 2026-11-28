@@ -6,9 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/authlogin.h"
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/ipobj.h"
+#include "rust/won_net/records.h"
 
 /// A plain member of the lobby's private state.
 enum class EeWonLobbyPrvField : uint32_t {

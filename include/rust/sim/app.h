@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/sim/units.h"
+#include "rust/sim/records.h"
 
 /// id -> text, len: the string resource
 constexpr static const int32_t EE_APP_CHEAT_OP_STRING = 1;
@@ -94,33 +94,11 @@ constexpr static const int32_t EE_APP_STORM_OP_RANDOM = 13;
 /// the environment manager's colour back to the storm colour
 constexpr static const int32_t EE_APP_STORM_OP_RESET_COLOR = 14;
 
-/// The cheat table (`mCodes`, `mIsSinglePlayerOnly`).
-struct EeAppCheats;
-
 /// A unit set.
 struct EeUnitSet;
 
-/// The map's numbers the bodies read (`RTSMap`'s and `EEMap`'s plain members, names kept).
-struct EeAppMapDims {
-  /// `mSize`: the square's side in tiles
-  long size;
-  /// `mL195610` and `mL195614`: the diamond's two side lengths
-  long l195610;
-  long l195614;
-  /// `mF1955F4`: the tile height (`GetF1955F4`)
-  float f1955f4;
-  /// `mU195650`: the base terrain; `mU19565C`: the cliff terrain
-  long base_terrain;
-  long cliff_terrain;
-  /// `mU19561C`: the player count
-  unsigned long players;
-};
-
 /// A unit's reference count changed by `delta` (the C++'s `Reference` / `Dereference`, applied at once).
 using EeAppActiveRefsFn = void(*)(uint32_t, int32_t);
-
-/// The C++'s own step between the queues' and the lists' references (`Clear`'s unborn deactivations).
-using EeAppActiveBetweenFn = void(*)();
 
 /// One host operation's arguments and answers.
 struct EeAppCheatIo {
@@ -190,25 +168,6 @@ struct EeAppStatsRecord {
   long play_time;
 };
 
-/// The storm's plain members (names and order the C++ class's).
-struct EeAppStormFields {
-  /// = 1; clamped to [0, 2]
-  float mTargetIntensity;
-  /// = 1; the weather effect's intensity follows it
-  float mIntensity;
-  /// = 0.02: the fade's relative step
-  float mStep;
-  /// the kind (1..4)
-  long mType;
-  /// = 1; the step's state (2 routing, 3 moving, 4 pausing, 5 dying, 6 over, 7 lingering, 8 to route again)
-  long mState;
-  unsigned long mNextMoveTime;
-  /// = -1
-  unsigned long mEndTime;
-  /// a hurricane or a blizzard
-  bool mIsSevere;
-};
-
 /// One host operation's arguments and answers.
 struct EeAppStormIo {
   bool flag;
@@ -236,16 +195,6 @@ struct EeAppTeamsWorld {
 /// A unit-type callback (`EEUnitSetFunctor::Execute` through its C++ trampoline): false stops the walk.
 using EeUnitSetVisit = bool(*)(void *functor, uint32_t unit_type);
 
-/// `EEVoting`'s members (the class's base; zero when made).
-struct EeAppVoting {
-  /// the proposed edict (0: none)
-  int16_t mEdict;
-  int16_t mU06;
-  bool mB08;
-  bool mB09;
-  bool mB0A;
-};
-
 extern "C" {
 
 /// `ActivateUnit` after its checks -> true when queued (take a reference).
@@ -259,12 +208,6 @@ bool ee_app_active_deactivate(uint32_t id);
 /// # Safety
 /// `refs` is callable with any queued unit's id.
 void ee_app_active_update(EeAppActiveRefsFn refs);
-
-/// Every list emptied, the references dropped through `refs` (`between` after the queues').
-///
-/// # Safety
-/// As [`ee_app_active_update`]; `between` callable.
-void ee_app_active_clear(EeAppActiveRefsFn refs, EeAppActiveBetweenFn between);
 
 /// A unit stepped from now (two references taken by the caller).
 void ee_app_active_start(uint32_t id);
@@ -361,29 +304,6 @@ EeAppCheats *ee_app_cheats_new(EeAppCheatFn call, void *ctx);
 /// `p` came from [`ee_app_cheats_new`] (or is null) and is not used again.
 void ee_app_cheats_free(EeAppCheats *p);
 
-/// `ParseCheatCode(text)`: `code` and (when the line ends in a number) `parameter`.
-///
-/// # Safety
-/// `p` is live, `text` holds `len` bytes, the outputs are live; `call` and `ctx` are live for the call.
-void ee_app_cheats_parse(const EeAppCheats *p,
-                         EeAppCheatFn call,
-                         void *ctx,
-                         const uint8_t *text,
-                         size_t len,
-                         long *code,
-                         long *parameter);
-
-/// `ApplyCheatCode(code, player, parameter)`.
-///
-/// # Safety
-/// `p` is live; `call` and `ctx` are live for the call.
-void ee_app_cheats_apply(const EeAppCheats *p,
-                         EeAppCheatFn call,
-                         void *ctx,
-                         long code,
-                         long player,
-                         long parameter);
-
 /// `mGhostUnits.size()`.
 size_t ee_app_ghost_count();
 
@@ -420,12 +340,6 @@ size_t ee_app_record_statistics(const EeAppStatsWorld *world,
                                 size_t cap,
                                 long *current_index,
                                 bool *is_scenario);
-
-/// `EEEMStorm(kind)`'s plain members.
-///
-/// # Safety
-/// `out` is live.
-void ee_app_storm_init(EeAppStormFields *out, long kind);
 
 /// `Step(time)`: the record copied in, the step run, copied back (no host op touches it).
 ///
@@ -470,12 +384,6 @@ int32_t ee_app_team_save(void *file,
 
 /// `mTeams[team].ContainsPlayer(player)` (false past the end).
 bool ee_app_teams_contains(size_t team, uint32_t player);
-
-/// `EEWorld::AddTeam` of `n` players.
-///
-/// # Safety
-/// `players` holds `n` ids; `w` as [`calls`].
-void ee_app_teams_add(const uint32_t *players, size_t n, const EeAppTeamsWorld *w);
 
 /// `EEWorld::AddAlliance`.
 ///

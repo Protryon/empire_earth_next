@@ -335,31 +335,6 @@ pub extern "C" fn ee_preload_main(p: *mut c_void) -> c_ulong {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_preload_handle_message(
-    p: *mut c_void,
-    message: u32,
-    parameter1: *mut c_void,
-    parameter2: *mut c_void,
-) {
-    handle_message(p as P, message, parameter1 as usize, parameter2 as usize)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_preload_queue_message(
-    p: *mut c_void,
-    message: u32,
-    parameter1: *mut c_void,
-    parameter2: *mut c_void,
-) {
-    queue_message(p as P, message, parameter1 as usize, parameter2 as usize)
-}
-
-#[no_mangle]
-pub extern "C" fn ee_preload_flush_queue(p: *mut c_void) {
-    flush_queue(p as P)
-}
-
-#[no_mangle]
 pub extern "C" fn ee_preload_start_queueing() {
     state().queueing = true;
 }

@@ -6,11 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/buffer.h"
-#include "rust/won_net/dir.h"
-#include "rust/won_net/ffi.h"
-#include "rust/won_net/ipobj.h"
-#include "rust/won_net/ops.h"
+#include "rust/won_net/records.h"
 
 /// `GetStatus()` -> out_num
 constexpr static const int32_t EE_WON_HOST_STATUS = 1;
@@ -443,167 +439,16 @@ constexpr static const int64_t EE_WON_HOST_OP_RECV_BYTES_FROM = 7;
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
-/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
-enum class EeWonCoreObject {
-  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
-  Op = 0,
-  /// a `SocketOp*`'s [`EeWonSocketOp`]
-  SocketOp = 1,
-  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
-  Socket = 2,
-  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
-  Queue = 3,
-  /// a `UDPManager*`'s [`EeWonUdpManager`]
-  UdpManager = 4,
-  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
-  UdpRecv = 5,
-  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
-  UdpSendRecv = 6,
-  /// a `ServerConnection*`'s [`EeWonServerConn`]
-  ServerConn = 7,
-  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
-  RouteOp = 8,
-  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
-  RouteConn = 9,
-  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
-  AuthCtx = 10,
-  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
-  HostOp = 11,
-  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
-  HttpConn = 12,
-  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
-  Lock = 13,
-  /// an `HTTPSession*`'s [`EeWonHttpSession`](crate::httpengine::EeWonHttpSession)
-  HttpSession = 14,
-  /// a `ServerContext*`'s [`ServerList`](crate::servctx::ServerList)
-  Context = 15,
-};
-
-/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
-enum class EeWonCoreSocketOp {
-  /// `new CloseOp(socket)`
-  Close = 0,
-  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
-  QueueClose = 1,
-  /// `new RecvBytesFromOp(size, socket)`
-  RecvFrom = 2,
-  /// `new SendBytesToOp(bytes, addr, socket)`
-  SendTo = 3,
-  /// `new RecvMsgOp(socket)`
-  RecvMsg = 4,
-  /// `new SendMsgOp(bytes, socket)`
-  SendMsg = 5,
-  /// `new ConnectOp(addr, socket)`
-  Connect = 6,
-  /// `new SendBytesOp(bytes, socket)`
-  SendBytes = 7,
-  /// `new RecvBytesOp(size, socket)`
-  RecvBytes = 8,
-  /// `new RecvCRMsgOp(socket)`
-  RecvCrMsg = 9,
-  /// `new AcceptOp(socket)`
-  Accept = 10,
-};
-
-/// `AsyncOp`'s state, lock, completion and container.
-struct EeWonAsyncOp;
-
-/// A completion's call in Rust (round 24): what the C++ `RustCompletion` runs when completed (with the op, an
-/// `AsyncOp*`, the caller holding a reference for the call), and what it frees when deleted. The tracker's
-/// completion (`TrackerCompletion`, deleted) and the op base's timer and repeat completions (`HostCompletion`,
-/// deleted) are these.
-struct EeWonCompletion;
-
-/// An op of the Rust op base, as the C++ `RustServerOp` holds it.
-struct EeWonHostOp;
-
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
-
-/// `AsyncOpTracker`: the ops tracked by id (a reference each), in id order; among equal ids the latest first (the
-/// original's hinted multimap insert at the id's first entry); an op tracked once (every tracker was made with
-/// duplicate ids allowed, duplicate ops not). The lock is the platform's recursive mutex.
-struct EeWonOpTracker;
-
-/// `ThreadBase` + `Thread`'s state.
-struct EeWonThread;
 
 /// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
 
-/// A C++ call on one object.
-using EeWonCoreFn = void(*)(void *object);
-
-/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
-/// object holds no reference yet.
-struct EeWonCoreHooks {
-  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
-  EeWonCoreFn ref_add;
-  EeWonCoreFn ref_release;
-  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
-  void (*completion_call)(void *completion, void *op);
-  /// the object's Rust object of that kind (null for a null object or one not of the kind's class)
-  void *(*object_of)(void *object, EeWonCoreObject kind);
-  /// a socket op's virtual `Duplicate()` (a new op, or null)
-  void *(*socketop_duplicate)(void *op);
-  /// `new AsyncOp`
-  void *(*new_op)();
-  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
-  void *(*new_completion)(EeWonCompletion *body);
-  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
-  void *(*new_socket_op)(EeWonCoreSocketOp kind,
-                         void *socket,
-                         void *bytes,
-                         const EeWonIpAddr *addr,
-                         uint32_t size);
-  /// `new QueueSocket(type)`, or `new BlockingSocket(type)` (the ops' own sockets)
-  void *(*new_queue_socket)(int32_t kind, bool blocking);
-  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
-  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
-  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
-  void *udp_response_check;
-  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
-  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
-  /// a `ByteBuffer`'s bytes (its `mBytes`)
-  const EeWonByteBuffer *(*bytes_of)(void *buffer);
-  /// a socket op's virtual `Continue()`
-  long (*socketop_continue)(void *op);
-  /// a socket op's virtual `Start()`
-  long (*socketop_start)(void *op);
-  /// `WONAPICore::AddToSocketThread(op)`
-  EeWonCoreFn socket_thread_add;
-  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
-  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
-  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
-  /// result's
-  long (*transform)(void *socket, void **message, bool send);
-  /// the socket's virtual `Duplicate()`: a new, unopened socket of its class (no reference yet)
-  void *(*socket_duplicate)(void *socket);
-  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
-  void (*socket_hook)(void *socket, int32_t which);
-  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
-  void *(*new_route_op)(void *conn, int32_t ty);
-  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
-  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
-  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
-  /// `new HTTPConnection(NULL)`
-  void *(*new_http_conn)();
-};
-
 /// `new RustServerOp(op)`: the C++ op of a Rust op on the op base (it takes `op`; no reference yet). ServerOp.cpp
 /// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
 using EeWonNewHostOp = void*(*)(EeWonHostOp *op);
-
-/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
-struct EeWonServerConnCpp {
-  /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
-  void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
-  /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
-  void (*msg_callback)(void *conn, void *message);
-};
 
 /// One call of the op on the C++ side: the code, its inputs, its outputs. Bytes come back through `out_sink`
 /// (not called: NULL).
@@ -662,9 +507,6 @@ struct EeWonAsyncOpHooks {
   /// the virtual `AsyncOpWithTracker::CallbackHook(child, param)` of `op`
   bool (*callback_hook)(void *op, void *child, int32_t param);
 };
-
-/// A logic's `RemoveTrackedOp(op)`: whether the op was tracked (and is not any more).
-using EeWonRemoveTrackedFn = bool(*)(void *logic, void *op);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).

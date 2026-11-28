@@ -6,11 +6,24 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guidraw.h"
-#include "rust/won_gui/platfont.h"
+#include "rust/won_gui/records.h"
+
+/// The kind of a Rust-made RefCount that is a game WrappedText (guistrobj.rs's texts are 0, wmobj.rs's events 1,
+/// soundobj.rs's sounds 2).
+constexpr static const uint32_t EE_WON_RC_WRAP = 3;
 
 /// The Rust WrappedText (the original's members but the text and font).
 struct EeWonWrapText;
+
+/// Where the classes that hold one keep their wrapped text, and `Font::mRust` (offsets in a `Label`, an
+/// `MSButtonBase` and a `Font`; GuiHost.cpp registers them; R6 WON GUI rounds 40-41).
+struct EeWonWrapAt {
+  /// `Label::mWrappedText`, `MSButtonBase::mText` (SmartPtrs)
+  size_t label_text;
+  size_t msbtn_text;
+  /// `Font::mRust`
+  size_t font_rust;
+};
 
 extern "C" {
 
@@ -106,6 +119,24 @@ size_t ee_won_wrap_paint_font(const EeWonWrapText *o,
                               int32_t y,
                               EeWonDrawOp *out,
                               size_t cap);
+
+/// Registers the holders' offsets (GuiHost.cpp at static initialisation).
+///
+/// # Safety
+/// `at` points at the offsets.
+void ee_won_wrap_register(const EeWonWrapAt *at);
+
+/// `new WrappedText` (no reference yet): the empty text, no font, wrapping, not centred.
+void *ee_won_wrapt_new();
+
+/// One of WrappedText's methods on the game's wrapped text `w` (`which`; `c` the argument): `SetText(*(const
+/// GUIString*)c)`, the setters that may rewrap, the size, `GetFont()` and `&GetText()`.
+///
+/// # Safety
+/// `w` is a live object of `ee_won_wrapt_new`; `c` as the method needs it.
+ptrdiff_t ee_won_wrapt_call(void *w,
+                            EeWonWbText which,
+                            ptrdiff_t c);
 
 }  // extern "C"
 

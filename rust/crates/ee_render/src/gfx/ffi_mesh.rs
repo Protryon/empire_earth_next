@@ -7,7 +7,6 @@ use std::ffi::c_void;
 
 use ee_base::math::types::{Ge3DPoint, GeVector};
 
-use crate::gfx::beam::{self, EeGfxBeamVertex};
 use crate::gfx::effect_store::EffectStore;
 use crate::gfx::effects::EeGfxColor;
 use crate::gfx::farm::{self, EeGfxFarmField, FarmTerrain};
@@ -75,29 +74,6 @@ pub unsafe extern "C" fn ee_gfx_farm_ground(
         let f = *field;
         let mut mesh = Mesh::new(slice_mut(vertices, vertex_count), slice_mut(triangles, triangle_count));
         farm::ground(&f, &mut CppFarmTerrain(terrain), &mut mesh)
-    }
-}
-
-/// `EEE3DFarm::BuildCrops`' mesh: `rows` crop rows per tile row, `height` tall; returns the models' place.
-///
-/// # Safety
-/// As `ee_gfx_farm_ground`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_farm_crops(
-    field: *const EeGfxFarmField,
-    rows: u32,
-    height: f32,
-    terrain: EeGfxFarmTerrain,
-    vertices: *mut EeGfxMeshVertex,
-    vertex_count: usize,
-    triangles: *mut EeGfxMeshTriangle,
-    triangle_count: usize,
-) -> Ge3DPoint {
-    // SAFETY: the function's contract (the field copied first)
-    unsafe {
-        let f = *field;
-        let mut mesh = Mesh::new(slice_mut(vertices, vertex_count), slice_mut(triangles, triangle_count));
-        farm::crops(&f, rows, height, &mut CppFarmTerrain(terrain), &mut mesh)
     }
 }
 
@@ -201,28 +177,6 @@ pub unsafe extern "C" fn ee_gfx_volcano_build(
             &mut mesh,
         )
     }
-}
-
-/// `EEE3DTracerBeam::DrawPass6`'s stretch of `count` vertices in place (length, width, texture scroll).
-///
-/// # Safety
-/// `vertices` holds `count` records (or is null).
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_beam_stretch(
-    vertices: *mut EeGfxBeamVertex,
-    count: usize,
-    length: f32,
-    width: f32,
-    scroll: f32,
-) {
-    // SAFETY: the function's contract
-    beam::stretch(unsafe { slice_mut(vertices, count) }, length, width, scroll);
-}
-
-/// `DrawPass6`'s stretch of a sub-model's internal y.
-#[no_mangle]
-pub extern "C" fn ee_gfx_beam_stretch_y(y: f32, length: f32) -> f32 {
-    beam::stretch_y(y, length)
 }
 
 // ---- the effect manager's capture (effect_store.rs, ffi_manager.rs)

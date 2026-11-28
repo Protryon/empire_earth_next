@@ -31,6 +31,7 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESMArea.h"
 #include "ee/EESEARust.h"
+#include "rust/sim/scenario.h"
 
 
 // Sets the map rectangle the editor highlights
@@ -68,7 +69,7 @@ extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i
     void** theOut = static_cast<void**>(p[2]);
     EESMArea* theArea = static_cast<EESMArea*>(p[0]);
     switch (inOp) {
-    case EE_SCREENS_SEAR_OP_NAMES: gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_AREAS, *static_cast<std::vector<UWideString>*>(p[0])); return 0;
+    case EE_SCREENS_SEAR_OP_NAMES: ee_scenario_en_list(gWorld.mScenarioManager, EE_SCENARIO_LS_NAMES, (unsigned long)(EE_SCENARIO_NAMES_USER_AREAS), 0, 0, &(*static_cast<std::vector<UWideString>*>(p[0]))); return 0;
     case EE_SCREENS_SEAR_OP_HIGHLIGHT: SearEditor()->GetBrushGroup()->SetIsHighlightShown(i[0] != 0); return 0;
     case EE_SCREENS_SEAR_OP_PAINT_AREA: SearEditor()->SetPaintArea(GERectangle(f[0], f[1], f[2], f[3])); return 0;
     case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->GetIsUIHidden();

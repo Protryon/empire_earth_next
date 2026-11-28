@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const int32_t EE_WON_COMP_FLAG_INVISIBLE = 1;
@@ -317,6 +317,8 @@ enum class EeWonComp : uint32_t {
   GNew,
   /// `delete (BackgroundGrabber*)b`.
   GDelete,
+  /// `MouseWheel(c)` (the manager's wheel to the topmost popup, R6 WON GUI round 40).
+  VMouseWheel,
 };
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -341,23 +343,6 @@ enum class EeWonCompExtra : uint32_t {
 /// owned; no code ever set the tool tip. A world's host (the drivers and the crate's tests) still answers
 /// `AllocExtra`, `Extra` and `SetExtra` with its own.
 struct EeWonCompExtraData;
-
-/// A component event's record (the C++ `ComponentEvent::mEv`, R6 WON GUI round 39): the original's
-/// ComponentEvent members and its GUI subclasses' (ListItemClickedEvent, ComboSelChangedEvent, TreeItemOpenedEvent,
-/// TextLinkActivatedEvent: one class since then), read and set in place by Rust in the game. `comp` is the
-/// component (held: the original's `mComponentRef` beside the same `mComponent`), `item` the clicked or selected
-/// list item, the opened tree row or the activated link (held); `flag` a click's double click or a combo
-/// selection's active selection.
-struct EeWonCompEventRec {
-  ptrdiff_t comp;
-  int32_t kind;
-  uint8_t broadcast;
-  uint8_t flag;
-  int32_t button;
-  int32_t x;
-  int32_t y;
-  ptrdiff_t item;
-};
 
 extern "C" {
 

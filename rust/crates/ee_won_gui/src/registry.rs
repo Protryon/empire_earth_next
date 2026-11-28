@@ -60,6 +60,8 @@ pub enum EeWonGuiKind {
     Shell,
     /// splitobj.rs `EeWonSplitter`
     Splitter,
+    /// multiobj.rs `EeWonMRow` (a multi-column row, by its `MultiListItem`)
+    MRow,
 }
 
 struct Maps {

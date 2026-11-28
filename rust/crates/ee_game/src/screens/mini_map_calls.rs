@@ -302,11 +302,6 @@ mod ffi {
     pub extern "C" fn ee_screens_mm_mouse_r_down(map: usize) -> i64 {
         super::mouse_r_down(&mut Ffi, map)
     }
-    /// `EEUIMiniMap::CenterCamera`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_mm_center_camera(map: usize) {
-        super::center_camera(&mut Ffi, map)
-    }
     /// `EEUIMiniMap::SetLocation`.
     #[no_mangle]
     pub extern "C" fn ee_screens_mm_set_location(map: usize, x: f32, y: f32) {

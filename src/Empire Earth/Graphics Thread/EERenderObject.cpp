@@ -11,7 +11,14 @@
 // inline ctors) follows the ghost-unit pass.
 #include <windows.h>
 
-#include "dx7/DX7Rasterizer.h"
+#include "lle/LowLevelEngine.h"
+#include "lle/GESurface.h"
+#include "lle/GETextureManager.h"
+#include "lle/GETexture.h"
+#include "lle/GEScreen.h"
+#include "lle/GEViewport.h"
+#include "lle/GERasterizer.h"
+#include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
@@ -41,6 +48,8 @@
 #include "ee/EEMouse.h"
 #include "ee/EEWheel.h"
 #include "ee/EEAreaEffectTemplate.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/screens.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -70,7 +79,8 @@ GEColor gU4E9220(1.0f, 1.0f, 1.0f);
 
 GEVector gU4E9210;                         // 0x4e9210 (the sun direction: Fn10C036, SetTerrainLighting)
 
-GELight gU4E9198;
+// the scene's one light (GELight's record, ee_ge light.rs; the DX7 rasterizer reads it directly)
+EeGeLight gU4E9198 = [] { EeGeLight theLight; ee_ge_light_init(&theLight); return theLight; }();
 unsigned long gU4E9190;                     // 0x4e9190 (gU4E9198's index in the rasterizer: AddLight/UpdateLight)
 
 GEViewport gU4E8F08;
@@ -156,13 +166,13 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoMusicFollowsBattle: return gMusicFollowsBattle;
     case O::RoMusicIntensity: return gMusicManager->mIntensity;
     case O::RoCollisionSphereMode: return gCollisionSphereMode;
-    case O::RoLightAttenuation0: gU4E9198.SetAttenuation0(f[0]);
+    case O::RoLightAttenuation0: gU4E9198.attenuation0 = f[0];
         break;
-    case O::RoLightAttenuation1: gU4E9198.SetAttenuation1(f[0]);
+    case O::RoLightAttenuation1: gU4E9198.attenuation1 = f[0];
         break;
-    case O::RoLightAttenuation2: gU4E9198.SetAttenuation2(f[0]);
+    case O::RoLightAttenuation2: gU4E9198.attenuation2 = f[0];
         break;
-    case O::RoLightStyle: gU4E9198.SetStyle((unsigned long)a[0]);
+    case O::RoLightStyle: gU4E9198.style = (unsigned long)a[0];
         break;
     case O::RoNewBitmap: return RO_P64(new GEBitmap);
     case O::RoBitmapDereference: ((GEBitmap*)p)->Dereference();
@@ -250,7 +260,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoWheelCount: return RO_CX->mNumWheels;
     case O::RoUnitAreaEffectCount: return (int64_t)RO_CX->mAffectingAreaEffects.mItems.size();
     case O::RoUnitAreaEffectKind: return RO_CX->mAffectingAreaEffects.mItems[a[0]]->mTemplate->mKind;
-    case O::RoUnitAreaEffectStrength: return RO_CX->mAffectingAreaEffects.mItems[a[0]]->GetStrength();
+    case O::RoUnitAreaEffectStrength: return (long)ee_screens_ae_strength((uintptr_t)RO_CX->mAffectingAreaEffects.mItems[a[0]]);
     case O::RoComplexInView: return RO_UN->mComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
     case O::RoComplexLocation: return RO_P64(&((EEComplexUnit*)p)->mPhysicalModel.GetLocation());
     case O::RoComplexIsFoundation: return ((EEComplexUnit*)p)->IsFoundation();
@@ -326,15 +336,15 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoTriggerSelectUnits: return RO_P64(dynamic_cast<EESEUICTriggerSelectUnits*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS)));
     case O::RoSelectionIsDrawn: return ((EEUICSelectUnits*)p)->GetIsDrawn();
     case O::RoTriggerSelectionIsDrawn: return ((EESEUICTriggerSelectUnits*)p)->GetIsDrawn();
-    case O::RoPickUnits: gUnitPicker.PickUnits(((EEUICSelectUnits*)p)->GetSelectionRectangle(), (EEPlayer*)a[0], 0, gU4E9230);
+    case O::RoPickUnits: ee_gamecpp_pz_box(&gUnitPicker, &(((EEUICSelectUnits*)p)->GetSelectionRectangle()), false, (EEPlayer*)a[0], 0, &gU4E9230);
         break;
-    case O::RoPickUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EEUICSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+    case O::RoPickUnitsInRectangle: ee_gamecpp_pz_box(&gUnitPicker, &(((EEUICSelectUnits*)p)->GetSelectionRectangle()), true, NULL, 0, &gU4E9230);
         break;
-    case O::RoPickTriggerUnitsInRectangle: gUnitPicker.PickUnitsInRectangle(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle(), 0, gU4E9230);
+    case O::RoPickTriggerUnitsInRectangle: ee_gamecpp_pz_box(&gUnitPicker, &(((EESEUICTriggerSelectUnits*)p)->GetSelectionRectangle()), true, NULL, 0, &gU4E9230);
         break;
-    case O::RoAmbientCountUnit: gAmbientSoundManager.mAnalyzer.CountUnit((EEComplexUnit*)p);
+    case O::RoAmbientCountUnit: ee_gamecpp_ambient_count_unit(&gAmbientSoundManager.mAnalyzer, (EEComplexUnit*)p);
         break;
-    case O::RoAmbientCountTree: gAmbientSoundManager.mAnalyzer.CountTree(RO_UN);
+    case O::RoAmbientCountTree: ee_gamecpp_ambient_count_tree(&gAmbientSoundManager.mAnalyzer, RO_UN);
         break;
     case O::RoAmbientFrameCountIncrement: gAmbientSoundManager.mFrameCount++;
         break;
@@ -353,15 +363,15 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoScreenPoint: GetScreenPoint(*(const GE3DPoint*)a[0], *(GE2DPoint*)a[1]);
         break;
-    case O::RoLightColor: gU4E9198.SetColor(GEColor(f[0], f[1], f[2]));
+    case O::RoLightColor: ee_ge_light_set_color(&gU4E9198, reinterpret_cast<const float(*)[3]>(f));
         break;
-    case O::RoLightIntensity: gU4E9198.SetIntensity(f[0]);
+    case O::RoLightIntensity: ee_ge_light_set_intensity(&gU4E9198, f[0]);
         break;
-    case O::RoLightDirection: gU4E9198.SetDirection(GEVector(f[0], f[1], f[2]));
+    case O::RoLightDirection: ee_ge_light_set_direction(&gU4E9198, reinterpret_cast<const float(*)[3]>(f));
         break;
-    case O::RoRastAddLight: gRasterizer->AddLight(gU4E9198, gScreenIndex, gU4E9190);
+    case O::RoRastAddLight: ee_dx7r_add_light(gRasterizer->mDX7, &gU4E9198, gScreenIndex, &gU4E9190);
         break;
-    case O::RoRastUpdateLight: gRasterizer->UpdateLight(gU4E9190, gU4E9198, gScreenIndex);
+    case O::RoRastUpdateLight: ee_dx7r_update_light(gRasterizer->mDX7, gU4E9190, &gU4E9198, gScreenIndex);
         break;
     // the textures, the text and the screen line the raster table makes
     case O::RoLoadTexture: return RO_P64(gTextureManager->LoadTexture(UString((const char*)a[0]), *(const GETextureDescription*)a[1]));
@@ -416,7 +426,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RrTexture32: return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport();
     case O::RrScreen: return (uint32_t)gScreenIndex;
     case O::RrObjects: return RO_P64(GERasterizer::RustObjects(gRasterizer, (void**)a[0]));
-    case O::RrOpacityOwn: return Fn23CEE2((EEComplexUnit*)p, a[0] != 0, *(float*)a[1]);
+    case O::RrOpacityOwn: return ee_units_ck_body(EE_UNITS_CK_DO_TRANSLUCENT, (uint64_t)(uintptr_t)(EEComplexUnit*)p, (uint64_t)a[1], a[0] != 0, 0) != 0;
     case O::RrModelCenter: *(GE3DPoint*)a[1] = RO_UN->GetModel()->mModels[a[0]]->GetCenterPoint();
         break;
     case O::RrPhysicalFrame: return ((EEComplexUnit*)p)->mPhysicalModel.GetFrame();

@@ -27,7 +27,6 @@ public:
     intptr_t LCall(EeWonLobbyDlgCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0) {
         return ee_won_lobbydlg_call(this->mLobbyDlg, c, a, b, cc); }
     const GUIString& InputText(int inMember); // the member input box's GetText()
-    const GUIString& InputTextOf(intptr_t inInput); // an input box's GetText(), gEmptyGUIString for NULL
     SmartPtr<LobbyGame> GetGame(); // the create game dialog's new game
 };
 template <EeWonLobbyDlgKind K> Component* NewLobbyDialog() { return new LobbyRustDialog(K); }

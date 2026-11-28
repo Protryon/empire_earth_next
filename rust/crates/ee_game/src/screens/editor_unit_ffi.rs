@@ -58,6 +58,12 @@ impl SeplHost for Host {
                         if let Some(r) = crate::screens::editor_seunx::ge_op(op, p, f) {
                             return r;
                         }
+                        // player p1's GetTechTree()->Get(i0) into the out slot (the tree is Rust's)
+                        if op == crate::screens::editor_seunx::EE_SCREENS_SEUNX_TREE_NODE {
+                            use crate::tech_tree::objects::{get, player_tree};
+                            *(p[0] as *mut usize) = get(player_tree(p[1]), i[0] as core::ffi::c_long);
+                            return 0;
+                        }
                         let p = p.map(|v| v as *mut c_void);
                         sys::ee_screenscpp_seunx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
                     };

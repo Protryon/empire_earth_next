@@ -254,37 +254,37 @@ pub const EE_UNITS_CU_FLOAT_TO_LONG: i32 = 614;
 pub const EE_UNITS_CU_SET_ANIMATION_FRAME: i32 = 615;
 /// graphic `a`'s `GetNumParts()`
 pub const EE_UNITS_CU_GRAPHIC_NUM_PARTS: i32 = 616;
-/// the scratch angles `= new float[b]`
+/// `new float[b]` (the new turret angles)
 pub const EE_UNITS_CU_SCRATCH_ANGLES_NEW: i32 = 617;
-/// the scratch angles' `[b] = b < c ? mTurretAngles[b] : 0.0f` (c: the old part count)
+/// the new angles a's `[b] = (unsigned long)b < (unsigned long)c ? mTurretAngles[b] : 0.0f`
 pub const EE_UNITS_CU_SCRATCH_ANGLE_COPY: i32 = 618;
-/// `mTurretAngles = the scratch angles`
+/// `mTurretAngles = the new angles a`
 pub const EE_UNITS_CU_TURRET_ANGLES_ASSIGN: i32 = 619;
 /// graphic `a`'s `GetOrbitalCount()`
 pub const EE_UNITS_CU_GRAPHIC_ORBITAL_COUNT: i32 = 620;
-/// the scratch orbitals `= b == 0 ? NULL : new EEOrbital*[b]`
+/// `b != 0 ? new EEOrbital*[b] : NULL` (the new orbitals)
 pub const EE_UNITS_CU_SCRATCH_ORBITALS_NEW: i32 = 621;
-/// the scratch orbitals' `[b] = new EEOrbital(*graphic a->mOrbitals[b])`
+/// the new orbitals c's `[b] = new EEOrbital(*graphic a->mOrbitals[b])`
 pub const EE_UNITS_CU_SCRATCH_ORBITAL_NEW: i32 = 622;
-/// the scratch orbitals' `[b]->mAngle = mOrbitals[b]->mAngle`
+/// the new orbitals a's `[b]->mAngle = mOrbitals[b]->mAngle`
 pub const EE_UNITS_CU_SCRATCH_ORBITAL_KEEP_ANGLE: i32 = 623;
 /// `mNumOrbitals`
 pub const EE_UNITS_CU_NUM_ORBITALS: i32 = 624;
-/// `mOrbitals = the scratch orbitals`
+/// `mOrbitals = the new orbitals a`
 pub const EE_UNITS_CU_ORBITALS_ASSIGN: i32 = 625;
 /// `mNumOrbitals = b`
 pub const EE_UNITS_CU_SET_NUM_ORBITALS: i32 = 626;
 /// graphic `a`'s `GetWheelCount()`
 pub const EE_UNITS_CU_GRAPHIC_WHEEL_COUNT: i32 = 627;
-/// the scratch wheels `= b == 0 ? NULL : new EEWheel*[b]`
+/// `b != 0 ? new EEWheel*[b] : NULL` (the new wheels)
 pub const EE_UNITS_CU_SCRATCH_WHEELS_NEW: i32 = 628;
-/// the scratch wheels' `[b] = new EEWheel(*graphic a->mWheels[b])`
+/// the new wheels c's `[b] = new EEWheel(*graphic a->mWheels[b])`
 pub const EE_UNITS_CU_SCRATCH_WHEEL_NEW: i32 = 629;
-/// the scratch wheels' `[b]->mAngle = mWheels[b]->mAngle`
+/// the new wheels a's `[b]->mAngle = mWheels[b]->mAngle`
 pub const EE_UNITS_CU_SCRATCH_WHEEL_KEEP_ANGLE: i32 = 630;
 /// `mNumWheels`
 pub const EE_UNITS_CU_NUM_WHEELS: i32 = 631;
-/// `mWheels = the scratch wheels`
+/// `mWheels = the new wheels a`
 pub const EE_UNITS_CU_WHEELS_ASSIGN: i32 = 632;
 /// `mNumWheels = b`
 pub const EE_UNITS_CU_SET_NUM_WHEELS: i32 = 633;
@@ -303,21 +303,8 @@ pub const EE_UNITS_CU_GATHER_GOAL: i32 = 638;
 pub const EE_UNITS_CU_FIND_GATHER_SPOT: i32 = 639;
 /// class `a`'s `mTileSize`
 pub const EE_UNITS_CU_CLASS_TILE_SIZE_OF: i32 = 640;
-/// the scratch tiles' `clear()`
-pub const EE_UNITS_CU_SCRATCH_TILES_CLEAR: i32 = 641;
-/// the scratch tiles' `push_back(EETileCoordinate(b, c))`
-pub const EE_UNITS_CU_SCRATCH_TILES_PUSH: i32 = 642;
-/// `EEAIRandomShuffle(the scratch tiles' begin(), end())`
+/// `EEAIRandomShuffle(tiles a, a + b)` (the body's `EETileCoordinate`s)
 pub const EE_UNITS_CU_SCRATCH_TILES_SHUFFLE: i32 = 643;
-/// the scratch tiles' `size()`
-pub const EE_UNITS_CU_SCRATCH_TILES_SIZE: i32 = 644;
-/// the scratch tiles' `back()` (f[0], f[1]: its x and y as longs' bits... no: the answer is x, f is unused; y by
-/// `EE_UNITS_CU_SCRATCH_TILES_BACK_Y`)
-pub const EE_UNITS_CU_SCRATCH_TILES_BACK_X: i32 = 645;
-/// the scratch tiles' `back().mY`
-pub const EE_UNITS_CU_SCRATCH_TILES_BACK_Y: i32 = 646;
-/// the scratch tiles' `pop_back()`
-pub const EE_UNITS_CU_SCRATCH_TILES_POP: i32 = 647;
 /// `ee_units_uu_can_stand_on(b, c, this)`
 pub const EE_UNITS_CU_CAN_STAND_ON: i32 = 648;
 /// `EEUGRust::NewLocation(GE2DPoint(f[0], f[1]), false, true, false, 0.0f, false, 0)`
@@ -325,16 +312,12 @@ pub const EE_UNITS_CU_NEW_LOCATION_GOAL: i32 = 649;
 /// `SetGoal(goal a, b, c)`
 pub const EE_UNITS_CU_SET_GOAL: i32 = 650;
 // IsNextToTile's
-/// `ee_units_uu_square_ring(GetTileX(), GetTileY(), the class's tile size twice, 1, the scratch points)`
+/// `EEGetSquareRing(GetTileX(), GetTileY(), the class's tile size twice, 1)` into the body's tiles at b
+/// (replaced; answered in Rust: cu_view.rs)
 pub const EE_UNITS_CU_SCRATCH_SQUARE_RING: i32 = 651;
-/// `ee_units_uu_ring_corners(0, GetTileX(), GetTileY(), the class's tile size twice, 1, the scratch points)`
+/// `EEGetRingCorners(0, GetTileX(), GetTileY(), the class's tile size twice, 1)` into the body's tiles at b
+/// (replaced; answered in Rust: cu_view.rs)
 pub const EE_UNITS_CU_SCRATCH_RING_CORNERS: i32 = 652;
-/// the scratch points' `size()`
-pub const EE_UNITS_CU_SCRATCH_POINTS_SIZE: i32 = 653;
-/// the scratch points' `[b].GetX()`
-pub const EE_UNITS_CU_SCRATCH_POINT_X: i32 = 654;
-/// the scratch points' `[b].GetY()`
-pub const EE_UNITS_CU_SCRATCH_POINT_Y: i32 = 655;
 /// `GetTileX()`
 pub const EE_UNITS_CU_GET_TILE_X: i32 = 656;
 // UpdateFanaticismColor's
@@ -348,6 +331,8 @@ pub const EE_UNITS_CU_CLEAR_CLOAKED_TIME: i32 = 659;
 pub const EE_UNITS_CU_FANATICISM_PERIOD: i32 = 660;
 /// the fanaticism effect's `mParam<b>` (b 1..6; its bits)
 pub const EE_UNITS_CU_FANATICISM_PARAM: i32 = 661;
+/// `static_cast<EeDataGraphicEffectFields*>(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect))` (units round 14)
+pub const EE_UNITS_CU_FANATICISM_FIELDS: i32 = 14302;
 /// `SetColor(GEColor(f[0], f[1], f[2]))` (the function static `sColor`'s copy)
 pub const EE_UNITS_CU_SET_COLOR: i32 = 662;
 // GetChecksum's
@@ -387,10 +372,9 @@ pub const EE_UNITS_CU_UM_FLOOR: i32 = 677;
 pub const EE_UNITS_CU_MOVE_TO: i32 = 678;
 /// `UpdateWaterState(false)`
 pub const EE_UNITS_CU_UPDATE_WATER_STATE_OFF: i32 = 679;
-/// `mPhysicalModel.SetLocation(the scratch placement)`
-pub const EE_UNITS_CU_PM_SET_PLACEMENT: i32 = 680;
-/// the scratch placement `= *(const GETransformation*)a` (the original's copy `thePlacement`)
-pub const EE_UNITS_CU_PLACEMENT_COPY: i32 = 681;
+/// `*(GETransformation*)b = *(const GETransformation*)a` (a copy into the body's own; answered in Rust:
+/// cu_view.rs)
+pub const EE_UNITS_CU_TRANSFORMATION_COPY: i32 = 681;
 /// class `a`'s `mScale` (its bits)
 pub const EE_UNITS_CU_CLASS_SCALE: i32 = 682;
 /// `mCargoRoom = class a's mTransportCapacity`
@@ -727,9 +711,10 @@ pub fn reset<H: CuHost + ?Sized>(h: &mut H, unit: u64, goal_queues: i64, random_
 /// effects); `placement` the caller's transformation (read through the host).
 pub fn init<H: CuHost + ?Sized>(h: &mut H, unit: u64, class: u64, placement: u64, player: u64, goal_queues: i64) {
     let s = &mut S { h, unit };
-    s.qa(EE_UNITS_CU_PLACEMENT_COPY, placement);
-    let x = s.float(EE_UNITS_CU_PLACEMENT_X);
-    let y = s.float(EE_UNITS_CU_PLACEMENT_Y);
+    // the original's copy of the placement (units round 14: the body's, was a C++ scratch static)
+    let mut t = [[0.0f32; 4]; 4];
+    s.qab(EE_UNITS_CU_TRANSFORMATION_COPY, placement, t.as_mut_ptr() as usize as i64);
+    let (x, y) = (t[0][3], t[1][3]);
     s.qab(EE_UNITS_CU_UNIT_INIT, class, player as i64);
     reset(s.h, unit, goal_queues, true);
     s.qa(EE_UNITS_CU_INIT_COLLIDABLE, class);
@@ -740,12 +725,10 @@ pub fn init<H: CuHost + ?Sized>(h: &mut H, unit: u64, class: u64, placement: u64
     s.q(EE_UNITS_CU_UPDATE_WATER_STATE_OFF);
     if s.q(EE_UNITS_CU_TILE_SIZE) > 1 {
         let offset = s.qa(EE_UNITS_CU_CLASS_TILE_SIZE_OF, class) as f32 * 0.5 - 0.5;
-        let x = s.float(EE_UNITS_CU_PLACEMENT_X) + offset;
-        s.qb(EE_UNITS_CU_PLACEMENT_SET_X, bits(x));
-        let y = s.float(EE_UNITS_CU_PLACEMENT_Y) + offset;
-        s.qb(EE_UNITS_CU_PLACEMENT_SET_Y, bits(y));
+        t[0][3] += offset;
+        t[1][3] += offset;
     }
-    s.q(EE_UNITS_CU_PM_SET_PLACEMENT);
+    s.qa(crate::units::u12a_small::EE_UNITS_CU_T_PM_SET_LOCATION, t.as_ptr() as usize as u64);
     let scale = s.qa(EE_UNITS_CU_CLASS_SCALE, class);
     s.qb(EE_UNITS_CU_PM_SET_SCALE, scale);
     s.qa(EE_UNITS_CU_INIT_CARGO_ROOM, class);
@@ -822,19 +805,19 @@ pub fn swap_graphic<H: CuHost + ?Sized>(h: &mut H, unit: u64, old: u64, new: u64
     }
     s.qb(EE_UNITS_CU_SET_NEXT_FRAME, i64::from(frame));
     let parts = s.qa(EE_UNITS_CU_GRAPHIC_NUM_PARTS, new);
-    s.qb(EE_UNITS_CU_SCRATCH_ANGLES_NEW, parts);
+    let angles = s.qb(EE_UNITS_CU_SCRATCH_ANGLES_NEW, parts) as u64;
     for i in 0..parts {
         let old_parts = s.qa(EE_UNITS_CU_GRAPHIC_NUM_PARTS, old);
-        s.qbc(EE_UNITS_CU_SCRATCH_ANGLE_COPY, i, old_parts);
+        s.qabc(EE_UNITS_CU_SCRATCH_ANGLE_COPY, angles, i, old_parts);
     }
     s.q(EE_UNITS_CU_DELETE_TURRET_ANGLES);
-    s.q(EE_UNITS_CU_TURRET_ANGLES_ASSIGN);
+    s.qa(EE_UNITS_CU_TURRET_ANGLES_ASSIGN, angles);
     let orbitals = s.qa(EE_UNITS_CU_GRAPHIC_ORBITAL_COUNT, new);
-    s.qb(EE_UNITS_CU_SCRATCH_ORBITALS_NEW, orbitals);
+    let new_orbitals = s.qb(EE_UNITS_CU_SCRATCH_ORBITALS_NEW, orbitals);
     for i in 0..orbitals {
-        s.qab(EE_UNITS_CU_SCRATCH_ORBITAL_NEW, new, i);
+        s.qabc(EE_UNITS_CU_SCRATCH_ORBITAL_NEW, new, i, new_orbitals);
         if i < s.q(EE_UNITS_CU_NUM_ORBITALS) {
-            s.qb(EE_UNITS_CU_SCRATCH_ORBITAL_KEEP_ANGLE, i);
+            s.qab(EE_UNITS_CU_SCRATCH_ORBITAL_KEEP_ANGLE, new_orbitals as u64, i);
         }
     }
     let mut i = 0;
@@ -843,14 +826,14 @@ pub fn swap_graphic<H: CuHost + ?Sized>(h: &mut H, unit: u64, old: u64, new: u64
         i += 1;
     }
     s.q(EE_UNITS_CU_DELETE_ORBITALS);
-    s.q(EE_UNITS_CU_ORBITALS_ASSIGN);
+    s.qa(EE_UNITS_CU_ORBITALS_ASSIGN, new_orbitals as u64);
     s.qb(EE_UNITS_CU_SET_NUM_ORBITALS, orbitals);
     let wheels = s.qa(EE_UNITS_CU_GRAPHIC_WHEEL_COUNT, new);
-    s.qb(EE_UNITS_CU_SCRATCH_WHEELS_NEW, wheels);
+    let new_wheels = s.qb(EE_UNITS_CU_SCRATCH_WHEELS_NEW, wheels);
     for i in 0..wheels {
-        s.qab(EE_UNITS_CU_SCRATCH_WHEEL_NEW, new, i);
+        s.qabc(EE_UNITS_CU_SCRATCH_WHEEL_NEW, new, i, new_wheels);
         if i < s.q(EE_UNITS_CU_NUM_WHEELS) {
-            s.qb(EE_UNITS_CU_SCRATCH_WHEEL_KEEP_ANGLE, i);
+            s.qab(EE_UNITS_CU_SCRATCH_WHEEL_KEEP_ANGLE, new_wheels as u64, i);
         }
     }
     let mut i = 0;
@@ -859,7 +842,7 @@ pub fn swap_graphic<H: CuHost + ?Sized>(h: &mut H, unit: u64, old: u64, new: u64
         i += 1;
     }
     s.q(EE_UNITS_CU_DELETE_WHEELS);
-    s.q(EE_UNITS_CU_WHEELS_ASSIGN);
+    s.qa(EE_UNITS_CU_WHEELS_ASSIGN, new_wheels as u64);
     s.qb(EE_UNITS_CU_SET_NUM_WHEELS, wheels);
 }
 
@@ -928,24 +911,23 @@ pub fn step_aside<H: CuHost + ?Sized>(
     let size = s.qa(EE_UNITS_CU_CLASS_TILE_SIZE_OF, class);
     let (min_x, max_x) = (x - size - 1, x + size + 1);
     let (min_y, max_y) = (y - size - 1, y + size + 1);
-    s.q(EE_UNITS_CU_SCRATCH_TILES_CLEAR);
+    // the original's local tile vector (units round 14: the body's, was a C++ scratch static)
+    let mut tiles: Vec<[c_long; 2]> = Vec::new();
     for tx in min_x..=max_x {
         if tx != min_x && tx != max_x {
-            s.qbc(EE_UNITS_CU_SCRATCH_TILES_PUSH, tx, min_y);
-            s.qbc(EE_UNITS_CU_SCRATCH_TILES_PUSH, tx, max_y);
+            tiles.push([tx as c_long, min_y as c_long]);
+            tiles.push([tx as c_long, max_y as c_long]);
         } else {
             for ty in min_y..=max_y {
-                s.qbc(EE_UNITS_CU_SCRATCH_TILES_PUSH, tx, ty);
+                tiles.push([tx as c_long, ty as c_long]);
             }
         }
     }
-    s.q(EE_UNITS_CU_SCRATCH_TILES_SHUFFLE);
+    s.qab(EE_UNITS_CU_SCRATCH_TILES_SHUFFLE, tiles.as_mut_ptr() as usize as u64, tiles.len() as i64);
     let mut found = false;
     let (mut fx, mut fy) = (0i64, 0i64);
-    while s.q(EE_UNITS_CU_SCRATCH_TILES_SIZE) != 0 {
-        fx = s.q(EE_UNITS_CU_SCRATCH_TILES_BACK_X);
-        fy = s.q(EE_UNITS_CU_SCRATCH_TILES_BACK_Y);
-        s.q(EE_UNITS_CU_SCRATCH_TILES_POP);
+    while let Some(tile) = tiles.pop() {
+        (fx, fy) = (tile[0] as i64, tile[1] as i64);
         found = s.qbc(EE_UNITS_CU_CAN_STAND_ON, fx, fy) != 0;
         if found {
             break;
@@ -964,16 +946,6 @@ pub fn step_aside<H: CuHost + ?Sized>(
 
 /// `mCommand->mType`
 pub const EE_UNITS_CU_COMMAND_KIND: i32 = 693;
-/// the scratch placement's `GetX()` (its bits)
-pub const EE_UNITS_CU_PLACEMENT_X: i32 = 694;
-/// the scratch placement's `GetY()` (its bits)
-pub const EE_UNITS_CU_PLACEMENT_Y: i32 = 695;
-/// the scratch placement's `SetX(the float of the bits b)`
-pub const EE_UNITS_CU_PLACEMENT_SET_X: i32 = 696;
-/// the scratch placement's `SetY(the float of the bits b)`
-pub const EE_UNITS_CU_PLACEMENT_SET_Y: i32 = 697;
-/// the scratch points' `clear()` (the original's fresh local)
-pub const EE_UNITS_CU_SCRATCH_POINTS_CLEAR: i32 = 698;
 
 /// `IsNextToTile(x, y)`: the unit's tile, or one of the side or corner tiles around its footprint.
 pub fn is_next_to_tile<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: i64, y: i64) -> bool {
@@ -983,15 +955,12 @@ pub fn is_next_to_tile<H: CuHost + ?Sized>(h: &mut H, unit: u64, x: i64, y: i64)
     if tx == x && ty == y {
         return true;
     }
-    s.q(EE_UNITS_CU_SCRATCH_POINTS_CLEAR);
+    // the original's local point vector (units round 14: the body's, was a C++ scratch static)
+    let mut points: Vec<crate::units::uu_tiles::Tile> = Vec::new();
     for ring in [EE_UNITS_CU_SCRATCH_SQUARE_RING, EE_UNITS_CU_SCRATCH_RING_CORNERS] {
-        s.q(ring);
-        let mut k = 0;
-        while k < s.q(EE_UNITS_CU_SCRATCH_POINTS_SIZE) {
-            if x == s.qb(EE_UNITS_CU_SCRATCH_POINT_X, k) && y == s.qb(EE_UNITS_CU_SCRATCH_POINT_Y, k) {
-                return true;
-            }
-            k += 1;
+        s.qb(ring, &mut points as *mut Vec<crate::units::uu_tiles::Tile> as usize as i64);
+        if points.iter().any(|p| x == i64::from(p[0]) && y == i64::from(p[1])) {
+            return true;
         }
     }
     false

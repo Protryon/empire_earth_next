@@ -6,12 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/data/records.h"
 
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
-
-/// The rules (ee/EERules.h, its `mRust`). Every field starts at its default.
-struct EeDataRules;
 
 /// A sink handed to the read callback; the text goes in with `ee_data_sink_write`.
 struct EeDataSink;

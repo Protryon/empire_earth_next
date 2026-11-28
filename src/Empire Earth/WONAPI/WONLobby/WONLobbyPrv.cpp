@@ -35,7 +35,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "rust/won_net/udpmgr.h"
 #include "ee/wonapi/WONLobbyEvents.h"
-#include "ee/wonapi/EELobbySound.h"
+#include "rust/won_gui/soundobj.h" // the lobby's sounds
 #include "platform/PlatThread.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyModel.h"
@@ -258,7 +258,7 @@ void LobbyShutdown()
     LobbyLogout(false);
     gLobbyData->Destroy();
     LobbyRemoveEventHooks();
-    LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop();
+    ee_won_sound_call((EeWonSound*)LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound).get(), EeWonSoundCall::Stop, 0);
     LobbyResource_UnloadResources();
     gLobbyData=NULL;
 }
@@ -486,7 +486,7 @@ void LobbyInstallEventHooks()
     if(gLobbyData.get()==NULL)
         return;
     LobbyAddLogicListener(gLobbyData->mLobbyContainer.get());
-    gLobbyData->mTimerEvent=new UserEvent(LobbyTimerCallback,0);
+    gLobbyData->mTimerEvent=NewUserEvent(LobbyTimerCallback,0);
     WONAPI::WindowManager::GetDefaultWindowManager()->AddTimerEvent(gLobbyData->mTimerEvent.get());
 }
 
@@ -643,13 +643,10 @@ static intptr_t RunHost(EeWonRunOp inOp, intptr_t a)
     case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
     case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
     case Op::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
-    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
-    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
     case Op::PingsToDo: return LobbyGetNumPingsToDo();
     case Op::KillPings: LobbyKillPings(1); return 0;
     case Op::NetSuspend: LobbyNetSuspend(); return 0;
     case Op::MusicOn: return LobbyGetLobbyMusic() ? 1 : 0;
-    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
     case Op::NetResume: LobbyNetResume(); return 0;
     case Op::InitLogicInit: gLobbyData->mInitLogic->Call(EeWonLogicCall::InitInit); return 0;
     }
@@ -823,9 +820,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     // the three controls the login screen disables while it initialises
     case O::EnableLogin: reinterpret_cast<Container*>(a)->EnableControlsById(ControlIdSet{200001, 200002, 200003}, b != 0); return 0;
     case O::LobbyMusic: return LobbyGetLobbyMusic();
-    case O::MusicSetLooping: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->SetLooping(true); return 0;
-    case O::MusicPlay: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Play(); return 0;
-    case O::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
     case O::RoomDirServersGet: return (intptr_t)LobbyGetRoomDirServers();
     case O::RememberHostAddress: IPAddr().SetRememberHostString(true); return 0;
     case O::DirServersRemoveAll: LobbyGetDirServers()->RemoveAllAddresses(); return 0;
@@ -845,13 +839,6 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::ServerCount: return InitList(a)->GetNumAddresses();
     case O::DirNotifyFailed: LobbyGetDirServers()->NotifyFailed(R(a)->GetCurAddr()); return 0;
     case O::ServerNotifyFailed: SC(a)->NotifyFailed(R(b)->GetCurAddr()); return 0;
-    case O::TextNew: return (intptr_t)(a >= 0 ? new GUIString(gLobbyResources[a].mString) : new GUIString);
-    case O::TextAppendRes: T(a)->append(gLobbyResources[b].mString); return 0;
-    case O::TextAppendComma: T(a)->append(GUIString(", ")); return 0;
-    case O::TextLength: return T(a)->length();
-    case O::TextAppendText: T(a)->append(*T(b)); return 0;
-    case O::TextFree: delete T(a); return 0;
-    case O::TextStatus: return (intptr_t)new GUIString(LobbyFormatString(gLobbyResources[a].mString, GetWONStatusString((WONStatus)b)));
     case O::IsAcceptOp: return reinterpret_cast<AsyncOp*>(a) == aLogic->Slot<AsyncOp>(kInitAcceptOp);
     case O::ClearAcceptOp: aLogic->mSlot[kInitAcceptOp] = NULL; return 0;
     case O::AcceptedFromFirewall:

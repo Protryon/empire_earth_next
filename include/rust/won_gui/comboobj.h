@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/ctobj.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonComboCall : uint32_t {
@@ -78,6 +77,12 @@ enum class EeWonComboField : uint32_t {
 struct EeWonComboBox;
 
 extern "C" {
+
+/// The ComboBox's part offsets (R6 WON GUI round 41: its parts are read and set in place in the game).
+void ee_won_combo_parts_register(size_t edit,
+                                 size_t button,
+                                 size_t list_box,
+                                 size_t list_area);
 
 /// A new Rust ComboBox for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
 ///

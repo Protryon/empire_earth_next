@@ -7,7 +7,6 @@
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
-acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp
@@ -22,7 +21,6 @@ da56d da984 Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp
 dae63 db169 Empire Earth/Database/EETerrainColorTable.cpp
 db169 dbcc8 Empire Earth/Database/EETerrainTable.cpp
 dbcc8 dc682 Empire Earth/Database/EETerrainTypeTable.cpp
-ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 10972b 10a9b0 Empire Earth/Graphics Thread/EEGraphics.cpp
 10a9b0 10aa88 Empire Earth/Graphics Thread/EEMouse.cpp
 10aa88 111d3d Empire Earth/Graphics Thread/EERenderObject.cpp
@@ -87,7 +85,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1bb5a5 1c5783 Empire Earth/Scenario Manager/EESMEffect.cpp
 1c5f73 1ca4ee Empire Earth/Scenario Manager/EESMObject.cpp
 1ca4ee 1cba2f Empire Earth/Scenario Manager/EEEvent.cpp
-1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp
 1ebc47 1f1f19 Empire Earth/Units/EEActiveGroup.cpp
 1f1f19 1f57d3 Empire Earth/Units/EEComplexDoppelganger.cpp
 1f57d3 201d85 Empire Earth/Units/EEComplexUnit.cpp
@@ -97,12 +94,10 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 20834c 208c37 Empire Earth/Units/EESightRings.cpp
 208c37 208e6b Empire Earth/Graphics Thread/EEOrbital.cpp
 228c4c 22a509 Empire Earth/Units/EEUnit.cpp
-22a509 22d95f Empire Earth/Units/EEUnitAction.cpp
 22d95f 22f272 Empire Earth/Units/EEUnitAI.cpp
 22f272 23a5bf Empire Earth/Units/EEUnitClass.cpp
 23a5bf 23b61a Empire Earth/Units/EEUnitClassImprovement.cpp
 23b61a 23c332 Empire Earth/Units/EEUnitClassUpgrade.cpp
-23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
 254911 27aa0b Empire Earth/User Interface Thread/EEUserInterface.cpp
@@ -112,4 +107,3 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
-29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp

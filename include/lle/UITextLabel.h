@@ -24,33 +24,24 @@ public:
     UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness), mRust(ee_ui_label_new(this, ee_ui_label_host, UIF4(inRectangle), inFont, inLabelType, inBorderThickness)) { this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText); }
     virtual ~UITextLabel() { ee_ui_label_free(this->mRust); }
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
-    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiLabelCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiLabelCall::CopyData); }
-    void DeleteArray() { this->Call(EeUiLabelCall::DeleteArray); }
     void DeleteLine(unsigned long inLine) { this->Call(EeUiLabelCall::DeleteLine, inLine); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiLabelCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiLabelCall::DrawText); }
     GEText* GetGEText() const { return reinterpret_cast<GEText*>(this->Call(EeUiLabelCall::Text)); }
     unsigned long GetLineCount() const { return (unsigned long)this->Call(EeUiLabelCall::LineCount); }
-    unsigned long GetNumberLinesDisplayed() const { return (unsigned long)this->Call(EeUiLabelCall::LinesDisplayed); }
     const UIScrollBar* GetScrollBar() const { return reinterpret_cast<const UIScrollBar*>(this->Call(EeUiLabelCall::ScrollBar)); } // NULL while it is marked removed
     virtual bool GetTabable() const { return false; }
     const UWideString& GetText(unsigned long inLine) const { return *reinterpret_cast<const UWideString*>(this->Call(EeUiLabelCall::Line, inLine)); }
-    long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
-    virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(EeUiLabelCall::MouseWheelTurned, inDelta); }
-    virtual void RecomputeDisplayRange() { this->Call(EeUiLabelCall::RecomputeDisplayRange); } // slot 0x8c
-    bool ScrollBarExists() const { return this->Call(EeUiLabelCall::ScrollBarExists) != 0; }
     void SetAlignment(unsigned long inAlignment) { this->Call(EeUiLabelCall::SetAlignment, inAlignment); }
     void SetFitRectToText(bool inFit) { this->Call(EeUiLabelCall::SetFitRectToText, inFit); }
     virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiLabelCall::SetLocation, 0, 0, inLocation.GetX(), inLocation.GetY()); }
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiLabelCall::SetRectangle, inRectangle); }
     void SetStartingDisplayLine(unsigned long inLine) { this->Call(EeUiLabelCall::SetStartingDisplayLine, inLine); }
     void SetScrollBarBgOpacity(float inOpacity) { this->Call(EeUiLabelCall::SetScrollBarBgOpacity, 0, 0, inOpacity); }
-    void SetScrollBarBgColor(const GEColor& inColor) { this->Call(EeUiLabelCall::SetScrollBarBgColor, 0, 0, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
     void SetText(const UWideString& inText) { this->SetText(inText, true); }
     void SetText(long inValue) { ee_ui_label_set_number(this->mRust, inValue); }   // _itoa's decimal
     virtual long UpdateKeyboard() { return kErrorFailed; }
-    virtual void CheckScrollBar() { this->Call(EeUiLabelCall::CheckScrollBar); } // slot 0x90
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiLabelCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiLabelCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(EeUiLabelCall::MouseMove, 0, 0, inLocation.GetX(), inLocation.GetY()); }

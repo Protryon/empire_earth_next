@@ -24,6 +24,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "won_file37_orig.h" // FileReader, FileWriter
 #include "ee/wonapi/WONLobbyImageDecoder.h"
+#include "rust/won_gui/imgdec.h"
 using namespace WONAPI;
 
 static int sFailures;

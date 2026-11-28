@@ -44,11 +44,6 @@ public:
     bool Intersects(const GEViewport& inViewport, bool inOrthographic) const;
     void SetFrame(unsigned long inFrame) { this->mFrame = inFrame; }
     void SetLocation(const GETransformation& inLocation) { this->mLocation = inLocation; }
-    void SetLocationAndScale(const GETransformation& inLocation, float inScale)
-    {
-        this->mLocation = inLocation;
-        this->mScale = inScale;
-    }
     void SetLocationXY(float inX, float inY) { this->mLocation.SetPosition(inX, inY, this->mLocation.GetZ()); }
     void SetLocationXYZ(const GE3DPoint& inPoint) { this->mLocation.SetPosition(inPoint.GetX(), inPoint.GetY(), inPoint.GetZ()); }
     // replaces the model, keeping a reference to the new one (the old one released first)

@@ -7,13 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// `GEColor`: red, green, blue.
-struct EeUiColor {
-  float red;
-  float green;
-  float blue;
-};
-
 /// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
 struct EeUiCheckFields {
   /// `UITextLabel*`, C++'s.

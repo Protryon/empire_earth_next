@@ -645,12 +645,6 @@ pub unsafe extern "C" fn ee_units_goal_queues_tick(unit: u64) {
     update_unit(unit, game_time(), &mut file_host(std::ptr::null_mut(), 0, 0, unit), &mut Goals);
 }
 
-/// The length of a unit's queue `index`; -1 when it has no such queue.
-#[no_mangle]
-pub extern "C" fn ee_units_goal_queue_len(unit: u64, index: u32) -> i64 {
-    queue_len(unit, index as usize).map_or(-1, |n| n as i64)
-}
-
 // ---- the unit's goal calls (EEComplexUnit's GetQueuedGoal, RefreshGoals, RefreshActiveGoal, SetGoal,
 // DropUnsuitedGoals over its queues and its mGoalState and mActiveGoal)
 

@@ -1282,39 +1282,6 @@ pub unsafe extern "C" fn ee_rmap_game_water_points(state: *mut EeRmapGameState, 
     unsafe { run(state, host, |g, h| g.water_points(h)) }
 }
 
-/// `EERandomMap::SmoothHeights`.
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_game_smooth_heights(state: *mut EeRmapGameState, host: *mut EeRmapGameHost) {
-    // SAFETY: the caller's guarantee
-    unsafe { run(state, host, |g, h| g.smooth_heights(h)) }
-}
-
-/// `EERandomMap::Fn288839` (the heights onto the mesh).
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_game_apply_heights(state: *mut EeRmapGameState, host: *mut EeRmapGameHost) {
-    // SAFETY: the caller's guarantee
-    unsafe { run(state, host, |g, h| g.apply_heights(h)) }
-}
-
-/// `EERMArePlayersConnected`.
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_game_players_connected(
-    state: *mut EeRmapGameState,
-    host: *mut EeRmapGameHost,
-) -> bool {
-    // SAFETY: the caller's guarantee
-    unsafe { run(state, host, |g, h| g.players_connected(h)) }
-}
-
 /// `EERandomMap::MarkFeatures`.
 ///
 /// # Safety
@@ -1323,36 +1290,6 @@ pub unsafe extern "C" fn ee_rmap_game_players_connected(
 pub unsafe extern "C" fn ee_rmap_game_mark_features(state: *mut EeRmapGameState, host: *mut EeRmapGameHost) {
     // SAFETY: the caller's guarantee
     unsafe { run(state, host, |g, h| g.mark_features(h)) }
-}
-
-/// `EERandomMap::PaintTiles` (with `PlaceTerrainUnit`).
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_game_paint_tiles(state: *mut EeRmapGameState, host: *mut EeRmapGameHost) {
-    // SAFETY: the caller's guarantee
-    unsafe { run(state, host, |g, h| g.paint_tiles(h)) }
-}
-
-/// `EERandomMap::PlaceFeatures`.
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_game_place_features(state: *mut EeRmapGameState, host: *mut EeRmapGameHost) {
-    // SAFETY: the caller's guarantee
-    unsafe { run(state, host, |g, h| g.place_features(h)) }
-}
-
-/// `EERandomMap::Fn288426` (the resource objects).
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_rmap_game_place_objects(state: *mut EeRmapGameState, host: *mut EeRmapGameHost) {
-    // SAFETY: the caller's guarantee
-    unsafe { run(state, host, |g, h| g.place_objects(h)) }
 }
 
 /// `CreateGrids`' grid size (see [`grid_size`]).

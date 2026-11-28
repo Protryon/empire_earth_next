@@ -100,6 +100,46 @@ pub(crate) fn cg_plain(op: i32, unit: u64, a: u64, b: i64, c: i64, f: &mut [f32;
             unsafe { std::ptr::write(b as usize as *mut [[f32; 4]; 4], rows) };
             0
         }
+        // the goals' accessors and the unit's timers, each inline over a Rust entry point or a record member
+        // (units round 14): the attack goal `a`'s tile, convert flag and target, the heal goal's target, the
+        // ground goal's point (into `b`), the goal's path attempts, the reload and target search timers
+        EE_UNITS_CG_ATTACK_TILE_X => crate::combat::goal_attack::ee_combat_attack_of(a).tile[0] as c_long as i64,
+        EE_UNITS_CG_ATTACK_TILE_Y => crate::combat::goal_attack::ee_combat_attack_of(a).tile[1] as c_long as i64,
+        EE_UNITS_CG_CONVERT => i64::from(crate::combat::goal_attack::ee_combat_attack_of(a).convert != 0),
+        EE_UNITS_CG_ATTACK_TARGET => crate::combat::goal_attack::ee_combat_attack_of(a).target as i64,
+        EE_UNITS_CG_HEAL_TARGET => crate::combat::goal_heal::ee_combat_heal_target(a) as i64,
+        EE_UNITS_CG_GROUND_TARGET => {
+            let point = crate::combat::goal_objects::ee_combat_ground_target_point(a);
+            // SAFETY: the caller's GE3DPoint
+            unsafe { std::ptr::write(b as usize as *mut ee_base::math::types::Ge3DPoint, point) };
+            0
+        }
+        EE_UNITS_CG_PATH_ATTEMPTS => {
+            use crate::units::goal_calls::ee_units_goal_set_path_attempts;
+            use crate::units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS;
+            // SAFETY: `a` is the live goal
+            unsafe {
+                ee_units_goal_set_path_attempts(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, a as usize as *mut _, b as c_long)
+            };
+            0
+        }
+        EE_UNITS_CG_RELOAD_TIMER => {
+            use crate::units::cu_body::game::ee_units_cu_body;
+            use crate::units::cu_world::EE_UNITS_CU_DO_SET_RANDOM_RELOAD_TIMER;
+            // SAFETY: SetRandomReloadTimer's call on the live unit
+            unsafe { ee_units_cu_body(EE_UNITS_CU_DO_SET_RANDOM_RELOAD_TIMER, p(unit), b as c_long as i64, 0, 0) };
+            0
+        }
+        EE_UNITS_CG_SEARCH_TIMER => {
+            let cx = complex_mut(&u()?);
+            // SAFETY: the live unit's record (SetTargetSearchTimer: stored when it differs)
+            unsafe {
+                if (*cx).mTargetSearchTimer != b as c_long {
+                    (*cx).mTargetSearchTimer = b as c_long;
+                }
+            }
+            0
+        }
         _ => return None,
     })
 }
@@ -141,6 +181,20 @@ pub(crate) fn query_plain_handle(code: i32, object: u64) -> Option<u64> {
         EE_COMBAT_H_OWNER => o()?.owner_handle(),
         // SAFETY: the shot's live unit
         EE_COMBAT_H_GOAL_TARGET => unsafe { crate::combat::cg_query::ee_units_cgq_shot_target(object) },
+        // the unit's `mTileNode->mPrev` (a unit or the chain's head) and `->mNext`; its active (attack) goal's
+        // target (units round 14)
+        EE_COMBAT_H_TILE_PREV | EE_COMBAT_H_TILE_NEXT => {
+            let at = |object: u64, offset: usize| (object as usize + offset) as *const usize;
+            let slot = if code == EE_COMBAT_H_TILE_NEXT { 0 } else { std::mem::size_of::<usize>() };
+            // SAFETY: the live unit's tile node (RTSUnitLink: mNext, then mPrev)
+            unsafe {
+                let node = *at(object, crate::world::layout::layout().unit_tile_node as usize);
+                *at(node as u64, slot) as u64
+            }
+        }
+        crate::combat::leaves::EE_COMBAT_H_ACTIVE_GOAL_TARGET => {
+            crate::combat::goal_attack::ee_combat_attack_of(o()?.active_goal_handle()).target
+        }
         _ => return None,
     })
 }

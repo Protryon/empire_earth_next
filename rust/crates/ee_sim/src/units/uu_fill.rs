@@ -223,7 +223,7 @@ pub fn location_screen<H: LfHost + ?Sized>(h: &mut H, screen: u64, x: c_long, y:
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::uu_line::game_host;
 

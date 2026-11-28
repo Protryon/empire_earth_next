@@ -955,47 +955,11 @@ void ee_rmap_game_tiles_push(EeRmapGameTiles *sink, int32_t x, int32_t y);
 /// `state` and `host` are valid (`EeRmapGameState`'s pointers for their lengths).
 void ee_rmap_game_water_points(EeRmapGameState *state, EeRmapGameHost *host);
 
-/// `EERandomMap::SmoothHeights`.
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-void ee_rmap_game_smooth_heights(EeRmapGameState *state, EeRmapGameHost *host);
-
-/// `EERandomMap::Fn288839` (the heights onto the mesh).
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-void ee_rmap_game_apply_heights(EeRmapGameState *state, EeRmapGameHost *host);
-
-/// `EERMArePlayersConnected`.
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-bool ee_rmap_game_players_connected(EeRmapGameState *state, EeRmapGameHost *host);
-
 /// `EERandomMap::MarkFeatures`.
 ///
 /// # Safety
 /// As `ee_rmap_game_water_points`.
 void ee_rmap_game_mark_features(EeRmapGameState *state, EeRmapGameHost *host);
-
-/// `EERandomMap::PaintTiles` (with `PlaceTerrainUnit`).
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-void ee_rmap_game_paint_tiles(EeRmapGameState *state, EeRmapGameHost *host);
-
-/// `EERandomMap::PlaceFeatures`.
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-void ee_rmap_game_place_features(EeRmapGameState *state, EeRmapGameHost *host);
-
-/// `EERandomMap::Fn288426` (the resource objects).
-///
-/// # Safety
-/// As `ee_rmap_game_water_points`.
-void ee_rmap_game_place_objects(EeRmapGameState *state, EeRmapGameHost *host);
 
 /// `CreateGrids`' grid size (see [`grid_size`]).
 uint32_t ee_rmap_game_grid_size(uint32_t height, uint32_t width, uint32_t current);

@@ -60,6 +60,10 @@
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationBuilder.h"
 #include "rust/game/sim_driver.h"   // EeSimDriverSed
+#include "rust/game/screens.h"
+#include "rust/sim/app.h"
+#include "rust/sim/scenario.h"
+#include "rust/sim/units.h"
 
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
@@ -247,7 +251,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::BrushHighlight: return ((EEUIFSEBrushGroup*)p)->mIsHighlightShown;
     case O::BrushCentered: return ((EEUIFSEBrushGroup*)p)->mIsCentered;
     case O::BrushSize: return ((EEUIFSEBrushGroup*)p)->mBrushSize;
-    case O::BrushSetHighlight: ((EEUIFSEBrushGroup*)p)->SetHighlight(f[0], f[1], a[0] != 0);
+    case O::BrushSetHighlight: ee_screens_sebr_group_highlight(reinterpret_cast<EeScreensSeBrushGroup*>(((EEUIFSEBrushGroup*)p)), f[0], f[1], a[0] != 0);
         break;
     case O::EdgeScrollEdges: return P64(&((EEAScroll*)p)->mEdges);
     case O::LoadThreadPostDone: return ((EESELoadThread*)p)->mThread->Post(EE_SCREENS_SE_LOAD_THREAD_MESSAGE_QUEUE_DONE, NULL, NULL, true);
@@ -267,7 +271,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
             new EESEARust((uint32_t)a[0], (void*)p, (int32_t)a[1], (int32_t)a[2], (int32_t)a[3], (int32_t)a[4])));
     case O::SeaAction: return P64(static_cast<EESEARust*>(ACT)->mAction);
     case O::PaintNew: return P64(static_cast<EEAction*>(new EESEAPaintRust((uint32_t)a[0], (int32_t)a[1], (int32_t)a[2])));
-    case O::PaintSetArea: return static_cast<EESEAPaint*>(ACT)->SetArea((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
+    case O::PaintSetArea: return ee_screens_ga_paint_set_area(static_cast<EESEAPaint*>(ACT), (int32_t)((long)a[0]), (int32_t)((long)a[1]), (int32_t)((long)a[2]), (int32_t)((long)a[3]));
     case O::PostAction: gUserInterface->PostAction(ACT);
         break;
     case O::ClickNew: return P64(static_cast<EEAction*>(new EESEAMouseClick));
@@ -324,7 +328,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     // the ghosts
     case O::GhostsChanged: gGhostUnitsChanged = true;
         break;
-    case O::GhostCount: return gWorld.GetNumGhostUnits();
+    case O::GhostCount: return (unsigned long)ee_app_ghost_count();
     case O::GhostAt: return P64(gWorld.GetGhostUnit(a[0]));
     case O::GhostCreate: EEGhostUnit::Create(GE2DPoint(f[0], f[1]), (long)a[0], gWorld.mPlayers[a[1]], f[2], false);
         break;
@@ -342,7 +346,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::GhostSetTransformation: GH->mTransformation = *(const GETransformation*)a[0];
         break;
-    case O::GhostFillSquare: GH->FillSquare();
+    case O::GhostFillSquare: ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_SQUARE, GH, NULL, NULL);
         break;
     case O::GhostLocationToTile: GH->mUnitClass->LocationToTile(GE3DPoint(f[0], f[1], f[2]), GH->mTileX, GH->mTileY);
         break;
@@ -372,7 +376,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::SmShowDebugIds: return SM->mShowDebugIDs;
     case O::SmSetShowDebugIds: SM->mShowDebugIDs = a[0] != 0;
         break;
-    case O::SmGetNames: SM->GetNames((unsigned long)a[0], *(std::vector<UWideString>*)a[1]);
+    case O::SmGetNames: ee_scenario_en_list(SM, EE_SCENARIO_LS_NAMES, (unsigned long)a[0], 0, 0, (std::vector<UWideString>*)a[1]);
         break;
     case O::NamesNew: return P64(new std::vector<UWideString>());
     case O::NamesCount: return NM->size();
@@ -381,24 +385,24 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::SmFindCondition: return P64(SM->FindConditionByID((long)a[0]));
     case O::SmFindEffect: return P64(SM->FindEffectByID((long)a[0]));
     case O::SmFindObject: return P64(SM->FindObjectByID((long)a[0]));
-    case O::SmObjectIndex: return SM->GetObjectIndex((EESMObject*)a[0]);
+    case O::SmObjectIndex: return (long)ee_scenario_en_list(SM, EE_SCENARIO_LS_INDEX_OF, EE_SCENARIO_LIST_OBJECTS, 0, 0, (EESMObject*)a[0]);
     case O::SmGetTrigger: return P64(SM->GetTrigger((unsigned long)a[0]));
     case O::SmGetObject: return P64(SM->GetScenarioObject((unsigned long)a[0]));
     case O::SmGetArea: return P64(SM->GetArea((unsigned long)a[0]));
-    case O::SmExportText: return SM->ExportText(*(FSFileSpec*)a[0]);
-    case O::SmImportText: return SM->ImportTriggerText(*(FSFileSpec*)a[0], (unsigned long)a[1], a[2] != 0);
+    case O::SmExportText: return ee_scenario_en_text(SM, (FSFileSpec*)a[0], true, 0, false);
+    case O::SmImportText: return ee_scenario_en_text(SM, (FSFileSpec*)a[0], false, (unsigned long)a[1], a[2] != 0);
     case O::SmClearImportErrors: SM->mImportErrors.clear();
         break;
     case O::SmImportErrorCount: return SM->mImportErrors.size();
     case O::SmAddTimedEffect: SM->AddTimedEffect((long)a[0], (unsigned long)a[1], false);
         break;
-    case O::SmAddPendingCopy: SM->AddV134Effect(*(EESMEffect*)a[0]);
+    case O::SmAddPendingCopy: ee_scenario_en_round(SM, EE_SCENARIO_MN_ADD_PENDING, (EESMEffect*)a[0], 0, 0);
         break;
     case O::SmNewEntry: SM->NewEntry((unsigned long)a[0]);
         break;
-    case O::SmSortList: SM->SortList((unsigned long)a[0]);
+    case O::SmSortList: ee_scenario_en_list(SM, EE_SCENARIO_LS_SORT, (unsigned long)a[0], 0, 0, NULL);
         break;
-    case O::SmMoveEntry: SM->MoveEntry((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
+    case O::SmMoveEntry: ee_scenario_en_list(SM, EE_SCENARIO_LS_MOVE, (unsigned long)a[0], (unsigned long)a[1], a[2] != 0, NULL);
         break;
     case O::SmDeleteEntry: return SM->DeleteEntry((unsigned long)a[0], (unsigned long)a[1]);
     case O::SmDuplicateEntry: SM->DuplicateEntry((unsigned long)a[0], (unsigned long)a[1]);
@@ -510,9 +514,9 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::ListDrawCount: return CivListAccess::Drawn(LBS);
     case O::ListDataEquals: return LBS->GetData((unsigned long)a[0]) == s;
     case O::ProcessEventOn: return ((UIEvent*)p)->ProcessEvent((UIForm*)a[0], (UIControl*)a[1]);
-    case O::CivEdit: return CivBuilderEditCivilization();
+    case O::CivEdit: return ee_screens_cb_edit_civilization();
     case O::CivTimer: return EEProcessTimerExpired();
-    case O::CivBlink: return EESetCivBuilderButtonBlinking(a[0] != 0);
+    case O::CivBlink: return ee_screens_cb_set_blinking(a[0] != 0);
     case O::CivAvailablePoints: return CV->mAvailablePoints;
     case O::CivMaxPoints: return CV->mMaxPoints;
     case O::CivUnchanged: return CV->mUnchanged;

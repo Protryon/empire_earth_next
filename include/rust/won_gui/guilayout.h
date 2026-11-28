@@ -6,14 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// A `WONRectangle` (x, y, width, height).
-struct EeWonRect {
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-};
+#include "rust/won_gui/records.h"
 
 /// A child layout instruction (`ChildLayoutInstruction`): its flags and the four offsets.
 struct EeWonChildLayout {

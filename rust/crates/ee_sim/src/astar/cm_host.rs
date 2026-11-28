@@ -78,15 +78,6 @@ pub unsafe extern "C" fn ee_astar_area_create_of(h: u64, points: *const EeHullPo
     area_create(h, &points);
 }
 
-/// `EEAIArea::UpdateHull()` for the C++.
-///
-/// # Safety
-/// `h` a live area (an `EEAIArea*`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_update_hull_of(h: u64) {
-    update_hull(h);
-}
-
 /// `EEAIArea::RemoveTile(tile)` of the kind (a forest's count of the tile's wood kind drops).
 ///
 /// # Safety
@@ -206,15 +197,6 @@ pub(crate) fn answer(op: i32, io: &mut EeAStarCmIo) -> Option<i64> {
             _ => return None,
         })
     }
-}
-
-/// `EEAIArea::RemoveTile(tile)` / `EEAIForest::RemoveTile(tile)` for the C++ (the kind's slot).
-///
-/// # Safety
-/// `h` a live area.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_remove_tile_of(h: u64, x: c_long, y: c_long) -> bool {
-    remove_tile(h, x, y)
 }
 
 #[cfg(test)]

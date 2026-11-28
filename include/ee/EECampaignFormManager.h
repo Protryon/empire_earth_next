@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "rust/game/campaign.h"
+#include "lle/UIFormManager.h"
 
 
 class EECampaign {
@@ -26,10 +27,6 @@ public:
     // Returns the decrypted campaign password
     // 0x28c606 (+0x88)
     const UWideString& GetPassword() { return this->mPassword; }
-    // 0x28ca06: the scenario files and their media of the campaign (ee_game campaign.rs, with Save)
-    // Lists every scenario file of the campaign (optionally with the campaign prefix) with its media and sounds, plus
-    // the background image; returns false at the first scenario whose files are missing (ee_game campaign.rs)
-    bool ListScenarioFiles(std::vector<UWideString>& outFiles, UWideString& outError, bool inAdd, bool inPrefixed) { return ee_campaign_list_scenario_files(this, &outFiles, &outError, inAdd, inPrefixed); }
     // Saves the campaign: its tags (password encrypted), then the archive of its files; needs a campaign name; returns
     // whether it worked, with an error text otherwise (ee_game campaign.rs campaign_save)
     bool Save(UWideString& outError) { return ee_campaign_save(this, &outError); }
@@ -104,10 +101,6 @@ public:
     void SetCampaignName(const UWideString& inName) { this->mCampaignName = inName; }
     void SetDescription(const UWideString& inDescription) { this->mDescription = inDescription; }
     void SetFirstScenario(const UWideString& inScenario) { this->mFirstScenario = inScenario; }
-    // 0x28f285: mChecksum of the campaign file ("Campaigns\" + name + extension; 0 when it is missing); name
-    // (provisional name)
-    // Recomputes the checksum of the chosen campaign's file (0 when it is not found; ee_game campaign.rs)
-    void UpdateChecksum() { ee_campaign_update_checksum(this); }
     unsigned long GetChecksum() const { return this->mChecksum; }  // (the CSSE loads it before the other arguments)
 
     EECampaign mCampaign;                   // +0x004

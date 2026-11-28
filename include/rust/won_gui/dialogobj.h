@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/ctobj.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonDlgCall : uint32_t {

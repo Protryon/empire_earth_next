@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "lle/U2DPoint.h"
+#include "rust/sim/records.h"
 #include "rust/sim/unit_ids.h"        // kGoalAttackGround
 #include "rust/sim/units.h"
 #include "rust/sim/combat.h"
@@ -66,13 +67,10 @@ public:
     unsigned long GetCreationTime() { return this->mCreationTime; }   // +0x38
     void SetOwner(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_SET_OWNER, H(inUnit)); }   // +0x3c
     void Step(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_STEP, H(inUnit)); }            // +0x40
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x44
     void Abandon(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_ABANDON, H(inUnit)); }        // +0x4c
     long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)this->Call(EE_UNITS_GOAL_REPAIR, inMajorVersion, inMinorVersion); }  // +0x50
     void Start(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_START, H(inUnit)); }          // +0x54
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x58
     // +0x5c: the base goal's count, then the kind's (the attack unit's: 0 also clears the sidestep count)
-    void SetPathAttempts(long inValue) { ee_units_goal_set_path_attempts(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, reinterpret_cast<EeUnitsGoalBase*>(this), inValue); }
     void SetStartTime(long inValue) { this->mStartTime = inValue; }   // +0x60
     bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent) { return this->Call(EE_UNITS_GOAL_EVALUATE, H(inUnit), inEvent) != 0; }  // +0x64
     void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit* inUnit) { this->Call3(EE_UNITS_GOAL_REPLACE_UNIT, H(inOld), H(inNew), (int64_t)H(inUnit)); }  // +0x6c
@@ -97,12 +95,6 @@ public:
                            EeUnitsGoalIo* ioArgs = NULL)
     {
         return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_io(inKind, inArg, inOperation, inA, inB, ioArgs));
-    }
-    // the same with an answer block of three integers
-    static EEUnitGoal* NewCall(unsigned char inKind, bool inArg, int32_t inOperation, uint64_t inA, uint64_t inB, int64_t inI0,
-                               int64_t inI1 = 0, int64_t inI2 = 0)
-    {
-        return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_call(inKind, inArg, inOperation, inA, inB, inI0, inI1, inI2));
     }
     // one field of a body's answer block
     int64_t Field(int32_t inOperation, int inIndex) const { return ee_units_goal_field(inOperation, this->Base(), inIndex); }
@@ -164,7 +156,7 @@ public:
     static EEUnitGoal* NewCastCalamity(EEComplexUnit* inSource, EEUnit* inTarget, long inTileX, long inTileY,
                                        long inCalamityType, bool inArg)
     {
-        return NewCall(11, inArg, EE_UNITS_GOAL_NEW_CALAMITY, H(inSource), H(inTarget), inTileX, inTileY, inCalamityType);
+        return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_call(11, inArg, EE_UNITS_GOAL_NEW_CALAMITY, H(inSource), H(inTarget), inTileX, inTileY, inCalamityType));
     }
     static EEUnitGoal* NewCastCalamity(bool inArg) { return New(11, inArg, EE_UNITS_GOAL_CALAMITY_NEW_EMPTY); }
     // the cast's technology (its tile and target unit when asked); where the calamity goes (the target, the source
@@ -183,7 +175,7 @@ public:
 
     // an unload (kGoalUnloadTransport): the transport (referenced) unloads at the tile, its unload tiles found when
     // it carries cargo (EEUGUnloadTransport(...)); or the load's empty goal (EEUGUnloadTransport(inArg))
-    static EEUnitGoal* NewUnloadTransport(EEComplexUnit* inTransport, long inX, long inY, bool inArg) { return NewCall(8, inArg, EE_UNITS_GOAL_NEW_UNLOAD, H(inTransport), 0, inX, inY); }
+    static EEUnitGoal* NewUnloadTransport(EEComplexUnit* inTransport, long inX, long inY, bool inArg) { return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_call(8, inArg, EE_UNITS_GOAL_NEW_UNLOAD, H(inTransport), 0, inX, inY, 0)); }
     static EEUnitGoal* NewUnloadTransport(bool inArg) { return New(8, inArg, EE_UNITS_GOAL_UNLOAD_NEW_EMPTY); }
     // the transport (its unload tile when asked); another transport (the reference moved, its range taken); whether
     // the transport can unload at the tile (its class's test, else a free tile)
@@ -191,7 +183,7 @@ public:
     void SetUnloadTransport(EEComplexUnit* inTransport) { this->Call(EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT, H(inTransport)); }
     bool CanUnloadAtDestination() { return this->Call(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD) != 0; }
 
-    // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRustCombat.cpp): an attack on the
+    // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRust.cpp's GoalOp): an attack on the
     // ground at inTarget (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's at 0, 0, 0) and its point
     static EEUnitGoal* NewAttackGround(const GE3DPoint& inTarget, bool inArg)
     {
@@ -204,7 +196,7 @@ public:
     // target, attacker, last known target tile, convert flag, destination and sidestep count
     static EEUnitGoal* NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert)
     {
-        return NewCall(2, inArg3, EE_COMBAT_GOAL_NEW_ATTACK, H(inAttacker), H(inTarget), inIsConvert ? 1 : 0);
+        return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_call(2, inArg3, EE_COMBAT_GOAL_NEW_ATTACK, H(inAttacker), H(inTarget), inIsConvert ? 1 : 0, 0, 0));
     }
     EEUnit* GetAttackTarget() const { return Of<EEUnit>(this->Attack().target); }
     EEComplexUnit* GetAttacker() const { return Of<EEComplexUnit>(this->Attack().attacker); }
@@ -222,7 +214,7 @@ public:
     // referenced; the load's EEUGHealUnit(inArg): no healee, at 0, 0, 0), its healee, and the location it was made at
     // (the heal goal derived from EEUGLocation until it moved: EELocationGoalPoint reads it)
     static EEUnitGoal* NewHealUnit(EEComplexUnit* inTarget, bool inArg) { return New(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, H(inTarget)); }
-    static EEUnitGoal* NewHealUnit(bool inArg) { return NewCall(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, 0, 0, 2); }
+    static EEUnitGoal* NewHealUnit(bool inArg) { return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_call(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, 0, 0, 2, 0, 0)); }
     EEComplexUnit* GetHealTarget() const { return Of<EEComplexUnit>(ee_combat_heal_target(H(this))); }
     // a load goal (kGoalLoadTransport, kGoalLoadGarrison): the container and the units, all referenced; inUnits is
     // sorted by id and loses its duplicates, as the original constructors did to the caller's list

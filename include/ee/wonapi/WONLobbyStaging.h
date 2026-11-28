@@ -3,6 +3,7 @@
 #define EE_WONAPI_WONLOBBYSTAGING_H
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
+#include "rust/won_lobby/lobbyhost.h"
 namespace WONAPI {
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots; constructor 0x7ef160.
 // A Rust object since round 20 (rust/crates/ee_won_lobby/src/stagingobj.rs): its methods and scalar state (the join

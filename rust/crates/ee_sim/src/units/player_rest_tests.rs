@@ -22,6 +22,9 @@ struct World {
     complex: bool,
     on_tile: bool,
     points: Vec<u64>,
+    rect_units: Vec<u64>,
+    ring: Vec<[i32; 2]>,
+    herd_units: Vec<u64>,
 }
 
 impl World {
@@ -97,11 +100,16 @@ impl RestHost for World {
     fn location_z(&mut self, _: u64) -> f32 {
         1.0
     }
-    fn units_in_rectangle(&mut self, bounds: [f32; 4], _: u64) {
+    fn units_in_rectangle(&mut self, bounds: [f32; 4], units: &mut Vec<u64>) {
         self.refs.push(('r', bounds[2] as u64));
+        units.extend_from_slice(&self.rect_units);
     }
-    fn block_ring(&mut self, _: c_long, _: c_long, _: c_long, _: u64) {
+    fn block_ring(&mut self, _: c_long, _: c_long, _: c_long, tiles: &mut Vec<[i32; 2]>) {
         self.refs.push(('b', 0));
+        tiles.clone_from(&self.ring);
+    }
+    fn herd_units(&mut self, _: u64) -> Vec<u64> {
+        self.herd_units.clone()
     }
     fn can_stand_on(&mut self, x: c_long, _: c_long, _: u64) -> bool {
         x != 9
@@ -129,6 +137,9 @@ impl RestHost for World {
     }
     fn c_string(&mut self, _: u64) -> Vec<u8> {
         b"Archer".to_vec()
+    }
+    fn names(&mut self, _: u64) -> (Vec<u8>, Vec<u8>) {
+        (b"Ann".to_vec(), b"Rome".to_vec())
     }
 }
 
@@ -311,18 +322,10 @@ fn a_dead_unit_counts_by_its_class() {
 fn a_footprint_is_cleared_onto_waypoints_or_the_free_ring() {
     // the building 0x40 at (3, 4), size 2: units 0x40 (itself), 0x66 (not movable), 0x70 (a waypoint outside), 0x71
     // (no path: every free tile but x 9)
-    let mut w = World::default()
-        .answer(EE_UNITS_PLAYER_BODY_UNITS_SIZE, None, None, 4)
-        .answer(EE_UNITS_PLAYER_BODY_UNITS_AT, None, Some(0), 0x40)
-        .answer(EE_UNITS_PLAYER_BODY_UNITS_AT, None, Some(1), 0x66)
-        .answer(EE_UNITS_PLAYER_BODY_UNITS_AT, None, Some(2), 0x70)
-        .answer(EE_UNITS_PLAYER_BODY_UNITS_AT, None, Some(3), 0x71)
-        .answer(EE_UNITS_PLAYER_BODY_WAYPOINTS, Some(0x70), None, 1)
-        .answer(EE_UNITS_PLAYER_BODY_TILES_SIZE, None, None, 3)
-        .answer(EE_UNITS_PLAYER_BODY_TILES_AT, None, Some(0), pack(9, 4))
-        .answer(EE_UNITS_PLAYER_BODY_TILES_AT, None, Some(1), pack(5, 4))
-        .answer(EE_UNITS_PLAYER_BODY_TILES_AT, None, Some(2), pack(5, 5))
-        .answer(EE_UNITS_PLAYER_BODY_TILE_EMPTY, None, None, 1);
+    let mut w =
+        World { rect_units: vec![0x40, 0x66, 0x70, 0x71], ring: vec![[9, 4], [5, 5], [5, 4]], ..Default::default() }
+            .answer(EE_UNITS_PLAYER_BODY_WAYPOINTS, Some(0x70), None, 1)
+            .answer(EE_UNITS_PLAYER_BODY_TILE_EMPTY, None, None, 1);
     // the building's tile is (3, 4) (World::tile)
     clear_footprint(&mut w, 1, 0x40);
     assert_eq!(w.refs[0], ('r', 4), "the rectangle's right: 3 + 2 - 1");
@@ -330,7 +333,9 @@ fn a_footprint_is_cleared_onto_waypoints_or_the_free_ring() {
     // 0x70's next waypoint (0, 0, 0) is outside the rectangle: moved once; 0x71 to both free tiles it can stand on
     assert_eq!(moves, vec![0x70, 0x71, 0x71]);
     assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_START_IDLE).count(), 2);
-    assert_eq!(w.ops().last(), Some(&EE_UNITS_PLAYER_BODY_TILES_DELETE));
+    // the ring sorted by the distance to the building's top right (4, 4): (5, 4) before (5, 5)
+    let moved: Vec<i64> = w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_MESH_VALID).map(|c| c.3).collect();
+    assert_eq!(moved, vec![4, 5]);
 }
 
 #[test]
@@ -407,15 +412,10 @@ fn the_cloak_chains_walk_the_parts_until_one_is_so() {
 
 #[test]
 fn a_herd_dies_from_its_last_unit_and_the_dump_lists_what_is_there() {
-    let mut w = World::default()
-        .answer(EE_UNITS_PLAYER_BODY_COMPLEXES_NEW, None, None, 0x80)
-        .answer(EE_UNITS_PLAYER_BODY_COMPLEXES_SIZE, None, None, 2)
-        .answer(EE_UNITS_PLAYER_BODY_COMPLEXES_AT, None, Some(0), 0x41)
-        .answer(EE_UNITS_PLAYER_BODY_COMPLEXES_AT, None, Some(1), 0x42);
+    let mut w = World { herd_units: vec![0x41, 0x42], ..Default::default() };
     kill_herd_units(&mut w, 1, 0x30, false);
     let kills: Vec<u64> = w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_KILL_KILLED).map(|c| c.1).collect();
     assert_eq!(kills, vec![0x42, 0x41]);
-    assert_eq!(w.calls[1], (EE_UNITS_PLAYER_BODY_HERD_UNITS, 0x30, 0x80, 0));
     let mut w = World::default().answer(EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS, None, None, 3).answer(
         EE_UNITS_PLAYER_BODY_UPGRADE_AT,
         None,
@@ -450,11 +450,7 @@ fn a_color_and_its_shade() {
 fn a_computer_players_result_names_its_civilization() {
     let mut w = World::default();
     announce_result(&mut w, 1, true);
-    let ops = w.ops();
-    assert_eq!(ops.iter().filter(|&&o| o == EE_UNITS_PLAYER_BODY_TEXT_NEW).count(), 4);
-    assert_eq!(ops.iter().filter(|&&o| o == EE_UNITS_PLAYER_BODY_TEXT_DELETE).count(), 4);
-    let at = |op| ops.iter().position(|&o| o == op).unwrap();
-    assert!(at(EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME) < at(EE_UNITS_PLAYER_BODY_TEXT_FORMAT));
-    assert!(at(EE_UNITS_PLAYER_BODY_TEXT_FORMAT) < at(EE_UNITS_PLAYER_BODY_CHAT_RESULT));
-    assert!(!ops.contains(&EE_UNITS_PLAYER_BODY_TEXT_NAME));
+    assert_eq!(w.ops(), vec![EE_UNITS_PLAYER_BODY_IS_HUMAN, EE_UNITS_PLAYER_BODY_CHAT_RESULT]);
+    let line = format_s(b"Player '%s' is victorious! 100%%", b"Rome - (Ann)");
+    assert_eq!(line, b"Player 'Rome - (Ann)' is victorious! 100%");
 }

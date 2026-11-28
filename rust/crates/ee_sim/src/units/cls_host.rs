@@ -734,13 +734,6 @@ unsafe fn set_tile(p: *mut [c_long; 2], t: Tile) {
     unsafe { *p = [t[0] as c_long, t[1] as c_long] }
 }
 
-/// `EEUnitClass::CanCarry` (`class` the transport's class object).
-#[no_mangle]
-pub extern "C" fn ee_units_tr_can_carry(class: u64, unit1: u64, unit2: u64) -> bool {
-    let (mut h, cls) = game(class);
-    tr::can_carry(&mut h, cls, unit1, unit2)
-}
-
 /// `EEUnitClass::CanUnloadAt`.
 #[no_mangle]
 pub extern "C" fn ee_units_tr_can_unload_at(class: u64, transport: u64, x: i32, y: i32) -> bool {
@@ -903,17 +896,6 @@ pub extern "C" fn ee_units_cls_take_off_from_runway(class: u64, unit: u64, dx: i
     air::take_off_from_runway(&mut h, class, cls.0, unit, dx, dy);
 }
 
-/// A home base's facing as the runway's direction (`out` x, y).
-///
-/// # Safety
-/// `out` points to two writable `long`s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_runway_direction(facing: u32, out: *mut [c_long; 2]) {
-    let (x, y) = air::runway_direction(facing);
-    // SAFETY: the caller's contract
-    unsafe { set_tile(out, [x, y]) }
-}
-
 /// `EEGetFacingQuarter`.
 #[no_mangle]
 pub extern "C" fn ee_units_cls_facing_quarter(x: i32, y: i32) -> i32 {
@@ -930,26 +912,6 @@ pub extern "C" fn ee_units_cls_navy_yard_facing(x: u32, y: u32) -> i32 {
 #[no_mangle]
 pub extern "C" fn ee_units_cls_dock_facing(x: u32, y: u32) -> i32 {
     bld::dock_facing(&mut ClsGame(Game), x, y)
-}
-
-/// `EETurnGatePart`'s answer: the piece's animation, and the yaw it turns to in `yaw` (`turned` false: kept).
-///
-/// # Safety
-/// `yaw` and `turned` are writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_gate_part_turn(
-    direction: i32,
-    index: i32,
-    yaw: *mut f32,
-    turned: *mut bool,
-) -> i32 {
-    let (action, turn) = bld::gate_part_turn(direction, index);
-    // SAFETY: the caller's contract
-    unsafe {
-        *turned = turn.is_some();
-        *yaw = turn.unwrap_or(0.0);
-    }
-    action
 }
 
 /// `EEGetWallGateTiles` (appended to `out`, a `std::vector<U2DPoint<long> >`).
@@ -995,24 +957,11 @@ pub extern "C" fn ee_units_cls_landing_has_arrived(class: u64, unit: u64, value:
     air::landing_has_arrived(&mut h, cls.0, unit, value, animal)
 }
 
-/// `EEUnitClass::EvaluateCondition` of the landing kinds (`animal`: the air animal's): 0 or 1, -1 for a trigger the
-/// common unit class answers.
-#[no_mangle]
-pub extern "C" fn ee_units_cls_landing_condition(class: u64, unit: u64, event: u32, animal: bool) -> i32 {
-    let (mut h, cls) = game(class);
-    let answer = if animal {
-        air::air_animal_condition(&mut h, unit, event)
-    } else {
-        air::landable_condition(&mut h, class, cls.0, unit, event)
-    };
-    answer.unwrap_or(-1)
-}
-
 // ---- the trigger answers (cls_condition.rs) over `ee_units_cls_cond_host` (EEUnitAI.cpp)
 use crate::units::cls_condition::{self as cond, Answer, CombatKind, CondHost, EeUnitsCondIo};
 
 extern "C" {
-    fn ee_units_cls_cond_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsCondIo) -> i64;
+    pub(crate) fn ee_units_cls_cond_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsCondIo) -> i64;
 }
 
 /// The trigger host's plain reads of the unit `a` over the world views (the units' behaviour lane, round 2; they

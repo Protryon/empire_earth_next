@@ -20,6 +20,9 @@
 #include "ee/wonapi/WONGUIShell.h"
 #include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/dialogs.h"
+#include "ee/wonapi/WONComponentFlags.h"
+#include "rust/won_gui/guiconf.h"
+#include "rust/won_lobby/scrolltext.h"
 
 using namespace WONAPI;
 
@@ -31,15 +34,7 @@ using namespace WONAPI;
 // dialogs are lobby dialog kinds now; the rows stay C++ widgets)
 
 // One row of the bad user list: a Rust row since R6 WON round 34 (ee_won_lobby rows.rs BadUser; its texts made
-// by dlgsplit.rs over TextRecord, TextFormatRes and the rows' TextNew)
-
-// a bad user record's text (TextRecord)
-static std::wstring RecordText(const uint16_t* inUnits, size_t inCount)
-{
-    std::wstring aText;
-    WonWideSink(&aText, inUnits, inCount);
-    return aText;
-}
+// by dlgsplit.rs, in Rust since R6 WON GUI round 40: lobbytext.rs)
 
 // Adapter list row holding the adapter's host address (RTTI in the global namespace, not WONAPI)
 class NetworkAdapterListItem : public MultiListItem {
@@ -88,13 +83,6 @@ const GUIString& LobbyRustDialog::InputText(int inMember)
     return reinterpret_cast<InputBox*>(this->LCall(EeWonLobbyDlgCall::Slot, inMember))->GetText();
 }
 
-const GUIString& LobbyRustDialog::InputTextOf(intptr_t inInput)
-{
-    if (inInput == 0)
-        return gEmptyGUIString;
-    return reinterpret_cast<InputBox*>(inInput)->GetText();
-}
-
 SmartPtr<LobbyGame> LobbyRustDialog::GetGame()
 {
     LobbyGame* aHeld = reinterpret_cast<LobbyGame*>(this->LCall(EeWonLobbyDlgCall::GetGame));
@@ -130,7 +118,6 @@ static intptr_t Held(RefCount* inObject)
         inObject->AddRef();
     return (intptr_t)inObject;
 }
-static std::string sDlgItemText; // ItemText's text: the Rust copies it before its next op
 
 static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -194,13 +181,13 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::FrameRight: return WONShell::Op(reinterpret_cast<Component*>(a), EeWonShellOp::GetFrameBorder, 2);
     case Op::RootWidth: return GetLobbyRoot()->Width();
     case Op::RootHeight: return GetLobbyRoot()->Height();
-    case Op::FontStringWidth: return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
-    case Op::FontStringWidthRange: return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b), 0, reinterpret_cast<const GUIString*>(b)->length());
-    case Op::FontCharWidth: return aLabel->mWrappedText->mFont->GetCharacterWidth((int)b);
-    case Op::FontHeight: return aLabel->mWrappedText->mFont->GetHeight();
+    case Op::FontStringWidth: return aLabel->mWrappedText->GetFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
+    case Op::FontStringWidthRange: return aLabel->mWrappedText->GetFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(b), 0, reinterpret_cast<const GUIString*>(b)->length());
+    case Op::FontCharWidth: return aLabel->mWrappedText->GetFont()->GetCharacterWidth((int)b);
+    case Op::FontHeight: return aLabel->mWrappedText->GetFont()->GetHeight();
     case Op::TickCount: return (intptr_t)(uint32_t)WONTickCount();
     case Op::Invalidate: aComp->Invalidate(); return 0;
-    case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->mText;
+    case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->GetText();
     // round 3: TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog
     // as text (WON's HTML rendering is not ported)
     case Op::BrowserShowTou: reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false); return 0;
@@ -239,23 +226,13 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::ConnectItemSetImage: static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;
     case Op::ConnectItemNotReady: return static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
     // EELobbyFileDialog
-    case Op::ItemText: return (intptr_t)(sDlgItemText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.operator std::string()).c_str();
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
     case Op::FileAskDelete: return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle), EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
     case Op::FileDelete: WONFile(reinterpret_cast<const char*>(a)).Delete(true); return 0;
-    case Op::EventDoubleClick: return reinterpret_cast<ComponentEvent*>(a)->mEv.flag;
-    case Op::EventButton: return reinterpret_cast<ComponentEvent*>(a)->mEv.button;
     // R6 WON round 34: the statements of the compound cases dlgsplit.rs composes (the bad user rows, the admin title,
     // the default adapter row, the file search) and of the constructors
-    case Op::TextCompare: return ee_won_gstr_read(EeWonGstrRead::Compare, reinterpret_cast<const EeWonGstr*>(a), reinterpret_cast<const void*>(b), 0, 0);
-    case Op::TextRecord: return Held(NewGUIStringData(RecordText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
-    case Op::TextFormatRes: return Held(LobbyFormatString(gLobbyResources[a].mString, GUIString(reinterpret_cast<GUIStringData*>(b))).mData.get());
-    case Op::TitleNew: return (intptr_t) new GUIString(gLobbyResources[a].mString);
-    case Op::TitleAppendSpace: reinterpret_cast<GUIString*>(a)->append(GUIString(" ")); return 0;
     case Op::TitleAppendName: reinterpret_cast<GUIString*>(a)->append(reinterpret_cast<LobbyClient*>(b)->GetName()); return 0;
-    case Op::TitleFree: delete reinterpret_cast<GUIString*>(a); return 0;
     case Op::AdapterSetDefaultName: aMulti->SetString(0, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Default_String), NULL); return 0;
-    case Op::NameLength: return (intptr_t)GUIString(reinterpret_cast<const char*>(a)).length();
     case Op::FileListInsertName: aList->InsertString(GUIString(reinterpret_cast<const char*>(b)).substr(0, (unsigned short)c), -1); return 0;
     case Op::NewScrollText: return (intptr_t) new ScrollingTextComponent;
     }
@@ -296,7 +273,6 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     PopupMenu* aMenu = reinterpret_cast<PopupMenu*>(a);
     LobbyClient* aClient = reinterpret_cast<LobbyClient*>(a);
     LobbyGame* aGame = reinterpret_cast<LobbyGame*>(a);
-    ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
     case Op::MenuNew: return (intptr_t) new PopupMenu;
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
@@ -314,8 +290,6 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
     case Op::Config: return (intptr_t)ee_won_lobbyconf_current();
     case Op::ConfigNoPingInProgress: return ee_won_lobbyconf_num(reinterpret_cast<EeWonLobbyConf*>(a), EeWonLobbyConfNum::NoPingInProgress);
-    case Op::EventItem: return anEvent->mEv.item;
-    case Op::EventButton: return anEvent->mEv.button;
     case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;
     case Op::DeliverClient: aPopup->DeliverEvent(ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false); return 0;
     case Op::DeliverGame: aPopup->DeliverEvent(GameActionEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
@@ -325,4 +299,49 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     return 0;
 }
 
+}
+
+// ---- CreditsDialog.cpp until R6 WON GUI round 41: The lobby's credits dialog: credit lines from the layout file scroll up and fade in and out at the edges
+// R6 WONLobby round 3: the scrolling text's lines, clock and paint are ee_won's scrolltext.rs (this unit keeps the
+// component's shell and its host) and CreditsDialog is the lobby dialog kind Credits (lobbydlg.rs; its shell is in
+// WONLobbyDialogs.h). Its config's ADDLINE reader is the lobby kind LobbyCredits (lobbycfgrd.rs, R6 WON lobby/net
+// round 40; its host LobbyNetCtrlHost.cpp's).
+// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+namespace WONAPI {
+// ---- ScrollingTextComponent: the shell and its host (each op the original's statements on the component or the
+// paint's Graphics)
+
+static intptr_t ScrollTextHost(void* inComp, EeWonScrollTextOp inOp, intptr_t a, intptr_t b, int x, int y, int w, int h)
+{
+    typedef EeWonScrollTextOp Op;
+    ScrollingTextComponent* aComp = static_cast<ScrollingTextComponent*>(inComp);
+    Graphics& g = *reinterpret_cast<Graphics*>(a);
+    switch (inOp) {
+    case Op::Width: return aComp->Width();
+    case Op::Height: return aComp->Height();
+    case Op::Invalidate: aComp->Invalidate(); return 0;
+    case Op::RequestTimer: aComp->RequestTimer(x != 0); return 0;
+    case Op::BasePaint: aComp->Component::Paint(g); return 0;
+    case Op::SetDefaultFont: g.SetFont(aComp->GetDefaultFont()); return 0;
+    case Op::SetColor: g.SetColor((DWORD)(uint32_t)x); return 0;
+    case Op::SysHilight: g.SetSysColor(StandardColor_3DHilight); return 0;
+    case Op::SysShadow: g.SetSysColor(StandardColor_3DShadow); return 0;
+    case Op::FillRect: g.FillRect(x, y, w, h); return 0;
+    case Op::DrawRect: g.DrawRect(x, y, w, h); return 0;
+    case Op::FontHeight: return g.GetFont()->GetHeight();
+    case Op::Color: return (intptr_t)g.mG.st.color;
+    case Op::StringWidth: return g.GetFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
+    case Op::DrawString: g.DrawString(*reinterpret_cast<const GUIString*>(b), x, y); return 0;
+    }
+    return 0;
+}
+
+// Creates an empty clipped scrolling text box that scrolls one pixel every 60 ms
+ScrollingTextComponent::ScrollingTextComponent() : mScroll(ee_won_scrolltext_new(this, ScrollTextHost))
+{
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+}
+// Destroys the scrolling text box: its lines front to back, then the component
+ScrollingTextComponent::~ScrollingTextComponent() { ee_won_scrolltext_free(this->mScroll); }
 }

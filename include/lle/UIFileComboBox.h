@@ -3,8 +3,8 @@
 // original's sizeof was 0xf4.
 //
 // Whole in Rust (rust/crates/ee_ui/src/filelistobj.rs, R6 ui round 21): the valid extensions and the path are the
-// Rust object mRust; every method forwards there (UIFileListBox.cpp holds the forwarders and the host). Requires
-// lle/UIComboBox.h.
+// Rust object mRust (the game's Rust calls it through ee_ui direct's Kind::FileList; UIFileListBox.cpp holds the
+// host). Requires lle/UIComboBox.h.
 #ifndef LLE_UIFILECOMBOBOX_H
 #define LLE_UIFILECOMBOBOX_H
 
@@ -26,10 +26,6 @@ public:
     this->mRust = ee_ui_file_list_new(this, ee_ui_file_combo_host, true);
 }
     virtual ~UIFileComboBox() { ee_ui_file_list_free(this->mRust); }
-    void AddValidExtension(const UString& inExtension) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension); }
-    void CreateEntries(unsigned long inSortType) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType); }
-    long DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
-    void SetSearchPaths(FSPath* inPath) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath); }
     EeUiFileList* mRust;                    // the valid extensions (".xxx") and the path (referenced)
 };
 

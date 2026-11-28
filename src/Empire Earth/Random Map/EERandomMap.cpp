@@ -22,6 +22,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
+#include "rust/game/gamecpp.h"
 
 // The world a random map is made in (ee_rmap_cpp's p)
 struct EERMWorld {
@@ -69,11 +70,11 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     switch (inOp) {
     case O::MapTileCount: return W->mMap->GetTileCount();
     case O::MapIsEdgeTile: return W->mMap->IsEdgeTile((long)a[0], (long)a[1]);
-    case O::MapPaintTerrain: W->mMap->PaintTerrain((long)a[0], (long)a[1], (long)a[2]);
+    case O::MapPaintTerrain: ee_gamecpp_mx_paint(W->mMap, (long)a[0], (long)a[1], (long)a[2]);
         break;
-    case O::MapSetCliffTexture: W->mMap->SetCliffTexture((long)a[0]);
+    case O::MapSetCliffTexture: ee_gamecpp_mx_set_cliff_texture(W->mMap, (long)a[0]);
         break;
-    case O::MapUpdateCliffs: W->mMap->UpdateCliffs(0, W->mMap->mSize, 0, W->mMap->mSize);
+    case O::MapUpdateCliffs: ee_gamecpp_mx_update_cliffs(W->mMap, 0, W->mMap->mSize, 0, W->mMap->mSize);
         break;
     case O::MapSetCharacteristics: W->mMap->mMapCharacteristics = (unsigned long)a[0];
         break;

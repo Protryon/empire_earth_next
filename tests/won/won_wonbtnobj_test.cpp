@@ -145,7 +145,7 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
         switch (k) {
         case Wt::Width: r = TextWidth(t); break;
         case Wt::Height: r = TextHeight(t); break;
-        case Wt::Font: r = t.font; break;
+        case Wt::GetFont: r = t.font; break;
         case Wt::SetText: t.length = (int)c; break; // the GUIString is its length here
         case Wt::SetMaxWidth: t.maxWidth = (int)c; break;
         case Wt::SetWrap: t.wrap = c != 0; break;
@@ -426,7 +426,7 @@ struct WONButton {
                         dst.mImage = src.mImage;
                 }
                 if (src.mText.get() != 0)
-                    dst.mText = this->mFontTextMap[T(Wt::Font, src.mText.get())];
+                    dst.mText = this->mFontTextMap[T(Wt::GetFont, src.mText.get())];
             }
         }
     }

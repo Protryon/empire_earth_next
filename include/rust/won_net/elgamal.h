@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-/// An ElGamal key with its own random generator.
-struct EeWonElGamal;
+#include "rust/won_net/records.h"
 
 #endif  // EE_RUST_WON_NET_ELGAMAL_H

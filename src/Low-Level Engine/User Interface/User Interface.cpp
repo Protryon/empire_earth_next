@@ -33,7 +33,6 @@
 #include "lle/UIBFull.h"
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/Input System.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/UIBlinkingButton.h"
@@ -76,10 +75,7 @@ class LLE_API UITiledBackground : public UIBitmapBackground {
 public:
     UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription, const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible, UITiling inTiling = kTilingBoth, float inAcross = 0.0f, float inDown = 0.0f) : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm, inDrawPriority, inVisible) { this->Call(EeUiBgCall::TiledInit, inTiling, 0, UIF4(inAcross, inDown)); }
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::TiledDraw, inRectangle); }
-    // slot 0x20: draws the tiles [inFirstRow, inLastRow] x [inFirstColumn, inLastColumn] clipped to inClip
-    virtual long DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
-                                     unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
-                                     float inHeight);
+    // (slot 0x20, DrawTiledBackground, which nothing overrode: Rust's, bgobj.rs DrawTiled)
 };
 
 // C:\EEX\Low-Level Engine\User Interface\UIBackground.cpp
@@ -112,8 +108,6 @@ struct UIF8 {
 EE_UI_CASE(bg_window) { return a ? m->GetRasterizer()->GetWindow(s)->GetHeight() : m->GetRasterizer()->GetWindow(s)->GetWidth(); }
 EE_UI_CASE(bg_virt_load) { return static_cast<UIBackground*>(r)->LoadBackground(); }
 EE_UI_CASE(bg_virt_unload) { return static_cast<UIBackground*>(r)->UnloadBackground(); }
-EE_UI_CASE(bg_virt_stretched) { return static_cast<UIBitmapBackground*>(static_cast<UIBackground*>(r)) ->DrawStrectchedBackground(UIObjHost::Rect(f), UIObjHost::Rect(f + 4)); }
-EE_UI_CASE(bg_virt_tiled) { return static_cast<UITiledBackground*>(static_cast<UIBackground*>(r)) ->DrawTiledBackground(UIObjHost::Rect(f), a, b, c, d, f[4], f[5]); }
 EE_UI_CASE(bg_bitmap_new) { return (intptr_t) new GEBitmap; }
 EE_UI_VOID(bg_bitmap_release) { theBitmap->Dereference(); }
 EE_UI_CASE(bg_bitmap_texture) { return (intptr_t)theBitmap->GetTexture(s); }
@@ -129,19 +123,6 @@ typedef EeUiBgCall C;
 #define UIBGM(r) static_cast<UIForm*>(static_cast<EeUiBackgroundFields*>((void*)(r))->mForm)->GetManager()
 extern "C" uintptr_t ee_uicpp_bg_texture_load(uintptr_t inRecord, EeUiShimText inName, uintptr_t inDescription)
 { return (uintptr_t)UIBGM(inRecord)->GetRasterizer()->GetTextureManager(UIBGM(inRecord)->GetScreen())->LoadTexture(UIShimString(inName), *reinterpret_cast<const GETextureDescription*>(inDescription)); }
-
-long UIBitmapBackground::DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination)
-{
-    return (long)this->Call(C::BitmapStretched, 0, 0, UIF8(inSource, inDestination));
-}
-
-long UITiledBackground::DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
-                                            unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
-                                            float inHeight)
-{
-    return (long)this->Call(C::DrawTiled, inFirstRow, inLastRow,
-                            UIF8(inClip, UIF4::Bits((int32_t)inFirstColumn), UIF4::Bits((int32_t)inLastColumn), inWidth, inHeight));
-}
 
 // C:\EEX\Low-Level Engine\User Interface\UIBackgroundTable.cpp
 // 0x1005c34a..0x1005c84e: UIBackgroundTable's inline members first (0x1005c34a..0x1005c575), then the
@@ -252,10 +233,6 @@ extern "C" void ee_uicpp_combo_set_rust(uintptr_t inCombo, uintptr_t inRust)
 { COMBO(inCombo)->mRust = reinterpret_cast<EeUiCombo*>(inRust); }
 extern "C" void ee_uicpp_list_change_selection(uintptr_t inList, uint32_t inIndex, bool inA, bool inB)
 { LIST(inList)->ChangeSelectionIndex(inIndex, inA, inB); }
-extern "C" void ee_uicpp_control_set_bg_opacity(uintptr_t inControl, float inOpacity)
-{ CTL(inControl)->SetBgOpacity(inOpacity); }
-extern "C" void ee_uicpp_control_set_bg_color(uintptr_t inControl, float inRed, float inGreen, float inBlue)
-{ CTL(inControl)->SetBgColor(GEColor(inRed, inGreen, inBlue)); }
 
 // The Rust combo box's calls out (ee_ui lle_hosts.rs combo: ComboQuery's and ComboAct's one shim each, by its
 // number; a the query's argument, or b, c, d, f the action's)
@@ -272,7 +249,6 @@ EE_UI_VOID(combo_a_list_delete_all) { CB_LIST->DeleteAllEntries(); }
 EE_UI_CASE(combo_a_part_mouse_down) { return CB_PART(b)->MouseLButtonDown(); }
 EE_UI_CASE(combo_a_part_mouse_up) { return CB_PART(b)->MouseLButtonUp(); }
 EE_UI_CASE(combo_a_part_mouse_move) { return CB_PART(b)->MouseMove(GE2DPoint(f[0], f[1])); }
-EE_UI_CASE(combo_a_list_wheel) { return CB_LIST->MouseWheelTurned((long)b); }
 EE_UI_CASE(combo_a_part_update_keyboard) { return CB_PART(b)->UpdateKeyboard(); }
 EE_UI_CASE(combo_a_part_translated_key) { return CB_PART(b)->UpdateTranslatedKey(reinterpret_cast<const char*>(c), (short)d); }
 EE_UI_VOID(combo_a_part_set_rectangle) { CB_PART(b)->SetRectangle(UIObjHost::Rect(f)); }
@@ -280,14 +256,8 @@ EE_UI_VOID(combo_a_part_set_location) { CB_PART(b)->SetLocation(GE2DPoint(f[0], 
 EE_UI_CASE(combo_a_part_copy_data) { return CB_PART(b)->CopyData(); }
 EE_UI_VOID(combo_a_set_dirty) { CB->SetDirty(true); }
 EE_UI_VOID(combo_a_set_rectangle) { CB->SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_VOID(combo_a_release_mouse) { CB->ReleaseCapturedMouse(); }
-EE_UI_VOID(combo_a_release_keyboard) { CB->ReleaseCapturedKeyboard(); }
-EE_UI_VOID(combo_a_open_list) { CB->OpenListBox(); }
-EE_UI_VOID(combo_a_close_list) { CB->CloseListBox(); }
 EE_UI_CASE(combo_a_add_string) { return CB->AddString(); }
 EE_UI_VOID(combo_a_change_selection) { CB->ChangeSelection(); }
-EE_UI_CASE(combo_rhombus_create) { return (intptr_t) new GERhombus(); }
-EE_UI_VOID(combo_rhombus_delete) { delete reinterpret_cast<GERhombus*>(a); }
 #undef CB_LIST
 #undef CB_PART
 #undef CB
@@ -304,18 +274,12 @@ static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle'
 // Rust's (lle_control.rs, the host ee_ui_control_host)
 #define ctl static_cast<UIControl*>(inObj)
 #define theForm ctl->GetForm()
-EE_UI_VOID(ctl_hide) { ctl->HideControl(); }
 EE_UI_VOID(ctl_help_string) { theForm->GetManager()->GetStringTable()->GetString((unsigned long)b, *reinterpret_cast<UWideString*>(a)); }
 EE_UI_VOID(ctl_set_dirty) { ctl->SetDirty(a != 0); }
 EE_UI_VOID(ctl_form_ctl_set_dirty) { reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); }
 EE_UI_VOID(ctl_virt_set_location) { ctl->SetLocation(GE2DPoint(f[0], f[1])); }
-EE_UI_VOID(ctl_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
-EE_UI_VOID(ctl_release_mouse) { ctl->ReleaseCapturedMouse(); }
-EE_UI_VOID(ctl_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
-EE_UI_VOID(ctl_part_set_bg_color) { ctl->SetBgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(ctl_tabbed_to) { ctl->TabbedTo(); }
 EE_UI_VOID(ctl_draw_copied_bg) { ctl->GetRasterizer()->Draw(ctl->CopiedBgRhombus(), ctl->GetScreenIndex()); }
-EE_UI_CASE(ctl_virt_draw_border) { return ctl->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
 EE_UI_CASE(ctl_virt_mouse_down) { return ctl->MouseLButtonDown(); }
 EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0], f[0], f[0], f[0]); }
 #undef theForm
@@ -323,8 +287,6 @@ EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0],
 
 // The first control's key lookup (lle_control.rs): the statics in its order, the one-statement shims
 #define CTL(x) reinterpret_cast<UIControl*>(x)
-extern "C" void ee_uicpp_control_key_fetch(uint32_t inSlot, uint32_t inCode)
-{ gISKeyboard->GetEntity(inCode, UIControl::Key((EeUiKey)inSlot)); }
 extern "C" long ee_uicpp_control_mouse_left_double(uintptr_t inControl)
 { return CTL(inControl)->MouseLButtonDoublePressed(); }
 extern "C" long ee_uicpp_control_mouse_left_up(uintptr_t inControl) { return CTL(inControl)->MouseLButtonUp(); }
@@ -334,18 +296,10 @@ extern "C" long ee_uicpp_control_mouse_right_down(uintptr_t inControl) { return 
 extern "C" long ee_uicpp_control_mouse_move(uintptr_t inControl, uintptr_t inLocation)
 { return CTL(inControl)->MouseMove(*reinterpret_cast<const GE2DPoint*>(inLocation)); }
 
-// the background rhombi's new and delete (ee_ui lle_control.rs: the constructor and destructor)
-extern "C" void* ee_uicpp_rhombus_new() { return new GERhombus; }
-extern "C" void ee_uicpp_rhombus_delete(void* inRhombus) { delete static_cast<GERhombus*>(inRhombus); }
-
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
 #define ctl static_cast<UIControl*>(inObj)
 EE_UI_VOID(obj_set_dirty) { ctl->SetDirty(a != 0); }
-EE_UI_VOID(obj_release_mouse) { ctl->ReleaseCapturedMouse(); }
 EE_UI_CASE(obj_tabable) { return ctl->GetTabable(); }
-EE_UI_VOID(obj_release_keyboard) { ctl->ReleaseCapturedKeyboard(); }
-EE_UI_VOID(obj_set_display_mode) { ctl->SetDisplayMode((unsigned long)a); }
-EE_UI_VOID(obj_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
 #undef ctl
 // The ops on the bitmaps and texts a whole object holds by address (ee_ui obj.rs): a the object, b an argument
 #define ctl static_cast<UIControl*>(inObj)
@@ -355,8 +309,6 @@ EE_UI_VOID(obj_bitmap_reference) { theBitmap->Reference(); }
 EE_UI_VOID(obj_bitmap_release) { theBitmap->Dereference(); }
 EE_UI_CASE(obj_bitmap_texture_width) { return theBitmap->GetTexture(ctl->GetScreenIndex())->GetWidth(); }
 EE_UI_CASE(obj_string_length) { return reinterpret_cast<const UWideString*>(a)->GetLength(); }
-EE_UI_CASE(obj_text_create) { return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); }
-EE_UI_VOID(obj_text_delete) { delete theText; }
 EE_UI_CASE(obj_text_length) { return theText->GetText().GetLength(); }
 EE_UI_VOID(obj_text_extent) { *reinterpret_cast<GERectangle*>(f) = theText->GetTextExtent(); }
 EE_UI_VOID(obj_text_set_text) { theText->SetText(*reinterpret_cast<const UWideString*>(b)); }
@@ -374,8 +326,6 @@ EE_UI_CASE(obj_part_mouse_up) { return part->MouseLButtonUp(); }
 EE_UI_CASE(obj_part_mouse_move) { return part->MouseMove(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(obj_part_set_location) { part->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(obj_part_set_rectangle) { part->SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_VOID(obj_part_set_bg_color) { part->SetBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(obj_part_set_bg_opacity) { part->SetBgOpacity(f[0]); }
 #undef part
 
 // C:\EEX\Low-Level Engine\User Interface\UIControlsTable.cpp
@@ -491,10 +441,7 @@ EE_UI_VOID(tbl_set_edit_text) { static_cast<UIEditBox*>(SC)->SetText((*reinterpr
 EE_UI_VOID(tbl_set_list_selected_bg) { static_cast<UILBString*>(SC)->GetSelectedBackground()->SetColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(tbl_set_list_selection) { static_cast<UILBString*>(SC)->ChangeSelectionIndex((unsigned long)c, false, false); }
 EE_UI_VOID(tbl_set_status_text) { static_cast<UIStatusBar*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c)), reinterpret_cast<GEFont*>(d)); }
-EE_UI_VOID(tbl_set_bg_color) { SC->SetBgColor(GEColor(f[0], f[1], f[2])); }
-EE_UI_VOID(tbl_set_bg_opacity) { SC->SetBgOpacity(f[0]); }
 EE_UI_VOID(tbl_set_set_rectangle) { SC->SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_VOID(tbl_set_change_font) { SC->ChangeFont(reinterpret_cast<GEFont*>(c)); }
 EE_UI_CASE(tbl_text_list) { return (intptr_t)static_cast<UILBString*>(SC)->GetGEText(); }
 #undef SC
 // SetupGEText's two calls (lle_table.rs ee_ui_table_setup_text) on the text a
@@ -509,8 +456,6 @@ EE_UI_CASE(tbl_text_list) { return (intptr_t)static_cast<UILBString*>(SC)->GetGE
 // clipboard, the scroll bar, the texts, lines, rhombus and polls it holds by address). The text model (edit.rs), the
 // key dispatch (edit_keys.rs) and the drawing's ranges (edit_draw.rs) are its algorithms.
 #define e static_cast<UIEditBox*>(inObj)
-#define theLine reinterpret_cast<GELine*>(a)
-#define theRhombus reinterpret_cast<GERhombus*>(a)
 #define theText reinterpret_cast<GEText*>(a)
 EE_UI_VOID(edit_button_down) { e->ButtonDown(); }
 EE_UI_VOID(edit_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
@@ -518,24 +463,14 @@ EE_UI_CASE(edit_text_font_height) { return theText->GetFont()->GetHeight(); }
 EE_UI_VOID(edit_virt_set_rectangle) { e->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(edit_virt_process_enter_key) { e->ProcessEnterKey(); }
 EE_UI_VOID(edit_text_input_cancel) { PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation()); }
-EE_UI_VOID(edit_line_delete) { delete theLine; }
-EE_UI_CASE(edit_rhombus_create) { return (intptr_t) new GERhombus(); }
-EE_UI_VOID(edit_rhombus_delete) { delete theRhombus; }
 #undef theText
-#undef theRhombus
-#undef theLine
 #undef e
 
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
 // lle_bg_edit.rs, UI lane round 12) before the host above
 #define UIEB(e) static_cast<UIEditBox*>(reinterpret_cast<UIControl*>(e))
-extern "C" void ee_uicpp_keyboard_entity(uint32_t inKey, uintptr_t* inOut)
-{ gISKeyboard->GetEntity(inKey, *reinterpret_cast<ISEntity**>(inOut)); }
 extern "C" uintptr_t ee_uicpp_edit_scroll_bar_new(uintptr_t inEdit, float inX, float inY, float inLength)
 { return (uintptr_t) new UIScrollBar(UIEB(inEdit)->GetId(), GE2DPoint(inX, inY), inLength, 1, UIEB(inEdit)->GetForm(), UIEB(inEdit)->GetIndex(), UIEB(inEdit)->GetBorderThickness()); }
-extern "C" uintptr_t ee_uicpp_line_new_black()
-{ return (uintptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
-extern "C" uintptr_t ee_uicpp_line_new() { return (uintptr_t) new GELine(); }
 
 // C:\EEX\Low-Level Engine\User Interface\UIFileListBox.cpp
 // The original units: UIFileListBox.cpp 0x1006fae7..0x1006ff58 and UIFileComboBox.cpp 0x1006f4ef..0x1006fae7.
@@ -652,16 +587,8 @@ extern "C" void ee_uicpp_hot_key_set_just_unpressed(uintptr_t inKey, uintptr_t i
 { HOTKEY(inKey)->SetJustUnpressedEvent(EVENT(inEvent)); }
 extern "C" void ee_uicpp_hot_key_set_double_pressed(uintptr_t inKey, uintptr_t inEvent)
 { HOTKEY(inKey)->SetDoublePressedEvent(EVENT(inEvent)); }
-extern "C" void ee_uicpp_form_fetch_tab_key() { gISKeyboard->GetEntity(kKeyTab, UIControl::Key(EeUiKey::Tab)); }
-extern "C" void ee_uicpp_form_fetch_shift_key() { gISKeyboard->GetEntity(kKeyShift, UIControl::Key(EeUiKey::Shift)); }
 extern "C" void ee_uicpp_event_uninitialize(uintptr_t inEvent) { EVENT(inEvent)->Uninitialize(); }
 extern "C" void ee_uicpp_event_initialize(uintptr_t inEvent) { EVENT(inEvent)->Initialize(); }
-extern "C" void ee_uicpp_control_ime_result(uintptr_t inControl, uintptr_t inText)
-{ CTL(inControl)->AddIMEResultString(*reinterpret_cast<const UWideString*>(inText)); }
-extern "C" long ee_uicpp_control_ime_change(uintptr_t inControl, uintptr_t inText, uintptr_t inAttributes, uint32_t inCursor)
-{ return CTL(inControl)->ChangeIMECompositionString(*reinterpret_cast<const UWideString*>(inText), *reinterpret_cast<const UString*>(inAttributes), inCursor); }
-extern "C" long ee_uicpp_control_ime_close(uintptr_t inControl) { return CTL(inControl)->CloseIMECompositionString(); }
-extern "C" long ee_uicpp_control_ime_open(uintptr_t inControl) { return CTL(inControl)->OpenIMECompositionString(); }
 extern "C" long ee_uicpp_control_translated_key(uintptr_t inControl, uintptr_t inKey, int32_t inRepeat)
 { return CTL(inControl)->UpdateTranslatedKey(reinterpret_cast<const char*>(inKey), (short)inRepeat); }
 extern "C" uintptr_t ee_uicpp_mgr_create_form(uintptr_t inM, EeUiShimText inData)
@@ -671,7 +598,6 @@ extern "C" uintptr_t ee_uicpp_mgr_create_form(uintptr_t inM, EeUiShimText inData
 // UIEntityGroup.cpp, 0x1006e304..0x1006e5a8): the calls out of Disable/Enable on entity a, a button or a hot key
 #define ENTITY_CONTROL static_cast<UIControl*>(reinterpret_cast<UIEntity*>(a))
 EE_UI_CASE(group_is_button) { return reinterpret_cast<UIEntity*>(a)->GetType() == kControlTypeButton; }
-EE_UI_VOID(group_hide) { ENTITY_CONTROL->HideControl(); }
 EE_UI_VOID(group_set_dirty) { ENTITY_CONTROL->SetDirty(true); }
 #undef ENTITY_CONTROL
 
@@ -687,21 +613,15 @@ EE_UI_VOID(group_set_dirty) { ENTITY_CONTROL->SetDirty(true); }
 EE_UI_CASE(form_ctl_type) { return theControl->GetType(); }
 EE_UI_CASE(form_ctl_entity_type) { return theControl->UIEntity::GetType(); }
 EE_UI_CASE(form_ctl_tabable) { return theControl->GetTabable(); }
-EE_UI_CASE(form_ctl_ime_enabled) { return theControl->GetIMEEnabled(); }
 EE_UI_CASE(form_part_copy_data) { return theControl->CopyData(); }
 EE_UI_CASE(form_part_draw_polygons) { return theControl->DrawPolygons(); }
 EE_UI_CASE(form_part_draw_text) { return theControl->DrawTextA(); }
 EE_UI_VOID(form_part_set_location) { theControl->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(form_delete_part) { delete theControl; }
 EE_UI_VOID(form_ctl_set_dirty) { theControl->SetDirty(b != 0); }
-EE_UI_VOID(form_ctl_set_display_mode) { theControl->SetDisplayMode((unsigned long)b); }
-EE_UI_VOID(form_ctl_hide) { theControl->HideControl(); }
 EE_UI_VOID(form_ctl_tabbed_from) { theControl->TabbedFrom(); }
 EE_UI_VOID(form_ctl_tabbed_to) { theControl->TabbedTo(); }
 EE_UI_CASE(form_ctl_update_keyboard) { return theControl->UpdateKeyboard(); }
-EE_UI_CASE(form_ctl_wheel_turned) { return theControl->MouseWheelTurned((long)b); }
-EE_UI_VOID(form_ctl_release_mouse) { theControl->ReleaseCapturedMouse(); }
-EE_UI_VOID(form_ctl_release_keyboard) { theControl->ReleaseCapturedKeyboard(); }
 EE_UI_VOID(form_help_set_text) { static_cast<UITextLabel*>(theControl)->SetText(sUIFormHelpString, true); }
 EE_UI_CASE(form_group_new) { return (intptr_t) new UIEntityGroup; }
 EE_UI_VOID(form_group_delete) { delete theGroup; }
@@ -711,25 +631,18 @@ EE_UI_VOID(form_bg_delete) { delete theBackground; }
 EE_UI_CASE(form_bg_draw) { return theBackground->DrawBackground(UIFormRect(f)); }
 EE_UI_VOID(form_bg_load) { theBackground->LoadBackground(); }
 EE_UI_VOID(form_bg_unload) { theBackground->UnloadBackground(); }
-EE_UI_VOID(form_bg_relayout) { theBackground->RelayoutBackground(); }
 EE_UI_CASE(form_hot_key_copy) { return (intptr_t) new UIHotKey(theForm, *theKey); }
 EE_UI_VOID(form_hot_key_delete) { delete theKey; }
-EE_UI_CASE(form_hot_key_fire) { return theKey->FireEvents(); }
 // the temporary hot key AddHotKey builds (lle_hosts.rs form_hot_key_temp): made, on this form, its key b
 EE_UI_CASE(form_hot_key_new) { return (intptr_t) new UIHotKey; }
-// an input entity by key or button a into the slot b (lle_hosts.rs form_entity)
-EE_UI_VOID(form_key_entity_get) { gISKeyboard->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
 EE_UI_CASE(form_wheel_event_new) { return (intptr_t) new UIEMouseWheelScroll; }
-EE_UI_VOID(form_mouse_entity_get) { gISMouse->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_window_width) { return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth(); }
 EE_UI_CASE(form_window_height) { return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight(); }
 EE_UI_VOID(form_music_start) { theForm->GetManager()->StartMusic(UWideString((const char*)a)); }
 EE_UI_VOID(form_manager_delete) { delete reinterpret_cast<UIFormManager*>(a); }
 EE_UI_VOID(form_virt_help_location) { theForm->SetHelpTextPopupLocation(); }
 EE_UI_CASE(form_virt_draw_background) { return theForm->DrawBackground(UIFormRect(f)); }
-EE_UI_CASE(form_rhombus_create) { return (intptr_t) new GERhombus; }
-EE_UI_VOID(form_rhombus_delete) { delete theRhombus; }
 EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor()); }
 #undef theForm
 #undef theControl
@@ -743,16 +656,9 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 // UIGraph (with UILineGraph and the post-game summary's EEUIPGSLineGraph, R6 game screens B round 3) is whole in
 // Rust (rust/crates/ee_ui/src/graphobj.rs): the members below forward to the Rust object, which calls out through
 // ee_ui_graph_host (UIControl's members, the texts, a line).
-#define g static_cast<UIGraph*>(inObj)
 #define theText reinterpret_cast<GEText*>(a)
-#define theLine reinterpret_cast<GELine*>(a)
 EE_UI_VOID(graph_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
-EE_UI_CASE(graph_draw_border) { return g->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
-EE_UI_CASE(graph_line_create) { return (intptr_t) new GELine; }
-EE_UI_VOID(graph_line_delete) { delete theLine; }
-#undef theLine
 #undef theText
-#undef g
 
 // C:\EEX\Low-Level Engine\User Interface\UIHotKey.cpp
 // 0x10076f27..0x100774b9: the sPressedPoll/sHotKey init chains, then the out-of-line members (CreateHotKeys,
@@ -777,25 +683,12 @@ extern "C" void ee_uicpp_file_close(void* inFile) { static_cast<FSFileSpec*>(inF
 
 // The Rust hot keys' calls out (EeUiOp 570..581): the object is the record (NULL for the table's own calls)
 #define r static_cast<EeUiHotKeyFields*>(inObj)
-#define theEntity reinterpret_cast<ISEntity*>(a)
 #define theEvent reinterpret_cast<UIEvent*>(a)
-EE_UI_CASE(hk_value) { return theEntity->GetValue(); }
-EE_UI_CASE(hk_double_pressed) { return theEntity->JustDoublePressed(); }
-EE_UI_CASE(hk_just_pressed) { return theEntity->JustPressed(); }
-EE_UI_CASE(hk_just_unpressed) { return theEntity->JustUnpressed(); }
-EE_UI_CASE(hk_keyboard_state) { return gISKeyboard->GetModifierState(); }
-EE_UI_CASE(hk_modifier_state) { return ISKeyboard::ComputeModifierState((unsigned long)a); }
-EE_UI_CASE(hk_key_index) { return theEntity->GetIndex(); }
 EE_UI_VOID(hk_process) { theEvent->ProcessEvent(static_cast<UIForm*>(r->mForm), static_cast<UIHotKey*>(r)); }
 EE_UI_CASE(hk_new) { return (intptr_t) static_cast<EeUiHotKeyFields*>(new UIHotKey); }
 EE_UI_VOID(hk_delete) { delete static_cast<UIHotKey*>(reinterpret_cast<EeUiHotKeyFields*>(a)); }
-extern "C" intptr_t ee_uicpp_hk_get_entity(intptr_t inKey, ISEntity** ioEntity) { return gISKeyboard->GetEntity((unsigned long)inKey, *ioEntity); }
 #undef theEvent
-#undef theEntity
 #undef r
-
-// the entities' names (ee_ui hotkey_ffi.rs: the hot key's display name)
-extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast<ISEntity*>(inEntity)->GetName(); }
 
 // C:\EEX\Low-Level Engine\User Interface\UILBString.cpp
 // 0x10078251..0x100785cd: the U2D key init chains, then DrawTextA and UpdateTranslatedKey (both Rust's: ee_ui
@@ -804,15 +697,7 @@ extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast
 // The Rust list box's ops that do not depend on T (ee_ui listobj.rs; UIListBoxRust<T>::Op answers the rest):
 // UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's
 #define lst static_cast<UIControl*>(inObj)
-#define theLine reinterpret_cast<GELine*>(a)
-#define theRhombus reinterpret_cast<GERhombus*>(a)
-EE_UI_CASE(list_rhombus_create) { return (intptr_t) new GERhombus(); }
-EE_UI_VOID(list_rhombus_delete) { delete theRhombus; }
-EE_UI_CASE(list_line_create) { return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
-EE_UI_VOID(list_line_delete) { delete theLine; }
 EE_UI_CASE(list_create_scroll_bar) { return (intptr_t) new UIScrollBar(lst->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, lst->GetForm(), lst->GetIndex(), lst->GetBorderThickness()); }
-#undef theRhombus
-#undef theLine
 #undef lst
 
 // The string list's draw (ee_ui listobj.rs string_draw): its drawn text placed, given a drawn line, drawn clipped
@@ -900,9 +785,6 @@ extern "C" void ee_uicpp_instance_dereference(uintptr_t inInstance)
 extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, EeUiShimText inName, uintptr_t* inFile)
 { return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + UIShimString(inName), *reinterpret_cast<FSFileSpec**>(inFile)); }
 extern "C" void ee_uicpp_file_delete(uintptr_t inFile) { delete FILE_SPEC(inFile); }
-// the shared mouse button inButton into the key slot inWhich after the left button's (lle_manager.rs)
-extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich, uint32_t inButton)
-{ gISMouse->GetEntity(inButton, UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
 #define FORM reinterpret_cast<UIForm*>(a)
@@ -920,16 +802,7 @@ EE_UI_CASE(mgr_form_update_keyboard) { return FORM->UpdateKeyboard(); }
 EE_UI_CASE(mgr_form_update_mouse) { return FORM->UpdateMouse(); }
 EE_UI_VOID(mgr_form_delete) { delete FORM; }
 EE_UI_VOID(mgr_form_relayout) { FORM->RelayoutForm(UIManagerRect(f)); }
-#define COMPOSITION (*reinterpret_cast<const EeUiImeComposition*>(c))
-EE_UI_VOID(mgr_form_ime_result) { FORM->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); }
-EE_UI_CASE(mgr_form_ime_change) { return FORM->ChangeIMECompositionString(*static_cast<const UWideString*>(COMPOSITION.string), *static_cast<const UString*>(COMPOSITION.attributes), COMPOSITION.cursor); }
-EE_UI_CASE(mgr_form_ime_close) { return FORM->CloseIMECompositionString(); }
-EE_UI_CASE(mgr_form_ime_open) { return FORM->OpenIMECompositionString(); }
-#undef COMPOSITION
-EE_UI_CASE(mgr_ctl_ime) { return reinterpret_cast<UIControl*>(a)->GetIMEEnabled(); }
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
-EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
-EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(mgr_set_blending) { static_cast<UIManager*>(inObj)->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, static_cast<UIManager*>(inObj)->GetScreen()); }
@@ -947,8 +820,6 @@ EE_UI_VOID(mgr_sound_parameters) { SOUNDS->SetSoundParameters(INSTANCE, f[0], 0.
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
 // 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls
 // out: the event's virtuals on the record, the file's reads (UIHotKey.cpp's ee_uicpp_file_*) and the owners'
-EE_UI_CASE(event_ev_initialize) { return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->InitializeEvent(); }
-EE_UI_CASE(event_ev_uninitialize) { return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->UninitializeEvent(); }
 EE_UI_VOID(event_bgt_file_open) { ee_uicpp_file_open(inObj); }
 EE_UI_CASE(event_bgt_file_read) { return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c); }
 EE_UI_VOID(event_bgt_file_close) { ee_uicpp_file_close(inObj); }
@@ -1027,8 +898,6 @@ EE_UI_VOID(label_string_assign) { *reinterpret_cast<UWideString*>(a) = *reinterp
 EE_UI_VOID(label_text_set_bytes) { reinterpret_cast<GEText*>(a)->SetText(UWideString(reinterpret_cast<const char*>(b))); }
 EE_UI_CASE(label_text_font_height) { return reinterpret_cast<GEText*>(a)->GetFont()->GetHeight(); }
 EE_UI_CASE(label_create_scroll_bar) { return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(), l->GetBorderThickness()); }
-EE_UI_VOID(label_virt_check_scroll_bar) { l->CheckScrollBar(); }
-EE_UI_VOID(label_virt_recompute) { l->RecomputeDisplayRange(); }
 EE_UI_VOID(label_virt_set_location) { l->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
 #undef l

@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/fontmap.h"
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// `Window::WindowState`.
 constexpr static const int32_t EE_WON_WIN_OPEN = 0;
@@ -18,54 +17,6 @@ constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
 
 /// The last field.
 constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
-
-/// The inward calls (`ee_won_win_call`).
-enum class EeWonWinCall : uint32_t {
-  CanClose = 1,
-  Close,
-  /// `CheckResize(a)` (a tick).
-  CheckResize,
-  /// `SetTitle`'s platform part (the C++ stored the title).
-  TitleChanged,
-  /// `SetIcon`'s platform part (the C++ stored the icon).
-  IconChanged,
-  /// `Center(a != 0)`.
-  Center,
-  SetClientSize,
-  Show,
-  HandleMouseExit,
-  /// `HandleKeyEvent`, `HandleMouseDown`, `HandleMouseEvent`, `HandleInputEvent` with `a` an `EeWonWinEvent*`.
-  HandleKeyEvent,
-  HandleMouseDown,
-  HandleMouseEvent,
-  HandleInputEvent,
-  /// `IdleUpdate()` (0 or 1).
-  IdleUpdate,
-  /// `TimerEvent(a)`.
-  TimerEvent,
-  /// `Create`'s statements after the icon (`a`, `b` the rectangle's width and height).
-  Create,
-  /// the base `PlatformClose`.
-  PlatformClose,
-  ShowNativeCursor,
-  CheckSetCursor,
-  InvalidateRoot,
-  Minimize,
-  SuspendRootResize,
-  RemoveComponent,
-  IsMouseDown,
-  AddComponent,
-  SetModal,
-  CheckDoubleClick,
-  /// `SetParent((Window*)a)`.
-  SetParent,
-  /// the child window set: `a` inserted (`b != 0`) or erased (the parent's half of `Create` / `PlatformClose`).
-  ChildSet,
-  /// the field `a` (`EeWonWinField`).
-  GetField,
-  /// the field `a` set to `b`.
-  SetField,
-};
 
 /// The root container's methods the window calls (`WinRoot`'s `a`; `b`, `c`, `d` its arguments).
 enum class EeWonWinRoot : uint32_t {
@@ -161,26 +112,6 @@ enum class EeWonWinField : uint32_t {
   IsShowing,
   /// the number of child windows
   ChildCount,
-};
-
-/// The Rust Window.
-struct EeWonWindow;
-
-/// An input event's fields: the C++ `InputEvent`'s own record (`mEv`; `KeyEvent`, `MouseEvent` and `SizeEvent` fill
-/// theirs, the other fields 0).
-struct EeWonWinEvent {
-  /// the `WindowEventType`
-  int32_t kind;
-  int32_t x;
-  int32_t y;
-  int32_t key_mod;
-  /// a mouse event's button or wheel amount
-  int32_t button;
-  /// a key event's key
-  int32_t key;
-  /// a size event's
-  int32_t width;
-  int32_t height;
 };
 
 extern "C" {

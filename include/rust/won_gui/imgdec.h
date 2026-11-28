@@ -6,13 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_net/file.h"
-
-/// The decoders.
-enum class EeWonImgKind : int32_t {
-  Png = 0,
-  Jpg = 1,
-};
+#include "rust/won_gui/records.h"
+#include "rust/won_net/records.h"
 
 /// A decoded image: its size, its transparency flag, and its ARGB pixels (rows top first) until taken.
 struct EeWonImgRaw {

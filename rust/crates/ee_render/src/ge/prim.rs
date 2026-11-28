@@ -20,10 +20,8 @@ use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeVector};
 pub enum EeGePrimKind {
     /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
     Line = 1,
-    /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
-    Point,
     /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
-    Rhombus,
+    Rhombus = 3,
 }
 
 /// The primitive.
@@ -144,12 +142,6 @@ impl EeGePrim {
                     Self::vertex(p, EeGeBmpOp::VertexSetUv, 1, &[1.0f32, 1.0]);
                     p
                 }
-                EeGePrimKind::Point => {
-                    let p = Self::start(host, owner, 1, true);
-                    Self::set_opacity(p, 0, 1.0);
-                    Self::vertex(p, EeGeBmpOp::VertexSetUv, 0, &[0.0f32, 0.0]);
-                    p
-                }
                 EeGePrimKind::Rhombus => {
                     let p = Self::start(host, owner, 4, false);
                     for i in 0..4 {
@@ -198,29 +190,6 @@ impl EeGePrim {
             Self::set_opacity(p, 1, opacity);
             Self::vertex(p, EeGeBmpOp::VertexSetUv, 0, &[0.0f32, 0.0]);
             Self::vertex(p, EeGeBmpOp::VertexSetUv, 1, &[1.0f32, 1.0]);
-            p
-        }
-    }
-
-    /// `GEPoint(point, colour, opacity)`.
-    ///
-    /// # Safety
-    /// As `create`; the colour is three floats.
-    pub unsafe fn create_point(
-        host: EeGeBmpHostFn,
-        owner: usize,
-        point: Ge2DPoint,
-        color: *const f32,
-        opacity: f32,
-    ) -> *mut Self {
-        // SAFETY: the caller's contract
-        unsafe {
-            let p = Self::start(host, owner, 1, true);
-            let point = Ge3DPoint { x: point.x, y: point.y, z: 0.0 };
-            Self::vertex(p, EeGeBmpOp::VertexSetPoint, 0, &point);
-            Self::vertex(p, EeGeBmpOp::VertexSetColor, 0, color);
-            Self::set_opacity(p, 0, opacity);
-            Self::vertex(p, EeGeBmpOp::VertexSetUv, 0, &[0.0f32, 0.0]);
             p
         }
     }
@@ -311,22 +280,6 @@ pub unsafe extern "C" fn ee_ge_prim_new_line(
 ) -> *mut EeGePrim {
     // SAFETY: the caller's contract
     unsafe { EeGePrim::create_line(host, owner as usize, *start, *end, start_color.cast(), end_color.cast(), opacity) }
-}
-
-/// `GEPoint(point, colour, opacity)` (the colour as `const GEColor*`).
-///
-/// # Safety
-/// As `ee_ge_prim_new`; the pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_prim_new_point(
-    host: EeGeBmpHostFn,
-    owner: *mut c_void,
-    point: *const Ge2DPoint,
-    color: *const c_void,
-    opacity: f32,
-) -> *mut EeGePrim {
-    // SAFETY: the caller's contract
-    unsafe { EeGePrim::create_point(host, owner as usize, *point, color.cast(), opacity) }
 }
 
 /// The destructors.
@@ -522,16 +475,6 @@ pub unsafe extern "C" fn ee_ge_prim_set_opacities(p: *mut EeGePrim, count: c_ulo
         // SAFETY: the caller's contract
         unsafe { EeGePrim::set_opacity(p, i, opacity) };
     }
-}
-
-/// A rhombus's `SetZPerVertex(a, b, c, d)`.
-///
-/// # Safety
-/// `p` is a live rhombus.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_prim_set_z(p: *mut EeGePrim, a: f32, b: f32, c: f32, d: f32) {
-    // SAFETY: the caller's contract
-    unsafe { ee_ge_prim_set_depths(p, &[a, b, c, d]) }
 }
 
 /// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.

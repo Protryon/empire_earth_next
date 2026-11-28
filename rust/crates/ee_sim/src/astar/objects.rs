@@ -237,24 +237,6 @@ pub extern "C" fn ee_astar_object_size(t: EeAStarCmTable) -> usize {
     }
 }
 
-/// `EEAIContinent::GetPathAreaAt` (`object` a continent) or `EEAIPathSector::GetPathAreaAt` (`sector`), over the
-/// registered manager (0 before it is).
-///
-/// # Safety
-/// `object` a live continent or sector of the registered manager.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_object_path_area_at(
-    object: u64,
-    sector: bool,
-    x: std::ffi::c_long,
-    y: std::ffi::c_long,
-) -> u64 {
-    match crate::astar::world_view::cm() {
-        Some(r) => crate::astar::cm_query::ee_astar_cm_object_path_area_at(r, object, sector, x, y),
-        None => 0,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

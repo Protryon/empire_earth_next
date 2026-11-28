@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/records.h"
 
 /// The inward calls (the C++ shells' virtuals and methods).
 enum class EeWonScrollerCall : uint32_t {

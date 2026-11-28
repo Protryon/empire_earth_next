@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/won_gui/shell.h"
+#include "rust/won_gui/records.h"
 
 /// The constructor's texts (`MSMessageBox(title, message, button1, button2, button3)`), each a `const GUIString*`,
 /// and the C++ "Ok" for an empty first button: the C++ passes them as `intptr_t[6]` (this layout).

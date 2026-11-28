@@ -42559,3 +42559,451 @@ line views (docs/progress/ui-cluster.md "Round 15", pass 2's "What is left"); in
 virtuals, URandom.h (tests/net) (lle-shims.md "Round 15"); the Rust behind deleted C++ (ee_uconfig_*, the GEPoint
 paths) is uncounted and can go. The UI thread's unit is the next candidate for the toolkit's pass-2 treatment: its
 shims are chains over the game's forms and controls.
+
+## The units' lane, round 14: scratch statics as Rust locals, one host per class, the formation a Rust record; seven unit files gone (ee_sim units ucp_view.rs, ucx_view.rs, uca_view.rs, ucb_view.rs, cu_view.rs us_view/ck_view, combat goal_objects.rs group_op, formations units.rs; branch rust-units14, 2026-11-26)
+
+Numbers: docs/progress/units.md ("Round 14"). port_metrics origin/rust 38bb1e104 (batch 31) -> 868b1182b: cpp_lines
+**-928**, compiled files **-7** (249 -> 242), logic **-271** (11,579 -> 11,308), classes -1, extern_c -4, unsafe +77,
+layout +4. The file target (3) is
+met (EEUnitStore, EECloakingUtilities, EEUnitAction, EEUnitClassGround, EEUnitClassKinds, EEUGRustCombat,
+EEFormation); the logic (-400) and C++ line (-1,500) targets are not.
+
+- **Logic moves with the scratch statics, not with the cases.** Round 13 deleted ~1,460 one-statement cases for -7
+  logic. This round's logic came from the multi-statement bodies around the hosts' scratch statics (a C++
+  `static std::vector<...>` or point one case filled for the next): made the Rust body's locals, or Rust cells whose
+  address the one remaining C++ case takes (`sUcpHandle`, `sUcpUnits`, `sUcxTiles`, `sUcaTile`, `sUcDbFile`,
+  TakeHit's and Kill's hit input and death sound, CanReachTile's points and blockers, GoalOp's `sGoalPoint`, which
+  now travels in the argument block). A static that a C++ callee takes by reference (`sUcChain`, `sUcLine`,
+  `sUcTiles9`, `sUcbUnits`, `sUcbTiles`) stays until that callee is Rust's.
+- **Merging the hosts of one class empties files.** A class file whose only remaining code was its host (the
+  people's, transports', air, buildings' and shots' hosts; the eum, path and tile sight hosts) goes when its cases
+  move into the class's main host: the op ranges were disjoint already, so the merge is a cut and paste checked by the
+  compiler's duplicate-case error. The files that stayed (EEUnitClassPeople/Transports/Air/Buildings) keep code outside
+  any host: shims, `ee_units_cz_host`, `ee_units_cls_host`, the gate shims.
+- **A C++ member group the Rust bodies read becomes a record in the world layout.** EEFormation's members are now
+  `EeFormationFields`, registered as `formation_fields` (`offsetof(EEFormation, mOrientation)`), and the groups', active
+  groups' and herds' formation statements and Place/Arrange are Rust's; EEFormation.cpp went. Fork B registered the
+  physics' generator (`physics_random`), the effect detail's address (`effect_detail`) and `graphic_effect_fields` the
+  same way. Two forks adding layout entries at once: fork B put its entries after `physics_saved`, not at the end,
+  and the merge with the lead's `formation_fields` (at the end) was clean. The C++ struct is the generated header,
+  so its order always follows layout.rs.
+- **A host draw keeps its trace hook.** The class hosts' random draws moved to Rust through `physics_generate()`,
+  which calls `ee_urandom_generate` rather than stepping the generator itself, so the random trace (and the oracle)
+  sees every draw. `gEffectDetail` is compared unsigned, as the C++ did.
+- **A move to Rust can leave its list plumbing dead.** After the formations moved, `AgGame::list`, `GameGroups::fill`
+  and the two push exports they fed (`ee_units_ag_push`, `ee_units_group_push`) had no caller; rustc warned (`dead_code`)
+  and the gate's clippy would have failed. A merge of several legs should build once with warnings shown before the
+  gate.
+- **The case check after scripted deletions** (scratchpad u13_casecheck.py, 14a2bd363 -> tip): 256 cases deleted, 72
+  named by no Rust arm. None of the 72 constants is referenced any more outside its own definition (so no caller can
+  send an op whose case is gone): they are cases whose whole operation went (the formations' ops, the scratch
+  statics' ops, the team ops batch 30 removed) and `EE_UNITS_CLS_CR_RANDOM` (its callers draw in Rust).
+- **A merge whose base is itself a merge.** Merging batch 31 (which carried round 13, already in this branch) gave
+  conflicts in three host files whose "merged common ancestors" section held the recursive merge's nested
+  `<<<<<<<<< Temporary merge branch` markers. In every hunk theirs equalled the base and ours had cut or rewritten
+  the lines, so each hunk resolves to ours; a resolver that keeps the HEAD side must match the 7-character markers
+  exactly, not the 9-character nested ones.
+- **The doppelganger record.** Fork A tried to give the doppelganger objects' own fields a Rust record; every oracle
+  seed crashed and the attempt was reverted before commit. Its report went with its worktree, so the cause is not
+  known; a retry should first check the record's start against the C++ object at start-up (as EEGhostUnit.cpp does
+  for `EeUnitsGhostFields`) and run the ASan build.
+- **Edits outside the lane**: EEHerd.cpp (AI Thread: the herd's formation cases), EEWorld.cpp (UpdateLandContinents),
+  EEEffectHost.cpp and EERenderObject.cpp (the unit opacity), EECPPlacement.cpp/.h (the space dock site), EERenderLists.h:
+  each now calls `ee_units_ck_body` or loses a forwarder's declaration; tools/units.py and link/exe/units.txt for the
+  deleted files.
+- **Behaviour changes**: none observed (oracle seeds 2-7 identical after each merge; captures, the saveload matrix
+  and the gates as listed in units.md).
+
+## The player/tech lane, round 4: the player's tech tree made and saved in Rust, the computer player's virtuals one Rust entry, the other lanes' tech statements answered in Rust, EETechTree.cpp gone (ee_sim units player_native.rs, player_upgrades.rs, tech_cases.rs, tech/tree_objects.rs; ee_game screens editor_tech.rs, tech_direct.rs; branch rust-playertech4, 2026-11-26)
+
+The round's measure was total C++ lines (tools/port_metrics.py), target -1,500: -515, compiled files -3, logic
+-11, with no behaviour change (the oracle's six seeds identical after every step; the capture profiles, the
+saveload matrix, scenario_check, sim_editor, gates.sh). Two forks in two rounds each and the lead.
+
+- **ee_sim cannot call ee_game, but ee_game can register into ee_sim**: the player trees' new/free/copy/save bodies
+  are ee_game's (tech_tree objects.rs), so ee_sim's player host reaches them through a table of fns ee_game sets in
+  `ee_rust_init` (tree_objects.rs `TreeBodies`), registered in the test build too. A Rust-allocated object must
+  never meet a C++ `delete`: move `new` and `delete` together and grep both sides.
+- **A virtual overridden by a subclass that has a Rust body**: make the base virtual itself dispatch (one Rust entry
+  that tests the subclass's pointer member, here mComputerPlayer) and pass `base = true` from every explicit
+  `Base::Method()` call, or the override's own call of its base recurses.
+- **An operation that repeats another chain's C++ statement is a duplicate**: before moving a case, grep the other
+  chains' `case O::` lines for the same statement (EETechTree.cpp's file, class media and sound operations were
+  EEGameOps.cpp's, EEWorld.cpp's, EEDataTextFile.cpp's); the Rust then uses the existing operation and the case
+  goes. Check the other case is in the same enum (`typedef EeGameCpp O`), not another file's EePreloadCpp/EePhysCpp.
+- **A C++ shim the Rust calls back into Rust**: EECreateCalamityUnit only forwarded to ee_gamecpp_calamity_create_unit
+  and its one caller was EEGameOps.cpp's CalCreateUnit, called from Rust: the Rust calls its own function and the
+  export, the shim, the case and the declaration go.
+- **Code used only from `#[cfg(not(test))]` paths warns in the test build**: clippy's `-D warnings` then fails the
+  gate on dead code (tech_cases.rs); allow dead_code under cfg(test) or move the helpers under the same cfg.
+- **A saveload matrix failure in a loaded worktree**: fork B's first matrix run lost every load (no output files);
+  the same code passed on the merged tip and again later. Rerun the matrix alone before bisecting.
+
+## The game headers lane, round 4: one-call wrappers of Rust exports inlined at their callers, dead code, self-contained headers (branch rust-headers4, 2026-11-26)
+
+- **One-call wrappers inlined** (owner's direction: callers call the Rust export directly, the shim's declaration and
+  definition go; header inlines only in headers that are not hot). build/hd4/scan2.py lists C++ functions whose whole
+  body is one call to a Rust export (2,148 on the tip; 794 with no member or global in the arguments, 357 virtual);
+  build/hd4/inline.py plans the safe ones and rewrites every call site with the shim's own statement. 385 shims went
+  (-701 C++ lines with the temporaries fix; shim removal, not logic).
+- **A text rewrite needs the compiler to check types**: the Rust parameters are `void*`, so passing a caller's
+  `EEComplexUnit*` straight to a slot the shim typed `EEUnit*` skips the derived-to-base adjustment, and a caller's
+  `unsigned long` passed where the shim took `long` and Rust an `int64_t` changes the value. A check pass wraps each
+  substituted argument in a template that static_asserts the exact type (`EEHD4V<T, id>`, and `EEHD4R` for references,
+  which also asserts an lvalue: clang-cl's MS extensions bind rvalues to non-const references and take their address,
+  which POSIX clang refuses); the compile's "requested here" notes name the failing ids, and only those get a cast.
+- **What a rewrite must not inline**: a shim that takes the address of a by-value parameter (`&inValue` to Rust: the
+  inlined call would hand Rust the caller's own variable); a parameter used twice with a side-effecting argument;
+  calls whose object expression is not a plain postfix expression; names another class declares (a text rewrite
+  cannot tell `a->Reset()` from `b->Reset()`); C++ functions Rust calls (`ee_*cpp_*` with no C++ caller looked dead:
+  the first full link listed them unresolved).
+- **The object of a call, backwards**: parse a postfix chain (identifiers, `::`, `->`, `.`, balanced `()`/`[]`, a
+  template cast's `<...>`) and stop at the first other token; keywords (`return`) end it without eating the space
+  before them. A `#define X(a) ...->Shim(a)` body is a call site like any other.
+- **Doc comments of a removed member**: the comment lines directly above go when a blank line, a closing brace or an
+  access specifier follows the member, or code precedes the comment; otherwise (a group heading over several members)
+  only a last line naming the member or an address. Layout notes (`// +0x...`) stay.
+- **-O0 scans on the lle units** (fork A): the lle units build with `LLE_API = __declspec(dllexport)`, which emits
+  every inline member, so "no object emits it" never fires there; count a member used only when a relocation
+  (.text/.rdata/.data) or ee_game.lib's undefined list names it. Fork C instead built with LLE_API empty (a local
+  patch, never committed) and relinked with `/OPT:REF /VERBOSE`, which lists every discarded section transitively
+  (under Git Bash the link flags must start with `-`: MSYS rewrites `/U...` as a path). After rounds 3 and 4 the
+  out-of-line layer is nearly empty (about 25 functions discarded in both links, most of them golden-driver or
+  harness entry points).
+- **Self-contained headers** (fork B): the alone test's prelude must always end in lle/LowLevelEngine.h (LLE_API);
+  the 73 headers that failed it needed their bases' and by-value members' includes. The trim then dropped 95 includes.
+  A full trim of the lle headers is hours: every one reaches all 248 units through LowLevelEngine.h.
+- **Merging batch 30**: fork B's new `#include "ee/EETeam.h"` met batch 30's deletion of EETeam.h (EEPWorldHelper.h);
+  fork A's deletion of `ee_gamecpp_world_teams_add` met batch 30's rewrite of teams.rs (theirs taken; fork C then
+  found it unreferenced and deleted it).
+- **Address of a temporary**: the check pass missed 13 sites in units a fatal error had stopped; compile every unit
+  with `/clang:-Werror=address-of-temporary` (build/hd4/tempaddr.py) before trusting a Windows-only build for POSIX.
+- **Behaviour changes**: none intended. Gates: both builds 0/0, the Rust gate PASS, oracle seeds 2-7 identical
+  against batch 30, captures oracle/late/units/scenario/calamity/effects/groups PASS, the saveload matrix PASS,
+  scenario_check 27/27 (one form time-out on the first run), sim_editor and --civbuilder PASS, editor and
+  random-game tours PASS, won_host_coverage PASS, wontest 185/185 (won_ping36 passed alone after one timing line),
+  gates.sh GATES PASS. Not run: transport, space, missile, app, placement captures, plain saveload, a POSIX build
+  (the Linux game build needs a sysroot this machine lacks).
+
+## The game headers lane, round 5: records headers per crate, C++ value classes in records, the record-base head check, function headers off the class headers (xtask split.rs records; ee_base record_head.rs; ee_sim world heads.rs; ee/EERecordBase.h; branch rust-headers5, 2026-11-27)
+
+- **A records module needs no moved code**: `records.rs` lists the records with `pub use` of their definitions;
+  split.rs reads the capitalized names of its `use` declarations (and what it defines) and moves the C declarations.
+  Other lanes keep editing the records where they are; a typo is a compile error (the `pub use`), a record cbindgen
+  does not emit is a split error naming it. A `pub use` through a private module is E0603: use the parent's
+  re-export (build/hd5/fixpriv.py drops the private segment).
+- **Function headers that include function headers** were the rebuild cascade, not the class headers: a function of
+  rust/sim/app.h naming a units type made app.h include units.h, and 30 headers include gamecpp.h. Moving every type
+  another module names to its crate's records header made each function header include only records headers
+  (rust/sim/app.h: 149 -> 47 units). Units that used a module's functions through another module's header then fail
+  to compile: `tools/rust_includes.py FILE...` adds the narrow include (it missed three files whose include chain it
+  misread; those took one by hand). Running it on every file instead touches 60+ unrelated files: run it on the
+  failing ones only (build/hd5/fixinc.py reads the build's FAILED logs).
+- **A module emptied into records keeps a stub header** (it includes its records header), or every includer of
+  `rust/ui/obj.h`, `rust/won_net/md5.h` (tests/won) would need an edit in the same commit.
+- **The lle math headers are not self-contained one by one**: GE3DPoint.h needs GEVector complete, UMFastMath.h
+  needs LLE_API. A records header that declares a GE3DPoint member includes lle/LowLevelEngineCore.h and the
+  geometry chain in LowLevelEngine.h's order (split.rs `CPP_VALUE_CHAIN`).
+- **Record-base heads**: a class's own vtable pointer comes first when it has no polymorphic base (MSVC and
+  Itanium); `UReferenceCounter` is {vptr, unsigned long} = 16 bytes on both (LP64's 8-byte long fills the padding);
+  records are POD, so no ABI reuses their tail padding. A base class with C++ members (RTSUnit's for EEUnit) has no
+  head until its members are records.
+- **Out-of-lining by text** (build/hd5/outline.py): a token scanner with brace matching finds a class's member
+  definitions; `operator=` must not count as an initializer's `=` (it swallowed the next three members), a body
+  with a preprocessor line inside is skipped, a return type named in the class gets `Class::`. Moved bodies keep
+  their text; one-line bodies stay one line.
+- **Bash tool heredocs halve backslashes** (`\\n` arrives as `\n`): write Python or Rust with escapes through the
+  Write/Edit tools, not a heredoc.
+
+## The LLE and UI lane, round 3: the toolkit's single-body virtuals as Rust ops, the screens' and the UI thread's toolkit chains and record members in Rust, the LLE one unit per engine directory, TMTimer, URandom, GELight and include/dx7 gone (ee_ui lle_chains.rs, direct.rs Kind::FileList, lle_hosts.rs ge; ee_game screens scr_direct.rs, uit_direct.rs; ee_base input system.rs; branch rust-lleui3, forks rust-lleui3-a, -b, 2026-11-26)
+
+The brief: -2,000 C++ lines (tools/port_metrics.py), whole files and classes first. **-537 C++ lines, -8 compiled
+files** for the round's own work (fork A -97 and -8 files, fork B -173 in pass 1 against 416ec808d; after the batch 31
+merge, 79d919d95 -> c0892ac68, fork A -23, fork B -187, the lead -57). Against origin/rust 38bb1e104, which does not
+hold round 2 yet: 79,339 / 249 -> 76,469 / 202 (-2,870 / -47, round 2's -2,336 / -39 included); code -1,479, shim
+-1,432, logic -47; classes -11; extern_c -59; rust_hdrs unchanged (367); unsafe +144; Rust +2,642 (fork A deleted 887
+lines of dead Rust: the ee_uconfig_* exports, the GEPoint paths, 60 LLE exports nothing named). The target was not
+reached: what is left is mostly not shims of the kind this lane can answer (below).
+
+### What moved
+
+- **The LLE** (fork A): one unit per engine directory (File System, Sound Engine, Network Engine but NEMessage.cpp,
+  which tests/net links alone, Graphics Engine with DX7Rasterizer), include lists trimmed; TMTimer.h gone (the game
+  timer an `EeTimeTimer*`); URandom.h folded into LowLevelEngine.h (tests/net keeps a copy); GELight gone
+  (EERenderObject.cpp holds an `EeGeLight`); include/dx7 gone; GE host cases over Rust state answered by the objects.
+- **The toolkit** (fork B): the input calls straight to ee_base; a census of every virtual's overrides: one-body
+  virtuals made Rust ops, the ones only toolkit classes override dispatched by the control's kind (`direct::is`),
+  the IME virtuals gone or non-virtual; the rhombi, lines and texts a toolkit object owns made in Rust; three headers
+  folded.
+- **The screens** (fork B2): 80 shims of EEScreens.cpp and EECivilizationBuilder.cpp whose statement was a chain of the
+  toolkit's non-virtual forwarders answered through `ee_ui::direct` (scr_direct.rs; the file lists registered as
+  `Kind::FileList`).
+- **The UI thread** (the lead): 22 chain shims of EEUserInterface.cpp the same way, and 36 shims that read or wrote a
+  member of a game class's Rust record (the class's second base) read in place at the offset
+  `ee_screenscpp_rec_offset` answers (one C++ table of `static_cast` offsets for nine classes; uit_direct.rs).
+
+### Lessons
+
+- A game class's Rust record is a second base at an offset only C++ knows. One exported table of
+  `static_cast<R*>(reinterpret_cast<C*>(0x1000)) - 0x1000` offsets turns every member shim of those classes into a
+  Rust read, without moving the record or changing a golden (the `= module::name` entries of game_cpp.rs's `shims!`
+  are logged by the fake like the C++ ones).
+- A virtual no class outside the toolkit overrides is a Rust op; one overridden only inside the toolkit is a Rust
+  dispatch on the control's kind. The census of overrides must cover tests/ and the WON GUI and editor classes.
+- Round 2's include lists were trimmed on Windows only: the linux-x86_64 census (`xbuild.py census --target
+  linux-x86_64 --dialect ms`, which runs on Windows against the Debian sysroot) found EEScreens.cpp without `<list>`
+  (WONRouting.h's std::list: MSVC's headers reach it transitively, libstdc++'s do not). `xbuild.py game --target
+  linux-x86_64` does not build on Windows (alsa-sys needs pkg-config for the target), so the census is the POSIX check
+  available here.
+- What is left is no longer shims over Rust objects: calls that reach a game override or a game class's C++ state,
+  `dynamic_cast` checks the kinds cannot tell apart, shims making a C++ UWideString in place or `new GEBitmap` into a
+  record's pointer, the store gate's surfaces (a Rust call of an `ee_dx7sf_*` surface would read the store gate's
+  memory surface, linked under the same names), and the game-state shims (gWorld, players, units) of other lanes.
+
+### Behaviour changes
+
+None intended; the oracle traces are identical. Unreachable paths: a direct lookup of an unknown or NULL object
+answers 0 where the C++ dereferenced it; an input lookup before ISInitialize gets a NULL entity; the toolkit's rhombi,
+lines and texts come from Rust's allocator; vtables of UIForm, UIManager, UIControl and 13 toolkit classes are
+shorter (layout.json regenerates; tools/harness/human/human_input.c names UIManager's slot 0x28 for the 32-bit
+original only).
+
+### Gates
+
+On c0892ac68 (merged with origin/rust 38bb1e104, batch 31), through build/lleui3/chain.sh (logs in build/lleui3/gates),
+all PASS: `build.py -j 10 --sim` 0/0 (EE-AOC 243 inputs, EE-SIM 244), the test profile 0/0 (243); the headers current
+(367); `rust_build.py gate` PASS; the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines); the
+captures `oracle` (598 digests equal) and `late` (598 equal), the lane's two (no app shell change); the saveload matrix
+`saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448) and `--civbuilder` PASS (4,062: the controls
+table's setters changed); won_host_coverage PASS; `xbuild.py wontest` all 185 programs exit 0; through slot.py on the
+main checkout's tree: the editor (RESULT PASS editor), `random-game --box-select --orders --seed 7` (BOX SELECT PASS,
+ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS), `bash tools/gates.sh` GATES PASS (tour: RENDER CHECK
+ok, view 85.7% lit, F3 ok; ai-game time-cap PT 11788, units [4, 35, 36], alive [2, 3], classic_lua x 2; lan-game PT
+2847/2929). The forks ran the store gate (fork A: 25,140 lines equal), `xbuild.py nettest` (fork A: every driver 0
+differing; ee_session_test does not compile at batch 31 either: it names EEServer members the headers lane deleted)
+and their own oracle runs. The one later commit (54021b27d, EEScreens.cpp's `<list>`) was built again: 0/0 both
+profiles. The linux-x86_64 census of every unit: no lane unit fails (the remaining failures are other lanes' or
+pre-existing: Empire Earth.cpp's ee_sim_driver_game_ended, EEMiniMap.cpp's dot record size, WONGUI Button.cpp's
+list item offset, LobbyConfig.cpp's ee_won_regkey_op, the GE fog record's size on LP64, and every unit's
+intrinsic-header vector errors of the census environment).
+Not run: `gates.sh --legacy`, the macOS build, eedata check/cppgate (no table, rule or text compiler change).
+
+### Left
+
+The toolkit: the overridden virtuals (the controls' CopyData, draws, mouse handlers, SetLocation/SetRectangle; the
+forms' Open/Close/Activate; the backgrounds' Load/Draw; ProcessEvent; the manager's Create*), the controls'
+constructors (the game derives from them), UIEntityGroup, UIHotKey, GEBitmap, the strings and string vectors, the list
+box's line views (EECivilizationBuilder.cpp reads them). The screens and the UI thread: shims reaching game overrides
+or a game class's C++ state, kind-ambiguous `dynamic_cast`s, UIBitmap, in-place UWideStrings, `new GEBitmap` into
+records, and the game-state shims. The LLE: the store gate's surfaces as Rust surfaces (then ~25 Surf* cases), the
+NE's message ops (tests/net's stand-in messages), SetDisplayNoTextureMode/OverdrawMode (empty; RTSGraphics.cpp's
+callers), ~550 Rust exports nothing calls in other lanes' crates (build/lu3a/dead_exports.py in the fork A worktree).
+
+## R6 WON GUI, round 40: the lobby's texts and events answered in Rust, the window's offscreen image and input events Rust-owned, text segments, items and wrapped text read in place (ee_won_lobby lobbytext.rs, eeresource.rs; ee_won_gui gamewin.rs, wmobj.rs EeWonRustEvent, leafpaint.rs, wrapobj.rs; branch rust-wongui40, 2026-11-26)
+
+The round started from rust-wongui39 (922e30e27, batch 28 in). Round 39 had named the payoff of the Rust text and
+event record: about 120 lobby cases. Two waves of two forks in hand-made worktrees: wave 1 A (the lobby's text and
+event cases) and B (the window's holders and events); the lead merged them (no conflicts), then origin/rust batch 29
+(47e9ad712: units.txt and cbindgen.toml unions, LobbyDispatch.cpp and LobbyLogicMgr.cpp deleted there and their
+round 39 event-record edits applied to the moved code in WONLobbyPrv.cpp); wave 2 C (the lobby's remaining texts,
+driver-only members) and D (the GUI's text segments, items, leaves and wrapped text) from that tip, merged with no
+conflicts. Fork C stopped on an API error after its last commit; its builds, rust gate, coverage and LAN game had
+passed, and the lead's wontest on the merged tip covers it.
+
+### What moved (`port_metrics.py` cpp_lines)
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| A d27719144 | lobbytext.rs: the lobby's text and event cases answered in the game (gated on `compobj::is_game()`), first in the controls', rows', dialogs', popups', logics', routing, LAN, model and glue op chains; a heap GUIString is a `Box` of one text pointer; TextListItem's `mText`/`mColor` and ChatCommandParser's `mParser` read in place; about 50 LobbyNetCtrlHost cases (the sEELobbyText ops, BytesOfText), LobbyCtrlHost, LobbyDialogHost, InitLogic, RoutingLogic, LanLogicHost, LobbyModelHost, CreditsDialog and EELobbyGlueHost text/event cases gone; WONStatusString.cpp deleted (an inline over `ee_won_lobby_status_string`) | -137, files -1 |
+| A 0add29498 | the chat parser ops, the saved settings' texts, AccountLogic's user texts, the event control ids, StringsEqual, DialogLogic's status and OK/Cancel texts (sDlgStatusText, sDlgButtons gone), the directory listing's setters (DirReadHost, UnitsText gone) | -50 |
+| B c3c56ceb6 | uncalled methods: Graphics' BlendSupported, SetPixel, DrawDottedRect, FillEllipse, DrawArc (the drivers keep their copy), Dialog, Scrollbar, ScrollbarScroller, Window, ScrollArea and ListArea members | -27 |
+| B 48725d8f5 | the window's offscreen image held in gamewin.rs (a fifth binding entry); its ops, the grabber's and FireEndPopup/ClickChildAt answered in Rust; `mOffscreenImage`, `DisplayContext::CreateImage`, `GetDefaultFont(descriptor)` gone | -29 |
+| B 7478234e4 | InputEvent, MouseEvent, KeyEvent, SizeEvent and DoPopupEvent are Rust events (wmobj.rs `EeWonRustEvent`: NULL vtable, count, kind at +12; `ee_won_gstr_free` dispatches on the kind); the queue cases, sHostParams and `ee_won_guicpp_root_call` gone; the fixture queues through `ee_won_win_queue_input` | -53, classes -2 |
+| B 3798d7f55 | browserobj.rs holds the browser's scroller; Ref, Unref, HasScroller, Invalidate answered in Rust | -5 |
+| C 383f5b8a7 | RoutingLogic's heap texts (GameText, ParserText, DialogText, TextFree) and the LAN logic's dialog, client and parser texts | -39 |
+| C 8354f94fd | the EE lobby's 73 strings Rust's (eeresource.rs, read in place) and their reset | -19 |
+| C cbcf10b90, c99c57527 | the controls' input box and combo texts, the filter values; the EE glue's texts (GlueText gone) | -7, -16 |
+| C b8a78feb9, 38b9b14c4 | the parser's reads in Rust; driver-only members of ChatCommandParser, the model, the persistence, StringParser and WONFile moved to tests/won/drv/*.inl | -76, -74 |
+| C cd4373c42 | **dead code**: LobbyResource_Get*, RootScreen's four handlers, LobbyGetNetLogic, LobbyGetCurNetLogic, EELobbyRunConnectDialog | -23 |
+| D 4fb08259c | TextArea's segments read and set in place (`ee_won_text_seg_register`), TextLink's Pressed/Released in Rust; 19 GuiHost cases, three virtuals, `mLinkParam` x2 and `mSelText` gone | -45 |
+| D e19e6a82c, c70565d70 | the manager's MouseWheel/HandleComponentEvent through the component host (WmCompCall gone); UserEvent a Rust event (`NewUserEvent`) | -9, -8, classes -1 |
+| D 115f19bee, 73e641396, d8e2a056d, 0d2cfea60 | TextListItem/MenuItem and the list's paint fields, ComponentListItem/Background members, the tooltip's scheme, WrappedText's members read in place (leafpaint.rs, tipobj.rs, wrapobj.rs; `ee_won_leaf_members_register`, `ee_won_wrap_register`); MenuItemCall and about 60 cases gone | -17, -14, -5, -12 |
+
+Lane total (wave 1 against 922e30e27, wave 2 against 088514eb6): cpp_lines **-665**, cpp_files -1, logic -137,
+classes -3, extern_c +11, rust_hdrs +1, unsafe +183, layout +4. Short of the -1,500 target.
+
+### Why not -1,500
+
+The lobby cases were one line each and about 300 of them were answerable; wave 2 found the rest needs C++
+widgets or touches the lines the WON lobby/net round 39 (rust-wonnet39, not yet in origin/rust) changed, which the
+brief kept us off. The GUI side is runs of one-line forwards the config and lobby C++ still call; each removal is a
+Rust answer plus an offset registration. The biggest blocks left (the Sound family, ~150 lines; the config object
+model) belong to the lobby lane.
+
+### Problems met
+- Compound cases in Rust split modules call their `out` closure straight to the host, skipping the dispatcher's op
+  chain: the closure must try the new layer first (dlgsplit, logics, netlogicops; lanown/lobbyops through
+  `Host::op` lost the LAN client names until lobbytext.rs became its first answer: a joiner's DuplicateName).
+- TextArea::AddSegment passed the raw C++ host to `ee_won_gui_add_segment`, so an op answered only in the game layer
+  was lost on that path: check which host a C++ caller passes before deleting a case.
+- The window's DisplayContext cannot go: wmcache.rs `decode_image` returns NULL without one (every lobby
+  background went).
+- Never dereference an event to test whether it is Rust-made outside the game: drivers pass fake integers.
+- A new host enum variant breaks the crate tests' exhaustive world matches: run `rust_build.py gate`, not clippy.
+- `offsetof` on a private member needs it public (and `-Winvalid-offsetof` off for non-standard-layout classes).
+- A `pub extern "C"` signature must name the real type, not a `use ... as` alias (cbindgen emitted the alias).
+- Python `open(p, 'w')` on Windows writes CRLF into LF Rust files: read and write bytes.
+
+### Lessons
+- **One `#[repr(C)]` record of offsets per class family, filled by C++ at static initialisation, lets Rust read
+  and write the C++ members in place** (segments, leaves, wrapped text, dialogs' input boxes): no static_assert per
+  member, and the platform's `long`/`std::string` layouts are whatever the compiler says.
+- **A Rust object can stand in for any C++ RefCount subclass** with a NULL vtable slot, the count at +8 and a kind
+  at +12: one Release path frees texts and events by kind.
+- **Driver-only members go to tests/won/drv/*.inl included in the class body for the drivers**: the game header
+  loses them, the golden code is unchanged.
+- **Gating the Rust answers on `is_game()` kept every driver world and golden unchanged.**
+
+### Behaviour changes
+- The window's offscreen image is released when the Rust window is freed (still after the root).
+- A Rust-made event whose window is gone is dropped (was the C++ empty `Deliver`).
+- Text segments made by AddSegment are held and released (their SegHold/SegRelease were no-ops on that path).
+- The text areas' copy buffer is one Rust buffer (CopySelection gathers and copies in one call).
+- TextLink's colours are `int` (were `unsigned long`).
+- The lobby texts heap GUIStrings and static slots held are Rust allocations; the status text is built in Rust.
+
+### Merging rust-wonnet39
+Seven conflicts in a trial merge of eff86d9af: PORT_LEARNINGS.md, cbindgen.toml (unions); WONLobbyCore.h (keep
+both declarations: LobbyResetFirewallTest from ours, LobbyFormatString2 from theirs, if still used); LobbyNetCtrlHost.cpp
+(both sides removed cases: drop ItemTextAppend, AddFilterValue, RemoveFilterValue (ours) and the Filter* cases
+(theirs: FilterListItem a Rust row)); PingLogic.cpp (round 39's event reads against theirs); WONStatusString.cpp
+(modify/delete: delete it, apply their include change nowhere); won_host_coverage.py (union of the rust lists).
+
+### Gates
+On 8dcc9b8b4 (batch 29 merged; logs in build/wongui40): builds `--sim` and `--test-profile windowed-software` 0/0;
+rust header current, rust gate PASS; won_host_coverage PASS; oracle 2-7 identical; captures oracle and late PASS
+(the WON GUI is not in EE-SIM, so no other profile covers it); saveload matrix PASS; scenario_check 27/27; gates.sh
+GATES PASS (tour, ai-game [4, 34, 37] classic_lua x2, lan-game); wontest exit 0 (185 drivers); the LAN game PASS
+(host 3258, joiner 3262) and lan_capture_compare against build/w39lanM: every lobby capture identical but three
+15-pixel input-box caret strips (host-create-dialog x575, the staging x121), which the round 39 exe shows too under
+the same harness (caret blink timing). Forks A, B, D each ran builds, rust gate, coverage, wontest and a LAN game;
+fork C builds, rust gate, coverage and a LAN game.
+
+### Left
+- EvNew and LHandle (the lobby subclasses ComponentEvent and ComponentListener with vtables); InputBox's `mRealText`;
+  the ComboBox host's ~20 cases (the in-place pattern applies); FmtAddText/ViewAddText (the TextArea's Rust
+  object); the tooltip's ScrollPaint/OpenPopup/ClosePopup; WrappedText as a whole Rust object (its Paint).
+- Lobby: PingLogic's EventGame/EventFlag and the cases next to rust-wonnet39's lines; the hostops compounds
+  (TextBytes, TextAppend, ParserCommandText) and logicsplit's StatusSetStatus/OkCancelSetText are now the drivers'
+  path only (drop with won_ctl35's next change).
+- The Sound family and the config object model with the lobby lane.
+
+## R6 WON GUI, round 41: the Sound family, the combo and input hosts, WrappedText and the widgets' forwards in Rust; five units folded (ee_won_gui soundobj.rs, gamefwd.rs, wrapobj.rs, comboobj.rs, inputobj.rs; ee_won_lobby eesound.rs; branch rust-wongui41, 2026-11-26)
+
+The round started from rust-wongui40 (9ffe7cd8a) with origin/rust batch 30 merged (eae41e517). Wave 1 forks A (the
+Sound family) and B (the combo box, the input box, the tooltip, WrappedText, the formatted text) were merged (one
+conflict: both took Rust RefCount kind 2; the wrapped text is now 3); wave 2 fork C (GuiHost.cpp's widget forwards);
+then batch 31 (38bb1e104, rust-wonnet39) and the lead's unit folds.
+
+### What moved (`port_metrics.py` cpp_lines)
+
+| Commit | What | cpp_lines |
+|---|---|---|
+| A c71591d76 | soundobj.rs: a sound is a Rust RefCount (kind 2; flags, path, looping, a `SoundHook`); the decoder a Rust fn; eesound.rs's music and effect are hooks registered by EELobbyGlueHost.cpp; the lobby's music and click cases answered in Rust; EELobbySound.h, Sound/SoundDescriptor/SoundDecoder, EELobbyMusic/EELobbySound/EELobbySoundDecoder and WindowManager's decoder gone (`class Sound : public RefCount {}` stays as SmartPtr's name) | -199, classes -6 |
+| B f21be948d | the combo box's parts read and set in place, its edit/undo/item/popup cases in Rust (3 cases left: they build C++ objects) | |
+| B d6908a0ca | 22 input box cases, the tooltip's ScrollPaint/OpenPopup/ClosePopup, WrappedText::Paint and the Graphics host's Text case | |
+| B 3b518961e, 095456541 | WrappedText a Rust RefCount (kind 3: text, font, wrap; the C++ class a handle); the formatted text a Rust sink (the four Fmt* functions gone) | B total -110 |
+| C b2fe334ed, 53af0cdd2, d8945e135 | gamefwd.rs: every GuiHost case that only called a widget's non-virtual forward is that Rust call (the object from the registry), the list/text areas' constructor statements member writes in place; ImageOp, SplitterHostCall, five uncalled forwards gone | -112 |
+| lead 16c8ec47c | LobbyContainer.cpp -> RootScreen.cpp (dropped at the rust-wonnet40 merge: theirs is Rust), CreditsDialog.cpp -> LobbyDialogHost.cpp, WONLobbyResource.cpp -> LobbyCtrlHost.cpp, EELobbyResource.cpp -> EELobbyGlueHost.cpp | -45, files -4 |
+| lead 12b13461d | Window.cpp -> WindowManager.cpp | -20, files -1 |
+
+Lane total: cpp_lines **-486**, cpp_files **-5** (forks against eae41e517 -421; the folds against 35f2d78f2 -65),
+logic -124, classes -6, extern_c +15, rust_hdrs +2, unsafe +120. Short of -1,500; the file target (3) met.
+
+### Why not -1,500
+What is left in the GUI hosts calls C++ virtuals (list items, AdjustPosition, SetCursor), builds C++ objects or
+paints C++ Backgrounds; none maps to a Rust object's call until those classes move. The lobby's big blocks are the
+lobby lane's (gLobbyData, the config object model). The forks ran under heavy load (wontest at ~20 minutes for 28
+drivers), which cost most of the round's time.
+
+### Problems met
+- Two forks each took the next free Rust RefCount kind (2): kinds are a crate-wide registry; check soundobj.rs,
+  wmobj.rs and wrapobj.rs before taking one.
+- Folding units: keep the UNIT-FLAGS class the same (EELobbyGlueHost.cpp and EELobbyResource.cpp are the exe's
+  game-flag units; the WONLobby units are -GX), rename clashing file statics (Window.cpp's sHostFont), and inline
+  into a header only what needs no class the header forward-declares (LobbyContainer's RootScreen comparisons
+  stayed out of line).
+- A forward deleted as uncalled in the game can still be called by a driver's subclass of the game class (the cfgset
+  driver's OrigWONButton called WONButton::SetButtonState): the fork's GUI-driver subset missed it, the full wontest
+  on the merged tip caught it; the method went into the driver's subclass.
+- A fold moves `__FILE__`: LobbyContainer's SafeGetComponent errors now name RootScreen.cpp.
+
+### Behaviour changes
+- `ee_won_sound_call` on a null sound does nothing; the decoder is process-wide (not the manager's member).
+- The combo box's undo text is held in Rust; a wrapped text is freed by Rust at its last reference.
+- ClosePopup goes straight to the manager's EndPopup.
+
+### Left
+- EvNew and LHandle (ComponentListener's vtable subclasses); InputBox's `mRealText` (lobbytext.rs returns a
+  reference to it); ComboInsertString, ComboDeliverSel, ListenTo; ViewAddText (needs `mHTMLView`'s offset).
+- GuiHost.cpp: the list items' virtuals, the tooltip cases, the sort, MenuItemOf (`dynamic_cast`), the shell's
+  layouts. Button's click sound could be read in place.
+- LobbyPlaySound and its four cases (gLobbyData, lobby lane); the driver-only host variants (TextBytes, TextAppend,
+  ParserCommandText, StatusSetStatus, OkCancelSetText) are Rust and driver lines only, so they do not move cpp_lines.
+
+### Merging rust-wonnet40 (c08bf625b)
+Batch 32 left round 40 out (19 conflicting files with WON lobby/net 39+40), so rust-wonnet40 (2b7968a65) was
+merged here directly. Its round moved AccountLogic, DialogLogic, InitLogic, LobbyLogic, PingLogic and RoutingLogic.cpp
+into LobbyLogicHost.cpp and WONLobbyPrv.cpp: rounds 40 and 41's case deletions in those units were carried over as
+exact removed-line hunks found in the new homes (16 of 19 matched; the other three were sound lines theirs had
+already dropped), and DialogLogic's lobbytext.rs offset registration moved to LobbyLogicHost.cpp. LobbyContainer and
+CreditsDialog's config reader became theirs (lobbyscreens.rs, lobbycfgrd.rs), so this round's fold of LobbyContainer
+was dropped. The Rust dispatchers try lobbytext.rs before logicshell.rs. A check that pays: list each conflicted
+file's lines ours added or removed against the merge base and compare with the result (diff3's alignment silently
+dropped an include ours had added inside a block).
+
+### Gates
+On c08bf625b (batch 31 and rust-wonnet40 merged; logs in build/w41m of the merge worktree): builds `--sim` and
+`--test-profile windowed-software` 0/0; rust header current; rust gate PASS on 517aff4d2 (c08bf625b failed rustfmt
+only: the merged module order in ee_won_lobby lib.rs); won_host_coverage PASS; oracle 2-7 identical; captures oracle
+and late PASS (the WON GUI is not in EE-SIM, so no other profile covers it); saveload matrix PASS; scenario_check
+27/27; gates.sh GATES PASS (tour, ai-game [4, 36, 37] classic_lua x2, lan-game); the LAN game PASS (host 2808, joiner
+2804) and lan_capture_compare against build/w40lanM: the lobby captures identical but two 15-pixel input-box carets.
+wontest: 185 of 186 drivers exit 0 (151 on c08bf625b, the other 35 on 8cb0ca8a2 after the cfgset driver fix); won_ping36_test shows one mismatch in the ping op's status and references, and rust-wonnet40 (2b7968a65) alone fails it the same way, so it came with the lobby/net round, not this one. The same set passed before the rust-wonnet40 merge on 12b13461d.
+
+## EE-SIM's fixed display: the headless checks never read the real desktop (ee_base plat_core sim.rs, plat_sdl exports.rs; branch rust-fixedscreen, 2026-11-27)
+
+On 2026-11-27 afternoon the checks failed on code that had passed in the morning (and on older commits that passed
+the day before): `sim_editor` (its formstate lines' `view=` and `edges=` from step 1451 on: `view=0,25,1536,781
+edges=0,0,1363,767` against `view=0,25,1382,783 edges=0,0,1225,767`), the `oracle` capture's CAMU in seeds 2 and 3,
+and a LAN game's lobby captures against a base made a day earlier (the window's size). The owner had logged in to the
+harness machine with a TV connected: the desktop went from 1728x1084 (96 DPI) to 1920x1080.
+
+- The cause: EE-SIM creates a real (hidden) SDL window, and every size the game has comes from the display through
+  two platform calls, `PlatWindowGetDisplaySize` and `PlatWindowGetDisplayLogicalSize` (plat_sdl exports.rs:
+  `SDL_GetDesktopDisplayMode` of the primary display). Their readers: `GXGameSize` (ee_render gx modes.rs
+  `game_size`: windowed, 80% of the logical size, so 1382x866 then, 1536x864 now), the window itself
+  (gamecpp startup.rs: `ww * 4 / 5`, 1382x867 then), `GXDirectDraw`'s mode (`desktop_size`), the mode list, the
+  render scale, the RTS mouse's desktop size (RTSMouse.cpp `ee_rtsmcpp_display_size`), DX7Screen::CreateAWindow and
+  EEScreens' display query. The editor's saved view is the game size less the panel (`view` right = width, bottom =
+  height - 83), its edge scroll the menus' width (1226 then, 1364 now: 768 lines at the game's aspect ratio); the
+  camera's viewport and projection (CAMU) follow the game size too. The old size was read back from the gates tours'
+  game logs: "GX: presenting 1382x866 frames into a 1382x867 window" (lane tours until 12:34 that day; 1536x864 from
+  15:05), so W * 4 / 5 = 1382 and H * 4 / 5 = 867: 1728x1084.
+- The fix: in EE-SIM (`gPlatSimMode`, set by the driver before the engine starts) both calls answer
+  `plat_core::sim::SIM_DISPLAY_SIZE`, 1728x1084, as logical size and pixels, without asking SDL. The game (EE-AOC,
+  the test profile included) still asks the real display. The committed goldens pass unchanged on the 1920x1080
+  desktop; a headless run is now the same on any desktop, a remote session's or a bench machine's (Linux's dummy
+  video driver: its display mode no longer matters).
+- Lesson: a check's output must not depend on the host's display. Anything headless that reads a size, a DPI or a
+  monitor (SDL display modes, GetSystemMetrics, the work area) must take a fixed value in the simulation. Still
+  host-dependent (live, windowed sessions): the harness tours (their checks are relative: lit share, colours; the
+  frame sizes in the logs follow the desktop) and `lan_capture_compare.py` (its base and new captures must come from
+  the same desktop: make the base again after the desktop changes), and the hidden window's pixel density in EE-SIM
+  (a DPI other than 96 would scale the window's client pixels; nothing the captures record reads them).
+- Checks on the fix (eacb1a73f, desktop 1920x1080): both builds 0/0; rust header current, `rust_build.py gate` PASS;
+  the editor gate failed before the fix exactly as reported and passes after it (14448 lines), `--civbuilder` PASS
+  (4062); sim captures oracle PASS (598 equal, CAMU of seeds 2 and 3 among them), late PASS (598), app PASS (38);
+  oracle seeds 2-7 identical to the main checkout's `ref`; won_host_coverage PASS; scenario_check 27/27 (a first run under load: 26/27, one
+  scenario's start timed out; 27/27 alone); `gates.sh` GATES PASS (its tour's
+  gameplay frame 1536x864: the live game follows the desktop, as it should).

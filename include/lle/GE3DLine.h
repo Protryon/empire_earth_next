@@ -4,6 +4,7 @@
 #include "lle/GERust.h"
 
 #include "lle/LLEForward.h"
+#include "rust/base/records.h"
 
 class GE3DLine : public EeGe3DLine {   // the Rust record (mStart, mDirection; rust/base/math.h)
 public:
@@ -16,13 +17,6 @@ public:
     void Define(const GE3DPoint& inStart, const GEVector& inDirection) { *this = GE3DLine(inStart, inDirection); }
     const GEVector& GetDirection() const { return GECpp(this->mDirection); }
     const GE3DPoint& GetStart() const { return GECpp(this->mStart); }
-    // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
-    // in the third axis; the parameters on each); a plane (false when parallel)
-    bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const
-        { return ee_ge_line_intersects_point(GERust(*this), GERust(inPoint), inTolerance, &outT); }
-    bool Intersects(const GE3DLine& inLine, float& outT, float& outLineT) const
-        { return ee_ge_line_intersects_line(GERust(*this), GERust(inLine), &outT, &outLineT); }
-    bool Intersects(const GE3DPlane& inPlane, float& outT) const { return ee_ge_line_intersects_plane(GERust(*this), GERust(inPlane), &outT); }
     template <class F> long Load(F& inFile) { return ee_ge_3d_line_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) const { return ee_ge_3d_line_save(GERust(*this), GERustFile(inFile)); }
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }
@@ -43,11 +37,7 @@ public:
     void Define(const GE3DPoint& inPoint1, const GE3DPoint& inPoint2, const GE3DPoint& inPoint3)
         { ee_ge_plane_define(GERust(inPoint1), GERust(inPoint2), GERust(inPoint3), GERust(*this)); }
     void Define(const GE3DPoint& inPoint, const GEVector& inNormal) { *this = GE3DPlane(inPoint, inNormal); }
-    const GEVector& GetNormal() const { return GECpp(this->mNormal); }
     const GE3DPoint& GetPoint() const { return GECpp(this->mPoint); }
-    // the line where the planes meet; false when they are parallel (degenerate normals: the C++ read an
-    // uninitialized parameter, Rust takes 0)
-    bool Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const { return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine)); }
     template <class F> long Load(F& inFile) { return ee_ge_3d_plane_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_3d_plane_save(GERust(*this), GERustFile(inFile)); }
 };

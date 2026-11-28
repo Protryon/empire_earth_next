@@ -8,7 +8,7 @@
 #ifndef EE_EEGAMEOPTIONS_H
 #define EE_EEGAMEOPTIONS_H
 
-#include "rust/game/gamecpp.h"
+#include "rust/game/records.h"
 
 class FSFile;
 class TSReadWriteLock;
@@ -46,28 +46,21 @@ class EEGameOptions : public EeAppOptionsFields {
 public:
     // Creates default game options (random epochs, normal speed and map size, unit limit 50, three wonders to win)
     // with sixteen empty player slots (ee_game gamecpp options.rs; the limits, the strings and the slots)
-    EEGameOptions() { ee_gamecpp_options_init(this); }
+    EEGameOptions();
     // Creates a copy of other game options, with its own lock (the copy keeps the defaults' mB407: operator= leaves it)
     // 0x12f818 (also asserts on CreateReadWriteLock: user-written)
-    EEGameOptions(const EEGameOptions& inOther) { ee_gamecpp_options_copy(this, &inOther); }
+    EEGameOptions(const EEGameOptions& inOther);
     ~EEGameOptions();                       // 0x12f892 (out of line: the lobby's GameType calls it)
     EEGameOptions& operator=(const EEGameOptions& inOther);
     // Reads the game options and the sixteen slots from a saved game (ee_app game_options.rs load); returns the first
     // read error
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_options_load(this, inMajorVersion, inMinorVersion, &inFile); }
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     // Writes the sixteen player slots and the game options to a saved game (ee_app game_options.rs save); returns the
     // first write error
-    long Save(FSFile& outFile) { return ee_gamecpp_options_save(this, &outFile); }
+    long Save(FSFile& outFile);
     // Returns whether civilizations may be bought: not in the scenario editor and not in a scenario game
     // 0x12fc0c: !gUIManager+0x13c && !mIsScenarioGame (EEMCivUpgradesPurchased; provisional name)
-    bool CanBuyCivilization() { return ee_gamecpp_options_can_buy_civilization(this); }
-    // Returns the map's width and height in tiles for the map size setting (0 x 0 for an unknown size)
-    // (gameoptions.yaml map_sizes: 42, 58, 75, 105, 160, 220 in the original)
-    // 0x12fb70 (by mMapSize; EERandomMap::CreateRandomMap)
-    void GetMapDimensions(long& outWidth, long& outHeight) { ee_gamecpp_options_map_dimensions(this, &outWidth, &outHeight); }
-    // Returns the campaign scenario's map name when the options name a campaign with a checksum and a map, else ""
-    // 0x12fbc5 (EEWorld::StartGame on gGameOptions; provisional name)
-    bool GetCampaignMapName(UWideString& outName) { return ee_gamecpp_options_campaign_map_name(this, &outName); }
+    bool CanBuyCivilization();
     // inline const accessors (EEMFullGameOptions 0xbe6c6 expands all 19; provisional names)
     const UWideString& GetMapType() const { return this->mMapType; }
     long GetGameSpeed() const { return this->mGameSpeed; }
@@ -88,10 +81,6 @@ public:
     bool GetRecordGames() const { return this->mRecordGames; }
     bool GetAllowCustomCivs() const { return this->mAllowCustomCivs; }
     bool GetB407() const { return this->mB407; }
-    // Resets the options to the lobby's defaults (all resources, random epochs, first map type, cheats on, victory off,
-    // the preferred difficulty) with sixteen empty player slots
-    // 0x12fc27 (the preferences' defaults, mLoadType 0, epochs 15/14; provisional name)
-    void SetDefaults() { ee_gamecpp_options_set_defaults(this); }
     // inline (SIE Start 0x1e82c1: the temporary of the implicit const char* -> UWideString conversion is re-addressed
     // with lea)
     void SetMapType(const UWideString& inMapType) { this->mMapType = inMapType; }

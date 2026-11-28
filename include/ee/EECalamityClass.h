@@ -9,7 +9,9 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
+#include "rust/sim/records.h"
 #include "rust/game/gamecpp.h"
+#include "rust/sim/tech.h"
 
 class EECalamity;
 class EEContagionFunctor;
@@ -86,9 +88,6 @@ public:
 
     // a location class's (+0x4c): the shared rule over the class's radius, water flag, map area, space terrain and
     // placed unit class
-    bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY) { return ee_gamecpp_calamity_class_valid_location(this, inUnit, inX, inY); }
-    // a unit class's (+0x4c): the fire's and the plague's functor decides (CanInfect), the others' the shared rule
-    bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit) { return ee_gamecpp_calamity_class_valid_target(this, inUnit, inTargetUnit); }
     // the volcano's (0xb4e74; EEUCBuilding calls it): a random location of a map tile between mMinimumRadius and
     // mMaximumRadius around inCenter, at the tile's height
     void GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation) { ee_gamecpp_calamity_class_random_location(this, (const float(*)[3])&inCenter.mX, (float(*)[3])&outLocation.mX); }

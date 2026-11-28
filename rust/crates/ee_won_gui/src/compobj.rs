@@ -335,6 +335,8 @@ pub enum EeWonComp {
     GNew,
     /// `delete (BackgroundGrabber*)b`.
     GDelete,
+    /// `MouseWheel(c)` (the manager's wheel to the topmost popup, R6 WON GUI round 40).
+    VMouseWheel,
 }
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -425,7 +427,7 @@ pub extern "C" fn ee_won_comp_event_register(at: usize) {
 }
 
 /// A game event's record (`e` a live `ComponentEvent*`), None outside the game.
-pub(crate) fn event_rec(e: isize) -> Option<*mut EeWonCompEventRec> {
+pub fn event_rec(e: isize) -> Option<*mut EeWonCompEventRec> {
     let at = EVENT_AT.load(Ordering::Acquire);
     (at != 0 && e != 0 && is_game()).then(|| (e as usize + at) as *mut EeWonCompEventRec)
 }
@@ -669,6 +671,18 @@ impl Comp {
     /// `GetDesiredSize(w, h)`.
     pub fn v_desired_size(&self, c: isize) -> (i32, i32) {
         self.desired(c)
+    }
+    /// `MarkInvalid()`.
+    pub fn v_mark_invalid(&self, c: isize) {
+        self.h(K::VMarkInvalid, c, 0, 0);
+    }
+    /// `HandleComponentEvent(ev)`.
+    pub fn v_handle_event(&self, c: isize, ev: isize) {
+        self.h(K::VHandleEvent, c, ev, 0);
+    }
+    /// `MouseWheel(amount)` (its answer dropped, as the manager's call did).
+    pub fn v_mouse_wheel(&self, c: isize, amount: isize) {
+        self.h(K::VMouseWheel, c, amount, 0);
     }
     /// `GetMouseChild()`.
     pub fn v_mouse_child(&self, c: isize) -> isize {
