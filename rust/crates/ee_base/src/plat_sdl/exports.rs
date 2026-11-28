@@ -437,6 +437,12 @@ pub unsafe extern "C" fn PlatWindowGetDisplaySize(
     out_width: *mut i32,
     out_height: *mut i32,
 ) -> c_int {
+    // EE-SIM: the fixed display (plat_core::sim::SIM_DISPLAY_SIZE), never the real one
+    if let Some((w, h)) = crate::plat_core::sim::sim_display_size() {
+        *out_width = w;
+        *out_height = h;
+        return 1;
+    }
     let mode = desktop_mode(window);
     if mode.is_null() {
         return 0;
@@ -453,6 +459,11 @@ pub unsafe extern "C" fn PlatWindowGetDisplayLogicalSize(
     out_width: *mut i32,
     out_height: *mut i32,
 ) -> c_int {
+    if let Some((w, h)) = crate::plat_core::sim::sim_display_size() {
+        *out_width = w;
+        *out_height = h;
+        return 1;
+    }
     let mode = desktop_mode(window);
     if mode.is_null() {
         return 0;

@@ -51,6 +51,18 @@ pub static gPlatSimPortOffset: CVar<c_int> = CVar::new(0);
 #[no_mangle]
 pub static gPlatSimNoHumanDefeatHits: CVar<c_long> = CVar::new(0);
 
+/// The display EE-SIM's game sees (logical size and pixels): the one the simulation goldens were made with (the
+/// harness machine's desktop until 2026-11-27, 1728x1084 at 96 DPI: a windowed game of 1382x866 in a 1382x867
+/// window). The game's sizes all follow the display (`GXGameSize`, the window, the menus' width, the editor's view
+/// and edge scroll, the camera's viewport), so a headless run never asks the real one: its output is the same on any
+/// desktop, a remote session's or none.
+pub const SIM_DISPLAY_SIZE: (c_int, c_int) = (1728, 1084);
+
+/// `SIM_DISPLAY_SIZE` in EE-SIM (`gPlatSimMode`); None in the game, which asks the real display.
+pub fn sim_display_size() -> Option<(c_int, c_int)> {
+    (gPlatSimMode.get() != 0).then_some(SIM_DISPLAY_SIZE)
+}
+
 static DEBUG_HANDLER: AtomicUsize = AtomicUsize::new(0);
 
 #[no_mangle]
@@ -86,6 +98,15 @@ mod tests {
         assert_eq!(size_of::<CVar<c_long>>(), size_of::<c_long>());
         assert_eq!(align_of::<CVar<c_int>>(), align_of::<c_int>());
         assert_eq!(size_of::<CVar<Option<unsafe extern "C" fn()>>>(), size_of::<usize>());
+    }
+
+    #[test]
+    fn the_simulation_has_a_fixed_display() {
+        let _guard = test_globals();
+        assert_eq!(sim_display_size(), None);
+        gPlatSimMode.set(1);
+        assert_eq!(sim_display_size(), Some((1728, 1084)));
+        gPlatSimMode.set(0);
     }
 
     #[test]
