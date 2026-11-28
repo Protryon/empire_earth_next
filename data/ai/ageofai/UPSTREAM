@@ -639,9 +639,11 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 vendored in personalities/ with their README and a NOTICE) as the source when tools/personas.py has
                 generated personas_data.lua: name, traits, leanings, character and the lines of the nine situations
                 voice.lua says. Ported: the traits/leanings/character and each situation's unconditional fallback
-                line. Not ported: the .eeai expression evaluation (conditions/chances - the port says the
+                line, and the civilization name (`civilization =>`, shown through the engine's ai.civ: the
+                player's displayed civ name, the upgrades stay the game's random premade pick, as persona.c).
+                Not ported: the .eeai expression evaluation (conditions/chances - the port says the
                 personality's plain line, not the situation-specific one), the {placeholders} (stripped, so a line
-                can read bare), the talk trait and the other situations, title/civilization/colour (engine-side),
+                can read bare), the talk trait and the other situations, title/colour (engine-side),
                 style and priorities (the experimental ai_style has no port), the mod/computer.eeai layer, and
                 upstream's colour-matched assignment (M.pick deals by player id and map size, no repeats in a game,
                 through voice.lua's greeting line at the start).

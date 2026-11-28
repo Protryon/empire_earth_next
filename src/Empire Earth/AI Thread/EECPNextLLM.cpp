@@ -62,13 +62,20 @@ struct LLMState {
     bool enabled = false;
     int timeout_s = 20;
     bool think = false;
-    std::string answer;          // the last finished answer
-    unsigned long long answer_seq = 0;
+    // an answer belongs to the player that asked (one line each; a shared answer made every AI say the same
+    // line, and made the AI that asked say it again at every step: the poll never consumed it)
+    std::string answer[16];               // the last finished answer of each player
+    unsigned long long answer_seq[16] = {};   // the request it answers
+    unsigned long long request_seq = 1;   // starts at 1: a request's poll sequence is never 0 (0 is "could not start")
     std::atomic<bool> busy{false};
     std::atomic<unsigned long long> done{0};
 };
 
 LLMState g;
+
+int slot(int player) {
+    return (player >= 0 ? player : 0) & 15;
+}
 
 std::wstring wide(const std::string& s) {
     if (s.empty()) return std::wstring();
@@ -214,7 +221,7 @@ bool http_post(const std::string& url, const std::string& key, const std::string
     return ok != FALSE;
 }
 
-void worker(std::string url, std::string key, std::string body, int timeout_s) {
+void worker(int player, unsigned long long seq, std::string url, std::string key, std::string body, int timeout_s) {
     std::string raw, answer;
     int code = 0;
     bool ok = http_post(url, key, body, timeout_s, raw, &code);
@@ -226,8 +233,8 @@ void worker(std::string url, std::string key, std::string body, int timeout_s) {
             snprintf(b, sizeof b, " (http %d, win %lu)", code, (unsigned long)GetLastError());
             answer = "llm error: " + answer + b;
         }
-        g.answer = answer;
-        g.answer_seq++;
+        g.answer[slot(player)] = answer;
+        g.answer_seq[slot(player)] = seq;
     }
     g.done++;
     g.busy = false;
@@ -247,8 +254,9 @@ extern "C" void EECPNextLLMConfigure(const char* url, const char* key, const cha
     g.think = think != 0;
 }
 
-// start one request; 0 when disabled or busy, the sequence number otherwise
-extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, const char* prompt) {
+// start one request for player (one at a time in the process); 0 when disabled or busy. The result is the sequence to
+// poll with, ai.llm(seq): the answer's own sequence (EECPNextLLMSeq) is greater than it.
+extern "C" unsigned long long EECPNextLLMRequest(int player, const char* system_prompt, const char* prompt) {
     std::string url, key, model;
     bool enabled;
     int timeout_s;
@@ -272,30 +280,34 @@ extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, cons
     body += "\"max_tokens\":300,\"temperature\":0.8";
     if (!model.empty()) body += ",\"model\":\"" + json_escape(model) + "\"";
     body += "}";
-    unsigned long long seq;
+    unsigned long long before, seq;
     {
         std::lock_guard<std::mutex> h(g.lock);
-        seq = g.answer_seq + 1;
+        before = g.request_seq;
+        seq = ++g.request_seq;
     }
-    std::thread(worker, url, key, body, timeout_s).detach();
-    return seq;
+    std::thread(worker, player, seq, url, key, body, timeout_s).detach();
+    return before;   // its answer's sequence is greater, so ai.llm(before) reads it (and nothing older)
 }
 
-// copy the answer started after `seq` (0: the latest): 1 ready, 0 nothing new
-extern "C" int EECPNextLLMPoll(unsigned long long since, char* out, int cap) {
+// copy the player's answer to a request after `seq` (0: the latest): 1 ready, 0 nothing new. A caller remembers the
+// sequence of its request, so it reads its own answer once and never another player's.
+extern "C" int EECPNextLLMPoll(int player, unsigned long long since, char* out, int cap) {
     std::lock_guard<std::mutex> h(g.lock);
-    if (g.answer.empty() || g.answer_seq <= since) return 0;
+    int p = slot(player);
+    if (g.answer[p].empty() || g.answer_seq[p] <= since) return 0;
     if (out == NULL || cap <= 0) return 1;
-    int n = (int)g.answer.size();
+    int n = (int)g.answer[p].size();
     if (n > cap - 1) n = cap - 1;
-    memcpy(out, g.answer.data(), (size_t)n);
+    memcpy(out, g.answer[p].data(), (size_t)n);
     out[n] = 0;
     return 1;
 }
 
-extern "C" unsigned long long EECPNextLLMSeq(void) {
+// the player's last answered request (0: none yet)
+extern "C" unsigned long long EECPNextLLMSeq(int player) {
     std::lock_guard<std::mutex> h(g.lock);
-    return g.answer_seq;
+    return g.answer_seq[slot(player)];
 }
 
 #else  // not _WIN32: no WinHTTP, the transport is inert (the voice is off)
@@ -310,19 +322,22 @@ extern "C" void EECPNextLLMConfigure(const char* url, const char* key, const cha
     (void)think;
 }
 
-extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, const char* prompt) {
+extern "C" unsigned long long EECPNextLLMRequest(int player, const char* system_prompt, const char* prompt) {
+    (void)player;
     (void)system_prompt;
     (void)prompt;
     return 0;
 }
 
-extern "C" int EECPNextLLMPoll(unsigned long long since, char* out, int cap) {
+extern "C" int EECPNextLLMPoll(int player, unsigned long long since, char* out, int cap) {
+    (void)player;
     (void)since;
     if (out != NULL && cap > 0) out[0] = 0;
     return 0;
 }
 
-extern "C" unsigned long long EECPNextLLMSeq(void) {
+extern "C" unsigned long long EECPNextLLMSeq(int player) {
+    (void)player;
     return 0;
 }
 

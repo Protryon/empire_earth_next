@@ -337,6 +337,9 @@ return {
                                     -- each AI a different one, dealt from its player id and the map)
     persona_style = false,          -- upstream [ai_base] ai_style (default off): personalities only talk/negotiate;
                                     -- here, off keeps the leanings neutral (50) and the plan's play as before
+    persona_civ = true,             -- the persona's civilization name is shown for the AI (upstream persona.c
+                                    -- civilization =>, e.g. "Walled Cities"); false keeps the game's own random one.
+                                    -- The upgrades/bonuses stay the game's random premade pick either way.
     stations = false,               -- the switch; upstream runs it while [ai_base] game_ai = 0 (off as shipped)
     -- the holy (holy.c): priests and prophets, a strike category of their own
     holy = false,                   -- off until measured
@@ -442,4 +445,5 @@ return {
                                     -- reject it returned HTTP 400), so this is currently a no-op
     llm_extra = "",                 -- extra JSON for the request
     llm_log = true,                 -- prompts and answers into the log
+    llm_line_seconds = 60,          -- the model says a line by itself at most this often (0: only on events)
 }

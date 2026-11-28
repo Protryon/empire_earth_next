@@ -134,6 +134,10 @@ local function persona_add(id, p)
     if type(p.character) == "string" and p.character ~= "" then
         e.character = p.character      -- for voice.lua (upstream voice/prompt: who this is, in a few words)
     end
+    if type(p.civ) == "string" and p.civ ~= "" then
+        e.civ = p.civ                   -- the civilization name shown for this AI (upstream persona.c civilization =>;
+                                        -- applied through ai.civ at game start)
+    end
     if type(p.color) == "table" and #p.color == 3 then
         e.color = {p.color[1], p.color[2], p.color[3]}   -- applied through ai.name/ai.color at game start
     end
@@ -273,6 +277,13 @@ function M.step(memory, view)
         end
         if ai ~= nil and ai.color ~= nil and e.color ~= nil then
             ai.color(e.color[1] / 255.0, e.color[2] / 255.0, e.color[3] / 255.0)
+        end
+        -- the civilization name the game shows (upstream persona.c writes the player's civ name): the upgrades stay
+        -- the game's random premade pick. persona_civ = false keeps the game's own name (e.g. a scenario's custom civ)
+        if S.persona_civ ~= false and ai ~= nil and ai.civ ~= nil and e.civ ~= nil then
+            if ai.civ(e.civ) ~= false then
+                print(string.format("persona p%d civ %s", (ai.me ~= nil and ai.me() or 0), e.civ))
+            end
         end
     end
     memory.persona = memory.persona or {}

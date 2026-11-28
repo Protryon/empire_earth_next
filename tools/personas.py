@@ -16,6 +16,8 @@ Per file (the basename is the persona id, e.g. baumeister) it reads:
   * the six leanings of `personality`: air_force, navy, early_anti_air, pressure, defences, spread, `NN%`, under
     the port's names (air, navy, anti_air, pressure, defences, spread - personas.lua's M.LEAN_KEYS);
   * `personality.character` - the few words the AI voice plays;
+  * `personality.civilization` - the name the mod shows for the AI's civilization ("Walled Cities"), the same
+    unconditional rule as the lines below (the port shows it through ai.civ; the upgrades stay the game's);
   * `lines` - one entry per situation the port has (see SITUATIONS): greeting, war, peace, alliance, betrayal,
     capitulation, push, capture, loss.
 
@@ -41,7 +43,7 @@ sentence's first letter are tidied ("Peace with {enemy}, {them}." -> "Peace."). 
 addressing, and a sentence whose subject was a placeholder reads bare ("Come on, lads! {them} is waiting!" ->
 "Come on, lads! Is waiting!"); the words themselves are the personality's.
 
-Not read at all: `title`, `civilization`, `color`, the `talk` trait, `style`, `priorities`, `decide` and `prompt`
+Not read at all: `title`, `color`, the `talk` trait, `style`, `priorities`, `decide` and `prompt`
 records, the file's own names (vars), its event handlers (`on_territory_taken() { ... }`), and `include(...)` - the
 mod's `mod/*.eeai` base layers are not vendored (this port has no line system to build on them). `talk` only sets
 how often a line is said upstream; the port says a line on an event, so it has nothing to spend it on.
@@ -485,6 +487,7 @@ def parse_file(path):
         "traits": traits,
         "leanings": leanings,
         "character": first_text(fields.get("character", "")) or "",
+        "civ": first_text(fields.get("civilization", "")) or "",
         "color": color,
         "lines": lines,
     }
@@ -515,8 +518,9 @@ HEADER = """\
 -- contributors (personalities/NOTICE). The port is under the same licence.
 --
 -- Per personality: the in-game name, the six traits and the six leanings 0..100 (50 is neutral; the files'
--- air_force and early_anti_air are the port's air and anti_air), the `character` text the AI voice plays, and the
--- lines for the situations the port has. The .eeai expressions are NOT evaluated: a situation holds the
+-- air_force and early_anti_air are the port's air and anti_air), the `character` text the AI voice plays, the
+-- `civ` name the mod shows for its civilization, and the lines for the situations the port has. The .eeai
+-- expressions are NOT evaluated: a situation holds the
 -- unconditional lines - the `?? [ ... ]` list that is said when no condition holds, else the last `: ...` branch
 -- of a conditional chain - with every {placeholder} stripped from the text (tools/personas.py has the mapping and
 -- the tidy-up). A situation a personality has no line for is left out: ageofai/personas.lua falls back to its own
@@ -553,6 +557,8 @@ def render(personalities):
         leanings = ", ".join("%s = %d" % (k, p["leanings"][k]) for _, k in LEANINGS if k in p["leanings"])
         out.append("            leanings = {%s}," % leanings)
         out.append("            character = %s," % lua_string(p["character"]))
+        if p.get("civ"):
+            out.append("            civ = %s," % lua_string(p["civ"]))
         if p.get("color") is not None:
             out.append("            color = {%d, %d, %d}," % (p["color"][0], p["color"][1], p["color"][2]))
         if p["lines"]:

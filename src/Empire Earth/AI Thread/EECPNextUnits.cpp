@@ -4611,9 +4611,9 @@ static int LuaEpoch(lua_State* L)
 // the LLM transport (EECPNextLLM.cpp): configure, start a request, poll the last answer
 extern "C" void EECPNextLLMConfigure(const char* url, const char* key, const char* model, int enabled, int timeout_s,
                                      int think);
-extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, const char* prompt);
-extern "C" int EECPNextLLMPoll(unsigned long long since, char* out, int cap);
-extern "C" unsigned long long EECPNextLLMSeq(void);
+extern "C" unsigned long long EECPNextLLMRequest(int player, const char* system_prompt, const char* prompt);
+extern "C" int EECPNextLLMPoll(int player, unsigned long long since, char* out, int cap);
+extern "C" unsigned long long EECPNextLLMSeq(int player);
 
 // ai.say: a chat line as this computer player (the game's in-game chat; no effect in the headless simulation)
 extern "C" void EECPNextChatPush(int player, const char* text);   // the AI's chat inbox (EECPNextLLM.cpp)
@@ -4691,17 +4691,50 @@ static int LuaColor(lua_State* L) {
     return 1;
 }
 
-// ai.llm: no argument = the last answer (nil while none or still busy); a table = configure; a string = ask
+// ai.civ: the civilization name the game shows for this player (upstream persona.c writes the player's civ name,
+// "Walled Cities"); the upgrades and bonuses stay the game's random premade pick
+static int LuaCiv(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL || !lua_isstring(L, 1)) { lua_pushboolean(L, 0); return 1; }
+    const char* utf8 = lua_tostring(L, 1);
+    // UTF-8 (the model/table) to the game's codepage, as ai.say does
+    std::wstring wide;
+    int wn = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+    if (wn > 0) {
+        wide.resize((size_t)wn);
+        MultiByteToWideChar(CP_UTF8, 0, utf8, -1, &wide[0], wn);
+    }
+    std::string local;
+    if (!wide.empty()) {
+        int an = WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
+        if (an > 0) {
+            local.resize((size_t)an);
+            WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, &local[0], an, NULL, NULL);
+        }
+    }
+    me->mCivilization.SetName(UWideString(!local.empty() ? local.c_str() : utf8));
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// ai.llm: no argument = this player's last answer (nil while none); a number (a request's sequence) = the player's
+// answer to that request or a later one, once (the second result is the answer's sequence, so the next poll skips
+// it); a table = configure; a string = ask
 static int LuaLlm(lua_State* L) {
     EECPUnitsCharge(L, kCostCall);
-    if (lua_isnoneornil(L, 1)) {
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    int player = me != NULL ? (int)me->mPlayerID : 0;
+    if (lua_isnoneornil(L, 1) || lua_type(L, 1) == LUA_TNUMBER) {
+        unsigned long long since = lua_isnoneornil(L, 1) ? 0 : (unsigned long long)lua_tointeger(L, 1);
         static char buf[8192];
-        if (EECPNextLLMPoll(0, buf, sizeof buf)) {
+        if (EECPNextLLMPoll(player, since, buf, sizeof buf)) {
             lua_pushstring(L, buf);
         } else {
             lua_pushnil(L);
         }
-        return 1;
+        lua_pushinteger(L, (lua_Integer)EECPNextLLMSeq(player));
+        return 2;
     }
     if (lua_istable(L, 1)) {
         std::string url, key, model;
@@ -4730,7 +4763,7 @@ static int LuaLlm(lua_State* L) {
     }
     const char* prompt = lua_isstring(L, 1) ? lua_tostring(L, 1) : NULL;
     const char* system = lua_isstring(L, 2) ? lua_tostring(L, 2) : NULL;
-    unsigned long long seq = EECPNextLLMRequest(system, prompt);
+    unsigned long long seq = EECPNextLLMRequest(player, system, prompt);
     if (seq == 0) {
         lua_pushnil(L);
     } else {
@@ -4762,7 +4795,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
-        {"llm", LuaLlm}, {"say", LuaSay}, {"chat", LuaChat}, {"name", LuaName}, {"color", LuaColor},
+        {"llm", LuaLlm}, {"say", LuaSay}, {"chat", LuaChat}, {"name", LuaName}, {"color", LuaColor}, {"civ", LuaCiv},
         {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {

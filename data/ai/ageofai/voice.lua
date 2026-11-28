@@ -2,16 +2,16 @@
 -- and the licence, GPL-3.0, Grille and the Age of AI contributors). require("ageofai.voice").
 --
 -- Optional (settings.llm_enabled). The engine's transport is ai.llm (EECPNextLLM.cpp): a table configures it, a
--- string starts one request on its worker thread, no argument polls the last answer (nil while none). A slow or
--- missing server never stalls the step. The lines are printed to the AI trace until the game's chat has a Lua door
--- (upstream speaks through persona_say; this engine has no chat binding yet).
+-- string starts one request on its worker thread and returns its sequence, a number polls this AI's answer to that
+-- request (nil while none; the transport keeps an answer per player, so AIs never read each other's lines). A slow
+-- or missing server never stalls the step.
 local S = require("ageofai.settings")
 local PS = require("ageofai.personas")
 local M = {}
 
-local EVERY = 8000          -- a line every this long at most
-local MAX_REQ = 6           -- requests before it gives up for the game
-local FAIL_LIMIT = 3        -- LLM failures before it stops trying and prints one notice
+local MAX_REQ = 40          -- requests before it gives up for the game
+local FAIL_LIMIT = 3        -- consecutive LLM failures before it stops asking for a while
+local DOWN = 300000         -- how long it stays quiet after FAIL_LIMIT failures (5 minutes), then it tries again
 
 local function available()
     return ai ~= nil and ai.llm ~= nil
@@ -50,35 +50,59 @@ function M.step(view, memory)
             return
         end
     end
-    -- the answer, when it comes: into the game's chat (ai.say) when the game has it, else the trace
-    local ans = ai.llm()
-    if ans ~= nil and ans ~= "" then
-        if type(ans) == "string" and string.sub(ans, 1, 9) == "llm error" then
-            -- a dead or refusing server: count it, say nothing, and stop trying after a few
-            v.fails = (v.fails or 0) + 1
-            if v.fails >= FAIL_LIMIT and not v.llm_off then
-                v.llm_off = true
-                print(string.format("voice: LLM unavailable (%s) - giving up for this game", ans))
+    -- the answer, when it comes: into the game's chat (ai.say) when the game has it, else the trace. v.seq is the
+    -- request this AI waits for: the transport keeps one answer per player and a poll asks only for answers after
+    -- that sequence, so a line is said once (the old poll returned the same answer at every step, a chat loop).
+    if v.seq ~= nil then
+        local ans, seq = ai.llm(v.seq)
+        if ans ~= nil and ans ~= "" then
+            v.seq = seq or v.seq
+            if S.llm_log then
+                print(string.format("voice: answer %s", tostring(ans)))
             end
-        else
-            v.line = ans
-            v.answered = (v.answered or 0) + 1
-            v.fails = 0
-            local said = false
-            if ai.say ~= nil and S.llm_lines ~= false then
-                said = ai.say(ans) ~= false
-            end
-            if not said then
-                print(string.format("voice: %s", ans))
+            if type(ans) == "string" and string.sub(ans, 1, 9) == "llm error" then
+                -- a dead or refusing server: count it, say nothing, and stay quiet for a while after a few
+                v.fails = (v.fails or 0) + 1
+                if v.fails >= FAIL_LIMIT then
+                    v.fails = 0
+                    v.down_until = view.time + DOWN
+                    print(string.format("voice: LLM unavailable (%s) - no requests for %d minutes", ans, DOWN // 60000))
+                end
+            elseif ans ~= v.line then
+                -- a small model says the same thing again and again: keep the chat free of copies
+                v.line = ans
+                v.answered = (v.answered or 0) + 1
+                v.fails = 0
+                v.down_until = nil
+                local said = false
+                if ai.say ~= nil and S.llm_lines ~= false then
+                    said = ai.say(ans) ~= false
+                end
+                if not said then
+                    print(string.format("voice: %s", ans))
+                end
             end
         end
     end
+    -- a model that keeps failing: no requests for a while (a long game should not spend itself on a dead server),
+    -- and the persona's own line now and then so the chat is not silent; the next period tries again
+    if v.down_until ~= nil then
+        if view.time < v.down_until then
+            if view.time - (v.persona_t or 0) >= 300000 then
+                v.persona_t = view.time
+                M.say(memory, "greeting")
+            end
+            return
+        end
+        v.down_until = nil
+    end
     -- the human's chat (llm_ai_talk): answer the next line from the human (player 1, single player)
-    if ai.chat ~= nil and S.llm_ai_talk and not v.llm_off then
+    if ai.chat ~= nil and S.llm_ai_talk then
         local text, player = ai.chat()
         if text ~= nil and (player or 0) == 1 and text ~= "" then
             v.talk = (v.talk or 0) + 1
-            ai.llm("The human said: \"" .. tostring(text) .. "\". Answer in one short line.", system_prompt(memory))
+            v.seq = ai.llm("The human said: \"" .. tostring(text) .. "\". Answer in one short line.",
+                           system_prompt(memory)) or v.seq
             return
         end
     end
@@ -86,17 +110,8 @@ function M.step(view, memory)
     if v.dec ~= nil and next(v.dec) ~= nil then
         return
     end
-    -- the persona's own line now and then, so the chat is not silent while the model is off or down
-    if v.llm_off or view.time - (v.persona_t or 0) >= 300000 then
-        if view.time - (v.persona_t or 0) >= 300000 then
-            v.persona_t = view.time
-            M.say(memory, "greeting")
-        end
-        if v.llm_off then
-            return
-        end
-    end
-    if view.time - (v.t or 0) < EVERY or (v.req or 0) >= MAX_REQ then
+    local every = tonumber(S.llm_line_seconds or 60) * 1000
+    if every <= 0 or view.time - (v.t or 0) < every or (v.req or 0) >= MAX_REQ then
         return
     end
     v.t = view.time
@@ -105,7 +120,17 @@ function M.step(view, memory)
     local seq = ai.llm(prompt, system_prompt(memory))
     if seq ~= nil then
         v.req = (v.req or 0) + 1
-        v.last_seq = seq
+        v.seq = seq
+        if S.llm_log then
+            print(string.format("voice: ask %s", prompt))
+        end
+    else
+        -- the transport takes one request at a time and another AI has it: ask again shortly (not a whole period)
+        v.t = view.time - math.max(every - 2000, 0)
+        if S.llm_log and not v.busy_note then
+            v.busy_note = true
+            print("voice: the transport is busy with another AI's request - trying again")
+        end
     end
 end
 
@@ -121,11 +146,15 @@ function M.decide(memory, key, question, default)
     local d = v.dec[key]
     if d == nil then
         local now = (ai.time ~= nil and ai.time()) or 0
-        v.dec[key] = {t = now}
-        ai.llm(question, "Answer with exactly ACCEPT or REJECT, nothing else. You are the computer player; the game's rules bind you.")
+        local seq = ai.llm(question, "Answer with exactly ACCEPT or REJECT, nothing else. You are the computer player; the game's rules bind you.")
+        v.dec[key] = {t = now, seq = seq or 0}
         return nil
     end
-    local ans = ai.llm()
+    if (d.seq or 0) == 0 then
+        v.dec[key] = nil
+        return default   -- the transport was busy: the rules decide
+    end
+    local ans = ai.llm(d.seq)
     if ans ~= nil then
         v.dec[key] = nil
         local a = string.upper(ans)

@@ -6,8 +6,9 @@
 -- contributors (personalities/NOTICE). The port is under the same licence.
 --
 -- Per personality: the in-game name, the six traits and the six leanings 0..100 (50 is neutral; the files'
--- air_force and early_anti_air are the port's air and anti_air), the `character` text the AI voice plays, and the
--- lines for the situations the port has. The .eeai expressions are NOT evaluated: a situation holds the
+-- air_force and early_anti_air are the port's air and anti_air), the `character` text the AI voice plays, the
+-- `civ` name the mod shows for its civilization, and the lines for the situations the port has. The .eeai
+-- expressions are NOT evaluated: a situation holds the
 -- unconditional lines - the `?? [ ... ]` list that is said when no condition holds, else the last `: ...` branch
 -- of a conditional chain - with every {placeholder} stripped from the text (tools/personas.py has the mapping and
 -- the tidy-up). A situation a personality has no line for is left out: ageofai/personas.lua falls back to its own
@@ -20,6 +21,7 @@ return {
             traits = {aggression = 20, loyalty = 70, pride = 50, greed = 40, forgiveness = 60, caution = 90},
             leanings = {air = 40, navy = 50, anti_air = 80, pressure = 35, defences = 85, spread = 30},
             character = "A careful master builder who trusts stone walls more than people; calm, practical, slow to anger, proud of every tower.",
+            civ = "Walled Cities",
             color = {230, 120, 40},
             lines = {
                 greeting = {
@@ -66,6 +68,7 @@ return {
             traits = {aggression = 85, loyalty = 35, pride = 80, greed = 30, forgiveness = 15, caution = 25},
             leanings = {air = 35, navy = 30, anti_air = 30, pressure = 80, defences = 25, spread = 80},
             character = "A steppe conqueror, a warlord of horsemen: blunt, boastful, contemptuous of weakness, respects only strength.",
+            civ = "Golden Horde",
             color = {160, 40, 40},
             lines = {
                 greeting = {
@@ -112,6 +115,7 @@ return {
             traits = {aggression = 60, loyalty = 15, pride = 40, greed = 60, forgiveness = 50, caution = 45},
             leanings = {air = 70, navy = 50, anti_air = 60, pressure = 45, defences = 55, spread = 45},
             character = "A scheming princess, charming and polite on the surface, cold and calculating beneath; keeps a little book of every slight and every favour; enjoys hints and veiled threats.",
+            civ = "Silver Court",
             color = {200, 80, 160},
             lines = {
                 greeting = {
@@ -157,6 +161,7 @@ return {
             traits = {aggression = 25, loyalty = 60, pride = 30, greed = 90, forgiveness = 70, caution = 60},
             leanings = {air = 50, navy = 80, anti_air = 55, pressure = 30, defences = 45, spread = 75},
             character = "A merchant prince who sees everything as a deal: friendly, chatty, always counting, talks of profit, prices and interest.",
+            civ = "Merchant Republic",
             color = {200, 200, 60},
             lines = {
                 greeting = {
@@ -203,6 +208,7 @@ return {
             traits = {aggression = 90, loyalty = 60, pride = 60, greed = 30, forgiveness = 80, caution = 15},
             leanings = {air = 50, navy = 40, anti_air = 20, pressure = 85, defences = 20, spread = 60},
             character = "A loud, hot-headed tribal chieftain who loves a brawl: shouts, laughs, insults, forgets a grudge as fast as he picks one.",
+            civ = "Clan Legions",
             color = {60, 180, 60},
             lines = {
                 greeting = {
@@ -250,6 +256,7 @@ return {
             traits = {aggression = 55, loyalty = 95, pride = 75, greed = 20, forgiveness = 40, caution = 50},
             leanings = {air = 40, navy = 40, anti_air = 50, pressure = 60, defences = 70, spread = 50},
             character = "An honourable knight bound by his word: formal, solemn, courteous even to enemies, never breaks an oath.",
+            civ = "Sworn Order",
             color = {120, 160, 220},
             lines = {
                 greeting = {
