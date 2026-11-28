@@ -1,0 +1,273 @@
+// AI personality for eeaimod - the format and every key: _template.eeai.
+register_personality()
+
+personality = {
+    name = "Temur",
+    // five territories taken make him the Great Khan, his horde an empire (his tally: conquests, below)
+    title => conquests >= 5 ? "Great Khan" : "Khan",
+    civilization => conquests >= 5 ? "Golden Empire" : "Golden Horde",
+    color = ["darkred", "red"],
+    aggression = 85%,
+    loyalty = 35%,
+    pride = 80%,
+    greed = 30%,
+    forgiveness = 15%,
+    caution = 25%,
+    talk = 60%,
+    // leanings (strategy_plans): the horde: soldiers early and many, little in the air or at sea
+    air_force = 35%,
+    navy = 30%,
+    early_anti_air = 30%,
+    pressure = 80%,
+    defences = 25%,
+    spread = 80%,
+    // for the AI voice ([llm] in ageofai.ini): who this is, in a few words
+    character = "A steppe conqueror, a warlord of horsemen: blunt, boastful, contemptuous of weakness, respects only strength.",
+}
+
+style = {
+    // EXPERIMENTAL - only with ai_style=1 in ageofai.ini (default off: every AI plays the same, tested way).
+    // The same keys as in ageofai.ini; they replace the difficulty's values for this AI. The defaults for
+    // comparison: military_income_share 40%, from the Copper Age military_income_share_farms 65%.
+    military_income_share = 50%,
+}
+
+// his tally: the territories he has taken (on_territory_taken, at the bottom) - five make him Great Khan
+let conquests = 0
+
+// the Khan measures everyone by strength
+weakling => them.strength * 2 < me.strength
+worthy => me.strength * 2 < them.strength
+// blood between us: more than a skirmish
+my_dead => them.kills(me, units) > many_dead
+their_dead => me.kills(them, units) > many_dead
+
+lines = {
+    greeting => [
+        players > 5 && chance(50%) ? "So many tents on my steppe. There will be fewer soon.",
+        allied && chance(50%) ? "We ride on the same side, {them}. Try to keep up.",
+    ] ?? [
+        "The steppe is wide, but not wide enough for all of us.",
+        "I am Temur. Remember the name - you will hear it often.",
+        "My riders are hungry. Who feeds them first?",
+    ],
+    war_declared => [
+        weakling && chance(60%) ? "You, {them}? With that handful of men? I will enjoy this.",
+        worthy && chance(60%) ? "Finally a foe worth the ride, {them}. Come, then!",
+        them.tribute(me, 20) > 0 ? [
+            "First you pay me, now you fight me, {them}? Make up your mind.",
+            "You sent me {them.tribute(me, 20)} in tribute, {them}, and now you send soldiers. The tribute was better.",
+        ],
+    ] ?? [
+        "You dare, {them}? Then learn what war means.",
+        "At last, {them}. I was afraid you would never dare.",
+        "War? With ME? You chose your enemies poorly, {them}.",
+    ],
+    betrayed => me.betrayals(them) > 0 ? [
+        "I broke faith with you once, {them}. Now we are even - and even bores me.",
+        "You learned from the Khan, {them}. A good pupil - but the teacher still rides faster.",
+    ] : them.betrayals(me) > 0 ? [
+        "Twice, {them}? A dog that bites twice is not forgiven. It is put down.",
+        "Once was a mistake, {them}. Twice is your nature. There will be no third time.",
+    ] : [
+        "A traitor, {them}. For traitors there is only one punishment.",
+        "I turned my back on you, {them}. That was MY mistake. The next one is yours.",
+    ],
+    peace_accept => [
+        me.kills(them, this_war, units) > many_dead && me.kills(them, this_war, units) > them.kills(me, this_war, units) * 2 && chance(60%) ? "You have bled enough, {them}. The Khan is merciful - today.",
+        them.kills(me, this_war, units) > many_dead && them.kills(me, this_war, units) > me.kills(them, this_war, units) && chance(60%) ? "You fight like a steppe wolf, {them}. Peace - between wolves.",
+        them.betrayals(me) > 0 ? [
+            "Peace. But this time I keep my eyes on your hands, {them}.",
+            "Peace, {them}. My riders stay in the saddle - a traitor's peace is only a pause.",
+        ],
+    ] ?? [
+        "Good, {them}. You have sense. We ride side by side.",
+        "Peace, then. But never forget who granted it, {them}.",
+    ],
+    peace_refuse => [
+        them.betrayals(me) > 0 ? [
+            "Peace with a traitor? I would sooner make peace with the wolves.",
+            "Your word, {them}? I have tested it already. It breaks like dry grass.",
+        ],
+        them.refusals(me, 30) > 0 && chance(70%) ? "You turned down my peace once, {them}. Now you know how it tastes.",
+        them.kills(me, 10, units) > many_dead / 3 && chance(50%) ? "My dead are not even cold, {them}. No.",
+    ] ?? [
+        "Peace? Not until your cities burn, {them}.",
+        "All I hear is the whimpering of the beaten, {them}.",
+        "No. The steppe does not forget so quickly.",
+    ],
+    block_refuse => [
+        "Peace with you means peace with {enemy}. Never, {them}.",
+        "You keep bad company, {them}. {enemy} first.",
+    ],
+    block_refuse_own => [
+        "{enemy} rides with me and wants your head, {them}.",
+        "Ask {enemy} first, {them}. The answer is no.",
+    ],
+    vassal_grumble => "Peace with {enemy}... The Khan obeys, {them}. The Khan does not forget.",
+    ask_lord => [
+        "The Khan rides for {enemy} now. Speak to them, {them}.",
+        "Not my word to give, {them}. Go to {enemy}.",
+    ],
+    alliance_offer => [
+        enemy.strength > me.strength + them.strength && chance(60%) ? "{enemy} is stronger than both of us, {them}. Alone we are fodder. Together, a horde.",
+    ] ?? [
+        "{them}, you fight {enemy} too. Together we crush them - and then we shall see.",
+        "{them}! {enemy} grows too strong. Ride with me and we share the spoils.",
+    ],
+    offer_accepted => [
+        them.betrayals(me) > 0 ? [
+            "Allies again, {them}. Do not make me regret it twice.",
+            "I ride with you again, {them} - but you ride in front, where I can see you.",
+        ],
+    ] ?? [
+        enemy ? "Good. Let {enemy} tremble.",
+        "An alliance of the strong. So be it, {them}.",
+    ],
+    offer_withdrawn => them.ignored(me) > 0 ? [
+        "Silence again, {them}. I hear it well enough.",
+        "Again no answer, {them}. The Khan stops asking - next time he takes.",
+    ] : [
+        "You hesitate, {them}? Then I ride alone - and past you.",
+        "No alliance, then. Remember this day, {them}.",
+    ],
+    betray => [
+        weakling && chance(60%) ? "You have grown weak, {them}. On the steppe, weakness is a death sentence.",
+        them.tribute(me, 30) > 0 && chance(50%) ? "Your gold was welcome, {them}. Now I take the rest.",
+    ] ?? [
+        "Our alliance ends here, {them}. I take what I need.",
+        "The steppe has no friends, {them}. Only riders and prey.",
+    ],
+    tribute_thanks => [
+        them.tribute(me) > big_tribute && chance(60%) ? "More gold from {them}. You would make a fine vassal.",
+        at_war ? [
+            "Gold in the middle of a war, {them}? You are buying time. It is for sale.",
+            "You pay the Khan while we are at war, {them}? Keep paying. Perhaps my riders take the long way to your gates.",
+        ],
+    ] ?? [
+        "A gift for the Khan? You learn fast, {them}.",
+        "I like that, {them}. Perhaps I will spare your city.",
+    ],
+    tribute_small => at_war ? [
+        "That buys you a minute, {them}. Not a day.",
+        "A handful of coins in war, {them}? My riders will not even slow down.",
+    ] : [
+        "You call that tribute, {them}? My horses eat more.",
+        "So little, {them}? Even a beggar on the steppe gives the Khan more.",
+    ],
+    attack => [
+        them.kills(me, 20, buildings) > 0 && chance(60%) ? "They burned our tents. Now we burn theirs!",
+        them.kills(me, 20, units) > many_dead / 2 && them.kills(me, 20, units) > me.kills(them, 20, units) && chance(60%) ? "Revenge for our dead! Ride against {them}!",
+    ] ?? [
+        "Riders, gather! We ride against {them}!",
+        "Today {them}'s land burns.",
+    ],
+    attack_threat => [
+        their_dead && chance(50%) ? "{me.kills(them, units)} of your men already feed the crows, {them}. Count again.",
+    ] ?? [
+        "{them}, do you hear the hooves?",
+        "Count your men, {them}. Soon there will be fewer.",
+        "My riders are coming for you, {them}.",
+    ],
+    under_attack => [
+        me.soldiers < 10 ? [
+            "Too few riders at home - hold the camp, whatever it costs!",
+            "The horde is far away and they know it - every herdsman takes up a bow!",
+        ],
+    ] ?? [
+        "They dare attack my camp? Every man to arms!",
+        "Enemies at the camp! None of them go home alive!",
+    ],
+    building_lost => [
+        "Stones can be stacked again. Heads cannot - remember that.",
+        "That will be paid for dearly.",
+    ],
+    landing => [
+        "The sea did not stop us, {them}. Nothing will.",
+        "My riders have wet hooves now, {them}. Soon they will have red ones.",
+    ],
+    territory_taken => [
+        weakling && chance(50%) ? "Your land was too big for you, {them}. Now it fits me.",
+    ] ?? [
+        "Your pastures are mine now, {them}. My horses thank you.",
+        "Where your town stood, {them}, my riders camp tonight.",
+    ],
+    territory_lost => [
+        worthy && chance(50%) ? "You took ground from Temur, {them}. Few can say that. Fewer live to say it twice.",
+    ] ?? [
+        "Keep that patch of dirt warm for me, {them}. I am coming back for it.",
+        "You took my land, {them}. I will take your head.",
+    ],
+    territory_held => [
+        "You came, {them}. You ran. As it should be.",
+        "Is that all your army, {them}? My riders are not even tired.",
+    ],
+    title => [
+        "Five lands bow to the horde. Kneel before {me}!",
+        "The steppe was too small. I am {me} now - and the world is next.",
+    ],
+    epoch_up => [
+        epoch >= epoch.industrial && chance(50%) ? "{epoch}. Horses of iron - the steppe was never so small.",
+    ] ?? [
+        "{epoch} - new weapons for old targets.",
+        "A new age: {epoch}. The world grows smaller for my enemies.",
+    ],
+    enemy_ahead => "{them} is ahead of us? We catch up - and then we ride them down.",
+    winning => [
+        their_dead && chance(50%) ? "{me.kills(them, units)} of yours lie in the grass, {them}. More will follow.",
+    ] ?? [
+        "Do you see {them} waver? One more push!",
+        "{them}, your end is near.",
+    ],
+    losing => [
+        "A wolf is most dangerous when wounded, {them}.",
+        "Laugh while you can, {them}. I am not finished.",
+    ],
+    desperate => [
+        "If I fall, I take you with me!",
+        "To the last ride, men!",
+    ],
+    enemy_defeated => [
+        them.betrayals(me) > 0 ? [
+            "{them} is no more. So ends every traitor.",
+            "{them} broke faith with me - and paid with everything. One traitor fewer on the steppe.",
+        ],
+        their_dead && chance(60%) ? "{them} is gone - and my riders did most of the work.",
+    ] ?? [
+        "{them} is no more. So ends everyone who stands against me.",
+        "One fewer.",
+    ],
+    ally_defeated => "{them} has fallen. Someone will bleed for this.",
+    defeated => [
+        "The steppe ... will ... remember ...",
+        "You have won. This time.",
+    ],
+    surrender => [
+        "Enough. Keep this land, {them} - for now.",
+        "The Khan withdraws. But the steppe never forgets.",
+    ],
+    capitulate => "Enough blood, {them}. {tribute} in tribute, and you leave my last tents standing.",
+    capitulate_accepted => "The Khan keeps his word. Take your {tribute} - and do not get used to it.",
+    capitulate_refused => "So be it. Then we ride to the end!",
+    all_submitted => [
+        "All who still ride now ride under your banner, {them}.",
+        "The Khan has seen your victory, {them}. The steppe will remember it.",
+    ],
+    other_victory => lord == them ? [
+        "The steppe bows to {them}. Today, at least.",
+        "Ride on, {them}. Your name will be sung.",
+    ] : [
+        "We rode together, {them}, and the world fell. A good hunt.",
+        "Victory! Tonight our riders feast, {them}.",
+    ],
+    wonder_threat => [
+        "A wonder? It will make a wonderful fire.",
+        "What stands high falls far.",
+    ],
+    help_land => [
+        "My riders are coming!",
+        "Hold on, the horde is on its way!",
+    ],
+    help_none => "I can spare no one. Fight for yourself.",
+}
+on_territory_taken() { conquests += 1 }

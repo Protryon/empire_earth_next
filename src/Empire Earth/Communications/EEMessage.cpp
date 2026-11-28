@@ -3572,13 +3572,17 @@ void EEMImmediateCargoUnload::Execute()
 // FUNCTION: EXE 0x4bfdd2
 // Shows a chat line in the local chat log if the sender's chat target (all, allies, enemies, chosen players)
 // includes the local player and observers only reach observers; plays the incoming-chat sound; records the text
+extern "C" void EECPNextChatPush(int player, const char* text);   // the AI's chat inbox (AI Thread/EECPNextLLM.cpp)
+
 void EEMInGameChat::Execute()
 {
     UWideString theType;
     EEPlayer* theSender = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     EEPlayer* theLocal = gWorld.GetCurrentPlayer();
-    if (theSender)   // port: the game log (ee/EEGameLog.h), every in-game chat line (notes typed while playing)
+    if (theSender) {   // port: the game log (ee/EEGameLog.h), every in-game chat line (notes typed while playing)
         EEGameLogChat(theSender->mPlayerID, (const char*)this->mText);
+        EECPNextChatPush(theSender->mPlayerID, (const char*)this->mText);
+    }
     if (theSender && theLocal) {
         if (theLocal == theSender
             || (theSender->mSlot != kSlotNone

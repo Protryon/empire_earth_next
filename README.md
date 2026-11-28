@@ -31,6 +31,7 @@ GitHub.cli`, then `gh auth login`): `fetch_data.py` downloads the releases with 
 ```
 git clone https://github.com/Protryon/empire_earth_next && cd empire_earth_next
 python -I tools/fetch_wgpu.py               # the graphics library, into toolchain/
+python -I tools/fetch_posix.py fonts        # the built-in fonts (Liberation), into toolchain/
 python -I build.py -j 10                    # -> build\clang\exe\EE-AOC.exe (about 2 minutes)
 python -I tools/fetch_data.py               # the media releases into data\ (--without textures-4x: skip the 1.3 GB)
 set EE_DATA_ROOT=%CD%\build\data-root       # cmd; PowerShell: $env:EE_DATA_ROOT = "$PWD\build\data-root"
@@ -102,8 +103,12 @@ Requirements (Windows 10/11):
   Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add
   Microsoft.VisualStudio.Component.Windows11SDK.22621"`
 - Python 3.12 (standard library only) and 7-Zip (`winget install 7zip.7zip`)
+- CMake and Ninja (`winget install Kitware.CMake Ninja-build.Ninja`): `build.py` builds SDL3, the static window
+  layer, from its pinned sources (`tools/xbuild.py sdl3`) the first time it is missing
 - wgpu-native, the renderer's graphics library (static, sha256-pinned GitHub release download into `toolchain/`,
   which is not tracked): `python -I tools/fetch_wgpu.py`
+- the built-in fonts (Liberation Sans/Serif/Mono 2.1.5, SIL OFL; sha256-pinned download into `toolchain/fonts`):
+  `python -I tools/fetch_posix.py fonts`
 
 Then:
 

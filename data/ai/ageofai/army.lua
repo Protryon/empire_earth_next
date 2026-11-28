@@ -14,8 +14,12 @@
 -- the fast wait for the slow). The building down (none seen within ar_done of the destination with a member
 -- there): the next known enemy building nearest the force's middle, judged the same; under ar_go_pct: home.
 -- A raid (ar_raid_band enemy land fighters seen within ar_raid_r of an own building within ar_raid_reach of home,
--- or one attacking) while the force is home: the whole force attack-moves to it and goes home once no enemy fighter
--- is seen there. Soldiers trained while the force is out gather at home and join the next push.
+-- or one attacking) while the force is home: RAID PARTIES (raid_parties, armies.c 7a17182): the part of the force
+-- nearest it that beats it by AR_PART_PCT (200%) - never fewer than the raid's band and 3 - goes as an army of its
+-- own and rejoins once no raider is seen for two looks or it no longer beats them; else the whole force attack-moves
+-- to it and goes home once no enemy fighter is seen there. Soldiers trained while the force is out gather at home
+-- and join the next push. CITIZENS FIRST (citizens_first): while citizens are missing, the food of the next 4 of
+-- them is held from the soldiers' orders (army.c, 7a17182).
 -- HOME GUARD: every 10 s, fewer than 6 + home_guard x epoch soldiers at home (or home_guard_share of the military
 -- room) -> up to 5 more, the strongest soldier the account pays for (substitute_soldier).
 -- MUSTER: an enemy army in the base the soldiers and towers cannot fight (muster_enemies, muster_ratio): every own
@@ -32,12 +36,20 @@ local MS = require("ageofai.mass")     -- [mass.c] the army as one: the reinforc
 local DT = require("ageofai.detach")   -- [armies.c det] the detachments, the raiders, the riders' look, the sites
 local SK = require("ageofai.skirmish") -- [skirmish.c] the sharpshooters' sorties, the spotter
 local MT = require("ageofai.metal")    -- [metal.c] the soldier that does most per gold + iron
+local SV = require("ageofai.savings")  -- [savings.c] SAVING FIRST: a type the budget refuses is saved for
 local FR = require("ageofai.fronts")   -- [fronts.c] the front station
+local TV = require("ageofai.territories")   -- [territories.c] the front's station (AR_FRONT_TER)
+local TW = require("ageofai.towns")     -- [expand.c expand_front_guard] a front island's soldiers are its guard's
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
 local HOME_SCAN = 25                -- tiles: soldiers this near the base are at home (home_guard's 625)
 local LOOK_EVERY = 240000           -- a look at the enemy's base every 4 minutes once it is known
+local PART_PCT = 200                -- [armies.c RAID PARTIES] a part answers a raid it beats by this (AR_PART_PCT)
+local PART_LOOK = 20                -- ... the raiders looked for this far from where it goes and from its middle
+local PART_MIN = 3                  -- ... never fewer than this (AR_MIN_RAID; the raid's band at least)
+local PART_GONE = 2                 -- ... home once raiders were out of sight for this many looks running
+local PART_ORDER = 20000            -- ... its attack-move given again this often while it goes
 
 local function d2(x1, y1, x2, y2)
     local dx, dy = x1 - x2, y1 - y2
@@ -108,12 +120,136 @@ local function enemy_at(x, y, r, player)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
+-- RAID PARTIES (armies.c, 7a17182; [ai_base] raid_parties, on): a raid near home is answered by the part of the
+-- force nearest it that beats it by AR_PART_PCT - the fight estimate (the enemy soldiers seen and remembered there),
+-- never fewer than the raid's band and 3 - instead of the whole force, which stays home for the attack time and the
+-- next raid. The part is an army of its own (a manual group, lib.groups only keeps its list): it attack-moves at the
+-- raiders, the nearest seen land fighter within PART_LOOK of where it goes or of its middle, not while the force is
+-- out on a push; it goes back into the force once there is none for two looks running, or once it no longer beats
+-- them by ar_back_pct. A raider a party is at already is not answered again (ar_part_at).
+
+local function part_strength(ids)
+    local s = 0
+    for _, id in ipairs(ids) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            s = s + (u.hp or 0) * (u.attack or 0)
+        end
+    end
+    return s
+end
+
+local function part_at(mem, x, y)
+    for _, p in ipairs(mem.parts or {}) do
+        if d2(p.x, p.y, x, y) <= 10 * 10 then
+            return true
+        end
+    end
+    return false
+end
+
+-- the nearest raider seen around a tile (the party's target), nil when none
+local function raider_near(x, y, r)
+    local ids = ai.seen{enemy = true, armed = true, category = "soldier", near = {x, y, r}, limit = 8}
+    local best, bd = nil, nil
+    for _, id in ipairs(ids) do
+        local u = ai.unit(id)
+        if u ~= nil and u.category == "soldier" then
+            local d = d2(u.x, u.y, x, y)
+            if bd == nil or d < bd then
+                best, bd = u, d
+            end
+        end
+    end
+    return best
+end
+
+-- each step: the parties out - the dead dropped, the raid judged again, the ones done back into the force
+local function parties(view, memory, mem, force, hx, hy, now)
+    mem.parts = mem.parts or {}
+    if #mem.parts == 0 then
+        return
+    end
+    local keep = {}
+    for _, p in ipairs(mem.parts) do
+        local g = G.get(memory, p.id)
+        local alive = {}
+        for _, id in ipairs(g ~= nil and g.units or {}) do
+            if ai.unit(id) ~= nil then
+                alive[#alive + 1] = id
+            end
+        end
+        if #alive == 0 then
+            if g ~= nil then
+                G.disband(memory, g)
+            end
+        else
+            local cx, cy, n = 0, 0, 0
+            for _, id in ipairs(alive) do
+                local u = ai.unit(id)
+                if u ~= nil and u.inside == nil then
+                    cx, cy, n = cx + u.x, cy + u.y, n + 1
+                end
+            end
+            cx, cy = n > 0 and cx // n or p.x, n > 0 and cy // n or p.y
+            local target = raider_near(p.x, p.y, PART_LOOK) or raider_near(cx, cy, PART_LOOK)
+            local foe = enemy_at(p.x, p.y, 12)
+            local own = part_strength(alive)
+            if target == nil then
+                p.gone = (p.gone or 0) + 1
+            else
+                p.gone = 0
+            end
+            if p.gone >= PART_GONE or (foe > 0 and own * 100 < foe * S.ar_back_pct) then
+                -- home: the force takes them on again (or they are the engine's), and they are ordered there
+                if force ~= nil then
+                    G.add(memory, force, alive)
+                else
+                    ai.move(alive, hx, hy, {forced = true, formation = true})
+                end
+                if g ~= nil then
+                    G.disband(memory, g)
+                end
+                mem.parts_home = (mem.parts_home or 0) + 1
+                print(string.format("raid party home n=%d own=%d foe=%d why=%s", #alive, own, foe,
+                    target == nil and "cleared" or "losing"))
+            else
+                keep[#keep + 1] = p
+                -- the way: the raider seen, else the raid's place; given again at PART_ORDER
+                if now - (p.t or 0) >= PART_ORDER then
+                    p.t = now
+                    local tx, ty = p.x, p.y
+                    if target ~= nil then
+                        tx, ty = target.x, target.y
+                        p.x, p.y = tx, ty
+                    end
+                    ai.move(alive, tx, ty, {forced = false, formation = true})
+                end
+                if g ~= nil then
+                    g.x, g.y = p.x, p.y
+                    g.way_t = now
+                end
+            end
+        end
+    end
+    mem.parts = keep
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
 -- Home: the station
 
 local function station(view, mem, memory)
     local tx, ty = view.town_x, view.town_y
     if tx < 0 then
         return nil
+    end
+    -- [territories.c AR_FRONT_TER, force_at_front] the force's home in the land front with the heaviest open
+    -- border: its middle, toward the neighbour nobody of its side holds, and out of the danger
+    if S.force_at_front ~= false and memory ~= nil then
+        local tx2, ty2 = TV.front_station(view)
+        if tx2 ~= nil and ai.danger(tx2, ty2) == 0 then
+            return tx2, ty2
+        end
     end
     -- [fronts.c] armies.c ar_home: the first front's station (its tower nearest the heaviest front, FA_BEHIND back
     -- towards the base) when it is out of danger; else as below
@@ -201,16 +337,62 @@ local function train(view, memory, mem, order, budget)
         mem.plan = {producer = mem.last_producer, busy = false, wants = want}
         return mem.plan
     end
-    local pick, n = M.pick_soldier(view, budget.avail, math.min(target - home, 5))
+    -- [army.c CITIZENS FIRST, 7a17182] while citizens are missing, the food of the next 4 of them is held from the
+    -- soldiers' orders (the player's game: 1 citizen bringing 15 food a minute, every 30 of it a soldier's, the
+    -- bank never at a citizen's 50 - the AI trained soldiers instead of citizens)
+    local avail = budget.avail
+    if S.citizens_first ~= false and not ((memory.army or {}).shelf or {}).want then
+        -- (citizens on the shelf are not missing: their room is the army's, bunker.c)
+        local miss = (budget.citizens_wanted or 0) - view.citizens
+        if miss > 0 then
+            local cc = V.cost(view, "citizen")
+            local hold = math.min(miss, 4) * (cc ~= nil and cc.cost.food or 50)
+            if avail.food > view.stock.food - hold then
+                local copy = {}
+                for r, v in pairs(avail) do
+                    copy[r] = v
+                end
+                copy.food = math.max(view.stock.food - hold, 0)
+                avail = copy
+            end
+        end
+    end
+    local pick, n = M.pick_soldier(view, avail, math.min(target - home, 5))
+    -- [savings.c] SAVING FIRST: a type the budget refused is saved for while its money grows (sv_want/sv_type)
+    local saved = SV.type(view, memory, SV.ARMY)
+    if saved ~= nil then
+        local c = V.cost(view, saved)
+        if c ~= nil and SV.may(view, memory, SV.ARMY, saved, c.cost, avail) then
+            pick = c
+            n = math.min(target - home, 5)
+        end
+    end
     -- [metal.c] best_per_metal: the soldier asked for (the strongest affordable) is trained as the one that does most
     -- against the enemy army known per gold + iron, when that one is 25% better (mt_choose; the budget pays as before)
     do
-        local alt, an = MT.choose(view, memory, pick, budget.avail, view.stock, budget.hold or {}, math.min(target - home, 5))
+        local alt, an = MT.choose(view, memory, pick, avail, view.stock, budget.hold or {}, math.min(target - home, 5))
         if alt ~= nil then
             pick, n = alt, an
         end
     end
+    if pick ~= nil and not SV.may(view, memory, SV.ARMY, pick.type, pick.cost, avail) then
+        pick = nil   -- the money is the saving's, not another kind's
+    end
     if pick == nil then
+        -- [savings.c] SAVING FIRST: the strongest soldier is wanted and its money saved for rather than a cheaper
+        -- one now; the workers gather for it (the stock is measured against its whole price)
+        local rich = {food = 1e9, wood = 1e9, stone = 1e9, gold = 1e9, iron = 1e9}
+        local want_pick, want_n = M.pick_soldier(view, rich, math.min(target - home, 5))
+        if want_pick ~= nil and want_n > 0 then
+            local f = SV.fraction(view, avail, want_pick.type)
+            if SV.want(view, memory, SV.ARMY, want_pick.type, f, view.threat_strength > 0) then
+                for _, r in ipairs(V.resources) do
+                    want[r] = want_pick.cost[r] * want_n
+                end
+                mem.plan = {producer = want_pick.producer, busy = true, wants = want}
+                return mem.plan
+            end
+        end
         -- what the cheapest soldier costs: the workers gather for it
         local cheap = nil
         for _, c in ipairs(view.costs) do
@@ -225,11 +407,11 @@ local function train(view, memory, mem, order, budget)
             end
         end
         -- [metal.c] MIX counts what the refused order was short of (the cheapest soldier's price against the account)
-        MT.note_short(view, memory, cheap ~= nil and cheap.cost or nil, budget.avail)
+        MT.note_short(view, memory, cheap ~= nil and cheap.cost or nil, avail)
         mem.plan = {producer = mem.last_producer, busy = false, wants = want}
         return mem.plan
     end
-    MT.note_short(view, memory, nil, budget.avail)   -- [metal.c] the minute's window rolls
+    MT.note_short(view, memory, nil, avail)   -- [metal.c] the minute's window rolls
     -- the producers' queues: train_queue at most each
     local b = V.buildings(view, pick.producer)
     local busy = b ~= nil and b.finished > 0 and pick.requested + pick.in_production >= S.train_queue * b.finished
@@ -237,6 +419,7 @@ local function train(view, memory, mem, order, budget)
         n = math.min(n, S.train_queue * (b and b.finished or 1) - pick.requested - pick.in_production)
         if n > 0 then
             order({verb = "train", type = pick.type, n = n})
+            SV.bought(view, memory, pick.type)   -- [savings.c] the saving's type bought: its hold is over
             mem.last_producer = pick.producer
             mem.trained = (mem.trained or 0) + n
         end
@@ -343,6 +526,9 @@ local function force_step(view, memory, mem, order)
     mem.home_x, mem.home_y = hx, hy
     local force = G.role(memory, "force")
     local free = G.free_soldiers(tx, ty)
+    if S.front_guards == true then
+        free = TW.leave_front_guards(view, memory, free)
+    end
     -- every land soldier (but the scouts) is the force's
     if #free > 0 then
         if force == nil then
@@ -522,6 +708,43 @@ local function force_step(view, memory, mem, order)
             local foe_there = enemy_at(rx, ry, 12)
             local need = math.max(S.ar_back_pct, S.raid_answer)
             if own * 100 >= foe_there * need then
+                -- RAID PARTIES: the nearest members at home that beat the raiders by PART_PCT, never fewer than
+                -- the raid's band and 3; only when they are not the whole force (else the whole force goes)
+                if S.raid_parties ~= false and #force.units > 3 and not part_at(mem, rx, ry) then
+                    local home_ids = {}
+                    for _, id in ipairs(force.units) do
+                        local u = ai.unit(id)
+                        if u ~= nil and u.inside == nil and d2(u.x, u.y, hx, hy) <= HOME_SCAN * HOME_SCAN then
+                            home_ids[#home_ids + 1] = {id = id, d = d2(u.x, u.y, rx, ry), s = (u.hp or 0) * (u.attack or 0)}
+                        end
+                    end
+                    table.sort(home_ids, function(a, b)
+                        return a.d < b.d
+                    end)
+                    local want = math.max(S.ar_raid_band or 3, PART_MIN)
+                    local need_s = foe_there * PART_PCT // 100
+                    local sum, pick = 0, {}
+                    for _, e in ipairs(home_ids) do
+                        pick[#pick + 1] = e.id
+                        sum = sum + e.s
+                        if #pick >= want and sum >= need_s then
+                            break
+                        end
+                    end
+                    if #pick >= want and sum >= need_s and #pick < #home_ids then
+                        local g = G.create(memory, {task = "attack", role = "raid", manual = true, x = rx, y = ry,
+                                                    radius = 6, home_x = hx, home_y = hy})
+                        G.add(memory, g, pick)
+                        ai.move(pick, rx, ry, {forced = false, formation = true})
+                        g.way_t = now
+                        mem.parts = mem.parts or {}
+                        mem.parts[#mem.parts + 1] = {id = g.id, x = rx, y = ry, t = now, gone = 0}
+                        mem.parts_sent = (mem.parts_sent or 0) + 1
+                        mem.raids = (mem.raids or 0) + 1
+                        print(string.format("raid party sent at=%d,%d n=%d own=%d foe=%d band=%d", rx, ry, #pick, sum, foe_there, want))
+                        return
+                    end
+                end
                 force.task = "attack"
                 force.target = rplayer
                 force.x, force.y = rx, ry
@@ -756,6 +979,9 @@ function M.step(view, memory, orders, budget, events)
             G.committed[id] = true
         end
     end
+    -- [armies.c RAID PARTIES] the parts of the force out answer their raid on their own (the dead dropped, the
+    -- cleared and the losing back into the force)
+    parties(view, memory, mem, G.role(memory, "force"), mem.home_x or view.town_x, mem.home_y or view.town_y, view.time)
     muster(view, memory, mem)
     if not mem.mustering then
         force_step(view, memory, mem, order)
@@ -776,11 +1002,12 @@ function M.step(view, memory, orders, budget, events)
     if view.time % 60000 < 1000 then
         local force = G.role(memory, "force")
         local at = mem.at or {}
-        print(string.format("army force=%d out=%s next_attack=%d pushes=%d raids=%d musters=%d trained=%d mil=%d/%d/%d/%d/%d weak=%d breach=%d/%d retarget=%d leashed=%d shells=%d",
+        print(string.format("army force=%d out=%s next_attack=%d pushes=%d raids=%d musters=%d trained=%d mil=%d/%d/%d/%d/%d weak=%d breach=%d/%d retarget=%d leashed=%d shells=%d parts=%d/%d",
             force and #force.units or 0, tostring(mem.out or false), (mem.next_attack or 0) // 60000, mem.pushes or 0,
             mem.raids or 0, mem.musters or 0, mem.trained or 0, memory.eco.mil.food or 0, memory.eco.mil.wood or 0,
             memory.eco.mil.stone or 0, memory.eco.mil.gold or 0, memory.eco.mil.iron or 0, at.weak_spots or 0,
-            at.breaches or 0, at.breach_none or 0, at.retargets or 0, force and (force.leashed or 0) or 0, mem.shells or 0))
+            at.breaches or 0, at.breach_none or 0, at.retargets or 0, force and (force.leashed or 0) or 0, mem.shells or 0,
+            mem.parts_sent or 0, mem.parts_home or 0))
     end
     return plan
 end

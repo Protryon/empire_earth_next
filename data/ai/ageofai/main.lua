@@ -16,6 +16,24 @@ local W = require("ageofai.walls")   -- [defence.c walls, enclose]
 local SF = require("ageofai.safety")   -- [attack.c citizens_safety]
 local FR = require("ageofai.fronts")   -- [fronts.c]
 local MT = require("ageofai.metal")   -- [metal.c]
+local RS = require("ageofai.research")   -- [research.c] the research by rank, the units' improvements
+local PRD = require("ageofai.produce")   -- [produce.c] the production buildings by territory
+local CL = require("ageofai.claims")     -- [claims.c] orders by priority
+local EX = require("ageofai.explore")    -- [explore.c] the food search, the dog, the explorers
+local AG = require("ageofai.airguard")   -- [airguard.c] the anti-air, the fighters, the sweeps
+local ST = require("ageofai.storms")     -- [storms.c] the storms' danger zones, the ships out
+local BD = require("ageofai.build")      -- [build.c] the buildings by territory (off unless S.build_by_territory)
+local SN = require("ageofai.stations")   -- [stations.c] the force by territory (off unless S.stations)
+local TV = require("ageofai.territories")   -- [territories.c] the territories as the AI sees them
+local FY = require("ageofai.ferry")       -- [ferry.c] the ferry service (crossing.lua is its crossing)
+local WT = require("ageofai.watch")      -- [watch.c] the patches out of sight, the patrols, the watch towers
+local CR = require("ageofai.creep")      -- [creep.c] tower creep (off unless S.tower_creep)
+local HL = require("ageofai.holy")       -- [holy.c] the priests' conversions, the prophets' calamities (off unless S.holy)
+local PL = require("ageofai.plans")       -- [plans.c] the strategy plans (off unless S.strategy_plans)
+local RT = require("ageofai.returns")     -- [returns.c] the returns, step 1 of the plans
+local PS = require("ageofai.personas")    -- [persona.c] personas (traits + leanings), the Lua-side stand-in
+local VO = require("ageofai.voice")       -- [voice/llm.c] the optional LLM voice (off unless S.llm_enabled)
+local NW = require("ageofai.news")        -- [news.c] the lines the territories give the AI to say
 local V = require("lib.view")
 local S = require("ageofai.settings")
 
@@ -41,28 +59,72 @@ function M.step(view, memory)
     memory.hits = {}
     memory.epoch_now = view.epoch
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- the micro modules' town (no view there)
+    -- [persona.c] pick the persona (traits for diplo, leanings for the plans when persona_style is on)
+    PS.step(memory, view)
+    -- [voice/llm.c] the optional LLM voice: ask for a line now and then, print the answer into the trace
+    VO.step(view, memory)
+    -- [returns.c] track kills/losses/fielded from this step's died events, then [plans.c] pick/change the plan
+    RT.step(view, memory, events)
+    PL.step(view, memory)
     local budget = E.step(view, memory, orders, memory.army_plan)
+    -- [territories.c] the territories as the AI sees them (chunked over steps): the holds, the fronts, the guard,
+    -- the unsafe ground and its refuge, the seas' claims; the consumers are build.lua and the modules to come
+    TV.step(view, memory)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
     -- [priority.c] a building sees the stock the list leaves a building (budget.build); the fortress asks the list
     -- (the army's memory exists before its first step: a game started in the Copper Age runs the fortress on the
     -- first step, before ageofai.army made memory.army)
     memory.army = memory.army or {}
     T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, budget.build, memory)
+    -- [explore.c] the citizens the food search sends, the Canine Scout, an explorer's next goal (the economy's plan)
+    EX.step(view, memory)
     -- [fronts.c] the territory, the border and the fronts every 10 s; station 1 is the force's home (army.lua)
     FR.step(view, memory)
+    -- [watch.c] the patches of its own ground out of sight, the patrols they want, the watch towers for them
+    WT.step(view, memory)
     -- [metal.c] the 5-minute line of the metal plan (what it picked, cut and freed)
     MT.tick(view, memory)
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
+    -- [ferry.c] the soldiers and citizens across the water (off unless settings.ferry_service); before towns.lua's
+    -- own outpost ferry, so the service's hulls are its own
+    FY.step(view, memory, orders)
     TW.step(view, memory, orders, budget)
     -- [defence.c walls, enclose] the front walls and their gates, the ring round the town or the island's coast
     -- (ageofai.walls; econ.lua reads the stone it owes and the ring's tower spots from memory.eco)
     W.step(view, memory)
+    -- [creep.c] tower creep: its own crew walks up and towers an unguarded enemy building (off unless S.tower_creep)
+    CR.step(view, memory, orders)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
+    -- [stations.c] the force by territory: the alternative land force (off as shipped). It takes every land soldier
+    -- and siege weapon out of the force above at its look, and gives them back while the setting is off.
+    if S.stations then
+        SN.step(view, memory, orders, budget)
+    else
+        SN.release(view, memory)   -- a no-op unless the setting just turned off
+    end
+    -- [holy.c] the priests' conversions and the prophets' calamities (off unless S.holy)
+    HL.step(view, memory, orders)
+    -- [research.c] the research by rank: the economy's techs, then the units' improvements (every 5 s)
+    RS.step(view, memory, orders)
+    -- [produce.c] the production buildings by territory: the shares and the hub that builds (every 10 s)
+    PRD.step(view, memory, orders)
+    -- [build.c] the look's one building (fields, a granary, the research buildings, the mines, the claims, the
+    -- sinks); off unless build_by_territory, when it lays what econ.lua's settlements/production/farms would
+    BD.step(view, memory, orders, budget)
+    -- [claims.c] the expired claims back to their stance, the minute line
+    CL.sweep(view, memory)
+    CL.log(view, memory)
+    -- [storms.c] the enemy storms its ships see: out of them, whatever they were doing
+    ST.step(view, memory)
+    -- [news.c] a territory gained or lost: the persona's line
+    NW.step(view, memory)
     -- [diplo.c] the diplomacy (ageofai.diplo): every step (the stances and the pending answers), the blocks every
     -- 2 s, the world scan every 10 s, the initiative every 60 s from minute 10; the events for the hits and losses
     DP.step(view, memory, events)
     -- [airstrike.c] the air force: the shooters' spots from the step's attacked events, the bombers' wing every 5 s
     AIR.step(view, memory, orders, budget, events)
+    -- [airguard.c] the anti-air buildings, its fighters (air_force_share), the intercepts and the sweeps
+    AG.step(view, memory, orders, budget, events)
     if view.time % 60000 < 1000 then
         local t = budget.target or {}
         print(string.format("ageofai e=%d saving=%s cit=%d/%d army=%d/%d towers=%d want=%d/%d/%d/%d/%d stock=%d/%d/%d/%d/%d inc=%d/%d/%d/%d/%d next=%d/%d/%d/%d/%d sol=%d wild=%d places=%d acc=%d",

@@ -20,6 +20,16 @@
 -- only with aircraft seen; L scaled by the non-submarine share of the enemy fleet and by 4 / (4 + coastal siege) -
 -- payable now from the stock and the account, else the next role below its share that is; in the role the type
 -- with the best factor x attack / (reload + 2 s) x hit points / cost^2). The account pays it (ai.train).
+-- Led by the squadrons (squadrons.lua, sea_squadrons, off in the port) battleships are the core of what is trained
+-- (2.0 against 1.0) and frigates the scouts' and the escort's (1.5 against 2.0), and the missile subs are wanted beside
+-- the mix (navy.c NR_MSUB; THE STRIKE).
+-- THE STRENGTH (navy.c navy_strength): with sea_fleet (> 0) the warships its waters want - the sea territories along
+-- land it holds that border land or water not its own, a warship per sea_fleet tiles, 2 at least, all of navy_fleet_pop
+-- of the cap while none of its land borders land of others (time islands: the sea is its only front) - against a whole
+-- fleet's navy_fleet_pop of the population cap, 0..100 percent; every share, target and dock count follows it. With
+-- sea_fleet 0 the map's kind (the share of its enemies across the water, detect) as before.
+-- FISHING BOATS (sea_fishing): on every map, while its food workers are short and it knows fish in its waters (the sea
+-- territories along its land), the newest fishing boat at a dock on the sea with the most of it.
 -- DOCKS (navy_docks, once a minute): 2, on islands 3 while a warship waits for the account or 12+ fishing boats share
 -- them; with the fleet's target 2 + target / 8 (at most 5); one more when none is unfinished or queued (the fish
 -- verb's dock by the fish). FISHING BOAT (fishing_boat): the newest fishing boat the dock can make, trained one at a
@@ -50,13 +60,45 @@ local LA = require("lib.army")   -- [forces.c] home_threat
 local S = require("ageofai.settings")
 local F = require("ageofai.fleet")
 local MT = require("ageofai.metal")      -- [metal.c] the fleet's size by the enemy's, the calm sea's account
+local PL = require("ageofai.plans")      -- [plans.c] the navy leaning (share)
+local T = require("ageofai.territories")   -- [territories.c] THE SEAS: fishing and the fleet's size by its waters
+local SQ = require("ageofai.squadrons")    -- [squadrons.c] the squadrons' switch (off in the port) and its role weights
 local M = {}
+
+-- [squadrons.c THE STRIKE] a missile submarine (Trident, Triton: buildings and land units from 24 tiles, no ship)
+local function is_msub(t)
+    return t ~= nil and (t:find("trident") or t:find("triton")) ~= nil
+end
+local MSUB_GROUP = 2       -- NV_MSUB_GROUP: a strike group's missile subs ...
+local MSUB_FLEET = 6       -- ... from NV_MSUB_FLEET warships of the other roles (a second group from twice that)
 
 local ACC_CAP = 600
 local NAVY_RES = {"wood", "gold", "iron"}
 local SHIP_PRODUCERS = {b_dock = true, b_navy_yard = true}
 local TOWER_CLASSES = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle",
                        "b_guard_tower_imperial", "b_guard_tower_ww1", "b_guard_tower_info", "b_guard_tower_space"}
+-- its finished docks and the sea each stands on (dock_seas, a look every 10 s: the fishing and the fleet's training)
+local scan_docks = {}
+-- the docks' seas (fleet.c fl_sea_docks' first half): the sea of the water by each finished dock
+local function dock_seas()
+    scan_docks = {}
+    local ids = ai.units{type = "b_dock", built = true}
+    if #ids == 0 then
+        return
+    end
+    local cols = ai.get(ids, {"x", "y"})
+    for k = 1, #ids do
+        if cols.x[k] ~= nil then
+            local t = ai.tile(cols.x[k], cols.y[k])
+            local sea = t ~= nil and (t.sea or 0) or 0
+            if sea == 0 then
+                local sx, sy, s2 = ai.shore(cols.x[k], cols.y[k], {max = 4})
+                sea = sx ~= nil and (s2 or 0) or 0
+            end
+            scan_docks[#scan_docks + 1] = {id = ids[k], x = cols.x[k], y = cols.y[k], sea = sea}
+        end
+    end
+end
 
 local function d2(x1, y1, x2, y2)
     local dx, dy = x1 - x2, y1 - y2
@@ -144,7 +186,7 @@ local function count(view, mem)
     mem.count_t = view.time
     local ids = ai.units{category = "ship", armed = true}
     local role = {[0] = 0, 0, 0, 0, 0, 0}
-    local war = 0
+    local war, msub = 0, 0
     if #ids > 0 then
         local cols = ai.get(ids, {"type"})
         for k = 1, #ids do
@@ -152,31 +194,58 @@ local function count(view, mem)
             if r ~= 0 then
                 war = war + 1
                 role[r] = role[r] + 1
+            elseif is_msub(cols.type[k]) then
+                msub = msub + 1   -- [squadrons.c THE STRIKE] no role in the fleet's mix (no ship to hit)
             end
         end
     end
     mem.war = war
     mem.role = role
+    mem.msub = msub
     local d = V.buildings(view, "b_dock")
     mem.docks = V.total(d)
     mem.docks_built = d ~= nil and d.finished or 0
     mem.fish = #ai.units{category = "boat"}
 end
 
-local function fleet_builds(mem)
-    return S.navy_fleet == "big" and (mem.strength or 0) > 0
+local strength   -- [navy.c navy_strength] below (fleet_builds asks it)
+local function fleet_builds(view, mem)
+    return S.navy_fleet == "big" and strength(view, mem) > 0
+end
+-- [navy.c navy_strength] how much the water matters to it, 0..100: with sea_fleet (> 0) the warships its waters want
+-- (territories.c THE SEAS: a warship per sea_fleet tiles of the sea territories along its land that border land or
+-- water not its own, all of navy_fleet_pop of the cap while none of its land borders land of others) against a whole
+-- fleet's navy_fleet_pop of the population cap - no map kinds: a pond gives a little, the sea round an island all.
+-- Else the map's kind (detect: the share of its enemies across the water). mem.ocean is the fleet's sea (fleet.lua)
+function strength(view, mem)
+    local tiles = S.sea_fleet
+    if tiles ~= nil and tiles > 0 then
+        local full = view.population_cap * S.navy_fleet_pop // 100
+        local ocean = (mem.fleet or {}).ocean
+        local need = ocean ~= nil and ocean ~= 0 and T.sea_need(ocean) or 0
+        if need == nil or need <= 0 then
+            need = (T.sea_best())
+        end
+        if full <= 0 or need <= 0 then
+            return 0
+        end
+        return need >= full and 100 or need * 100 // full
+    end
+    return mem.strength or 0
 end
 -- the navy's share of the income in percent x 100 (navy_share): toward navy_share_max with the warships missing
-local function share(mem)
+local function share(view, mem)
     if not S.navy or mem.kind == nil then
         return 0
     end
     local sh = S.navy_share * 100
+    local f = (mem.plan_factor or 1000) / 1000.0
+    sh = math.floor(sh * f + 0.5)
     local t, miss = mem.target or 0, (mem.target or 0) - (mem.war or 0)
-    if t > 0 and miss > 0 and S.navy_share_max > S.navy_share and fleet_builds(mem) then
+    if t > 0 and miss > 0 and S.navy_share_max > S.navy_share and fleet_builds(view, mem) then
         sh = sh + (S.navy_share_max - S.navy_share) * 100 * miss // t
     end
-    return sh * (mem.strength or 0) // 100
+    return sh * strength(view, mem) // 100
 end
 local function pool(mem)
     local a = mem.acc or {}
@@ -184,7 +253,7 @@ local function pool(mem)
 end
 local function account(view, mem)
     mem.acc = mem.acc or {wood = 0, gold = 0, iron = 0}
-    local sh = share(mem)
+    local sh = share(view, mem)
     local dt = math.max(view.time - (mem.acc_t or view.time), 0)
     mem.acc_t = view.time
     if sh > 0 and dt > 0 and dt <= 5000 then
@@ -224,7 +293,7 @@ end
 -- what the others may not touch (navy_hold): the account, or the whole cost of the warship the mix waits for
 local function hold(view, mem, memory)
     local h = {wood = 0, gold = 0, iron = 0}
-    if share(mem) > 0 then
+    if share(view, mem) > 0 then
         local want = mem.want_type ~= nil and view.time - (mem.want_t or 0) < 120000 and V.cost(view, mem.want_type) or nil
         local total = 0
         if want ~= nil then
@@ -308,8 +377,11 @@ local function seen_shares(view, mem)
     local afloat = e[F.FRIG] + e[F.LINE] + e[F.ANTI] + e[F.AA]
     local airn = air + 3 * carriers
     local w = {[0] = 0, 0, 0, 0, 0, 0}   -- x 100
-    w[F.FRIG] = 200 + 50 * (e[F.ANTI] + e[F.SUB])
-    w[F.LINE] = (100 + 25 * e[F.FRIG]) * (1 + afloat) // (1 + afloat + e[F.SUB]) * 4 // (4 + coast)
+    -- [squadrons.c, navy.c nv_seen] led by squadrons, battleships are the core of what is trained (2.0) and frigates the
+    -- scouts' and the escort's (1.5); the one fleet wants frigates first (2.0) and a battleship per two (1.0)
+    local sq = mem.sq_on == true
+    w[F.FRIG] = (sq and 150 or 200) + 50 * (e[F.ANTI] + e[F.SUB])
+    w[F.LINE] = ((sq and 200 or 100) + 25 * e[F.FRIG]) * (1 + afloat) // (1 + afloat + e[F.SUB]) * 4 // (4 + coast)
     w[F.ANTI] = 50 + 75 * e[F.LINE]
     w[F.SUB] = 100 + 75 * e[F.LINE]
     w[F.AA] = airn > 0 and math.min(50 + airn * 100 // 8, 200) or 0
@@ -427,6 +499,24 @@ local function fl_build(view, mem, budget)
     if #docks == 0 then
         return
     end
+    -- [sea_fleet, the seas] trained at a dock on the fleet's sea, or not at all (fleet.c fl_build's fl_sea_docks)
+    if S.sea_fleet ~= nil and S.sea_fleet > 0 and (mem.fleet or {}).ocean ~= nil then
+        if #scan_docks == 0 then
+            dock_seas()
+        end
+        local on_sea = {}
+        for _, dk in ipairs(scan_docks) do
+            if dk.sea == mem.fleet.ocean then
+                on_sea[#on_sea + 1] = dk.id
+            end
+        end
+        if #on_sea > 0 then
+            docks = on_sea
+        else
+            mem.no_dock = (mem.no_dock or 0) + 1
+            return
+        end
+    end
     local code, reason = ai.train(docks, c.type, 1)
     if code == "ok" then
         paid(mem, c.cost)
@@ -450,6 +540,73 @@ local function fl_build(view, mem, budget)
     end
 end
 
+-- [squadrons.c THE STRIKE; missile_subs] MISSILE SUBS: "i usually keep them in small strike groups 1-2 (subs) with
+-- frigates and cruisers near since they are expensive and easily destroyed" (the player, 2026-11-20) - a strike group
+-- holds MSUB_GROUP of them from MSUB_FLEET warships of the other roles, a second group from twice that. The port's mix
+-- has no missile-sub role (fleet.lua's roles are the retail hit table's, and a Trident hits no ship), so they are
+-- wanted here, by the squadrons (and only then: ageofai.squadrons leads them)
+local function msub_class(view)
+    local best = nil
+    for _, c in ipairs(view.costs) do
+        if not c.building and c.producer ~= nil and SHIP_PRODUCERS[c.producer] and is_msub(c.type)
+                and (best == nil or c.type > best.type) then
+            best = c
+        end
+    end
+    return best
+end
+local function msubs(view, mem, budget)
+    if mem.sq_on ~= true or S.missile_subs == false or view.epoch < 1 then
+        return
+    end
+    if mem.msub_t ~= nil and view.time - mem.msub_t < 30000 then
+        return
+    end
+    mem.msub_t = view.time
+    local others = (mem.war or 0) - (mem.role and mem.role[F.SUB] or 0)
+    local want = (others >= 2 * MSUB_FLEET and 2 or others >= MSUB_FLEET and 1 or 0) * MSUB_GROUP
+    -- the ones ordered in the last 90 s (not afloat yet)
+    local ring, recent = {}, 0
+    for _, t in ipairs(mem.msub_bring or {}) do
+        if view.time - t < 90000 then
+            ring[#ring + 1] = t
+            recent = recent + 1
+        end
+    end
+    mem.msub_bring = ring
+    if want <= (mem.msub or 0) + recent or (mem.docks_built or 0) == 0 or view.population >= view.population_cap then
+        return
+    end
+    local c = msub_class(view)
+    if c == nil or c.in_production + c.requested > 0 then
+        return
+    end
+    for _, r in ipairs(V.resources) do
+        if c.cost[r] > ((budget and budget.ship) and budget.ship[r] or view.stock[r]) then
+            return
+        end
+    end
+    local total = 0
+    for _, r in ipairs(NAVY_RES) do
+        total = total + c.cost[r]
+    end
+    if total > pool(mem) then
+        return
+    end
+    local docks = ai.units{type = "b_dock", built = true}
+    if #docks == 0 then
+        return
+    end
+    if ai.train(docks, c.type, 1) == "ok" then
+        paid(mem, c.cost)
+        mem.msub_bring[#mem.msub_bring + 1] = view.time
+        mem.msub_orders = (mem.msub_orders or 0) + 1
+        if mem.msub_orders % 2 == 1 then
+            print(string.format("navy missile_sub type=%s others=%d want=%d", c.type, others, want))
+        end
+    end
+end
+
 -- ---------------------------------------------------------------------------------------------------------------
 -- Docks and fishing boats
 
@@ -461,12 +618,15 @@ local function docks(view, mem, order)
     -- the fish within reach of the town (the engine's coast rule; the fishing boats' count follows it too)
     mem.fish_near = #ai.resources{source = "fish", near = {view.town_x, view.town_y, S.fishing_reach}, limit = 16}
     local want = 0
-    if share(mem) > 0 then
+    if share(view, mem) > 0 then
         want = 2
-        if mem.kind == "islands" and ((mem.fish or 0) >= 12 or (mem.want_type ~= nil and view.time - (mem.want_t or 0) < 120000)) then
+        -- [navy.c navy_docks] two docks, three while the sea it stands in wants all its share (an island: sea_fleet on)
+        -- and 12+ boats share them or a warship waits for the account
+        local islands = (S.sea_fleet ~= nil and S.sea_fleet > 0) and strength(view, mem) >= 100 or mem.kind == "islands"
+        if islands and ((mem.fish or 0) >= 12 or (mem.want_type ~= nil and view.time - (mem.want_t or 0) < 120000)) then
             want = 3
         end
-        if fleet_builds(mem) and (mem.target or 0) > 0 then
+        if fleet_builds(view, mem) and (mem.target or 0) > 0 then
             want = math.max(want, math.min(2 + mem.target // 8, 5))
         end
     elseif (mem.fish_near or 0) > 0 or M.water_near(view, mem) then
@@ -493,6 +653,27 @@ local function boat_class(view)
     end
     return best
 end
+-- [sea_fishing] THE SEAS (territories.c THE SEAS; fleet.c boats_tick): its waters with a finished dock of its on them -
+-- the fish it has seen there, the sea with the most first. nil: no sea of its has fish
+local function sea_fishing_sea()
+    local fish, ocean = 0, nil
+    for _, e in ipairs(T.seas()) do
+        if e.fish > fish and e.ocean ~= nil and e.ocean ~= 0 then
+            local dock = false
+            for _, dk in ipairs(scan_docks) do
+                if dk.sea == e.ocean then
+                    dock = true
+                    break
+                end
+            end
+            if dock then
+                fish, ocean = e.fish, e.ocean
+            end
+        end
+    end
+    return ocean, fish
+end
+-- its finished docks and the sea each stands on (a look every 10 s; the docks' own count is navy_docks')
 local function fishing(view, mem, budget, more)
     if not S.fishing_boat or view.epoch < 1 or (mem.docks_built or 0) == 0 then
         return
@@ -501,8 +682,26 @@ local function fishing(view, mem, budget, more)
         return
     end
     mem.fish_t = view.time
-    local max = (mem.strength or 0) > 0 and S.fishing_boats_max_water or S.fishing_boats_max
-    local wanted = math.min((mem.fish_near or 0) * S.fishing_boats_per_fish, max) + more
+    -- [sea_fishing] not the game's water map flag: on every map, while its food workers are short and it knows fish in
+    -- its waters (the sea territories along its land), at a dock on the sea with the most of it
+    local sea, sea_food = nil, 0
+    local max = strength(view, mem) > 0 and S.fishing_boats_max_water or S.fishing_boats_max
+    local wanted
+    dock_seas()
+    if S.sea_fishing ~= false then
+        sea, sea_food = sea_fishing_sea()
+        local target = (budget ~= nil and budget.target and budget.target.food) or 0
+        if target > 0 and (view.gatherers.food or 0) >= target then
+            return   -- its food workers are not short
+        end
+        if sea_food <= 0 then
+            mem.no_fish = (mem.no_fish or 0) + 1
+            return
+        end
+        wanted = math.min(sea_food * S.fishing_boats_per_fish, max) + more
+    else
+        wanted = math.min((mem.fish_near or 0) * S.fishing_boats_per_fish, max) + more
+    end
     local c = boat_class(view)
     if c == nil or (mem.fish or 0) + c.in_production + c.requested >= wanted then
         return
@@ -512,13 +711,19 @@ local function fishing(view, mem, budget, more)
             return
         end
     end
-    local docks = ai.units{type = "b_dock", built = true}
+    local docks = {}
+    for _, dk in ipairs(scan_docks) do
+        if sea == nil or dk.sea == sea then
+            docks[#docks + 1] = dk.id
+        end
+    end
     if #docks > 0 then
         local code = ai.train(docks, c.type, 1)
         if code == "ok" then
             mem.boats_trained = (mem.boats_trained or 0) + 1
             if mem.boats_trained % 5 == 1 then
-                print(string.format("navy boat type=%s have=%d wanted=%d fish_near=%d", c.type, mem.fish or 0, wanted, mem.fish_near or 0))
+                print(string.format("navy boat type=%s have=%d wanted=%d fish_near=%d sea_fish=%d sea=%d", c.type, mem.fish or 0, wanted,
+                    mem.fish_near or 0, sea_food, sea or 0))
             end
         end
     end
@@ -1401,6 +1606,10 @@ function M.step(view, memory, orders, budget, force)
     memory.navy = memory.navy or {}
     local mem = memory.navy
     memory.eco = memory.eco or {}
+    -- [plans.c LN_NAVY] the plan's factor on the navy leaning, cached for share() this step
+    mem.plan_factor = math.floor(PL.plan_f(memory, 1) * 1000 + 0.5)
+    -- [squadrons.c] the squadrons' switch, read once a step (their weights in the mix and the missile subs follow it)
+    mem.sq_on = SQ.on()
     local function order(o)
         orders[#orders + 1] = o
     end
@@ -1410,25 +1619,26 @@ function M.step(view, memory, orders, budget, force)
         mem.landing_hold = nil   -- [priority.c] no landing getting its transports
     end
     -- the fleet's size target (stage 4)
-    if fleet_builds(mem) then
-        mem.target = (view.population_cap * S.navy_fleet_pop * (mem.strength or 0) + 5000) // 10000
+    if fleet_builds(view, mem) then
+        mem.target = (view.population_cap * S.navy_fleet_pop * strength(view, mem) + 5000) // 10000
         -- [metal.c] fleet_by_enemy: at most metal_fleet_pct of the enemy warships known + 6, at least metal_fleet_min
         -- x the strength
-        mem.target = MT.fleet_target(view, memory, mem.target, mem.strength or 0)
+        mem.target = MT.fleet_target(view, memory, mem.target, strength(view, mem))
     else
         mem.target = 0
     end
     account(view, mem)
     -- [metal.c] calm_navy_cap: the sea calm for 3 minutes - the account keeps 100 gold and 100 iron at most
-    MT.calm(view, memory, mem, share(mem) > 0)
+    MT.calm(view, memory, mem, share(view, mem) > 0)
     hold(view, mem, memory)
     docks(view, mem, order)
     fishing(view, mem, budget, memory.eco.more_boats or 0)   -- econ's: citizens idle for want of a food site
     fl_build(view, mem, budget)
-    if view.time - (mem.budget_t or -1000000) >= 300000 and share(mem) > 0 then
+    msubs(view, mem, budget)   -- [squadrons.c THE STRIKE] the missile subs of its strike groups
+    if view.time - (mem.budget_t or -1000000) >= 300000 and share(view, mem) > 0 then
         mem.budget_t = view.time
         print(string.format("navy budget share=%d account=%d/%d/%d warships=%d F%d L%d A%d S%d AA%d target=%d docks=%d/%d fishing=%d built=%d refused=%d want=%s seen=F%d L%d A%d S%d air=%d coast=%d",
-            share(mem) // 100, mem.acc.wood // 100, mem.acc.gold // 100, mem.acc.iron // 100, mem.war or 0, mem.role[1], mem.role[2], mem.role[3], mem.role[4], mem.role[5],
+            share(view, mem) // 100, mem.acc.wood // 100, mem.acc.gold // 100, mem.acc.iron // 100, mem.war or 0, mem.role[1], mem.role[2], mem.role[3], mem.role[4], mem.role[5],
             mem.target or 0, mem.docks_built or 0, mem.docks or 0, mem.fish or 0, mem.built or 0, mem.build_refused or 0, tostring(mem.want_type),
             mem.seen and mem.seen[1] or 0, mem.seen and mem.seen[2] or 0, mem.seen and mem.seen[3] or 0, mem.seen and mem.seen[4] or 0,
             mem.seen_air or 0, mem.seen_coast or 0))
@@ -1536,8 +1746,8 @@ function M.step(view, memory, orders, budget, force)
     end
     mem.fleet = mem.fleet or {}
     mem.fleet.target = mem.target
-    if share(mem) > 0 then
-        F.step(view, mem.fleet, landing_phase(mem), exclude)
+    if share(view, mem) > 0 then
+        F.step(view, mem.fleet, landing_phase(mem), exclude, memory)
         mem.shelter = mem.fleet.shelter
         if S.navy_fleet_mass then
             rally_tower(view, mem, order)

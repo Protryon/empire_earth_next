@@ -38,9 +38,19 @@
 --   to the water by the nearest dock out of danger (one with an own tower within 8 tiles counts half the way) until
 --   80%; a retreat goes under the towers (the rally while they cover it), else to the haven;
 -- - FISHING BOATS (navy_fleet_boats): an enemy warship seen within 10 tiles of a boat and no fleet within 20 that wins
---   (ratio 1): the boat goes to its nearest dock; released a minute later (the engine gives it new work).
+--   (ratio 1): the boat goes to its nearest dock; released a minute later (the engine gives it new work);
+-- - THE FLEET'S STATION (fleet_station): the guard point lies in the water territory with the longest shore along land
+--   the AI holds, the more so where enemy warships were seen (territories.c tv_sea_station); the haven stays;
+-- - HARBOURS (harbours): every sea territory that borders land the AI holds gets one - a dock from the held territory
+--   with the longest shore there, a tower by it, a second where enemy warships were seen on that sea or with 600 stone
+--   in the bank (fleet.c fl_harbours);
+-- - THE SQUADRONS (sea_squadrons, off in the port): ageofai.squadrons leads the ships instead of this one fleet; the
+--   switch is read here and the ships are handed over after the scan (fleet.c fleet_tick's sq_tick).
 -- The fleet's own warship orders (fl_build) are in ageofai.navy (the account pays them).
 local S = require("ageofai.settings")
+local ST = require("ageofai.storms")   -- [storms.c] the enemy storms' danger zones
+local V = require("lib.view")
+local T = require("ageofai.territories")   -- [territories.c] the seas' claim, the station, the harbours
 local M = {}
 
 -- roles (navy.c nv_role): 0 none, F frigates, L battleships, A galleys and catapult ships, S attack submarines,
@@ -294,6 +304,13 @@ function M.scan(view, mem, exclude)
             end
         end
     end
+    -- [storms.c] the enemy storms it sees are danger zones of the scan (the ships inside sail out in storms.lua;
+    -- a way a storm covers is no way)
+    for _, z in ipairs(ST.zones()) do
+        if #s.dz < 384 then
+            s.dz[#s.dz + 1] = {x = z.x, y = z.y, r = z.r}
+        end
+    end
     return s
 end
 
@@ -444,6 +461,61 @@ end
 
 -- the guard point: from the fishing boats' middle (the docks' with fewer than 2 boats) 5 tiles toward the nearest
 -- known enemy building, on open water of the fleet's sea, out of danger
+-- FLEET STATION ([ai_base] fleet_station; territories.c tv_sea_station): with the setting on, the point is the middle
+-- of the water territory of its sea with the longest shore along land it holds, the more so where enemy warships were
+-- seen there (or on a border sea) - an island is a front until the water round it is held, and holding that sea is
+-- what turns it into backland. It keeps its station unless another weighs a third more (17 changes of station a game
+-- without: a sighting here, a sighting there). The haven, the massing and the rest are as they were.
+-- Cost: a look every 10 s (upstream every 2 s: the pass over the water territories is the expensive one here)
+local function station(mem, now)
+    if S.fleet_station == false then
+        return nil
+    end
+    if mem.st_t ~= nil and mem.st_ocean == mem.ocean and now >= mem.st_t and now - mem.st_t < 10000 then
+        return mem.st_x, mem.st_y
+    end
+    mem.st_t, mem.st_ocean, mem.st_x, mem.st_y = now, mem.ocean, nil, nil
+    local n = T.count()
+    if n == 0 then
+        return nil
+    end
+    local best, bw = nil, 0
+    for r = 1, n do
+        local wi = T.info(r)
+        if wi ~= nil and not wi.land and wi.ocean == mem.ocean then
+            local shore = 0
+            for _, nb in ipairs(T.neighbours(r)) do
+                if nb.land then
+                    local li = T.info(nb.o)
+                    if li ~= nil and li.role ~= T.TVR_NONE then
+                        shore = shore + nb.len
+                    end
+                end
+            end
+            if shore > 0 then
+                local recent = wi.border or (wi.eship_t > 0 and now >= wi.eship_t and now - wi.eship_t < T.TV_FOE_MEMORY)
+                local w = shore * (1 + (wi.eships or 0) + (recent and 2 or 0))
+                if r == mem.station then
+                    w = w * 134 // 100   -- the one it stands in stays unless another weighs a third more
+                end
+                if w > bw then
+                    bw, best = w, r
+                end
+            end
+        end
+    end
+    if best == nil then
+        return nil
+    end
+    mem.station = best
+    local i = T.info(best)
+    mem.st_x, mem.st_y = i.x, i.y
+    if mem.station_said ~= best then
+        mem.station_said = best
+        print(string.format("fleet station=territory %d at %d,%d (sea %d)", best, i.x, i.y, mem.ocean or 0))
+    end
+    return mem.st_x, mem.st_y
+end
 local function guard_point(mem)
     local s = scan
     local bx, by, n = 0, 0, 0
@@ -479,6 +551,10 @@ local function guard_point(mem)
         if len > 1 then
             tx, ty = mx + 5 * dx // len, my + 5 * dy // len
         end
+    end
+    local sx, sy = station(mem, ai.time())
+    if sx ~= nil then
+        tx, ty = sx, sy
     end
     local gx, gy = safe_toward(mx, my, tx, ty, mem.ocean, 0)
     if gx ~= nil then
@@ -545,6 +621,10 @@ local function rally(mem, now)
                         end
                         local away = s.eb ~= nil and isqrt(d2(qx, qy, s.eb.x, s.eb.y)) or 0
                         local sc = 1000 * cov + 200 * dock + 2 * away - 10 * isqrt(dx * dx + dy * dy)
+                        -- [fleet.c HARBOURS] a place in its station's sea counts as HB_RALLY towers more
+                        if mem.station ~= nil and T.terr_at(qx, qy) == mem.station then
+                            sc = sc + 3000
+                        end
                         if best == nil or sc > best then
                             best, bc, br = sc, cov, cr
                             mem.rx, mem.ry = qx, qy
@@ -559,6 +639,322 @@ local function rally(mem, now)
     if bc == 0 then
         mem.rx, mem.ry = mem.hx, mem.hy
     end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- HARBOURS ([ai_base] harbours; fleet.c fl_harbours)
+
+-- The player, 2026-11-14: "dont fully ignore the sea on continental ... for the habour rule: a hold theretory builds a
+-- habour if the sea territory dosnt alredy has habour from another held territory. this should gurante coverage witout
+-- wasting resources". So: a harbour a SEA territory. Each sea that borders land the AI holds and has no dock of its on
+-- it gets one from the held territory with the longest shore there (territories.c tv_harbour_next) - a dock, and a
+-- tower by every dock that has none within HB_TOWER_R, a second one where enemy warships were seen on that sea in the
+-- last 10 minutes or with HB_STONE of stone in the bank; one order a HB_EVERY, HB_DOCKS docks at most.
+-- The port lays them itself (the engine's queue of the retail's ComputerPlayer is not here): ai.build's foundation
+-- with HB_BUILDERS of the nearest free citizens, as bunker.c/harbours lay a fortress upstream with the game's computer
+-- player off (build.c's own builders for unfinished buildings came late: a harbour's first dock stood 30 minutes at 1
+-- hit point).
+local HB_EVERY = 45000
+local HB_CITS = 3
+local HB_TOWER_R = 8
+local HB_TOWER_GAP = 4        -- a harbour's tower no nearer another own tower: two cover more shore than a pair side by side
+local HB_STONE = 600          -- stone in the bank from which a harbour gets its second tower unasked
+local HB_DOCKS = 8
+local HB_LAID = 90000         -- the last one first: the builder is on its way, nothing queued tells of it
+local HB_SERVED = 16
+local HB_SERVED_R = 12        -- a dock of its within this of where it was laid: that sea is served
+local HB_SERVED_MS = 300000
+local HB_BUILDERS = 2
+local HB_TOWERS = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle",
+                   "b_guard_tower_imperial", "b_guard_tower_ww1", "b_guard_tower_info", "b_guard_tower_space"}
+
+-- the newest tower the player can build now (econ.lua's and territories.lua's)
+local function hb_tower_class(view)
+    for k = #HB_TOWERS, 1, -1 do
+        if V.cost(view, HB_TOWERS[k]) ~= nil then
+            return HB_TOWERS[k]
+        end
+    end
+    return nil
+end
+
+-- the water tile nearest a point (of any sea), and the sea
+local function any_water(x, y)
+    for r = 1, 4 do
+        for _, d in ipairs({{r, 0}, {-r, 0}, {0, r}, {0, -r}, {r, r}, {-r, -r}, {r, -r}, {-r, r}}) do
+            local t = ai.tile(x + d[1], y + d[2])
+            if t ~= nil and (t.sea or 0) ~= 0 then
+                return x + d[1], y + d[2], t.sea
+            end
+        end
+    end
+    return nil
+end
+
+-- the enemy land units seen within r of a point (upstream raiders_near)
+local function raiders_near(x, y, r)
+    local ids = ai.seen{enemy = true, armed = true, near = {x, y, r}}
+    if #ids == 0 then
+        return false
+    end
+    local cols = ai.get(ids, {"category"})
+    for k = 1, #ids do
+        if cols.category[k] == "soldier" or cols.category[k] == "siege" then
+            return true
+        end
+    end
+    return false
+end
+
+local function hb_state(mem, now)
+    local hb = mem.hb
+    if hb == nil or (hb.t or 0) > now then   -- a new game (the time went back)
+        hb = {served = {}, ns = 0, docks = 0, towers = 0, builders = {}, why = {0, 0, 0, 0, 0}}
+        mem.hb = hb
+    end
+    hb.builders = hb.builders or {}
+    hb.served = hb.served or {}
+    return hb
+end
+
+-- can it pay a class now (the stock covers it; ai.build pays the foundation)
+local function hb_lay_cost(view, type)
+    local c = V.cost(view, type)
+    if c == nil then
+        return false
+    end
+    for _, r in ipairs(V.resources) do
+        if c.cost[r] > view.stock[r] then
+            return false
+        end
+    end
+    return true
+end
+
+-- a harbour's building at (x, y): the foundation and HB_BUILDERS of the nearest free citizens sent to it; held 3
+-- minutes (the engine's again after)
+local function hb_lay(view, hb, type, x, y)
+    if not hb_lay_cost(view, type) then
+        return false
+    end
+    local builders = ai.units{category = "citizen", near = {x, y, 30}, held = "engine", limit = HB_BUILDERS}
+    if #builders == 0 then
+        return false
+    end
+    ai.take(builders)
+    local code, reason = ai.build(builders, type, x, y)
+    if code ~= "ok" then
+        ai.release(builders)
+        hb.why[4] = hb.why[4] + 1
+        return false
+    end
+    local now = view.time
+    for _, id in ipairs(builders) do
+        hb.builders[id] = now
+    end
+    hb.laid_t = now
+    print(string.format("fleet harbour type=%s at=%d,%d builders=%d", type, x, y, #builders))
+    return true
+end
+
+-- the citizens of a lay given back after 3 minutes (as the rally tower's)
+local function hb_free(view, mem, hb)
+    for _, id in ipairs(ai.keys(hb.builders)) do
+        if view.time - hb.builders[id] >= 180000 then
+            if ai.unit(id) ~= nil then
+                ai.release(id)
+            end
+            hb.builders[id] = nil
+        end
+    end
+end
+
+-- where the next harbour goes (territories.c tv_harbour_next): a water territory that borders land it holds and has no
+-- dock of its on it, and the held land territory with the longest shore on it (3 citizens, not being lost). Of several:
+-- the more so with enemy warships seen there (x3), by a front (x2), with the longer shore
+local function hb_next(dock_seas, nd, view)
+    local n = T.count()
+    if n == 0 then
+        return nil
+    end
+    local bl, bs, bw = nil, nil, 0
+    for w = 1, n do
+        local wi = T.info(w)
+        if wi ~= nil and not wi.land then
+            local has = false
+            for k = 1, nd do
+                if dock_seas[k] == w then
+                    has = true
+                    break
+                end
+            end
+            if not has then
+                local to, len = nil, 0
+                for _, nb in ipairs(T.neighbours(w)) do
+                    if nb.land and nb.len > len then
+                        local li = T.info(nb.o)
+                        if li ~= nil and li.role ~= T.TVR_NONE and li.cit >= HB_CITS and li.state ~= T.TV_UNSAFE then
+                            len, to = nb.len, nb.o
+                        end
+                    end
+                end
+                if to ~= nil then
+                    local threat = wi.eship_t > 0 and view.time >= wi.eship_t and view.time - wi.eship_t < 2 * T.TV_FOE_MEMORY
+                    local li = T.info(to)
+                    local wt = len * (li.role == T.TVR_FRONT and 2 or 1) * (threat and 3 or 1)
+                    if wt > bw then
+                        bw, bl, bs = wt, to, w
+                    end
+                end
+            end
+        end
+    end
+    if bl == nil then
+        return nil
+    end
+    -- the last tile of that land on the line from its middle to the sea's middle
+    local li, wi = T.info(bl), T.info(bs)
+    local dx, dy = wi.x - li.x, wi.y - li.y
+    local len = isqrt(dx * dx + dy * dy)
+    local sx, sy = li.x, li.y
+    for i = 1, len - 1 do
+        local qx, qy = li.x + dx * i // len, li.y + dy * i // len
+        local q = T.terr_at(qx, qy)
+        if q == bl then
+            sx, sy = qx, qy
+        elseif q ~= nil and q ~= bl then
+            local qi = T.info(q)
+            if qi ~= nil and not qi.land then
+                break
+            end
+        end
+    end
+    return sx, sy, bl, bs
+end
+
+-- the look (fleet.c fl_harbours): its towers first (a dock without one is no harbour), then the next sea's dock
+local function harbours(view, mem, now)
+    if S.harbours == false then
+        return
+    end
+    local hb = hb_state(mem, now)
+    if hb.t ~= nil and now >= hb.t and now - hb.t < HB_EVERY then
+        return
+    end
+    hb.t = now
+    hb_free(view, mem, hb)
+    if (hb.docks or 0) >= HB_DOCKS then
+        return
+    end
+    if hb.laid_t ~= nil and now >= hb.laid_t and now - hb.laid_t < HB_LAID then
+        return
+    end
+    local s = scan
+    if #s.docks == 0 then
+        return
+    end
+    -- the sea territory each of its docks stands on
+    local dock_seas, nd = {}, 0
+    local docks = {}
+    for k = 1, math.min(#s.docks, 16) do
+        local dk = s.docks[k]
+        local wx, wy, oc = any_water(dk.x, dk.y)
+        local terr = wx ~= nil and T.terr_at(wx, wy) or nil
+        docks[k] = {x = dk.x, y = dk.y, terr = terr, ocean = oc}
+        if terr ~= nil then
+            nd = nd + 1
+            dock_seas[nd] = terr
+        end
+    end
+    -- the seas it laid a dock for (HB_SERVED): the shore tv_harbour_next finds lies on the line to the sea's middle and
+    -- can be another sea's - the dock then stood on that one, the sea asked for never had its dock and got the next
+    local keep = {}
+    for _, r in ipairs(hb.served) do
+        local stands = now >= r.t and now - r.t < HB_SERVED_MS
+        for k = 1, #docks do
+            if not stands and d2(docks[k].x, docks[k].y, r.x, r.y) <= HB_SERVED_R * HB_SERVED_R then
+                stands = true
+            end
+        end
+        if stands then
+            keep[#keep + 1] = r
+            if nd < 32 then
+                nd = nd + 1
+                dock_seas[nd] = r.terr
+            end
+        end
+    end
+    hb.served = keep
+    -- its towers first: a dock without one is no harbour
+    local ttype = hb_tower_class(view)
+    if ttype ~= nil then
+        for k = 1, #docks do
+            local dk = docks[k]
+            if dk.ocean ~= nil and not raiders_near(dk.x, dk.y, 10) then
+                local threat = dk.terr ~= nil and T.sea_threat(dk.terr)
+                local want = 1 + ((threat or (view.stock.stone or 0) >= HB_STONE) and 1 or 0)
+                local cov = 0
+                for _, tw in ipairs(s.towers) do
+                    if d2(tw.x, tw.y, dk.x, dk.y) <= HB_TOWER_R * HB_TOWER_R then
+                        cov = cov + 1
+                    end
+                end
+                if cov < want and hb_lay_cost(view, ttype) then
+                    local placed = false
+                    for r = 2, 6 do
+                        for ax = -r, r do
+                            for ay = -r, r do
+                                local qx, qy = dk.x + ax, dk.y + ay
+                                if not placed and (math.abs(ax) == r or math.abs(ay) == r) and M.coast(qx, qy, dk.ocean) then
+                                    local close = false
+                                    for _, tw in ipairs(s.towers) do
+                                        if d2(tw.x, tw.y, qx, qy) < HB_TOWER_GAP * HB_TOWER_GAP then
+                                            close = true
+                                            break
+                                        end
+                                    end
+                                    if not close and ai.can_place(ttype, qx, qy) then
+                                        placed = hb_lay(view, hb, ttype, qx, qy)
+                                        if placed then
+                                            hb.towers = (hb.towers or 0) + 1
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if placed then
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
+    -- then the next sea's dock
+    local sx, sy, land, sea = hb_next(dock_seas, nd, view)
+    if sx == nil or raiders_near(sx, sy, 12) then
+        return
+    end
+    if V.cost(view, "b_dock") == nil then
+        return
+    end
+    for r = 0, 8 do
+        for ax = -r, r do
+            for ay = -r, r do
+                local qx, qy = sx + ax, sy + ay
+                if (math.abs(ax) == r or math.abs(ay) == r) and ai.can_place("b_dock", qx, qy) then
+                    if hb_lay(view, hb, "b_dock", qx, qy) then
+                        hb.docks = (hb.docks or 0) + 1
+                        if #hb.served < HB_SERVED then
+                            hb.served[#hb.served + 1] = {terr = sea, x = qx, y = qy, t = now > 0 and now or 1}
+                        end
+                    end
+                    return
+                end
+            end
+        end
+    end
+    hb.why[1] = hb.why[1] + 1
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -1505,10 +1901,10 @@ end
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- The step (fleet_tick, every 2 s). L: the landing's state for the escort ({phase, ocean, water_x, water_y}), or nil.
--- exclude: ids the fleet leaves alone (the landing's escorts, the sea scout). Returns the scan (navy.lua reads the
--- docks and towers from it)
+-- exclude: ids the fleet leaves alone (the landing's escorts, the sea scout). `memory`: the AI's memory (the squadrons
+-- keep their groups in it; nil: none). Returns the scan (navy.lua reads the docks and towers from it)
 
-function M.step(view, mem, L, exclude)
+function M.step(view, mem, L, exclude, memory)
     local now = view.time
     if mem.last ~= nil and now - mem.last < 2000 then
         return nil
@@ -1519,6 +1915,26 @@ function M.step(view, mem, L, exclude)
     mem.fl = mem.fl or {}
     local f = mem.fl
     f.ships = s.ships
+    -- [sea_fleet] THE SEAS: its sea is the one whose waters want the most warships (territories.c tv_sea_best) -
+    -- changed only while none of its warships is afloat on the present one, or that one wants none (fleet.c fleet_tick)
+    if S.sea_fleet ~= nil and S.sea_fleet > 0 then
+        local best, bo = T.sea_best()
+        if best > 0 and bo ~= nil and bo ~= (mem.ocean or 0) then
+            local afloat = false
+            for _, u in ipairs(s.ships) do
+                if sea_of(u.x, u.y) == mem.ocean then
+                    afloat = true
+                    break
+                end
+            end
+            if (mem.ocean or 0) == 0 or not afloat or T.sea_need(mem.ocean) == 0 then
+                if (mem.ocean or 0) ~= 0 then
+                    print(string.format("fleet sea %d -> %d (its waters there want %d warships)", mem.ocean, bo, best))
+                end
+                mem.ocean = bo
+            end
+        end
+    end
     -- its sea: the docks' (the first with a sea next to it), else the first ship's
     if (mem.ocean or 0) == 0 then
         for _, dk in ipairs(s.docks) do
@@ -1544,6 +1960,20 @@ function M.step(view, mem, L, exclude)
     boats(mem, f.ships, cx, cy)
     -- stage 4: the haven, massing or the shelter, the task forces
     haven(mem)
+    -- [fleet.c fl_harbours] the harbours first (they order no warship)
+    harbours(view, mem, now)
+    -- [squadrons.c] THE SQUADRONS lead its warships (sea_squadrons, off in the port): the switch hands them over here,
+    -- after the scan, the sea, the guard point and the haven - the training stays navy.lua's (the fleet's own orders)
+    local SQ = require("ageofai.squadrons")
+    if memory ~= nil and SQ.lead(memory, mem) then
+        SQ.step(view, memory, mem, s, exclude)
+        f.task = "guard"
+        f.why = "squadrons"
+        f.gox, f.goy = cx, cy
+        f.ships = nil
+        return s
+    end
+    SQ.handback(memory, mem)
     local rr = ratio_of(f.ships, s.es)
     f.ratio = math.floor(math.min(rr, 99) * 100)
     mem.ring = mem.ring or {}
@@ -1629,6 +2059,27 @@ end
 -- the fleet's own warship orders need the scan's docks: the last scan
 function M.last_scan()
     return scan
+end
+
+-- the water of the sea oc near a point (for the squadrons: ageofai.squadrons moves and anchors on it)
+function M.water_near(x, y, oc)
+    return water_near(x, y, oc)
+end
+-- a safe water point on the way from `from` to `to`, as near to the target as it gets (the squadrons' sq_safe)
+function M.safe_toward(fx, fy, tx, ty, oc, margin)
+    return safe_toward(fx, fy, tx, ty, oc, margin)
+end
+-- the engine's sea of a tile (0: land or unknown)
+function M.sea_of(x, y)
+    return sea_of(x, y)
+end
+-- the dock a damaged ship goes to (nil: none out of danger)
+function M.repair_dock(x, y)
+    return repair_dock(x, y)
+end
+-- a land unit or building's reach over the water (the shore's defences, fleet.c fl_danger_r)
+function M.danger_r(rec)
+    return danger_r(rec)
 end
 
 return M

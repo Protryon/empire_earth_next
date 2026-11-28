@@ -1074,7 +1074,7 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParamete
         EESMDialogMessage* theDialog = reinterpret_cast<EESMDialogMessage*>(inParameter1);
         if (gUIManager != NULL && gUIManager->mMainGameForm != NULL) {
             gUIManager->LockUIForCopyData();
-            gUIManager->mMainGameForm->ShowInformation((EEUIFMGInformation*)theDialog);
+            gUIManager->mMainGameForm->ShowInformation(theDialog);
             gUIManager->UnlockUIForCopyData();
         }
         EEChatLogEntry* theEntry = new EEChatLogEntry;

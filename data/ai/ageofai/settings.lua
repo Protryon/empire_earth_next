@@ -116,6 +116,12 @@ return {
     -- siege (attack.c attack_siege), settlement upgrades (garrison.c), counter-fire (counterfire.c)
     attack_siege = true,
     garrison_upgrades = true, gu_every = 20000, gu_wait = 60000, gu_batch = 10, gu_wood = 5000,
+    gu_mine_holders = true,         -- garrison.c THE MINES' HOLDERS: only a holder by a stone/gold/iron mine, scored
+                                    -- by its gatherers (gold/iron double) x 50/25/15% by what is inside
+    gu_kick = 120,                  -- ... A SECOND PRODUCER: percent of the nonstop citizen food the income needs
+    gu_food = 10000,                -- ... A DRAIN, NOT A COST: food in the bank for a Town Center/Capitol to take
+    gu_granary = true,              -- ... A GRANARY BEFORE THE NEXT (build.lua's ask)
+    gu_workable = true,             -- ... only where its citizens work (territories.lua)
     counter_fire = true,
     -- scouting (armies.c ar_look, the game's scout)
     scout_at = 120000, scouts_max = 3,
@@ -131,7 +137,8 @@ return {
     rescue_citizens = true,         -- NOT PORTED (the stranded citizens' transport home): kept for the record
     -- towns: the parts as bits (resource_towns 1, settlement 2, forward_production 4, forward_base 8, spread 16,
     -- scout 32, grow 64, fort 128, take_mines 256, mine_raids 512); upstream "resource_towns, spread"
-    towns = 17,
+    towns = 17,                     -- the parts as bits (+1024 THE PARTY, ported but off: upstream ships 1041
+                                    -- "resource_towns, spread, party"; the port keeps its measured 17)
     towns_max = 3,                  -- resource towns at most (not with spread)
     towns_citizens = 6,             -- citizens that found a town (a forward base: + 2; 12 at most)
     towers_per_town = 2,            -- towers by a resource town (spread: 2 + one per 4 mines)
@@ -272,4 +279,171 @@ return {
     citizens_home = true,           -- econ.c citizens_home part 2: an idle citizen 15+ tiles from its nearest
                                     -- finished town, idle twice running, walks to the nearest safe town (parts 1 and
                                     -- 3, the base point and the stacked foundations, are the original game's bugs)
+
+    -- ============================================================================================================
+    -- THE PORT FORWARD (upstream 7a17182, 2026-11-23): the [ai_base] keys of the newer upstream that this port
+    -- knows about. A key whose comment names a module is read by it; "(not read yet)" marks a decision this port
+    -- forward has not reached yet, kept here so the file stays the map of upstream's settings.
+    -- ============================================================================================================
+    -- work.c: the citizens' work (work.lua)
+    mine_crowds = true,             -- the walkers and waiters count against a mine's places; the rest go to the
+                                    -- nearest free mine (work.c; 6 gatherers a mine)
+    mine_choice = true,             -- the free mine nearest a drop site
+    rebalance_workers = true,       -- citizens move from an oversupplied resource to a short one
+    local_mines = false,            -- a citizen works a mine near its own town (a drop site within 40) first
+    town_work = false,              -- the mod decides the citizens' work, a site 60+ tiles from the citizen swapped
+                                    -- for work in its own town
+    herd_keep = true,               -- the hunters take grown animals only and leave a herd's minimum living (not read
+                                    -- yet: no unit record carries a herd, the engine's finder picks the animal)
+    wood_drop = true,               -- a Settlement by the forest when 8+ woodcutters cut 15+ tiles from a drop site
+    citizen_mine_cap = true,        -- the citizens wanted at most half the cap and at most the known mines x places
+    claim_from_towers = false,      -- [ai_base] claim_from_towers, off (no gain measured)
+    mine_fill = false,              -- mine_fill (empty upstream = off): the game's AI's mine help; mine_places_first
+    mine_places_first = true,       -- ... the mines' free places before more food and wood (mines_first, on)
+    work_needs = false,             -- work.c wk_needs: the worker plan from what each resource spends, saves for and
+                                    -- its soldiers would use (3 minutes of samples); off until measured, the port's
+                                    -- shortfall plan stands under it
+    food_plan = "count_trained,back_to_food",   -- the food plan's parts (food.c; upstream 3 + its newer parts)
+    food_hunt_range = 15,           -- tiles from a drop site the hunters go
+    citizen_plan = "mine_slots,food_pays",      -- citizen_plan's parts (citizens.c)
+    workforce_plan = "",            -- workforce_plan's parts, empty = off (upstream's default)
+    workforce_army_cap = 250,       -- ... its army_room from this population cap
+    -- research.c, savings.c, produce.c, claims.c
+    paid_upgrades = true,           -- the epoch's upgrades researched and paid, not granted (research.lua)
+    unit_improvements = true,       -- the "+" improvements a player buys (research.lua)
+    savings = true,                 -- a bigger want holds the stock before a small spender takes it (savings.lua)
+    claims = 31,                    -- claims.c's mask of what is claimed: 1 ships and aircraft, 2 citizens, 4 the rest,
+                                    -- 8 a ferry's passengers, 16 the muster's (31 = all; claims.lua)
+    produce = true,                 -- produce.c runs (the production buildings by territory, the shares: produce.lua;
+                                    -- upstream has no key, it runs with the game's computer player off)
+    train_by_need = true,           -- the producers train what the need asks (produce.lua)
+    fleet_by_need = false,          -- ... the fleet likewise (off upstream)
+    train_room = 65535,             -- a mask of players whose producers count the room (all)
+    build_by_territory = false,     -- build.lua's buildings by territory instead of econ.lua's settlements,
+                                    -- production and farms; off, the module does nothing (build.c)
+    backland_radius = 60,           -- build.lua's fallback: on a map without territories.lua the ground this near the
+                                    -- base with no enemy building known round it is the backland
+    holy_log = false,               -- holy.lua's minute line (upstream: [autotest] only)
+    creep_log = false,              -- creep.lua's log (upstream: [autotest] only)
+    -- the strategy plans (plans.c, returns.c): off until the consumers (metal/econ/defence/territories/build/airguard/
+    -- navy) are wired to plan_f/worth; default leanings are 50 (neutral) since personas are not ported
+    strategy_plans = false,
+    plan_lean_air = 50, plan_lean_navy = 50, plan_lean_anti_air = 50,
+    plan_lean_pressure = 50, plan_lean_defences = 50, plan_lean_spread = 50,
+    -- [persona.c] the persona (traits + leanings); the leanings only change play when persona_style is on
+    persona = "random",             -- an id from personas.lua ("balanced", "aggressive", "defensive", "tall",
+                                    -- "wide", "naval") or from the mod's own personalities ("baumeister",
+                                    -- "eroberer", "fuchs", "haendler", "hitzkopf", "ritter"), or "random" (the default:
+                                    -- each AI a different one, dealt from its player id and the map)
+    persona_style = false,          -- upstream [ai_base] ai_style (default off): personalities only talk/negotiate;
+                                    -- here, off keeps the leanings neutral (50) and the plan's play as before
+    persona_civ = true,             -- the persona's civilization name is shown for the AI (upstream persona.c
+                                    -- civilization =>, e.g. "Walled Cities"); false keeps the game's own random one.
+                                    -- The upgrades/bonuses stay the game's random premade pick either way.
+    stations = false,               -- the switch; upstream runs it while [ai_base] game_ai = 0 (off as shipped)
+    -- the holy (holy.c): priests and prophets, a strike category of their own
+    holy = false,                   -- off until measured
+    -- armies.c (the port forward): the force
+    raid_parties = true,            -- a part of the force answers a raid it beats by 200% instead of the whole force
+                                    -- (army.lua; armies.c RAID PARTIES)
+    citizens_first = true,          -- while citizens are missing, the food of the next 4 of them is held from the
+                                    -- soldiers' orders (army.c CITIZENS FIRST)
+    ally_aid = false,               -- an ally's buildings within this many tiles of home are answered too (0 = off)
+    mod_armies_sea = true,          -- the force on island maps too (its landings lent its soldiers: not ported yet)
+    force_at_front = true,          -- the force's home in the land front with the heaviest open border (fronts.lua's
+                                    -- station stands in until the territories are in)
+    -- explore.c
+    explore = true,                 -- the citizens round their town for food, the dog's rings, the scouts (explore.lua)
+    -- airguard.c, airstrike.c, storms.c
+    air_force_share = 25,           -- percent of the force into the AI's own air force (0 = air.lua's wing only)
+    aa_strong = false,              -- STRONG ANTI-AIR: while aircraft were seen near its towns in 10 min, or an enemy
+                                    -- Airport it knows, the AA buildings it still lacks are the first priority row
+                                    -- (defence.c/airguard.c; off as upstream ships it)
+    fighter_sweeps = true,          -- the fighters sweep the enemy's ground
+    air_by_worth = true,            -- the air force's parts scaled by what they bring back
+    bomber_harass = false,          -- lone bomber runs while the wing gathers (off: measured no gain)
+    bomber_doctrine = true,         -- the bombers' survival estimate, the way home, a wing by worth, no theft
+    bomber_survive = true, bomber_come_home = true, bomber_value_wing = true, bomber_claim = true,
+    storm_dodge = true,             -- the ships sail out of an enemy prophet's hurricane (storms.lua)
+    -- territories.c, watch.c
+    territory_shelter = true,       -- the citizens of a territory being lost into a Fortress or a safe refuge
+    front_guards = true,            -- a front island gets a boat of soldiers when short of its guard
+    border_towers = true,           -- a tower every 20 s on the outside border of a held territory (1500 stone, wood)
+    border_walls = true,            -- a wall along the shortest border to land nobody of its side holds
+    stone_sink = true,              -- with 5000 stone the border towers denser and faster, the wood sink past its wood
+    watch_towers = true,            -- a tower on the ground the AI has had in sight least
+    fog_patrols = true,             -- a soldier to the patches out of sight for 4 minutes
+    tower_creep = false,            -- 12 citizens creep a tower to an unguarded enemy building (off upstream)
+    sea_fishing = true,             -- a fishing boat on the sea territories along the AI's land
+    sea_fleet = 300,                -- the fleet's size from a warship per this many tiles of its sea territories (0 off)
+    harbours = true,                -- a dock and a tower on every sea territory along the AI's land
+    fleet_station = true,           -- the fleet's guard point on the sea with the longest shore along its land
+    sea_squadrons = true,           -- the warships as squadrons instead of one fleet (squadrons.c: ported, off until
+                                    -- measured - the gate is squadrons.lua's M.PORTED)
+    missile_subs = true,            -- the strike groups' missile subs trained from 6 warships of the other roles
+    sea_shore_fire = true,          -- the squadrons' quiet moves and the decided shore shelling
+    stash_by_territory = true,      -- the fortress reserve by territory (bunker.c)
+    stash_let_out_few = true,       -- a fortress lets out as many as are wanted, one at a time
+    -- the newer engines' switches, as upstream ships them
+    behind_walls = false,           -- an enemy behind the walls no longer keeps the citizens from work
+    ship_reach_exact = false,       -- an enemy ship keeps citizens off only within its range and a tile
+    danger_routes = true,           -- ENGINE: this engine's ai.route (attack.lua, citizens by the danger layer)
+    avoid_lost_fights = true,       -- ENGINE: this engine's threat/lost layers (docs/AI_LUA_UNITS.md §4.4)
+    threat_memory = true,           -- ENGINE: the seen-and-remembered soldiers in the safety checks
+    shelter_first = true,           -- the fortress ahead of everything it saves for
+    counter_siege = true,           -- the soldiers near the base answer enemy siege (tactics.lua)
+    more_granaries = true,          -- a granary while it wants more food workers than its fields hold
+    build_fields = true,            -- the fields around every granary (econ.lua's farms)
+    farm_builders_paid = true,      -- a field's builder only with its wood, one field a builder
+    rest_open_ground = true,        -- a soldier at rest on open ground (stations.c: not ported yet)
+    fight_production = true,        -- production where the fight is (stations.c: not ported yet)
+    hold_ground = true,             -- stations.c HELD GROUND: not ported yet
+    attention_activities = 0,       -- ENGINE: the game takes +1 of its attention flags (0 = leave)
+    last_stand_buildings = 0,       -- ENGINE: the game's last-stand level (0 = never)
+    sea_first = true,               -- a crossing held for the risk has the squadrons win its way (squadrons: not ported)
+    ferry_service = true,           -- the ferry service for citizens and soldiers (ferry.c: not ported yet)
+    ferry_safety = true,            -- the crossing's safety check (crossing.c: not ported yet)
+    ferry_reach = true,             -- a pick-up both the passengers and the transport reach (ferry.c)
+    ferry_time_by_way = true,       -- the ferry's time limits by the way (ferry.c)
+    expand_across = false,          -- the pushes across the water (stations.c ACROSS; upstream ON, measured worse
+                                    -- than the landings - OFF in the port until measured)
+    push_across = false,            -- ... and their waves (needs expand_across, ferry_service and stations)
+    transport_lifeboat = true,      -- a sinking transport runs for the nearest beach (convoy.c: not ported yet)
+    transport_escort = true,        -- the ferry's escort ahead (convoy.c)
+    transport_park = true,          -- transports held at a park
+    strategy_plans = false,         -- the strategy plans (plans.c: ported, off until the consumers are wired to
+                                    -- plan_f/worth)
+    -- ============================================================================================================
+    -- [llm] the AI voice (upstream config/ageofai.ini [llm], the keys ageofai_config.exe writes). This engine has
+    -- no voice/LLM subsystem (voice/persona.c and dll/voice/llm.c are the retail mod's), so these keys are recorded
+    -- for parity only: nothing reads them yet. An LLM key goes in llm_api_key.
+    -- ============================================================================================================
+    llm_enabled = false,            -- the language model speaks for the computer players (0 upstream)
+    llm_url = "http://localhost:1234/v1/chat/completions",
+    llm_model = "",                 -- the model name (empty: the server's default)
+    llm_api_key = "",               -- for a server that wants a key (a local one doesn't)
+    llm_lines = true,               -- the AI says its personality's lines
+    ai_lines = true,                -- the persona's own lines on war, peace, alliance, betrayal, capitulation (voice.lua;
+                                    -- upstream's [general] ai_lines)
+    news = true,                    -- a territory gained or lost: a line (news.c's light stand-in: news.lua)
+    llm_chat = true,                -- ... and the chat lines
+    llm_decide = false,             -- the model decides its moves towards the human
+    llm_ai_talk = false,            -- an exchange with the human after an offer
+    llm_ai_talk_show = true,        -- ... the human reads along
+    llm_ai_talk_gap = 60,           -- seconds between exchanges
+    llm_ai_talk_turns = 4,          -- messages an exchange
+    llm_ai_decide = false,          -- the model decides between the AIs too
+    llm_constrained = true,         -- within the rules
+    llm_memory = 8,                 -- the messages the model keeps
+    llm_memory_mode = "pair",
+    llm_equal = false,
+    llm_timeout = 20,               -- seconds a request may take
+    llm_fallback = "rules",         -- what it does when the model fails
+    llm_max_tokens = 300,
+    llm_temperature = 80,           -- percent
+    llm_think = false,              -- retained for parity; the transport never sends reasoning_effort (servers that
+                                    -- reject it returned HTTP 400), so this is currently a no-op
+    llm_extra = "",                 -- extra JSON for the request
+    llm_log = true,                 -- prompts and answers into the log
+    llm_line_seconds = 60,          -- the model says a line by itself at most this often (0: only on events)
 }

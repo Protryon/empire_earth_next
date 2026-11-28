@@ -174,13 +174,16 @@ def run(cmd, env=None, cwd=None, quiet=False):
 
 
 def windows_env():
-    """INCLUDE / LIB for clang-cl and lld-link (x64): the MSVC runtime and the Windows SDK."""
-    msvc, sdk, sdk_lib, _ = ee.modern_dirs()
+    """INCLUDE / LIB for clang-cl and lld-link (x64): the MSVC runtime and the Windows SDK. PATH gets the SDK's x64
+    tools too (mt.exe for the manifests CMake links in, rc.exe): they are not on a plain shell's PATH, and CMake
+    would fail the compiler check with MT-NOTFOUND."""
+    msvc, sdk, sdk_lib, sdk_bin = ee.modern_dirs()
     env = dict(os.environ)
     env["INCLUDE"] = os.pathsep.join([str(msvc / "include"), str(sdk / "ucrt"), str(sdk / "um"), str(sdk / "shared"),
                                       str(sdk / "winrt")])
     env["LIB"] = os.pathsep.join([str(msvc / "lib" / "x64"), str(sdk_lib / "ucrt" / "x64"),
                                   str(sdk_lib / "um" / "x64")])
+    env["PATH"] = os.pathsep.join([str(sdk_bin / "x64"), env.get("PATH", "")])
     return env
 
 

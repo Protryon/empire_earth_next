@@ -1,0 +1,379 @@
+// AI personality for eeaimod - the format and every key: _template.eeai.
+// Princess Livia keeps books: what each player did to her and for her, and the ground that changed hands - fields of
+// her own (README.md "State: what an AI remembers"), each AI that plays her with its own books, saved with the game.
+// The handlers at the bottom write them when something happens; her lines read them (a line sees the books as they
+// stood before the handler wrote what just happened - hence the "+ 1" where a line counts what is happening now).
+register_personality()
+
+personality = {
+    name = "Livia",
+    // a queen when her court comes of age, an empress once her books hold five lands taken (conquered, below)
+    title => conquered >= 5 ? "Empress" : epoch >= epoch.middle ? "Queen" : "Princess",
+    civilization => conquered >= 5 ? "Silver Empire" : "Silver Court",
+    color = ["magenta", "purple"],
+    aggression = 60%,
+    loyalty = 15%,
+    pride = 40%,
+    greed = 60%,
+    forgiveness = 50%,
+    caution = 45%,
+    talk = 55%,
+    // leanings (strategy_plans): she strikes from afar: aircraft, and anti-air against the same
+    air_force = 70%,
+    navy = 50%,
+    early_anti_air = 60%,
+    pressure = 45%,
+    defences = 55%,
+    spread = 45%,
+    // for the AI voice ([llm] in ageofai.ini): who this is, in a few words
+    character = "A scheming princess, charming and polite on the surface, cold and calculating beneath; keeps a little book of every slight and every favour; enjoys hints and veiled threats.",
+}
+
+// HER BOOKS
+let slights = dict<player, int>(0)      // her little book: a war declared on her 2, a betrayal 3, an offer let run out 1, ground taken 2
+let favours = dict<player, int>(0)      // the other column: a generous tribute 1, an alliance accepted 2, a capitulation accepted 3
+let taken = dict<player, int>(0)        // the territories she took from them
+let conquered = 0                       // the same from everyone together: her title's (Empress at five)
+let lost = dict<player, int>(0)         // the territories they took from her
+let repelled = dict<player, int>(0)     // their attacks on her ground she beat back
+let darling: player? = null             // whom she courts: her last alliance offer, or the ally who took it
+let nemesis: player? = null             // the one with the most slights in her book
+
+// Livia weighs everyone by their use to her: a pawn to be moved, a rival to be handled with care
+pawn => them.strength * 2 < me.strength
+rival => me.strength * 2 < them.strength
+// blood between us: more than a skirmish
+my_dead => them.kills(me, units) > many_dead
+their_dead => me.kills(them, units) > many_dead
+// what the books say of them: more slights than favours, a page that is full
+in_debt => slights[them] > favours[them]
+full_page => slights[them] >= 6
+
+lines = {
+    greeting => [
+        players == 2 && chance(50%) ? "Just the two of us? How intimate.",
+        players > 5 && chance(50%) ? "So many guests. I do hope there are enough chairs ... for a while.",
+        allied && chance(50%) ? "Allies already, {them}? How sweet. Let us see how long it lasts.",
+    ] ?? [
+        players > 2 ? "How lovely to meet you all.",
+        "I am sure we will ... get along splendidly.",
+        "Friends? Enemies? Oh, that will sort itself out.",
+    ],
+    war_declared => [
+        slights[them] > 0 ? [
+            "Another entry in my little book, {them}. Your page is getting crowded.",
+            "War, {them}? I shall write it down. Next to the other {slights[them]} things.",
+        ],
+        them.tribute(me, 20) > 0 ? [
+            "First gifts, now war? How fickle you are, {them}.",
+            "Thank you for the gifts, {them}. They will make such lovely arrows - pointed at you.",
+        ],
+        pawn && chance(60%) ? "You, {them}? With so little? How brave. How very foolish.",
+        rival && chance(60%) ? "War, {them}? Then I shall simply have to be cleverer than you are strong. That should not be difficult.",
+    ] ?? [
+        "How clumsy of you, {them}.",
+        "War, {them}? I had hoped you were cleverer.",
+        "Oh, {them}. You should not have done that.",
+    ],
+    betrayed => me.betrayals(them) > 0 ? [
+        "Returning the favour, {them}? I suppose I taught you that. How flattering.",
+        "A knife for a knife, {them}? How very fair of you. I had no idea you kept accounts.",
+    ] : favours[them] > 1 ? [
+        "All those favours, {them}, and now this. I shall have to move you to the other column. In red ink.",
+        "I had you down as a friend, {them}. In pencil, luckily.",
+    ] : them.betrayals(me) > 0 ? [
+        "Twice, {them}? Once is a surprise. Twice is a habit - and habits can be broken. Like so many other things.",
+        "Again, {them}? I made a little note the first time. Now I shall have to start a whole book.",
+    ] : [
+        "You of all people, {them}? I am almost impressed.",
+        "Betrayal is my art, {them}. You are a mere dabbler.",
+    ],
+    peace_accept => [
+        them.betrayals(me) > 0 ? [
+            "Peace, {them}. I forgive - I simply never forget.",
+            "Peace, {them}. And this time I shall keep my back to the wall, if you don't mind.",
+        ],
+        in_debt && chance(60%) ? "Peace, {them}. But my little book stays open. It always does.",
+        them.kills(me, this_war, units) > many_dead && them.kills(me, this_war, units) > me.kills(them, this_war, units) && chance(60%) ? "You have made your point, {them}. Rather emphatically. Peace.",
+        them.tribute(me, 30) > 0 && chance(50%) ? "Your gifts did not go unnoticed, {them}. I am always kind to generous people.",
+    ] ?? [
+        "Peace, {them}? Gladly. For now.",
+        "As you wish, {them}. We are friends now.",
+    ],
+    peace_refuse => [
+        them.betrayals(me) > 0 ? [
+            "Peace with you, {them}? I trusted you once. Once is my limit.",
+            "Your word, {them}? I already have one of those. It broke the first time I leaned on it.",
+        ],
+        full_page ? "Your page in my book is full, {them}. Peace? Not while there is ink left to dry.",
+        lost[them] > taken[them] && chance(60%) ? "Peace, {them}, while you sit on my land? Give it back first. Then we may talk.",
+        them.refusals(me) > 0 && chance(70%) ? "Now you want peace? I offered you my hand, {them}, and you slapped it away. I remember these things.",
+        them.ignored(me) > 0 && chance(60%) ? "You let my offer gather dust, {them}. Now yours can do the same.",
+        them.opinion(me) < -50% && chance(50%) ? "You cannot stand me, {them}, and now you want peace? How ... suspicious.",
+    ] ?? [
+        "Why should I, {them}? What is in it for me?",
+        "Later perhaps, {them}. It does not suit me now.",
+        "Convince me, {them}. With gold, perhaps?",
+    ],
+    block_refuse => [
+        enemy.betrayals(me) > 0 ? [
+            "{enemy} at your table, {them}? {enemy} once put a knife in my back. I do not dine with knives.",
+            "Do ask {enemy} what became of their last alliance with me, {them}. Then ask yourself why I decline.",
+        ],
+        enemy == nemesis ? "With {enemy} at your side, {them}? {enemy} has a whole book to themselves. I do not share tables with my reading.",
+    ] ?? [
+        "An alliance with {enemy} in it? I am not that foolish, {them}.",
+        "{enemy} at your table, {them}? Then I dine elsewhere.",
+    ],
+    block_refuse_own => [
+        "And upset {enemy}? My ally would never forgive me, {them}.",
+        "{enemy} would be most displeased, {them}. Another time.",
+    ],
+    vassal_grumble => [
+        enemy.betrayals(me) > 0 ? [
+            "Peace with {enemy}, who betrayed me? As you command, {them}. I shall smile at them. Very sweetly.",
+            "{enemy} broke faith with me, and now I must call them friend? Your wish, {them}. Peace has such short memories - mine is long.",
+        ],
+        enemy == nemesis ? "Peace with {enemy}? As you command, {them}. Their page in my book stays where it is.",
+    ] ?? "Peace with {enemy}? If you insist, {them}. I shall keep an eye on them.",
+    ask_lord => [
+        "Oh, I would love to, {them}. But {enemy} holds my leash now.",
+        "Ask {enemy}, {them}. I am merely the humble servant.",
+    ],
+    alliance_offer => [
+        darling == them ? "Still you, {them}. You know you are my favourite. Against {enemy}, together?",
+        enemy == nemesis && chance(70%) ? "{enemy} has filled more pages of my book than anyone, {them}. Help me close it.",
+        enemy.betrayals(them) > 0 ? [
+            "{enemy} betrayed you once, {them}. I would never ... well. Shall we teach them some manners together?",
+            "Does it still sting, {them}, what {enemy} did to you? Revenge is so much sweeter shared.",
+        ],
+        enemy.strength > me.strength + them.strength && chance(60%) ? "{enemy} is stronger than the two of us together, {them}. Alone we are dessert. Together we might be the cook.",
+        them.refusals(me) > 0 && chance(60%) ? "I know, {them}, you turned me down before. But {enemy} changes things, doesn't it?",
+        them.opinion(me) > 30% && chance(60%) ? "You have always thought so well of me, {them}. Let us make it official - against {enemy}.",
+    ] ?? [
+        "{them}, darling, {enemy} will devour us both. Shouldn't we ... work together?",
+        "A proposal, {them}: the two of us against {enemy}. What do you say?",
+    ],
+    offer_accepted => [
+        them.betrayals(me) > 0 ? [
+            "Friends again, {them}. I shall keep a chair for you - and a dagger under it. Just in case.",
+            "Allies once more, {them}. Last time you ended it. This time, I think, I shall.",
+        ],
+        in_debt ? "Friends, {them}. I shall write it in the good column. It looks so lonely there.",
+        them.refusals(me) > 0 && chance(60%) ? "You said no before, {them}. I knew you would come round.",
+    ] ?? [
+        enemy ? "Wonderful, {them}. {enemy} will not like this at all.",
+        "How nice, we understand each other.",
+    ],
+    offer_withdrawn => slights[them] > 0 ? [
+        "Ignored again, {them}? I keep a little book, you know. Your page has {slights[them] + 1} entries now.",
+        "Silence is an answer too, {them}. I wrote it down - next to the other {slights[them]}.",
+    ] : [
+        "You hesitated too long, {them}. Such a pity.",
+        "Never mind, {them}. I will remember this. I have a little book for such things.",
+    ],
+    betray => [
+        them.betrayals(me) > 0 ? [
+            "You taught me this game yourself, {them}. Do you like my progress?",
+            "Did you think I had forgotten, {them}? I was only waiting for the right moment. This is it.",
+        ],
+        in_debt && chance(70%) ? "I have kept your page in my book all this time, {them}: {slights[them]} entries against {favours[them]}. The sums no longer add up.",
+        them.tribute(me, 30) > 0 && chance(50%) ? "Thank you for all the gifts, {them}. They will pay for the war.",
+        pawn && chance(60%) ? "You have become such a burden, {them}. A lady must travel light.",
+    ] ?? [
+        "I am so sorry, {them}. No, not really.",
+        "You were useful, {them}. Now you are not.",
+        "Did you really think I was your friend, {them}?",
+    ],
+    tribute_thanks => [
+        at_war ? [
+            "Gold in the middle of a war, {them}? How touching. It changes nothing - well, almost nothing.",
+            "Paying your enemy, {them}? I shall spend it carefully. On soldiers, most likely.",
+        ],
+        full_page && chance(70%) ? "Gold will not wash out ink, {them}. But do keep trying - it is so charming to watch.",
+        favours[them] >= 3 && chance(60%) ? "My most generous friend, {them}. You have a page of your own in the good column now.",
+        them.betrayals(me) > 0 && chance(60%) ? "Gifts from a traitor, {them}? Guilt suits you.",
+        them.tribute(me) > big_tribute && chance(60%) ? "{them.tribute(me) + tribute_total} in gifts already, {them}. One could almost think you were afraid of me.",
+    ] ?? [
+        "For me? How thoughtful, {them}.",
+        "You know how to treat a lady, {them}.",
+    ],
+    tribute_small => at_war ? [
+        "A trinket in the middle of a war, {them}? You do value yourself cheaply.",
+        "Is that the price of peace in your eyes, {them}? Then the war goes on.",
+    ] : [
+        "Is that all, {them}?",
+        "How ... modest, {them}. I shall find a small drawer for it.",
+    ],
+    attack => [
+        nemesis == them ? "{them} has filled more of my little book than anyone. Today I begin to close it.",
+        lost[them] > 0 && chance(60%) ? "{them} still sits on {lost[them]} of my lands. We go to collect the rent.",
+        them.kills(me, 20, buildings) > 0 && chance(60%) ? "{them} broke some of my lovely things. Let us return the courtesy.",
+        them.betrayals(me) > 0 && chance(60%) ? "{them} once broke faith with me. Today the bill arrives.",
+        them.refusals(me) > 1 && chance(50%) ? "{them} has said no to me so often. Let us see if they can say no to this.",
+    ] ?? [
+        "Time for a little surprise for {them}.",
+        "Our troops are on their way to {them}. Quietly.",
+    ],
+    attack_threat => [
+        nemesis == them && chance(70%) ? "You have a whole book to yourself, {them}. I have come to read it to you. Aloud.",
+        lost[them] > 0 && chance(60%) ? "You took {lost[them]} of my lands, {them}. I have come to take them back - with interest.",
+        them.betrayals(me) > 0 && chance(60%) ? "Do you sleep well, {them}? Traitors usually don't.",
+        them.refusals(me) > 0 && chance(50%) ? "You should have accepted my offer, {them}. Do you remember it? I do.",
+        their_dead && chance(50%) ? "{me.kills(them, units)} of your people already, {them}. I could stop counting - but I so enjoy it.",
+    ] ?? [
+        "Let us see how well you sleep, {them}.",
+        "A little surprise is on its way to you, {them}.",
+        "{them}, do look behind you now and then.",
+    ],
+    landing => [
+        "Did you think the water would keep me away, {them}? How quaint.",
+        "I do so love the seaside, {them}. Especially yours.",
+    ],
+    territory_taken => [
+        lost[them] > 0 ? [
+            "Back where it belongs, {them}. You only borrowed it.",
+            "One back from you, {them}. {lost[them] - 1} more to go - I am keeping count.",
+        ],
+        taken[them] > 0 && chance(70%) ? "That makes {taken[them] + 1} of your lands, {them}. Shall I keep count for you? I am so good with numbers.",
+        pawn && chance(60%) ? "Such a pretty piece of land, {them}. Far too pretty for you.",
+    ] ?? [
+        "Your land, {them}? Mine now. Do try to keep up.",
+        "I have taken a little something of yours, {them}. I am sure you will not miss it.",
+    ],
+    territory_lost => [
+        lost[them] > 0 ? [
+            "Again, {them}? That makes {lost[them] + 1}. Every one of them is in my book.",
+            "You do like my land, {them}. {lost[them] + 1} pieces of it now. I shall want them all back.",
+        ],
+        taken[them] > lost[them] && chance(70%) ? "One to you, {them}. You are still {taken[them] - lost[them] - 1} behind - but do keep trying.",
+        rival && chance(50%) ? "Take it, {them}. Land is so heavy to carry - I am happy to let you hold it for me. For a while.",
+    ] ?? [
+        "My land, {them}? How bold. I shall write that down.",
+        "Enjoy it while you can, {them}. I always collect what is owed.",
+    ],
+    territory_held => [
+        repelled[them] > 0 ? "Again you knock, {them}, and again the door stays shut. That is {repelled[them] + 1} times now.",
+        my_dead && chance(50%) ? "That cost me, {them}. It cost you more.",
+    ] ?? [
+        "Leaving so soon, {them}? You only just arrived.",
+        "Was that an attack, {them}? I hardly noticed.",
+    ],
+    title => [
+        conquered >= 5 ? "Five lands in my book, and a crown to match. {me} - do get used to it.",
+    ] ?? [
+        "{me}. The court has finally come of age - and so have I.",
+        "You may call me {me} now. I always knew the title would suit me.",
+    ],
+    under_attack => [
+        me.soldiers < 10 ? [
+            "Guests, and nobody home to receive them? Everyone to the gates - now!",
+            "Where are my soldiers when I need them? Servants, cooks, anyone - take up a spear!",
+        ],
+        lord && chance(50%) ? "My lord {lord} will be so displeased to hear of this.",
+    ] ?? [
+        "How rude, to turn up unannounced!",
+        "Guards! Throw these people out!",
+    ],
+    building_lost => [
+        "Annoying.",
+        "That was my favourite building.",
+    ],
+    epoch_up => [
+        epoch >= epoch.industrial && chance(50%) ? "{epoch}. Smoke and steel - so vulgar, so effective.",
+        me.rank == 1 && chance(50%) ? "{epoch}. First in strength, first in fashion.",
+    ] ?? [
+        "{epoch}. New toys.",
+        "A new age - how exciting.",
+    ],
+    enemy_ahead => "{them} is in a hurry? Those who run fast stumble easily.",
+    winning => [
+        them.betrayals(me) > 0 && chance(60%) ? "You betrayed me, {them}. Did you think I would let that go? How sweet.",
+        taken[them] > 1 && chance(60%) ? "{taken[them]} of your lands are mine, {them}. Shall we try for a round number?",
+        their_dead && chance(50%) ? "{me.kills(them, units)} of yours, {them}, and I have hardly creased my gown.",
+    ] ?? [
+        "{them}, you should start begging for mercy.",
+        "Everything is going to plan.",
+    ],
+    losing => [
+        enemies > 1 && chance(50%) ? "Everyone against me at once? I suppose I should be flattered.",
+        my_dead && them.kills(me, units) > me.kills(them, units) && chance(50%) ? "{them.kills(me, units)} of my people, {them}. I shall remember every one of them - and so will you.",
+    ] ?? [
+        "Hm. That was not the plan.",
+        "Perhaps we should talk, {them}?",
+    ],
+    desperate => [
+        lord && chance(70%) ? "My lord {lord}! Your humble servant needs you - now!",
+        darling != null && darling.alive && me.allied(darling) && chance(70%) ? "{darling}, darling! Now would be a lovely moment to remember everything I did for you!",
+        allies > 0 && chance(60%) ? "Friends, now would be a lovely moment to remember everything I did for you!",
+    ] ?? [
+        "I am not giving up - I am merely changing tactics!",
+        "This is not over yet!",
+    ],
+    enemy_defeated => [
+        nemesis == them ? "And so the book on {them} is closed. The last page was the best.",
+        them.betrayals(me) > 0 ? [
+            "Poor {them}. Traitors so rarely age well.",
+            "{them} broke faith with me, and now {them} is broken. I do like it when things come full circle.",
+        ],
+        them.refusals(me) > 0 && chance(50%) ? "{them} said no to me once. Look where it got them.",
+        their_dead && chance(60%) ? "And {them} is history. I may have helped. A little.",
+    ] ?? [
+        "Poor {them}.",
+        "And just like that, {them} is history.",
+    ],
+    ally_defeated => darling == them ? "{them} is gone. My favourite, too. Oh well - one finds new favourites." : "{them} is gone. Oh well, one finds new friends.",
+    defeated => [
+        "That ... was not ... the plan.",
+        "Very well. A game is a game.",
+    ],
+    surrender => [
+        "I know when a game is lost. Well played, {them}.",
+        "Time for a graceful exit.",
+    ],
+    capitulate => "Darling {them}, why fight when we could be friends? {tribute} say we are.",
+    capitulate_accepted => "{tribute} - a small price for such good company.",
+    capitulate_refused => "Pity. I would have made such a charming ally.",
+    all_submitted => "Well, {them}, it seems we all work for you now. Take your bow.",
+    other_victory => lord == them ? [
+        "Well played, {them}. Truly.",
+        "I do love a good ending. Bravo, {them}.",
+    ] : [
+        "How fortunate that we were friends, {them}. For both of us.",
+        "A shared victory, {them}. I shall remember who stood by me.",
+    ],
+    wonder_threat => "What a pretty wonder. It would be a shame if something happened to it.",
+    help_none => "Help? Me? Whatever gave you that idea?",
+}
+
+// WRITING THE BOOKS: each handler runs when its situation happens - whether she says a line or not - after the line
+note(p, weight) {   // a slight against her, of that weight; the one with the most is her nemesis
+    slights[p] += weight
+    if nemesis == null {
+        nemesis = p
+    } else if slights[p] > slights[nemesis] {
+        nemesis = p
+    }
+}
+on_war_declared() { note(them, 2) }
+on_betrayed() { note(them, 3) }
+on_offer_withdrawn() { note(them, 1) }
+on_territory_lost() {
+    note(them, 2)
+    lost[them] += 1
+}
+on_territory_taken() {
+    taken[them] += 1
+    conquered += 1
+}
+on_territory_held() { repelled[them] += 1 }
+on_tribute_thanks() { favours[them] += 1 }
+on_offer_accepted() {
+    favours[them] += 2
+    darling = them
+}
+on_capitulate_accepted() { favours[them] += 3 }
+on_alliance_offer() { darling = them }
+on_betray() {
+    if darling == them { darling = null }
+}

@@ -42,6 +42,7 @@
 #include "lle/USingleton.h"
 #include "lle/NEMessage.h"
 #include "ee/EmpireEarth.h"
+#include "ee/EEUserInterface.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
@@ -4607,6 +4608,170 @@ static int LuaEpoch(lua_State* L)
 // ---------------------------------------------------------------------------------------------------------------
 // Opening, the micro step
 
+// the LLM transport (EECPNextLLM.cpp): configure, start a request, poll the last answer
+extern "C" void EECPNextLLMConfigure(const char* url, const char* key, const char* model, int enabled, int timeout_s,
+                                     int think);
+extern "C" unsigned long long EECPNextLLMRequest(int player, const char* system_prompt, const char* prompt);
+extern "C" int EECPNextLLMPoll(int player, unsigned long long since, char* out, int cap);
+extern "C" unsigned long long EECPNextLLMSeq(int player);
+
+// ai.say: a chat line as this computer player (the game's in-game chat; no effect in the headless simulation)
+extern "C" void EECPNextChatPush(int player, const char* text);   // the AI's chat inbox (EECPNextLLM.cpp)
+static int LuaSay(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL || !lua_isstring(L, 1) || gPlatSimMode) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    // the answer is UTF-8; the game's chat is in its own codepage (the language the game runs in)
+    const char* utf8 = lua_tostring(L, 1);
+    std::wstring wide;
+    int wn = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+    if (wn > 0) {
+        wide.resize((size_t)wn);
+        MultiByteToWideChar(CP_UTF8, 0, utf8, -1, &wide[0], wn);
+    }
+    std::string local;
+    if (!wide.empty()) {
+        int an = WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
+        if (an > 0) {
+            local.resize((size_t)an);
+            WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, &local[0], an, NULL, NULL);
+        }
+    }
+    const char* text = !local.empty() ? local.c_str() : utf8;
+    // the game's own chat line, as upstream's chat.c shows it: the log, the AI's inbox and the UI directly (the
+    // EEMInGameChat message carries chat-type and observer tests a computer player can fail)
+    EEGameLogChat(me->mPlayerID, text);
+    EECPNextChatPush(me->mPlayerID, text);
+    if (gUserInterface != NULL) {
+        gUserInterface->AddChatLogEntry(me->mColor, me->mName, UWideString(text), 15000, 0);
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// the chat inbox (EECPNextLLM.cpp): one captured in-game chat line a call
+extern "C" int EECPNextChatPoll(int* player, char* out, int cap);
+
+// ai.chat: the next in-game chat line since the last call -> text, player; nil when none
+static int LuaChat(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    static char buf[1024];
+    int player = 0;
+    if (EECPNextChatPoll(&player, buf, sizeof buf)) {
+        lua_pushstring(L, buf);
+        lua_pushinteger(L, player);
+        return 2;
+    }
+    lua_pushnil(L);
+    return 1;
+}
+
+// ai.name: rename the computer player (the game's chat/UI name)
+static int LuaName(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL || !lua_isstring(L, 1)) { lua_pushboolean(L, 0); return 1; }
+    me->mName = UWideString(lua_tostring(L, 1));
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// ai.color: set the computer player's colour (r, g, b; 0..1 or 0..255)
+static int LuaColor(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL) { lua_pushboolean(L, 0); return 1; }
+    float r = (float)lua_tonumber(L, 1), g = (float)lua_tonumber(L, 2), b = (float)lua_tonumber(L, 3);
+    if (r > 1.0f || g > 1.0f || b > 1.0f) { r /= 255.0f; g /= 255.0f; b /= 255.0f; }
+    me->SetColor(GEColor(r, g, b));
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// ai.civ: the civilization name the game shows for this player (upstream persona.c writes the player's civ name,
+// "Walled Cities"); the upgrades and bonuses stay the game's random premade pick
+static int LuaCiv(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL || !lua_isstring(L, 1)) { lua_pushboolean(L, 0); return 1; }
+    const char* utf8 = lua_tostring(L, 1);
+    // UTF-8 (the model/table) to the game's codepage, as ai.say does
+    std::wstring wide;
+    int wn = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+    if (wn > 0) {
+        wide.resize((size_t)wn);
+        MultiByteToWideChar(CP_UTF8, 0, utf8, -1, &wide[0], wn);
+    }
+    std::string local;
+    if (!wide.empty()) {
+        int an = WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
+        if (an > 0) {
+            local.resize((size_t)an);
+            WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, &local[0], an, NULL, NULL);
+        }
+    }
+    me->mCivilization.SetName(UWideString(!local.empty() ? local.c_str() : utf8));
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// ai.llm: no argument = this player's last answer (nil while none); a number (a request's sequence) = the player's
+// answer to that request or a later one, once (the second result is the answer's sequence, so the next poll skips
+// it); a table = configure; a string = ask
+static int LuaLlm(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    int player = me != NULL ? (int)me->mPlayerID : 0;
+    if (lua_isnoneornil(L, 1) || lua_type(L, 1) == LUA_TNUMBER) {
+        unsigned long long since = lua_isnoneornil(L, 1) ? 0 : (unsigned long long)lua_tointeger(L, 1);
+        static char buf[8192];
+        if (EECPNextLLMPoll(player, since, buf, sizeof buf)) {
+            lua_pushstring(L, buf);
+        } else {
+            lua_pushnil(L);
+        }
+        lua_pushinteger(L, (lua_Integer)EECPNextLLMSeq(player));
+        return 2;
+    }
+    if (lua_istable(L, 1)) {
+        std::string url, key, model;
+        int enabled = 0, timeout = 20, think = 0;
+        lua_getfield(L, 1, "enabled");
+        enabled = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "url");
+        if (lua_isstring(L, -1)) url = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "api_key");
+        if (lua_isstring(L, -1)) key = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "model");
+        if (lua_isstring(L, -1)) model = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "timeout");
+        if (lua_isnumber(L, -1)) timeout = (int)lua_tointeger(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "think");
+        think = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        EECPNextLLMConfigure(url.c_str(), key.c_str(), model.c_str(), enabled, timeout, think);
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+    const char* prompt = lua_isstring(L, 1) ? lua_tostring(L, 1) : NULL;
+    const char* system = lua_isstring(L, 2) ? lua_tostring(L, 2) : NULL;
+    unsigned long long seq = EECPNextLLMRequest(player, system, prompt);
+    if (seq == 0) {
+        lua_pushnil(L);
+    } else {
+        lua_pushinteger(L, (lua_Integer)seq);
+    }
+    return 1;
+}
+
 void EECPUnitsOpen(lua_State* L, void* inPlayer)
 {
     EEComputerPlayer* thePlayer = (EEComputerPlayer*)inPlayer;
@@ -4630,6 +4795,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
+        {"llm", LuaLlm}, {"say", LuaSay}, {"chat", LuaChat}, {"name", LuaName}, {"color", LuaColor}, {"civ", LuaCiv},
         {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {

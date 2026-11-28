@@ -1,0 +1,192 @@
+// _template.eeai - a template for a new AI personality (eeaimod). Not a personality itself: its
+// register_personality() below is commented out. Copy it to a new name in this folder (e.g. seefahrer.eeai), take
+// the // from register_personality(), fill it in, and the AIs of the next game may get it (picked at random, a
+// matching colour first).
+//
+// Each situation below gets a line: a string, or a list of them (one at random), with conditions if you like:
+//   greeting => [allied ? "Welcome back, {them}.", opinion < -50% ? ["Go away.", "You again?"]] ?? "Greetings, {them}."
+// A situation without a line stays silent - unless it must be said (war, peace, offers, capitulation, victory): then
+// a more general situation speaks (noted below) or a layer - mod/computer.eeai. The lines are English.
+//
+// key = value or key => ..., a value is an expression: "a string" ({placeholders} and {expressions} in it), ["a
+// list", "of strings"] (one at random), allied ? "a condition", a ?? b, numbers ... The keys the mod reads stand in
+// records (lines = { ... }, a comma after each entry): key = ... what it reads once (name, colour, traits, style),
+// key => ... what it works out each time it uses it (a line each time it is said, a title every 10 s, a decision,
+// the priorities, a prompt). A name outside them is the file's own: name => ... worked out where it is used (me,
+// them, opinion ...), name = ... data, the same everywhere - a record of your own too (colors = { dark = ..., light
+// = ... }: colors.dark). The format, the expressions and every
+// value of the game (opinion, them.soldiers, epoch.middle, ...): README.md in this folder.
+
+// eeaimod's base, mod/computer.eeai, and the language model's texts, mod/prompt.eeai, are layers of every
+// personality without being named: the lines that must not go unsaid, the names this_war, many_dead, big_tribute,
+// the decide rules, the prompts - each counts where this file has none of its own. A pack's own base comes before
+// them: include("pack_base.eeai").
+// this file is a personality (an AI may get it) - without it, a file is only included by others
+//register_personality()
+
+personality = {
+    // the name in the game (the player name in the scores and the chat) - a list: the first no other player has
+    // (all taken: the first with a number, "Temur II"): ["Temur", "Batu"], pick([...]) a random one. Chosen once:
+    // a loaded game finds the personality by it
+    name = "",
+    // a title before the name ("Khan Temur"), worked out again every 10 s from the game: epoch < epoch.dark ?
+    // "Chieftain" : "King" - me.territories, its fields too; a new one is the situation title (empty: none)
+    //title => "",
+    // its civilization's name as the game shows it, instead of the one it plays - worked out like the title
+    // (empty: keep the name it shows)
+    //civilization => "",
+    // favoured player colours on random maps, the first free one wins: blue, red, yellow, magenta, orange, green,
+    // cyan, darkred, darkgrey, purple, grey, silver, lightyellow, lime, lightblue, pink (or German names, or a number
+    // 1..17: color.red or 2), or one of its own: rgb(128, 64, 0) - 0 to 255 each
+    //color = ["blue", "cyan"],
+    // traits 0% to 100% (50% when left out). aggression: betrays, refuses peace; loyalty: keeps its alliances (a vassal
+    // under 50% rebels against a clearly weaker lord, the sooner the prouder); pride: how long it holds a grudge and
+    // refuses peace after a declaration of war (pride x 5 minutes), how long it fights on before it capitulates, how
+    // weak a lord it serves; greed: what a tribute is worth to it; forgiveness: how fast a grudge fades;
+    // caution: capitulates earlier, pays more; talk: how often it says the lines that are not always said
+    aggression = 50%,
+    loyalty = 50%,
+    pride = 50%,
+    greed = 50%,
+    forgiveness = 50%,
+    caution = 50%,
+    talk = 50%,
+    // leanings 0% to 100% (50% when left out), with strategy_plans in ageofai.ini: what it puts into each, and how
+    // likely it picks a plan that puts more - air_force: the aircraft; navy: the warships; early_anti_air: anti-air before
+    // any aircraft is seen (0%: only in answer to them); pressure: the army's share of the income (high: early pressure,
+    // low: the economy first); defences: towers and walls along its borders; spread: claims of empty territories
+    // (high: wide, low: compact)
+    air_force = 50%,
+    navy = 50%,
+    early_anti_air = 50%,
+    pressure = 50%,
+    defences = 50%,
+    spread = 50%,
+    // for the AI voice: who this is, in a few words (the model plays it)
+    character = "",
+}
+
+style = {
+    // EXPERIMENTAL - only with ai_style=1 in ageofai.ini (default off: every AI plays the same, tested way). The same
+    // keys as in ageofai.ini; they replace the difficulty's values for this AI: the army's share of the income, the
+    // epochs' times. Uncomment what it should change. Each an expression worked out at the game start (like color =):
+    // shares with % (military_income_share = 35%), minutes as numbers - chance(50%) ? 20 : 30 works too.
+    //military_start_share = ,
+    //military_income_share = ,
+    //military_income_share_farms = ,
+    //epoch_min = ,
+    //epoch_max = ,
+}
+
+priorities = {
+    // EXPERIMENTAL - only with ai_style=1 in ageofai.ini. What this AI saves for, worked out every 10 seconds with the
+    // game's values (me.soldiers, epoch ...). A building and how many it wants: entries in this order, one at a time, its
+    // cost held back from soldiers and other buildings. A row of the list with a condition: that saving only while it
+    // holds. Uncomment or add. Without this record the AI plays the list as it stands. For example:
+    //b_stable => 2,
+    //b_archery_range => epoch >= epoch.copper ? 2 : 0,
+    //navy => me.soldiers > 50,
+}
+
+// names of your own (vars) for its lines, before those of mod/system.eeai - anywhere outside the records. For example:
+//address => opinion > 30% ? "my friend" : opinion < -30% ? "you dog" : "neighbour"
+
+lines = {
+    // [] or a list with nothing left: no line (a more general situation or mod/computer.eeai speaks, or nobody)
+    // the game begins - a first word to everyone - heard by everyone (60% of the time at talk=50)
+    greeting => [],
+    // {them} has just declared war on you - heard by {them} only (at most every 20 s)
+    war_declared => [],
+    // {them}, your ally until now, has betrayed you and declared war - heard by {them} only (at most every 20 s, without a line: war_declared)
+    betrayed => [],
+    // you accept {them}'s offer of peace (you are allied now) - heard by {them} only
+    peace_accept => [],
+    // you refuse {them}'s offer of peace - heard by {them} only (at most every 60 s)
+    peace_refuse => [],
+    // you offer {them} an alliance against {enemy}, your common enemy - heard by {them} only
+    alliance_offer => [],
+    // {them} has accepted your alliance offer - heard by {them} only
+    offer_accepted => [],
+    // your alliance offer to {them} went unanswered, and you withdraw it - heard by {them} only
+    offer_withdrawn => [],
+    // you betray {them}, your ally, and declare war on them - heard by {them} only
+    betray => [],
+    // {them} sent you a generous tribute: {tribute} - heard by {them} only (at most every 20 s)
+    tribute_thanks => [],
+    // {them} sent you a tribute - a small one: {tribute} - heard by {them} only (at most every 60 s)
+    tribute_small => [],
+    // your army sets out to attack {them} - heard by its allies (40% of the time at talk=50, at most every 300 s)
+    attack => [],
+    // your town is under attack - heard by its allies (60% of the time at talk=50, at most every 240 s)
+    under_attack => [],
+    // you lost a building - heard by its allies (25% of the time at talk=50, at most every 180 s)
+    building_lost => [],
+    // you have just reached the {epoch} age - heard by everyone (50% of the time at talk=50, at most every 60 s)
+    epoch_up => [],
+    // an enemy is a whole age ahead of you - heard by its allies (40% of the time at talk=50, at most every 600 s)
+    enemy_ahead => [],
+    // you are winning against {them} - heard by {them} only (40% of the time at talk=50, at most every 600 s)
+    winning => [],
+    // you are losing the war - heard by its allies (50% of the time at talk=50, at most every 600 s)
+    losing => [],
+    // you are close to defeat - heard by its allies
+    desperate => [],
+    // {them} has been defeated - heard by everyone (80% of the time at talk=50, at most every 30 s)
+    enemy_defeated => [],
+    // your ally {them} has been defeated - heard by its allies (80% of the time at talk=50, at most every 30 s)
+    ally_defeated => [],
+    // you have been defeated - heard by everyone
+    defeated => [],
+    // a wonder is threatened - heard by everyone (at most every 60 s, only while the game's computer player runs: game_ai = 1)
+    wonder_threat => [],
+    // you send help for an ally's wonder - heard by its allies (at most every 60 s, only while the game's computer player runs: game_ai = 1)
+    wonder_help => [],
+    // you have no help to give for an ally's wonder - heard by its allies (at most every 60 s, only while the game's computer player runs: game_ai = 1)
+    wonder_nohelp => [],
+    // you send land troops to help an ally - heard by its allies (at most every 30 s, only while the game's computer player runs: game_ai = 1)
+    help_land => [],
+    // you send aircraft to help an ally - heard by its allies (at most every 30 s, only while the game's computer player runs: game_ai = 1)
+    help_air => [],
+    // you send ships to help an ally - heard by its allies (at most every 30 s, only while the game's computer player runs: game_ai = 1)
+    help_naval => [],
+    // you have no troops to send an ally who asked for help - heard by its allies (at most every 30 s, only while the game's computer player runs: game_ai = 1)
+    help_none => [],
+    // you give up the game - heard by everyone (without a line: defeated)
+    surrender => [],
+    // you capitulate: {them} is beating you, and you offer to PAY them a tribute ({tribute}) for peace - you give, they receive - heard by {them} only
+    capitulate => [],
+    // {them} accepted your capitulation: you PAY them the tribute ({tribute}) and serve them from now on - heard by {them} only
+    capitulate_accepted => [],
+    // {them} did not accept your capitulation, and you withdraw it: the war goes on - heard by {them} only
+    capitulate_refused => [],
+    // your army is about to attack {them} - heard by {them} only (60% of the time at talk=50, at most every 300 s)
+    attack_threat => [],
+    // every other player has submitted to {them}, your lord - heard by {them} only
+    all_submitted => [],
+    // {them} has won the game - heard by everyone
+    other_victory => [],
+    // you refuse {them}'s peace offer because {enemy} in their alliance cannot be at peace with your side - heard by {them} only (at most every 60 s, without a line: peace_refuse)
+    block_refuse => [],
+    // you refuse {them}'s peace offer because your own ally {enemy} won't make peace with them - heard by {them} only (at most every 60 s, without a line: block_refuse)
+    block_refuse_own => [],
+    // your lord {them} forces you to make peace with {enemy}, whom you hate - heard by {them} only (at most every 60 s)
+    vassal_grumble => [],
+    // {them} offers you peace, but you are the vassal of {enemy} and have no diplomacy of your own - they must talk to {enemy} - heard by {them} only (at most every 60 s, without a line: peace_refuse)
+    ask_lord => [],
+    // you have taken a territory from {them}: their buildings there are gone, yours hold it now - heard by {them} only (60% of the time at talk=50, at most every 180 s)
+    territory_taken => [],
+    // {them} has taken a territory of yours: the buildings that held it for you are gone - heard by {them} only (60% of the time at talk=50, at most every 180 s)
+    territory_lost => [],
+    // {them} attacked a territory of yours and was beaten off: it is still yours - heard by {them} only (50% of the time at talk=50, at most every 300 s)
+    territory_held => [],
+    // your army has crossed the water and landed on {them}'s shore - heard by {them} only (70% of the time at talk=50, at most every 300 s)
+    landing => [],
+    // you have just taken a new title: from now on you are called {me} - heard by everyone
+    title => [],
+}
+
+// what the language model is told for this AI (ageofai.ini [llm]), instead of mod/prompt.eeai's text - every key and
+// its placeholders are there. For example:
+//prompt = {
+//    nature => "You speak in short, proud sentences.",
+//}

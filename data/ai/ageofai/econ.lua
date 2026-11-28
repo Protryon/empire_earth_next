@@ -11,6 +11,9 @@ local S = require("ageofai.settings")
 local P = require("ageofai.priority")   -- [priority.c] the list every spender asks
 local MT = require("ageofai.metal")     -- [metal.c] workers_to_metals
 local PK = require("ageofai.packing")   -- [packing.c] the production buildings packed against their kind
+local W = require("ageofai.work")       -- [work.c] THE WORK: the need model, the citizen plan's caps, the mine crowds
+local TT = require("ageofai.territories")   -- [territories.c] the border towers and their stone sink
+local PL = require("ageofai.plans")         -- [plans.c] the strategy plans (plan_f on the pressure lever)
 local M = {}
 
 local cur_memory = nil   -- [priority.c] the memory of the step under way (the buildings ask the list)
@@ -220,6 +223,11 @@ function M.accounts(view, mem, reserve, reserve_civ)
         end
     end
     local share = view.epoch >= FARM_EPOCH and S.military_income_share_farms or S.military_income_share
+    -- [plans.c LN_PRESSURE] the plan's factor on the pressure lever (1.0 when the plans are off)
+    share = math.floor(share * PL.plan_f(memory, 3) + 0.5)
+    if share < 0 then
+        share = 0
+    end
     -- early_army (econ.c hook_add_resource): no army in the first epoch (share 0 unless early_soldiers), then
     -- food-free ranged soldiers: the army's food share small (early_army_food_share) and at most 300 held before
     -- farms, so the citizens keep their food
@@ -285,7 +293,7 @@ local function per_worker(view, r)
 end
 
 -- the targets: land gatherers wanted per resource
-function M.workers(view, mem, reserve, wants)
+function M.workers(view, mem, reserve, wants, memory)
     local total = view.citizens
     if total < 6 then
         return nil
@@ -293,8 +301,10 @@ function M.workers(view, mem, reserve, wants)
     local late = view.epoch >= FARM_EPOCH
     local need = {}
     local citizens_more = math.min(math.max((wants.citizens or 0) - view.citizens, 0), 10)
-    -- food: the reserve plus 300 over the stock, and the citizens' own (50 a citizen for the next 10 while short)
-    need.food = reserve.food + 300 - view.stock.food + 50 * citizens_more + (wants.food or 0)
+    -- food: the reserve plus 300 over the stock, and the citizens' own (50 a citizen for the next 10 while short;
+    -- food_plan count_trained: before farms the plan counts the food of the citizens the Town Center trains)
+    local trained = W.has("food_plan", "count_trained") and 50 * citizens_more or 0
+    need.food = reserve.food + 300 - view.stock.food + trained + (wants.food or 0)
     -- wood: the buildings queued and wanted (a hundred over), the fields' wood
     local w = math.max(reserve.wood, (wants.wood or 0) + 300) + 100
     need.wood = w - view.stock.wood
@@ -318,6 +328,24 @@ function M.workers(view, mem, reserve, wants)
         sum = sum + need[r]
         weight[r] = need[r] * 100 // per_worker(view, r)
         wsum = wsum + weight[r]
+    end
+    -- [work.c THE NEEDS] the citizens each resource needs from what it spends and saves for and from what its soldiers
+    -- would spend (work.lua wk_needs): the split's weight once three minutes of it are sampled (S.work_needs). The
+    -- shortfall above stands under it and for the floors below.
+    local cits = W.weights(view, memory, {reserve = reserve, places = wants.places, fields = mem.fields or 0})
+    if cits ~= nil then
+        wsum, sum = 0, 0
+        for _, r in ipairs(V.resources) do
+            need[r] = math.max(cits[r] * per_worker(view, r), 0)
+            weight[r] = math.max(cits[r] * 100, 0)
+            wsum = wsum + weight[r]
+            sum = sum + need[r]
+        end
+        -- the towers' stone is a stock want, not a citizen count: it stays on the plan's own measure
+        local stone = (wants.tower_stone or 0) * 100 // per_worker(view, "stone")
+        need.stone = need.stone + (wants.tower_stone or 0)
+        weight.stone = weight.stone + stone
+        wsum, sum = wsum + stone, sum + (wants.tower_stone or 0)
     end
     local target = {}
     if sum <= 0 or wsum <= 0 then
@@ -345,12 +373,30 @@ function M.workers(view, mem, reserve, wants)
             end
         end
     end
+    -- [work.c wk_needs] the mines' share is cut to the places the claimed sites offer (a gatherer beyond a mine's room
+    -- queues and is wasted), what is cut going to the larger of food and wood (upstream: nc x wt / sum, then the cut)
+    if cits ~= nil and late then
+        for _, r in ipairs(MINERALS) do
+            local places = (wants.places or {})[r] or 0
+            while target[r] > places do
+                local to = (weight.food or 0) >= (weight.wood or 0) and "food" or "wood"
+                target[r] = target[r] - 1
+                target[to] = target[to] + 1
+            end
+        end
+    end
     -- the food floor: half the workers on food, up to food_floor, before farms (the citizens' own food); from farms
     -- the fields: at least their farmers (fields + 2) when the plan has them
     local floor_food = late and math.min(total // 2, math.max((wants.fields or 0) + 2, 6))
         or math.min(total * S.food_share // 100, S.food_floor)
     if late and mem.recovering then
         floor_food = total * 2 // 3   -- RECOVERY: two thirds on food, the fields filled
+    end
+    -- FEED (citizen_plan food_pays, work.lua's cz_feed): the food gatherers that pay the producers the citizens still
+    -- missing need - one producer per ten missing - come before the others
+    local feed = W.feed(view, memory, math.max((wants.citizens or 0) - view.citizens, 0))
+    if feed > floor_food then
+        floor_food = feed
     end
     mem.food_floor = floor_food   -- [metal.c] MIX keeps it (citizen_plan's FEED)
     while target.food < floor_food do
@@ -399,9 +445,10 @@ function M.workers(view, mem, reserve, wants)
         end
     end
     -- from farms: the mines' places near the drop sites get their workers from food beyond its floor and wood beyond
-    -- its need (citizen_plan GOAL)
+    -- its need (citizen_plan GOAL). [work.c THE MINES FIRST] mine_places_first: the free places fill by each mine
+    -- resource's need (the most free places first) before wood and food beyond the need; else stone, gold, iron
     if late then
-        for _, r in ipairs(MINERALS) do
+        for _, r in ipairs(W.mine_order(target, wants.places)) do
             local places = wants.places and wants.places[r] or 0
             while target[r] < places do
                 local from = nil
@@ -418,6 +465,12 @@ function M.workers(view, mem, reserve, wants)
             end
         end
     end
+    -- [food.c food_plan back_to_food] PULL: while the food gatherers are under food's target, up to four come back to
+    -- it from the resource farthest above its target (the game never takes a gatherer back)
+    W.pull(view, memory, target)
+    -- [citizens.c workforce_plan wood_spent] WOOD: while the wood stock holds three minutes of its spending + 1000,
+    -- wood wants at most that need; the rest goes to the mines' places, then to the fields
+    W.wood_target(view, memory, target, {places = wants.places, fields = mem.fields or 0})
     return target
 end
 
@@ -626,9 +679,19 @@ local function settlements(view, mem, target, order)
         end
     end
     local wood = view.wood
-    if wood ~= nil and (target.wood or 0) > 0 and not wood.ready and not wood.has_drop then
+    -- [mines.c wood_drops] wood_drop: 8+ woodcutters cutting 15+ tiles from a drop site (work.lua); the port's own
+    -- rule builds at the edge as soon as wood is wanted (the engine's finder needs a drop site by the trees)
+    if wood ~= nil and (target.wood or 0) > 0 and not wood.ready and not wood.has_drop and W.wood_drop_ok(view) then
         cands[#cands + 1] = {rank = SETTLE_RANK.wood, dist = wood.distance, tile = wood, key = wood.x * 10000 + wood.y}
         mem.wd_want_t = view.time   -- [priority.c] the forest row (mines.c wood_reserve: a Settlement wanted at the edge)
+    end
+    -- [mines.c mine_fill / citizen_plan mine_settlement] a Settlement at the home continent's unworked mine (the nearest
+    -- mineral site with nothing left to do there: no drop site, nobody working it)
+    local mine = W.mine_settlement(view)
+    if mine ~= nil and not TW.near_town(mem, mine.x, mine.y, 18) then
+        order({verb = "claim", site = mine.index})
+        cands[#cands + 1] = {rank = SETTLE_RANK[mine.resource], dist = mine.distance, site = mine,
+                             key = mine.x * 10000 + mine.y}
     end
     table.sort(cands, function(a, b)
         if a.rank ~= b.rank then
@@ -815,6 +878,17 @@ local function towers(view, mem, order, above)
     end
     -- the front and the outposts: one a minute while the stone allows (tower_stone_keep kept back), none while
     -- one is queued or going up
+    -- [territories.c BORDER TOWERS] the outside border of a held territory (its stone sink: denser and faster with
+    -- 5000 stone), aimed from the core outwards; its own pace is inside (20 s, 10 s with the sink)
+    if S.border_towers ~= false then
+        local bx, by, bt = TT.border_tower(view, cur_memory)
+        if bx ~= nil then
+            order({verb = "build", type = bt or tower, near = "tile", x = bx, y = by})
+            mem.tower_t = view.time
+            mem.border_towers = (mem.border_towers or 0) + 1
+            return stone_wanted
+        end
+    end
     local max_towers = 4 + S.towers_max_epoch * view.epoch
     if not S.defence_towers or busy or n >= max_towers or view.time - (mem.tower_t or 0) < 60000
             or view.citizens < 8 then
@@ -1175,7 +1249,8 @@ end
 -- the citizens wanted: the game's share of the cap before farms (min_workforce at least), from farms the
 -- citizen_plan's goal: the claimed sites' places, the food and wood gatherers, the idle and 4 builders, within the
 -- cap less the army's share
-local function citizens_wanted(view, target)
+local function citizens_wanted(view, memory, target)
+    local mem = memory.eco or {}
     local cap = view.population_cap
     local game = cap * S.citizen_share // 100
     if view.epoch < FARM_EPOCH then
@@ -1192,7 +1267,10 @@ local function citizens_wanted(view, target)
     local goal = places + (target and (target.food + target.wood) or view.gatherers.food + view.gatherers.wood) + 4
     local lim = cap - cap * S.citizen_army_share // 100
     goal = math.min(goal, lim)
-    return math.max(goal, game)
+    -- [work.c, citizens.c] the caps over the goal: workforce_plan CAP (what the economy uses; off, upstream's default)
+    -- and citizen_mine_cap (half the cap, the mineral mines known x their places x 1.5; settings.lua has it on)
+    return W.cap(view, memory, math.max(goal, game), {places = mem.places, fields = mem.fields or 0, target = target,
+                                                      cap = cap})
 end
 
 -- the economy's orders for this step. army: {producer=, busy=, wants={res=amount}} from the army side (the demand
@@ -1291,7 +1369,7 @@ function M.step(view, memory, orders, army)
 
     -- citizens: two at a time from each town centre while the civil budget keeps a citizen's food
     local citizen = V.cost(view, "citizen")
-    local want_citizens = citizens_wanted(view, mem.target)
+    local want_citizens = citizens_wanted(view, memory, mem.target)
     -- [bunker.c] shelf_wanted: while the shelf works or holds citizens, no more than there are (on the map or in it)
     if memory.shelf_hold then
         want_citizens = math.min(want_citizens, view.citizens)
@@ -1300,6 +1378,9 @@ function M.step(view, memory, orders, army)
     local waiting = citizen and citizen.requested or 0
     local planned = view.citizens + making + waiting
     local cit_food = mem.recovering and view.stock.food or civil.food   -- RECOVERY: the whole stock for citizens
+    -- [citizens.c citizen_plan before_reserve] the citizens come before the epoch's reserve while the food income pays
+    -- both (work.lua)
+    cit_food = W.citizen_food(view, memory, view.stock.food, cit_food, want_citizens, view.citizens)
     if citizen and waiting == 0 and making < 2 * citizen.producers and planned < want_citizens
             and view.population < view.population_cap and not view.advancing and cit_food >= citizen.cost.food then
         order({verb = "train", type = "citizen", n = math.min(want_citizens - planned, 2)})
@@ -1359,7 +1440,11 @@ function M.step(view, memory, orders, army)
                 wants.places[r] = (wants.places[r] or 0) + s.capacity
             end
         end
-        target = M.workers(view, mem, reserve, wants)
+        mem.places = wants.places   -- (work.lua's caps and the next citizens_wanted read them)
+        -- [work.c] THE WORK: the minute's bucket of THE NEEDS (what each resource spent, saved for and its soldiers
+        -- would use), the army's appetite, the citizens the needs want (work.lua)
+        W.step(view, memory, {reserve = reserve_civ, places = wants.places, fields = mem.fields or 0, target = mem.target})
+        target = M.workers(view, mem, reserve, wants, memory)
         -- [metal.c] workers_to_metals (army.c MIX): from piled-up food to the wood, gold or iron the army lacks
         MT.workers(view, memory, target, mem.food_floor, wants.places, epoch_reserve)
         if target ~= nil and mem.target ~= nil then
@@ -1392,6 +1477,9 @@ function M.step(view, memory, orders, army)
         if target ~= nil then
             mem.target = target
             local hunt = claims(view, mem, target, order)
+            -- [sites.c mine_crowds, mine_choice] the citizens beyond a mine's places to the nearest free mine of the
+            -- kind (work.lua; the runner's shed sends its own crowds to any work)
+            W.mine_crowds(view, memory)
             hunt = hunt or (view.time - (mem.no_drop_t or -100000) < 30000 and view.hunt > 0)
             -- the patches blocked or bare (the food gatherers at work far under the target and the income low): the
             -- game near home (food_plan HUNT)
@@ -1414,12 +1502,17 @@ function M.step(view, memory, orders, army)
             local prefer = hunt and "hunt" or "patch"
             for _, r in ipairs(V.resources) do
                 if target[r] ~= view.wanted[r] or (r == "food" and prefer ~= (mem.prefer or "patch")) then
+                    local o = {verb = "gather", resource = r, n = target[r]}
                     if r == "food" then
-                        order({verb = "gather", resource = r, n = target[r], prefer = prefer})
+                        o.prefer = prefer
                         mem.prefer = prefer
-                    else
-                        order({verb = "gather", resource = r, n = target[r]})
                     end
+                    -- [econ.c econ_rebalance, sites.c rebalance_workers] the runner moves a gatherer off a resource as
+                    -- soon as it has more than the target (else only past one more) while another is short
+                    if S.rebalance_workers then
+                        o.exact = 1
+                    end
+                    order(o)
                 end
             end
             settlements(view, mem, target, order)

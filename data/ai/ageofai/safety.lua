@@ -3,13 +3,20 @@
 -- soldier was in sight within 6 tiles (hurt_seen_short) - and a site within 6 tiles of such spots is dangerous:
 -- food and wood from one spot, stone, gold and iron from three. A citizen gathering at a raided site (enemy
 -- soldiers seen within 6) or a hurt one is sent back to the nearest drop site unless the town holds there
--- (raid_held: its soldiers and towers within 8 beat the raiders by raid_held 150%); the claimed site is released
+-- (raid_held: its soldiers and towers within 8 beat the raiders by raid_held 150%); a gold or iron mine only when
+-- its citizens are being hit there (GOLD AND IRON STAY, the port forward's attack.c: not for soldiers seen near
+-- it, not for the way's danger). BUILDERS UNDER COVER (defence.c build_held): a builder (action "build"/"repair") is
+-- no gatherer - its site can't be had elsewhere, and a tower or fortress going up is what the soldiers there are for -
+-- so it stays while at least BH_MIN of its soldiers (and its towers) stand within BH_OWN tiles and match the enemy
+-- soldiers it sees within BH_FOE (raid_held's judgement without the 150%: not losing), or no enemy is seen there;
+-- alone it is sent back as a gatherer. The claimed site is released
 -- while the danger lasts, so the engine's finders send nobody there (upstream's searches refuse such sites). While
 -- the base is overrun (a muster on, army.lua): every citizen with raiders within 8 of it flees to the rally point,
 -- or 12 tiles in the clear direction nearest it when the way is raided (flee_point).
 -- This engine's own danger zones (a hit citizen's spot for 30 s, EECPRMResourceInDanger) stay on underneath.
 local S = require("ageofai.settings")
 local G = require("lib.groups")
+local TV = require("ageofai.territories")   -- [territories.c] the territory being lost and its refuge
 
 local M = {}
 
@@ -99,6 +106,26 @@ local function raid_held(x, y)
     local own = ai.units{armed = true, near = {x, y, 8}, limit = 40}
     local mine = #own > 0 and ai.strength(own) or 0
     return mine * 100 >= ai.strength(foes) * S.raid_held
+end
+
+-- BUILDERS UNDER COVER (defence.c build_held; BH_MIN 4, BH_OWN 14, the enemies within 12): a builder's site holds
+-- while at least BH_MIN of its soldiers (and towers) stand within BH_OWN tiles and are not losing against the enemy
+-- soldiers seen within BH_FOE - or no enemy is seen there (upstream's remembered-only case: the port's raiders are
+-- the seen ones, S.threat_memory has no reader yet). Alone it still goes.
+local BH_MIN = 4
+local BH_OWN = 14
+local BH_FOE = 12
+
+local function build_held(x, y)
+    local own = ai.units{armed = true, near = {x, y, BH_OWN}, limit = 40}
+    if #own < BH_MIN then
+        return false
+    end
+    local foes = raiders_near(x, y, BH_FOE)
+    if #foes == 0 then
+        return true
+    end
+    return ai.strength(own) >= ai.strength(foes)
 end
 
 -- the way from (x0,y0) to (x1,y1) raided: enemy soldiers seen within 4 of a point every 4 tiles, or within 6 of the end
@@ -194,23 +221,42 @@ function M.step(mem, memory, now)
     for k = 1, #citizens do
         local id, x, y = citizens[k], cols.x[k], cols.y[k]
         if x ~= nil and not cols.inside[k] and mem.sent_back[id] == nil then
+            local builder = cols.action[k] == "build" or cols.action[k] == "repair"
+            local sx, sy = cols.tx[k] or x, cols.ty[k] or y   -- the site: the goal's tile, the citizen's spot when none
             if rally ~= nil then
                 -- the base is overrun: citizens near the enemy (or working near it) flee to the rally point
                 if d2(x, y, rally.x, rally.y) > 36 then
                     local danger = #raiders_near(x, y, 8) > 0
-                    if not danger and cols.action[k] == "gather" and cols.tx[k] ~= nil then
+                    if not danger and (cols.action[k] == "gather" or builder) and cols.tx[k] ~= nil then
                         danger = #raiders_near(cols.tx[k], cols.ty[k], 8) > 0
                     end
-                    if danger then
+                    -- BUILDERS UNDER COVER: a builder whose own soldiers hold its site stays (defence.c build_held)
+                    if danger and not (builder and cols.tx[k] ~= nil and build_held(sx, sy)) then
                         local fx, fy = flee_point(x, y, rally.x, rally.y, map)
                         ai.move({id}, fx, fy, {forced = true})
                         mem.sent_back[id] = now + 30000
                         fled = fled + 1
                     end
                 end
+            elseif builder then
+                -- BUILDERS UNDER COVER (defence.c build_held): a builder whose site (or it) has enemy soldiers near it
+                -- goes home to the nearest drop site - unless its own soldiers there win (not losing: raid_held's
+                -- judgement, at BH_MIN soldiers and 14 tiles). Its builders' orders re-send it (lib/verbs' builder
+                -- check); alone it still goes.
+                if #raiders_near(x, y, 8) > 0 or #raiders_near(sx, sy, 8) > 0 then
+                    if build_held(sx, sy) then
+                        held = held + 1
+                    else
+                        local did, dd, dx, dy = ai.drop_site(sx, sy, "food")
+                        if did ~= nil and dx ~= nil and not (math.abs(dx - x) <= 3 and math.abs(dy - y) <= 3) then
+                            ai.move({id}, dx, dy, {forced = true})
+                            mem.sent_back[id] = now + 8000
+                            sent = sent + 1
+                        end
+                    end
+                end
             elseif cols.action[k] == "gather" then
                 -- the site: where it gathers (its goal's tile; the citizen's own spot when none)
-                local sx, sy = cols.tx[k] or x, cols.ty[k] or y
                 local raided = #raiders_near(sx, sy, 6) > 0
                 local nh = 0
                 for _, h in ipairs(spots) do
@@ -218,16 +264,45 @@ function M.step(mem, memory, now)
                         nh = nh + 1
                     end
                 end
-                local mineral = false
-                if not raided and nh >= 1 then
-                    -- the site's resource only when a hurt spot is near (the budget): minerals take three spots
+                local kind = nil
+                if raided or nh >= 1 then
+                    -- the site's resource (the budget): one look, only when the site is in question
                     local site = ai.unit(ai.units{category = "resource", near = {sx, sy, 2}, limit = 1}[1] or -1)
-                    if site ~= nil and site.kind ~= nil then
-                        mineral = site.kind == "stone" or site.kind == "gold" or site.kind == "iron"
+                    kind = site ~= nil and site.kind or nil
+                end
+                -- [territories.c TERRITORY SHELTER] the ground is being lost: every citizen in it into a Fortress
+                -- with room on its land, else to its nearest drop site in a territory that is not - not while the
+                -- town holds there. Nobody works a territory being lost (its sites are dangerous below too).
+                local sheltered = false
+                if TV.unsafe(sx, sy) and not raid_held(sx, sy) then
+                    local fx, fy, fid, fk = TV.refuge(sx, sy)
+                    if fk == "fortress" and fid ~= nil then
+                        ai.garrison({id}, fid)
+                        mem.sent_back[id] = now + 20000
+                        sent = sent + 1
+                        sheltered = true
+                    elseif fx ~= nil then
+                        ai.move({id}, fx, fy, {forced = true})
+                        mem.sent_back[id] = now + 8000
+                        sent = sent + 1
+                        sheltered = true
+                    end
+                    if eco ~= nil then
+                        eco.site_danger = eco.site_danger or {}
+                        eco.site_danger[tostring(sx) .. "," .. tostring(sy)] = now + 30000
                     end
                 end
+                local mineral = kind == "stone" or kind == "gold" or kind == "iron"
+                -- GOLD AND IRON STAY (attack.c, 7a17182: "it scares citizens away from work way too aggressively, for
+                -- farms and wood that's fine ... but gold and iron are abandoned way too quickly"): a gold or iron
+                -- mine is left only when its citizens are being hit there (three hurt spots within 6), not for
+                -- enemy soldiers seen near it, not for the danger on the way or a territory being lost - and not
+                -- while the town holds it. Food, wood and stone keep the wider rule below.
+                if kind == "gold" or kind == "iron" then
+                    raided = false
+                end
                 local hurt = not raided and nh >= (mineral and 3 or 1)
-                if (raided or hurt) then
+                if not sheltered and (raided or hurt) then
                     if raid_held(sx, sy) then
                         held = held + 1
                     else
@@ -257,6 +332,9 @@ end
 
 -- whether a site at x,y is dangerous by the safety's book (econ.lua's claims: released, not claimed again)
 function M.site_dangerous(eco, x, y, now)
+    if TV.unsafe(x, y) then
+        return true   -- [territories.c] no site in a territory being lost
+    end
     local d = eco ~= nil and eco.site_danger or nil
     if d == nil then
         return false

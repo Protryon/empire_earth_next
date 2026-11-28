@@ -406,7 +406,11 @@ route skips:
 | `ai.pack(ids, on)` | PackUnpack | | |
 | `ai.cast(ids, power, target or x, y)` | CastCalamity | | |
 | `ai.tribute(player, amounts)`, `ai.trade(resource, buy, n)`, `ai.diplomacy(player, stance)` | PayTribute, ExchangeResources, SetDiplomaticStance | | |
-| `ai.air(...)` | the airport messages | stage L6 or later | |
+| `ai.air(...)` | the airport messages | stage L6 or later |
+| `ai.llm(config)` / `ai.llm(prompt[, system])` / `ai.llm([seq])` | the AI's voice: a table configures the LLM transport (`url`, `api_key`, `model`, `timeout`, `enabled`, `think`); a string starts one request on a worker thread and returns the sequence to poll with (nil when disabled or busy); a number returns this AI's answer to that request or a later one, once (nil while none), with the answer's sequence as a second result; no argument returns the last answer. Each player has its own answer slot, so AIs never read each other's lines, and a caller that passes its request's sequence reads the answer once instead of at every step. Windows WinHTTP; inert on POSIX. Never blocks the step (`EECPNextLLM.cpp`). | this port |
+| `ai.say(text)` | a chat line as the computer player (the game's in-game chat); false in the headless simulation. | this port |
+| `ai.chat()` | the next in-game chat line since the last call: `text, player`, or nil. The inbox keeps the last 32 lines; the AI's own lines are in it too (`voice.lua` skips by the player id). | this port | |
+| `ai.name(text)` / `ai.color(r, g, b)` / `ai.civ(text)` | the AI's identity in the game's UI and chat: its player name, its colour, and the civilization name the game shows (upstream persona.c's `civilization =>`, e.g. "Walled Cities"; the civilization's upgrades and bonuses stay the game's random premade pick). | this port | |
 
 **The ownership calls (§7):**
 - `ai.take(ids)`, `ai.release(ids)`;
