@@ -42559,3 +42559,40 @@ line views (docs/progress/ui-cluster.md "Round 15", pass 2's "What is left"); in
 virtuals, URandom.h (tests/net) (lle-shims.md "Round 15"); the Rust behind deleted C++ (ee_uconfig_*, the GEPoint
 paths) is uncounted and can go. The UI thread's unit is the next candidate for the toolkit's pass-2 treatment: its
 shims are chains over the game's forms and controls.
+
+## EE-SIM's fixed display: the headless checks never read the real desktop (ee_base plat_core sim.rs, plat_sdl exports.rs; branch rust-fixedscreen, 2026-11-27)
+
+On 2026-11-27 afternoon the checks failed on code that had passed in the morning (and on older commits that passed
+the day before): `sim_editor` (its formstate lines' `view=` and `edges=` from step 1451 on: `view=0,25,1536,781
+edges=0,0,1363,767` against `view=0,25,1382,783 edges=0,0,1225,767`), the `oracle` capture's CAMU in seeds 2 and 3,
+and a LAN game's lobby captures against a base made a day earlier (the window's size). The owner had logged in to the
+harness machine with a TV connected: the desktop went from 1728x1084 (96 DPI) to 1920x1080.
+
+- The cause: EE-SIM creates a real (hidden) SDL window, and every size the game has comes from the display through
+  two platform calls, `PlatWindowGetDisplaySize` and `PlatWindowGetDisplayLogicalSize` (plat_sdl exports.rs:
+  `SDL_GetDesktopDisplayMode` of the primary display). Their readers: `GXGameSize` (ee_render gx modes.rs
+  `game_size`: windowed, 80% of the logical size, so 1382x866 then, 1536x864 now), the window itself
+  (gamecpp startup.rs: `ww * 4 / 5`, 1382x867 then), `GXDirectDraw`'s mode (`desktop_size`), the mode list, the
+  render scale, the RTS mouse's desktop size (RTSMouse.cpp `ee_rtsmcpp_display_size`), DX7Screen::CreateAWindow and
+  EEScreens' display query. The editor's saved view is the game size less the panel (`view` right = width, bottom =
+  height - 83), its edge scroll the menus' width (1226 then, 1364 now: 768 lines at the game's aspect ratio); the
+  camera's viewport and projection (CAMU) follow the game size too. The old size was read back from the gates tours'
+  game logs: "GX: presenting 1382x866 frames into a 1382x867 window" (lane tours until 12:34 that day; 1536x864 from
+  15:05), so W * 4 / 5 = 1382 and H * 4 / 5 = 867: 1728x1084.
+- The fix: in EE-SIM (`gPlatSimMode`, set by the driver before the engine starts) both calls answer
+  `plat_core::sim::SIM_DISPLAY_SIZE`, 1728x1084, as logical size and pixels, without asking SDL. The game (EE-AOC,
+  the test profile included) still asks the real display. The committed goldens pass unchanged on the 1920x1080
+  desktop; a headless run is now the same on any desktop, a remote session's or a bench machine's (Linux's dummy
+  video driver: its display mode no longer matters).
+- Lesson: a check's output must not depend on the host's display. Anything headless that reads a size, a DPI or a
+  monitor (SDL display modes, GetSystemMetrics, the work area) must take a fixed value in the simulation. Still
+  host-dependent (live, windowed sessions): the harness tours (their checks are relative: lit share, colours; the
+  frame sizes in the logs follow the desktop) and `lan_capture_compare.py` (its base and new captures must come from
+  the same desktop: make the base again after the desktop changes), and the hidden window's pixel density in EE-SIM
+  (a DPI other than 96 would scale the window's client pixels; nothing the captures record reads them).
+- Checks on the fix (eacb1a73f, desktop 1920x1080): both builds 0/0; rust header current, `rust_build.py gate` PASS;
+  the editor gate failed before the fix exactly as reported and passes after it (14448 lines), `--civbuilder` PASS
+  (4062); sim captures oracle PASS (598 equal, CAMU of seeds 2 and 3 among them), late PASS (598), app PASS (38);
+  oracle seeds 2-7 identical to the main checkout's `ref`; won_host_coverage PASS; scenario_check 27/27 (a first run under load: 26/27, one
+  scenario's start timed out; 27/27 alone); `gates.sh` GATES PASS (its tour's
+  gameplay frame 1536x864: the live game follows the desktop, as it should).
