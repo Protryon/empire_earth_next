@@ -518,7 +518,7 @@ impl EeWonWonButton {
                     }
                 }
                 if src.text != 0 {
-                    let font = self.text(Wt::Font, src.text, 0);
+                    let font = self.text(Wt::GetFont, src.text, 0);
                     let t = *self.st.borrow_mut().fonts.entry(font).or_insert(0);
                     self.set_cell_text(i, j, t);
                 }

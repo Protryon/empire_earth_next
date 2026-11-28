@@ -1117,8 +1117,8 @@ pub enum EeWonWbText {
     Width,
     /// `GetHeight()`.
     Height,
-    /// `mFont.get()` (a pure read).
-    Font,
+    /// `mFont.get()` (a pure read; not `Font`, which a driver renames with a macro).
+    GetFont,
     /// `&GetText()` (a `const GUIString*`).
     Text,
 }

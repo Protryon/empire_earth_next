@@ -523,7 +523,7 @@ public:
     void SetMaxWidth(int w) { this->W(EeWonWbText::SetMaxWidth, w); } //34adb0
     int GetWidth() { return (int)this->W(EeWonWbText::Width); }
     int GetHeight() { return (int)this->W(EeWonWbText::Height); }
-    Font* GetFont() { return (Font*)this->W(EeWonWbText::Font); }
+    Font* GetFont() { return (Font*)this->W(EeWonWbText::GetFont); }
     const GUIString& GetText() { return *(const GUIString*)this->W(EeWonWbText::Text); }
 };
 // MSButtonBase (R6 WON round 35): its colours, alignments, focus style, text pads, transparency, fit to text and

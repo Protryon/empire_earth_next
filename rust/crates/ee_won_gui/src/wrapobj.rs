@@ -494,7 +494,7 @@ unsafe fn wrap_call(w: *mut EeWonWrapRc, which: crate::guihost::EeWonWbText, c: 
                 (unsafe { ee_won_plat_font_metric(plat_font(w), 0) }) as isize
             }
         }
-        T::Font => w.font,
+        T::GetFont => w.font,
         T::Text => &w.text as *const _ as isize,
         _ => return None,
     })
